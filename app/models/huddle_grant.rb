@@ -4,6 +4,9 @@ class HuddleGrant < ApplicationRecord
   INVITATION_DEDUP_WINDOW = 2.minutes
   IN_CALL_WINDOW = 20.seconds
   SEEN_TOUCH_INTERVAL = 10.seconds
+  # A banner-only ring lives at most the client's ring timeout, so a leave
+  # later than this after issuance has no banner to stop.
+  CALL_ENDED_WINDOW = 1.minute
 
   belongs_to :session, optional: true
   belongs_to :user, optional: true
@@ -20,6 +23,7 @@ class HuddleGrant < ApplicationRecord
   validates :identity, uniqueness: true
 
   after_update_commit :broadcast_voice_presence, if: :saved_change_to_revoked_at?
+  after_update_commit :broadcast_call_ended_to_invitee, if: :revoked_while_in_call?
 
   class << self
     def issue!(session:, membership:)
@@ -177,8 +181,10 @@ class HuddleGrant < ApplicationRecord
     return false if last_seen_at.nil?
     return false if seen_after.present? && last_seen_at > seen_after
 
+    was_in_call = in_call?
     update_columns(last_seen_at: nil)
     broadcast_voice_presence
+    broadcast_call_ended_to_invitee if was_in_call
     true
   end
 
@@ -269,11 +275,52 @@ class HuddleGrant < ApplicationRecord
         return
       end
 
+      # The same attempt re-rings through its own row even when the retry
+      # comes from another session with a brand-new grant: same room, same
+      # starter, same recipient, and the previous item still unhandled. A
+      # handled item proves the recipient joined, closing the attempt, so
+      # the next invite opens a new one with its own item.
+      if (attempt = same_attempt_item(recipient))
+        return unless refresh_attempt!(attempt)
+
+        Huddle::PushInvitationJob.perform_later(attempt.id)
+        return
+      end
+
       item = ActivityItems::Recorder.record!(recipient:, source: self, event_type: "huddle_started")
       return unless item
       return unless item.previously_new_record? || refresh_invitation!(item)
 
       Huddle::PushInvitationJob.perform_later(item.id)
+    end
+
+    # The recipient's unhandled huddle item for this room from this starter,
+    # if any: a retry of the attempt it belongs to reuses it (repointed at
+    # the new grant) instead of stacking a second missed-call item beside
+    # it. Only unhandled rows qualify — ringing, missed, or dismissed — so a
+    # recipient who joined keeps their history and the retry reads as new.
+    def same_attempt_item(recipient)
+      invitations_for(recipient.id)
+        .where(handled_at: nil, invitation_grants: { user_id: user_id })
+        .order(created_at: :desc)
+        .first
+    end
+
+    # Resets the same attempt's row in place under a lock, repointed at the
+    # retrying grant so the banner and the push describe the live call. A
+    # row the recipient handled concurrently — they joined while the retry
+    # was in flight — is left alone and the retry stays silent.
+    def refresh_attempt!(item)
+      refreshed = false
+
+      item.with_lock do
+        unless item.handled? || item.created_at >= INVITATION_DEDUP_WINDOW.ago
+          item.update!(source: self, event_type: "huddle_started", read_at: nil, handled_at: nil, created_at: Time.current)
+          refreshed = true
+        end
+      end
+
+      refreshed
     end
 
     # Inbox identity is recipient + source, so a reused grant re-rings through
@@ -342,6 +389,78 @@ class HuddleGrant < ApplicationRecord
 
     def stale_invitation?(item)
       item.handled? || item.event_type != "huddle_started" || item.created_at < INVITATION_DEDUP_WINDOW.ago
+    end
+
+    # Only a revocation that actually ends a call rings the ended bell: a
+    # grant that was already quiet had no live banner to stop.
+    def revoked_while_in_call?
+      saved_change_to_revoked_at? && in_call?
+    end
+
+    # Tells the DM peer's banner the call ended: the starter hung up, was
+    # removed, or joined another room. Open invitations for this grant flip
+    # the banner to a "caller left" state instead of ringing until the
+    # missed-call resolution; a banner-only ring (items switched off) gets
+    # the same payload with a zero id. The items themselves still resolve
+    # to missed calls on their own schedule.
+    def broadcast_call_ended_to_invitee
+      return unless room && user
+
+      delivered = false
+      open_call_items.find_each do |item|
+        ActionCable.server.broadcast ActivityChannel.stream_name_for(item.user_id), call_ended_payload(item)
+        delivered = true
+      end
+      broadcast_suppressed_call_ended! unless delivered
+    end
+
+    def open_call_items
+      ActivityItem.where(
+        source_type: HuddleGrant.polymorphic_name, source_id: id,
+        event_type: "huddle_started", handled_at: nil
+      )
+    end
+
+    def call_ended_payload(item)
+      routes = Rails.application.routes.url_helpers
+      {
+        activityItemId: item.id,
+        huddleInvitation: {
+          activityItemId: item.id,
+          eventType: "huddle_ended",
+          state: item.state,
+          roomId: room.id,
+          roomName: suppressed_invitation_room_name(item.user),
+          roomPath: routes.room_path(room),
+          callerName: user.name,
+          readPath: routes.read_activity_item_path(item, state: "read"),
+          handledPath: routes.handled_activity_item_path(item, state: "handled")
+        }
+      }
+    end
+
+    def broadcast_suppressed_call_ended!
+      recipient = direct_huddle_recipient
+      return unless recipient
+      return if recipient.inbox_preferences.huddle_invitations
+      return unless last_issued_at.present? && last_issued_at > CALL_ENDED_WINDOW.ago
+      return unless ActivityItem.active_human?(recipient)
+
+      routes = Rails.application.routes.url_helpers
+      ActionCable.server.broadcast ActivityChannel.stream_name_for(recipient.id), {
+        activityItemId: 0,
+        huddleInvitation: {
+          activityItemId: 0,
+          eventType: "huddle_ended",
+          state: "unread",
+          roomId: room.id,
+          roomName: suppressed_invitation_room_name(recipient),
+          roomPath: routes.room_path(room),
+          callerName: user&.name || "Someone",
+          readPath: "",
+          handledPath: ""
+        }
+      }
     end
 
     # With huddle inbox items switched off, the call still rings in-app

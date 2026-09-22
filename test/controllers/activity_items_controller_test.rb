@@ -196,17 +196,17 @@ class ActivityItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "started and missed huddles render their copy in the inbox" do
-    # The missed item is outside the dedup window so the second ring proceeds;
-    # a fresh missed item would suppress it.
-    missed_item = travel_to(3.minutes.ago) { start_dm_huddle_for(users(:david)) }
+    # Two rooms, two attempts: a second ring in the same room would re-ring
+    # through the first attempt's own row instead of stacking beside it.
+    missed_item = travel_to(3.minutes.ago) { start_dm_huddle_for(users(:david), rooms(:david_and_jason)) }
     missed_item.update!(event_type: "huddle_missed")
-    started_item = start_dm_huddle_for(users(:david))
+    started_item = start_dm_huddle_for(users(:david), rooms(:david_and_kevin))
 
     get activity_items_url
 
     assert_response :success
     assert_select "##{ActionView::RecordIdentifier.dom_id(started_item)}", text: /Incoming huddle/
-    assert_select "##{ActionView::RecordIdentifier.dom_id(started_item)}", text: /Jason started a huddle/
+    assert_select "##{ActionView::RecordIdentifier.dom_id(started_item)}", text: /Kevin started a huddle/
     assert_select "##{ActionView::RecordIdentifier.dom_id(missed_item)}", text: /Missed huddle/
     assert_select "##{ActionView::RecordIdentifier.dom_id(missed_item)}", text: /You missed a huddle from Jason/
   end
@@ -385,8 +385,8 @@ class ActivityItemsControllerTest < ActionDispatch::IntegrationTest
       approval = AgentApproval.create!(agent: agents(:bender_agent), room: @room, action: "deploy", summary: "Ship it")
       ActivityItem.find_by!(user:, source: approval)
 
-      travel_to(3.minutes.ago) { start_dm_huddle_for(user) }.update!(event_type: "huddle_missed")
-      start_dm_huddle_for(user)
+      travel_to(3.minutes.ago) { start_dm_huddle_for(user, rooms(:david_and_jason)) }.update!(event_type: "huddle_missed")
+      start_dm_huddle_for(user, rooms(:david_and_kevin))
     end
 
     def with_page_size(size)
@@ -399,10 +399,10 @@ class ActivityItemsControllerTest < ActionDispatch::IntegrationTest
       ActivityItemsController.const_set(:PAGE_SIZE, original)
     end
 
-    def start_dm_huddle_for(recipient)
-      starter = (rooms(:david_and_jason).user_ids - [ recipient.id ]).first
+    def start_dm_huddle_for(recipient, room = rooms(:david_and_jason))
+      starter = (room.user_ids - [ recipient.id ]).first
       session = Session.create!(user_id: starter, user_agent: "huddle test", ip_address: "127.0.0.1")
-      membership = Membership.find_by!(room: rooms(:david_and_jason), user_id: starter)
+      membership = Membership.find_by!(room:, user_id: starter)
       grant = HuddleGrant.issue!(session:, membership:)
       ActivityItem.find_by!(user: recipient, source: grant)
     end
