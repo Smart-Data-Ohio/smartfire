@@ -16,7 +16,7 @@ class MessagesController < ApplicationController
     @messages = find_paged_messages
 
     if @messages.any?
-      fresh_when @messages
+      fresh_when @messages, etag: [ @messages, rendered_related_stamp(@messages) ]
       Message.preload_rendering_details(@messages) unless performed?
     else
       head :no_content
@@ -122,6 +122,32 @@ class MessagesController < ApplicationController
     # this to preload only what their representation reads.
     def paged_message_scope
       @room.root_messages
+    end
+
+    # The newest timestamp over everything the page renders that the
+    # messages' own rows don't cover: reply sources (whose edits must
+    # refresh previews even when the source scrolled off the page),
+    # card rows (whose fetch completion must refresh cards) and
+    # creators (whose renames must refresh authors). Aggregate queries
+    # only, so a conditional GET still never loads bodies. edited_at is
+    # folded in beside updated_at because a legacy body edit rewrites
+    # only the rich-text row, leaving the message row untouched.
+    def rendered_related_stamp(messages)
+      message_ids = messages.map(&:id)
+      reply_ids = messages.filter_map(&:reply_to_message_id)
+
+      # Formatted at microsecond precision like collection cache keys:
+      # a raw Time expands into an etag at whole seconds, which blinds
+      # the etag to same-second changes.
+      [
+        Message.where(id: message_ids).maximum(:edited_at),
+        reply_ids.any? ? Message.where(id: reply_ids).maximum(:updated_at) : nil,
+        reply_ids.any? ? Message.where(id: reply_ids).maximum(:edited_at) : nil,
+        Github::PullRequestReference.where(message_id: message_ids).joins(:pull_request).maximum("github_pull_requests.updated_at"),
+        Twitter::PostReference.where(message_id: message_ids).joins(:post).maximum("twitter_posts.updated_at"),
+        EventReference.where(message_id: message_ids).joins(:event).maximum("events.updated_at"),
+        User.where(id: messages.map(&:creator_id)).maximum(:updated_at)
+      ].compact.max&.utc&.to_fs(:usec)
     end
 
 
