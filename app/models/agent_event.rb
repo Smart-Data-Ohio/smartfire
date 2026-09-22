@@ -105,8 +105,8 @@ class AgentEvent < ApplicationRecord
   end
 
   def hop
-    hop = read_attribute(:hop)
-    return hop.to_i unless hop.nil?
+    column_hop = read_attribute(:hop).to_i
+    return column_hop unless column_hop.zero?
 
     metadata.is_a?(Hash) ? (metadata["hop"] || 0).to_i : 0
   end

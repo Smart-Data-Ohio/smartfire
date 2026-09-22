@@ -159,7 +159,10 @@ class Agent::DeliveryJobTest < ActiveSupport::TestCase
     assert depths.all? { |depth| depth > baseline },
       "the rate check must run inside the agent lock so concurrent enqueues cannot both pass"
   ensure
-    Agent::Delivery.singleton_class.send(:remove_method, :rate_limited?)
+    # remove_method would delete the original too (the probe replaced it
+    # in place), breaking every later test in this process; restore it.
+    Agent::Delivery.singleton_class.send(:define_method, :rate_limited?, real_rate_limited)
+    Agent::Delivery.singleton_class.send(:private, :rate_limited?)
   end
 
   test "rate limit drops the 21st delivery with a suppression row and no job" do

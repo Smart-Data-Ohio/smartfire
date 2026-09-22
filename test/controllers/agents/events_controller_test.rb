@@ -684,6 +684,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
 
     def assert_delivered(agent, hop:)
       perform_enqueued_jobs only: Agent::DeliveryJob
+      perform_enqueued_jobs only: Agent::EventWebhookJob
 
       event = agent.agent_events.deliverable.last
       assert_equal "delivered", event.outcome

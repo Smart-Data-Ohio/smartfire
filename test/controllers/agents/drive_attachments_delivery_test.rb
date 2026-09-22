@@ -50,6 +50,7 @@ class Agents::DriveAttachmentsDeliveryTest < ActionDispatch::IntegrationTest
     message.drive_attachments.create!(file_id: FILE_A)
 
     perform_enqueued_jobs only: Agent::DeliveryJob
+    perform_enqueued_jobs only: Agent::EventWebhookJob
 
     assert_requested :post, webhooks(:bender).url, body: hash_including(
       "agent" => hash_including("id" => @agent.id),
