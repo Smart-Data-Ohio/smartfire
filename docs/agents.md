@@ -244,13 +244,14 @@ The ledger outcome (`pending`, `delivered`, `acknowledged`,
 `suppressed`) tracks polling state; the webhook POST has its own
 status on the same row (`webhook_status`: `none`, `pending`,
 `delivered`, `failed`) with an attempt count and the last error, all
-shown on the ledger page. A failed POST retries with backoff up to 5
-attempts, then the row stays `failed` with the last error recorded.
-Guard refusals, unresolvable hosts, and payloads that can no longer
-be built (message, approval, or thread gone) fail fast without
-retrying. Any completed HTTP response counts as delivered, whatever
-its status, so a receiver must treat redeliveries as possible:
-webhook delivery is at-least-once.
+shown on the ledger page. Only a 2xx response counts as delivered. A
+429, 408, or 5xx response retries with backoff up to 5 attempts —
+honoring the endpoint's `Retry-After` header when present — as do
+network errors and timeouts; then the row stays `failed` with the
+last error recorded. Other 4xx responses fail fast without retrying,
+like guard refusals, unresolvable hosts, and payloads that can no
+longer be built (message, approval, or thread gone). A receiver must
+treat redeliveries as possible: webhook delivery is at-least-once.
 
 Acking a row by polling marks polling state only and never cancels
 a webhook still owed: an agent that acks a `pending` row before its

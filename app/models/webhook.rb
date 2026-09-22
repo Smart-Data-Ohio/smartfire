@@ -45,18 +45,21 @@ class Webhook < ApplicationRecord
     end
   end
 
-  # A 200 text or attachment response becomes a reply to the triggering
+  # A 2xx text or attachment response becomes a reply to the triggering
   # message: inside its thread when it has one (board posts included),
-  # otherwise a root reply referencing it. For agent deliveries the POST
-  # already succeeded once a reply is stored, so a reply that cannot be
-  # stored (a locked thread, a deleted parent) is logged and the
-  # delivery still counts; legacy deliveries keep raising. Timeouts on
-  # agent deliveries propagate to the delivery job, which records them
-  # in the ledger and retries; legacy bots keep the timeout message.
+  # otherwise a root reply referencing it. Error responses create no
+  # reply: the agent delivery job classifies them as retryable or
+  # permanent failures, while legacy deliveries simply ignore the
+  # body. For agent deliveries the POST already succeeded once a reply
+  # is stored, so a reply that cannot be stored (a locked thread, a
+  # deleted parent) is logged and the delivery still counts; legacy
+  # deliveries keep raising. Timeouts on agent deliveries propagate to
+  # the delivery job, which records them in the ledger and retries;
+  # legacy bots keep the timeout message.
   def deliver(message, agent: nil, delivery_id: nil)
     secret = agent ? agent.ensure_webhook_signing_secret! : signing_secret
     post(payload(message, agent: agent, delivery_id: delivery_id), secret: secret).tap do |response|
-      receive_sync_reply(message, response, agent: agent)
+      receive_sync_reply(message, response, agent: agent) if response.is_a?(Net::HTTPSuccess)
     end
   rescue Net::OpenTimeout, Net::ReadTimeout
     raise if agent

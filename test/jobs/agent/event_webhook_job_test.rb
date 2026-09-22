@@ -70,6 +70,102 @@ class Agent::EventWebhookJobTest < ActiveSupport::TestCase
     assert_match "Connection refused", event.reload.webhook_last_error.to_s
   end
 
+  test "a 201 response counts as delivered" do
+    WebMock.stub_request(:post, @webhook_url).to_return(status: 201)
+
+    event = deliverable_event
+    Agent::EventWebhookJob.perform_now(event.id)
+
+    assert_equal "delivered", event.reload.webhook_status
+    assert_equal 1, event.reload.webhook_attempts
+    assert_nil event.reload.webhook_last_error
+  end
+
+  test "a 500 response retries with backoff and fails after five attempts" do
+    WebMock.stub_request(:post, @webhook_url).to_return(status: 500, body: "boom")
+
+    event = deliverable_event
+    Agent::EventWebhookJob.perform_now(event.id)
+
+    assert_equal "pending", event.reload.webhook_status
+    assert_equal 1, event.reload.webhook_attempts
+    assert_match "500", event.reload.webhook_last_error.to_s
+    assert_enqueued_jobs 1, only: Agent::EventWebhookJob
+
+    event.update!(webhook_attempts: 4)
+    assert_no_enqueued_jobs only: Agent::EventWebhookJob do
+      Agent::EventWebhookJob.perform_now(event.id)
+    end
+
+    assert_equal "failed", event.reload.webhook_status
+    assert_equal 5, event.reload.webhook_attempts
+    assert_match "500", event.reload.webhook_last_error.to_s
+  end
+
+  test "a 429 response waits out Retry-After before retrying" do
+    WebMock.stub_request(:post, @webhook_url)
+      .to_return(status: 429, headers: { "Retry-After" => "45" })
+
+    event = deliverable_event
+    Agent::EventWebhookJob.perform_now(event.id)
+
+    assert_equal "pending", event.reload.webhook_status
+    assert_equal 1, event.reload.webhook_attempts
+    assert_match "429", event.reload.webhook_last_error.to_s
+
+    job = enqueued_jobs.select { |enqueued| enqueued[:job] == Agent::EventWebhookJob }.sole
+    assert_in_delta 45, job[:at] - Time.current.to_f, 5
+  end
+
+  test "a 429 response without Retry-After retries with the default backoff" do
+    WebMock.stub_request(:post, @webhook_url).to_return(status: 429)
+
+    event = deliverable_event
+    Agent::EventWebhookJob.perform_now(event.id)
+
+    assert_equal "pending", event.reload.webhook_status
+    assert_equal 1, event.reload.webhook_attempts
+    assert_enqueued_jobs 1, only: Agent::EventWebhookJob
+  end
+
+  test "a 408 response retries instead of failing fast" do
+    WebMock.stub_request(:post, @webhook_url).to_return(status: 408)
+
+    event = deliverable_event
+    Agent::EventWebhookJob.perform_now(event.id)
+
+    assert_equal "pending", event.reload.webhook_status
+    assert_equal 1, event.reload.webhook_attempts
+    assert_enqueued_jobs 1, only: Agent::EventWebhookJob
+  end
+
+  test "a 404 response fails fast without retrying" do
+    WebMock.stub_request(:post, @webhook_url).to_return(status: 404, body: "gone")
+
+    event = deliverable_event
+
+    assert_no_enqueued_jobs only: Agent::EventWebhookJob do
+      Agent::EventWebhookJob.perform_now(event.id)
+    end
+
+    assert_equal "failed", event.reload.webhook_status
+    assert_equal 0, event.reload.webhook_attempts
+    assert_match "404", event.reload.webhook_last_error.to_s
+  end
+
+  test "an error response with an attachment body creates no sync reply" do
+    WebMock.stub_request(:post, @webhook_url)
+      .to_return(status: 500, body: file_fixture("moon.jpg").read, headers: { "Content-Type" => "image/jpeg" })
+
+    event = deliverable_event
+
+    assert_no_difference -> { Message.count } do
+      Agent::EventWebhookJob.perform_now(event.id)
+    end
+
+    assert_equal "pending", event.reload.webhook_status
+  end
+
   test "a guard refusal fails fast without retrying" do
     bot = User.create_bot!(name: "Loopback Webhook Bot", webhook_url: "http://127.0.0.1:9999/hook")
     agent = bot.create_agent!(kind: :workspace, owner: users(:david))

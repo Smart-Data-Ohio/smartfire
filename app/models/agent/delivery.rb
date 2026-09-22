@@ -8,6 +8,25 @@ class Agent::Delivery
   # gone): the delivery job records it and does not retry.
   class UndeliverableWebhook < StandardError; end
 
+  # Raised when the webhook endpoint answers 429, 408, or 5xx: the
+  # delivery job retries with backoff. Carries the endpoint's
+  # Retry-After delay in seconds when it sent a parseable one.
+  class RetryableWebhookResponse < StandardError
+    attr_reader :retry_after
+
+    def initialize(message, retry_after: nil)
+      @retry_after = retry_after
+      super(message)
+    end
+  end
+
+  # Raised when the endpoint answers any other non-2xx status: the
+  # delivery job records it and does not retry.
+  class PermanentWebhookResponse < StandardError; end
+
+  # Upper bound for an endpoint-provided Retry-After delay.
+  RETRY_AFTER_MAX = 1.hour
+
   class << self
     # Called after a message commits. Writes a `posted` row when the author
     # is an agent, then creates one pending event per recipient agent (or a
@@ -149,10 +168,12 @@ class Agent::Delivery
     # the message payload with sync replies; approval, GitHub action,
     # and work events carry their own payloads and ignore response
     # bodies. Raises UndeliverableWebhook when the payload cannot be
-    # built, and lets transport errors propagate for the caller to
-    # retry. Any completed HTTP response counts as delivered.
+    # built, RetryableWebhookResponse on a 429, 408, or 5xx answer,
+    # PermanentWebhookResponse on any other non-2xx answer, and lets
+    # transport errors propagate for the caller to retry. Only a 2xx
+    # response counts as delivered.
     def post_event_webhook!(webhook, event, agent:)
-      case event.event_type
+      response = case event.event_type
       when *AgentEvent::MESSAGE_DELIVERABLE_TYPES
         message = Message.find_by(id: event.message_id)
         raise UndeliverableWebhook, "Message no longer available" unless message
@@ -180,6 +201,9 @@ class Agent::Delivery
       else
         raise UndeliverableWebhook, "Event type #{event.event_type} has no webhook payload"
       end
+
+      check_webhook_response!(response)
+      response
     end
 
     # Runs inside Agent::DeliveryJob. Re-checks everything at perform time:
@@ -379,6 +403,41 @@ class Agent::Delivery
 
       def member_of?(agent, room)
         Membership.exists?(user_id: agent.user_id, room_id: room.id)
+      end
+
+      # Only a 2xx answer delivers. A 429, 408, or 5xx is worth
+      # retrying, carrying the endpoint's Retry-After delay when it
+      # sent a parseable one; anything else non-2xx (a wrong URL, a
+      # refused payload, an unhandled redirect) fails permanently.
+      def check_webhook_response!(response)
+        code = response.code.to_i
+        return if code.between?(200, 299)
+
+        if code == 429 || code == 408 || code >= 500
+          raise RetryableWebhookResponse.new("Webhook endpoint returned #{code}", retry_after: parse_retry_after(response))
+        else
+          raise PermanentWebhookResponse, "Webhook endpoint returned #{code}"
+        end
+      end
+
+      # Retry-After arrives as delay seconds or an HTTP date. Unparseable
+      # values mean no hint; valid ones clamp into 0..RETRY_AFTER_MAX so
+      # a hostile header cannot stall a delivery for days.
+      def parse_retry_after(response)
+        value = response["Retry-After"].to_s.strip
+        return if value.empty?
+
+        delay = if value.match?(/\A\d+\z/)
+          value.to_i
+        else
+          begin
+            Time.httpdate(value) - Time.current
+          rescue ArgumentError, TypeError
+            return
+          end
+        end
+
+        [ [ delay, 0 ].max, RETRY_AFTER_MAX ].min
       end
 
       # Atomically transitions a pending row; false when another job
