@@ -164,6 +164,9 @@ class ThreadsTest < ApplicationSystemTestCase
     find("#thread-panel [data-thread-panel-target='workManage'] summary").click
     find("#thread-panel [data-thread-panel-target='workOwner'] option", text: "Kevin", exact_text: true).select_option
     wait_for_condition { thread.reload.work_owner_id == users(:kevin).id }
+    # Wait for the save to RENDER, not just commit: the menu stays open
+    # until the PATCH response arrives, so toggling before this would close it.
+    assert_selector "#thread-panel [data-thread-panel-target='workOwnerLabel']", text: "Kevin", wait: 10
 
     find("#thread-panel [data-thread-panel-target='workManage'] summary").click
     find("#thread-panel [data-thread-panel-target='workStatus'] option[value='in_progress']").select_option
