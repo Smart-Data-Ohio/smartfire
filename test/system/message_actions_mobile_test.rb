@@ -10,8 +10,9 @@ class MessageActionsMobileTest < ApplicationSystemTestCase
   test "message action menu is a bottom sheet with touch-sized targets on phones" do
     page.current_window.resize_to(390, 844)
     within_message(messages(:third)) do
-      open_message_actions
+      right_click_message
     end
+    assert_message_menu_open
 
     # Metadata reveals the edit/delete actions and re-runs placement, so
     # wait for it before measuring the final geometry.
@@ -48,8 +49,9 @@ class MessageActionsMobileTest < ApplicationSystemTestCase
 
   test "message action menu stays a floating popover on desktop" do
     within_message(messages(:third)) do
-      open_message_actions
+      right_click_message
     end
+    assert_message_menu_open
 
     geometry = menu_geometry
     refute_nil geometry["menu"], "expected the message action menu to be open"
@@ -62,15 +64,10 @@ class MessageActionsMobileTest < ApplicationSystemTestCase
   end
 
   private
-    def open_message_actions
-      find("[data-message-edit-format], [data-reply-target='body']", match: :first).right_click
-      assert_selector "[data-message-actions-target='menu']", visible: true, wait: 10
-    end
-
     def menu_geometry
       page.evaluate_script(<<~JS)
         (() => {
-          const menu = document.querySelector(".message[data-message-actions-open] .message__actions-menu")
+          const menu = document.querySelector("#message-actions-menu:not([hidden])")
           if (!menu) return { menu: null }
           const rect = menu.getBoundingClientRect()
           const visibleSizes = selector => Array.from(menu.querySelectorAll(selector))

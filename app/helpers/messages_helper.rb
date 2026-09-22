@@ -20,7 +20,7 @@ module MessagesHelper
 
   def messages_tag(room, thread: nil, anchor_message_id: nil, &)
     messages_id = thread ? dom_id(thread, :messages) : dom_id(room, :messages)
-    controller = thread ? "maintain-scroll" : "maintain-scroll refresh-room"
+    controller = thread ? "maintain-scroll message-list" : "maintain-scroll refresh-room message-list"
     actions = [ maintain_scroll_actions ]
     actions << refresh_room_actions unless thread
 
@@ -45,6 +45,9 @@ module MessagesHelper
         message_id: message.id,
         room_id: message.room_id,
         thread_id: message.thread_id,
+        actions_url: message_actions_url(message),
+        message_url: message_action_url(message),
+        boost_url: message_boosts_url(message),
         message_timestamp: message_timestamp_milliseconds,
         message_updated_at: message.updated_at.to_fs(:epoch),
         sort_value: message_timestamp_milliseconds,
@@ -67,6 +70,16 @@ module MessagesHelper
       room_thread_message_url(message.room, message.thread, message)
     else
       room_message_url(message.room, message)
+    end
+  end
+
+  # The metadata endpoint behind the shared message menu (capabilities,
+  # edit source, forward and thread URLs).
+  def message_actions_url(message)
+    if message.thread_message?
+      actions_room_thread_message_url(message.room, message.thread, message)
+    else
+      actions_room_message_url(message.room, message)
     end
   end
 

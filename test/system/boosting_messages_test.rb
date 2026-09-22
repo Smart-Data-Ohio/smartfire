@@ -42,9 +42,10 @@ class BoostingMessagesTest < ApplicationSystemTestCase
       join_room rooms(:designers)
 
       within_message messages(:third) do
-        reveal_message_actions
-        click_on "Edit message", exact: true
+        right_click_message
       end
+      assert_message_menu_open
+      click_on "Edit message", exact: true
       fill_in_markdown "Write a message", with: "Redacted!"
       click_on "Send Message"
       assert_message_text "Redacted!"

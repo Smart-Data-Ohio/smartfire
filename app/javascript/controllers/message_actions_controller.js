@@ -1,112 +1,92 @@
 import { Controller } from "@hotwired/stimulus"
 
 const FOCUSABLE_SELECTOR = "button:not([disabled]), a[href]:not([aria-disabled='true'])"
-const LONG_PRESS_DELAY = 550
-const MOVE_THRESHOLD = 10
 const VIEWPORT_PADDING = 8
 
+// The shared message menu and forward dialog, rendered once per page. A
+// message-list controller (or a message toolbar button) opens it for one
+// message at a time through the message-actions:open window event; the
+// per-message URLs come from the message element's own data attributes.
 export default class extends Controller {
   static targets = [
-    "menu", "item", "threadLabel", "status", "forwardDialog", "forwardPreview", "forwardNote",
+    "menu", "item", "downloadLink", "threadLabel", "status", "forwardDialog", "forwardPreview", "forwardNote",
     "forwardDestinations", "forwardStatus", "forwardSubmit"
   ]
-  static values = {
-    messageUrl: String,
-    metadataUrl: String,
-    permalinkUrl: String,
-  }
 
   #message
-  #longPressTimer
-  #longPressPointer
-  #longPressTriggered = false
+  #messageUrl
+  #metadataUrl
+  #boostUrl
   #metadata
+  #metadataMessage
   #metadataRequest
   #forwardDestinationsRequest
   #forwardDestinationsController
   #previouslyFocusedElement
   #menuPoint
   #mobileSheetQuery
-  #menuId
   #announceTimer
   #forwardPreviouslyFocusedElement
   #open = false
   #connected = false
 
   connect() {
-    this.#message = this.element.closest(".message")
-    if (!this.#message || !this.hasMenuTarget) return
+    if (!this.hasMenuTarget) return
     this.#connected = true
 
-    this.#menuId = this.menuTarget.id || `message-actions-${this.#message.dataset.messageId || Math.random().toString(36).slice(2)}`
-    this.menuTarget.id = this.#menuId
-    this.#message.tabIndex = this.#message.tabIndex < 0 ? 0 : this.#message.tabIndex
-    this.#message.setAttribute("aria-haspopup", "menu")
-    this.#message.setAttribute("aria-controls", this.#menuId)
-    this.#message.setAttribute("aria-expanded", "false")
-
-    this.onContextMenu = this.#onContextMenu.bind(this)
-    this.onPointerDown = this.#onPointerDown.bind(this)
-    this.onPointerMove = this.#onPointerMove.bind(this)
-    this.onPointerUp = this.#onPointerUp.bind(this)
-    this.onKeydown = this.#onKeydown.bind(this)
     this.onMenuKeydown = this.#onMenuKeydown.bind(this)
     this.onMenuClick = this.#onMenuClick.bind(this)
     this.onDocumentPointerDown = this.#onDocumentPointerDown.bind(this)
     this.onWindowKeydown = this.#onWindowKeydown.bind(this)
-    this.onOtherMenuOpened = this.#onOtherMenuOpened.bind(this)
+    this.onOpenRequest = this.#onOpenRequest.bind(this)
+    this.onThreadRequest = this.#onThreadRequest.bind(this)
     this.onEditLast = this.#onEditLast.bind(this)
-    this.onCancelLongPress = this.#cancelLongPress.bind(this)
     this.onReposition = this.#reposition.bind(this)
     this.onForwardClose = this.#onForwardClose.bind(this)
 
-    this.#message.addEventListener("contextmenu", this.onContextMenu)
-    this.#message.addEventListener("pointerdown", this.onPointerDown)
-    this.#message.addEventListener("pointermove", this.onPointerMove)
-    this.#message.addEventListener("pointerup", this.onPointerUp)
-    this.#message.addEventListener("pointercancel", this.onPointerUp)
-    this.#message.addEventListener("keydown", this.onKeydown)
     this.menuTarget.addEventListener("keydown", this.onMenuKeydown)
     this.menuTarget.addEventListener("click", this.onMenuClick)
     this.forwardDialogTarget?.addEventListener("close", this.onForwardClose)
     document.addEventListener("pointerdown", this.onDocumentPointerDown)
     window.addEventListener("keydown", this.onWindowKeydown)
-    window.addEventListener("scroll", this.onCancelLongPress, true)
     window.addEventListener("resize", this.onReposition)
     window.visualViewport?.addEventListener("resize", this.onReposition)
     window.visualViewport?.addEventListener("scroll", this.onReposition)
-    window.addEventListener("message-actions:opening", this.onOtherMenuOpened)
+    window.addEventListener("message-actions:open", this.onOpenRequest)
+    window.addEventListener("message-actions:thread", this.onThreadRequest)
     window.addEventListener("message-actions:edit-last", this.onEditLast)
   }
 
   disconnect() {
     this.#connected = false
-    this.#cancelLongPress()
     this.#metadataRequest?.abort()
     this.#forwardDestinationsController?.abort()
 
-    this.#message?.removeEventListener("contextmenu", this.onContextMenu)
-    this.#message?.removeEventListener("pointerdown", this.onPointerDown)
-    this.#message?.removeEventListener("pointermove", this.onPointerMove)
-    this.#message?.removeEventListener("pointerup", this.onPointerUp)
-    this.#message?.removeEventListener("pointercancel", this.onPointerUp)
-    this.#message?.removeEventListener("keydown", this.onKeydown)
     this.menuTarget?.removeEventListener("keydown", this.onMenuKeydown)
     this.menuTarget?.removeEventListener("click", this.onMenuClick)
     this.forwardDialogTarget?.removeEventListener("close", this.onForwardClose)
     document.removeEventListener("pointerdown", this.onDocumentPointerDown)
     window.removeEventListener("keydown", this.onWindowKeydown)
-    window.removeEventListener("scroll", this.onCancelLongPress, true)
     window.removeEventListener("resize", this.onReposition)
     window.visualViewport?.removeEventListener("resize", this.onReposition)
     window.visualViewport?.removeEventListener("scroll", this.onReposition)
-    window.removeEventListener("message-actions:opening", this.onOtherMenuOpened)
+    window.removeEventListener("message-actions:open", this.onOpenRequest)
+    window.removeEventListener("message-actions:thread", this.onThreadRequest)
     window.removeEventListener("message-actions:edit-last", this.onEditLast)
   }
 
-  openFromContext(event) {
-    event.preventDefault()
-    this.#openMenu({ x: event.clientX, y: event.clientY })
+  openFor(message, point) {
+    if (!message?.isConnected || !message.dataset.actionsUrl) return
+    this.#setMessage(message)
+    this.#configureForMessage()
+    this.#openMenu(point)
+  }
+
+  async requestThread(message) {
+    if (!message?.isConnected || !message.dataset.actionsUrl) return
+    this.#setMessage(message)
+    await this.#ensureMetadata()
+    this.#dispatchThread()
   }
 
   close(event) {
@@ -119,8 +99,13 @@ export default class extends Controller {
     this.#closeMenu({ restoreFocus: false })
   }
 
-  edit(event) {
+  async edit(event) {
     event.preventDefault()
+    await this.#ensureMetadata()
+    if (this.#boolean(this.#metadata || {}, "can_edit", "canEdit", "editable") !== true) {
+      this.#closeMenu({ restoreFocus: false })
+      return
+    }
     this.#dispatchMessageEvent("message:edit")
     this.#closeMenu({ restoreFocus: false })
   }
@@ -133,14 +118,15 @@ export default class extends Controller {
 
   copyLink(event) {
     event.preventDefault()
-    this.#copy(this.permalinkUrlValue || this.messageUrlValue, "Message link copied")
+    this.#copy(this.#permalinkUrl() || this.#messageUrl, "Message link copied")
   }
 
-  forward(event) {
+  async forward(event) {
     event.preventDefault()
+    await this.#ensureMetadata()
     const detail = {
       forwardUrl: this.#stringFromMetadata("forward_url", "forwardUrl"),
-      sourceUrl: this.permalinkUrlValue || this.messageUrlValue,
+      sourceUrl: this.#permalinkUrl() || this.#messageUrl,
     }
     this.#dispatchMessageEvent("message:forward", detail)
     this.#openForwardDialog(detail)
@@ -166,7 +152,7 @@ export default class extends Controller {
       return
     }
 
-    const url = this.#stringFromMetadata("forward_url", "forwardUrl") || `${this.messageUrlValue}/forwards`
+    const url = this.#stringFromMetadata("forward_url", "forwardUrl") || `${this.#messageUrl}/forwards`
     const destinations = Array.from(selected, input => {
       const destination = { room_id: input.dataset.roomId || input.value }
       if (input.dataset.threadId) destination.thread_id = input.dataset.threadId
@@ -197,12 +183,10 @@ export default class extends Controller {
     }
   }
 
-  thread(event) {
+  async thread(event) {
     event.preventDefault()
-    this.#dispatchMessageEvent("message:thread", {
-      threadUrl: this.#stringFromMetadata("thread_url", "threadUrl"),
-      threadSummary: this.#metadata?.thread_summary || this.#metadata?.threadSummary || null,
-    })
+    await this.#ensureMetadata()
+    this.#dispatchThread()
     this.#closeMenu({ restoreFocus: false })
   }
 
@@ -211,7 +195,7 @@ export default class extends Controller {
     if (!window.confirm("Are you sure you want to delete this message?")) return
 
     const message = this.#message
-    const response = await fetch(this.messageUrlValue, {
+    const response = await fetch(this.#messageUrl, {
       method: "DELETE",
       headers: {
         Accept: "text/vnd.turbo-stream.html, application/json",
@@ -236,52 +220,13 @@ export default class extends Controller {
 
   // Internal event handlers
 
-  #onContextMenu(event) {
-    if (this.#isInteractive(event.target)) return
-    event.preventDefault()
-    if (this.#longPressPointer) return
-    this.#openMenu({ x: event.clientX, y: event.clientY })
+  #onOpenRequest(event) {
+    if (!event.detail?.message) return
+    this.openFor(event.detail.message, { x: event.detail.x, y: event.detail.y })
   }
 
-  #onPointerDown(event) {
-    if (event.pointerType !== "touch" || event.button !== 0 || this.#isInteractive(event.target)) return
-
-    this.#cancelLongPress()
-    this.#longPressPointer = { id: event.pointerId, x: event.clientX, y: event.clientY }
-    this.#longPressTimer = setTimeout(() => {
-      if (!this.#longPressPointer) return
-      this.#longPressTriggered = true
-    }, LONG_PRESS_DELAY)
-  }
-
-  #onPointerMove(event) {
-    if (!this.#longPressPointer || event.pointerId !== this.#longPressPointer.id) return
-
-    const distance = Math.hypot(event.clientX - this.#longPressPointer.x, event.clientY - this.#longPressPointer.y)
-    if (distance > MOVE_THRESHOLD) this.#cancelLongPress()
-  }
-
-  #onPointerUp(event) {
-    if (event.type === "pointercancel") {
-      this.#cancelLongPress()
-      return
-    }
-    if (this.#longPressPointer && event.pointerId === this.#longPressPointer.id && this.#longPressTriggered) {
-      const { x, y } = this.#longPressPointer
-      this.#cancelLongPress()
-      setTimeout(() => this.#openMenu({ x, y }), 0)
-      return
-    }
-    if (!this.#longPressPointer || event.pointerId === this.#longPressPointer.id) this.#cancelLongPress()
-  }
-
-  #onKeydown(event) {
-    const contextMenuKey = event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey)
-    if (!contextMenuKey || this.#isInteractive(event.target)) return
-
-    event.preventDefault()
-    const rect = this.#message.getBoundingClientRect()
-    this.#openMenu({ x: rect.left + Math.min(rect.width / 2, 240), y: rect.bottom })
+  #onThreadRequest(event) {
+    if (event.detail?.message) void this.requestThread(event.detail.message)
   }
 
   #onMenuKeydown(event) {
@@ -334,7 +279,11 @@ export default class extends Controller {
   }
 
   #onDocumentPointerDown(event) {
-    if (this.#open && !this.#message.contains(event.target)) this.#closeMenu()
+    if (!this.#open) return
+    if (this.menuTarget.contains(event.target)) return
+    if (this.hasForwardDialogTarget && this.forwardDialogTarget.contains(event.target)) return
+    if (this.#message?.contains(event.target)) return
+    this.#closeMenu()
   }
 
   #onWindowKeydown(event) {
@@ -342,10 +291,6 @@ export default class extends Controller {
       event.preventDefault()
       this.#closeMenu()
     }
-  }
-
-  #onOtherMenuOpened(event) {
-    if (event.detail?.controller !== this) this.#closeMenu()
   }
 
   #onForwardClose() {
@@ -367,18 +312,73 @@ export default class extends Controller {
   }
 
   async #onEditLast(event) {
-    if (event.detail?.message !== this.#message) return
-    await this.#loadMetadata()
+    const message = event.detail?.message
+    if (!message?.isConnected || !message.dataset.actionsUrl) return
+    this.#setMessage(message)
+    await this.#ensureMetadata()
     if (this.#boolean(this.#metadata || {}, "can_edit", "canEdit", "editable") !== true) return
     this.#dispatchMessageEvent("message:edit")
   }
 
   // Menu lifecycle
 
+  #setMessage(message) {
+    if (this.#message && this.#message !== message) this.#clearMessageState()
+    this.#message = message
+    this.#messageUrl = message.dataset.messageUrl
+    this.#metadataUrl = message.dataset.actionsUrl
+    this.#boostUrl = message.dataset.boostUrl
+    if (this.#metadataMessage !== message) {
+      this.#metadataRequest?.abort()
+      this.#metadataRequest = null
+      this.#metadata = null
+      this.#metadataMessage = message
+    }
+  }
+
+  #configureForMessage() {
+    const frame = `boosting_${this.#message.id}`
+    this.menuTarget.querySelectorAll("form").forEach(form => {
+      form.action = this.#boostUrl
+      form.setAttribute("data-turbo-frame", frame)
+    })
+
+    if (this.hasDownloadLinkTarget) {
+      const source = this.#message.querySelector(".message__body-content a.message__action-btn[href], .message__body-content a[data-lightbox-target='image'][href]")
+      if (source) {
+        this.downloadLinkTarget.href = source.href
+        this.downloadLinkTarget.hidden = false
+        this.downloadLinkTarget.setAttribute("aria-hidden", "false")
+      } else {
+        this.downloadLinkTarget.hidden = true
+        this.downloadLinkTarget.setAttribute("aria-hidden", "true")
+      }
+    }
+
+    this.#setActionAvailability(".message__edit-action", false)
+    this.#setActionAvailability(".message__delete-action", false)
+    if (this.hasThreadLabelTarget) this.threadLabelTarget.textContent = "Create thread"
+    this.itemTargets.filter(item => item.dataset.reaction).forEach(item => {
+      item.removeAttribute("aria-pressed")
+      item.removeAttribute("data-reaction-active")
+    })
+
+    this.#message.setAttribute("aria-haspopup", "menu")
+    if (this.menuTarget.id) this.#message.setAttribute("aria-controls", this.menuTarget.id)
+
+    if (this.#metadataMessage === this.#message && this.#metadata) {
+      this.#applyMetadata({ actions: this.#metadata })
+    }
+  }
+
+  #clearMessageState() {
+    this.#message?.removeAttribute("data-message-actions-open")
+    this.#message?.setAttribute("aria-expanded", "false")
+  }
+
   #openMenu(point) {
     if (!this.#message?.isConnected) return
 
-    window.dispatchEvent(new CustomEvent("message-actions:opening", { detail: { controller: this } }))
     this.#previouslyFocusedElement = document.activeElement
     this.#menuPoint = point
     this.#open = true
@@ -388,7 +388,7 @@ export default class extends Controller {
     this.menuTarget.setAttribute("aria-hidden", "false")
     this.#showMenuPopover()
     this.#positionMenu()
-    this.#loadMetadata()
+    void this.#ensureMetadata()
 
     const focus = () => {
       this.#positionMenu()
@@ -399,12 +399,10 @@ export default class extends Controller {
   }
 
   #closeMenu({ restoreFocus = true } = {}) {
-    this.#cancelLongPress()
     if (!this.#open && this.menuTarget?.hidden) return
 
     this.#open = false
-    this.#message?.removeAttribute("data-message-actions-open")
-    this.#message?.setAttribute("aria-expanded", "false")
+    this.#clearMessageState()
     if (this.menuTarget) {
       this.#hideMenuPopover()
       this.menuTarget.hidden = true
@@ -496,8 +494,8 @@ export default class extends Controller {
   }
 
   #fallbackForwardDestinationsUrl() {
-    if (!this.messageUrlValue) return null
-    return `${this.messageUrlValue.replace(/\/$/, "")}/forwards/destinations`
+    if (!this.#messageUrl) return null
+    return `${this.#messageUrl.replace(/\/$/, "")}/forwards/destinations`
   }
 
   #populateForwardDestinations(destinations) {
@@ -673,24 +671,31 @@ export default class extends Controller {
 
   // Metadata and actions
 
-  async #loadMetadata() {
-    if (!this.metadataUrlValue || this.#metadataRequest) return
+  async #ensureMetadata() {
+    if (this.#metadata && this.#metadataMessage === this.#message) return this.#metadata
+    if (!this.#metadataUrl) return null
 
-    this.#metadataRequest = new AbortController()
+    this.#metadataRequest?.abort()
+    const request = new AbortController()
+    this.#metadataRequest = request
+    const message = this.#message
+
     try {
-      const response = await fetch(this.metadataUrlValue, {
+      const response = await fetch(this.#metadataUrl, {
         headers: { Accept: "application/json" },
         cache: "no-store",
-        signal: this.#metadataRequest.signal,
+        signal: request.signal,
       })
-      if (!response.ok || !this.#connected) return
+      if (!response.ok || !this.#connected || this.#message !== message) return null
 
       const payload = await response.json()
-      if (this.#connected) this.#applyMetadata(payload)
+      if (this.#connected && this.#message === message) this.#applyMetadata(payload)
+      return this.#metadata
     } catch (error) {
       if (error.name !== "AbortError") this.#announce("Message actions are temporarily unavailable")
+      return null
     } finally {
-      this.#metadataRequest = null
+      if (this.#metadataRequest === request) this.#metadataRequest = null
     }
   }
 
@@ -700,12 +705,6 @@ export default class extends Controller {
 
     this.#setActionAvailability(".message__edit-action", this.#boolean(metadata, "can_edit", "canEdit", "editable"))
     this.#setActionAvailability(".message__delete-action", this.#boolean(metadata, "can_delete", "canDelete", "deletable"))
-
-    const source = this.#stringFromMetadata("edit_source", "editable_markdown_source", "editableMarkdownSource", "markdown_source")
-    if (source !== null) this.#message.dataset.editSource = source
-
-    const editFormat = this.#stringFromMetadata("edit_format", "editable_format", "editableFormat")
-    if (editFormat !== null) this.#message.dataset.editFormat = editFormat
 
     const threadSummary = metadata.thread_summary || metadata.threadSummary
     if (threadSummary && this.hasThreadLabelTarget) {
@@ -753,6 +752,13 @@ export default class extends Controller {
     return Number(summary.count || summary.message_count || summary.messageCount || 0)
   }
 
+  #dispatchThread() {
+    this.#dispatchMessageEvent("message:thread", {
+      threadUrl: this.#stringFromMetadata("thread_url", "threadUrl"),
+      threadSummary: this.#metadata?.thread_summary || this.#metadata?.threadSummary || null,
+    })
+  }
+
   #dispatchMessageEvent(name, extra = {}) {
     window.dispatchEvent(new CustomEvent(name, {
       detail: {
@@ -773,12 +779,22 @@ export default class extends Controller {
       roomId: this.#message.dataset.roomId || document.querySelector("meta[name='current-room-id']")?.content,
       threadId: this.#message.dataset.threadId || "",
       author,
-      url: this.permalinkUrlValue || this.messageUrlValue,
-      messageUrl: this.messageUrlValue,
-      source: source || this.#message.dataset.editSource || body?.dataset.messageEditSource || null,
-      sourceFormat: this.#stringFromMetadata("edit_format", "editable_format", "editableFormat") || this.#message.dataset.editFormat || body?.dataset.messageEditFormat || "markdown",
+      url: this.#permalinkUrl() || this.#messageUrl,
+      messageUrl: this.#messageUrl,
+      source: source || null,
+      sourceFormat: this.#stringFromMetadata("edit_format", "editable_format", "editableFormat") || "markdown",
       previewText: this.#fallbackText(body),
       driveAttachments: this.#driveAttachments(),
+    }
+  }
+
+  #permalinkUrl() {
+    const href = this.#message?.querySelector("a.message__permalink")?.getAttribute("href")
+    if (!href) return null
+    try {
+      return new URL(href, window.location.origin).href
+    } catch {
+      return href
     }
   }
 
@@ -826,16 +842,5 @@ export default class extends Controller {
     this.statusTarget.textContent = message
     clearTimeout(this.#announceTimer)
     this.#announceTimer = setTimeout(() => this.statusTarget.textContent = "", 2_000)
-  }
-
-  #isInteractive(target) {
-    return Boolean(target?.closest("a, button, input, textarea, select, option, [contenteditable='true'], [data-no-message-menu]") || this.menuTarget.contains(target))
-  }
-
-  #cancelLongPress() {
-    clearTimeout(this.#longPressTimer)
-    this.#longPressTimer = null
-    this.#longPressPointer = null
-    this.#longPressTriggered = false
   }
 }

@@ -38,19 +38,21 @@ class ThreadsTest < ApplicationSystemTestCase
     save_thread_screenshot "desktop-conversation.png"
 
     within_thread_message("A reply from the thread drawer.") do
-      open_message_actions
-      click_button "Reply"
+      right_click_message
     end
+    assert_message_menu_open
+    click_button "Reply"
     assert_selector "#thread-panel [data-composer-target='contextLabel']", text: /Replying to/
     fill_in "Write a thread reply", with: "A reply to the drawer message."
     click_button "Send Reply"
     assert_selector "#thread-panel .message__reply-preview", text: /A reply from the thread drawer/, wait: 10
 
     within_thread_message(first_message) do
-      open_message_actions
-      assert_selector ".message__edit-action", visible: true, wait: 10
-      click_button "Edit message"
+      right_click_message
     end
+    assert_message_menu_open
+    assert_selector ".message__edit-action", visible: true, wait: 10
+    click_button "Edit message"
     assert_selector "#thread-panel [data-composer-target='contextLabel']", text: "Editing Message"
     fill_in "Write a thread reply", with: "The edited thread starter."
     click_button "Send Reply"
@@ -58,9 +60,10 @@ class ThreadsTest < ApplicationSystemTestCase
     assert_selector "#thread-panel [data-thread-panel-target='parent']", text: "Third time's a charm.", wait: 10
 
     within_thread_message("A reply to the drawer message.") do
-      open_message_actions
-      find(".message__quick-reaction[title='Thumbs up']").click
+      right_click_message
     end
+    assert_message_menu_open
+    find(".message__quick-reaction[title='Thumbs up']").click
     assert_selector "#thread-panel .boosts__reactions", text: "👍", wait: 10
   end
 
@@ -206,16 +209,17 @@ class ThreadsTest < ApplicationSystemTestCase
     assert_selector "#thread-panel [data-thread-panel-target='conversation']", visible: true, wait: 10
 
     within_thread_message("A second mobile thread.") do
-      open_message_actions
-      assert page.evaluate_script(<<~JS), "the mobile message menu should stay inside the viewport"
+      right_click_message
+    end
+    assert_message_menu_open
+    assert page.evaluate_script(<<~JS), "the mobile message menu should stay inside the viewport"
         (() => {
-          const menu = document.querySelector("#thread-panel .message__actions-menu:not([hidden])");
+          const menu = document.querySelector("#message-actions-menu:not([hidden])");
           if (!menu) return false;
           const rect = menu.getBoundingClientRect();
           return rect.left >= 0 && rect.top >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight;
         })()
       JS
-    end
 
     page.send_keys :escape
     assert_selector "#thread-panel[aria-hidden='false']", visible: true
@@ -425,10 +429,10 @@ class ThreadsTest < ApplicationSystemTestCase
 
     def create_thread_from_message(name, first_message)
       within_message(messages(:third)) do
-        find("[data-message-edit-format], [data-reply-target='body']", match: :first).right_click
-        assert_selector "[data-message-actions-target='menu']", visible: true, wait: 10
-        click_button "Create thread"
+        right_click_message
       end
+      assert_message_menu_open
+      click_button "Create thread"
 
       assert_selector "#thread-panel [data-thread-panel-target='create']", visible: true, wait: 10
       fill_in "Thread name", with: name
@@ -461,14 +465,8 @@ class ThreadsTest < ApplicationSystemTestCase
       message_id = message["id"]
       assert_selector "##{message_id}[aria-haspopup='menu']", visible: false, wait: 10
       within(message) do
-        assert_selector "[data-controller~='message-actions']", wait: 10
         yield
       end
-    end
-
-    def open_message_actions
-      find("[data-message-edit-format], [data-reply-target='body']", match: :first).right_click
-      assert_selector "[data-message-actions-target='menu']", visible: true, wait: 10
     end
 
     def wait_for_thread_read_state(membership, unread:)

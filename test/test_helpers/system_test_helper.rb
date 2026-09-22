@@ -58,9 +58,20 @@ module SystemTestHelper
     assert_selector ".rooms a", class: "unread", text: "#{room.name}", wait: 5
   end
 
-  def reveal_message_actions
+  # Right-clicks the message body in the current scope. Call it inside
+  # within_message, then assert on the shared menu outside the scope.
+  def right_click_message
     find("[data-message-edit-format], [data-reply-target='body']", match: :first).right_click
-    assert_selector ".message[data-message-actions-open] .message__quick-reaction", visible: true
+  end
+
+  def assert_message_menu_open
+    assert_selector "[data-message-actions-target='menu']", visible: true, wait: 10
+    assert_selector ".message[data-message-actions-open]"
+  end
+
+  def reveal_message_actions
+    right_click_message
+    assert_message_menu_open
   end
 
   def dismiss_pwa_install_prompt

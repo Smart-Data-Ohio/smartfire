@@ -94,9 +94,10 @@ class DriveAttachmentsTest < ApplicationSystemTestCase
     assert_selector ".drive-attachments .drive-chip__name", text: "Budget 2026"
 
     within_message(Message.last) do
-      open_message_actions
-      click_button "Edit message"
+      right_click_message
     end
+    assert_message_menu_open
+    click_button "Edit message"
 
     assert_selector "[data-composer-target='contextLabel']", text: "Editing Message", wait: 10
     assert_selector ".composer__drive-attachments .drive-attachment-chip", count: 2
@@ -155,11 +156,6 @@ class DriveAttachmentsTest < ApplicationSystemTestCase
 
     def thread_panel_settled?
       page.evaluate_script("getComputedStyle(document.querySelector('#thread-panel .thread-panel__surface')).transform === 'none'")
-    end
-
-    def open_message_actions
-      find("[data-message-edit-format], [data-reply-target='body']", match: :first).right_click
-      assert_selector "[data-message-actions-target='menu']", visible: true, wait: 10
     end
 
     def attach_from_picker(name)

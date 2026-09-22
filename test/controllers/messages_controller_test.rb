@@ -64,7 +64,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_rendered_turbo_stream_broadcast @room, :messages, action: "append", target: [ @room, :messages ] do
-      assert_select "[data-message-actions-metadata-url-value='#{origin}#{actions_room_message_path(@room, Message.last)}']"
+      assert_select "[data-actions-url='#{origin}#{actions_room_message_path(@room, Message.last)}']"
       assert_copy_link_button "#{origin}#{room_at_message_path(@room, Message.last)}"
     end
   end
@@ -320,6 +320,6 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     end
 
     def assert_copy_link_button(url)
-      assert_select "[data-message-actions-permalink-url-value='#{url}']"
+      assert_select "a.message__permalink[href='#{url}']"
     end
 end

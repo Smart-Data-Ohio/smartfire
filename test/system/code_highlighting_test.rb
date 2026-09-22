@@ -127,9 +127,10 @@ class CodeHighlightingTest < ApplicationSystemTestCase
     assert_selector "pre code.language-ts[data-highlighted='yes'] .code-token", text: "const"
     message = Message.find_by!(markdown_source: source)
     within_message(message) do
-      reveal_message_actions
-      click_on "Edit message", exact: true
+      right_click_message
     end
+    assert_message_menu_open
+    click_on "Edit message", exact: true
 
     replacement = "```python\ndef greet(name):\n    return \"Hello \" + name\n```"
     fill_in_markdown "Write a message", with: replacement
