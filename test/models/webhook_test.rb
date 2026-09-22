@@ -285,6 +285,21 @@ class WebhookTest < ActiveSupport::TestCase
     assert_not_requested :post, webhooks(:bender).url
   end
 
+  test "signing secret generation mints exactly one secret when raced" do
+    webhook = webhooks(:bender)
+    webhook.update_column(:signing_secret, nil)
+    stale = Webhook.find(webhook.id)
+    assert_nil stale.signing_secret
+
+    # A concurrent first delivery wins the race after this instance
+    # loaded a blank value; the loser must adopt the winner's secret
+    # instead of overwriting it with a competing one.
+    winner = Webhook.find(webhook.id).ensure_signing_secret!
+
+    assert_equal winner, stale.ensure_signing_secret!
+    assert_equal winner, webhook.reload.signing_secret
+  end
+
   private
     def webhook_header(request, name)
       value = request.headers.find { |key, _| key.to_s.downcase == name }&.last

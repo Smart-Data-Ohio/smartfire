@@ -13,16 +13,27 @@ class Webhook < ApplicationRecord
 
   # The HMAC secret signing legacy deliveries from this webhook, or nil
   # when unsigned. Agent deliveries use the agent's own secret instead.
-  # Shown to admins on the bot edit page, never logged.
+  # Shown to admins on the bot edit page, never logged. Generated under
+  # the webhook's row lock with a fresh read, so concurrent first
+  # deliveries cannot mint competing secrets and invalidate each
+  # other's signatures.
   def ensure_signing_secret!
     return signing_secret if signing_secret.present?
 
-    reset_signing_secret!
+    with_lock do
+      reload
+      return signing_secret if signing_secret.present?
+
+      update!(signing_secret: SecureRandom.hex(32))
+      signing_secret
+    end
   end
 
   def reset_signing_secret!
-    update!(signing_secret: SecureRandom.hex(32))
-    signing_secret
+    with_lock do
+      update!(signing_secret: SecureRandom.hex(32))
+      signing_secret
+    end
   end
 
   # Posts a JSON payload to this webhook's URL through the SSRF guard,
