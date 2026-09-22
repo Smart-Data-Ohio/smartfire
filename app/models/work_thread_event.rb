@@ -134,30 +134,37 @@ class WorkThreadEvent < ApplicationRecord
     }
   end
 
+  # Memoized per record call: record_activity_items reads this once for the
+  # loop and the recorder reads it again per recipient through
+  # activity_recipient_ids, so recomputing would reload both membership
+  # lists once per recipient.
   def recipient_user_ids
-    room_memberships = thread.room.memberships.includes(:user).index_by(&:user_id)
-    thread_memberships = thread.memberships.index_by(&:user_id)
+    @recipient_user_ids ||=
+      begin
+        room_memberships = thread.room.memberships.includes(:user).index_by(&:user_id)
+        thread_memberships = thread.memberships.index_by(&:user_id)
 
-    # A result edit notifies the post's creator and owner only, not every
-    # thread follower; status and owner changes keep the wider rule below.
-    candidate_ids = [ thread.creator_id, from_owner_id, to_owner_id ]
-    unless event_type == "result_updated"
-      candidate_ids.concat(thread_memberships.values.select(&:involved_in_everything?).map(&:user_id))
-    end
+        # A result edit notifies the post's creator and owner only, not every
+        # thread follower; status and owner changes keep the wider rule below.
+        candidate_ids = [ thread.creator_id, from_owner_id, to_owner_id ]
+        unless event_type == "result_updated"
+          candidate_ids.concat(thread_memberships.values.select(&:involved_in_everything?).map(&:user_id))
+        end
 
-    candidate_ids.uniq.filter_map do |user_id|
-      next if user_id == actor_id
+        candidate_ids.uniq.filter_map do |user_id|
+          next if user_id == actor_id
 
-      room_membership = room_memberships[user_id]
-      user = room_membership&.user
-      next unless user&.active? && !user.bot?
-      next if room_membership.involvement.in?(%w[ invisible nothing ])
+          room_membership = room_memberships[user_id]
+          user = room_membership&.user
+          next unless user&.active? && !user.bot?
+          next if room_membership.involvement.in?(%w[ invisible nothing ])
 
-      thread_membership = thread_memberships[user_id]
-      next if thread_membership&.involved_in_nothing?
+          thread_membership = thread_memberships[user_id]
+          next if thread_membership&.involved_in_nothing?
 
-      user_id
-    end
+          user_id
+        end
+      end
   end
 
   alias activity_recipient_ids recipient_user_ids
@@ -176,8 +183,10 @@ class WorkThreadEvent < ApplicationRecord
       # work_update item sourced at this event, grouped with other updates.
       item_event_type = event_type == "result_updated" ? "work_update" : event_type
 
+      recipients_by_id = User.active.without_bots.where(id: recipient_user_ids).index_by(&:id)
+
       recipient_user_ids.each do |recipient_id|
-        recipient = User.active.without_bots.find_by(id: recipient_id)
+        recipient = recipients_by_id[recipient_id]
         next unless recipient
         next if agent_assignment_for_opted_out_recipient?(recipient)
 
