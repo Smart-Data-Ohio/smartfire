@@ -3,7 +3,8 @@
    desktop sizing is untouched. One global rule (rather than per-component
    overrides) so future fields are covered too. */
 @media (pointer: coarse) {
-  input, select, textarea {
+  input:not([type=checkbox], [type=radio], [type=range], [type=color], [type=file], [type=button], [type=submit], [type=reset], [type=image], [type=hidden]),
+  select, textarea {
     font-size: max(16px, 1em) !important;
   }
 }
