@@ -465,6 +465,12 @@ class HuddlesTest < ApplicationSystemTestCase
   test "muting and unmuting keeps the noise suppressor on the microphone" do
     open_huddle_as "jz@37signals.com"
 
+    assert page.evaluate_script(<<~JS), "expected the room to stop the mic track on mute"
+      window.Stimulus
+        .getControllerForElementAndIdentifier(document.getElementById('channel-huddle'), 'huddle')
+        ?.room?.options?.publishDefaults?.stopMicTrackOnMute === true
+    JS
+
     wait_for_condition("the RNNoise processor never attached to the microphone") do
       microphone_processor_name == "campfire-rnnoise"
     end
@@ -473,11 +479,22 @@ class HuddlesTest < ApplicationSystemTestCase
     assert_button "Unmute"
     assert_selector "#channel-huddle.huddle--muted"
 
+    # Muting stops the mic track so the OS indicator clears, and bypasses
+    # the worklet instead of filtering silence.
+    wait_for_condition("the mic track was not stopped on mute") do
+      microphone_track_state == "ended"
+    end
+    wait_for_condition("the noise processor kept running while muted") do
+      microphone_processor_name.nil?
+    end
+
     click_button "Unmute"
     assert_button "Mute"
 
-    # Muting disables the published track rather than replacing it, so the
-    # processor has to survive the round trip.
+    # Unmuting re-acquires the microphone and re-attaches the processor.
+    wait_for_condition("the microphone was not re-acquired on unmute") do
+      microphone_track_state == "live"
+    end
     wait_for_condition("the RNNoise processor was lost across mute and unmute") do
       microphone_processor_name == "campfire-rnnoise"
     end
@@ -1209,6 +1226,14 @@ class HuddlesTest < ApplicationSystemTestCase
         window.Stimulus
           .getControllerForElementAndIdentifier(document.getElementById('channel-huddle'), 'huddle')
           ?.room?.localParticipant?.getTrackPublication('microphone')?.audioTrack?.getProcessor()?.name ?? null
+      JS
+    end
+
+    def microphone_track_state
+      page.evaluate_script(<<~JS)
+        window.Stimulus
+          .getControllerForElementAndIdentifier(document.getElementById('channel-huddle'), 'huddle')
+          ?.room?.localParticipant?.getTrackPublication('microphone')?.audioTrack?.mediaStreamTrack?.readyState ?? null
       JS
     end
 

@@ -442,11 +442,13 @@ export default class extends Controller {
     if (!room || this.state !== "connected" || this.muteTarget.disabled) return
 
     this.muteTarget.disabled = true
+    const enabling = !room.localParticipant.isMicrophoneEnabled
+    // Unmuting re-acquires the stopped mic track from these defaults, so
+    // refresh them with the selected device (and the current filtering)
+    // first.
+    if (enabling && room.options) room.options.audioCaptureDefaults = this.#audioCaptureOptions()
     try {
-      await room.localParticipant.setMicrophoneEnabled(
-        !room.localParticipant.isMicrophoneEnabled,
-        this.#audioCaptureOptions()
-      )
+      await room.localParticipant.setMicrophoneEnabled(enabling, this.#audioCaptureOptions())
       if (room === this.room) {
         this.#updateMediaControls()
         this.#renderRoster()
@@ -891,7 +893,7 @@ export default class extends Controller {
   async #acquirePreviewAudio(preview) {
     // The pickers are authoritative here, not storage, so the stored device id
     // is swapped for the selected one.
-    const { deviceId: _stored, ...audio } = this.#audioCaptureOptions()
+    const { deviceId: _stored, ...audio } = this.#audioCaptureOptions({ forPreview: true })
     const selected = this.microphoneSelectTarget.value
     if (selected) audio.deviceId = { exact: selected }
 
@@ -1284,16 +1286,23 @@ export default class extends Controller {
         // camera-specific "maintain-framerate" default in its own publish
         // options (see #setCameraEnabled), so each track keeps its own default.
         videoEncoding: VideoPresets.h720.encoding,
-        simulcast: true
+        simulcast: true,
+        // Stops the microphone's media track while muted so the OS mic
+        // indicator clears; unmuting re-acquires from audioCaptureDefaults,
+        // which the mute toggle refreshes with the selected device first.
+        stopMicTrackOnMute: true
       }
     }
   }
 
-  #audioCaptureOptions() {
+  #audioCaptureOptions({ forPreview = false } = {}) {
     const options = {
       autoGainControl: true,
       echoCancellation: true,
-      noiseSuppression: true,
+      // RNNoise replaces the browser's suppressor when it is on, so the
+      // capture asks for none and the signal is filtered exactly once. The
+      // prejoin preview keeps the browser default: no processor runs there.
+      noiseSuppression: forPreview || !(this.noiseSuppressionAvailable && this.noiseSuppressionEnabled),
       // Chrome's stronger speech isolation where it exists; ignored elsewhere
       // because it is an "ideal" constraint rather than a required one.
       voiceIsolation: true
@@ -2118,7 +2127,10 @@ export default class extends Controller {
     const track = room.localParticipant.getTrackPublication?.(Track.Source.Microphone)?.audioTrack
     if (!track || typeof track.setProcessor !== "function") return
 
-    const wanted = this.noiseSuppressionAvailable && this.noiseSuppressionEnabled
+    // Muting bypasses the worklet: filtering silence wastes CPU, and the
+    // stopped mic track it fed is gone anyway. Unmuting re-attaches.
+    const wanted = this.noiseSuppressionAvailable && this.noiseSuppressionEnabled &&
+      room.localParticipant.isMicrophoneEnabled
     const current = track.getProcessor?.()
     if (wanted === Boolean(current)) return
 
@@ -2151,10 +2163,41 @@ export default class extends Controller {
         this.noiseSuppressionEnabled = false
         this.#showTemporaryStatus("Noise suppression couldn’t start. Basic filtering is still on — try again.")
       }
+
+      // The capture asked for no browser suppression because RNNoise was
+      // meant to filter; with the processor failed, re-acquire so the
+      // browser's basic filtering is actually on, as promised above.
+      await this.#restoreBrowserNoiseSuppression(room)
     } finally {
       this.noiseSuppressionBusy = false
       this.#updateNoiseSuppressionControl()
     }
+  }
+
+  // Re-acquires the microphone with the browser's own suppression after a
+  // processor failure. Skipped while muted — nothing live to re-acquire, and
+  // the next unmute captures with the same options anyway. Never throws:
+  // the microphone matters more than its filtering.
+  async #restoreBrowserNoiseSuppression(room) {
+    try {
+      if (room !== this.room || this.state !== "connected" || !room.localParticipant.isMicrophoneEnabled) return
+      if (room.options) room.options.audioCaptureDefaults = this.#audioCaptureOptions()
+
+      await room.localParticipant.setMicrophoneEnabled(false)
+      await room.localParticipant.setMicrophoneEnabled(true, this.#audioCaptureOptions())
+    } catch (error) {
+      if (room === this.room) {
+        this.#showTemporaryStatus("Noise suppression couldn't be started, and the microphone could not be restarted. Rejoin to restore filtering.")
+        this.#updateMediaControls()
+        this.#renderRoster()
+      }
+      return
+    }
+
+    if (room !== this.room) return
+    this.#updateMediaControls()
+    this.#renderRoster()
+    this.#startMicrophoneMeter()
   }
 
   // Only a browser that genuinely cannot run the filter latches it off for the
