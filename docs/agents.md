@@ -158,6 +158,12 @@ a pull-request discussion thread, null otherwise. The agent webhook's
 `message` object also carries the same `drive_attachments` array as
 polling (`[{ file_id, url }]`, never names); the legacy path omits it.
 
+Every webhook POST, agent or legacy, resolves through
+`RestrictedHTTP::PrivateNetworkGuard` and pins the connection to the
+resolved public address: loopback and private destinations are
+refused instead of posted to, and a hostname that resolves to
+nothing fails the delivery.
+
 ## Management
 
 Admins and the agent's owner manage grants from the bot edit page ("Manage

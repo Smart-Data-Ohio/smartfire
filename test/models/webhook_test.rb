@@ -53,4 +53,57 @@ class WebhookTest < ActiveSupport::TestCase
     reply_message = Message.last
     assert_equal "Failed to respond within 7 seconds", reply_message.body.to_plain_text
   end
+
+  test "delivery to a loopback URL is refused without posting" do
+    bot = User.create_bot!(name: "Loopback Bot", webhook_url: "http://127.0.0.1:9999/hook")
+
+    assert_raises RestrictedHTTP::Violation do
+      bot.webhook.deliver(messages(:first))
+    end
+
+    assert_not_requested :post, bot.webhook.url
+  end
+
+  test "delivery to a hostname resolving to a private address is refused" do
+    stub_dns_resolution("10.0.0.5")
+
+    assert_raises RestrictedHTTP::Violation do
+      webhooks(:bender).deliver(messages(:first))
+    end
+
+    assert_not_requested :post, webhooks(:bender).url
+  end
+
+  test "agent delivery to a refused URL raises instead of replying" do
+    bot = User.create_bot!(name: "Private Agent Bot", webhook_url: "http://192.168.1.10/hook")
+    agent = bot.create_agent!(kind: :workspace, owner: users(:david))
+
+    assert_no_difference -> { Message.count } do
+      assert_raises RestrictedHTTP::Violation do
+        bot.webhook.deliver(messages(:first), agent: agent, delivery_id: 1)
+      end
+    end
+  end
+
+  test "agent approval webhook to a refused URL raises" do
+    bot = User.create_bot!(name: "Private Approval Bot", webhook_url: "http://10.1.2.3/hook")
+    agent = bot.create_agent!(kind: :workspace, owner: users(:david))
+    approval = AgentApproval.create!(agent: agent, action: "deploy", summary: "Ship it")
+
+    assert_raises RestrictedHTTP::Violation do
+      Agent::Delivery.post_approval_webhook!(bot.webhook, approval, agent: agent, delivery_id: 1)
+    end
+
+    assert_not_requested :post, bot.webhook.url
+  end
+
+  test "delivery to an unresolvable hostname raises without posting" do
+    stub_dns_failure
+
+    assert_raises Surfguard::Unresolvable do
+      webhooks(:bender).deliver(messages(:first))
+    end
+
+    assert_not_requested :post, webhooks(:bender).url
+  end
 end

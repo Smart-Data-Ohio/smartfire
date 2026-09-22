@@ -1,6 +1,3 @@
-require "net/http"
-require "uri"
-
 class Agent::Delivery
   RATE_LIMIT_PER_MINUTE = 20
   RATE_WINDOW = 1.minute
@@ -91,19 +88,13 @@ class Agent::Delivery
     # the thread fields. Response bodies are ignored: an assignment
     # notification never creates a reply message.
     def post_work_webhook!(webhook, event, thread:, agent:)
-      uri = URI(webhook.url)
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = (uri.scheme == "https")
-      http.open_timeout = Webhook::ENDPOINT_TIMEOUT
-      http.read_timeout = Webhook::ENDPOINT_TIMEOUT
-
       payload = {
         agent: { id: agent.id, name: agent.user.name, owner: agent.owner&.name, delivery_id: event.id },
         event_type: event.event_type,
         work: work_payload(thread, assigned_by: event.metadata.is_a?(Hash) ? event.metadata["assigned_by"] : nil)
       }.to_json
 
-      http.request(Net::HTTP::Post.new(uri, "Content-Type" => "application/json").tap { |request| request.body = payload })
+      webhook.post_payload(payload)
     end
 
     # Posts an approval decision to the agent's webhook. The payload carries
@@ -111,12 +102,6 @@ class Agent::Delivery
     # with the decision fields. Response bodies are ignored: a decision
     # notification never creates a reply message.
     def post_approval_webhook!(webhook, approval, agent:, delivery_id:)
-      uri = URI(webhook.url)
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = (uri.scheme == "https")
-      http.open_timeout = Webhook::ENDPOINT_TIMEOUT
-      http.read_timeout = Webhook::ENDPOINT_TIMEOUT
-
       payload = {
         agent: { id: agent.id, name: agent.user.name, owner: agent.owner&.name, delivery_id: delivery_id },
         approval: {
@@ -127,7 +112,7 @@ class Agent::Delivery
         }
       }.to_json
 
-      http.request(Net::HTTP::Post.new(uri, "Content-Type" => "application/json").tap { |request| request.body = payload })
+      webhook.post_payload(payload)
     end
 
     # Posts a GitHub write-action result to the agent's webhook. The payload
@@ -135,12 +120,6 @@ class Agent::Delivery
     # github_action key with the completion fields. Response bodies are
     # ignored: a completion notification never creates a reply message.
     def post_github_action_webhook!(webhook, event, agent:)
-      uri = URI(webhook.url)
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = (uri.scheme == "https")
-      http.open_timeout = Webhook::ENDPOINT_TIMEOUT
-      http.read_timeout = Webhook::ENDPOINT_TIMEOUT
-
       metadata = event.metadata.is_a?(Hash) ? event.metadata : {}
       payload = {
         agent: { id: agent.id, name: agent.user.name, owner: agent.owner&.name, delivery_id: event.id },
@@ -153,7 +132,7 @@ class Agent::Delivery
         }.compact
       }.to_json
 
-      http.request(Net::HTTP::Post.new(uri, "Content-Type" => "application/json").tap { |request| request.body = payload })
+      webhook.post_payload(payload)
     end
 
     # Runs inside Agent::DeliveryJob. Re-checks everything at perform time:

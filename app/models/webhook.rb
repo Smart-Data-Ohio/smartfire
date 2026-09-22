@@ -1,10 +1,27 @@
 require "net/http"
 require "uri"
+require "restricted_http/private_network_guard"
 
 class Webhook < ApplicationRecord
   ENDPOINT_TIMEOUT = 7.seconds
 
   belongs_to :user
+
+  # Posts a JSON payload to this webhook's URL through the SSRF guard,
+  # pinning the connection to the resolved public address like unfurls.
+  # A URL pointing at loopback or a private address raises
+  # RestrictedHTTP::Violation instead of posting; a hostname that
+  # resolves to nothing raises Surfguard::Unresolvable.
+  def post_payload(payload)
+    address = RestrictedHTTP::PrivateNetworkGuard.resolve(uri.host)
+
+    Net::HTTP.start(uri.host, uri.port, ipaddr: address, use_ssl: uri.scheme == "https",
+      open_timeout: ENDPOINT_TIMEOUT, read_timeout: ENDPOINT_TIMEOUT) do |http|
+      request = Net::HTTP::Post.new(uri, "Content-Type" => "application/json")
+      request.body = payload
+      http.request(request)
+    end
+  end
 
   def deliver(message, agent: nil, delivery_id: nil)
     post(payload(message, agent: agent, delivery_id: delivery_id)).tap do |response|
@@ -20,18 +37,7 @@ class Webhook < ApplicationRecord
 
   private
     def post(payload)
-      http.request \
-        Net::HTTP::Post.new(uri, "Content-Type" => "application/json").tap { |request| request.body = payload }
-    end
-
-    # No PrivateNetworkGuard, unlike Opengraph::Fetch: only an administrator sets this URL,
-    # and operators legitimately point bots at their own internal services.
-    def http
-      Net::HTTP.new(uri.host, uri.port).tap do |http|
-        http.use_ssl = (uri.scheme == "https")
-        http.open_timeout = ENDPOINT_TIMEOUT
-        http.read_timeout = ENDPOINT_TIMEOUT
-      end
+      post_payload(payload)
     end
 
     def uri
