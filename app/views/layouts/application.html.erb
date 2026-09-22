@@ -65,6 +65,7 @@
             <%= image_tag "check.svg", aria: { hidden: true }, size: 24, class: "colorize--white" %></span>
           <% end %>
         </div>
+        <button type="button" class="flash__dismiss" data-action="element-removal#remove" aria-label="Dismiss notification">×</button>
         <span class="for-screen-reader" role="alert" aria-atomic="true"><%= notice %></span>
       </div>
     <% end %>
