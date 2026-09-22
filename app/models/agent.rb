@@ -152,12 +152,20 @@ class Agent < ApplicationRecord
 
   # The HMAC secret signing this agent's webhook deliveries, generated
   # lazily on first delivery so older rows need no backfill. Shown to
-  # admins and the owner on the bot edit page, never logged.
+  # admins and the owner on the bot edit page, never logged. Generated
+  # under the agent's row lock with a fresh read, so concurrent first
+  # deliveries cannot mint competing secrets and invalidate each
+  # other's signatures.
   def ensure_webhook_signing_secret!
     return webhook_signing_secret if webhook_signing_secret.present?
 
-    update!(webhook_signing_secret: self.class.generate_webhook_signing_secret)
-    webhook_signing_secret
+    with_lock do
+      reload
+      return webhook_signing_secret if webhook_signing_secret.present?
+
+      update!(webhook_signing_secret: self.class.generate_webhook_signing_secret)
+      webhook_signing_secret
+    end
   end
 
   def reset_webhook_signing_secret!
