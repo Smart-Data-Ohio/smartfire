@@ -14,7 +14,7 @@ module Periodic
 
     def initialize(reminders_interval: 30, retention_interval: 24.hours.to_i, logger: Rails.logger)
       @tasks = [
-        Task.new("delayed jobs", DELAYED_JOBS_INTERVAL, -> { Resque::Scheduler.handle_delayed_items }),
+        Task.new("delayed jobs", DELAYED_JOBS_INTERVAL, -> { Periodic::DelayedJobDrain.drain_due! }),
         Task.new("event reminders", reminders_interval, -> { Event::ReminderDispatcher.dispatch_due! }),
         Task.new("stuck rooms", STUCK_ROOM_SWEEP_INTERVAL, -> { Room::DestroyJob.reenqueue_stuck! }),
         Task.new("retention prune", retention_interval, -> { Retention::PruneJob.perform_later })

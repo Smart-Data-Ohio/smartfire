@@ -6,14 +6,14 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
   end
 
   test "a tick moves due delayed jobs onto their queues" do
-    Resque::Scheduler.expects(:handle_delayed_items).once
+    Periodic::DelayedJobDrain.expects(:drain_due!).once
     Event::ReminderDispatcher.stubs(:dispatch_due!)
 
     @runner.tick
   end
 
   test "a tick runs every task the first time" do
-    Resque::Scheduler.stubs(:handle_delayed_items)
+    Periodic::DelayedJobDrain.stubs(:drain_due!)
     Event::ReminderDispatcher.expects(:dispatch_due!).once
 
     assert_enqueued_with(job: Retention::PruneJob) do
@@ -22,7 +22,7 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
   end
 
   test "a tick skips tasks whose interval has not elapsed" do
-    Resque::Scheduler.stubs(:handle_delayed_items)
+    Periodic::DelayedJobDrain.stubs(:drain_due!)
     Event::ReminderDispatcher.stubs(:dispatch_due!)
 
     travel_to Time.current do
@@ -32,16 +32,16 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
   end
 
   test "a tick reruns tasks whose interval has elapsed but not the daily prune" do
-    Resque::Scheduler.stubs(:handle_delayed_items)
+    Periodic::DelayedJobDrain.stubs(:drain_due!)
     Event::ReminderDispatcher.stubs(:dispatch_due!)
 
     now = Time.current
     travel_to(now) { @runner.tick }
 
     travel_to(now + 30.seconds) do
-      Resque::Scheduler.unstub(:handle_delayed_items)
+      Periodic::DelayedJobDrain.unstub(:drain_due!)
       Event::ReminderDispatcher.unstub(:dispatch_due!)
-      Resque::Scheduler.expects(:handle_delayed_items).once
+      Periodic::DelayedJobDrain.expects(:drain_due!).once
       Event::ReminderDispatcher.expects(:dispatch_due!).once
 
       assert_no_enqueued_jobs do
@@ -51,7 +51,7 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
   end
 
   test "a tick re-enqueues destroys for rooms stuck as deleted once the sweep is due" do
-    Resque::Scheduler.stubs(:handle_delayed_items)
+    Periodic::DelayedJobDrain.stubs(:drain_due!)
     Event::ReminderDispatcher.stubs(:dispatch_due!)
 
     stuck = Rooms::Closed.create_for({ name: "Stuck", creator: users(:david) }, users: [ users(:david) ])
@@ -78,7 +78,7 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
   end
 
   test "a tick enqueues the retention prune once its interval has elapsed" do
-    Resque::Scheduler.stubs(:handle_delayed_items)
+    Periodic::DelayedJobDrain.stubs(:drain_due!)
     Event::ReminderDispatcher.stubs(:dispatch_due!)
 
     now = Time.current
@@ -90,7 +90,7 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
   end
 
   test "a failing task is logged and does not stop the other tasks" do
-    Resque::Scheduler.stubs(:handle_delayed_items).raises(Redis::BaseConnectionError, "Redis down")
+    Periodic::DelayedJobDrain.stubs(:drain_due!).raises(Redis::BaseConnectionError, "Redis down")
     Event::ReminderDispatcher.expects(:dispatch_due!).once
 
     assert_enqueued_with(job: Retention::PruneJob) { @runner.tick }
