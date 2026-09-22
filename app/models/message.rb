@@ -42,6 +42,7 @@ class Message < ApplicationRecord
   before_create -> { self.client_message_id ||= Random.uuid } # Bots don't care
   before_destroy :preserve_reply_tombstones, prepend: true
   after_create_commit :receive_in_conversation
+  after_create_commit :close_stale_sibling_threads, if: :thread_message?
   after_create_commit :record_activity_items
   # Create and update need distinct callback filters: registering the same
   # method twice on the commit chain keeps only one registration.
@@ -83,7 +84,7 @@ class Message < ApplicationRecord
     with_creator
       .with_rich_text_body_and_embeds
       .with_attached_attachment
-      .preload(:room, :thread, :channel_thread, :drive_attachments, reply_to_message: [ :room, :rich_text_body, { creator: :avatar_attachment } ])
+      .preload(:room, { thread: :room }, :channel_thread, :drive_attachments, reply_to_message: [ :room, :rich_text_body, { creator: :avatar_attachment } ])
   }
 
   class << self
@@ -217,6 +218,14 @@ class Message < ApplicationRecord
       else
         room.receive(self)
       end
+    end
+
+    # Thread writes run the room's archive sweep: with no scheduled-job
+    # facility this callback is what persists closed_at for stale threads.
+    # Reads stay correct between sweeps because ChannelThread#status
+    # reports stale threads as closed without writing.
+    def close_stale_sibling_threads
+      ChannelThread.close_stale_in(room:)
     end
 
     def preserve_reply_tombstones

@@ -75,14 +75,21 @@ class ChannelThread < ApplicationRecord
   }
 
   class << self
-    # There is no scheduled-job facility in this Smartfire deployment. Expire
-    # stale conversations whenever the thread surface is consulted, and take a
-    # row lock for the final decision so a concurrent post always wins.
-    # Board posts never auto-archive: closing stays a moderator action.
+    # There is no scheduled-job facility in this Smartfire deployment, so the
+    # archive sweep runs at thread write time (see Message's create callback),
+    # never on GET paths. One UPDATE with no per-row load or save; the single
+    # statement is atomic, so a concurrent post either lands first (and the
+    # thread is no longer stale) or reopens afterwards — either way the post
+    # wins, the same guarantee the old row lock gave. Board posts never
+    # auto-archive: closing stays a moderator action.
     def close_stale_in(room: nil)
       scope = room ? room.channel_threads : all
-      scope = scope.where.not(room_id: Room.boards.select(:id))
-      scope.active.find_each(&:close_if_stale!)
+      now = Time.current
+      scope
+        .where.not(room_id: Room.boards.select(:id))
+        .where(closed_at: nil, locked_at: nil)
+        .where("datetime(last_activity_at, '+' || auto_archive_after_minutes || ' minutes') <= datetime(?)", now.utc.to_fs(:db))
+        .update_all(closed_at: now, updated_at: now)
     end
 
     # The board index query behind GET /rooms/:id for a board room. Filters
@@ -265,9 +272,12 @@ class ChannelThread < ApplicationRecord
       end
   end
 
+  # Reads report stale threads as closed without writing: the persisted
+  # closed_at only catches up at the next thread write, so the display rule
+  # lives here rather than in the sweep.
   def status
     return "locked" if locked_at.present?
-    return "closed" if closed_at.present?
+    return "closed" if closed_at.present? || stale?
 
     "active"
   end
@@ -342,7 +352,7 @@ class ChannelThread < ApplicationRecord
   end
 
   def stale?
-    active? && auto_archive_at <= Time.current
+    closed_at.nil? && locked_at.nil? && last_activity_at.present? && !board_post? && auto_archive_at <= Time.current
   end
 
   def close_if_stale!(expected_last_activity_at: nil)

@@ -61,16 +61,38 @@ class ChannelThreadsControllerTest < ActionDispatch::IntegrationTest
     assert_response :no_content
   end
 
-  test "browsing does not join and stale active threads archive on the thread surface" do
+  test "browsing does not join and stale threads show as closed without writes" do
     @thread.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
     assert_not @thread.memberships.exists?(user: users(:kevin))
 
     sign_in :kevin
-    get room_threads_url(@room, state: "all", format: :json)
+    assert_no_changes -> { @thread.reload.closed_at } do
+      get room_threads_url(@room, state: "all", format: :json)
+    end
 
     assert_response :success
-    assert_predicate @thread.reload, :closed?
+    assert_equal "closed", response.parsed_body["threads"].find { |row| row["id"] == @thread.id }["status"]
     assert_not @thread.memberships.exists?(user: users(:kevin))
+
+    get room_threads_url(@room, format: :json)
+    assert_response :success
+    assert_empty response.parsed_body["threads"].select { |row| row["id"] == @thread.id }
+
+    get room_threads_url(@room, state: "closed", format: :json)
+    assert_response :success
+    assert_equal "closed", response.parsed_body["threads"].find { |row| row["id"] == @thread.id }["status"]
+  end
+
+  test "posting to a thread persists closed_at for its stale siblings" do
+    sign_in :jz
+    stale = ChannelThread.create!(room: @room, creator: @creator, name: "Stale sibling")
+    stale.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+    assert_nil stale.reload.closed_at
+
+    live = ChannelThread.create!(room: @room, creator: @creator, name: "Live sibling")
+    live.post_message!(creator: @creator, attributes: { body: "Hello", client_message_id: "sweep-trigger" })
+
+    assert_predicate stale.reload, :closed?
   end
 
   test "joining accepts only thread notification preferences and preserves an existing preference when omitted" do

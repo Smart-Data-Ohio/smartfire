@@ -4,7 +4,6 @@ class ChannelThreadsController < ApplicationController
   class ThreadUpdateForbidden < StandardError; end
   class InvalidThreadInvolvement < StandardError; end
 
-  before_action :close_stale_threads
   before_action :set_thread, except: %i[ index new create ]
   before_action :ensure_channel_room, only: :create
   before_action :ensure_thread_lifecycle_manager, only: :destroy
@@ -172,10 +171,6 @@ class ChannelThreadsController < ApplicationController
   end
 
   private
-    def close_stale_threads
-      ChannelThread.close_stale_in(room: @room)
-    end
-
     def set_thread
       @thread = @room.channel_threads.find(params[:id])
     end
@@ -184,20 +179,37 @@ class ChannelThreadsController < ApplicationController
       scope = @room.channel_threads.ordered
       case params[:state].to_s
       when "active", "open", ""
-        scope.active
+        reject_stale(scope.active)
       when "work", "working"
         scope.work.where.not(work_status: "done")
       when "done", "completed"
         scope.work.where(work_status: "done")
       when "closed"
-        scope.closed
+        include_stale(scope.closed, scope)
       when "locked"
         scope.locked
       when "all"
         scope
       else
-        scope.active
+        reject_stale(scope.active)
       end
+    end
+
+    # Reads report stale threads as closed without writing (see
+    # ChannelThread#status), so the state filters apply the same rule in
+    # memory: stale threads leave the active listing and join the closed
+    # one. Boards never go stale and skip both.
+    def reject_stale(threads)
+      return threads if @room.board?
+
+      threads.to_a.reject(&:stale?)
+    end
+
+    def include_stale(closed, scope)
+      return closed if @room.board?
+
+      (closed.to_a + scope.active.to_a.select(&:stale?))
+        .sort_by { |thread| [ thread.last_activity_at, thread.id ] }.reverse
     end
 
     def ensure_channel_room

@@ -49,4 +49,55 @@ class MessageForwardsControllerTest < ActionDispatch::IntegrationTest
     destination = response.parsed_body.fetch("destinations").find { |candidate| candidate.fetch("room_id") == direct.id }
     assert_equal "Kevin", destination.fetch("name")
   end
+
+  test "destinations show stale threads as closed without writing" do
+    stale = ChannelThread.create!(room: @room, creator: users(:jz), name: "Stale destination")
+    stale.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+
+    assert_no_changes -> { stale.reload.closed_at } do
+      get room_message_forward_destinations_url(@room, @message, format: :json)
+    end
+
+    assert_response :success
+    designers = response.parsed_body.fetch("destinations").find { |destination| destination.fetch("room_id") == @room.id }
+    thread = designers.fetch("threads").find { |candidate| candidate.fetch("id") == stale.id }
+    assert_equal "closed", thread.fetch("status")
+  end
+
+  test "destinations cost a constant number of queries as reachable rooms grow" do
+    create_destination_rooms(2, offset: 0)
+
+    get room_message_forward_destinations_url(@room, @message, format: :json)
+    assert_response :success
+    small = count_queries { get room_message_forward_destinations_url(@room, @message, format: :json) }
+
+    create_destination_rooms(4, offset: 2)
+
+    large = count_queries { get room_message_forward_destinations_url(@room, @message, format: :json) }
+    assert_response :success
+
+    assert_equal small, large, "destinations should be O(1) in queries, got #{small} then #{large}"
+  end
+
+  private
+    def create_destination_rooms(count, offset:)
+      count.times do |i|
+        room = Rooms::Open.create!(name: "destination room #{offset + i}", creator: users(:jz))
+        room.memberships.find_or_create_by!(user: users(:jz))
+        ChannelThread.create!(room:, creator: users(:jz), name: "destination thread #{offset + i}")
+      end
+    end
+
+    def count_queries
+      count = 0
+      subscription = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        count += 1 unless payload[:name] == "SCHEMA" || payload[:cached]
+      end
+
+      ActiveRecord::Base.connection.clear_query_cache
+      yield
+      count
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscription)
+    end
 end
