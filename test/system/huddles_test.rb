@@ -1247,11 +1247,13 @@ class HuddlesTest < ApplicationSystemTestCase
       JS
     end
 
+    # The raw capture track, not the noise suppressor's processed output:
+    # muting stops this one while the attached processor's track stays live.
     def microphone_track_state
       page.evaluate_script(<<~JS)
         window.Stimulus
           .getControllerForElementAndIdentifier(document.getElementById('channel-huddle'), 'huddle')
-          ?.room?.localParticipant?.getTrackPublication('microphone')?.audioTrack?.mediaStreamTrack?.readyState ?? null
+          ?.room?.localParticipant?.getTrackPublication('microphone')?.audioTrack?._mediaStreamTrack?.readyState ?? null
       JS
     end
 
