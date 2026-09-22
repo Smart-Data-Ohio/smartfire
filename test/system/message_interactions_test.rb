@@ -37,10 +37,10 @@ class MessageInteractionsTest < ApplicationSystemTestCase
 
     page.current_window.resize_to(390, 844)
     message = find("##{dom_id(messages(:third))}")
-    perform_touch_gesture(message, move_by: [ 25, 0 ])
+    long_press(message, move_by: [ 25, 0 ])
     assert_no_selector ".message[data-message-actions-open]"
 
-    perform_touch_gesture(message)
+    long_press(message)
     assert_message_menu_open
     assert_menu_within_viewport
     page.execute_script "window.confirm = () => false"
@@ -316,17 +316,6 @@ class MessageInteractionsTest < ApplicationSystemTestCase
   end
 
   private
-    def perform_touch_gesture(node, move_by: nil, hold: 0.7)
-      action = page.driver.browser.action
-      touch = action.add_pointer_input(:touch, "message-touch")
-      action.move_to(node.native, device: "message-touch")
-      action.pointer_down(:left, device: "message-touch")
-      action.move_by(*move_by, device: "message-touch") if move_by
-      action.pause(device: touch, duration: hold)
-      action.pointer_up(:left, device: "message-touch")
-      action.perform
-    end
-
     def save_screenshot(name)
       page.save_screenshot SCREENSHOT_DIR.join(name)
     end

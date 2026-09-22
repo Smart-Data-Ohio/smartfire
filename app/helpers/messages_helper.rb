@@ -57,6 +57,7 @@ module MessagesHelper
         message_updated_at: message.updated_at.to_fs(:epoch),
         sort_value: message_timestamp_milliseconds,
         messages_target: "message",
+        message_format_target: "message",
         search_results_target: "message",
         refresh_room_target: ("message" unless message.thread_message?),
         reply_composer_outlet: message.thread_message? ? "##{dom_id(message.thread, :composer)}" : "#composer"
@@ -98,6 +99,21 @@ module MessagesHelper
 
   def message_timestamp(message, **attributes)
     local_datetime_tag message.created_at, **attributes
+  end
+
+  # Data attributes for pages that render messages without the room shell
+  # (the standalone thread and message pages): message-format applies the
+  # list styling the messages controller would, and message-list attaches
+  # the shared menu and roving tabindex. Neither owns scrolling or streams.
+  def static_message_list_data
+    {
+      controller: "message-format message-list",
+      message_format_first_of_day_class: "message--first-of-day",
+      message_format_formatted_class: "message--formatted",
+      message_format_me_class: "message--me",
+      message_format_mentioned_class: "message--mentioned",
+      message_format_threaded_class: "message--threaded"
+    }
   end
 
   def message_presentation(message)

@@ -120,6 +120,67 @@ class MessageListA11yTest < ApplicationSystemTestCase
       "expected the live region to be restored after pagination"
   end
 
+  test "search results keep their menus and focusability" do
+    result = @room.messages.create!(body: "A searchable menu result", creator: users(:jz), client_message_id: "menu-search-result")
+
+    visit searches_url(q: "searchable")
+    dismiss_pwa_install_prompt
+    assert_selector "#search-results .message", text: "A searchable menu result"
+
+    assert_selector "#search-results .message[tabindex='0'][aria-haspopup='menu']"
+
+    within_message(result) do
+      right_click_message
+    end
+    assert_message_menu_open
+    page.send_keys :escape
+    assert_no_selector ".message[data-message-actions-open]"
+
+    long_press(find("#search-results ##{dom_id(result)}"))
+    assert_message_menu_open
+  end
+
+  test "the standalone thread page keeps menus and focusability" do
+    thread = ChannelThread.create!(room: @room, creator: users(:jz),
+      name: "Menu audit thread", parent_message: messages(:third))
+    reply = thread.messages.create!(room: @room, creator: users(:jz),
+      markdown_source: "A thread reply with a menu", client_message_id: SecureRandom.uuid)
+
+    visit room_thread_path(@room, thread)
+    dismiss_pwa_install_prompt
+    assert_selector "main.thread .message", count: 2
+    assert_selector "main.thread .message[tabindex='0'][aria-haspopup='menu']"
+
+    within_message(messages(:third)) do
+      right_click_message
+    end
+    assert_message_menu_open
+    page.send_keys :escape
+    assert_no_selector ".message[data-message-actions-open]"
+
+    within_message(reply) do
+      right_click_message
+    end
+    assert_message_menu_open
+    page.send_keys :escape
+    assert_no_selector ".message[data-message-actions-open]"
+
+    long_press(find("##{dom_id(reply)}"))
+    assert_message_menu_open
+  end
+
+  test "the standalone message page keeps its menu and focusability" do
+    visit room_message_path(@room, messages(:third))
+    dismiss_pwa_install_prompt
+    assert_selector ".message", text: "Third time's a charm."
+    assert_selector ".message[tabindex='0'][aria-haspopup='menu']"
+
+    within_message(messages(:third)) do
+      right_click_message
+    end
+    assert_message_menu_open
+  end
+
   test "the viewport allows pinch zoom" do
     meta = find("meta[name='viewport']", visible: false)
     assert_equal "width=device-width, initial-scale=1, interactive-widget=resizes-content", meta["content"]

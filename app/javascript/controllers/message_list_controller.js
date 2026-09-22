@@ -36,7 +36,7 @@ export default class extends Controller {
 
     this.#initTabindex()
     this.#observer = new MutationObserver(this.#onMutations.bind(this))
-    this.#observer.observe(this.element, { childList: true })
+    this.#observer.observe(this.element, { childList: true, subtree: true })
   }
 
   disconnect() {
@@ -209,7 +209,11 @@ export default class extends Controller {
   }
 
   #messages() {
-    return Array.from(this.element.children).filter(element => element.matches(MESSAGE_SELECTOR))
+    // Descendants, not just children: the standalone thread page nests its
+    // starter and messages in article/section wrappers. The closest guard
+    // keeps nested lists (if any) from managing each other's messages.
+    return Array.from(this.element.querySelectorAll(MESSAGE_SELECTOR))
+      .filter(element => element.closest("[data-controller~='message-list']") === this.element)
   }
 
   #isInteractive(target) {
