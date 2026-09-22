@@ -1,12 +1,20 @@
 #!/bin/bash
 set -euo pipefail
 
+storage="${CAMPFIRE_STORAGE:-/rails/storage}"
 db_name="${RAILS_ENV:-production}.sqlite3"
-snapshot="/rails/storage/backups/$db_name"
-db="/rails/storage/db/$db_name"
+snapshot="$storage/backups/$db_name"
+db="$storage/db/$db_name"
 
 if [ -f "$snapshot" ]; then
   mkdir -p "$(dirname "$db")"
   cp "$snapshot" "$db"
   rm -f "$db-wal" "$db-shm"
 fi
+
+# The Redis queue persists on this same volume (config/redis.conf sets dir
+# with appendonly), so a restored archive carries its old queue with it.
+# Drop the append-only log — both the Redis 7 multi-part directory and the
+# legacy single file — so a restore never replays stale jobs against the
+# restored database.
+rm -rf "$storage/appendonlydir" "$storage"/appendonly.aof*
