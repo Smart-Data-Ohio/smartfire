@@ -4,7 +4,7 @@
       <h2 class="margin-none">GitHub</h2>
       <p class="txt-small margin-none-block-start">
         Subscribed repositories post pull-request events to this room as the GitHub bot.
-        Titles from private repositories become visible to the whole room.
+        Your linked GitHub account must be able to read the repository, and titles from private repositories become visible to the whole room.
       </p>
     </div>
 
@@ -60,6 +60,13 @@
             </label>
           <% end %>
         </div>
+
+        <% if Current.user.administrator? %>
+          <label class="flex align-center gap txt-small">
+            <%= check_box_tag "github_repository_subscription[skip_access_check]", "1", false, id: "github_subscription_new_skip_access_check" %>
+            Subscribe without verifying my GitHub access (private pull-request titles stay hidden)
+          </label>
+        <% end %>
 
         <div>
           <%= submit_tag "Subscribe", class: "btn btn--reversed" %>

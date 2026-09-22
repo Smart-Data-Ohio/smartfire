@@ -2,7 +2,9 @@ class User < ApplicationRecord
   include Avatar, Bannable, Bot, Mentionable, Role, Transferable
 
   has_many :memberships, dependent: :delete_all
-  has_many :rooms, through: :memberships
+  # Listings, room scopes, and reachable messages all read through here, so
+  # soft-deleted rooms disappear from every one of them at once.
+  has_many :rooms, -> { alive }, through: :memberships
 
   has_many :reachable_messages, through: :rooms, source: :messages
   has_many :messages, dependent: :destroy, foreign_key: :creator_id
@@ -29,6 +31,7 @@ class User < ApplicationRecord
   normalizes :github_login, with: ->(login) { login.to_s.strip.downcase.presence }
 
   validates :github_login, uniqueness: { case_sensitive: false, message: "is already linked to another user" }, allow_nil: true
+  validate :github_login_must_match_verified_account, if: :will_save_change_to_github_login?
   validate :inbox_preferences_must_be_boolean
 
   normalizes :icon_name, with: ->(name) { Icons.normalize_name(name) }
@@ -68,6 +71,12 @@ class User < ApplicationRecord
     self[:inbox_preferences] = existing.merge((hash || {}).stringify_keys.slice(*User::InboxPreferences::KEYS))
   end
 
+  # True while a connected GitHub account vouches for the login: GitHub
+  # confirmed it when the token was linked, so the profile cannot edit it.
+  def github_login_verified?
+    github_connected_account&.connected? || false
+  end
+
   def initials
     name.scan(/\b\w/).join
   end
@@ -99,8 +108,13 @@ class User < ApplicationRecord
       push_subscriptions.delete_all
       searches.delete_all
       sessions.delete_all
+      Calendar::DisconnectCleanupJob.perform_later([], google_account.cleanup_snapshot, google_account.id) if google_account&.usable?
       google_account&.mark_disconnected!("Account deactivated")
       github_connected_account&.mark_disconnected!("Account deactivated")
+      # Agents this person owns stop with them: suspension revokes their
+      # grants, suspended agents' Bearer tokens are refused (401), and their
+      # bot keys fail every capability check (403).
+      Agent.where(owner_id: id).find_each(&:suspend!)
 
       update! status: :deactivated, email_address: deactived_email_address
     end
@@ -135,6 +149,13 @@ class User < ApplicationRecord
       end
     end
 
+    def github_login_must_match_verified_account
+      return unless github_login_verified?
+      return if github_login == github_connected_account.github_login.to_s.strip.downcase
+
+      errors.add(:github_login, "is set by your linked GitHub account")
+    end
+
     def inbox_preferences_must_be_boolean
       raw = self[:inbox_preferences]
       unless raw.nil? || raw.is_a?(Hash)
@@ -150,7 +171,7 @@ class User < ApplicationRecord
     end
 
     def grant_membership_to_open_rooms
-      Membership.insert_all(Rooms::Open.pluck(:id).collect { |room_id| { room_id: room_id, user_id: id } })
+      Membership.insert_all(Rooms::Open.alive.pluck(:id).collect { |room_id| { room_id: room_id, user_id: id } })
     end
 
     def deactived_email_address

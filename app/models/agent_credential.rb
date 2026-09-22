@@ -1,4 +1,8 @@
 class AgentCredential < ApplicationRecord
+  # `last_used_at`/`last_used_ip` are stamped at most this often per
+  # credential, like Agent#touch_last_seen!.
+  RECORD_USE_THROTTLE = 1.minute
+
   belongs_to :agent
   belongs_to :created_by, class_name: "User"
 
@@ -59,7 +63,24 @@ class AgentCredential < ApplicationRecord
     update!(revoked_at: Time.current) unless revoked?
   end
 
+  # Stamps use without callbacks or validations, at most once per minute
+  # per credential. The throttle check and the write are one conditional
+  # UPDATE so concurrent requests cannot both observe an expired value and
+  # write. An IP change inside the throttle window is recorded with the
+  # next stamp, not immediately.
   def record_use!(ip = nil)
-    update_columns(last_used_at: Time.current, last_used_ip: ip, updated_at: Time.current)
+    now = Time.current
+    written = AgentCredential.where(id: id)
+      .where("last_used_at IS NULL OR last_used_at <= ?", now - RECORD_USE_THROTTLE)
+      .update_all(last_used_at: now, last_used_ip: ip, updated_at: now)
+
+    if written.positive?
+      write_attribute(:last_used_at, now)
+      clear_attribute_change(:last_used_at)
+      write_attribute(:last_used_ip, ip)
+      clear_attribute_change(:last_used_ip)
+      write_attribute(:updated_at, now)
+      clear_attribute_change(:updated_at)
+    end
   end
 end

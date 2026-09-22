@@ -1,6 +1,8 @@
 require "test_helper"
 
 class UserTest < ActiveSupport::TestCase
+  include GoogleCalendarTestHelper
+
   test "user does not prevent very long passwords" do
     users(:david).update(password: "secret" * 50)
     assert users(:david).valid?
@@ -61,6 +63,37 @@ class UserTest < ActiveSupport::TestCase
 
     assert_equal "Account deactivated", account.reload.disconnected_reason
     assert_not_predicate account, :usable?
+  end
+
+  test "deactivating revokes the Google grant in the background" do
+    account = GoogleAccount.create!(user: users(:david), email: "david@gmail.test",
+      refresh_token: "refresh-token", access_token: "access-token", access_token_expires_at: 1.hour.from_now)
+
+    assert_enqueued_with(job: Calendar::DisconnectCleanupJob) do
+      users(:david).deactivate
+    end
+
+    job = enqueued_jobs.find { |enqueued| enqueued[:job] == Calendar::DisconnectCleanupJob }
+    assert_equal [], job[:args].first
+    blob = job[:args].second
+    assert_equal account.id, job[:args].third
+    assert_not_includes blob, "refresh-token"
+    assert_equal "refresh-token", Calendar::DisconnectCleanupJob.decrypt_credentials(blob).with_indifferent_access[:refresh_token]
+
+    revoke = stub_google_revoke
+    perform_enqueued_jobs only: Calendar::DisconnectCleanupJob
+
+    assert_requested revoke, body: hash_including({ "token" => "refresh-token" })
+  end
+
+  test "deactivating with an unreadable Google token skips the revoke" do
+    account = GoogleAccount.create!(user: users(:david), email: "david@gmail.test",
+      refresh_token: "refresh-token", access_token: "access-token", access_token_expires_at: 1.hour.from_now)
+    corrupt_google_token!(account)
+
+    assert_no_enqueued_jobs(only: Calendar::DisconnectCleanupJob) do
+      users(:david).deactivate
+    end
   end
 
   test "github logins are unique among present values" do

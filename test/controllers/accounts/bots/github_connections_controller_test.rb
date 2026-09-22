@@ -25,22 +25,27 @@ class Accounts::Bots::GithubConnectionsControllerTest < ActionDispatch::Integrat
     assert_equal token, account.access_token
   end
 
-  test "the owner can link and unlink without admin rights" do
+  test "the owner without admin rights can neither link, relink, nor unlink" do
+    GithubConnectedAccount.create!(user: @bot, github_login: "bender-machine", access_token: "admin-linked")
     @agent.update!(owner: users(:kevin))
     sign_in users(:kevin)
-    stub_github_user("bender-machine")
+    user_stub = stub_github_user("owner-machine")
 
     post account_bot_github_connection_url(@bot), params: { access_token: "owner-pat" }
+    assert_response :forbidden
+    assert_not_requested user_stub
+    assert_equal "bender-machine", @bot.reload.github_connected_account.github_login
+    assert_equal "admin-linked", @bot.github_connected_account.access_token
 
-    assert_redirected_to edit_account_bot_url(@bot)
-    assert_predicate @bot.reload.github_connected_account, :usable?
-
-    assert_difference -> { GithubConnectedAccount.count }, -1 do
+    assert_no_difference -> { GithubConnectedAccount.count } do
       delete account_bot_github_connection_url(@bot)
     end
+    assert_response :forbidden
 
-    assert_redirected_to edit_account_bot_url(@bot)
-    assert_equal "GitHub disconnected.", flash[:notice]
+    get edit_account_bot_url(@bot)
+    assert_response :ok
+    assert_select "form[action=?]", account_bot_github_connection_path(@bot), count: 0
+    assert_match "Connected as bender-machine", response.body
   end
 
   test "another member gets 403 linking and unlinking" do

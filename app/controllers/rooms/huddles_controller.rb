@@ -64,7 +64,7 @@ class Rooms::HuddlesController < ApplicationController
     end
 
     def set_room
-      @membership = Current.user.memberships.find_by(room_id: params[:room_id])
+      @membership = Current.user.memberships.joins(:room).merge(Room.alive).find_by(room_id: params[:room_id])
       @room = @membership&.room
       render_error "Room not found or inaccessible", :not_found unless @membership && @room
     end

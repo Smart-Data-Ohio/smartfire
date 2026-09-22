@@ -53,4 +53,43 @@ class GoogleAccountTest < ActiveSupport::TestCase
     assert_not_predicate account, :connected?
     assert_not_predicate account, :usable?
   end
+
+  test "calendar? treats blank scopes as granted and requires calendar.events otherwise" do
+    account = connect_google!(users(:david))
+
+    assert_predicate account, :calendar?
+
+    account.update!(scopes: "openid email")
+
+    assert_not_predicate account, :calendar?
+
+    account.update!(scopes: CALENDAR_SCOPES)
+
+    assert_predicate account, :calendar?
+  end
+
+  test "an unreadable token reads as unusable and marks the account disconnected" do
+    account = connect_google!(users(:david))
+    corrupt_google_token!(account)
+
+    assert_not_predicate account, :usable?
+    assert_equal GoogleAccount::UNREADABLE_TOKEN_REASON, account.reload.disconnected_reason
+    assert_not_predicate account, :connected?
+  end
+
+  test "cleanup_snapshot returns an encrypted blob, or nil when unreadable" do
+    account = connect_google!(users(:david))
+
+    blob = account.cleanup_snapshot
+    snapshot = Calendar::DisconnectCleanupJob.decrypt_credentials(blob).with_indifferent_access
+
+    assert_not_includes blob, "refresh-token-#{users(:david).id}"
+    assert_equal "refresh-token-#{users(:david).id}", snapshot[:refresh_token]
+    assert_equal "access-token-#{users(:david).id}", snapshot[:access_token]
+    assert_not_nil snapshot[:access_token_expires_at]
+
+    corrupt_google_token!(account)
+
+    assert_nil account.cleanup_snapshot
+  end
 end

@@ -5,6 +5,7 @@ class Opengraph::Fetch
   ALLOWED_DOCUMENT_CONTENT_TYPE = "text/html"
   MAX_BODY_SIZE = 5.megabytes
   MAX_REDIRECTS = 10
+  TIMEOUT = 5
 
   class TooManyRedirectsError < StandardError; end
   class RedirectDeniedError < StandardError; end
@@ -24,10 +25,11 @@ class Opengraph::Fetch
   private
     def request(url, request_class, ip:)
       MAX_REDIRECTS.times do
-        Net::HTTP.start(url.host, url.port, ipaddr: ip, use_ssl: url.scheme == "https") do |http|
+        Net::HTTP.start(url.host, url.port, ipaddr: ip, use_ssl: url.scheme == "https",
+            open_timeout: TIMEOUT, read_timeout: TIMEOUT, write_timeout: TIMEOUT) do |http|
           http.request request_class.new(url) do |response|
             if response.is_a?(Net::HTTPRedirection)
-              url, ip = resolve_redirect(response["location"])
+              url, ip = resolve_redirect(response["location"], url)
             else
               yield response
             end
@@ -38,10 +40,14 @@ class Opengraph::Fetch
       raise TooManyRedirectsError
     end
 
-    def resolve_redirect(location)
-      url = URI.parse(location)
+    def resolve_redirect(location, base)
+      raise RedirectDeniedError if location.blank?
+
+      url = base.merge(location.to_s)
       raise RedirectDeniedError unless url.is_a?(URI::HTTP)
       [ url, RestrictedHTTP::PrivateNetworkGuard.resolve(url.host) ]
+    rescue URI::InvalidURIError
+      raise RedirectDeniedError
     end
 
     def body_if_acceptable(response)

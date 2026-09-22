@@ -73,11 +73,11 @@ class Agents::GithubActionDeliveryTest < ActionDispatch::IntegrationTest
     approval.decide!(decision: "approved", by: users(:david))
     perform_enqueued_jobs only: Github::PerformAgentActionJob
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
-    row = response.parsed_body.find { |entry| entry["event_type"] == "github_action_completed" }
-    assert row, "expected a github_action_completed row in #{response.parsed_body.inspect}"
+    row = response.parsed_body["events"].find { |entry| entry["event_type"] == "github_action_completed" }
+    assert row, "expected a github_action_completed row in #{response.parsed_body["events"].inspect}"
     assert_equal "delivered", row["outcome"]
     assert_nil row["message"]
     assert_equal(
@@ -101,11 +101,11 @@ class Agents::GithubActionDeliveryTest < ActionDispatch::IntegrationTest
     memberships(:bender_watercooler).destroy!
     perform_enqueued_jobs only: Github::PerformAgentActionJob
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
-    row = response.parsed_body.find { |entry| entry["event_type"] == "github_action_completed" }
-    assert row, "expected a github_action_completed row in #{response.parsed_body.inspect}"
+    row = response.parsed_body["events"].find { |entry| entry["event_type"] == "github_action_completed" }
+    assert row, "expected a github_action_completed row in #{response.parsed_body["events"].inspect}"
     assert_equal "failed", row.dig("github_action", "status")
     assert_equal "Agent is no longer a member of the room", row.dig("github_action", "message")
     assert_not row["github_action"].key?("url")
@@ -133,6 +133,7 @@ class Agents::GithubActionDeliveryTest < ActionDispatch::IntegrationTest
     approval = build_approval(kind: "comment", body: "Nice")
     approval.decide!(decision: "approved", by: users(:david))
     perform_enqueued_jobs only: Github::PerformAgentActionJob
+    perform_enqueued_jobs only: Agent::EventWebhookJob
 
     assert_requested stub, times: 2 # the approval decision plus the completion
     completion = @agent.agent_events.where(event_type: "github_action_completed").last
@@ -160,9 +161,9 @@ class Agents::GithubActionDeliveryTest < ActionDispatch::IntegrationTest
     other_agent, other_secret = create_agent_with_secret("Github Completion Other Bot")
     AgentGrant.create!(agent: other_agent, room: @room, granted_by: users(:david), capability: "read_messages")
 
-    get agents_events_url, headers: { "Authorization" => "Bearer #{other_secret}" }
+    get agents_events_url(envelope: 1), headers: { "Authorization" => "Bearer #{other_secret}" }
     assert_response :success
-    assert_empty response.parsed_body.select { |entry| entry["event_type"] == "github_action_completed" }
+    assert_empty response.parsed_body["events"].select { |entry| entry["event_type"] == "github_action_completed" }
 
     post ack_agents_event_url(event), headers: { "Authorization" => "Bearer #{other_secret}" }
     assert_response :not_found
@@ -210,7 +211,8 @@ class Agents::GithubActionDeliveryTest < ActionDispatch::IntegrationTest
       assert action.valid?, action.errors.full_messages.to_sentence
       AgentApproval.create!(
         agent: @agent, room: @room, action: action.action_name,
-        summary: action.summary, payload: action.payload_json
+        summary: action.summary, payload: action.payload_json,
+        github_account_id: @bot.github_connected_account.id, github_login: @bot.github_connected_account.github_login
       )
     end
 

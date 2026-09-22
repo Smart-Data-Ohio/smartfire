@@ -1,4 +1,5 @@
 require "test_helper"
+require "minitest/mock"
 
 class Github::PerformAgentActionJobTest < ActiveJob::TestCase
   AGENT_TOKEN = "agent-token-abc"
@@ -41,6 +42,37 @@ class Github::PerformAgentActionJobTest < ActiveJob::TestCase
     assert_no_enqueued_jobs only: Github::PerformAgentActionJob do
       deniable.decide!(decision: "denied", by: users(:david))
     end
+  end
+
+  test "a relinked GitHub account after approval makes no request" do
+    approval = approve!(build_approval(kind: "comment", body: "Nice work"))
+    @account.update!(github_login: "someone-else-machine", access_token: "swapped-token")
+
+    Github::PerformAgentActionJob.perform_now(approval.id)
+
+    assert_not_requested :post, %r{api\.github\.com}
+    assert_failed_with approval, "The agent's GitHub account changed since this was approved"
+  end
+
+  test "a replaced GitHub connection with the same login makes no request" do
+    approval = approve!(build_approval(kind: "comment", body: "Nice work"))
+    @account.destroy!
+    @account = GithubConnectedAccount.create!(user: @bot, github_login: "bender-machine", access_token: "new-token")
+
+    Github::PerformAgentActionJob.perform_now(approval.id)
+
+    assert_not_requested :post, %r{api\.github\.com}
+    assert_failed_with approval, "The agent's GitHub account changed since this was approved"
+  end
+
+  test "an approval that recorded no GitHub identity makes no request" do
+    approval = build_approval(kind: "comment", body: "Nice work")
+    approval.update_columns(github_account_id: nil, github_login: nil, status: "approved", decided_by_id: users(:david).id)
+
+    Github::PerformAgentActionJob.perform_now(approval.id)
+
+    assert_not_requested :post, %r{api\.github\.com}
+    assert_failed_with approval, "The agent's GitHub account changed since this was approved"
   end
 
   test "approving a non-github action enqueues nothing" do
@@ -282,6 +314,83 @@ class Github::PerformAgentActionJobTest < ActiveJob::TestCase
     assert_requested stub, times: 1
   end
 
+  test "a historical completion row with a NULL approval column still suppresses a second run" do
+    stub = stub_request(:post, "https://api.github.com/repos/rails/rails/issues/12/comments")
+      .with(body: { body: "Legacy" }.to_json)
+      .to_return(status: 201, body: { html_url: "https://github.com/rails/rails/pull/12#issuecomment-11" }.to_json)
+    approval = approve!(build_approval(kind: "comment", body: "Legacy"))
+
+    # Historical duplicates keep agent_approval_id NULL: only the lowest id
+    # per approval is backfilled. The payload alone must still match.
+    @agent.agent_events.create!(
+      event_type: "github_action_completed", room: @room, outcome: "delivered", agent_approval_id: nil,
+      metadata: { "approval_id" => approval.id, "action" => "github.comment", "status" => "completed" }
+    )
+
+    assert_no_difference -> { @agent.agent_events.where(event_type: "github_action_completed").count } do
+      Github::PerformAgentActionJob.perform_now(approval.id)
+    end
+
+    assert_requested stub, times: 0
+  end
+
+  test "a duplicate enqueue that slips past the check posts no second request" do
+    stub = stub_request(:post, "https://api.github.com/repos/rails/rails/issues/12/comments")
+      .with(body: { body: "Racy" }.to_json)
+      .to_return(status: 201, body: { html_url: "https://github.com/rails/rails/pull/12#issuecomment-9" }.to_json)
+    approval = approve!(build_approval(kind: "comment", body: "Racy"))
+
+    Github::PerformAgentActionJob.perform_now(approval.id)
+
+    Github::PerformAgentActionJob.any_instance.stubs(:already_executed?).returns(false)
+    assert_no_difference -> { @agent.agent_events.where(event_type: "github_action_completed").count } do
+      Github::PerformAgentActionJob.perform_now(approval.id)
+    end
+
+    assert_requested stub, times: 1
+  end
+
+  test "a job that loses the execution claim makes no GitHub request" do
+    stub = stub_request(:post, "https://api.github.com/repos/rails/rails/issues/12/comments")
+      .with(body: { body: "Claimed" }.to_json)
+      .to_return(status: 201, body: { html_url: "https://github.com/rails/rails/pull/12#issuecomment-10" }.to_json)
+    approval = approve!(build_approval(kind: "comment", body: "Claimed"))
+
+    Github::PerformAgentActionJob.any_instance.stubs(:claim_execution).returns(nil)
+    assert_no_difference -> { @agent.agent_events.where(event_type: "github_action_completed").count } do
+      Github::PerformAgentActionJob.perform_now(approval.id)
+    end
+
+    assert_not_requested :post, %r{api\.github\.com}
+    assert_requested stub, times: 0
+  end
+
+  test "a failed GitHub call rewrites the winner's claim as a failure" do
+    stub_request(:post, "https://api.github.com/repos/rails/rails/issues/12/comments")
+      .to_return(status: 403, body: { message: "Nope" }.to_json)
+    approval = approve!(build_approval(kind: "comment", body: "Failing"))
+
+    Github::PerformAgentActionJob.perform_now(approval.id)
+
+    assert_equal 1, @agent.agent_events.where(event_type: "github_action_completed").count
+    assert_failed_with(approval, "GitHub refused: Nope")
+  end
+
+  test "completion rows are unique per agent and approval" do
+    approval = approve!(build_approval(kind: "comment", body: "Unique"))
+    assert @agent.agent_events.exists?(event_type: "approval_decided", agent_approval_id: approval.id)
+
+    @agent.agent_events.create!(
+      event_type: "github_action_completed", room: @room, outcome: "delivered", agent_approval_id: approval.id
+    )
+
+    assert_raises ActiveRecord::RecordNotUnique do
+      @agent.agent_events.create!(
+        event_type: "github_action_completed", room: @room, outcome: "delivered", agent_approval_id: approval.id
+      )
+    end
+  end
+
   test "a failed run is not retried by a second run" do
     approval = approve!(build_approval(kind: "comment", body: "Later"))
     @grant.update!(revoked_at: Time.current)
@@ -307,6 +416,93 @@ class Github::PerformAgentActionJobTest < ActiveJob::TestCase
     assert_not_requested :post, %r{api\.github\.com}
   end
 
+  test "a running claim older than 15 minutes is marked failed by the sweeper" do
+    approval = approve!(build_approval(kind: "comment", body: "Stuck"))
+    event = @agent.agent_events.create!(
+      event_type: "github_action_completed", room: @room, outcome: "delivered",
+      agent_approval_id: approval.id, webhook_status: "none",
+      created_at: 16.minutes.ago,
+      metadata: { "approval_id" => approval.id, "action" => "github.comment", "status" => "running" }
+    )
+
+    Rails.logger.expects(:error).with { |message| message.include?("Stuck GitHub claim") }.at_least_once
+    Github::PerformAgentActionJob.recover_stuck_claims!
+
+    event.reload
+    assert_equal "failed", event.metadata["status"]
+    assert_match "timed out", event.metadata["message"].to_s
+    assert_match "timed out", event.detail.to_s
+  end
+
+  test "a claim the sweep already failed is not rewritten by a late finish" do
+    approval = approve!(build_approval(kind: "comment", body: "Late finish"))
+    event = @agent.agent_events.create!(
+      event_type: "github_action_completed", room: @room, outcome: "delivered",
+      agent_approval_id: approval.id, webhook_status: "none",
+      created_at: 16.minutes.ago,
+      metadata: { "approval_id" => approval.id, "action" => "github.comment", "status" => "running" }
+    )
+
+    Github::PerformAgentActionJob.recover_stuck_claims!
+    assert_equal "failed", event.reload.metadata["status"]
+
+    assert_no_enqueued_jobs only: Agent::EventWebhookJob do
+      Github::PerformAgentActionJob.new.send(:finish_claim, event, approval, @agent,
+        status: "completed", url: "https://github.com/rails/rails/pull/12#issuecomment-9")
+    end
+
+    event.reload
+    assert_equal "failed", event.metadata["status"]
+    assert_match "timed out", event.metadata["message"].to_s
+  end
+
+  test "a claim finished while the sweep runs keeps its result" do
+    approval = approve!(build_approval(kind: "comment", body: "Racy finish"))
+    event = @agent.agent_events.create!(
+      event_type: "github_action_completed", room: @room, outcome: "delivered",
+      agent_approval_id: approval.id, webhook_status: "none",
+      created_at: 16.minutes.ago,
+      metadata: { "approval_id" => approval.id, "action" => "github.comment", "status" => "running" }
+    )
+    finder = AgentEvent.method(:find)
+    stale = finder.call(event.id)
+
+    # The worker finishes between the sweep's read and its write: the
+    # sweep still sees a running row, but its rewrite must lose.
+    finished = false
+    fetch = lambda do |id|
+      if id == event.id && !finished
+        finished = true
+        Github::PerformAgentActionJob.new.send(:finish_claim, finder.call(id), approval, @agent,
+          status: "completed", url: "https://github.com/rails/rails/pull/12#issuecomment-9")
+      end
+      id == event.id ? stale : finder.call(id)
+    end
+
+    Rails.logger.expects(:error).never
+    AgentEvent.stub(:find, fetch) do
+      Github::PerformAgentActionJob.recover_stuck_claims!
+    end
+
+    event.reload
+    assert_equal "completed", event.metadata["status"]
+    assert_equal "https://github.com/rails/rails/pull/12#issuecomment-9", event.metadata["url"]
+  end
+
+  test "a fresh running claim is left alone by the sweeper" do
+    approval = approve!(build_approval(kind: "comment", body: "Fresh"))
+    event = @agent.agent_events.create!(
+      event_type: "github_action_completed", room: @room, outcome: "delivered",
+      agent_approval_id: approval.id, webhook_status: "none",
+      created_at: 5.minutes.ago,
+      metadata: { "approval_id" => approval.id, "action" => "github.comment", "status" => "running" }
+    )
+
+    Github::PerformAgentActionJob.recover_stuck_claims!
+
+    assert_equal "running", event.reload.metadata["status"]
+  end
+
   private
     def agent_bearer_header
       { "Authorization" => "Bearer #{AGENT_TOKEN}" }
@@ -319,7 +515,8 @@ class Github::PerformAgentActionJobTest < ActiveJob::TestCase
       assert action.valid?, action.errors.full_messages.to_sentence
       AgentApproval.create!(
         agent: @agent, room: @room, action: action.action_name,
-        summary: action.summary, payload: action.payload_json
+        summary: action.summary, payload: action.payload_json,
+        github_account_id: @account.id, github_login: @account.github_login
       )
     end
 

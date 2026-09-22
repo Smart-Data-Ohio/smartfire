@@ -91,6 +91,24 @@ class AgentCredentialTest < ActiveSupport::TestCase
     assert_equal "203.0.113.7", credential.last_used_ip
   end
 
+  test "record_use throttles to once per minute" do
+    credential = agent_credentials(:bender_main)
+    credential.record_use!("203.0.113.7")
+    first_stamp = credential.reload.last_used_at
+
+    assert_no_changes -> { credential.reload.last_used_at } do
+      credential.record_use!("198.51.100.9")
+    end
+    assert_equal "203.0.113.7", credential.reload.last_used_ip
+
+    credential.update_columns(last_used_at: 61.seconds.ago)
+    credential.record_use!("198.51.100.9")
+    credential.reload
+
+    assert credential.last_used_at > first_stamp
+    assert_equal "198.51.100.9", credential.last_used_ip
+  end
+
   test "destroying the agent removes its credentials" do
     credential_id = agent_credentials(:bender_main).id
     agents(:bender_agent).destroy!

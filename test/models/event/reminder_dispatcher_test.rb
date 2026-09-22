@@ -86,7 +86,7 @@ class Event::ReminderDispatcherTest < ActiveSupport::TestCase
   end
 
   test "recently started events are still reminded but old ones are not" do
-    @event.update!(starts_at: 30.minutes.ago)
+    @event.update!(starts_at: 3.minutes.ago)
     old_event = @room.events.create!(
       organizer: @organizer, title: "Old standup", starts_at: 2.hours.ago, time_zone: "UTC"
     )
@@ -132,6 +132,55 @@ class Event::ReminderDispatcherTest < ActiveSupport::TestCase
 
     assert_not_nil occurrences.second.reload.reminded_at
     assert_equal "event_reminder", ActivityItem.find_by!(user: users(:jason), source: occurrences.second).event_type
+  end
+
+  test "events in soft-deleted rooms are skipped" do
+    # Memberships stay intact so only the soft-delete can skip the event:
+    # begin_destroy! would also fail the organizer check on the remind stamp.
+    @room.update_columns(deleted_at: Time.current)
+
+    assert_no_enqueued_jobs only: Event::ReminderPushJob do
+      assert_no_difference -> { ActivityItem.where(source: @event).count } do
+        Event::ReminderDispatcher.dispatch_due!
+      end
+    end
+
+    assert_nil @event.reload.reminded_at
+  end
+
+  test "a stale event after runner downtime is claimed without reminding or pushing" do
+    # The 15-minute window passed while the runner was down; the event is
+    # still inside the grace window, so it is claimed like any due event,
+    # but neither the inbox nor the push goes out because the moment passed.
+    @event.update!(starts_at: 2.days.from_now)
+    stale = @room.events.create!(
+      organizer: @organizer, title: "Missed standup",
+      starts_at: 30.minutes.ago, ends_at: 30.minutes.from_now, time_zone: "UTC"
+    )
+    stale.attendances.create!(user: users(:jason), response: :going)
+
+    assert_no_enqueued_jobs only: Event::ReminderPushJob do
+      Event::ReminderDispatcher.dispatch_due!
+    end
+
+    assert_not_nil stale.reload.reminded_at
+    assert_equal "event_invitation", ActivityItem.find_by!(user: users(:jason), source: stale).event_type
+  end
+
+  test "an ended event is claimed without reminding" do
+    @event.update!(starts_at: 2.days.from_now)
+    ended = @room.events.create!(
+      organizer: @organizer, title: "Finished standup",
+      starts_at: 50.minutes.ago, ends_at: 5.minutes.ago, time_zone: "UTC"
+    )
+    ended.attendances.create!(user: users(:jason), response: :going)
+
+    assert_no_enqueued_jobs only: Event::ReminderPushJob do
+      Event::ReminderDispatcher.dispatch_due!
+    end
+
+    assert_not_nil ended.reload.reminded_at
+    assert_equal "event_invitation", ActivityItem.find_by!(user: users(:jason), source: ended).event_type
   end
 
   test "one failing event does not stop the others" do

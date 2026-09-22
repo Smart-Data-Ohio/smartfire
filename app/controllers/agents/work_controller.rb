@@ -22,7 +22,7 @@ class Agents::WorkController < ApplicationController
   end
 
   # GET /agents/work/:id (Bearer-only, JSON). Returns one owned thread.
-  # Anything the agent does not own is 404.
+  # Anything the agent does not own, or whose room it cannot read, is 404.
   def show
     no_store_response!
 
@@ -96,16 +96,22 @@ class Agents::WorkController < ApplicationController
       end
     end
 
-    # Ownership plus current room membership: like every other agent
-    # endpoint, a room the agent's user no longer belongs to answers 404.
+    # Ownership, current room membership, and read_messages in the room:
+    # like every other agent endpoint, a room the agent's user no longer
+    # belongs to, or can no longer read, answers 404 (index filters the
+    # same rows out), so a revoked read grant cannot still read or write
+    # work by id.
     def set_owned_thread
       @thread = ChannelThread.work.where(work_owner_id: Current.agent.user_id)
         .includes(:room, :work_owner, :tags, work_thread_links: %i[ github_pull_request event ]).find_by(id: params[:id])
-      head :not_found unless @thread && @thread.room.memberships.exists?(user_id: Current.agent.user_id)
+
+      unless @thread && @thread.room.memberships.exists?(user_id: Current.agent.user_id) && Current.agent.can?(:read_messages, @thread.room)
+        head :not_found
+      end
     end
 
     def work_thread_payload(thread)
-      Agents::WorkPayload.for(thread)
+      Agents::WorkPayload.for(thread, agent: Current.agent)
     end
 
     # Reads an updatable work field from the top level or the nested work

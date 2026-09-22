@@ -5,26 +5,32 @@ david:
   email_address: david@37signals.com
   password_digest: <%= password_digest %>
   role: administrator
+  google_email_link_allowed: true
 
 jason:
   name: Jason
   email_address: jason@37signals.com
   password_digest: <%= password_digest %>
   role: administrator
+  google_email_link_allowed: true
 
 jz:
   name: JZ
   email_address: jz@37signals.com
   password_digest: <%= password_digest %>
   bio: Designer
+  google_email_link_allowed: true
 
 kevin:
   name: Kevin
   email_address: kevin@37signals.com
   password_digest: <%= password_digest %>
   bio: Programmer
+  google_email_link_allowed: true
 
 bender:
   name: Bender Bot
-  bot_token: <%= User.generate_bot_token %>
+  # Token "BenderToken1" (BotKeyTestHelper::FIXTURE_BOT_TOKENS).
+  bot_token: BenderToken1
+  bot_token_digest: <%= Digest::SHA256.hexdigest("BenderToken1") %>
   role: bot

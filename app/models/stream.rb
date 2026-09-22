@@ -69,7 +69,7 @@ class Stream < ApplicationRecord
 
       # Streams only exist on stage rooms; every other revocation — DMs,
       # voice, plain channels — skips the membership and stream lookups.
-      stage_room = Room.find_by(id: grant.room_id)
+      stage_room = Room.alive.find_by(id: grant.room_id)
       return unless stage_room.is_a?(Rooms::Stage)
       return if HuddleGrant.active.where(room_id: grant.room_id, membership_id: grant.membership_id).exists?
 
@@ -116,7 +116,7 @@ class Stream < ApplicationRecord
     def broadcast_stream_stopped_event
       return if ended_by.nil? || ended_by.id == user_id
 
-      stage_room = Room.find_by(id: room_id)
+      stage_room = Room.alive.find_by(id: room_id)
       return unless stage_room.is_a?(Rooms::Stage)
 
       broadcast_append_to user, :rooms,
@@ -132,7 +132,7 @@ class Stream < ApplicationRecord
     # roster broadcasts. The event page carries the sidebar subscription, so
     # the venue dot updates without a reload.
     def broadcast_stream_changed
-      stage_room = Room.find_by(id: room_id)
+      stage_room = Room.alive.find_by(id: room_id)
       return unless stage_room.is_a?(Rooms::Stage)
 
       broadcast_replace_to stage_room, :messages,

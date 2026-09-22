@@ -69,12 +69,16 @@ module ActivityItems
     end
 
     private
+      # Computed once per record call. Every candidate is re-checked through
+      # source_allows_recipient?, so recomputing here would re-query
+      # memberships once per recipient.
       def message_candidates
-        if @source.thread
-          thread_message_candidates
-        else
-          room_message_candidates
-        end
+        @message_candidates ||=
+          if @source.thread
+            thread_message_candidates
+          else
+            room_message_candidates
+          end
       end
 
       def room_message_candidates
@@ -95,7 +99,7 @@ module ActivityItems
 
       def thread_message_candidates
         candidates = {}
-        @source.thread.memberships.includes(:user).each do |thread_membership|
+        thread_memberships.each do |thread_membership|
           room_membership = room_memberships[thread_membership.user_id]
           next unless mentionable_room_membership?(room_membership)
           next unless eligible_thread_membership?(thread_membership)
@@ -117,8 +121,24 @@ module ActivityItems
         candidates
       end
 
+      # Only the memberships the candidate check can read: the thread's
+      # members for thread messages, the mentionees plus the reply author
+      # for root messages. A root post to a large room used to load every
+      # room membership to notify at most a handful of members.
       def room_memberships
-        @room_memberships ||= @source.room.memberships.includes(:user).index_by(&:user_id)
+        @room_memberships ||=
+          begin
+            ids = @source.thread ? thread_memberships.map(&:user_id) : (mention_ids | [ reply_author_id ].compact)
+            if ids.empty?
+              {}
+            else
+              @source.room.memberships.includes(:user).where(user_id: ids).index_by(&:user_id)
+            end
+          end
+      end
+
+      def thread_memberships
+        @thread_memberships ||= @source.thread.memberships.includes(:user).to_a
       end
 
       def mention_ids

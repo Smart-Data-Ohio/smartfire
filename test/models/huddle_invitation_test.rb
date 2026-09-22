@@ -29,9 +29,9 @@ class HuddleInvitationTest < ActiveSupport::TestCase
   end
 
   test "issuing a grant never schedules a delayed job" do
-    # Production runs the :resque adapter without resque-scheduler, whose
-    # enqueue_at raises NotImplementedError. Invitations must only enqueue
-    # immediate jobs; overdue resolution runs in the reconciler loop instead.
+    # Invitations must only enqueue immediate jobs; overdue resolution runs
+    # in the reconciler loop instead. Delayed jobs exist for retries, but
+    # issuing a grant must never schedule one.
     ActiveJob::Base.queue_adapter.stubs(:enqueue_at).raises(NotImplementedError)
 
     HuddleGrant.issue!(session: @starter_session, membership: @starter_membership)

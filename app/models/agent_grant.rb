@@ -16,6 +16,7 @@ class AgentGrant < ApplicationRecord
   scope :revoked, -> { where.not(revoked_at: nil) }
 
   validates :capability, presence: true, inclusion: { in: CAPABILITIES }
+  validates :room, presence: { message: "must be an existing room" }, if: :room_id?
   validate :no_duplicate_active_grant
 
   class << self

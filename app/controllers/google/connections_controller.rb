@@ -17,8 +17,11 @@ module Google
       stored_state = session.delete(:google_oauth_state)
       verified_state = state_verifier.verified(params[:state].to_s)
 
+      # A stale state (a second tab overwrote the session's) is a
+      # recoverable UX dead end, not a client error: send the member
+      # back to try again.
       unless valid_state?(verified_state, stored_state)
-        return head :unprocessable_content
+        return redirect_to user_profile_path, alert: "Google connection expired. Try again."
       end
 
       if params[:error].present?
@@ -37,6 +40,13 @@ module Google
       account.email = Google::Client.email_from_id_token(tokens["id_token"])
       account.save!
 
+      # Google lets the member deselect scopes at consent: without
+      # calendar.events nothing can publish, so say so instead of
+      # claiming a connection the profile will not show.
+      unless account.calendar?
+        return redirect_to user_profile_path, alert: "Calendar permission was not granted. Reconnect to publish events."
+      end
+
       enqueue_upcoming_syncs(Current.user)
       redirect_to user_profile_path, notice: "Google Calendar connected."
     rescue Google::Client::Error => error
@@ -46,19 +56,12 @@ module Google
 
     def destroy
       if (account = Current.user.google_account)
-        client = Google::Client.new(account)
-        Current.user.event_calendar_entries.find_each do |entry|
-          begin
-            client.delete_event(entry.google_event_id)
-          rescue Google::Client::NotFound
-            nil
-          rescue StandardError => error
-            Rails.logger.warn "Google Calendar disconnect could not remove entry #{entry.id}: #{error.class}"
-          end
-        end
-
+        google_event_ids = Current.user.event_calendar_entries.pluck(:google_event_id)
+        snapshot = account.cleanup_snapshot
+        account_id = account.id
         Current.user.event_calendar_entries.delete_all
         account.destroy!
+        Calendar::DisconnectCleanupJob.perform_later(google_event_ids, snapshot, account_id) if snapshot
       end
 
       redirect_to user_profile_path, notice: "Google Calendar disconnected."

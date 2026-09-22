@@ -79,7 +79,7 @@ class Github::RepositorySubscriptionTest < ActiveSupport::TestCase
     end
 
     bot = User.active_bots.find_by!(name: "GitHub")
-    assert bot.bot_token.present?
+    assert bot.bot_token_digest.present?
     assert_nil bot.agent
     assert @room.memberships.exists?(user: bot)
   end

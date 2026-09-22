@@ -9,7 +9,7 @@ class Messages::Boosts::ByBotsControllerTest < ActionDispatch::IntegrationTest
 
   test "create adds a boost to the message and returns it" do
     assert_difference -> { @message.boosts.count }, +1 do
-      post room_bot_message_boosts_url(@room, @bot.bot_key, @message), params: +"👀"
+      post room_bot_message_boosts_url(@room, bot_key_for(@bot), @message), params: +"👀"
       assert_response :created
     end
 
@@ -27,7 +27,7 @@ class Messages::Boosts::ByBotsControllerTest < ActionDispatch::IntegrationTest
 
   test "create with text content" do
     assert_difference -> { Boost.count }, +1 do
-      post room_bot_message_boosts_url(@room, @bot.bot_key, @message), params: +"Nice!"
+      post room_bot_message_boosts_url(@room, bot_key_for(@bot), @message), params: +"Nice!"
       assert_response :created
     end
 
@@ -37,7 +37,7 @@ class Messages::Boosts::ByBotsControllerTest < ActionDispatch::IntegrationTest
   test "create includes the booster icon fields" do
     @bot.update!(icon_name: "openai")
 
-    post room_bot_message_boosts_url(@room, @bot.bot_key, @message), params: +"👀"
+    post room_bot_message_boosts_url(@room, bot_key_for(@bot), @message), params: +"👀"
     assert_response :created
 
     json = JSON.parse(response.body)
@@ -46,7 +46,7 @@ class Messages::Boosts::ByBotsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "booster icon fields are present and null without an icon" do
-    post room_bot_message_boosts_url(@room, @bot.bot_key, @message), params: +"👀"
+    post room_bot_message_boosts_url(@room, bot_key_for(@bot), @message), params: +"👀"
     assert_response :created
 
     json = JSON.parse(response.body)
@@ -57,7 +57,7 @@ class Messages::Boosts::ByBotsControllerTest < ActionDispatch::IntegrationTest
 
   test "create broadcasts the boost" do
     assert_turbo_stream_broadcasts [ @message.room, :messages ], count: 1 do
-      post room_bot_message_boosts_url(@room, @bot.bot_key, @message), params: +"👍"
+      post room_bot_message_boosts_url(@room, bot_key_for(@bot), @message), params: +"👍"
     end
   end
 
@@ -71,14 +71,14 @@ class Messages::Boosts::ByBotsControllerTest < ActionDispatch::IntegrationTest
       true
     end
 
-    post room_bot_message_boosts_url(@room, @bot.bot_key, @message), params: +"👍"
+    post room_bot_message_boosts_url(@room, bot_key_for(@bot), @message), params: +"👍"
 
     assert_response :created
   end
 
   test "create stores an unknown shortcode as literal text" do
     assert_difference -> { Boost.count }, +1 do
-      post room_bot_message_boosts_url(@room, @bot.bot_key, @message), params: +":lol:"
+      post room_bot_message_boosts_url(@room, bot_key_for(@bot), @message), params: +":lol:"
       assert_response :created
     end
 
@@ -92,7 +92,7 @@ class Messages::Boosts::ByBotsControllerTest < ActionDispatch::IntegrationTest
     Boost.any_instance.stubs(:errors).returns(failures)
 
     assert_no_difference -> { Boost.count } do
-      post room_bot_message_boosts_url(@room, @bot.bot_key, @message), params: +"👀"
+      post room_bot_message_boosts_url(@room, bot_key_for(@bot), @message), params: +"👀"
       assert_response :unprocessable_content
     end
 
@@ -101,10 +101,10 @@ class Messages::Boosts::ByBotsControllerTest < ActionDispatch::IntegrationTest
 
   test "create without content" do
     assert_no_difference -> { Boost.count } do
-      post room_bot_message_boosts_url(@room, @bot.bot_key, @message)
+      post room_bot_message_boosts_url(@room, bot_key_for(@bot), @message)
       assert_response :unprocessable_content
 
-      post room_bot_message_boosts_url(@room, @bot.bot_key, @message), params: +"   "
+      post room_bot_message_boosts_url(@room, bot_key_for(@bot), @message), params: +"   "
       assert_response :unprocessable_content
     end
   end
@@ -118,14 +118,14 @@ class Messages::Boosts::ByBotsControllerTest < ActionDispatch::IntegrationTest
 
   test "create is not found for a room the bot is not a member of" do
     assert_no_difference -> { Boost.count } do
-      post room_bot_message_boosts_url(rooms(:designers), @bot.bot_key, messages(:first)), params: +"👀"
+      post room_bot_message_boosts_url(rooms(:designers), bot_key_for(@bot), messages(:first)), params: +"👀"
     end
     assert_response :not_found
   end
 
   test "create is not found for a message outside the room" do
     assert_no_difference -> { Boost.count } do
-      post room_bot_message_boosts_url(@room, @bot.bot_key, messages(:first)), params: +"👀"
+      post room_bot_message_boosts_url(@room, bot_key_for(@bot), messages(:first)), params: +"👀"
     end
     assert_response :not_found
   end
@@ -141,7 +141,7 @@ class Messages::Boosts::ByBotsControllerTest < ActionDispatch::IntegrationTest
 
   test "destroy removes the bot's own boost" do
     assert_difference -> { Boost.count }, -1 do
-      delete room_bot_message_boost_url(@room, @bot.bot_key, @message, boosts(:fourth_by_bender))
+      delete room_bot_message_boost_url(@room, bot_key_for(@bot), @message, boosts(:fourth_by_bender))
     end
 
     assert_response :no_content
@@ -149,13 +149,13 @@ class Messages::Boosts::ByBotsControllerTest < ActionDispatch::IntegrationTest
 
   test "destroy broadcasts the removal" do
     assert_turbo_stream_broadcasts [ @message.room, :messages ], count: 1 do
-      delete room_bot_message_boost_url(@room, @bot.bot_key, @message, boosts(:fourth_by_bender))
+      delete room_bot_message_boost_url(@room, bot_key_for(@bot), @message, boosts(:fourth_by_bender))
     end
   end
 
   test "destroy can't touch a boost the bot did not make" do
     assert_no_difference -> { Boost.count } do
-      delete room_bot_message_boost_url(@room, @bot.bot_key, messages(:thirteenth), boosts(:thirteenth))
+      delete room_bot_message_boost_url(@room, bot_key_for(@bot), messages(:thirteenth), boosts(:thirteenth))
     end
 
     assert_response :not_found

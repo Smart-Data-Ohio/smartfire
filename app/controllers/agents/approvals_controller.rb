@@ -1,9 +1,13 @@
 class Agents::ApprovalsController < ApplicationController
+  include AgentApiThrottle
+
   allow_agent_access only: %i[ index show create destroy for_agent ]
   allow_bot_access only: %i[ for_agent ]
 
   before_action :ensure_agent_token, only: %i[ index show create destroy ]
   before_action :set_own_approval, only: %i[ show destroy ]
+  throttle_agent_api limit: 120, only: %i[ index show ]
+  throttle_agent_api limit: 60, only: %i[ create destroy ]
 
   POLL_MAX_LIMIT = 100
   HTML_PER_PAGE = 50
@@ -244,7 +248,7 @@ class Agents::ApprovalsController < ApplicationController
     def find_request_room(room_id)
       return nil if room_id.blank?
 
-      room = Room.find_by(id: room_id)
+      room = Room.alive.find_by(id: room_id)
       unless room && Membership.exists?(user_id: Current.agent.user_id, room_id: room.id)
         head :not_found
         return nil

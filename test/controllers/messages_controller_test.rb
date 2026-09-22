@@ -16,6 +16,14 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     ensure_messages_present @messages.last
   end
 
+  test "index is not found for a soft-deleted room" do
+    @room.update_columns(deleted_at: Time.current)
+
+    assert_raises ActiveRecord::RecordNotFound do
+      get room_messages_url(@room)
+    end
+  end
+
   test "index returns a page before the specified message" do
     get room_messages_url(@room, before: @messages.third)
 
@@ -269,6 +277,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
       markdown_source: "Hey @[Bender Bot]", client_message_id: "agent-once" } }
 
     perform_enqueued_jobs only: Agent::DeliveryJob
+    perform_enqueued_jobs only: Agent::EventWebhookJob
     perform_enqueued_jobs only: Bot::WebhookJob
 
     assert_requested :post, webhooks(:bender).url, times: 1
@@ -285,6 +294,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
 
     grant.revoke!
     perform_enqueued_jobs only: Agent::DeliveryJob
+    perform_enqueued_jobs only: Agent::EventWebhookJob
     perform_enqueued_jobs only: Bot::WebhookJob
 
     assert_not_requested :post, webhooks(:bender).url
@@ -306,6 +316,24 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     perform_enqueued_jobs only: Bot::WebhookJob
 
     assert_requested :post, bot.webhook.url, body: hash_excluding("agent"), times: 1
+  end
+
+  test "retried create with the same client id returns the original message" do
+    params = { message: { markdown_source: "Post once", client_message_id: "retry-root-post" } }
+
+    assert_difference -> { @room.messages.count }, 1 do
+      post room_messages_url(@room, format: :turbo_stream), params: params
+      assert_response :success
+    end
+    original_id = @room.messages.order(:id).last.id
+
+    assert_no_difference -> { @room.messages.count } do
+      post room_messages_url(@room, format: :turbo_stream), params: params
+      assert_response :success
+    end
+
+    assert_equal original_id, @room.messages.order(:id).last.id
+    assert_equal "retry-root-post", @room.messages.order(:id).last.client_message_id
   end
 
   private

@@ -10,14 +10,41 @@ An agent is a row in `agents`, 1:1 with a bot `User`. `kind` is `personal`
 create; backfilled rows may have no owner, rendered as "no owner recorded").
 `Agent#active?` is false while `suspended_at` is set or the bot user is not
 active. Suspending an agent revokes all of its capability grants in the same
-transaction.
+transaction. Deactivating or banning a person suspends every agent they own, so those
+agents' Bearer tokens answer 401 and their bot keys get 403 from every
+capability check.
 
 ## Credentials
 
 `agent_credentials` holds Bearer agent tokens. Credentials store only a SHA256 digest
 plus a display identifier; the secret is shown once at creation. Revoked or
 expired credentials return 401 on the next request. The legacy `bot_key` URL
-path is frozen and unchanged.
+path is frozen and unchanged. Bot keys (`<id>-<token>`) authenticate the
+same way: `users.bot_token_digest` holds the token's SHA-256 digest,
+compared in constant time after an id lookup, and the UI shows the key
+once, on the page that follows creating the bot or generating a new key
+(the bots page's curl examples use a `BOT_KEY` placeholder). Existing keys
+kept their value. For one release the plaintext `users.bot_token` column is
+still written, so rolling back stays possible and the legacy webhook
+payload's `room.path` keeps the real key; a follow-up release removes it.
+
+### Rate limits
+
+Agent endpoints throttle per credential per minute, so one busy
+credential cannot starve others sharing the agent:
+
+- event polling and acks: 120/minute each
+- approval reads: 120/minute
+- posting messages, requesting approvals, cancelling approvals, and
+  pull-request actions: 60/minute each
+- creating board posts: 30/minute
+
+Overflowing a bucket returns 429 with a `Retry-After` header in
+seconds and a `{ "error": "rate_limited" }` body. Human session
+requests are not throttled, and neither are the frozen legacy
+bot-key endpoints, which carry no credential to key a bucket on.
+These limits are separate from the
+20-deliveries-per-minute-per-room delivery guard below.
 
 ## Capability grants
 
@@ -85,8 +112,8 @@ agent never receives its own messages, and bots without an agent row keep
 the legacy webhook path only.
 
 `Agent::DeliveryJob` re-checks room membership and the `read_messages`
-grant at perform time, then marks the row `delivered` and posts the
-agent's webhook when one is configured. Polling is the primary path, so a
+grant at perform time, then marks the row `delivered` and enqueues its
+webhook POST when one is configured. Polling is the primary path, so a
 missing webhook still delivers. Revocation between enqueue and perform
 writes `delivery_suppressed_revoked`; a message deleted before delivery
 marks the row suppressed without a new row.
@@ -94,18 +121,32 @@ marks the row suppressed without a new row.
 ### Polling
 
 `GET /agents/events?since=<id>&limit=<n>` (Bearer-only, JSON, ordered by
-id, max 100) returns the agent's own deliverable rows with the message
-payload resolved at query time. Rows for messages the agent can no longer
-read (membership or grant revoked, message deleted) are omitted.
-`POST /agents/events/:id/ack` marks a row `acknowledged` and is idempotent.
-Both require `read_messages` (`Agent#has_capability_anywhere?` at the
-endpoint, per-room `Agent#can?` per row and per ack).
+id, max 100) returns the agent's own deliverable rows as a bare JSON
+array with the message payload resolved at query time. The last
+scanned row id travels in the `X-Smartfire-Next-Since` response
+header, which the client passes back as `since` to page forward; pass
+`?envelope=1` for the `{ events: [...], next_since: <id> }` object
+form instead. Rows for messages the agent can no longer read
+(membership or grant revoked, message deleted) are omitted, and so are
+work rows whose thread is gone without a snapshot — but every scanned
+row still advances the cursor, so a fully dropped page returns no rows
+with a cursor that moves past them. A deleted thread's
+`work_unassigned` row is the exception: it returns its pre-destroy
+snapshot marked `thread_deleted: true`.
+`POST /agents/events/:id/ack` marks a row `acknowledged` and is
+idempotent. Both require `read_messages`
+(`Agent#has_capability_anywhere?` at the endpoint, per-room `Agent#can?`
+per row and per ack).
 
 Message event rows carry a `pull_request` key: the PR context object when
 the message lives in a pull-request discussion thread, explicit null
 otherwise. The object is `url`, `owner`, `repo`, `number`, `title`,
 `state`, `head_branch`, `base_branch`, `review_decision`, and
-`checks_state` (`checks_state` mirrors the card's check status). See
+`checks_state` (`checks_state` mirrors the card's check status). `title`,
+`head_branch`, and `base_branch` are null unless the repository is known
+public or the agent owner's own linked GitHub account can read it (the
+card rule, with the owner as viewer); work `links` entries follow the same
+rule for their `title`. See
 [GitHub pull request cards](github.md#pull-request-threads).
 
 An agent with the `post_messages` capability may also attach Drive files
@@ -120,17 +161,33 @@ Never names: bots receive no Drive credentials. See
 ### Rate limit and loop guard
 
 At most 20 deliveries per agent per room per minute, counted from
-`agent_events`; excess writes `delivery_suppressed_rate_limit` and is
-dropped, not queued. Agent-to-agent chains carry `metadata.hop`: human
-messages start at 0, and an agent's message carries its trigger's hop plus
-one, where the trigger is the most recent mention, direct message, or
-reply `delivered` to or `acknowledged` by the agent in that room within the
-last five minutes. The agent's own `posted` rows, suppression rows, and
-pending rows are never triggers, and neither the request body nor the reply
-target influences the hop; a message with no recent trigger is a new root
-at 0. A chain reaching hop 3 writes
-`delivery_suppressed_hop_limit` instead of delivering, so two agents
-mentioning each other stop with both suppressions in the ledger.
+`agent_events` with the count and the insert sharing the agent's row
+lock, so concurrent enqueues cannot over-deliver; excess writes
+`delivery_suppressed_rate_limit` and is dropped, not queued. Agent-to-agent chains carry a hop count and a
+trigger chain id: human messages start at 0, and an agent's message
+carries its trigger's hop plus one, where the trigger is the most
+recent mention, direct message, reply, or work assignment event
+`pending` for, `delivered` to, or `acknowledged` by the agent in any
+room within the last five minutes. Pending rows count so a fast
+polling agent cannot restart the chain at hop 0, and bridging rooms
+carries the chain instead of resetting it. The agent's own `posted`
+rows, suppression rows, and approval decisions are never triggers,
+and neither the request body nor the reply target influences the
+hop; a message with no recent trigger is a new root at 0. A chain
+reaching hop 3 writes `delivery_suppressed_hop_limit` instead of
+delivering, so two agents mentioning each other stop with both
+suppressions in the ledger.
+
+Messages from bots without an agent row carry hops too: a reply
+continues its source message's highest recorded hop (including the
+sender's `posted` row), and a root post continues the most recent
+room message within the window that mentioned the bot or replied to
+it. The legacy webhook path honors the same hop limit and simply
+stops posting once a chain reaches hop 3. Work assignments carry the
+assigning agent's chain the same way: an assignment at hop 3 writes
+`delivery_suppressed_hop_limit` with the thread fields instead of
+`work_assigned` or `work_unassigned`, so two agents assigning posts
+to each other stop. Human assignments always start a new root.
 
 ### Webhooks
 
@@ -143,11 +200,106 @@ a pull-request discussion thread, null otherwise. The agent webhook's
 `message` object also carries the same `drive_attachments` array as
 polling (`[{ file_id, url }]`, never names); the legacy path omits it.
 
+Every webhook POST, agent or legacy, resolves through
+`RestrictedHTTP::PrivateNetworkGuard` and pins the connection to the
+resolved public address: loopback and private destinations are
+refused instead of posted to, and a hostname that resolves to
+nothing fails the delivery.
+
+A 200 response with a text or attachment body becomes a sync reply
+to the triggering message: inside its thread when it has one (board
+posts included), otherwise a root message referencing it. A reply
+that cannot be stored (a locked thread, a deleted parent) is logged
+for agent deliveries and the POST still counts as delivered; legacy
+deliveries raise. A webhook that does not answer within 7 seconds
+records a timeout in the agent's ledger row and retries like any
+transport failure, with no timeout message; legacy bots keep the
+"Failed to respond within 7 seconds" message.
+
+The `room.path` in agent deliveries is the plain room path. It never
+carries the bot key; receivers that post back use their own agent
+token. Legacy bots (bot users without an `Agent` row) keep receiving
+the bot-key `room.path` this release, since existing integrations
+reply through it; agent-backed bots never get a key in the payload.
+The bot key in the payload is planned for removal in a future
+release: legacy integrations should switch to posting back with their
+own stored bot key or, for new integrations, an agent token.
+
+### Verifying signatures
+
+Every webhook POST carries an `X-Smartfire-Timestamp` header (unix
+seconds) and, when the bot has a signing secret, an
+`X-Smartfire-Signature: sha256=<hmac>` header with the HMAC-SHA256
+of `"#{timestamp}.#{raw_body}"`: the timestamp header, a dot, and
+the raw request body. Each agent has its own secret, generated
+on its first delivery and shown to admins and the agent's owner on
+the bot edit page with a reset control; legacy bots sign too once
+a secret is generated for them on the same page. Verify with a
+constant-time comparison over the raw bytes, and reject timestamps
+older than 5 minutes to bound replays:
+
+```ruby
+require "openssl"
+
+timestamp = request.headers["X-Smartfire-Timestamp"].to_s
+signature = request.headers["X-Smartfire-Signature"].to_s
+signed = "#{timestamp}.#{request.raw_post}"
+expected = "sha256=" + OpenSSL::HMAC.hexdigest("SHA256", ENV["SMARTFIRE_WEBHOOK_SECRET"], signed)
+
+fresh = timestamp.match?(/\A\d+\z/) && (Time.current.to_i - timestamp.to_i).abs <= 300
+
+unless fresh && signature.start_with?("sha256=") && ActiveSupport::SecurityUtils.secure_compare(signature, expected)
+  head :unauthorized
+end
+```
+
+```js
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+const timestamp = req.headers["x-smartfire-timestamp"] ?? "";
+const signature = req.headers["x-smartfire-signature"] ?? "";
+const expected = "sha256=" + createHmac("sha256", process.env.SMARTFIRE_WEBHOOK_SECRET)
+  .update(`${timestamp}.${req.rawBody}`).digest("hex");
+
+const fresh = /^\d+$/.test(timestamp) && Math.abs(Date.now() / 1000 - Number(timestamp)) <= 300;
+const a = Buffer.from(signature);
+const b = Buffer.from(expected);
+if (!fresh || !signature.startsWith("sha256=") || a.length !== b.length || !timingSafeEqual(a, b)) {
+  res.sendStatus(401);
+}
+```
+
+### Delivery status and retries
+
+The ledger outcome (`pending`, `delivered`, `acknowledged`,
+`suppressed`) tracks polling state; the webhook POST has its own
+status on the same row (`webhook_status`: `none`, `pending`,
+`delivered`, `failed`) with an attempt count and the last error, all
+shown on the ledger page. Only a 2xx response counts as delivered. A
+429, 408, or 5xx response retries with backoff up to 5 attempts —
+honoring the endpoint's `Retry-After` header when present — as do
+network errors and timeouts; then the row stays `failed` with the
+last error recorded. Other 4xx responses fail fast without retrying,
+like guard refusals, unresolvable hosts, and payloads that can no
+longer be built (message, approval, or thread gone). A periodic sweep
+re-enqueues rows stranded in `pending` past two minutes with attempts
+remaining, so a crash between the row write and its enqueue still
+delivers. A receiver must
+treat redeliveries as possible: webhook delivery is at-least-once.
+
+Acking a row by polling marks polling state only and never cancels
+a webhook still owed: an agent that acks a `pending` row before its
+delivery job runs still gets exactly one POST.
+
 ## Management
 
-Admins and the agent's owner manage grants from the bot edit page ("Manage
-capability grants"): grant a capability in one of the agent's rooms or
-workspace-wide, and revoke. Anyone else gets 403. The same audience reads
+Admins and the agent's owner open grants from the bot edit page ("Manage
+capability grants"). Only a current administrator may grant a capability
+(in an existing room or workspace-wide, `external_action` included); the
+owner, who may have been an administrator only when the agent was
+created, keeps a read-only view and may revoke. The same split applies
+to credentials (owners list and revoke, administrators issue) and to the
+bot's webhook URL (administrators only). Anyone else gets 403. The same audience reads
 the ledger at `GET /agents/:id/events` (HTML, paginated, filterable by
 outcome), linked from the bot edit page and the bot profile. There is no
 public exposure.
@@ -258,7 +410,8 @@ scheduler: expiry is lazy. `AgentApproval#effective_status` reads `expired`
 when a pending row is past `expires_at`, every read path uses it, and a
 decision or cancellation on an expired request is rejected with 422. A
 read path that notices an overdue pending row may persist `expired` in the
-same request.
+same request; the activity inbox resolves the reader's overdue approvals
+on every visit so their unread badge drops.
 
 ### Deciders
 
@@ -272,7 +425,10 @@ the inbox never shows them the item.
 Each decider gets one `agent_approval_request` activity item on create.
 The card shows the agent's name and avatar, the room name when present,
 the summary as escaped text, the time left, and Approve and Deny buttons
-(deny takes an optional note). Deciding marks every decider's item
+(deny takes an optional note). A `github.*` request can be approved only
+by a current administrator: an owner who is not one sees no Approve
+button and gets 403 from `PATCH /agent_approvals/:id?decision=approved`,
+but may still deny. Deciding marks every decider's item
 handled. Marking an inbox item read or handled never decides the request.
 
 ### Delivery of decisions
@@ -281,10 +437,11 @@ A human decision appends an `agent_events` row of deliverable type
 `approval_decided` with `metadata: { approval_id, status, decided_by,
 note }`, `outcome: delivered`, and no `message_id`. `GET /agents/events`
 returns it with an `approval` payload instead of `message`, and `ack`
-works on it. The webhook posts when configured with the same additive
-`agent` key plus an `approval` key carrying the same fields. Agent
-cancellation appends no event. Rate limits and the hop guard do not apply
-to these rows.
+works on it. The decision enqueues a webhook POST when configured,
+after the decision transaction commits so the decider's request never
+waits on it, with the same additive `agent` key plus an `approval` key
+carrying the same fields. Agent cancellation appends no event. Rate
+limits and the hop guard do not apply to these rows.
 
 ### GitHub write actions
 
@@ -302,10 +459,10 @@ room-scoped, `outcome: delivered`, always readable by its own agent,
 with `metadata` carrying `approval_id`, `action`, `status` (`completed`
 or `failed`), the GitHub `url` when completed, or a `message` when
 failed. `GET /agents/events` returns it with a `github_action` key
-instead of `message`, `ack` works on it, the webhook posts it with the
-same additive `agent` key plus `github_action`, and the ledger page
-lists it with its status. Rate limits and the hop guard do not apply,
-like approval rows.
+instead of `message`, `ack` works on it, the completion enqueues a
+webhook POST with the same additive `agent` key plus `github_action`,
+and the ledger page lists it with its status. Rate limits and the hop
+guard do not apply, like approval rows.
 
 ## Work threads
 
@@ -330,9 +487,10 @@ Assigning an agent writes a `work_assigned` row to its event ledger in
 the same transaction as the work change, with `room_id` set, `actor_id`
 the human who assigned it, and `metadata: { thread_id, title,
 work_status, assigned_by }`. Unassigning it — clearing the owner,
-reassigning to a human, or stopping work tracking — writes
-`work_unassigned` the same way. Both are deliverable types, but neither
-is a message type, so rate limits and the hop guard ignore them.
+reassigning to a human, stopping work tracking, or deleting the thread
+— writes `work_unassigned` the same way. Both are deliverable types,
+but neither is a message type, so rate limits ignore them; the hop
+guard applies (see Rate limit and loop guard).
 
 `GET /agents/events` returns these rows with a `work` payload instead
 of `message`: the full work payload documented under Boards, plus the
@@ -348,10 +506,14 @@ legacy `thread_id`, `status`, and `assigned_by` keys:
 
 `url` is the workspace permalink path for the thread. Rows for threads
 the agent can no longer read (membership or `read_messages` revoked)
-are omitted, like message rows. The webhook posts after the assigning
-transaction commits, when configured, with the same additive `agent` key
-plus `event_type` and the `work` key, gated on current room membership
-and `read_messages` like message delivery. `ack` works on these rows.
+are omitted, like message rows. The assignment enqueues a webhook POST
+after the assigning transaction commits, when configured, with the
+same additive `agent` key plus `event_type` and the `work` key, gated
+on current room membership and `read_messages` like message delivery,
+so the assigner's request never waits on it. `ack` works on these
+rows. A deletion notifies through a snapshot of the thread taken
+before destroy: polling returns it marked `thread_deleted: true`,
+while assignment rows whose thread is gone stay dropped.
 
 ### Agent API (Bearer-only, JSON)
 
@@ -359,8 +521,9 @@ and `read_messages` like message delivery. `ack` works on these rows.
   work payloads (see Boards for the full shape), newest first, max
   100, filtered to rooms where the agent holds `read_messages`.
 - `GET /agents/work/:id` returns one owned thread, or 404 for anything
-  the agent does not own or whose room the agent's user no longer belongs
-  to.
+  the agent does not own, whose room the agent's user no longer belongs
+  to, or where the agent no longer holds `read_messages`. `PATCH` and
+  `PUT .../result` answer the same 404 before checking `manage_threads`.
 - `PATCH /agents/work/:id` updates the status, tags, and run link of an
   owned thread. It takes `work_status` (one of `planned`,
   `in_progress`, `blocked`, `done`) and an optional plain-text `note`
@@ -384,8 +547,9 @@ curl -X PATCH https://smartfire.example.com/agents/work/7 \
   -d '{"work_status":"in_progress","note":"Reproducing the bug"}'
 ```
 
-This is the first enforcement of `manage_threads`: the status update
-requires it in the thread's room, with the standard 403 error shape.
+The status update requires `manage_threads` in the thread's room,
+with the standard 403 error shape; board post creation requires it
+too (see Boards).
 
 ### Link payloads
 

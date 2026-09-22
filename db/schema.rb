@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_18_160000) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_22_212400) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -86,6 +86,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_18_160000) do
     t.string "decision_note"
     t.datetime "expires_at", null: false
     t.string "external_id"
+    t.integer "github_account_id"
+    t.string "github_login"
     t.text "payload"
     t.integer "room_id"
     t.string "status", default: "pending", null: false
@@ -113,16 +115,26 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_18_160000) do
 
   create_table "agent_events", force: :cascade do |t|
     t.integer "actor_id"
+    t.integer "agent_approval_id"
     t.integer "agent_credential_id"
     t.integer "agent_id", null: false
+    t.string "chain_id"
     t.datetime "created_at", null: false
     t.string "detail"
     t.string "event_type", null: false
+    t.integer "hop", default: 0, null: false
     t.integer "message_id"
     t.json "metadata"
     t.string "outcome"
     t.integer "room_id"
+    t.integer "webhook_attempts", default: 0, null: false
+    t.text "webhook_last_error"
+    t.datetime "webhook_next_attempt_at"
+    t.string "webhook_status", default: "none", null: false
+    t.index ["agent_id", "agent_approval_id"], name: "index_agent_events_on_agent_github_approval", unique: true, where: "event_type = 'github_action_completed' AND agent_approval_id IS NOT NULL"
     t.index ["agent_id", "created_at"], name: "index_agent_events_on_agent_id_and_created_at"
+    t.index ["agent_id", "outcome", "id"], name: "index_agent_events_on_agent_outcome_id"
+    t.index ["webhook_status", "webhook_next_attempt_at"], name: "index_agent_events_on_webhook_recovery"
   end
 
   create_table "agent_grants", force: :cascade do |t|
@@ -152,6 +164,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_18_160000) do
     t.datetime "suspended_at"
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
+    t.string "webhook_signing_secret"
     t.index ["owner_id", "kind"], name: "index_agents_on_owner_id_and_kind"
     t.index ["user_id"], name: "index_agents_on_user_id", unique: true
   end
@@ -257,6 +270,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_18_160000) do
     t.datetime "updated_at", null: false
     t.integer "venue_room_id"
     t.index ["organizer_id"], name: "index_events_on_organizer_id"
+    t.index ["reminded_at", "starts_at"], name: "index_events_on_reminded_starts"
     t.index ["room_id", "starts_at"], name: "index_events_on_room_id_and_starts_at"
     t.index ["series_id", "starts_at"], name: "index_events_on_series_slot", unique: true, where: "series_id IS NOT NULL AND cancelled_at IS NULL"
     t.index ["series_id"], name: "index_events_on_series_id"
@@ -339,6 +353,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_18_160000) do
     t.integer "created_by_id"
     t.json "events", default: [], null: false
     t.string "owner", null: false
+    t.boolean "reader_verified", default: false, null: false
     t.string "repo", null: false
     t.integer "room_id", null: false
     t.datetime "updated_at", null: false
@@ -455,7 +470,10 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_18_160000) do
     t.index ["creator_id"], name: "index_messages_on_creator_id"
     t.index ["forwarded_from_message_id"], name: "index_messages_on_forwarded_from_message_id"
     t.index ["reply_to_message_id"], name: "index_messages_on_reply_to_message_id"
+    t.index ["room_id", "creator_id", "client_message_id"], name: "index_messages_on_room_creator_client_id"
+    t.index ["room_id", "thread_id", "created_at"], name: "index_messages_on_room_thread_created"
     t.index ["room_id"], name: "index_messages_on_room_id"
+    t.index ["thread_id", "created_at"], name: "index_messages_on_thread_created"
     t.index ["thread_id"], name: "index_messages_on_thread_id"
   end
 
@@ -474,6 +492,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_18_160000) do
   create_table "rooms", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "creator_id", null: false
+    t.datetime "deleted_at"
+    t.datetime "destroy_enqueued_at"
     t.string "icon_name"
     t.string "name"
     t.string "type", null: false
@@ -482,9 +502,11 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_18_160000) do
 
   create_table "searches", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "dedup_key"
     t.string "query", null: false
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
+    t.index ["user_id", "dedup_key"], name: "index_searches_on_user_and_dedup_key", unique: true
     t.index ["user_id"], name: "index_searches_on_user_id"
   end
 
@@ -569,9 +591,12 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_18_160000) do
   create_table "users", force: :cascade do |t|
     t.text "bio"
     t.string "bot_token"
+    t.string "bot_token_digest"
     t.datetime "created_at", null: false
     t.string "email_address"
+    t.datetime "email_self_changed_at"
     t.string "github_login"
+    t.boolean "google_email_link_allowed", default: false, null: false
     t.string "icon_name"
     t.json "inbox_preferences", default: {}
     t.string "name", null: false
@@ -581,11 +606,13 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_18_160000) do
     t.datetime "updated_at", null: false
     t.index "LOWER(github_login)", name: "index_users_on_lower_github_login", unique: true, where: "github_login IS NOT NULL"
     t.index ["bot_token"], name: "index_users_on_bot_token", unique: true
+    t.index ["bot_token_digest"], name: "index_users_on_bot_token_digest", unique: true
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
   end
 
   create_table "webhooks", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "signing_secret"
     t.datetime "updated_at", null: false
     t.string "url"
     t.integer "user_id", null: false
