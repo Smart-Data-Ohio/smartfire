@@ -1193,6 +1193,7 @@ export default class extends Controller {
     if (!room || !this.liveKit || this.connectionStatsSampling) return
     if (this.state !== "connected" && this.state !== "reconnecting") return
     if (this.connectionDetailsTarget.hidden) return
+    if (document.visibilityState === "hidden") return
 
     this.connectionStatsSampling = true
     try {
@@ -2238,9 +2239,8 @@ export default class extends Controller {
   }
 
   #renderRoster() {
-    this.participantListTarget.replaceChildren()
-
     if (!this.room) {
+      this.participantListTarget.replaceChildren()
       this.participantCountTarget.textContent = "0 participants"
       return
     }
@@ -2253,34 +2253,58 @@ export default class extends Controller {
       return this.#participantName(left).localeCompare(this.#participantName(right))
     })
 
-    for (const participant of participants) {
-      const item = document.createElement("li")
-      const name = document.createElement("span")
-      const activity = document.createElement("span")
-      const isLocal = participant === this.room.localParticipant
-      const speaking = participant.isSpeaking
-      const microphone = participant.getTrackPublication?.(Track.Source.Microphone)
-      const muted = isLocal ? !participant.isMicrophoneEnabled : microphone?.isMuted
-      const activityText = speaking ? "Speaking" : muted ? "Muted" : "Listening"
-
-      item.className = "huddle__participant"
-      item.classList.toggle("huddle__participant--speaking", speaking)
-      item.setAttribute("aria-label", `${this.#participantName(participant)}, ${activityText}`)
-
-      name.className = "huddle__participant-name overflow-ellipsis"
-      name.textContent = this.#participantName(participant)
-      if (isLocal) name.textContent += " (you)"
-
-      activity.className = "huddle__participant-activity"
-      activity.textContent = activityText
-
-      item.append(name, activity)
-      this.participantListTarget.appendChild(item)
+    // Speaking and mute events fire constantly mid-call, so rows are patched
+    // in place: rebuilding the list would drop hover, tooltips, and focus on
+    // every utterance. Only membership changes add or remove rows.
+    for (const item of [ ...this.participantListTarget.children ]) {
+      if (!participants.some(participant => participant.identity === item.dataset.participantIdentity)) item.remove()
     }
+    participants.forEach((participant, index) => {
+      let item = [ ...this.participantListTarget.children ]
+        .find(row => row.dataset.participantIdentity === participant.identity)
+      if (!item) {
+        item = this.#buildRosterRow(participant.identity)
+      }
+      this.#updateRosterRow(item, participant, Track)
+
+      const reference = this.participantListTarget.children[index]
+      if (item !== reference) this.participantListTarget.insertBefore(item, reference || null)
+    })
 
     const count = participants.length
     this.participantCountTarget.textContent = `${count} ${count === 1 ? "participant" : "participants"}`
     this.#renderStreamViewing()
+  }
+
+  #buildRosterRow(identity) {
+    const item = document.createElement("li")
+    item.dataset.participantIdentity = identity
+
+    const name = document.createElement("span")
+    name.className = "huddle__participant-name overflow-ellipsis"
+
+    const activity = document.createElement("span")
+    activity.className = "huddle__participant-activity"
+
+    item.append(name, activity)
+    return item
+  }
+
+  #updateRosterRow(item, participant, Track) {
+    const isLocal = participant === this.room.localParticipant
+    const speaking = participant.isSpeaking
+    const microphone = participant.getTrackPublication?.(Track.Source.Microphone)
+    const muted = isLocal ? !participant.isMicrophoneEnabled : microphone?.isMuted
+    const activityText = speaking ? "Speaking" : muted ? "Muted" : "Listening"
+
+    item.className = "huddle__participant"
+    item.classList.toggle("huddle__participant--speaking", speaking)
+    item.setAttribute("aria-label", `${this.#participantName(participant)}, ${activityText}`)
+
+    const [ name, activity ] = item.children
+    name.textContent = this.#participantName(participant)
+    if (isLocal) name.textContent += " (you)"
+    activity.textContent = activityText
   }
 
   #participantName(participant) {
@@ -2485,6 +2509,8 @@ export default class extends Controller {
 
   #checkAuthentication() {
     if (!this.room || !this.roomId || this.authenticationCheck) return this.authenticationCheck
+    // Becoming visible re-checks immediately, so hidden ticks can skip.
+    if (document.visibilityState === "hidden") return
 
     const roomAtStart = this.room
     const check = fetch(`/rooms/${encodeURIComponent(this.roomId)}/huddle`, {
