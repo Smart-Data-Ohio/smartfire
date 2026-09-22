@@ -1,11 +1,10 @@
 module SystemTestHelper
+  # Fast authenticated path: the test-only route verifies the same
+  # credentials and issues the same session row and cookie as the login
+  # form, skipping only the form round-trips. Every test still drives a
+  # real browser session from here on.
   def sign_in(email_address, password = "secret123456")
-    visit root_url
-
-    fill_in "email_address", with: email_address
-    fill_in "password", with: password
-
-    click_on "log_in"
+    visit test_sign_in_path(email_address: email_address, password: password)
     assert_selector "a.btn", text: "Designers"
   end
 

@@ -236,4 +236,11 @@ Rails.application.routes.draw do
   get "service-worker" => "pwa#service_worker"
 
   get "up" => "rails/health#show", as: :rails_health_check
+
+  # Test-only fast sign-in for system tests (see TestSessionController).
+  # Never loaded outside the test environment.
+  if Rails.env.test?
+    require_relative "../test/support/test_session_controller"
+    get "test_session", to: "test_session#create", as: :test_sign_in
+  end
 end

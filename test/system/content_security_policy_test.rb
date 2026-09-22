@@ -49,6 +49,10 @@ class ContentSecurityPolicyTest < ApplicationSystemTestCase
   end
 
   test "sign-in, a room, markdown, the Drive picker composer, and the huddle panel raise no violations" do
+    # The fast sign-in helper skips the login form; load it explicitly so
+    # the sign-in page keeps its violation coverage.
+    visit new_session_url
+    assert_field "email_address"
     sign_in "jz@37signals.com"
     assert Huddle.configured?
     join_room rooms(:designers)
