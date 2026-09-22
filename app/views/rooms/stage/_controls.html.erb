@@ -1,10 +1,11 @@
 <div id="<%= dom_id(room, :stage_controls) %>" class="stage-panel__controls">
   <% stream = room.live_stream %>
   <% if stream %>
-    <div class="stage-panel__live">
+    <div class="stage-panel__live" data-stream-id="<%= stream.id %>">
       <p class="stage-panel__note stage-panel__note--live">Live: <%= stream.user.name %></p>
       <% if stream.membership_id == membership.id || membership.host? %>
         <%= button_to "Stop stream", room_stage_stream_path(room), method: :delete,
+              params: { stream_id: stream.id },
               class: "btn stage-panel__stop",
               form: { data: { action: "turbo:submit-end->stage-panel#streamStopSubmitted", room_id: room.id } } %>
       <% end %>

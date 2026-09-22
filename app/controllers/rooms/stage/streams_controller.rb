@@ -9,8 +9,9 @@ class Rooms::Stage::StreamsController < ApplicationController
   # room carries at most one live stream: starting while another is live
   # answers 409 naming the presenter, including when a concurrent start wins
   # the race and the partial unique index rejects this one. Going live also
-  # requires an active huddle grant for the room, so a stream never starts
-  # without a call to publish over. The Stream callbacks broadcast the header
+  # requires an in-call huddle grant for the room — one the gateway has seen
+  # recently, not just an active one — so a stream never starts without a
+  # live call to publish over. The Stream callbacks broadcast the header
   # badge, sidebar dot, and per-viewer panel; the response only swaps the
   # actor's own panel without navigating.
   def create
@@ -18,7 +19,7 @@ class Rooms::Stage::StreamsController < ApplicationController
       return render plain: "Only hosts and speakers can go live", status: :forbidden
     end
 
-    unless HuddleGrant.active.exists?(room_id: @room.id, membership_id: @membership.id)
+    unless HuddleGrant.active.in_call.exists?(room_id: @room.id, membership_id: @membership.id)
       return render plain: "Join the stage before going live", status: :forbidden
     end
 
@@ -45,6 +46,13 @@ class Rooms::Stage::StreamsController < ApplicationController
   # endpoint never confirms stream state to listeners. Stopping an already
   # ended stream succeeds without doing anything. The actor travels with the
   # end so a host's stop can notify the presenter's browser.
+  #
+  # Both the Stop control and the presenting browser send the stream id they
+  # mean to stop: a DELETE that names a stream which is no longer live ends
+  # nothing, so a delayed stop can never kill someone else's newer stream.
+  # The id is purely anti-staleness — stopping is still authorized by role —
+  # and requests without one keep the historical end-whatever-is-live
+  # behavior.
   def destroy
     stream = @room.live_stream
 
@@ -52,7 +60,11 @@ class Rooms::Stage::StreamsController < ApplicationController
       return render plain: "Only the presenter or a host can stop the stream", status: :forbidden
     end
 
-    stream&.end!(ended_by: Current.user)
+    if params[:stream_id].present?
+      stream.end!(ended_by: Current.user) if stream && stream.id.to_s == params[:stream_id].to_s
+    else
+      stream&.end!(ended_by: Current.user)
+    end
     respond_with_panel
   end
 

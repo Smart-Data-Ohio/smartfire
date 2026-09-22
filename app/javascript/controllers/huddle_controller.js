@@ -589,14 +589,18 @@ export default class extends Controller {
     if (roomId !== this.roomId || !this.room || this.state !== "connected") return
 
     const room = this.room
-    this.streaming = { roomId, quality: detail?.quality }
+    // The Turbo response that triggered this event already swapped in the
+    // live panel, so the stream id is in the DOM: every later DELETE names
+    // it, and can never end someone else's newer stream.
+    const streamId = Number(document.querySelector(".stage-panel__live")?.dataset.streamId) || null
+    this.streaming = { roomId, quality: detail?.quality, streamId }
 
     try {
       await this.#startScreenShare(room, this.#streamEncodingFor(detail?.quality))
     } catch (error) {
       // A cancelled or denied capture must not leave live state dangling.
       this.streaming = null
-      await this.#deleteStream(roomId)
+      await this.#deleteStream(roomId, streamId)
       if (room === this.room) {
         this.#showTemporaryStatus(this.#permissionWasDenied(error)
           ? "Screen sharing wasn’t started. Choose a screen and allow sharing to try again."
@@ -1243,13 +1247,18 @@ export default class extends Controller {
 
   // Ends the room's stream the way the Stop control's DELETE does. Best
   // effort: the Stop control and the automatic ends converge on the same
-  // state, so a failure here only delays the end.
-  async #deleteStream(roomId) {
+  // state, so a failure here only delays the end. The stream id travels
+  // along when this browser knows it, so a delayed end can never kill
+  // someone else's newer stream.
+  async #deleteStream(roomId, streamId = null) {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
     if (!csrfToken) return
 
+    const path = `/rooms/${encodeURIComponent(roomId)}/stage/stream` +
+      (Number.isInteger(streamId) && streamId > 0 ? `?stream_id=${streamId}` : "")
+
     try {
-      await fetch(`/rooms/${encodeURIComponent(roomId)}/stage/stream`, {
+      await fetch(path, {
         method: "DELETE",
         credentials: "same-origin",
         headers: {
@@ -1378,9 +1387,9 @@ export default class extends Controller {
     if (!this.streaming || this.streaming.roomId !== this.roomId) return
     if (publication?.source !== this.liveKit?.Track?.Source?.ScreenShare) return
 
-    const { roomId } = this.streaming
+    const { roomId, streamId } = this.streaming
     this.streaming = null
-    this.#deleteStream(roomId)
+    this.#deleteStream(roomId, streamId)
   }
 
   // Leaving, switching rooms, and rejoining all end the local share with the
@@ -1390,9 +1399,9 @@ export default class extends Controller {
   #endStreamOnDisconnect() {
     if (!this.streaming) return
 
-    const { roomId } = this.streaming
+    const { roomId, streamId } = this.streaming
     this.streaming = null
-    this.#deleteStream(roomId)
+    this.#deleteStream(roomId, streamId)
   }
 
   async #disconnectCurrentRoom() {

@@ -186,9 +186,9 @@ class StreamingTest < ApplicationSystemTestCase
     end
   end
 
-  test "a cancelled capture DELETEs the stream" do
+  test "a cancelled capture DELETEs the stream by id" do
     room = create_stage_room(name: "Town Hall", members: [ users(:david), users(:jason) ])
-    Stream.create!(room: room, membership: room.memberships.find_by!(user: users(:david)),
+    stream = Stream.create!(room: room, membership: room.memberships.find_by!(user: users(:david)),
       user: users(:david), quality: "1080p15")
     sign_in "david@37signals.com"
     visit room_path(room)
@@ -200,7 +200,7 @@ class StreamingTest < ApplicationSystemTestCase
       window.__streamDeleteSeen = [];
       const originalFetch = window.fetch;
       window.fetch = (url, options) => {
-        if (typeof url === "string" && url.endsWith("/stage/stream") && options?.method === "DELETE") {
+        if (typeof url === "string" && url.includes("/stage/stream") && options?.method === "DELETE") {
           window.__streamDeleteSeen.push(url);
         }
         return originalFetch(url, options);
@@ -230,6 +230,8 @@ class StreamingTest < ApplicationSystemTestCase
       Stream.find_by(room_id: room.id)&.ended_at.present?
     end
 
+    assert_equal [ "/rooms/#{room.id}/stage/stream?stream_id=#{stream.id}" ],
+      page.evaluate_script("window.__streamDeleteSeen")
     assert_no_selector ".stage-live__badge"
   end
 
@@ -251,7 +253,7 @@ class StreamingTest < ApplicationSystemTestCase
       window.__streamDeleteSeen = [];
       const originalFetch = window.fetch;
       window.fetch = (url, options) => {
-        if (typeof url === "string" && url.endsWith("/stage/stream") && options?.method === "DELETE") {
+        if (typeof url === "string" && url.includes("/stage/stream") && options?.method === "DELETE") {
           window.__streamDeleteSeen.push(url);
         }
         return originalFetch(url, options);
@@ -398,15 +400,16 @@ class StreamingTest < ApplicationSystemTestCase
       end
     end
 
-    # The non-LiveKit stand-in for joining the stage: a real grant so the
-    # server accepts the Go live POST, plus a synthetic huddle:changed event
-    # so the stage panel enables the control, mirroring the connected state
-    # a real join would broadcast.
+    # The non-LiveKit stand-in for joining the stage: a real in-call grant
+    # so the server accepts the Go live POST, plus a synthetic
+    # huddle:changed event so the stage panel enables the control,
+    # mirroring the connected state a real join would broadcast.
     def join_stage_without_media(room, user)
-      HuddleGrant.issue!(
+      grant = HuddleGrant.issue!(
         session: user.sessions.create!(user_agent: "System Test"),
         membership: room.memberships.find_by!(user: user)
       )
+      grant.update_columns(last_seen_at: Time.current)
       dispatch_huddle_changed(room_id: room.id, state: "connected")
     end
 

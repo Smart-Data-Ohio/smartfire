@@ -62,7 +62,9 @@ for what is and is not measured.
 The stage panel shows **Stop stream** to the presenter and to hosts.
 Stopping (`DELETE /rooms/:room_id/stage/stream`) ends the live state; the
 presenter's browser stops sharing alongside it. An administrator member
-can also stop through the endpoint. Anyone else gets 403.
+can also stop through the endpoint. Anyone else gets 403. Both the Stop
+control and the presenting browser name the stream id they mean to stop,
+so a delayed stop can never end someone else's newer stream.
 
 A stream also ends, in the same transaction, when:
 
