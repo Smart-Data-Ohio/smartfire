@@ -126,7 +126,11 @@ jobs:
       - name: Run tests
         run: bin/rails db:setup test
 
-  test_system:
+  test_system_shard:
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [ browser, huddles, stage-streaming ]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -159,18 +163,25 @@ jobs:
           bundler-cache: true
 
       - name: Set up Node
-        if: steps.coverage.outputs.scope != 'google'
+        if: matrix.shard != 'browser' && steps.coverage.outputs.scope != 'google'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           package-manager-cache: false
 
       - name: Install gateway dependencies
-        if: steps.coverage.outputs.scope != 'google'
+        if: matrix.shard != 'browser' && steps.coverage.outputs.scope != 'google'
         run: npm ci --ignore-scripts --prefix script/livekit-gateway
 
-      - name: Run browser tests with LiveKit
-        if: steps.coverage.outputs.scope != 'google'
+      - name: Run browser tests
+        if: matrix.shard == 'browser' && steps.coverage.outputs.scope != 'google'
+        run: |
+          bin/rails db:setup
+          mapfile -t files < <(printf '%s\n' test/system/*_test.rb | grep -v -E "/(huddles_test|stage_test|streaming_test)\\.rb$")
+          PARALLEL_WORKERS=4 bin/rails test "${files[@]}"
+
+      - name: Run LiveKit-backed browser tests
+        if: matrix.shard != 'browser' && steps.coverage.outputs.scope != 'google'
         run: |
           bin/livekit-local setup
           source .bundle/livekit/env
@@ -182,10 +193,35 @@ jobs:
             sleep 1
           done
           bin/livekit-local status
-          LIVEKIT_SYSTEM_TESTS=1 PARALLEL_WORKERS=1 bin/rails db:setup test:system
+          bin/rails db:setup
+          case "${{ matrix.shard }}" in
+            huddles)
+              LIVEKIT_SYSTEM_TESTS=1 PARALLEL_WORKERS=1 bin/rails test test/system/huddles_test.rb
+              ;;
+            *)
+              LIVEKIT_SYSTEM_TESTS=1 PARALLEL_WORKERS=1 bin/rails test test/system/stage_test.rb test/system/streaming_test.rb
+              ;;
+          esac
 
       - name: Run Google Calendar and Drive browser tests
-        if: steps.coverage.outputs.scope == 'google'
+        if: matrix.shard == 'browser' && steps.coverage.outputs.scope == 'google'
         run: |
           bin/rails db:setup
           PARALLEL_WORKERS=1 bin/rails test test/system/events_test.rb test/system/drive_link_previews_test.rb test/system/drive_attachments_test.rb test/system/drive_share_test.rb
+
+      - name: Nothing to run in Google-only scope
+        if: matrix.shard != 'browser' && steps.coverage.outputs.scope == 'google'
+        run: echo "Google-only scope runs in the browser shard."
+
+  test_system:
+    runs-on: ubuntu-latest
+    permissions: {}
+    needs: [ test_system_shard ]
+    if: always()
+    steps:
+      - name: Fail if any browser shard failed
+        run: |
+          if [ "${{ needs.test_system_shard.result }}" != "success" ]; then
+            echo "Browser shard result: ${{ needs.test_system_shard.result }}"
+            exit 1
+          fi
