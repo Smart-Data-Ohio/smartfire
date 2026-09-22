@@ -108,20 +108,21 @@ class IconsTest < ApplicationSystemTestCase
     def assert_no_icon_suggestions(editor, text)
       editor.set text
       page.evaluate_script(<<~JS, editor)
-        const [ editor ] = arguments
-        window.__iconSuggestionFetches = 0
-        if (!window.__iconSuggestionFetchWrapped) {
-          window.__iconSuggestionFetchWrapped = true
-          window.fetch = ((originalFetch) => (...args) => {
-            const url = String(args[0] && args[0].url || args[0])
-            if (!url.includes("/autocompletable/")) return originalFetch(...args)
-            window.__iconSuggestionFetches++
-            return originalFetch(...args).finally(() => window.__iconSuggestionFetches--)
-          })(window.fetch.bind(window))
-        }
-        const host = editor.closest('[data-controller~="markdown-autocomplete"]')
-        const controller = window.Stimulus.getControllerForElementAndIdentifier(host, "markdown-autocomplete")
-        controller.handlers.forEach(handler => handler.updateWithContentAndPosition(editor.value, editor.selectionStart))
+        ((editor) => {
+          window.__iconSuggestionFetches = 0
+          if (!window.__iconSuggestionFetchWrapped) {
+            window.__iconSuggestionFetchWrapped = true
+            window.fetch = ((originalFetch) => (...args) => {
+              const url = String(args[0] && args[0].url || args[0])
+              if (!url.includes("/autocompletable/")) return originalFetch(...args)
+              window.__iconSuggestionFetches++
+              return originalFetch(...args).finally(() => window.__iconSuggestionFetches--)
+            })(window.fetch.bind(window))
+          }
+          const host = editor.closest('[data-controller~="markdown-autocomplete"]')
+          const controller = window.Stimulus.getControllerForElementAndIdentifier(host, "markdown-autocomplete")
+          controller.handlers.forEach(handler => handler.updateWithContentAndPosition(editor.value, editor.selectionStart))
+        })(arguments[0])
       JS
       Timeout.timeout(10) do
         sleep 0.05 until page.evaluate_script("window.__iconSuggestionFetches") == 0
