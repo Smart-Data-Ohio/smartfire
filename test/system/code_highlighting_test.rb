@@ -32,7 +32,9 @@ class CodeHighlightingTest < ApplicationSystemTestCase
     assert_selector ".message__body pre code", count: SAMPLES.size
 
     SAMPLES.each do |language, source_code|
-      code = find("pre code[class~='language-#{language}'][data-highlighted='yes']")
+      # The first completion wait absorbs the worker's cold boot; once one
+      # block is marked, the rest follow within milliseconds.
+      code = find("pre code[class~='language-#{language}'][data-highlighted='yes']", wait: HIGHLIGHT_WAIT)
       assert_selector "pre code[class~='language-#{language}'] .code-token"
       assert_equal source_code + "\n", code.evaluate_script("this.textContent")
     end
@@ -71,8 +73,8 @@ class CodeHighlightingTest < ApplicationSystemTestCase
       ```
     MARKDOWN
     send_message source
-    assert_selector "pre.code-highlighted code .code-token"
-    assert_selector "pre code.language-text[data-highlighted='yes']", text: 'const plain = "@[JZ] :smile:";'
+    assert_selector "pre.code-highlighted code .code-token", wait: HIGHLIGHT_WAIT
+    assert_selector "pre code.language-text[data-highlighted='yes']", text: 'const plain = "@[JZ] :smile:";', wait: HIGHLIGHT_WAIT
     assert_no_selector "code.language-text span, code.language-unknown-language span, p code span"
     assert_selector "code.language-unknown-language", text: "<script>window.codeExecuted = true</script>"
     assert_no_selector ".message__body pre script", visible: :all
@@ -86,14 +88,14 @@ class CodeHighlightingTest < ApplicationSystemTestCase
 
     visit searches_url(q: "HighlightSearchExample")
     within_message(message) do
-      assert_selector "pre code.language-javascript[data-highlighted='yes'] .code-token", text: "const"
+      assert_selector "pre code.language-javascript[data-highlighted='yes'] .code-token", text: "const", wait: HIGHLIGHT_WAIT
       assert_selector ".markdown-code-copy", count: 1
     end
 
     click_link "Exit search"
     assert_current_path room_path(rooms(:designers))
     within_message(message) do
-      assert_selector "pre code.language-javascript[data-highlighted='yes'] .code-token", text: "const"
+      assert_selector "pre code.language-javascript[data-highlighted='yes'] .code-token", text: "const", wait: HIGHLIGHT_WAIT
       assert_selector ".markdown-code-copy", count: 1
     end
 
@@ -124,7 +126,7 @@ class CodeHighlightingTest < ApplicationSystemTestCase
   test "editing a code block replaces its language colors and copied source" do
     source = "```ts\nconst value: string = \"hello\";\n```"
     send_message source
-    assert_selector "pre code.language-ts[data-highlighted='yes'] .code-token", text: "const"
+    assert_selector "pre code.language-ts[data-highlighted='yes'] .code-token", text: "const", wait: HIGHLIGHT_WAIT
     message = Message.find_by!(markdown_source: source)
     within_message(message) do
       reveal_message_actions
@@ -135,7 +137,7 @@ class CodeHighlightingTest < ApplicationSystemTestCase
     fill_in_markdown "Write a message", with: replacement
     click_on "Send Message"
     within_message(message) do
-      assert_selector "pre code.language-python[data-highlighted='yes'] .code-token", text: "def"
+      assert_selector "pre code.language-python[data-highlighted='yes'] .code-token", text: "def", wait: HIGHLIGHT_WAIT
       assert_no_selector "code.language-ts"
       assert_selector ".markdown-code-copy", count: 1
       page.execute_script "navigator.clipboard.writeText = async text => { window.copiedCode = text; };"
@@ -154,7 +156,7 @@ class CodeHighlightingTest < ApplicationSystemTestCase
 
     visit room_url(rooms(:designers), thread: thread.id, message_id: message.id)
     within_message(message) do
-      assert_selector "pre code.language-ts[data-highlighted='yes'] .code-token", text: "const"
+      assert_selector "pre code.language-ts[data-highlighted='yes'] .code-token", text: "const", wait: HIGHLIGHT_WAIT
     end
 
     colors = %w[ light dark ].map do |theme|

@@ -331,7 +331,7 @@ class WorkspaceMarkdownTest < ApplicationSystemTestCase
     end
 
     def assert_highlighted_code
-      assert_selector "pre code.language-javascript[data-highlighted='yes'] .code-token", text: "const"
+      assert_selector "pre code.language-javascript[data-highlighted='yes'] .code-token", text: "const", wait: HIGHLIGHT_WAIT
       assert_selector ".markdown-code-copy", count: 1
     end
 
