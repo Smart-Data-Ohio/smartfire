@@ -45,8 +45,18 @@ review), `merged`, `closed` (without merge), `review_requested`,
 `checks_failed` (a check concluding `failure`, `timed_out`, or `cancelled`,
 or a commit status of `failure`/`error`). New subscriptions default to
 `opened`, `merged`, `review_requested`, and `checks_failed`. Direct rooms
-cannot be subscribed. Subscribing performs no GitHub API call, so a typo in
-`owner/repo` simply never receives events.
+cannot be subscribed.
+
+Subscribing requires the subscriber's own linked GitHub account (profile
+page) to read the repository: the app calls `GET /repos/{owner}/{repo}`
+with the subscriber's token (the same cached check private cards use) and
+refuses the subscription unless GitHub answers 200. Administrators may tick
+"Subscribe without verifying my GitHub access" to override; such
+subscriptions, and every subscription created before this check existed,
+are recorded as unverified (`reader_verified` false). When a webhook's
+`repository.private` is true, or missing, messages posted for an
+unverified subscription omit the PR title (for example "**alice** opened
+pull request #12"); the PR card still gates its content per viewer.
 
 Each selected event arrives once as a normal message from the workspace
 **GitHub** bot (created lazily, member only of subscribed rooms), with one
@@ -70,6 +80,10 @@ new environment variables were added.
 
 Link a GitHub username on the profile page to receive an inbox item ("Review
 requested") when a subscribed repository requests a review from that login.
+While a GitHub account is linked (see PR write actions below), the profile
+login is the one GitHub confirmed for the token and cannot be edited by
+hand; linking releases that login from any other member who had typed it
+in without a linked account.
 The item points at the posted message, so its visibility follows room
 membership: it appears only while the reviewer is a member of the room the
 event posted into. A login can be linked to only one user. No item is
@@ -312,7 +326,7 @@ one GitHub request per viewer per window. Linking, relinking, or repairing
 the connected account retires that member's cached decisions at once,
 because the cache key carries the account's `updated_at`. The card content itself still
 comes from the stored record fetched with the workspace token; only the
-gate is per viewer. Likewise, subscribing a room to a private repository
-makes its PR titles visible to the whole room through the posted
-messages: subscription messages carry the PR title as text, which room
-membership alone gates.
+gate is per viewer. Subscription messages are the exception: a
+subscription created by a verified reader posts private PR titles as text,
+which room membership alone gates; unverified subscriptions post them
+without titles.

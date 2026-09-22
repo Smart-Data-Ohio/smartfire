@@ -4,6 +4,7 @@
 # active_record_encryption initializer) and is never logged or rendered back.
 class GithubConnectedAccount < ApplicationRecord
   UNREADABLE_TOKEN_REASON = "The stored token could not be read; link it again"
+  REPOSITORY_ACCESS_TTL = 10.minutes
 
   belongs_to :user
 
@@ -27,6 +28,37 @@ class GithubConnectedAccount < ApplicationRecord
     connected? && access_token.present?
   rescue ActiveRecord::Encryption::Errors::Decryption
     mark_disconnected!(UNREADABLE_TOKEN_REASON)
+    false
+  end
+
+  # Whether this linked account can read owner/repo, checked with its own
+  # token against GET /repos/{owner}/{repo}. Backs the per-viewer gate for
+  # private-repo cards, repository subscriptions, and agent payloads.
+  #
+  # The decision is cached per member and repository for 10 minutes, both
+  # grants and denials, so a page of cards from one repository costs at
+  # most one GitHub request per member per window. The key carries
+  # updated_at, so linking, relinking, or repairing the account retires
+  # that member's cached decisions without enumerating repositories. An
+  # unusable account is denied with no request, and a transport failure
+  # denies without caching so the next check retries.
+  def can_read_repository?(owner, repo)
+    return false unless usable?
+
+    owner = owner.to_s.downcase
+    repo = repo.to_s.downcase
+    # updated_at at float precision: a relink in the same second as a cached
+    # denial must still retire it.
+    Rails.cache.fetch([ "github_repo_access", user_id, updated_at.to_f, owner, repo ], expires_in: REPOSITORY_ACCESS_TTL) do
+      Github::WriteClient.new(token: access_token).repository_readable?(owner, repo)
+    rescue Github::WriteClient::Unauthorized
+      mark_disconnected!("GitHub rejected the linked token (401)")
+      false
+    end
+  rescue ActiveRecord::Encryption::Errors::Decryption
+    mark_disconnected!(UNREADABLE_TOKEN_REASON)
+    false
+  rescue Github::WriteClient::Error
     false
   end
 
