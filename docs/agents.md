@@ -10,7 +10,9 @@ An agent is a row in `agents`, 1:1 with a bot `User`. `kind` is `personal`
 create; backfilled rows may have no owner, rendered as "no owner recorded").
 `Agent#active?` is false while `suspended_at` is set or the bot user is not
 active. Suspending an agent revokes all of its capability grants in the same
-transaction.
+transaction. Deactivating a person suspends every agent they own, so those
+agents' Bearer tokens answer 401 and their bot keys get 403 from every
+capability check.
 
 ## Credentials
 

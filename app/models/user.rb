@@ -108,6 +108,10 @@ class User < ApplicationRecord
       sessions.delete_all
       google_account&.mark_disconnected!("Account deactivated")
       github_connected_account&.mark_disconnected!("Account deactivated")
+      # Agents this person owns stop with them: suspension revokes their
+      # grants, suspended agents' Bearer tokens are refused (401), and their
+      # bot keys fail every capability check (403).
+      Agent.where(owner_id: id).find_each(&:suspend!)
 
       update! status: :deactivated, email_address: deactived_email_address
     end
