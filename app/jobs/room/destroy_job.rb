@@ -7,6 +7,10 @@ class Room::DestroyJob < ApplicationJob
   # (A run that lands before its marking transaction commits either blocks
   # on the write lock and retries, or no-ops and is picked up again by the
   # retention sweep for rooms that stay marked.)
+  #
+  # Messages go before threads on purpose: a thread's dependent destroy
+  # loads its whole message set at once, so every message is destroyed in
+  # batches first and each thread is already empty when its turn comes.
   BATCH_SIZE = 500
 
   def perform(room_id)
@@ -14,8 +18,8 @@ class Room::DestroyJob < ApplicationJob
     return unless room&.deleted?
 
     destroy_huddle_grants(room)
-    room.channel_threads.find_each(batch_size: BATCH_SIZE, &:destroy!)
     room.messages.find_each(batch_size: BATCH_SIZE, &:destroy!)
+    room.channel_threads.find_each(batch_size: BATCH_SIZE, &:destroy!)
     room.events.find_each(batch_size: BATCH_SIZE, &:destroy!)
     room.destroy!
   end

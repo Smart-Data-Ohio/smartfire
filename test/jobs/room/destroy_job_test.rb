@@ -135,4 +135,37 @@ class Room::DestroyJobTest < ActiveJob::TestCase
       Room::DestroyJob.perform_now(Room.maximum(:id).to_i + 100)
     end
   end
+
+  test "destroy never loads more than a batch of messages at once" do
+    room = Rooms::Closed.create_for({ name: "Batchy", creator: @david }, users: [ @david ])
+    thread = ChannelThread.create!(room: room, creator: @david, name: "Big thread")
+    5.times { |index| thread.post_message!(creator: @david, attributes: { markdown_source: "Message #{index}" }) }
+    room.root_messages.create!(creator: @david, markdown_source: "Root")
+    room.begin_destroy!
+
+    counts = []
+    with_destroy_batch_size(2) do
+      ActiveSupport::Notifications.subscribed(
+        ->(*, payload) { counts << payload[:record_count] if payload[:class_name] == "Message" },
+        "instantiation.active_record"
+      ) do
+        Room::DestroyJob.perform_now(room.id)
+      end
+    end
+
+    assert_not_empty counts
+    assert_operator counts.max, :<=, 2
+    assert_empty Message.where(room_id: room.id)
+  end
+
+  private
+    def with_destroy_batch_size(size)
+      original = Room::DestroyJob::BATCH_SIZE
+      Room::DestroyJob.send(:remove_const, :BATCH_SIZE)
+      Room::DestroyJob.const_set(:BATCH_SIZE, size)
+      yield
+    ensure
+      Room::DestroyJob.send(:remove_const, :BATCH_SIZE)
+      Room::DestroyJob.const_set(:BATCH_SIZE, original)
+    end
 end
