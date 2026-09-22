@@ -46,30 +46,36 @@ class Agent::Delivery
           next
         end
 
-        if rate_limited?(agent, room)
-          agent.agent_events.create!(
-            event_type: "delivery_suppressed_rate_limit",
-            room: room,
-            message: message,
-            actor_id: message.creator_id,
-            outcome: "suppressed",
-            detail: "Rate limit exceeded (#{RATE_LIMIT_PER_MINUTE} per minute)",
-            chain_id: chain_id,
-            metadata: { "hop" => message_hop }
-          )
-          next
+        # The rate check and the row insert share the agent's row lock so
+        # concurrent enqueues cannot both pass the count and over-deliver.
+        # Each recipient locks only its own agent row; different agents
+        # proceed in parallel.
+        event = agent.with_lock do
+          if rate_limited?(agent, room)
+            agent.agent_events.create!(
+              event_type: "delivery_suppressed_rate_limit",
+              room: room,
+              message: message,
+              actor_id: message.creator_id,
+              outcome: "suppressed",
+              detail: "Rate limit exceeded (#{RATE_LIMIT_PER_MINUTE} per minute)",
+              chain_id: chain_id,
+              metadata: { "hop" => message_hop }
+            )
+            nil
+          else
+            agent.agent_events.create!(
+              event_type: event_type,
+              room: room,
+              message: message,
+              actor_id: message.creator_id,
+              outcome: "pending",
+              chain_id: chain_id,
+              metadata: { "hop" => message_hop }
+            )
+          end
         end
-
-        event = agent.agent_events.create!(
-          event_type: event_type,
-          room: room,
-          message: message,
-          actor_id: message.creator_id,
-          outcome: "pending",
-          chain_id: chain_id,
-          metadata: { "hop" => message_hop }
-        )
-        Agent::DeliveryJob.perform_later(event.id)
+        Agent::DeliveryJob.perform_later(event.id) if event
       end
     end
 

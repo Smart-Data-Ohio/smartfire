@@ -125,8 +125,9 @@ Never names: bots receive no Drive credentials. See
 ### Rate limit and loop guard
 
 At most 20 deliveries per agent per room per minute, counted from
-`agent_events`; excess writes `delivery_suppressed_rate_limit` and is
-dropped, not queued. Agent-to-agent chains carry a hop count and a
+`agent_events` with the count and the insert sharing the agent's row
+lock, so concurrent enqueues cannot over-deliver; excess writes
+`delivery_suppressed_rate_limit` and is dropped, not queued. Agent-to-agent chains carry a hop count and a
 trigger chain id: human messages start at 0, and an agent's message
 carries its trigger's hop plus one, where the trigger is the most
 recent mention, direct message, reply, or work assignment event

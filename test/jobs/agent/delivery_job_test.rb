@@ -144,6 +144,24 @@ class Agent::DeliveryJobTest < ActiveSupport::TestCase
     assert_not_requested :post, webhooks(:bender).url
   end
 
+  test "rate check and insert run inside the agent lock" do
+    baseline = ActiveRecord::Base.connection.open_transactions
+    depths = []
+    real_rate_limited = Agent::Delivery.method(:rate_limited?)
+    Agent::Delivery.singleton_class.send(:define_method, :rate_limited?) do |*args, **kwargs|
+      depths << ActiveRecord::Base.connection.open_transactions
+      real_rate_limited.call(*args, **kwargs)
+    end
+
+    create_mentioning_message(@room, @bot, creator: users(:david))
+
+    assert_equal 1, depths.size
+    assert depths.all? { |depth| depth > baseline },
+      "the rate check must run inside the agent lock so concurrent enqueues cannot both pass"
+  ensure
+    Agent::Delivery.singleton_class.send(:remove_method, :rate_limited?)
+  end
+
   test "rate limit drops the 21st delivery with a suppression row and no job" do
     20.times do |i|
       @room.messages.create!(

@@ -282,6 +282,35 @@ class Github::PerformAgentActionJobTest < ActiveJob::TestCase
     assert_requested stub, times: 1
   end
 
+  test "a duplicate enqueue that slips past the check returns the winner" do
+    stub_request(:post, "https://api.github.com/repos/rails/rails/issues/12/comments")
+      .with(body: { body: "Racy" }.to_json)
+      .to_return(status: 201, body: { html_url: "https://github.com/rails/rails/pull/12#issuecomment-9" }.to_json)
+    approval = approve!(build_approval(kind: "comment", body: "Racy"))
+
+    Github::PerformAgentActionJob.perform_now(approval.id)
+
+    Github::PerformAgentActionJob.any_instance.stubs(:already_executed?).returns(false)
+    assert_no_difference -> { @agent.agent_events.where(event_type: "github_action_completed").count } do
+      Github::PerformAgentActionJob.perform_now(approval.id)
+    end
+  end
+
+  test "completion rows are unique per agent and approval" do
+    approval = approve!(build_approval(kind: "comment", body: "Unique"))
+    assert @agent.agent_events.exists?(event_type: "approval_decided", agent_approval_id: approval.id)
+
+    @agent.agent_events.create!(
+      event_type: "github_action_completed", room: @room, outcome: "delivered", agent_approval_id: approval.id
+    )
+
+    assert_raises ActiveRecord::RecordNotUnique do
+      @agent.agent_events.create!(
+        event_type: "github_action_completed", room: @room, outcome: "delivered", agent_approval_id: approval.id
+      )
+    end
+  end
+
   test "a failed run is not retried by a second run" do
     approval = approve!(build_approval(kind: "comment", body: "Later"))
     @grant.update!(revoked_at: Time.current)
