@@ -189,6 +189,37 @@ class ChannelThreadsControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "closed listing finds stale threads in SQL with one threads query" do
+    @thread.update_columns(last_activity_at: 1.hour.ago, closed_at: 30.minutes.ago)
+
+    old_closed = ChannelThread.create!(room: @room, creator: @creator, name: "Old closed")
+    old_closed.update_columns(last_activity_at: 4.hours.ago, closed_at: 3.hours.ago)
+
+    stale = ChannelThread.create!(room: @room, creator: @creator, name: "Gone quiet")
+    stale.update_columns(last_activity_at: 3.hours.ago, auto_archive_after_minutes: 60)
+
+    locked = ChannelThread.create!(room: @room, creator: @creator, name: "Moderated")
+    locked.lock_conversation!
+    locked.update_columns(last_activity_at: 2.hours.ago)
+
+    ChannelThread.create!(room: @room, creator: @creator, name: "Still going")
+
+    sign_in :jz
+    selects = channel_thread_selects { get room_threads_url(@room, state: "closed", format: :json) }
+    assert_response :success
+    assert_equal 1, selects.size, "expected a single channel_threads query, ran: #{selects.inspect}"
+    assert_equal [ @thread.id, locked.id, stale.id, old_closed.id ],
+      response.parsed_body.fetch("threads").pluck("id")
+
+    board = Rooms::Board.create_for({ name: "Launch", creator: users(:david) }, users: [ users(:david), users(:jz) ])
+    board_post = ChannelThread.create!(room: board, creator: @creator, name: "Launch post", work_status: "planned")
+    board_post.update_columns(last_activity_at: 3.hours.ago, auto_archive_after_minutes: 60)
+
+    get room_threads_url(board, state: "closed", format: :json)
+    assert_response :success
+    assert_empty response.parsed_body.fetch("threads")
+  end
+
   test "a deleted starter is represented explicitly so open clients clear its preview" do
     parent = messages(:third)
     @thread.update!(parent_message: parent)
@@ -448,6 +479,23 @@ class ChannelThreadsControllerTest < ActionDispatch::IntegrationTest
       ActiveRecord::Base.connection.clear_query_cache
       yield
       count
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscription)
+    end
+
+    # Every uncached SELECT against channel_threads in the block, so the
+    # closed listing can prove it filters in SQL instead of loading
+    # active threads into Ruby.
+    def channel_thread_selects
+      selects = []
+      subscription = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        sql = payload[:sql].to_s
+        selects << sql if !payload[:cached] && sql.match?(/FROM "channel_threads"/)
+      end
+
+      ActiveRecord::Base.connection.clear_query_cache
+      yield
+      selects
     ensure
       ActiveSupport::Notifications.unsubscribe(subscription)
     end

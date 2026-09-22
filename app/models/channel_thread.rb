@@ -63,6 +63,15 @@ class ChannelThread < ApplicationRecord
   # view. A separate locked scope remains available for moderation tooling.
   scope :closed, -> { where.not(closed_at: nil) }
   scope :locked, -> { where.not(locked_at: nil) }
+  # Threads the closed listing shows: explicitly closed threads (locked
+  # threads set closed_at too) plus time-stale threads, which reads
+  # report as closed. Mirrors #stale? in SQL; boards never go stale.
+  scope :effectively_closed, -> {
+    stale = where(closed_at: nil, locked_at: nil)
+      .where.not(room_id: Room.boards.select(:id))
+      .where("datetime(last_activity_at, '+' || auto_archive_after_minutes || ' minutes') <= datetime(?)", Time.current.utc.to_fs(:db))
+    closed.or(stale)
+  }
   scope :not_deleted, -> { all }
   scope :work, -> { where.not(work_status: nil) }
   scope :unfinished_work, -> { where(work_status: WORK_STATUSES - [ "done" ]) }

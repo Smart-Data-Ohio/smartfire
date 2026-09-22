@@ -195,7 +195,7 @@ class ChannelThreadsController < ApplicationController
       when "done", "completed"
         scope.work.where(work_status: "done")
       when "closed"
-        include_stale(scope.closed, scope)
+        scope.effectively_closed
       when "locked"
         scope.locked
       when "all"
@@ -206,20 +206,14 @@ class ChannelThreadsController < ApplicationController
     end
 
     # Reads report stale threads as closed without writing (see
-    # ChannelThread#status), so the state filters apply the same rule in
-    # memory: stale threads leave the active listing and join the closed
-    # one. Boards never go stale and skip both.
+    # ChannelThread#status), so the active listing drops them in memory
+    # after loading the rows it renders anyway. The closed listing
+    # applies the same rule in SQL (see effectively_closed). Boards
+    # never go stale and skip the in-memory filter.
     def reject_stale(threads)
       return threads if @room.board?
 
       threads.to_a.reject(&:stale?)
-    end
-
-    def include_stale(closed, scope)
-      return closed if @room.board?
-
-      (closed.to_a + scope.active.to_a.select(&:stale?))
-        .sort_by { |thread| [ thread.last_activity_at, thread.id ] }.reverse
     end
 
     def ensure_channel_room
