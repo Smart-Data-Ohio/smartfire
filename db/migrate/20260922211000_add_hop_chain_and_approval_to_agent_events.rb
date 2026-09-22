@@ -15,6 +15,23 @@ class AddHopChainAndApprovalToAgentEvents < ActiveRecord::Migration[8.2]
           SET agent_approval_id = CAST(json_extract(metadata, '$.approval_id') AS INTEGER)
           WHERE event_type IN ('github_action_completed', 'approval_decided')
         SQL
+
+        # Concurrent writers could record the same completion twice before
+        # the unique index below existed. Drop every duplicate but the
+        # lowest id per key so the index builds cleanly in production.
+        duplicate_scope = <<~SQL.squish
+          event_type = 'github_action_completed'
+            AND agent_approval_id IS NOT NULL
+            AND id NOT IN (
+              SELECT MIN(id) FROM agent_events
+              WHERE event_type = 'github_action_completed'
+                AND agent_approval_id IS NOT NULL
+              GROUP BY agent_id, agent_approval_id
+            )
+        SQL
+        duplicates = select_value("SELECT COUNT(*) FROM agent_events WHERE #{duplicate_scope}")
+        execute("DELETE FROM agent_events WHERE #{duplicate_scope}")
+        say "Removed #{duplicates} duplicate github_action_completed rows, keeping the lowest id per approval"
       end
     end
 
