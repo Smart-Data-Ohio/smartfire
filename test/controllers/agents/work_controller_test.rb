@@ -85,12 +85,38 @@ class Agents::WorkControllerTest < ActionDispatch::IntegrationTest
     assert_equal "planned", response.parsed_body["work_status"]
   end
 
+  test "work links omit a private pull request's title and branches unless the owner can read it" do
+    grant!(capability: "read_messages", room: @room)
+    grant!(capability: "post_messages", room: @room)
+    thread = create_owned_thread!(name: "Private work")
+    pull_request = Github::PullRequest.for_reference(owner: "acme", repo: "secret", number: 3)
+    pull_request.update!(private: true, title: "Secret acquisition", head_branch: "secret-branch", base_branch: "main", state: "open")
+    thread.work_thread_links.create!(kind: :pull_request, github_pull_request: pull_request, created_by: users(:david))
+
+    get agents_work_thread_url(thread), headers: bearer_headers
+    pr_entry = response.parsed_body["links"].first
+    assert_nil pr_entry["title"]
+    assert_nil pr_entry.dig("pull_request", "title")
+    assert_nil pr_entry.dig("pull_request", "head_branch")
+    assert_nil pr_entry.dig("pull_request", "base_branch")
+    assert_not_includes response.body, "Secret acquisition"
+    assert_not_includes response.body, "secret-branch"
+
+    GithubConnectedAccount.create!(user: @agent.owner, github_login: "owner-gh", access_token: "owner-token")
+    stub_request(:get, "https://api.github.com/repos/acme/secret").to_return(status: 200, body: "{}")
+
+    get agents_work_thread_url(thread), headers: bearer_headers
+    pr_entry = response.parsed_body["links"].first
+    assert_equal "Secret acquisition", pr_entry["title"]
+    assert_equal "secret-branch", pr_entry.dig("pull_request", "head_branch")
+  end
+
   test "show includes links with pull request, event, and drive entries" do
     grant!(capability: "read_messages", room: @room)
     grant!(capability: "post_messages", room: @room)
     thread = create_owned_thread!(name: "Linked work")
     pull_request = Github::PullRequest.for_reference(owner: "rails", repo: "rails", number: 7)
-    pull_request.update!(title: "Fix login", state: "open", html_url: "https://github.com/rails/rails/pull/7")
+    pull_request.update!(private: false, title: "Fix login", state: "open", html_url: "https://github.com/rails/rails/pull/7")
     thread.work_thread_links.create!(kind: :pull_request, github_pull_request: pull_request, created_by: users(:david))
     thread.work_thread_links.create!(kind: :event, event: events(:watercooler_sync), created_by: users(:david))
     drive_url = "https://drive.google.com/file/d/1AbcDefGhIjKlMnOpQrSt/view"

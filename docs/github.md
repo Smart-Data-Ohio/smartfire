@@ -123,7 +123,9 @@ records the existing `fetch_error`.
 Mentioning an agent in a PR thread gives it the PR context: its delivery
 payload gains a `pull_request` object (`url`, `owner`, `repo`,
 `number`, `title`, `state`, `head_branch`, `base_branch`,
-`review_decision`, `checks_state`), null in other threads. See [AI
+`review_decision`, `checks_state`), null in other threads. For a private
+or still-unknown repository, `title` and the branch names are null unless
+the agent owner's linked GitHub account can read the repository. See [AI
 agents](agents.md) for the payload shape.
 
 A PR thread is a normal thread and respects the normal thread rules:

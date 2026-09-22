@@ -105,7 +105,7 @@ class Agents::WorkController < ApplicationController
     end
 
     def work_thread_payload(thread)
-      Agents::WorkPayload.for(thread)
+      Agents::WorkPayload.for(thread, agent: Current.agent)
     end
 
     # Reads an updatable work field from the top level or the nested work

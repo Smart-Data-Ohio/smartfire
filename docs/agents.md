@@ -105,7 +105,11 @@ Message event rows carry a `pull_request` key: the PR context object when
 the message lives in a pull-request discussion thread, explicit null
 otherwise. The object is `url`, `owner`, `repo`, `number`, `title`,
 `state`, `head_branch`, `base_branch`, `review_decision`, and
-`checks_state` (`checks_state` mirrors the card's check status). See
+`checks_state` (`checks_state` mirrors the card's check status). `title`,
+`head_branch`, and `base_branch` are null unless the repository is known
+public or the agent owner's own linked GitHub account can read it (the
+card rule, with the owner as viewer); work `links` entries follow the same
+rule for their `title`. See
 [GitHub pull request cards](github.md#pull-request-threads).
 
 An agent with the `post_messages` capability may also attach Drive files
