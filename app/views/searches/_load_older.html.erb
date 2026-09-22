@@ -1,0 +1,3 @@
+<div id="load_older_results" class="searches__load-older">
+  <%= link_to "Load older results", searches_path(q: query, before: oldest_id), data: { turbo_stream: true } %>
+</div>

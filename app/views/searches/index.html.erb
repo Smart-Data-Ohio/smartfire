@@ -53,6 +53,14 @@
     </figure>
   </div>
 
+  <% if @query.present? && @messages.empty? %>
+    <p class="searches__empty">No messages match “<%= @query %>”.</p>
+  <% end %>
+
+  <% if @has_more_older %>
+    <%= render "searches/load_older", query: params[:q], oldest_id: @messages.first.id %>
+  <% end %>
+
   <%= search_results_tag do %>
     <%= render partial: "messages/message", collection: @messages, locals: { show_room_icon: true } %>
   <% end %>

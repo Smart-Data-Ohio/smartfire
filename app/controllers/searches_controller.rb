@@ -18,19 +18,35 @@ class SearchesController < ApplicationController
   end
 
   private
-    # The 100-row cap and the full rendering preloads are both deliberate. The
-    # results are rendered through messages/_message, which reads boosts and
-    # attachments, so the rows are loaded either way; preloading them only
-    # changes when. Measured on a 150-message result set, a page of 100 holds
-    # 1.24 MB of Ruby heap preloaded against 1.81 MB lazily, because preloading
-    # instantiates one creator, room and blob per record rather than one per
-    # row, and costs 12 queries against 370.
+    # Results page newest-first in fixed windows, with a "Load older
+    # results" cursor on (created_at, id): the id half keeps
+    # same-timestamp messages from skipping or repeating at page edges.
+    # The window is selected as ids with LIMIT in SQL (plus one probe
+    # row to learn whether older results exist), so a large result set
+    # never instantiates more than a page; only the window is then
+    # loaded with its rendering preloads, and displayed oldest-first.
+    # The preloads stay deliberate: the results render through
+    # messages/_message, which reads boosts and attachments either way,
+    # and preloading costs ~12 queries against ~370 lazy ones.
     def set_messages
-      if query.present?
-        @messages = Current.user.reachable_messages.with_rendering_details.search(query).last(100)
-      else
-        @messages = Message.none
-      end
+      @messages = Message.none
+      @has_more_older = false
+      return if query.blank?
+
+      scope = Current.user.reachable_messages.search(query)
+      scope = scope.before(search_cursor) if params[:before].present?
+
+      ids = scope.reorder(created_at: :desc, id: :desc)
+        .limit(Message::PAGE_SIZE + 1).pluck(:id)
+      @has_more_older = ids.size > Message::PAGE_SIZE
+      page_ids = ids.first(Message::PAGE_SIZE)
+
+      @messages = Current.user.reachable_messages.with_rendering_details
+        .where(id: page_ids).ordered.order(:id).to_a
+    end
+
+    def search_cursor
+      Current.user.reachable_messages.find(params[:before])
     end
 
     # The FTS5 MATCH expression. Every token is quoted as a phrase, so
