@@ -418,6 +418,80 @@ class Rooms::HuddlesControllerTest < ActionDispatch::IntegrationTest
     assert_empty HuddleGrant.all
   end
 
+  test "leaving drops the session's grants out of the call without revoking" do
+    room = rooms(:watercooler)
+    sign_in :david
+    session = Session.find_by!(token: parsed_cookies.signed[:session_token])
+    grant = HuddleGrant.issue!(session:, membership: memberships(:david_watercooler))
+    grant.update_columns(last_seen_at: Time.current)
+    other_grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_watercooler))
+    other_grant.update_columns(last_seen_at: Time.current)
+
+    assert_difference -> { capture_turbo_stream_broadcasts([ room, :messages ]).count } do
+      post leave_room_huddle_url(room)
+    end
+
+    assert_response :no_content
+    assert_equal "no-store", response.headers["Cache-Control"]
+    assert_nil grant.reload.last_seen_at
+    assert_not grant.revoked?
+    assert_not_nil other_grant.reload.last_seen_at
+    assert_equal [ users(:david).id ], HuddleGrant.participants_for(room).map(&:id)
+  end
+
+  test "leaving works for voice rooms and group directs, like participants" do
+    voice = Rooms::Voice.create_for({ name: "Lounge", creator: users(:david) }, users: [ users(:david), users(:jason) ])
+    group = Rooms::Direct.create_for({ creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
+    sign_in :david
+    session = Session.find_by!(token: parsed_cookies.signed[:session_token])
+
+    # One room at a time: joining the second room would revoke the first
+    # room's in-call grant through the one-active-call rule.
+    voice_grant = HuddleGrant.issue!(session:, membership: voice.memberships.find_by!(user: users(:david)))
+    voice_grant.update_columns(last_seen_at: Time.current)
+
+    post leave_room_huddle_url(voice)
+    assert_response :no_content
+    assert_nil voice_grant.reload.last_seen_at
+
+    group_grant = HuddleGrant.issue!(session:, membership: group.memberships.find_by!(user: users(:david)))
+    group_grant.update_columns(last_seen_at: Time.current)
+
+    post leave_room_huddle_url(group)
+    assert_response :no_content
+    assert_nil group_grant.reload.last_seen_at
+  end
+
+  test "leaving twice, or without ever joining, still answers no content" do
+    sign_in :david
+
+    post leave_room_huddle_url(rooms(:watercooler))
+    assert_response :no_content
+
+    session = Session.find_by!(token: parsed_cookies.signed[:session_token])
+    grant = HuddleGrant.issue!(session:, membership: memberships(:david_watercooler))
+    grant.update_columns(last_seen_at: Time.current)
+
+    post leave_room_huddle_url(rooms(:watercooler))
+    assert_response :no_content
+    assert_nil grant.reload.last_seen_at
+
+    post leave_room_huddle_url(rooms(:watercooler))
+    assert_response :no_content
+  end
+
+  test "leaving denies non-members, bots, and unauthenticated requests" do
+    post leave_room_huddle_url(rooms(:watercooler))
+    assert_json_error :unauthorized, "Authentication required"
+
+    post leave_room_huddle_url(rooms(:watercooler)), params: { bot_key: users(:bender).bot_key }
+    assert_json_error :forbidden, "Bots cannot join huddles"
+
+    sign_in :jz
+    post leave_room_huddle_url(rooms(:watercooler))
+    assert_json_error :not_found, "Room not found or inaccessible"
+  end
+
   private
     def assert_json_error(status, message)
       assert_response status

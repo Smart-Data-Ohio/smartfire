@@ -44,6 +44,7 @@ module Messages
 
           room = creator.rooms.find_by(id: room_id)
           raise InvalidDestination, "You cannot forward to that room" unless room
+          raise InvalidDestination, "You cannot forward to a board" if room.board?
 
           thread = if destination[:thread_id].present?
             room.channel_threads.find_by(id: destination[:thread_id]).tap do |candidate|
@@ -101,6 +102,7 @@ module Messages
           body: snapshot_body,
           forwarded_from_message: source,
           forwarded_at: Time.current,
+          forwarded_markdown: source.markdown? || source.forwarded_markdown?,
           forward_note: note
         ).tap do |message|
           copy_attachment_to(source, message)

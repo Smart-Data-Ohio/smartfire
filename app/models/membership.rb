@@ -21,7 +21,7 @@ class Membership < ApplicationRecord
   enum :stage_role, %w[ listener speaker host ].index_by(&:itself)
 
   before_validation :default_stage_role, on: :create
-  before_update :revoke_huddle_grants_on_stage_role_change, if: :stage_role_changed?
+  before_update :sync_huddle_grants_on_stage_role_change, if: :stage_role_changed?
 
   validate :stage_attributes_only_for_stage_rooms
   validate :raised_hands_only_for_listeners
@@ -53,10 +53,12 @@ class Membership < ApplicationRecord
     hand_raised_at.present?
   end
 
-  # Any role change clears a raised hand and, through the callback below,
-  # revokes the member's active huddle grants in the same transaction, so the
-  # gateway removes a demoted speaker and the client rejoins with a fresh
-  # token for the new role.
+  # Any role change clears a raised hand. A change that crosses the publish
+  # boundary (to or from listener) revokes the member's active huddle grants
+  # in the same transaction, so the gateway removes a demoted speaker and
+  # the client rejoins with a fresh token for the new role; a host↔speaker
+  # change keeps the same publish permission, so the grants keep their
+  # identity and just record the new role.
   def change_stage_role!(new_role)
     update!(stage_role: new_role, hand_raised_at: nil)
   end
@@ -66,8 +68,12 @@ class Membership < ApplicationRecord
       self.stage_role ||= :listener if room&.stage?
     end
 
-    def revoke_huddle_grants_on_stage_role_change
-      HuddleGrant.revoke_for_membership!(self)
+    def sync_huddle_grants_on_stage_role_change
+      if (stage_role_was == "listener") != (stage_role == "listener")
+        HuddleGrant.revoke_for_membership!(self)
+      else
+        HuddleGrant.update_role_for_membership!(self)
+      end
     end
 
     def stage_attributes_only_for_stage_rooms

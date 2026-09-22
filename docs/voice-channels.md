@@ -29,10 +29,13 @@ same liveness signal DM ringing uses). Members can read it as JSON from
 `GET /rooms/:room_id/huddle/participants` (`[{ id, name, avatar_url }]`), and
 it renders as an avatar stack in the sidebar row and in the room header.
 
-The stacks refresh over Turbo Streams when a grant is issued, revoked, or
-first seen in the call. Grants that quietly expire — leaving the call does not
-revoke the session's grant — fall off through a 15-second browser refresh,
-which is the only polling in the feature. On phones the header stack shows at
+The stacks refresh over Turbo Streams when a grant is issued, revoked,
+first seen in the call, or reported left: the panel reports explicit leaves
+and the gateway reports disconnects after its reconnect grace, so the
+stacks clear within seconds. Leaving the call does not revoke the
+session's grant. Grants that quietly expire with no report — a dead tab the
+gateway never saw — fall off through a 15-second browser refresh, which is
+the only polling in the feature. On phones the header stack shows at
 most three avatars plus the count, yields its width before the room name
 shrinks, and steps aside entirely below 360px.
 

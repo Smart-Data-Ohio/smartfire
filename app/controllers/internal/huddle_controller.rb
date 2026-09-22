@@ -21,14 +21,45 @@ class Internal::HuddleController < ActionController::API
     grant = HuddleGrant.find_by(id: params[:id])
 
     if grant&.authorize_or_revoke!
-      grant.record_seen!
+      # The gateway's reconnect-grace checks carry no live connection, so they
+      # enforce without recording liveness: a sighting from a dead connection
+      # would otherwise resurrect a participant whose leave report just
+      # cleared, leaving a ghost until the liveness window expires.
+      grant.record_seen! unless params[:record_seen] == "0"
       render json: grant.authorization_payload
     else
       head :not_found
     end
   end
 
+  # The gateway posts here after its reconnect grace expires with no
+  # replacement connection: the participant is gone, so the grant drops out
+  # of the call and presence refreshes immediately instead of waiting out
+  # the liveness window and the browser poll. Best effort on both sides —
+  # enforcement never depends on it — so an unknown grant is a plain 404.
+  def left
+    grant = HuddleGrant.find_by(id: params[:id])
+    return head :not_found unless grant
+
+    floor = disconnected_at_param
+    return head :unprocessable_entity if params[:disconnected_at].present? && floor.nil?
+
+    grant.mark_out_of_call!(seen_after: floor)
+    head :ok
+  end
+
   private
+    # The gateway sends ISO 8601 or nothing. A present-but-unparseable
+    # timestamp is a client bug, not a clear, and out-of-range values make
+    # the parser raise rather than return nil.
+    def disconnected_at_param
+      raw = params[:disconnected_at].to_s
+      return if raw.blank?
+
+      Time.zone.parse(raw)
+    rescue ArgumentError
+      nil
+    end
     def authenticate_gateway
       provided = request.headers["X-Huddle-Gateway-Secret"].to_s
       expected = ENV["LIVEKIT_GATEWAY_SECRET"].to_s

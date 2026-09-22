@@ -56,18 +56,28 @@ export default class extends Controller {
     this.toggleTarget.setAttribute("aria-expanded", "false")
   }
 
-  // A successful Go live submits the stream over Turbo first; only then does
-  // the huddle panel start sharing at the chosen quality. A failed submit —
-  // a listener's 403, a 409 while someone else is live — dispatches nothing.
-  streamSubmitted(event) {
-    const form = event.target
-    if (!(form instanceof HTMLFormElement) || event.detail?.success !== true) return
+  // The Go-live click hands the whole sequence to the huddle panel
+  // synchronously — the capture must start inside this gesture, before any
+  // POST round-trip, or Safari denies it. The huddle panel captures first,
+  // posts the stream, then publishes; without the panel the form submits
+  // on its own and the stream goes live without a share, as before.
+  goLive(event) {
+    const form = event.currentTarget.closest("form")
+    const panel = document.getElementById("channel-huddle")
+    const huddle = panel && this.application.getControllerForElementAndIdentifier(panel, "huddle")
+    if (!form || !huddle) return
 
     const roomId = Number(form.dataset.roomId)
-    const quality = form.querySelector("select[name='quality']")?.value
     if (!Number.isInteger(roomId) || roomId <= 0) return
 
-    window.dispatchEvent(new CustomEvent("huddle:stream-start", { detail: { roomId, quality } }))
+    event.preventDefault()
+    window.dispatchEvent(new CustomEvent("huddle:go-live", {
+      detail: {
+        roomId,
+        quality: form.querySelector("select[name='quality']")?.value,
+        streamUrl: form.action
+      }
+    }))
   }
 
   // Stop stream ends the server state through the form's own DELETE; once it

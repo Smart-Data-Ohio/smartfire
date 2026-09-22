@@ -39,7 +39,9 @@ class MessageForwardsController < ApplicationController
     direct_names_by_room_id = direct_names_by_room_id(rooms.select(&:direct?))
 
     render json: {
-      destinations: rooms.map do |room|
+      # Boards hold posts, not forwarded chat, so they are neither
+      # offered nor (see Messages::Forwarder) accepted.
+      destinations: rooms.reject(&:board?).map do |room|
         {
           room_id: room.id,
           name: direct_names_by_room_id.fetch(room.id, room.name),

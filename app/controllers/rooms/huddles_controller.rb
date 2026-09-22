@@ -4,7 +4,7 @@ class Rooms::HuddlesController < ApplicationController
   before_action :ensure_human_user
   before_action :ensure_active_user
   before_action :set_room
-  before_action :ensure_one_to_one_direct_room, except: :participants
+  before_action :ensure_one_to_one_direct_room, except: %i[ participants leave ]
 
   def show
     render json: { room: room_json }
@@ -16,6 +16,16 @@ class Rooms::HuddlesController < ApplicationController
     render json: HuddleGrant.participants_for(@room).map { |user|
       { id: user.id, name: user.name, avatar_url: helpers.fresh_user_avatar_url(user) }
     }
+  end
+
+  # The panel calls this when the user leaves the call: the session's grants
+  # for the room drop out of the call without being revoked, and presence
+  # refreshes immediately. Like participants, leaving works for every room
+  # type. Idempotent: leaving twice, or leaving without ever joining, still
+  # answers 204.
+  def leave
+    HuddleGrant.active.where(session_id: Current.session.id, room_id: @room.id).find_each(&:mark_out_of_call!)
+    head :no_content
   end
 
   def create

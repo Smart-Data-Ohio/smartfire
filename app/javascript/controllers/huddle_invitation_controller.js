@@ -11,7 +11,13 @@ export default class extends Controller {
     roomName: String,
     roomPath: String,
     readPath: String,
-    handledPath: String
+    handledPath: String,
+    // How long a ring may run before the banner gives up on its own. Matches
+    // the server's missed-call resolution wait, so a banner-only ring (which
+    // has no item to resolve) stops on the same schedule as an inbox one.
+    ringTimeout: { type: Number, default: 45000 },
+    // How long the "caller left" state stays up before dismissing itself.
+    endedTimeout: { type: Number, default: 5000 }
   }
 
   async connect() {
@@ -44,6 +50,8 @@ export default class extends Controller {
     this.generation = undefined
     this.subscription?.unsubscribe()
     this.subscription = undefined
+    clearTimeout(this.ringTimer)
+    clearTimeout(this.endedTimer)
     window.removeEventListener("huddle:join", this.handleHuddleJoin)
     window.removeEventListener("huddle:changed", this.handleHuddleChange)
   }
@@ -91,6 +99,8 @@ export default class extends Controller {
 
     if (invitation.eventType === "huddle_started" && invitation.state === "unread") {
       this.#show(invitation)
+    } else if (invitation.eventType === "huddle_ended" && this.#matchesCurrentRing(invitation)) {
+      this.#showCallEnded(invitation)
     } else if (invitation.activityItemId === this.activityItemIdValue) {
       this.#hide()
     }
@@ -145,9 +155,38 @@ export default class extends Controller {
     this.titleTarget.textContent = `${invitation.callerName} started a huddle`
     this.descriptionTarget.textContent = `Join the huddle in ${invitation.roomName}`
     this.element.hidden = false
+
+    // A ring that nothing ever stops — a lost "call ended" event, a missed
+    // inbox resolution — stops itself here.
+    clearTimeout(this.ringTimer)
+    clearTimeout(this.endedTimer)
+    this.ringTimer = setTimeout(() => this.#hide(), this.ringTimeoutValue)
+  }
+
+  // The starter hung up (or was removed) while this ring was live: say so,
+  // then get out of the way. An ended event for any other ring is ignored,
+  // so a stale event can never cut off a newer call.
+  #showCallEnded(invitation) {
+    clearTimeout(this.ringTimer)
+    this.titleTarget.textContent = `${invitation.callerName} left the huddle`
+    this.descriptionTarget.textContent = `Missed call in ${invitation.roomName}`
+    this.element.hidden = false
+
+    clearTimeout(this.endedTimer)
+    this.endedTimer = setTimeout(() => this.#hide(), this.endedTimeoutValue)
+  }
+
+  // The current ring matches by item when the payload carries one, and by
+  // room for banner-only rings (and their ended events), which have none.
+  #matchesCurrentRing(invitation) {
+    if (this.element.hidden || this.roomIdValue === 0) return false
+    if (invitation.activityItemId) return invitation.activityItemId === this.activityItemIdValue
+    return Number(invitation.roomId) === this.roomIdValue
   }
 
   #hide() {
+    clearTimeout(this.ringTimer)
+    clearTimeout(this.endedTimer)
     this.activityItemIdValue = 0
     this.roomIdValue = 0
     this.element.hidden = true

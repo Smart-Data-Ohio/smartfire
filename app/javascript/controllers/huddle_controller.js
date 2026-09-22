@@ -81,7 +81,7 @@ export default class extends Controller {
 
     window.addEventListener("huddle:join", this.join, options)
     window.addEventListener("huddle:role-changed", this.roleChanged, options)
-    window.addEventListener("huddle:stream-start", this.streamStarted, options)
+    window.addEventListener("huddle:go-live", this.goLive, options)
     window.addEventListener("huddle:stream-stop", this.streamStopped, options)
     window.addEventListener("huddle:query", this.broadcastState, options)
     window.addEventListener("huddle:expand-screen", this.viewSharedScreen, options)
@@ -102,6 +102,7 @@ export default class extends Controller {
     this.#startAuthenticationChecks()
     this.#observeRoleEvents()
     this.#updateNoiseSuppressionControl()
+    this.#updatePublishControls()
     this.speakerRowTarget.hidden = !audioOutputSupported()
     this.#renderState()
   }
@@ -405,8 +406,15 @@ export default class extends Controller {
   }
 
   leave = async () => {
+    const roomId = this.roomId
     ++this.operation
     await this.#disconnectCurrentRoom()
+    // Report after the disconnect completes: the gateway checks connected
+    // participants about once per second, and a check landing between an
+    // early report and the disconnect would mark the grant seen again,
+    // leaving a ghost in the call until the liveness window expires. The
+    // report itself stays fire-and-forget, so leaving still works offline.
+    if (roomId) this.#reportLeave(roomId)
     this.roomId = null
     this.roomName = null
     this.identity = null
@@ -414,16 +422,37 @@ export default class extends Controller {
     this.#setState("idle", "Not in a huddle")
   }
 
+  // Best effort: leaving works fully offline, and the liveness window plus
+  // the gateway's disconnect event converge on the same out-of-call state.
+  #reportLeave(roomId) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+    if (!csrfToken) return
+
+    fetch(`/rooms/${encodeURIComponent(roomId)}/huddle/leave`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "X-CSRF-Token": csrfToken
+      },
+      body: "{}"
+    }).catch(() => {})
+  }
+
   toggleMute = async () => {
     const room = this.room
     if (!room || this.state !== "connected" || this.muteTarget.disabled) return
 
     this.muteTarget.disabled = true
+    const enabling = !room.localParticipant.isMicrophoneEnabled
+    // The capture options below only matter when no mic track exists yet
+    // (a first publish). Unmuting re-acquires the stopped track from the
+    // track's own stored constraints, which the noise-suppression sync
+    // keeps current — refreshing the room defaults here would not reach
+    // the microphone.
     try {
-      await room.localParticipant.setMicrophoneEnabled(
-        !room.localParticipant.isMicrophoneEnabled,
-        this.#audioCaptureOptions()
-      )
+      await room.localParticipant.setMicrophoneEnabled(enabling, this.#audioCaptureOptions())
       if (room === this.room) {
         this.#updateMediaControls()
         this.#renderRoster()
@@ -576,27 +605,38 @@ export default class extends Controller {
     this.#expandScreen(expanded === -1 ? tracks.at(-1) : tracks[(expanded + 1) % tracks.length])
   }
 
-  // The stage panel POSTs the stream first and dispatches this on success,
-  // so by the time it arrives the room is live. The share starts at the
-  // stream's quality; an ordinary share keeps the room default.
-  streamStarted = async ({ detail }) => {
+  // The stage panel dispatches this synchronously from the Go-live click.
+  // Everything before the first await runs inside the gesture, which is the
+  // whole point: Safari denies a getDisplayMedia that starts after the POST
+  // round-trip, so the capture starts here, first. Then the stream posts,
+  // and the captured tracks publish at the stream's quality; an ordinary
+  // share keeps the room default. Any failure stops the tracks, and a
+  // failure after the POST also ends the posted stream.
+  goLive = async ({ detail }) => {
     const roomId = Number(detail?.roomId)
     if (!Number.isInteger(roomId) || roomId <= 0) return
 
     // Presenting needs the call: without it there is nothing to share over.
-    // The stream stays live — stopping it is the Stop control's job — and a
-    // join afterwards shares through the ordinary control instead.
-    if (roomId !== this.roomId || !this.room || this.state !== "connected") return
-
+    // Nothing posts and no picker opens; joining first is the way back.
     const room = this.room
-    this.streaming = { roomId, quality: detail?.quality }
+    if (roomId !== this.roomId || !room || this.state !== "connected" || !this.canPublish) {
+      this.#showTemporaryStatus("Join the stage before going live.")
+      return
+    }
 
+    if (!this.#canShareScreen()) {
+      this.#showTemporaryStatus("Screen sharing isn’t available in this browser.")
+      return
+    }
+
+    const operation = this.operation
+    const capture = this.#beginScreenCapture(room)
+
+    let tracks
     try {
-      await this.#startScreenShare(room, this.#streamEncodingFor(detail?.quality))
+      tracks = await capture
     } catch (error) {
-      // A cancelled or denied capture must not leave live state dangling.
-      this.streaming = null
-      await this.#deleteStream(roomId)
+      // Cancelled or denied before anything posted: nothing to unwind.
       if (room === this.room) {
         this.#showTemporaryStatus(this.#permissionWasDenied(error)
           ? "Screen sharing wasn’t started. Choose a screen and allow sharing to try again."
@@ -605,15 +645,102 @@ export default class extends Controller {
       }
       return
     }
-
-    if (room !== this.room) {
-      this.streaming = null
+    if (operation !== this.operation || room !== this.room) {
+      this.#stopCapturedTracks(tracks)
       return
     }
 
+    let streamId
+    try {
+      streamId = await this.#postStream(detail?.streamUrl, detail?.quality)
+    } catch (error) {
+      this.#stopCapturedTracks(tracks)
+      if (room === this.room) {
+        this.#showTemporaryStatus(error.message || "Going live failed. Try again.")
+        this.#updateMediaControls()
+      }
+      return
+    }
+    if (operation !== this.operation || room !== this.room) {
+      this.#stopCapturedTracks(tracks)
+      await this.#deleteStream(roomId, streamId)
+      return
+    }
+
+    try {
+      await this.#publishScreenTracks(room, tracks, this.#streamEncodingFor(detail?.quality))
+    } catch (error) {
+      this.#stopCapturedTracks(tracks)
+      await this.#deleteStream(roomId, streamId)
+      if (room === this.room) {
+        this.#showTemporaryStatus("Screen sharing could not be started. Try again.")
+        this.#updateMediaControls()
+      }
+      return
+    }
+
+    this.streaming = { roomId, quality: detail?.quality, streamId }
     this.#syncLocalScreenShare(room)
     this.#updateMediaControls()
     this.#showTemporaryStatus("You’re live")
+  }
+
+  // Starts the screen capture and returns its tracks. Called synchronously
+  // from the Go-live gesture: the getDisplayMedia inside fires before this
+  // method returns. The video-only retry only runs after a constraint
+  // rejection, which happens outside the gesture on browsers that reject
+  // audio capture — those browsers keep the old failure there.
+  #beginScreenCapture(room) {
+    const attempt = room.localParticipant.createScreenTracks(this.#screenCaptureOptions(true))
+    return attempt.catch((error) => {
+      if (this.#displayMediaRejectedConstraints(error)) {
+        return room.localParticipant.createScreenTracks(this.#screenCaptureOptions(false))
+      }
+      throw error
+    })
+  }
+
+  #stopCapturedTracks(tracks) {
+    for (const track of tracks || []) track.stop?.()
+  }
+
+  // POSTs the stream the way the Go-live form would have: the response's
+  // turbo-stream swaps the actor's own panel, and its header names the new
+  // stream for every later DELETE. Throws the server's message on failure.
+  async #postStream(streamUrl, quality) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+    if (!streamUrl || !csrfToken) throw new Error("Going live failed. Try again.")
+
+    const response = await fetch(streamUrl, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Accept": "text/vnd.turbo-stream.html",
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        "X-CSRF-Token": csrfToken
+      },
+      body: new URLSearchParams({ quality: quality || "1080p15" })
+    })
+
+    if (!response.ok) {
+      throw new Error((await response.text()).trim() || "Going live failed. Try again.")
+    }
+
+    const streamId = Number(response.headers.get("X-Stream-Id")) || null
+    if (window.Turbo?.renderStreamMessage) {
+      window.Turbo.renderStreamMessage(await response.text())
+    }
+    return streamId
+  }
+
+  // Publishes captured screen tracks the way setScreenShareEnabled would:
+  // the same publish options on every track, so the share toggle, the
+  // unpublished cleanup, and the ended broadcasts all behave identically.
+  async #publishScreenTracks(room, tracks, encoding) {
+    const publishOptions = { dtx: false, ...(encoding ? { screenShareEncoding: encoding } : {}) }
+    for (const track of tracks) {
+      await room.localParticipant.publishTrack(track, publishOptions)
+    }
   }
 
   // Stop stream ends the server state first; this stops the local share once
@@ -770,7 +897,7 @@ export default class extends Controller {
   async #acquirePreviewAudio(preview) {
     // The pickers are authoritative here, not storage, so the stored device id
     // is swapped for the selected one.
-    const { deviceId: _stored, ...audio } = this.#audioCaptureOptions()
+    const { deviceId: _stored, ...audio } = this.#audioCaptureOptions({ forPreview: true })
     const selected = this.microphoneSelectTarget.value
     if (selected) audio.deviceId = { exact: selected }
 
@@ -1070,6 +1197,7 @@ export default class extends Controller {
     if (!room || !this.liveKit || this.connectionStatsSampling) return
     if (this.state !== "connected" && this.state !== "reconnecting") return
     if (this.connectionDetailsTarget.hidden) return
+    if (document.visibilityState === "hidden") return
 
     this.connectionStatsSampling = true
     try {
@@ -1163,16 +1291,23 @@ export default class extends Controller {
         // camera-specific "maintain-framerate" default in its own publish
         // options (see #setCameraEnabled), so each track keeps its own default.
         videoEncoding: VideoPresets.h720.encoding,
-        simulcast: true
+        simulcast: true,
+        // Stops the microphone's media track while muted so the OS mic
+        // indicator clears; unmuting re-acquires from the track's stored
+        // constraints, which the noise-suppression sync keeps current.
+        stopMicTrackOnMute: true
       }
     }
   }
 
-  #audioCaptureOptions() {
+  #audioCaptureOptions({ forPreview = false } = {}) {
     const options = {
       autoGainControl: true,
       echoCancellation: true,
-      noiseSuppression: true,
+      // RNNoise replaces the browser's suppressor when it is on, so the
+      // capture asks for none and the signal is filtered exactly once. The
+      // prejoin preview keeps the browser default: no processor runs there.
+      noiseSuppression: forPreview || !(this.noiseSuppressionAvailable && this.noiseSuppressionEnabled),
       // Chrome's stronger speech isolation where it exists; ignored elsewhere
       // because it is an "ideal" constraint rather than a required one.
       voiceIsolation: true
@@ -1195,6 +1330,25 @@ export default class extends Controller {
   }
 
   async #startScreenShare(room, screenShareEncoding) {
+    // Shared audio is usually music or a video rather than speech, and discontinuous
+    // transmission chops it, so it publishes without DTX. The option reaches both
+    // screen tracks; DTX has no meaning for the video one. A stream passes its
+    // own encoding for this call only; an ordinary share inherits the default.
+    const publishOptions = { dtx: false }
+    if (screenShareEncoding) publishOptions.screenShareEncoding = screenShareEncoding
+
+    try {
+      await room.localParticipant.setScreenShareEnabled(true, this.#screenCaptureOptions(true), publishOptions)
+    } catch (error) {
+      if (!this.#displayMediaRejectedConstraints(error)) throw error
+
+      // Only a browser that refused to *capture* with these constraints is
+      // retried; a publishing failure would just show a second picker.
+      await room.localParticipant.setScreenShareEnabled(true, this.#screenCaptureOptions(false), publishOptions)
+    }
+  }
+
+  #screenCaptureOptions(withAudio) {
     const options = {
       contentHint: "detail",
       // No `resolution`. A preset's resolution carries its frame rate too, so
@@ -1207,23 +1361,15 @@ export default class extends Controller {
       // feeds the speakers back into the huddle on Windows.
       systemAudio: "exclude"
     }
+    if (withAudio) options.audio = true
+    return options
+  }
 
-    // Shared audio is usually music or a video rather than speech, and discontinuous
-    // transmission chops it, so it publishes without DTX. The option reaches both
-    // screen tracks; DTX has no meaning for the video one. A stream passes its
-    // own encoding for this call only; an ordinary share inherits the default.
-    const publishOptions = { dtx: false }
-    if (screenShareEncoding) publishOptions.screenShareEncoding = screenShareEncoding
-
-    try {
-      await room.localParticipant.setScreenShareEnabled(true, { ...options, audio: true }, publishOptions)
-    } catch (error) {
-      if (!this.#displayMediaRejectedConstraints(error)) throw error
-
-      // Only a browser that refused to *capture* with these constraints is
-      // retried; a publishing failure would just show a second picker.
-      await room.localParticipant.setScreenShareEnabled(true, options, publishOptions)
-    }
+  // Screen sharing needs getDisplayMedia; without it the Share control hides
+  // and Go live reports the browser instead of opening a picker that cannot
+  // work.
+  #canShareScreen() {
+    return typeof navigator.mediaDevices?.getDisplayMedia === "function"
   }
 
   // The stream quality select maps onto the SDK's screen-share presets. An
@@ -1243,15 +1389,26 @@ export default class extends Controller {
 
   // Ends the room's stream the way the Stop control's DELETE does. Best
   // effort: the Stop control and the automatic ends converge on the same
-  // state, so a failure here only delays the end.
-  async #deleteStream(roomId) {
+  // state, so a failure here only delays the end. The stream id travels
+  // along when this browser knows it, so a delayed end can never kill
+  // someone else's newer stream.
+  //
+  // keepalive (not sendBeacon) so the unload-time call survives: a beacon
+  // is POST-only with no custom headers, so it could not carry this
+  // DELETE or its CSRF token, while a keepalive fetch keeps both. The
+  // reconciler's stale-stream end is the backstop when even that is lost.
+  async #deleteStream(roomId, streamId = null) {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
     if (!csrfToken) return
 
+    const path = `/rooms/${encodeURIComponent(roomId)}/stage/stream` +
+      (Number.isInteger(streamId) && streamId > 0 ? `?stream_id=${streamId}` : "")
+
     try {
-      await fetch(`/rooms/${encodeURIComponent(roomId)}/stage/stream`, {
+      await fetch(path, {
         method: "DELETE",
         credentials: "same-origin",
+        keepalive: true,
         headers: {
           "Accept": "text/vnd.turbo-stream.html",
           "X-CSRF-Token": csrfToken
@@ -1378,9 +1535,9 @@ export default class extends Controller {
     if (!this.streaming || this.streaming.roomId !== this.roomId) return
     if (publication?.source !== this.liveKit?.Track?.Source?.ScreenShare) return
 
-    const { roomId } = this.streaming
+    const { roomId, streamId } = this.streaming
     this.streaming = null
-    this.#deleteStream(roomId)
+    this.#deleteStream(roomId, streamId)
   }
 
   // Leaving, switching rooms, and rejoining all end the local share with the
@@ -1390,9 +1547,9 @@ export default class extends Controller {
   #endStreamOnDisconnect() {
     if (!this.streaming) return
 
-    const { roomId } = this.streaming
+    const { roomId, streamId } = this.streaming
     this.streaming = null
-    this.#deleteStream(roomId)
+    this.#deleteStream(roomId, streamId)
   }
 
   async #disconnectCurrentRoom() {
@@ -1975,42 +2132,118 @@ export default class extends Controller {
     const track = room.localParticipant.getTrackPublication?.(Track.Source.Microphone)?.audioTrack
     if (!track || typeof track.setProcessor !== "function") return
 
+    // The processor stays attached across mute: the stopped mic track it
+    // feeds goes silent, so nothing audible is filtered while muted, and
+    // unmuting hands the live track back to the same worklet and
+    // AudioContext instead of rebuilding them — with no unfiltered burst
+    // while a fresh processor spins up.
     const wanted = this.noiseSuppressionAvailable && this.noiseSuppressionEnabled
     const current = track.getProcessor?.()
-    if (wanted === Boolean(current)) return
 
-    this.noiseSuppressionBusy = true
-    this.#updateNoiseSuppressionControl()
+    if (wanted !== Boolean(current)) {
+      this.noiseSuppressionBusy = true
+      this.#updateNoiseSuppressionControl()
+
+      try {
+        if (wanted) {
+          await track.setProcessor(new HuddleNoiseSuppressor({
+            workletUrl: this.noiseWorkletUrlValue,
+            wasmUrl: this.noiseWasmUrlValue,
+            simdWasmUrl: this.noiseSimdWasmUrlValue
+          }))
+        } else {
+          await track.stopProcessor()
+        }
+      } catch (error) {
+        if (wanted) {
+          // Falling back to the browser's own suppression is always better than
+          // dropping the microphone out of the call.
+          await track.stopProcessor().catch(() => {})
+
+          if (this.#noiseSuppressionUnsupported(error)) {
+            this.noiseSuppressionAvailable = false
+            this.#showTemporaryStatus("Extra noise suppression isn’t available in this browser. Basic filtering is still on.")
+          } else {
+            // A worklet or model that failed to load may well load next time, so the
+            // control stays usable and nothing about the failure is written to storage.
+            this.noiseSuppressionEnabled = false
+            this.#showTemporaryStatus("Noise suppression couldn’t start. Basic filtering is still on — try again.")
+          }
+        }
+      } finally {
+        this.noiseSuppressionBusy = false
+        this.#updateNoiseSuppressionControl()
+      }
+    }
+
+    // Browser suppression is on exactly when RNNoise is off. The sync reads
+    // the attached processor rather than the flags, so a failed stop still
+    // describes the microphone truthfully, and it runs even when the
+    // processor did not change: toggling the switch while muted refreshes the
+    // stored constraints, and the unmute that follows re-acquires from them.
+    await this.#syncCaptureNoiseSuppression(track, Boolean(track.getProcessor?.()))
+  }
+
+  // The full capture set for a noise-suppression sync: the same processing the
+  // join asks for, with browser suppression following the processor instead of
+  // the preference, on the currently selected device. The SDK replaces the
+  // track's stored constraints wholesale on restart, so a partial set would
+  // drop the device — and voice isolation — from the next unmute. The track's
+  // own device wins over the stored preference: an SDK retarget may have moved
+  // capture since the preference was saved.
+  #noiseSyncConstraints(track, rnnoiseOn) {
+    const constraints = { ...this.#audioCaptureOptions(), noiseSuppression: !rnnoiseOn }
+    const active = track.constraints?.deviceId
+
+    if (active) {
+      constraints.deviceId = active
+    } else if (!constraints.deviceId) {
+      const liveId = track.getSourceTrackSettings?.()?.deviceId
+      if (liveId) constraints.deviceId = { ideal: liveId }
+    }
+
+    return constraints
+  }
+
+  // Chromium rebuilds its audio processing (noise suppression, echo
+  // cancellation, gain control) only at capture time: `applyConstraints` on a
+  // live track updates the stored copy without touching the processing graph.
+  // So a processor change while live re-acquires the microphone with the new
+  // constraints. The SDK carries the processor, if any, onto the new track and
+  // replaces the stored constraints; the meter re-attaches to the new track.
+  // While muted the source track is stopped — restarting it would light the OS
+  // mic indicator for a track nobody can hear — so only the stored constraints
+  // are refreshed and the next unmute re-acquires from them. Never throws: the
+  // microphone matters more than its filtering.
+  async #syncCaptureNoiseSuppression(track, rnnoiseOn) {
+    const wanted = !rnnoiseOn
+    const constraints = this.#noiseSyncConstraints(track, rnnoiseOn)
+    const storedMatches = track.constraints?.noiseSuppression === wanted
+
+    // The SDK merges stored constraints only after a live apply succeeds, so
+    // a muted (stopped) track would keep stale processing; write the stored
+    // copy directly instead, with the device only when one is known. The next
+    // unmute re-acquires from it, and a restart below replaces it wholesale
+    // anyway — even a restart that throws leaves the stored set correct.
+    if (track._constraints && typeof track._constraints === "object") {
+      track._constraints = { ...track._constraints, ...constraints }
+    }
+
+    const live = this.room?.localParticipant.isMicrophoneEnabled && track.isMuted !== true
+    if (!live || storedMatches) return
 
     try {
-      if (wanted) {
-        await track.setProcessor(new HuddleNoiseSuppressor({
-          workletUrl: this.noiseWorkletUrlValue,
-          wasmUrl: this.noiseWasmUrlValue,
-          simdWasmUrl: this.noiseSimdWasmUrlValue
-        }))
+      if (typeof track.restartTrack === "function") {
+        await track.restartTrack(constraints)
+        // The restart replaced the meter's track; the old one reads as ended.
+        this.#startMicrophoneMeter()
+      } else if (typeof track.applyConstraints === "function") {
+        await track.applyConstraints(constraints)
       } else {
-        await track.stopProcessor()
+        await track.mediaStreamTrack?.applyConstraints?.(constraints)
       }
     } catch (error) {
-      if (!wanted) return
-
-      // Falling back to the browser's own suppression is always better than
-      // dropping the microphone out of the call.
-      await track.stopProcessor().catch(() => {})
-
-      if (this.#noiseSuppressionUnsupported(error)) {
-        this.noiseSuppressionAvailable = false
-        this.#showTemporaryStatus("Extra noise suppression isn’t available in this browser. Basic filtering is still on.")
-      } else {
-        // A worklet or model that failed to load may well load next time, so the
-        // control stays usable and nothing about the failure is written to storage.
-        this.noiseSuppressionEnabled = false
-        this.#showTemporaryStatus("Noise suppression couldn’t start. Basic filtering is still on — try again.")
-      }
-    } finally {
-      this.noiseSuppressionBusy = false
-      this.#updateNoiseSuppressionControl()
+      // The next sync — after unmute, or after the next toggle — retries.
     }
   }
 
@@ -2052,9 +2285,8 @@ export default class extends Controller {
   }
 
   #renderRoster() {
-    this.participantListTarget.replaceChildren()
-
     if (!this.room) {
+      this.participantListTarget.replaceChildren()
       this.participantCountTarget.textContent = "0 participants"
       return
     }
@@ -2067,34 +2299,58 @@ export default class extends Controller {
       return this.#participantName(left).localeCompare(this.#participantName(right))
     })
 
-    for (const participant of participants) {
-      const item = document.createElement("li")
-      const name = document.createElement("span")
-      const activity = document.createElement("span")
-      const isLocal = participant === this.room.localParticipant
-      const speaking = participant.isSpeaking
-      const microphone = participant.getTrackPublication?.(Track.Source.Microphone)
-      const muted = isLocal ? !participant.isMicrophoneEnabled : microphone?.isMuted
-      const activityText = speaking ? "Speaking" : muted ? "Muted" : "Listening"
-
-      item.className = "huddle__participant"
-      item.classList.toggle("huddle__participant--speaking", speaking)
-      item.setAttribute("aria-label", `${this.#participantName(participant)}, ${activityText}`)
-
-      name.className = "huddle__participant-name overflow-ellipsis"
-      name.textContent = this.#participantName(participant)
-      if (isLocal) name.textContent += " (you)"
-
-      activity.className = "huddle__participant-activity"
-      activity.textContent = activityText
-
-      item.append(name, activity)
-      this.participantListTarget.appendChild(item)
+    // Speaking and mute events fire constantly mid-call, so rows are patched
+    // in place: rebuilding the list would drop hover, tooltips, and focus on
+    // every utterance. Only membership changes add or remove rows.
+    for (const item of [ ...this.participantListTarget.children ]) {
+      if (!participants.some(participant => participant.identity === item.dataset.participantIdentity)) item.remove()
     }
+    participants.forEach((participant, index) => {
+      let item = [ ...this.participantListTarget.children ]
+        .find(row => row.dataset.participantIdentity === participant.identity)
+      if (!item) {
+        item = this.#buildRosterRow(participant.identity)
+      }
+      this.#updateRosterRow(item, participant, Track)
+
+      const reference = this.participantListTarget.children[index]
+      if (item !== reference) this.participantListTarget.insertBefore(item, reference || null)
+    })
 
     const count = participants.length
     this.participantCountTarget.textContent = `${count} ${count === 1 ? "participant" : "participants"}`
     this.#renderStreamViewing()
+  }
+
+  #buildRosterRow(identity) {
+    const item = document.createElement("li")
+    item.dataset.participantIdentity = identity
+
+    const name = document.createElement("span")
+    name.className = "huddle__participant-name overflow-ellipsis"
+
+    const activity = document.createElement("span")
+    activity.className = "huddle__participant-activity"
+
+    item.append(name, activity)
+    return item
+  }
+
+  #updateRosterRow(item, participant, Track) {
+    const isLocal = participant === this.room.localParticipant
+    const speaking = participant.isSpeaking
+    const microphone = participant.getTrackPublication?.(Track.Source.Microphone)
+    const muted = isLocal ? !participant.isMicrophoneEnabled : microphone?.isMuted
+    const activityText = speaking ? "Speaking" : muted ? "Muted" : "Listening"
+
+    item.className = "huddle__participant"
+    item.classList.toggle("huddle__participant--speaking", speaking)
+    item.setAttribute("aria-label", `${this.#participantName(participant)}, ${activityText}`)
+
+    const [ name, activity ] = item.children
+    name.textContent = this.#participantName(participant)
+    if (isLocal) name.textContent += " (you)"
+    activity.textContent = activityText
   }
 
   #participantName(participant) {
@@ -2113,7 +2369,7 @@ export default class extends Controller {
     const live = this.state === "connected" || this.state === "reconnecting"
 
     this.muteTarget.hidden = listening
-    this.shareTarget.hidden = listening
+    this.shareTarget.hidden = listening || !this.#canShareScreen()
     this.cameraTarget.hidden = listening
     this.listeningNoteTarget.hidden = !(live && listening)
   }
@@ -2134,16 +2390,20 @@ export default class extends Controller {
     const screenShareEnabled = this.room.localParticipant.isScreenShareEnabled
     const cameraEnabled = this.room.localParticipant.isCameraEnabled
 
-    this.muteLabelTarget.textContent = microphoneEnabled ? "Mute" : "Unmute"
+    // Stable action labels: aria-pressed carries the state, and the tooltip
+    // names it visibly, instead of the label flipping with every toggle.
+    this.muteLabelTarget.textContent = "Mute microphone"
     this.muteTarget.setAttribute("aria-pressed", String(!microphoneEnabled))
+    this.muteTarget.title = microphoneEnabled ? "Microphone live" : "Microphone muted"
     this.muteTarget.classList.toggle("huddle__mute--muted", !microphoneEnabled)
     this.element.classList.toggle("huddle--muted", !microphoneEnabled)
     // The meter only means something while the microphone is live.
     this.meterTarget.hidden = !microphoneEnabled
     this.shareLabelTarget.textContent = screenShareEnabled ? "Stop sharing" : "Share screen"
     this.shareTarget.setAttribute("aria-pressed", String(screenShareEnabled))
-    this.cameraLabelTarget.textContent = cameraEnabled ? "Camera on" : "Camera off"
+    this.cameraLabelTarget.textContent = "Camera"
     this.cameraTarget.setAttribute("aria-pressed", String(cameraEnabled))
+    this.cameraTarget.title = cameraEnabled ? "Camera on" : "Camera off"
   }
 
   #updateAudioPlaybackControl() {
@@ -2299,6 +2559,10 @@ export default class extends Controller {
 
   #checkAuthentication() {
     if (!this.room || !this.roomId || this.authenticationCheck) return this.authenticationCheck
+    // Outside a call a hidden tick can skip: becoming visible re-checks
+    // immediately. Inside a call the check runs hidden too, so a revoked
+    // background tab ends instead of lingering until it is opened.
+    if (document.visibilityState === "hidden" && this.state !== "connected" && this.state !== "reconnecting") return
 
     const roomAtStart = this.room
     const check = fetch(`/rooms/${encodeURIComponent(this.roomId)}/huddle`, {

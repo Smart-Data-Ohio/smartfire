@@ -37,7 +37,7 @@ class VoiceChannelsTest < ApplicationSystemTestCase
     renders = header_voice_renders
     david_grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: @room.memberships.find_by!(user: users(:david)))
     wait_for_issuance_broadcast(after: renders)
-    david_grant.record_seen!
+    record_seen_and_deliver(david_grant)
 
     within "#voice_rooms .voice-room" do
       assert_selector ".voice-stack__count", text: "1", wait: BROADCAST_WAIT
@@ -46,7 +46,7 @@ class VoiceChannelsTest < ApplicationSystemTestCase
     renders = header_voice_renders
     jason_grant = HuddleGrant.issue!(session: users(:jason).sessions.create!(user_agent: "Test"), membership: @room.memberships.find_by!(user: users(:jason)))
     wait_for_issuance_broadcast(after: renders)
-    jason_grant.record_seen!
+    record_seen_and_deliver(jason_grant)
 
     within "#voice_rooms .voice-room" do
       assert_selector ".voice-stack--live", wait: BROADCAST_WAIT
@@ -168,7 +168,7 @@ class VoiceChannelsTest < ApplicationSystemTestCase
 
       # The reload landed; broadcast over [user, :rooms] immediately. The
       # sidebar stack render must land even though the frame just swapped.
-      grant.record_seen!
+      record_seen_and_deliver(grant)
 
       assert_equal 3, page.evaluate_script("window.preReloadSources.length")
       assert page.evaluate_script("window.preReloadSources.every(element => element.isConnected)"),
@@ -225,7 +225,7 @@ class VoiceChannelsTest < ApplicationSystemTestCase
     observe_turbo_stream_renders
     grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: @room.memberships.find_by!(user: users(:david)))
     wait_for_issuance_broadcast # Let the issuance render land first (see above).
-    grant.record_seen!
+    record_seen_and_deliver(grant)
 
     within ".room-header__actions" do
       assert_selector ".voice-stack__count", text: "1", wait: BROADCAST_WAIT
@@ -238,6 +238,38 @@ class VoiceChannelsTest < ApplicationSystemTestCase
 
     assert_no_selector ".room-header__actions .voice-stack--live", wait: 25
     assert_selector ".room-header__actions .voice-stack__count[hidden]", visible: :all, wait: 10
+  end
+
+  test "leaving through the panel clears presence immediately" do
+    # The leave POST carries the CSRF token, so forgery protection stays on
+    # for this test the way it does throughout the streaming suite.
+    @forgery_protection = ActionController::Base.allow_forgery_protection
+    ActionController::Base.allow_forgery_protection = true
+
+    begin
+      session = users(:jason).sessions.order(created_at: :desc, id: :desc).first
+      grant = HuddleGrant.issue!(session:, membership: @room.memberships.find_by!(user: users(:jason)))
+      grant.update_columns(last_seen_at: Time.current)
+
+      visit room_path(@room)
+      wait_for_cable_connection
+      within("#voice_rooms .voice-room") { assert_selector ".voice-stack__count", text: "1" }
+
+      # The panel is idle without media; drive leave() with the room set,
+      # the way a connected panel calls it.
+      page.execute_script(<<~JS, @room.id)
+        const controller = window.Stimulus.getControllerForElementAndIdentifier(
+          document.getElementById("channel-huddle"), "huddle");
+        controller.roomId = arguments[0];
+        controller.leave();
+      JS
+
+      within("#voice_rooms .voice-room") { assert_no_selector ".voice-stack--live", wait: BROADCAST_WAIT }
+      assert_nil grant.reload.last_seen_at
+      assert_not grant.revoked?
+    ensure
+      ActionController::Base.allow_forgery_protection = @forgery_protection
+    end
   end
 
   test "voice rooms carry ordinary text chat" do
@@ -269,7 +301,7 @@ class VoiceChannelsTest < ApplicationSystemTestCase
 
     david_grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: @room.memberships.find_by!(user: users(:david)))
     wait_for_issuance_broadcast
-    david_grant.record_seen!
+    record_seen_and_deliver(david_grant)
     within(".room-header__actions") { assert_selector ".voice-stack--live", wait: BROADCAST_WAIT }
 
     page.execute_script(<<~JS)
@@ -402,10 +434,10 @@ class VoiceChannelsTest < ApplicationSystemTestCase
       @room.memberships.grant_to([ users(:kevin), users(:jz) ])
       kevin_grant = HuddleGrant.issue!(session: users(:kevin).sessions.create!(user_agent: "Test"), membership: @room.memberships.find_by!(user: users(:kevin)))
       sleep 0.5
-      kevin_grant.record_seen!
+      record_seen_and_deliver(kevin_grant)
       jz_grant = HuddleGrant.issue!(session: users(:jz).sessions.create!(user_agent: "Test"), membership: @room.memberships.find_by!(user: users(:jz)))
       sleep 0.5
-      jz_grant.record_seen!
+      record_seen_and_deliver(jz_grant)
 
       page.current_window.resize_to(1400, 1400)
       within(".room-header__actions") do
@@ -471,6 +503,14 @@ class VoiceChannelsTest < ApplicationSystemTestCase
   end
 
   private
+    # record_seen! refreshes presence through a job; run it inline so the
+    # browser receives the stacks without a worker.
+    def record_seen_and_deliver(grant)
+      perform_enqueued_jobs only: Huddle::BroadcastPresenceJob do
+        grant.record_seen!
+      end
+    end
+
     def assert_no_horizontal_overflow
       assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth"),
         "the workspace overflows the viewport horizontally"

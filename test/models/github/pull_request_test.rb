@@ -179,6 +179,24 @@ class Github::PullRequestTest < ActiveSupport::TestCase
     end
   end
 
+  test "URLs in code spans and fenced blocks create no references" do
+    message = @room.messages.create!(
+      creator: @creator,
+      markdown_source: <<~MARKDOWN,
+        see `https://github.com/rails/rails/pull/901` inline
+
+        ```text
+        https://github.com/rails/rails/pull/902
+        ```
+
+        but do review https://github.com/rails/rails/pull/903
+      MARKDOWN
+      client_message_id: "pr-ref-code"
+    )
+
+    assert_equal [ 903 ], message.github_pull_requests.map(&:number)
+  end
+
   test "editing a message to add a PR URL adds the reference" do
     message = @room.messages.create!(
       creator: @creator, markdown_source: "just chatting", client_message_id: "pr-ref-edit"

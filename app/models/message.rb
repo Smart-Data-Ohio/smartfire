@@ -53,7 +53,11 @@ class Message < ApplicationRecord
   after_create_commit :sync_event_references
   after_update_commit :resync_event_references
 
-  scope :ordered, -> { order(:created_at) }
+  # Tie-broken by id so the page windows agree with the (created_at, id)
+  # tuple cursors in Pagination: ordering by created_at alone lets the
+  # database pick either side of a same-timestamp tie at a page edge,
+  # skipping or repeating messages.
+  scope :ordered, -> { order(:created_at, :id) }
   scope :root_messages, -> { where(thread_id: nil) }
   scope :thread_messages, -> { where.not(thread_id: nil) }
   scope :with_creator, -> { preload(creator: :avatar_attachment) }
@@ -154,6 +158,23 @@ class Message < ApplicationRecord
     !markdown_source.nil?
   end
 
+  # True when the pending changes alter the message text itself, as opposed
+  # to an attachment-only or identical save. The edit endpoints stamp
+  # edited_at only then, so "(edited)" means the words changed. A blank
+  # body assigned to a message that had none (attachment-only) is not a
+  # text change.
+  def body_content_will_change?
+    return true if will_save_change_to_markdown_source?
+
+    rich_text = rich_text_body
+    return false unless rich_text&.body_changed?
+
+    current = rich_text.body
+    previous = rich_text.body_was || ActionText::Content.new("")
+    current.to_html != previous.to_html &&
+      (current.to_plain_text.present? || previous.to_plain_text.present?)
+  end
+
   # Messages created before the Markdown composer still have Action Text bodies.
   # The action metadata endpoint needs a source that the normal composer can
   # load, without asking the browser to scrape presentation HTML.
@@ -223,7 +244,7 @@ class Message < ApplicationRecord
     end
 
     def resync_github_pull_request_references
-      Github::PullRequestReferenceSync.call(self) if saved_change_to_markdown_source?
+      Github::PullRequestReferenceSync.call(self) if references_source_changed?
     end
 
     def sync_twitter_post_references
@@ -231,7 +252,7 @@ class Message < ApplicationRecord
     end
 
     def resync_twitter_post_references
-      Twitter::PostReferenceSync.call(self) if saved_change_to_markdown_source?
+      Twitter::PostReferenceSync.call(self) if references_source_changed?
     end
 
     def sync_event_references
@@ -239,7 +260,15 @@ class Message < ApplicationRecord
     end
 
     def resync_event_references
-      Event::ReferenceSync.call(self) if saved_change_to_markdown_source?
+      Event::ReferenceSync.call(self) if references_source_changed?
+    end
+
+    # Markdown edits rewrite the body through the renderer; legacy edits
+    # rewrite only the rich-text row. Either must re-sync references. The
+    # association check avoids loading the body when it was untouched.
+    def references_source_changed?
+      saved_change_to_markdown_source? ||
+        (association(:rich_text_body).loaded? && rich_text_body&.saved_change_to_body?)
     end
 
     def receive_in_conversation

@@ -123,7 +123,12 @@ module MessagesHelper
     when "sound"
       message_sound_presentation(message)
     else
-      if message.markdown?
+      # A forward of Markdown snapshots rendered HTML, not source, so it
+      # stays a non-Markdown record; the flag routes it through the
+      # Markdown presentation and sanitizer, which keep tables and
+      # icon images that the legacy path deletes. Legacy forwards
+      # (flag unset) render as they always have.
+      if message.markdown? || message.forwarded_markdown?
         markdown_message_presentation(message.body.body)
       else
         auto_link h(ContentFilters::TextMessagePresentationFilters.apply(message.body.body)), html: { target: "_blank" }

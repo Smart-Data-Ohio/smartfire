@@ -1,0 +1,6 @@
+<%= turbo_stream.prepend "search-results", partial: "messages/message", collection: @messages, locals: { show_room_icon: true } %>
+<% if @has_more_older %>
+  <%= turbo_stream.replace "load_older_results", partial: "searches/load_older", locals: { query: params[:q], oldest_id: @messages.first.id } %>
+<% else %>
+  <%= turbo_stream.remove "load_older_results" %>
+<% end %>
