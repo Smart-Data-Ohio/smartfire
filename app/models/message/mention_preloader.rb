@@ -75,11 +75,16 @@ module Message::MentionPreloader
 
       def preloaded_bodies_for(message)
         bodies = []
-        bodies << message.body.body if message.association(:rich_text_body).loaded?
+        bodies << message.body.body if message_body_preloaded?(message)
         if message.association(:reply_to_message).loaded? && (source = message.reply_to_message)
-          bodies << source.body.body if source.association(:rich_text_body).loaded?
+          bodies << source.body.body if message_body_preloaded?(source)
         end
         bodies
+      end
+
+      # Attachment-only messages have no rich text body to scan.
+      def message_body_preloaded?(message)
+        message.association(:rich_text_body).loaded? && message.body.body.present?
       end
 
       def decode_base64(message)

@@ -117,10 +117,17 @@ class Message < ApplicationRecord
   # reply preview), and each computation re-resolves mention attachables,
   # so the result is memoized per instance. Keyed on the inputs rather than
   # a bare ivar so an in-place edit still reads fresh.
+  # Reloading drops the memoized plain text along with the attributes.
+  def reload(*)
+    @plain_text_body = nil
+    @plain_text_body_key = nil
+    super
+  end
+
   def plain_text_body
     # to_html serializes the stored nodes; to_s would render the attachments
     # and resolve every mention with a query.
-    cache_key = [ body.body.to_html, attachment&.filename&.to_s, forward_note ]
+    cache_key = [ body.body&.to_html, attachment&.filename&.to_s, forward_note ]
     return @plain_text_body if defined?(@plain_text_body) && @plain_text_body_key == cache_key
 
     @plain_text_body_key = cache_key
