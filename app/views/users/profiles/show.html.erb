@@ -110,7 +110,8 @@
 
         <label class="flex align-center gap flex-item-grow input input--actor">
           <%= form.text_field :github_login, class: "input txt-large", placeholder: "GitHub username",
-                required: false, autocomplete: "off", data: { "1p-ignore": true } %>
+                required: false, autocomplete: "off", data: { "1p-ignore": true },
+                disabled: @user.github_login_verified? %>
           <%= image_tag "link.svg", aria: { hidden: "true" }, size: 24, class: "colorize--black" %>
         </label>
       </div>
@@ -119,6 +120,8 @@
           GitHub username <%= @user.errors[:github_login].to_sentence %>.
           Link it to receive review requests in your activity inbox.
         </p>
+      <% elsif @user.github_login_verified? %>
+        <p class="txt-small margin-none">Set by your linked GitHub account. Disconnect GitHub below to edit it.</p>
       <% else %>
         <p class="txt-small margin-none">Link your GitHub username to receive review requests in your activity inbox.</p>
       <% end %>

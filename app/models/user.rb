@@ -29,6 +29,7 @@ class User < ApplicationRecord
   normalizes :github_login, with: ->(login) { login.to_s.strip.downcase.presence }
 
   validates :github_login, uniqueness: { case_sensitive: false, message: "is already linked to another user" }, allow_nil: true
+  validate :github_login_must_match_verified_account, if: :will_save_change_to_github_login?
   validate :inbox_preferences_must_be_boolean
 
   normalizes :icon_name, with: ->(name) { Icons.normalize_name(name) }
@@ -66,6 +67,12 @@ class User < ApplicationRecord
     existing = self[:inbox_preferences]
     existing = {} unless existing.is_a?(Hash)
     self[:inbox_preferences] = existing.merge((hash || {}).stringify_keys.slice(*User::InboxPreferences::KEYS))
+  end
+
+  # True while a connected GitHub account vouches for the login: GitHub
+  # confirmed it when the token was linked, so the profile cannot edit it.
+  def github_login_verified?
+    github_connected_account&.connected? || false
   end
 
   def initials
@@ -133,6 +140,13 @@ class User < ApplicationRecord
         successor = remaining.find { |membership| membership.user.active? && membership.user.administrator? } || remaining.first
         successor.change_stage_role!("host")
       end
+    end
+
+    def github_login_must_match_verified_account
+      return unless github_login_verified?
+      return if github_login == github_connected_account.github_login.to_s.strip.downcase
+
+      errors.add(:github_login, "is set by your linked GitHub account")
     end
 
     def inbox_preferences_must_be_boolean

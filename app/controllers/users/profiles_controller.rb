@@ -41,7 +41,10 @@ class Users::ProfilesController < ApplicationController
     end
 
     def user_params
-      params.require(:user).permit(:name, :avatar, :email_address, :password, :bio, :github_login, inbox_preferences: User::InboxPreferences::KEYS).compact
+      permitted = %i[ name avatar email_address password bio ]
+      # A verified GitHub link owns the login; manual edits are ignored.
+      permitted << :github_login unless @user.github_login_verified?
+      params.require(:user).permit(*permitted, inbox_preferences: User::InboxPreferences::KEYS).compact
     end
 
     # Case-only edits are not a change of address: sign-in and Google
