@@ -254,9 +254,11 @@ class Agent::Delivery
       end
 
       webhook_status = agent.user.webhook ? "pending" : "none"
-      return unless claim(event, outcome: "delivered", webhook_status: webhook_status)
+      webhook_next_attempt_at = Time.current if webhook_status == "pending"
+      return unless claim(event, outcome: "delivered", webhook_status: webhook_status,
+        webhook_next_attempt_at: webhook_next_attempt_at)
 
-      enqueue_webhook_after_commit(event.id) if webhook_status == "pending"
+      enqueue_webhook_after_commit(event.id, event.webhook_attempts.to_i) if webhook_status == "pending"
     end
 
     # Webhook half of an acknowledged row: the agent already read it by
@@ -265,26 +267,39 @@ class Agent::Delivery
     def enqueue_owed_webhook(event)
       return unless event.agent.user.webhook
       return unless AgentEvent.where(id: event.id, outcome: "acknowledged", webhook_status: "none")
-        .update_all(webhook_status: "pending") == 1
+        .update_all(webhook_status: "pending", webhook_next_attempt_at: Time.current) == 1
 
-      enqueue_webhook_after_commit(event.id)
+      enqueue_webhook_after_commit(event.id, event.webhook_attempts.to_i)
     end
 
-    # Re-enqueues webhook rows stranded in pending past
-    # STRANDED_WEBHOOK_AFTER with attempts remaining: the row write
-    # committed but its enqueue never ran (a crash or a Redis outage in
-    # between), or a retry's re-enqueue was lost. Runs from the periodic
-    # event-reminders loop. A row still waiting on its scheduled retry
-    # past the grace period may post twice; delivery is at-least-once,
-    # so receivers already tolerate redelivery.
+    # Re-enqueues webhook rows stranded in pending with attempts
+    # remaining: the row write committed but its enqueue never ran (a
+    # crash or a Redis outage in between), or a retry's re-enqueue was
+    # lost. Runs from the periodic event-reminders loop. A row is
+    # stranded only once its scheduled attempt is past by the grace
+    # period, so a retry waiting out Retry-After is never re-enqueued
+    # early; rows that were never scheduled (no next attempt recorded)
+    # fall back to their age. A row still waiting on its scheduled
+    # retry past the grace period may post twice; delivery is
+    # at-least-once, so receivers already tolerate redelivery, and the
+    # webhook job's attempt claim keeps the duplicate from burning an
+    # extra attempt.
     def recover_stranded_webhooks!(now: Time.current)
+      grace = now - STRANDED_WEBHOOK_AFTER
       AgentEvent.where(webhook_status: "pending")
-        .where("agent_events.created_at < ?", now - STRANDED_WEBHOOK_AFTER)
         .where("agent_events.webhook_attempts < ?", Agent::EventWebhookJob::MAX_ATTEMPTS)
+        .where(
+          "((agent_events.webhook_next_attempt_at IS NULL AND agent_events.created_at < :grace) " \
+            "OR agent_events.webhook_next_attempt_at < :grace)",
+          grace: grace
+        )
         .find_each do |event|
-          Agent::EventWebhookJob.perform_later(event.id)
-        rescue => error
-          Rails.logger.error "Stranded webhook recovery failed for event #{event.id}: #{error.class}: #{error.message}"
+          begin
+            Agent::EventWebhookJob.perform_later(event.id, event.webhook_attempts.to_i)
+            AgentEvent.where(id: event.id).update_all(webhook_next_attempt_at: Time.current)
+          rescue => error
+            Rails.logger.error "Stranded webhook recovery failed for event #{event.id}: #{error.class}: #{error.message}"
+          end
         end
     end
 
@@ -465,20 +480,24 @@ class Agent::Delivery
       # The Redis enqueue waits for the row write to commit, so a
       # rolled-back claim never leaves a job behind. (A crash between the
       # commit and the enqueue still strands the row; the periodic sweep
-      # picks those up.)
-      def enqueue_webhook_after_commit(event_id)
+      # picks those up.) The attempt travels with the job so a duplicate
+      # enqueue finds its number stale and exits without posting.
+      def enqueue_webhook_after_commit(event_id, attempt)
         ActiveRecord.after_all_transactions_commit do
-          Agent::EventWebhookJob.perform_later(event_id)
+          AgentEvent.where(id: event_id, webhook_next_attempt_at: nil)
+            .update_all(webhook_next_attempt_at: Time.current)
+          Agent::EventWebhookJob.perform_later(event_id, attempt)
         end
       end
 
       # Atomically transitions a pending row; false when another job
       # already claimed it, so two concurrent jobs cannot both post and the
       # loser exits without posting or writing a duplicate suppression row.
-      def claim(event, outcome:, detail: nil, webhook_status: nil)
+      def claim(event, outcome:, detail: nil, webhook_status: nil, webhook_next_attempt_at: nil)
         updates = { outcome: outcome }
         updates[:detail] = detail unless detail.nil?
         updates[:webhook_status] = webhook_status unless webhook_status.nil?
+        updates[:webhook_next_attempt_at] = webhook_next_attempt_at unless webhook_next_attempt_at.nil?
         AgentEvent.where(id: event.id, outcome: "pending").update_all(updates) == 1
       end
 

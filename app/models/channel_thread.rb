@@ -1009,8 +1009,8 @@ class ChannelThread < ApplicationRecord
         next unless agent.user.webhook
         next unless event.webhook_status == "none"
 
-        event.update!(webhook_status: "pending")
-        Agent::EventWebhookJob.perform_later(event.id)
+        event.update!(webhook_status: "pending", webhook_next_attempt_at: Time.current)
+        Agent::EventWebhookJob.perform_later(event.id, event.webhook_attempts.to_i)
       end
     end
 

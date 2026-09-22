@@ -51,15 +51,63 @@ class Agent::DeliveryRecoveryTest < ActiveSupport::TestCase
     end
   end
 
+  test "a 429 with Retry-After 600 is not re-posted by the sweeper before 600 seconds" do
+    WebMock.stub_request(:post, webhooks(:bender).url)
+      .to_return(status: 429, headers: { "Retry-After" => "600" })
+
+    event = stranded_event(age: 0.seconds, attempts: 0)
+    event.update!(created_at: Time.current)
+    Agent::EventWebhookJob.perform_now(event.id)
+    assert_equal "pending", event.reload.webhook_status
+    assert_equal 1, event.reload.webhook_attempts
+
+    travel 3.minutes do
+      assert_no_enqueued_jobs only: Agent::EventWebhookJob do
+        Agent::Delivery.recover_stranded_webhooks!
+      end
+    end
+
+    travel 599.seconds do
+      assert_no_enqueued_jobs only: Agent::EventWebhookJob do
+        Agent::Delivery.recover_stranded_webhooks!(now: Time.current)
+      end
+    end
+  end
+
   test "a recovery pass keeps going past an enqueue failure" do
     first = stranded_event(age: 5.minutes, attempts: 0)
     second = stranded_event(age: 6.minutes, attempts: 0)
 
-    Agent::EventWebhookJob.expects(:perform_later).with(first.id).raises(StandardError, "redis down")
-    Agent::EventWebhookJob.expects(:perform_later).with(second.id)
+    Agent::EventWebhookJob.expects(:perform_later).with(first.id, 0).raises(StandardError, "redis down")
+    Agent::EventWebhookJob.expects(:perform_later).with(second.id, 0)
 
     # Calling it plainly proves the first row's failure never aborts the pass.
     Agent::Delivery.recover_stranded_webhooks!
+  end
+
+  test "a job with a stale attempt number exits without posting" do
+    WebMock.stub_request(:post, webhooks(:bender).url).to_return(status: 200)
+
+    event = stranded_event(age: 0.seconds, attempts: 1)
+    event.update!(created_at: Time.current, webhook_next_attempt_at: Time.current)
+
+    Agent::EventWebhookJob.perform_now(event.id, 0)
+
+    assert_not_requested :post, webhooks(:bender).url
+    assert_equal 1, event.reload.webhook_attempts
+    assert_equal "pending", event.reload.webhook_status
+  end
+
+  test "a scheduled retry records its next attempt in the future" do
+    WebMock.stub_request(:post, webhooks(:bender).url)
+      .to_return(status: 429, headers: { "Retry-After" => "600" })
+
+    event = stranded_event(age: 0.seconds, attempts: 0)
+    event.update!(created_at: Time.current)
+    Agent::EventWebhookJob.perform_now(event.id)
+
+    assert_equal "pending", event.reload.webhook_status
+    assert_in_delta 600, event.reload.webhook_next_attempt_at - Time.current, 5
   end
 
   private

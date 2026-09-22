@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_22_211200) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_22_211300) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -127,9 +127,11 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_211200) do
     t.integer "room_id"
     t.integer "webhook_attempts", default: 0, null: false
     t.text "webhook_last_error"
+    t.datetime "webhook_next_attempt_at"
     t.string "webhook_status", default: "none", null: false
     t.index ["agent_id", "agent_approval_id"], name: "index_agent_events_on_agent_github_approval", unique: true, where: "event_type = 'github_action_completed' AND agent_approval_id IS NOT NULL"
     t.index ["agent_id", "created_at"], name: "index_agent_events_on_agent_id_and_created_at"
+    t.index ["webhook_status", "webhook_next_attempt_at"], name: "index_agent_events_on_webhook_recovery"
   end
 
   create_table "agent_grants", force: :cascade do |t|

@@ -15,7 +15,15 @@ class Agent::EventWebhookJob < ApplicationJob
   # payloads that can no longer be built, and other 4xx answers fail
   # fast without retrying. Never raises for delivery failures once
   # recorded.
-  def perform(event_id)
+  #
+  # The attempt argument is the webhook_attempts value the job was
+  # scheduled for. The claim below increments only when the row still
+  # holds that value, so a duplicate enqueue (a sweeper pass racing the
+  # scheduled retry) finds its attempt number stale and exits without
+  # posting or burning an attempt. Jobs enqueued before the attempt
+  # argument existed pass nil and claim whatever the row currently
+  # holds.
+  def perform(event_id, attempt = nil)
     event = AgentEvent.find_by(id: event_id)
     return unless event
     return if event.webhook_status == "delivered"
@@ -26,37 +34,56 @@ class Agent::EventWebhookJob < ApplicationJob
       return
     end
 
+    attempt = event.webhook_attempts.to_i if attempt.nil?
+    claimed = AgentEvent.where(id: event.id, webhook_attempts: attempt, webhook_status: "pending")
+      .update_all(webhook_attempts: attempt + 1, webhook_next_attempt_at: Time.current) == 1
+    return unless claimed
+
+    attempts = attempt + 1
+    # Reload so later update! calls see the claimed row as their
+    # baseline; without it the fail-fast revert below looks like a
+    # no-op to dirty tracking (0 -> 1 -> 0) and never writes.
+    event.reload
+
     begin
       Agent::Delivery.post_event_webhook!(webhook, event, agent: event.agent)
     rescue Agent::Delivery::UndeliverableWebhook, RestrictedHTTP::Violation, Surfguard::Unresolvable, URI::InvalidURIError,
         Agent::Delivery::PermanentWebhookResponse => error
-      event.update!(webhook_status: "failed", webhook_last_error: short_error(error))
+      # Fail fast without consuming an attempt: revert the claim's
+      # increment so the ledger keeps reporting 0 attempts for rows
+      # that never became retryable.
+      event.update!(webhook_status: "failed", webhook_attempts: attempt, webhook_last_error: short_error(error))
     rescue Agent::Delivery::RetryableWebhookResponse => error
-      attempts = event.webhook_attempts.to_i + 1
       if attempts >= MAX_ATTEMPTS
-        event.update!(webhook_status: "failed", webhook_attempts: attempts, webhook_last_error: short_error(error))
+        event.update!(webhook_status: "failed", webhook_last_error: short_error(error))
       else
-        event.update!(webhook_status: "pending", webhook_attempts: attempts, webhook_last_error: short_error(error))
-        if error.retry_after
-          retry_job(wait: error.retry_after)
-        else
-          raise
-        end
+        delay = error.retry_after || default_backoff_for(attempts)
+        event.update!(webhook_status: "pending", webhook_last_error: short_error(error),
+          webhook_next_attempt_at: Time.current + delay)
+        self.class.set(wait: delay).perform_later(event.id, attempts)
       end
     rescue StandardError => error
-      attempts = event.webhook_attempts.to_i + 1
       if attempts >= MAX_ATTEMPTS
-        event.update!(webhook_status: "failed", webhook_attempts: attempts, webhook_last_error: short_error(error))
+        event.update!(webhook_status: "failed", webhook_last_error: short_error(error))
       else
-        event.update!(webhook_status: "pending", webhook_attempts: attempts, webhook_last_error: short_error(error))
-        raise
+        delay = default_backoff_for(attempts)
+        event.update!(webhook_status: "pending", webhook_last_error: short_error(error),
+          webhook_next_attempt_at: Time.current + delay)
+        self.class.set(wait: delay).perform_later(event.id, attempts)
       end
     else
-      event.update!(webhook_status: "delivered", webhook_attempts: event.webhook_attempts.to_i + 1, webhook_last_error: nil)
+      event.update!(webhook_status: "delivered", webhook_last_error: nil)
     end
   end
 
   private
+    # Default retry delay in seconds for attempt N (1-based), matching
+    # the retry_on :polynomially_longer shape (executions**4 + 2) so a
+    # scheduled retry and its recorded next_attempt_at agree.
+    def default_backoff_for(attempts)
+      (attempts**4) + 2
+    end
+
     def short_error(error)
       "#{error.class}: #{error.message}".truncate(500)
     end

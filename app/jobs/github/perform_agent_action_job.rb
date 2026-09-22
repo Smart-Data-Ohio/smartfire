@@ -115,6 +115,7 @@ class Github::PerformAgentActionJob < ApplicationJob
     # already_executed? first lands here, loses the insert, and returns
     # the winner instead of writing a second row.
     def record_outcome(approval, agent, room, status:, message: nil, url: nil)
+      pending_webhook = agent.user.webhook.present?
       event = agent.agent_events.create!(
         event_type: "github_action_completed",
         room: room,
@@ -122,7 +123,8 @@ class Github::PerformAgentActionJob < ApplicationJob
         outcome: "delivered",
         detail: (message if status == "failed"),
         agent_approval_id: approval.id,
-        webhook_status: agent.user.webhook ? "pending" : "none",
+        webhook_status: pending_webhook ? "pending" : "none",
+        webhook_next_attempt_at: (Time.current if pending_webhook),
         metadata: {
           "approval_id" => approval.id,
           "action" => approval.action,
@@ -165,9 +167,11 @@ class Github::PerformAgentActionJob < ApplicationJob
     # later runs from posting a duplicate write; at-most-once is the
     # correct bias for a call GitHub may already have applied.
     def finish_claim(event, approval, agent, status:, message: nil, url: nil)
+      pending_webhook = agent.user.webhook.present?
       event.update!(
         detail: (message if status == "failed"),
-        webhook_status: agent.user.webhook ? "pending" : "none",
+        webhook_status: pending_webhook ? "pending" : "none",
+        webhook_next_attempt_at: (Time.current if pending_webhook),
         metadata: {
           "approval_id" => approval.id,
           "action" => approval.action,
@@ -184,7 +188,7 @@ class Github::PerformAgentActionJob < ApplicationJob
       return unless event.webhook_pending?
 
       ActiveRecord.after_all_transactions_commit do
-        Agent::EventWebhookJob.perform_later(event.id)
+        Agent::EventWebhookJob.perform_later(event.id, event.webhook_attempts.to_i)
       end
     end
 end

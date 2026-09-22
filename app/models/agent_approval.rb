@@ -98,7 +98,7 @@ class AgentApproval < ApplicationRecord
 
     if event.webhook_pending?
       ActiveRecord.after_all_transactions_commit do
-        Agent::EventWebhookJob.perform_later(event.id)
+        Agent::EventWebhookJob.perform_later(event.id, event.webhook_attempts.to_i)
       end
     end
     self
@@ -209,13 +209,15 @@ class AgentApproval < ApplicationRecord
     end
 
     def record_decision_event!
+      pending_webhook = agent.user.webhook.present?
       event = agent.agent_events.create!(
         event_type: "approval_decided",
         room: room,
         actor: decided_by,
         outcome: "delivered",
         agent_approval_id: id,
-        webhook_status: agent.user.webhook ? "pending" : "none",
+        webhook_status: pending_webhook ? "pending" : "none",
+        webhook_next_attempt_at: (Time.current if pending_webhook),
         metadata: {
           "approval_id" => id,
           "status" => status,
