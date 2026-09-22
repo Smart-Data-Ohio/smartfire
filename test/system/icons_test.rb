@@ -1,4 +1,5 @@
 require "application_system_test_case"
+require "timeout"
 
 class IconsTest < ApplicationSystemTestCase
   setup do
@@ -21,17 +22,9 @@ class IconsTest < ApplicationSystemTestCase
 
     editor = find_field("Write a message")
 
-    editor.set "::"
-    sleep 0.5
-    assert_no_selector "suggestion-option"
-
-    editor.set "12:30"
-    sleep 0.5
-    assert_no_selector "suggestion-option"
-
-    editor.set "http://"
-    sleep 0.5
-    assert_no_selector "suggestion-option"
+    assert_no_icon_suggestions editor, "::"
+    assert_no_icon_suggestions editor, "12:30"
+    assert_no_icon_suggestions editor, "http://"
 
     editor.set ":open"
     assert_selector "suggestion-option", text: "OpenAI"
@@ -106,6 +99,39 @@ class IconsTest < ApplicationSystemTestCase
   end
 
   private
+    # The composer debounces searches 250 ms after the last keystroke. For
+    # inputs that must not suggest anything, run the same handler the
+    # debounced search would run, wait for any autocomplete fetch it issues
+    # to settle, and assert no menu opened — without waiting out the
+    # debounce. The debounced wiring itself is covered by the positive
+    # :open search in the test above.
+    def assert_no_icon_suggestions(editor, text)
+      editor.set text
+      page.evaluate_script(<<~JS, editor)
+        const [ editor ] = arguments
+        window.__iconSuggestionFetches = 0
+        if (!window.__iconSuggestionFetchWrapped) {
+          window.__iconSuggestionFetchWrapped = true
+          window.fetch = ((originalFetch) => (...args) => {
+            const url = String(args[0] && args[0].url || args[0])
+            if (!url.includes("/autocompletable/")) return originalFetch(...args)
+            window.__iconSuggestionFetches++
+            return originalFetch(...args).finally(() => window.__iconSuggestionFetches--)
+          })(window.fetch.bind(window))
+        }
+        const host = editor.closest('[data-controller~="markdown-autocomplete"]')
+        const controller = window.Stimulus.getControllerForElementAndIdentifier(host, "markdown-autocomplete")
+        controller.handlers.forEach(handler => handler.updateWithContentAndPosition(editor.value, editor.selectionStart))
+      JS
+      Timeout.timeout(10) do
+        sleep 0.05 until page.evaluate_script("window.__iconSuggestionFetches") == 0
+      end
+      # The fetch spy observes the raw response; give it a beat to parse
+      # and render before asserting nothing did.
+      sleep 0.1
+      assert_no_selector "suggestion-option", wait: 0
+    end
+
     def assert_icon_rendered(message, alt)
       width, height = page.evaluate_script(<<~JS, dom_id(message), alt)
         ((id, alt) => {
