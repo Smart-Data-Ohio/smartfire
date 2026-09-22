@@ -15,6 +15,9 @@ class StreamingTest < ApplicationSystemTestCase
   driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1000 ], options: { name: :streaming_chrome } do |options|
     options.add_argument "--use-fake-device-for-media-stream"
     options.add_argument "--use-fake-ui-for-media-stream"
+    # Keep the fake microphone's beep (and any remote audio) off the
+    # host speakers; capture and Web Audio analysis are unaffected.
+    options.add_argument "--mute-audio"
     options.add_argument "--autoplay-policy=no-user-gesture-required"
   end
 
