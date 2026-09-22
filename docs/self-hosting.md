@@ -98,6 +98,15 @@ docker run --publish 80:80 --env DISABLE_SSL=true ...
 To enable error reporting to Sentry in production, supply your DSN in the `SENTRY_DSN` environment variable.
 To disable Sentry initialization entirely, set `SKIP_TELEMETRY=true`.
 
+#### Bot key storage
+
+Bot keys now authenticate against a SHA-256 digest
+(`users.bot_token_digest`, backfilled by migration `20260922210200`).
+This release still keeps the plaintext `users.bot_token` column populated
+so a rollback to the previous release keeps every bot working. The
+plaintext column is removed in a follow-up release; after that, rolling
+back past it would require resetting every bot key.
+
 #### Content Security Policy
 
 Every page sends a `Content-Security-Policy-Report-Only` header (see

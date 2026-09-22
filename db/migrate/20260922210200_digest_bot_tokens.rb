@@ -1,9 +1,11 @@
 require "digest"
 
-# Bot keys ("<id>-<token>") were stored in plaintext. Keep the key value
-# every existing bot URL carries, but store only its SHA-256 digest, as
-# agent credentials already do. Plain SQL plus Ruby's digest: no models,
-# jobs, Redis, or network.
+# Bot keys ("<id>-<token>") are stored in plaintext. This release adds the
+# token's SHA-256 digest, as agent credentials store theirs, and the app
+# authenticates against it. The plaintext column stays populated this
+# release so a rolled-back container still authenticates and legacy webhook
+# payloads keep their working room.path; a follow-up release drops it.
+# Plain SQL plus Ruby's digest: no models, jobs, Redis, or network.
 class DigestBotTokens < ActiveRecord::Migration[8.2]
   def up
     add_column :users, :bot_token_digest, :string
@@ -13,15 +15,10 @@ class DigestBotTokens < ActiveRecord::Migration[8.2]
     end
 
     add_index :users, :bot_token_digest, unique: true
-    remove_index :users, :bot_token, name: "index_users_on_bot_token"
-    remove_column :users, :bot_token
   end
 
-  # The plaintext tokens are gone; rolling back restores the column empty,
-  # so every bot needs a key reset afterwards.
+  # Lossless: the plaintext column was never touched.
   def down
-    add_column :users, :bot_token, :string
-    add_index :users, :bot_token, unique: true, name: "index_users_on_bot_token"
     remove_index :users, :bot_token_digest
     remove_column :users, :bot_token_digest
   end

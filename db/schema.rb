@@ -569,6 +569,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_210200) do
 
   create_table "users", force: :cascade do |t|
     t.text "bio"
+    t.string "bot_token"
     t.string "bot_token_digest"
     t.datetime "created_at", null: false
     t.string "email_address"
@@ -582,6 +583,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_210200) do
     t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
     t.index "LOWER(github_login)", name: "index_users_on_lower_github_login", unique: true, where: "github_login IS NOT NULL"
+    t.index ["bot_token"], name: "index_users_on_bot_token", unique: true
     t.index ["bot_token_digest"], name: "index_users_on_bot_token_digest", unique: true
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
   end
