@@ -1,4 +1,5 @@
 require "test_helper"
+require "minitest/mock"
 
 class Github::PerformAgentActionJobTest < ActiveJob::TestCase
   AGENT_TOKEN = "agent-token-abc"
@@ -400,6 +401,61 @@ class Github::PerformAgentActionJobTest < ActiveJob::TestCase
     assert_equal "failed", event.metadata["status"]
     assert_match "timed out", event.metadata["message"].to_s
     assert_match "timed out", event.detail.to_s
+  end
+
+  test "a claim the sweep already failed is not rewritten by a late finish" do
+    approval = approve!(build_approval(kind: "comment", body: "Late finish"))
+    event = @agent.agent_events.create!(
+      event_type: "github_action_completed", room: @room, outcome: "delivered",
+      agent_approval_id: approval.id, webhook_status: "none",
+      created_at: 16.minutes.ago,
+      metadata: { "approval_id" => approval.id, "action" => "github.comment", "status" => "running" }
+    )
+
+    Github::PerformAgentActionJob.recover_stuck_claims!
+    assert_equal "failed", event.reload.metadata["status"]
+
+    assert_no_enqueued_jobs only: Agent::EventWebhookJob do
+      Github::PerformAgentActionJob.new.send(:finish_claim, event, approval, @agent,
+        status: "completed", url: "https://github.com/rails/rails/pull/12#issuecomment-9")
+    end
+
+    event.reload
+    assert_equal "failed", event.metadata["status"]
+    assert_match "timed out", event.metadata["message"].to_s
+  end
+
+  test "a claim finished while the sweep runs keeps its result" do
+    approval = approve!(build_approval(kind: "comment", body: "Racy finish"))
+    event = @agent.agent_events.create!(
+      event_type: "github_action_completed", room: @room, outcome: "delivered",
+      agent_approval_id: approval.id, webhook_status: "none",
+      created_at: 16.minutes.ago,
+      metadata: { "approval_id" => approval.id, "action" => "github.comment", "status" => "running" }
+    )
+    finder = AgentEvent.method(:find)
+    stale = finder.call(event.id)
+
+    # The worker finishes between the sweep's read and its write: the
+    # sweep still sees a running row, but its rewrite must lose.
+    finished = false
+    fetch = lambda do |id|
+      if id == event.id && !finished
+        finished = true
+        Github::PerformAgentActionJob.new.send(:finish_claim, finder.call(id), approval, @agent,
+          status: "completed", url: "https://github.com/rails/rails/pull/12#issuecomment-9")
+      end
+      id == event.id ? stale : finder.call(id)
+    end
+
+    Rails.logger.expects(:error).never
+    AgentEvent.stub(:find, fetch) do
+      Github::PerformAgentActionJob.recover_stuck_claims!
+    end
+
+    event.reload
+    assert_equal "completed", event.metadata["status"]
+    assert_equal "https://github.com/rails/rails/pull/12#issuecomment-9", event.metadata["url"]
   end
 
   test "a fresh running claim is left alone by the sweeper" do

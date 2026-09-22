@@ -4,6 +4,13 @@ class Github::PerformAgentActionJob < ApplicationJob
   # periodic sweep.
   STUCK_CLAIM_AFTER = 15.minutes
 
+  # Both claim writers (finish_claim below and the stuck-claim sweep)
+  # condition their outcome rewrite on the claim still running, so a
+  # worker finishing while the sweep runs — or vice versa — cannot
+  # overwrite the winner's result: the first write wins and the other
+  # becomes a no-op that enqueues no webhook.
+  RUNNING_CLAIM_CONDITION = "json_extract(agent_events.metadata, '$.status') = 'running'"
+
   # Marks stuck running claims failed. Runs from the periodic
   # event-reminders loop alongside the webhook sweep. Each stuck row is
   # rewritten like a failed finish_claim (failed status with a timeout
@@ -13,7 +20,7 @@ class Github::PerformAgentActionJob < ApplicationJob
   def self.recover_stuck_claims!(now: Time.current)
     AgentEvent.where(event_type: "github_action_completed")
       .where("agent_events.created_at < ?", now - STUCK_CLAIM_AFTER)
-      .where("json_extract(agent_events.metadata, '$.status') = 'running'")
+      .where(RUNNING_CLAIM_CONDITION)
       .find_each do |event|
         begin
           event = AgentEvent.find(event.id)
@@ -22,12 +29,16 @@ class Github::PerformAgentActionJob < ApplicationJob
           message = "GitHub action execution timed out"
           metadata = event.metadata.merge("status" => "failed", "message" => message)
           pending_webhook = event.agent.user.webhook.present?
-          event.update!(
-            detail: message,
-            webhook_status: pending_webhook ? "pending" : "none",
-            webhook_next_attempt_at: (Time.current if pending_webhook),
-            metadata: metadata
-          )
+          written = AgentEvent.where(id: event.id).where(RUNNING_CLAIM_CONDITION)
+            .update_all(
+              detail: message,
+              webhook_status: pending_webhook ? "pending" : "none",
+              webhook_next_attempt_at: (Time.current if pending_webhook),
+              metadata: metadata
+            ) == 1
+          next unless written
+
+          event.reload
           if pending_webhook
             Agent::EventWebhookJob.perform_later(event.id, event.webhook_attempts.to_i)
           end
@@ -205,22 +216,27 @@ class Github::PerformAgentActionJob < ApplicationJob
     # Rewrites the winner's claim with the GitHub result. A crash between
     # the claim and this write leaves a "running" row behind, which keeps
     # later runs from posting a duplicate write; at-most-once is the
-    # correct bias for a call GitHub may already have applied.
+    # correct bias for a call GitHub may already have applied. The rewrite
+    # lands only while the claim is still running: when the stuck-claim
+    # sweep already failed the row, this becomes a no-op that enqueues no
+    # webhook, so the two writers cannot overwrite each other's outcome.
     def finish_claim(event, approval, agent, status:, message: nil, url: nil)
       pending_webhook = agent.user.webhook.present?
-      event.update!(
-        detail: (message if status == "failed"),
-        webhook_status: pending_webhook ? "pending" : "none",
-        webhook_next_attempt_at: (Time.current if pending_webhook),
-        metadata: {
-          "approval_id" => approval.id,
-          "action" => approval.action,
-          "status" => status,
-          "url" => url,
-          "message" => message
-        }.compact
-      )
-      enqueue_outcome_webhook(event)
+      written = AgentEvent.where(id: event.id).where(RUNNING_CLAIM_CONDITION)
+        .update_all(
+          detail: (message if status == "failed"),
+          webhook_status: pending_webhook ? "pending" : "none",
+          webhook_next_attempt_at: (Time.current if pending_webhook),
+          metadata: {
+            "approval_id" => approval.id,
+            "action" => approval.action,
+            "status" => status,
+            "url" => url,
+            "message" => message
+          }.compact
+        ) == 1
+      event.reload
+      enqueue_outcome_webhook(event) if written
       event
     end
 
