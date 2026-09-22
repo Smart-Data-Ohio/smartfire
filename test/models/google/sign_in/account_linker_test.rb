@@ -56,4 +56,28 @@ class Google::SignIn::AccountLinkerTest < ActiveSupport::TestCase
     )
     assert_equal "Given Family", named.name
   end
+
+  test "a self-changed email is refused for linking and never provisions a duplicate" do
+    user = User.create!(name: "Squatter", email_address: "hire@smartdata.net", password: "secret123456",
+      google_email_link_allowed: true, email_self_changed_at: Time.current)
+
+    error = assert_raises(Google::SignIn::Rejected) do
+      Google::SignIn::AccountLinker.resolve!({ "sub" => "google-sub-hire", "email" => "hire@smartdata.net", "hd" => "smartdata.net" })
+    end
+
+    assert_equal :admin_link_required, error.reason
+    assert_nil user.reload.google_identity
+    assert_equal 1, User.where("LOWER(email_address) = ?", "hire@smartdata.net").count
+
+    user.update!(email_self_changed_at: nil)
+    assert_equal user, Google::SignIn::AccountLinker.resolve!({ "sub" => "google-sub-hire", "email" => "hire@smartdata.net", "hd" => "smartdata.net" })
+  end
+
+  test "an already-linked subject signs in even after its account self-changed email" do
+    user = User.create!(name: "Linked", email_address: "linked@smartdata.net", password: "secret123456")
+    GoogleIdentity.create!(user:, subject: "google-sub-linked", email: "linked@smartdata.net", domain: "smartdata.net")
+    user.update!(email_address: "linked2@smartdata.net", email_self_changed_at: Time.current)
+
+    assert_equal user, Google::SignIn::AccountLinker.resolve!({ "sub" => "google-sub-linked", "email" => "linked@smartdata.net", "hd" => "smartdata.net" })
+  end
 end

@@ -132,7 +132,7 @@ class Agents::MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal bearer_token_error, response.parsed_body["error"]
     delete session_url
 
-    post room_agent_messages_url(@room, bot_key: @bot.bot_key),
+    post room_agent_messages_url(@room, bot_key: bot_key_for(@bot)),
       params: { thread_id: thread.id, message: { markdown_source: "Legacy" } }.to_json,
       headers: { "Content-Type" => "application/json" }
     assert_response :forbidden

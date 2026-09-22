@@ -209,7 +209,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
 
     delete session_url
-    get agents_events_url(bot_key: @bot.bot_key)
+    get agents_events_url(bot_key: bot_key_for(@bot))
     assert_response :forbidden
   end
 
@@ -494,6 +494,47 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     assert_select "menu li", text: "No events yet."
   end
 
+  test "a private PR's title and branches reach the agent only when its owner can read the repository" do
+    thread = discuss_pull_request(number: 12, client_id: "agent-private-pr", private: true)
+    thread.post_message!(
+      creator: users(:david),
+      attributes: { markdown_source: "Hey @[Bender Bot], review this", client_message_id: "agent-private-pr-1" }
+    )
+
+    get agents_events_url, headers: bearer_headers
+    pull_request = response.parsed_body.find { |entry| entry["event_type"] == "mention" }["pull_request"]
+    assert_equal 12, pull_request["number"]
+    assert_nil pull_request["title"]
+    assert_nil pull_request["head_branch"]
+    assert_nil pull_request["base_branch"]
+
+    GithubConnectedAccount.create!(user: agents(:bender_agent).owner, github_login: "david-gh", access_token: "david-token")
+    readable = stub_request(:get, "https://api.github.com/repos/rails/rails").to_return(status: 200, body: "{}")
+
+    get agents_events_url, headers: bearer_headers
+    pull_request = response.parsed_body.find { |entry| entry["event_type"] == "mention" }["pull_request"]
+    assert_requested readable
+    assert_equal "Fix login", pull_request["title"]
+    assert_equal "shiny", pull_request["head_branch"]
+    assert_equal "main", pull_request["base_branch"]
+  end
+
+  test "a private PR stays redacted when the owner's token cannot read the repository" do
+    thread = discuss_pull_request(number: 12, client_id: "agent-private-pr-denied", private: nil)
+    thread.post_message!(
+      creator: users(:david),
+      attributes: { markdown_source: "Hey @[Bender Bot], review this", client_message_id: "agent-private-pr-denied-1" }
+    )
+    GithubConnectedAccount.create!(user: agents(:bender_agent).owner, github_login: "david-gh", access_token: "david-token")
+    stub_request(:get, "https://api.github.com/repos/rails/rails").to_return(status: 404, body: "{}")
+
+    get agents_events_url, headers: bearer_headers
+
+    pull_request = response.parsed_body.find { |entry| entry["event_type"] == "mention" }["pull_request"]
+    assert_nil pull_request["title"]
+    assert_nil pull_request["head_branch"]
+  end
+
   test "a mention in a PR thread carries the pull_request object" do
     thread = discuss_pull_request(number: 12, client_id: "agent-pr-mention")
     thread.post_message!(
@@ -545,7 +586,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
-    def discuss_pull_request(number:, client_id:)
+    def discuss_pull_request(number:, client_id:, private: false)
       parent = @room.messages.create!(
         creator: users(:david),
         markdown_source: "review https://github.com/rails/rails/pull/#{number}",
@@ -553,7 +594,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       )
       pull_request = parent.github_pull_requests.first
       pull_request.update!(
-        title: "Fix login", state: "open", base_branch: "main", head_branch: "shiny",
+        private: private, title: "Fix login", state: "open", base_branch: "main", head_branch: "shiny",
         review_decision: "approved", check_status: "passing",
         html_url: "https://github.com/rails/rails/pull/#{number}"
       )

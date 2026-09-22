@@ -32,7 +32,7 @@ class Rooms::Events::AttendancesControllerTest < ActionDispatch::IntegrationTest
   test "bots are denied" do
     delete session_url
 
-    patch room_event_attendance_url(@room, @event, bot_key: users(:bender).bot_key), params: { response: "going" }
+    patch room_event_attendance_url(@room, @event, bot_key: bot_key_for(users(:bender))), params: { response: "going" }
 
     assert_response :forbidden
   end
