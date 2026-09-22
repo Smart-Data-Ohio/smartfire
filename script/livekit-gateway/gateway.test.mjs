@@ -271,6 +271,9 @@ test("reports the participant as left after the reconnect grace expires", async 
 
   await waitFor(() => harness.state.leftPosts.length === 1);
   await waitFor(() => harness.state.removals.length === 1);
+  // The left report runs unawaited beside the removal, so the POST
+  // landing does not mean its emit has run yet.
+  await waitFor(() => harness.state.decisions.some(({ type }) => type === "participant_left_reported"));
 
   const [report] = harness.state.leftPosts;
   assert.equal(report.grantId, "17");
@@ -292,6 +295,10 @@ test("a failing left report changes nothing about removal", async (t) => {
 
   await waitFor(() => harness.state.leftPosts.length === 1);
   await waitFor(() => harness.state.removals.length === 1);
+  // The left report runs unawaited beside the removal, so the POST
+  // landing and the removal finishing do not mean its catch has recorded
+  // the failure yet.
+  await waitFor(() => harness.state.decisions.some(({ type }) => type === "participant_left_report_failed"));
 
   assert.deepEqual(harness.state.fatals, []);
   assert.ok(harness.state.decisions.some(({ type }) => type === "participant_left_report_failed"));
