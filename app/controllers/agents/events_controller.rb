@@ -186,7 +186,7 @@ class Agents::EventsController < ApplicationController
         room: { id: room.id, name: room.name },
         actor: event.actor ? { id: event.actor.id, name: event.actor.name } : nil,
         message: message_payload(message)
-      }.compact.merge(pull_request: Github::PullRequestThread.payload_for_message(message, agent: agent))
+      }.compact.merge(pull_request: Github::PullRequestThread.payload_for_message(message, agent: Current.agent))
     end
 
     def work_poll_payload(event)
@@ -202,7 +202,7 @@ class Agents::EventsController < ApplicationController
       # from exactly that snapshot, marked thread_deleted, with no live
       # data beyond it. Assignment rows have no snapshot and stay dropped.
       work = if thread
-        Agent::Delivery.work_payload(thread, assigned_by: metadata["assigned_by"])
+        Agent::Delivery.work_payload(thread, assigned_by: metadata["assigned_by"], agent: Current.agent)
       else
         return unless event.event_type == "work_unassigned"
 

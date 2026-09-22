@@ -112,8 +112,8 @@ class Agent::Delivery
     # push notifications use; agents combine it with their configured
     # host. The thread_id, status, and assigned_by keys predate the
     # shared builder and keep their names; everything else comes from it.
-    def work_payload(thread, assigned_by:)
-      Agents::WorkPayload.for(thread).merge(
+    def work_payload(thread, assigned_by:, agent: nil)
+      Agents::WorkPayload.for(thread, agent: agent).merge(
         thread_id: thread.id,
         status: thread.work_status,
         assigned_by: assigned_by
@@ -200,7 +200,7 @@ class Agent::Delivery
         metadata = event.metadata.is_a?(Hash) ? event.metadata : {}
         thread = ChannelThread.find_by(id: metadata["thread_id"])
         work = if thread
-          work_payload(thread, assigned_by: metadata["assigned_by"])
+          work_payload(thread, assigned_by: metadata["assigned_by"], agent: agent)
         else
           metadata["work_snapshot"]
         end
