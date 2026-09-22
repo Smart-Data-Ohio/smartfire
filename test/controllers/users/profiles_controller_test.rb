@@ -100,8 +100,19 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
 
     assert_includes response.body, "Calendar permission needed, reconnect to publish events"
     assert_not_includes response.body, "Connected as"
-    assert_not_includes response.body, "Disconnect"
+    assert_includes response.body, "Disconnect"
     assert_select "form[action=?][method=post][data-turbo=false]", google_connect_path, count: 1
+  end
+
+  test "profile shows Disconnect for a partial grant with Drive still active" do
+    connect_google!(users(:david), email: "david@gmail.test",
+      scopes: "openid email #{Google::Client::DRIVE_SCOPE}")
+
+    get user_profile_url
+
+    assert_includes response.body, "Calendar permission needed, reconnect to publish events"
+    assert_includes response.body, "Disconnect"
+    assert_includes response.body, "Connect Google Calendar"
   end
 
   test "reconnect preserves a granted Drive scope" do
