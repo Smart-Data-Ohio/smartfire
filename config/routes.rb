@@ -4,6 +4,7 @@ Rails.application.routes.draw do
   namespace :internal do
     post "huddle/authorize", to: "huddle#authorize"
     get "huddle/grants/:id", to: "huddle#show"
+    post "huddle/grants/:id/left", to: "huddle#left"
   end
 
   resource :first_run
@@ -146,6 +147,7 @@ Rails.application.routes.draw do
       end
       resource :huddle, only: %i[ show create ] do
         get :participants
+        post :leave
       end
       resource :refresh, only: :show
       resource :settings, only: :show

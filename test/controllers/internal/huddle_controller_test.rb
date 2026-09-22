@@ -283,11 +283,55 @@ class Internal::HuddleControllerTest < ActionDispatch::IntegrationTest
     assert_nil @huddle.grant.reload.last_seen_at
   end
 
-  test "gateway authentication is required for both endpoints" do
+  test "a disconnect event marks the grant out of the call and refreshes presence" do
+    @huddle.grant.update_columns(last_seen_at: 5.seconds.ago)
+
+    assert_difference -> { capture_turbo_stream_broadcasts([ rooms(:watercooler), :messages ]).count } do
+      post "/internal/huddle/grants/#{@huddle.grant_id}/left",
+        params: { disconnected_at: Time.current.iso8601 }, headers: gateway_headers
+    end
+
+    assert_response :success
+    assert_nil @huddle.grant.reload.last_seen_at
+    assert_not @huddle.grant.revoked?
+  end
+
+  test "a stale disconnect event keeps a newer sighting" do
+    @huddle.grant.update_columns(last_seen_at: Time.current)
+
+    post "/internal/huddle/grants/#{@huddle.grant_id}/left",
+      params: { disconnected_at: 1.minute.ago.iso8601 }, headers: gateway_headers
+
+    assert_response :success
+    assert_not_nil @huddle.grant.reload.last_seen_at
+  end
+
+  test "a disconnect event with no timestamp clears liveness" do
+    @huddle.grant.update_columns(last_seen_at: Time.current)
+
+    post "/internal/huddle/grants/#{@huddle.grant_id}/left", headers: gateway_headers
+
+    assert_response :success
+    assert_nil @huddle.grant.reload.last_seen_at
+  end
+
+  test "a disconnect event for an unknown grant is not found" do
+    post "/internal/huddle/grants/-1/left", headers: gateway_headers
+
+    assert_response :not_found
+  end
+
+  test "gateway authentication is required for every endpoint" do
     post "/internal/huddle/authorize", headers: { "Authorization" => "Bearer #{@huddle.token}" }
     assert_response :unauthorized
 
     get "/internal/huddle/grants/#{@huddle.grant_id}", headers: { "X-Huddle-Gateway-Secret" => "wrong" }
+    assert_response :unauthorized
+
+    post "/internal/huddle/grants/#{@huddle.grant_id}/left"
+    assert_response :unauthorized
+
+    post "/internal/huddle/grants/#{@huddle.grant_id}/left", headers: { "X-Huddle-Gateway-Secret" => "wrong" }
     assert_response :unauthorized
   end
 
@@ -298,6 +342,9 @@ class Internal::HuddleControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :service_unavailable
     assert_equal "no-store", response.headers["Cache-Control"]
+
+    post "/internal/huddle/grants/#{@huddle.grant_id}/left", headers: gateway_headers
+    assert_response :service_unavailable
   end
 
   private

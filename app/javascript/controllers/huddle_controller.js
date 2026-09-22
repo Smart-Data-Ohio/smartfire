@@ -405,13 +405,35 @@ export default class extends Controller {
   }
 
   leave = async () => {
+    const roomId = this.roomId
     ++this.operation
+    // Tell the server first, without waiting: the avatar stacks clear
+    // through the broadcast instead of waiting out the liveness window.
+    if (roomId) this.#reportLeave(roomId)
     await this.#disconnectCurrentRoom()
     this.roomId = null
     this.roomName = null
     this.identity = null
     this.#clearConnectedNotice()
     this.#setState("idle", "Not in a huddle")
+  }
+
+  // Best effort: leaving works fully offline, and the liveness window plus
+  // the gateway's disconnect event converge on the same out-of-call state.
+  #reportLeave(roomId) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+    if (!csrfToken) return
+
+    fetch(`/rooms/${encodeURIComponent(roomId)}/huddle/leave`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "X-CSRF-Token": csrfToken
+      },
+      body: "{}"
+    }).catch(() => {})
   }
 
   toggleMute = async () => {

@@ -86,6 +86,8 @@ async function createHarness(overrides = {}) {
     stallAuthorizeBody: false,
     seenAuthorization: [],
     grantChecks: 0,
+    leftPosts: [],
+    leftStatus: 200,
     upstreamConnections: 0,
     sendFirstSignal: true,
     upstreamSockets: new Set(),
@@ -118,6 +120,16 @@ async function createHarness(overrides = {}) {
       assert.equal(request.headers["x-huddle-gateway-secret"], SECRET);
       const status = state.grantCheckStatus ?? (state.active ? 200 : 403);
       return json(response, status, status === 200 ? GRANT : {});
+    }
+    const leftMatch = request.url?.match(/^\/internal\/huddle\/grants\/([^/?]+)\/left$/);
+    if (request.method === "POST" && leftMatch) {
+      const body = await readJson(request);
+      state.leftPosts.push({
+        grantId: leftMatch[1],
+        body,
+        secret: request.headers["x-huddle-gateway-secret"],
+      });
+      return json(response, state.leftStatus, {});
     }
     response.writeHead(404).end();
   });
@@ -248,6 +260,43 @@ for (const [name, status] of [["revocation", 403], ["backend outage", 503]]) {
   });
 }
 
+test("reports the participant as left after the reconnect grace expires", async (t) => {
+  const harness = await createHarness({ reconnectGraceMs: 60 });
+  t.after(() => harness.close());
+  const before = Date.now();
+  const result = await websocketAttempt(`ws://127.0.0.1:${harness.gatewayPort}/rtc?access_token=${TOKEN}`);
+  assert.equal(result.status, 101);
+  result.socket.close();
+  await once(result.socket, "close");
+
+  await waitFor(() => harness.state.leftPosts.length === 1);
+  await waitFor(() => harness.state.removals.length === 1);
+
+  const [report] = harness.state.leftPosts;
+  assert.equal(report.grantId, "17");
+  assert.equal(report.secret, SECRET);
+  const disconnectedAt = Date.parse(report.body.disconnected_at);
+  assert.ok(Number.isFinite(disconnectedAt));
+  assert.ok(disconnectedAt >= before && disconnectedAt <= Date.now());
+  assert.ok(harness.state.decisions.some(({ type }) => type === "participant_left_reported"));
+});
+
+test("a failing left report changes nothing about removal", async (t) => {
+  const harness = await createHarness({ reconnectGraceMs: 60 });
+  t.after(() => harness.close());
+  harness.state.leftStatus = 500;
+  const result = await websocketAttempt(`ws://127.0.0.1:${harness.gatewayPort}/rtc?access_token=${TOKEN}`);
+  assert.equal(result.status, 101);
+  result.socket.close();
+  await once(result.socket, "close");
+
+  await waitFor(() => harness.state.leftPosts.length === 1);
+  await waitFor(() => harness.state.removals.length === 1);
+
+  assert.deepEqual(harness.state.fatals, []);
+  assert.ok(harness.state.decisions.some(({ type }) => type === "participant_left_report_failed"));
+});
+
 test("a reconnect inside the grace period cancels stale participant removal", async (t) => {
   const harness = await createHarness({ reconnectGraceMs: 120 });
   t.after(() => harness.close());
@@ -261,6 +310,7 @@ test("a reconnect inside the grace period cancels stale participant removal", as
   await new Promise((resolve) => setTimeout(resolve, 180));
 
   assert.equal(harness.state.removals.length, 0);
+  assert.equal(harness.state.leftPosts.length, 0);
   assert.equal(second.socket.readyState, WebSocket.OPEN);
 });
 

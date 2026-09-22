@@ -167,6 +167,21 @@ class HuddleGrant < ApplicationRecord
     last_seen_at.present? && last_seen_at > IN_CALL_WINDOW.ago
   end
 
+  # Drops the grant from the call without revoking it: leaving the call does
+  # not end the session's authorization, it only stops counting as present.
+  # Called from the explicit leave endpoint and from the gateway's
+  # disconnect event, both of which broadcast fresh presence. The optional
+  # floor keeps a stale disconnect event from clobbering a liveness
+  # sighting that landed after the disconnect (quick rejoin).
+  def mark_out_of_call!(seen_after: nil)
+    return false if last_seen_at.nil?
+    return false if seen_after.present? && last_seen_at > seen_after
+
+    update_columns(last_seen_at: nil)
+    broadcast_voice_presence
+    true
+  end
+
   # The gateway checks every connected participant about once per second, so
   # liveness is persisted at most every SEEN_TOUCH_INTERVAL, and the
   # first-sighting presence refresh goes through a job instead of rendering

@@ -240,6 +240,38 @@ class VoiceChannelsTest < ApplicationSystemTestCase
     assert_selector ".room-header__actions .voice-stack__count[hidden]", visible: :all, wait: 10
   end
 
+  test "leaving through the panel clears presence immediately" do
+    # The leave POST carries the CSRF token, so forgery protection stays on
+    # for this test the way it does throughout the streaming suite.
+    @forgery_protection = ActionController::Base.allow_forgery_protection
+    ActionController::Base.allow_forgery_protection = true
+
+    begin
+      session = users(:jason).sessions.order(created_at: :desc, id: :desc).first
+      grant = HuddleGrant.issue!(session:, membership: @room.memberships.find_by!(user: users(:jason)))
+      grant.update_columns(last_seen_at: Time.current)
+
+      visit room_path(@room)
+      wait_for_cable_connection
+      within("#voice_rooms .voice-room") { assert_selector ".voice-stack__count", text: "1" }
+
+      # The panel is idle without media; drive leave() with the room set,
+      # the way a connected panel calls it.
+      page.execute_script(<<~JS, @room.id)
+        const controller = window.Stimulus.getControllerForElementAndIdentifier(
+          document.getElementById("channel-huddle"), "huddle");
+        controller.roomId = arguments[0];
+        controller.leave();
+      JS
+
+      within("#voice_rooms .voice-room") { assert_no_selector ".voice-stack--live", wait: BROADCAST_WAIT }
+      assert_nil grant.reload.last_seen_at
+      assert_not grant.revoked?
+    ensure
+      ActionController::Base.allow_forgery_protection = @forgery_protection
+    end
+  end
+
   test "voice rooms carry ordinary text chat" do
     visit room_path(@room)
     wait_for_cable_connection

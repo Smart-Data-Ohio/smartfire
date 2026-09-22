@@ -28,7 +28,24 @@ class Internal::HuddleController < ActionController::API
     end
   end
 
+  # The gateway posts here after its reconnect grace expires with no
+  # replacement connection: the participant is gone, so the grant drops out
+  # of the call and presence refreshes immediately instead of waiting out
+  # the liveness window and the browser poll. Best effort on both sides —
+  # enforcement never depends on it — so an unknown grant is a plain 404.
+  def left
+    grant = HuddleGrant.find_by(id: params[:id])
+    return head :not_found unless grant
+
+    grant.mark_out_of_call!(seen_after: disconnected_at_param)
+    head :ok
+  end
+
   private
+    def disconnected_at_param
+      raw = params[:disconnected_at].to_s
+      Time.zone.parse(raw) if raw.present?
+    end
     def authenticate_gateway
       provided = request.headers["X-Huddle-Gateway-Secret"].to_s
       expected = ENV["LIVEKIT_GATEWAY_SECRET"].to_s

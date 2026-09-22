@@ -139,6 +139,41 @@ class HuddleGrantTest < ActiveSupport::TestCase
     end
   end
 
+  test "mark_out_of_call! drops liveness without revoking and refreshes presence" do
+    room = rooms(:watercooler)
+    grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_watercooler))
+    grant.update_columns(last_seen_at: Time.current)
+
+    assert_presence_broadcast(room) do
+      assert grant.mark_out_of_call!
+    end
+
+    assert_nil grant.reload.last_seen_at
+    assert_not_predicate grant, :in_call?
+    assert_not grant.revoked?
+    assert_predicate grant, :authorized?
+  end
+
+  test "mark_out_of_call! is silent when the grant was never seen" do
+    grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_watercooler))
+
+    assert_no_changes -> { capture_turbo_stream_broadcasts([ rooms(:watercooler), :messages ]).count } do
+      assert_not grant.mark_out_of_call!
+    end
+  end
+
+  test "mark_out_of_call! keeps a sighting newer than the disconnect" do
+    grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_watercooler))
+    grant.update_columns(last_seen_at: Time.current)
+
+    assert_no_changes -> { grant.reload.last_seen_at } do
+      assert_not grant.mark_out_of_call!(seen_after: 1.minute.ago)
+    end
+
+    assert grant.mark_out_of_call!(seen_after: Time.current)
+    assert_nil grant.reload.last_seen_at
+  end
+
   test "participants_for lists distinct in-call users by name" do
     room = Rooms::Voice.create_for({ name: "Lounge", creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
     david_membership = room.memberships.find_by!(user: users(:david))
