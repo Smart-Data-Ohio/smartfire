@@ -209,7 +209,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
 
     delete session_url
-    get agents_events_url(bot_key: @bot.bot_key)
+    get agents_events_url(bot_key: bot_key_for(@bot))
     assert_response :forbidden
   end
 

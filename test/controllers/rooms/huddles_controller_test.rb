@@ -223,7 +223,7 @@ class Rooms::HuddlesControllerTest < ActionDispatch::IntegrationTest
   test "participants denies bots and inactive users" do
     room = Rooms::Voice.create_for({ name: "Lounge", creator: users(:david) }, users: [ users(:david) ])
 
-    get participants_room_huddle_url(room), params: { bot_key: users(:bender).bot_key }
+    get participants_room_huddle_url(room), params: { bot_key: bot_key_for(users(:bender)) }
     assert_json_error :forbidden, "Bots cannot join huddles"
 
     bot = users(:bender)
@@ -310,7 +310,7 @@ class Rooms::HuddlesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "bots cannot join" do
-    post room_huddle_url(rooms(:watercooler)), params: { bot_key: users(:bender).bot_key }
+    post room_huddle_url(rooms(:watercooler)), params: { bot_key: bot_key_for(users(:bender)) }
 
     assert_json_error :forbidden, "Bots cannot join huddles"
   end

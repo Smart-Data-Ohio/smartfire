@@ -16,7 +16,7 @@ class AgentOwnerDeactivationTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     assert_difference -> { Message.count }, 1 do
-      post room_bot_messages_url(@room, users(:bender).bot_key), params: +"still here"
+      post room_bot_messages_url(@room, bot_key_for(users(:bender))), params: +"still here"
     end
   end
 
@@ -42,7 +42,7 @@ class AgentOwnerDeactivationTest < ActionDispatch::IntegrationTest
     users(:david).deactivate
 
     assert_no_difference -> { Message.count } do
-      post room_bot_messages_url(@room, users(:bender).bot_key), params: +"should not post"
+      post room_bot_messages_url(@room, bot_key_for(users(:bender))), params: +"should not post"
     end
     assert_response :forbidden
   end

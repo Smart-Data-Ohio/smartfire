@@ -279,7 +279,7 @@ class Agents::PostsControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
     delete session_url
 
-    post room_agent_posts_url(@board, bot_key: @bot.bot_key),
+    post room_agent_posts_url(@board, bot_key: bot_key_for(@bot)),
       params: { title: "Legacy post" }.to_json,
       headers: { "Content-Type" => "application/json" }
     assert_response :forbidden

@@ -54,12 +54,38 @@ class Accounts::BotsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
 
     post account_bots_url, params: { user: { name: "Bender's Friend" } }
-    assert_redirected_to account_bots_url
+    assert_response :created
     assert_equal "Bender's Friend", User.bot.last.name
 
     agent = User.bot.last.agent
     assert agent.workspace?
     assert_equal users(:david), agent.owner
+  end
+
+  test "create shows the new key once and stores only its digest" do
+    post account_bots_url, params: { user: { name: "Key Bot" } }
+
+    assert_response :created
+    assert_equal "no-store", response.headers["Cache-Control"]
+    bot = User.bot.find_by!(name: "Key Bot")
+    key = css_select("input[aria-label='Bot key']").first["value"]
+    assert_match(/\A#{bot.id}-[A-Za-z0-9]{12}\z/, key)
+    assert_equal bot, User.authenticate_bot(key)
+    assert_equal Digest::SHA256.hexdigest(key.split("-", 2).last), bot.bot_token_digest
+    assert_not_includes User.connection.select_rows("SELECT * FROM users WHERE id = #{bot.id}").flatten.map(&:to_s), key.split("-", 2).last
+
+    get account_bots_url
+    assert_response :success
+    assert_not_includes response.body, key
+  end
+
+  test "members cannot create bots" do
+    sign_in :kevin
+
+    assert_no_difference -> { User.bot.count } do
+      post account_bots_url, params: { user: { name: "Sneaky Bot" } }
+    end
+    assert_response :forbidden
   end
 
   test "update" do
@@ -95,7 +121,8 @@ class Accounts::BotsControllerTest < ActionDispatch::IntegrationTest
     bot = users(:bender).reload
     assert_equal "openai", bot.icon_name
     assert bot.bot?
-    assert_not_equal "forged-token", bot.bot_token
+    assert_not_equal Digest::SHA256.hexdigest("forged-token"), bot.bot_token_digest
+    assert_equal bot, User.authenticate_bot(bot_key_for(bot))
   end
 
   test "updating the icon busts the fresh avatar cache through updated_at" do

@@ -31,6 +31,43 @@ class User::BotTest < ActiveSupport::TestCase
     assert User.authenticate_bot(bot.bot_key)
   end
 
+  test "only the digest is stored and a reloaded bot no longer knows its key" do
+    token = "5M0aLYwQyBXOXa5Wsz6NZb11EE4tW2"
+    SecureRandom.stubs(:alphanumeric).returns(token)
+    bot = User.create_bot!(name: "Bender")
+
+    stored = User.find(bot.id)
+    assert_equal Digest::SHA256.hexdigest(token), stored.bot_token_digest
+    assert_nil stored.plain_bot_key
+    assert_equal User::Bot::BOT_KEY_PLACEHOLDER, stored.bot_key
+    assert_equal bot, User.authenticate_bot("#{bot.id}-#{token}")
+  end
+
+  test "authenticate refuses wrong, empty, and malformed keys" do
+    bot = User.create_bot!(name: "Bender")
+    token = bot.plain_bot_token
+
+    assert_nil User.authenticate_bot("#{bot.id}-#{token}x")
+    assert_nil User.authenticate_bot("#{bot.id}-")
+    assert_nil User.authenticate_bot("#{bot.id}")
+    assert_nil User.authenticate_bot("")
+    assert_nil User.authenticate_bot(User::Bot::BOT_KEY_PLACEHOLDER)
+    assert_nil User.authenticate_bot("#{users(:bender).id}-#{token}"), "another bot's token never matches"
+    assert_nil User.authenticate_bot("#{users(:david).id}-#{token}"), "humans have no bot key"
+  end
+
+  test "a deactivated bot's key is refused" do
+    bot = User.create_bot!(name: "Bender")
+    key = bot.bot_key
+    bot.deactivate
+
+    assert_nil User.authenticate_bot(key)
+  end
+
+  test "existing keys keep working after the digest migration" do
+    assert_equal users(:bender), User.authenticate_bot("#{users(:bender).id}-BenderToken1")
+  end
+
   test "deliver message by webhook" do
     WebMock.stub_request(:post, webhooks(:bender).url).to_return(status: 200)
 

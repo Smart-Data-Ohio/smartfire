@@ -138,7 +138,7 @@ class Accounts::Bots::GrantsControllerTest < ActionDispatch::IntegrationTest
     assert grant.reload.revoked?
     delete session_url
 
-    post room_bot_messages_url(rooms(:watercooler), @bot.bot_key), params: +"Hello!"
+    post room_bot_messages_url(rooms(:watercooler), bot_key_for(@bot)), params: +"Hello!"
     assert_response :forbidden
   end
 

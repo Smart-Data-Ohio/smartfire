@@ -1,0 +1,33 @@
+<% @page_title = "Bot key" %>
+
+<% content_for :nav do %>
+  <div class="flex-item-justify-start">
+    <%= link_back_to account_bots_path %>
+  </div>
+<% end %>
+
+<section class="panel txt-align-center flex flex-column gap">
+  <div class="pad-inline-double center">
+    <h1 class="margin-none">Copy the key for <%= @bot.name %> now</h1>
+    <p class="margin-none-block-start">It will not be shown again. Generate a new key if it is lost.</p>
+  </div>
+
+  <div class="pad-inline pad-block-start">
+    <div class="flex align-center gap">
+      <div class="flex-item-grow">
+        <input type="text" class="input full-width fill-white" value="<%= @bot_key %>" aria-label="Bot key" readonly>
+      </div>
+
+      <div class="txt-small">
+        <%= button_to_copy_to_clipboard(@bot_key) do %>
+          <%= image_tag "copy-paste.svg", aria: { hidden: "true" }, size: 20 %>
+          <span class="for-screen-reader">Copy bot key</span>
+        <% end %>
+      </div>
+    </div>
+
+    <p class="txt-small">Post with <code>curl -d 'Hello!' <%= room_bot_messages_url("ROOM_ID", @bot_key) %></code>.</p>
+
+    <%= link_to "Done", account_bots_path, class: "btn btn--reversed" %>
+  </div>
+</section>

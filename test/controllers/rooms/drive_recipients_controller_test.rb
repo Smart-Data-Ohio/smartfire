@@ -130,7 +130,7 @@ class Rooms::DriveRecipientsControllerTest < ActionDispatch::IntegrationTest
   test "index is 403 for bot-key and agent-token requests" do
     delete session_path
 
-    get room_drive_recipients_path(@room, bot_key: users(:bender).bot_key), headers: { "Accept" => "application/json" }
+    get room_drive_recipients_path(@room, bot_key: bot_key_for(users(:bender))), headers: { "Accept" => "application/json" }
     assert_response :forbidden
 
     get room_drive_recipients_path(@room), headers: {
@@ -288,7 +288,7 @@ class Rooms::DriveRecipientsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
 
     delete session_path
-    post validate_room_drive_recipients_path(@room, bot_key: users(:bender).bot_key),
+    post validate_room_drive_recipients_path(@room, bot_key: bot_key_for(users(:bender))),
       params: { user_ids: [ users(:david).id ] },
       headers: { "Accept" => "application/json" }, as: :json
     assert_response :forbidden

@@ -627,11 +627,11 @@ class ChannelThreadsBoardTest < ActionDispatch::IntegrationTest
   test "bot posting API returns 422 in a board" do
     @room.memberships.grant_to(users(:bender))
 
-    post room_bot_messages_url(@room, users(:bender).bot_key), params: +"Board root message"
+    post room_bot_messages_url(@room, bot_key_for(users(:bender))), params: +"Board root message"
     assert_response :unprocessable_entity
     assert_empty @room.root_messages
 
-    post room_bot_messages_url(rooms(:watercooler), users(:bender).bot_key), params: +"Channel root message"
+    post room_bot_messages_url(rooms(:watercooler), bot_key_for(users(:bender))), params: +"Channel root message"
     assert_response :created
   end
 

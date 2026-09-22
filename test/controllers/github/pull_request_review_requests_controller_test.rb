@@ -200,7 +200,7 @@ class Github::PullRequestReviewRequestsControllerTest < ActionDispatch::Integrat
   test "a bot key is forbidden, exactly as the comments endpoint" do
     delete session_url
 
-    post room_github_pull_request_review_requests_url(@room, bot_key: users(:bender).bot_key),
+    post room_github_pull_request_review_requests_url(@room, bot_key: bot_key_for(users(:bender))),
       params: { pull_request_id: @pull_request.id, reviewers: "alice" }
 
     assert_response :forbidden

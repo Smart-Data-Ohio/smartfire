@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_22_210100) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_22_210200) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -569,7 +569,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_210100) do
 
   create_table "users", force: :cascade do |t|
     t.text "bio"
-    t.string "bot_token"
+    t.string "bot_token_digest"
     t.datetime "created_at", null: false
     t.string "email_address"
     t.datetime "email_self_changed_at"
@@ -582,7 +582,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_210100) do
     t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
     t.index "LOWER(github_login)", name: "index_users_on_lower_github_login", unique: true, where: "github_login IS NOT NULL"
-    t.index ["bot_token"], name: "index_users_on_bot_token", unique: true
+    t.index ["bot_token_digest"], name: "index_users_on_bot_token_digest", unique: true
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
   end
 

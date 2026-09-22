@@ -19,7 +19,13 @@ capability check.
 `agent_credentials` holds Bearer agent tokens. Credentials store only a SHA256 digest
 plus a display identifier; the secret is shown once at creation. Revoked or
 expired credentials return 401 on the next request. The legacy `bot_key` URL
-path is frozen and unchanged.
+path is frozen and unchanged. Bot keys (`<id>-<token>`) are stored the same
+way: `users.bot_token_digest` holds the token's SHA-256 digest, compared in
+constant time after an id lookup, and the key is shown once, on the page
+that follows creating the bot or generating a new key. Existing keys kept
+their value when storage moved to digests. The bots page shows curl
+examples with a `BOT_KEY` placeholder, and so does the legacy webhook
+payload's `room.path`, since the stored digest cannot produce the key.
 
 ## Capability grants
 

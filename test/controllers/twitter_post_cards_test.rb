@@ -97,7 +97,7 @@ class TwitterPostCardsTest < ActionDispatch::IntegrationTest
     room = rooms(:watercooler)
 
     assert_enqueued_with(job: Twitter::FetchPostJob) do
-      post room_bot_messages_url(room, users(:bender).bot_key),
+      post room_bot_messages_url(room, bot_key_for(users(:bender))),
         params: +"bot says https://x.com/jack/status/134"
     end
 

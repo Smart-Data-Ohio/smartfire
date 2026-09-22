@@ -13,10 +13,14 @@ class Accounts::BotsController < ApplicationController
     @bot = User.active_bots.new
   end
 
+  # Shows the new bot's key once: only its digest is stored.
   def create
-    bot = User.create_bot! bot_params
-    bot.create_agent!(kind: :workspace, owner: Current.user)
-    redirect_to account_bots_url
+    @bot = User.create_bot! bot_params
+    @bot.create_agent!(kind: :workspace, owner: Current.user)
+    @bot_key = @bot.plain_bot_key
+
+    no_store_response!
+    render "accounts/bots/keys/show", status: :created
   rescue ActiveRecord::RecordInvalid => error
     @bot = error.record
     render :new, status: :unprocessable_entity

@@ -26,5 +26,6 @@ kevin:
 
 bender:
   name: Bender Bot
-  bot_token: <%= User.generate_bot_token %>
+  # Token "BenderToken1" (BotKeyTestHelper::FIXTURE_BOT_TOKENS).
+  bot_token_digest: <%= Digest::SHA256.hexdigest("BenderToken1") %>
   role: bot
