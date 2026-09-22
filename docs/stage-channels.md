@@ -56,11 +56,14 @@ not by hidden buttons.
 - Each stage grant records the role it was issued for. The gateway's
   per-second authorization check revokes any grant whose issued role no
   longer matches the membership's current role.
-- A role change revokes the member's active grants in the same transaction
-  as the role change, reusing the existing revocation path so the gateway
-  removes the participant. The affected member's browser then rejoins with a
-  fresh token for the new role; LiveKit permissions are never updated in
-  place.
+- A role change that crosses the publish boundary (to or from listener)
+  revokes the member's active grants in the same transaction as the role
+  change, reusing the existing revocation path so the gateway removes the
+  participant. The affected member's browser then rejoins with a fresh
+  token for the new role; LiveKit permissions are never updated in
+  place. A host↔speaker change keeps the same publish permission, so the
+  grants keep their identity and just record the new role, and the member
+  stays in the call with no rejoin.
 
 To silence a speaker, a host moves them to the audience. There is no
 per-speaker mute: demotion revokes the speaker's grant within the same

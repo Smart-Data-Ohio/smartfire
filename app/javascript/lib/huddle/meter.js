@@ -5,7 +5,9 @@
 // server-driven `audioLevel` was the alternative, but it only moves while the
 // server counts somebody as speaking, so it cannot drive a meter at rest. This
 // polls the analyser at roughly 10 Hz instead, which is smooth enough for a
-// small bar and cheap enough to leave running for a whole call.
+// small bar. Ticks skip while the tab is hidden — nobody watches the bar —
+// and the meter stops itself once the track ends instead of polling silence
+// forever.
 //
 // The analyser owns its AudioContext, so `stop` closes that context again. The
 // controller stops the meter on mute, on device switches (which replace the
@@ -53,8 +55,17 @@ export default class HuddleMicrophoneMeter {
     } catch (error) {
       return
     }
+    this.mediaStreamTrack = mediaStreamTrack
 
     const poll = () => {
+      // A finished track would read as silence; stop instead so nothing
+      // polls past the end of the stream.
+      if (this.mediaStreamTrack.readyState !== "live") {
+        this.stop()
+        return
+      }
+      if (document.visibilityState === "hidden") return
+
       let volume = 0
       try {
         volume = this.analyser.calculateVolume()
@@ -73,6 +84,7 @@ export default class HuddleMicrophoneMeter {
     clearInterval(this.timer)
     this.timer = null
     this.lastVolume = 0
+    this.mediaStreamTrack = null
 
     const analyser = this.analyser
     this.analyser = null

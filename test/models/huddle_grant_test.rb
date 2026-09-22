@@ -1,6 +1,8 @@
 require "test_helper"
 
 class HuddleGrantTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @environment_names = Huddle::REQUIRED_ENVIRONMENT
     @original_livekit_environment = ENV.values_at(*@environment_names)
@@ -79,6 +81,29 @@ class HuddleGrantTest < ActiveSupport::TestCase
     end
   end
 
+  test "joining another room ends the session's in-call grant there but keeps quiet ones" do
+    session = sessions(:david_safari)
+    in_call_grant = HuddleGrant.issue!(session:, membership: memberships(:david_watercooler))
+    in_call_grant.update_columns(last_seen_at: Time.current)
+    quiet_grant = HuddleGrant.issue!(session:, membership: memberships(:david_designers))
+
+    grant = HuddleGrant.issue!(session:, membership: memberships(:david_hq))
+
+    assert in_call_grant.reload.revoked?
+    assert HuddleCleanup.exists?(operation: :remove_participant, huddle_grant_id: in_call_grant.id)
+    assert_not quiet_grant.reload.revoked?
+    assert_not grant.revoked?
+  end
+
+  test "rejoining the same room keeps the session's grant there" do
+    session = sessions(:david_safari)
+    grant = HuddleGrant.issue!(session:, membership: memberships(:david_watercooler))
+    grant.update_columns(last_seen_at: Time.current)
+
+    assert_equal grant, HuddleGrant.issue!(session:, membership: memberships(:david_watercooler))
+    assert_not grant.reload.revoked?
+  end
+
   test "in_call reflects gateway liveness within twenty seconds" do
     grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_watercooler))
 
@@ -112,6 +137,41 @@ class HuddleGrantTest < ActiveSupport::TestCase
         grant.record_seen!
       end
     end
+  end
+
+  test "mark_out_of_call! drops liveness without revoking and refreshes presence" do
+    room = rooms(:watercooler)
+    grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_watercooler))
+    grant.update_columns(last_seen_at: Time.current)
+
+    assert_presence_broadcast(room) do
+      assert grant.mark_out_of_call!
+    end
+
+    assert_nil grant.reload.last_seen_at
+    assert_not_predicate grant, :in_call?
+    assert_not grant.revoked?
+    assert_predicate grant, :authorized?
+  end
+
+  test "mark_out_of_call! is silent when the grant was never seen" do
+    grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_watercooler))
+
+    assert_no_changes -> { capture_turbo_stream_broadcasts([ rooms(:watercooler), :messages ]).count } do
+      assert_not grant.mark_out_of_call!
+    end
+  end
+
+  test "mark_out_of_call! keeps a sighting newer than the disconnect" do
+    grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_watercooler))
+    grant.update_columns(last_seen_at: Time.current)
+
+    assert_no_changes -> { grant.reload.last_seen_at } do
+      assert_not grant.mark_out_of_call!(seen_after: 1.minute.ago)
+    end
+
+    assert grant.mark_out_of_call!(seen_after: Time.current)
+    assert_nil grant.reload.last_seen_at
   end
 
   test "participants_for lists distinct in-call users by name" do
@@ -177,15 +237,21 @@ class HuddleGrantTest < ActiveSupport::TestCase
     end
   end
 
-  test "first sighting in the call refreshes voice presence, later sightings stay silent" do
+  test "first sighting in the call enqueues a presence refresh, later sightings stay silent" do
     room = Rooms::Voice.create_for({ name: "Lounge", creator: users(:david) }, users: [ users(:david) ])
     grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: room.memberships.first!)
 
-    assert_difference -> { capture_turbo_stream_broadcasts([ room, :messages ]).count } do
-      grant.record_seen!
+    assert_no_changes -> { capture_turbo_stream_broadcasts([ room, :messages ]).count } do
+      assert_enqueued_with(job: Huddle::BroadcastPresenceJob, args: [ grant.id ]) do
+        grant.record_seen!
+      end
     end
 
-    assert_no_changes -> { capture_turbo_stream_broadcasts([ room, :messages ]).count } do
+    assert_difference -> { capture_turbo_stream_broadcasts([ room, :messages ]).count } do
+      perform_enqueued_jobs only: Huddle::BroadcastPresenceJob
+    end
+
+    assert_no_enqueued_jobs only: Huddle::BroadcastPresenceJob do
       travel 11.seconds do
         grant.record_seen!
       end
@@ -234,15 +300,19 @@ class HuddleGrantTest < ActiveSupport::TestCase
     end
   end
 
-  test "first sighting in a channel refreshes presence, later sightings stay silent" do
+  test "first sighting in a channel enqueues a presence refresh, later sightings stay silent" do
     room = rooms(:watercooler)
     grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_watercooler))
 
-    assert_presence_broadcast(room) do
+    assert_enqueued_with(job: Huddle::BroadcastPresenceJob, args: [ grant.id ]) do
       grant.record_seen!
     end
 
-    assert_no_changes -> { capture_turbo_stream_broadcasts([ room, :messages ]).count } do
+    assert_presence_broadcast(room) do
+      perform_enqueued_jobs only: Huddle::BroadcastPresenceJob
+    end
+
+    assert_no_enqueued_jobs only: Huddle::BroadcastPresenceJob do
       travel 11.seconds do
         grant.record_seen!
       end
@@ -305,6 +375,28 @@ class HuddleGrantTest < ActiveSupport::TestCase
     assert grant.reload.revoked?
     assert HuddleCleanup.exists?(operation: :remove_participant, huddle_grant_id: grant.id)
     assert_not other_grant.reload.revoked?
+  end
+
+  test "a host-speaker change updates the grant's role in place without revoking" do
+    room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david), users(:jason) ])
+    membership = room.memberships.find_by!(user: users(:jason))
+    membership.change_stage_role!("speaker")
+    grant = HuddleGrant.issue!(session: users(:jason).sessions.create!(user_agent: "Test"), membership: membership)
+
+    membership.change_stage_role!("host")
+
+    grant.reload
+    assert_not grant.revoked?
+    assert_equal "host", grant.stage_role
+    assert_predicate grant, :authorized?
+    assert_not HuddleCleanup.exists?(operation: :remove_participant, huddle_grant_id: grant.id)
+
+    membership.change_stage_role!("speaker")
+
+    grant.reload
+    assert_not grant.revoked?
+    assert_equal "speaker", grant.stage_role
+    assert_predicate grant, :authorized?
   end
 
   test "authorize_or_revoke! revokes a grant whose issued role no longer matches" do

@@ -36,9 +36,9 @@
   </div>
 
   <nav class="txt-align-center txt-small margin-block-start" aria-label="About this workspace">
-    <%= link_to "About", about_path %> ·
-    <%= link_to "Privacy Policy", privacy_path %> ·
-    <%= link_to "Terms of Service", terms_path %>
+    <%= link_to "About", about_path, target: "_blank", rel: "noopener" %> ·
+    <%= link_to "Privacy Policy", privacy_path, target: "_blank", rel: "noopener" %> ·
+    <%= link_to "Terms of Service", terms_path, target: "_blank", rel: "noopener" %>
   </nav>
 
   <%= render "accounts/help_contact" %>

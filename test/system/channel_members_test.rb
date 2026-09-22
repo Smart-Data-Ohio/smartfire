@@ -47,6 +47,20 @@ class ChannelMembersTest < ApplicationSystemTestCase
     assert_member users(:jz), online: true
   end
 
+  test "a bot with a checked-in agent shows online in the member panel" do
+    bot = User.create_bot!(name: "Panel Bot", skip_open_room_grant: true)
+
+    begin
+      rooms(:designers).memberships.grant_to bot
+      bot.create_agent!(kind: :workspace, owner: users(:david)).update_column(:last_seen_at, Time.current)
+
+      visit room_path(rooms(:designers))
+      assert_member bot, online: true
+    ensure
+      bot.destroy!
+    end
+  end
+
   test "closing one tab keeps a member online until their last tab closes" do
     using_session("Kevin") do
       sign_in "kevin@37signals.com"

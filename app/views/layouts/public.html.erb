@@ -16,11 +16,11 @@
 
     <header class="public-header">
       <div class="public-wrap public-header__inner">
-        <%= link_to "Smartfire", about_path, class: "public-brand" %>
+        <%= link_to "Smartfire", about_path, class: "public-brand", target: "_blank", rel: "noopener" %>
         <nav class="public-nav" aria-label="Public pages">
-          <%= link_to "About", about_path %>
-          <%= link_to "Privacy", privacy_path %>
-          <%= link_to "Terms", terms_path %>
+          <%= link_to "About", about_path, target: "_blank", rel: "noopener" %>
+          <%= link_to "Privacy", privacy_path, target: "_blank", rel: "noopener" %>
+          <%= link_to "Terms", terms_path, target: "_blank", rel: "noopener" %>
           <%= link_to "Sign in", new_session_path, class: "public-nav__signin" %>
         </nav>
       </div>
@@ -33,9 +33,9 @@
     <footer class="public-footer">
       <div class="public-wrap">
         <nav class="public-nav public-nav--footer" aria-label="Footer">
-          <%= link_to "About", about_path %>
-          <%= link_to "Privacy Policy", privacy_path %>
-          <%= link_to "Terms of Service", terms_path %>
+          <%= link_to "About", about_path, target: "_blank", rel: "noopener" %>
+          <%= link_to "Privacy Policy", privacy_path, target: "_blank", rel: "noopener" %>
+          <%= link_to "Terms of Service", terms_path, target: "_blank", rel: "noopener" %>
           <%= link_to "Sign in", new_session_path %>
         </nav>
         <p class="public-footer__note">

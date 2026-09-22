@@ -8,15 +8,18 @@ class Rooms::Stage::RolesController < ApplicationController
 
   STAGE_ROLES = %w[ listener speaker host ].freeze
 
-  # Hosts and administrators change any member's stage role. The role change
-  # revokes the member's huddle grants in the same transaction, and three
-  # broadcasts deliver it: a per-viewer roster goes to every member's own
-  # rooms stream, a personalized panel goes to the affected member's stream,
-  # and a rejoin event goes to the persistent target in their huddle panel,
-  # which is present on every page. The persistent event is the only reconnect
+  # Hosts and administrators change any member's stage role. A change that
+  # crosses the publish boundary (to or from listener) revokes the member's
+  # huddle grants in the same transaction, and three broadcasts deliver it:
+  # a per-viewer roster goes to every member's own rooms stream, a
+  # personalized panel goes to the affected member's stream, and a rejoin
+  # event goes to the persistent target in their huddle panel, which is
+  # present on every page. The persistent event is the only reconnect
   # trigger, so delayed delivery cannot reconnect twice; the panel carries no
-  # trigger. A demotion to listener also ends the member's live stream in the
-  # same transaction.
+  # trigger. A host↔speaker change keeps the grants and the call, so it
+  # broadcasts the roster and panel but no rejoin event: rejoining would
+  # drop the member's share and end their live stream. A demotion to
+  # listener also ends the member's live stream in the same transaction.
   def update
     target = @room.memberships.find_by(id: params[:membership_id])
     return head :not_found unless target
@@ -34,9 +37,11 @@ class Rooms::Stage::RolesController < ApplicationController
       return render plain: error.record.errors.full_messages.to_sentence, status: :unprocessable_entity
     end
 
+    crossed_publish_boundary = publish_boundary_crossed?(target)
+
     broadcast_roster
     broadcast_panel_to_member(target)
-    broadcast_role_event_to_member(target)
+    broadcast_role_event_to_member(target) if crossed_publish_boundary
     respond_with_roster
   end
 
@@ -69,6 +74,13 @@ class Rooms::Stage::RolesController < ApplicationController
         target: [ @room, :stage_panel ],
         partial: "rooms/stage/panel_body",
         locals: { room: @room, membership: target.reload, rejoin: false }
+    end
+
+    # Read from previous_changes before the panel broadcast reloads the
+    # record: only a to-or-from-listener crossing needs a fresh token.
+    def publish_boundary_crossed?(target)
+      was, now = target.previous_changes["stage_role"]
+      (was == "listener") != (now == "listener")
     end
 
     # The stage panel only exists on that stage's page, but the huddle panel

@@ -15,7 +15,7 @@ class Rooms::Stage::StreamsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a host goes live, broadcasting the badge, dot, and panels" do
-    HuddleGrant.issue!(session: users(:david).sessions.create!(user_agent: "Test"), membership: @host)
+    issue_in_call_grant!(users(:david), @host)
     sign_in :david
 
     assert_difference -> { capture_turbo_stream_broadcasts([ @room, :messages ]).count }, 1 do
@@ -33,12 +33,13 @@ class Rooms::Stage::StreamsControllerTest < ActionDispatch::IntegrationTest
     stream = @room.live_stream
     assert_equal "1080p30", stream.quality
     assert_equal users(:david), stream.user
+    assert_equal stream.id.to_s, response.headers["X-Stream-Id"]
     assert_equal @host, stream.membership
   end
 
   test "a speaker goes live" do
     @listener.change_stage_role!("speaker")
-    HuddleGrant.issue!(session: users(:jason).sessions.create!(user_agent: "Test"), membership: @listener)
+    issue_in_call_grant!(users(:jason), @listener)
     sign_in :jason
 
     post room_stage_stream_url(@room), params: { quality: "720p15" }
@@ -48,7 +49,7 @@ class Rooms::Stage::StreamsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a turbo-stream start swaps the actor's own panel without navigating" do
-    HuddleGrant.issue!(session: users(:david).sessions.create!(user_agent: "Test"), membership: @host)
+    issue_in_call_grant!(users(:david), @host)
     sign_in :david
 
     post room_stage_stream_url(@room), params: { quality: "1080p15" },
@@ -105,8 +106,33 @@ class Rooms::Stage::StreamsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Join the stage before going live", response.body
   end
 
-  test "an unknown quality is unprocessable" do
+  test "a host with a quiet grant cannot go live" do
     HuddleGrant.issue!(session: users(:david).sessions.create!(user_agent: "Test"), membership: @host)
+    sign_in :david
+
+    assert_no_difference -> { Stream.live.count } do
+      post room_stage_stream_url(@room), params: { quality: "1080p15" }
+    end
+
+    assert_response :forbidden
+    assert_equal "Join the stage before going live", response.body
+  end
+
+  test "a host whose grant went quiet cannot go live" do
+    grant = issue_in_call_grant!(users(:david), @host)
+    grant.update_columns(last_seen_at: 25.seconds.ago)
+    sign_in :david
+
+    assert_no_difference -> { Stream.live.count } do
+      post room_stage_stream_url(@room), params: { quality: "1080p15" }
+    end
+
+    assert_response :forbidden
+    assert_equal "Join the stage before going live", response.body
+  end
+
+  test "an unknown quality is unprocessable" do
+    issue_in_call_grant!(users(:david), @host)
     sign_in :david
 
     assert_no_difference -> { Stream.live.count } do
@@ -118,7 +144,7 @@ class Rooms::Stage::StreamsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a missing quality is unprocessable" do
-    HuddleGrant.issue!(session: users(:david).sessions.create!(user_agent: "Test"), membership: @host)
+    issue_in_call_grant!(users(:david), @host)
     sign_in :david
 
     post room_stage_stream_url(@room)
@@ -130,7 +156,7 @@ class Rooms::Stage::StreamsControllerTest < ActionDispatch::IntegrationTest
   test "starting while another stream is live returns conflict naming the presenter" do
     Stream.create!(room: @room, membership: @host, user: users(:david), quality: "1080p15")
     @listener.change_stage_role!("speaker")
-    HuddleGrant.issue!(session: users(:jason).sessions.create!(user_agent: "Test"), membership: @listener)
+    issue_in_call_grant!(users(:jason), @listener)
     sign_in :jason
 
     assert_no_difference -> { Stream.live.count } do
@@ -234,6 +260,51 @@ class Rooms::Stage::StreamsControllerTest < ActionDispatch::IntegrationTest
     assert_predicate stream.reload, :live?
   end
 
+  test "stopping with the live stream id ends that stream" do
+    stream = Stream.create!(room: @room, membership: @host, user: users(:david), quality: "1080p15")
+    sign_in :david
+
+    delete room_stage_stream_url(@room), params: { stream_id: stream.id }
+
+    assert_redirected_to room_url(@room)
+    assert_not_predicate stream.reload, :live?
+  end
+
+  test "stopping with a stale stream id ends nothing, even when another stream is live" do
+    old_stream = Stream.create!(room: @room, membership: @host, user: users(:david), quality: "1080p15")
+    old_stream.end!
+    @listener.change_stage_role!("speaker")
+    live_stream = Stream.create!(room: @room, membership: @listener, user: users(:jason), quality: "1080p15")
+    sign_in :david
+
+    delete room_stage_stream_url(@room), params: { stream_id: old_stream.id }
+
+    assert_redirected_to room_url(@room)
+    assert_predicate live_stream.reload, :live?
+    assert_not_predicate old_stream.reload, :live?
+  end
+
+  test "stopping with an unknown stream id ends nothing" do
+    stream = Stream.create!(room: @room, membership: @host, user: users(:david), quality: "1080p15")
+    sign_in :david
+
+    delete room_stage_stream_url(@room), params: { stream_id: -1 }
+
+    assert_redirected_to room_url(@room)
+    assert_predicate stream.reload, :live?
+  end
+
+  test "the stop control sends its stream id" do
+    stream = Stream.create!(room: @room, membership: @host, user: users(:david), quality: "1080p15")
+    sign_in :david
+
+    get room_url(@room)
+
+    assert_response :success
+    assert_select ".stage-panel__live[data-stream-id='#{stream.id}']"
+    assert_select "form[action='#{room_stage_stream_path(@room)}'] input[name='stream_id'][value='#{stream.id}']"
+  end
+
   test "stopping with nothing live succeeds for hosts and stays silent" do
     sign_in :david
 
@@ -322,18 +393,45 @@ class Rooms::Stage::StreamsControllerTest < ActionDispatch::IntegrationTest
     assert_not_predicate stream.reload, :live?
   end
 
-  test "promoting a speaker keeps no live stream dangling" do
+  test "promoting a speaker to host keeps the grant and the live stream" do
     @listener.change_stage_role!("speaker")
     stream = Stream.create!(room: @room, membership: @listener, user: users(:jason), quality: "1080p15")
     grant = HuddleGrant.issue!(session: users(:jason).sessions.create!(user_agent: "Test"), membership: @listener)
     sign_in :david
 
-    # Any role change revokes the member's grants, and the last revoked grant
-    # ends the stream: rejoining drops the share, so nothing stays live.
+    # Host and speaker share the same publish permission, so the promotion
+    # keeps the grant's identity and the stream it carries: no revocation,
+    # no rejoin, nothing to re-share.
     patch room_stage_role_url(@room, @listener), params: { stage_role: "host" }
 
     assert_redirected_to room_url(@room)
-    assert grant.reload.revoked?
-    assert_not_predicate stream.reload, :live?
+    assert_not grant.reload.revoked?
+    assert_equal "host", grant.stage_role
+    assert_predicate stream.reload, :live?
+    assert_equal stream, @room.live_stream
   end
+
+  test "demoting a host to speaker keeps the grant and the live stream" do
+    @listener.change_stage_role!("speaker")
+    stream = Stream.create!(room: @room, membership: @listener, user: users(:jason), quality: "1080p15")
+    grant = HuddleGrant.issue!(session: users(:jason).sessions.create!(user_agent: "Test"), membership: @listener)
+    sign_in :david
+
+    patch room_stage_role_url(@room, @listener), params: { stage_role: "host" }
+    assert_predicate stream.reload, :live?
+
+    patch room_stage_role_url(@room, @listener), params: { stage_role: "speaker" }
+
+    assert_redirected_to room_url(@room)
+    assert_not grant.reload.revoked?
+    assert_equal "speaker", grant.stage_role
+    assert_predicate stream.reload, :live?
+  end
+
+  private
+    def issue_in_call_grant!(user, membership)
+      grant = HuddleGrant.issue!(session: user.sessions.create!(user_agent: "Test"), membership: membership)
+      grant.update_columns(last_seen_at: Time.current)
+      grant
+    end
 end

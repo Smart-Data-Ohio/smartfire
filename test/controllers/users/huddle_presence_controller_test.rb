@@ -31,14 +31,16 @@ class Users::HuddlePresenceControllerTest < ActionDispatch::IntegrationTest
     revoked.revoke!
 
     direct = rooms(:david_and_jason)
-    issue_in_call_grant!(user: users(:jason), room: direct)
+    # A second tab: one session carries at most one in-call grant, so each
+    # room needs its own session to stay live.
+    issue_in_call_grant!(user: users(:jason), room: direct, session: users(:jason).sessions.create!(user_agent: "Direct"))
 
     # Issued but never seen by the gateway: the room stays out.
     HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_watercooler))
 
     # A room the current user cannot see stays out.
     strangers = Rooms::Closed.create_for({ name: "Secret", creator: users(:jason) }, users: [ users(:jason), users(:kevin) ])
-    issue_in_call_grant!(user: users(:jason), room: strangers)
+    issue_in_call_grant!(user: users(:jason), room: strangers, session: users(:jason).sessions.create!(user_agent: "Strangers"))
 
     sign_in :david
     get huddle_presence_users_url
@@ -65,8 +67,10 @@ class Users::HuddlePresenceControllerTest < ActionDispatch::IntegrationTest
   test "the response runs one grants query no matter how many rooms are live" do
     issue_in_call_grant!(user: users(:david), room: rooms(:hq))
     issue_in_call_grant!(user: users(:jason), room: rooms(:hq))
-    issue_in_call_grant!(user: users(:david), room: rooms(:watercooler))
-    issue_in_call_grant!(user: users(:jason), room: rooms(:david_and_jason))
+    # One session carries at most one in-call grant, so the second room per
+    # user joins from a second tab.
+    issue_in_call_grant!(user: users(:david), room: rooms(:watercooler), session: users(:david).sessions.create!(user_agent: "Second"))
+    issue_in_call_grant!(user: users(:jason), room: rooms(:david_and_jason), session: users(:jason).sessions.create!(user_agent: "Second"))
 
     sign_in :david
     queries = capture_select_sql { get huddle_presence_users_url }
