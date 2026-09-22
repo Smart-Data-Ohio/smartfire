@@ -48,6 +48,36 @@ class Rooms::MembersControllerTest < ActionDispatch::IntegrationTest
     assert_empty response.body
   end
 
+  test "reports a bot with a checked-in agent as online" do
+    rooms(:designers).memberships.grant_to users(:bender)
+    agents(:bender_agent).update_column(:last_seen_at, Time.current)
+
+    get room_members_url(rooms(:designers), format: :json)
+
+    member = response.parsed_body.fetch("members").find { |item| item["id"] == users(:bender).id }
+    assert member.fetch("online")
+  end
+
+  test "reports a bot as offline until its agent checks in" do
+    rooms(:designers).memberships.grant_to users(:bender)
+
+    get room_members_url(rooms(:designers), format: :json)
+
+    member = response.parsed_body.fetch("members").find { |item| item["id"] == users(:bender).id }
+    assert_not member.fetch("online")
+  end
+
+  test "reports a bot with a suspended agent as offline" do
+    rooms(:designers).memberships.grant_to users(:bender)
+    agents(:bender_agent).update_column(:last_seen_at, Time.current)
+    agents(:bender_agent).suspend!
+
+    get room_members_url(rooms(:designers), format: :json)
+
+    member = response.parsed_body.fetch("members").find { |item| item["id"] == users(:bender).id }
+    assert_not member.fetch("online")
+  end
+
   test "revoked sessions immediately make a member offline" do
     jason_session = users(:jason).sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
     WorkspacePresenceLease.establish(user: users(:jason), session: jason_session)
