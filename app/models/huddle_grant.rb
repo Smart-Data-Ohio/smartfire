@@ -37,6 +37,13 @@ class HuddleGrant < ApplicationRecord
           revoke_scope! active.where(session_id: current_session.id, room_id: current_room.id)
             .where.not(membership_id: current_membership.id)
 
+          # One active call per session: joining room B ends this session's
+          # publish in room A, so two tabs cannot publish in two rooms. Only
+          # grants the gateway still sees in the call are revoked; quiet
+          # ones simply stay out of the call.
+          revoke_scope! active.in_call.where(session_id: current_session.id)
+            .where.not(room_id: current_room.id)
+
           stage_role = current_room.stage? ? current_membership.stage_role : nil
 
           existing = active.find_by(session_id: current_session.id, membership_id: current_membership.id)

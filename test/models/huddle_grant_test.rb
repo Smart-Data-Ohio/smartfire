@@ -81,6 +81,29 @@ class HuddleGrantTest < ActiveSupport::TestCase
     end
   end
 
+  test "joining another room ends the session's in-call grant there but keeps quiet ones" do
+    session = sessions(:david_safari)
+    in_call_grant = HuddleGrant.issue!(session:, membership: memberships(:david_watercooler))
+    in_call_grant.update_columns(last_seen_at: Time.current)
+    quiet_grant = HuddleGrant.issue!(session:, membership: memberships(:david_designers))
+
+    grant = HuddleGrant.issue!(session:, membership: memberships(:david_hq))
+
+    assert in_call_grant.reload.revoked?
+    assert HuddleCleanup.exists?(operation: :remove_participant, huddle_grant_id: in_call_grant.id)
+    assert_not quiet_grant.reload.revoked?
+    assert_not grant.revoked?
+  end
+
+  test "rejoining the same room keeps the session's grant there" do
+    session = sessions(:david_safari)
+    grant = HuddleGrant.issue!(session:, membership: memberships(:david_watercooler))
+    grant.update_columns(last_seen_at: Time.current)
+
+    assert_equal grant, HuddleGrant.issue!(session:, membership: memberships(:david_watercooler))
+    assert_not grant.reload.revoked?
+  end
+
   test "in_call reflects gateway liveness within twenty seconds" do
     grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_watercooler))
 
