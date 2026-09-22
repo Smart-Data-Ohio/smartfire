@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_22_212300) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_22_212400) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -480,6 +480,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_212300) do
     t.datetime "created_at", null: false
     t.bigint "creator_id", null: false
     t.datetime "deleted_at"
+    t.datetime "destroy_enqueued_at"
     t.string "icon_name"
     t.string "name"
     t.string "type", null: false

@@ -49,6 +49,9 @@ class Room < ApplicationRecord
   # Soft-deleted rooms grant nothing: every access path reads through alive.
   scope :alive, -> { where(deleted_at: nil) }
   scope :deleted, -> { where.not(deleted_at: nil) }
+  # Destroys never enqueued, or enqueued longer ago than the cutoff: the
+  # stuck-room sweep's claim candidates.
+  scope :destroy_unclaimed_before, ->(cutoff) { where("destroy_enqueued_at IS NULL OR destroy_enqueued_at < ?", cutoff) }
 
   class << self
     def create_for(attributes, users:)

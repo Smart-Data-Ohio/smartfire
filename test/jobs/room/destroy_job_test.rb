@@ -136,6 +136,48 @@ class Room::DestroyJobTest < ActiveJob::TestCase
     end
   end
 
+  test "reenqueue_stuck! claims rooms so a second sweep enqueues nothing" do
+    stuck = Rooms::Closed.create_for({ name: "Stuck", creator: @david }, users: [ @david ])
+    stuck.begin_destroy!
+    stuck.update_columns(deleted_at: 11.minutes.ago)
+
+    assert_enqueued_with(job: Room::DestroyJob, args: [ stuck.id ]) do
+      Room::DestroyJob.reenqueue_stuck!
+    end
+    assert_not_nil stuck.reload.destroy_enqueued_at
+
+    assert_no_enqueued_jobs do
+      Room::DestroyJob.reenqueue_stuck!
+    end
+  end
+
+  test "reenqueue_stuck! re-enqueues once the claim expires" do
+    stuck = Rooms::Closed.create_for({ name: "Stuck", creator: @david }, users: [ @david ])
+    stuck.begin_destroy!
+    stuck.update_columns(deleted_at: 11.minutes.ago)
+
+    Room::DestroyJob.reenqueue_stuck!
+    clear_enqueued_jobs
+
+    travel_to 11.minutes.from_now do
+      assert_enqueued_with(job: Room::DestroyJob, args: [ stuck.id ]) do
+        Room::DestroyJob.reenqueue_stuck!
+      end
+    end
+  end
+
+  test "perform refreshes the sweep claim while the job runs" do
+    @room.begin_destroy!
+    @room.update_columns(deleted_at: 2.hours.ago, destroy_enqueued_at: 2.hours.ago)
+
+    Room.any_instance.stubs(:destroy!).raises(Net::ReadTimeout, "boom")
+    assert_enqueued_with(job: Room::DestroyJob, args: [ @room.id ]) do
+      Room::DestroyJob.perform_now(@room.id)
+    end
+
+    assert_in_delta Time.current.to_i, @room.reload.destroy_enqueued_at.to_i, 5
+  end
+
   test "destroy enqueue waits for the marking transaction to commit" do
     assert_no_enqueued_jobs do
       Room.transaction do

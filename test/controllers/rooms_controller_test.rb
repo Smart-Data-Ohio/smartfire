@@ -79,6 +79,15 @@ class RoomsControllerTest < ActionDispatch::IntegrationTest
     assert_empty room.memberships
   end
 
+  test "destroy stamps the sweep claim" do
+    room = rooms(:designers)
+
+    delete room_url(room)
+
+    assert_redirected_to root_url
+    assert_not_nil room.reload.destroy_enqueued_at
+  end
+
   test "destroyed room is inaccessible while deletion is pending" do
     room = rooms(:designers)
     delete room_url(room)

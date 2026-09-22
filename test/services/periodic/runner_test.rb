@@ -72,7 +72,13 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
       assert_no_enqueued_jobs { @runner.tick }
     end
 
+    # The first sweep claimed the room, so the next due sweep enqueues
+    # nothing; once the claim expires the sweep re-enqueues.
     travel_to(now + 5.minutes) do
+      assert_no_enqueued_jobs { @runner.tick }
+    end
+
+    travel_to(now + 11.minutes) do
       assert_enqueued_with(job: Room::DestroyJob, args: [ stuck.id ]) { @runner.tick }
     end
   end

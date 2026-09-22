@@ -18,17 +18,27 @@ class Room::DestroyJob < ApplicationJob
   # enqueue to after commit keeps the job from running on pre-commit state.
   self.enqueue_after_transaction_commit = true
 
-  # Re-enqueues destroys for rooms stuck as deleted. A destroy already in
-  # flight makes this a harmless duplicate: perform is idempotent.
+  # Re-enqueues destroys for rooms stuck as deleted. The destroy_enqueued_at
+  # claim keeps this from re-enqueueing a destroy that is already queued or
+  # running: only rooms never enqueued, or enqueued longer ago than the
+  # grace, are claimed, and the claim update is conditional so two sweeps
+  # racing each other enqueue only once.
   def self.reenqueue_stuck!(grace: STUCK_GRACE)
-    Room.deleted.where(deleted_at: ...grace.ago).pluck(:id).each do |room_id|
-      perform_later(room_id)
+    cutoff = grace.ago
+    Room.deleted.where(deleted_at: ...cutoff).destroy_unclaimed_before(cutoff).pluck(:id).each do |room_id|
+      claimed = Room.where(id: room_id).destroy_unclaimed_before(cutoff).update_all(destroy_enqueued_at: Time.current)
+      perform_later(room_id) if claimed == 1
     end
   end
 
   def perform(room_id)
     room = Room.find_by(id: room_id)
     return unless room&.deleted?
+
+    # Hold the sweep claim while running, so a slow destroy is not
+    # re-enqueued mid-flight. A duplicate would still be harmless: perform
+    # is idempotent.
+    room.update_columns(destroy_enqueued_at: Time.current)
 
     destroy_huddle_grants(room)
     room.messages.find_each(batch_size: BATCH_SIZE, &:destroy!)

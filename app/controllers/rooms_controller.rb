@@ -13,12 +13,14 @@ class RoomsController < ApplicationController
 
   def destroy
     # The destroy job defers its enqueue past this transaction's commit, so
-    # it never runs on pre-commit state. If the queue is down the room stays
-    # marked deleted and the periodic sweep re-enqueues its destroy.
+    # it never runs on pre-commit state. The claim stamp records the enqueue
+    # for the stuck-room sweep; if the queue is down the room stays marked
+    # deleted and the sweep re-enqueues its destroy.
     Room.transaction do
       @room.begin_destroy!
       Room::DestroyJob.perform_later(@room.id)
     end
+    @room.update_columns(destroy_enqueued_at: Time.current)
 
     broadcast_remove_room
     redirect_to root_url
