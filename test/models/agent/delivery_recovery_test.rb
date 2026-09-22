@@ -110,6 +110,35 @@ class Agent::DeliveryRecoveryTest < ActiveSupport::TestCase
     assert_in_delta 600, event.reload.webhook_next_attempt_at - Time.current, 5
   end
 
+  test "the sweeper recovers a stranded pending delivery for a webhook-enabled agent" do
+    assert webhooks(:bender).present?
+    @room.messages.create!(
+      creator: users(:david), body: "Hey #{mention_attachment_for(:bender)}",
+      client_message_id: "strand-delivery-#{SecureRandom.hex(4)}"
+    )
+    event = @agent.agent_events.deliverable.last
+    assert_equal "pending", event.outcome
+    assert_equal "none", event.webhook_status
+    event.update!(created_at: 3.minutes.ago)
+
+    assert_enqueued_jobs 1, only: Agent::DeliveryJob do
+      Agent::Delivery.recover_stranded_webhooks!
+    end
+  end
+
+  test "the sweeper leaves a fresh pending delivery alone" do
+    @room.messages.create!(
+      creator: users(:david), body: "Hey #{mention_attachment_for(:bender)}",
+      client_message_id: "strand-fresh-#{SecureRandom.hex(4)}"
+    )
+    event = @agent.agent_events.deliverable.last
+    event.update!(created_at: 1.minute.ago)
+
+    assert_no_enqueued_jobs only: Agent::DeliveryJob do
+      Agent::Delivery.recover_stranded_webhooks!
+    end
+  end
+
   private
     def stranded_event(age:, attempts:, webhook_status: "pending")
       @room.messages.create!(

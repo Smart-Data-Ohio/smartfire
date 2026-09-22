@@ -285,6 +285,7 @@ class Agent::Delivery
     # webhook job's attempt claim keeps the duplicate from burning an
     # extra attempt.
     def recover_stranded_webhooks!(now: Time.current)
+      recover_stranded_deliveries!(now: now)
       grace = now - STRANDED_WEBHOOK_AFTER
       AgentEvent.where(webhook_status: "pending")
         .where("agent_events.webhook_attempts < ?", Agent::EventWebhookJob::MAX_ATTEMPTS)
@@ -299,6 +300,24 @@ class Agent::Delivery
             AgentEvent.where(id: event.id).update_all(webhook_next_attempt_at: Time.current)
           rescue => error
             Rails.logger.error "Stranded webhook recovery failed for event #{event.id}: #{error.class}: #{error.message}"
+          end
+        end
+    end
+
+    # Re-enqueues message deliveries stranded in pending past the grace
+    # period: the row write committed but its DeliveryJob enqueue never
+    # ran. Runs from the same periodic sweep as the webhook recovery
+    # above. The delivery job re-checks grants and membership at
+    # perform time, so a recovered row still suppresses correctly when
+    # access went away while it was stranded.
+    def recover_stranded_deliveries!(now: Time.current)
+      AgentEvent.message_deliverable.where(outcome: "pending")
+        .where("agent_events.created_at < ?", now - STRANDED_WEBHOOK_AFTER)
+        .find_each do |event|
+          begin
+            Agent::DeliveryJob.perform_later(event.id)
+          rescue => error
+            Rails.logger.error "Stranded delivery recovery failed for event #{event.id}: #{error.class}: #{error.message}"
           end
         end
     end
