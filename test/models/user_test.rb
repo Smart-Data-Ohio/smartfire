@@ -75,8 +75,9 @@ class UserTest < ActiveSupport::TestCase
 
     job = enqueued_jobs.find { |enqueued| enqueued[:job] == Calendar::DisconnectCleanupJob }
     assert_equal [], job[:args].first
-    snapshot = job[:args].second
-    assert_equal "refresh-token", snapshot[:refresh_token] || snapshot["refresh_token"]
+    blob = job[:args].second
+    assert_not_includes blob, "refresh-token"
+    assert_equal "refresh-token", Calendar::DisconnectCleanupJob.decrypt_credentials(blob).with_indifferent_access[:refresh_token]
 
     revoke = stub_google_revoke
     perform_enqueued_jobs only: Calendar::DisconnectCleanupJob

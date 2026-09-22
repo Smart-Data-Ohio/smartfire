@@ -77,11 +77,13 @@ class GoogleAccountTest < ActiveSupport::TestCase
     assert_not_predicate account, :connected?
   end
 
-  test "cleanup_snapshot returns the tokens, or nil when unreadable" do
+  test "cleanup_snapshot returns an encrypted blob, or nil when unreadable" do
     account = connect_google!(users(:david))
 
-    snapshot = account.cleanup_snapshot
+    blob = account.cleanup_snapshot
+    snapshot = Calendar::DisconnectCleanupJob.decrypt_credentials(blob).with_indifferent_access
 
+    assert_not_includes blob, "refresh-token-#{users(:david).id}"
     assert_equal "refresh-token-#{users(:david).id}", snapshot[:refresh_token]
     assert_equal "access-token-#{users(:david).id}", snapshot[:access_token]
     assert_not_nil snapshot[:access_token_expires_at]

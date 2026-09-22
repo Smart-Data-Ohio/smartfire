@@ -9,7 +9,39 @@ class Calendar::DisconnectCleanupJob < ApplicationJob
   # (never with tokens) and the job does not retry.
   self.enqueue_after_transaction_commit = true
 
-  def perform(google_event_ids, credentials)
+  # Credentials travel as an encrypted blob, and stay out of the logs
+  # even so: argument logging would otherwise record them on enqueue.
+  self.log_arguments = false
+
+  CREDENTIALS_PURPOSE = "calendar/disconnect-cleanup"
+  CREDENTIALS_EXPIRES_IN = 1.day
+
+  def self.credentials_encryptor
+    @credentials_encryptor ||= ActiveSupport::MessageEncryptor.new(
+      Rails.application.key_generator.generate_key(CREDENTIALS_PURPOSE, ActiveSupport::MessageEncryptor.key_len)
+    )
+  end
+
+  def self.encrypt_credentials(snapshot)
+    credentials_encryptor.encrypt_and_sign(snapshot, expires_in: CREDENTIALS_EXPIRES_IN, purpose: CREDENTIALS_PURPOSE)
+  end
+
+  # Nil when the blob expired, was tampered with, or was encrypted under
+  # a rotated key: there is nothing cleanup could authenticate with.
+  def self.decrypt_credentials(blob)
+    return nil unless blob.is_a?(String)
+
+    credentials_encryptor.decrypt_and_verify(blob, purpose: CREDENTIALS_PURPOSE)
+  rescue ActiveSupport::MessageEncryptor::InvalidMessage
+    nil
+  end
+
+  def perform(google_event_ids, credentials_blob)
+    credentials = if credentials_blob.is_a?(Hash)
+      credentials_blob # Legacy raw snapshot from before encryption.
+    else
+      self.class.decrypt_credentials(credentials_blob)
+    end
     return if credentials.blank?
 
     credentials = credentials.with_indifferent_access

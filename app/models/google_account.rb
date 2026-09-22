@@ -45,16 +45,18 @@ class GoogleAccount < ApplicationRecord
     access_token.blank? || access_token_expires_at.blank? || access_token_expires_at <= Time.current
   end
 
-  # Token snapshot for post-disconnect cleanup, when this row is about to
-  # be destroyed. Nil when the tokens cannot be read (decryption failure)
-  # or were never stored: there is nothing cleanup could authenticate.
+  # Encrypted token snapshot for post-disconnect cleanup, when this row
+  # is about to be destroyed. The blob (not raw tokens) travels as the
+  # job argument, and expires in a day. Nil when the tokens cannot be
+  # read (decryption failure) or were never stored: there is nothing
+  # cleanup could authenticate.
   def cleanup_snapshot
     return nil if refresh_token.blank?
 
-    {
+    Calendar::DisconnectCleanupJob.encrypt_credentials(
       access_token:, refresh_token:,
       access_token_expires_at:
-    }
+    )
   rescue ActiveRecord::Encryption::Errors::Decryption
     nil
   end

@@ -9,6 +9,8 @@ class Calendar::DisconnectCleanupJobTest < ActiveSupport::TestCase
 
   test "deletes every remote copy then revokes the grant" do
     account = connect_google!(@david)
+    access_token = account.access_token
+    refresh_token = account.refresh_token
     snapshot = account.cleanup_snapshot
     first_delete = stub_google_event_delete("first-id")
     second_delete = stub_google_event_delete("second-id")
@@ -17,9 +19,9 @@ class Calendar::DisconnectCleanupJobTest < ActiveSupport::TestCase
 
     Calendar::DisconnectCleanupJob.perform_now([ "first-id", "second-id" ], snapshot)
 
-    assert_requested first_delete, headers: { "Authorization" => "Bearer #{snapshot[:access_token]}" }
+    assert_requested first_delete, headers: { "Authorization" => "Bearer #{access_token}" }
     assert_requested second_delete
-    assert_requested revoke, body: hash_including({ "token" => snapshot[:refresh_token] })
+    assert_requested revoke, body: hash_including({ "token" => refresh_token })
   end
 
   test "refreshes an expired access token from the snapshot" do
@@ -84,4 +86,45 @@ class Calendar::DisconnectCleanupJobTest < ActiveSupport::TestCase
     assert_not_requested :delete, %r{\A#{Regexp.escape(GOOGLE_EVENTS_URL)}/}
     assert_not_requested :post, GOOGLE_REVOKE_URL
   end
+
+  test "tokens never reach the job logs" do
+    account = connect_google!(@david)
+    access_token = account.access_token
+    refresh_token = account.refresh_token
+    blob = account.cleanup_snapshot
+    account.destroy!
+
+    assert_not_includes blob.inspect, access_token
+    assert_not_includes blob.inspect, refresh_token
+    assert_not_predicate Calendar::DisconnectCleanupJob, :log_arguments?
+
+    stub_google_event_delete("orphan-id")
+    stub_google_revoke
+
+    log = capture_job_logs do
+      Calendar::DisconnectCleanupJob.perform_later([ "orphan-id" ], blob)
+      perform_enqueued_jobs only: Calendar::DisconnectCleanupJob
+    end
+
+    assert_not_includes log, access_token
+    assert_not_includes log, refresh_token
+  end
+
+  private
+    def capture_job_logs
+      io = StringIO.new
+      logger = ActiveSupport::TaggedLogging.new(ActiveSupport::Logger.new(io))
+      old_rails_logger = Rails.logger
+      old_job_logger = ActiveJob::Base.logger
+      old_subscriber_logger = ActiveJob::LogSubscriber.logger
+      Rails.logger = logger
+      ActiveJob::Base.logger = logger
+      ActiveJob::LogSubscriber.logger = logger
+      yield
+      io.string
+    ensure
+      Rails.logger = old_rails_logger
+      ActiveJob::Base.logger = old_job_logger
+      ActiveJob::LogSubscriber.logger = old_subscriber_logger
+    end
 end
