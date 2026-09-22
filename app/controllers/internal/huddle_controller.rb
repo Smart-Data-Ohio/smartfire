@@ -37,14 +37,24 @@ class Internal::HuddleController < ActionController::API
     grant = HuddleGrant.find_by(id: params[:id])
     return head :not_found unless grant
 
-    grant.mark_out_of_call!(seen_after: disconnected_at_param)
+    floor = disconnected_at_param
+    return head :unprocessable_entity if params[:disconnected_at].present? && floor.nil?
+
+    grant.mark_out_of_call!(seen_after: floor)
     head :ok
   end
 
   private
+    # The gateway sends ISO 8601 or nothing. A present-but-unparseable
+    # timestamp is a client bug, not a clear, and out-of-range values make
+    # the parser raise rather than return nil.
     def disconnected_at_param
       raw = params[:disconnected_at].to_s
-      Time.zone.parse(raw) if raw.present?
+      return if raw.blank?
+
+      Time.zone.parse(raw)
+    rescue ArgumentError
+      nil
     end
     def authenticate_gateway
       provided = request.headers["X-Huddle-Gateway-Secret"].to_s

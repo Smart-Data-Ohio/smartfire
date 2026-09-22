@@ -185,6 +185,41 @@ class HuddleRosterTest < ApplicationSystemTestCase
     end
   end
 
+  test "leaving reports after the disconnect completes" do
+    visit room_path(rooms(:designers))
+    wait_for_cable_connection
+    install_stub_room
+    page.execute_script(<<~JS)
+      window.__leaveOrder = []
+      // Forgery protection is off in tests, so the layout renders no CSRF
+      // meta tags; the leave report needs one to attempt its POST.
+      const csrfMeta = document.createElement("meta")
+      csrfMeta.name = "csrf-token"
+      csrfMeta.content = "test-csrf-token"
+      document.head.appendChild(csrfMeta)
+      const nativeLeaveFetch = window.fetch.bind(window)
+      window.fetch = (...args) => {
+        const input = args[0]
+        const url = typeof input === "string" ? input : input.url
+        if (new URL(url, window.location.origin).pathname.endsWith("/huddle/leave")) {
+          window.__leaveOrder.push("reported")
+        }
+        return nativeLeaveFetch(...args)
+      }
+      window.__huddleController.room.disconnect = () => {
+        window.__leaveOrder.push("disconnected")
+        return Promise.resolve()
+      }
+    JS
+
+    find("[data-action='huddle#leave']").click
+
+    wait_for_condition("leaving did not disconnect and report") do
+      page.evaluate_script("window.__leaveOrder.length") >= 2
+    end
+    assert_equal [ "disconnected", "reported" ], page.evaluate_script("window.__leaveOrder")
+  end
+
   private
     def click_mute_button
       find("[data-huddle-target='mute']").click

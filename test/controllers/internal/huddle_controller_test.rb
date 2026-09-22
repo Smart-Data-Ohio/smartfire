@@ -315,6 +315,18 @@ class Internal::HuddleControllerTest < ActionDispatch::IntegrationTest
     assert_nil @huddle.grant.reload.last_seen_at
   end
 
+  test "a disconnect event with a malformed timestamp is unprocessable" do
+    @huddle.grant.update_columns(last_seen_at: Time.current)
+
+    [ "2026-13-99", "not-a-timestamp" ].each do |disconnected_at|
+      post "/internal/huddle/grants/#{@huddle.grant_id}/left",
+        params: { disconnected_at: }, headers: gateway_headers
+
+      assert_response :unprocessable_entity
+      assert_not_nil @huddle.grant.reload.last_seen_at
+    end
+  end
+
   test "a disconnect event for an unknown grant is not found" do
     post "/internal/huddle/grants/-1/left", headers: gateway_headers
 

@@ -408,10 +408,13 @@ export default class extends Controller {
   leave = async () => {
     const roomId = this.roomId
     ++this.operation
-    // Tell the server first, without waiting: the avatar stacks clear
-    // through the broadcast instead of waiting out the liveness window.
-    if (roomId) this.#reportLeave(roomId)
     await this.#disconnectCurrentRoom()
+    // Report after the disconnect completes: the gateway checks connected
+    // participants about once per second, and a check landing between an
+    // early report and the disconnect would mark the grant seen again,
+    // leaving a ghost in the call until the liveness window expires. The
+    // report itself stays fire-and-forget, so leaving still works offline.
+    if (roomId) this.#reportLeave(roomId)
     this.roomId = null
     this.roomName = null
     this.identity = null
@@ -2524,8 +2527,10 @@ export default class extends Controller {
 
   #checkAuthentication() {
     if (!this.room || !this.roomId || this.authenticationCheck) return this.authenticationCheck
-    // Becoming visible re-checks immediately, so hidden ticks can skip.
-    if (document.visibilityState === "hidden") return
+    // Outside a call a hidden tick can skip: becoming visible re-checks
+    // immediately. Inside a call the check runs hidden too, so a revoked
+    // background tab ends instead of lingering until it is opened.
+    if (document.visibilityState === "hidden" && this.state !== "connected" && this.state !== "reconnecting") return
 
     const roomAtStart = this.room
     const check = fetch(`/rooms/${encodeURIComponent(this.roomId)}/huddle`, {
