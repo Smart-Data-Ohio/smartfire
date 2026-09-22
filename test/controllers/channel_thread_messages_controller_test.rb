@@ -60,6 +60,37 @@ class ChannelThreadMessagesControllerTest < ActionDispatch::IntegrationTest
     assert @thread.memberships.find_by!(user: everything).unread?
   end
 
+  test "editing a thread message to add a post URL broadcasts the new card" do
+    sign_in :jz
+
+    patch room_thread_message_url(@room, @thread, @message), params: {
+      message: { markdown_source: "see https://x.com/jack/status/112233" }
+    }
+
+    assert_redirected_to room_thread_message_path(@room, @thread, @message)
+    assert_equal [ "112233" ], @message.reload.twitter_posts.map(&:post_id)
+    assert_rendered_turbo_stream_broadcast @thread, :messages, action: "replace", target: [ @message, :twitter_cards ] do
+      assert_select ".x-post-card", text: /Loading post/
+    end
+  end
+
+  test "editing a thread message to remove a post URL broadcasts an empty card container" do
+    message = @thread.post_message!(
+      creator: users(:jz),
+      attributes: { markdown_source: "see https://x.com/jack/status/112234", client_message_id: "x-ref-thread-remove" }
+    )
+    assert_equal [ "112234" ], message.twitter_posts.map(&:post_id)
+    sign_in :jz
+
+    patch room_thread_message_url(@room, @thread, message), params: { message: { markdown_source: "never mind" } }
+
+    assert_redirected_to room_thread_message_path(@room, @thread, message)
+    assert_empty message.reload.twitter_posts
+    assert_rendered_turbo_stream_broadcast @thread, :messages, action: "replace", target: [ message, :twitter_cards ] do
+      assert_select ".x-post-card", count: 0
+    end
+  end
+
   test "nested HTML message URL redirects into the parent room shell" do
     sign_in :jz
     get room_thread_message_url(@room, @thread, @message)

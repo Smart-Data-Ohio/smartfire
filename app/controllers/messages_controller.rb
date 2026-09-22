@@ -69,6 +69,12 @@ class MessagesController < ApplicationController
     @message.save!
 
     @message.broadcast_replace_to @room, :messages, target: [ @message, :presentation ], partial: "messages/presentation", attributes: { maintain_scroll: true }
+    # References re-sync on save (see Message's after_update_commit
+    # hooks), so an edit that adds or removes a URL replaces the card
+    # containers too. The containers always render, which gives both
+    # cases a broadcast target.
+    @message.broadcast_replace_to @room, :messages, target: [ @message, :github_pr_cards ], partial: "github/pull_requests/cards", attributes: { maintain_scroll: true }
+    @message.broadcast_replace_to @room, :messages, target: [ @message, :twitter_cards ], partial: "twitter/posts/cards", attributes: { maintain_scroll: true }
     if drive_file_ids_key_present?
       @message.broadcast_replace_to @room, :messages, target: [ @message, :drive_attachments ],
         partial: "messages/drive_attachments", locals: { message: @message }, attributes: { maintain_scroll: true }

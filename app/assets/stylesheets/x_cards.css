@@ -5,6 +5,12 @@
   flex-direction: column;
   gap: 0.5rem;
   margin-top: 0.5rem;
+
+  /* The container always renders so edits can broadcast-replace it;
+     hide it when an edit (or a fresh message) leaves it empty. */
+  &:empty {
+    display: none;
+  }
 }
 
 .x-post-card {

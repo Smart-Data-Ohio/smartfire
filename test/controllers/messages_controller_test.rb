@@ -152,7 +152,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
   test "update updates a message belonging to the user" do
     message = @room.messages.where(creator: users(:david)).first
 
-    Turbo::StreamsChannel.expects(:broadcast_replace_to).once
+    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(3)  # presentation plus both card containers
     put room_message_url(@room, message), params: { message: { body: "Updated body" } }
 
     assert_redirected_to room_message_url(@room, message)
@@ -163,7 +163,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     message = @room.messages.create!(creator: users(:david), markdown_source: "**Before**", client_message_id: "markdown-update")
     source = "## After\n\n`code`"
 
-    Turbo::StreamsChannel.expects(:broadcast_replace_to).once
+    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(3)  # presentation plus both card containers
     put room_message_url(@room, message), params: { message: { markdown_source: source } }
 
     assert_redirected_to room_message_url(@room, message)
@@ -174,12 +174,54 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
   test "a legacy body update clears stale Markdown mode" do
     message = @room.messages.create!(creator: users(:david), markdown_source: "**Before**", client_message_id: "markdown-to-rich")
 
-    Turbo::StreamsChannel.expects(:broadcast_replace_to).once
+    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(3)  # presentation plus both card containers
     put room_message_url(@room, message), params: { message: { body: "Legacy again" } }
 
     assert_redirected_to room_message_url(@room, message)
     assert_nil message.reload.markdown_source
     assert_equal "Legacy again", message.plain_text_body
+  end
+
+  test "editing a message to add a PR URL broadcasts the new card" do
+    pull_request = Github::PullRequest.for_reference(owner: "rails", repo: "rails", number: 510)
+    pull_request.update!(private: false, title: "Seeded PR card", state: "open", fetched_at: Time.current)
+    message = @room.messages.create!(creator: users(:david), markdown_source: "no links here", client_message_id: "card-add")
+
+    put room_message_url(@room, message), params: { message: { markdown_source: "see https://github.com/rails/rails/pull/510" } }
+
+    assert_redirected_to room_message_url(@room, message)
+    assert_equal [ pull_request ], message.reload.github_pull_requests
+    assert_rendered_turbo_stream_broadcast @room, :messages, action: "replace", target: [ message, :github_pr_cards ] do
+      assert_select ".github-pr-card", text: /Seeded PR card/
+    end
+  end
+
+  test "editing a message to remove a PR URL broadcasts an empty card container" do
+    pull_request = Github::PullRequest.for_reference(owner: "rails", repo: "rails", number: 511)
+    pull_request.update!(private: false, title: "Removed PR card", state: "open", fetched_at: Time.current)
+    message = @room.messages.create!(
+      creator: users(:david), markdown_source: "see https://github.com/rails/rails/pull/511", client_message_id: "card-remove"
+    )
+    assert_equal [ pull_request ], message.github_pull_requests
+
+    put room_message_url(@room, message), params: { message: { markdown_source: "never mind" } }
+
+    assert_redirected_to room_message_url(@room, message)
+    assert_empty message.reload.github_pull_requests
+    assert_rendered_turbo_stream_broadcast @room, :messages, action: "replace", target: [ message, :github_pr_cards ] do
+      assert_select ".github-pr-card", count: 0
+      assert_select "turbo-frame", count: 0
+    end
+  end
+
+  test "messages render empty card containers for future broadcasts" do
+    message = @room.messages.create!(creator: users(:david), markdown_source: "no links", client_message_id: "empty-cards")
+
+    get room_message_url(@room, message)
+
+    assert_response :success
+    assert_select "##{dom_id(message, :github_pr_cards)}.github-pr-cards"
+    assert_select "##{dom_id(message, :twitter_cards)}.x-post-cards"
   end
 
   test "admin cannot update a message belonging to another user" do
