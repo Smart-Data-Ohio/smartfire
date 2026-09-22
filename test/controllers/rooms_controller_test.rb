@@ -88,6 +88,23 @@ class RoomsControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil room.reload.destroy_enqueued_at
   end
 
+  test "destroy succeeds when the queue is down and the sweep recovers the room" do
+    room = rooms(:designers)
+    Room::DestroyJob.stubs(:perform_later).raises(Redis::BaseConnectionError, "Redis down")
+
+    delete room_url(room)
+
+    assert_redirected_to root_url
+    assert_predicate room.reload, :deleted?
+    assert_nil room.destroy_enqueued_at
+
+    Room::DestroyJob.unstub(:perform_later)
+    room.update_columns(deleted_at: 11.minutes.ago)
+    assert_enqueued_with(job: Room::DestroyJob, args: [ room.id ]) do
+      Room::DestroyJob.reenqueue_stuck!
+    end
+  end
+
   test "destroyed room is inaccessible while deletion is pending" do
     room = rooms(:designers)
     delete room_url(room)

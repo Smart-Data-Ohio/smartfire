@@ -12,21 +12,26 @@ class RoomsController < ApplicationController
   end
 
   def destroy
-    # The destroy job defers its enqueue past this transaction's commit, so
-    # it never runs on pre-commit state. The claim stamp records the enqueue
-    # for the stuck-room sweep; if the queue is down the room stays marked
-    # deleted and the sweep re-enqueues its destroy.
-    Room.transaction do
-      @room.begin_destroy!
-      Room::DestroyJob.perform_later(@room.id)
-    end
-    @room.update_columns(destroy_enqueued_at: Time.current)
+    Room.transaction { @room.begin_destroy! }
+    enqueue_destroy
 
     broadcast_remove_room
     redirect_to root_url
   end
 
   private
+    # The enqueue runs after the marking transaction commits, so the job
+    # never runs on pre-commit state. If the queue is down the room stays
+    # marked deleted without a claim and the stuck-room sweep re-enqueues
+    # its destroy — the destroy itself already happened, so the request
+    # still succeeds.
+    def enqueue_destroy
+      Room::DestroyJob.perform_later(@room.id)
+      @room.update_columns(destroy_enqueued_at: Time.current)
+    rescue StandardError => error
+      Rails.logger.error "Room destroy enqueue failed for room #{@room.id}: #{error.class}: #{error.message}"
+    end
+
     def set_room
       if room = room_scope.find_by(id: params[:room_id] || params[:id])
         @room = room
