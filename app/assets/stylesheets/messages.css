@@ -76,10 +76,14 @@
   grid-auto-rows: min-content;
   overflow-y: auto;
   overscroll-behavior: contain;
-  /* Headroom for the first message's hover toolbar, which floats above it. */
-  padding-block-start: 1rem;
   position: relative;
   row-gap: var(--message-space);
+}
+
+/* Headroom for the first message's hover toolbar, which floats above it.
+   Search results are excluded and keep their own spacing. */
+.messages:not(.searches__results) {
+  padding-block-start: 1rem;
 
   @media (max-width: 100ch) {
     padding-block-start: var(--navbar-height);

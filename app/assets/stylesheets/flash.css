@@ -22,6 +22,16 @@
   }
 }
 
+/* Client-side error flashes carry visible text instead of an icon. */
+.flash__inner--text {
+  aspect-ratio: auto;
+  border-radius: 1rem;
+  color: #fff;
+  font-size: 0.9rem;
+  max-inline-size: min(24rem, 90vw);
+  padding: 0.6rem 1rem;
+}
+
 .flash__dismiss {
   align-items: center;
   background-color: var(--color-bg);

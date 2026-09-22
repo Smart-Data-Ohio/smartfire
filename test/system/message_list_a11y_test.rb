@@ -12,11 +12,11 @@ class MessageListA11yTest < ApplicationSystemTestCase
       Array.from(document.querySelectorAll("##{dom_id(@room, :messages)} > .message"))
         .filter(message => message.tabIndex === 0).map(message => message.id)
     JS
-    assert_equal [ dom_id(@room.messages.ordered.first) ], tabbables
+    assert_equal [ dom_id(messages(:third)) ], tabbables
 
-    first_id = tabbables.first
-    page.execute_script("document.getElementById('#{first_id}').focus()")
-    assert_selector "##{first_id}:focus"
+    newest_id = tabbables.first
+    page.execute_script("document.getElementById('#{newest_id}').focus()")
+    assert_selector "##{newest_id}:focus"
 
     # The author's avatar link comes first in the message; the revealed
     # toolbar follows it.
@@ -53,6 +53,42 @@ class MessageListA11yTest < ApplicationSystemTestCase
     assert_selector "##{messages.last}:focus"
   end
 
+  test "a stream replacing the focused message keeps focus and the tab stop on its replacement" do
+    message = find("##{dom_id(messages(:second))}")
+    page.execute_script("arguments[0].focus()", message)
+    assert_selector "##{dom_id(messages(:second))}:focus"
+
+    page.execute_script <<~JS, dom_id(messages(:second))
+      const clone = document.getElementById(arguments[0]).cloneNode(true);
+      clone.setAttribute("data-replaced", "true");
+      const stream = `<turbo-stream action="replace" target="${arguments[0]}"><template>${clone.outerHTML}</template></turbo-stream>`;
+      Turbo.renderStreamMessage(stream);
+    JS
+
+    # Wait for the replacement itself: the stream renders asynchronously,
+    # and asserting focus first would pass on the not-yet-replaced node.
+    assert_selector "##{dom_id(messages(:second))}[data-replaced='true']", wait: 10
+    assert_focus_and_tab_stop_on messages(:second)
+  end
+
+  test "a direct DOM swap of the focused message keeps focus and the tab stop on its replacement" do
+    message = find("##{dom_id(messages(:second))}")
+    page.execute_script("arguments[0].focus()", message)
+    assert_selector "##{dom_id(messages(:second))}:focus"
+
+    # Outside Turbo (which preserves focus itself), the list controller
+    # moves the tab stop and focus to the same-id replacement.
+    page.execute_script <<~JS, dom_id(messages(:second))
+      const node = document.getElementById(arguments[0]);
+      const clone = node.cloneNode(true);
+      clone.setAttribute("data-replaced", "true");
+      node.replaceWith(clone);
+    JS
+
+    assert_selector "##{dom_id(messages(:second))}[data-replaced='true']"
+    assert_focus_and_tab_stop_on messages(:second)
+  end
+
   test "the ContextMenu key opens the shared menu and Escape returns focus" do
     message = find("##{dom_id(messages(:third))}")
     page.execute_script("arguments[0].focus()", message)
@@ -78,6 +114,75 @@ class MessageListA11yTest < ApplicationSystemTestCase
     editor.send_keys :up
 
     assert_selector "[data-composer-target='contextLabel']", text: "Editing Message", wait: 10
+  end
+
+  test "up-arrow-to-edit shows an error when the actions endpoint fails" do
+    page.execute_script <<~JS
+      window.__origFetch = window.fetch;
+      window.fetch = (input, init = {}) => {
+        const url = typeof input === "string" ? input : input.url;
+        if (url.includes("/actions")) return Promise.resolve(new Response("{}", { status: 500 }));
+        return window.__origFetch(input, init);
+      };
+    JS
+
+    editor = find_field("Write a message")
+    editor.click
+    editor.send_keys :up
+
+    assert_selector ".flash--client[role='alert']", text: "temporarily unavailable", wait: 10
+  ensure
+    page.execute_script("window.fetch = window.__origFetch") if page
+  end
+
+  test "forward reuses the menu-open metadata request instead of fetching again" do
+    gate_actions_requests
+
+    within_message(messages(:third)) do
+      right_click_message
+    end
+    assert_message_menu_open
+    click_button "Forward"
+
+    assert_equal 1, page.evaluate_script("window.__actionFetches"),
+      "expected menu open and forward to share one metadata request"
+    release_actions_requests
+    assert_selector "dialog[open]", visible: true, wait: 10
+  ensure
+    restore_fetch if page
+  end
+
+  test "a menu opened while an action waits does not redirect the pending action" do
+    gate_actions_requests
+
+    within_message(messages(:second)) do
+      right_click_message
+    end
+    assert_message_menu_open
+    click_button "Forward"
+
+    within_message(messages(:third)) do
+      right_click_message
+    end
+    assert_selector "##{dom_id(messages(:third))}[data-message-actions-open]"
+    release_actions_requests
+
+    assert_no_selector "dialog[open]"
+    assert_selector "##{dom_id(messages(:third))}[data-message-actions-open]"
+  ensure
+    restore_fetch if page
+  end
+
+  test "the menu closes before Turbo caches the page" do
+    within_message(messages(:third)) do
+      right_click_message
+    end
+    assert_message_menu_open
+
+    page.execute_script("document.dispatchEvent(new Event('turbo:before-cache'))")
+
+    assert_no_selector ".message[data-message-actions-open]"
+    assert_selector "##{dom_id(messages(:third))}[aria-expanded='false']", visible: false
   end
 
   test "the main message list is a live log" do
@@ -180,7 +285,9 @@ class MessageListA11yTest < ApplicationSystemTestCase
     fill_in "Write a message", with: "Announce me once"
     click_button "Send Message"
 
-    assert_selector ".message__body", text: "Announce me once", wait: 10
+    # The pending copy carries the text immediately; wait for the delivered
+    # replacement (which carries the server message id) instead.
+    assert_selector ".message[data-message-id] .message__body", text: "Announce me once", wait: 10
     assert_no_selector ".messages[aria-busy='true']", wait: 10
     assert_includes page.evaluate_script("window.__liveValues"), "off",
       "expected the pending-to-delivered replacement to render quietly"
@@ -205,6 +312,32 @@ class MessageListA11yTest < ApplicationSystemTestCase
 
     long_press(find("#search-results ##{dom_id(result)}"))
     assert_message_menu_open
+  end
+
+  test "the message-list top padding does not apply to search results" do
+    rules = page.evaluate_script(<<~JS)
+      (() => {
+        const hits = [];
+        const scan = (rules) => {
+          for (const rule of rules) {
+            if (rule.type === CSSRule.STYLE_RULE && rule.style.getPropertyValue("padding-block-start")) {
+              hits.push([ rule.selectorText, rule.style.getPropertyValue("padding-block-start") ]);
+            }
+            if (rule.cssRules) scan(rule.cssRules);
+          }
+        };
+        for (const sheet of document.styleSheets) {
+          try { scan(sheet.cssRules) } catch { /* cross-origin sheet */ }
+        }
+        return hits.filter(([ selector ]) => selector.includes(".messages"));
+      })()
+    JS
+
+    assert_not_empty rules, "expected a message-list top padding rule"
+    assert_empty rules.select { |(selector, _)| selector == ".messages" },
+      "expected no unscoped .messages top padding rule"
+    assert rules.any? { |(selector, _)| selector.include?(":not(.searches__results)") },
+      "expected the top padding rule to exclude search results"
   end
 
   test "the standalone thread page keeps menus and focusability" do
@@ -263,7 +396,7 @@ class MessageListA11yTest < ApplicationSystemTestCase
 
     fields = [
       ".board-post__form input[name='thread[tags]']",
-      ".board-post__form select[name='thread[work_status]']",
+      ".board-post__form select[name='thread[work_status]']"
     ]
     fields.each { |field| assert_selector field, visible: true }
 
@@ -312,7 +445,7 @@ class MessageListA11yTest < ApplicationSystemTestCase
     end
   end
 
-  test "flash persists under reduced motion and dismisses on demand" do
+  test "flash persists its 5-second minimum under reduced motion" do
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "reduce" } ])
 
     visit user_profile_url
@@ -320,10 +453,30 @@ class MessageListA11yTest < ApplicationSystemTestCase
     click_button "Save changes"
 
     assert_selector ".flash", wait: 10
-    assert_equal "5s", page.evaluate_script("getComputedStyle(document.querySelector('.flash__inner')).animationDuration")
-    sleep 1
+    duration = page.evaluate_script("document.querySelector('.flash__inner').getAnimations().map(animation => animation.effect.getTiming().duration)")
+    assert_equal [ 5000 ], duration
+
+    # Travel to 4 seconds in: wall-clock time passes but the removal timer
+    # has not run out, so the flash stays.
+    page.execute_script("document.querySelector('.flash__inner').getAnimations()[0].currentTime = 4000")
+    sleep 0.3
     assert_selector ".flash"
 
+    # Travel past the end: the animation finishes and removes the flash.
+    page.execute_script("document.querySelector('.flash__inner').getAnimations()[0].currentTime = 5100")
+    assert_no_selector ".flash", wait: 10
+  ensure
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "no-preference" } ]) if page
+  end
+
+  test "flash dismisses on demand under reduced motion" do
+    page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "reduce" } ])
+
+    visit user_profile_url
+    fill_in "user_bio", with: "Reduced motion dismiss check"
+    click_button "Save changes"
+
+    assert_selector ".flash", wait: 10
     find(".flash__dismiss").click
     assert_no_selector ".flash"
   ensure
@@ -331,7 +484,42 @@ class MessageListA11yTest < ApplicationSystemTestCase
   end
 
   private
+    def assert_focus_and_tab_stop_on(message)
+      assert_selector "##{dom_id(message)}:focus", wait: 10
+      assert_equal dom_id(message), page.evaluate_script("document.activeElement.id")
+      assert_equal 0, page.evaluate_script("document.getElementById('#{dom_id(message)}').tabIndex")
+      assert_equal(-1, page.evaluate_script("document.getElementById('#{dom_id(messages(:third))}').tabIndex"),
+        "expected the tab stop to stay on the replacement, not jump to the newest message")
+    end
+
     def font_size(selector)
       page.evaluate_script("parseFloat(getComputedStyle(document.querySelector(\"#{selector}\")).fontSize)")
+    end
+
+    # Holds actions-endpoint fetches behind a gate so tests can interleave
+    # menu opens while a request is in flight. Counts every attempt.
+    def gate_actions_requests
+      page.execute_script <<~JS
+        window.__actionFetches = 0;
+        window.__actionGates = [];
+        window.__origFetch = window.fetch;
+        window.fetch = (input, init = {}) => {
+          const url = typeof input === "string" ? input : input.url;
+          if (url.includes("/actions")) {
+            window.__actionFetches++;
+            return new Promise(resolve => window.__actionGates.push(() => resolve(window.__origFetch(input, init))));
+          }
+          return window.__origFetch(input, init);
+        };
+      JS
+    end
+
+    def release_actions_requests
+      page.execute_script("window.__actionGates.forEach(release => release()); window.__actionGates = []")
+    end
+
+    def restore_fetch
+      release_actions_requests
+      page.execute_script("window.fetch = window.__origFetch")
     end
 end

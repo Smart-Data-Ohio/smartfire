@@ -20,6 +20,7 @@ export default class extends Controller {
   #metadata
   #metadataMessage
   #metadataRequest
+  #metadataPromise
   #forwardDestinationsRequest
   #forwardDestinationsController
   #previouslyFocusedElement
@@ -44,10 +45,12 @@ export default class extends Controller {
     this.onEditLast = this.#onEditLast.bind(this)
     this.onReposition = this.#reposition.bind(this)
     this.onForwardClose = this.#onForwardClose.bind(this)
+    this.onBeforeCache = this.#onBeforeCache.bind(this)
 
     this.menuTarget.addEventListener("keydown", this.onMenuKeydown)
     this.menuTarget.addEventListener("click", this.onMenuClick)
     this.forwardDialogTarget?.addEventListener("close", this.onForwardClose)
+    document.addEventListener("turbo:before-cache", this.onBeforeCache)
     document.addEventListener("pointerdown", this.onDocumentPointerDown)
     window.addEventListener("keydown", this.onWindowKeydown)
     window.addEventListener("resize", this.onReposition)
@@ -62,11 +65,13 @@ export default class extends Controller {
   disconnect() {
     this.#connected = false
     this.#metadataRequest?.abort()
+    this.#metadataPromise = null
     this.#forwardDestinationsController?.abort()
 
     this.menuTarget?.removeEventListener("keydown", this.onMenuKeydown)
     this.menuTarget?.removeEventListener("click", this.onMenuClick)
     this.forwardDialogTarget?.removeEventListener("close", this.onForwardClose)
+    document.removeEventListener("turbo:before-cache", this.onBeforeCache)
     document.removeEventListener("pointerdown", this.onDocumentPointerDown)
     window.removeEventListener("keydown", this.onWindowKeydown)
     window.removeEventListener("resize", this.onReposition)
@@ -89,6 +94,7 @@ export default class extends Controller {
     if (!message?.isConnected || !message.dataset.actionsUrl) return
     this.#setMessage(message)
     await this.#ensureMetadata()
+    if (this.#message !== message || !message.isConnected) return
     this.#dispatchThread()
   }
 
@@ -104,7 +110,11 @@ export default class extends Controller {
 
   async edit(event) {
     event.preventDefault()
+    const message = this.#message
     await this.#ensureMetadata()
+    // Another menu opening mid-request must not redirect this action to
+    // its message; the newer menu stays open untouched.
+    if (this.#message !== message || !message?.isConnected) return
     if (this.#boolean(this.#metadata || {}, "can_edit", "canEdit", "editable") !== true) {
       this.#closeMenu({ restoreFocus: false })
       return
@@ -126,7 +136,9 @@ export default class extends Controller {
 
   async forward(event) {
     event.preventDefault()
+    const message = this.#message
     await this.#ensureMetadata()
+    if (this.#message !== message || !message?.isConnected) return
     const detail = {
       forwardUrl: this.#stringFromMetadata("forward_url", "forwardUrl"),
       sourceUrl: this.#permalinkUrl() || this.#messageUrl,
@@ -188,7 +200,9 @@ export default class extends Controller {
 
   async thread(event) {
     event.preventDefault()
+    const message = this.#message
     await this.#ensureMetadata()
+    if (this.#message !== message || !message?.isConnected) return
     this.#dispatchThread()
     this.#closeMenu({ restoreFocus: false })
   }
@@ -198,7 +212,8 @@ export default class extends Controller {
     if (!window.confirm("Are you sure you want to delete this message?")) return
 
     const message = this.#message
-    const response = await fetch(this.#messageUrl, {
+    const messageUrl = this.#messageUrl
+    const response = await fetch(messageUrl, {
       method: "DELETE",
       headers: {
         Accept: "text/vnd.turbo-stream.html, application/json",
@@ -218,7 +233,9 @@ export default class extends Controller {
       message.remove()
     }
 
-    this.#closeMenu({ restoreFocus: false })
+    // The confirmed delete still lands, but a menu opened mid-request
+    // keeps its own message and state.
+    if (this.#message === message) this.#closeMenu({ restoreFocus: false })
   }
 
   // Internal event handlers
@@ -310,6 +327,12 @@ export default class extends Controller {
     }
   }
 
+  #onBeforeCache() {
+    // Snapshots must not keep an open menu: the restored page would show
+    // aria-expanded="true" on a message whose menu is gone.
+    this.#closeMenu({ restoreFocus: false })
+  }
+
   #onForwardClose() {
     this.#forwardDestinationsController?.abort()
     this.#forwardDestinationsController = null
@@ -333,7 +356,12 @@ export default class extends Controller {
     if (!message?.isConnected || !message.dataset.actionsUrl) return
     this.#setMessage(message)
     await this.#ensureMetadata()
-    if (this.#boolean(this.#metadata || {}, "can_edit", "canEdit", "editable") !== true) return
+    if (this.#message !== message || !message.isConnected) return
+    if (this.#metadataMessage !== message || !this.#metadata) {
+      this.#flashError("Message actions are temporarily unavailable")
+      return
+    }
+    if (this.#boolean(this.#metadata, "can_edit", "canEdit", "editable") !== true) return
     this.#dispatchMessageEvent("message:edit")
   }
 
@@ -348,6 +376,7 @@ export default class extends Controller {
     if (this.#metadataMessage !== message) {
       this.#metadataRequest?.abort()
       this.#metadataRequest = null
+      this.#metadataPromise = null
       this.#metadata = null
       this.#metadataMessage = message
     }
@@ -694,32 +723,40 @@ export default class extends Controller {
 
   // Metadata and actions
 
-  async #ensureMetadata() {
-    if (this.#metadata && this.#metadataMessage === this.#message) return this.#metadata
-    if (!this.#metadataUrl) return null
+  // The menu-open fetch and a follow-up edit/forward share one in-flight
+  // request instead of aborting and refetching the same metadata.
+  #ensureMetadata() {
+    if (this.#metadata && this.#metadataMessage === this.#message) return Promise.resolve(this.#metadata)
+    if (!this.#metadataUrl) return Promise.resolve(null)
+    if (this.#metadataPromise && this.#metadataMessage === this.#message) return this.#metadataPromise
 
     this.#metadataRequest?.abort()
     const request = new AbortController()
     this.#metadataRequest = request
     const message = this.#message
+    const url = this.#metadataUrl
 
-    try {
-      const response = await fetch(this.#metadataUrl, {
-        headers: { Accept: "application/json" },
-        cache: "no-store",
-        signal: request.signal,
-      })
-      if (!response.ok || !this.#connected || this.#message !== message) return null
+    const promise = this.#metadataPromise = (async () => {
+      try {
+        const response = await fetch(url, {
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+          signal: request.signal,
+        })
+        if (!response.ok || !this.#connected || this.#message !== message) return null
 
-      const payload = await response.json()
-      if (this.#connected && this.#message === message) this.#applyMetadata(payload)
-      return this.#metadata
-    } catch (error) {
-      if (error.name !== "AbortError") this.#announce("Message actions are temporarily unavailable")
-      return null
-    } finally {
-      if (this.#metadataRequest === request) this.#metadataRequest = null
-    }
+        const payload = await response.json()
+        if (this.#connected && this.#message === message) this.#applyMetadata(payload)
+        return this.#metadata
+      } catch (error) {
+        if (error.name !== "AbortError") this.#announce("Message actions are temporarily unavailable")
+        return null
+      } finally {
+        if (this.#metadataRequest === request) this.#metadataRequest = null
+        if (this.#metadataPromise === promise) this.#metadataPromise = null
+      }
+    })()
+    return promise
   }
 
   #applyMetadata(payload) {
@@ -865,5 +902,32 @@ export default class extends Controller {
     this.statusTarget.textContent = message
     clearTimeout(this.#announceTimer)
     this.#announceTimer = setTimeout(() => this.statusTarget.textContent = "", 2_000)
+  }
+
+  // A client-side error flash matching the server flash markup: it removes
+  // itself on animationend through element-removal and inherits the
+  // reduced-motion persistence. Used where no menu is open to announce
+  // into, like a failed up-arrow-to-edit.
+  #flashError(message) {
+    const flash = document.createElement("div")
+    flash.className = "flash flash--client"
+    flash.dataset.controller = "element-removal"
+    flash.dataset.action = "animationend->element-removal#remove"
+    flash.setAttribute("role", "alert")
+
+    const inner = document.createElement("div")
+    inner.className = "flash__inner flash__inner--text shadow"
+    inner.style.setProperty("--flash-background", "var(--color-negative)")
+    inner.textContent = message
+
+    const dismiss = document.createElement("button")
+    dismiss.type = "button"
+    dismiss.className = "flash__dismiss"
+    dismiss.dataset.action = "element-removal#remove"
+    dismiss.setAttribute("aria-label", "Dismiss notification")
+    dismiss.textContent = "×"
+
+    flash.append(inner, dismiss)
+    document.body.append(flash)
   }
 }

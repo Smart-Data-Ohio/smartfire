@@ -54,20 +54,24 @@ export default class extends Controller {
     window.removeEventListener("scroll", this.onCancelLongPress, true)
   }
 
-  // Roving tabindex: exactly one message is a Tab stop. Focus (Tab or arrow
-  // keys) moves the stop; streamed and paginated messages join as -1.
+  // Roving tabindex: exactly one message is a Tab stop, starting on the
+  // newest message nearest the composer. Focus (Tab or arrow keys) moves
+  // the stop; streamed and paginated messages join as -1.
 
   #initTabindex() {
     const messages = this.#messages()
     messages.forEach((message, index) => {
-      message.tabIndex = index === 0 ? 0 : -1
+      message.tabIndex = index === messages.length - 1 ? 0 : -1
       this.#annotate(message)
     })
-    this.#tabbable = messages[0] || null
+    this.#tabbable = messages[messages.length - 1] || null
   }
 
   #onMutations(records) {
     let changed = false
+    const addedMessages = []
+    const removedIds = new Set()
+    let tabbableRemoved = false
 
     for (const record of records) {
       for (const node of record.addedNodes) {
@@ -76,10 +80,32 @@ export default class extends Controller {
         for (const message of added) {
           message.tabIndex = -1
           this.#annotate(message)
+          addedMessages.push(message)
           changed = true
         }
       }
-      if (record.removedNodes.length > 0) changed = true
+      for (const node of record.removedNodes) {
+        if (node.nodeType !== Node.ELEMENT_NODE) continue
+        const removed = node.matches(MESSAGE_SELECTOR) ? [ node ] : Array.from(node.querySelectorAll(MESSAGE_SELECTOR))
+        for (const message of removed) {
+          removedIds.add(message.id)
+          if (message === this.#tabbable) tabbableRemoved = true
+          changed = true
+        }
+      }
+    }
+
+    // A stream replace swaps the node out from under focus: move the tab
+    // stop to the replacement with the same id, and focus it when removal
+    // dropped focus back to the page. (Turbo streams usually preserve focus
+    // themselves; this also covers direct DOM swaps.)
+    if (tabbableRemoved) {
+      const replacement = addedMessages.find(message => removedIds.has(message.id))
+      if (replacement) {
+        replacement.tabIndex = 0
+        this.#tabbable = replacement
+        if (document.activeElement === document.body) replacement.focus()
+      }
     }
 
     if (changed) this.#ensureTabbable()
@@ -88,10 +114,11 @@ export default class extends Controller {
   #ensureTabbable() {
     if (this.#tabbable?.isConnected && this.element.contains(this.#tabbable)) return
 
-    const first = this.#messages()[0]
-    if (first) {
-      first.tabIndex = 0
-      this.#tabbable = first
+    const messages = this.#messages()
+    const newest = messages[messages.length - 1]
+    if (newest) {
+      newest.tabIndex = 0
+      this.#tabbable = newest
     } else {
       this.#tabbable = null
     }
