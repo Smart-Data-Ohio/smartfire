@@ -20,6 +20,8 @@ module Google
 
     LIST_LIMIT = 30
     LIST_WINDOW = 1.minute
+    SHOW_LIMIT = 60
+    SHOW_WINDOW = 1.minute
 
     def show
       account = Current.user.google_account
@@ -27,6 +29,10 @@ module Google
       unless Google::Client.configured? && Google::DriveLink.valid_id?(params[:id]) &&
           account&.usable? && account.drive?
         return head :not_found
+      end
+
+      if drive_show_throttled?(account.user_id)
+        return render json: { error: "rate_limited" }, status: :too_many_requests
       end
 
       file = Rails.cache.fetch(cache_key(account, params[:id]), expires_in: 5.minutes) do
@@ -81,6 +87,14 @@ module Google
       def drive_list_throttled?(user_id)
         key = "google_drive_list/#{user_id}/#{Time.current.to_i / LIST_WINDOW.to_i}"
         Rails.cache.increment(key, 1, expires_in: LIST_WINDOW).to_i > LIST_LIMIT
+      end
+
+      # Per-user minute-bucketed counter for show: one channel load can
+      # fire dozens of these (one per Drive link), so bound fresh views
+      # per viewer above the list budget. Same null-store behavior.
+      def drive_show_throttled?(user_id)
+        key = "google_drive_show/#{user_id}/#{Time.current.to_i / SHOW_WINDOW.to_i}"
+        Rails.cache.increment(key, 1, expires_in: SHOW_WINDOW).to_i > SHOW_LIMIT
       end
 
       def cache_key(account, file_id)

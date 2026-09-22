@@ -3,7 +3,7 @@
 
   <% if !Google::Client.configured? %>
     <p>Google Calendar is not configured for this workspace</p>
-  <% elsif user.google_account&.connected? %>
+  <% elsif user.google_account&.connected? && user.google_account.calendar? %>
     <p>Connected as <%= user.google_account.email %></p>
     <% if user.google_account.drive? %>
       <p>Drive previews enabled</p>
@@ -14,9 +14,18 @@
     <%= button_to "Disconnect", google_connection_path, method: :delete, class: "btn btn--negative",
           form: { data: { turbo_confirm: "Disconnect Google Calendar? Your published event entries will be removed." } } %>
   <% elsif user.google_account %>
-    <p>Google rejected the connection, reconnect</p>
+    <% if user.google_account.connected? %>
+      <p>Calendar permission needed, reconnect to publish events</p>
+    <% else %>
+      <p>Google rejected the connection, reconnect</p>
+    <% end %>
     <%= button_to "Connect Google Calendar", google_connect_path, method: :post, class: "btn",
+          params: (user.google_account.drive? ? { features: [ "drive" ] } : {}),
           form: { data: { turbo: false } } %>
+    <% if user.google_account.connected? %>
+      <%= button_to "Disconnect", google_connection_path, method: :delete, class: "btn btn--negative",
+            form: { data: { turbo_confirm: "Disconnect Google Calendar? Your published event entries will be removed." } } %>
+    <% end %>
   <% else %>
     <p>Publish events you are going or maybe to to your Google Calendar.</p>
     <%= button_to "Connect Google Calendar", google_connect_path, method: :post, class: "btn",

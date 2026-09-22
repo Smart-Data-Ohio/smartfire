@@ -2,9 +2,11 @@ module GoogleCalendarTestHelper
   extend ActiveSupport::Concern
 
   GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+  GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke"
   GOOGLE_EVENTS_URL = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
   GOOGLE_DRIVE_FILES_URL = "https://www.googleapis.com/drive/v3/files"
   DRIVE_SCOPES = "openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.metadata.readonly"
+  CALENDAR_SCOPES = "openid email https://www.googleapis.com/auth/calendar.events"
 
   included do
     setup :configure_google_for_test
@@ -52,6 +54,29 @@ module GoogleCalendarTestHelper
         body: { error: "invalid_grant", error_description: "Token has been expired or revoked." }.to_json,
         headers: { "Content-Type" => "application/json" }
       )
+    end
+
+    def stub_google_revoke(status: 200)
+      stub_request(:post, GOOGLE_REVOKE_URL).to_return(status:)
+    end
+
+    # Rotated or lost encryption keys leave valid envelopes that no
+    # longer decrypt. update_column would re-encrypt, so corrupt the
+    # ciphertext with raw SQL, exactly what key rotation looks like.
+    def corrupt_google_token!(account, column = :refresh_token)
+      raw = GoogleAccount.connection.select_value(
+        "SELECT #{column} FROM google_accounts WHERE id = #{account.id}"
+      )
+      tampered = raw.dup
+      tampered[raw.length / 2] = (tampered[raw.length / 2] == "A" ? "B" : "A")
+      GoogleAccount.connection.execute(
+        "UPDATE google_accounts SET #{column} = #{GoogleAccount.connection.quote(tampered)} WHERE id = #{account.id}"
+      )
+      account.reload
+    end
+
+    def google_forbidden_body(reason = "rateLimitExceeded")
+      { "error" => { "code" => 403, "errors" => [ { "reason" => reason } ] } }
     end
 
     def stub_google_code_exchange(access_token: "new-access-token", refresh_token: "new-refresh-token", id_token: google_id_token, scope: nil)
