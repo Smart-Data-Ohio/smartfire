@@ -1,6 +1,10 @@
 class Accounts::Bots::CredentialsController < ApplicationController
-  before_action :ensure_can_administer
   before_action :set_bot
+  # The agent's owner may list and revoke its credentials; issuing a new
+  # one needs a current administrator. Legacy bots without an agent row
+  # have no owner, so only administrators reach them.
+  before_action :ensure_can_manage_bot, only: %i[ index destroy ]
+  before_action :ensure_can_administer, only: :create
   before_action :set_agent
 
   def index
@@ -31,6 +35,10 @@ class Accounts::Bots::CredentialsController < ApplicationController
   private
     def set_bot
       @bot = User.active_bots.find(params[:bot_id])
+    end
+
+    def ensure_can_manage_bot
+      head :forbidden unless Current.user.administrator? || @bot.agent&.owner == Current.user
     end
 
     def set_agent

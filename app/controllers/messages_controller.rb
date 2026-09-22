@@ -17,7 +17,10 @@ class MessagesController < ApplicationController
 
     if @messages.any?
       fresh_when @messages
-      Message.preload_rendering_details(@messages) unless performed?
+      unless performed?
+        Message.preload_rendering_details(@messages)
+        Message::MentionPreloader.preload_for(@messages)
+      end
     else
       head :no_content
     end

@@ -29,6 +29,7 @@ class User < ApplicationRecord
   normalizes :github_login, with: ->(login) { login.to_s.strip.downcase.presence }
 
   validates :github_login, uniqueness: { case_sensitive: false, message: "is already linked to another user" }, allow_nil: true
+  validate :github_login_must_match_verified_account, if: :will_save_change_to_github_login?
   validate :inbox_preferences_must_be_boolean
 
   normalizes :icon_name, with: ->(name) { Icons.normalize_name(name) }
@@ -68,6 +69,12 @@ class User < ApplicationRecord
     self[:inbox_preferences] = existing.merge((hash || {}).stringify_keys.slice(*User::InboxPreferences::KEYS))
   end
 
+  # True while a connected GitHub account vouches for the login: GitHub
+  # confirmed it when the token was linked, so the profile cannot edit it.
+  def github_login_verified?
+    github_connected_account&.connected? || false
+  end
+
   def initials
     name.scan(/\b\w/).join
   end
@@ -102,6 +109,10 @@ class User < ApplicationRecord
       Calendar::DisconnectCleanupJob.perform_later([], google_account.cleanup_snapshot, google_account.id) if google_account&.usable?
       google_account&.mark_disconnected!("Account deactivated")
       github_connected_account&.mark_disconnected!("Account deactivated")
+      # Agents this person owns stop with them: suspension revokes their
+      # grants, suspended agents' Bearer tokens are refused (401), and their
+      # bot keys fail every capability check (403).
+      Agent.where(owner_id: id).find_each(&:suspend!)
 
       update! status: :deactivated, email_address: deactived_email_address
     end
@@ -134,6 +145,13 @@ class User < ApplicationRecord
         successor = remaining.find { |membership| membership.user.active? && membership.user.administrator? } || remaining.first
         successor.change_stage_role!("host")
       end
+    end
+
+    def github_login_must_match_verified_account
+      return unless github_login_verified?
+      return if github_login == github_connected_account.github_login.to_s.strip.downcase
+
+      errors.add(:github_login, "is set by your linked GitHub account")
     end
 
     def inbox_preferences_must_be_boolean

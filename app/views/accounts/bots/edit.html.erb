@@ -13,7 +13,7 @@
 
   <hr class="separator full-width margin-block-double">
 
-  <% if Current.user.administrator? %>
+  <% if Current.user.administrator? || @bot.agent&.owner == Current.user %>
     <div class="flex align-center gap justify-space-between margin-block-end">
       <%= link_to account_bot_credentials_path(@bot), class: "btn full-width txt--small" do %>
         <%= image_tag "key.svg", aria: { hidden: "true" }, size: 20 %>
@@ -54,8 +54,12 @@
     <% if account&.usable? %>
       <p>Connected as <%= account.github_login %></p>
       <p>Approved write actions post from PR threads as <strong>@<%= account.github_login %></strong> on GitHub.</p>
+      <% if Current.user.administrator? %>
       <%= button_to "Disconnect GitHub", account_bot_github_connection_path(@bot), method: :delete, class: "btn btn--negative",
             form: { data: { turbo_confirm: "Disconnect GitHub? This agent will no longer be able to request PR write actions." } } %>
+      <% end %>
+    <% elsif !Current.user.administrator? %>
+      <p>No GitHub account is connected. Only an administrator can connect one.</p>
     <% else %>
       <% if account %>
         <p>GitHub rejected the connection<% if account.disconnected_reason.present? %> (<%= account.disconnected_reason %>)<% end %>. Paste a new token to reconnect.</p>

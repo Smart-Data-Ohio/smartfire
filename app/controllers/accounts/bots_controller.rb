@@ -2,6 +2,7 @@ class Accounts::BotsController < ApplicationController
   before_action :ensure_can_administer, only: %i[ index new create destroy ]
   before_action :set_bot, only: %i[ edit update destroy ]
   before_action :ensure_can_manage_bot, only: %i[ edit update ]
+  before_action :ensure_can_change_webhook, only: :update
   before_action :set_agent, only: %i[ edit update ]
 
   def index
@@ -12,10 +13,14 @@ class Accounts::BotsController < ApplicationController
     @bot = User.active_bots.new
   end
 
+  # Shows the new bot's key once: only its digest is stored.
   def create
-    bot = User.create_bot! bot_params
-    bot.create_agent!(kind: :workspace, owner: Current.user)
-    redirect_to account_bots_url
+    @bot = User.create_bot! bot_params
+    @bot.create_agent!(kind: :workspace, owner: Current.user)
+    @bot_key = @bot.plain_bot_key
+
+    no_store_response!
+    render "accounts/bots/keys/show", status: :created
   rescue ActiveRecord::RecordInvalid => error
     @bot = error.record
     render :new, status: :unprocessable_entity
@@ -51,6 +56,17 @@ class Accounts::BotsController < ApplicationController
       head :forbidden unless Current.user.administrator? || @bot.agent&.owner == Current.user
     end
 
+    # The webhook URL decides where the app posts room messages and where it
+    # makes server-side requests, so only a current administrator may change
+    # it. An owner who is no longer (or never was) an administrator can still
+    # submit the edit form unchanged.
+    def ensure_can_change_webhook
+      return if Current.user.administrator?
+      return unless params[:user].respond_to?(:key?) && params[:user].key?(:webhook_url)
+
+      head :forbidden if params[:user][:webhook_url].to_s.strip != @bot.webhook_url.to_s
+    end
+
     # A legacy bot without an agent row stays that way: reading or editing
     # its page must not silently convert it into an agent.
     def set_agent
@@ -58,7 +74,9 @@ class Accounts::BotsController < ApplicationController
     end
 
     def bot_params
-      params.require(:user).permit(:name, :avatar, :webhook_url, :icon_name)
+      permitted = %i[ name avatar icon_name ]
+      permitted << :webhook_url if Current.user.administrator?
+      params.require(:user).permit(*permitted)
     end
 
     def agent_params

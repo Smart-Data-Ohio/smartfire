@@ -317,4 +317,63 @@ class ActivityItems::RecorderTest < ActiveSupport::TestCase
       2.times { ActivityItems::Recorder.record!(recipient: @recipient, source: message, event_type: "mention") }
     end
   end
+
+  test "recording a thread message queries memberships a constant number of times as followers grow" do
+    thread = ChannelThread.create!(room: @room, creator: @author, name: "Follower ceiling thread")
+    ThreadMembership.join!(thread, @author)
+    add_followers(thread, count: 5, offset: 0)
+    message = thread.post_message!(creator: @author,
+      attributes: { body: "Update", client_message_id: "activity-follower-ceiling" })
+
+    ActivityItem.where(source: message).delete_all
+    small = count_membership_queries { ActivityItems::Recorder.record_message!(message) }
+
+    add_followers(thread, count: 25, offset: 5)
+    ActivityItem.where(source: message).delete_all
+    large = count_membership_queries { ActivityItems::Recorder.record_message!(message) }
+
+    assert_equal small, large,
+      "membership queries should stay constant, got #{small} for 5 followers and #{large} for 30"
+  end
+
+  test "a root message loads only the mentionee and reply-author memberships" do
+    30.times { |i| @room.memberships.create!(user: User.create!(name: "Room member #{i}")) }
+    source = @room.messages.create!(creator: @recipient, body: "Original",
+      client_message_id: "activity-scoped-source")
+    message = @room.messages.create!(
+      creator: @author,
+      body: "Hey #{mention_attachment_for(:david)}",
+      reply_to_message: source,
+      client_message_id: "activity-scoped-root"
+    )
+
+    memberships = ActivityItems::Recorder.new(message).send(:room_memberships)
+
+    assert_equal [ users(:david).id ], memberships.keys
+  end
+
+  private
+    def add_followers(thread, count:, offset:)
+      count.times do |i|
+        user = User.create!(name: "Follower #{offset + i}")
+        @room.memberships.create!(user:)
+        ThreadMembership.join!(thread, user).update!(involvement: "everything")
+      end
+    end
+
+    # Membership lookups only: every recipient still needs its own activity
+    # item row (plus its broadcast), so total queries grow with followers by
+    # design and only the candidate computation must stay flat.
+    def count_membership_queries
+      count = 0
+      subscription = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        count += 1 if payload[:name] != "SCHEMA" && !payload[:cached] && payload[:sql].match?(/membership/i)
+      end
+
+      ActiveRecord::Base.connection_pool.clear_query_cache
+      yield
+      count
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscription)
+    end
 end

@@ -1,6 +1,8 @@
 class Accounts::Bots::GithubConnectionsController < ApplicationController
+  # Only a current administrator may link, relink, or unlink the agent's
+  # GitHub identity: it decides whom approved write actions act as.
+  before_action :ensure_can_administer
   before_action :set_bot
-  before_action :ensure_can_manage_bot
 
   # Links the agent's own fine-grained personal access token (for a GitHub
   # machine user dedicated to the agent) so approved write actions run as
@@ -34,9 +36,5 @@ class Accounts::Bots::GithubConnectionsController < ApplicationController
   private
     def set_bot
       @bot = User.active_bots.find(params[:bot_id])
-    end
-
-    def ensure_can_manage_bot
-      head :forbidden unless Current.user.administrator? || @bot.agent&.owner == Current.user
     end
 end

@@ -12,19 +12,19 @@ export default class TypingTracker {
     clearInterval(this.timer)
   }
 
-  add(name) {
-    this.currentlyTyping[name] = Date.now()
+  add(id, name) {
+    this.currentlyTyping[id] = { name, timestamp: Date.now() }
     this.#refresh()
   }
 
-  remove(name) {
-    delete this.currentlyTyping[name]
+  remove(id) {
+    delete this.currentlyTyping[id]
     this.#refresh()
   }
 
   #refresh() {
     this.#purgeInactive()
-    const names = Object.keys(this.currentlyTyping).sort()
+    const names = Object.values(this.currentlyTyping).map(entry => entry.name).sort()
 
     if (names.length > 0) {
       this.callback(`${names.join(", ")}`)
@@ -36,7 +36,7 @@ export default class TypingTracker {
   #purgeInactive() {
     const cutoff = Date.now() - TYPING_TIMEOUT
     this.currentlyTyping = Object.fromEntries(
-      Object.entries(this.currentlyTyping).filter(([_name, timestamp]) => timestamp > cutoff)
+      Object.entries(this.currentlyTyping).filter(([_id, entry]) => entry.timestamp > cutoff)
    )
   }
 }

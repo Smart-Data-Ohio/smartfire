@@ -48,7 +48,7 @@ class Agents::DirectoryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "legacy bot key request is forbidden" do
-    get agents_url(bot_key: users(:bender).bot_key)
+    get agents_url(bot_key: bot_key_for(users(:bender)))
 
     assert_response :forbidden
   end

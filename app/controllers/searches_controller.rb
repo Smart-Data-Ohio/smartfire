@@ -27,7 +27,9 @@ class SearchesController < ApplicationController
     # row, and costs 12 queries against 370.
     def set_messages
       if query.present?
-        @messages = Current.user.reachable_messages.with_rendering_details.search(query).last(100)
+        @messages = Message::MentionPreloader.preload_for(
+          Current.user.reachable_messages.with_rendering_details.search(query).last(100)
+        )
       else
         @messages = Message.none
       end

@@ -210,4 +210,56 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to user_profile_url
     assert_nil users(:david).reload.github_login
   end
+
+  test "changing email requires the current password" do
+    put user_profile_url, params: { user: { email_address: "newhire@smartdata.net" } }
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "Current password is required to change your email address"
+    assert_equal "david@37signals.com", users(:david).reload.email_address
+    assert_nil users(:david).email_self_changed_at
+  end
+
+  test "changing email with a wrong current password is refused" do
+    put user_profile_url, params: { user: { email_address: "newhire@smartdata.net", current_password: "wrong-password" } }
+
+    assert_response :unprocessable_entity
+    assert_includes response.body, "Current password is incorrect"
+    assert_equal "david@37signals.com", users(:david).reload.email_address
+  end
+
+  test "a new password cannot stand in for the current one" do
+    put user_profile_url, params: { user: { email_address: "newhire@smartdata.net", password: "brand-new-secret", current_password: "brand-new-secret" } }
+
+    assert_response :unprocessable_entity
+    assert_equal "david@37signals.com", users(:david).reload.email_address
+    assert users(:david).authenticate("secret123456")
+  end
+
+  test "changing email with the current password records a self-change" do
+    freeze_time do
+      put user_profile_url, params: { user: { email_address: "david@smartdata.net", current_password: "secret123456" } }
+
+      assert_redirected_to user_profile_url
+      assert_equal "david@smartdata.net", users(:david).reload.email_address
+      assert_equal Time.current, users(:david).email_self_changed_at
+    end
+  end
+
+  test "other profile edits and case-only email edits need no password and record nothing" do
+    put user_profile_url, params: { user: { name: "Dave", email_address: "David@37signals.com" } }
+
+    assert_redirected_to user_profile_url
+    assert_equal "Dave", users(:david).reload.name
+    assert_nil users(:david).email_self_changed_at
+  end
+
+  test "profile asks for the current password only when the account has one" do
+    get user_profile_url
+    assert_select "input[name=?][autocomplete=current-password]", "user[current_password]"
+
+    users(:david).update_columns(password_digest: nil)
+    get user_profile_url
+    assert_select "input[name=?]", "user[current_password]", count: 0
+  end
 end

@@ -61,16 +61,95 @@ class ChannelThreadsControllerTest < ActionDispatch::IntegrationTest
     assert_response :no_content
   end
 
-  test "browsing does not join and stale active threads archive on the thread surface" do
+  test "browsing does not join and stale threads show as closed without writes" do
     @thread.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
     assert_not @thread.memberships.exists?(user: users(:kevin))
 
     sign_in :kevin
-    get room_threads_url(@room, state: "all", format: :json)
+    assert_no_changes -> { @thread.reload.closed_at } do
+      get room_threads_url(@room, state: "all", format: :json)
+    end
 
     assert_response :success
-    assert_predicate @thread.reload, :closed?
+    assert_equal "closed", response.parsed_body["threads"].find { |row| row["id"] == @thread.id }["status"]
     assert_not @thread.memberships.exists?(user: users(:kevin))
+
+    get room_threads_url(@room, format: :json)
+    assert_response :success
+    assert_empty response.parsed_body["threads"].select { |row| row["id"] == @thread.id }
+
+    get room_threads_url(@room, state: "closed", format: :json)
+    assert_response :success
+    assert_equal "closed", response.parsed_body["threads"].find { |row| row["id"] == @thread.id }["status"]
+  end
+
+  test "reopening a time-stale thread restarts its archive clock instead of leaving it closed" do
+    @thread.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+    assert_predicate @thread.reload, :closed?
+
+    sign_in :jz
+    patch room_thread_url(@room, @thread, format: :json), params: { thread: { status: "active" } }
+    assert_response :success
+    assert_predicate @thread.reload, :active?
+    assert @thread.last_activity_at > 1.minute.ago
+
+    get room_threads_url(@room, format: :json)
+    assert_response :success
+    assert_includes response.parsed_body.fetch("threads").pluck("id"), @thread.id
+
+    get room_threads_url(@room, state: "closed", format: :json)
+    assert_response :success
+    assert_not_includes response.parsed_body.fetch("threads").pluck("id"), @thread.id
+
+    stale = ChannelThread.create!(room: @room, creator: @creator, name: "Model reopen")
+    stale.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+    stale.reopen!
+    assert_predicate stale.reload, :active?
+  end
+
+  test "unlocking a time-stale thread reopens it instead of leaving it closed" do
+    @thread.lock_conversation!
+    @thread.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+
+    sign_in :david
+    patch room_thread_url(@room, @thread, format: :json), params: { thread: { status: "active" } }
+    assert_response :success
+    assert_predicate @thread.reload, :active?
+    assert @thread.last_activity_at > 1.minute.ago
+
+    locked = ChannelThread.create!(room: @room, creator: @creator, name: "Model unlock")
+    locked.lock_conversation!
+    locked.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+    locked.unlock_conversation!
+    assert_predicate locked.reload, :active?
+  end
+
+  test "posting to a thread persists closed_at for its stale siblings" do
+    sign_in :jz
+    stale = ChannelThread.create!(room: @room, creator: @creator, name: "Stale sibling")
+    stale.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+    assert_nil stale.reload.closed_at
+
+    live = ChannelThread.create!(room: @room, creator: @creator, name: "Live sibling")
+    live.post_message!(creator: @creator, attributes: { body: "Hello", client_message_id: "sweep-trigger" })
+
+    assert_predicate stale.reload, :closed?
+  end
+
+  test "thread index costs a constant number of queries as threads grow" do
+    sign_in :jz
+    create_index_threads(2, offset: 0)
+
+    get room_threads_url(@room)
+    assert_response :success
+    small = count_queries { get room_threads_url(@room) }
+
+    create_index_threads(4, offset: 2)
+    large = count_queries { get room_threads_url(@room) }
+    assert_response :success
+
+    assert_equal small, large,
+      "thread index should be O(1) in queries, got #{small} then #{large}"
   end
 
   test "joining accepts only thread notification preferences and preserves an existing preference when omitted" do
@@ -108,6 +187,37 @@ class ChannelThreadsControllerTest < ActionDispatch::IntegrationTest
       post room_threads_url(direct, format: :json), params: { thread: { name: "Not permitted" } }
     end
     assert_response :forbidden
+  end
+
+  test "closed listing finds stale threads in SQL with one threads query" do
+    @thread.update_columns(last_activity_at: 1.hour.ago, closed_at: 30.minutes.ago)
+
+    old_closed = ChannelThread.create!(room: @room, creator: @creator, name: "Old closed")
+    old_closed.update_columns(last_activity_at: 4.hours.ago, closed_at: 3.hours.ago)
+
+    stale = ChannelThread.create!(room: @room, creator: @creator, name: "Gone quiet")
+    stale.update_columns(last_activity_at: 3.hours.ago, auto_archive_after_minutes: 60)
+
+    locked = ChannelThread.create!(room: @room, creator: @creator, name: "Moderated")
+    locked.lock_conversation!
+    locked.update_columns(last_activity_at: 2.hours.ago)
+
+    ChannelThread.create!(room: @room, creator: @creator, name: "Still going")
+
+    sign_in :jz
+    selects = channel_thread_selects { get room_threads_url(@room, state: "closed", format: :json) }
+    assert_response :success
+    assert_equal 1, selects.size, "expected a single channel_threads query, ran: #{selects.inspect}"
+    assert_equal [ @thread.id, locked.id, stale.id, old_closed.id ],
+      response.parsed_body.fetch("threads").pluck("id")
+
+    board = Rooms::Board.create_for({ name: "Launch", creator: users(:david) }, users: [ users(:david), users(:jz) ])
+    board_post = ChannelThread.create!(room: board, creator: @creator, name: "Launch post", work_status: "planned")
+    board_post.update_columns(last_activity_at: 3.hours.ago, auto_archive_after_minutes: 60)
+
+    get room_threads_url(board, state: "closed", format: :json)
+    assert_response :success
+    assert_empty response.parsed_body.fetch("threads")
   end
 
   test "a deleted starter is represented explicitly so open clients clear its preview" do
@@ -349,4 +459,44 @@ class ChannelThreadsControllerTest < ActionDispatch::IntegrationTest
     assert_nil payload.fetch("work_owner")
     assert_empty @thread.work_thread_events
   end
+
+  private
+    def create_index_threads(count, offset:)
+      count.times do |i|
+        number = offset + i
+        thread = ChannelThread.create!(room: @room, creator: @creator, name: "Index thread #{number}")
+        thread.post_message!(creator: @creator,
+          attributes: { body: "Index message #{number}", client_message_id: "index-thread-#{number}" })
+      end
+    end
+
+    def count_queries
+      count = 0
+      subscription = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        count += 1 unless payload[:name] == "SCHEMA" || payload[:cached]
+      end
+
+      ActiveRecord::Base.connection.clear_query_cache
+      yield
+      count
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscription)
+    end
+
+    # Every uncached SELECT against channel_threads in the block, so the
+    # closed listing can prove it filters in SQL instead of loading
+    # active threads into Ruby.
+    def channel_thread_selects
+      selects = []
+      subscription = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        sql = payload[:sql].to_s
+        selects << sql if !payload[:cached] && sql.match?(/FROM "channel_threads"/)
+      end
+
+      ActiveRecord::Base.connection.clear_query_cache
+      yield
+      selects
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscription)
+    end
 end

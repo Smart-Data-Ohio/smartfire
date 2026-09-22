@@ -1,10 +1,13 @@
 module User::Bannable
   extend ActiveSupport::Concern
 
+  # Agents the banned person owns stop too, as on deactivation: suspension
+  # revokes their grants and refuses their credentials.
   def ban
     transaction do
       create_bans_from_sessions
       apply_ban
+      Agent.where(owner_id: id).find_each(&:suspend!)
       banned!
     end
   end

@@ -21,6 +21,23 @@ class MessagesHelperTest < ActionView::TestCase
     assert_no_match /trix-content/, presentation
   end
 
+  test "markdown presentation reads preloaded mentions without querying" do
+    message = Message.create!(
+      room: rooms(:pets),
+      markdown_source: "Hi @[David]",
+      client_message_id: "markdown-preloaded-mention",
+      creator: users(:jason)
+    )
+    loaded = Message.with_rendering_details.find(message.id)
+    Message::MentionPreloader.preload_for([ loaded ])
+
+    presentation = nil
+    assert_no_queries { presentation = view.markdown_message_presentation(loaded.body.body) }
+    assert_match %r{<div class="mention mention--user-#{users(:david).id}"}, presentation
+  ensure
+    Current.mentioned_users_by_id = nil
+  end
+
   test "legacy mention presentation includes a stable user id marker" do
     message = Message.create!(
       room: rooms(:pets),
