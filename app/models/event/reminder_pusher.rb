@@ -1,17 +1,23 @@
 class Event::ReminderPusher
+  # A push this late is stale (the runner was down): the moment passed,
+  # so stay silent instead of announcing an event already underway.
+  STALE_AFTER_START = 5.minutes
+
   attr_reader :event
 
   def initialize(event:)
     @event = event
   end
 
-  def push
-    enqueue_payload_for_delivery build_payload, push_subscriptions_for_recipients
+  def push(now: Time.current)
+    return if stale?(now)
+
+    enqueue_payload_for_delivery build_payload(now), push_subscriptions_for_recipients
   end
 
   private
-    def build_payload
-      body = "Starts in 15 minutes: #{event.title}"
+    def build_payload(now)
+      body = "#{relative_start(now)}: #{event.title}"
       body += " in #{event.venue.name}" if event.venue.present?
 
       {
@@ -19,6 +25,20 @@ class Event::ReminderPusher
         body:,
         path: Rails.application.routes.url_helpers.room_event_path(event.room, event)
       }
+    end
+
+    def relative_start(now)
+      minutes = ((event.starts_at - now) / 60).round
+
+      if minutes <= 0
+        "Starting now"
+      else
+        "Starts in #{minutes} #{'minute'.pluralize(minutes)}"
+      end
+    end
+
+    def stale?(now)
+      (event.ends_at.present? && event.ends_at <= now) || event.starts_at < now - STALE_AFTER_START
     end
 
     def push_subscriptions_for_recipients

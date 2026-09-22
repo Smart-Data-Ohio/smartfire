@@ -134,6 +134,28 @@ class Event::ReminderDispatcherTest < ActiveSupport::TestCase
     assert_equal "event_reminder", ActivityItem.find_by!(user: users(:jason), source: occurrences.second).event_type
   end
 
+  test "a stale event after runner downtime is claimed but never pushed" do
+    # The 15-minute window passed while the runner was down; the event is
+    # still inside the grace window, so it is claimed like any due event,
+    # but the push stays silent because the moment passed.
+    @event.update!(starts_at: 2.days.from_now)
+    stale = @room.events.create!(
+      organizer: @organizer, title: "Missed standup",
+      starts_at: 30.minutes.ago, ends_at: 30.minutes.from_now, time_zone: "UTC"
+    )
+    stale.attendances.create!(user: users(:jason), response: :going)
+
+    Rails.configuration.x.web_push_pool.expects(:queue).never
+
+    assert_enqueued_with(job: Event::ReminderPushJob, args: [ stale ]) do
+      Event::ReminderDispatcher.dispatch_due!
+    end
+    perform_enqueued_jobs only: Event::ReminderPushJob
+
+    assert_not_nil stale.reload.reminded_at
+    assert_equal "event_reminder", ActivityItem.find_by!(user: users(:jason), source: stale).event_type
+  end
+
   test "one failing event does not stop the others" do
     other = @room.events.create!(
       organizer: @organizer, title: "Other standup", starts_at: 10.minutes.from_now, time_zone: "UTC"
