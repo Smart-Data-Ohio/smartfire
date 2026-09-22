@@ -44,16 +44,27 @@ class User::BotTest < ActiveSupport::TestCase
     assert_equal bot, User.authenticate_bot("#{bot.id}-#{token}")
   end
 
-  test "authentication trusts the digest, not the plaintext column" do
+  test "a key reset by a rolled-back release retires the old key despite the stale digest" do
+    bot = User.create_bot!(name: "Bender")
+    leaked_key = bot.plain_bot_key
+
+    # origin/main's reset_bot_key writes only bot_token.
+    bot.update_columns(bot_token: "ResetDuring1")
+    assert_equal Digest::SHA256.hexdigest(leaked_key.split("-", 2).last), bot.reload.bot_token_digest, "digest is stale"
+
+    assert_nil User.authenticate_bot(leaked_key)
+    assert_equal bot, User.authenticate_bot("#{bot.id}-ResetDuring1")
+    assert_equal Digest::SHA256.hexdigest("ResetDuring1"), bot.reload.bot_token_digest, "digest re-backfilled"
+    assert_nil User.authenticate_bot(leaked_key)
+  end
+
+  test "once the plaintext column is gone the digest alone decides" do
     bot = User.create_bot!(name: "Bender")
     key = bot.plain_bot_key
+    bot.update_columns(bot_token: nil)
 
-    bot.update_columns(bot_token: "tampered1234")
     assert_equal bot, User.authenticate_bot(key)
-    assert_nil User.authenticate_bot("#{bot.id}-tampered1234")
-
-    bot.update_columns(bot_token_digest: Digest::SHA256.hexdigest("other"))
-    assert_nil User.authenticate_bot(key)
+    assert_nil User.authenticate_bot("#{bot.id}-WrongToken12")
   end
 
   test "a bot written without a digest by the previous release authenticates once and is backfilled" do

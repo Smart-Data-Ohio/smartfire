@@ -32,9 +32,13 @@ module User::Bot
       end
     end
 
-    # Looks the bot up by id, then compares token digests in constant time.
-    # A row without a digest (written by a rolled-back previous release)
-    # is checked against its plaintext once and gets its digest backfilled.
+    # Looks the bot up by id and compares in constant time.
+    #
+    # TRANSITIONAL: while the plaintext bot_token column exists it is
+    # authoritative, because a rolled-back previous release writes only the
+    # plaintext (a key reset there leaves the digest describing the old,
+    # possibly leaked key). A digest that no longer matches the plaintext is
+    # re-backfilled. Once bot_token is dropped, the digest alone decides.
     def authenticate_bot(bot_key)
       bot_id, bot_token = bot_key.to_s.split("-", 2)
       return if bot_id.blank? || bot_token.blank? || !bot_id.match?(/\A\d+\z/)
@@ -42,11 +46,14 @@ module User::Bot
       bot = active_bots.find_by(id: bot_id)
       return if bot.nil?
 
-      if bot.bot_token_digest.present?
-        bot if ActiveSupport::SecurityUtils.secure_compare(bot.bot_token_digest, digest_bot_token(bot_token))
-      elsif bot.bot_token.present? && ActiveSupport::SecurityUtils.secure_compare(bot.bot_token, bot_token)
-        bot.update_columns(bot_token_digest: digest_bot_token(bot_token))
+      if bot.has_attribute?(:bot_token) && bot.bot_token.present?
+        return unless ActiveSupport::SecurityUtils.secure_compare(bot.bot_token, bot_token)
+
+        digest = digest_bot_token(bot_token)
+        bot.update_columns(bot_token_digest: digest) unless bot.bot_token_digest == digest
         bot
+      elsif bot.bot_token_digest.present?
+        bot if ActiveSupport::SecurityUtils.secure_compare(bot.bot_token_digest, digest_bot_token(bot_token))
       end
     end
 
