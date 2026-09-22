@@ -17,7 +17,7 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
     Event::ReminderDispatcher.expects(:dispatch_due!).once
 
     assert_enqueued_with(job: Retention::PruneJob) do
-      assert_equal [ "delayed jobs", "event reminders", "retention prune" ], @runner.tick
+      assert_equal [ "delayed jobs", "event reminders", "stuck rooms", "retention prune" ], @runner.tick
     end
   end
 
@@ -47,6 +47,33 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
       assert_no_enqueued_jobs do
         assert_equal [ "delayed jobs", "event reminders" ], @runner.tick
       end
+    end
+  end
+
+  test "a tick re-enqueues destroys for rooms stuck as deleted once the sweep is due" do
+    Resque::Scheduler.stubs(:handle_delayed_items)
+    Event::ReminderDispatcher.stubs(:dispatch_due!)
+
+    stuck = Rooms::Closed.create_for({ name: "Stuck", creator: users(:david) }, users: [ users(:david) ])
+    stuck.begin_destroy!
+    stuck.update_columns(deleted_at: 11.minutes.ago)
+    fresh = Rooms::Closed.create_for({ name: "Fresh", creator: users(:david) }, users: [ users(:david) ])
+    fresh.begin_destroy!
+
+    now = Time.current
+    travel_to(now) do
+      assert_enqueued_with(job: Room::DestroyJob, args: [ stuck.id ]) { @runner.tick }
+
+      destroy_args = enqueued_jobs.select { |job| job[:job] == Room::DestroyJob }.map { |job| job[:args] }
+      assert_equal [ [ stuck.id ] ], destroy_args
+    end
+
+    travel_to(now + 30.seconds) do
+      assert_no_enqueued_jobs { @runner.tick }
+    end
+
+    travel_to(now + 5.minutes) do
+      assert_enqueued_with(job: Room::DestroyJob, args: [ stuck.id ]) { @runner.tick }
     end
   end
 

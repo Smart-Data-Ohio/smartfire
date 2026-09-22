@@ -66,6 +66,7 @@ The `periodic` Procfile process runs `bin/periodic`, one loop for every recurrin
 
 - **Delayed jobs** (every 30 seconds): moves due resque-scheduler delayed jobs — ActiveJob retries with backoff — onto their queues. This replaces a scheduler daemon; there is deliberately no `resque-scheduler` process.
 - **Event reminders** (every `EVENT_REMINDERS_INTERVAL` seconds, default 30): dispatches due event reminders.
+- **Stuck rooms** (every 5 minutes): re-enqueues `Room::DestroyJob` for rooms marked deleted over 10 minutes ago that are still present, covering a destroy whose job never ran.
 - **Data retention** (every `RETENTION_PRUNE_INTERVAL` seconds, default daily): enqueues `Retention::PruneJob`, which deletes, in batches:
   - `agent_events` older than 90 days,
   - `activity_items` the user has seen (read or handled) and untouched for 180 days — unread items are never pruned,

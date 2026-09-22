@@ -136,6 +136,35 @@ class Room::DestroyJobTest < ActiveJob::TestCase
     end
   end
 
+  test "destroy enqueue waits for the marking transaction to commit" do
+    assert_no_enqueued_jobs do
+      Room.transaction do
+        @room.begin_destroy!
+        Room::DestroyJob.perform_later(@room.id)
+        raise ActiveRecord::Rollback
+      end
+    end
+
+    assert_not_predicate @room.reload, :deleted?
+  end
+
+  test "destroy retries a transient failure and resumes where it stopped" do
+    @room.begin_destroy!
+
+    Room.any_instance.stubs(:destroy!).raises(Net::ReadTimeout, "boom")
+    assert_enqueued_with(job: Room::DestroyJob, args: [ @room.id ]) do
+      Room::DestroyJob.perform_now(@room.id)
+    end
+
+    # The content is already gone; the retry only has the room itself left.
+    assert_empty @room.messages.reload
+    Room.any_instance.unstub(:destroy!)
+
+    assert_difference -> { Room.count }, -1 do
+      Room::DestroyJob.perform_now(@room.id)
+    end
+  end
+
   test "destroy never loads more than a batch of messages at once" do
     room = Rooms::Closed.create_for({ name: "Batchy", creator: @david }, users: [ @david ])
     thread = ChannelThread.create!(room: room, creator: @david, name: "Big thread")

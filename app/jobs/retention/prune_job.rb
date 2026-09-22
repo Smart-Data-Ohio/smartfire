@@ -43,11 +43,9 @@ class Retention::PruneJob < ApplicationJob
       end
     end
 
-    # A destroy already in flight makes this a harmless duplicate:
-    # Room::DestroyJob is idempotent.
+    # The periodic runner sweeps stuck destroys every few minutes; this
+    # daily pass is the backstop with a longer grace.
     def reenqueue_stuck_room_destroys
-      Room.deleted.where(deleted_at: ...STUCK_ROOM_GRACE.ago).pluck(:id).each do |room_id|
-        Room::DestroyJob.perform_later(room_id)
-      end
+      Room::DestroyJob.reenqueue_stuck!(grace: STUCK_ROOM_GRACE)
     end
 end

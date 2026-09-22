@@ -12,9 +12,9 @@ class RoomsController < ApplicationController
   end
 
   def destroy
-    # Marking and enqueueing share one transaction: if the queue is down the
-    # request fails with the room intact instead of stranding a room that is
-    # marked deleted with no job to finish it.
+    # The destroy job defers its enqueue past this transaction's commit, so
+    # it never runs on pre-commit state. If the queue is down the room stays
+    # marked deleted and the periodic sweep re-enqueues its destroy.
     Room.transaction do
       @room.begin_destroy!
       Room::DestroyJob.perform_later(@room.id)
