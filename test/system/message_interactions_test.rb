@@ -254,6 +254,25 @@ class MessageInteractionsTest < ApplicationSystemTestCase
     save_screenshot "forward-dialog.png"
   end
 
+  test "forwarding twice in a row submits only once" do
+    within_message(messages(:third)) do
+      right_click_message
+    end
+    assert_message_menu_open
+    click_button "Forward"
+    assert_selector "dialog[open]", visible: true, wait: 10
+
+    find(".message-forward-dialog__destination input", match: :first, wait: 10).check
+    submit = find("[data-message-actions-target='forwardSubmit']")
+
+    assert_difference -> { messages(:third).forwards.count }, 1 do
+      submit.click
+      assert_selector "[data-message-actions-target='forwardStatus']", text: /Forwarded to 1 destination/, wait: 10
+      assert_selector "[data-message-actions-target='forwardSubmit']:disabled"
+    end
+    assert_no_selector "dialog[open]", wait: 10
+  end
+
   test "groups emoji reactions, updates the live count, and highlights the current user" do
     using_session("David") do
       sign_in "david@37signals.com"

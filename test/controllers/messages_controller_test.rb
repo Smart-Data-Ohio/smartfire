@@ -48,6 +48,24 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "room message list announces live appends" do
+    get room_url(@room)
+
+    assert_response :success
+    assert_select "##{dom_id(@room, :messages)}[role='log'][aria-live='polite'][aria-relevant='additions']", 1
+  end
+
+  test "image attachments use the filename as alt text" do
+    post room_messages_url(@room, format: :turbo_stream), params: {
+      message: { attachment: fixture_file_upload("moon.jpg", "image/jpeg"), client_message_id: "alt-text-1" }
+    }
+    assert_response :success
+
+    get room_url(@room)
+    assert_response :success
+    assert_select "img.message__attachment[alt='moon']", 1
+  end
+
   test "creating a message broadcasts the message to the room" do
     post room_messages_url(@room, format: :turbo_stream), params: { message: { body: "New one", client_message_id: 999 } }
 

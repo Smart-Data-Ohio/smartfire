@@ -15,6 +15,15 @@ class Accounts::Bots::GrantsControllerTest < ActionDispatch::IntegrationTest
     assert_match "post_messages", response.body
   end
 
+  test "index renders grant timestamps for the local-time controller" do
+    AgentGrant.create!(agent: @agent, granted_by: users(:david), capability: "post_messages")
+
+    get account_bot_grants_url(@bot)
+
+    assert_response :ok
+    assert_select "time[data-local-time-target='datetime'][datetime]", minimum: 1
+  end
+
   test "index lists existing grants with scope and enforcement state" do
     AgentGrant.create!(agent: @agent, room: rooms(:watercooler), granted_by: users(:david), capability: "post_messages")
     AgentGrant.create!(agent: @agent, granted_by: users(:david), capability: "external_action")

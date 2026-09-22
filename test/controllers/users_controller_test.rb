@@ -11,6 +11,21 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "profile message buttons carry the accessible name" do
+    sign_in :david
+
+    get user_url(users(:kevin))
+    assert_response :ok
+    assert_select "button[aria-label='Message Kevin']", 1
+    assert_select "button", text: "Ban Kevin"
+    assert_select "img[aria-label]", 0
+
+    get user_url(users(:bender))
+    assert_response :ok
+    assert_select "button[aria-label='Message Bender Bot']", 1
+    assert_select "img[aria-label]", 0
+  end
+
   test "bot profile links to capability grants for admins" do
     sign_in :david
 

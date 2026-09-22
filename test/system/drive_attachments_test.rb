@@ -50,6 +50,16 @@ class DriveAttachmentsTest < ApplicationSystemTestCase
     attach_from_picker "Budget 2026"
     assert_selector ".composer__drive-attachments .drive-attachment-chip", count: 2
 
+    chip_remove_size = page.evaluate_script(<<~JS)
+      (() => {
+        const button = document.querySelector(".drive-attachment-chip__remove");
+        const rect = button.getBoundingClientRect();
+        return { width: rect.width, height: rect.height };
+      })()
+    JS
+    assert_operator chip_remove_size["width"], :>=, 24, "expected the Drive chip remove button to be at least 24px wide"
+    assert_operator chip_remove_size["height"], :>=, 24, "expected the Drive chip remove button to be at least 24px tall"
+
     # Dropping a pending chip keeps it out of the sent message.
     within_chip("Budget 2026") { find("button").click }
     assert_selector ".composer__drive-attachments .drive-attachment-chip", count: 1
