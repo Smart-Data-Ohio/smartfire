@@ -872,9 +872,11 @@ class HuddlesTest < ApplicationSystemTestCase
 
     find("[data-huddle-target='connection']").click
     assert_no_selector "[data-huddle-target='connectionDetails']:not([hidden])"
-    # Leave the panel closed past a sampling interval, so a stale baseline
-    # would average the next bitrate over the closed gap.
-    sleep 3
+    # Leave the panel closed past one 2 s sampling interval, so a stale
+    # baseline would average the next bitrate over the closed gap. Ruby
+    # sleeps on wall-clock time and interval timers cannot fire early, so
+    # 2.5 s guarantees a skipped tick with room to spare.
+    sleep 2.5
 
     reopened_at = (Time.now.to_f * 1000).to_i
     find("[data-huddle-target='connection']").click
