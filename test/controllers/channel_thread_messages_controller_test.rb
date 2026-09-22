@@ -118,6 +118,18 @@ class ChannelThreadMessagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, refreshes.size
   end
 
+  test "edited thread messages show an edited marker" do
+    sign_in :jz
+
+    patch room_thread_message_url(@room, @thread, @message), params: { message: { markdown_source: "Edited here" } }
+
+    assert_redirected_to room_thread_message_path(@room, @thread, @message)
+
+    get room_thread_url(@room, @thread)
+    assert_response :success
+    assert_select ".message__edited", text: "(edited)"
+  end
+
   test "nested HTML message URL redirects into the parent room shell" do
     sign_in :jz
     get room_thread_message_url(@room, @thread, @message)

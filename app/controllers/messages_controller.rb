@@ -66,6 +66,10 @@ class MessagesController < ApplicationController
     @message.preserve_legacy_attachments_on_next_markdown_render! if !@message.markdown? && attributes[:markdown_source].present?
     @message.assign_attributes(attributes)
     apply_drive_file_ids!(@message) if drive_file_ids_key_present?
+    # edited_at is stamped only here (and the thread endpoint), never by
+    # reaction touches, reply tombstones or card fetches, so the
+    # "(edited)" marker means the author edited after posting.
+    @message.edited_at = Time.current
     @message.save!
 
     @message.broadcast_replace_to @room, :messages, target: [ @message, :presentation ], partial: "messages/presentation", attributes: { maintain_scroll: true }

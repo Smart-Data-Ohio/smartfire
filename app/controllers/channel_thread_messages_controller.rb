@@ -65,6 +65,9 @@ class ChannelThreadMessagesController < ApplicationController
       @message.preserve_legacy_attachments_on_next_markdown_render! if !@message.markdown? && attributes[:markdown_source].present?
       @message.assign_attributes(attributes)
       apply_drive_file_ids!(@message) if replace_drive_attachments
+      # Stamped only by the edit endpoints (see MessagesController),
+      # never by reaction touches, reply tombstones or card fetches.
+      @message.edited_at = Time.current
       @message.save!
     end
     @message.broadcast_replace_to @thread, :messages,

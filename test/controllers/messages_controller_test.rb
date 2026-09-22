@@ -342,6 +342,65 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal @room.id, refreshes.sole["roomId"]
   end
 
+  test "edited messages show an edited marker with the edit time" do
+    message = @room.messages.create!(creator: users(:david), markdown_source: "original", client_message_id: "edited-marker")
+
+    get room_message_url(@room, message)
+    assert_response :success
+    assert_select ".message__edited", count: 0
+
+    put room_message_url(@room, message), params: { message: { markdown_source: "edited" } }
+
+    get room_message_url(@room, message)
+    assert_response :success
+    assert_select ".message__edited", text: "(edited)"
+    assert_select ".message__edited[title^='Edited ']"
+  end
+
+  test "reactions do not mark a message edited" do
+    message = @room.messages.create!(
+      creator: users(:david), markdown_source: "react to this", client_message_id: "edited-reaction",
+      created_at: 1.hour.ago, updated_at: 1.hour.ago
+    )
+    Boost.create!(message:, booster: users(:jason), content: "👍")
+
+    assert_operator message.reload.updated_at, :>, message.created_at
+
+    get room_message_url(@room, message)
+    assert_response :success
+    assert_select ".message__edited", count: 0
+  end
+
+  test "card fetches do not mark a message edited" do
+    pull_request = Github::PullRequest.for_reference(owner: "rails", repo: "rails", number: 530)
+    message = @room.messages.create!(
+      creator: users(:david), markdown_source: "see https://github.com/rails/rails/pull/530",
+      client_message_id: "edited-card", created_at: 1.hour.ago, updated_at: 1.hour.ago
+    )
+
+    pull_request.update!(private: false, title: "Fetched", fetched_at: Time.current)
+
+    get room_message_url(@room, message)
+    assert_response :success
+    assert_select ".message__edited", count: 0
+  end
+
+  test "reply tombstones do not mark the reply edited" do
+    source = @room.messages.create!(creator: users(:david), markdown_source: "source", client_message_id: "edited-tombstone-source")
+    reply = @room.messages.create!(
+      creator: users(:david), markdown_source: "reply", reply_to_message: source,
+      client_message_id: "edited-tombstone-reply", created_at: 1.hour.ago, updated_at: 1.hour.ago
+    )
+
+    delete room_message_url(@room, source, format: :turbo_stream)
+
+    assert_operator reply.reload.updated_at, :>, reply.created_at
+
+    get room_message_url(@room, reply)
+    assert_response :success
+    assert_select ".message__edited", count: 0
+  end
+
   test "ensure non-admin can't update a message belonging to another user" do
     sign_in :jz
     assert_not users(:jz).administrator?
