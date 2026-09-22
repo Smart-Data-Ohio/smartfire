@@ -12,6 +12,9 @@ pin "noise-suppressor", to: "noise-suppressor.js", preload: false
 pin_all_from "app/javascript/initializers", under: "initializers"
 pin_all_from "app/javascript/lib", under: "lib"
 pin_all_from "app/javascript/channels", under: "channels"
-pin_all_from "app/javascript/controllers", under: "controllers"
+# Controllers stay resolvable for lazyLoadControllersFrom but are not
+# downloaded up front; pages preload only their first-paint set (see
+# RoomsHelper::FIRST_PAINT_CONTROLLERS).
+pin_all_from "app/javascript/controllers", under: "controllers", preload: false
 pin_all_from "app/javascript/helpers", under: "helpers"
 pin_all_from "app/javascript/models", under: "models"
