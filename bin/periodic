@@ -1,0 +1,12 @@
+#!/usr/bin/env ruby
+
+require_relative "../config/environment"
+
+begin
+  reminders_interval = Periodic::Runner.parse_interval!(ENV.fetch("EVENT_REMINDERS_INTERVAL", 30), "EVENT_REMINDERS_INTERVAL")
+  retention_interval = Periodic::Runner.parse_interval!(ENV.fetch("RETENTION_PRUNE_INTERVAL", 24.hours.to_i), "RETENTION_PRUNE_INTERVAL")
+rescue ArgumentError => error
+  abort error.message
+end
+
+Periodic::Runner.new(reminders_interval:, retention_interval:).run

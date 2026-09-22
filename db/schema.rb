@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_22_211300) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_22_212400) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -133,6 +133,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_211300) do
     t.string "webhook_status", default: "none", null: false
     t.index ["agent_id", "agent_approval_id"], name: "index_agent_events_on_agent_github_approval", unique: true, where: "event_type = 'github_action_completed' AND agent_approval_id IS NOT NULL"
     t.index ["agent_id", "created_at"], name: "index_agent_events_on_agent_id_and_created_at"
+    t.index ["agent_id", "outcome", "id"], name: "index_agent_events_on_agent_outcome_id"
     t.index ["webhook_status", "webhook_next_attempt_at"], name: "index_agent_events_on_webhook_recovery"
   end
 
@@ -269,6 +270,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_211300) do
     t.datetime "updated_at", null: false
     t.integer "venue_room_id"
     t.index ["organizer_id"], name: "index_events_on_organizer_id"
+    t.index ["reminded_at", "starts_at"], name: "index_events_on_reminded_starts"
     t.index ["room_id", "starts_at"], name: "index_events_on_room_id_and_starts_at"
     t.index ["series_id", "starts_at"], name: "index_events_on_series_slot", unique: true, where: "series_id IS NOT NULL AND cancelled_at IS NULL"
     t.index ["series_id"], name: "index_events_on_series_id"
@@ -468,7 +470,10 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_211300) do
     t.index ["creator_id"], name: "index_messages_on_creator_id"
     t.index ["forwarded_from_message_id"], name: "index_messages_on_forwarded_from_message_id"
     t.index ["reply_to_message_id"], name: "index_messages_on_reply_to_message_id"
+    t.index ["room_id", "creator_id", "client_message_id"], name: "index_messages_on_room_creator_client_id"
+    t.index ["room_id", "thread_id", "created_at"], name: "index_messages_on_room_thread_created"
     t.index ["room_id"], name: "index_messages_on_room_id"
+    t.index ["thread_id", "created_at"], name: "index_messages_on_thread_created"
     t.index ["thread_id"], name: "index_messages_on_thread_id"
   end
 
@@ -487,6 +492,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_211300) do
   create_table "rooms", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "creator_id", null: false
+    t.datetime "deleted_at"
+    t.datetime "destroy_enqueued_at"
     t.string "icon_name"
     t.string "name"
     t.string "type", null: false
@@ -495,9 +502,11 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_211300) do
 
   create_table "searches", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "dedup_key"
     t.string "query", null: false
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
+    t.index ["user_id", "dedup_key"], name: "index_searches_on_user_and_dedup_key", unique: true
     t.index ["user_id"], name: "index_searches_on_user_id"
   end
 

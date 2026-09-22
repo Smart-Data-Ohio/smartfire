@@ -2,7 +2,9 @@ class User < ApplicationRecord
   include Avatar, Bannable, Bot, Mentionable, Role, Transferable
 
   has_many :memberships, dependent: :delete_all
-  has_many :rooms, through: :memberships
+  # Listings, room scopes, and reachable messages all read through here, so
+  # soft-deleted rooms disappear from every one of them at once.
+  has_many :rooms, -> { alive }, through: :memberships
 
   has_many :reachable_messages, through: :rooms, source: :messages
   has_many :messages, dependent: :destroy, foreign_key: :creator_id
@@ -169,7 +171,7 @@ class User < ApplicationRecord
     end
 
     def grant_membership_to_open_rooms
-      Membership.insert_all(Rooms::Open.pluck(:id).collect { |room_id| { room_id: room_id, user_id: id } })
+      Membership.insert_all(Rooms::Open.alive.pluck(:id).collect { |room_id| { room_id: room_id, user_id: id } })
     end
 
     def deactived_email_address

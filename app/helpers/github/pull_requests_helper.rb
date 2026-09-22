@@ -117,7 +117,15 @@ module Github::PullRequestsHelper
     def request_pr_refresh(pull_request)
       return unless pull_request.stale?
       return unless (@github_pr_fetches ||= Set.new).add?(pull_request.id)
+      return unless pull_request.claim_fetch_request!
 
-      Github::FetchPullRequestJob.perform_later(pull_request) if pull_request.claim_fetch_request!
+      begin
+        Github::FetchPullRequestJob.perform_later(pull_request)
+      rescue Redis::BaseError, RedisClient::Error => error
+        # The queue is down: serve the stale card instead of breaking the page,
+        # and release the claim so the next render retries the refresh.
+        pull_request.release_fetch_request!
+        Rails.logger.warn "Skipping PR refresh enqueue for #{pull_request.id}: #{error.class}"
+      end
     end
 end

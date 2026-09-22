@@ -24,6 +24,9 @@ class Room < ApplicationRecord
   has_many :events, dependent: :destroy
   has_many :hosted_events, class_name: "Event", foreign_key: :venue_room_id, dependent: :nullify
   has_many :github_repository_subscriptions, class_name: "Github::RepositorySubscription", dependent: :destroy
+  # The agent ledger outlives the room; only the room link is cleared.
+  has_many :agent_events, dependent: :nullify
+  has_many :agent_approvals, dependent: :nullify
 
   belongs_to :creator, class_name: "User", default: -> { Current.user }
 
@@ -43,6 +46,13 @@ class Room < ApplicationRecord
 
   scope :ordered, -> { order("LOWER(name)") }
 
+  # Soft-deleted rooms grant nothing: every access path reads through alive.
+  scope :alive, -> { where(deleted_at: nil) }
+  scope :deleted, -> { where.not(deleted_at: nil) }
+  # Destroys never enqueued, or enqueued longer ago than the cutoff: the
+  # stuck-room sweep's claim candidates.
+  scope :destroy_unclaimed_before, ->(cutoff) { where("destroy_enqueued_at IS NULL OR destroy_enqueued_at < ?", cutoff) }
+
   class << self
     def create_for(attributes, users:)
       transaction do
@@ -60,6 +70,25 @@ class Room < ApplicationRecord
   def receive(message)
     unread_memberships(message)
     push_later(message)
+  end
+
+  def deleted?
+    deleted_at.present?
+  end
+
+  # First half of asynchronous room deletion (see RoomsController#destroy).
+  # Synchronously removes the room from everyone — with no memberships the
+  # room disappears and every membership-based access check fails — revokes
+  # huddle and agent access, ends live streams, and marks the room for
+  # Room::DestroyJob, which removes the remaining content in batches.
+  def begin_destroy!
+    transaction do
+      update!(deleted_at: Time.current)
+      memberships.delete_all
+      HuddleGrant.revoke_for_room!(self)
+      AgentGrant.revoke_for_room!(self)
+      Stream.live.where(room_id: id).find_each(&:end!)
+    end
   end
 
   def open?

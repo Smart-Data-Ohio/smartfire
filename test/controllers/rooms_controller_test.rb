@@ -65,27 +65,78 @@ class RoomsControllerTest < ActionDispatch::IntegrationTest
     assert_match %r{href="https://example\.com/page"}, response.body
   end
 
-  test "destroy" do
+  test "destroy removes the room from everyone and enqueues its deletion" do
+    room = rooms(:designers)
+
     assert_turbo_stream_broadcasts :rooms, count: 1 do
-      assert_difference -> { Room.count }, -1 do
-        delete room_url(rooms(:designers))
+      assert_enqueued_with(job: Room::DestroyJob, args: [ room.id ]) do
+        delete room_url(room)
       end
+    end
+
+    assert_redirected_to root_url
+    assert_predicate room.reload, :deleted?
+    assert_empty room.memberships
+  end
+
+  test "destroy stamps the sweep claim" do
+    room = rooms(:designers)
+
+    delete room_url(room)
+
+    assert_redirected_to root_url
+    assert_not_nil room.reload.destroy_enqueued_at
+  end
+
+  test "destroy succeeds when the queue is down and the sweep recovers the room" do
+    room = rooms(:designers)
+    Room::DestroyJob.stubs(:perform_later).raises(Redis::BaseConnectionError, "Redis down")
+
+    delete room_url(room)
+
+    assert_redirected_to root_url
+    assert_predicate room.reload, :deleted?
+    assert_nil room.destroy_enqueued_at
+
+    Room::DestroyJob.unstub(:perform_later)
+    room.update_columns(deleted_at: 11.minutes.ago)
+    assert_enqueued_with(job: Room::DestroyJob, args: [ room.id ]) do
+      Room::DestroyJob.reenqueue_stuck!
+    end
+  end
+
+  test "destroyed room is inaccessible while deletion is pending" do
+    room = rooms(:designers)
+    delete room_url(room)
+
+    get room_url(room)
+    assert_redirected_to root_url
+  end
+
+  test "destroy finishes through the enqueued job" do
+    room = rooms(:designers)
+    delete room_url(room)
+
+    assert_difference -> { Room.count }, -1 do
+      perform_enqueued_jobs
     end
   end
 
   test "destroy only allowed for creators or those who can administer" do
     sign_in :jz
 
-    assert_no_difference -> { Room.count } do
+    assert_no_enqueued_jobs do
       delete room_url(rooms(:designers))
       assert_response :forbidden
     end
+    assert_not_predicate rooms(:designers).reload, :deleted?
 
     rooms(:designers).update! creator: users(:jz)
 
-    assert_difference -> { Room.count }, -1 do
+    assert_enqueued_with(job: Room::DestroyJob) do
       delete room_url(rooms(:designers))
     end
+    assert_predicate rooms(:designers).reload, :deleted?
   end
 
   private

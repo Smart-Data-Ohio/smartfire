@@ -249,7 +249,7 @@ class Event < ApplicationRecord
     def venue_must_be_voice_or_stage_channel
       return if venue_room_id.blank?
 
-      venue_room = Room.find_by(id: venue_room_id)
+      venue_room = Room.alive.find_by(id: venue_room_id)
       unless venue_room.is_a?(Rooms::Voice) || venue_room.is_a?(Rooms::Stage)
         errors.add :venue, "must be a voice or Stage channel you belong to"
         return

@@ -248,7 +248,7 @@ class Agents::ApprovalsController < ApplicationController
     def find_request_room(room_id)
       return nil if room_id.blank?
 
-      room = Room.find_by(id: room_id)
+      room = Room.alive.find_by(id: room_id)
       unless room && Membership.exists?(user_id: Current.agent.user_id, room_id: room.id)
         head :not_found
         return nil

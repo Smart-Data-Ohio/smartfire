@@ -124,9 +124,11 @@ class Agent < ApplicationRecord
   end
 
   # Room-scoped capability check. Reads the database on every call; no
-  # caching. Room membership is checked separately by the controllers.
+  # caching. Room membership is checked separately by the controllers. A
+  # soft-deleted room grants nothing, however the grant row reads.
   def can?(capability, room = nil)
     return false unless active?
+    return false if room.is_a?(Room) && room.deleted?
 
     capability = capability.to_s
     return false unless AgentGrant::CAPABILITIES.include?(capability)
