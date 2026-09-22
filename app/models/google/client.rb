@@ -12,22 +12,63 @@ module Google
     TOKEN_HOST = "oauth2.googleapis.com"
     API_HOST = "www.googleapis.com"
     TIMEOUT = 10
-    SCOPE = "openid email https://www.googleapis.com/auth/calendar.events"
+    CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events"
+    SCOPE = "openid email #{CALENDAR_SCOPE}"
     DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.metadata.readonly"
     ID_TOKEN_ISSUERS = %w[ https://accounts.google.com accounts.google.com ].freeze
 
+    # In-memory credentials for post-disconnect cleanup, when the account
+    # row (and its tokens) is already gone. Quacks like the account bits
+    # the client touches: refreshes update memory instead of the database,
+    # and there is no row left to mark disconnected.
+    class SnapshotCredentials
+      attr_reader :refresh_token
+      attr_accessor :access_token, :access_token_expires_at
+
+      def initialize(access_token:, refresh_token:, access_token_expires_at:)
+        @access_token = access_token
+        @refresh_token = refresh_token
+        @access_token_expires_at = access_token_expires_at
+      end
+
+      def access_token_expired?
+        access_token.blank? || access_token_expires_at.blank? || access_token_expires_at <= Time.current
+      end
+
+      def update!(access_token:, access_token_expires_at:)
+        self.access_token = access_token
+        self.access_token_expires_at = access_token_expires_at
+      end
+
+      def mark_disconnected!(_reason)
+        nil
+      end
+    end
+
     class Error < StandardError; end
     class Unavailable < Error; end
+    class RateLimited < Unavailable; end
     class Unauthorized < Error; end
+    class Forbidden < Error; end
     class NotFound < Error; end
     class Conflict < Error; end
 
     # Timeouts, connection failures, and malformed bodies surface as
     # Unavailable so callers and last_error see one shape. Messages carry
     # only the error class, never response bytes that could hold tokens.
+    # SystemCallError covers every Errno::* connection failure; IOError
+    # covers EOFError from a dropped connection.
     TRANSPORT_ERRORS = [
       Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout,
-      SocketError, OpenSSL::SSL::SSLError, JSON::ParserError
+      Net::HTTPBadResponse, SocketError, SystemCallError, IOError,
+      OpenSSL::SSL::SSLError, JSON::ParserError
+    ].freeze
+
+    # Google answers quota exhaustion as 429, or as 403 carrying one of
+    # these reasons. Anything else on 403 is a permission problem.
+    RATE_LIMIT_REASONS = %w[
+      rateLimitExceeded userRateLimitExceeded
+      quotaExceeded dailyLimitExceeded
     ].freeze
 
     class << self
@@ -87,6 +128,23 @@ module Google
         JSON.parse(response.body.to_s)["error"]
       rescue JSON::ParserError
         nil
+      end
+
+      # Best-effort grant revocation for disconnect and deactivation.
+      # Returns true when Google accepted (or had already revoked) the
+      # token; transport failures raise Unavailable so the caller decides
+      # whether to retry. Never logs the token.
+      def revoke_token(token)
+        uri = URI::HTTPS.build(host: TOKEN_HOST, path: "/revoke")
+        response = Net::HTTP.start(uri.host, uri.port, use_ssl: true,
+            open_timeout: TIMEOUT, read_timeout: TIMEOUT, write_timeout: TIMEOUT) do |http|
+          http.post(uri.request_uri, URI.encode_www_form(token: token),
+            "Content-Type" => "application/x-www-form-urlencoded")
+        end
+
+        response.is_a?(Net::HTTPSuccess) || response.code == "400"
+      rescue *TRANSPORT_ERRORS => error
+        raise Unavailable, "Google token revoke failed (#{error.class})"
       end
 
       # The account email comes from the id_token returned by the token
@@ -184,6 +242,9 @@ module Google
           @account.mark_disconnected!("Google rejected the connection")
           raise Unauthorized, "Google rejected the refresh token"
         end
+        if response.code == "429"
+          raise Unavailable, "Google token refresh rate limited (429)"
+        end
         raise Error, "Google token refresh failed (#{response.code})"
       end
     rescue *TRANSPORT_ERRORS => error
@@ -196,6 +257,25 @@ module Google
       # post-match backreference in a replacement string.
       def escape_drive_query(term)
         term.gsub(/['\\]/) { |char| "\\#{char}" }
+      end
+
+      # A Calendar 403 is either quota exhaustion (retryable) or a
+      # permission problem (permanent): Google puts the distinction in
+      # error.errors[].reason. Only matched constants reach the message,
+      # never raw response bytes.
+      def raise_for_calendar_forbidden!(response)
+        if (reason = forbidden_reasons(response).find { |candidate| RATE_LIMIT_REASONS.include?(candidate) })
+          raise RateLimited, "Google Calendar request rate limited (#{reason})"
+        else
+          raise Forbidden, "Google Calendar request forbidden (403)"
+        end
+      end
+
+      def forbidden_reasons(response)
+        JSON.parse(response.body.to_s).dig("error", "errors").to_a
+          .filter_map { |entry| entry["reason"] if entry.is_a?(Hash) }
+      rescue JSON::ParserError
+        []
       end
 
       def api_request(method, path, payload = nil, query: nil, forbidden: :error, service_name: "Calendar")
@@ -212,14 +292,16 @@ module Google
           response.body.present? ? JSON.parse(response.body) : true
         when Net::HTTPUnauthorized
           raise Unauthorized, "Google rejected the request (401)"
-        when Net::HTTPNotFound
+        when Net::HTTPNotFound, Net::HTTPGone
           raise NotFound, "Google #{service_name.downcase} entry not found"
         when Net::HTTPForbidden
           if forbidden == :not_found
             raise NotFound, "Google #{service_name.downcase} entry not found"
           else
-            raise Error, "Google Calendar request failed (403)"
+            raise_for_calendar_forbidden!(response)
           end
+        when Net::HTTPTooManyRequests
+          raise RateLimited, "Google #{service_name} request rate limited (429)"
         when Net::HTTPConflict
           raise Conflict, "Google calendar entry already exists"
         else
@@ -227,6 +309,12 @@ module Google
         end
       rescue *TRANSPORT_ERRORS => error
         raise Unavailable, "Google #{service_name} request failed (#{error.class})"
+      rescue ActiveRecord::Encryption::Errors::Decryption
+        # The token rotted between the usable? check and this read (or a
+        # caller skipped the check): fail as Unauthorized so Drive
+        # endpoints 404 and sync drops the entry instead of retrying.
+        @account.mark_disconnected!(GoogleAccount::UNREADABLE_TOKEN_REASON)
+        raise Unauthorized, "Google token could not be read"
       end
 
       def send_api_request(method, path, payload, query = nil)
