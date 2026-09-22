@@ -52,7 +52,11 @@ class Message < ApplicationRecord
   after_create_commit :sync_event_references
   after_update_commit :resync_event_references
 
-  scope :ordered, -> { order(:created_at) }
+  # Tie-broken by id so the page windows agree with the (created_at, id)
+  # tuple cursors in Pagination: ordering by created_at alone lets the
+  # database pick either side of a same-timestamp tie at a page edge,
+  # skipping or repeating messages.
+  scope :ordered, -> { order(:created_at, :id) }
   scope :root_messages, -> { where(thread_id: nil) }
   scope :thread_messages, -> { where.not(thread_id: nil) }
   scope :with_creator, -> { preload(creator: :avatar_attachment) }

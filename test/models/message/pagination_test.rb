@@ -30,6 +30,42 @@ class Message::PaginationTest < ActiveSupport::TestCase
     assert_equal tied, tied & around
   end
 
+  test "paging across same-timestamp page edges visits every message exactly once" do
+    room = Rooms::Closed.create!(name: "Paging edges", creator: users(:david))
+    early = Time.zone.local(2026, 4, 1, 12, 0, 0)
+    late = Time.zone.local(2026, 4, 2, 12, 0, 0)
+    created = []
+    10.times do |index|
+      created << room.messages.create!(
+        body: "old tie #{index}", client_message_id: "page-old-#{index}",
+        creator: users(:david), created_at: early
+      )
+    end
+    25.times do |index|
+      created << room.messages.create!(
+        body: "middle #{index}", client_message_id: "page-mid-#{index}",
+        creator: users(:david), created_at: early + (index + 1).minutes
+      )
+    end
+    10.times do |index|
+      created << room.messages.create!(
+        body: "new tie #{index}", client_message_id: "page-new-#{index}",
+        creator: users(:david), created_at: late
+      )
+    end
+    expected_ids = created.map(&:id).sort
+
+    first = room.messages.first_page
+    following = room.messages.page_after(first.last)
+    assert_equal expected_ids, (first + following).map(&:id).sort
+    assert_equal expected_ids.size, (first + following).map(&:id).uniq.size
+
+    last = room.messages.last_page
+    preceding = room.messages.page_before(last.first)
+    assert_equal expected_ids, (preceding + last).map(&:id).sort
+    assert_equal expected_ids.size, (preceding + last).map(&:id).uniq.size
+  end
+
   test "before and after work on joined scopes" do
     cursor = rooms(:designers).messages.ordered.last
 
