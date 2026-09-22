@@ -98,6 +98,17 @@ docker run --publish 80:80 --env DISABLE_SSL=true ...
 To enable error reporting to Sentry in production, supply your DSN in the `SENTRY_DSN` environment variable.
 To disable Sentry initialization entirely, set `SKIP_TELEMETRY=true`.
 
+#### Content Security Policy
+
+Every page sends a `Content-Security-Policy-Report-Only` header (see
+`config/initializers/content_security_policy.rb` for each allowed source
+and why). Browsers report violations to `POST /csp_reports`, which logs one
+`CSP violation:` line per report (directive, blocked origin, and document
+path; never query strings), rate-limited to 20 reports per client per
+minute. The LiveKit origin comes from `LIVEKIT_URL`. The policy blocks
+nothing yet; once the logs stay quiet it can be enforced by setting
+`content_security_policy_report_only` to false.
+
 #### Google sign-in (optional)
 
 Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and a comma-separated

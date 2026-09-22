@@ -14,6 +14,8 @@ Rails.application.routes.draw do
     end
   end
 
+  post "csp_reports", to: "content_security_policy_reports#create", as: :content_security_policy_reports
+
   post "session/google", to: "sessions/google#create", as: :session_google
   get "session/google/callback", to: "sessions/google#callback", as: :session_google_callback
 
