@@ -443,10 +443,11 @@ export default class extends Controller {
 
     this.muteTarget.disabled = true
     const enabling = !room.localParticipant.isMicrophoneEnabled
-    // Unmuting re-acquires the stopped mic track from these defaults, so
-    // refresh them with the selected device (and the current filtering)
-    // first.
-    if (enabling && room.options) room.options.audioCaptureDefaults = this.#audioCaptureOptions()
+    // The capture options below only matter when no mic track exists yet
+    // (a first publish). Unmuting re-acquires the stopped track from the
+    // track's own stored constraints, which the noise-suppression sync
+    // keeps current — refreshing the room defaults here would not reach
+    // the microphone.
     try {
       await room.localParticipant.setMicrophoneEnabled(enabling, this.#audioCaptureOptions())
       if (room === this.room) {
@@ -1289,8 +1290,8 @@ export default class extends Controller {
         videoEncoding: VideoPresets.h720.encoding,
         simulcast: true,
         // Stops the microphone's media track while muted so the OS mic
-        // indicator clears; unmuting re-acquires from audioCaptureDefaults,
-        // which the mute toggle refreshes with the selected device first.
+        // indicator clears; unmuting re-acquires from the track's stored
+        // constraints, which the noise-suppression sync keeps current.
         stopMicTrackOnMute: true
       }
     }
@@ -2128,77 +2129,87 @@ export default class extends Controller {
     const track = room.localParticipant.getTrackPublication?.(Track.Source.Microphone)?.audioTrack
     if (!track || typeof track.setProcessor !== "function") return
 
-    // Muting bypasses the worklet: filtering silence wastes CPU, and the
-    // stopped mic track it fed is gone anyway. Unmuting re-attaches.
-    const wanted = this.noiseSuppressionAvailable && this.noiseSuppressionEnabled &&
-      room.localParticipant.isMicrophoneEnabled
+    // The processor stays attached across mute: the stopped mic track it
+    // feeds goes silent, so nothing audible is filtered while muted, and
+    // unmuting hands the live track back to the same worklet and
+    // AudioContext instead of rebuilding them — with no unfiltered burst
+    // while a fresh processor spins up.
+    const wanted = this.noiseSuppressionAvailable && this.noiseSuppressionEnabled
     const current = track.getProcessor?.()
-    if (wanted === Boolean(current)) return
 
-    this.noiseSuppressionBusy = true
-    this.#updateNoiseSuppressionControl()
-
-    try {
-      if (wanted) {
-        await track.setProcessor(new HuddleNoiseSuppressor({
-          workletUrl: this.noiseWorkletUrlValue,
-          wasmUrl: this.noiseWasmUrlValue,
-          simdWasmUrl: this.noiseSimdWasmUrlValue
-        }))
-      } else {
-        await track.stopProcessor()
-      }
-    } catch (error) {
-      if (!wanted) return
-
-      // Falling back to the browser's own suppression is always better than
-      // dropping the microphone out of the call.
-      await track.stopProcessor().catch(() => {})
-
-      if (this.#noiseSuppressionUnsupported(error)) {
-        this.noiseSuppressionAvailable = false
-        this.#showTemporaryStatus("Extra noise suppression isn’t available in this browser. Basic filtering is still on.")
-      } else {
-        // A worklet or model that failed to load may well load next time, so the
-        // control stays usable and nothing about the failure is written to storage.
-        this.noiseSuppressionEnabled = false
-        this.#showTemporaryStatus("Noise suppression couldn’t start. Basic filtering is still on — try again.")
-      }
-
-      // The capture asked for no browser suppression because RNNoise was
-      // meant to filter; with the processor failed, re-acquire so the
-      // browser's basic filtering is actually on, as promised above.
-      await this.#restoreBrowserNoiseSuppression(room)
-    } finally {
-      this.noiseSuppressionBusy = false
+    if (wanted !== Boolean(current)) {
+      this.noiseSuppressionBusy = true
       this.#updateNoiseSuppressionControl()
+
+      try {
+        if (wanted) {
+          await track.setProcessor(new HuddleNoiseSuppressor({
+            workletUrl: this.noiseWorkletUrlValue,
+            wasmUrl: this.noiseWasmUrlValue,
+            simdWasmUrl: this.noiseSimdWasmUrlValue
+          }))
+        } else {
+          await track.stopProcessor()
+        }
+      } catch (error) {
+        if (wanted) {
+          // Falling back to the browser's own suppression is always better than
+          // dropping the microphone out of the call.
+          await track.stopProcessor().catch(() => {})
+
+          if (this.#noiseSuppressionUnsupported(error)) {
+            this.noiseSuppressionAvailable = false
+            this.#showTemporaryStatus("Extra noise suppression isn’t available in this browser. Basic filtering is still on.")
+          } else {
+            // A worklet or model that failed to load may well load next time, so the
+            // control stays usable and nothing about the failure is written to storage.
+            this.noiseSuppressionEnabled = false
+            this.#showTemporaryStatus("Noise suppression couldn’t start. Basic filtering is still on — try again.")
+          }
+        }
+      } finally {
+        this.noiseSuppressionBusy = false
+        this.#updateNoiseSuppressionControl()
+      }
     }
+
+    // Browser suppression is on exactly when RNNoise is off. The sync reads
+    // the attached processor rather than the flags, so a failed stop still
+    // describes the microphone truthfully, and it runs even when the
+    // processor did not change: toggling the switch while muted leaves the
+    // stored constraints stale, and the unmute that follows re-acquires
+    // from them.
+    await this.#syncCaptureNoiseSuppression(track, Boolean(track.getProcessor?.()))
   }
 
-  // Re-acquires the microphone with the browser's own suppression after a
-  // processor failure. Skipped while muted — nothing live to re-acquire, and
-  // the next unmute captures with the same options anyway. Never throws:
-  // the microphone matters more than its filtering.
-  async #restoreBrowserNoiseSuppression(room) {
-    try {
-      if (room !== this.room || this.state !== "connected" || !room.localParticipant.isMicrophoneEnabled) return
-      if (room.options) room.options.audioCaptureDefaults = this.#audioCaptureOptions()
-
-      await room.localParticipant.setMicrophoneEnabled(false)
-      await room.localParticipant.setMicrophoneEnabled(true, this.#audioCaptureOptions())
-    } catch (error) {
-      if (room === this.room) {
-        this.#showTemporaryStatus("Noise suppression couldn't be started, and the microphone could not be restarted. Rejoin to restore filtering.")
-        this.#updateMediaControls()
-        this.#renderRoster()
-      }
-      return
+  // The SDK re-applies the track's *stored* constraints after the processor
+  // stops, and unmuting re-acquires from them, so refreshing the room's
+  // `audioCaptureDefaults` cannot restore browser filtering — only the
+  // track's own constraints reach the microphone. The track-level call
+  // updates both the live track and the stored copy. Never throws: the
+  // microphone matters more than its filtering.
+  async #syncCaptureNoiseSuppression(track, rnnoiseOn) {
+    const constraints = {
+      noiseSuppression: !rnnoiseOn,
+      echoCancellation: true,
+      autoGainControl: true
     }
 
-    if (room !== this.room) return
-    this.#updateMediaControls()
-    this.#renderRoster()
-    this.#startMicrophoneMeter()
+    try {
+      if (typeof track.applyConstraints === "function") {
+        await track.applyConstraints(constraints)
+      } else if (typeof track.restartTrack === "function" && this.room?.localParticipant.isMicrophoneEnabled) {
+        // No live-track update available: re-acquire, but only while
+        // unmuted — restarting a muted track would light the OS mic
+        // indicator for a track nobody can hear.
+        await track.restartTrack(constraints)
+      } else {
+        await track.mediaStreamTrack?.applyConstraints?.(constraints)
+      }
+    } catch (error) {
+      // A muted (stopped) track rejects the update; the next sync — after
+      // unmute — applies it to the live track instead.
+    }
   }
 
   // Only a browser that genuinely cannot run the filter latches it off for the

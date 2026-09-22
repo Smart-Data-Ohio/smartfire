@@ -498,19 +498,18 @@ class HuddlesTest < ApplicationSystemTestCase
     assert_selector "[data-huddle-target='mute'][aria-pressed='true']", text: "Mute microphone"
     assert_selector "#channel-huddle.huddle--muted"
 
-    # Muting stops the mic track so the OS indicator clears, and bypasses
-    # the worklet instead of filtering silence.
+    # Muting stops the mic track so the OS indicator clears; the processor
+    # stays attached to the silenced track instead of being rebuilt, so
+    # unmuting hands the live track back to the same worklet.
     wait_for_condition("the mic track was not stopped on mute") do
       microphone_track_state == "ended"
     end
-    wait_for_condition("the noise processor kept running while muted") do
-      microphone_processor_name.nil?
-    end
+    assert_equal "campfire-rnnoise", microphone_processor_name
 
     click_button "Mute microphone"
     assert_selector "[data-huddle-target='mute'][aria-pressed='false']", text: "Mute microphone"
 
-    # Unmuting re-acquires the microphone and re-attaches the processor.
+    # Unmuting re-acquires the microphone onto the surviving processor.
     wait_for_condition("the microphone was not re-acquired on unmute") do
       microphone_track_state == "live"
     end

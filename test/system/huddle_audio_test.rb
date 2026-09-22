@@ -53,7 +53,7 @@ class HuddleAudioTest < ApplicationSystemTestCase
     assert_equal [ true, true ], mutes.map { |call| noise_option(call) }
   end
 
-  test "unmuting re-acquires from defaults refreshed with the selected device" do
+  test "unmuting requests the selected device without rewriting the room defaults" do
     visit room_path(rooms(:designers))
     wait_for_cable_connection
     page.execute_script("window.localStorage.setItem('campfire.huddle.devices', JSON.stringify({ audioinput: 'mic-1' }))")
@@ -62,27 +62,91 @@ class HuddleAudioTest < ApplicationSystemTestCase
     toggle_mute_and_await(1, "muting did not reach the room")
     toggle_mute_and_await(2, "unmuting did not reach the room")
 
-    defaults = page.evaluate_script("window.__audioCaptureDefaults")
-    assert_equal({ "ideal" => "mic-1" }, defaults["deviceId"])
-    assert_equal true, defaults["noiseSuppression"]
+    mutes = page.evaluate_script("window.__micCalls")
+    assert_equal({ "ideal" => "mic-1" }, mutes.last["deviceId"])
+    # Unmuting re-acquires from the track's stored constraints, so the
+    # controller leaves the room defaults alone.
+    assert_nil page.evaluate_script("window.__audioCaptureDefaults")
   end
 
-  test "muting bypasses the noise processor and unmuting re-attaches it" do
+  test "muting keeps the noise processor attached across mute and unmute" do
     visit room_path(rooms(:designers))
     wait_for_cable_connection
     install_stub_room(noise_enabled: true, processor: "campfire-rnnoise")
 
     toggle_mute_and_await(1, "muting did not reach the room")
-    wait_for_condition("muting did not stop the noise processor") do
+    toggle_mute_and_await(2, "unmuting did not reach the room")
+    wait_for_condition("the noise sync did not run after unmuting") do
+      page.evaluate_script("window.__constraintCalls.length") > 0
+    end
+
+    assert_empty page.evaluate_script("window.__processorCalls")
+  end
+
+  test "toggling noise suppression off restores browser suppression on the live track" do
+    visit room_path(rooms(:designers))
+    wait_for_cable_connection
+    install_stub_room(noise_enabled: true, processor: "campfire-rnnoise")
+
+    find("[data-huddle-target='noise']").click
+
+    wait_for_condition("toggling off did not stop the noise processor") do
       page.evaluate_script("window.__processorCalls.length") > 0
     end
-    assert_equal [ [ "stop" ] ], page.evaluate_script("window.__processorCalls")
-
-    toggle_mute_and_await(2, "unmuting did not reach the room")
-    wait_for_condition("unmuting did not re-attach the noise processor") do
-      page.evaluate_script("window.__processorCalls.length") > 1
+    wait_for_condition("toggling off did not update the capture constraints") do
+      page.evaluate_script("window.__constraintCalls.length") > 0
     end
-    assert_equal [ [ "stop" ], [ "set", "campfire-rnnoise" ] ], page.evaluate_script("window.__processorCalls")
+
+    assert_equal [ [ "stop" ] ], page.evaluate_script("window.__processorCalls")
+    assert_equal(
+      { "noiseSuppression" => true, "echoCancellation" => true, "autoGainControl" => true },
+      page.evaluate_script("window.__constraintCalls").last
+    )
+  end
+
+  test "toggling noise suppression on disables browser suppression on the live track" do
+    visit room_path(rooms(:designers))
+    wait_for_cable_connection
+    install_stub_room(noise_enabled: false)
+
+    find("[data-huddle-target='noise']").click
+
+    wait_for_condition("toggling on did not attach the noise processor") do
+      page.evaluate_script("window.__processorCalls.length") > 0
+    end
+    wait_for_condition("toggling on did not update the capture constraints") do
+      page.evaluate_script("window.__constraintCalls.length") > 0
+    end
+
+    assert_equal [ [ "set", "campfire-rnnoise" ] ], page.evaluate_script("window.__processorCalls")
+    assert_equal(
+      { "noiseSuppression" => false, "echoCancellation" => true, "autoGainControl" => true },
+      page.evaluate_script("window.__constraintCalls").last
+    )
+  end
+
+  test "toggling noise suppression off while muted applies on unmute" do
+    visit room_path(rooms(:designers))
+    wait_for_cable_connection
+    install_stub_room(noise_enabled: true, processor: "campfire-rnnoise")
+
+    toggle_mute_and_await(1, "muting did not reach the room")
+    find("[data-huddle-target='noise']").click
+    wait_for_condition("toggling off did not stop the noise processor") do
+      page.evaluate_script("window.__processorCalls.length") > 0
+    end
+
+    # The stopped track rejects the update while muted; unmuting retries
+    # it against the live track.
+    toggle_mute_and_await(2, "unmuting did not reach the room")
+    wait_for_condition("unmuting did not update the capture constraints") do
+      page.evaluate_script("window.__constraintCalls.length") > 0
+    end
+
+    assert_equal(
+      { "noiseSuppression" => true, "echoCancellation" => true, "autoGainControl" => true },
+      page.evaluate_script("window.__constraintCalls").last
+    )
   end
 
   private
@@ -106,7 +170,8 @@ class HuddleAudioTest < ApplicationSystemTestCase
 
     # A connected panel with a stubbed room: setMicrophoneEnabled records
     # its arguments and flips, the mic publication carries a stub audio
-    # track that records processor calls.
+    # track that records processor and constraint calls. Constraint updates
+    # reject while muted, like a stopped live track.
     def install_stub_room(noise_enabled:, processor: nil)
       page.execute_script(<<~JS, noise_enabled, processor)
         const controller = window.Stimulus
@@ -120,6 +185,7 @@ class HuddleAudioTest < ApplicationSystemTestCase
         controller.canPublish = true;
         window.__micCalls = [];
         window.__processorCalls = [];
+        window.__constraintCalls = [];
         window.__audioCaptureDefaults = null;
         let micEnabled = true;
         let processor = arguments[1] ? { name: arguments[1] } : null;
@@ -134,7 +200,12 @@ class HuddleAudioTest < ApplicationSystemTestCase
             processor = null;
             return Promise.resolve();
           },
-          getProcessor: () => processor
+          getProcessor: () => processor,
+          applyConstraints: (constraints) => {
+            if (!micEnabled) return Promise.reject(new DOMException("Test stopped track", "InvalidStateError"));
+            window.__constraintCalls.push({ ...constraints });
+            return Promise.resolve();
+          }
         };
         const participant = {
           identity: "fake",
@@ -165,7 +236,10 @@ class HuddleAudioTest < ApplicationSystemTestCase
         };
         controller.element.hidden = false;
         controller.activeControlsTarget.hidden = false;
+        controller.settingsTarget.hidden = false;
+        controller.settingsRowTarget.hidden = false;
         controller.muteTarget.disabled = false;
+        controller.noiseTarget.disabled = false;
       JS
     end
 

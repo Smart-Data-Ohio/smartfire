@@ -50,7 +50,16 @@ export default class HuddleNoiseSuppressor {
     }
   }
 
+  // LiveKit restarts the microphone track on unmute and on device
+  // switches, and hands the new track over through here. The filter graph
+  // survives that: only the source side is rewired onto the new track, so
+  // the worklet, the model instance inside it, and the AudioContext stay
+  // alive — and the publisher keeps the processed track throughout, with
+  // no unfiltered burst while a fresh graph spins up. Anything the
+  // running graph cannot take (a closed context, a new channel count, a
+  // rewire that throws) falls back to a full rebuild.
   async restart(options) {
+    if (options?.track && await this.#rewireSource(options.track).catch(() => false)) return
     await this.destroy()
     await this.init(options)
   }
@@ -100,6 +109,7 @@ export default class HuddleNoiseSuppressor {
     const wasmBinary = await wasmPromise
 
     const channelCount = Math.min(Math.max(track.getSettings?.().channelCount || 1, 1), 2)
+    this.channelCount = channelCount
 
     this.source = context.createMediaStreamSource(new MediaStream([ track ]))
     this.node = new RnnoiseWorkletNode(context, { maxChannels: channelCount, wasmBinary: wasmBinary.slice(0) })
@@ -112,6 +122,25 @@ export default class HuddleNoiseSuppressor {
     const [ processedTrack ] = this.destination.stream.getAudioTracks()
     if (!processedTrack) throw new Error("noise-suppression-produced-no-track")
     this.processedTrack = processedTrack
+  }
+
+  async #rewireSource(track) {
+    const context = this.node?.context
+    if (!context || !this.source || !this.node || !this.destination || !this.processedTrack) return false
+    if (this.processedTrack.readyState === "ended") return false
+
+    if (context.state === "suspended") await context.resume().catch(() => {})
+    if (context.state !== "running") return false
+
+    // The node was built for this channel count; anything else needs a
+    // graph that matches the new track.
+    const channelCount = Math.min(Math.max(track.getSettings?.().channelCount || 1, 1), 2)
+    if (channelCount !== this.channelCount) return false
+
+    this.source.disconnect()
+    this.source = context.createMediaStreamSource(new MediaStream([ track ]))
+    this.source.connect(this.node)
+    return true
   }
 
   #context(audioContext) {
