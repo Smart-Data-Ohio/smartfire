@@ -64,7 +64,12 @@ module SystemTestHelper
   end
 
   def dismiss_pwa_install_prompt
-    if page.has_css?("[data-pwa-install-target~='dialog']", visible: :visible, wait: 5)
+    # No view renders this dialog target anymore, so the check below only
+    # ever passes when a regression reintroduces it. join_room calls this
+    # after the cable connects, by which point any rendered dialog is
+    # present; a zero wait keeps the dismissal without burning 5 s per room
+    # visit on the miss path.
+    if page.has_css?("[data-pwa-install-target~='dialog']", visible: :visible, wait: 0)
       click_on("Close")
     end
   end
