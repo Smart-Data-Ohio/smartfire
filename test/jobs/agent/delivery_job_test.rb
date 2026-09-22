@@ -118,6 +118,22 @@ class Agent::DeliveryJobTest < ActiveSupport::TestCase
     assert_not_requested :post, webhooks(:bender).url
   end
 
+  test "a delivery claimed inside a rolled-back transaction enqueues no webhook" do
+    WebMock.stub_request(:post, webhooks(:bender).url).to_return(status: 200)
+
+    create_mentioning_message(@room, @bot, creator: users(:david))
+    event = @agent.agent_events.deliverable.last
+
+    assert_no_enqueued_jobs only: Agent::EventWebhookJob do
+      ActiveRecord::Base.transaction do
+        Agent::DeliveryJob.perform_now(event.id)
+        raise ActiveRecord::Rollback
+      end
+    end
+
+    assert_equal "pending", event.reload.outcome
+  end
+
   test "a job that loses the suppression race writes no duplicate row" do
     create_mentioning_message(@room, @bot, creator: users(:david))
     event = @agent.agent_events.deliverable.last

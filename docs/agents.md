@@ -250,7 +250,10 @@ honoring the endpoint's `Retry-After` header when present — as do
 network errors and timeouts; then the row stays `failed` with the
 last error recorded. Other 4xx responses fail fast without retrying,
 like guard refusals, unresolvable hosts, and payloads that can no
-longer be built (message, approval, or thread gone). A receiver must
+longer be built (message, approval, or thread gone). A periodic sweep
+re-enqueues rows stranded in `pending` past two minutes with attempts
+remaining, so a crash between the row write and its enqueue still
+delivers. A receiver must
 treat redeliveries as possible: webhook delivery is at-least-once.
 
 Acking a row by polling marks polling state only and never cancels

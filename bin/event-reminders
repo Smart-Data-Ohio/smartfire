@@ -13,6 +13,12 @@ until stopping
     Event::ReminderDispatcher.dispatch_due!
   rescue => error
     Rails.logger.error "Event reminder dispatch failed: #{error.class}: #{error.message}"
+  end
+
+  begin
+    Agent::Delivery.recover_stranded_webhooks!
+  rescue => error
+    Rails.logger.error "Stranded webhook recovery failed: #{error.class}: #{error.message}"
   ensure
     sleep interval unless stopping
   end

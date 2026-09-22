@@ -3,6 +3,9 @@ class Agent::Delivery
   RATE_WINDOW = 1.minute
   HOP_LIMIT = 3
   TRIGGER_WINDOW = 5.minutes
+  # A webhook row still pending past this age with attempts remaining is
+  # presumed stranded (its enqueue never ran) and picked up by the sweep.
+  STRANDED_WEBHOOK_AFTER = 2.minutes
 
   # Raised when a webhook cannot be built (message, approval, or thread
   # gone): the delivery job records it and does not retry.
@@ -208,11 +211,12 @@ class Agent::Delivery
 
     # Runs inside Agent::DeliveryJob. Re-checks everything at perform time:
     # grant, membership, rate, hop, and message existence. Marks the row
-    # delivered and enqueues its webhook when one is configured, or
-    # records a suppression. Idempotent: settled rows are left alone, and
-    # the webhook job posts at most once per row. An agent that acked the
-    # row by polling before this ran still gets its webhook: acking marks
-    # polling state only and never cancels a webhook still owed.
+    # delivered and enqueues its webhook after the claim commits when one
+    # is configured, or records a suppression. Idempotent: settled rows
+    # are left alone, and the webhook job posts at most once per row. An
+    # agent that acked the row by polling before this ran still gets its
+    # webhook: acking marks polling state only and never cancels a
+    # webhook still owed.
     def perform(event)
       event = AgentEvent.find_by(id: event.is_a?(AgentEvent) ? event.id : event)
       return unless event
@@ -252,7 +256,7 @@ class Agent::Delivery
       webhook_status = agent.user.webhook ? "pending" : "none"
       return unless claim(event, outcome: "delivered", webhook_status: webhook_status)
 
-      Agent::EventWebhookJob.perform_later(event.id) if webhook_status == "pending"
+      enqueue_webhook_after_commit(event.id) if webhook_status == "pending"
     end
 
     # Webhook half of an acknowledged row: the agent already read it by
@@ -263,7 +267,25 @@ class Agent::Delivery
       return unless AgentEvent.where(id: event.id, outcome: "acknowledged", webhook_status: "none")
         .update_all(webhook_status: "pending") == 1
 
-      Agent::EventWebhookJob.perform_later(event.id)
+      enqueue_webhook_after_commit(event.id)
+    end
+
+    # Re-enqueues webhook rows stranded in pending past
+    # STRANDED_WEBHOOK_AFTER with attempts remaining: the row write
+    # committed but its enqueue never ran (a crash or a Redis outage in
+    # between), or a retry's re-enqueue was lost. Runs from the periodic
+    # event-reminders loop. A row still waiting on its scheduled retry
+    # past the grace period may post twice; delivery is at-least-once,
+    # so receivers already tolerate redelivery.
+    def recover_stranded_webhooks!(now: Time.current)
+      AgentEvent.where(webhook_status: "pending")
+        .where("agent_events.created_at < ?", now - STRANDED_WEBHOOK_AFTER)
+        .where("agent_events.webhook_attempts < ?", Agent::EventWebhookJob::MAX_ATTEMPTS)
+        .find_each do |event|
+          Agent::EventWebhookJob.perform_later(event.id)
+        rescue => error
+          Rails.logger.error "Stranded webhook recovery failed for event #{event.id}: #{error.class}: #{error.message}"
+        end
     end
 
     # Message hop for the legacy webhook gate. Recomputes the same value
@@ -438,6 +460,16 @@ class Agent::Delivery
         end
 
         [ [ delay, 0 ].max, RETRY_AFTER_MAX ].min
+      end
+
+      # The Redis enqueue waits for the row write to commit, so a
+      # rolled-back claim never leaves a job behind. (A crash between the
+      # commit and the enqueue still strands the row; the periodic sweep
+      # picks those up.)
+      def enqueue_webhook_after_commit(event_id)
+        ActiveRecord.after_all_transactions_commit do
+          Agent::EventWebhookJob.perform_later(event_id)
+        end
       end
 
       # Atomically transitions a pending row; false when another job
