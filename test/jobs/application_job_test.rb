@@ -72,11 +72,10 @@ class ApplicationJobTest < ActiveJob::TestCase
     assert_no_enqueued_jobs
   end
 
-  test "Calendar::SyncEntryJob does not retry" do
-    Calendar::EntrySync.stubs(:sync).raises(Net::ReadTimeout, "boom")
+  test "Calendar::SyncEntryJob retries transient Google failures with a delay" do
+    Calendar::EntrySync.stubs(:sync).raises(Google::Client::Unavailable, "boom")
 
-    assert_raises(Net::ReadTimeout) { Calendar::SyncEntryJob.perform_now(1, 1) }
-    assert_no_enqueued_jobs
+    assert_enqueued_with(job: Calendar::SyncEntryJob) { Calendar::SyncEntryJob.perform_now(1, 1) }
   end
 
   test "Github::FetchPullRequestJob does not retry" do
