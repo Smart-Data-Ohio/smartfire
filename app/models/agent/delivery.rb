@@ -6,6 +6,12 @@ class Agent::Delivery
   # A webhook row still pending past this age with attempts remaining is
   # presumed stranded (its enqueue never ran) and picked up by the sweep.
   STRANDED_WEBHOOK_AFTER = 2.minutes
+  # A pending row that already spent every attempt but never recorded an
+  # outcome (its worker died between the claim and the write) would match
+  # no sweep and sit pending forever. Once it has been past the stranded
+  # grace for this further margin — long enough that no live worker can
+  # still be writing its outcome — the sweep marks it failed instead.
+  EXHAUSTED_WEBHOOK_AFTER = 5.minutes
 
   # Raised when a webhook cannot be built (message, approval, or thread
   # gone): the delivery job records it and does not retry.
@@ -286,6 +292,7 @@ class Agent::Delivery
     # extra attempt.
     def recover_stranded_webhooks!(now: Time.current)
       recover_stranded_deliveries!(now: now)
+      fail_exhausted_webhooks!(now: now)
       grace = now - STRANDED_WEBHOOK_AFTER
       AgentEvent.where(webhook_status: "pending")
         .where("agent_events.webhook_attempts < ?", Agent::EventWebhookJob::MAX_ATTEMPTS)
@@ -311,6 +318,23 @@ class Agent::Delivery
             Rails.logger.error "Stranded webhook recovery failed for event #{event.id}: #{error.class}: #{error.message}"
           end
         end
+    end
+
+    # Fails pending webhook rows that spent every attempt without
+    # recording an outcome, once they have been past the stranded grace
+    # for EXHAUSTED_WEBHOOK_AFTER. Without this the attempts filter in
+    # the recovery sweep above hides them and they sit pending forever.
+    def fail_exhausted_webhooks!(now: Time.current)
+      cutoff = now - STRANDED_WEBHOOK_AFTER - EXHAUSTED_WEBHOOK_AFTER
+      AgentEvent.where(webhook_status: "pending")
+        .where("agent_events.webhook_attempts >= ?", Agent::EventWebhookJob::MAX_ATTEMPTS)
+        .where(
+          "((agent_events.webhook_next_attempt_at IS NULL AND agent_events.created_at < :cutoff) " \
+            "OR agent_events.webhook_next_attempt_at < :cutoff)",
+          cutoff: cutoff
+        )
+        .update_all(webhook_status: "failed",
+          webhook_last_error: "Delivery attempts exhausted without a recorded outcome")
     end
 
     # Re-enqueues message deliveries stranded in pending past the grace

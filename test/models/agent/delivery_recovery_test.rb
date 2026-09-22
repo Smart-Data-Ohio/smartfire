@@ -34,12 +34,27 @@ class Agent::DeliveryRecoveryTest < ActiveSupport::TestCase
     end
   end
 
-  test "an exhausted pending row is left alone" do
-    stranded_event(age: 10.minutes, attempts: Agent::EventWebhookJob::MAX_ATTEMPTS)
+  test "an exhausted pending row past its grace is marked failed" do
+    old_null = stranded_event(age: 10.minutes, attempts: Agent::EventWebhookJob::MAX_ATTEMPTS)
+    old_scheduled = stranded_event(age: 10.minutes, attempts: Agent::EventWebhookJob::MAX_ATTEMPTS)
+    old_scheduled.update!(webhook_next_attempt_at: 8.minutes.ago)
 
     assert_no_enqueued_jobs only: Agent::EventWebhookJob do
       Agent::Delivery.recover_stranded_webhooks!
     end
+
+    assert_equal "failed", old_null.reload.webhook_status
+    assert_equal "failed", old_scheduled.reload.webhook_status
+  end
+
+  test "a recently exhausted pending row is left alone" do
+    event = stranded_event(age: 3.minutes, attempts: Agent::EventWebhookJob::MAX_ATTEMPTS)
+
+    assert_no_enqueued_jobs only: Agent::EventWebhookJob do
+      Agent::Delivery.recover_stranded_webhooks!
+    end
+
+    assert_equal "pending", event.reload.webhook_status
   end
 
   test "settled webhook rows are left alone" do
