@@ -210,7 +210,8 @@ class Agents::GithubActionDeliveryTest < ActionDispatch::IntegrationTest
       assert action.valid?, action.errors.full_messages.to_sentence
       AgentApproval.create!(
         agent: @agent, room: @room, action: action.action_name,
-        summary: action.summary, payload: action.payload_json
+        summary: action.summary, payload: action.payload_json,
+        github_account_id: @bot.github_connected_account.id, github_login: @bot.github_connected_account.github_login
       )
     end
 

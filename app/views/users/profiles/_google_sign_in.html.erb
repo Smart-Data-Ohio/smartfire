@@ -1,0 +1,13 @@
+<% if Google::SignIn.configured? %>
+  <section class="margin-block pad-inline pad-block fill-shade border-radius" aria-labelledby="google-sign-in-title">
+    <h2 id="google-sign-in-title" class="txt-large">Google sign-in</h2>
+
+    <% if (identity = user.google_identity) %>
+      <p>Linked to <%= identity.email %>. You can sign in with Google.</p>
+    <% else %>
+      <p>Link your Workspace Google account so you can sign in with Google. You will confirm it with Google.</p>
+      <%= button_to "Link Google sign-in", user_google_sign_in_link_path, method: :post, class: "btn",
+            form: { data: { turbo: false } } %>
+    <% end %>
+  </section>
+<% end %>

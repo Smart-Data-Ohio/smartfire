@@ -18,12 +18,12 @@ class AgentRevocationEndpointsTest < ActionDispatch::IntegrationTest
     memberships(:bender_watercooler).destroy!
 
     assert_no_difference -> { Message.count } do
-      post room_bot_messages_url(@room, @bot.bot_key), params: +"Hello!"
+      post room_bot_messages_url(@room, bot_key_for(@bot)), params: +"Hello!"
     end
     assert_response :not_found
 
     assert_no_difference -> { Boost.count } do
-      post room_bot_message_boosts_url(@room, @bot.bot_key, @message), params: +"👀"
+      post room_bot_message_boosts_url(@room, bot_key_for(@bot), @message), params: +"👀"
     end
     assert_response :not_found
 
@@ -40,12 +40,12 @@ class AgentRevocationEndpointsTest < ActionDispatch::IntegrationTest
     @room.destroy!
 
     assert_no_difference -> { Message.count } do
-      post room_bot_messages_url(@room, @bot.bot_key), params: +"Hello!"
+      post room_bot_messages_url(@room, bot_key_for(@bot)), params: +"Hello!"
     end
     assert_response :not_found
 
     assert_no_difference -> { Boost.count } do
-      post room_bot_message_boosts_url(@room, @bot.bot_key, message_id), params: +"👀"
+      post room_bot_message_boosts_url(@room, bot_key_for(@bot), message_id), params: +"👀"
     end
     assert_response :not_found
 
@@ -61,12 +61,12 @@ class AgentRevocationEndpointsTest < ActionDispatch::IntegrationTest
     @agent.suspend!
 
     assert_no_difference -> { Message.count } do
-      post room_bot_messages_url(@room, @bot.bot_key), params: +"Hello!"
+      post room_bot_messages_url(@room, bot_key_for(@bot)), params: +"Hello!"
     end
     assert_response :forbidden
 
     assert_no_difference -> { Boost.count } do
-      post room_bot_message_boosts_url(@room, @bot.bot_key, @message), params: +"👀"
+      post room_bot_message_boosts_url(@room, bot_key_for(@bot), @message), params: +"👀"
     end
     assert_response :forbidden
 
@@ -86,12 +86,12 @@ class AgentRevocationEndpointsTest < ActionDispatch::IntegrationTest
     # A deactivated bot no longer authenticates, so the legacy endpoints fall
     # through to the login redirect instead of creating anything.
     assert_no_difference -> { Message.count } do
-      post room_bot_messages_url(@room, @bot.bot_key), params: +"Hello!"
+      post room_bot_messages_url(@room, bot_key_for(@bot)), params: +"Hello!"
     end
     assert_response :redirect
 
     assert_no_difference -> { Boost.count } do
-      post room_bot_message_boosts_url(@room, @bot.bot_key, @message), params: +"👀"
+      post room_bot_message_boosts_url(@room, bot_key_for(@bot), @message), params: +"👀"
     end
     assert_response :redirect
 

@@ -1,13 +1,12 @@
 <% boosts = message.ordered_boosts %>
-<% reaction_boosts = boosts.group_by(&:content) %>
-<% legacy_boosts = boosts.reject { |boost| EmojiHelper::REACTIONS.key?(boost.content) } %>
+<% reaction_boosts, legacy_boosts = boosts.partition { |boost| Boost.reaction?(boost.content) } %>
+<% grouped_reactions = reaction_boosts.group_by(&:content) %>
 
 <div id="<%= dom_id(message, :boosts) %>" class="flex-inline flex-wrap gap">
-  <% if reaction_boosts.any? { |character, _| EmojiHelper::REACTIONS.key?(character) } %>
+  <% if grouped_reactions.any? %>
     <div class="boosts__reactions flex-inline flex-wrap gap" role="group" aria-label="Message reactions">
-      <% EmojiHelper::REACTIONS.each do |character, title| %>
-        <% next unless reaction_boosts.key?(character) %>
-        <%= render "messages/boosts/reaction", message:, character:, title:, boosts: reaction_boosts.fetch(character) %>
+      <% grouped_reactions.each do |content, group| %>
+        <%= render "messages/boosts/reaction", message:, content:, boosts: group %>
       <% end %>
     </div>
   <% end %>

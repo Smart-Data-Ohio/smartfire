@@ -47,6 +47,8 @@ class ActivityItem < ApplicationRecord
     # Source data is deliberately resolved from the source row at query time.
     # Keeping only the recipient, source identity, event type, and state means
     # a private message cannot remain readable in a deleted or revoked room.
+    # No DISTINCT: every join below is 1:1 (primary keys plus the unique
+    # room/user membership index), so rows cannot fan out.
     def accessible_to(user)
       return none unless active_human?(user)
 
@@ -100,7 +102,6 @@ class ActivityItem < ApplicationRecord
             AND (activity_approval_agents.owner_id = activity_items.user_id
               OR users.role = #{connection.quote(User.roles.fetch("administrator"))}))
         SQL
-        .distinct
     end
 
     def active_human?(user)

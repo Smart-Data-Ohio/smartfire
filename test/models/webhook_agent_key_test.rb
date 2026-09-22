@@ -60,7 +60,7 @@ class WebhookAgentKeyTest < ActiveSupport::TestCase
     )
     pull_request = parent.github_pull_requests.first
     pull_request.update!(
-      title: "Fix login", state: "open", base_branch: "main", head_branch: "shiny",
+      private: false, title: "Fix login", state: "open", base_branch: "main", head_branch: "shiny",
       review_decision: "approved", check_status: "passing",
       html_url: "https://github.com/rails/rails/pull/12"
     )

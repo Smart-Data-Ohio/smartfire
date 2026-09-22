@@ -15,7 +15,10 @@ module Github
 
     # One postable event for one PR. Every post from a single webhook shares
     # its event_key, owner, and repo; check runs fan out over PR numbers.
-    Post = Data.define(:event_key, :owner, :repo, :number, :title, :url, :line, :dedupe_suffix, :reviewer_login)
+    # redacted_line is the same line without the PR title, posted for a
+    # private (or unknown) repository into rooms whose subscription was not
+    # created by a verified reader of the repository.
+    Post = Data.define(:event_key, :owner, :repo, :number, :title, :url, :line, :redacted_line, :dedupe_suffix, :reviewer_login)
 
     class << self
       def bot_user
@@ -37,6 +40,8 @@ module Github
         posts = plan_posts(github_event, payload)
         return if posts.blank?
 
+        public_repository = payload.dig("repository", "private") == false
+
         subscriptions = Github::RepositorySubscription.joins(:room).merge(Room.alive)
           .where(owner: posts.first.owner, repo: posts.first.repo)
           .select { |subscription| subscription.subscribed_to?(posts.first.event_key) }
@@ -50,7 +55,7 @@ module Github
 
         bot = bot_user
         claims.each do |subscription, notification, post|
-          message = post_message!(subscription.room, bot, post)
+          message = post_message!(subscription.room, bot, post, redact: !public_repository && !subscription.reader_verified?)
           notification.update!(message: message)
           record_review_request_item(subscription.room, message, post) if post.event_key == "review_requested"
         end
@@ -75,23 +80,24 @@ module Github
         # room already discusses the PR in a thread, the update lands there
         # as a thread reply instead, which also refreshes the thread's
         # activity timestamp so it surfaces in the threads list.
-        def post_message!(room, bot, post)
+        def post_message!(room, bot, post, redact:)
+          line = redact ? post.redacted_line : post.line
           thread = pull_request_thread_for(room, post)
-          return post_room_message!(room, bot, post) if thread.nil?
+          return post_room_message!(room, bot, post, line) if thread.nil?
 
           # A locked thread refuses the reply; the dedupe row is already
           # claimed, so the update falls back to a root room message rather
           # than failing the job. Closed threads reopen inside post_message!.
           begin
-            message = thread.post_message!(creator: bot, attributes: { markdown_source: "#{post.line}\n#{post.url}" })
+            message = thread.post_message!(creator: bot, attributes: { markdown_source: "#{line}\n#{post.url}" })
           rescue ChannelThread::LockedError
-            return post_room_message!(room, bot, post)
+            return post_room_message!(room, bot, post, line)
           end
           message.tap(&:broadcast_create)
         end
 
-        def post_room_message!(room, bot, post)
-          room.root_messages.create_with_attachment!(creator: bot, markdown_source: "#{post.line}\n#{post.url}").tap(&:broadcast_create)
+        def post_room_message!(room, bot, post, line)
+          room.root_messages.create_with_attachment!(creator: bot, markdown_source: "#{line}\n#{post.url}").tap(&:broadcast_create)
         end
 
         # The room's discussion thread for the posted PR, if one exists.
@@ -143,19 +149,21 @@ module Github
 
           case payload["action"]
           when "opened"
-            [ opened_post(owner, repo, number, title, url, "**#{inline(sender)}** opened pull request #{pr_ref(number, title)}") ]
+            [ opened_post(owner, repo, number, title, url) { |shown| "**#{inline(sender)}** opened pull request #{pr_ref(number, shown)}" } ]
           when "reopened"
-            [ opened_post(owner, repo, number, title, url, "**#{inline(sender)}** reopened pull request #{pr_ref(number, title)}") ]
+            [ opened_post(owner, repo, number, title, url) { |shown| "**#{inline(sender)}** reopened pull request #{pr_ref(number, shown)}" } ]
           when "ready_for_review"
-            [ opened_post(owner, repo, number, title, url, "**#{inline(sender)}** marked #{pr_ref(number, title)} ready for review") ]
+            [ opened_post(owner, repo, number, title, url) { |shown| "**#{inline(sender)}** marked #{pr_ref(number, shown)} ready for review" } ]
           when "closed"
             if pr["merged"]
               actor = pr.dig("merged_by", "login") || sender
               [ Post.new(event_key: "merged", owner:, repo:, number:, title:, url:,
-                line: "**#{inline(actor)}** merged #{pr_ref(number, title)}", dedupe_suffix: "", reviewer_login: nil) ]
+                line: "**#{inline(actor)}** merged #{pr_ref(number, title)}",
+                redacted_line: "**#{inline(actor)}** merged #{pr_ref(number, nil)}", dedupe_suffix: "", reviewer_login: nil) ]
             else
               [ Post.new(event_key: "closed", owner:, repo:, number:, title:, url:,
                 line: "**#{inline(sender)}** closed #{pr_ref(number, title)}",
+                redacted_line: "**#{inline(sender)}** closed #{pr_ref(number, nil)}",
                 dedupe_suffix: ":#{pr["closed_at"]}", reviewer_login: nil) ]
             end
           when "review_requested"
@@ -164,14 +172,16 @@ module Github
 
             [ Post.new(event_key: "review_requested", owner:, repo:, number:, title:, url:,
               line: "**#{inline(sender)}** requested a review from **#{inline(reviewer)}** on #{pr_ref(number, title)}",
+              redacted_line: "**#{inline(sender)}** requested a review from **#{inline(reviewer)}** on #{pr_ref(number, nil)}",
               dedupe_suffix: ":#{reviewer.to_s.downcase}", reviewer_login: reviewer) ]
           else
             []
           end
         end
 
-        def opened_post(owner, repo, number, title, url, line)
-          Post.new(event_key: "opened", owner:, repo:, number:, title:, url:, line:, dedupe_suffix: "", reviewer_login: nil)
+        def opened_post(owner, repo, number, title, url, &line)
+          Post.new(event_key: "opened", owner:, repo:, number:, title:, url:, line: line.call(title), redacted_line: line.call(nil),
+            dedupe_suffix: "", reviewer_login: nil)
         end
 
         def plan_review_posts(payload)
@@ -194,6 +204,7 @@ module Github
 
           [ Post.new(event_key: "review_submitted", owner:, repo:, number:, title:, url:,
             line: "**#{inline(actor)}** #{verb} #{pr_ref(number, title)}",
+            redacted_line: "**#{inline(actor)}** #{verb} #{pr_ref(number, nil)}",
             dedupe_suffix: ":#{review["id"]}", reviewer_login: nil) ]
         end
 
@@ -214,6 +225,7 @@ module Github
             Post.new(event_key: "checks_failed", owner:, repo:, number:, title:,
               url: "https://github.com/#{full_name}/pull/#{number}",
               line: checks_failed_line(number, title, name),
+              redacted_line: checks_failed_line(number, nil, name),
               dedupe_suffix: ":#{sha}", reviewer_login: nil)
           end
         end
@@ -232,6 +244,7 @@ module Github
             Post.new(event_key: "checks_failed", owner:, repo:, number: pr.number, title: pr.title,
               url: pr.html_url.presence || "https://github.com/#{full_name}/pull/#{pr.number}",
               line: checks_failed_line(pr.number, pr.title, payload["context"]),
+              redacted_line: checks_failed_line(pr.number, nil, payload["context"]),
               dedupe_suffix: ":#{payload["sha"]}", reviewer_login: nil)
           end
         end

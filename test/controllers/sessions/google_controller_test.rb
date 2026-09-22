@@ -148,7 +148,8 @@ class Sessions::GoogleControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "existing account links by verified email, preserving id, history, role, and password" do
-    user = User.create!(name: "Riel", email_address: "riel@smartdata.net", password: "secret123456", role: :administrator)
+    user = User.create!(name: "Riel", email_address: "riel@smartdata.net", password: "secret123456", role: :administrator,
+      google_email_link_allowed: true)
     message = Message.create!(room: rooms(:pets), creator: user, body: "history stays")
 
     state = start_google_sign_in

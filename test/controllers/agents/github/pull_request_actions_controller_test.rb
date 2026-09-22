@@ -208,7 +208,7 @@ class Agents::Github::PullRequestActionsControllerTest < ActionDispatch::Integra
   test "a legacy bot key is rejected" do
     delete session_url
 
-    post room_agent_github_pull_request_actions_url(@room, bot_key: @bot.bot_key),
+    post room_agent_github_pull_request_actions_url(@room, bot_key: bot_key_for(@bot)),
       params: { pull_request_id: @pull_request.id, kind: "comment", body: "hi" }.to_json,
       headers: { "Content-Type" => "application/json" }
 
@@ -255,6 +255,9 @@ class Agents::Github::PullRequestActionsControllerTest < ActionDispatch::Integra
       JSON.parse(approval.payload)
     )
     assert_equal "gh-1", approval.external_id
+    assert_equal @bot.github_connected_account.id, approval.github_account_id
+    assert_equal "bender-machine", approval.github_login
+    assert approval.github_identity_current?
     assert ActivityItem.exists?(user: users(:david), source: approval)
   end
 

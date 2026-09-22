@@ -90,7 +90,7 @@ class AgentAuthenticationTest < ActionDispatch::IntegrationTest
   end
 
   test "bot keys remain denied on /agents/me" do
-    get agents_me_url(bot_key: users(:bender).bot_key)
+    get agents_me_url(bot_key: bot_key_for(users(:bender)))
 
     assert_response :forbidden
   end

@@ -8,7 +8,7 @@ class RoomsController < ApplicationController
   end
 
   def show
-    @messages = find_messages
+    @messages = Message::MentionPreloader.preload_for(find_messages)
   end
 
   def destroy

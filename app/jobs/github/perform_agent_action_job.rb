@@ -51,6 +51,13 @@ class Github::PerformAgentActionJob < ApplicationJob
         message: "Agent has no usable GitHub account")
     end
 
+    # The decider approved acting as the identity recorded at request time;
+    # a relinked or replaced connection must never inherit that approval.
+    unless approval.github_identity_matches?(account)
+      return record_outcome(approval, agent, room, status: "failed",
+        message: "The agent's GitHub account changed since this was approved")
+    end
+
     begin
       client = Github::WriteClient.new(token: account.access_token)
     rescue ActiveRecord::Encryption::Errors::Decryption

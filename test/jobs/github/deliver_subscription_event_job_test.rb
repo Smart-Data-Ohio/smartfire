@@ -400,6 +400,67 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
     end
   end
 
+  test "a private repository posts without the title to a subscription with no verified reader" do
+    payload = pull_request_payload(action: "opened", title: "Secret acquisition")
+    payload["repository"]["private"] = true
+
+    Github::DeliverSubscriptionEventJob.perform_now("pull_request", payload)
+
+    message = @room.messages.order(:created_at).last
+    assert_equal "**alice** opened pull request #12\nhttps://github.com/rails/rails/pull/12", message.markdown_source
+  end
+
+  test "a repository whose privacy the payload omits is treated as private" do
+    payload = pull_request_payload(action: "closed", merged: true, title: "Secret acquisition")
+    payload["repository"].delete("private")
+
+    Github::DeliverSubscriptionEventJob.perform_now("pull_request", payload)
+
+    assert_not_includes @room.messages.order(:created_at).last.markdown_source, "Secret acquisition"
+  end
+
+  test "a private repository keeps the title for a verified reader's subscription" do
+    @subscription.update!(reader_verified: true)
+    payload = pull_request_payload(action: "opened", title: "Secret acquisition")
+    payload["repository"]["private"] = true
+
+    Github::DeliverSubscriptionEventJob.perform_now("pull_request", payload)
+
+    assert_equal "**alice** opened pull request #12: Secret acquisition\nhttps://github.com/rails/rails/pull/12",
+      @room.messages.order(:created_at).last.markdown_source
+  end
+
+  test "failed checks on a private repository omit the stored title for an unverified subscription" do
+    Github::PullRequest.create!(owner: "rails", repo: "rails", number: 12, title: "Secret acquisition", head_branch: "secret-branch")
+    run = check_run_payload
+    run["repository"]["private"] = true
+    status = status_payload(state: "failure", branches: [ "secret-branch" ], sha: "fff999")
+    status["repository"]["private"] = true
+
+    Github::DeliverSubscriptionEventJob.perform_now("check_run", run)
+    Github::DeliverSubscriptionEventJob.perform_now("status", status)
+
+    sources = @room.messages.order(:created_at).last(2).map(&:markdown_source)
+    assert_equal 2, sources.size
+    sources.each do |source|
+      assert_not_includes source, "Secret acquisition"
+      assert_not_includes source, "secret-branch"
+      assert source.start_with?("Checks failed on #12")
+    end
+  end
+
+  test "one webhook redacts per subscription" do
+    other_room = rooms(:pets)
+    Github::RepositorySubscription.create!(room: other_room, owner: "rails", repo: "rails", created_by: users(:david), reader_verified: true)
+    payload = pull_request_payload(action: "opened", title: "Secret acquisition")
+    payload["repository"]["private"] = true
+
+    Github::DeliverSubscriptionEventJob.perform_now("pull_request", payload)
+
+    assert_not_includes @room.messages.order(:created_at).last.markdown_source, "Secret acquisition"
+    assert_includes other_room.messages.order(:created_at).last.markdown_source, "Secret acquisition"
+  end
+
   private
     def room_messages_stream_name(room)
       signed = Turbo::StreamsChannel.signed_stream_name([ room, :messages ])
@@ -426,7 +487,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
       {
         "action" => action,
         "sender" => { "login" => action == "review_requested" ? "bob" : "alice" },
-        "repository" => { "full_name" => "rails/rails" },
+        "repository" => { "full_name" => "rails/rails", "private" => false },
         "pull_request" => {
           "number" => number,
           "title" => title,
@@ -444,7 +505,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
       {
         "action" => "submitted",
         "sender" => { "login" => "carol" },
-        "repository" => { "full_name" => "rails/rails" },
+        "repository" => { "full_name" => "rails/rails", "private" => false },
         "review" => { "id" => id, "state" => state, "user" => { "login" => "carol" } },
         "pull_request" => {
           "number" => 12,
@@ -458,7 +519,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
     def check_run_payload(conclusion: "failure", sha: "abc123", name: "ci / test", numbers: [ 12 ])
       {
         "action" => "completed",
-        "repository" => { "full_name" => "rails/rails" },
+        "repository" => { "full_name" => "rails/rails", "private" => false },
         "check_run" => {
           "name" => name,
           "head_sha" => sha,
@@ -471,7 +532,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
     def check_suite_payload(conclusion: "failure", sha: "abc123", numbers: [ 12 ])
       {
         "action" => "completed",
-        "repository" => { "full_name" => "rails/rails" },
+        "repository" => { "full_name" => "rails/rails", "private" => false },
         "check_suite" => {
           "head_sha" => sha,
           "conclusion" => conclusion,
@@ -486,7 +547,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
         "state" => state,
         "sha" => sha,
         "context" => "ci / test",
-        "repository" => { "full_name" => "rails/rails" },
+        "repository" => { "full_name" => "rails/rails", "private" => false },
         "branches" => branches.map { |name| { "name" => name } }
       }
     end

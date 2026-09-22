@@ -9,6 +9,16 @@ class MessageTest < ActiveSupport::TestCase
     end
   end
 
+  test "plain_text_body memoizes per instance and refreshes after edits" do
+    message = rooms(:designers).messages.create!(creator: users(:david),
+      markdown_source: "original", client_message_id: "memo-text")
+
+    assert_same message.plain_text_body, message.plain_text_body
+
+    message.update!(markdown_source: "edited")
+    assert_equal "edited", message.plain_text_body
+  end
+
   test "all emoji" do
     assert Message.new(body: "😄🤘").plain_text_body.all_emoji?
     assert_not Message.new(body: "Haha! 😄🤘").plain_text_body.all_emoji?

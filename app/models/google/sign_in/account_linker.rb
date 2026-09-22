@@ -6,6 +6,16 @@ module Google
     # the verified email; later logins never consult the email for an
     # already-linked subject. Never reactivates, recreates, or
     # provisions privileged accounts. Raises Rejected on any mismatch.
+    #
+    # Linking by email trusts the Campfire account's address, so an
+    # address the member typed in themselves (email_self_changed_at) is
+    # never trusted: a member could otherwise claim a new hire's Workspace
+    # address and receive that person's first Google sign-in. Only
+    # accounts with google_email_link_allowed (those that existed before
+    # this rule, with their original email, or that an administrator
+    # vouched for) auto-link; every other match -- join-code signups,
+    # self-changed emails -- is refused with :admin_link_required. Those
+    # members link from their own profile while signed in (link_to_user!).
     class AccountLinker
       # Marker User#deactivate splices into the email local part, as in
       # "jane-deactivated-<uuid>@example.com".
@@ -37,7 +47,37 @@ module Google
           raise Rejected, :retry
         end
 
+        # Links verified claims to an already signed-in member, who proved
+        # the account is theirs by being signed in. Refuses a subject that
+        # belongs to someone else and a member already linked to another
+        # subject (an administrator unlinks first). Returns the identity.
+        def link_to_user!(claims, user)
+          subject = claims["sub"].to_s
+          email = claims["email"].to_s.strip
+          domain = claims["hd"].to_s.strip.downcase
+          raise Rejected, :bad_token if subject.blank? || email.blank?
+
+          ensure_eligible!(user)
+
+          if (identity = GoogleIdentity.find_by(subject:))
+            raise Rejected, :subject_taken unless identity.user_id == user.id
+
+            identity.update!(email:, domain:)
+            return identity
+          end
+
+          raise Rejected, :already_linked if user.google_identity
+
+          GoogleIdentity.create!(user:, subject:, email:, domain:)
+        rescue ActiveRecord::RecordNotUnique
+          raise Rejected, :subject_taken
+        end
+
         private
+          def email_link_allowed?(user)
+            user.google_email_link_allowed? && user.email_self_changed_at.nil?
+          end
+
           def link_or_provision!(subject:, email:, domain:, claims:)
             matches = User.where("LOWER(email_address) = ?", email.downcase).to_a
             raise Rejected, :ambiguous if matches.many?
@@ -47,6 +87,8 @@ module Google
               if user.google_identity && user.google_identity.subject != subject
                 raise Rejected, :subject_mismatch
               end
+              raise Rejected, :admin_link_required unless email_link_allowed?(user)
+
               GoogleIdentity.create!(user:, subject:, email:, domain:)
               return user
             end

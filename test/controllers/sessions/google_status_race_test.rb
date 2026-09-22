@@ -12,7 +12,7 @@ class Sessions::GoogleStatusRaceTest < ActionDispatch::IntegrationTest
   [ :deactivate, :ban ].each do |action|
     [ false, true ].each do |linked|
       test "#{action} racing #{linked ? 'linked' : 'first'} Google login leaves no usable session" do
-        user = User.create!(name: "Member", email_address: "member@smartdata.net", password: "secret123456")
+        user = User.create!(name: "Member", email_address: "member@smartdata.net", password: "secret123456", google_email_link_allowed: true)
         if linked
           GoogleIdentity.create!(user:, subject: "race-member", email: user.email_address, domain: "smartdata.net")
         end
