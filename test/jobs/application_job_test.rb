@@ -48,29 +48,19 @@ class ApplicationJobTest < ActiveJob::TestCase
     end
   end
 
-  test "plain resque without a scheduler cannot delay retries" do
-    assert_not Resque.respond_to?(:enqueue_at_with_queue),
-      "resque-scheduler is now available; revisit the immediate-retry fallback"
-  end
+  test "retries are scheduled with polynomial backoff" do
+    travel_to Time.current do
+      assert_enqueued_with(job: TransientFailureJob) do
+        TransientFailureJob.perform_now
+      end
+      first_at = enqueued_jobs.last[:at]
 
-  test "retries re-enqueue immediately when the adapter cannot schedule" do
-    job = TransientFailureJob.new
-    job.stubs(:scheduled_retries_supported?).returns(false)
+      perform_enqueued_jobs
+      second_at = enqueued_jobs.last[:at]
 
-    assert_enqueued_with(job: TransientFailureJob, at: nil) do
-      job.perform_now
+      assert_not_nil first_at
+      assert_operator second_at - first_at, :>, 5, "expected the backoff to grow between attempts"
     end
-  end
-
-  test "retries keep their backoff when the adapter can schedule" do
-    job = TransientFailureJob.new
-    job.stubs(:scheduled_retries_supported?).returns(true)
-
-    assert_enqueued_with(job: TransientFailureJob) do
-      job.perform_now
-    end
-
-    assert_not_nil enqueued_jobs.last[:at]
   end
 
   test "Agent::DeliveryJob does not retry" do

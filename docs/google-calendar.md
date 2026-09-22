@@ -59,9 +59,8 @@ created or changes, when an event's time, title, or description changes,
 when an event is cancelled, when an account is connected (all upcoming
 going/maybe RSVPs), and when a membership ends.
 
-There is no delayed-job scheduler in this deployment, so failures are not
-retried on a timer: a failure is recorded on the entry and the next change
-retries. The Google event id is deterministic per event and member
+This job opts out of retries, so failures are not retried on a timer:
+a failure is recorded on the entry and the next change retries. The Google event id is deterministic per event and member
 (`campfire` plus base32hex of the packed ids), and the local row is
 reserved before the first request, so a retried insert reuses the same id
 and concurrent first runs converge through the insert-conflict path

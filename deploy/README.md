@@ -60,14 +60,17 @@ ONCE starts a replacement container before retiring the prior one. The explicit 
 
 If rollback is needed before accepting new writes, stop the app and restore the coherent checkpoint with its original image and keys. After new writes have been accepted, first preserve them: restoring an older checkpoint by itself would discard those messages and could make the feed repost alerts. Keep the feed's delivery state consistent with the restored message history.
 
-## Data retention
+## Periodic tasks
 
-The `retention` Procfile process runs `bin/retention-prune`, which enqueues `Retention::PruneJob` every `RETENTION_PRUNE_INTERVAL` seconds (default: daily). The job deletes, in batches:
+The `periodic` Procfile process runs `bin/periodic`, one loop for every recurring task so the box needs no extra long-running process. Each tick runs each task whose interval has elapsed; a failing task is logged without stopping the others:
 
-- `agent_events` older than 90 days,
-- `activity_items` the user has seen (read or handled) and untouched for 180 days — unread items are never pruned,
-- `github_webhook_deliveries` older than 14 days (the redelivery dedupe window is 7 days, still enforced at claim time),
-- completed `huddle_cleanups` older than 7 days (pending cleanups are never pruned),
-- revoked `huddle_grants` older than 30 days, along with their inbox items.
+- **Delayed jobs** (every 30 seconds): moves due resque-scheduler delayed jobs — ActiveJob retries with backoff — onto their queues. This replaces a scheduler daemon; there is deliberately no `resque-scheduler` process.
+- **Event reminders** (every `EVENT_REMINDERS_INTERVAL` seconds, default 30): dispatches due event reminders.
+- **Data retention** (every `RETENTION_PRUNE_INTERVAL` seconds, default daily): enqueues `Retention::PruneJob`, which deletes, in batches:
+  - `agent_events` older than 90 days,
+  - `activity_items` the user has seen (read or handled) and untouched for 180 days — unread items are never pruned,
+  - `github_webhook_deliveries` older than 14 days (the redelivery dedupe window is 7 days, still enforced at claim time),
+  - completed `huddle_cleanups` older than 7 days (pending cleanups are never pruned),
+  - revoked `huddle_grants` older than 30 days, along with their inbox items.
 
 The windows live as constants on `Retention::PruneJob` so they are easy to change. The same run re-enqueues `Room::DestroyJob` for any room that has been marked deleted for over an hour but is still present, covering a destroy whose job never ran (queue outage, lost job).
