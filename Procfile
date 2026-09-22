@@ -7,3 +7,4 @@ redis: redis-server config/redis.conf
 workers: FORK_PER_JOB=false INTERVAL=0.1 bundle exec resque-pool
 huddle_reconciler: bundle exec bin/huddle-reconcile
 event_reminders: bundle exec bin/event-reminders
+retention: bundle exec bin/retention-prune

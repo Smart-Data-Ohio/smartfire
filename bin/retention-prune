@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+
+require_relative "../config/environment"
+
+interval = Float(ENV.fetch("RETENTION_PRUNE_INTERVAL", 24.hours.to_i))
+abort "RETENTION_PRUNE_INTERVAL must be a positive finite number" unless interval.positive? && interval.finite?
+
+stopping = false
+%w[ INT TERM ].each { |signal| Signal.trap(signal) { stopping = true } }
+
+until stopping
+  begin
+    Retention::PruneJob.perform_later
+  rescue => error
+    Rails.logger.error "Retention prune enqueue failed: #{error.class}: #{error.message}"
+  ensure
+    sleep interval unless stopping
+  end
+end
