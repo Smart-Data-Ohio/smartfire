@@ -50,11 +50,49 @@ class Google::ConnectionsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes query.keys, "include_granted_scopes"
   end
 
-  test "callback with a bad state is 422" do
+  test "callback with a bad state redirects to the profile with an alert" do
     get google_callback_path, params: { state: "bogus", code: "auth-code" }
 
-    assert_response :unprocessable_content
+    assert_redirected_to user_profile_path
+    assert_equal "Google connection expired. Try again.", flash[:alert]
     assert_not GoogleAccount.exists?(user: @david)
+  end
+
+  test "callback with a connection failure redirects without storing" do
+    state = connect_state_from_redirect
+    stub_request(:post, GOOGLE_TOKEN_URL).to_raise(Errno::ECONNREFUSED)
+
+    get google_callback_path, params: { state:, code: "auth-code" }
+
+    assert_redirected_to user_profile_path
+    assert_equal "Could not connect Google Calendar. Try again.", flash[:alert]
+    assert_not GoogleAccount.exists?(user: @david)
+  end
+
+  test "callback without the calendar scope stores the grant but does not claim a connection" do
+    state = connect_state_from_redirect
+    stub_google_code_exchange(scope: "openid email")
+
+    assert_no_enqueued_jobs(only: Calendar::SyncEntryJob) do
+      get google_callback_path, params: { state:, code: "auth-code" }
+    end
+
+    assert_redirected_to user_profile_path
+    assert_equal "Calendar permission was not granted. Reconnect to publish events.", flash[:alert]
+    account = @david.reload.google_account
+    assert_equal "openid email", account.scopes
+    assert_not_predicate account, :calendar?
+  end
+
+  test "callback keeps the calendar scope when Drive is granted alongside" do
+    state = connect_state_from_redirect
+    stub_google_code_exchange(scope: DRIVE_SCOPES)
+
+    get google_callback_path, params: { state:, code: "auth-code" }
+
+    assert_redirected_to user_profile_path
+    assert_equal "Google Calendar connected.", flash[:notice]
+    assert_predicate @david.reload.google_account, :calendar?
   end
 
   test "callback success stores the account and enqueues syncs for upcoming going/maybe attendances" do
@@ -164,28 +202,46 @@ class Google::ConnectionsControllerTest < ActionDispatch::IntegrationTest
     assert_not GoogleAccount.exists?(user: @david)
   end
 
-  test "disconnect deletes the Google entries and destroys the account" do
-    connect_google!(@david)
+  test "disconnect clears local state without waiting on Google, then cleans up remotely" do
+    account = connect_google!(@david)
     first = EventCalendarEntry.create!(event: events(:launch_party), user: @david, google_event_id: SecureRandom.hex(16))
     second = EventCalendarEntry.create!(event: events(:watercooler_sync), user: @david, google_event_id: SecureRandom.hex(16))
-    first_delete = stub_google_event_delete(first.google_event_id)
-    second_delete = stub_google_event_delete(second.google_event_id)
+    refresh_token = account.refresh_token
 
-    delete google_connection_path
+    assert_enqueued_with(job: Calendar::DisconnectCleanupJob) do
+      delete google_connection_path
+    end
 
     assert_redirected_to user_profile_path
-    assert_requested first_delete
-    assert_requested second_delete
+    assert_not_requested :delete, %r{\A#{Regexp.escape(GOOGLE_EVENTS_URL)}/}
+    assert_not_requested :post, GOOGLE_REVOKE_URL
     assert_not EventCalendarEntry.exists?(user: @david)
     assert_not GoogleAccount.exists?(user: @david)
+
+    job = enqueued_jobs.find { |enqueued| enqueued[:job] == Calendar::DisconnectCleanupJob }
+    assert_equal [ first.google_event_id, second.google_event_id ].sort, job[:args].first.sort
+    snapshot = job[:args].second
+    assert_equal refresh_token, snapshot[:refresh_token] || snapshot["refresh_token"]
+
+    first_delete = stub_google_event_delete(first.google_event_id)
+    second_delete = stub_google_event_delete(second.google_event_id)
+    revoke = stub_google_revoke
+
+    perform_enqueued_jobs only: Calendar::DisconnectCleanupJob
+
+    assert_requested first_delete
+    assert_requested second_delete
+    assert_requested revoke, body: hash_including({ "token" => refresh_token })
   end
 
-  test "disconnect is best effort when Google fails" do
-    connect_google!(@david)
-    entry = EventCalendarEntry.create!(event: events(:launch_party), user: @david, google_event_id: SecureRandom.hex(16))
-    stub_google_event_delete(entry.google_event_id, status: 500)
+  test "disconnect without readable tokens skips cleanup but still disconnects" do
+    account = connect_google!(@david)
+    EventCalendarEntry.create!(event: events(:launch_party), user: @david, google_event_id: SecureRandom.hex(16))
+    corrupt_google_token!(account)
 
-    delete google_connection_path
+    assert_no_enqueued_jobs(only: Calendar::DisconnectCleanupJob) do
+      delete google_connection_path
+    end
 
     assert_redirected_to user_profile_path
     assert_not EventCalendarEntry.exists?(user: @david)
@@ -203,11 +259,11 @@ class Google::ConnectionsControllerTest < ActionDispatch::IntegrationTest
     connect_google!(users(:jason))
     mine = EventCalendarEntry.create!(event: events(:launch_party), user: @david, google_event_id: SecureRandom.hex(16))
     theirs = EventCalendarEntry.create!(event: events(:launch_party), user: users(:jason), google_event_id: SecureRandom.hex(16))
-    stub_google_event_delete(mine.google_event_id)
 
     delete google_connection_path
 
-    assert_not_requested :delete, "#{GOOGLE_EVENTS_URL}/#{theirs.google_event_id}"
+    job = enqueued_jobs.find { |enqueued| enqueued[:job] == Calendar::DisconnectCleanupJob }
+    assert_equal [ mine.google_event_id ], job[:args].first
     assert EventCalendarEntry.exists?(theirs.id)
     assert GoogleAccount.exists?(user: users(:jason))
   end

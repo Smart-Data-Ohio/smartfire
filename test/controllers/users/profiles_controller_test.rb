@@ -93,6 +93,38 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "Drive previews enabled"
   end
 
+  test "profile asks to reconnect when the grant lacks the calendar scope" do
+    connect_google!(users(:david), email: "david@gmail.test", scopes: "openid email")
+
+    get user_profile_url
+
+    assert_includes response.body, "Calendar permission needed, reconnect to publish events"
+    assert_not_includes response.body, "Connected as"
+    assert_not_includes response.body, "Disconnect"
+    assert_select "form[action=?][method=post][data-turbo=false]", google_connect_path, count: 1
+  end
+
+  test "reconnect preserves a granted Drive scope" do
+    connect_google!(users(:david), disconnected_reason: "Google rejected the connection", scopes: DRIVE_SCOPES)
+
+    get user_profile_url
+
+    assert_includes response.body, "Google rejected the connection, reconnect"
+    assert_select "form[action=?][method=post][data-turbo=false]", google_connect_path, count: 1 do
+      assert_select "input[name='features[]'][value=drive]", count: 1
+    end
+  end
+
+  test "reconnect without Drive requests the calendar scope only" do
+    connect_google!(users(:david), disconnected_reason: "Google rejected the connection")
+
+    get user_profile_url
+
+    assert_select "form[action=?][method=post][data-turbo=false]", google_connect_path, count: 1 do
+      assert_select "input[name='features[]']", count: 0
+    end
+  end
+
   test "layout carries the Drive previews meta tag only with the Drive scope" do
     get user_profile_url
     assert_not_includes response.body, "google-drive-previews"
