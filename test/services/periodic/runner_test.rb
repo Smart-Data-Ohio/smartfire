@@ -95,6 +95,20 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
     end
   end
 
+  test "a failed prune is retried instead of skipped for a day" do
+    Periodic::DelayedJobDrain.stubs(:drain_due!)
+    Event::ReminderDispatcher.stubs(:dispatch_due!)
+
+    now = Time.current
+    Retention::PruneJob.stubs(:perform_later).raises(Redis::BaseConnectionError, "Redis down")
+    travel_to(now) { @runner.tick }
+    Retention::PruneJob.unstub(:perform_later)
+
+    travel_to(now + 30.seconds) do
+      assert_enqueued_with(job: Retention::PruneJob) { @runner.tick }
+    end
+  end
+
   test "a failing task is logged and does not stop the other tasks" do
     Periodic::DelayedJobDrain.stubs(:drain_due!).raises(Redis::BaseConnectionError, "Redis down")
     Event::ReminderDispatcher.expects(:dispatch_due!).once

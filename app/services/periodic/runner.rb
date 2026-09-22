@@ -39,8 +39,9 @@ module Periodic
       @tasks.filter_map do |task|
         next unless due?(task, now)
 
-        @last_run[task.name] = now
-        run_task(task)
+        # Only a success counts as a run: a Redis error at the tick must
+        # not skip the daily prune for 24 hours.
+        @last_run[task.name] = now if run_task(task)
         task.name
       end
     end
@@ -66,8 +67,10 @@ module Periodic
 
       def run_task(task)
         task.run.call
+        true
       rescue => error
         @logger.error "Periodic #{task.name} failed: #{error.class}: #{error.message}"
+        false
       end
   end
 end
