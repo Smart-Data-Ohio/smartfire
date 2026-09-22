@@ -78,8 +78,11 @@ A stream also ends, in the same transaction, when:
 
 Ending always broadcasts the same updates as an explicit stop. On the
 presenting browser, a cancelled or denied capture, the browser's own stop
-control, and leaving the call end the stream as well, so no live state
-dangles behind a share that is already gone. When a host stops someone else's stream, the presenter's browser is notified through the huddle panel and stops sharing, instead of the share continuing as an ordinary screen share.
+control, and leaving the call end the stream as well — the leaving call
+uses `keepalive` so it survives tab close — and the huddle reconciler ends
+any live stream whose presenter has had no in-call grant for thirty
+seconds, so no live state dangles behind a share that is already gone.
+When a host stops someone else's stream, the presenter's browser is notified through the huddle panel and stops sharing, instead of the share continuing as an ordinary screen share.
 
 ## Deliberately not included
 

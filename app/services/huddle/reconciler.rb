@@ -20,9 +20,10 @@ class Huddle::Reconciler
     end
   end
 
-  # One pass of both loops, extracted so tests can run it without the sleep loop.
+  # One pass of every loop, extracted so tests can run it without the sleep loop.
   def reconcile_once
     resolve_overdue_invitations
+    end_stale_streams
     HuddleCleanup.reconcile_now if Huddle.livekit_admin_configured?
   end
 
@@ -31,6 +32,12 @@ class Huddle::Reconciler
       Huddle::InvitationResolver.resolve_overdue!
     rescue => error
       Rails.logger.error "Huddle invitation resolution failed: #{error.class}"
+    end
+
+    def end_stale_streams
+      Stream.end_stale_live!
+    rescue => error
+      Rails.logger.error "Huddle stream reconciliation failed: #{error.class}"
     end
 
     def install_signal_handlers

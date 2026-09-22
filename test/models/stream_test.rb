@@ -276,6 +276,52 @@ class StreamTest < ActiveSupport::TestCase
     assert_no_match(/FROM "streams"/, queries.join("\n"))
   end
 
+  test "end_stale_live! ends streams whose presenter went quiet over thirty seconds ago" do
+    grant = HuddleGrant.issue!(session: users(:david).sessions.create!(user_agent: "Test"), membership: @host)
+    grant.update_columns(last_seen_at: 31.seconds.ago)
+    stream = Stream.create!(room: @room, membership: @host, user: users(:david), quality: "1080p15")
+
+    assert_difference -> { capture_turbo_stream_broadcasts([ @room, :messages ]).count } do
+      Stream.end_stale_live!
+    end
+
+    assert_not_predicate stream.reload, :live?
+  end
+
+  test "end_stale_live! ends streams whose presenter was never seen" do
+    HuddleGrant.issue!(session: users(:david).sessions.create!(user_agent: "Test"), membership: @host)
+    stream = Stream.create!(room: @room, membership: @host, user: users(:david), quality: "1080p15")
+
+    Stream.end_stale_live!
+
+    assert_not_predicate stream.reload, :live?
+  end
+
+  test "end_stale_live! keeps streams with a recently seen presenter" do
+    grant = HuddleGrant.issue!(session: users(:david).sessions.create!(user_agent: "Test"), membership: @host)
+    grant.update_columns(last_seen_at: 29.seconds.ago)
+    stream = Stream.create!(room: @room, membership: @host, user: users(:david), quality: "1080p15")
+
+    assert_no_difference -> { capture_turbo_stream_broadcasts([ @room, :messages ]).count } do
+      Stream.end_stale_live!
+    end
+
+    assert_predicate stream.reload, :live?
+  end
+
+  test "end_stale_live! ignores other memberships' grants in the room" do
+    other_grant = HuddleGrant.issue!(session: users(:jason).sessions.create!(user_agent: "Test"),
+      membership: @room.memberships.find_by!(user: users(:jason)))
+    other_grant.update_columns(last_seen_at: Time.current)
+    quiet_grant = HuddleGrant.issue!(session: users(:david).sessions.create!(user_agent: "Test"), membership: @host)
+    quiet_grant.update_columns(last_seen_at: 31.seconds.ago)
+    stream = Stream.create!(room: @room, membership: @host, user: users(:david), quality: "1080p15")
+
+    Stream.end_stale_live!
+
+    assert_not_predicate stream.reload, :live?
+  end
+
   private
     def capture_sql
       queries = []

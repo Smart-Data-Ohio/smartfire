@@ -1250,6 +1250,11 @@ export default class extends Controller {
   // state, so a failure here only delays the end. The stream id travels
   // along when this browser knows it, so a delayed end can never kill
   // someone else's newer stream.
+  //
+  // keepalive (not sendBeacon) so the unload-time call survives: a beacon
+  // is POST-only with no custom headers, so it could not carry this
+  // DELETE or its CSRF token, while a keepalive fetch keeps both. The
+  // reconciler's stale-stream end is the backstop when even that is lost.
   async #deleteStream(roomId, streamId = null) {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
     if (!csrfToken) return
@@ -1261,6 +1266,7 @@ export default class extends Controller {
       await fetch(path, {
         method: "DELETE",
         credentials: "same-origin",
+        keepalive: true,
         headers: {
           "Accept": "text/vnd.turbo-stream.html",
           "X-CSRF-Token": csrfToken
