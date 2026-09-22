@@ -282,8 +282,8 @@ class Github::PerformAgentActionJobTest < ActiveJob::TestCase
     assert_requested stub, times: 1
   end
 
-  test "a duplicate enqueue that slips past the check returns the winner" do
-    stub_request(:post, "https://api.github.com/repos/rails/rails/issues/12/comments")
+  test "a duplicate enqueue that slips past the check posts no second request" do
+    stub = stub_request(:post, "https://api.github.com/repos/rails/rails/issues/12/comments")
       .with(body: { body: "Racy" }.to_json)
       .to_return(status: 201, body: { html_url: "https://github.com/rails/rails/pull/12#issuecomment-9" }.to_json)
     approval = approve!(build_approval(kind: "comment", body: "Racy"))
@@ -294,6 +294,34 @@ class Github::PerformAgentActionJobTest < ActiveJob::TestCase
     assert_no_difference -> { @agent.agent_events.where(event_type: "github_action_completed").count } do
       Github::PerformAgentActionJob.perform_now(approval.id)
     end
+
+    assert_requested stub, times: 1
+  end
+
+  test "a job that loses the execution claim makes no GitHub request" do
+    stub = stub_request(:post, "https://api.github.com/repos/rails/rails/issues/12/comments")
+      .with(body: { body: "Claimed" }.to_json)
+      .to_return(status: 201, body: { html_url: "https://github.com/rails/rails/pull/12#issuecomment-10" }.to_json)
+    approval = approve!(build_approval(kind: "comment", body: "Claimed"))
+
+    Github::PerformAgentActionJob.any_instance.stubs(:claim_execution).returns(nil)
+    assert_no_difference -> { @agent.agent_events.where(event_type: "github_action_completed").count } do
+      Github::PerformAgentActionJob.perform_now(approval.id)
+    end
+
+    assert_not_requested :post, %r{api\.github\.com}
+    assert_requested stub, times: 0
+  end
+
+  test "a failed GitHub call rewrites the winner's claim as a failure" do
+    stub_request(:post, "https://api.github.com/repos/rails/rails/issues/12/comments")
+      .to_return(status: 403, body: { message: "Nope" }.to_json)
+    approval = approve!(build_approval(kind: "comment", body: "Failing"))
+
+    Github::PerformAgentActionJob.perform_now(approval.id)
+
+    assert_equal 1, @agent.agent_events.where(event_type: "github_action_completed").count
+    assert_failed_with(approval, "GitHub refused: Nope")
   end
 
   test "completion rows are unique per agent and approval" do

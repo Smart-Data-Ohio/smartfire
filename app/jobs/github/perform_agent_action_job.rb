@@ -56,18 +56,26 @@ class Github::PerformAgentActionJob < ApplicationJob
         message: GithubConnectedAccount::UNREADABLE_TOKEN_REASON)
     end
 
+    # The outcome row is claimed before the GitHub write: the unique index
+    # admits exactly one claim per approval, so a concurrent job that also
+    # passed already_executed? loses the insert here and returns without
+    # calling GitHub. The winner rewrites its claim with the real outcome
+    # below, so a failed call still records a failure, never a retry.
+    event = claim_execution(approval, agent, room)
+    return unless event
+
     begin
       response = action.perform(client)
     rescue Github::WriteClient::Unauthorized
       account.mark_disconnected!("GitHub rejected the linked token (401)")
-      return record_outcome(approval, agent, room, status: "failed",
+      return finish_claim(event, approval, agent, status: "failed",
         message: "GitHub rejected the agent's linked token (401)")
     rescue Github::WriteClient::Refused, Github::WriteClient::Error => error
-      return record_outcome(approval, agent, room, status: "failed", message: error.message)
+      return finish_claim(event, approval, agent, status: "failed", message: error.message)
     end
 
     url = response.is_a?(Hash) ? response["html_url"] : nil
-    record_outcome(approval, agent, room, status: "completed", url: url)
+    finish_claim(event, approval, agent, status: "completed", url: url)
   end
 
   private
@@ -115,9 +123,60 @@ class Github::PerformAgentActionJob < ApplicationJob
           "message" => message
         }.compact
       )
-      Agent::EventWebhookJob.perform_later(event.id) if event.webhook_pending?
+      enqueue_outcome_webhook(event)
       event
     rescue ActiveRecord::RecordNotUnique
       agent.agent_events.find_by!(event_type: "github_action_completed", agent_approval_id: approval.id)
+    end
+
+    # Inserts the winner's outcome row ahead of the GitHub write. Returns
+    # the claim, or nil when another job already owns this approval (its
+    # claim, completed row, or premature-failure row holds the key). The
+    # claim carries webhook_status none so no webhook goes out until the
+    # winner rewrites it with the real outcome.
+    def claim_execution(approval, agent, room)
+      agent.agent_events.create!(
+        event_type: "github_action_completed",
+        room: room,
+        actor: approval.decided_by,
+        outcome: "delivered",
+        agent_approval_id: approval.id,
+        webhook_status: "none",
+        metadata: {
+          "approval_id" => approval.id,
+          "action" => approval.action,
+          "status" => "running"
+        }
+      )
+    rescue ActiveRecord::RecordNotUnique
+      nil
+    end
+
+    # Rewrites the winner's claim with the GitHub result. A crash between
+    # the claim and this write leaves a "running" row behind, which keeps
+    # later runs from posting a duplicate write; at-most-once is the
+    # correct bias for a call GitHub may already have applied.
+    def finish_claim(event, approval, agent, status:, message: nil, url: nil)
+      event.update!(
+        detail: (message if status == "failed"),
+        webhook_status: agent.user.webhook ? "pending" : "none",
+        metadata: {
+          "approval_id" => approval.id,
+          "action" => approval.action,
+          "status" => status,
+          "url" => url,
+          "message" => message
+        }.compact
+      )
+      enqueue_outcome_webhook(event)
+      event
+    end
+
+    def enqueue_outcome_webhook(event)
+      return unless event.webhook_pending?
+
+      ActiveRecord.after_all_transactions_commit do
+        Agent::EventWebhookJob.perform_later(event.id)
+      end
     end
 end
