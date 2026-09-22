@@ -201,9 +201,14 @@ records a timeout in the agent's ledger row and retries like any
 transport failure, with no timeout message; legacy bots keep the
 "Failed to respond within 7 seconds" message.
 
-The `room.path` in every payload is the plain room path. It never
-carries the bot key; receivers that post back use their own bot key
-or agent token.
+The `room.path` in agent deliveries is the plain room path. It never
+carries the bot key; receivers that post back use their own agent
+token. Legacy bots (bot users without an `Agent` row) keep receiving
+the bot-key `room.path` this release, since existing integrations
+reply through it; agent-backed bots never get a key in the payload.
+The bot key in the payload is planned for removal in a future
+release: legacy integrations should switch to posting back with their
+own stored bot key or, for new integrations, an agent token.
 
 ### Verifying signatures
 

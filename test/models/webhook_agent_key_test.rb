@@ -1,7 +1,7 @@
 require "test_helper"
 
 class WebhookAgentKeyTest < ActiveSupport::TestCase
-  test "deliver without agent context sends the legacy payload without the agent key or bot key" do
+  test "deliver without agent context for an agent-backed bot sends no agent key or bot key" do
     message = messages(:first)
     room_path = Rails.application.routes.url_helpers.room_path(message.room)
 
@@ -16,6 +16,25 @@ class WebhookAgentKeyTest < ActiveSupport::TestCase
       "room" => hash_including("path" => room_path)
     ), times: 1
     assert_not_includes captured, users(:bender).bot_key
+    assert_not_includes JSON.parse(captured).keys, "agent"
+  end
+
+  test "deliver for a legacy bot without an agent row keeps the bot-key room path" do
+    legacy = User.create_bot!(name: "Legacy Path Bot", webhook_url: "https://example.test/legacy-path")
+    message = messages(:first)
+    key_path = Rails.application.routes.url_helpers.room_bot_messages_path(message.room, legacy.bot_key)
+
+    captured = nil
+    WebMock.stub_request(:post, legacy.webhook.url)
+      .with { |request| captured = request.body; true }
+      .to_return(status: 200)
+
+    legacy.webhook.deliver(message)
+
+    assert_requested :post, legacy.webhook.url, body: hash_including(
+      "room" => hash_including("path" => key_path)
+    ), times: 1
+    assert_includes captured, legacy.bot_key
     assert_not_includes JSON.parse(captured).keys, "agent"
   end
 

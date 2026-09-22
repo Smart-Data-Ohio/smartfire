@@ -79,7 +79,7 @@ class Webhook < ApplicationRecord
     def payload(message, agent: nil, delivery_id: nil)
       hash = {
         user:    { id: message.creator.id, name: message.creator.name },
-        room:    { id: message.room.id, name: message.room.name, path: room_payload_path(message.room) },
+        room:    { id: message.room.id, name: message.room.name, path: room_payload_path(message.room, agent: agent) },
         message: { id: message.id, body: { html: message.body.body, plain: without_recipient_mentions(message.plain_text_body) }, path: message_path(message) }
       }
       if agent
@@ -96,10 +96,18 @@ class Webhook < ApplicationRecord
       Rails.application.routes.url_helpers.room_at_message_path(message.room, message)
     end
 
-    # The room path carries no credential: receivers that post back use
-    # their own bot key or agent token, never one from the payload.
-    def room_payload_path(room)
-      Rails.application.routes.url_helpers.room_path(room)
+    # Agent deliveries carry the plain room path: receivers post back
+    # with their own agent token, never a key from the payload.
+    # Agent-backed bots get the plain path on every delivery. Legacy bots
+    # (no Agent row) keep the bot-key path this release so existing
+    # integrations can still reply through it; that path is slated for
+    # removal (see docs/agents.md).
+    def room_payload_path(room, agent:)
+      if agent.nil? && !Agent.exists?(user_id: user.id)
+        Rails.application.routes.url_helpers.room_bot_messages_path(room, user.bot_key)
+      else
+        Rails.application.routes.url_helpers.room_path(room)
+      end
     end
 
     def extract_text_from(response)
