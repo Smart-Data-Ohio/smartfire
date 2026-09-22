@@ -95,6 +95,22 @@ class ChannelThreadsControllerTest < ActionDispatch::IntegrationTest
     assert_predicate stale.reload, :closed?
   end
 
+  test "thread index costs a constant number of queries as threads grow" do
+    sign_in :jz
+    create_index_threads(2, offset: 0)
+
+    get room_threads_url(@room)
+    assert_response :success
+    small = count_queries { get room_threads_url(@room) }
+
+    create_index_threads(4, offset: 2)
+    large = count_queries { get room_threads_url(@room) }
+    assert_response :success
+
+    assert_equal small, large,
+      "thread index should be O(1) in queries, got #{small} then #{large}"
+  end
+
   test "joining accepts only thread notification preferences and preserves an existing preference when omitted" do
     sign_in :kevin
 
@@ -371,4 +387,27 @@ class ChannelThreadsControllerTest < ActionDispatch::IntegrationTest
     assert_nil payload.fetch("work_owner")
     assert_empty @thread.work_thread_events
   end
+
+  private
+    def create_index_threads(count, offset:)
+      count.times do |i|
+        number = offset + i
+        thread = ChannelThread.create!(room: @room, creator: @creator, name: "Index thread #{number}")
+        thread.post_message!(creator: @creator,
+          attributes: { body: "Index message #{number}", client_message_id: "index-thread-#{number}" })
+      end
+    end
+
+    def count_queries
+      count = 0
+      subscription = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        count += 1 unless payload[:name] == "SCHEMA" || payload[:cached]
+      end
+
+      ActiveRecord::Base.connection.clear_query_cache
+      yield
+      count
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscription)
+    end
 end

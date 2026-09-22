@@ -10,6 +10,11 @@ class ChannelThreadsController < ApplicationController
 
   def index
     @threads = thread_scope
+    # One grouped count for the page, so rows render no count query of
+    # their own. Threads without messages are absent; the view defaults
+    # them to zero.
+    thread_ids = @threads.map(&:id)
+    @message_counts = thread_ids.any? ? Message.where(thread_id: thread_ids).group(:thread_id).count : {}
     no_store_response! if request.format.json?
 
     respond_to do |format|
@@ -39,6 +44,7 @@ class ChannelThreadsController < ApplicationController
   def content
     no_store_response!
     @messages, @content_anchor = find_content_messages
+    Message::MentionPreloader.preload_for(@messages)
     response.headers["X-Thread-Content-At-Latest"] = (@content_anchor.nil?).to_s
     render partial: "channel_threads/conversation", locals: {
       room: @room,
@@ -339,7 +345,7 @@ class ChannelThreadsController < ApplicationController
     end
 
     def set_show_details
-      @messages = @thread.messages.with_rendering_details.last_page
+      @messages = Message::MentionPreloader.preload_for(@thread.messages.with_rendering_details.last_page)
       if @thread.work? && request.format.html?
         @work_links = @thread.work_thread_links.ordered.includes(:github_pull_request, :event).to_a
         @linkable_events = @room.events.upcoming.soonest_first

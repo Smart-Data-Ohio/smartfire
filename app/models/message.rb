@@ -113,11 +113,23 @@ class Message < ApplicationRecord
     boosts.sort_by { |boost| [ boost.created_at, boost.id ] }
   end
 
+  # Rendered two or three times per message (tag class, presentation,
+  # reply preview), and each computation re-resolves mention attachables,
+  # so the result is memoized per instance. Keyed on the inputs rather than
+  # a bare ivar so an in-place edit still reads fresh.
   def plain_text_body
-    text = markdown? ? Markdown.plain_text(body.body) : body.to_plain_text
-    text = text.presence || attachment&.filename&.to_s || ""
+    # to_html serializes the stored nodes; to_s would render the attachments
+    # and resolve every mention with a query.
+    cache_key = [ body.body.to_html, attachment&.filename&.to_s, forward_note ]
+    return @plain_text_body if defined?(@plain_text_body) && @plain_text_body_key == cache_key
 
-    forward_note.present? ? [ forward_note, text ].compact_blank.join("\n\n") : text
+    @plain_text_body_key = cache_key
+    @plain_text_body = begin
+      text = markdown? ? Markdown.plain_text(body.body) : body.to_plain_text
+      text = text.presence || attachment&.filename&.to_s || ""
+
+      forward_note.present? ? [ forward_note, text ].compact_blank.join("\n\n") : text
+    end
   end
 
   def markdown?

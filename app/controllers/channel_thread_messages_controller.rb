@@ -8,7 +8,7 @@ class ChannelThreadMessagesController < ApplicationController
   before_action :ensure_thread_message_writable, only: :update
 
   def index
-    @messages = find_paged_messages
+    @messages = Message::MentionPreloader.preload_for(find_paged_messages)
     no_store_response! if request.format.json?
 
     respond_to do |format|
