@@ -26,6 +26,26 @@ class ChannelThreadsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "First thread post", created.messages.sole.plain_text_body
   end
 
+  test "retried creation with the same first-message client id returns the existing thread" do
+    sign_in :jz
+    params = {
+      thread: { name: "Retried start", message: { markdown_source: "First", client_message_id: "retry-thread-start" } }
+    }
+
+    post room_threads_url(@room, format: :json), params: params
+    assert_response :created
+    original_id = response.parsed_body.dig("thread", "id")
+
+    assert_no_difference -> { ChannelThread.count } do
+      assert_no_difference -> { Message.thread_messages.count } do
+        post room_threads_url(@room, format: :json), params: params
+        assert_response :created
+      end
+    end
+
+    assert_equal original_id, response.parsed_body.dig("thread", "id")
+  end
+
   test "creator settings, joined-member reopening, and moderator lifecycle powers stay distinct" do
     joined_user = users(:kevin)
     ThreadMembership.join!(@thread, joined_user)

@@ -103,6 +103,17 @@ class Message < ApplicationRecord
       ActiveRecord::Associations::Preloader.new(records: records, associations: rendering_associations).call
       records
     end
+
+    # A message this user already posted in this room with the same client
+    # id, if any, so a retried create returns the original instead of
+    # posting twice. There is deliberately no unique index behind this
+    # (production already holds duplicates), so concurrent double-submits
+    # can still both land; sequential retries always hit this lookup.
+    def find_duplicate(room:, creator:, client_message_id:)
+      return if client_message_id.blank? || room.nil? || creator.nil?
+
+      find_by(room_id: room.id, creator_id: creator.id, client_message_id: client_message_id)
+    end
   end
 
   # Sorting in Ruby rather than with the `ordered` scope, because applying a

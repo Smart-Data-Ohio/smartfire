@@ -25,13 +25,20 @@ class MessagesController < ApplicationController
 
   def create
     set_room
-    @message = @room.root_messages.new(message_params)
-    apply_drive_file_ids!(@message) if drive_file_ids_key_present?
-    @message.save!
-    @message.process_attachment
 
-    @message.broadcast_create
-    deliver_webhooks_to_bots
+    if (duplicate = Message.find_duplicate(room: @room, creator: Current.user, client_message_id: params.dig(:message, :client_message_id)))
+      # A retried create: the original request already saved, broadcast, and
+      # delivered this message, so return it without repeating side effects.
+      @message = duplicate
+    else
+      @message = @room.root_messages.new(message_params)
+      apply_drive_file_ids!(@message) if drive_file_ids_key_present?
+      @message.save!
+      @message.process_attachment
+
+      @message.broadcast_create
+      deliver_webhooks_to_bots
+    end
   rescue ActiveRecord::RecordNotFound
     render action: :room_not_found
   rescue ActiveRecord::RecordInvalid => error

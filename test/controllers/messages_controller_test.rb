@@ -308,6 +308,24 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_requested :post, bot.webhook.url, body: hash_excluding("agent"), times: 1
   end
 
+  test "retried create with the same client id returns the original message" do
+    params = { message: { markdown_source: "Post once", client_message_id: "retry-root-post" } }
+
+    assert_difference -> { @room.messages.count }, 1 do
+      post room_messages_url(@room, format: :turbo_stream), params: params
+      assert_response :success
+    end
+    original_id = @room.messages.order(:id).last.id
+
+    assert_no_difference -> { @room.messages.count } do
+      post room_messages_url(@room, format: :turbo_stream), params: params
+      assert_response :success
+    end
+
+    assert_equal original_id, @room.messages.order(:id).last.id
+    assert_equal "retry-root-post", @room.messages.order(:id).last.client_message_id
+  end
+
   private
     def ensure_messages_present(*messages, count: 1)
       messages.each do |message|

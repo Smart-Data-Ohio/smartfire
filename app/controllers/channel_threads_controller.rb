@@ -211,12 +211,18 @@ class ChannelThreadsController < ApplicationController
     def create_channel_thread
       parent_message = parent_message_from_params
 
-      ChannelThread.transaction do
-        @thread = @room.channel_threads.create!(thread_attributes.merge(creator: Current.user, parent_message: parent_message))
-        ThreadMembership.join!(@thread, Current.user)
+      if (duplicate_thread = duplicate_initial_message_thread)
+        # A retried creation whose first message already exists: return the
+        # existing thread instead of opening a duplicate.
+        @thread = duplicate_thread
+      else
+        ChannelThread.transaction do
+          @thread = @room.channel_threads.create!(thread_attributes.merge(creator: Current.user, parent_message: parent_message))
+          ThreadMembership.join!(@thread, Current.user)
 
-        if initial_message_attributes.present?
-          create_thread_message!(initial_message_attributes)
+          if initial_message_attributes.present?
+            create_thread_message!(initial_message_attributes)
+          end
         end
       end
 
@@ -403,6 +409,20 @@ class ChannelThreadsController < ApplicationController
       attributes[:reply_to_message_id] = attributes[:reply_to_message_id].presence
       attributes[:reply_notify_author] = ActiveModel::Type::Boolean.new.cast(attributes[:reply_notify_author]) if attributes.key?(:reply_notify_author)
       @thread.post_message!(creator: Current.user, attributes: attributes)
+    end
+
+    # The existing in-room thread for a retried creation, if the first
+    # message's client id already produced a thread reply here. Anything
+    # else (no client id, no duplicate, a root message) falls through to
+    # normal creation.
+    def duplicate_initial_message_thread
+      client_message_id = initial_message_attributes[:client_message_id]
+      return if client_message_id.blank?
+
+      duplicate = Message.find_duplicate(room: @room, creator: Current.user, client_message_id: client_message_id)
+      return unless duplicate&.thread&.room_id == @room.id
+
+      duplicate.thread
     end
 
     def find_content_messages

@@ -7,7 +7,7 @@ class Search < ApplicationRecord
 
   class << self
     def record(query)
-      find_or_create_by(query: query).touch
+      create_or_find_by(query: query).touch
     end
   end
 

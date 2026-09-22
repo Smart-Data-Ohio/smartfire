@@ -55,12 +55,17 @@ class Agents::MessagesController < MessagesController
         return
       end
 
-      @message = thread.post_message!(
-        creator: Current.user,
-        attributes: thread_message_params,
-        drive_file_ids: validated_drive_file_ids!
-      )
-      @message.broadcast_create
+      if (duplicate = Message.find_duplicate(room: @room, creator: Current.user, client_message_id: params.dig(:message, :client_message_id)))
+        # A retried create: return the original without re-posting.
+        @message = duplicate
+      else
+        @message = thread.post_message!(
+          creator: Current.user,
+          attributes: thread_message_params,
+          drive_file_ids: validated_drive_file_ids!
+        )
+        @message.broadcast_create
+      end
 
       render json: message_payload(@message).merge(thread_id: @message.thread_id), status: :created
     rescue ActiveRecord::RecordInvalid => error
