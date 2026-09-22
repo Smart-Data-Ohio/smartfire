@@ -5,6 +5,7 @@ import {
   keepScroll,
   trimChildren,
 } from "helpers/dom_helpers"
+import { silenceLiveRegion } from "helpers/live_region_helpers"
 import { ThreadStyle } from "models/message_formatter"
 
 const MAX_MESSAGES = 300
@@ -145,9 +146,9 @@ export default class MessagePaginator {
     const resp = await this.#fetchPage()
     if (resp.statusCode === 200) {
       const page = await this.#formatPage(resp)
-      const restoreLiveRegion = this.#silenceLiveRegion()
+      const restoreLiveRegion = silenceLiveRegion(this.#container)
       this.#container.replaceChildren(page)
-      queueMicrotask(restoreLiveRegion)
+      restoreLiveRegion()
     }
   }
 
@@ -162,7 +163,7 @@ export default class MessagePaginator {
     if (resp.statusCode === 200) {
       const page = await this.#formatPage(resp)
       const lastNewElement = page.lastElementChild
-      const restoreLiveRegion = this.#silenceLiveRegion()
+      const restoreLiveRegion = silenceLiveRegion(this.#container)
 
       keepScroll(this.#container, top, () => {
         insertHTMLFragment(page, this.#container, top)
@@ -172,28 +173,9 @@ export default class MessagePaginator {
           this.#messageFormatter.format(lastNewElement.nextElementSibling, ThreadStyle.thread)
         }
       })
-      queueMicrotask(restoreLiveRegion)
+      restoreLiveRegion()
 
       this.trimExcessMessages(!top)
-    }
-  }
-
-  // Paginated history must not be announced: only live appends reach the
-  // screen reader. The region is the list itself, or the conversation
-  // wrapper that carries the live region for thread lists.
-  #silenceLiveRegion() {
-    const region = this.#container.hasAttribute("aria-live")
-      ? this.#container
-      : this.#container.parentElement?.closest("[aria-live]")
-    if (!region) return () => {}
-
-    const value = region.getAttribute("aria-live")
-    region.setAttribute("aria-live", "off")
-    let restored = false
-    return () => {
-      if (restored) return
-      restored = true
-      region.setAttribute("aria-live", value)
     }
   }
 

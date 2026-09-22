@@ -87,7 +87,7 @@ class MessageListA11yTest < ApplicationSystemTestCase
     assert_equal "additions", list["aria-relevant"]
   end
 
-  test "paginated history is inserted without announcing" do
+  test "paginated history stays quiet past the insert, then the live region comes back" do
     count = Message::PAGE_SIZE + 5
     first_created_at = count.seconds.ago
     count.times do |index|
@@ -106,18 +106,85 @@ class MessageListA11yTest < ApplicationSystemTestCase
     assert_no_selector ".message", text: "History post 0"
 
     page.execute_script <<~JS
+      window.__liveTimeline = [];
+      window.__liveT0 = performance.now();
+      const list = document.querySelector(".messages[role='log']");
+      new MutationObserver(mutations => {
+        for (const mutation of mutations) {
+          const entry = { t: Math.round((performance.now() - window.__liveT0) * 10) / 10 };
+          if (mutation.type === "attributes") {
+            entry.live = list.getAttribute("aria-live");
+            entry.busy = list.getAttribute("aria-busy");
+          } else {
+            entry.added = mutation.addedNodes.length;
+          }
+          window.__liveTimeline.push(entry);
+        }
+      }).observe(list, { attributes: true, attributeFilter: [ "aria-live", "aria-busy" ], childList: true });
+    JS
+    page.execute_script("document.querySelector('.messages').scrollTop = 0")
+
+    assert_selector ".message", text: "History post 0", wait: 10
+    assert_no_selector ".messages[aria-busy='true']", wait: 10
+
+    timeline = page.evaluate_script("window.__liveTimeline")
+    insert = timeline.find { |entry| entry["added"].to_i > 0 }
+    assert_not_nil insert, "expected the timeline to record the history insert"
+
+    assert timeline.any? { |entry| entry["live"] == "off" },
+      "expected pagination to silence the live region while inserting"
+    assert timeline.any? { |entry| entry["busy"] == "true" },
+      "expected pagination to mark the list busy while inserting"
+
+    restore = timeline.select { |entry| entry["live"] == "polite" && entry["t"] > insert["t"] }.first
+    assert_not_nil restore, "expected the live region to be restored after pagination"
+    assert_operator restore["t"] - insert["t"], :>=, 30,
+      "expected the quiet state to still be in force after the insert"
+
+    assert_equal "polite", page.evaluate_script("document.querySelector('.messages').getAttribute('aria-live')")
+    assert_nil page.evaluate_script("document.querySelector('.messages').getAttribute('aria-busy')")
+  end
+
+  test "an edit replacement is not announced as an addition" do
+    page.execute_script <<~JS
       window.__liveValues = [];
       new MutationObserver(mutations => {
         for (const mutation of mutations) window.__liveValues.push(mutation.target.getAttribute("aria-live"));
       }).observe(document.querySelector(".messages[role='log']"), { attributes: true, attributeFilter: [ "aria-live" ] });
     JS
-    page.execute_script("document.querySelector('.messages').scrollTop = 0")
 
-    assert_selector ".message", text: "History post 0", wait: 10
+    within_message(messages(:third)) do
+      right_click_message
+    end
+    assert_message_menu_open
+    click_button "Edit message"
+    assert_selector "[data-composer-target='contextLabel']", text: "Editing Message", wait: 10
+    fill_in "Write a message", with: "Edited quietly"
+    click_button "Send Message"
+
+    assert_selector ".message__body", text: "Edited quietly", wait: 10
+    assert_no_selector ".messages[aria-busy='true']", wait: 10
     assert_includes page.evaluate_script("window.__liveValues"), "off",
-      "expected pagination to silence the live region while inserting"
-    assert_equal "polite", page.evaluate_script("document.querySelector('.messages').getAttribute('aria-live')"),
-      "expected the live region to be restored after pagination"
+      "expected the edit replacement to silence the live region while rendering"
+    assert_equal "polite", page.evaluate_script("document.querySelector('.messages').getAttribute('aria-live')")
+  end
+
+  test "an own message is not re-announced when its broadcast replaces the pending copy" do
+    page.execute_script <<~JS
+      window.__liveValues = [];
+      new MutationObserver(mutations => {
+        for (const mutation of mutations) window.__liveValues.push(mutation.target.getAttribute("aria-live"));
+      }).observe(document.querySelector(".messages[role='log']"), { attributes: true, attributeFilter: [ "aria-live" ] });
+    JS
+
+    fill_in "Write a message", with: "Announce me once"
+    click_button "Send Message"
+
+    assert_selector ".message__body", text: "Announce me once", wait: 10
+    assert_no_selector ".messages[aria-busy='true']", wait: 10
+    assert_includes page.evaluate_script("window.__liveValues"), "off",
+      "expected the pending-to-delivered replacement to render quietly"
+    assert_equal "polite", page.evaluate_script("document.querySelector('.messages').getAttribute('aria-live')")
   end
 
   test "search results keep their menus and focusability" do
