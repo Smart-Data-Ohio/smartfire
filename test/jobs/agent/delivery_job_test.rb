@@ -351,7 +351,7 @@ class Agent::DeliveryJobTest < ActiveSupport::TestCase
     assert_equal 0, agent_b.agent_events.deliverable.last.hop
   end
 
-  test "pending rows are never hop triggers" do
+  test "pending rows are hop triggers" do
     agent_b = create_agent_in(@room, name: "Pending Bot B")
     create_mentioning_message(@room, @bot, creator: users(:david))
     assert_equal "pending", @agent.agent_events.deliverable.last.outcome
@@ -361,7 +361,7 @@ class Agent::DeliveryJobTest < ActiveSupport::TestCase
       client_message_id: "pending-trigger"
     )
 
-    assert_equal 0, agent_b.agent_events.deliverable.last.hop
+    assert_equal 1, agent_b.agent_events.deliverable.last.hop
   end
 
   test "deliveries older than five minutes are not hop triggers" do
@@ -377,6 +377,74 @@ class Agent::DeliveryJobTest < ActiveSupport::TestCase
     )
 
     assert_equal 0, agent_b.agent_events.deliverable.last.hop
+  end
+
+  test "bridging rooms carries the hop chain instead of resetting it" do
+    other_room = rooms(:designers)
+    other_room.memberships.grant_to(@bot)
+    agent_b = create_agent_in(@room, name: "Bridge Bot B")
+    other_room.memberships.grant_to(agent_b.user)
+    bot_b = agent_b.user
+
+    @room.messages.create!(
+      creator: users(:david), markdown_source: "Hey @[#{@bot.name}]", client_message_id: "bridge-m1"
+    )
+    first = @agent.agent_events.deliverable.last
+    assert_equal 0, first.hop
+
+    Message.create!(
+      room: other_room, creator: @bot, markdown_source: "Hey @[#{bot_b.name}] over here",
+      client_message_id: "bridge-m2"
+    )
+    second = agent_b.agent_events.deliverable.last
+    assert_equal 1, second.hop
+    assert_equal first.chain_id, second.chain_id
+
+    @room.messages.create!(
+      creator: bot_b, markdown_source: "Hey @[#{@bot.name}] back",
+      client_message_id: "bridge-m3"
+    )
+    third = @agent.agent_events.deliverable.last
+    assert_equal 2, third.hop
+    assert_equal first.chain_id, third.chain_id
+
+    assert_no_enqueued_jobs only: Agent::DeliveryJob do
+      Message.create!(
+        room: other_room, creator: @bot, markdown_source: "Hey @[#{bot_b.name}] again",
+        client_message_id: "bridge-m4"
+      )
+    end
+
+    suppression = agent_b.agent_events.where(event_type: "delivery_suppressed_hop_limit").last
+    assert suppression.present?
+    assert_equal 3, suppression.hop
+  end
+
+  test "agent and legacy bot ping-pong escalates until the agent side suppresses" do
+    legacy = User.create_bot!(name: "Legacy Loop", webhook_url: "https://example.test/legacy-loop")
+    @room.memberships.grant_to(legacy)
+    WebMock.stub_request(:post, legacy.webhook.url)
+      .to_return(status: 200, body: "Hey #{mention_attachment_for(:bender)}",
+        headers: { "Content-Type" => "text/plain" })
+
+    m1 = @room.messages.create!(
+      creator: @bot, markdown_source: "Hey @[Legacy Loop]", client_message_id: "loop-m1"
+    )
+    legacy.deliver_webhook_later(m1)
+    perform_enqueued_jobs only: Bot::WebhookJob
+
+    assert_equal 1, @agent.agent_events.deliverable.last.hop
+
+    m2 = @room.messages.create!(
+      creator: @bot, markdown_source: "Hey @[Legacy Loop] again", client_message_id: "loop-m2"
+    )
+    legacy.deliver_webhook_later(m2)
+    perform_enqueued_jobs only: Bot::WebhookJob
+
+    assert_equal 1, @agent.agent_events.deliverable.count, "the hop-3 legacy reply must suppress, not deliver"
+    suppression = @agent.agent_events.where(event_type: "delivery_suppressed_hop_limit").last
+    assert suppression.present?
+    assert_equal 3, suppression.hop
   end
 
   test "an agent's own posts are not hop triggers" do

@@ -16,7 +16,7 @@ class Agent::Delivery
       return unless room
 
       sender_agent = Agent.find_by(user_id: message.creator_id)
-      message_hop = message_hop_for(message, sender_agent)
+      message_hop, chain_id = message_hop_and_chain_for(message, sender_agent)
 
       if sender_agent
         sender_agent.agent_events.create!(
@@ -25,6 +25,7 @@ class Agent::Delivery
           message: message,
           actor_id: message.creator_id,
           outcome: "delivered",
+          chain_id: chain_id,
           metadata: { "hop" => message_hop, "thread_id" => message.thread_id }
         )
       end
@@ -38,6 +39,7 @@ class Agent::Delivery
             actor_id: message.creator_id,
             outcome: "suppressed",
             detail: "Hop limit reached (hop #{message_hop})",
+            chain_id: chain_id,
             metadata: { "hop" => message_hop }
           )
           next
@@ -51,6 +53,7 @@ class Agent::Delivery
             actor_id: message.creator_id,
             outcome: "suppressed",
             detail: "Rate limit exceeded (#{RATE_LIMIT_PER_MINUTE} per minute)",
+            chain_id: chain_id,
             metadata: { "hop" => message_hop }
           )
           next
@@ -62,6 +65,7 @@ class Agent::Delivery
           message: message,
           actor_id: message.creator_id,
           outcome: "pending",
+          chain_id: chain_id,
           metadata: { "hop" => message_hop }
         )
         Agent::DeliveryJob.perform_later(event.id)
@@ -197,6 +201,25 @@ class Agent::Delivery
       end
     end
 
+    # Message hop for the legacy webhook gate. Recomputes the same value
+    # enqueue_for_message used, so the legacy path honors the hop limit
+    # even though it writes no ledger rows of its own.
+    def hop_for_message(message)
+      sender_agent = Agent.find_by(user_id: message.creator_id)
+      message_hop_for(message, sender_agent)
+    end
+
+    # A work assignment carries the assigning agent's chain forward, so
+    # two agents assigning posts to each other escalate and stop instead
+    # of looping. Human assigners always start a new root at hop 0.
+    def work_assignment_hop_and_chain_for(actor)
+      agent = actor.is_a?(User) ? (actor.agent || Agent.find_by(user_id: actor.id)) : nil
+      return [ 0, SecureRandom.uuid ] unless agent
+
+      trigger = hop_trigger_for(agent)
+      trigger ? [ trigger.hop + 1, trigger.chain_id || SecureRandom.uuid ] : [ 0, SecureRandom.uuid ]
+    end
+
     private
       # One entry per recipient agent: [agent, event_type]. Direct rooms
       # notify every other agent member; elsewhere a reply to an agent's
@@ -233,21 +256,75 @@ class Agent::Delivery
       end
 
       # Human messages start a chain at hop 0. An agent's message continues
-      # the chain of its server-authorized trigger: the most recent event
-      # delivered to (or acknowledged by) the agent in the room within the
-      # trigger window. The agent's own posted rows, suppression rows,
-      # approval decisions, and pending rows are never triggers, so an agent
-      # posting several unprompted messages does not escalate its own hop
-      # count, and neither the request body nor the reply target influences
-      # the hop. A message with no recent trigger is a new root at hop 0.
-      def message_hop_for(message, sender_agent)
-        return 0 unless sender_agent
+      # the chain of its server-authorized trigger: the most recent message
+      # or work event pending for, delivered to, or acknowledged by the
+      # agent in any room within the trigger window, so bridging rooms
+      # carries the chain instead of resetting it. The agent's own posted
+      # rows, suppression rows, and approval decisions are never triggers,
+      # and neither the request body nor the reply target influences the
+      # hop. A message with no recent trigger is a new root at hop 0.
+      # Legacy bot messages continue the chain of the message they answer,
+      # read from its ledger rows (including the sender's posted row).
+      def message_hop_and_chain_for(message, sender_agent)
+        if sender_agent
+          trigger = hop_trigger_for(sender_agent)
+          return trigger ? [ trigger.hop + 1, trigger.chain_id || SecureRandom.uuid ] : [ 0, SecureRandom.uuid ]
+        end
 
-        trigger = sender_agent.agent_events.message_deliverable
-          .where(room_id: message.room_id, outcome: %w[ delivered acknowledged ])
-          .where("created_at >= ?", TRIGGER_WINDOW.ago)
+        return legacy_message_hop_and_chain_for(message) if message.creator&.bot?
+
+        [ 0, SecureRandom.uuid ]
+      end
+
+      def message_hop_for(message, sender_agent)
+        message_hop_and_chain_for(message, sender_agent).first
+      end
+
+      def hop_trigger_for(agent)
+        agent.agent_events.where(event_type: AgentEvent::HOP_TRIGGER_TYPES, outcome: AgentEvent::HOP_TRIGGER_OUTCOMES)
+          .where("agent_events.created_at >= ?", TRIGGER_WINDOW.ago)
           .order(id: :desc).first
-        trigger ? trigger.hop + 1 : 0
+      end
+
+      # A legacy bot has no ledger of its own, so its chain comes from the
+      # message it answers: a reply continues its source message's highest
+      # recorded hop (any agent's rows, including posted rows), while a
+      # root post continues the most recent room message within the window
+      # that mentioned the bot or replied to one of its messages. Anything
+      # else is a new root at hop 0.
+      def legacy_message_hop_and_chain_for(message)
+        source = message.reply_to_message || legacy_trigger_message_for(message)
+        return [ 0, SecureRandom.uuid ] unless source
+
+        row = AgentEvent.where(message_id: source.id, outcome: AgentEvent::HOP_TRIGGER_OUTCOMES)
+          .order(hop: :desc, id: :desc).first
+        row ? [ row.hop + 1, row.chain_id || SecureRandom.uuid ] : [ 0, SecureRandom.uuid ]
+      end
+
+      # Bounded scan for the newest room message within the trigger window
+      # that plausibly triggered a legacy bot's root post: one that
+      # mentions the bot or replies to its messages. Mention parsing reads
+      # the preloaded bodies; no per-row user query runs.
+      def legacy_trigger_message_for(message)
+        bot_id = message.creator_id
+        candidates = Message.where(room_id: message.room_id)
+          .where("messages.created_at >= ?", TRIGGER_WINDOW.ago)
+          .where.not(id: message.id, creator_id: bot_id)
+          .order(id: :desc).limit(25)
+          .includes(:rich_text_body, :reply_to_message)
+
+        candidates.find do |candidate|
+          (candidate.reply_to_message_id.present? && candidate.reply_to_message&.creator_id == bot_id) ||
+            mentioned_user_ids(candidate).include?(bot_id)
+        end
+      end
+
+      def mentioned_user_ids(message)
+        if message.body&.body
+          message.body.body.attachables.grep(User).map(&:id)
+        else
+          []
+        end
       end
 
       def rate_limited?(agent, room, exclude: nil)
@@ -282,6 +359,7 @@ class Agent::Delivery
           actor_id: event.actor_id,
           outcome: "suppressed",
           detail: detail,
+          chain_id: event.chain_id,
           metadata: { "hop" => event.hop }
         )
       end

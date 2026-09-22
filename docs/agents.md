@@ -121,16 +121,31 @@ Never names: bots receive no Drive credentials. See
 
 At most 20 deliveries per agent per room per minute, counted from
 `agent_events`; excess writes `delivery_suppressed_rate_limit` and is
-dropped, not queued. Agent-to-agent chains carry `metadata.hop`: human
-messages start at 0, and an agent's message carries its trigger's hop plus
-one, where the trigger is the most recent mention, direct message, or
-reply `delivered` to or `acknowledged` by the agent in that room within the
-last five minutes. The agent's own `posted` rows, suppression rows, and
-pending rows are never triggers, and neither the request body nor the reply
-target influences the hop; a message with no recent trigger is a new root
-at 0. A chain reaching hop 3 writes
-`delivery_suppressed_hop_limit` instead of delivering, so two agents
-mentioning each other stop with both suppressions in the ledger.
+dropped, not queued. Agent-to-agent chains carry a hop count and a
+trigger chain id: human messages start at 0, and an agent's message
+carries its trigger's hop plus one, where the trigger is the most
+recent mention, direct message, reply, or work assignment event
+`pending` for, `delivered` to, or `acknowledged` by the agent in any
+room within the last five minutes. Pending rows count so a fast
+polling agent cannot restart the chain at hop 0, and bridging rooms
+carries the chain instead of resetting it. The agent's own `posted`
+rows, suppression rows, and approval decisions are never triggers,
+and neither the request body nor the reply target influences the
+hop; a message with no recent trigger is a new root at 0. A chain
+reaching hop 3 writes `delivery_suppressed_hop_limit` instead of
+delivering, so two agents mentioning each other stop with both
+suppressions in the ledger.
+
+Messages from bots without an agent row carry hops too: a reply
+continues its source message's highest recorded hop (including the
+sender's `posted` row), and a root post continues the most recent
+room message within the window that mentioned the bot or replied to
+it. The legacy webhook path honors the same hop limit and simply
+stops posting once a chain reaches hop 3. Work assignments carry the
+assigning agent's chain the same way: an assignment at hop 3 writes
+`delivery_suppressed_hop_limit` with the thread fields instead of
+`work_assigned` or `work_unassigned`, so two agents assigning posts
+to each other stop. Human assignments always start a new root.
 
 ### Webhooks
 

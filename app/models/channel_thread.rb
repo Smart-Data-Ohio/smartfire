@@ -894,41 +894,54 @@ class ChannelThread < ApplicationRecord
     # agent owner (if any) gets work_unassigned and the new agent owner
     # (if any) gets work_assigned. Status-only changes notify nobody.
     # Bots without an Agent row have no ledger to write to and are
-    # skipped. Returns the created rows for webhook delivery after the
+    # skipped. An assignment whose chain reached the hop limit suppresses
+    # instead of delivering, so two agents assigning posts to each other
+    # stop. Returns the created rows for webhook delivery after the
     # transaction commits.
     def record_work_assignment_events!(from_owner:, to_owner:, actor:)
       return [] if from_owner&.id == to_owner&.id
 
+      hop, chain_id = Agent::Delivery.work_assignment_hop_and_chain_for(actor)
+
       events = []
       if (previous_agent = agent_for_work_owner(from_owner))
-        events << previous_agent.agent_events.create!(
-          event_type: "work_unassigned",
-          room: room,
-          actor: actor,
-          outcome: "delivered",
-          metadata: {
-            "thread_id" => id,
-            "title" => name,
-            "work_status" => work_status,
-            "assigned_by" => actor&.name
-          }
-        )
+        events << record_work_assignment_event!(previous_agent, "work_unassigned", actor, hop, chain_id)
       end
       if (next_agent = agent_for_work_owner(to_owner))
-        events << next_agent.agent_events.create!(
-          event_type: "work_assigned",
+        events << record_work_assignment_event!(next_agent, "work_assigned", actor, hop, chain_id)
+      end
+      events
+    end
+
+    def record_work_assignment_event!(agent, event_type, actor, hop, chain_id)
+      metadata = {
+        "thread_id" => id,
+        "title" => name,
+        "work_status" => work_status,
+        "assigned_by" => actor&.name,
+        "hop" => hop
+      }
+
+      if hop >= Agent::Delivery::HOP_LIMIT
+        agent.agent_events.create!(
+          event_type: "delivery_suppressed_hop_limit",
+          room: room,
+          actor: actor,
+          outcome: "suppressed",
+          detail: "Hop limit reached (hop #{hop})",
+          chain_id: chain_id,
+          metadata: metadata
+        )
+      else
+        agent.agent_events.create!(
+          event_type: event_type,
           room: room,
           actor: actor,
           outcome: "delivered",
-          metadata: {
-            "thread_id" => id,
-            "title" => name,
-            "work_status" => work_status,
-            "assigned_by" => actor&.name
-          }
+          chain_id: chain_id,
+          metadata: metadata
         )
       end
-      events
     end
 
     def agent_for_work_owner(owner)
@@ -943,6 +956,8 @@ class ChannelThread < ApplicationRecord
     # its work there, even if a workspace-wide grant survives.
     def deliver_work_assignment_webhooks(events)
       events.each do |event|
+        next unless AgentEvent::WORK_DELIVERABLE_TYPES.include?(event.event_type)
+
         agent = event.agent
         next unless Membership.exists?(user_id: agent.user_id, room_id: room_id) && agent.can?(:read_messages, room)
 

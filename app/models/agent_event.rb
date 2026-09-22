@@ -14,6 +14,13 @@ class AgentEvent < ApplicationRecord
 
   OUTCOMES = %w[ pending delivered acknowledged suppressed ].freeze
 
+  # Event types that continue an agent's trigger chain: message deliveries
+  # plus work assignments, so an agent that answers a work assignment keeps
+  # the chain's hop count instead of restarting at 0. Approval decisions
+  # and GitHub completions never trigger hops.
+  HOP_TRIGGER_TYPES = (MESSAGE_DELIVERABLE_TYPES + WORK_DELIVERABLE_TYPES).freeze
+  HOP_TRIGGER_OUTCOMES = %w[ pending delivered acknowledged ].freeze
+
   belongs_to :agent
   belongs_to :room, optional: true
   belongs_to :message, optional: true
@@ -22,6 +29,8 @@ class AgentEvent < ApplicationRecord
 
   validates :event_type, presence: true, inclusion: { in: EVENT_TYPES }
   validates :outcome, inclusion: { in: OUTCOMES }, allow_nil: true
+
+  before_validation :copy_metadata_hop_to_column, on: :create
 
   scope :deliverable, -> { where(event_type: DELIVERABLE_TYPES) }
   scope :message_deliverable, -> { where(event_type: MESSAGE_DELIVERABLE_TYPES) }
@@ -92,6 +101,9 @@ class AgentEvent < ApplicationRecord
   end
 
   def hop
+    hop = read_attribute(:hop)
+    return hop.to_i unless hop.nil?
+
     metadata.is_a?(Hash) ? (metadata["hop"] || 0).to_i : 0
   end
 
@@ -102,4 +114,14 @@ class AgentEvent < ApplicationRecord
   def acknowledged?
     outcome == "acknowledged"
   end
+
+  private
+    # Writers keep recording the hop in metadata; the column mirrors it for
+    # indexed max-hop lookups (legacy bot lineage). Runs only on create so
+    # an explicit column write is never clobbered.
+    def copy_metadata_hop_to_column
+      return unless metadata.is_a?(Hash) && metadata.key?("hop") && read_attribute(:hop).to_i.zero?
+
+      self.hop = metadata["hop"].to_i
+    end
 end

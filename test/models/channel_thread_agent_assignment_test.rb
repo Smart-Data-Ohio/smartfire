@@ -359,6 +359,54 @@ class ChannelThreadAgentAssignmentTest < ActiveSupport::TestCase
     assert_equal 2, @thread.work_thread_events.count
   end
 
+  test "two agents assigning posts to each other stop at the hop limit" do
+    board = Rooms::Board.create_for({ name: "Loop Board", creator: @manager }, users: [ @manager ])
+    agent_a = create_agent_in(board, name: "Loop Agent A")
+    agent_b = create_agent_in(board, name: "Loop Agent B")
+
+    ChannelThread.create_board_post!(
+      room: board, creator: agent_a.user, name: "Post one",
+      work_status: "in_progress", owner_id: agent_b.user_id
+    )
+    assert_equal 0, agent_b.agent_events.where(event_type: "work_assigned").last.hop
+
+    ChannelThread.create_board_post!(
+      room: board, creator: agent_b.user, name: "Post two",
+      work_status: "in_progress", owner_id: agent_a.user_id
+    )
+    assert_equal 1, agent_a.agent_events.where(event_type: "work_assigned").last.hop
+
+    ChannelThread.create_board_post!(
+      room: board, creator: agent_a.user, name: "Post three",
+      work_status: "in_progress", owner_id: agent_b.user_id
+    )
+    assert_equal 2, agent_b.agent_events.where(event_type: "work_assigned").last.hop
+
+    ChannelThread.create_board_post!(
+      room: board, creator: agent_b.user, name: "Post four",
+      work_status: "in_progress", owner_id: agent_a.user_id
+    )
+
+    assert_equal 1, agent_a.agent_events.where(event_type: "work_assigned").count
+    suppressed = agent_a.agent_events.where(event_type: "delivery_suppressed_hop_limit").last
+    assert suppressed.present?
+    assert_equal 3, suppressed.hop
+    assert_equal suppressed.metadata["thread_id"], ChannelThread.order(:id).last.id
+  end
+
+  test "a human assignment starts a new root at hop 0" do
+    board = Rooms::Board.create_for({ name: "Human Board", creator: @manager }, users: [ @manager ])
+    agent = create_agent_in(board, name: "Human Loop Agent")
+
+    ChannelThread.create_board_post!(
+      room: board, creator: @manager, name: "Human post",
+      work_status: "in_progress", owner_id: agent.user_id
+    )
+
+    assigned = agent.agent_events.where(event_type: "work_assigned").last
+    assert_equal 0, assigned.hop
+  end
+
   private
     def grant!(agent, capability)
       AgentGrant.create!(agent: agent, room: @room, granted_by: @manager, capability: capability)
