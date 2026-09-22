@@ -59,6 +59,20 @@ class Github::PullRequestUrlTest < ActiveSupport::TestCase
     assert_includes text, "pull/4"
   end
 
+  test "non_code_text keeps a URL at a br or block boundary matchable" do
+    html = <<~HTML
+      <div>see https://github.com/o/r/pull/12<br>thanks</div>
+      <p>also https://github.com/o/r/pull/13</p><p>for this</p>
+    HTML
+
+    text = Github::PullRequestUrl.non_code_text(html)
+
+    assert_equal [
+      Github::PullRequestUrl::Reference.new("o", "r", 12),
+      Github::PullRequestUrl::Reference.new("o", "r", 13)
+    ], Github::PullRequestUrl.extract(text)
+  end
+
   test "pull_request_url? matches only PR URLs" do
     assert Github::PullRequestUrl.pull_request_url?("https://github.com/rails/rails/pull/123")
     assert Github::PullRequestUrl.pull_request_url?("https://github.com/rails/rails/pulls/123/files")

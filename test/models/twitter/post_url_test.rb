@@ -66,6 +66,20 @@ class Twitter::PostUrlTest < ActiveSupport::TestCase
     assert_includes text, "status/24"
   end
 
+  test "non_code_text keeps a URL at a br or block boundary matchable" do
+    html = <<~HTML
+      <div>see https://x.com/jack/status/25<br>thanks</div>
+      <p>also https://x.com/jack/status/26</p><p>for this</p>
+    HTML
+
+    text = Twitter::PostUrl.non_code_text(html)
+
+    assert_equal [
+      Twitter::PostUrl::Reference.new("jack", "25"),
+      Twitter::PostUrl::Reference.new("jack", "26")
+    ], Twitter::PostUrl.extract(text)
+  end
+
   test "post_url? matches only post URLs" do
     assert Twitter::PostUrl.post_url?("https://x.com/jack/status/20")
     assert Twitter::PostUrl.post_url?("https://twitter.com/jack/status/20?s=20")

@@ -15,6 +15,16 @@ module Github
 
     MAX_PER_MESSAGE = 4
 
+    # Block-level tags whose boundaries separate words when flattening
+    # HTML to text. fragment.text joins across them, which would glue a
+    # URL onto adjacent prose (.../pull/12thanks) and hide it from
+    # extraction. code and pre are absent: they are removed beforehand.
+    BLOCK_TAGS = %w[
+      address article aside blockquote dd dialog div dl dt fieldset
+      figcaption figure footer form h1 h2 h3 h4 h5 h6 header hgroup hr
+      li main nav ol p section table td th tr ul
+    ].freeze
+
     Reference = Data.define(:owner, :repo, :number)
 
     class << self
@@ -42,6 +52,8 @@ module Github
       def non_code_text(html)
         fragment = Nokogiri::HTML5.fragment(html.to_s)
         fragment.css("code, pre").remove
+        fragment.css("br").each { |br| br.replace("\n") }
+        fragment.css(BLOCK_TAGS.join(",")).each { |element| element.after("\n") }
 
         [ fragment.text, *fragment.css("a[href]").map { |link| link["href"] } ].join("\n")
       end
