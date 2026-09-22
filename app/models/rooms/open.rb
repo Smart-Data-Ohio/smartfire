@@ -4,6 +4,6 @@ class Rooms::Open < Room
 
   private
     def grant_access_to_all_users
-      memberships.grant_to(User.active) if type_previously_changed?(to: "Rooms::Open")
+      memberships.grant_to(User.active) if !deleted? && type_previously_changed?(to: "Rooms::Open")
     end
 end

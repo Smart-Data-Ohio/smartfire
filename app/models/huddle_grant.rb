@@ -30,7 +30,7 @@ class HuddleGrant < ApplicationRecord
           user = User.active.where.not(role: :bot).lock.find_by(id: session.user_id)
           current_session = Session.lock.find_by(id: session.id, user_id: user&.id)
           current_membership = Membership.lock.find_by(id: membership.id, user_id: user&.id, room_id: membership.room_id)
-          current_room = Room.lock.find_by(id: current_membership&.room_id)
+          current_room = Room.alive.lock.find_by(id: current_membership&.room_id)
 
           raise Ineligible unless user && current_session && current_membership && current_room
 
@@ -108,7 +108,7 @@ class HuddleGrant < ApplicationRecord
 
     return false unless User.active.where.not(role: :bot).exists?(id: user_id) &&
       Session.exists?(id: session_id, user_id: user_id) &&
-      Room.exists?(id: room_id)
+      Room.alive.exists?(id: room_id)
 
     membership = Membership.find_by(id: membership_id, user_id: user_id, room_id: room_id)
     return false unless membership

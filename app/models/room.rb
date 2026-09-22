@@ -46,6 +46,10 @@ class Room < ApplicationRecord
 
   scope :ordered, -> { order("LOWER(name)") }
 
+  # Soft-deleted rooms grant nothing: every access path reads through alive.
+  scope :alive, -> { where(deleted_at: nil) }
+  scope :deleted, -> { where.not(deleted_at: nil) }
+
   class << self
     def create_for(attributes, users:)
       transaction do

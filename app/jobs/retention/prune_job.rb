@@ -44,7 +44,7 @@ class Retention::PruneJob < ApplicationJob
     # A destroy already in flight makes this a harmless duplicate:
     # Room::DestroyJob is idempotent.
     def reenqueue_stuck_room_destroys
-      Room.where.not(deleted_at: nil).where(deleted_at: ...STUCK_ROOM_GRACE.ago).pluck(:id).each do |room_id|
+      Room.deleted.where(deleted_at: ...STUCK_ROOM_GRACE.ago).pluck(:id).each do |room_id|
         Room::DestroyJob.perform_later(room_id)
       end
     end
