@@ -63,7 +63,18 @@ in the account chooser does not grant access. See Google's
 [identity verification guidance](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token).
 
 The initial link matches an existing human account by email without regard
-to letter case; ambiguous matches are rejected. Later sign-ins use Google's
+to letter case; ambiguous matches are rejected. Only accounts whose email is
+known to be their own auto-link this way: accounts that existed before the
+September 2026 release and still carry their original email
+(`users.google_email_link_allowed`, set by migration `20260922210400`).
+Accounts created later (join-code signups included), and anyone who
+changed their own email, are refused with "An administrator must link this
+account". Those members use **Link Google sign-in** on their profile, which
+runs the same verified flow (PKCE, nonce, `hd` allowlist) while they are
+signed in and links that Google account to them; it returns through the
+same `/session/google/callback`, so no new redirect URI is needed. An
+administrator can also allow the email link, or unlink an identity, from
+the account page. Later sign-ins use Google's
 stable account identifier, so changing a Google email does not create a new
 Smartfire account. A different Google identity cannot take over an existing
 link. Administrator roles are never assigned by automatic onboarding.

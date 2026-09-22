@@ -45,8 +45,18 @@ review), `merged`, `closed` (without merge), `review_requested`,
 `checks_failed` (a check concluding `failure`, `timed_out`, or `cancelled`,
 or a commit status of `failure`/`error`). New subscriptions default to
 `opened`, `merged`, `review_requested`, and `checks_failed`. Direct rooms
-cannot be subscribed. Subscribing performs no GitHub API call, so a typo in
-`owner/repo` simply never receives events.
+cannot be subscribed.
+
+Subscribing requires the subscriber's own linked GitHub account (profile
+page) to read the repository: the app calls `GET /repos/{owner}/{repo}`
+with the subscriber's token (the same cached check private cards use) and
+refuses the subscription unless GitHub answers 200. Administrators may tick
+"Subscribe without verifying my GitHub access" to override; such
+subscriptions, and every subscription created before this check existed,
+are recorded as unverified (`reader_verified` false). When a webhook's
+`repository.private` is true, or missing, messages posted for an
+unverified subscription omit the PR title (for example "**alice** opened
+pull request #12"); the PR card still gates its content per viewer.
 
 Each selected event arrives once as a normal message from the workspace
 **GitHub** bot (created lazily, member only of subscribed rooms), with one
@@ -70,6 +80,10 @@ new environment variables were added.
 
 Link a GitHub username on the profile page to receive an inbox item ("Review
 requested") when a subscribed repository requests a review from that login.
+While a GitHub account is linked (see PR write actions below), the profile
+login is the one GitHub confirmed for the token and cannot be edited by
+hand; linking releases that login from any other member who had typed it
+in without a linked account.
 The item points at the posted message, so its visibility follows room
 membership: it appears only while the reviewer is a member of the room the
 event posted into. A login can be linked to only one user. No item is
@@ -109,7 +123,9 @@ records the existing `fetch_error`.
 Mentioning an agent in a PR thread gives it the PR context: its delivery
 payload gains a `pull_request` object (`url`, `owner`, `repo`,
 `number`, `title`, `state`, `head_branch`, `base_branch`,
-`review_decision`, `checks_state`), null in other threads. See [AI
+`review_decision`, `checks_state`), null in other threads. For a private
+or still-unknown repository, `title` and the branch names are null unless
+the agent owner's linked GitHub account can read the repository. See [AI
 agents](agents.md) for the payload shape.
 
 A PR thread is a normal thread and respects the normal thread rules:
@@ -179,8 +195,8 @@ decision.
 ### Identity
 
 An agent acts as its own linked GitHub account: the bot edit page carries
-a "GitHub account" section where an administrator or the agent's owner
-pastes a fine-grained token for a machine user dedicated to the agent
+a "GitHub account" section where an administrator (only; the agent's
+owner sees the connection read-only) pastes a fine-grained token for a machine user dedicated to the agent
 (validated with `GET /user`, never shown again). The token is never the
 workspace `GITHUB_TOKEN` and never a person's token. Deactivating the
 agent's bot disconnects the account, exactly like deactivating a human;
@@ -218,11 +234,15 @@ curl -X POST https://smartfire.example.com/rooms/1/agents/github/pull_request_ac
 
 ### Approval and execution
 
-Deciders are the existing approval deciders — the agent's owner and
-every administrator — deciding from the activity inbox; there is no new
-inbox item type. When a `github.*` request is approved, the server
+Deciders are the existing approval deciders deciding from the activity
+inbox; approving a `github.*` request needs a current administrator (the
+owner may deny). The request records the agent's linked account and
+login (`github_account_id`, `github_login`), and the card shows "Acts on
+GitHub as @login". Approving is refused (422) if the connection changed
+since the request. When a `github.*` request is approved, the server
 re-checks everything (still approved, agent active, still a member,
-grant still held, thread still mapped, account still usable, and no
+grant still held, thread still mapped, account still usable and still
+the recorded one, and no
 earlier outcome recorded for the approval, so a queue retry never posts
 twice) and performs the action with the agent's token. Any failed re-check, and any
 GitHub refusal, records a failed completion without posting; a 401
@@ -312,7 +332,7 @@ one GitHub request per viewer per window. Linking, relinking, or repairing
 the connected account retires that member's cached decisions at once,
 because the cache key carries the account's `updated_at`. The card content itself still
 comes from the stored record fetched with the workspace token; only the
-gate is per viewer. Likewise, subscribing a room to a private repository
-makes its PR titles visible to the whole room through the posted
-messages: subscription messages carry the PR title as text, which room
-membership alone gates.
+gate is per viewer. Subscription messages are the exception: a
+subscription created by a verified reader posts private PR titles as text,
+which room membership alone gates; unverified subscriptions post them
+without titles.

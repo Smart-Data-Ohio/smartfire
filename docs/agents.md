@@ -10,14 +10,23 @@ An agent is a row in `agents`, 1:1 with a bot `User`. `kind` is `personal`
 create; backfilled rows may have no owner, rendered as "no owner recorded").
 `Agent#active?` is false while `suspended_at` is set or the bot user is not
 active. Suspending an agent revokes all of its capability grants in the same
-transaction.
+transaction. Deactivating or banning a person suspends every agent they own, so those
+agents' Bearer tokens answer 401 and their bot keys get 403 from every
+capability check.
 
 ## Credentials
 
 `agent_credentials` holds Bearer agent tokens. Credentials store only a SHA256 digest
 plus a display identifier; the secret is shown once at creation. Revoked or
 expired credentials return 401 on the next request. The legacy `bot_key` URL
-path is frozen and unchanged.
+path is frozen and unchanged. Bot keys (`<id>-<token>`) authenticate the
+same way: `users.bot_token_digest` holds the token's SHA-256 digest,
+compared in constant time after an id lookup, and the UI shows the key
+once, on the page that follows creating the bot or generating a new key
+(the bots page's curl examples use a `BOT_KEY` placeholder). Existing keys
+kept their value. For one release the plaintext `users.bot_token` column is
+still written, so rolling back stays possible and the legacy webhook
+payload's `room.path` keeps the real key; a follow-up release removes it.
 
 ## Capability grants
 
@@ -105,7 +114,11 @@ Message event rows carry a `pull_request` key: the PR context object when
 the message lives in a pull-request discussion thread, explicit null
 otherwise. The object is `url`, `owner`, `repo`, `number`, `title`,
 `state`, `head_branch`, `base_branch`, `review_decision`, and
-`checks_state` (`checks_state` mirrors the card's check status). See
+`checks_state` (`checks_state` mirrors the card's check status). `title`,
+`head_branch`, and `base_branch` are null unless the repository is known
+public or the agent owner's own linked GitHub account can read it (the
+card rule, with the owner as viewer); work `links` entries follow the same
+rule for their `title`. See
 [GitHub pull request cards](github.md#pull-request-threads).
 
 An agent with the `post_messages` capability may also attach Drive files
@@ -145,9 +158,13 @@ polling (`[{ file_id, url }]`, never names); the legacy path omits it.
 
 ## Management
 
-Admins and the agent's owner manage grants from the bot edit page ("Manage
-capability grants"): grant a capability in one of the agent's rooms or
-workspace-wide, and revoke. Anyone else gets 403. The same audience reads
+Admins and the agent's owner open grants from the bot edit page ("Manage
+capability grants"). Only a current administrator may grant a capability
+(in an existing room or workspace-wide, `external_action` included); the
+owner, who may have been an administrator only when the agent was
+created, keeps a read-only view and may revoke. The same split applies
+to credentials (owners list and revoke, administrators issue) and to the
+bot's webhook URL (administrators only). Anyone else gets 403. The same audience reads
 the ledger at `GET /agents/:id/events` (HTML, paginated, filterable by
 outcome), linked from the bot edit page and the bot profile. There is no
 public exposure.
@@ -272,7 +289,10 @@ the inbox never shows them the item.
 Each decider gets one `agent_approval_request` activity item on create.
 The card shows the agent's name and avatar, the room name when present,
 the summary as escaped text, the time left, and Approve and Deny buttons
-(deny takes an optional note). Deciding marks every decider's item
+(deny takes an optional note). A `github.*` request can be approved only
+by a current administrator: an owner who is not one sees no Approve
+button and gets 403 from `PATCH /agent_approvals/:id?decision=approved`,
+but may still deny. Deciding marks every decider's item
 handled. Marking an inbox item read or handled never decides the request.
 
 ### Delivery of decisions
@@ -359,8 +379,9 @@ and `read_messages` like message delivery. `ack` works on these rows.
   work payloads (see Boards for the full shape), newest first, max
   100, filtered to rooms where the agent holds `read_messages`.
 - `GET /agents/work/:id` returns one owned thread, or 404 for anything
-  the agent does not own or whose room the agent's user no longer belongs
-  to.
+  the agent does not own, whose room the agent's user no longer belongs
+  to, or where the agent no longer holds `read_messages`. `PATCH` and
+  `PUT .../result` answer the same 404 before checking `manage_threads`.
 - `PATCH /agents/work/:id` updates the status, tags, and run link of an
   owned thread. It takes `work_status` (one of `planned`,
   `in_progress`, `blocked`, `done`) and an optional plain-text `note`

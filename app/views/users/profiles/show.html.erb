@@ -69,6 +69,22 @@
         </label>
       </div>
 
+      <% if @user.password_digest_was.present? %>
+        <div class="flex align-center gap">
+          <label class="flex align-center gap flex-item-grow input input--actor">
+            <%= password_field_tag "user[current_password]", nil, id: "user_current_password", class: "input txt-large",
+                  autocomplete: "current-password", placeholder: "Current password (to change email)", required: false,
+                  maxlength: 72, aria: { label: "Current password, required to change your email address" } %>
+            <%= image_tag "password.svg", aria: { hidden: "true" }, size: 24, class: "colorize--black" %>
+          </label>
+        </div>
+      <% end %>
+      <% if @user.errors[:current_password].any? %>
+        <p class="txt-small margin-none" style="color: var(--color-negative)">
+          Current password <%= @user.errors[:current_password].to_sentence %>.
+        </p>
+      <% end %>
+
       <div class="flex align-center gap">
         <%= translation_button(:update_password) %>
 
@@ -94,7 +110,8 @@
 
         <label class="flex align-center gap flex-item-grow input input--actor">
           <%= form.text_field :github_login, class: "input txt-large", placeholder: "GitHub username",
-                required: false, autocomplete: "off", data: { "1p-ignore": true } %>
+                required: false, autocomplete: "off", data: { "1p-ignore": true },
+                disabled: @user.github_login_verified? %>
           <%= image_tag "link.svg", aria: { hidden: "true" }, size: 24, class: "colorize--black" %>
         </label>
       </div>
@@ -103,6 +120,8 @@
           GitHub username <%= @user.errors[:github_login].to_sentence %>.
           Link it to receive review requests in your activity inbox.
         </p>
+      <% elsif @user.github_login_verified? %>
+        <p class="txt-small margin-none">Set by your linked GitHub account. Disconnect GitHub below to edit it.</p>
       <% else %>
         <p class="txt-small margin-none">Link your GitHub username to receive review requests in your activity inbox.</p>
       <% end %>
@@ -134,6 +153,8 @@
       <%= profile_form_submit_button %>
     </div>
   <% end %>
+
+  <%= render "users/profiles/google_sign_in", user: @user %>
 
   <%= render "users/profiles/google_calendar", user: @user %>
 

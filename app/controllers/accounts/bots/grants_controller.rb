@@ -1,6 +1,10 @@
 class Accounts::Bots::GrantsController < ApplicationController
   before_action :set_bot
   before_action :ensure_can_manage_bot
+  # Owners keep a read-only view and may revoke; widening what an agent can
+  # do needs a current administrator, so a demoted owner cannot keep
+  # granting capabilities (workspace-wide or external_action included).
+  before_action :ensure_can_administer, only: :create
   before_action :set_agent
 
   def index

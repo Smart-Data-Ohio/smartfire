@@ -31,26 +31,65 @@ class Github::ConnectionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "octocat", users(:david).reload.github_login
   end
 
-  test "linking leaves the profile username and shows a mismatch notice when they differ" do
+  test "linking replaces a differing profile username with the verified one" do
     users(:david).update!(github_login: "someone-else")
     stub_github_user("octocat")
 
     post github_connection_url, params: { access_token: "github_pat_pasted" }
 
-    assert_equal "someone-else", users(:david).reload.github_login
-    assert_match(/differs from your profile username/, flash[:notice])
+    assert_equal "octocat", users(:david).reload.github_login
+    assert_equal "GitHub connected as octocat.", flash[:notice]
   end
 
-  test "linking leaves a taken login alone with an explanatory notice" do
+  test "linking releases the login from a member who claimed it without verification" do
     users(:david).update!(github_login: nil)
-    users(:jz).update!(github_login: "octocat")
+    users(:jz).update!(github_login: "OctoCat")
+    stub_github_user("octocat")
+
+    post github_connection_url, params: { access_token: "github_pat_pasted" }
+
+    assert_equal "octocat", users(:david).reload.github_login
+    assert_nil users(:jz).reload.github_login
+    assert_equal "GitHub connected as octocat.", flash[:notice]
+  end
+
+  test "linking never takes a login another member's linked token verifies" do
+    users(:david).update!(github_login: nil)
+    GithubConnectedAccount.create!(user: users(:jz), github_login: "octocat", access_token: "jz-token")
+    assert_equal "octocat", users(:jz).reload.github_login
     stub_github_user("octocat")
 
     post github_connection_url, params: { access_token: "github_pat_pasted" }
 
     assert_nil users(:david).reload.github_login
-    assert_match(/linked to another member/, flash[:notice])
+    assert_equal "octocat", users(:jz).reload.github_login
+    assert_match(/Another member's linked GitHub account already uses that username/, flash[:notice])
     assert_equal "octocat", users(:david).github_connected_account.github_login
+  end
+
+  test "the profile cannot edit the login while a verified account is linked" do
+    GithubConnectedAccount.create!(user: users(:david), github_login: "octocat", access_token: "x")
+
+    get user_profile_url
+    assert_select "input[name=?][disabled]", "user[github_login]"
+
+    put user_profile_url, params: { user: { github_login: "someone-else", name: "Dave" } }
+    assert_redirected_to user_profile_url
+    assert_equal "octocat", users(:david).reload.github_login
+    assert_equal "Dave", users(:david).name
+
+    assert_not users(:david).update(github_login: "someone-else")
+    assert_includes users(:david).errors[:github_login], "is set by your linked GitHub account"
+  end
+
+  test "the profile edits the login again once the link is disconnected" do
+    GithubConnectedAccount.create!(user: users(:david), github_login: "octocat", access_token: "x")
+    delete github_connection_url
+
+    put user_profile_url, params: { user: { github_login: "david-gh" } }
+
+    assert_redirected_to user_profile_url
+    assert_equal "david-gh", users(:david).reload.github_login
   end
 
   test "a rejected token stores nothing" do

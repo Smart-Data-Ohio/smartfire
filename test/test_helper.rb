@@ -19,7 +19,7 @@ class ActiveSupport::TestCase
 
   set_fixture_class twitter_posts: Twitter::Post, twitter_post_references: Twitter::PostReference
 
-  include SessionTestHelper, MentionTestHelper, TurboTestHelper, DnsTestHelper, WorkspaceIconTestHelper
+  include SessionTestHelper, BotKeyTestHelper, MentionTestHelper, TurboTestHelper, DnsTestHelper, WorkspaceIconTestHelper
 
   setup do
     ActionCable.server.pubsub.clear

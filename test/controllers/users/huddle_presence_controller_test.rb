@@ -97,7 +97,7 @@ class Users::HuddlePresenceControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "bots and inactive users are denied like the huddle controller" do
-    get huddle_presence_users_url, params: { bot_key: users(:bender).bot_key }
+    get huddle_presence_users_url, params: { bot_key: bot_key_for(users(:bender)) }
     assert_json_error :forbidden, "Bots cannot join huddles"
 
     bot = users(:bender)
