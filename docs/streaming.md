@@ -70,9 +70,9 @@ A stream also ends, in the same transaction, when:
 - the presenter's membership is removed;
 - the presenter's user is deactivated;
 - the presenter's last active grant for the room is revoked, including
-  through the gateway's authorization check. Any role change revokes
-  grants, so a promotion ends the stream too: rejoining drops the share,
-  and nothing stays live behind it.
+  through the gateway's authorization check. Only a change that crosses
+  the publish boundary (to or from listener) revokes grants; a host↔speaker
+  change keeps the grant and the stream it carries.
 
 Ending always broadcasts the same updates as an explicit stop. On the
 presenting browser, a cancelled or denied capture, the browser's own stop

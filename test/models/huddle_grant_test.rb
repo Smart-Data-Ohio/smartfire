@@ -319,6 +319,28 @@ class HuddleGrantTest < ActiveSupport::TestCase
     assert_not other_grant.reload.revoked?
   end
 
+  test "a host-speaker change updates the grant's role in place without revoking" do
+    room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david), users(:jason) ])
+    membership = room.memberships.find_by!(user: users(:jason))
+    membership.change_stage_role!("speaker")
+    grant = HuddleGrant.issue!(session: users(:jason).sessions.create!(user_agent: "Test"), membership: membership)
+
+    membership.change_stage_role!("host")
+
+    grant.reload
+    assert_not grant.revoked?
+    assert_equal "host", grant.stage_role
+    assert_predicate grant, :authorized?
+    assert_not HuddleCleanup.exists?(operation: :remove_participant, huddle_grant_id: grant.id)
+
+    membership.change_stage_role!("speaker")
+
+    grant.reload
+    assert_not grant.revoked?
+    assert_equal "speaker", grant.stage_role
+    assert_predicate grant, :authorized?
+  end
+
   test "authorize_or_revoke! revokes a grant whose issued role no longer matches" do
     room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david), users(:jason) ])
     membership = room.memberships.find_by!(user: users(:jason))

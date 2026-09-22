@@ -72,6 +72,13 @@ class HuddleGrant < ApplicationRecord
       revoke_scope! active.where(membership_id: membership.id)
     end
 
+    # Records a host↔speaker change on the member's active grants without
+    # revoking them: the publish permission is unchanged, so the call and
+    # any live stream continue on the same participant identity.
+    def update_role_for_membership!(membership)
+      active.where(membership_id: membership.id).update_all(stage_role: membership.stage_role)
+    end
+
     def revoke_for_session!(session)
       revoke_scope! active.where(session_id: session.id)
     end

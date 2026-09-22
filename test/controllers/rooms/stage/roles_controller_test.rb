@@ -73,7 +73,7 @@ class Rooms::Stage::RolesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "huddle_role_events", event["target"]
   end
 
-  test "every role change appends a rejoin event to the member's persistent target" do
+  test "a publish-boundary crossing appends a rejoin event to the member's persistent target" do
     sign_in :david
 
     patch room_stage_role_url(@room, @listener), params: { stage_role: "speaker" }
@@ -83,6 +83,25 @@ class Rooms::Stage::RolesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "huddle_role_events", event["target"]
     assert_match "data-huddle-rejoin-room-id=\"#{@room.id}\"", event.to_html
     assert_match "data-huddle-rejoin-stage-role=\"speaker\"", event.to_html
+  end
+
+  test "a host-speaker change broadcasts roster and panel but no rejoin event and revokes nothing" do
+    @listener.change_stage_role!("speaker")
+    grant = HuddleGrant.issue!(session: users(:jason).sessions.create!(user_agent: "Test"), membership: @listener)
+    sign_in :david
+
+    patch room_stage_role_url(@room, @listener), params: { stage_role: "host" }
+
+    assert_redirected_to room_url(@room)
+    assert_equal "host", @listener.reload.stage_role
+    assert_not grant.reload.revoked?
+    assert_equal "host", grant.stage_role
+    assert_not HuddleCleanup.exists?(operation: :remove_participant, huddle_grant_id: grant.id)
+
+    streams = capture_turbo_stream_broadcasts([ users(:jason), :rooms ])
+    assert streams.any? { |stream| stream["target"] == ActionView::RecordIdentifier.dom_id(@room, :stage_roster) }
+    assert streams.any? { |stream| stream["target"] == ActionView::RecordIdentifier.dom_id(@room, :stage_panel) }
+    assert_empty streams.select { |stream| stream["action"] == "append" }
   end
 
   test "a demotion appends a rejoin event to the member's persistent target" do

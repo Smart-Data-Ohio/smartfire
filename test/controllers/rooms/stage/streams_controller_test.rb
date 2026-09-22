@@ -322,18 +322,38 @@ class Rooms::Stage::StreamsControllerTest < ActionDispatch::IntegrationTest
     assert_not_predicate stream.reload, :live?
   end
 
-  test "promoting a speaker keeps no live stream dangling" do
+  test "promoting a speaker to host keeps the grant and the live stream" do
     @listener.change_stage_role!("speaker")
     stream = Stream.create!(room: @room, membership: @listener, user: users(:jason), quality: "1080p15")
     grant = HuddleGrant.issue!(session: users(:jason).sessions.create!(user_agent: "Test"), membership: @listener)
     sign_in :david
 
-    # Any role change revokes the member's grants, and the last revoked grant
-    # ends the stream: rejoining drops the share, so nothing stays live.
+    # Host and speaker share the same publish permission, so the promotion
+    # keeps the grant's identity and the stream it carries: no revocation,
+    # no rejoin, nothing to re-share.
     patch room_stage_role_url(@room, @listener), params: { stage_role: "host" }
 
     assert_redirected_to room_url(@room)
-    assert grant.reload.revoked?
-    assert_not_predicate stream.reload, :live?
+    assert_not grant.reload.revoked?
+    assert_equal "host", grant.stage_role
+    assert_predicate stream.reload, :live?
+    assert_equal stream, @room.live_stream
+  end
+
+  test "demoting a host to speaker keeps the grant and the live stream" do
+    @listener.change_stage_role!("speaker")
+    stream = Stream.create!(room: @room, membership: @listener, user: users(:jason), quality: "1080p15")
+    grant = HuddleGrant.issue!(session: users(:jason).sessions.create!(user_agent: "Test"), membership: @listener)
+    sign_in :david
+
+    patch room_stage_role_url(@room, @listener), params: { stage_role: "host" }
+    assert_predicate stream.reload, :live?
+
+    patch room_stage_role_url(@room, @listener), params: { stage_role: "speaker" }
+
+    assert_redirected_to room_url(@room)
+    assert_not grant.reload.revoked?
+    assert_equal "speaker", grant.stage_role
+    assert_predicate stream.reload, :live?
   end
 end
