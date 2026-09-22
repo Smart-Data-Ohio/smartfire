@@ -10,6 +10,7 @@
 
         <%= form.text_field :content, id: nil, autofocus: true, autocomplete: "off", autocorrect: "off", maxlength: 16,
               required: true, pattern: /\S+.*/, class: "input input--boost txt-small",
+              role: "combobox", aria: { autocomplete: "list", expanded: "false" },
               data: {
                 boost_form_target: "input",
                 controller: "markdown-autocomplete",
