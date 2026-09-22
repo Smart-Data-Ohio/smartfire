@@ -1,4 +1,6 @@
 class Agents::Github::PullRequestActionsController < ApplicationController
+  include AgentApiThrottle
+
   allow_agent_access only: :create
 
   before_action :ensure_agent_token, only: :create
@@ -6,6 +8,7 @@ class Agents::Github::PullRequestActionsController < ApplicationController
   before_action :set_pull_request_and_thread, only: :create
   before_action :ensure_external_action, only: :create
   before_action :ensure_agent_github_account, only: :create
+  throttle_agent_api limit: 60, only: :create
 
   # POST /rooms/:room_id/agents/github/pull_request_actions (Bearer-only,
   # JSON). Requests a pull-request write action — comment, approve,

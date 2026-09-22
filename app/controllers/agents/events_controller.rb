@@ -1,11 +1,13 @@
 class Agents::EventsController < ApplicationController
   include AgentAuthorization
+  include AgentApiThrottle
 
   allow_agent_access only: %i[ index ack ]
 
   before_action :ensure_agent_token, only: %i[ index ack ]
   before_action :set_ack_event, only: :ack
   require_agent_capability :read_messages, only: %i[ index ack ]
+  throttle_agent_api limit: 120, only: %i[ index ack ]
 
   LEDGER_PER_PAGE = 50
   POLL_DEFAULT_LIMIT = 50

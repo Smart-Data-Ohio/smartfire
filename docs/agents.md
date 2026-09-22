@@ -19,6 +19,22 @@ plus a display identifier; the secret is shown once at creation. Revoked or
 expired credentials return 401 on the next request. The legacy `bot_key` URL
 path is frozen and unchanged.
 
+### Rate limits
+
+Agent endpoints throttle per credential per minute, so one busy
+credential cannot starve others sharing the agent:
+
+- event polling and acks: 120/minute each
+- approval reads: 120/minute
+- posting messages, requesting approvals, cancelling approvals, and
+  pull-request actions: 60/minute each
+- creating board posts: 30/minute
+
+Overflowing a bucket returns 429 with a `Retry-After` header in
+seconds and a `{ "error": "rate_limited" }` body. Human session
+requests are not throttled. These limits are separate from the
+20-deliveries-per-minute-per-room delivery guard below.
+
 ## Capability grants
 
 `agent_grants` rows scope what an agent may do: `agent_id`, nullable `room_id`
