@@ -7,8 +7,9 @@ class Calendar::DisconnectCleanupJob < ApplicationJob
   # transient delete failure retries instead of revoking early.
   # Deactivation reuses this job with an empty id list for a revoke-only
   # run. Permanent failures are logged (never with tokens); transient
-  # ones retry, and an exhausted retry logs at error level since the
-  # account row the failure could be recorded on is gone.
+  # ones retry, and an exhausted retry logs at error level and reports
+  # to the error service, since the account row the failure could be
+  # recorded on is gone.
   self.enqueue_after_transaction_commit = true
 
   # Credentials travel as an encrypted blob, and stay out of the logs
@@ -17,6 +18,7 @@ class Calendar::DisconnectCleanupJob < ApplicationJob
 
   retry_on Google::Client::Unavailable, wait: :polynomially_longer, attempts: 8 do |job, error|
     Rails.logger.error "Calendar::DisconnectCleanupJob failed after retries: #{error.class}"
+    Rails.error.report(error, context: { account_id: job.arguments.third })
   end
 
   CREDENTIALS_PURPOSE = "calendar/disconnect-cleanup"

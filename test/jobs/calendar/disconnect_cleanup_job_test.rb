@@ -145,6 +145,36 @@ class Calendar::DisconnectCleanupJobTest < ActiveSupport::TestCase
     assert_not_requested revoke
   end
 
+  test "an exhausted retry reports to the error service with the account id" do
+    account = connect_google!(@david)
+    snapshot = account.cleanup_snapshot
+    account_id = account.id
+    access_token = account.access_token
+    refresh_token = account.refresh_token
+    stub_google_event_delete("orphan-id", status: 429)
+    account.destroy!
+
+    job = Calendar::DisconnectCleanupJob.new([ "orphan-id" ], snapshot, account_id)
+    job.exception_executions = { [ Google::Client::Unavailable ].to_s => 8 }
+
+    reported_error = nil
+    reported_options = nil
+    Rails.error.stubs(:report).with do |*args, **kwargs|
+      reported_error = args.first
+      reported_options = kwargs
+      true
+    end
+
+    assert_no_enqueued_jobs(only: Calendar::DisconnectCleanupJob) do
+      job.perform_now
+    end
+
+    assert_kind_of Google::Client::Unavailable, reported_error
+    assert_equal({ account_id: account_id }, reported_options[:context])
+    assert_not_includes reported_error.inspect, access_token
+    assert_not_includes reported_error.inspect, refresh_token
+  end
+
   test "a missing id list still revokes the grant" do
     account = connect_google!(@david)
     snapshot = account.cleanup_snapshot
