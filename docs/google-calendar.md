@@ -83,8 +83,11 @@ triggered. A remote copy already gone (404 or 410) counts as deleted.
 **Disconnect** on the profile immediately removes the connection and every
 local calendar entry for that member, then a background job removes the
 remote copies and revokes the Google grant. Transient failures retry with
-backoff, and the grant is revoked only after every delete has succeeded;
-entries Google permanently refuses to remove are logged and forgotten.
+backoff, and the grant is revoked only after every delete has succeeded
+or failed permanently; entries Google permanently refuses to remove are
+logged and forgotten. Revoking despite permanent delete failures (or an
+already-dead grant) is intended: the member asked to disconnect, so the
+grant goes away even when a remote copy could not be removed.
 
 Deactivating a member removes their room memberships, revokes the Google
 grant in the background, marks the Google account disconnected ("Account

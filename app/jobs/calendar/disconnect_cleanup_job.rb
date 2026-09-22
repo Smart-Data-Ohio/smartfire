@@ -76,6 +76,10 @@ class Calendar::DisconnectCleanupJob < ApplicationJob
       end
     end
 
+    # Revoking after permanent delete failures (or an already-dead
+    # grant) is intended: the member asked to disconnect, so the grant
+    # goes away even when a remote copy could not be removed. Only
+    # transient failures retry instead of revoking.
     begin
       revoked = Google::Client.revoke_token(credentials[:refresh_token])
       Rails.logger.warn "Calendar::DisconnectCleanupJob could not revoke the grant: rejected" unless revoked
