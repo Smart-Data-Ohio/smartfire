@@ -43,7 +43,7 @@ class Github::PullRequestThread < ApplicationRecord
 
   # The pull_request object for agent delivery payloads: the PR's context
   # when the message lives in a PR thread, nil everywhere else.
-  def self.payload_for_message(message)
-    message.thread&.pull_request_thread&.pull_request&.agent_payload
+  def self.payload_for_message(message, agent: nil)
+    message.thread&.pull_request_thread&.pull_request&.agent_payload(agent: agent)
   end
 end

@@ -1,8 +1,21 @@
 ActiveSupport.on_load(:action_text_content) do
+  # Content#attachables resolves through Attachable.from_node directly,
+  # bypassing Attachment.from_node, so the preloaded lookup hooks both.
+  module ActionText::Attachable
+    class << self
+      def from_node_with_preloaded_user(node)
+        Message::MentionPreloader.preloaded_user_for(node) || from_node_without_preloaded_user(node)
+      end
+
+      alias_method :from_node_without_preloaded_user, :from_node
+      alias_method :from_node, :from_node_with_preloaded_user
+    end
+  end
+
   class ActionText::Attachment
     class << self
       def from_node(node, attachable = nil)
-        new(node, attachable || ActionText::Attachment::OpengraphEmbed.from_node(node) || attachable_from_possibly_expired_sgid(node["sgid"]) || ActionText::Attachable.from_node(node))
+        new(node, attachable || ActionText::Attachment::OpengraphEmbed.from_node(node) || Message::MentionPreloader.preloaded_user_for(node) || attachable_from_possibly_expired_sgid(node["sgid"]) || ActionText::Attachable.from_node(node))
       end
 
       private
@@ -11,32 +24,13 @@ ActiveSupport.on_load(:action_text_content) do
         ATTACHABLES_PERMITTED_WITH_INVALID_SIGNATURES = %w[ User ]
 
         def attachable_from_possibly_expired_sgid(sgid)
-          if message = sgid&.split("--")&.first
-            encoded_message = JSON.parse(decode_base64(message))
-
-            decoded_gid = if data = encoded_message.dig("_rails", "data")
-              data
-            elsif data = encoded_message.dig("_rails", "message")
-              # Rails 7 used an older format of GID that serialized the payload using Marshall
-              # Since we intentionally skip signature verification, we can't safely unmarshal the data
-              # To work around this, we manually extract the GID from the marshaled data
-              decode_base64(data).match(%r{(gid://campfire/[^/]+/\d+)})&.to_s
-            else
-              nil
-            end
-
-            if model = GlobalID.find(decoded_gid)
+          if gid_uri = Message::MentionPreloader.gid_uri_for_sgid(sgid)
+            if model = GlobalID.find(gid_uri)
               model.model_name.to_s.in?(ATTACHABLES_PERMITTED_WITH_INVALID_SIGNATURES) ? model : nil
             end
           end
         rescue ActiveRecord::RecordNotFound
           nil
-        end
-
-        def decode_base64(message)
-          Base64.strict_decode64(message)
-        rescue => _e
-          Base64.urlsafe_decode64(message)
         end
     end
   end

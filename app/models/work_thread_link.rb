@@ -24,18 +24,20 @@ class WorkThreadLink < ApplicationRecord
   # pull request or event row is gone carry no usable URL or title and
   # are omitted. Drive entries carry only the stored URL and cached
   # title: bots never receive Drive credentials.
-  def self.agent_payloads_for(thread)
+  def self.agent_payloads_for(thread, agent: nil)
     links = if thread.association(:work_thread_links).loaded?
       thread.work_thread_links.sort_by(&:id)
     else
       where(channel_thread_id: thread.id).ordered.includes(:github_pull_request, :event).to_a
     end
-    links.filter_map(&:agent_payload)
+    links.filter_map { |link| link.agent_payload(agent: agent) }
   end
 
-  def agent_payload
+  # The pull request entry's title follows Github::PullRequest#agent_payload:
+  # null unless the repository is public or the agent's owner can read it.
+  def agent_payload(agent: nil)
     case kind
-    when "pull_request" then pull_request_agent_payload
+    when "pull_request" then pull_request_agent_payload(agent)
     when "event" then event_agent_payload
     when "drive_file" then drive_file_agent_payload
     end
@@ -72,15 +74,16 @@ class WorkThreadLink < ApplicationRecord
       self.title = title.to_s.truncate(TITLE_LIMIT) if title.present?
     end
 
-    def pull_request_agent_payload
+    def pull_request_agent_payload(agent)
       pull_request = github_pull_request
       return if pull_request.nil?
 
+      pull_request_payload = pull_request.agent_payload(agent: agent)
       {
         kind: kind,
         url: pull_request.html_url.presence || "https://github.com/#{pull_request.full_name}/pull/#{pull_request.number}",
-        title: pull_request.title,
-        pull_request: pull_request.agent_payload,
+        title: pull_request_payload[:title],
+        pull_request: pull_request_payload,
         event: nil
       }
     end

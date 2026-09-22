@@ -49,7 +49,9 @@ class Agents::Github::PullRequestActionsController < ApplicationController
       action: action.action_name,
       summary: action.summary,
       payload: action.payload_json,
-      external_id: params[:external_id].presence
+      external_id: params[:external_id].presence,
+      github_account_id: @github_account.id,
+      github_login: @github_account.github_login
     )
 
     if approval.save

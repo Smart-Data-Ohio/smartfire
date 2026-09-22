@@ -31,7 +31,9 @@
 <div class="flex align-center gap">
   <%= translation_button(:webhook_url) %>
   <label class="flex align-center gap flex-item-grow txt-large input input--actor">
-    <%= form.url_field :webhook_url, class: "input", placeholder: "Webhook URL" %>
+    <%= form.url_field :webhook_url, class: "input", placeholder: "Webhook URL",
+          disabled: bot.persisted? && !Current.user.administrator?,
+          title: (Current.user.administrator? ? nil : "Only an administrator can change the webhook URL") %>
     <%= image_tag "web.svg", aria: { hidden: "true" }, size: 24, class: "colorize--black" %>
   </label>
 </div>

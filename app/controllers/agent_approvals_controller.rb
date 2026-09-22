@@ -26,6 +26,24 @@ class AgentApprovalsController < ApplicationController
       return
     end
 
+    if decision == "approved" && !@approval.approvable_by?(Current.user)
+      message = "Only an administrator can approve GitHub write actions"
+      respond_to do |format|
+        format.html { redirect_back_or_to activity_items_path, alert: "#{message}.", status: :see_other }
+        format.json { render json: { error: message }, status: :forbidden }
+      end
+      return
+    end
+
+    if decision == "approved" && @approval.github_action? && !@approval.github_identity_current?
+      message = "The agent's GitHub account changed since this was requested; deny it and ask the agent to request again"
+      respond_to do |format|
+        format.html { redirect_back_or_to activity_items_path, alert: "#{message}.", status: :see_other }
+        format.json { render json: { error: message }, status: :unprocessable_entity }
+      end
+      return
+    end
+
     begin
       @approval.decide!(decision: decision, by: Current.user, note: params[:decision_note].presence || params[:note].presence)
     rescue ActiveRecord::RecordInvalid

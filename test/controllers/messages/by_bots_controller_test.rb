@@ -7,14 +7,14 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
 
   test "create" do
     assert_difference -> { Message.count }, +1 do
-      post room_bot_messages_url(@room, users(:bender).bot_key), params: +"Hello Bot World!"
+      post room_bot_messages_url(@room, bot_key_for(users(:bender))), params: +"Hello Bot World!"
       assert_equal "Hello Bot World!", Message.last.plain_text_body
     end
   end
 
   test "create ignores drive_file_ids" do
     assert_difference -> { Message.count }, +1 do
-      post room_bot_messages_url(@room, users(:bender).bot_key),
+      post room_bot_messages_url(@room, bot_key_for(users(:bender))),
         params: { message: { markdown_source: "hello", drive_file_ids: [ "1AbcDefGhIjKlMnOpQrSt" ] } }
     end
     assert_empty Message.last.drive_attachments
@@ -26,7 +26,7 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
     )
     message.drive_attachments.create!(file_id: "1AbcDefGhIjKlMnOpQrSt")
 
-    patch room_bot_message_url(@room, users(:bender).bot_key, message),
+    patch room_bot_message_url(@room, bot_key_for(users(:bender)), message),
       params: { message: { drive_file_ids: [ "2BcdEfgHiJkLmNoPqRsTu" ] } }
 
     assert_response :ok
@@ -35,14 +35,14 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
 
   test "create with UTF-8 content" do
     assert_difference -> { Message.count }, +1 do
-      post room_bot_messages_url(@room, users(:bender).bot_key), params: +"Hello 👋!"
+      post room_bot_messages_url(@room, bot_key_for(users(:bender))), params: +"Hello 👋!"
       assert_equal "Hello 👋!", Message.last.plain_text_body
     end
   end
 
   test "create file" do
     assert_difference -> { Message.count }, +1 do
-      post room_bot_messages_url(@room, users(:bender).bot_key), params: { attachment: fixture_file_upload("moon.jpg", "image/jpeg") }
+      post room_bot_messages_url(@room, bot_key_for(users(:bender))), params: { attachment: fixture_file_upload("moon.jpg", "image/jpeg") }
       assert Message.last.attachment.present?
     end
   end
@@ -92,22 +92,22 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
     body = "<div>Hey #{mention_attachment_for(:bender)}</div>"
 
     assert_no_enqueued_jobs only: Bot::WebhookJob do
-      post room_bot_messages_url(@room, users(:bender).bot_key), params: body
+      post room_bot_messages_url(@room, bot_key_for(users(:bender))), params: body
     end
   end
 
   test "create does not trigger a webhook to the sending bot in a direct room" do
     assert_no_enqueued_jobs only: Bot::WebhookJob do
-      post room_bot_messages_url(rooms(:bender_and_kevin), users(:bender).bot_key), params: +"Talking to myself again!"
+      post room_bot_messages_url(rooms(:bender_and_kevin), bot_key_for(users(:bender))), params: +"Talking to myself again!"
     end
   end
 
   test "create without a body or attachment" do
     assert_no_difference -> { Message.count } do
-      post room_bot_messages_url(@room, users(:bender).bot_key)
+      post room_bot_messages_url(@room, bot_key_for(users(:bender)))
       assert_response :unprocessable_content
 
-      post room_bot_messages_url(@room, users(:bender).bot_key), params: +"   "
+      post room_bot_messages_url(@room, bot_key_for(users(:bender))), params: +"   "
       assert_response :unprocessable_content
     end
   end
@@ -124,7 +124,7 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index returns the room's messages in the order they were sent" do
-    get room_bot_messages_url(@room, users(:bender).bot_key)
+    get room_bot_messages_url(@room, bot_key_for(users(:bender)))
     assert_response :success
 
     json = JSON.parse(response.body)
@@ -132,9 +132,9 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index includes message details" do
-    post room_bot_messages_url(@room, users(:bender).bot_key), params: +"Hello from Bender!"
+    post room_bot_messages_url(@room, bot_key_for(users(:bender))), params: +"Hello from Bender!"
 
-    get room_bot_messages_url(@room, users(:bender).bot_key)
+    get room_bot_messages_url(@room, bot_key_for(users(:bender)))
     assert_response :success
 
     message = Message.last
@@ -153,9 +153,9 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
   test "index includes icon fields for creator and room" do
     users(:bender).update!(icon_name: "openai")
     @room.update!(icon_name: "fire")
-    post room_bot_messages_url(@room, users(:bender).bot_key), params: +"Hello from Bender!"
+    post room_bot_messages_url(@room, bot_key_for(users(:bender))), params: +"Hello from Bender!"
 
-    get room_bot_messages_url(@room, users(:bender).bot_key)
+    get room_bot_messages_url(@room, bot_key_for(users(:bender)))
     assert_response :success
 
     json_message = JSON.parse(response.body).last
@@ -165,9 +165,9 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "icon fields are present and null without icons" do
-    post room_bot_messages_url(@room, users(:bender).bot_key), params: +"Hello from Bender!"
+    post room_bot_messages_url(@room, bot_key_for(users(:bender))), params: +"Hello from Bender!"
 
-    get room_bot_messages_url(@room, users(:bender).bot_key)
+    get room_bot_messages_url(@room, bot_key_for(users(:bender)))
     assert_response :success
 
     json_message = JSON.parse(response.body).last
@@ -182,7 +182,7 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
     source = "## Status\n\n<script>alert(1)</script>\n\n**Ready**"
     message = @room.messages.create!(creator: users(:jason), markdown_source: source, client_message_id: "markdown-json")
 
-    get room_bot_messages_url(@room, users(:bender).bot_key)
+    get room_bot_messages_url(@room, bot_key_for(users(:bender)))
 
     assert_response :success
     json_message = response.parsed_body.find { |item| item["id"] == message.id }
@@ -196,7 +196,7 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
       @room.messages.create!(body: "Filler #{i}", creator: users(:jason), client_message_id: "filler-#{i}")
     end
 
-    get room_bot_messages_url(@room, users(:bender).bot_key)
+    get room_bot_messages_url(@room, bot_key_for(users(:bender)))
     assert_response :success
 
     json = JSON.parse(response.body)
@@ -213,7 +213,7 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index pages newer messages with after" do
-    get room_bot_messages_url(@room, users(:bender).bot_key, after: messages(:tenth).id)
+    get room_bot_messages_url(@room, bot_key_for(users(:bender)), after: messages(:tenth).id)
     assert_response :success
 
     json = JSON.parse(response.body)
@@ -222,7 +222,7 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index in a room with no messages" do
-    get room_bot_messages_url(rooms(:bender_and_kevin), users(:bender).bot_key)
+    get room_bot_messages_url(rooms(:bender_and_kevin), bot_key_for(users(:bender)))
     assert_response :success
 
     assert_equal [], JSON.parse(response.body)
@@ -236,19 +236,19 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index is not found for a room the bot is not a member of" do
-    get room_bot_messages_url(rooms(:designers), users(:bender).bot_key)
+    get room_bot_messages_url(rooms(:designers), bot_key_for(users(:bender)))
     assert_response :not_found
   end
 
   test "create is not found for a room the bot is not a member of" do
     assert_no_difference -> { Message.count } do
-      post room_bot_messages_url(rooms(:designers), users(:bender).bot_key), params: +"Hello!"
+      post room_bot_messages_url(rooms(:designers), bot_key_for(users(:bender))), params: +"Hello!"
     end
     assert_response :not_found
   end
 
   test "regular messages index remains denied for bots" do
-    get room_messages_url(@room, bot_key: users(:bender).bot_key)
+    get room_messages_url(@room, bot_key: bot_key_for(users(:bender)))
     assert_response :forbidden
   end
 
@@ -256,7 +256,7 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
     message = post_bot_message "Deploying..."
 
     assert_no_difference -> { Message.count } do
-      patch room_bot_message_url(@room, users(:bender).bot_key, message), params: +"Deployed."
+      patch room_bot_message_url(@room, bot_key_for(users(:bender)), message), params: +"Deployed."
     end
 
     assert_response :ok
@@ -274,7 +274,7 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
       creator: users(:bender), markdown_source: "**Deploying**", client_message_id: "bot-markdown"
     )
 
-    patch room_bot_message_url(@room, users(:bender).bot_key, message), params: +"Deployed."
+    patch room_bot_message_url(@room, bot_key_for(users(:bender)), message), params: +"Deployed."
 
     assert_response :ok
     assert_nil message.reload.markdown_source
@@ -284,7 +284,7 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
   test "update with UTF-8 content" do
     message = post_bot_message "Deploying..."
 
-    patch room_bot_message_url(@room, users(:bender).bot_key, message), params: +"Deployed 🚀!"
+    patch room_bot_message_url(@room, bot_key_for(users(:bender)), message), params: +"Deployed 🚀!"
 
     assert_response :ok
     assert_equal "Deployed 🚀!", message.reload.plain_text_body
@@ -295,7 +295,7 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
     message = messages(:fourth)
     original = message.plain_text_body
 
-    patch room_bot_message_url(@room, users(:bender).bot_key, message), params: +"Hijacked!"
+    patch room_bot_message_url(@room, bot_key_for(users(:bender)), message), params: +"Hijacked!"
 
     assert_response :forbidden
     assert_equal original, message.reload.plain_text_body
@@ -305,7 +305,7 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
     message = messages(:first)
     original = message.plain_text_body
 
-    patch room_bot_message_url(rooms(:designers), users(:bender).bot_key, message), params: +"Hijacked!"
+    patch room_bot_message_url(rooms(:designers), bot_key_for(users(:bender)), message), params: +"Hijacked!"
 
     assert_response :not_found
     assert_equal original, message.reload.plain_text_body
@@ -326,7 +326,7 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
     message = post_bot_message "Deploying..."
 
     assert_difference -> { Message.count }, -1 do
-      delete room_bot_message_url(@room, users(:bender).bot_key, message)
+      delete room_bot_message_url(@room, bot_key_for(users(:bender)), message)
     end
 
     assert_response :no_content
@@ -336,7 +336,7 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
     message = messages(:fourth)
 
     assert_no_difference -> { Message.count } do
-      delete room_bot_message_url(@room, users(:bender).bot_key, message)
+      delete room_bot_message_url(@room, bot_key_for(users(:bender)), message)
     end
 
     assert_response :forbidden
@@ -345,7 +345,7 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
   test "index is forbidden with only a post_messages grant" do
     AgentGrant.create!(agent: agents(:bender_agent), room: @room, granted_by: users(:david), capability: "post_messages")
 
-    get room_bot_messages_url(@room, users(:bender).bot_key)
+    get room_bot_messages_url(@room, bot_key_for(users(:bender)))
 
     assert_response :forbidden
     assert_equal "Forbidden: agent lacks read_messages capability", response.parsed_body["error"]
@@ -355,7 +355,7 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
     bot = User.create_bot!(name: "Legacy Reader")
     @room.memberships.grant_to(bot)
 
-    get room_bot_messages_url(@room, bot.bot_key)
+    get room_bot_messages_url(@room, bot_key_for(bot))
 
     assert_response :success
     assert_equal @room.messages.ordered.map(&:id), response.parsed_body.map { it["id"] }
@@ -363,7 +363,7 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
 
   private
     def post_bot_message(body)
-      post room_bot_messages_url(@room, users(:bender).bot_key), params: +body
+      post room_bot_messages_url(@room, bot_key_for(users(:bender))), params: +body
       Message.last
     end
 

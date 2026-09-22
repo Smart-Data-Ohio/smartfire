@@ -44,6 +44,37 @@ class Github::PerformAgentActionJobTest < ActiveJob::TestCase
     end
   end
 
+  test "a relinked GitHub account after approval makes no request" do
+    approval = approve!(build_approval(kind: "comment", body: "Nice work"))
+    @account.update!(github_login: "someone-else-machine", access_token: "swapped-token")
+
+    Github::PerformAgentActionJob.perform_now(approval.id)
+
+    assert_not_requested :post, %r{api\.github\.com}
+    assert_failed_with approval, "The agent's GitHub account changed since this was approved"
+  end
+
+  test "a replaced GitHub connection with the same login makes no request" do
+    approval = approve!(build_approval(kind: "comment", body: "Nice work"))
+    @account.destroy!
+    @account = GithubConnectedAccount.create!(user: @bot, github_login: "bender-machine", access_token: "new-token")
+
+    Github::PerformAgentActionJob.perform_now(approval.id)
+
+    assert_not_requested :post, %r{api\.github\.com}
+    assert_failed_with approval, "The agent's GitHub account changed since this was approved"
+  end
+
+  test "an approval that recorded no GitHub identity makes no request" do
+    approval = build_approval(kind: "comment", body: "Nice work")
+    approval.update_columns(github_account_id: nil, github_login: nil, status: "approved", decided_by_id: users(:david).id)
+
+    Github::PerformAgentActionJob.perform_now(approval.id)
+
+    assert_not_requested :post, %r{api\.github\.com}
+    assert_failed_with approval, "The agent's GitHub account changed since this was approved"
+  end
+
   test "approving a non-github action enqueues nothing" do
     approval = AgentApproval.create!(agent: @agent, room: @room, action: "deploy", summary: "Ship it")
 
@@ -484,7 +515,8 @@ class Github::PerformAgentActionJobTest < ActiveJob::TestCase
       assert action.valid?, action.errors.full_messages.to_sentence
       AgentApproval.create!(
         agent: @agent, room: @room, action: action.action_name,
-        summary: action.summary, payload: action.payload_json
+        summary: action.summary, payload: action.payload_json,
+        github_account_id: @account.id, github_login: @account.github_login
       )
     end
 

@@ -24,13 +24,16 @@ only inside text nodes — never inside inline code, fenced blocks, link labels,
 or mention attachments. Unknown shortcodes such as `:nope_not_real:` stay
 literal.
 
-Reactions accept a brand shortcode as boost content and render the same
-icon markup. An emoji shortcode such as `:thumbsup:` is stored as the
-character itself, so it behaves exactly like an emoji typed directly. A
-reaction whose shortcode the registry does not know is stored as the literal
-text, exactly as typed. Brand aliases are canonicalised on save, so `:gpt:`
-is stored as `:openai:` and shares its reaction chip. The eight quick
-reactions are unchanged.
+Reactions aggregate Discord-style: any single emoji or any shortcode the
+registry knows shares one counted chip with a toggle, in first-reacted
+order, rendering the same icon markup for brand and workspace shortcodes.
+An emoji shortcode such as `:thumbsup:` is stored as the character itself,
+so it behaves exactly like an emoji typed directly. A reaction whose
+shortcode the registry does not know is stored as the literal shortcode,
+and free text stays a per-person boost. Surrounding whitespace is stripped
+on save, so `:fire: ` from autocomplete resolves like `:fire:`. Brand
+aliases are canonicalised on save, so `:gpt:` is stored as `:openai:` and
+shares its reaction chip. The eight quick reactions are unchanged.
 
 ## Adding an icon
 

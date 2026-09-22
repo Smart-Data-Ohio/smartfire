@@ -98,6 +98,39 @@ docker run --publish 80:80 --env DISABLE_SSL=true ...
 To enable error reporting to Sentry in production, supply your DSN in the `SENTRY_DSN` environment variable.
 To disable Sentry initialization entirely, set `SKIP_TELEMETRY=true`.
 
+#### Bot key storage
+
+Bot keys now authenticate against a SHA-256 digest
+(`users.bot_token_digest`, backfilled by migration `20260922210200`).
+This release still keeps the plaintext `users.bot_token` column populated
+so a rollback to the previous release keeps every bot working. The
+plaintext column is removed in a follow-up release; after that, rolling
+back past it would require resetting every bot key.
+
+#### Google sign-in email links after upgrading
+
+Migration `20260922210400` marks every existing human account whose email
+was never self-changed as allowed to link Google sign-in by email
+(`users.google_email_link_allowed`). It trusts the email addresses already
+stored, so an address a member typed in before this release (for example
+at a join-code signup) is trusted too. After deploying, an administrator
+should review members' email addresses. The account page has no control
+yet to withdraw an email link, so for any address that is not the
+member's own Workspace address, have it corrected (or deactivate the
+account) before the real owner of that address signs in with Google; an
+identity already linked by mistake can be unlinked on the account page.
+
+#### Content Security Policy
+
+Every page sends a `Content-Security-Policy-Report-Only` header (see
+`config/initializers/content_security_policy.rb` for each allowed source
+and why). Browsers report violations to `POST /csp_reports`, which logs one
+`CSP violation:` line per report (directive, blocked origin, and document
+path; never query strings), rate-limited to 20 reports per client per
+minute. The LiveKit origin comes from `LIVEKIT_URL`. The policy blocks
+nothing yet; once the logs stay quiet it can be enforced by setting
+`content_security_policy_report_only` to false.
+
 #### Google sign-in (optional)
 
 Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and a comma-separated

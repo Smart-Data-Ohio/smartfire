@@ -186,7 +186,7 @@ class Agents::EventsController < ApplicationController
         room: { id: room.id, name: room.name },
         actor: event.actor ? { id: event.actor.id, name: event.actor.name } : nil,
         message: message_payload(message)
-      }.compact.merge(pull_request: Github::PullRequestThread.payload_for_message(message))
+      }.compact.merge(pull_request: Github::PullRequestThread.payload_for_message(message, agent: agent))
     end
 
     def work_poll_payload(event)
