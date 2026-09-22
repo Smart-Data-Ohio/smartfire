@@ -77,7 +77,7 @@
 .overflow-ellipsis { text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
 
 .overflow-hide-scrollbar::-webkit-scrollbar {
-  @media (pointer: course) {
+  @media (pointer: coarse) {
     display: none;
   }
 }

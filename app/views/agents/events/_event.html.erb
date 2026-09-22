@@ -3,7 +3,7 @@
     <div class="min-width flex-item-grow">
       <div class="overflow-ellipsis txt-large"><strong><%= event.event_type %></strong> · <%= event.outcome %></div>
       <div class="overflow-ellipsis txt-small">
-        <%= event.created_at.to_fs(:short) %>
+        <%= local_datetime_tag event.created_at, style: :datetime %>
         <% if event.room %> · <%= room_display_name(event.room) %><% end %>
         <% if event.actor %> · from <%= event.actor.name %><% end %>
         <% if event.message_id %> · message #<%= event.message_id %><% end %>
