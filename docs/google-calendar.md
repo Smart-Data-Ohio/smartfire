@@ -82,8 +82,9 @@ triggered. A remote copy already gone (404 or 410) counts as deleted.
 
 **Disconnect** on the profile immediately removes the connection and every
 local calendar entry for that member, then a background job removes the
-remote copies and revokes the Google grant, best effort: entries Google
-refuses to remove are logged and forgotten.
+remote copies and revokes the Google grant. Transient failures retry with
+backoff, and the grant is revoked only after every delete has succeeded;
+entries Google permanently refuses to remove are logged and forgotten.
 
 Deactivating a member removes their room memberships, revokes the Google
 grant in the background, marks the Google account disconnected ("Account
@@ -99,4 +100,5 @@ Refresh and access tokens are stored encrypted (`encrypts` on
 `config/initializers/active_record_encryption.rb`), so no separate secret
 is needed. Rotating `SECRET_KEY_BASE` invalidates every stored Google
 token: affected members must reconnect. Tokens are never logged or
-rendered.
+rendered. Disconnect cleanup passes its token snapshot to the background
+job as a short-lived encrypted blob rather than raw tokens.
