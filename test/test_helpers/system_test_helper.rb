@@ -4,7 +4,7 @@ module SystemTestHelper
   # form, skipping only the form round-trips. Every test still drives a
   # real browser session from here on.
   def sign_in(email_address, password = "secret123456")
-    visit test_sign_in_path(email_address: email_address, password: password)
+    visit sign_in_for_tests_path(email_address: email_address, password: password)
     assert_selector "a.btn", text: "Designers"
   end
 

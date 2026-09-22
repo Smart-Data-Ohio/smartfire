@@ -242,6 +242,6 @@ Rails.application.routes.draw do
   # Never loaded outside the test environment.
   if Rails.env.test?
     require_relative "../test/support/test_session_controller"
-    get "test_session", to: "test_session#create", as: :test_sign_in
+    get "test_session", to: "test_session#create", as: :sign_in_for_tests
   end
 end
