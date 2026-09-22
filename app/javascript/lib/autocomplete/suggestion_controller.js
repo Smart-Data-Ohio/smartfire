@@ -44,6 +44,7 @@ export default class SuggestionController {
     this.#uninstallResultsController()
     this.#uninstallResizeListeners()
     this.#uninstallKeyboardListener()
+    this.#syncComboboxState()
   }
 
   commitSuggestion({withTerminator} = {}) {
@@ -110,6 +111,7 @@ export default class SuggestionController {
     this.#uninstallResultsController()
     this.#active = false
     this.#canceled = false
+    this.#syncComboboxState()
   }
 
   #cancelSuggestion() {
@@ -160,6 +162,7 @@ export default class SuggestionController {
     return this.delegate.fetchResultsForQuery(query, results => {
       if ((this.#resultsController != null) && (query === this.#context?.query)) {
         this.#resultsController.updateResults(results)
+        this.#syncComboboxState()
         return callback?.()
       }
     })
@@ -191,11 +194,13 @@ export default class SuggestionController {
 
   didShowResults(element) {
     this.hidden = false
+    this.#syncComboboxState()
     return this.delegate.didShowResults?.(element)
   }
 
   didHideResults(element) {
     this.hidden = true
+    this.#syncComboboxState()
     return this.delegate.didHideResults?.(element)
   }
 
@@ -275,6 +280,7 @@ export default class SuggestionController {
   #didPressUpKey() {
     if (this.#active) {
       this.#resultsController.selectUp()
+      this.#syncComboboxState()
       return false
     }
   }
@@ -282,6 +288,7 @@ export default class SuggestionController {
   #didPressDownKey() {
     if (this.#active) {
       this.#resultsController.selectDown()
+      this.#syncComboboxState()
       return false
     }
   }
@@ -344,5 +351,30 @@ export default class SuggestionController {
 
   #spaceMatchesWordBoundary() {
     return this.characterMatchesWordBoundary(" ")
+  }
+
+  // Keeps the input's combobox semantics in step with the listbox: expanded
+  // while visible results exist, tracking the selected option otherwise.
+  #syncComboboxState() {
+    const element = this.delegate?.element
+    if (!element || typeof element.setAttribute !== "function") return
+
+    const resultsController = this.#resultsController
+    const expanded = this.#active && !!resultsController?.visible && resultsController.hasResults()
+
+    element.setAttribute("aria-expanded", String(expanded))
+
+    if (expanded) {
+      element.setAttribute("aria-controls", resultsController.selectElement.id)
+      const selected = resultsController.selectElement.selectedOption
+      if (selected?.id) {
+        element.setAttribute("aria-activedescendant", selected.id)
+      } else {
+        element.removeAttribute("aria-activedescendant")
+      }
+    } else {
+      element.removeAttribute("aria-controls")
+      element.removeAttribute("aria-activedescendant")
+    }
   }
 }

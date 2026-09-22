@@ -2,6 +2,8 @@ import BaseAutocompleteHandler from "lib/autocomplete/base_autocomplete_handler"
 import { escapeHTML } from "helpers/string_helpers"
 
 export default class MarkdownIconsAutocompleteHandler extends BaseAutocompleteHandler {
+  #requestId = 0
+
   constructor(element, url) {
     super(element, url)
     this.iconsUrl = url
@@ -24,13 +26,21 @@ export default class MarkdownIconsAutocompleteHandler extends BaseAutocompleteHa
   }
 
   fetchResultsForQuery(query, callback) {
+    const requestId = ++this.#requestId
+
     fetch(this.#autocompletablesUrl(query), { headers: { "Accept": "application/json" } })
       .then(response => response.json())
       .then(icons => {
+        // Discard out-of-order responses before they touch state: a slow
+        // earlier query must not replace the collection the list commit reads.
+        if (requestId !== this.#requestId) return
         this.setAutocompletables(icons)
         callback(this.#renderSuggestions(icons))
       })
-      .catch(() => callback(""))
+      .catch(() => {
+        if (requestId !== this.#requestId) return
+        callback("")
+      })
   }
 
   didShowResults(selectElement) {

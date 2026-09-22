@@ -168,10 +168,11 @@ class Users::SidebarsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-controller~='huddle-presence']", count: 0
   end
 
-  test "sidebar query count does not grow with quiet channels, DMs, and boards" do
+  test "sidebar query count does not grow with quiet channels, DMs, boards, and stages" do
     2.times { |index| create_quiet_channel("Quiet #{index}") }
     create_quiet_direct(users(:jz))
     create_quiet_board("Quiet board")
+    2.times { |index| create_quiet_stage("Quiet stage #{index}") }
     get user_sidebar_url # Warm up one-time queries before counting.
     baseline = capture_select_sql { get user_sidebar_url }
     assert_response :success
@@ -180,6 +181,7 @@ class Users::SidebarsControllerTest < ActionDispatch::IntegrationTest
     create_quiet_direct(users(:bender))
     create_quiet_direct(users(:kevin))
     create_quiet_board("Extra quiet board")
+    4.times { |index| create_quiet_stage("Extra quiet stage #{index}") }
     with_more_rooms = capture_select_sql { get user_sidebar_url }
     assert_response :success
 
@@ -227,6 +229,10 @@ class Users::SidebarsControllerTest < ActionDispatch::IntegrationTest
 
     def create_quiet_board(name)
       Rooms::Board.create_for({ name: name, creator: users(:david) }, users: [ users(:david) ])
+    end
+
+    def create_quiet_stage(name)
+      Rooms::Stage.create_for({ name: name, creator: users(:david) }, users: [ users(:david) ])
     end
 
     # Cached reads count too: per-row queries carry distinct binds, so they

@@ -35,17 +35,18 @@ class MessageForwardsController < ApplicationController
   # infer destinations from whatever happens to be visible in its sidebar.
   def destinations
     no_store_response!
-    Current.user.rooms.find_each { |room| ChannelThread.close_stale_in(room:) unless room.direct? }
+    rooms = Current.user.rooms.ordered.includes(:channel_threads).to_a
+    direct_names_by_room_id = direct_names_by_room_id(rooms.select(&:direct?))
 
     render json: {
       # Boards hold posts, not forwarded chat, so they are neither
       # offered nor (see Messages::Forwarder) accepted.
-      destinations: Current.user.rooms.ordered.reject(&:board?).map do |room|
+      destinations: rooms.reject(&:board?).map do |room|
         {
           room_id: room.id,
-          name: view_context.room_display_name(room),
+          name: direct_names_by_room_id.fetch(room.id, room.name),
           direct: room.direct?,
-          threads: room.direct? ? [] : room.channel_threads.where(locked_at: nil).ordered.map do |thread|
+          threads: room.direct? ? [] : unlocked_threads(room).map do |thread|
             { id: thread.id, name: thread.name, status: thread.status }
           end
         }
@@ -54,6 +55,28 @@ class MessageForwardsController < ApplicationController
   end
 
   private
+    # Filtered in memory over the preloaded threads: one query for every
+    # room's threads instead of one per room. Locked threads stay excluded
+    # and stale ones report closed through ChannelThread#status.
+    def unlocked_threads(room)
+      room.channel_threads.select { |thread| thread.locked_at.nil? }
+        .sort_by { |thread| [ thread.last_activity_at, thread.id ] }.reverse
+    end
+
+    # room_display_name queries per direct room; load every direct room's
+    # members once instead. Non-direct rooms keep room.name, as before.
+    def direct_names_by_room_id(direct_rooms)
+      return {} if direct_rooms.empty?
+
+      users_by_room_id = Membership.where(room_id: direct_rooms.map(&:id)).includes(:user)
+        .group_by(&:room_id).transform_values { |memberships| memberships.map(&:user) }
+
+      direct_rooms.to_h do |room|
+        others = users_by_room_id.fetch(room.id, []).reject { |user| user.id == Current.user.id }
+        [ room.id, others.map(&:name).to_sentence.presence || Current.user.name ]
+      end
+    end
+
     def set_source
       if params[:room_id].present?
         room = Current.user.rooms.find(params[:room_id])

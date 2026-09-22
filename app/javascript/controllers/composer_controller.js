@@ -24,6 +24,7 @@ export default class extends Controller {
   connect() {
     this.onEditRequest = this.#startEditFromEvent.bind(this)
     window.addEventListener("message:edit", this.onEditRequest)
+    this.#restoreDraft()
 
     if (!this.#usingTouchDevice) {
       onNextEventLoopTick(() => this.markdownTarget?.focus())
@@ -210,6 +211,12 @@ export default class extends Controller {
 
   offline() {
     this.fieldsTarget.disabled = true
+  }
+
+  saveDraft() {
+    // Edit content belongs to the message being edited, not to the room.
+    if (this.#mode?.type === "edit") return
+    this.#writeDraft(this.markdownTarget.value)
   }
 
   submitByKeyboard(event) {
@@ -461,8 +468,50 @@ export default class extends Controller {
   #reset() {
     this.#mode = null
     this.#savedDraft = null
+    this.#clearDraft()
     this.#setMarkdownValue("")
     this.#clearContext()
+  }
+
+  // Per-room (and per-thread) drafts in localStorage, keyed by user so a
+  // shared device never leaks one person's draft into another's composer.
+  // Every access is guarded: storage may be unavailable or full.
+  #draftKey() {
+    const userId = document.querySelector("meta[name='current-user-id']")?.content || "anonymous"
+    const scope = this.threadIdValue ? `thread-${this.threadIdValue}` : "main"
+    return `campfire.composer.draft.${userId}.${this.roomIdValue}.${scope}`
+  }
+
+  #restoreDraft() {
+    if (this.markdownTarget.value !== "") return
+
+    let draft = ""
+    try {
+      draft = window.localStorage.getItem(this.#draftKey()) || ""
+    } catch {
+      draft = ""
+    }
+    if (draft) this.#setMarkdownValue(draft)
+  }
+
+  #writeDraft(value) {
+    try {
+      if (value) {
+        window.localStorage.setItem(this.#draftKey(), value)
+      } else {
+        window.localStorage.removeItem(this.#draftKey())
+      }
+    } catch {
+      // Drafts are best-effort when storage is unavailable or full.
+    }
+  }
+
+  #clearDraft() {
+    try {
+      window.localStorage.removeItem(this.#draftKey())
+    } catch {
+      // Drafts are best-effort when storage is unavailable or full.
+    }
   }
 
   #setBusy(busy) {

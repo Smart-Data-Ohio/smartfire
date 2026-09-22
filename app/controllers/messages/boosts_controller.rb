@@ -12,7 +12,7 @@ class Messages::BoostsController < ApplicationController
     content = Boost.resolve_content(boost_params[:content])
     @message.with_lock do
       @message.reload
-      existing = @message.boosts.where(booster: Current.user, content:).to_a if EmojiHelper::REACTIONS.key?(content)
+      existing = @message.boosts.where(booster: Current.user, content:).to_a if Boost.reaction?(content)
 
       if existing.present?
         # Old data may contain duplicate reaction rows. Preserve it until this

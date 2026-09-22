@@ -45,8 +45,10 @@ class SearchesController < ApplicationController
       @has_more_older = ids.size > Message::PAGE_SIZE
       page_ids = ids.first(Message::PAGE_SIZE)
 
-      @messages = Current.user.reachable_messages.with_rendering_details
-        .where(id: page_ids).ordered.order(:id).to_a
+      @messages = Message::MentionPreloader.preload_for(
+        Current.user.reachable_messages.with_rendering_details
+          .where(id: page_ids).ordered.to_a
+      )
     end
 
     def search_cursor

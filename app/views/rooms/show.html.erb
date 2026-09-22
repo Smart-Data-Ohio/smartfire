@@ -6,6 +6,7 @@
 <% content_for :head do %>
   <%= turbo_exempts_page_from_preview %>
   <meta name="current-room-id" content="<%= @room.id %>">
+  <%= first_paint_controller_preloads %>
 <% end %>
 
 <%= render "rooms/show/nav", room: @room %>

@@ -100,7 +100,7 @@ export default class BaseAutocompleteHandler {
 
   #autocompletablesUrl(query) {
     const separator = this.#url.includes('?') ? '&' : '?'
-    return `${this.#url}${separator}query=${query}`
+    return `${this.#url}${separator}query=${encodeURIComponent(query)}`
   }
 
   get #suggestionResultsPlacement() {
@@ -110,12 +110,10 @@ export default class BaseAutocompleteHandler {
   #closeSuggestionController() {
     if (!this.suggestionController) return
 
-    if (this.suggestionController.active) {
-      this.suggestionController.hideResults()
-    } else {
-      this.suggestionController.destroy()
-      this.suggestionController = null
-    }
+    // Always destroy: hiding alone would orphan an active controller whose
+    // window capture keydown listener keeps swallowing Enter after blur.
+    this.suggestionController.destroy()
+    this.suggestionController = null
   }
 
   #fetchAutocompletables(url) {
