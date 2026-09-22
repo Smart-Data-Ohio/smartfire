@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_22_210300) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_22_210400) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -577,6 +577,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_210300) do
     t.string "email_address"
     t.datetime "email_self_changed_at"
     t.string "github_login"
+    t.boolean "google_email_link_allowed", default: false, null: false
     t.string "icon_name"
     t.json "inbox_preferences", default: {}
     t.string "name", null: false

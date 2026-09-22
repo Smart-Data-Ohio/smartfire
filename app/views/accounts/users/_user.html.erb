@@ -26,10 +26,10 @@
           <%= image_tag "link.svg", size: 20, aria: { hidden: "true" } %>
           <span class="for-screen-reader">Unlink Google sign-in from <%= user.name %></span>
         <% end %>
-      <% elsif user.email_self_changed_at.present? && user.email_address.present? %>
+      <% elsif (user.email_self_changed_at.present? || !user.google_email_link_allowed?) && user.email_address.present? %>
         <%= button_to account_user_google_link_path(user), method: :post, class: "btn txt-small flex-item-no-shrink btn--reversed",
               title: "Allow Google sign-in to link #{user.email_address}",
-              data: { turbo_confirm: "#{user.name} changed their email to #{user.email_address}. Allow the Google account with that address to sign in as them?" } do %>
+              data: { turbo_confirm: "#{user.name} chose the email #{user.email_address} themselves. Allow the Google account with that address to sign in as them?" } do %>
           <%= image_tag "link.svg", size: 20, aria: { hidden: "true" } %>
           <span class="for-screen-reader">Allow Google sign-in for <%= user.name %></span>
         <% end %>

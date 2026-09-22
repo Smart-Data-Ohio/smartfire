@@ -58,7 +58,8 @@ class Google::SignIn::AccountLinkerTest < ActiveSupport::TestCase
   end
 
   test "a self-changed email is refused for linking and never provisions a duplicate" do
-    user = User.create!(name: "Squatter", email_address: "hire@smartdata.net", password: "secret123456", email_self_changed_at: Time.current)
+    user = User.create!(name: "Squatter", email_address: "hire@smartdata.net", password: "secret123456",
+      google_email_link_allowed: true, email_self_changed_at: Time.current)
 
     error = assert_raises(Google::SignIn::Rejected) do
       Google::SignIn::AccountLinker.resolve!({ "sub" => "google-sub-hire", "email" => "hire@smartdata.net", "hd" => "smartdata.net" })

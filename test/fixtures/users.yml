@@ -5,24 +5,28 @@ david:
   email_address: david@37signals.com
   password_digest: <%= password_digest %>
   role: administrator
+  google_email_link_allowed: true
 
 jason:
   name: Jason
   email_address: jason@37signals.com
   password_digest: <%= password_digest %>
   role: administrator
+  google_email_link_allowed: true
 
 jz:
   name: JZ
   email_address: jz@37signals.com
   password_digest: <%= password_digest %>
   bio: Designer
+  google_email_link_allowed: true
 
 kevin:
   name: Kevin
   email_address: kevin@37signals.com
   password_digest: <%= password_digest %>
   bio: Programmer
+  google_email_link_allowed: true
 
 bender:
   name: Bender Bot

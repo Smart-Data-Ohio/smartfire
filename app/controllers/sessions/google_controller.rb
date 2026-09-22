@@ -4,7 +4,14 @@ module Sessions
   # which requires login and stays opt-in: this flow requests only
   # "openid email profile" and persists no OAuth tokens.
   class GoogleController < ApplicationController
-    require_unauthenticated_access only: %i[ create callback ]
+    include GoogleSignInFlow
+
+    require_unauthenticated_access only: :create
+    # The callback also finishes a signed-in member's "Link Google sign-in"
+    # flow, so it restores the session instead of refusing signed-in users;
+    # a sign-in flow still sends a signed-in browser home.
+    allow_unauthenticated_access only: :callback
+    before_action :restore_session_for_callback, only: :callback
 
     before_action :ensure_configured
     before_action :ensure_workspace_ready
@@ -12,22 +19,7 @@ module Sessions
     # Starts the flow: stash a browser-bound one-use state, nonce, and
     # PKCE verifier in the session, then send the browser to Google.
     def create
-      verifier, challenge = Google::SignIn.pkce_pair
-      raw_state = SecureRandom.hex(16)
-
-      session[:google_sign_in_request] = {
-        "state" => raw_state,
-        "nonce" => SecureRandom.hex(16),
-        "verifier" => verifier,
-        "exp" => Google::SignIn::FLOW_TTL.from_now.to_i
-      }
-
-      redirect_to Google::SignIn.authorize_url(
-        redirect_uri: session_google_callback_url,
-        state: state_verifier.generate(raw_state),
-        nonce: session[:google_sign_in_request]["nonce"],
-        challenge:
-      ), allow_other_host: true
+      redirect_to_google_sign_in(purpose: "sign_in")
     end
 
     # Handles Google's redirect back: consume the one-use flow, trade
@@ -35,8 +27,13 @@ module Sessions
     # failure lands back on the login page with the password form
     # intact -- Google sign-in never restricts global access.
     def callback
-      flow = session.delete(:google_sign_in_request)
-      verified_state = state_verifier.verified(params[:state].to_s)
+      flow = session.delete(GoogleSignInFlow::FLOW_SESSION_KEY)
+      verified_state = google_sign_in_state_verifier.verified(params[:state].to_s)
+
+      if valid_flow?(flow, verified_state) && flow["purpose"] == "link"
+        return finish_link(flow)
+      end
+      return redirect_to root_url if signed_in?
 
       unless valid_flow?(flow, verified_state)
         return redirect_to new_session_url, alert: "Google sign-in expired. Try again or sign in with email and password."
@@ -74,6 +71,12 @@ module Sessions
     end
 
     private
+      # A separate name: re-declaring restore_authentication here would
+      # replace the create action's copy from require_unauthenticated_access.
+      def restore_session_for_callback
+        restore_authentication
+      end
+
       def ensure_configured
         head :not_found unless Google::SignIn.configured?
       end
@@ -84,8 +87,39 @@ module Sessions
         redirect_to first_run_url if Account.none? || User.none?
       end
 
-      def state_verifier
-        Rails.application.message_verifier("google_sign_in_state")
+      # Links the verified Google subject to the member who started the
+      # flow, who must still be the signed-in user. Same verification as
+      # sign-in: PKCE, nonce, audience, and the hd domain allowlist.
+      def finish_link(flow)
+        unless signed_in? && Current.user.id == flow["user_id"]
+          return redirect_to(signed_in? ? user_profile_url : new_session_url, alert: "Google linking expired. Try again.")
+        end
+
+        if params[:error].present? || params[:code].blank?
+          return redirect_to user_profile_url, alert: "Google linking was cancelled."
+        end
+
+        id_token = Google::SignIn.exchange_code(
+          code: params[:code].to_s, redirect_uri: session_google_callback_url, verifier: flow["verifier"]
+        )
+        claims = Google::SignIn::IdTokenVerifier.verify!(id_token, nonce: flow["nonce"])
+        User.transaction { Google::SignIn::AccountLinker.link_to_user!(claims, Current.user) }
+
+        redirect_to user_profile_url, notice: "Google sign-in linked to #{claims["email"]}."
+      rescue Google::SignIn::Unavailable
+        redirect_to user_profile_url, alert: "Google is unavailable right now. Try again."
+      rescue Google::SignIn::Rejected => error
+        Rails.logger.warn "Google link rejected: #{error.reason}"
+        redirect_to user_profile_url, alert: link_rejection_alert(error.reason)
+      end
+
+      def link_rejection_alert(reason)
+        case reason
+        when :wrong_domain then "Only #{domain_list} Google accounts can be linked."
+        when :subject_taken then "That Google account already signs in as another member."
+        when :already_linked then "Your account is already linked to a Google account. Ask an administrator to unlink it first."
+        else "Google linking failed. Try again."
+        end
       end
 
       def valid_flow?(flow, verified_state)

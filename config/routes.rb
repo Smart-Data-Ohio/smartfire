@@ -18,6 +18,7 @@ Rails.application.routes.draw do
 
   post "session/google", to: "sessions/google#create", as: :session_google
   get "session/google/callback", to: "sessions/google#callback", as: :session_google_callback
+  post "user/profile/google_sign_in_link", to: "users/google_sign_in_links#create", as: :user_google_sign_in_link
 
   resource :account do
     scope module: "accounts" do

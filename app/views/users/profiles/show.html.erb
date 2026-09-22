@@ -154,6 +154,8 @@
     </div>
   <% end %>
 
+  <%= render "users/profiles/google_sign_in", user: @user %>
+
   <%= render "users/profiles/google_calendar", user: @user %>
 
   <%= render "users/profiles/github_connection", user: @user %>
