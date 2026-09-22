@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_18_160000) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_22_223000) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -442,9 +442,11 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_18_160000) do
     t.string "client_message_id", null: false
     t.datetime "created_at", null: false
     t.integer "creator_id", null: false
+    t.datetime "edited_at"
     t.text "forward_note"
     t.datetime "forwarded_at"
     t.integer "forwarded_from_message_id"
+    t.boolean "forwarded_markdown", default: false, null: false
     t.text "markdown_source"
     t.boolean "reply_notify_author", default: true, null: false
     t.datetime "reply_target_deleted_at"

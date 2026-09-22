@@ -101,6 +101,7 @@ module Messages
           body: snapshot_body,
           forwarded_from_message: source,
           forwarded_at: Time.current,
+          forwarded_markdown: source.markdown? || source.forwarded_markdown?,
           forward_note: note
         ).tap do |message|
           copy_attachment_to(source, message)

@@ -50,6 +50,52 @@ class MessagesHelperTest < ActionView::TestCase
     assert_match /<a href="\/x">x<\/a>/, presentation
   end
 
+  test "message_presentation renders Markdown forwards through the Markdown sanitizer" do
+    create_workspace_icon(name: "acme")
+    source = Message.create!(
+      room: rooms(:pets),
+      markdown_source: "| What |\n| --- |\n| :acme: |\n\n```ruby\nputs :ok\n```",
+      client_message_id: "forward-source-markdown",
+      creator: users(:jason)
+    )
+    forwarded = Message.create!(
+      room: rooms(:pets),
+      body: source.body.body.to_html,
+      forwarded_from_message: source,
+      forwarded_at: Time.current,
+      forwarded_markdown: true,
+      client_message_id: "forwarded-markdown",
+      creator: users(:jason)
+    )
+
+    presentation = view.message_presentation(forwarded)
+
+    assert_match %r{\A<div class="markdown-body" data-controller="drive-link">}, presentation
+    assert_match %r{<table>.*</table>}m, presentation
+    assert_match %r{<img[^>]*alt=":acme:"}, presentation
+    assert_match %r{<pre><code class="language-ruby">puts :ok}, presentation
+  end
+
+  test "message_presentation keeps legacy forwards on the legacy path" do
+    source = Message.create!(
+      room: rooms(:pets), body: "<div>plain legacy</div>",
+      client_message_id: "legacy-forward-source", creator: users(:jason)
+    )
+    forwarded = Message.create!(
+      room: rooms(:pets),
+      body: source.body.body.to_html,
+      forwarded_from_message: source,
+      forwarded_at: Time.current,
+      client_message_id: "legacy-forward",
+      creator: users(:jason)
+    )
+
+    presentation = view.message_presentation(forwarded)
+
+    assert_no_match(/markdown-body/, presentation)
+    assert_match(/plain legacy/, presentation)
+  end
+
   test "message_presentation preserves safe links and formatting" do
     message = Message.create! room: rooms(:pets), body: '<div><a href="https://example.com">example</a> <strong>bold</strong></div>', client_message_id: "0015", creator: users(:jason)
 
