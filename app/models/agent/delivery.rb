@@ -4,6 +4,10 @@ class Agent::Delivery
   HOP_LIMIT = 3
   TRIGGER_WINDOW = 5.minutes
 
+  # Raised when a webhook cannot be built (message, approval, or thread
+  # gone): the delivery job records it and does not retry.
+  class UndeliverableWebhook < StandardError; end
+
   class << self
     # Called after a message commits. Writes a `posted` row when the author
     # is an agent, then creates one pending event per recipient agent (or a
@@ -135,15 +139,56 @@ class Agent::Delivery
       webhook.post_payload(payload)
     end
 
+    # Posts one event row to the agent's webhook. Message events carry
+    # the message payload with sync replies; approval, GitHub action,
+    # and work events carry their own payloads and ignore response
+    # bodies. Raises UndeliverableWebhook when the payload cannot be
+    # built, and lets transport errors propagate for the caller to
+    # retry. Any completed HTTP response counts as delivered.
+    def post_event_webhook!(webhook, event, agent:)
+      case event.event_type
+      when *AgentEvent::MESSAGE_DELIVERABLE_TYPES
+        message = Message.find_by(id: event.message_id)
+        raise UndeliverableWebhook, "Message no longer available" unless message
+
+        webhook.deliver(message, agent: agent, delivery_id: event.id)
+      when "approval_decided"
+        approval = AgentApproval.find_by(id: event.agent_approval_id) if event.agent_approval_id
+        approval ||= AgentApproval.find_by(id: event.metadata["approval_id"]) if event.metadata.is_a?(Hash)
+        raise UndeliverableWebhook, "Approval no longer available" unless approval
+
+        post_approval_webhook!(webhook, approval, agent: agent, delivery_id: event.id)
+      when "github_action_completed"
+        post_github_action_webhook!(webhook, event, agent: agent)
+      when *AgentEvent::WORK_DELIVERABLE_TYPES
+        thread_id = event.metadata.is_a?(Hash) ? event.metadata["thread_id"] : nil
+        thread = ChannelThread.find_by(id: thread_id)
+        raise UndeliverableWebhook, "Thread no longer available" unless thread
+
+        post_work_webhook!(webhook, event, thread: thread, agent: agent)
+      else
+        raise UndeliverableWebhook, "Event type #{event.event_type} has no webhook payload"
+      end
+    end
+
     # Runs inside Agent::DeliveryJob. Re-checks everything at perform time:
     # grant, membership, rate, hop, and message existence. Marks the row
-    # delivered (posting the webhook when configured) or records a
-    # suppression. Idempotent: non-pending rows are left alone.
+    # delivered and enqueues its webhook when one is configured, or
+    # records a suppression. Idempotent: settled rows are left alone, and
+    # the webhook job posts at most once per row. An agent that acked the
+    # row by polling before this ran still gets its webhook: acking marks
+    # polling state only and never cancels a webhook still owed.
     def perform(event)
       event = AgentEvent.find_by(id: event.is_a?(AgentEvent) ? event.id : event)
       return unless event
-      return unless event.outcome == "pending"
       return unless AgentEvent::MESSAGE_DELIVERABLE_TYPES.include?(event.event_type)
+
+      if event.outcome == "acknowledged"
+        enqueue_owed_webhook(event)
+        return
+      end
+
+      return unless event.outcome == "pending"
 
       agent = event.agent
       room = Room.find_by(id: event.room_id)
@@ -169,15 +214,21 @@ class Agent::Delivery
         return
       end
 
-      return unless claim(event, outcome: "delivered")
+      webhook_status = agent.user.webhook ? "pending" : "none"
+      return unless claim(event, outcome: "delivered", webhook_status: webhook_status)
 
-      if (webhook = agent.user.webhook)
-        begin
-          webhook.deliver(message, agent: agent, delivery_id: event.id)
-        rescue StandardError => error
-          Rails.logger.warn "Agent webhook delivery #{event.id} failed: #{error.class}"
-        end
-      end
+      Agent::EventWebhookJob.perform_later(event.id) if webhook_status == "pending"
+    end
+
+    # Webhook half of an acknowledged row: the agent already read it by
+    # polling, so no grant or membership re-check applies, but a
+    # configured webhook is still owed exactly one POST.
+    def enqueue_owed_webhook(event)
+      return unless event.agent.user.webhook
+      return unless AgentEvent.where(id: event.id, outcome: "acknowledged", webhook_status: "none")
+        .update_all(webhook_status: "pending") == 1
+
+      Agent::EventWebhookJob.perform_later(event.id)
     end
 
     # Message hop for the legacy webhook gate. Recomputes the same value
@@ -322,9 +373,10 @@ class Agent::Delivery
       # Atomically transitions a pending row; false when another job
       # already claimed it, so two concurrent jobs cannot both post and the
       # loser exits without posting or writing a duplicate suppression row.
-      def claim(event, outcome:, detail: nil)
+      def claim(event, outcome:, detail: nil, webhook_status: nil)
         updates = { outcome: outcome }
         updates[:detail] = detail unless detail.nil?
+        updates[:webhook_status] = webhook_status unless webhook_status.nil?
         AgentEvent.where(id: event.id, outcome: "pending").update_all(updates) == 1
       end
 

@@ -526,6 +526,24 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "Secret owner plans", response.body
   end
 
+  test "ledger page shows webhook delivery state honestly" do
+    sign_in :david
+    @room.messages.create!(
+      creator: users(:david), body: "Webhook state plans #{mention_attachment_for(:bender)}",
+      client_message_id: "ledger-webhook"
+    )
+    @agent.agent_events.deliverable.last.update!(
+      webhook_status: "failed", webhook_attempts: 5, webhook_last_error: "Net::OpenTimeout: execution expired"
+    )
+
+    get agent_events_url(@agent)
+
+    assert_response :success
+    assert_match "Webhook failed", response.body
+    assert_match "5 attempts", response.body
+    assert_match "Net::OpenTimeout", response.body
+  end
+
   test "ledger page shows content to an owner inside the room" do
     @agent.update!(owner: users(:kevin))
     sign_in users(:kevin)

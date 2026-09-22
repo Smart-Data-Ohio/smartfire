@@ -21,6 +21,10 @@ class AgentEvent < ApplicationRecord
   HOP_TRIGGER_TYPES = (MESSAGE_DELIVERABLE_TYPES + WORK_DELIVERABLE_TYPES).freeze
   HOP_TRIGGER_OUTCOMES = %w[ pending delivered acknowledged ].freeze
 
+  # Webhook POST state, independent of the polling outcome: none (no
+  # webhook configured), pending (owed or retrying), delivered, failed.
+  WEBHOOK_STATUSES = %w[ none pending delivered failed ].freeze
+
   belongs_to :agent
   belongs_to :room, optional: true
   belongs_to :message, optional: true
@@ -113,6 +117,10 @@ class AgentEvent < ApplicationRecord
 
   def acknowledged?
     outcome == "acknowledged"
+  end
+
+  def webhook_pending?
+    webhook_status == "pending"
   end
 
   private

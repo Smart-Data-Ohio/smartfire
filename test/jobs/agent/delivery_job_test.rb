@@ -34,6 +34,7 @@ class Agent::DeliveryJobTest < ActiveSupport::TestCase
     message = create_mentioning_message(@room, @bot, creator: users(:david))
     event = @agent.agent_events.deliverable.last
     perform_enqueued_jobs only: Agent::DeliveryJob
+    perform_enqueued_jobs only: Agent::EventWebhookJob
 
     assert_equal "delivered", event.reload.outcome
     assert_requested :post, webhooks(:bender).url, body: hash_including(
@@ -95,8 +96,10 @@ class Agent::DeliveryJobTest < ActiveSupport::TestCase
     assert_equal "delivered", event.reload.outcome
 
     Agent::DeliveryJob.perform_now(event.id)
+    perform_enqueued_jobs only: Agent::EventWebhookJob
 
     assert_equal "delivered", event.reload.outcome
+    assert_equal "delivered", event.reload.webhook_status
     assert_requested :post, webhooks(:bender).url, times: 1
   end
 
@@ -110,6 +113,7 @@ class Agent::DeliveryJobTest < ActiveSupport::TestCase
     Agent::Delivery.stubs(:rate_limited?).with { event.update_columns(outcome: "delivered"); true }.returns(false)
 
     Agent::DeliveryJob.perform_now(event.id)
+    perform_enqueued_jobs only: Agent::EventWebhookJob
 
     assert_not_requested :post, webhooks(:bender).url
   end
@@ -134,6 +138,7 @@ class Agent::DeliveryJobTest < ActiveSupport::TestCase
     event.message.destroy!
 
     perform_enqueued_jobs only: Agent::DeliveryJob
+    perform_enqueued_jobs only: Agent::EventWebhookJob
 
     assert_equal "suppressed", event.reload.outcome
     assert_not_requested :post, webhooks(:bender).url

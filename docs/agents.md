@@ -85,8 +85,8 @@ agent never receives its own messages, and bots without an agent row keep
 the legacy webhook path only.
 
 `Agent::DeliveryJob` re-checks room membership and the `read_messages`
-grant at perform time, then marks the row `delivered` and posts the
-agent's webhook when one is configured. Polling is the primary path, so a
+grant at perform time, then marks the row `delivered` and enqueues its
+webhook POST when one is configured. Polling is the primary path, so a
 missing webhook still delivers. Revocation between enqueue and perform
 writes `delivery_suppressed_revoked`; a message deleted before delivery
 marks the row suppressed without a new row.
@@ -168,6 +168,24 @@ Every webhook POST, agent or legacy, resolves through
 resolved public address: loopback and private destinations are
 refused instead of posted to, and a hostname that resolves to
 nothing fails the delivery.
+
+### Delivery status and retries
+
+The ledger outcome (`pending`, `delivered`, `acknowledged`,
+`suppressed`) tracks polling state; the webhook POST has its own
+status on the same row (`webhook_status`: `none`, `pending`,
+`delivered`, `failed`) with an attempt count and the last error, all
+shown on the ledger page. A failed POST retries with backoff up to 5
+attempts, then the row stays `failed` with the last error recorded.
+Guard refusals, unresolvable hosts, and payloads that can no longer
+be built (message, approval, or thread gone) fail fast without
+retrying. Any completed HTTP response counts as delivered, whatever
+its status, so a receiver must treat redeliveries as possible:
+webhook delivery is at-least-once.
+
+Acking a row by polling marks polling state only and never cancels
+a webhook still owed: an agent that acks a `pending` row before its
+delivery job runs still gets exactly one POST.
 
 ## Management
 

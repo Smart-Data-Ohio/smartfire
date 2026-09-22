@@ -197,6 +197,7 @@ class AgentApproval < ApplicationRecord
         room: room,
         actor: decided_by,
         outcome: "delivered",
+        agent_approval_id: id,
         metadata: {
           "approval_id" => id,
           "status" => status,
