@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_22_223000) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_22_235649) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -467,6 +467,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_223000) do
     t.datetime "reply_target_deleted_at"
     t.integer "reply_to_message_id"
     t.integer "room_id", null: false
+    t.boolean "system", default: false, null: false
     t.integer "thread_id"
     t.datetime "updated_at", null: false
     t.index ["creator_id"], name: "index_messages_on_creator_id"
@@ -496,10 +497,12 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_223000) do
     t.bigint "creator_id", null: false
     t.datetime "deleted_at"
     t.datetime "destroy_enqueued_at"
+    t.string "direct_member_key"
     t.string "icon_name"
     t.string "name"
     t.string "type", null: false
     t.datetime "updated_at", null: false
+    t.index ["direct_member_key"], name: "index_rooms_on_direct_member_key", unique: true, where: "direct_member_key IS NOT NULL AND deleted_at IS NULL"
   end
 
   create_table "searches", force: :cascade do |t|
