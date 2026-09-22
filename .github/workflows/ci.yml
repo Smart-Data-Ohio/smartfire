@@ -177,7 +177,8 @@ jobs:
         if: matrix.shard == 'browser' && steps.coverage.outputs.scope != 'google'
         run: |
           bin/rails db:setup
-          mapfile -t files < <(printf '%s\n' test/system/*_test.rb | grep -v -E "/(huddles_test|stage_test|streaming_test)\\.rb$")
+          shopt -s globstar
+          mapfile -t files < <(printf '%s\n' test/system/**/*_test.rb | grep -v -E "/(huddles_test|stage_test|streaming_test)\\.rb$")
           PARALLEL_WORKERS=4 bin/rails test "${files[@]}"
 
       - name: Run LiveKit-backed browser tests
