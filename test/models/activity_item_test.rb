@@ -86,6 +86,7 @@ class ActivityItemTest < ActiveSupport::TestCase
 
     assert_equal [ @item.id, second.id ].sort, ActivityItem.accessible_to(@user).pluck(:id).sort
     assert_equal 2, ActivityItem.accessible_to(@user).unread.count
+    assert_no_match(/distinct/i, ActivityItem.accessible_to(@user).to_sql)
   end
 
   test "huddle invitations are accessible until the recipient loses room access" do
