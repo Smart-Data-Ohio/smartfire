@@ -481,6 +481,58 @@ class HuddlesTest < ApplicationSystemTestCase
     assert_equal "on", page.evaluate_script("window.localStorage.getItem('campfire.huddle.noiseSuppression')")
   end
 
+  test "the capture's browser suppression follows the RNNoise processor" do
+    open_huddle_as "jz@37signals.com"
+
+    wait_for_condition("the RNNoise processor never attached to the microphone") do
+      microphone_processor_name == "campfire-rnnoise"
+    end
+    assert_equal false, microphone_capture_setting("noiseSuppression")
+    assert_equal false, last_microphone_constraints["noiseSuppression"]
+
+    capture_device = microphone_capture_setting("deviceId")
+    first_track = microphone_track_id
+
+    click_button "Noise suppression on"
+
+    assert_selector "[data-huddle-target='noise'][aria-pressed='false']", text: "Noise suppression off"
+    wait_for_condition("the RNNoise processor was not removed") { microphone_processor_name.nil? }
+    wait_for_condition("the microphone was not re-acquired after switching suppression off") do
+      microphone_track_id.present? && microphone_track_id != first_track
+    end
+    assert_equal true, microphone_capture_setting("noiseSuppression")
+    assert_equal true, last_microphone_constraints["noiseSuppression"]
+
+    # The re-acquire keeps the selected device instead of falling back to the
+    # browser default.
+    assert_equal capture_device, last_microphone_constraints["deviceId"]
+
+    second_track = microphone_track_id
+    click_button "Noise suppression off"
+
+    assert_selector "[data-huddle-target='noise'][aria-pressed='true']", text: "Noise suppression on"
+    wait_for_condition("the RNNoise processor did not come back") do
+      microphone_processor_name == "campfire-rnnoise"
+    end
+    wait_for_condition("the microphone was not re-acquired after switching suppression on") do
+      microphone_track_id.present? && microphone_track_id != second_track
+    end
+    assert_equal false, microphone_capture_setting("noiseSuppression")
+    assert_equal false, last_microphone_constraints["noiseSuppression"]
+
+    # A processor that fails to start falls back to browser suppression on a
+    # freshly re-acquired capture, not the unfiltered one the join captured.
+    click_button "Leave", exact: true
+    assert_no_selector "#channel-huddle:not([hidden])"
+    break_noise_suppression
+    join_huddle_and_confirm
+
+    assert_selector "[data-huddle-target='status']", text: /Noise suppression couldn’t start/
+    assert_nil microphone_processor_name
+    assert_equal true, microphone_capture_setting("noiseSuppression")
+    assert_equal true, last_microphone_constraints["noiseSuppression"]
+  end
+
   test "muting and unmuting keeps the noise suppressor on the microphone" do
     open_huddle_as "jz@37signals.com"
 
@@ -1113,6 +1165,7 @@ class HuddlesTest < ApplicationSystemTestCase
         window.huddleTestLocalTracks = [];
         window.huddleTestCredentials = [];
         window.huddleTestWebSocketUrls = [];
+        window.huddleTestGetUserMediaConstraints = [];
 
         const nativeFetch = window.fetch.bind(window);
         window.fetch = async (...args) => {
@@ -1156,6 +1209,7 @@ class HuddlesTest < ApplicationSystemTestCase
         };
         const nativeGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
         navigator.mediaDevices.getUserMedia = async (...args) => {
+          window.huddleTestGetUserMediaConstraints.push(args[0]);
           const stream = await nativeGetUserMedia(...args);
           window.huddleTestLocalTracks.push(...stream.getTracks());
           return stream;
@@ -1331,6 +1385,26 @@ class HuddlesTest < ApplicationSystemTestCase
         window.Stimulus
           .getControllerForElementAndIdentifier(document.getElementById('channel-huddle'), 'huddle')
           ?.microphoneMeter?.running ?? false
+      JS
+    end
+
+    # The browser's own audio processing on the raw capture track, not the
+    # noise suppressor's processed output.
+    def microphone_capture_setting(name)
+      page.evaluate_script(<<~JS, name)
+        window.Stimulus
+          .getControllerForElementAndIdentifier(document.getElementById('channel-huddle'), 'huddle')
+          ?.room?.localParticipant?.getTrackPublication('microphone')?.audioTrack?._mediaStreamTrack?.getSettings()[arguments[0]] ?? null
+      JS
+    end
+
+    # The audio constraints of the most recent microphone capture, as passed
+    # to getUserMedia: what the app asked for, beside what the track reports.
+    def last_microphone_constraints
+      page.evaluate_script(<<~JS)
+        (window.huddleTestGetUserMediaConstraints || [])
+          .filter(constraints => constraints && typeof constraints.audio === "object")
+          .at(-1)?.audio ?? null
       JS
     end
 
