@@ -2179,9 +2179,8 @@ export default class extends Controller {
     // Browser suppression is on exactly when RNNoise is off. The sync reads
     // the attached processor rather than the flags, so a failed stop still
     // describes the microphone truthfully, and it runs even when the
-    // processor did not change: toggling the switch while muted leaves the
-    // stored constraints stale, and the unmute that follows re-acquires
-    // from them.
+    // processor did not change: toggling the switch while muted refreshes the
+    // stored constraints, and the unmute that follows re-acquires from them.
     await this.#syncCaptureNoiseSuppression(track, Boolean(track.getProcessor?.()))
   }
 
@@ -2213,26 +2212,25 @@ export default class extends Controller {
   // constraints. The SDK carries the processor, if any, onto the new track and
   // replaces the stored constraints; the meter re-attaches to the new track.
   // While muted the source track is stopped — restarting it would light the OS
-  // mic indicator for a track nobody can hear — so the update stays
-  // best-effort until the unmute re-acquires. Never throws: the microphone
-  // matters more than its filtering.
+  // mic indicator for a track nobody can hear — so only the stored constraints
+  // are refreshed and the next unmute re-acquires from them. Never throws: the
+  // microphone matters more than its filtering.
   async #syncCaptureNoiseSuppression(track, rnnoiseOn) {
     const wanted = !rnnoiseOn
     const constraints = this.#noiseSyncConstraints(track, rnnoiseOn)
     const storedMatches = track.constraints?.noiseSuppression === wanted
-    const live = this.room?.localParticipant.isMicrophoneEnabled && track.isMuted !== true
 
-    if (!live) {
-      try {
-        await track.applyConstraints?.(constraints)
-      } catch (error) {
-        // A muted (stopped) track rejects the update; the unmute that follows
-        // re-acquires, and its sync retries against the live track.
-      }
-      return
+    // The SDK merges stored constraints only after a live apply succeeds, so
+    // a muted (stopped) track would keep stale processing; write the stored
+    // copy directly instead, with the device only when one is known. The next
+    // unmute re-acquires from it, and a restart below replaces it wholesale
+    // anyway — even a restart that throws leaves the stored set correct.
+    if (track._constraints && typeof track._constraints === "object") {
+      track._constraints = { ...track._constraints, ...constraints }
     }
 
-    if (storedMatches) return
+    const live = this.room?.localParticipant.isMicrophoneEnabled && track.isMuted !== true
+    if (!live || storedMatches) return
 
     try {
       if (typeof track.restartTrack === "function") {

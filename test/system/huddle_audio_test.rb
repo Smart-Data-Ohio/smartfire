@@ -151,7 +151,7 @@ class HuddleAudioTest < ApplicationSystemTestCase
     )
   end
 
-  test "toggling noise suppression off while muted applies on unmute" do
+  test "toggling noise suppression off while muted refreshes the stored constraints" do
     visit room_path(rooms(:designers))
     wait_for_cable_connection
     install_stub_room(noise_enabled: true, processor: "campfire-rnnoise")
@@ -162,22 +162,24 @@ class HuddleAudioTest < ApplicationSystemTestCase
       page.evaluate_script("window.__processorCalls.length") > 0
     end
     settle_noise_sync
+
+    # No re-acquire while muted: the OS mic indicator stays dark. The
+    # stored set carries the new processing on the same device, so the
+    # unmute that follows re-acquires from it without a second restart.
     assert_empty page.evaluate_script("window.__restartCalls")
-
-    # The stopped track rejects the update while muted; unmuting retries
-    # it against the live track.
-    toggle_mute_and_await(2, "unmuting did not reach the room")
-    wait_for_condition("unmuting did not re-acquire the microphone") do
-      page.evaluate_script("window.__restartCalls.length") > 0
-    end
-
     assert_equal(
       {
         "noiseSuppression" => true, "echoCancellation" => true, "autoGainControl" => true,
         "voiceIsolation" => true, "deviceId" => "stub-device"
       },
-      page.evaluate_script("window.__restartCalls").last
+      page.evaluate_script("window.__audioTrack._constraints")
     )
+
+    toggle_mute_and_await(2, "unmuting did not reach the room")
+    settle_noise_sync
+
+    assert_empty page.evaluate_script("window.__restartCalls")
+    assert_equal [ [ "stop" ] ], page.evaluate_script("window.__processorCalls")
   end
 
   private
