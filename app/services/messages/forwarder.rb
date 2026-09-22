@@ -44,6 +44,7 @@ module Messages
 
           room = creator.rooms.find_by(id: room_id)
           raise InvalidDestination, "You cannot forward to that room" unless room
+          raise InvalidDestination, "You cannot forward to a board" if room.board?
 
           thread = if destination[:thread_id].present?
             room.channel_threads.find_by(id: destination[:thread_id]).tap do |candidate|

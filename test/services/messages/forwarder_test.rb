@@ -103,6 +103,20 @@ class Messages::ForwarderTest < ActiveSupport::TestCase
     assert_predicate second, :forwarded_markdown?
   end
 
+  test "refuses board rooms as destinations" do
+    board = Rooms::Board.create_for({ name: "Launch", creator: @creator }, users: [ @creator ])
+    post = ChannelThread.create!(room: board, creator: @creator, name: "Ship it", work_status: "planned")
+
+    assert_raises(Messages::Forwarder::InvalidDestination) do
+      Messages::Forwarder.call(source: @source, destinations: [ { room_id: board.id } ], creator: @creator)
+    end
+    assert_raises(Messages::Forwarder::InvalidDestination) do
+      Messages::Forwarder.call(
+        source: @source, destinations: [ { room_id: board.id, thread_id: post.id } ], creator: @creator
+      )
+    end
+  end
+
   test "copied body mentions do not notify while a new forward note can" do
     forwarded = Messages::Forwarder.call(
       source: @source,

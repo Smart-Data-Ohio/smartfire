@@ -38,7 +38,9 @@ class MessageForwardsController < ApplicationController
     Current.user.rooms.find_each { |room| ChannelThread.close_stale_in(room:) unless room.direct? }
 
     render json: {
-      destinations: Current.user.rooms.ordered.map do |room|
+      # Boards hold posts, not forwarded chat, so they are neither
+      # offered nor (see Messages::Forwarder) accepted.
+      destinations: Current.user.rooms.ordered.reject(&:board?).map do |room|
         {
           room_id: room.id,
           name: view_context.room_display_name(room),
