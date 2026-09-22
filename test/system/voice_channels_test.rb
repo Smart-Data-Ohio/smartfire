@@ -276,6 +276,13 @@ class VoiceChannelsTest < ApplicationSystemTestCase
       window.voiceRemovalErrors = []
       window.addEventListener("error", event => window.voiceRemovalErrors.push(event.message))
       window.addEventListener("unhandledrejection", event => window.voiceRemovalErrors.push(String(event.reason)))
+      // Count in-flight fetches so the tail of the test waits for the
+      // reconnect burst to settle instead of sleeping a fixed two seconds.
+      window.voiceRemovalInflight = 0
+      window.fetch = ((originalFetch) => (...args) => {
+        window.voiceRemovalInflight++
+        return originalFetch(...args).finally(() => window.voiceRemovalInflight--)
+      })(window.fetch.bind(window))
     JS
 
     using_session("Admin") do
@@ -316,9 +323,12 @@ class VoiceChannelsTest < ApplicationSystemTestCase
 
     # Let the post-removal cable reconnect play out: the room message stream
     # stays rejected while the rooms streams resubscribe and the sidebar
-    # frame reloads without the room.
+    # frame reloads without the room. Wait for the reload and poll fetches
+    # to settle rather than sleeping, then keep a short grace so a late
+    # rejection from the burst still fails the error assertion below.
     wait_for_connected_stream_sources(2)
-    sleep 2
+    wait_for_fetch_quiet
+    sleep 0.5
     assert_no_selector "#voice_rooms .voice-room", text: "Lounge"
     assert_no_selector ".room-header__actions .voice-stack--live"
     assert_equal [], page.evaluate_script("window.voiceRemovalErrors")
@@ -379,15 +389,23 @@ class VoiceChannelsTest < ApplicationSystemTestCase
   end
 
   test "the voice header fits narrow phones and caps the stack" do
-    david_grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: @room.memberships.find_by!(user: users(:david)))
-    sleep 0.5
-    david_grant.record_seen!
-    jason_grant = HuddleGrant.issue!(session: users(:jason).sessions.create!(user_agent: "Test"), membership: @room.memberships.find_by!(user: users(:jason)))
-    sleep 0.5
-    jason_grant.record_seen!
-
     visit room_path(@room)
     wait_for_cable_connection
+    observe_turbo_stream_renders
+
+    # Issue on the loaded page and wait for each issuance render, like the
+    # sidebar/header test: a fixed sleep between issue! and record_seen!
+    # only orders the two thread-pool deliveries by hope.
+    renders = header_voice_renders
+    david_grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: @room.memberships.find_by!(user: users(:david)))
+    wait_for_issuance_broadcast(after: renders)
+    david_grant.record_seen!
+    within(".room-header__actions") { assert_selector ".voice-stack--live .voice-stack__count", text: "1", wait: BROADCAST_WAIT }
+
+    renders = header_voice_renders
+    jason_grant = HuddleGrant.issue!(session: users(:jason).sessions.create!(user_agent: "Test"), membership: @room.memberships.find_by!(user: users(:jason)))
+    wait_for_issuance_broadcast(after: renders)
+    jason_grant.record_seen!
     within(".room-header__actions") { assert_selector ".voice-stack--live .voice-stack__count", text: "2", wait: 10 }
 
     begin
@@ -400,11 +418,17 @@ class VoiceChannelsTest < ApplicationSystemTestCase
       # A fourth participant joins: the desktop header shows all four, the
       # phone header at most three plus the count.
       @room.memberships.grant_to([ users(:kevin), users(:jz) ])
+      renders = header_voice_renders
       kevin_grant = HuddleGrant.issue!(session: users(:kevin).sessions.create!(user_agent: "Test"), membership: @room.memberships.find_by!(user: users(:kevin)))
-      sleep 0.5
+      wait_for_issuance_broadcast(after: renders)
       kevin_grant.record_seen!
+      # The window is phone-sized here, where the stack may be capped or
+      # stepped aside; match regardless of visibility, since the count text
+      # only proves the sighting render landed.
+      within(".room-header__actions") { assert_selector ".voice-stack__count", text: "3", visible: :all, wait: BROADCAST_WAIT }
+      renders = header_voice_renders
       jz_grant = HuddleGrant.issue!(session: users(:jz).sessions.create!(user_agent: "Test"), membership: @room.memberships.find_by!(user: users(:jz)))
-      sleep 0.5
+      wait_for_issuance_broadcast(after: renders)
       jz_grant.record_seen!
 
       page.current_window.resize_to(1400, 1400)
@@ -434,12 +458,24 @@ class VoiceChannelsTest < ApplicationSystemTestCase
   end
 
   test "the room page shares one participants request across its stacks" do
-    david_grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: @room.memberships.find_by!(user: users(:david)))
-    sleep 0.5
-    david_grant.record_seen!
-
     visit room_path(@room)
     wait_for_cable_connection
+    observe_turbo_stream_renders
+
+    # Same issuance/sighting ordering as the sidebar/header test: wait for
+    # the issuance render instead of sleeping between the two broadcasts.
+    renders = header_voice_renders
+    david_grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: @room.memberships.find_by!(user: users(:david)))
+    wait_for_issuance_broadcast(after: renders)
+    david_grant.record_seen!
+
+    # The sighting render must land before the refresh block below runs: a
+    # stream replace mid-refresh would swap the measured controllers out
+    # from under the shared-request assertion.
+    within(".room-header__actions") do
+      assert_selector "img.voice-stack__avatar[data-user-id='#{users(:david).id}']", wait: BROADCAST_WAIT
+    end
+
     # Only this room's stacks are live; every other row renders an empty
     # stack target that stays hidden until someone joins its huddle.
     assert_selector '[data-controller="huddle-participants"]', count: 2
@@ -492,14 +528,22 @@ class VoiceChannelsTest < ApplicationSystemTestCase
     end
 
     # Sidebar loads arrive in bursts (initial fetch, then a reload if the
-    # channel reconnects). Two quiet seconds means the burst is over.
+    # channel reconnects). One quiet second means the burst is over: the
+    # reload fires off the cable connect within milliseconds, so a full
+    # second of quiet is several times the typical gap between the two.
     def wait_for_sidebar_quiet(loads)
       Timeout.timeout(30) do
         loop do
           before = loads.size
-          sleep 2
+          sleep 1
           break if loads.size == before
         end
+      end
+    end
+
+    def wait_for_fetch_quiet
+      Timeout.timeout(25) do
+        sleep 0.05 until page.evaluate_script("window.voiceRemovalInflight") == 0
       end
     end
 
