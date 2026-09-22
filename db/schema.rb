@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_18_160000) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_22_212200) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -123,6 +123,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_18_160000) do
     t.string "outcome"
     t.integer "room_id"
     t.index ["agent_id", "created_at"], name: "index_agent_events_on_agent_id_and_created_at"
+    t.index ["agent_id", "outcome", "id"], name: "index_agent_events_on_agent_outcome_id"
   end
 
   create_table "agent_grants", force: :cascade do |t|
@@ -257,6 +258,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_18_160000) do
     t.datetime "updated_at", null: false
     t.integer "venue_room_id"
     t.index ["organizer_id"], name: "index_events_on_organizer_id"
+    t.index ["reminded_at", "starts_at"], name: "index_events_on_reminded_starts"
     t.index ["room_id", "starts_at"], name: "index_events_on_room_id_and_starts_at"
     t.index ["series_id", "starts_at"], name: "index_events_on_series_slot", unique: true, where: "series_id IS NOT NULL AND cancelled_at IS NULL"
     t.index ["series_id"], name: "index_events_on_series_id"
@@ -455,8 +457,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_18_160000) do
     t.index ["creator_id"], name: "index_messages_on_creator_id"
     t.index ["forwarded_from_message_id"], name: "index_messages_on_forwarded_from_message_id"
     t.index ["reply_to_message_id"], name: "index_messages_on_reply_to_message_id"
-    t.index ["room_id"], name: "index_messages_on_room_id"
-    t.index ["thread_id"], name: "index_messages_on_thread_id"
+    t.index ["room_id", "thread_id", "created_at"], name: "index_messages_on_room_thread_created"
+    t.index ["thread_id", "created_at"], name: "index_messages_on_thread_created"
   end
 
   create_table "push_subscriptions", force: :cascade do |t|
@@ -474,6 +476,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_18_160000) do
   create_table "rooms", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "creator_id", null: false
+    t.datetime "deleted_at"
     t.string "icon_name"
     t.string "name"
     t.string "type", null: false
@@ -485,7 +488,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_18_160000) do
     t.string "query", null: false
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
-    t.index ["user_id"], name: "index_searches_on_user_id"
+    t.index ["user_id", "query"], name: "index_searches_on_user_and_query", unique: true
   end
 
   create_table "sessions", force: :cascade do |t|
