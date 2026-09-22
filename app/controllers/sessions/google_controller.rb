@@ -104,6 +104,8 @@ module Sessions
           "Google sign-in is only available for #{domain_list}. Other email addresses can sign in with email and password."
         when :ambiguous, :subject_mismatch
           "Google sign-in could not pick your account. Contact your administrator or sign in with email and password."
+        when :admin_link_required
+          "An administrator must link this account to Google before you can sign in with Google. Contact your administrator or sign in with email and password."
         when :deactivated, :banned
           "This account is no longer active. Contact your administrator or sign in with email and password."
         else

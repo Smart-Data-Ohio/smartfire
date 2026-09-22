@@ -18,6 +18,22 @@
           <%= form.check_box :role, { data: { action: "form#submit" }, hidden: true, id: dom_id(user, :role), disabled: user == Current.user }, "administrator", "member" %>
         </label>
       <% end %>
+
+      <% if user.google_identity %>
+        <%= button_to account_user_google_link_path(user), method: :delete, class: "btn txt-small flex-item-no-shrink",
+              title: "Unlink Google sign-in (#{user.google_identity.email})",
+              data: { turbo_confirm: "Unlink Google sign-in from #{user.name}? That Google account will no longer sign in as them." } do %>
+          <%= image_tag "link.svg", size: 20, aria: { hidden: "true" } %>
+          <span class="for-screen-reader">Unlink Google sign-in from <%= user.name %></span>
+        <% end %>
+      <% elsif user.email_self_changed_at.present? && user.email_address.present? %>
+        <%= button_to account_user_google_link_path(user), method: :post, class: "btn txt-small flex-item-no-shrink btn--reversed",
+              title: "Allow Google sign-in to link #{user.email_address}",
+              data: { turbo_confirm: "#{user.name} changed their email to #{user.email_address}. Allow the Google account with that address to sign in as them?" } do %>
+          <%= image_tag "link.svg", size: 20, aria: { hidden: "true" } %>
+          <span class="for-screen-reader">Allow Google sign-in for <%= user.name %></span>
+        <% end %>
+      <% end %>
     <% end %>
 
     <% unless user == Current.user %>

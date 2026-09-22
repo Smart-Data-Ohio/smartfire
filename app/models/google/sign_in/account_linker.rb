@@ -6,6 +6,13 @@ module Google
     # the verified email; later logins never consult the email for an
     # already-linked subject. Never reactivates, recreates, or
     # provisions privileged accounts. Raises Rejected on any mismatch.
+    #
+    # Linking by email trusts the Campfire account's address, so an
+    # address the member typed in themselves (email_self_changed_at) is
+    # never trusted: a member could otherwise claim a new hire's Workspace
+    # address and receive that person's first Google sign-in. Such
+    # accounts are refused with :admin_link_required until an
+    # administrator allows the link from the account page.
     class AccountLinker
       # Marker User#deactivate splices into the email local part, as in
       # "jane-deactivated-<uuid>@example.com".
@@ -47,6 +54,8 @@ module Google
               if user.google_identity && user.google_identity.subject != subject
                 raise Rejected, :subject_mismatch
               end
+              raise Rejected, :admin_link_required if user.email_self_changed_at.present?
+
               GoogleIdentity.create!(user:, subject:, email:, domain:)
               return user
             end
