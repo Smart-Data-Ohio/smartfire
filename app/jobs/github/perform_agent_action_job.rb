@@ -8,7 +8,10 @@ class Github::PerformAgentActionJob < ApplicationJob
   # or GitHub error makes no GitHub request beyond the failed call itself.
   # Never raises for GitHub or re-check failures, and never retries. Runs
   # at most once per approval: a queue retry or a duplicate enqueue finds
-  # the earlier outcome row and stops.
+  # the earlier outcome row and stops. attempts: 1 opts out of the inherited
+  # transient retries.
+  retry_on(*ApplicationJob::TRANSIENT_ERRORS, attempts: 1)
+
   def perform(approval_id)
     approval = AgentApproval.find_by(id: approval_id)
     return unless approval&.github_action?
