@@ -252,6 +252,9 @@ module Google
         if response.code == "429"
           raise Unavailable, "Google token refresh rate limited (429)"
         end
+        if response.code.start_with?("5")
+          raise Unavailable, "Google token refresh failed (#{response.code})"
+        end
         raise Error, "Google token refresh failed (#{response.code})"
       end
     rescue *TRANSPORT_ERRORS => error

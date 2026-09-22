@@ -70,6 +70,31 @@ class Calendar::DisconnectCleanupJobTest < ActiveSupport::TestCase
     assert_requested revoke
   end
 
+  test "a refresh 503 retries without revoking until the deletes succeed" do
+    account = connect_google!(@david)
+    account.update!(access_token_expires_at: 1.hour.ago)
+    snapshot = account.cleanup_snapshot
+    recovered_token = "recovered-access-token"
+    stub_request(:post, GOOGLE_TOKEN_URL).to_return(status: 503)
+    delete_stub = stub_google_event_delete("orphan-id")
+    revoke = stub_google_revoke
+    account.destroy!
+
+    assert_enqueued_with(job: Calendar::DisconnectCleanupJob, args: [ [ "orphan-id" ], snapshot ]) do
+      Calendar::DisconnectCleanupJob.perform_now([ "orphan-id" ], snapshot)
+    end
+
+    assert_not_requested delete_stub
+    assert_not_requested revoke
+
+    stub_google_token_refresh(access_token: recovered_token)
+
+    Calendar::DisconnectCleanupJob.perform_now([ "orphan-id" ], snapshot)
+
+    assert_requested delete_stub, headers: { "Authorization" => "Bearer #{recovered_token}" }
+    assert_requested revoke
+  end
+
   test "a transient delete failure schedules a retry without revoking" do
     account = connect_google!(@david)
     snapshot = account.cleanup_snapshot
