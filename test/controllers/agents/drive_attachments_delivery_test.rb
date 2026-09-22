@@ -18,7 +18,7 @@ class Agents::DriveAttachmentsDeliveryTest < ActionDispatch::IntegrationTest
     )
     message.drive_attachments.create!([ { file_id: FILE_A }, { file_id: FILE_B } ])
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
     row = response.parsed_body["events"].find { |entry| entry.dig("message", "id") == message.id }
@@ -35,7 +35,7 @@ class Agents::DriveAttachmentsDeliveryTest < ActionDispatch::IntegrationTest
       client_message_id: "drive-poll-empty"
     )
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
     row = response.parsed_body["events"].find { |entry| entry.dig("message", "id") == message.id }

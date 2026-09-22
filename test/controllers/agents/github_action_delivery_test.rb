@@ -73,7 +73,7 @@ class Agents::GithubActionDeliveryTest < ActionDispatch::IntegrationTest
     approval.decide!(decision: "approved", by: users(:david))
     perform_enqueued_jobs only: Github::PerformAgentActionJob
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
     row = response.parsed_body["events"].find { |entry| entry["event_type"] == "github_action_completed" }
@@ -101,7 +101,7 @@ class Agents::GithubActionDeliveryTest < ActionDispatch::IntegrationTest
     memberships(:bender_watercooler).destroy!
     perform_enqueued_jobs only: Github::PerformAgentActionJob
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
     row = response.parsed_body["events"].find { |entry| entry["event_type"] == "github_action_completed" }
@@ -161,7 +161,7 @@ class Agents::GithubActionDeliveryTest < ActionDispatch::IntegrationTest
     other_agent, other_secret = create_agent_with_secret("Github Completion Other Bot")
     AgentGrant.create!(agent: other_agent, room: @room, granted_by: users(:david), capability: "read_messages")
 
-    get agents_events_url, headers: { "Authorization" => "Bearer #{other_secret}" }
+    get agents_events_url(envelope: 1), headers: { "Authorization" => "Bearer #{other_secret}" }
     assert_response :success
     assert_empty response.parsed_body["events"].select { |entry| entry["event_type"] == "github_action_completed" }
 

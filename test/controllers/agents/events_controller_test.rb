@@ -20,7 +20,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       client_message_id: "poll-other"
     )
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
     ids = response.parsed_body["events"].map { |row| row["id"] }
@@ -34,7 +34,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       client_message_id: "poll-payload"
     )
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
     row = response.parsed_body["events"].first
@@ -55,12 +55,12 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     )
     dm.messages.create!(creator: users(:kevin), body: "DM hello", client_message_id: "poll-revoked-dm")
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
     assert_equal 2, response.parsed_body["events"].size
 
     dm_grant.revoke!
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
     assert_response :success
     assert_equal [ "mention" ], response.parsed_body["events"].map { |row| row["event_type"] }
   end
@@ -72,12 +72,12 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       client_message_id: "poll-revoked-all"
     )
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
     assert_equal 1, response.parsed_body["events"].size
 
     grant.revoke!
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
     assert_response :forbidden
   end
 
@@ -87,12 +87,12 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       client_message_id: "poll-membership"
     )
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
     assert_equal 1, response.parsed_body["events"].size
 
     memberships(:bender_watercooler).destroy!
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
     assert_response :success
     assert_empty response.parsed_body["events"]
   end
@@ -105,7 +105,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     event_id = @agent.agent_events.deliverable.last.id
     message.destroy!
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
     assert_not_includes response.parsed_body["events"].map { |row| row["id"] }, event_id
@@ -120,13 +120,13 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     end
     ids = @agent.agent_events.deliverable.ordered.pluck(:id)
 
-    get agents_events_url(since: ids.first), headers: bearer_headers
+    get agents_events_url(since: ids.first, envelope: 1), headers: bearer_headers
     assert_equal ids[1..], response.parsed_body["events"].map { |row| row["id"] }
 
-    get agents_events_url(limit: 2), headers: bearer_headers
+    get agents_events_url(limit: 2, envelope: 1), headers: bearer_headers
     assert_equal 2, response.parsed_body["events"].size
 
-    get agents_events_url(limit: 500), headers: bearer_headers
+    get agents_events_url(limit: 500, envelope: 1), headers: bearer_headers
     assert_response :success
     assert_operator response.parsed_body["events"].size, :<=, 100
   end
@@ -140,15 +140,47 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     end
     ids = @agent.agent_events.deliverable.ordered.pluck(:id)
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
     assert_response :success
     assert_equal ids, response.parsed_body["events"].map { |row| row["id"] }
     assert_equal ids.last, response.parsed_body["next_since"]
 
-    get agents_events_url(since: response.parsed_body["next_since"]), headers: bearer_headers
+    get agents_events_url(since: response.parsed_body["next_since"], envelope: 1), headers: bearer_headers
     assert_response :success
     assert_empty response.parsed_body["events"]
     assert_equal ids.last, response.parsed_body["next_since"]
+  end
+
+  test "polling defaults to a bare array with the cursor in a header" do
+    2.times do |i|
+      @room.messages.create!(
+        creator: users(:david), body: "Ping #{i} #{mention_attachment_for(:bender)}",
+        client_message_id: "poll-bare-#{i}"
+      )
+    end
+    ids = @agent.agent_events.deliverable.ordered.pluck(:id)
+
+    get agents_events_url, headers: bearer_headers
+
+    assert_response :success
+    assert_kind_of Array, response.parsed_body
+    assert_equal ids, response.parsed_body.map { |row| row["id"] }
+    assert_equal ids.last.to_s, response.headers["X-Smartfire-Next-Since"]
+  end
+
+  test "polling returns the envelope only with envelope=1" do
+    @room.messages.create!(
+      creator: users(:david), body: "Hey #{mention_attachment_for(:bender)}",
+      client_message_id: "poll-envelope"
+    )
+    event_id = @agent.agent_events.deliverable.last.id
+
+    get agents_events_url(envelope: 1), headers: bearer_headers
+
+    assert_response :success
+    assert_equal [ event_id ], response.parsed_body["events"].map { |row| row["id"] }
+    assert_equal event_id, response.parsed_body["next_since"]
+    assert_equal event_id.to_s, response.headers["X-Smartfire-Next-Since"]
   end
 
   test "a fully dropped page still advances next_since past the dropped rows" do
@@ -162,7 +194,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     # The snapshot-less assignment row still drops in Ruby after SQL
     # filtering, so a one-row page over it returns nothing but moves the
     # cursor past it; the deletion's unassignment follows on later pages.
-    get agents_events_url(limit: 1), headers: bearer_headers
+    get agents_events_url(limit: 1, envelope: 1), headers: bearer_headers
 
     assert_response :success
     assert_empty response.parsed_body["events"]
@@ -179,7 +211,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     thread.destroy!
     unassigned = @agent.agent_events.where(event_type: "work_unassigned").last
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
     rows = response.parsed_body["events"]
@@ -200,7 +232,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Live work")
     thread.update_work!(actor: users(:david), work_status: "planned", work_owner_id: @bot.id)
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
     row = response.parsed_body["events"].sole
@@ -216,7 +248,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
 
     memberships(:bender_watercooler).destroy!
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
     assert_empty response.parsed_body["events"]
@@ -229,7 +261,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       client_message_id: "poll-count-1"
     )
 
-    single = access_query_count { get agents_events_url, headers: bearer_headers }
+    single = access_query_count { get agents_events_url(envelope: 1), headers: bearer_headers }
     assert_response :success
 
     7.times do |i|
@@ -239,7 +271,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       )
     end
 
-    many = access_query_count { get agents_events_url, headers: bearer_headers }
+    many = access_query_count { get agents_events_url(envelope: 1), headers: bearer_headers }
     assert_response :success
     assert_equal 8, response.parsed_body["events"].size
 
@@ -255,7 +287,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       outcome: "suppressed", detail: "capped"
     )
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
     assert_empty response.parsed_body["events"]
@@ -264,7 +296,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
   test "polling requires read_messages anywhere" do
     AgentGrant.create!(agent: @agent, room: @room, granted_by: users(:david), capability: "post_messages")
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :forbidden
     assert_equal "Forbidden: agent lacks read_messages capability", response.parsed_body["error"]
@@ -280,7 +312,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     )
     dm.messages.create!(creator: users(:kevin), body: "DM hello", client_message_id: "poll-scoped-dm")
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
     assert_equal [ "mention" ], response.parsed_body["events"].map { |row| row["event_type"] }
@@ -298,7 +330,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       creator: users(:kevin), body: "DM hello", client_message_id: "poll-filter-member-dm"
     )
 
-    get agents_events_url(limit: 1), headers: bearer_headers
+    get agents_events_url(limit: 1, envelope: 1), headers: bearer_headers
 
     assert_response :success
     assert_equal [ "direct_message" ], response.parsed_body["events"].map { |row| row["event_type"] }
@@ -314,7 +346,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       client_message_id: "poll-filter-grant-room"
     )
 
-    get agents_events_url(limit: 1), headers: bearer_headers
+    get agents_events_url(limit: 1, envelope: 1), headers: bearer_headers
 
     assert_response :success
     assert_equal [ "mention" ], response.parsed_body["events"].map { |row| row["event_type"] }
@@ -636,7 +668,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       attributes: { markdown_source: "Hey @[Bender Bot], review this", client_message_id: "agent-pr-mention-1" }
     )
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
     row = response.parsed_body["events"].find { |entry| entry["event_type"] == "mention" }
@@ -668,7 +700,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     )
     human_says("Hey @[Bender Bot] in the room", "agent-null-room")
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
     rows = response.parsed_body["events"].select { |entry| entry["event_type"] == "mention" }

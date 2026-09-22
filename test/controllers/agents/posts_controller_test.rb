@@ -452,7 +452,7 @@ class Agents::PostsControllerTest < ActionDispatch::IntegrationTest
     listed_payload = response.parsed_body.find { |row| row["id"] == created_payload["id"] }
     assert_equal created_payload, listed_payload
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
     assert_response :success
     event_row = response.parsed_body["events"].find { |entry| entry["event_type"] == "work_assigned" }
     work_key = event_row["work"]

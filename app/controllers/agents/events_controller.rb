@@ -14,17 +14,19 @@ class Agents::EventsController < ApplicationController
   POLL_MAX_LIMIT = 100
 
   # GET /agents/events?since=<id>&limit=<n> (Bearer-only, JSON). Returns
-  # the agent's own deliverable rows ordered by id, plus next_since: the
-  # last scanned row id, which the client passes back as since. Rows the
-  # Ruby payload builders drop after SQL filtering (a revoked message, a
-  # deleted thread without a snapshot) still advance the cursor, so a
-  # fully dropped page returns no rows but never strands the client.
-  # Readability (message exists, membership, read grant) filters in SQL
-  # before the limit applies, so revoked rows can never hide newer
-  # readable rows. Approval decision rows carry no message and render an
-  # approval payload instead; GitHub completion rows render a
-  # github_action payload instead, and work rows render a work payload
-  # instead. A deleted thread's work_unassigned row renders its
+  # the agent's own deliverable rows ordered by id as a bare JSON array,
+  # with the cursor (the last scanned row id, which the client passes
+  # back as since) in the X-Smartfire-Next-Since response header. Pass
+  # ?envelope=1 for the { events, next_since } object form instead.
+  # Rows the Ruby payload builders drop after SQL filtering (a revoked
+  # message, a deleted thread without a snapshot) still advance the
+  # cursor, so a fully dropped page returns no rows but never strands
+  # the client. Readability (message exists, membership, read grant)
+  # filters in SQL before the limit applies, so revoked rows can never
+  # hide newer readable rows. Approval decision rows carry no message
+  # and render an approval payload instead; GitHub completion rows
+  # render a github_action payload instead, and work rows render a work
+  # payload instead. A deleted thread's work_unassigned row renders its
   # pre-destroy snapshot marked thread_deleted.
   def index
     no_store_response!
@@ -46,10 +48,15 @@ class Agents::EventsController < ApplicationController
     @thread_cache = ChannelThread.where(id: events.filter_map { |event| event.metadata.is_a?(Hash) && event.metadata["thread_id"] }).includes(:room, :work_owner, :tags, work_thread_links: %i[ github_pull_request event ]).index_by(&:id)
     preload_poll_access!(agent, events)
 
-    render json: {
-      events: events.filter_map { |event| poll_payload(event) },
-      next_since: events.last&.id || since
-    }
+    payload = events.filter_map { |event| poll_payload(event) }
+    next_since = events.last&.id || since
+    response.set_header("X-Smartfire-Next-Since", next_since.to_s)
+
+    if params[:envelope] == "1"
+      render json: { events: payload, next_since: next_since }
+    else
+      render json: payload
+    end
   end
 
   # POST /agents/events/:id/ack (Bearer-only, JSON). Idempotent.

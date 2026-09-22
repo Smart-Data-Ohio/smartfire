@@ -32,7 +32,7 @@ class Agents::ApprovalDeliveryTest < ActionDispatch::IntegrationTest
     approval = AgentApproval.create!(agent: @agent, room: @room, action: "deploy", summary: "Ship it")
     approval.decide!(decision: "denied", by: users(:david), note: "not now")
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
     row = response.parsed_body["events"].find { |entry| entry["event_type"] == "approval_decided" }

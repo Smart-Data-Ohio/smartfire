@@ -14,7 +14,7 @@ class Agents::WorkDeliveryTest < ActionDispatch::IntegrationTest
   test "assignment appears in event polling with the work payload" do
     thread = assign_owned_thread!(name: "Polled work")
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
     row = response.parsed_body["events"].find { |entry| entry["event_type"] == "work_assigned" }
@@ -37,7 +37,7 @@ class Agents::WorkDeliveryTest < ActionDispatch::IntegrationTest
     drive_url = "https://drive.google.com/file/d/1AbcDefGhIjKlMnOpQrSt/view"
     thread.work_thread_links.create!(kind: :drive_file, url: drive_url, created_by: users(:david))
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
     row = response.parsed_body["events"].find { |entry| entry["event_type"] == "work_assigned" }
@@ -52,7 +52,7 @@ class Agents::WorkDeliveryTest < ActionDispatch::IntegrationTest
     thread = assign_owned_thread!(name: "Unassigned work")
     thread.update_work!(actor: users(:david), work_owner_id: nil)
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
     row = response.parsed_body["events"].find { |entry| entry["event_type"] == "work_unassigned" }
@@ -115,12 +115,12 @@ class Agents::WorkDeliveryTest < ActionDispatch::IntegrationTest
     AgentGrant.create!(agent: @agent, room: dm, granted_by: users(:david), capability: "read_messages")
     assign_owned_thread!(name: "Revoked work")
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
     assert_equal 1, response.parsed_body["events"].size
 
     AgentGrant.where(agent: @agent, room: @room, capability: "read_messages").sole.revoke!
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
     assert_response :success
     assert_empty response.parsed_body["events"]
   end
@@ -129,12 +129,12 @@ class Agents::WorkDeliveryTest < ActionDispatch::IntegrationTest
     AgentGrant.create!(agent: @agent, granted_by: users(:david), capability: "read_messages")
     assign_owned_thread!(name: "Left work")
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
     assert_equal 1, response.parsed_body["events"].size
 
     memberships(:bender_watercooler).destroy!
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
     assert_response :success
     assert_empty response.parsed_body["events"]
   end
