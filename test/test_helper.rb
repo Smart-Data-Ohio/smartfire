@@ -32,6 +32,12 @@ class ActiveSupport::TestCase
     end
 
     WebMock.disable_net_connect!
+
+    # Webhook and unfurl deliveries resolve through the SSRF guard; answer
+    # every hostname with a public address so no test depends on real DNS.
+    # IP literals skip the resolver, and per-test stubs (DnsTestHelper)
+    # override this for private-address and failure cases.
+    Resolv.stubs(:getaddresses).returns([ "93.184.216.34" ])
   end
 
   teardown do

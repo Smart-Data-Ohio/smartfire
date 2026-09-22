@@ -1,10 +1,12 @@
 module Calendar
   # Reconciles one member's Google Calendar copy of one event with the
   # desired state computed from the database, so the sync job stays
-  # idempotent: an entry exists exactly when the user is connected, is
-  # going or maybe, the event is not cancelled, and the user is still a
-  # room member. Failures are recorded on the entry for the next change
-  # to retry; nothing here raises for Google or network problems.
+  # idempotent: an entry exists exactly when the user is connected with
+  # the calendar scope, is going or maybe, the event is not cancelled,
+  # and the user is still a room member. Permanent failures are recorded
+  # on the entry for the next change to retry; transient ones (Google
+  # rate limits, timeouts, connection failures) are recorded and
+  # re-raised so the job retries them.
   class EntrySync
     SYNCED_ATTRIBUTES = (Event::TIME_CHANGE_ATTRIBUTES + %w[ title description venue_room_id ]).freeze
     GOOGLE_EVENT_ID_PREFIX = "campfire"
@@ -45,7 +47,7 @@ module Calendar
 
     private
       def desired?(account)
-        account&.usable? &&
+        account&.usable? && account.calendar? &&
           @event.response_for(@user).in?(Event::NOTIFYING_RESPONSES) &&
           !@event.cancelled? &&
           @event.room.memberships.exists?(user_id: @user.id)
@@ -72,7 +74,11 @@ module Calendar
             begin
               client.insert_event(payload_with_id(entry))
             rescue Google::Client::Conflict
-              client.update_event(entry.google_event_id, payload)
+              # The id is deterministic, so a conflict means Google still
+              # holds this entry (a trashed copy from a declined RSVP, or
+              # a concurrent first run): take it over. The explicit
+              # confirmed status resurrects a cancelled copy.
+              client.update_event(entry.google_event_id, payload.merge("status" => "confirmed"))
             end
           else
             begin
@@ -85,32 +91,43 @@ module Calendar
           entry.synced_at = Time.current
           entry.last_error = nil
           entry.save!
+        rescue Google::Client::Unavailable => error
+          record_failure!(entry, error)
+          raise
         rescue StandardError => error
           if account.connected?
-            entry.last_error = error_summary(error)
-            entry.save!
-            Rails.logger.warn "Calendar::EntrySync failed for event #{@event.id} user #{@user.id}: #{error.class}"
+            record_failure!(entry, error)
           else
             # The account disconnected mid-sync: the remote copy is
             # unreachable, so drop the local row instead of retrying it.
-            entry.destroy!
+            # delete skips the orphan-cleanup callbacks: there is nothing
+            # cleanup could authenticate.
+            entry.delete
             Rails.logger.warn "Calendar::EntrySync dropped entry for event #{@event.id} user #{@user.id}: account disconnected"
           end
         end
       end
 
-      # A missing account (or one Google rejected) cannot call the API, so
-      # the row is dropped without a request. A 404 from Google counts as
-      # deleted. Other failures keep the row with last_error for a retry.
+      # A missing account, a rejected one, or a grant without the calendar
+      # scope cannot call the API, so the row is dropped without a
+      # request. A 404 (or 410) from Google counts as deleted. Permanent
+      # failures keep the row with last_error for a retry; transient ones
+      # are recorded and re-raised for the job to retry. The remote copy
+      # is gone (or unreachable) on every path below, so delete skips the
+      # orphan-cleanup callbacks.
       def remove!(account)
         entry = EventCalendarEntry.find_by(event: @event, user: @user)
         return if entry.nil?
 
-        if account&.usable?
+        if account&.usable? && account.calendar?
           begin
             Google::Client.new(account).delete_event(entry.google_event_id)
           rescue Google::Client::NotFound
             nil
+          rescue Google::Client::Unavailable => error
+            entry.update!(last_error: error_summary(error))
+            Rails.logger.warn "Calendar::EntrySync delete failed for event #{@event.id} user #{@user.id}: #{error.class}"
+            raise
           rescue StandardError => error
             entry.update!(last_error: error_summary(error))
             Rails.logger.warn "Calendar::EntrySync delete failed for event #{@event.id} user #{@user.id}: #{error.class}"
@@ -118,7 +135,7 @@ module Calendar
           end
         end
 
-        entry.destroy!
+        entry.delete
       end
 
       def payload
@@ -162,6 +179,12 @@ module Calendar
         else
           helpers.room_path(@event.venue)
         end
+      end
+
+      def record_failure!(entry, error)
+        entry.last_error = error_summary(error)
+        entry.save!
+        Rails.logger.warn "Calendar::EntrySync failed for event #{@event.id} user #{@user.id}: #{error.class}"
       end
 
       def error_summary(error)

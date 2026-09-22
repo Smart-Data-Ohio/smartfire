@@ -171,10 +171,10 @@ class Agents::MessagesControllerTest < ActionDispatch::IntegrationTest
     thread.post_message!(creator: users(:david),
       attributes: { markdown_source: "Hey @[Bender Bot], help here." })
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
-    assert_equal [ "mention" ], response.parsed_body.map { |row| row["event_type"] }
+    assert_equal [ "mention" ], response.parsed_body["events"].map { |row| row["event_type"] }
   end
 
   test "thread replies accept drive file ids" do

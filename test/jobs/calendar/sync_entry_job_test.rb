@@ -267,15 +267,159 @@ class Calendar::SyncEntryJobTest < ActiveSupport::TestCase
     assert_includes entry.last_error, "500"
   end
 
-  test "a transport failure records an Unavailable last_error without raising" do
+  test "a transport failure records last_error and enqueues a retry" do
     connect_google!(@david)
     stub_request(:post, GOOGLE_EVENTS_URL).to_timeout
 
-    Calendar::SyncEntryJob.perform_now(@event.id, @david.id)
+    assert_enqueued_with(job: Calendar::SyncEntryJob, args: [ @event.id, @david.id ]) do
+      Calendar::SyncEntryJob.perform_now(@event.id, @david.id)
+    end
 
     entry = EventCalendarEntry.find_by!(event: @event, user: @david)
     assert_nil entry.synced_at
     assert_equal "Unavailable: Google Calendar request failed (Net::OpenTimeout)", entry.last_error
+  end
+
+  test "the reconciler re-raises transient failures for the job to retry" do
+    connect_google!(@david)
+    stub_request(:post, GOOGLE_EVENTS_URL).to_timeout
+
+    assert_raises(Google::Client::Unavailable) { Calendar::EntrySync.sync(@event.id, @david.id) }
+
+    entry = EventCalendarEntry.find_by!(event: @event, user: @david)
+    assert_equal "Unavailable: Google Calendar request failed (Net::OpenTimeout)", entry.last_error
+  end
+
+  test "a 429 schedules a retry instead of parking the entry" do
+    connect_google!(@david)
+    stub_google_event_insert(status: 429)
+
+    assert_enqueued_with(job: Calendar::SyncEntryJob, args: [ @event.id, @david.id ]) do
+      Calendar::SyncEntryJob.perform_now(@event.id, @david.id)
+    end
+
+    assert_includes EventCalendarEntry.find_by!(event: @event, user: @david).last_error, "429"
+  end
+
+  test "a quota 403 schedules a retry" do
+    connect_google!(@david)
+    stub_google_event_insert(status: 403, body: google_forbidden_body)
+
+    assert_enqueued_with(job: Calendar::SyncEntryJob, args: [ @event.id, @david.id ]) do
+      Calendar::SyncEntryJob.perform_now(@event.id, @david.id)
+    end
+
+    assert_includes EventCalendarEntry.find_by!(event: @event, user: @david).last_error, "RateLimited"
+  end
+
+  test "a permission 403 records last_error without retrying" do
+    connect_google!(@david)
+    stub_google_event_insert(status: 403, body: google_forbidden_body("forbidden"))
+
+    assert_no_enqueued_jobs(only: Calendar::SyncEntryJob) do
+      Calendar::SyncEntryJob.perform_now(@event.id, @david.id)
+    end
+
+    entry = EventCalendarEntry.find_by!(event: @event, user: @david)
+    assert_includes entry.last_error, "Forbidden"
+  end
+
+  test "a delete transport failure keeps the row and enqueues a retry" do
+    connect_google!(@david)
+    entry = EventCalendarEntry.create!(event: @event, user: @david, google_event_id: SecureRandom.hex(16))
+    stub_request(:delete, "#{GOOGLE_EVENTS_URL}/#{entry.google_event_id}").to_timeout
+
+    @event.attendances.find_by!(user: @david).update!(response: :declined)
+
+    assert_enqueued_with(job: Calendar::SyncEntryJob, args: [ @event.id, @david.id ]) do
+      Calendar::SyncEntryJob.perform_now(@event.id, @david.id)
+    end
+
+    assert EventCalendarEntry.exists?(entry.id)
+    assert_includes entry.reload.last_error, "Unavailable"
+  end
+
+  test "going again after declining resurrects the remote copy as confirmed" do
+    connect_google!(@david)
+    stub_google_event_insert
+    Calendar::SyncEntryJob.perform_now(@event.id, @david.id)
+    entry = EventCalendarEntry.find_by!(event: @event, user: @david)
+
+    @event.attendances.find_by!(user: @david).update!(response: :declined)
+    stub_google_event_delete(entry.google_event_id)
+    Calendar::SyncEntryJob.perform_now(@event.id, @david.id)
+    assert_not EventCalendarEntry.exists?(entry.id)
+
+    @event.attendances.find_by!(user: @david).update!(response: :going)
+    WebMock.reset!
+    stub_google_event_insert(status: 409, body: { "error" => { "code" => 409 } })
+    update = stub_google_event_update(entry.google_event_id)
+    Calendar::SyncEntryJob.perform_now(@event.id, @david.id)
+
+    assert_requested update
+    assert_requested(:put, "#{GOOGLE_EVENTS_URL}/#{entry.google_event_id}") do |request|
+      JSON.parse(request.body)["status"] == "confirmed"
+    end
+    assert EventCalendarEntry.exists?(event: @event, user: @david)
+  end
+
+  test "delete treats a Google 410 as deleted" do
+    connect_google!(@david)
+    entry = EventCalendarEntry.create!(event: @event, user: @david, google_event_id: SecureRandom.hex(16))
+    stub_google_event_delete(entry.google_event_id, status: 410)
+
+    @event.attendances.find_by!(user: @david).update!(response: :declined)
+    Calendar::SyncEntryJob.perform_now(@event.id, @david.id)
+
+    assert_not EventCalendarEntry.exists?(entry.id)
+  end
+
+  test "a grant without the calendar scope never triggers a request" do
+    connect_google!(@david, scopes: "openid email")
+
+    Calendar::SyncEntryJob.perform_now(@event.id, @david.id)
+
+    assert_no_google_requests
+    assert_not EventCalendarEntry.exists?(event: @event, user: @david)
+  end
+
+  test "losing the calendar scope drops the entry without a request" do
+    account = connect_google!(@david)
+    entry = EventCalendarEntry.create!(event: @event, user: @david, google_event_id: SecureRandom.hex(16))
+    account.update!(scopes: "openid email")
+
+    Calendar::SyncEntryJob.perform_now(@event.id, @david.id)
+
+    assert_no_google_requests
+    assert_not EventCalendarEntry.exists?(entry.id)
+  end
+
+  test "an unreadable token drops the entry without a request" do
+    account = connect_google!(@david)
+    entry = EventCalendarEntry.create!(event: @event, user: @david, google_event_id: "stale" * 8)
+    corrupt_google_token!(account)
+
+    Calendar::SyncEntryJob.perform_now(@event.id, @david.id)
+
+    assert_no_google_requests
+    assert_not EventCalendarEntry.exists?(entry.id)
+    assert_equal GoogleAccount::UNREADABLE_TOKEN_REASON, account.reload.disconnected_reason
+  end
+
+  test "a reconciled decline does not enqueue a remote delete" do
+    connect_google!(@david)
+    stub_google_event_insert
+    Calendar::SyncEntryJob.perform_now(@event.id, @david.id)
+    entry = EventCalendarEntry.find_by!(event: @event, user: @david)
+
+    @event.attendances.find_by!(user: @david).update!(response: :declined)
+    stub_google_event_delete(entry.google_event_id)
+
+    assert_no_enqueued_jobs(only: Calendar::RemoteDeleteJob) do
+      Calendar::SyncEntryJob.perform_now(@event.id, @david.id)
+    end
+
+    assert_not EventCalendarEntry.exists?(entry.id)
   end
 
   test "a failed delete keeps the row with last_error for a retry" do
@@ -403,6 +547,39 @@ class Calendar::SyncEntryJobTest < ActiveSupport::TestCase
     assert_enqueued_with(job: Calendar::SyncEntryJob, args: [ @event.id, @david.id ]) do
       memberships(:david_designers).destroy!
     end
+  end
+
+  test "destroying a room enqueues remote deletes for its entries" do
+    connect_google!(@david)
+    EventCalendarEntry.create!(event: @event, user: @david, google_event_id: "room-destroy-id")
+    delete_stub = stub_google_event_delete("room-destroy-id")
+
+    assert_enqueued_with(job: Calendar::RemoteDeleteJob, args: [ @david.id, "room-destroy-id" ]) do
+      @room.destroy!
+    end
+
+    perform_enqueued_jobs only: Calendar::RemoteDeleteJob
+
+    assert_requested delete_stub
+  end
+
+  test "shrinking a series enqueues remote deletes for destroyed occurrences" do
+    connect_google!(@david)
+    head = @room.events.create!(
+      organizer: @david, title: "Daily sync", starts_at: 2.days.from_now, time_zone: "UTC",
+      recurrence_rule: "daily", recurrence_until: Date.current + 4
+    )
+    doomed = head.series_events.to_a.last
+    EventCalendarEntry.create!(event: doomed, user: @david, google_event_id: "doomed-entry")
+    delete_stub = stub_google_event_delete("doomed-entry")
+
+    assert_enqueued_with(job: Calendar::RemoteDeleteJob, args: [ @david.id, "doomed-entry" ]) do
+      head.update_with_scope!({ recurrence_until: Date.current + 3 }, scope: "this_and_following", actor: @david)
+    end
+
+    perform_enqueued_jobs only: Calendar::RemoteDeleteJob
+
+    assert_requested delete_stub
   end
 
   private

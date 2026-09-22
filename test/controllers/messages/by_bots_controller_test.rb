@@ -47,6 +47,47 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "create mentioning a legacy bot at hop 3 enqueues no legacy webhook" do
+    legacy = User.create_bot!(name: "Legacy Gate", webhook_url: "https://example.test/legacy-gate")
+    @room.memberships.grant_to(legacy)
+    WebMock.stub_request(:post, legacy.webhook.url).to_return(status: 200)
+
+    other = User.create_bot!(name: "Gate Bot B")
+    agent_b = other.create_agent!(kind: :workspace, owner: users(:david))
+    @room.memberships.grant_to(other)
+
+    @room.messages.create!(
+      creator: users(:david), markdown_source: "Hey @[Bender Bot]", client_message_id: "gate-m1"
+    )
+    @room.messages.create!(
+      creator: users(:bender), markdown_source: "Hey @[Gate Bot B]", client_message_id: "gate-m2"
+    )
+    @room.messages.create!(
+      creator: other, markdown_source: "Hey @[Bender Bot]", client_message_id: "gate-m3"
+    )
+    assert_equal 2, agents(:bender_agent).agent_events.deliverable.last.hop
+
+    assert_no_enqueued_jobs only: Bot::WebhookJob do
+      post room_bot_messages_url(@room, users(:bender).bot_key),
+        params: "<div>Hey #{mention_attachment_for_user(legacy)}</div>"
+      assert_response :created
+    end
+
+    assert_not_requested :post, legacy.webhook.url
+  end
+
+  test "create mentioning a legacy bot below hop 3 still enqueues the legacy webhook" do
+    legacy = User.create_bot!(name: "Legacy Pass", webhook_url: "https://example.test/legacy-pass")
+    @room.memberships.grant_to(legacy)
+    WebMock.stub_request(:post, legacy.webhook.url).to_return(status: 200)
+
+    assert_enqueued_jobs 1, only: Bot::WebhookJob do
+      post room_bot_messages_url(@room, users(:bender).bot_key),
+        params: "<div>Hey #{mention_attachment_for_user(legacy)}</div>"
+      assert_response :created
+    end
+  end
+
   test "create does not trigger a webhook to the sending bot if it mentions itself" do
     body = "<div>Hey #{mention_attachment_for(:bender)}</div>"
 
@@ -324,5 +365,10 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
     def post_bot_message(body)
       post room_bot_messages_url(@room, bot_key_for(users(:bender))), params: +body
       Message.last
+    end
+
+    def mention_attachment_for_user(user)
+      attachment_body = ApplicationController.render partial: "users/mention", locals: { user: user }
+      "<action-text-attachment sgid=\"#{user.attachable_sgid}\" content-type=\"application/vnd.campfire.mention\" content=\"#{attachment_body.gsub('"', '&quot;')}\"></action-text-attachment>"
     end
 end
