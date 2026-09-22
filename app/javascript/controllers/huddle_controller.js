@@ -2344,16 +2344,20 @@ export default class extends Controller {
     const screenShareEnabled = this.room.localParticipant.isScreenShareEnabled
     const cameraEnabled = this.room.localParticipant.isCameraEnabled
 
-    this.muteLabelTarget.textContent = microphoneEnabled ? "Mute" : "Unmute"
+    // Stable action labels: aria-pressed carries the state, and the tooltip
+    // names it visibly, instead of the label flipping with every toggle.
+    this.muteLabelTarget.textContent = "Mute microphone"
     this.muteTarget.setAttribute("aria-pressed", String(!microphoneEnabled))
+    this.muteTarget.title = microphoneEnabled ? "Microphone live" : "Microphone muted"
     this.muteTarget.classList.toggle("huddle__mute--muted", !microphoneEnabled)
     this.element.classList.toggle("huddle--muted", !microphoneEnabled)
     // The meter only means something while the microphone is live.
     this.meterTarget.hidden = !microphoneEnabled
     this.shareLabelTarget.textContent = screenShareEnabled ? "Stop sharing" : "Share screen"
     this.shareTarget.setAttribute("aria-pressed", String(screenShareEnabled))
-    this.cameraLabelTarget.textContent = cameraEnabled ? "Camera on" : "Camera off"
+    this.cameraLabelTarget.textContent = "Camera"
     this.cameraTarget.setAttribute("aria-pressed", String(cameraEnabled))
+    this.cameraTarget.title = cameraEnabled ? "Camera on" : "Camera off"
   }
 
   #updateAudioPlaybackControl() {

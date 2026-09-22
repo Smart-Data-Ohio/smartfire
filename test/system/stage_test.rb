@@ -452,7 +452,7 @@ class StageTest < ApplicationSystemTestCase
       join_stage_and_confirm
 
       assert_equal true, local_can_publish?
-      assert_selector "#channel-huddle [data-huddle-target='mute']", text: "Mute"
+      assert_selector "#channel-huddle [data-huddle-target='mute']", text: "Mute microphone"
       assert_selector ".huddle__participant", count: 2
     end
 
@@ -485,7 +485,7 @@ class StageTest < ApplicationSystemTestCase
     wait_for_condition("the invited listener did not rejoin publishing", timeout: LIVEKIT_REJOIN_WAIT) do
       page.has_css?("#channel-huddle[data-state='connected']", wait: 0) && local_can_publish? == true
     end
-    assert_selector "#channel-huddle [data-huddle-target='mute']", text: "Mute", visible: :visible
+    assert_selector "#channel-huddle [data-huddle-target='mute']", text: "Mute microphone", visible: :visible
     assert_no_selector "#channel-huddle [data-huddle-target='listeningNote']", visible: :visible
 
     using_session("Host") do

@@ -111,6 +111,34 @@ class HuddleRosterTest < ApplicationSystemTestCase
     assert_selector "li[data-participant-identity='remote-2']", text: "Alice"
   end
 
+  test "the mute toggle keeps a stable label with pressed state and tooltip" do
+    visit room_path(rooms(:designers))
+    wait_for_cable_connection
+    install_stub_room
+
+    assert_toggle_state "mute", label: "Mute microphone", pressed: false, tooltip: "Microphone live"
+
+    toggle_mute_and_await(1, "muting did not reach the room")
+    assert_toggle_state "mute", label: "Mute microphone", pressed: true, tooltip: "Microphone muted"
+
+    toggle_mute_and_await(2, "unmuting did not reach the room")
+    assert_toggle_state "mute", label: "Mute microphone", pressed: false, tooltip: "Microphone live"
+  end
+
+  test "the camera toggle keeps a stable label with pressed state and tooltip" do
+    visit room_path(rooms(:designers))
+    wait_for_cable_connection
+    install_stub_room
+
+    assert_toggle_state "camera", label: "Camera", pressed: false, tooltip: "Camera off"
+
+    toggle_camera_and_await(1, "enabling the camera did not reach the room")
+    assert_toggle_state "camera", label: "Camera", pressed: true, tooltip: "Camera on"
+
+    toggle_camera_and_await(2, "disabling the camera did not reach the room")
+    assert_toggle_state "camera", label: "Camera", pressed: false, tooltip: "Camera off"
+  end
+
   test "the meter stops once its track ends" do
     visit room_path(rooms(:designers))
     wait_for_cable_connection
@@ -167,6 +195,15 @@ class HuddleRosterTest < ApplicationSystemTestCase
       wait_for_condition(message) { (page.evaluate_script("window.__micCalls.length") || 0) >= call_count }
     end
 
+    def toggle_camera_and_await(call_count, message)
+      find("[data-huddle-target='camera']").click
+      wait_for_condition(message) { (page.evaluate_script("window.__cameraCalls.length") || 0) >= call_count }
+    end
+
+    def assert_toggle_state(target, label:, pressed:, tooltip:)
+      assert_selector "[data-huddle-target='#{target}'][aria-pressed='#{pressed}'][title='#{tooltip}']", text: label
+    end
+
     def wait_for_condition(message)
       deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 10
       until yield
@@ -200,10 +237,12 @@ class HuddleRosterTest < ApplicationSystemTestCase
         controller.noiseSuppressionAvailable = false;
         controller.noiseSuppressionEnabled = false;
         window.__micCalls = [];
+        window.__cameraCalls = [];
         window.__meterSamples = [];
         window.__meterVolume = 0.4;
         window.__meterCleanedUp = false;
         let micEnabled = true;
+        let cameraEnabled = false;
         const mediaStreamTrack = { readyState: "live" };
         window.__mediaStreamTrack = mediaStreamTrack;
         const audioTrack = { mediaStreamTrack };
@@ -217,6 +256,13 @@ class HuddleRosterTest < ApplicationSystemTestCase
             micEnabled = enabling;
             return Promise.resolve();
           },
+          get isCameraEnabled() { return cameraEnabled; },
+          setCameraEnabled: (enabling) => {
+            window.__cameraCalls.push(enabling);
+            cameraEnabled = enabling;
+            return Promise.resolve();
+          },
+          trackPublications: new Map(),
           getTrackPublication: (source) => source === "microphone" ? { audioTrack } : null
         };
         const remoteMic = { isMuted: false };
@@ -239,6 +285,7 @@ class HuddleRosterTest < ApplicationSystemTestCase
         controller.activeControlsTarget.hidden = false;
         controller.peopleTarget.hidden = false;
         controller.muteTarget.disabled = false;
+        controller.cameraTarget.disabled = false;
       JS
     end
 
