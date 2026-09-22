@@ -59,9 +59,9 @@ class AgentApproval < ApplicationRecord
   # Human decision. Raises ActiveRecord::RecordInvalid when the request is
   # already decided, cancelled, or expired. The pending check, the status
   # write, and the ledger row share one locked transaction so two
-  # concurrent decisions cannot both pass the guard; the webhook is posted
-  # only after that transaction commits so a slow webhook host never holds
-  # the database write lock.
+  # concurrent decisions cannot both pass the guard; the webhook is
+  # enqueued only after every open transaction commits, so a slow webhook
+  # host never holds the database write lock nor the human's request.
   def decide!(decision:, by:, note: nil)
     decision = decision.to_s
     raise ArgumentError, "Unknown decision: #{decision}" unless DECISIONS.include?(decision)
@@ -83,7 +83,11 @@ class AgentApproval < ApplicationRecord
       Github::PerformAgentActionJob.perform_later(id)
     end
 
-    post_decision_webhook!(event)
+    if event.webhook_pending?
+      ActiveRecord.after_all_transactions_commit do
+        Agent::EventWebhookJob.perform_later(event.id)
+      end
+    end
     self
   end
 
@@ -198,6 +202,7 @@ class AgentApproval < ApplicationRecord
         actor: decided_by,
         outcome: "delivered",
         agent_approval_id: id,
+        webhook_status: agent.user.webhook ? "pending" : "none",
         metadata: {
           "approval_id" => id,
           "status" => status,
@@ -206,16 +211,5 @@ class AgentApproval < ApplicationRecord
         }
       )
       event
-    end
-
-    def post_decision_webhook!(event)
-      webhook = agent.user.webhook
-      return unless webhook
-
-      begin
-        Agent::Delivery.post_approval_webhook!(webhook, self, agent: agent, delivery_id: event.id)
-      rescue StandardError => error
-        Rails.logger.warn "Agent approval webhook delivery #{event.id} failed: #{error.class}"
-      end
     end
 end

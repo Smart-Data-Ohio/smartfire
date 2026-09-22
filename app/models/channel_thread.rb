@@ -56,6 +56,7 @@ class ChannelThread < ApplicationRecord
   after_create_commit :announce_board_post, if: :board_post?
   after_update_commit :broadcast_board_row_replace_on_change, if: :board_post?
   after_destroy_commit :broadcast_board_row_remove, if: :board_post?
+  before_destroy :capture_deleted_work_snapshot
   after_destroy_commit :emit_deleted_work_unassigned
 
   # Set by the destroy endpoint so the work_unassigned row records who
@@ -959,6 +960,15 @@ class ChannelThread < ApplicationRecord
     # Gated on current room membership plus read_messages like message
     # delivery: an agent removed from the room learns nothing more about
     # its work there, even if a workspace-wide grant survives.
+    # Captured before destroy while tags, links, and the room are still
+    # intact, so the deletion webhook can describe the thread the job can
+    # no longer load. Only agent-owned work needs it.
+    def capture_deleted_work_snapshot
+      return unless agent_for_work_owner(work_owner)
+
+      @deleted_work_snapshot = Agent::Delivery.work_payload(self, assigned_by: deleted_by&.name)
+    end
+
     # An agent-owned thread that is deleted unassigns its owner the same
     # way clearing the owner does. The row is readable in the ledger and
     # by webhook; polling drops it like any row whose thread is gone, and
@@ -967,19 +977,22 @@ class ChannelThread < ApplicationRecord
       agent = agent_for_work_owner(work_owner)
       return unless agent
 
+      metadata = {
+        "thread_id" => id,
+        "title" => name,
+        "work_status" => work_status,
+        "assigned_by" => deleted_by&.name,
+        "hop" => 0
+      }
+      metadata["work_snapshot"] = @deleted_work_snapshot if @deleted_work_snapshot
+
       event = agent.agent_events.create!(
         event_type: "work_unassigned",
         room_id: room_id,
         actor: deleted_by,
         outcome: "delivered",
         chain_id: SecureRandom.uuid,
-        metadata: {
-          "thread_id" => id,
-          "title" => name,
-          "work_status" => work_status,
-          "assigned_by" => deleted_by&.name,
-          "hop" => 0
-        }
+        metadata: metadata
       )
       deliver_work_assignment_webhooks([ event ])
     end
@@ -992,15 +1005,11 @@ class ChannelThread < ApplicationRecord
         event_room = room || Room.find_by(id: room_id)
         next unless event_room
         next unless Membership.exists?(user_id: agent.user_id, room_id: room_id) && agent.can?(:read_messages, event_room)
+        next unless agent.user.webhook
+        next unless event.webhook_status == "none"
 
-        webhook = agent.user.webhook
-        next unless webhook
-
-        begin
-          Agent::Delivery.post_work_webhook!(webhook, event, thread: self, agent: agent)
-        rescue StandardError => error
-          Rails.logger.warn "Agent work webhook delivery #{event.id} failed: #{error.class}"
-        end
+        event.update!(webhook_status: "pending")
+        Agent::EventWebhookJob.perform_later(event.id)
       end
     end
 

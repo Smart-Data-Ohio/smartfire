@@ -143,38 +143,29 @@ class ChannelThreadAgentAssignmentTest < ActiveSupport::TestCase
     assert_equal @thread.id, event.metadata["thread_id"]
   end
 
-  test "unassignment after the agent left the room writes the ledger row but posts no webhook" do
+  test "unassignment after the agent left the room writes the ledger row but enqueues no webhook" do
     grant!(@agent, "post_messages")
     AgentGrant.create!(agent: @agent, room: nil, granted_by: @manager, capability: "read_messages")
     @thread.update_work!(actor: @manager, work_owner_id: @bot.id)
     @room.memberships.find_by!(user: @bot).destroy
 
-    Agent::Delivery.expects(:post_work_webhook!).never
-
-    assert_difference -> { @agent.agent_events.where(event_type: "work_unassigned").count }, 1 do
-      @thread.update_work!(actor: @manager, work_owner_id: nil)
+    assert_no_enqueued_jobs only: Agent::EventWebhookJob do
+      assert_difference -> { @agent.agent_events.where(event_type: "work_unassigned").count }, 1 do
+        @thread.update_work!(actor: @manager, work_owner_id: nil)
+      end
     end
   end
 
-  test "assignment webhooks are posted after the outermost transaction commits" do
+  test "assignment webhooks are enqueued after the outermost transaction commits" do
     grant!(@agent, "post_messages")
     grant!(@agent, "read_messages")
-    baseline = ActiveRecord::Base.connection.open_transactions
-    depth_at_post = nil
-    posted_inside_outer_transaction = false
-
-    Agent::Delivery.expects(:post_work_webhook!).with do |*|
-      depth_at_post = ActiveRecord::Base.connection.open_transactions
-      true
-    end
 
     ChannelThread.transaction do
       @thread.update_work!(actor: @manager, work_owner_id: @bot.id)
-      posted_inside_outer_transaction = !depth_at_post.nil?
+      assert_empty enqueued_event_webhook_jobs, "webhook must wait for the wrapping transaction"
     end
 
-    assert_not posted_inside_outer_transaction, "webhook must wait for the wrapping transaction"
-    assert_equal baseline, depth_at_post
+    assert_equal 1, enqueued_event_webhook_jobs.size
   end
 
   test "reassignment to a human writes work_unassigned and no work_assigned" do
@@ -408,7 +399,18 @@ class ChannelThreadAgentAssignmentTest < ActiveSupport::TestCase
     assert_equal @thread.id, event.metadata["thread_id"]
     assert_equal "Agent work", event.metadata["title"]
     assert_equal @manager.name, event.metadata["assigned_by"]
-    assert_requested :post, webhooks(:bender).url, times: 2
+    assert_not_requested :post, webhooks(:bender).url
+
+    perform_enqueued_jobs only: Agent::EventWebhookJob
+
+    # The assignment POST can no longer be built after the delete, but the
+    # deletion itself still notifies through its snapshot.
+    assert_equal "failed", @agent.agent_events.where(event_type: "work_assigned").last.webhook_status
+    assert_requested :post, webhooks(:bender).url, times: 1
+    assert_requested :post, webhooks(:bender).url, body: hash_including(
+      "event_type" => "work_unassigned",
+      "work" => hash_including("title" => "Agent work", "thread_id" => @thread.id)
+    ), times: 1
   end
 
   test "deleting a thread without an agent owner emits nothing" do
@@ -444,5 +446,9 @@ class ChannelThreadAgentAssignmentTest < ActiveSupport::TestCase
       agent = bot.create_agent!(kind: :workspace, owner: @manager)
       room.memberships.grant_to(bot)
       agent
+    end
+
+    def enqueued_event_webhook_jobs
+      enqueued_jobs.select { |job| job[:job] == Agent::EventWebhookJob }
     end
 end

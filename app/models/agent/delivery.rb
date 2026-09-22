@@ -91,11 +91,11 @@ class Agent::Delivery
     # event type (work_assigned or work_unassigned) and a work key with
     # the thread fields. Response bodies are ignored: an assignment
     # notification never creates a reply message.
-    def post_work_webhook!(webhook, event, thread:, agent:)
+    def post_work_webhook!(webhook, event, work:, agent:)
       payload = {
         agent: { id: agent.id, name: agent.user.name, owner: agent.owner&.name, delivery_id: event.id },
         event_type: event.event_type,
-        work: work_payload(thread, assigned_by: event.metadata.is_a?(Hash) ? event.metadata["assigned_by"] : nil)
+        work: work
       }.to_json
 
       webhook.post_payload(payload)
@@ -161,11 +161,16 @@ class Agent::Delivery
       when "github_action_completed"
         post_github_action_webhook!(webhook, event, agent: agent)
       when *AgentEvent::WORK_DELIVERABLE_TYPES
-        thread_id = event.metadata.is_a?(Hash) ? event.metadata["thread_id"] : nil
-        thread = ChannelThread.find_by(id: thread_id)
-        raise UndeliverableWebhook, "Thread no longer available" unless thread
+        metadata = event.metadata.is_a?(Hash) ? event.metadata : {}
+        thread = ChannelThread.find_by(id: metadata["thread_id"])
+        work = if thread
+          work_payload(thread, assigned_by: metadata["assigned_by"])
+        else
+          metadata["work_snapshot"]
+        end
+        raise UndeliverableWebhook, "Thread no longer available" unless work
 
-        post_work_webhook!(webhook, event, thread: thread, agent: agent)
+        post_work_webhook!(webhook, event, work: work, agent: agent)
       else
         raise UndeliverableWebhook, "Event type #{event.event_type} has no webhook payload"
       end

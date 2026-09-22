@@ -58,11 +58,16 @@ class Agents::ApprovalDeliveryTest < ActionDispatch::IntegrationTest
     assert_equal "acknowledged", event.reload.outcome
   end
 
-  test "decision posts the webhook with agent and approval keys" do
+  test "decision enqueues the webhook instead of blocking on it" do
     stub = WebMock.stub_request(:post, webhooks(:bender).url).to_return(status: 200)
     approval = AgentApproval.create!(agent: @agent, room: @room, action: "deploy", summary: "Ship it")
 
-    approval.decide!(decision: "approved", by: users(:david), note: "go")
+    assert_enqueued_jobs 1, only: Agent::EventWebhookJob do
+      approval.decide!(decision: "approved", by: users(:david), note: "go")
+    end
+    assert_not_requested :post, webhooks(:bender).url
+
+    perform_enqueued_jobs only: Agent::EventWebhookJob
 
     assert_requested :post, webhooks(:bender).url, body: hash_including(
       "agent" => hash_including("id" => @agent.id, "name" => "Bender Bot"),

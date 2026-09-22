@@ -104,6 +104,8 @@ class Github::PerformAgentActionJob < ApplicationJob
         actor: approval.decided_by,
         outcome: "delivered",
         detail: (message if status == "failed"),
+        agent_approval_id: approval.id,
+        webhook_status: agent.user.webhook ? "pending" : "none",
         metadata: {
           "approval_id" => approval.id,
           "action" => approval.action,
@@ -112,18 +114,7 @@ class Github::PerformAgentActionJob < ApplicationJob
           "message" => message
         }.compact
       )
-      post_webhook(event, agent)
+      Agent::EventWebhookJob.perform_later(event.id) if event.webhook_pending?
       event
-    end
-
-    def post_webhook(event, agent)
-      webhook = agent.user.webhook
-      return unless webhook
-
-      begin
-        Agent::Delivery.post_github_action_webhook!(webhook, event, agent: agent)
-      rescue StandardError => error
-        Rails.logger.warn "Agent github action webhook delivery #{event.id} failed: #{error.class}"
-      end
     end
 end

@@ -133,6 +133,7 @@ class Agents::GithubActionDeliveryTest < ActionDispatch::IntegrationTest
     approval = build_approval(kind: "comment", body: "Nice")
     approval.decide!(decision: "approved", by: users(:david))
     perform_enqueued_jobs only: Github::PerformAgentActionJob
+    perform_enqueued_jobs only: Agent::EventWebhookJob
 
     assert_requested stub, times: 2 # the approval decision plus the completion
     completion = @agent.agent_events.where(event_type: "github_action_completed").last

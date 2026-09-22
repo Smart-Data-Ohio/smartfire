@@ -325,10 +325,11 @@ A human decision appends an `agent_events` row of deliverable type
 `approval_decided` with `metadata: { approval_id, status, decided_by,
 note }`, `outcome: delivered`, and no `message_id`. `GET /agents/events`
 returns it with an `approval` payload instead of `message`, and `ack`
-works on it. The webhook posts when configured with the same additive
-`agent` key plus an `approval` key carrying the same fields. Agent
-cancellation appends no event. Rate limits and the hop guard do not apply
-to these rows.
+works on it. The decision enqueues a webhook POST when configured,
+after the decision transaction commits so the decider's request never
+waits on it, with the same additive `agent` key plus an `approval` key
+carrying the same fields. Agent cancellation appends no event. Rate
+limits and the hop guard do not apply to these rows.
 
 ### GitHub write actions
 
@@ -346,10 +347,10 @@ room-scoped, `outcome: delivered`, always readable by its own agent,
 with `metadata` carrying `approval_id`, `action`, `status` (`completed`
 or `failed`), the GitHub `url` when completed, or a `message` when
 failed. `GET /agents/events` returns it with a `github_action` key
-instead of `message`, `ack` works on it, the webhook posts it with the
-same additive `agent` key plus `github_action`, and the ledger page
-lists it with its status. Rate limits and the hop guard do not apply,
-like approval rows.
+instead of `message`, `ack` works on it, the completion enqueues a
+webhook POST with the same additive `agent` key plus `github_action`,
+and the ledger page lists it with its status. Rate limits and the hop
+guard do not apply, like approval rows.
 
 ## Work threads
 
@@ -393,10 +394,13 @@ legacy `thread_id`, `status`, and `assigned_by` keys:
 
 `url` is the workspace permalink path for the thread. Rows for threads
 the agent can no longer read (membership or `read_messages` revoked)
-are omitted, like message rows. The webhook posts after the assigning
-transaction commits, when configured, with the same additive `agent` key
-plus `event_type` and the `work` key, gated on current room membership
-and `read_messages` like message delivery. `ack` works on these rows.
+are omitted, like message rows. The assignment enqueues a webhook POST
+after the assigning transaction commits, when configured, with the
+same additive `agent` key plus `event_type` and the `work` key, gated
+on current room membership and `read_messages` like message delivery,
+so the assigner's request never waits on it. `ack` works on these
+rows. A deletion notifies through a snapshot of the thread taken
+before destroy, since polling drops rows whose thread is gone.
 
 ### Agent API (Bearer-only, JSON)
 

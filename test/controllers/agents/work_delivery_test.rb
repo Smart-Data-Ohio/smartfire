@@ -72,10 +72,13 @@ class Agents::WorkDeliveryTest < ActionDispatch::IntegrationTest
     assert_equal "acknowledged", event.reload.outcome
   end
 
-  test "assignment posts the webhook with agent and work keys" do
+  test "assignment enqueues the webhook instead of blocking on it" do
     stub = WebMock.stub_request(:post, webhooks(:bender).url).to_return(status: 200)
 
     thread = assign_owned_thread!(name: "Hooked work")
+    assert_not_requested :post, webhooks(:bender).url
+
+    perform_enqueued_jobs only: Agent::EventWebhookJob
 
     assert_requested :post, webhooks(:bender).url, body: hash_including(
       "agent" => hash_including("id" => @agent.id, "name" => "Bender Bot"),
@@ -95,9 +98,13 @@ class Agents::WorkDeliveryTest < ActionDispatch::IntegrationTest
     AgentGrant.where(agent: @agent, capability: "read_messages").update_all(revoked_at: Time.current)
     stub = WebMock.stub_request(:post, webhooks(:bender).url).to_return(status: 200)
 
-    assert_difference -> { @agent.agent_events.where(event_type: "work_assigned").count }, 1 do
-      assign_owned_thread!(name: "Unread work")
+    assert_no_enqueued_jobs only: Agent::EventWebhookJob do
+      assert_difference -> { @agent.agent_events.where(event_type: "work_assigned").count }, 1 do
+        assign_owned_thread!(name: "Unread work")
+      end
     end
+
+    perform_enqueued_jobs only: Agent::EventWebhookJob
 
     assert_not_requested :post, webhooks(:bender).url
     assert_requested stub, times: 0
