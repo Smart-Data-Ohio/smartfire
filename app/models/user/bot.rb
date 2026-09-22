@@ -36,7 +36,9 @@ module User::Bot
     success = false
 
     transaction do
-      update_webhook_url!(attributes.delete(:webhook_url))
+      # Only a submitted webhook_url (blank included) changes the webhook; an
+      # edit that leaves the key out keeps it.
+      update_webhook_url!(attributes.delete(:webhook_url)) if attributes.key?(:webhook_url)
       success = update(attributes)
       raise ActiveRecord::Rollback unless success
     end

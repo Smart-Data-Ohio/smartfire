@@ -112,6 +112,13 @@ class AgentApproval < ApplicationRecord
     user.administrator? || agent.owner_id == user.id
   end
 
+  # Approving a GitHub write action makes the agent act on GitHub, so only
+  # a current administrator may approve one, even as the agent's owner;
+  # owners may still deny. Other actions follow decidable_by?.
+  def approvable_by?(user)
+    decidable_by?(user) && (!github_action? || user.administrator?)
+  end
+
   def deciders
     admins = User.active.without_bots.where(role: :administrator).to_a
     owner = agent&.owner

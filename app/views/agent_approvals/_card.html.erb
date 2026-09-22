@@ -31,7 +31,11 @@
 
   <% if approval.pending_effective? %>
     <div class="agent-approval-card__actions">
-      <%= button_to "Approve", agent_approval_path(approval, decision: "approved"), method: :patch, class: "btn btn--primary", form: { class: "agent-approval-card__action-form" } %>
+      <% if approval.approvable_by?(Current.user) %>
+        <%= button_to "Approve", agent_approval_path(approval, decision: "approved"), method: :patch, class: "btn btn--primary", form: { class: "agent-approval-card__action-form" } %>
+      <% else %>
+        <span class="txt-small">Only an administrator can approve GitHub write actions.</span>
+      <% end %>
       <%= form_with url: agent_approval_path(approval), method: :patch, class: "agent-approval-card__deny-form" do %>
         <%= hidden_field_tag :decision, "denied" %>
         <%= text_field_tag :decision_note, nil, placeholder: "Note (optional)", maxlength: 200, class: "input agent-approval-card__note", aria: { label: "Deny note (optional)" } %>

@@ -149,9 +149,13 @@ polling (`[{ file_id, url }]`, never names); the legacy path omits it.
 
 ## Management
 
-Admins and the agent's owner manage grants from the bot edit page ("Manage
-capability grants"): grant a capability in one of the agent's rooms or
-workspace-wide, and revoke. Anyone else gets 403. The same audience reads
+Admins and the agent's owner open grants from the bot edit page ("Manage
+capability grants"). Only a current administrator may grant a capability
+(in an existing room or workspace-wide, `external_action` included); the
+owner, who may have been an administrator only when the agent was
+created, keeps a read-only view and may revoke. The same split applies
+to credentials (owners list and revoke, administrators issue) and to the
+bot's webhook URL (administrators only). Anyone else gets 403. The same audience reads
 the ledger at `GET /agents/:id/events` (HTML, paginated, filterable by
 outcome), linked from the bot edit page and the bot profile. There is no
 public exposure.
@@ -276,7 +280,10 @@ the inbox never shows them the item.
 Each decider gets one `agent_approval_request` activity item on create.
 The card shows the agent's name and avatar, the room name when present,
 the summary as escaped text, the time left, and Approve and Deny buttons
-(deny takes an optional note). Deciding marks every decider's item
+(deny takes an optional note). A `github.*` request can be approved only
+by a current administrator: an owner who is not one sees no Approve
+button and gets 403 from `PATCH /agent_approvals/:id?decision=approved`,
+but may still deny. Deciding marks every decider's item
 handled. Marking an inbox item read or handled never decides the request.
 
 ### Delivery of decisions

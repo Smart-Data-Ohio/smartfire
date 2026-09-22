@@ -150,7 +150,8 @@ class Accounts::BotsControllerTest < ActionDispatch::IntegrationTest
 
     get edit_account_bot_url(users(:bender))
     assert_response :ok
-    assert_no_match "Manage agent credentials", response.body
+    # Owners may review and revoke credentials; issuing needs an administrator.
+    assert_match "Manage agent credentials", response.body
 
     put account_bot_url(users(:bender)), params: {
       user: { name: "Bender Bot" },
@@ -204,8 +205,55 @@ class Accounts::BotsControllerTest < ActionDispatch::IntegrationTest
 
   test "remove webhook" do
     assert_difference -> { Webhook.count }, -1 do
-      put account_bot_url(users(:bender)), params: { user: { name: "Bender's New Friend", webook_url: "" } }
+      put account_bot_url(users(:bender)), params: { user: { name: "Bender's New Friend", webhook_url: "" } }
       assert_redirected_to account_bots_url
     end
+  end
+
+  test "an edit without the webhook field keeps the webhook" do
+    assert_no_difference -> { Webhook.count } do
+      put account_bot_url(users(:bender)), params: { user: { name: "Bender's New Friend" } }
+      assert_redirected_to account_bots_url
+    end
+    assert_equal "Bender's New Friend", users(:bender).reload.name
+  end
+
+  test "an owner without admin rights cannot change the webhook URL" do
+    agents(:bender_agent).update!(owner: users(:kevin))
+    sign_in users(:kevin)
+    original = users(:bender).webhook_url
+
+    put account_bot_url(users(:bender)), params: { user: { name: "Bender Bot", webhook_url: "https://attacker.example/hook" } }
+    assert_response :forbidden
+    assert_equal original, users(:bender).reload.webhook_url
+
+    put account_bot_url(users(:bender)), params: { user: { name: "Bender Bot", webhook_url: "" } }
+    assert_response :forbidden
+    assert_equal original, users(:bender).reload.webhook_url
+  end
+
+  test "an owner without admin rights edits other fields and keeps the webhook" do
+    agents(:bender_agent).update!(owner: users(:kevin))
+    sign_in users(:kevin)
+    original = users(:bender).webhook_url
+
+    get edit_account_bot_url(users(:bender))
+    assert_select "input[name='user[webhook_url]'][disabled]", 1
+
+    put account_bot_url(users(:bender)), params: { user: { name: "Bender Renamed" } }
+    assert_redirected_to account_bots_url
+    assert_equal "Bender Renamed", users(:bender).reload.name
+    assert_equal original, users(:bender).webhook_url
+
+    put account_bot_url(users(:bender)), params: { user: { name: "Bender Again", webhook_url: original } }
+    assert_redirected_to account_bots_url
+    assert_equal original, users(:bender).reload.webhook_url
+  end
+
+  test "administrators change the webhook URL" do
+    put account_bot_url(users(:bender)), params: { user: { name: "Bender Bot", webhook_url: "https://example.com/new-hook" } }
+
+    assert_redirected_to account_bots_url
+    assert_equal "https://example.com/new-hook", users(:bender).reload.webhook_url
   end
 end

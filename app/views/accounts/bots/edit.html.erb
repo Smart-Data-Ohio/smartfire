@@ -13,7 +13,7 @@
 
   <hr class="separator full-width margin-block-double">
 
-  <% if Current.user.administrator? %>
+  <% if Current.user.administrator? || @bot.agent&.owner == Current.user %>
     <div class="flex align-center gap justify-space-between margin-block-end">
       <%= link_to account_bot_credentials_path(@bot), class: "btn full-width txt--small" do %>
         <%= image_tag "key.svg", aria: { hidden: "true" }, size: 20 %>
