@@ -10,6 +10,7 @@
     <turbo-frame id="<%= dom_id(message, :edit) %>">
       <div class="message__body">
         <div class="message__body-content">
+          <%= render "messages/toolbar" %>
           <div class="message__meta">
             <h3 class="message__heading">
               <span class="message__author" title="<%= message.creator.title %>">

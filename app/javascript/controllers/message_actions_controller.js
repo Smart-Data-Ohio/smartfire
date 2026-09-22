@@ -40,6 +40,7 @@ export default class extends Controller {
     this.onWindowKeydown = this.#onWindowKeydown.bind(this)
     this.onOpenRequest = this.#onOpenRequest.bind(this)
     this.onThreadRequest = this.#onThreadRequest.bind(this)
+    this.onReactRequest = this.#onReactRequest.bind(this)
     this.onEditLast = this.#onEditLast.bind(this)
     this.onReposition = this.#reposition.bind(this)
     this.onForwardClose = this.#onForwardClose.bind(this)
@@ -54,6 +55,7 @@ export default class extends Controller {
     window.visualViewport?.addEventListener("scroll", this.onReposition)
     window.addEventListener("message-actions:open", this.onOpenRequest)
     window.addEventListener("message-actions:thread", this.onThreadRequest)
+    window.addEventListener("message-actions:react", this.onReactRequest)
     window.addEventListener("message-actions:edit-last", this.onEditLast)
   }
 
@@ -72,6 +74,7 @@ export default class extends Controller {
     window.visualViewport?.removeEventListener("scroll", this.onReposition)
     window.removeEventListener("message-actions:open", this.onOpenRequest)
     window.removeEventListener("message-actions:thread", this.onThreadRequest)
+    window.removeEventListener("message-actions:react", this.onReactRequest)
     window.removeEventListener("message-actions:edit-last", this.onEditLast)
   }
 
@@ -229,6 +232,20 @@ export default class extends Controller {
     if (event.detail?.message) void this.requestThread(event.detail.message)
   }
 
+  // The toolbar quick-react has no form of its own (forms carry per-session
+  // tokens, which the cached message HTML must not include), so it submits
+  // through the matching shared-menu form.
+  #onReactRequest(event) {
+    const { message, content } = event.detail || {}
+    if (!message?.isConnected || !message.dataset.boostUrl || !content) return
+    const input = this.menuTarget.querySelector(`input[name="boost[content]"][value="${CSS.escape(content)}"]`)
+    const form = input?.closest("form")
+    if (!form) return
+    form.action = message.dataset.boostUrl
+    form.setAttribute("data-turbo-frame", `boosting_${message.id}`)
+    form.requestSubmit()
+  }
+
   #onMenuKeydown(event) {
     if (event.key === "Escape") {
       event.preventDefault()
@@ -374,6 +391,11 @@ export default class extends Controller {
   #clearMessageState() {
     this.#message?.removeAttribute("data-message-actions-open")
     this.#message?.setAttribute("aria-expanded", "false")
+    this.#moreButton()?.setAttribute("aria-expanded", "false")
+  }
+
+  #moreButton() {
+    return this.#message?.querySelector("[data-action~='message-toolbar#more']")
   }
 
   #openMenu(point) {
@@ -384,6 +406,7 @@ export default class extends Controller {
     this.#open = true
     this.#message.setAttribute("data-message-actions-open", "")
     this.#message.setAttribute("aria-expanded", "true")
+    this.#moreButton()?.setAttribute("aria-expanded", "true")
     this.menuTarget.hidden = false
     this.menuTarget.setAttribute("aria-hidden", "false")
     this.#showMenuPopover()

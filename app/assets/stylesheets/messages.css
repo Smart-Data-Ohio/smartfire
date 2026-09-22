@@ -76,6 +76,8 @@
   grid-auto-rows: min-content;
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* Headroom for the first message's hover toolbar, which floats above it. */
+  padding-block-start: 1rem;
   position: relative;
   row-gap: var(--message-space);
 
@@ -554,6 +556,129 @@ img.message__attachment {
 
   &::backdrop {
     background: rgb(0 0 0 / 48%);
+  }
+}
+
+/* Hover/focus toolbar on each message. The buttons stay in the tab order,
+   and focusing the message reveals the bar, so Tab from a focused message
+   reaches them. Touch keeps the long-press menu instead. */
+.message__toolbar {
+  align-items: center;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border-darker);
+  border-radius: 0.6rem;
+  display: none;
+  gap: 0.1rem;
+  inset-block-start: -0.95rem;
+  inset-inline-end: 0.5rem;
+  padding: 0.15rem;
+  position: absolute;
+  z-index: 4;
+}
+
+.message:hover .message__toolbar,
+.message:focus-within .message__toolbar {
+  display: inline-flex;
+}
+
+@media (pointer: coarse) {
+  .message:hover .message__toolbar,
+  .message:focus-within .message__toolbar {
+    display: none;
+  }
+}
+
+.message__toolbar-btn {
+  align-items: center;
+  background: transparent;
+  block-size: 1.9rem;
+  border: 0;
+  border-radius: 0.4rem;
+  color: var(--color-text);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 1.05rem;
+  inline-size: 1.9rem;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+
+  @media (any-hover: hover) {
+    &:where(:not(:active):hover) {
+      background-color: color-mix(in srgb, var(--color-border) 45%, transparent);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-selected-dark);
+    outline-offset: -2px;
+  }
+}
+
+/* Shared emoji picker panel, anchored by JS near the toolbar button. */
+.emoji-picker__panel {
+  background-color: var(--color-bg);
+  block-size: max-content;
+  border: 1px solid var(--color-border-darker);
+  border-radius: 0.7rem;
+  inline-size: 21rem;
+  inset: auto;
+  margin: 0;
+  max-inline-size: calc(100vw - 1rem);
+  padding: 0.5rem;
+  position: fixed;
+  z-index: 30;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.emoji-picker__search {
+  inline-size: 100%;
+}
+
+.emoji-picker__grid {
+  display: grid;
+  gap: 0.1rem;
+  grid-template-columns: repeat(8, 1fr);
+  margin-block-start: 0.5rem;
+  max-block-size: 13rem;
+  overflow-y: auto;
+}
+
+.emoji-picker__option {
+  align-items: center;
+  background: transparent;
+  block-size: 2rem;
+  border: 0;
+  border-radius: 0.4rem;
+  color: var(--color-text);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 1.25rem;
+  inline-size: 100%;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+
+  @media (any-hover: hover) {
+    &:where(:not(:active):hover) {
+      background-color: color-mix(in srgb, var(--color-border) 45%, transparent);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-selected-dark);
+    outline-offset: -2px;
+  }
+}
+
+.emoji-picker__status {
+  margin: 0.25rem 0 0;
+
+  &:empty {
+    display: none;
   }
 }
 
