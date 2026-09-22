@@ -638,6 +638,47 @@ img.message__attachment {
   inline-size: 100%;
 }
 
+.emoji-picker__tabs {
+  display: flex;
+  gap: 0.1rem;
+  margin-block-start: 0.5rem;
+  overflow-x: auto;
+}
+
+.emoji-picker__tab {
+  align-items: center;
+  background: transparent;
+  block-size: 2rem;
+  border: 0;
+  border-block-end: 2px solid transparent;
+  border-radius: 0.4rem 0.4rem 0 0;
+  color: var(--color-text);
+  cursor: pointer;
+  display: inline-flex;
+  flex: none;
+  font-size: 1.1rem;
+  inline-size: 2rem;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+
+  @media (any-hover: hover) {
+    &:where(:not(:active):hover) {
+      background-color: color-mix(in srgb, var(--color-border) 45%, transparent);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-selected-dark);
+    outline-offset: -2px;
+  }
+
+  &[aria-selected="true"] {
+    background-color: color-mix(in srgb, var(--color-border) 45%, transparent);
+    border-block-end-color: var(--color-selected-dark);
+  }
+}
+
 .emoji-picker__grid {
   display: grid;
   gap: 0.1rem;

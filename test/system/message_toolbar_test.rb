@@ -69,7 +69,8 @@ class MessageToolbarTest < ApplicationSystemTestCase
     within_message(messages(:third)) { click_button "Add reaction" }
 
     assert_selector "#emoji-picker-panel", visible: true, wait: 10
-    assert_selector "#emoji-picker-panel .emoji-picker__option", count: EmojiHelper::REACTIONS.length, visible: true
+    assert_selector "#emoji-picker-tab-smileys[aria-selected='true']"
+    assert_selector "#emoji-picker-panel .emoji-picker__option[aria-label='Grinning face']", visible: true, wait: 10
     assert_equal "Search emoji and icons",
       page.evaluate_script("document.activeElement.getAttribute('aria-label')")
 
@@ -80,6 +81,71 @@ class MessageToolbarTest < ApplicationSystemTestCase
     assert_no_selector "#emoji-picker-panel", visible: true
     assert Boost.exists?(content: "🔥", message: messages(:third))
     assert_selector ".reaction-chip[data-reaction='🔥'] .reaction-chip__count", text: "1", wait: 10
+  end
+
+  test "the picker shows category tabs and switches between them" do
+    hover_toolbar(messages(:third))
+    within_message(messages(:third)) { click_button "Add reaction" }
+    assert_selector "#emoji-picker-panel", visible: true, wait: 10
+
+    assert_selector "#emoji-picker-panel [role='tab']", count: 11
+    assert_selector "#emoji-picker-tab-recent:not([aria-selected='true'])"
+    find("#emoji-picker-tab-people").click
+
+    assert_selector "#emoji-picker-tab-people[aria-selected='true']"
+    assert_selector "#emoji-picker-panel .emoji-picker__option[aria-label='Waving hand']", visible: true
+    assert_no_selector "#emoji-picker-panel .emoji-picker__option[aria-label='Grinning face']"
+
+    find("#emoji-picker-tab-flags").click
+    assert_selector "#emoji-picker-tab-flags[aria-selected='true']"
+    assert_selector "#emoji-picker-panel .emoji-picker__option[aria-label='Chequered flag']", visible: true, wait: 10
+  end
+
+  test "the picker loads its emoji data only on first open" do
+    before = page.evaluate_script("performance.getEntriesByType('resource').map(entry => entry.name)")
+    assert_not before.any? { |name| name.end_with?(".json") && name.include?("emoji") },
+      "expected no emoji data fetch before the picker opens"
+
+    hover_toolbar(messages(:third))
+    within_message(messages(:third)) { click_button "Add reaction" }
+    assert_selector "#emoji-picker-panel .emoji-picker__option[aria-label='Grinning face']", visible: true, wait: 10
+
+    after = page.evaluate_script("performance.getEntriesByType('resource').map(entry => entry.name)")
+    assert after.any? { |name| name.end_with?(".json") && name.include?("emoji") },
+      "expected the emoji data fetch on first open"
+  end
+
+  test "the picker remembers recent reactions" do
+    hover_toolbar(messages(:third))
+    within_message(messages(:third)) { click_button "Add reaction" }
+    assert_selector "#emoji-picker-panel .emoji-picker__option[aria-label='Grinning face']", visible: true, wait: 10
+    find("#emoji-picker-panel .emoji-picker__option[aria-label='Grinning face']").click
+    assert Boost.exists?(content: "😀", message: messages(:third))
+
+    hover_toolbar(messages(:third))
+    within_message(messages(:third)) { click_button "Add reaction" }
+    assert_selector "#emoji-picker-panel", visible: true, wait: 10
+    find("#emoji-picker-tab-recent").click
+
+    assert_selector "#emoji-picker-tab-recent[aria-selected='true']"
+    assert_selector "#emoji-picker-panel .emoji-picker__option[aria-label='Grinning face']", visible: true
+  end
+
+  test "the picker Custom tab reacts with a workspace icon" do
+    create_workspace_icon(name: "acme", title: "Acme Corp")
+
+    hover_toolbar(messages(:third))
+    within_message(messages(:third)) { click_button "Add reaction" }
+    assert_selector "#emoji-picker-panel", visible: true, wait: 10
+    find("#emoji-picker-tab-custom").click
+
+    assert_selector "#emoji-picker-tab-custom[aria-selected='true']"
+    assert_selector "#emoji-picker-panel .emoji-picker__option[aria-label='Acme Corp'] img", visible: true, wait: 10
+    find("#emoji-picker-panel .emoji-picker__option[aria-label='Acme Corp']").click
+
+    assert_no_selector "#emoji-picker-panel", visible: true
+    assert Boost.exists?(content: ":acme:", message: messages(:third))
+    assert_selector "##{dom_id(messages(:third))} .boost-item", wait: 10
   end
 
   test "the picker reacts with a brand icon shortcode" do
@@ -96,20 +162,49 @@ class MessageToolbarTest < ApplicationSystemTestCase
     assert_selector "##{dom_id(messages(:third))} .boost-item", wait: 10
   end
 
-  test "picker arrows move through options and Escape returns focus" do
+  test "picker arrows move through options, Enter selects, and Escape returns focus" do
     hover_toolbar(messages(:third))
     within_message(messages(:third)) { click_button "Add reaction" }
     assert_selector "#emoji-picker-panel", visible: true, wait: 10
+    assert_selector "#emoji-picker-panel .emoji-picker__option[aria-label='Grinning face']", visible: true, wait: 10
 
     find_field("Search emoji and icons").send_keys :down
-    assert_equal "Thumbs up", page.evaluate_script("document.activeElement.getAttribute('aria-label')")
+    assert_equal "Grinning face", page.evaluate_script("document.activeElement.getAttribute('aria-label')")
 
     page.send_keys :right
-    assert_equal "Clapping", page.evaluate_script("document.activeElement.getAttribute('aria-label')")
+    assert_equal "Grinning face with big eyes", page.evaluate_script("document.activeElement.getAttribute('aria-label')")
 
     page.send_keys :escape
     assert_no_selector "#emoji-picker-panel", visible: true
     assert_equal "Add reaction", page.evaluate_script("document.activeElement.getAttribute('aria-label')")
+
+    hover_toolbar(messages(:third))
+    within_message(messages(:third)) { click_button "Add reaction" }
+    assert_selector "#emoji-picker-panel .emoji-picker__option[aria-label='Grinning face']", visible: true, wait: 10
+
+    find_field("Search emoji and icons").send_keys :down
+    page.send_keys :enter
+
+    assert_no_selector "#emoji-picker-panel", visible: true
+    assert Boost.exists?(content: "😀", message: messages(:third))
+    assert_selector "##{dom_id(messages(:third))} .boost-item", text: "😀", wait: 10
+  end
+
+  test "picker tabs move with arrow keys and switch the grid" do
+    hover_toolbar(messages(:third))
+    within_message(messages(:third)) { click_button "Add reaction" }
+    assert_selector "#emoji-picker-panel .emoji-picker__option[aria-label='Grinning face']", visible: true, wait: 10
+
+    find("#emoji-picker-tab-smileys").click
+    page.send_keys :right
+
+    assert_selector "#emoji-picker-tab-people[aria-selected='true']"
+    assert_equal "emoji-picker-tab-people", page.evaluate_script("document.activeElement.id")
+    assert_selector "#emoji-picker-panel .emoji-picker__option[aria-label='Waving hand']", visible: true
+
+    page.send_keys :left
+    assert_selector "#emoji-picker-tab-smileys[aria-selected='true']"
+    assert_equal "emoji-picker-tab-smileys", page.evaluate_script("document.activeElement.id")
   end
 
   private
