@@ -348,8 +348,23 @@ class Google::ClientTest < ActiveSupport::TestCase
     assert Google::Client.revoke_token("revocable-token")
   end
 
-  test "revoke_token returns false when Google errors" do
+  test "revoke_token raises Unavailable on a 5xx so the caller retries" do
     stub_google_revoke(status: 500)
+
+    error = assert_raises(Google::Client::Unavailable) { Google::Client.revoke_token("revocable-token") }
+
+    assert_equal "Google token revoke failed (500)", error.message
+    assert_not_includes error.message, "revocable-token"
+  end
+
+  test "revoke_token raises Unavailable on a 429 so the caller retries" do
+    stub_google_revoke(status: 429)
+
+    assert_raises(Google::Client::Unavailable) { Google::Client.revoke_token("revocable-token") }
+  end
+
+  test "revoke_token returns false on other client errors" do
+    stub_google_revoke(status: 403)
 
     assert_not Google::Client.revoke_token("revocable-token")
   end

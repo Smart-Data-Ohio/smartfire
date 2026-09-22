@@ -55,17 +55,69 @@ class Calendar::DisconnectCleanupJobTest < ActiveSupport::TestCase
     assert_requested revoke
   end
 
-  test "Google failures are best effort and never raise" do
+  test "permanent delete failures are best effort and still revoke" do
     account = connect_google!(@david)
     snapshot = account.cleanup_snapshot
     delete_stub = stub_google_event_delete("orphan-id", status: 500)
-    revoke = stub_google_revoke(status: 500)
+    revoke = stub_google_revoke
     account.destroy!
 
-    Calendar::DisconnectCleanupJob.perform_now([ "orphan-id" ], snapshot)
+    assert_no_enqueued_jobs(only: Calendar::DisconnectCleanupJob) do
+      Calendar::DisconnectCleanupJob.perform_now([ "orphan-id" ], snapshot)
+    end
 
     assert_requested delete_stub
     assert_requested revoke
+  end
+
+  test "a transient delete failure schedules a retry without revoking" do
+    account = connect_google!(@david)
+    snapshot = account.cleanup_snapshot
+    delete_stub = stub_google_event_delete("orphan-id", status: 429)
+    revoke = stub_google_revoke
+    account.destroy!
+
+    assert_enqueued_with(job: Calendar::DisconnectCleanupJob, args: [ [ "orphan-id" ], snapshot ]) do
+      Calendar::DisconnectCleanupJob.perform_now([ "orphan-id" ], snapshot)
+    end
+
+    assert_requested delete_stub
+    assert_not_requested revoke
+  end
+
+  test "a revoke 5xx schedules a retry" do
+    account = connect_google!(@david)
+    snapshot = account.cleanup_snapshot
+    delete_stub = stub_google_event_delete("orphan-id")
+    revoke = stub_google_revoke(status: 500)
+    account.destroy!
+
+    assert_enqueued_with(job: Calendar::DisconnectCleanupJob, args: [ [ "orphan-id" ], snapshot ]) do
+      Calendar::DisconnectCleanupJob.perform_now([ "orphan-id" ], snapshot)
+    end
+
+    assert_requested delete_stub
+    assert_requested revoke
+  end
+
+  test "an exhausted retry logs the failure at error level" do
+    account = connect_google!(@david)
+    snapshot = account.cleanup_snapshot
+    stub_google_event_delete("orphan-id", status: 429)
+    revoke = stub_google_revoke
+    account.destroy!
+
+    job = Calendar::DisconnectCleanupJob.new([ "orphan-id" ], snapshot)
+    job.exception_executions = { [ Google::Client::Unavailable ].to_s => 8 }
+
+    log = capture_job_logs do
+      assert_no_enqueued_jobs(only: Calendar::DisconnectCleanupJob) do
+        job.perform_now
+      end
+    end
+
+    assert_includes log, "Calendar::DisconnectCleanupJob failed after retries"
+    assert_not_requested revoke
   end
 
   test "a missing id list still revokes the grant" do

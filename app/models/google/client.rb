@@ -132,8 +132,9 @@ module Google
 
       # Best-effort grant revocation for disconnect and deactivation.
       # Returns true when Google accepted (or had already revoked) the
-      # token; transport failures raise Unavailable so the caller decides
-      # whether to retry. Never logs the token.
+      # token, false on other client errors; transport failures, rate
+      # limits, and 5xx raise Unavailable so the caller retries. Never
+      # logs the token.
       def revoke_token(token)
         uri = URI::HTTPS.build(host: TOKEN_HOST, path: "/revoke")
         response = Net::HTTP.start(uri.host, uri.port, use_ssl: true,
@@ -142,7 +143,13 @@ module Google
             "Content-Type" => "application/x-www-form-urlencoded")
         end
 
-        response.is_a?(Net::HTTPSuccess) || response.code == "400"
+        if response.is_a?(Net::HTTPSuccess) || response.code == "400"
+          true
+        elsif response.code == "429" || response.code.start_with?("5")
+          raise Unavailable, "Google token revoke failed (#{response.code})"
+        else
+          false
+        end
       rescue *TRANSPORT_ERRORS => error
         raise Unavailable, "Google token revoke failed (#{error.class})"
       end

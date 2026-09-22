@@ -3,15 +3,21 @@ class Calendar::DisconnectCleanupJob < ApplicationJob
   # gone, so the disconnect request returned without waiting on Google.
   # This job removes the remote copies with the token snapshot captured
   # at disconnect time, then revokes the grant. Deletes run before the
-  # revoke: revoking first would unauthenticate the deletes. Deactivation
-  # reuses this job with an empty id list for a revoke-only run. Best
-  # effort throughout, like disconnect always was: failures are logged
-  # (never with tokens) and the job does not retry.
+  # revoke: revoking first would unauthenticate the deletes, and a
+  # transient delete failure retries instead of revoking early.
+  # Deactivation reuses this job with an empty id list for a revoke-only
+  # run. Permanent failures are logged (never with tokens); transient
+  # ones retry, and an exhausted retry logs at error level since the
+  # account row the failure could be recorded on is gone.
   self.enqueue_after_transaction_commit = true
 
   # Credentials travel as an encrypted blob, and stay out of the logs
   # even so: argument logging would otherwise record them on enqueue.
   self.log_arguments = false
+
+  retry_on Google::Client::Unavailable, wait: :polynomially_longer, attempts: 8 do |job, error|
+    Rails.logger.error "Calendar::DisconnectCleanupJob failed after retries: #{error.class}"
+  end
 
   CREDENTIALS_PURPOSE = "calendar/disconnect-cleanup"
   CREDENTIALS_EXPIRES_IN = 1.day
@@ -58,13 +64,18 @@ class Calendar::DisconnectCleanupJob < ApplicationJob
         client.delete_event(google_event_id)
       rescue Google::Client::NotFound, Google::Client::Unauthorized
         nil
+      rescue Google::Client::Unavailable
+        raise
       rescue Google::Client::Error => error
         Rails.logger.warn "Calendar::DisconnectCleanupJob could not remove #{google_event_id}: #{error.class}"
       end
     end
 
     begin
-      Google::Client.revoke_token(credentials[:refresh_token])
+      revoked = Google::Client.revoke_token(credentials[:refresh_token])
+      Rails.logger.warn "Calendar::DisconnectCleanupJob could not revoke the grant: rejected" unless revoked
+    rescue Google::Client::Unavailable
+      raise
     rescue Google::Client::Error => error
       Rails.logger.warn "Calendar::DisconnectCleanupJob could not revoke the grant: #{error.class}"
     end
