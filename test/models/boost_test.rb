@@ -32,4 +32,32 @@ class BoostTest < ActiveSupport::TestCase
     assert Boost.new(message: messages(:first), booster: users(:david), content: "💯").valid?
     assert Boost.new(message: messages(:first), booster: users(:david), content: "great :fire: work").valid?
   end
+
+  test "strips the trailing space icon autocomplete inserts before resolving" do
+    boost = Boost.create!(message: messages(:first), booster: users(:david), content: ":fire: ")
+
+    assert_equal "🔥", boost.reload.content
+  end
+
+  test "strips the trailing space from a brand shortcode" do
+    boost = Boost.create!(message: messages(:first), booster: users(:david), content: ":anthropic: ")
+
+    assert_equal ":anthropic:", boost.reload.content
+  end
+
+  test "reaction content is a single emoji or a known shortcode" do
+    assert Boost.reaction?("👍")
+    assert Boost.reaction?("💯")
+    assert Boost.reaction?("❤️")
+    assert Boost.reaction?(":thumbsup:")
+    assert Boost.reaction?(":anthropic:")
+
+    create_workspace_icon(name: "acme", title: "Acme Corp")
+    assert Boost.reaction?(":acme:")
+
+    assert_not Boost.reaction?("Morning!")
+    assert_not Boost.reaction?(":lol:")
+    assert_not Boost.reaction?("👍👍")
+    assert_not Boost.reaction?("great :fire: work")
+  end
 end

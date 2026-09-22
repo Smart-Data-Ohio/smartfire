@@ -16,7 +16,7 @@ module BoostsHelper
     icon = shortcode_icon(content)
 
     if icon && !icon.emoji? && (url = Icons.image_url_for(icon))
-      image_tag(url, class: icon_css_class(icon), alt: "", draggable: "false")
+      image_tag(url, class: icon_css_class(icon), alt: ":#{icon.name}:", draggable: "false")
     elsif icon&.emoji?
       icon.character
     else
