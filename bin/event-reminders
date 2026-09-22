@@ -19,6 +19,12 @@ until stopping
     Agent::Delivery.recover_stranded_webhooks!
   rescue => error
     Rails.logger.error "Stranded webhook recovery failed: #{error.class}: #{error.message}"
+  end
+
+  begin
+    Github::PerformAgentActionJob.recover_stuck_claims!
+  rescue => error
+    Rails.logger.error "Stuck GitHub claim recovery failed: #{error.class}: #{error.message}"
   ensure
     sleep interval unless stopping
   end

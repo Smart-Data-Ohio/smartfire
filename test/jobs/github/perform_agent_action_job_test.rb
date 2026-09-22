@@ -384,6 +384,38 @@ class Github::PerformAgentActionJobTest < ActiveJob::TestCase
     assert_not_requested :post, %r{api\.github\.com}
   end
 
+  test "a running claim older than 15 minutes is marked failed by the sweeper" do
+    approval = approve!(build_approval(kind: "comment", body: "Stuck"))
+    event = @agent.agent_events.create!(
+      event_type: "github_action_completed", room: @room, outcome: "delivered",
+      agent_approval_id: approval.id, webhook_status: "none",
+      created_at: 16.minutes.ago,
+      metadata: { "approval_id" => approval.id, "action" => "github.comment", "status" => "running" }
+    )
+
+    Rails.logger.expects(:error).with { |message| message.include?("Stuck GitHub claim") }.at_least_once
+    Github::PerformAgentActionJob.recover_stuck_claims!
+
+    event.reload
+    assert_equal "failed", event.metadata["status"]
+    assert_match "timed out", event.metadata["message"].to_s
+    assert_match "timed out", event.detail.to_s
+  end
+
+  test "a fresh running claim is left alone by the sweeper" do
+    approval = approve!(build_approval(kind: "comment", body: "Fresh"))
+    event = @agent.agent_events.create!(
+      event_type: "github_action_completed", room: @room, outcome: "delivered",
+      agent_approval_id: approval.id, webhook_status: "none",
+      created_at: 5.minutes.ago,
+      metadata: { "approval_id" => approval.id, "action" => "github.comment", "status" => "running" }
+    )
+
+    Github::PerformAgentActionJob.recover_stuck_claims!
+
+    assert_equal "running", event.reload.metadata["status"]
+  end
+
   private
     def agent_bearer_header
       { "Authorization" => "Bearer #{AGENT_TOKEN}" }

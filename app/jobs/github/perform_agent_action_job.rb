@@ -1,4 +1,44 @@
 class Github::PerformAgentActionJob < ApplicationJob
+  # A running claim older than this is presumed stuck (its worker crashed
+  # between the claim insert and the outcome rewrite) and failed by the
+  # periodic sweep.
+  STUCK_CLAIM_AFTER = 15.minutes
+
+  # Marks stuck running claims failed. Runs from the periodic
+  # event-reminders loop alongside the webhook sweep. Each stuck row is
+  # rewritten like a failed finish_claim (failed status with a timeout
+  # message, webhook enqueued when configured) and logged at error
+  # level, since a stuck claim means a GitHub write may or may not have
+  # happened. Never raises.
+  def self.recover_stuck_claims!(now: Time.current)
+    AgentEvent.where(event_type: "github_action_completed")
+      .where("agent_events.created_at < ?", now - STUCK_CLAIM_AFTER)
+      .where("json_extract(agent_events.metadata, '$.status') = 'running'")
+      .find_each do |event|
+        begin
+          event = AgentEvent.find(event.id)
+          next unless event.metadata.is_a?(Hash) && event.metadata["status"] == "running"
+
+          message = "GitHub action execution timed out"
+          metadata = event.metadata.merge("status" => "failed", "message" => message)
+          pending_webhook = event.agent.user.webhook.present?
+          event.update!(
+            detail: message,
+            webhook_status: pending_webhook ? "pending" : "none",
+            webhook_next_attempt_at: (Time.current if pending_webhook),
+            metadata: metadata
+          )
+          if pending_webhook
+            Agent::EventWebhookJob.perform_later(event.id, event.webhook_attempts.to_i)
+          end
+          Rails.logger.error "Stuck GitHub claim #{event.id} for approval #{event.metadata["approval_id"]} " \
+            "marked failed after #{STUCK_CLAIM_AFTER.inspect}"
+        rescue => error
+          Rails.logger.error "Stuck GitHub claim recovery failed for event #{event.id}: #{error.class}: #{error.message}"
+        end
+      end
+  end
+
   # Runs an approved agent GitHub write action. Re-checks everything at
   # perform time — the approval is still approved, the agent is active and
   # still belongs to the room with external_action, the PR thread mapping
