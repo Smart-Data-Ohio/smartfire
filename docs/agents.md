@@ -217,19 +217,25 @@ own stored bot key or, for new integrations, an agent token.
 Every webhook POST carries an `X-Smartfire-Timestamp` header (unix
 seconds) and, when the bot has a signing secret, an
 `X-Smartfire-Signature: sha256=<hmac>` header with the HMAC-SHA256
-of the raw request body. Each agent has its own secret, generated
+of `"#{timestamp}.#{raw_body}"`: the timestamp header, a dot, and
+the raw request body. Each agent has its own secret, generated
 on its first delivery and shown to admins and the agent's owner on
 the bot edit page with a reset control; legacy bots sign too once
 a secret is generated for them on the same page. Verify with a
-constant-time comparison over the raw bytes:
+constant-time comparison over the raw bytes, and reject timestamps
+older than 5 minutes to bound replays:
 
 ```ruby
 require "openssl"
 
+timestamp = request.headers["X-Smartfire-Timestamp"].to_s
 signature = request.headers["X-Smartfire-Signature"].to_s
-expected = "sha256=" + OpenSSL::HMAC.hexdigest("SHA256", ENV["SMARTFIRE_WEBHOOK_SECRET"], request.raw_post)
+signed = "#{timestamp}.#{request.raw_post}"
+expected = "sha256=" + OpenSSL::HMAC.hexdigest("SHA256", ENV["SMARTFIRE_WEBHOOK_SECRET"], signed)
 
-unless signature.start_with?("sha256=") && ActiveSupport::SecurityUtils.secure_compare(signature, expected)
+fresh = timestamp.match?(/\A\d+\z/) && (Time.current.to_i - timestamp.to_i).abs <= 300
+
+unless fresh && signature.start_with?("sha256=") && ActiveSupport::SecurityUtils.secure_compare(signature, expected)
   head :unauthorized
 end
 ```
@@ -237,13 +243,15 @@ end
 ```js
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+const timestamp = req.headers["x-smartfire-timestamp"] ?? "";
 const signature = req.headers["x-smartfire-signature"] ?? "";
 const expected = "sha256=" + createHmac("sha256", process.env.SMARTFIRE_WEBHOOK_SECRET)
-  .update(req.rawBody).digest("hex");
+  .update(`${timestamp}.${req.rawBody}`).digest("hex");
 
+const fresh = /^\d+$/.test(timestamp) && Math.abs(Date.now() / 1000 - Number(timestamp)) <= 300;
 const a = Buffer.from(signature);
 const b = Buffer.from(expected);
-if (!signature.startsWith("sha256=") || a.length !== b.length || !timingSafeEqual(a, b)) {
+if (!fresh || !signature.startsWith("sha256=") || a.length !== b.length || !timingSafeEqual(a, b)) {
   res.sendStatus(401);
 }
 ```

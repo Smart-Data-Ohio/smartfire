@@ -31,11 +31,15 @@ class Webhook < ApplicationRecord
   # RestrictedHTTP::Violation instead of posting; a hostname that
   # resolves to nothing raises Surfguard::Unresolvable. Every POST
   # carries a unix timestamp header; when a secret is given it also
-  # carries sha256=<hmac> of the raw body.
+  # carries sha256=<hmac> of "timestamp.body", so a captured POST
+  # cannot be replayed with a fresh timestamp.
   def post_payload(payload, secret: nil)
     address = RestrictedHTTP::PrivateNetworkGuard.resolve(uri.host)
-    headers = { "Content-Type" => "application/json", TIMESTAMP_HEADER => Time.current.to_i.to_s }
-    headers[SIGNATURE_HEADER] = "sha256=#{OpenSSL::HMAC.hexdigest("SHA256", secret, payload)}" if secret.present?
+    timestamp = Time.current.to_i.to_s
+    headers = { "Content-Type" => "application/json", TIMESTAMP_HEADER => timestamp }
+    if secret.present?
+      headers[SIGNATURE_HEADER] = "sha256=#{OpenSSL::HMAC.hexdigest("SHA256", secret, "#{timestamp}.#{payload}")}"
+    end
 
     Net::HTTP.start(uri.host, uri.port, ipaddr: address, use_ssl: uri.scheme == "https",
       open_timeout: ENDPOINT_TIMEOUT, read_timeout: ENDPOINT_TIMEOUT) do |http|

@@ -184,7 +184,8 @@ class WebhookTest < ActiveSupport::TestCase
     webhooks(:bender).deliver(messages(:first))
 
     secret = webhooks(:bender).reload.signing_secret
-    expected = "sha256=#{OpenSSL::HMAC.hexdigest("SHA256", secret, captured.body)}"
+    timestamp = webhook_header(captured, "x-smartfire-timestamp")
+    expected = "sha256=#{OpenSSL::HMAC.hexdigest("SHA256", secret, "#{timestamp}.#{captured.body}")}"
     assert_equal expected, webhook_header(captured, "x-smartfire-signature")
   end
 

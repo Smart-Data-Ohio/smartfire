@@ -125,9 +125,10 @@ class WebhookAgentKeyTest < ActiveSupport::TestCase
 
     secret = agent.reload.webhook_signing_secret
     assert secret.present?, "the first delivery generates the agent secret"
-    expected = "sha256=#{OpenSSL::HMAC.hexdigest("SHA256", secret, captured.body)}"
+    timestamp = timestamp_header(captured)
+    expected = "sha256=#{OpenSSL::HMAC.hexdigest("SHA256", secret, "#{timestamp}.#{captured.body}")}"
     assert_equal expected, signature_header(captured)
-    assert_match(/\A\d+\z/, timestamp_header(captured))
+    assert_match(/\A\d+\z/, timestamp)
   end
 
   test "approval, work, and completion deliveries sign with the agent secret" do
@@ -150,7 +151,8 @@ class WebhookAgentKeyTest < ActiveSupport::TestCase
     secret = agent.reload.webhook_signing_secret
     assert_equal 3, captured.size
     captured.each do |request|
-      expected = "sha256=#{OpenSSL::HMAC.hexdigest("SHA256", secret, request.body)}"
+      timestamp = timestamp_header(request)
+      expected = "sha256=#{OpenSSL::HMAC.hexdigest("SHA256", secret, "#{timestamp}.#{request.body}")}"
       assert_equal expected, signature_header(request)
     end
   end
