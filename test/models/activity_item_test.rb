@@ -81,6 +81,13 @@ class ActivityItemTest < ActiveSupport::TestCase
     assert_empty ActivityItem.accessible_to(@user)
   end
 
+  test "accessible_to returns each item once without DISTINCT" do
+    second = ActivityItem.create!(user: @user, source: messages(:second), event_type: "reply")
+
+    assert_equal [ @item.id, second.id ].sort, ActivityItem.accessible_to(@user).pluck(:id).sort
+    assert_equal 2, ActivityItem.accessible_to(@user).unread.count
+  end
+
   test "huddle invitations are accessible until the recipient loses room access" do
     grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_david_and_jason))
     item = ActivityItem.find_by!(user: users(:jason), source: grant)
