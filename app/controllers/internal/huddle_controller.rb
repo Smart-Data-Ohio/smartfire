@@ -21,7 +21,11 @@ class Internal::HuddleController < ActionController::API
     grant = HuddleGrant.find_by(id: params[:id])
 
     if grant&.authorize_or_revoke!
-      grant.record_seen!
+      # The gateway's reconnect-grace checks carry no live connection, so they
+      # enforce without recording liveness: a sighting from a dead connection
+      # would otherwise resurrect a participant whose leave report just
+      # cleared, leaving a ghost until the liveness window expires.
+      grant.record_seen! unless params[:record_seen] == "0"
       render json: grant.authorization_payload
     else
       head :not_found

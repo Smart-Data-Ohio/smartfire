@@ -233,6 +233,26 @@ class Internal::HuddleControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "an enforcement-only grant lookup authorizes without recording liveness" do
+    assert_nil @huddle.grant.last_seen_at
+
+    get "/internal/huddle/grants/#{@huddle.grant_id}?record_seen=0", headers: gateway_headers
+
+    assert_response :success
+    assert_equal expected_payload, response.parsed_body
+    assert_nil @huddle.grant.reload.last_seen_at
+  end
+
+  test "an enforcement-only lookup still revokes a stale grant" do
+    Membership.where(id: @huddle.grant.membership_id).delete_all
+
+    get "/internal/huddle/grants/#{@huddle.grant_id}?record_seen=0", headers: gateway_headers
+
+    assert_response :not_found
+    assert @huddle.grant.reload.revoked?
+    assert HuddleCleanup.exists?(operation: :remove_participant, huddle_grant_id: @huddle.grant_id)
+  end
+
   test "a steady-state grant check runs no transaction and writes nothing" do
     # Seen recently, so the throttled liveness write is skipped too: this is
     # the per-second gateway check for a participant mid-call.

@@ -283,8 +283,9 @@ export function createGateway(options) {
     });
   }
 
-  async function checkGrant(grant, signal) {
-    const path = `/internal/huddle/grants/${encodeURIComponent(grant.grantId)}`;
+  async function checkGrant(grant, signal, recordSeen = true) {
+    const query = recordSeen ? "" : "?record_seen=0";
+    const path = `/internal/huddle/grants/${encodeURIComponent(grant.grantId)}${query}`;
     return boundedFetch(campfireEndpoint(path), {
       method: "GET",
       headers: {
@@ -501,7 +502,11 @@ export function createGateway(options) {
       if (lease.denied || lease.checking || closing) return;
       lease.checking = true;
       try {
-        await checkGrant(lease.grant);
+        // A lease in its reconnect grace has no signaling connection behind
+        // it: the check still enforces the grant, but records no liveness, so
+        // a participant whose leave report already cleared cannot be marked
+        // seen again by their own dead connection.
+        await checkGrant(lease.grant, undefined, lease.owners.size > 0);
         emit(config, "active_grant_allowed");
       } catch {
         denyLease(lease, "active_grant_denied");

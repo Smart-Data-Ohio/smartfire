@@ -86,6 +86,7 @@ async function createHarness(overrides = {}) {
     stallAuthorizeBody: false,
     seenAuthorization: [],
     grantChecks: 0,
+    grantCheckUrls: [],
     leftPosts: [],
     leftStatus: 200,
     upstreamConnections: 0,
@@ -114,9 +115,10 @@ async function createHarness(overrides = {}) {
       return json(response, state.authorizeStatus, state.authorizeStatus === 200 ? GRANT : {});
     }
 
-    const match = request.url?.match(/^\/internal\/huddle\/grants\/([^/?]+)$/);
+    const match = request.url?.match(/^\/internal\/huddle\/grants\/([^/?]+)(\?.*)?$/);
     if (request.method === "GET" && match) {
       state.grantChecks += 1;
+      state.grantCheckUrls.push(request.url);
       assert.equal(request.headers["x-huddle-gateway-secret"], SECRET);
       const status = state.grantCheckStatus ?? (state.active ? 200 : 403);
       return json(response, status, status === 200 ? GRANT : {});
@@ -282,6 +284,25 @@ test("reports the participant as left after the reconnect grace expires", async 
   assert.ok(Number.isFinite(disconnectedAt));
   assert.ok(disconnectedAt >= before && disconnectedAt <= Date.now());
   assert.ok(harness.state.decisions.some(({ type }) => type === "participant_left_reported"));
+});
+
+test("grant checks during the reconnect grace enforce without recording liveness", async (t) => {
+  const harness = await createHarness({ reconnectGraceMs: 250, checkIntervalMs: 30 });
+  t.after(() => harness.close());
+  const result = await websocketAttempt(`ws://127.0.0.1:${harness.gatewayPort}/rtc?access_token=${TOKEN}`);
+  assert.equal(result.status, 101);
+  await waitFor(() => harness.state.grantChecks >= 1);
+  result.socket.close();
+  await once(result.socket, "close");
+
+  await waitFor(() => harness.state.leftPosts.length === 1);
+
+  // Checks stop when the grace expires, so any enforcement-only check ran
+  // inside it. Everything before the first one still had a connection.
+  const firstEnforcementOnly = harness.state.grantCheckUrls.findIndex((url) => url.includes("record_seen=0"));
+  assert.ok(firstEnforcementOnly >= 0, "expected an enforcement-only check during the grace");
+  assert.ok(harness.state.grantCheckUrls.slice(0, firstEnforcementOnly).every((url) => !url.includes("record_seen=0")));
+  assert.ok(harness.state.grantCheckUrls.slice(firstEnforcementOnly).every((url) => url.includes("record_seen=0")));
 });
 
 test("a failing left report changes nothing about removal", async (t) => {
