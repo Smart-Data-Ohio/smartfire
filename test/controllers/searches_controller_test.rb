@@ -142,6 +142,17 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     assert users(:david).searches.exists?(query: "hello")
   end
 
+  test "create with no searchable words redirects back with a notice and records nothing" do
+    [ "???", "🙂" ].each do |query|
+      assert_no_difference -> { users(:david).searches.count } do
+        post searches_url, params: { q: query }
+      end
+
+      assert_redirected_to searches_url
+      assert_equal "Enter a word to search for.", flash[:notice]
+    end
+  end
+
   test "clear search history" do
     assert users(:david).searches.any?
 

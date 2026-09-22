@@ -8,8 +8,12 @@ class SearchesController < ApplicationController
   end
 
   def create
-    Current.user.searches.record(display_query)
-    redirect_to searches_url(q: display_query)
+    if display_query.blank?
+      redirect_back_or_to searches_url, notice: "Enter a word to search for."
+    else
+      Current.user.searches.record(display_query)
+      redirect_to searches_url(q: display_query)
+    end
   end
 
   def clear
