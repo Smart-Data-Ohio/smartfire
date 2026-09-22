@@ -27,6 +27,19 @@ class AgentApproval < ApplicationRecord
 
   after_create_commit :fan_out_inbox_items
 
+  # Expires pending approvals whose time ran out and marks their inbox
+  # items handled, so deciders' unread badges drop. Runs lazily from the
+  # activity inbox like Huddle::InvitationResolver and stays idempotent:
+  # only unhandled approval items past expiry are touched.
+  def self.resolve_overdue!(user: nil)
+    scope = ActivityItem.where(event_type: "agent_approval_request", handled_at: nil)
+    scope = scope.where(user_id: user.id) if user
+    scope.preload(:source).find_each do |item|
+      approval = item.source if item.source_type == AgentApproval.polymorphic_name
+      approval&.expire_if_due!
+    end
+  end
+
   # Lazy expiry: a stored pending row past its deadline reads as expired.
   # Every read path uses this; writers persist via #expire_if_due!.
   def effective_status

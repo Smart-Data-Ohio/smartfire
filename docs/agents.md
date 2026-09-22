@@ -369,7 +369,8 @@ scheduler: expiry is lazy. `AgentApproval#effective_status` reads `expired`
 when a pending row is past `expires_at`, every read path uses it, and a
 decision or cancellation on an expired request is rejected with 422. A
 read path that notices an overdue pending row may persist `expired` in the
-same request.
+same request; the activity inbox resolves the reader's overdue approvals
+on every visit so their unread badge drops.
 
 ### Deciders
 
