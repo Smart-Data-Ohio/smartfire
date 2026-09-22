@@ -377,6 +377,83 @@ class Google::DriveFilesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "show throttles each user to 60 views per minute" do
+    jason = users(:jason)
+    connect_google!(@david, scopes: DRIVE_SCOPES)
+    connect_google!(jason, scopes: DRIVE_SCOPES)
+    stub_google_drive_file("1AbcDefGhIjKlMnOpQrSt")
+    travel_to Time.current.beginning_of_minute + 5.seconds
+
+    with_memory_cache do
+      60.times do
+        get google_drive_file_path("1AbcDefGhIjKlMnOpQrSt"), headers: { "Accept" => "application/json" }
+        assert_response :success
+      end
+
+      get google_drive_file_path("1AbcDefGhIjKlMnOpQrSt"), headers: { "Accept" => "application/json" }
+
+      assert_response :too_many_requests
+      assert_equal({ "error" => "rate_limited" }, response.parsed_body)
+
+      sign_in jason
+      get google_drive_file_path("1AbcDefGhIjKlMnOpQrSt"), headers: { "Accept" => "application/json" }
+
+      assert_response :success
+    end
+  end
+
+  test "show is 503 on a connection failure" do
+    connect_google!(@david, scopes: DRIVE_SCOPES)
+    stub_request(:get, "#{GOOGLE_DRIVE_FILES_URL}/1AbcDefGhIjKlMnOpQrSt")
+      .with(query: hash_including({ "supportsAllDrives" => "true" })).to_raise(Errno::ECONNREFUSED)
+
+    get google_drive_file_path("1AbcDefGhIjKlMnOpQrSt"), headers: { "Accept" => "application/json" }
+
+    assert_response :service_unavailable
+  end
+
+  test "show is 503 when Google rate limits" do
+    connect_google!(@david, scopes: DRIVE_SCOPES)
+    stub_google_drive_file("1AbcDefGhIjKlMnOpQrSt", status: 429)
+
+    get google_drive_file_path("1AbcDefGhIjKlMnOpQrSt"), headers: { "Accept" => "application/json" }
+
+    assert_response :service_unavailable
+  end
+
+  test "show is 404 with an empty body for an unreadable token" do
+    account = connect_google!(@david, scopes: DRIVE_SCOPES)
+    corrupt_google_token!(account)
+
+    get google_drive_file_path("1AbcDefGhIjKlMnOpQrSt"), headers: { "Accept" => "application/json" }
+
+    assert_response :not_found
+    assert_empty response.body
+    assert_not_requested :get, %r{\A#{Regexp.escape(GOOGLE_DRIVE_FILES_URL)}/}
+  end
+
+  test "index is 404 with an empty body for an unreadable token" do
+    account = connect_google!(@david, scopes: DRIVE_SCOPES)
+    corrupt_google_token!(account)
+
+    get google_drive_files_path, headers: { "Accept" => "application/json" }
+
+    assert_response :not_found
+    assert_empty response.body
+    assert_not_requested :get, GOOGLE_DRIVE_FILES_URL
+  end
+
+  test "index is 502 on a connection failure" do
+    connect_google!(@david, scopes: DRIVE_SCOPES)
+    stub_request(:get, GOOGLE_DRIVE_FILES_URL)
+      .with(query: hash_including({ "pageSize" => "10" })).to_raise(Errno::ECONNRESET)
+
+    get google_drive_files_path, headers: { "Accept" => "application/json" }
+
+    assert_response :bad_gateway
+    assert_equal({ "error" => "drive_unavailable" }, response.parsed_body)
+  end
+
   private
     # The test environment uses :null_store; swap in a memory store so cache
     # behavior is exercisable.

@@ -645,6 +645,19 @@ class Sessions::GoogleControllerTest < ActionDispatch::IntegrationTest
     assert_select ".flash", text: /unavailable right now/
   end
 
+  test "token endpoint connection failure fails closed with a retry message" do
+    state = start_google_sign_in
+    stub_request(:post, GOOGLE_TOKEN_URL).to_raise(Errno::ECONNREFUSED)
+
+    assert_no_user_or_session_change do
+      get session_google_callback_path, params: { state:, code: "auth-code" }
+    end
+
+    assert_redirected_to new_session_url
+    follow_redirect!
+    assert_select ".flash", text: /unavailable right now/
+  end
+
   test "signing key outage fails closed with a retry message" do
     state = start_google_sign_in
     stub_request(:get, GOOGLE_JWKS_URL).to_timeout
