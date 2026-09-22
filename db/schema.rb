@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_22_212200) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_22_212300) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -457,8 +457,11 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_212200) do
     t.index ["creator_id"], name: "index_messages_on_creator_id"
     t.index ["forwarded_from_message_id"], name: "index_messages_on_forwarded_from_message_id"
     t.index ["reply_to_message_id"], name: "index_messages_on_reply_to_message_id"
+    t.index ["room_id", "creator_id", "client_message_id"], name: "index_messages_on_room_creator_client_id"
     t.index ["room_id", "thread_id", "created_at"], name: "index_messages_on_room_thread_created"
+    t.index ["room_id"], name: "index_messages_on_room_id"
     t.index ["thread_id", "created_at"], name: "index_messages_on_thread_created"
+    t.index ["thread_id"], name: "index_messages_on_thread_id"
   end
 
   create_table "push_subscriptions", force: :cascade do |t|
@@ -485,10 +488,12 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_212200) do
 
   create_table "searches", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "dedup_key"
     t.string "query", null: false
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
-    t.index ["user_id", "query"], name: "index_searches_on_user_and_query", unique: true
+    t.index ["user_id", "dedup_key"], name: "index_searches_on_user_and_dedup_key", unique: true
+    t.index ["user_id"], name: "index_searches_on_user_id"
   end
 
   create_table "sessions", force: :cascade do |t|

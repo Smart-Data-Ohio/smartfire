@@ -34,6 +34,16 @@ class MessageTest < ActiveSupport::TestCase
     assert_equal [], message_mentioning_a_non_member.mentionees
   end
 
+  test "idempotency and page indexes exist alongside the pre-existing single-column indexes" do
+    connection = Message.connection
+    assert connection.index_exists?(:messages, %i[room_id creator_id client_message_id])
+    assert connection.index_exists?(:messages, %i[room_id thread_id created_at])
+    assert connection.index_exists?(:messages, %i[thread_id created_at])
+    # The redundant singles stay: migrations never drop indexes.
+    assert connection.index_exists?(:messages, :room_id)
+    assert connection.index_exists?(:messages, :thread_id)
+  end
+
   private
     def create_new_message_in(room)
       room.messages.create!(creator: users(:jason), body: "Hello", client_message_id: "123")

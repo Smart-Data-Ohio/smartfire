@@ -9,8 +9,8 @@ class AddPerformanceIndexes < ActiveRecord::Migration[8.2]
     # The reminder dispatcher filters reminded_at IS NULL + a starts_at range.
     add_index :events, %i[reminded_at starts_at], name: "index_events_on_reminded_starts"
 
-    # Covered as leftmost prefixes by the composites above.
-    remove_index :messages, :room_id
-    remove_index :messages, :thread_id
+    # The single-column messages indexes on room_id and thread_id are now
+    # covered as leftmost prefixes by the composites above, but they stay:
+    # migrations never drop pre-existing indexes.
   end
 end
