@@ -66,13 +66,15 @@ class MessagesController < ApplicationController
     @message.preserve_legacy_attachments_on_next_markdown_render! if !@message.markdown? && attributes[:markdown_source].present?
     @message.assign_attributes(attributes)
     apply_drive_file_ids!(@message) if drive_file_ids_key_present?
-    # edited_at is stamped only here (and the thread endpoint), never by
-    # reaction touches, reply tombstones or card fetches, so the
-    # "(edited)" marker means the author edited after posting.
-    @message.edited_at = Time.current
+    # edited_at is stamped only here (and the thread endpoint), and only
+    # when the text itself changed: never by reaction touches, reply
+    # tombstones, card fetches, attachment-only or identical saves, so
+    # the "(edited)" marker means the author edited after posting.
+    @message.edited_at = Time.current if @message.body_content_will_change?
     @message.save!
 
     @message.broadcast_replace_to @room, :messages, target: [ @message, :presentation ], partial: "messages/presentation", attributes: { maintain_scroll: true }
+    @message.broadcast_replace_to @room, :messages, target: [ @message, :meta ], partial: "messages/meta", attributes: { maintain_scroll: true }
     # References re-sync on save (see Message's after_update_commit
     # hooks), so an edit that adds or removes a URL replaces the card
     # containers too. The containers always render, which gives both

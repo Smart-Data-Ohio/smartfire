@@ -127,6 +127,23 @@ class Message < ApplicationRecord
     !markdown_source.nil?
   end
 
+  # True when the pending changes alter the message text itself, as opposed
+  # to an attachment-only or identical save. The edit endpoints stamp
+  # edited_at only then, so "(edited)" means the words changed. A blank
+  # body assigned to a message that had none (attachment-only) is not a
+  # text change.
+  def body_content_will_change?
+    return true if will_save_change_to_markdown_source?
+
+    rich_text = rich_text_body
+    return false unless rich_text&.body_changed?
+
+    current = rich_text.body
+    previous = rich_text.body_was || ActionText::Content.new("")
+    current.to_html != previous.to_html &&
+      (current.to_plain_text.present? || previous.to_plain_text.present?)
+  end
+
   # Messages created before the Markdown composer still have Action Text bodies.
   # The action metadata endpoint needs a source that the normal composer can
   # load, without asking the browser to scrape presentation HTML.

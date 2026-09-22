@@ -65,13 +65,16 @@ class ChannelThreadMessagesController < ApplicationController
       @message.preserve_legacy_attachments_on_next_markdown_render! if !@message.markdown? && attributes[:markdown_source].present?
       @message.assign_attributes(attributes)
       apply_drive_file_ids!(@message) if replace_drive_attachments
-      # Stamped only by the edit endpoints (see MessagesController),
-      # never by reaction touches, reply tombstones or card fetches.
-      @message.edited_at = Time.current
+      # Stamped only by the edit endpoints (see MessagesController), and
+      # only when the text itself changed: never by reaction touches,
+      # reply tombstones, card fetches, attachment-only or identical saves.
+      @message.edited_at = Time.current if @message.body_content_will_change?
       @message.save!
     end
     @message.broadcast_replace_to @thread, :messages,
       target: [ @message, :presentation ], partial: "messages/presentation", attributes: { maintain_scroll: true }
+    @message.broadcast_replace_to @thread, :messages,
+      target: [ @message, :meta ], partial: "messages/meta", attributes: { maintain_scroll: true }
     # References re-sync on save (see Message's after_update_commit
     # hooks), so an edit that adds or removes a URL replaces the card
     # containers too. The containers always render, which gives both

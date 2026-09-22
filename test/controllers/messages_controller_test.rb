@@ -212,7 +212,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
   test "update updates a message belonging to the user" do
     message = @room.messages.where(creator: users(:david)).first
 
-    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(3)  # presentation plus both card containers
+    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(4)  # presentation plus meta plus both card containers
     put room_message_url(@room, message), params: { message: { body: "Updated body" } }
 
     assert_redirected_to room_message_url(@room, message)
@@ -223,7 +223,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     message = @room.messages.create!(creator: users(:david), markdown_source: "**Before**", client_message_id: "markdown-update")
     source = "## After\n\n`code`"
 
-    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(3)  # presentation plus both card containers
+    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(4)  # presentation plus meta plus both card containers
     put room_message_url(@room, message), params: { message: { markdown_source: source } }
 
     assert_redirected_to room_message_url(@room, message)
@@ -234,7 +234,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
   test "a legacy body update clears stale Markdown mode" do
     message = @room.messages.create!(creator: users(:david), markdown_source: "**Before**", client_message_id: "markdown-to-rich")
 
-    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(3)  # presentation plus both card containers
+    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(4)  # presentation plus meta plus both card containers
     put room_message_url(@room, message), params: { message: { body: "Legacy again" } }
 
     assert_redirected_to room_message_url(@room, message)
@@ -353,8 +353,62 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
 
     get room_message_url(@room, message)
     assert_response :success
-    assert_select ".message__edited", text: "(edited)"
+    assert_select "time.message__edited[data-local-time-target='title'][datetime]", text: "(edited)"
     assert_select ".message__edited[title^='Edited ']"
+  end
+
+  test "editing a message broadcasts its meta so other clients see the edited marker" do
+    message = @room.messages.create!(creator: users(:david), markdown_source: "original", client_message_id: "edited-meta")
+
+    put room_message_url(@room, message), params: { message: { markdown_source: "edited" } }
+
+    assert_redirected_to room_message_url(@room, message)
+    assert_rendered_turbo_stream_broadcast @room, :messages, action: "replace", target: [ message, :meta ] do
+      assert_select ".message__edited", text: "(edited)"
+    end
+  end
+
+  test "identical and attachment-only saves do not mark a message edited" do
+    message = @room.messages.create!(creator: users(:david), markdown_source: "stays the same", client_message_id: "edited-identical")
+
+    put room_message_url(@room, message), params: { message: { markdown_source: "stays the same" } }
+    assert_nil message.reload.edited_at
+
+    put room_message_url(@room, message), params: {
+      message: { markdown_source: "stays the same", attachment: fixture_file_upload("moon.jpg", "image/jpeg") }
+    }
+    assert_nil message.reload.edited_at
+
+    get room_message_url(@room, message)
+    assert_response :success
+    assert_select ".message__edited", count: 0
+  end
+
+  test "identical rich-text saves do not mark a message edited" do
+    message = @room.messages.create!(creator: users(:david), body: "<div>legacy text</div>", client_message_id: "edited-identical-rich")
+
+    put room_message_url(@room, message), params: { message: { body: message.body.body.to_html } }
+
+    assert_nil message.reload.edited_at
+  end
+
+  test "a blank body on a bodyless message does not mark it edited" do
+    message = @room.messages.create!(creator: users(:david), client_message_id: "edited-bodyless")
+    message.attachment.attach(fixture_file_upload("moon.jpg", "image/jpeg"))
+
+    put room_message_url(@room, message), params: {
+      message: { body: "", attachment: fixture_file_upload("earth.png", "image/png") }
+    }
+
+    assert_nil message.reload.edited_at
+  end
+
+  test "formatting-only rich-text edits still mark a message edited" do
+    message = @room.messages.create!(creator: users(:david), body: "<div>legacy text</div>", client_message_id: "edited-format")
+
+    put room_message_url(@room, message), params: { message: { body: "<div><strong>legacy text</strong></div>" } }
+
+    assert_not_nil message.reload.edited_at
   end
 
   test "reactions do not mark a message edited" do

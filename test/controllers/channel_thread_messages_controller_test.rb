@@ -130,6 +130,25 @@ class ChannelThreadMessagesControllerTest < ActionDispatch::IntegrationTest
     assert_select ".message__edited", text: "(edited)"
   end
 
+  test "editing a thread message broadcasts its meta with the edited marker" do
+    sign_in :jz
+
+    patch room_thread_message_url(@room, @thread, @message), params: { message: { markdown_source: "Edited live" } }
+
+    assert_redirected_to room_thread_message_path(@room, @thread, @message)
+    assert_rendered_turbo_stream_broadcast @thread, :messages, action: "replace", target: [ @message, :meta ] do
+      assert_select ".message__edited", text: "(edited)"
+    end
+  end
+
+  test "identical thread message saves do not mark the message edited" do
+    sign_in :jz
+
+    patch room_thread_message_url(@room, @thread, @message), params: { message: { markdown_source: "Original" } }
+
+    assert_nil @message.reload.edited_at
+  end
+
   test "nested HTML message URL redirects into the parent room shell" do
     sign_in :jz
     get room_thread_message_url(@room, @thread, @message)
