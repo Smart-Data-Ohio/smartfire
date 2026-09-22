@@ -7,6 +7,9 @@ class ComposerTest < ApplicationSystemTestCase
     join_room @room
   end
 
+  # Regression guard: origin/main already destroyed the suggestion controller
+  # on blur (the old `suggestionController.active` check was never a real
+  # property, so it always took the destroy branch). This pins the behavior.
   test "blurring an open autocomplete does not leave a zombie that swallows Enter" do
     editor = find_field("Write a message")
     editor.set(":thu")
