@@ -363,8 +363,9 @@ and `read_messages` like message delivery. `ack` works on these rows.
   work payloads (see Boards for the full shape), newest first, max
   100, filtered to rooms where the agent holds `read_messages`.
 - `GET /agents/work/:id` returns one owned thread, or 404 for anything
-  the agent does not own or whose room the agent's user no longer belongs
-  to.
+  the agent does not own, whose room the agent's user no longer belongs
+  to, or where the agent no longer holds `read_messages`. `PATCH` and
+  `PUT .../result` answer the same 404 before checking `manage_threads`.
 - `PATCH /agents/work/:id` updates the status, tags, and run link of an
   owned thread. It takes `work_status` (one of `planned`,
   `in_progress`, `blocked`, `done`) and an optional plain-text `note`

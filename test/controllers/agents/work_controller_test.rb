@@ -589,6 +589,51 @@ class Agents::WorkControllerTest < ActionDispatch::IntegrationTest
     assert_nil thread.reload.result_markdown
   end
 
+  test "a revoked read grant hides an owned thread from show, update, and result" do
+    read = grant!(capability: "read_messages", room: @room)
+    grant!(capability: "post_messages", room: @room)
+    grant!(capability: "manage_threads", room: @room)
+    thread = create_owned_thread!(name: "Readable until revoked")
+
+    get agents_work_thread_url(thread), headers: bearer_headers
+    assert_response :success
+
+    read.revoke!
+
+    get agents_work_thread_url(thread), headers: bearer_headers
+    assert_response :not_found
+
+    patch agents_work_thread_url(thread), params: { work_status: "blocked", note: "still here" }.to_json, headers: bearer_headers
+    assert_response :not_found
+
+    put agents_work_thread_url(thread) + "/result", params: { markdown: "Late result" }.to_json, headers: bearer_headers
+    assert_response :not_found
+
+    assert_not_equal "blocked", thread.reload.work_status
+    assert_nil thread.result_markdown
+  end
+
+  test "a read grant for another room does not unlock an owned thread" do
+    grant!(capability: "read_messages", room: rooms(:pets))
+    grant!(capability: "post_messages", room: @room)
+    thread = create_owned_thread!(name: "Other room grant")
+
+    get agents_work_thread_url(thread), headers: bearer_headers
+
+    assert_response :not_found
+  end
+
+  test "a workspace-wide read grant still reads an owned thread" do
+    grant!(capability: "read_messages")
+    grant!(capability: "post_messages", room: @room)
+    thread = create_owned_thread!(name: "Workspace grant")
+
+    get agents_work_thread_url(thread), headers: bearer_headers
+
+    assert_response :success
+    assert_equal thread.id, response.parsed_body["id"]
+  end
+
   test "a revoked credential is 401" do
     grant!(capability: "read_messages", room: @room)
     grant!(capability: "post_messages", room: @room)
