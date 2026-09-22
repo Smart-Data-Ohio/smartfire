@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_22_211100) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_22_211200) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -159,6 +159,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_211100) do
     t.datetime "suspended_at"
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
+    t.string "webhook_signing_secret"
     t.index ["owner_id", "kind"], name: "index_agents_on_owner_id_and_kind"
     t.index ["user_id"], name: "index_agents_on_user_id", unique: true
   end
@@ -593,6 +594,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_211100) do
 
   create_table "webhooks", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "signing_secret"
     t.datetime "updated_at", null: false
     t.string "url"
     t.integer "user_id", null: false

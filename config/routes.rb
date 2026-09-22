@@ -27,6 +27,7 @@ Rails.application.routes.draw do
           resources :credentials, only: %i[ index create destroy ]
           resources :grants, only: %i[ index create destroy ]
           resource :github_connection, only: %i[ create destroy ]
+          resource :webhook_secret, only: :create
         end
       end
 

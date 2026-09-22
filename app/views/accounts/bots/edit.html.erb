@@ -46,6 +46,24 @@
 
   <hr class="separator full-width margin-block-double">
 
+  <section aria-labelledby="webhook-signing-secret-title">
+    <h2 id="webhook-signing-secret-title" class="txt-large margin-block-end">Webhook signing secret</h2>
+
+    <% secret = @bot.agent&.webhook_signing_secret || @bot.webhook&.signing_secret %>
+
+    <% if secret.present? %>
+      <p>Deliveries carry an <code>X-Smartfire-Signature</code> header. Copy this secret into the receiving service to verify them:</p>
+      <p><code><%= secret %></code></p>
+      <%= button_to "Reset signing secret", account_bot_webhook_secret_path(@bot), class: "btn btn--negative",
+            form: { data: { turbo_confirm: "Reset the signing secret? The receiving service must be updated with the new secret." } } %>
+    <% else %>
+      <p>No signing secret yet. Deliveries go out unsigned until one is generated.</p>
+      <%= button_to "Generate signing secret", account_bot_webhook_secret_path(@bot), class: "btn" %>
+    <% end %>
+  </section>
+
+  <hr class="separator full-width margin-block-double">
+
   <section aria-labelledby="github-connection-title">
     <h2 id="github-connection-title" class="txt-large margin-block-end">GitHub account</h2>
 

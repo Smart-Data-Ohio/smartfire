@@ -4,17 +4,25 @@ class WebhookTest < ActiveSupport::TestCase
   test "payload" do
     message = messages(:first)
     message_path = Rails.application.routes.url_helpers.room_at_message_path(message.room, message)
-    bot_messages_path = Rails.application.routes.url_helpers.room_bot_messages_path(message.room, users(:bender).bot_key)
+    room_path = Rails.application.routes.url_helpers.room_path(message.room)
 
-    WebMock.stub_request(:post, webhooks(:bender).url).
-      with(body: hash_including(
-        user: { id: message.creator.id, name: message.creator.name },
-        room: { id: message.room.id, name: message.room.name, path: bot_messages_path },
-        message: { id: message.id, body: { html: "First post!", plain: "First post!" }, path: message_path },
-      ))
+    captured = nil
+    WebMock.stub_request(:post, webhooks(:bender).url)
+      .with { |request| captured = request.body; true }
+      .to_return(status: 200)
 
     response = webhooks(:bender).deliver(messages(:first))
     assert_equal 200, response.code.to_i
+
+    payload = JSON.parse(captured)
+    assert_equal message.creator.id, payload.dig("user", "id")
+    assert_equal message.creator.name, payload.dig("user", "name")
+    assert_equal room_path, payload.dig("room", "path")
+    assert_equal message.id, payload.dig("message", "id")
+    assert_equal "First post!", payload.dig("message", "body", "html")
+    assert_equal "First post!", payload.dig("message", "body", "plain")
+    assert_equal message_path, payload.dig("message", "path")
+    assert_not_includes captured, users(:bender).bot_key
   end
 
   test "delivery" do
@@ -153,6 +161,33 @@ class WebhookTest < ActiveSupport::TestCase
     end
   end
 
+  test "legacy delivery without a secret sends no signature" do
+    captured = nil
+    WebMock.stub_request(:post, webhooks(:bender).url)
+      .with { |request| captured = request; true }
+      .to_return(status: 200)
+
+    webhooks(:bender).deliver(messages(:first))
+
+    assert_nil webhook_header(captured, "x-smartfire-signature")
+    assert_match(/\A\d+\z/, webhook_header(captured, "x-smartfire-timestamp"))
+  end
+
+  test "legacy delivery with a secret signs the body" do
+    webhooks(:bender).reset_signing_secret!
+
+    captured = nil
+    WebMock.stub_request(:post, webhooks(:bender).url)
+      .with { |request| captured = request; true }
+      .to_return(status: 200)
+
+    webhooks(:bender).deliver(messages(:first))
+
+    secret = webhooks(:bender).reload.signing_secret
+    expected = "sha256=#{OpenSSL::HMAC.hexdigest("SHA256", secret, captured.body)}"
+    assert_equal expected, webhook_header(captured, "x-smartfire-signature")
+  end
+
   test "legacy sync reply into a locked thread still raises" do
     room = rooms(:watercooler)
     legacy = User.create_bot!(name: "Legacy Locked", webhook_url: "https://example.test/legacy-locked")
@@ -248,4 +283,10 @@ class WebhookTest < ActiveSupport::TestCase
 
     assert_not_requested :post, webhooks(:bender).url
   end
+
+  private
+    def webhook_header(request, name)
+      value = request.headers.find { |key, _| key.to_s.downcase == name }&.last
+      value.is_a?(Array) ? value.first : value
+    end
 end

@@ -98,7 +98,7 @@ class Agent::Delivery
         work: work
       }.to_json
 
-      webhook.post_payload(payload)
+      webhook.post_payload(payload, secret: agent.ensure_webhook_signing_secret!)
     end
 
     # Posts an approval decision to the agent's webhook. The payload carries
@@ -116,7 +116,7 @@ class Agent::Delivery
         }
       }.to_json
 
-      webhook.post_payload(payload)
+      webhook.post_payload(payload, secret: agent.ensure_webhook_signing_secret!)
     end
 
     # Posts a GitHub write-action result to the agent's webhook. The payload
@@ -136,7 +136,7 @@ class Agent::Delivery
         }.compact
       }.to_json
 
-      webhook.post_payload(payload)
+      webhook.post_payload(payload, secret: agent.ensure_webhook_signing_secret!)
     end
 
     # Posts one event row to the agent's webhook. Message events carry

@@ -4,20 +4,42 @@ require "restricted_http/private_network_guard"
 
 class Webhook < ApplicationRecord
   ENDPOINT_TIMEOUT = 7.seconds
+  SIGNATURE_HEADER = "X-Smartfire-Signature"
+  TIMESTAMP_HEADER = "X-Smartfire-Timestamp"
 
   belongs_to :user
+
+  encrypts :signing_secret
+
+  # The HMAC secret signing legacy deliveries from this webhook, or nil
+  # when unsigned. Agent deliveries use the agent's own secret instead.
+  # Shown to admins on the bot edit page, never logged.
+  def ensure_signing_secret!
+    return signing_secret if signing_secret.present?
+
+    reset_signing_secret!
+  end
+
+  def reset_signing_secret!
+    update!(signing_secret: SecureRandom.hex(32))
+    signing_secret
+  end
 
   # Posts a JSON payload to this webhook's URL through the SSRF guard,
   # pinning the connection to the resolved public address like unfurls.
   # A URL pointing at loopback or a private address raises
   # RestrictedHTTP::Violation instead of posting; a hostname that
-  # resolves to nothing raises Surfguard::Unresolvable.
-  def post_payload(payload)
+  # resolves to nothing raises Surfguard::Unresolvable. Every POST
+  # carries a unix timestamp header; when a secret is given it also
+  # carries sha256=<hmac> of the raw body.
+  def post_payload(payload, secret: nil)
     address = RestrictedHTTP::PrivateNetworkGuard.resolve(uri.host)
+    headers = { "Content-Type" => "application/json", TIMESTAMP_HEADER => Time.current.to_i.to_s }
+    headers[SIGNATURE_HEADER] = "sha256=#{OpenSSL::HMAC.hexdigest("SHA256", secret, payload)}" if secret.present?
 
     Net::HTTP.start(uri.host, uri.port, ipaddr: address, use_ssl: uri.scheme == "https",
       open_timeout: ENDPOINT_TIMEOUT, read_timeout: ENDPOINT_TIMEOUT) do |http|
-      request = Net::HTTP::Post.new(uri, "Content-Type" => "application/json")
+      request = Net::HTTP::Post.new(uri, headers)
       request.body = payload
       http.request(request)
     end
@@ -32,7 +54,8 @@ class Webhook < ApplicationRecord
   # agent deliveries propagate to the delivery job, which records them
   # in the ledger and retries; legacy bots keep the timeout message.
   def deliver(message, agent: nil, delivery_id: nil)
-    post(payload(message, agent: agent, delivery_id: delivery_id)).tap do |response|
+    secret = agent ? agent.ensure_webhook_signing_secret! : signing_secret
+    post(payload(message, agent: agent, delivery_id: delivery_id), secret: secret).tap do |response|
       receive_sync_reply(message, response, agent: agent)
     end
   rescue Net::OpenTimeout, Net::ReadTimeout
@@ -42,8 +65,8 @@ class Webhook < ApplicationRecord
   end
 
   private
-    def post(payload)
-      post_payload(payload)
+    def post(payload, secret: nil)
+      post_payload(payload, secret: secret)
     end
 
     def uri
@@ -53,7 +76,7 @@ class Webhook < ApplicationRecord
     def payload(message, agent: nil, delivery_id: nil)
       hash = {
         user:    { id: message.creator.id, name: message.creator.name },
-        room:    { id: message.room.id, name: message.room.name, path: room_bot_messages_path(message) },
+        room:    { id: message.room.id, name: message.room.name, path: room_payload_path(message.room) },
         message: { id: message.id, body: { html: message.body.body, plain: without_recipient_mentions(message.plain_text_body) }, path: message_path(message) }
       }
       if agent
@@ -70,8 +93,10 @@ class Webhook < ApplicationRecord
       Rails.application.routes.url_helpers.room_at_message_path(message.room, message)
     end
 
-    def room_bot_messages_path(message)
-      Rails.application.routes.url_helpers.room_bot_messages_path(message.room, user.bot_key)
+    # The room path carries no credential: receivers that post back use
+    # their own bot key or agent token, never one from the payload.
+    def room_payload_path(room)
+      Rails.application.routes.url_helpers.room_path(room)
     end
 
     def extract_text_from(response)

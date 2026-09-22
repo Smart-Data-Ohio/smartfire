@@ -179,6 +179,46 @@ records a timeout in the agent's ledger row and retries like any
 transport failure, with no timeout message; legacy bots keep the
 "Failed to respond within 7 seconds" message.
 
+The `room.path` in every payload is the plain room path. It never
+carries the bot key; receivers that post back use their own bot key
+or agent token.
+
+### Verifying signatures
+
+Every webhook POST carries an `X-Smartfire-Timestamp` header (unix
+seconds) and, when the bot has a signing secret, an
+`X-Smartfire-Signature: sha256=<hmac>` header with the HMAC-SHA256
+of the raw request body. Each agent has its own secret, generated
+on its first delivery and shown to admins and the agent's owner on
+the bot edit page with a reset control; legacy bots sign too once
+a secret is generated for them on the same page. Verify with a
+constant-time comparison over the raw bytes:
+
+```ruby
+require "openssl"
+
+signature = request.headers["X-Smartfire-Signature"].to_s
+expected = "sha256=" + OpenSSL::HMAC.hexdigest("SHA256", ENV["SMARTFIRE_WEBHOOK_SECRET"], request.raw_post)
+
+unless signature.start_with?("sha256=") && ActiveSupport::SecurityUtils.secure_compare(signature, expected)
+  head :unauthorized
+end
+```
+
+```js
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+const signature = req.headers["x-smartfire-signature"] ?? "";
+const expected = "sha256=" + createHmac("sha256", process.env.SMARTFIRE_WEBHOOK_SECRET)
+  .update(req.rawBody).digest("hex");
+
+const a = Buffer.from(signature);
+const b = Buffer.from(expected);
+if (!signature.startsWith("sha256=") || a.length !== b.length || !timingSafeEqual(a, b)) {
+  res.sendStatus(401);
+}
+```
+
 ### Delivery status and retries
 
 The ledger outcome (`pending`, `delivered`, `acknowledged`,
