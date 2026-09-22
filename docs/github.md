@@ -195,8 +195,8 @@ decision.
 ### Identity
 
 An agent acts as its own linked GitHub account: the bot edit page carries
-a "GitHub account" section where an administrator or the agent's owner
-pastes a fine-grained token for a machine user dedicated to the agent
+a "GitHub account" section where an administrator (only; the agent's
+owner sees the connection read-only) pastes a fine-grained token for a machine user dedicated to the agent
 (validated with `GET /user`, never shown again). The token is never the
 workspace `GITHUB_TOKEN` and never a person's token. Deactivating the
 agent's bot disconnects the account, exactly like deactivating a human;
@@ -234,11 +234,15 @@ curl -X POST https://smartfire.example.com/rooms/1/agents/github/pull_request_ac
 
 ### Approval and execution
 
-Deciders are the existing approval deciders — the agent's owner and
-every administrator — deciding from the activity inbox; there is no new
-inbox item type. When a `github.*` request is approved, the server
+Deciders are the existing approval deciders deciding from the activity
+inbox; approving a `github.*` request needs a current administrator (the
+owner may deny). The request records the agent's linked account and
+login (`github_account_id`, `github_login`), and the card shows "Acts on
+GitHub as @login". Approving is refused (422) if the connection changed
+since the request. When a `github.*` request is approved, the server
 re-checks everything (still approved, agent active, still a member,
-grant still held, thread still mapped, account still usable, and no
+grant still held, thread still mapped, account still usable and still
+the recorded one, and no
 earlier outcome recorded for the approval, so a queue retry never posts
 twice) and performs the action with the agent's token. Any failed re-check, and any
 GitHub refusal, records a failed completion without posting; a 401

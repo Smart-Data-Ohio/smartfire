@@ -23,7 +23,7 @@ class AgentApprovalsControllerTest < ActionDispatch::IntegrationTest
 
   test "an owner without admin rights cannot approve the agent's GitHub write action" do
     @agent.update!(owner: users(:kevin))
-    approval = AgentApproval.create!(agent: @agent, room: @room, action: "github.comment", summary: "Comment on rails/rails#1: hi")
+    approval = AgentApproval.create!(agent: @agent, room: @room, action: "github.comment", summary: "Comment on rails/rails#1: hi", **github_identity)
     sign_in users(:kevin)
 
     assert_no_enqueued_jobs only: Github::PerformAgentActionJob do
@@ -41,7 +41,7 @@ class AgentApprovalsControllerTest < ActionDispatch::IntegrationTest
 
   test "an owner without admin rights may still deny the agent's GitHub write action" do
     @agent.update!(owner: users(:kevin))
-    approval = AgentApproval.create!(agent: @agent, room: @room, action: "github.review", summary: "Approve rails/rails#1")
+    approval = AgentApproval.create!(agent: @agent, room: @room, action: "github.review", summary: "Approve rails/rails#1", **github_identity)
     sign_in users(:kevin)
 
     patch agent_approval_url(approval, decision: "denied"), as: :json
@@ -51,7 +51,7 @@ class AgentApprovalsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "an administrator approves a GitHub write action" do
-    approval = AgentApproval.create!(agent: @agent, room: @room, action: "github.comment", summary: "Comment on rails/rails#1: hi")
+    approval = AgentApproval.create!(agent: @agent, room: @room, action: "github.comment", summary: "Comment on rails/rails#1: hi", **github_identity)
     sign_in :david
 
     assert_enqueued_jobs 1, only: Github::PerformAgentActionJob do
@@ -64,7 +64,7 @@ class AgentApprovalsControllerTest < ActionDispatch::IntegrationTest
 
   test "the approval card offers Approve on GitHub actions to administrators only" do
     @agent.update!(owner: users(:kevin))
-    github = AgentApproval.create!(agent: @agent, room: @room, action: "github.comment", summary: "Comment on rails/rails#1: hi")
+    github = AgentApproval.create!(agent: @agent, room: @room, action: "github.comment", summary: "Comment on rails/rails#1: hi", **github_identity)
     other = AgentApproval.create!(agent: @agent, room: @room, action: "deploy", summary: "Ship it")
 
     assert github.approvable_by?(users(:david))
@@ -76,6 +76,32 @@ class AgentApprovalsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "##{ActionView::RecordIdentifier.dom_id(github, :card)} form[action*='decision=approved']", 0
     assert_select "##{ActionView::RecordIdentifier.dom_id(other, :card)} form[action*='decision=approved']", 1
+  end
+
+  test "approving a GitHub action is refused once the agent's GitHub account changed" do
+    approval = AgentApproval.create!(agent: @agent, room: @room, action: "github.comment", summary: "Comment on rails/rails#1: hi", **github_identity)
+    users(:bender).github_connected_account.update!(github_login: "other-machine")
+    sign_in :david
+
+    assert_no_enqueued_jobs only: Github::PerformAgentActionJob do
+      patch agent_approval_url(approval, decision: "approved"), as: :json
+    end
+
+    assert_response :unprocessable_entity
+    assert_match "GitHub account changed", response.parsed_body["error"]
+    assert_equal "pending", approval.reload.status
+
+    patch agent_approval_url(approval, decision: "denied"), as: :json
+    assert_response :success
+  end
+
+  test "the card names the GitHub identity an action will use" do
+    approval = AgentApproval.create!(agent: @agent, room: @room, action: "github.comment", summary: "Comment on rails/rails#1: hi", **github_identity)
+    sign_in :david
+
+    get agent_approvals_url(@agent)
+
+    assert_select "##{ActionView::RecordIdentifier.dom_id(approval, :card)}", text: /Acts on GitHub as @bender-machine/
   end
 
   test "admin can deny with a note" do
@@ -194,4 +220,11 @@ class AgentApprovalsControllerTest < ActionDispatch::IntegrationTest
     assert_response :see_other
     assert_equal "approved", approval.reload.status
   end
+
+  private
+    def github_identity
+      account = users(:bender).github_connected_account ||
+        GithubConnectedAccount.create!(user: users(:bender), github_login: "bender-machine", access_token: "bender-token")
+      { github_account_id: account.id, github_login: account.github_login }
+    end
 end

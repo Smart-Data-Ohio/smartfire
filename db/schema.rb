@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_22_210200) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_22_210300) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -86,6 +86,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_210200) do
     t.string "decision_note"
     t.datetime "expires_at", null: false
     t.string "external_id"
+    t.integer "github_account_id"
+    t.string "github_login"
     t.text "payload"
     t.integer "room_id"
     t.string "status", default: "pending", null: false

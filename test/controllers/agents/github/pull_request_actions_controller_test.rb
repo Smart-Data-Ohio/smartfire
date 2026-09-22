@@ -255,6 +255,9 @@ class Agents::Github::PullRequestActionsControllerTest < ActionDispatch::Integra
       JSON.parse(approval.payload)
     )
     assert_equal "gh-1", approval.external_id
+    assert_equal @bot.github_connected_account.id, approval.github_account_id
+    assert_equal "bender-machine", approval.github_login
+    assert approval.github_identity_current?
     assert ActivityItem.exists?(user: users(:david), source: approval)
   end
 

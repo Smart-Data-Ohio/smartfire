@@ -12,6 +12,9 @@
   </div>
 
   <p class="agent-approval-card__summary"><%= approval.summary %></p>
+  <% if approval.github_action? && approval.github_login.present? %>
+    <p class="txt-small agent-approval-card__identity-note">Acts on GitHub as @<%= approval.github_login %></p>
+  <% end %>
 
   <div class="txt-small agent-approval-card__meta">
     <% case approval.effective_status %>

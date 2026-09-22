@@ -105,6 +105,20 @@ class AgentApproval < ApplicationRecord
     action.to_s.start_with?("github.")
   end
 
+  # True when account is the GitHub connection recorded when this github.*
+  # action was requested: the same connection row, still linked to the same
+  # GitHub login. A request that recorded none never matches.
+  def github_identity_matches?(account)
+    account.present? && github_account_id.present? && github_login.present? &&
+      account.id == github_account_id && account.github_login.to_s.casecmp?(github_login)
+  end
+
+  # The agent's current GitHub connection, if it still is the one recorded
+  # on this request.
+  def github_identity_current?
+    github_identity_matches?(agent&.user&.github_connected_account)
+  end
+
   def decidable_by?(user)
     return false unless user&.active? && !user.bot?
     return false unless agent&.user&.active?
