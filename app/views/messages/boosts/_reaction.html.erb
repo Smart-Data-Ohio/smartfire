@@ -1,19 +1,19 @@
-<% character = local_assigns.fetch(:character) %>
-<% title = local_assigns.fetch(:title) %>
+<% content = local_assigns.fetch(:content) %>
 <% boosts = local_assigns.fetch(:boosts) %>
 <% reactor_ids = boosts.map(&:booster_id).compact.uniq %>
+<% title = reaction_title(content) %>
 
 <%= form_with model: [ message, Boost.new ], class: "reaction-chip__form",
       data: { turbo_frame: dom_id(message, :boosting) } do %>
-  <%= hidden_field_tag "boost[content]", character %>
+  <%= hidden_field_tag "boost[content]", content %>
   <%= button_tag type: "submit", class: "reaction-chip", title: title,
         aria: { label: "#{title}: #{reactor_ids.length}", pressed: false },
         data: {
           controller: "reaction-chip",
           reaction_chip_booster_ids_value: reactor_ids.join(","),
-          reaction: character
+          reaction: content
         } do %>
-    <span class="reaction-chip__emoji" aria-hidden="true"><%= character %></span>
+    <span class="reaction-chip__emoji" aria-hidden="true"><%= reaction_chip_body(content) %></span>
     <span class="reaction-chip__count"><%= reactor_ids.length %></span>
     <span class="for-screen-reader"><%= title %></span>
   <% end %>
