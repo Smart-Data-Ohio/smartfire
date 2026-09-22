@@ -56,4 +56,27 @@ class AgentOwnerDeactivationTest < ActionDispatch::IntegrationTest
     get agents_me_url, headers: @bearer
     assert_response :success
   end
+
+  test "banning the owner suspends the agent, revokes its grants, and refuses its credentials" do
+    grant = AgentGrant.create!(agent: @agent, room: @room, capability: "post_messages", granted_by: users(:jason))
+
+    users(:david).ban
+
+    assert @agent.reload.suspended?
+    assert grant.reload.revoked?
+    get agents_me_url, headers: @bearer
+    assert_response :unauthorized
+    assert_no_difference -> { Message.count } do
+      post room_bot_messages_url(@room, bot_key_for(users(:bender))), params: +"should not post"
+    end
+    assert_response :forbidden
+  end
+
+  test "banning someone else leaves the agent working" do
+    users(:kevin).ban
+
+    assert_not @agent.reload.suspended?
+    get agents_me_url, headers: @bearer
+    assert_response :success
+  end
 end
