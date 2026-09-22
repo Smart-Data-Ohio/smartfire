@@ -25,6 +25,9 @@ class Event::ReminderDispatcher
         claimed = event.with_lock do
           if event.reminded_at.present?
             false
+          elsif Event::ReminderPusher.stale?(event, now:)
+            event.update!(reminded_at: now)
+            false
           else
             event.remind_attendees!
             event.update!(reminded_at: now)

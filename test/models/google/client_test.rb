@@ -266,4 +266,124 @@ class Google::ClientTest < ActiveSupport::TestCase
     assert_requested :post, GOOGLE_TOKEN_URL
     assert_requested list_stub, headers: { "Authorization" => "Bearer refreshed-access-token" }
   end
+
+  test "429 maps to RateLimited, which retries as Unavailable" do
+    stub_google_event_insert(status: 429)
+
+    error = assert_raises(Google::Client::RateLimited) { @client.insert_event({}) }
+
+    assert_kind_of Google::Client::Unavailable, error
+    assert_equal "Google Calendar request rate limited (429)", error.message
+  end
+
+  test "a 403 carrying a quota reason maps to RateLimited" do
+    stub_google_event_insert(status: 403, body: google_forbidden_body)
+
+    error = assert_raises(Google::Client::RateLimited) { @client.insert_event({}) }
+
+    assert_equal "Google Calendar request rate limited (rateLimitExceeded)", error.message
+  end
+
+  test "a 403 with a permission reason maps to Forbidden" do
+    stub_google_event_insert(status: 403, body: google_forbidden_body("forbidden"))
+
+    error = assert_raises(Google::Client::Forbidden) { @client.insert_event({}) }
+
+    assert_equal "Google Calendar request forbidden (403)", error.message
+  end
+
+  test "a 403 with an unparseable body maps to Forbidden" do
+    stub_request(:post, GOOGLE_EVENTS_URL).to_return(status: 403, body: "{oops")
+
+    assert_raises(Google::Client::Forbidden) { @client.insert_event({}) }
+  end
+
+  test "410 maps to NotFound" do
+    stub_google_event_delete("gone-id", status: 410)
+
+    assert_raises(Google::Client::NotFound) { @client.delete_event("gone-id") }
+  end
+
+  test "connection failures map to Unavailable" do
+    stub_request(:post, GOOGLE_EVENTS_URL).to_raise(Errno::ECONNREFUSED)
+
+    error = assert_raises(Google::Client::Unavailable) { @client.insert_event({}) }
+
+    assert_equal "Google Calendar request failed (Errno::ECONNREFUSED)", error.message
+  end
+
+  test "a dropped connection maps to Unavailable" do
+    stub_request(:post, GOOGLE_EVENTS_URL).to_raise(EOFError)
+
+    error = assert_raises(Google::Client::Unavailable) { @client.insert_event({}) }
+
+    assert_equal "Google Calendar request failed (EOFError)", error.message
+  end
+
+  test "a 429 on refresh raises Unavailable and keeps the connection" do
+    @account.update!(access_token_expires_at: 1.hour.ago)
+    stub_request(:post, GOOGLE_TOKEN_URL).to_return(status: 429)
+
+    assert_raises(Google::Client::Unavailable) { @client.insert_event({}) }
+    assert_nil @account.reload.disconnected_reason
+  end
+
+  test "a Drive 429 maps to RateLimited" do
+    stub_google_drive_file("1AbcDefGhIjKlMnOpQrSt", status: 429)
+
+    error = assert_raises(Google::Client::RateLimited) { @client.drive_file("1AbcDefGhIjKlMnOpQrSt") }
+
+    assert_equal "Google Drive request rate limited (429)", error.message
+  end
+
+  test "revoke_token posts the token and accepts success or already-revoked" do
+    revoke = stub_google_revoke
+
+    assert Google::Client.revoke_token("revocable-token")
+    assert_requested revoke, body: hash_including({ "token" => "revocable-token" })
+
+    WebMock.reset!
+    stub_google_revoke(status: 400)
+
+    assert Google::Client.revoke_token("revocable-token")
+  end
+
+  test "revoke_token raises Unavailable on a 5xx so the caller retries" do
+    stub_google_revoke(status: 500)
+
+    error = assert_raises(Google::Client::Unavailable) { Google::Client.revoke_token("revocable-token") }
+
+    assert_equal "Google token revoke failed (500)", error.message
+    assert_not_includes error.message, "revocable-token"
+  end
+
+  test "revoke_token raises Unavailable on a 429 so the caller retries" do
+    stub_google_revoke(status: 429)
+
+    assert_raises(Google::Client::Unavailable) { Google::Client.revoke_token("revocable-token") }
+  end
+
+  test "revoke_token returns false on other client errors" do
+    stub_google_revoke(status: 403)
+
+    assert_not Google::Client.revoke_token("revocable-token")
+  end
+
+  test "revoke_token maps transport failures to Unavailable without the token" do
+    stub_request(:post, GOOGLE_REVOKE_URL).to_timeout
+
+    error = assert_raises(Google::Client::Unavailable) { Google::Client.revoke_token("revocable-token") }
+
+    assert_equal "Google token revoke failed (Net::OpenTimeout)", error.message
+  end
+
+  test "an unreadable token marks the account disconnected and raises Unauthorized" do
+    corrupt_google_token!(@account, :access_token)
+
+    error = assert_raises(Google::Client::Unauthorized) { @client.insert_event({}) }
+
+    assert_equal "Google token could not be read", error.message
+    assert_equal GoogleAccount::UNREADABLE_TOKEN_REASON, @account.reload.disconnected_reason
+    assert_not_requested :post, GOOGLE_EVENTS_URL
+  end
 end

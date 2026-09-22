@@ -184,18 +184,27 @@ class AgentApprovalTest < ActiveSupport::TestCase
       bot.create_agent!(kind: :workspace, owner: owner)
     end
 
-  test "decision webhook is posted after the transaction commits" do
-    approval = AgentApproval.create!(agent: agents(:bender_agent), room: rooms(:designers), action: "deploy", summary: "Ship it")
-    baseline = ActiveRecord::Base.connection.open_transactions
-    depth_at_post = nil
-
-    Agent::Delivery.expects(:post_approval_webhook!).with do |*|
-      depth_at_post = ActiveRecord::Base.connection.open_transactions
-      true
+    def enqueued_event_webhook_jobs
+      enqueued_jobs.select { |job| job[:job] == Agent::EventWebhookJob }
     end
-    approval.decide!(decision: "approved", by: users(:david))
 
-    assert_equal baseline, depth_at_post, "webhook must be posted after the decision transaction commits"
+  test "decision webhook is enqueued after the transaction commits" do
+    approval = AgentApproval.create!(agent: agents(:bender_agent), room: rooms(:designers), action: "deploy", summary: "Ship it")
+
+    assert_enqueued_jobs 1, only: Agent::EventWebhookJob do
+      approval.decide!(decision: "approved", by: users(:david))
+    end
+  end
+
+  test "decision webhook waits for a wrapping transaction" do
+    approval = AgentApproval.create!(agent: agents(:bender_agent), room: rooms(:designers), action: "deploy", summary: "Ship it")
+
+    AgentApproval.transaction do
+      approval.decide!(decision: "approved", by: users(:david))
+      assert_empty enqueued_event_webhook_jobs, "webhook must wait for the wrapping transaction"
+    end
+
+    assert_equal 1, enqueued_event_webhook_jobs.size
   end
 
   test "a second decision on an already decided request appends no second event" do

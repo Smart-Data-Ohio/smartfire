@@ -241,7 +241,10 @@ The only persistence is a short `Rails.cache` entry (5 minutes) keyed by the
 viewer's user id and the file id, so one member's cached metadata is never
 served to another. The browser additionally shares one in-memory request per
 file id per page load, so twenty messages linking the same document make one
-request.
+request. Preview calls are throttled to 60 per user per minute (a
+`Rails.cache` minute-bucketed counter like the list throttle); past that
+the endpoint answers 429 with `{ error: "rate_limited" }` and the link
+stays plain.
 
 ## Setup (Google Cloud Console)
 

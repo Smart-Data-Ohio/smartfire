@@ -143,38 +143,29 @@ class ChannelThreadAgentAssignmentTest < ActiveSupport::TestCase
     assert_equal @thread.id, event.metadata["thread_id"]
   end
 
-  test "unassignment after the agent left the room writes the ledger row but posts no webhook" do
+  test "unassignment after the agent left the room writes the ledger row but enqueues no webhook" do
     grant!(@agent, "post_messages")
     AgentGrant.create!(agent: @agent, room: nil, granted_by: @manager, capability: "read_messages")
     @thread.update_work!(actor: @manager, work_owner_id: @bot.id)
     @room.memberships.find_by!(user: @bot).destroy
 
-    Agent::Delivery.expects(:post_work_webhook!).never
-
-    assert_difference -> { @agent.agent_events.where(event_type: "work_unassigned").count }, 1 do
-      @thread.update_work!(actor: @manager, work_owner_id: nil)
+    assert_no_enqueued_jobs only: Agent::EventWebhookJob do
+      assert_difference -> { @agent.agent_events.where(event_type: "work_unassigned").count }, 1 do
+        @thread.update_work!(actor: @manager, work_owner_id: nil)
+      end
     end
   end
 
-  test "assignment webhooks are posted after the outermost transaction commits" do
+  test "assignment webhooks are enqueued after the outermost transaction commits" do
     grant!(@agent, "post_messages")
     grant!(@agent, "read_messages")
-    baseline = ActiveRecord::Base.connection.open_transactions
-    depth_at_post = nil
-    posted_inside_outer_transaction = false
-
-    Agent::Delivery.expects(:post_work_webhook!).with do |*|
-      depth_at_post = ActiveRecord::Base.connection.open_transactions
-      true
-    end
 
     ChannelThread.transaction do
       @thread.update_work!(actor: @manager, work_owner_id: @bot.id)
-      posted_inside_outer_transaction = !depth_at_post.nil?
+      assert_empty enqueued_event_webhook_jobs, "webhook must wait for the wrapping transaction"
     end
 
-    assert_not posted_inside_outer_transaction, "webhook must wait for the wrapping transaction"
-    assert_equal baseline, depth_at_post
+    assert_equal 1, enqueued_event_webhook_jobs.size
   end
 
   test "reassignment to a human writes work_unassigned and no work_assigned" do
@@ -359,6 +350,88 @@ class ChannelThreadAgentAssignmentTest < ActiveSupport::TestCase
     assert_equal 2, @thread.work_thread_events.count
   end
 
+  test "two agents assigning posts to each other stop at the hop limit" do
+    board = Rooms::Board.create_for({ name: "Loop Board", creator: @manager }, users: [ @manager ])
+    agent_a = create_agent_in(board, name: "Loop Agent A")
+    agent_b = create_agent_in(board, name: "Loop Agent B")
+
+    ChannelThread.create_board_post!(
+      room: board, creator: agent_a.user, name: "Post one",
+      work_status: "in_progress", owner_id: agent_b.user_id
+    )
+    assert_equal 0, agent_b.agent_events.where(event_type: "work_assigned").last.hop
+
+    ChannelThread.create_board_post!(
+      room: board, creator: agent_b.user, name: "Post two",
+      work_status: "in_progress", owner_id: agent_a.user_id
+    )
+    assert_equal 1, agent_a.agent_events.where(event_type: "work_assigned").last.hop
+
+    ChannelThread.create_board_post!(
+      room: board, creator: agent_a.user, name: "Post three",
+      work_status: "in_progress", owner_id: agent_b.user_id
+    )
+    assert_equal 2, agent_b.agent_events.where(event_type: "work_assigned").last.hop
+
+    ChannelThread.create_board_post!(
+      room: board, creator: agent_b.user, name: "Post four",
+      work_status: "in_progress", owner_id: agent_a.user_id
+    )
+
+    assert_equal 1, agent_a.agent_events.where(event_type: "work_assigned").count
+    suppressed = agent_a.agent_events.where(event_type: "delivery_suppressed_hop_limit").last
+    assert suppressed.present?
+    assert_equal 3, suppressed.hop
+    assert_equal suppressed.metadata["thread_id"], ChannelThread.order(:id).last.id
+  end
+
+  test "deleting an agent-owned thread emits work_unassigned" do
+    @thread.update_work!(actor: @manager, work_owner_id: @bot.id)
+    @thread.deleted_by = @manager
+
+    assert_difference -> { @agent.agent_events.where(event_type: "work_unassigned").count }, 1 do
+      @thread.destroy!
+    end
+
+    event = @agent.agent_events.where(event_type: "work_unassigned").last
+    assert_equal "delivered", event.outcome
+    assert_equal @manager.id, event.actor_id
+    assert_equal @thread.id, event.metadata["thread_id"]
+    assert_equal "Agent work", event.metadata["title"]
+    assert_equal @manager.name, event.metadata["assigned_by"]
+    assert_not_requested :post, webhooks(:bender).url
+
+    perform_enqueued_jobs only: Agent::EventWebhookJob
+
+    # The assignment POST can no longer be built after the delete, but the
+    # deletion itself still notifies through its snapshot.
+    assert_equal "failed", @agent.agent_events.where(event_type: "work_assigned").last.webhook_status
+    assert_requested :post, webhooks(:bender).url, times: 1
+    assert_requested :post, webhooks(:bender).url, body: hash_including(
+      "event_type" => "work_unassigned",
+      "work" => hash_including("title" => "Agent work", "thread_id" => @thread.id)
+    ), times: 1
+  end
+
+  test "deleting a thread without an agent owner emits nothing" do
+    assert_no_difference -> { AgentEvent.count } do
+      @thread.destroy!
+    end
+  end
+
+  test "a human assignment starts a new root at hop 0" do
+    board = Rooms::Board.create_for({ name: "Human Board", creator: @manager }, users: [ @manager ])
+    agent = create_agent_in(board, name: "Human Loop Agent")
+
+    ChannelThread.create_board_post!(
+      room: board, creator: @manager, name: "Human post",
+      work_status: "in_progress", owner_id: agent.user_id
+    )
+
+    assigned = agent.agent_events.where(event_type: "work_assigned").last
+    assert_equal 0, assigned.hop
+  end
+
   private
     def grant!(agent, capability)
       AgentGrant.create!(agent: agent, room: @room, granted_by: @manager, capability: capability)
@@ -373,5 +446,9 @@ class ChannelThreadAgentAssignmentTest < ActiveSupport::TestCase
       agent = bot.create_agent!(kind: :workspace, owner: @manager)
       room.memberships.grant_to(bot)
       agent
+    end
+
+    def enqueued_event_webhook_jobs
+      enqueued_jobs.select { |job| job[:job] == Agent::EventWebhookJob }
     end
 end

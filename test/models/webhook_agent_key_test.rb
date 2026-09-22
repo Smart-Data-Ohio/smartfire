@@ -1,19 +1,41 @@
 require "test_helper"
 
 class WebhookAgentKeyTest < ActiveSupport::TestCase
-  test "deliver without agent context sends the legacy payload unchanged" do
+  test "deliver without agent context for an agent-backed bot sends no agent key or bot key" do
     message = messages(:first)
-    bot_messages_path = Rails.application.routes.url_helpers.room_bot_messages_path(message.room, users(:bender).bot_key)
+    room_path = Rails.application.routes.url_helpers.room_path(message.room)
 
+    captured = nil
     WebMock.stub_request(:post, webhooks(:bender).url)
-      .with(body: hash_excluding("agent"))
+      .with { |request| captured = request.body; true }
       .to_return(status: 200)
 
     webhooks(:bender).deliver(message)
 
     assert_requested :post, webhooks(:bender).url, body: hash_including(
-      "room" => hash_including("path" => bot_messages_path)
+      "room" => hash_including("path" => room_path)
     ), times: 1
+    assert_not_includes captured, users(:bender).bot_key
+    assert_not_includes JSON.parse(captured).keys, "agent"
+  end
+
+  test "deliver for a legacy bot without an agent row keeps the bot-key room path" do
+    legacy = User.create_bot!(name: "Legacy Path Bot", webhook_url: "https://example.test/legacy-path")
+    message = messages(:first)
+    key_path = Rails.application.routes.url_helpers.room_bot_messages_path(message.room, legacy.bot_key)
+
+    captured = nil
+    WebMock.stub_request(:post, legacy.webhook.url)
+      .with { |request| captured = request.body; true }
+      .to_return(status: 200)
+
+    legacy.webhook.deliver(message)
+
+    assert_requested :post, legacy.webhook.url, body: hash_including(
+      "room" => hash_including("path" => key_path)
+    ), times: 1
+    assert_includes captured, legacy.bot_key
+    assert_not_includes JSON.parse(captured).keys, "agent"
   end
 
   test "deliver with agent context adds the agent key alongside existing keys" do
@@ -90,6 +112,51 @@ class WebhookAgentKeyTest < ActiveSupport::TestCase
     ), times: 1
   end
 
+  test "agent delivery signs the raw body and timestamps the post" do
+    message = messages(:first)
+    agent = agents(:bender_agent)
+
+    captured = nil
+    WebMock.stub_request(:post, webhooks(:bender).url)
+      .with { |request| captured = request; true }
+      .to_return(status: 200)
+
+    webhooks(:bender).deliver(message, agent: agent, delivery_id: 123)
+
+    secret = agent.reload.webhook_signing_secret
+    assert secret.present?, "the first delivery generates the agent secret"
+    timestamp = timestamp_header(captured)
+    expected = "sha256=#{OpenSSL::HMAC.hexdigest("SHA256", secret, "#{timestamp}.#{captured.body}")}"
+    assert_equal expected, signature_header(captured)
+    assert_match(/\A\d+\z/, timestamp)
+  end
+
+  test "approval, work, and completion deliveries sign with the agent secret" do
+    agent = agents(:bender_agent)
+    approval = AgentApproval.create!(agent: agent, action: "deploy", summary: "Ship it")
+    event = agent.agent_events.create!(
+      event_type: "github_action_completed", outcome: "delivered",
+      metadata: { "approval_id" => approval.id, "action" => "github.comment", "status" => "completed" }
+    )
+
+    captured = []
+    WebMock.stub_request(:post, webhooks(:bender).url)
+      .with { |request| captured << request; true }
+      .to_return(status: 200)
+
+    Agent::Delivery.post_approval_webhook!(webhooks(:bender), approval, agent: agent, delivery_id: 7)
+    Agent::Delivery.post_work_webhook!(webhooks(:bender), event, work: { "title" => "Signed work" }, agent: agent)
+    Agent::Delivery.post_github_action_webhook!(webhooks(:bender), event, agent: agent)
+
+    secret = agent.reload.webhook_signing_secret
+    assert_equal 3, captured.size
+    captured.each do |request|
+      timestamp = timestamp_header(request)
+      expected = "sha256=#{OpenSSL::HMAC.hexdigest("SHA256", secret, "#{timestamp}.#{request.body}")}"
+      assert_equal expected, signature_header(request)
+    end
+  end
+
   test "agent delivery outside PR threads carries a null pull_request" do
     room = rooms(:watercooler)
     parent = room.messages.create!(
@@ -112,4 +179,18 @@ class WebhookAgentKeyTest < ActiveSupport::TestCase
 
     assert_requested :post, webhooks(:bender).url, body: hash_including("pull_request" => nil), times: 2
   end
+
+  private
+    def signature_header(request)
+      webhook_header(request, "x-smartfire-signature")
+    end
+
+    def timestamp_header(request)
+      webhook_header(request, "x-smartfire-timestamp")
+    end
+
+    def webhook_header(request, name)
+      value = request.headers.find { |key, _| key.to_s.downcase == name }&.last
+      value.is_a?(Array) ? value.first : value
+    end
 end

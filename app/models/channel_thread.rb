@@ -56,6 +56,12 @@ class ChannelThread < ApplicationRecord
   after_create_commit :announce_board_post, if: :board_post?
   after_update_commit :broadcast_board_row_replace_on_change, if: :board_post?
   after_destroy_commit :broadcast_board_row_remove, if: :board_post?
+  before_destroy :capture_deleted_work_snapshot
+  after_destroy_commit :emit_deleted_work_unassigned
+
+  # Set by the destroy endpoint so the work_unassigned row records who
+  # deleted the thread. Cascade and merge destroys leave it nil.
+  attr_accessor :deleted_by
 
   scope :ordered, -> { order(last_activity_at: :desc, id: :desc) }
   scope :active, -> { where(closed_at: nil, locked_at: nil) }
@@ -915,41 +921,54 @@ class ChannelThread < ApplicationRecord
     # agent owner (if any) gets work_unassigned and the new agent owner
     # (if any) gets work_assigned. Status-only changes notify nobody.
     # Bots without an Agent row have no ledger to write to and are
-    # skipped. Returns the created rows for webhook delivery after the
+    # skipped. An assignment whose chain reached the hop limit suppresses
+    # instead of delivering, so two agents assigning posts to each other
+    # stop. Returns the created rows for webhook delivery after the
     # transaction commits.
     def record_work_assignment_events!(from_owner:, to_owner:, actor:)
       return [] if from_owner&.id == to_owner&.id
 
+      hop, chain_id = Agent::Delivery.work_assignment_hop_and_chain_for(actor)
+
       events = []
       if (previous_agent = agent_for_work_owner(from_owner))
-        events << previous_agent.agent_events.create!(
-          event_type: "work_unassigned",
-          room: room,
-          actor: actor,
-          outcome: "delivered",
-          metadata: {
-            "thread_id" => id,
-            "title" => name,
-            "work_status" => work_status,
-            "assigned_by" => actor&.name
-          }
-        )
+        events << record_work_assignment_event!(previous_agent, "work_unassigned", actor, hop, chain_id)
       end
       if (next_agent = agent_for_work_owner(to_owner))
-        events << next_agent.agent_events.create!(
-          event_type: "work_assigned",
+        events << record_work_assignment_event!(next_agent, "work_assigned", actor, hop, chain_id)
+      end
+      events
+    end
+
+    def record_work_assignment_event!(agent, event_type, actor, hop, chain_id)
+      metadata = {
+        "thread_id" => id,
+        "title" => name,
+        "work_status" => work_status,
+        "assigned_by" => actor&.name,
+        "hop" => hop
+      }
+
+      if hop >= Agent::Delivery::HOP_LIMIT
+        agent.agent_events.create!(
+          event_type: "delivery_suppressed_hop_limit",
+          room: room,
+          actor: actor,
+          outcome: "suppressed",
+          detail: "Hop limit reached (hop #{hop})",
+          chain_id: chain_id,
+          metadata: metadata
+        )
+      else
+        agent.agent_events.create!(
+          event_type: event_type,
           room: room,
           actor: actor,
           outcome: "delivered",
-          metadata: {
-            "thread_id" => id,
-            "title" => name,
-            "work_status" => work_status,
-            "assigned_by" => actor&.name
-          }
+          chain_id: chain_id,
+          metadata: metadata
         )
       end
-      events
     end
 
     def agent_for_work_owner(owner)
@@ -962,19 +981,57 @@ class ChannelThread < ApplicationRecord
     # Gated on current room membership plus read_messages like message
     # delivery: an agent removed from the room learns nothing more about
     # its work there, even if a workspace-wide grant survives.
+    # Captured before destroy while tags, links, and the room are still
+    # intact, so the deletion webhook can describe the thread the job can
+    # no longer load. Only agent-owned work needs it.
+    def capture_deleted_work_snapshot
+      return unless agent_for_work_owner(work_owner)
+
+      @deleted_work_snapshot = Agent::Delivery.work_payload(self, assigned_by: deleted_by&.name)
+    end
+
+    # An agent-owned thread that is deleted unassigns its owner the same
+    # way clearing the owner does. The row is readable in the ledger and
+    # by webhook, and polling returns its pre-destroy snapshot marked
+    # thread_deleted; assignment rows without a snapshot stay dropped,
+    # and next_since still advances past them.
+    def emit_deleted_work_unassigned
+      agent = agent_for_work_owner(work_owner)
+      return unless agent
+
+      metadata = {
+        "thread_id" => id,
+        "title" => name,
+        "work_status" => work_status,
+        "assigned_by" => deleted_by&.name,
+        "hop" => 0
+      }
+      metadata["work_snapshot"] = @deleted_work_snapshot if @deleted_work_snapshot
+
+      event = agent.agent_events.create!(
+        event_type: "work_unassigned",
+        room_id: room_id,
+        actor: deleted_by,
+        outcome: "delivered",
+        chain_id: SecureRandom.uuid,
+        metadata: metadata
+      )
+      deliver_work_assignment_webhooks([ event ])
+    end
+
     def deliver_work_assignment_webhooks(events)
       events.each do |event|
+        next unless AgentEvent::WORK_DELIVERABLE_TYPES.include?(event.event_type)
+
         agent = event.agent
-        next unless Membership.exists?(user_id: agent.user_id, room_id: room_id) && agent.can?(:read_messages, room)
+        event_room = room || Room.find_by(id: room_id)
+        next unless event_room
+        next unless Membership.exists?(user_id: agent.user_id, room_id: room_id) && agent.can?(:read_messages, event_room)
+        next unless agent.user.webhook
+        next unless event.webhook_status == "none"
 
-        webhook = agent.user.webhook
-        next unless webhook
-
-        begin
-          Agent::Delivery.post_work_webhook!(webhook, event, thread: self, agent: agent)
-        rescue StandardError => error
-          Rails.logger.warn "Agent work webhook delivery #{event.id} failed: #{error.class}"
-        end
+        event.update!(webhook_status: "pending", webhook_next_attempt_at: Time.current)
+        Agent::EventWebhookJob.perform_later(event.id, event.webhook_attempts.to_i)
       end
     end
 

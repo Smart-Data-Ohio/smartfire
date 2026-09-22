@@ -189,7 +189,7 @@ export default class SuggestionResultsController {
     this.selectElement.addEventListener("click", this.#cancelEvent)
     this.selectElement.setAttribute("id", this.id)
     this.selectElement.setAttribute("data-behavior", "scrollable_menu")
-    this.selectElement.setAttribute("aria-live", "assertive")
+    this.selectElement.setAttribute("aria-live", "polite")
 
     document.body.appendChild(this.selectElement)
   }

@@ -55,9 +55,9 @@ export default class extends Controller {
   #received({ action, user }) {
     if (user.id !== Current.user.id) {
       if (action === "start") {
-        this.tracker.add(user.name)
+        this.tracker.add(user.id, user.name)
       } else {
-        this.tracker.remove(user.name)
+        this.tracker.remove(user.id)
       }
     }
   }

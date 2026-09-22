@@ -31,6 +31,33 @@ class Opengraph::FetchTest < ActiveSupport::TestCase
     assert_equal "<body>ok<body>", @fetch.fetch_document(@url)
   end
 
+  test "#fetch_document follows relative redirects" do
+    WebMock.stub_request(:get, "https://www.example.com/")
+      .to_return(status: 302, headers: { location: "/other" })
+
+    WebMock.stub_request(:get, "https://www.example.com/other")
+      .to_return(status: 200, body: "<body>ok<body>", headers: { content_type: "text/html" })
+
+    assert_equal "<body>ok<body>", @fetch.fetch_document(@url)
+  end
+
+  test "#fetch_document denies non-HTTP redirect targets" do
+    WebMock.stub_request(:get, "https://www.example.com/")
+      .to_return(status: 302, headers: { location: "javascript:alert(1)" })
+
+    assert_raises Opengraph::Fetch::RedirectDeniedError do
+      @fetch.fetch_document(@url)
+    end
+  end
+
+  test "#fetch_document connects with explicit timeouts" do
+    Net::HTTP.expects(:start).with("www.example.com", 443,
+      ipaddr: "1.2.3.4", use_ssl: true, open_timeout: 5, read_timeout: 5, write_timeout: 5
+    ).raises(Errno::ECONNREFUSED)
+
+    assert_raises(Errno::ECONNREFUSED) { @fetch.fetch_document(@url, ip: "1.2.3.4") }
+  end
+
   test "#fetch_document does not follow redirects to private networks" do
     WebMock.stub_request(:get, "https://www.example.com/")
       .to_return(status: 302, headers: { location: "https://www.other.com/" })
