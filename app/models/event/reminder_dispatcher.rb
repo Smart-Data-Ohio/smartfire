@@ -17,11 +17,14 @@ class Event::ReminderDispatcher
     private
       def due_events(now)
         Event.active
+          .joins(:room).merge(Room.alive)
           .where(reminded_at: nil)
           .where(starts_at: (now - REMIND_AFTER_GRACE)..(now + REMIND_BEFORE))
       end
 
       def dispatch_event!(event, now:)
+        return if event.room.deleted?
+
         claimed = event.with_lock do
           if event.reminded_at.present?
             false

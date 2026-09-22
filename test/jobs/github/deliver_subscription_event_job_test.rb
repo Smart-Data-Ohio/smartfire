@@ -379,6 +379,27 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
     end
   end
 
+  test "posts nothing to a soft-deleted room" do
+    @room.begin_destroy!
+
+    assert_no_difference -> { Message.count } do
+      assert_broadcasts room_messages_stream_name(@room), 0 do
+        Github::DeliverSubscriptionEventJob.perform_now("pull_request", pull_request_payload(action: "opened"))
+      end
+    end
+  end
+
+  test "records no inbox item for a soft-deleted room" do
+    users(:kevin).update!(github_login: "kevin-gh")
+    @room.update_columns(deleted_at: Time.current)
+
+    assert_no_difference -> { Message.count } do
+      assert_no_difference -> { ActivityItem.where(user: users(:kevin), event_type: "pr_review_request").count } do
+        Github::DeliverSubscriptionEventJob.perform_now("pull_request", pull_request_payload(action: "review_requested", reviewer: "Kevin-GH"))
+      end
+    end
+  end
+
   test "a private repository posts without the title to a subscription with no verified reader" do
     payload = pull_request_payload(action: "opened", title: "Secret acquisition")
     payload["repository"]["private"] = true
@@ -441,6 +462,10 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
   end
 
   private
+    def room_messages_stream_name(room)
+      signed = Turbo::StreamsChannel.signed_stream_name([ room, :messages ])
+      Turbo::StreamsChannel.verified_stream_name(signed)
+    end
     def discuss_pull_request(room, number:, client_id:)
       parent = room.messages.create!(
         creator: users(:david),

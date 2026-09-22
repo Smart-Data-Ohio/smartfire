@@ -38,9 +38,14 @@ class ChannelThreadMessagesController < ApplicationController
   end
 
   def create
-    @message = @thread.post_message!(creator: Current.user, attributes: message_params, drive_file_ids: validated_drive_file_ids!)
+    if (duplicate = Message.find_duplicate(room: @room, creator: Current.user, client_message_id: params.dig(:message, :client_message_id)))
+      # A retried create: return the original without re-posting.
+      @message = duplicate
+    else
+      @message = @thread.post_message!(creator: Current.user, attributes: message_params, drive_file_ids: validated_drive_file_ids!)
+      @message.broadcast_create
+    end
 
-    @message.broadcast_create
     no_store_response! if request.format.json?
     respond_to do |format|
       format.html { redirect_to room_thread_path(@room, @thread) }

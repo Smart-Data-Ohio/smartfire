@@ -236,7 +236,7 @@ class Agent::Delivery
       return unless event.outcome == "pending"
 
       agent = event.agent
-      room = Room.find_by(id: event.room_id)
+      room = Room.alive.find_by(id: event.room_id)
       message = Message.find_by(id: event.message_id)
 
       if message.nil? || room.nil?
@@ -281,7 +281,7 @@ class Agent::Delivery
     # Re-enqueues webhook rows stranded in pending with attempts
     # remaining: the row write committed but its enqueue never ran (a
     # crash or a Redis outage in between), or a retry's re-enqueue was
-    # lost. Runs from the periodic event-reminders loop. A row is
+    # lost. Runs from the periodic runner (bin/periodic). A row is
     # stranded only once its scheduled attempt is past by the grace
     # period, so a retry waiting out Retry-After is never re-enqueued
     # early; rows that were never scheduled (no next attempt recorded)

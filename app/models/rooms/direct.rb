@@ -10,7 +10,7 @@ class Rooms::Direct < Room
       # FIXME: Find a more performant algorithm that won't be a problem on accounts with 10K+ direct rooms,
       # which could be to store the membership id list as a hash on the room, and use that for lookup.
       def find_for(users)
-        all.joins(:users).detect do |room|
+        alive.joins(:users).detect do |room|
           Set.new(room.user_ids) == Set.new(users.pluck(:id))
         end
       end
