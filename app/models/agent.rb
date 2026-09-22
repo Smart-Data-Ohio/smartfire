@@ -169,8 +169,10 @@ class Agent < ApplicationRecord
   end
 
   def reset_webhook_signing_secret!
-    update!(webhook_signing_secret: self.class.generate_webhook_signing_secret)
-    webhook_signing_secret
+    with_lock do
+      update!(webhook_signing_secret: self.class.generate_webhook_signing_secret)
+      webhook_signing_secret
+    end
   end
 
   def self.generate_webhook_signing_secret

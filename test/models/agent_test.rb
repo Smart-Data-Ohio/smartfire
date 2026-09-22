@@ -342,6 +342,15 @@ class AgentTest < ActiveSupport::TestCase
     assert_equal winner, agent.reload.webhook_signing_secret
   end
 
+  test "signing secret reset takes the row lock" do
+    agent = agents(:bender_agent)
+
+    agent.expects(:with_lock).yields.once
+    agent.reset_webhook_signing_secret!
+
+    assert agent.reload.webhook_signing_secret.present?
+  end
+
   test "last_seen_at touch alone broadcasts nothing" do
     agent = agents(:bender_agent)
 
