@@ -13,11 +13,15 @@ for the media foundation.
 
 Hosts and speakers see a **Go live** form in the stage panel: a quality
 select (`720p15`, `1080p15`, `1080p30`, defaulting to `1080p15`) and a
-button. Submitting posts the stream (`POST /rooms/:room_id/stage/stream`
-with a `quality` parameter) and, on success, the huddle panel starts
-sharing the presenter's screen at that quality. A host or speaker can also
+button. The click hands the whole sequence to the huddle panel, which
+captures the screen inside the click gesture first — Safari denies a
+capture that starts after the POST round-trip — then posts the stream
+(`POST /rooms/:room_id/stage/stream` with a `quality` parameter) and
+publishes the captured tracks at that quality. Denying the capture posts
+nothing; a failed POST stops the tracks. A host or speaker can also
 share through the ordinary Share screen control; that share carries the
-room default and never marks the room live.
+room default and never marks the room live. The Share control hides where
+`getDisplayMedia` is missing.
 
 One room carries at most one live stream. Starting while another stream is
 live answers 409 and names the presenter. Listeners cannot go live, and

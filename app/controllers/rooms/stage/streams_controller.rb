@@ -32,10 +32,15 @@ class Rooms::Stage::StreamsController < ApplicationController
     end
 
     begin
-      @room.streams.create!(membership: @membership, user: Current.user, quality: params[:quality])
+      stream = @room.streams.create!(membership: @membership, user: Current.user, quality: params[:quality])
     rescue ActiveRecord::RecordNotUnique
       live = @room.live_stream
       return render plain: "#{live&.user&.name || "Someone"} is already live", status: :conflict
+    else
+      # The presenting browser reads this for every later DELETE, so a
+      # delayed end names this stream and can never kill someone else's
+      # newer one.
+      response.headers["X-Stream-Id"] = stream.id.to_s
     end
 
     respond_with_panel

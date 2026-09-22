@@ -81,7 +81,7 @@ export default class extends Controller {
 
     window.addEventListener("huddle:join", this.join, options)
     window.addEventListener("huddle:role-changed", this.roleChanged, options)
-    window.addEventListener("huddle:stream-start", this.streamStarted, options)
+    window.addEventListener("huddle:go-live", this.goLive, options)
     window.addEventListener("huddle:stream-stop", this.streamStopped, options)
     window.addEventListener("huddle:query", this.broadcastState, options)
     window.addEventListener("huddle:expand-screen", this.viewSharedScreen, options)
@@ -102,6 +102,7 @@ export default class extends Controller {
     this.#startAuthenticationChecks()
     this.#observeRoleEvents()
     this.#updateNoiseSuppressionControl()
+    this.#updatePublishControls()
     this.speakerRowTarget.hidden = !audioOutputSupported()
     this.#renderState()
   }
@@ -598,31 +599,38 @@ export default class extends Controller {
     this.#expandScreen(expanded === -1 ? tracks.at(-1) : tracks[(expanded + 1) % tracks.length])
   }
 
-  // The stage panel POSTs the stream first and dispatches this on success,
-  // so by the time it arrives the room is live. The share starts at the
-  // stream's quality; an ordinary share keeps the room default.
-  streamStarted = async ({ detail }) => {
+  // The stage panel dispatches this synchronously from the Go-live click.
+  // Everything before the first await runs inside the gesture, which is the
+  // whole point: Safari denies a getDisplayMedia that starts after the POST
+  // round-trip, so the capture starts here, first. Then the stream posts,
+  // and the captured tracks publish at the stream's quality; an ordinary
+  // share keeps the room default. Any failure stops the tracks, and a
+  // failure after the POST also ends the posted stream.
+  goLive = async ({ detail }) => {
     const roomId = Number(detail?.roomId)
     if (!Number.isInteger(roomId) || roomId <= 0) return
 
     // Presenting needs the call: without it there is nothing to share over.
-    // The stream stays live — stopping it is the Stop control's job — and a
-    // join afterwards shares through the ordinary control instead.
-    if (roomId !== this.roomId || !this.room || this.state !== "connected") return
-
+    // Nothing posts and no picker opens; joining first is the way back.
     const room = this.room
-    // The Turbo response that triggered this event already swapped in the
-    // live panel, so the stream id is in the DOM: every later DELETE names
-    // it, and can never end someone else's newer stream.
-    const streamId = Number(document.querySelector(".stage-panel__live")?.dataset.streamId) || null
-    this.streaming = { roomId, quality: detail?.quality, streamId }
+    if (roomId !== this.roomId || !room || this.state !== "connected" || !this.canPublish) {
+      this.#showTemporaryStatus("Join the stage before going live.")
+      return
+    }
 
+    if (!this.#canShareScreen()) {
+      this.#showTemporaryStatus("Screen sharing isn’t available in this browser.")
+      return
+    }
+
+    const operation = this.operation
+    const capture = this.#beginScreenCapture(room)
+
+    let tracks
     try {
-      await this.#startScreenShare(room, this.#streamEncodingFor(detail?.quality))
+      tracks = await capture
     } catch (error) {
-      // A cancelled or denied capture must not leave live state dangling.
-      this.streaming = null
-      await this.#deleteStream(roomId, streamId)
+      // Cancelled or denied before anything posted: nothing to unwind.
       if (room === this.room) {
         this.#showTemporaryStatus(this.#permissionWasDenied(error)
           ? "Screen sharing wasn’t started. Choose a screen and allow sharing to try again."
@@ -631,15 +639,102 @@ export default class extends Controller {
       }
       return
     }
-
-    if (room !== this.room) {
-      this.streaming = null
+    if (operation !== this.operation || room !== this.room) {
+      this.#stopCapturedTracks(tracks)
       return
     }
 
+    let streamId
+    try {
+      streamId = await this.#postStream(detail?.streamUrl, detail?.quality)
+    } catch (error) {
+      this.#stopCapturedTracks(tracks)
+      if (room === this.room) {
+        this.#showTemporaryStatus(error.message || "Going live failed. Try again.")
+        this.#updateMediaControls()
+      }
+      return
+    }
+    if (operation !== this.operation || room !== this.room) {
+      this.#stopCapturedTracks(tracks)
+      await this.#deleteStream(roomId, streamId)
+      return
+    }
+
+    try {
+      await this.#publishScreenTracks(room, tracks, this.#streamEncodingFor(detail?.quality))
+    } catch (error) {
+      this.#stopCapturedTracks(tracks)
+      await this.#deleteStream(roomId, streamId)
+      if (room === this.room) {
+        this.#showTemporaryStatus("Screen sharing could not be started. Try again.")
+        this.#updateMediaControls()
+      }
+      return
+    }
+
+    this.streaming = { roomId, quality: detail?.quality, streamId }
     this.#syncLocalScreenShare(room)
     this.#updateMediaControls()
     this.#showTemporaryStatus("You’re live")
+  }
+
+  // Starts the screen capture and returns its tracks. Called synchronously
+  // from the Go-live gesture: the getDisplayMedia inside fires before this
+  // method returns. The video-only retry only runs after a constraint
+  // rejection, which happens outside the gesture on browsers that reject
+  // audio capture — those browsers keep the old failure there.
+  #beginScreenCapture(room) {
+    const attempt = room.localParticipant.createScreenTracks(this.#screenCaptureOptions(true))
+    return attempt.catch((error) => {
+      if (this.#displayMediaRejectedConstraints(error)) {
+        return room.localParticipant.createScreenTracks(this.#screenCaptureOptions(false))
+      }
+      throw error
+    })
+  }
+
+  #stopCapturedTracks(tracks) {
+    for (const track of tracks || []) track.stop?.()
+  }
+
+  // POSTs the stream the way the Go-live form would have: the response's
+  // turbo-stream swaps the actor's own panel, and its header names the new
+  // stream for every later DELETE. Throws the server's message on failure.
+  async #postStream(streamUrl, quality) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+    if (!streamUrl || !csrfToken) throw new Error("Going live failed. Try again.")
+
+    const response = await fetch(streamUrl, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Accept": "text/vnd.turbo-stream.html",
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        "X-CSRF-Token": csrfToken
+      },
+      body: new URLSearchParams({ quality: quality || "1080p15" })
+    })
+
+    if (!response.ok) {
+      throw new Error((await response.text()).trim() || "Going live failed. Try again.")
+    }
+
+    const streamId = Number(response.headers.get("X-Stream-Id")) || null
+    if (window.Turbo?.renderStreamMessage) {
+      window.Turbo.renderStreamMessage(await response.text())
+    }
+    return streamId
+  }
+
+  // Publishes captured screen tracks the way setScreenShareEnabled would:
+  // the same publish options on every track, so the share toggle, the
+  // unpublished cleanup, and the ended broadcasts all behave identically.
+  async #publishScreenTracks(room, tracks, encoding) {
+    const publishOptions = { dtx: false, ...(encoding ? { screenShareEncoding: encoding } : {}) }
+    for (const track of tracks) {
+      await room.localParticipant.publishTrack(track, publishOptions)
+    }
   }
 
   // Stop stream ends the server state first; this stops the local share once
@@ -1221,6 +1316,25 @@ export default class extends Controller {
   }
 
   async #startScreenShare(room, screenShareEncoding) {
+    // Shared audio is usually music or a video rather than speech, and discontinuous
+    // transmission chops it, so it publishes without DTX. The option reaches both
+    // screen tracks; DTX has no meaning for the video one. A stream passes its
+    // own encoding for this call only; an ordinary share inherits the default.
+    const publishOptions = { dtx: false }
+    if (screenShareEncoding) publishOptions.screenShareEncoding = screenShareEncoding
+
+    try {
+      await room.localParticipant.setScreenShareEnabled(true, this.#screenCaptureOptions(true), publishOptions)
+    } catch (error) {
+      if (!this.#displayMediaRejectedConstraints(error)) throw error
+
+      // Only a browser that refused to *capture* with these constraints is
+      // retried; a publishing failure would just show a second picker.
+      await room.localParticipant.setScreenShareEnabled(true, this.#screenCaptureOptions(false), publishOptions)
+    }
+  }
+
+  #screenCaptureOptions(withAudio) {
     const options = {
       contentHint: "detail",
       // No `resolution`. A preset's resolution carries its frame rate too, so
@@ -1233,23 +1347,15 @@ export default class extends Controller {
       // feeds the speakers back into the huddle on Windows.
       systemAudio: "exclude"
     }
+    if (withAudio) options.audio = true
+    return options
+  }
 
-    // Shared audio is usually music or a video rather than speech, and discontinuous
-    // transmission chops it, so it publishes without DTX. The option reaches both
-    // screen tracks; DTX has no meaning for the video one. A stream passes its
-    // own encoding for this call only; an ordinary share inherits the default.
-    const publishOptions = { dtx: false }
-    if (screenShareEncoding) publishOptions.screenShareEncoding = screenShareEncoding
-
-    try {
-      await room.localParticipant.setScreenShareEnabled(true, { ...options, audio: true }, publishOptions)
-    } catch (error) {
-      if (!this.#displayMediaRejectedConstraints(error)) throw error
-
-      // Only a browser that refused to *capture* with these constraints is
-      // retried; a publishing failure would just show a second picker.
-      await room.localParticipant.setScreenShareEnabled(true, options, publishOptions)
-    }
+  // Screen sharing needs getDisplayMedia; without it the Share control hides
+  // and Go live reports the browser instead of opening a picker that cannot
+  // work.
+  #canShareScreen() {
+    return typeof navigator.mediaDevices?.getDisplayMedia === "function"
   }
 
   // The stream quality select maps onto the SDK's screen-share presets. An
@@ -2150,7 +2256,7 @@ export default class extends Controller {
     const live = this.state === "connected" || this.state === "reconnecting"
 
     this.muteTarget.hidden = listening
-    this.shareTarget.hidden = listening
+    this.shareTarget.hidden = listening || !this.#canShareScreen()
     this.cameraTarget.hidden = listening
     this.listeningNoteTarget.hidden = !(live && listening)
   }

@@ -84,24 +84,74 @@ class StreamingTest < ApplicationSystemTestCase
     end
   end
 
-  test "going live posts the stream and dispatches huddle:stream-start with the chosen quality" do
+  test "going live captures in the click, posts the stream, then publishes" do
     room = create_stage_room(name: "Town Hall", members: [ users(:david), users(:jason) ])
     sign_in "david@37signals.com"
     visit room_path(room)
     wait_for_cable_connection
     join_stage_without_media(room, users(:david))
     find("button[aria-label='Show stage']").click
-    page.execute_script("window.streamStartEvents = []; window.addEventListener('huddle:stream-start', event => window.streamStartEvents.push(event.detail))")
+
+    # Only the room is faked; the capture-then-post-then-publish order and
+    # the SDK's own encoding presets are the real code paths.
+    result = page.evaluate_async_script(<<~JS, room.id)
+      const done = arguments[arguments.length - 1];
+      import("livekit-client").then(module => {
+        const controller = window.Stimulus
+          .getControllerForElementAndIdentifier(document.getElementById("channel-huddle"), "huddle");
+        window.__huddleController = controller;
+        controller.liveKit = module;
+        controller.roomId = arguments[0];
+        controller.state = "connected";
+        controller.canPublish = true;
+        window.__goLiveSequence = [];
+        window.__publishOptions = null;
+        controller.room = {
+          localParticipant: {
+            isMicrophoneEnabled: true,
+            isScreenShareEnabled: false,
+            isCameraEnabled: false,
+            trackPublications: new Map(),
+            createScreenTracks: () => {
+              window.__goLiveSequence.push("capture");
+              return Promise.resolve([ { stop: () => {} } ]);
+            },
+            publishTrack: (track, options) => {
+              window.__goLiveSequence.push("publish");
+              const encoding = options.screenShareEncoding;
+              window.__publishOptions = {
+                maxBitrate: encoding.maxBitrate, maxFramerate: encoding.maxFramerate, dtx: options.dtx
+              };
+              return Promise.resolve({});
+            }
+          }
+        };
+        const originalFetch = window.fetch;
+        window.fetch = (url, options) => {
+          if (typeof url === "string" && url.includes("/stage/stream") && options?.method === "POST") {
+            window.__goLiveSequence.push("post");
+          }
+          return originalFetch(url, options);
+        };
+        done(true);
+      }).catch(error => done({ error: String(error && error.message || error) }));
+    JS
+    assert_equal true, result
 
     select "1080p30", from: "Stream quality"
     click_button "Go live"
 
-    Timeout.timeout(Capybara.default_max_wait_time) do
-      sleep 0.05 until page.evaluate_script("window.streamStartEvents.length") > 0
+    wait_for_condition("the go-live sequence did not complete") do
+      page.evaluate_script("window.__goLiveSequence.length") == 3
     end
-    assert_equal [ { "roomId" => room.id, "quality" => "1080p30" } ], page.evaluate_script("window.streamStartEvents")
 
-    assert_predicate Stream.find_by(room_id: room.id), :live?
+    assert_equal %w[ capture post publish ], page.evaluate_script("window.__goLiveSequence")
+    assert_equal({ "maxBitrate" => 5_000_000, "maxFramerate" => 30, "dtx" => false },
+      page.evaluate_script("window.__publishOptions"))
+
+    stream = Stream.find_by(room_id: room.id)
+    assert_predicate stream, :live?
+    assert_equal stream.id, page.evaluate_script("window.__huddleController.streaming.streamId")
     assert_selector ".stage-live__badge", text: "Live: David", wait: BROADCAST_WAIT
     assert_selector "#stage_rooms .stage-room .stage-live-dot__pip", wait: BROADCAST_WAIT
     assert_selector ".stage-panel__note--live", text: "Live: David"
@@ -135,6 +185,7 @@ class StreamingTest < ApplicationSystemTestCase
     sign_in "david@37signals.com"
     visit room_path(room)
     wait_for_cable_connection
+    grant = join_stage_without_media(room, users(:david))
 
     # The real LiveKit SDK loads without a server; only the room is faked, so
     # the asserted encodings are the SDK's own presets, not test fixtures.
@@ -146,6 +197,7 @@ class StreamingTest < ApplicationSystemTestCase
         controller.liveKit = module;
         controller.roomId = arguments[0];
         controller.state = "connected";
+        controller.canPublish = true;
         window.__streamPublishCalls = [];
         controller.room = {
           localParticipant: {
@@ -153,10 +205,10 @@ class StreamingTest < ApplicationSystemTestCase
             isScreenShareEnabled: false,
             isCameraEnabled: false,
             trackPublications: new Map(),
-            setScreenShareEnabled: (enabled, capture, publish) => {
+            createScreenTracks: () => Promise.resolve([ { stop: () => {} } ]),
+            publishTrack: (track, publish) => {
               const encoding = publish?.screenShareEncoding;
               window.__streamPublishCalls.push({
-                enabled: enabled,
                 encoding: encoding ? { maxBitrate: encoding.maxBitrate, maxFramerate: encoding.maxFramerate } : null
               });
               return Promise.resolve({});
@@ -169,9 +221,10 @@ class StreamingTest < ApplicationSystemTestCase
     assert_equal true, result
 
     { "720p15" => [ 1_500_000, 15 ], "1080p15" => [ 2_500_000, 15 ], "1080p30" => [ 5_000_000, 30 ] }.each do |quality, (bitrate, fps)|
+      grant.update_columns(last_seen_at: Time.current)
       page.execute_script(<<~JS, room.id, quality)
-        window.dispatchEvent(new CustomEvent("huddle:stream-start", {
-          detail: { roomId: arguments[0], quality: arguments[1] }
+        window.dispatchEvent(new CustomEvent("huddle:go-live", {
+          detail: { roomId: arguments[0], quality: arguments[1], streamUrl: `/rooms/${arguments[0]}/stage/stream` }
         }));
       JS
 
@@ -180,24 +233,72 @@ class StreamingTest < ApplicationSystemTestCase
       end
 
       call = page.evaluate_script("window.__streamPublishCalls.shift()")
-      assert_equal true, call["enabled"]
       assert_equal bitrate, call["encoding"]["maxBitrate"]
       assert_equal fps, call["encoding"]["maxFramerate"]
+
+      room.live_stream.end!
     end
   end
 
-  test "a cancelled capture DELETEs the stream by id" do
+  test "a cancelled capture posts nothing" do
     room = create_stage_room(name: "Town Hall", members: [ users(:david), users(:jason) ])
-    stream = Stream.create!(room: room, membership: room.memberships.find_by!(user: users(:david)),
-      user: users(:david), quality: "1080p15")
     sign_in "david@37signals.com"
     visit room_path(room)
     wait_for_cable_connection
+    join_stage_without_media(room, users(:david))
+    find("button[aria-label='Show stage']").click
 
-    assert_selector ".stage-live__badge", text: "Live: David"
+    # The capture runs first, inside the click; denying it must never reach
+    # the POST, so there is no live state to unwind.
+    page.execute_script(<<~JS, room.id)
+      window.__streamPostsSeen = [];
+      const originalFetch = window.fetch;
+      window.fetch = (url, options) => {
+        if (typeof url === "string" && url.includes("/stage/stream") && options?.method === "POST") {
+          window.__streamPostsSeen.push(url);
+        }
+        return originalFetch(url, options);
+      };
+      const controller = window.Stimulus
+        .getControllerForElementAndIdentifier(document.getElementById("channel-huddle"), "huddle");
+      controller.roomId = arguments[0];
+      controller.state = "connected";
+      controller.canPublish = true;
+      controller.room = {
+        localParticipant: {
+          isMicrophoneEnabled: true,
+          isScreenShareEnabled: false,
+          isCameraEnabled: false,
+          trackPublications: new Map(),
+          createScreenTracks: () => Promise.reject(new DOMException("Permission denied", "NotAllowedError"))
+        }
+      };
+    JS
+
+    click_button "Go live"
+
+    wait_for_condition("the cancelled capture showed no status") do
+      page.evaluate_script("document.querySelector('[data-huddle-target=status]').textContent")
+        .include?("Screen sharing wasn’t started")
+    end
+
+    sleep 0.5
+    assert_equal [], page.evaluate_script("window.__streamPostsSeen")
+    assert_nil Stream.find_by(room_id: room.id)
+    assert_no_selector ".stage-live__badge"
+  end
+
+  test "a failed publish ends the posted stream by id and stops the tracks" do
+    room = create_stage_room(name: "Town Hall", members: [ users(:david), users(:jason) ])
+    sign_in "david@37signals.com"
+    visit room_path(room)
+    wait_for_cable_connection
+    join_stage_without_media(room, users(:david))
+    find("button[aria-label='Show stage']").click
 
     page.execute_script(<<~JS, room.id)
       window.__streamDeleteSeen = [];
+      window.__stoppedTracks = 0;
       const originalFetch = window.fetch;
       window.fetch = (url, options) => {
         if (typeof url === "string" && url.includes("/stage/stream") && options?.method === "DELETE") {
@@ -209,30 +310,58 @@ class StreamingTest < ApplicationSystemTestCase
         .getControllerForElementAndIdentifier(document.getElementById("channel-huddle"), "huddle");
       controller.roomId = arguments[0];
       controller.state = "connected";
+      controller.canPublish = true;
+      controller.liveKit = { ScreenSharePresets: { h1080fps15: { maxBitrate: 1, maxFramerate: 15 } } };
       controller.room = {
         localParticipant: {
           isMicrophoneEnabled: true,
           isScreenShareEnabled: false,
           isCameraEnabled: false,
           trackPublications: new Map(),
-          setScreenShareEnabled: () => Promise.reject(new DOMException("Permission denied", "NotAllowedError"))
+          createScreenTracks: () => Promise.resolve([ { stop: () => { window.__stoppedTracks += 1; } } ]),
+          publishTrack: () => Promise.reject(new Error("publish failed"))
         }
       };
-      window.dispatchEvent(new CustomEvent("huddle:stream-start", {
-        detail: { roomId: arguments[0], quality: "1080p15" }
-      }));
     JS
 
-    wait_for_condition("the cancelled capture did not DELETE the stream") do
+    click_button "Go live"
+
+    wait_for_condition("the failed publish did not DELETE the stream") do
       page.evaluate_script("window.__streamDeleteSeen.length") > 0
     end
-    wait_for_condition("the cancelled capture left the stream live") do
+    wait_for_condition("the failed publish left the stream live") do
       Stream.find_by(room_id: room.id)&.ended_at.present?
     end
 
+    stream = Stream.find_by(room_id: room.id)
     assert_equal [ "/rooms/#{room.id}/stage/stream?stream_id=#{stream.id}" ],
       page.evaluate_script("window.__streamDeleteSeen")
+    assert_equal 1, page.evaluate_script("window.__stoppedTracks")
     assert_no_selector ".stage-live__badge"
+  end
+
+  test "Share screen hides where getDisplayMedia is missing" do
+    room = create_stage_room(name: "Town Hall", members: [ users(:david), users(:jason) ])
+    sign_in "david@37signals.com"
+    visit room_path(room)
+    wait_for_cable_connection
+
+    assert_selector "[data-huddle-target='share']:not([hidden])", visible: :all
+
+    script_id = add_script_to_evaluate_on_new_document(<<~JS)
+      try {
+        Object.defineProperty(navigator.mediaDevices, "getDisplayMedia", { value: undefined, configurable: true });
+      } catch (error) {}
+    JS
+
+    begin
+      visit room_path(room)
+      wait_for_cable_connection
+
+      assert_selector "[data-huddle-target='share'][hidden]", visible: :all
+    ensure
+      page.driver.browser.execute_cdp("Page.removeScriptToEvaluateOnNewDocument", identifier: script_id)
+    end
   end
 
   test "a host stop event stops the presenter's share without a DELETE" do
@@ -308,11 +437,11 @@ class StreamingTest < ApplicationSystemTestCase
     sign_in "david@37signals.com"
     visit room_path(room)
     wait_for_cable_connection
-    join_stage_without_media(room, users(:david))
-    find("button[aria-label='Show stage']").click
 
-    select "1080p15", from: "Stream quality"
-    click_button "Go live"
+    # Server-side start: this test is about what viewers receive over
+    # broadcasts, not about the presenter's go-live click.
+    Stream.create!(room: room, membership: room.memberships.find_by!(user: users(:david)),
+      user: users(:david), quality: "1080p15")
     assert_selector ".stage-live__badge", text: "Live: David", wait: BROADCAST_WAIT
 
     using_session("Viewer") do
@@ -324,6 +453,7 @@ class StreamingTest < ApplicationSystemTestCase
       assert_no_selector "button", text: "Stop stream", visible: :visible
     end
 
+    find("button[aria-label='Show stage']").click
     click_button "Stop stream"
 
     using_session("Viewer") do
@@ -390,6 +520,10 @@ class StreamingTest < ApplicationSystemTestCase
   end
 
   private
+    def add_script_to_evaluate_on_new_document(source)
+      page.driver.browser.execute_cdp("Page.addScriptToEvaluateOnNewDocument", source: source)["identifier"]
+    end
+
     def livekit_enabled?
       ENV["LIVEKIT_SYSTEM_TESTS"] == "1"
     end
@@ -411,6 +545,7 @@ class StreamingTest < ApplicationSystemTestCase
       )
       grant.update_columns(last_seen_at: Time.current)
       dispatch_huddle_changed(room_id: room.id, state: "connected")
+      grant
     end
 
     def dispatch_huddle_changed(room_id:, state:)

@@ -33,6 +33,7 @@ class Rooms::Stage::StreamsControllerTest < ActionDispatch::IntegrationTest
     stream = @room.live_stream
     assert_equal "1080p30", stream.quality
     assert_equal users(:david), stream.user
+    assert_equal stream.id.to_s, response.headers["X-Stream-Id"]
     assert_equal @host, stream.membership
   end
 
