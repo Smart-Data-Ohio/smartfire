@@ -120,7 +120,13 @@ class HuddleGrant < ApplicationRecord
     !room.stage? || membership.stage_role == stage_role
   end
 
+  # The gateway calls this about once per second per connected participant,
+  # so the steady-state authorized check runs without a lock: only a grant
+  # that looks revoked takes the write lock, and rechecks inside it before
+  # revoking.
   def authorize_or_revoke!
+    return true if authorized?
+
     with_lock do
       return true if authorized?
 
@@ -148,13 +154,15 @@ class HuddleGrant < ApplicationRecord
   end
 
   # The gateway checks every connected participant about once per second, so
-  # liveness is persisted at most every SEEN_TOUCH_INTERVAL.
+  # liveness is persisted at most every SEEN_TOUCH_INTERVAL, and the
+  # first-sighting presence refresh goes through a job instead of rendering
+  # and broadcasting synchronously inside the check.
   def record_seen!
     return if last_seen_at.present? && last_seen_at > SEEN_TOUCH_INTERVAL.ago
 
     first_seen = !in_call?
     update_columns(last_seen_at: Time.current)
-    broadcast_voice_presence if first_seen
+    Huddle::BroadcastPresenceJob.perform_later(id) if first_seen
   end
 
   # Post-commit work for every issuance, created or reused: obtaining a grant
@@ -176,6 +184,34 @@ class HuddleGrant < ApplicationRecord
     [ direct_huddle_recipient&.id ].compact
   end
 
+  # Refresh the presence stacks in the room members' sidebars and in the
+  # room header, for every room kind. The sidebar partial renders once and
+  # the same HTML goes to each member's rooms stream, so a 200-member
+  # channel does not render 200 times per join.
+  def broadcast_voice_presence
+    return unless Huddle.configured?
+
+    huddle_room = Room.find_by(id: room_id)
+    return unless huddle_room
+
+    participants = self.class.participants_for(huddle_room)
+    sidebar_html = ApplicationController.render(
+      partial: "rooms/huddles/participants",
+      locals: { room: huddle_room, placement: :sidebar, participants: participants }
+    )
+
+    huddle_room.memberships.includes(:user).find_each do |membership|
+      broadcast_replace_to membership.user, :rooms,
+        target: [ huddle_room, :sidebar_voice_participants ],
+        html: sidebar_html
+    end
+
+    broadcast_replace_to huddle_room, :messages,
+      target: [ huddle_room, :header_voice_participants ],
+      partial: "rooms/huddles/participants",
+      locals: { room: huddle_room, placement: :header, participants: participants }
+  end
+
   private
     # Joining late clears even a missed item: any open invitation for this
     # room and recipient is handled as soon as they obtain a grant here.
@@ -188,34 +224,6 @@ class HuddleGrant < ApplicationRecord
     # (created or reused) drives the ring and the dedup window guards it: any
     # invitation or missed item from the last two minutes, handled or not,
     # keeps reconnects and rejoins silent.
-    # Refresh the presence stacks in the room members' sidebars and in the
-    # room header, for every room kind. The sidebar partial renders once and
-    # the same HTML goes to each member's rooms stream, so a 200-member
-    # channel does not render 200 times per join.
-    def broadcast_voice_presence
-      return unless Huddle.configured?
-
-      huddle_room = Room.find_by(id: room_id)
-      return unless huddle_room
-
-      participants = self.class.participants_for(huddle_room)
-      sidebar_html = ApplicationController.render(
-        partial: "rooms/huddles/participants",
-        locals: { room: huddle_room, placement: :sidebar, participants: participants }
-      )
-
-      huddle_room.memberships.includes(:user).find_each do |membership|
-        broadcast_replace_to membership.user, :rooms,
-          target: [ huddle_room, :sidebar_voice_participants ],
-          html: sidebar_html
-      end
-
-      broadcast_replace_to huddle_room, :messages,
-        target: [ huddle_room, :header_voice_participants ],
-        partial: "rooms/huddles/participants",
-        locals: { room: huddle_room, placement: :header, participants: participants }
-    end
-
     def invite_direct_participant
       # Voice and stage channels are standing calls that members join at
       # will: nobody is ever invited, rung, or marked as missing the call.

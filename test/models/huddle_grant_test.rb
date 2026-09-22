@@ -1,6 +1,8 @@
 require "test_helper"
 
 class HuddleGrantTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @environment_names = Huddle::REQUIRED_ENVIRONMENT
     @original_livekit_environment = ENV.values_at(*@environment_names)
@@ -177,15 +179,21 @@ class HuddleGrantTest < ActiveSupport::TestCase
     end
   end
 
-  test "first sighting in the call refreshes voice presence, later sightings stay silent" do
+  test "first sighting in the call enqueues a presence refresh, later sightings stay silent" do
     room = Rooms::Voice.create_for({ name: "Lounge", creator: users(:david) }, users: [ users(:david) ])
     grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: room.memberships.first!)
 
-    assert_difference -> { capture_turbo_stream_broadcasts([ room, :messages ]).count } do
-      grant.record_seen!
+    assert_no_changes -> { capture_turbo_stream_broadcasts([ room, :messages ]).count } do
+      assert_enqueued_with(job: Huddle::BroadcastPresenceJob, args: [ grant.id ]) do
+        grant.record_seen!
+      end
     end
 
-    assert_no_changes -> { capture_turbo_stream_broadcasts([ room, :messages ]).count } do
+    assert_difference -> { capture_turbo_stream_broadcasts([ room, :messages ]).count } do
+      perform_enqueued_jobs only: Huddle::BroadcastPresenceJob
+    end
+
+    assert_no_enqueued_jobs only: Huddle::BroadcastPresenceJob do
       travel 11.seconds do
         grant.record_seen!
       end
@@ -234,15 +242,19 @@ class HuddleGrantTest < ActiveSupport::TestCase
     end
   end
 
-  test "first sighting in a channel refreshes presence, later sightings stay silent" do
+  test "first sighting in a channel enqueues a presence refresh, later sightings stay silent" do
     room = rooms(:watercooler)
     grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_watercooler))
 
-    assert_presence_broadcast(room) do
+    assert_enqueued_with(job: Huddle::BroadcastPresenceJob, args: [ grant.id ]) do
       grant.record_seen!
     end
 
-    assert_no_changes -> { capture_turbo_stream_broadcasts([ room, :messages ]).count } do
+    assert_presence_broadcast(room) do
+      perform_enqueued_jobs only: Huddle::BroadcastPresenceJob
+    end
+
+    assert_no_enqueued_jobs only: Huddle::BroadcastPresenceJob do
       travel 11.seconds do
         grant.record_seen!
       end

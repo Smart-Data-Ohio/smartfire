@@ -32,7 +32,7 @@ class HuddlePresenceTest < ApplicationSystemTestCase
     renders = header_presence_renders
     grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: @room.memberships.find_by!(user: users(:david)))
     wait_for_issuance_broadcast(after: renders)
-    grant.record_seen!
+    record_seen_and_deliver(grant)
 
     within "##{dom_id(@room, :list)}" do
       assert_selector ".voice-stack--live", wait: BROADCAST_WAIT
@@ -65,7 +65,7 @@ class HuddlePresenceTest < ApplicationSystemTestCase
     observe_turbo_stream_renders
     grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: direct_room.memberships.find_by!(user: users(:david)))
     wait_for_issuance_broadcast(room: direct_room)
-    grant.record_seen!
+    record_seen_and_deliver(grant)
 
     within "##{dom_id(direct_room, :list)}" do
       assert_selector ".voice-stack--live", wait: BROADCAST_WAIT
@@ -100,7 +100,7 @@ class HuddlePresenceTest < ApplicationSystemTestCase
     observe_turbo_stream_renders
     grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: @room.memberships.find_by!(user: users(:david)))
     wait_for_issuance_broadcast
-    grant.record_seen!
+    record_seen_and_deliver(grant)
 
     within "##{dom_id(@room, :list)}" do
       assert_selector ".voice-stack__count", text: "1", wait: BROADCAST_WAIT
@@ -232,6 +232,14 @@ class HuddlePresenceTest < ApplicationSystemTestCase
   end
 
   private
+    # record_seen! refreshes presence through a job; run it inline so the
+    # browser receives the stacks without a worker.
+    def record_seen_and_deliver(grant)
+      perform_enqueued_jobs only: Huddle::BroadcastPresenceJob do
+        grant.record_seen!
+      end
+    end
+
     # Records every Turbo Stream render as "action:target" so the test can
     # wait for a specific broadcast to land instead of sleeping a fixed time.
     def observe_turbo_stream_renders

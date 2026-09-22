@@ -233,6 +233,47 @@ class Internal::HuddleControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a steady-state grant check runs no transaction and writes nothing" do
+    # Seen recently, so the throttled liveness write is skipped too: this is
+    # the per-second gateway check for a participant mid-call.
+    @huddle.grant.update_columns(last_seen_at: Time.current)
+
+    statements = []
+    callback = ->(*, payload) { statements << payload[:sql] unless payload[:name] == "SCHEMA" }
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      get "/internal/huddle/grants/#{@huddle.grant_id}", headers: gateway_headers
+    end
+
+    assert_response :success
+    assert_empty statements.select { |sql| sql.match?(/\A\s*(begin|commit|rollback|savepoint)/i) },
+      "expected no transaction statements, saw: #{statements.inspect}"
+    assert_empty statements.select { |sql| sql.match?(/\A\s*(insert|update|delete)/i) },
+      "expected no writes, saw: #{statements.inspect}"
+    assert_operator statements.count, :<=, 8, "steady-state check ran: #{statements.inspect}"
+  end
+
+  test "a denied lookup takes the lock and revokes exactly once" do
+    Membership.where(id: @huddle.grant.membership_id).delete_all
+
+    statements = []
+    callback = ->(*, payload) { statements << payload[:sql] unless payload[:name] == "SCHEMA" }
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      get "/internal/huddle/grants/#{@huddle.grant_id}", headers: gateway_headers
+    end
+
+    assert_response :not_found
+    assert @huddle.grant.reload.revoked?
+    # Inside the test transaction the write lock arrives as a savepoint; in
+    # production it is a top-level BEGIN IMMEDIATE. Either way the
+    # double-checked lock revokes exactly once.
+    assert_not_empty statements.select { |sql| sql.match?(/\A\s*(begin|savepoint)/i) },
+      "expected the denied check to take the lock, saw: #{statements.inspect}"
+    assert_equal 1, statements.count { |sql| sql.match?(/\A\s*update\s+"huddle_grants"/i) },
+      "expected one revocation write, saw: #{statements.inspect}"
+    assert_equal 1, statements.count { |sql| sql.match?(/\A\s*insert\s+into\s+"huddle_cleanups"/i) },
+      "expected one cleanup row, saw: #{statements.inspect}"
+  end
+
   test "a denied lookup does not record liveness" do
     @huddle.grant.revoke!
 
