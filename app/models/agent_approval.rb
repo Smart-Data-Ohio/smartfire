@@ -27,6 +27,19 @@ class AgentApproval < ApplicationRecord
 
   after_create_commit :fan_out_inbox_items
 
+  # Expires pending approvals whose time ran out and marks their inbox
+  # items handled, so deciders' unread badges drop. Runs lazily from the
+  # activity inbox like Huddle::InvitationResolver and stays idempotent:
+  # only unhandled approval items past expiry are touched.
+  def self.resolve_overdue!(user: nil)
+    scope = ActivityItem.where(event_type: "agent_approval_request", handled_at: nil)
+    scope = scope.where(user_id: user.id) if user
+    scope.preload(:source).find_each do |item|
+      approval = item.source if item.source_type == AgentApproval.polymorphic_name
+      approval&.expire_if_due!
+    end
+  end
+
   # Lazy expiry: a stored pending row past its deadline reads as expired.
   # Every read path uses this; writers persist via #expire_if_due!.
   def effective_status
@@ -59,9 +72,9 @@ class AgentApproval < ApplicationRecord
   # Human decision. Raises ActiveRecord::RecordInvalid when the request is
   # already decided, cancelled, or expired. The pending check, the status
   # write, and the ledger row share one locked transaction so two
-  # concurrent decisions cannot both pass the guard; the webhook is posted
-  # only after that transaction commits so a slow webhook host never holds
-  # the database write lock.
+  # concurrent decisions cannot both pass the guard; the webhook is
+  # enqueued only after every open transaction commits, so a slow webhook
+  # host never holds the database write lock nor the human's request.
   def decide!(decision:, by:, note: nil)
     decision = decision.to_s
     raise ArgumentError, "Unknown decision: #{decision}" unless DECISIONS.include?(decision)
@@ -83,7 +96,11 @@ class AgentApproval < ApplicationRecord
       Github::PerformAgentActionJob.perform_later(id)
     end
 
-    post_decision_webhook!(event)
+    if event.webhook_pending?
+      ActiveRecord.after_all_transactions_commit do
+        Agent::EventWebhookJob.perform_later(event.id, event.webhook_attempts.to_i)
+      end
+    end
     self
   end
 
@@ -213,11 +230,15 @@ class AgentApproval < ApplicationRecord
     end
 
     def record_decision_event!
+      pending_webhook = agent.user.webhook.present?
       event = agent.agent_events.create!(
         event_type: "approval_decided",
         room: room,
         actor: decided_by,
         outcome: "delivered",
+        agent_approval_id: id,
+        webhook_status: pending_webhook ? "pending" : "none",
+        webhook_next_attempt_at: (Time.current if pending_webhook),
         metadata: {
           "approval_id" => id,
           "status" => status,
@@ -226,16 +247,5 @@ class AgentApproval < ApplicationRecord
         }
       )
       event
-    end
-
-    def post_decision_webhook!(event)
-      webhook = agent.user.webhook
-      return unless webhook
-
-      begin
-        Agent::Delivery.post_approval_webhook!(webhook, self, agent: agent, delivery_id: event.id)
-      rescue StandardError => error
-        Rails.logger.warn "Agent approval webhook delivery #{event.id} failed: #{error.class}"
-      end
     end
 end
