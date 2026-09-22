@@ -169,6 +169,16 @@ resolved public address: loopback and private destinations are
 refused instead of posted to, and a hostname that resolves to
 nothing fails the delivery.
 
+A 200 response with a text or attachment body becomes a sync reply
+to the triggering message: inside its thread when it has one (board
+posts included), otherwise a root message referencing it. A reply
+that cannot be stored (a locked thread, a deleted parent) is logged
+for agent deliveries and the POST still counts as delivered; legacy
+deliveries raise. A webhook that does not answer within 7 seconds
+records a timeout in the agent's ledger row and retries like any
+transport failure, with no timeout message; legacy bots keep the
+"Failed to respond within 7 seconds" message.
+
 ### Delivery status and retries
 
 The ledger outcome (`pending`, `delivered`, `acknowledged`,

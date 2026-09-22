@@ -23,15 +23,21 @@ class Webhook < ApplicationRecord
     end
   end
 
+  # A 200 text or attachment response becomes a reply to the triggering
+  # message: inside its thread when it has one (board posts included),
+  # otherwise a root reply referencing it. For agent deliveries the POST
+  # already succeeded once a reply is stored, so a reply that cannot be
+  # stored (a locked thread, a deleted parent) is logged and the
+  # delivery still counts; legacy deliveries keep raising. Timeouts on
+  # agent deliveries propagate to the delivery job, which records them
+  # in the ledger and retries; legacy bots keep the timeout message.
   def deliver(message, agent: nil, delivery_id: nil)
     post(payload(message, agent: agent, delivery_id: delivery_id)).tap do |response|
-      if text = extract_text_from(response)
-        receive_text_reply_to(message.room, text: text)
-      elsif attachment = extract_attachment_from(response)
-        receive_attachment_reply_to(message.room, attachment: attachment)
-      end
+      receive_sync_reply(message, response, agent: agent)
     end
   rescue Net::OpenTimeout, Net::ReadTimeout
+    raise if agent
+
     receive_text_reply_to message.room, text: "Failed to respond within #{ENDPOINT_TIMEOUT} seconds"
   end
 
@@ -72,6 +78,36 @@ class Webhook < ApplicationRecord
       String.new(response.body).force_encoding("UTF-8") if response.code == "200" && response.content_type.in?(%w[ text/html text/plain ])
     end
 
+    def receive_sync_reply(trigger, response, agent:)
+      if text = extract_text_from(response)
+        receive_text_reply(trigger, text: text)
+      elsif attachment = extract_attachment_from(response)
+        receive_attachment_reply(trigger, attachment: attachment)
+      end
+    rescue StandardError => error
+      raise unless agent
+
+      Rails.logger.warn "Agent webhook sync reply for message #{trigger.id} failed: #{error.class}"
+    end
+
+    def receive_text_reply(trigger, text:)
+      create_sync_reply(trigger, body: text).broadcast_create
+    end
+
+    def receive_attachment_reply(trigger, attachment:)
+      create_sync_reply(trigger, attachment: attachment).broadcast_create
+    end
+
+    def create_sync_reply(trigger, attributes)
+      if trigger.thread
+        trigger.thread.post_message!(creator: user, attributes: attributes.merge(reply_to_message: trigger))
+      elsif attributes.key?(:attachment)
+        trigger.room.messages.create_with_attachment!(attributes.merge(creator: user, reply_to_message: trigger))
+      else
+        trigger.room.messages.create!(attributes.merge(creator: user, reply_to_message: trigger))
+      end
+    end
+
     def receive_text_reply_to(room, text:)
       room.messages.create!(body: text, creator: user).broadcast_create
     end
@@ -81,10 +117,6 @@ class Webhook < ApplicationRecord
         ActiveStorage::Blob.create_and_upload! \
           io: StringIO.new(response.body), filename: "attachment.#{mime_type.symbol}", content_type: mime_type.to_s
       end
-    end
-
-    def receive_attachment_reply_to(room, attachment:)
-      room.messages.create_with_attachment!(attachment: attachment, creator: user).broadcast_create
     end
 
     def without_recipient_mentions(body)

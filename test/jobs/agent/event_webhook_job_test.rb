@@ -40,6 +40,21 @@ class Agent::EventWebhookJobTest < ActiveSupport::TestCase
     assert_requested :post, @webhook_url, times: 2
   end
 
+  test "a timeout records the attempt in the ledger and retries" do
+    WebMock.stub_request(:post, @webhook_url).to_timeout
+
+    event = deliverable_event
+
+    assert_no_difference -> { Message.count } do
+      Agent::EventWebhookJob.perform_now(event.id)
+    end
+
+    assert_equal "pending", event.reload.webhook_status
+    assert_equal 1, event.reload.webhook_attempts
+    assert_match "OpenTimeout", event.reload.webhook_last_error.to_s
+    assert_enqueued_jobs 1, only: Agent::EventWebhookJob
+  end
+
   test "the fifth failure marks the row failed without re-enqueueing" do
     WebMock.stub_request(:post, @webhook_url).to_raise(Errno::ECONNREFUSED)
 
