@@ -1,9 +1,15 @@
 class Event::ReminderPusher
-  # A push this late is stale (the runner was down): the moment passed,
-  # so stay silent instead of announcing an event already underway.
+  # A reminder this late is stale (the runner was down): the moment
+  # passed, so stay silent instead of announcing an event already
+  # underway or over. The dispatcher checks this before creating inbox
+  # activity; the push checks it again in case time passed in between.
   STALE_AFTER_START = 5.minutes
 
   attr_reader :event
+
+  def self.stale?(event, now: Time.current)
+    (event.ends_at.present? && event.ends_at <= now) || event.starts_at < now - STALE_AFTER_START
+  end
 
   def initialize(event:)
     @event = event
@@ -38,7 +44,7 @@ class Event::ReminderPusher
     end
 
     def stale?(now)
-      (event.ends_at.present? && event.ends_at <= now) || event.starts_at < now - STALE_AFTER_START
+      self.class.stale?(event, now:)
     end
 
     def push_subscriptions_for_recipients
