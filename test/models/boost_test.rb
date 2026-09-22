@@ -60,4 +60,16 @@ class BoostTest < ActiveSupport::TestCase
     assert_not Boost.reaction?("👍👍")
     assert_not Boost.reaction?("great :fire: work")
   end
+
+  test "reaction content counts keycaps, flags, ZWJ sequences, VS16 and modifiers" do
+    assert Boost.reaction?("1️⃣")
+    assert Boost.reaction?("#️⃣")
+    assert Boost.reaction?("🇺🇸")
+    assert Boost.reaction?("❤️")
+    assert Boost.reaction?("👍🏽")
+    assert Boost.reaction?("👨‍👩‍👧")
+
+    assert_not Boost.reaction?("1")
+    assert_not Boost.reaction?("a")
+  end
 end

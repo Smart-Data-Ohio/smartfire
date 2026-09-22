@@ -158,6 +158,42 @@ class Messages::BoostsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "keycaps, flags, ZWJ sequences, VS16 and modifiers aggregate and toggle" do
+    [ "1️⃣", "🇺🇸", "❤️", "👍🏽", "👨‍👩‍👧" ].each do |emoji|
+      assert_difference -> { @message.boosts.where(content: emoji).count }, 1 do
+        post message_boosts_url(@message, format: :turbo_stream), params: { boost: { content: emoji } }
+        assert_redirected_to message_boosts_url(@message)
+      end
+
+      get message_boosts_url(@message)
+      assert_response :success
+      assert_not_nil Nokogiri::HTML5.fragment(response.body).at_css(".reaction-chip[data-reaction='#{emoji}']"),
+        "expected a counted chip for #{emoji}"
+
+      assert_difference -> { @message.boosts.where(content: emoji).count }, -1 do
+        post message_boosts_url(@message, format: :turbo_stream), params: { boost: { content: emoji } }
+        assert_redirected_to message_boosts_url(@message)
+      end
+    end
+  end
+
+  test "plain digits and letters stay per-person legacy boosts without toggling" do
+    [ "1", "a" ].each do |content|
+      assert_difference -> { @message.boosts.where(content:).count }, 2 do
+        2.times do
+          post message_boosts_url(@message, format: :turbo_stream), params: { boost: { content: } }
+          assert_redirected_to message_boosts_url(@message)
+        end
+      end
+
+      get message_boosts_url(@message)
+      assert_response :success
+      assert_empty Nokogiri::HTML5.fragment(response.body).css(".reaction-chip[data-reaction='#{content}']")
+      legacy = Nokogiri::HTML5.fragment(response.body).css(".boosts__legacy .boost").select { |node| node.text.include?(content) }
+      assert_equal 2, legacy.length, "expected two legacy boosts for #{content}"
+    end
+  end
+
   test "free text stays a per-person legacy boost without toggling" do
     assert_difference -> { @message.boosts.count }, 2 do
       2.times do

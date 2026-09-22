@@ -37,9 +37,36 @@ class Boost < ApplicationRecord
     single_emoji?(content) || known_shortcode?(content)
   end
 
+  # Regional-indicator flag pair, e.g. 🇺🇸.
+  FLAG_SEQUENCE_PATTERN = /\A\p{Regional_Indicator}{2}\z/
+  # Keycap: a digit, # or * plus optional VS16 and U+20E3, e.g. 1️⃣ or #️⃣.
+  KEYCAP_SEQUENCE_PATTERN = /\A[0-9#*]\uFE0F?\u20E3\z/
+
   def self.single_emoji?(content)
-    content.grapheme_clusters.one? &&
-      content.match?(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/)
+    content = content.to_s
+    return false unless content.grapheme_clusters.one?
+
+    # Keycaps and flags fall outside Emoji_Presentation and
+    # Extended_Pictographic on some Unicode versions, so match them
+    # explicitly as whole clusters.
+    return true if content.match?(FLAG_SEQUENCE_PATTERN)
+    return true if content.match?(KEYCAP_SEQUENCE_PATTERN)
+    return true if content.match?(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/)
+    return false unless content.match?(/\p{Emoji}/)
+
+    # Fallback for text-default emoji on narrower Unicode versions: ZWJ
+    # sequences, VS16 forms (e.g. ❤️), and skin-tone modifiers. Plain
+    # digits and letters fail here: they carry no ZWJ, VS16 or modifier.
+    if content.include?("\u200D")
+      true
+    elsif content.include?("\uFE0F")
+      base = content.delete("\uFE0F")
+      base.match?(/\p{Emoji}/) && !base.match?(/\A[0-9#*]\z/)
+    elsif content.match?(/\p{Emoji_Modifier}/)
+      content.gsub(/\p{Emoji_Modifier}/, "").match?(/\p{Emoji}/)
+    else
+      false
+    end
   end
 
   def self.known_shortcode?(content)
