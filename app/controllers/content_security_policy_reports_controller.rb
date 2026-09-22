@@ -3,16 +3,15 @@
 # and logs one line per violation. Unauthenticated, since browsers send
 # reports without credentials guarantees, so it is rate-limited per IP,
 # reads at most MAX_BODY bytes, and logs only the directive, blocked origin,
-# and document path, never query strings.
-class ContentSecurityPolicyReportsController < ApplicationController
+# and document path, never query strings. As an ActionController::API it
+# loads no session, cookies, or forgery protection, so there is no
+# authenticated state to forge requests against.
+class ContentSecurityPolicyReportsController < ActionController::API
   MAX_BODY = 16.kilobytes
   MAX_VIOLATIONS = 10
   RATE_LIMIT = 20
   # Per process, so a report flood never touches the shared cache.
   RATE_LIMIT_STORE = ActiveSupport::Cache::MemoryStore.new
-
-  allow_unauthenticated_access
-  skip_forgery_protection
 
   rate_limit to: RATE_LIMIT, within: 1.minute, store: RATE_LIMIT_STORE, with: -> { head :too_many_requests }
 
