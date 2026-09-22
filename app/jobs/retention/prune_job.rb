@@ -34,10 +34,12 @@ class Retention::PruneJob < ApplicationJob
     # Revoked grants go through destroy (not delete_all) so their inbox
     # items go with them. Cleanup rows keep their own room_name/identity
     # copies, so unlinking a grant never strands pending reconcile work.
+    # The unlink runs once per batch of grants, not once per grant.
     def prune_huddle_grants
-      HuddleGrant.where.not(revoked_at: nil).where(revoked_at: ...GRANTS_RETENTION.ago).find_each do |grant|
-        HuddleCleanup.where(huddle_grant_id: grant.id).update_all(huddle_grant_id: nil)
-        grant.destroy!
+      HuddleGrant.where.not(revoked_at: nil).where(revoked_at: ...GRANTS_RETENTION.ago).in_batches do |batch|
+        grant_ids = batch.pluck(:id)
+        HuddleCleanup.where(huddle_grant_id: grant_ids).update_all(huddle_grant_id: nil)
+        HuddleGrant.where(id: grant_ids).find_each(&:destroy!)
       end
     end
 

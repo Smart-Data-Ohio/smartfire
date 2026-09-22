@@ -92,6 +92,31 @@ class Retention::PruneJobTest < ActiveJob::TestCase
     assert HuddleCleanup.exists?(old_cleanup.id)
   end
 
+  test "prunes revoked grants with one cleanup unlink per batch" do
+    room = rooms(:watercooler)
+    membership = memberships(:david_watercooler)
+
+    3.times do |index|
+      grant = HuddleGrant.create!(identity: "batch-grant-#{index}", room_name: "room", room:,
+        session: sessions(:david_safari), user: users(:david), membership:,
+        revoked_at: 31.days.ago)
+      HuddleCleanup.create!(operation: :remove_participant, room_name: "room",
+        identity: grant.identity, huddle_grant: grant)
+    end
+
+    updates = 0
+    ActiveSupport::Notifications.subscribed(
+      ->(*, payload) { updates += 1 if payload[:sql].start_with?("UPDATE") && payload[:sql].include?("huddle_cleanups") },
+      "sql.active_record"
+    ) do
+      Retention::PruneJob.perform_now
+    end
+
+    assert_equal 1, updates
+    assert_empty HuddleGrant.where("identity LIKE 'batch-grant-%'")
+    assert_empty HuddleCleanup.where("identity LIKE 'batch-grant-%'").where.not(huddle_grant_id: nil)
+  end
+
   test "re-enqueues destroys for rooms stuck as deleted" do
     stuck = Rooms::Closed.create_for({ name: "Stuck", creator: users(:david) }, users: [ users(:david) ])
     stuck.begin_destroy!

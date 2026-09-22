@@ -77,6 +77,19 @@ class GithubPullRequestsHelperTest < ActionView::TestCase
     end
   end
 
+  test "a failed pr enqueue releases its fetch claim" do
+    message = messages(:first)
+    pull_request = Github::PullRequest.create!(owner: "example", repo: "app", number: 500)
+    Github::PullRequestReference.create!(message:, pull_request:)
+
+    with_failing_queue_adapter(Redis::BaseConnectionError.new("Redis down")) do
+      github_pr_cards_for(message.reload)
+    end
+
+    assert_nil pull_request.reload.fetch_requested_at
+    assert pull_request.claim_fetch_request!
+  end
+
   private
     def with_failing_queue_adapter(error)
       previous = ActiveJob::Base.queue_adapter

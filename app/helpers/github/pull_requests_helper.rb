@@ -147,7 +147,9 @@ module Github::PullRequestsHelper
       begin
         Github::FetchPullRequestJob.perform_later(pull_request)
       rescue Redis::BaseError, RedisClient::Error => error
-        # The queue is down: serve the stale card instead of breaking the page.
+        # The queue is down: serve the stale card instead of breaking the page,
+        # and release the claim so the next render retries the refresh.
+        pull_request.release_fetch_request!
         Rails.logger.warn "Skipping PR refresh enqueue for #{pull_request.id}: #{error.class}"
       end
     end

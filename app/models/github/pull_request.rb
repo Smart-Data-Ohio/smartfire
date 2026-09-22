@@ -53,6 +53,14 @@ class Github::PullRequest < ApplicationRecord
     claimed
   end
 
+  # Give up a claim whose enqueue failed (the queue is down): the next
+  # render may try again instead of waiting out the staleness window.
+  # Skips callbacks, so releasing never broadcasts a card update.
+  def release_fetch_request!
+    self.class.where(id: id).update_all(fetch_requested_at: nil)
+    self.fetch_requested_at = nil
+  end
+
   # Find or create the record for a referenced PR. Safe to call concurrently:
   # a lost insert race falls back to finding the winner's row. Names are
   # downcased so links in any case resolve to the same row.
