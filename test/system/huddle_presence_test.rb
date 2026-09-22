@@ -231,6 +231,32 @@ class HuddlePresenceTest < ApplicationSystemTestCase
     end
   end
 
+  test "the aggregate poller skips while hidden and fetches on becoming visible" do
+    visit room_path(@room)
+    wait_for_cable_connection
+    count_presence_polls
+    refresh_presence_poller
+
+    Timeout.timeout(10) do
+      sleep 0.05 until presence_poll_count >= 1
+    end
+
+    set_visibility_state("hidden")
+    hidden_polls = presence_poll_count
+    refresh_presence_poller
+    sleep 0.3
+    assert_equal hidden_polls, presence_poll_count
+
+    set_visibility_state("visible")
+    page.execute_script("document.dispatchEvent(new Event('visibilitychange'))")
+
+    Timeout.timeout(10) do
+      sleep 0.05 until presence_poll_count > hidden_polls
+    end
+  ensure
+    restore_visibility_state
+  end
+
   private
     # record_seen! refreshes presence through a job; run it inline so the
     # browser receives the stacks without a worker.
@@ -264,5 +290,50 @@ class HuddlePresenceTest < ApplicationSystemTestCase
     def header_presence_renders(room: @room)
       expected = "replace:#{dom_id(room, :header_voice_participants)}"
       page.evaluate_script("window.presenceObservedStreams").count(expected)
+    end
+
+    def count_presence_polls
+      page.execute_script(<<~JS)
+        window.presencePollCount = 0
+        const nativePollFetch = window.fetch.bind(window)
+        window.fetch = (...args) => {
+          const input = args[0]
+          const url = typeof input === "string" ? input : input.url
+          if (new URL(url, window.location.origin).pathname === "/users/huddle_presence") {
+            window.presencePollCount += 1
+          }
+          return nativePollFetch(...args)
+        }
+      JS
+    end
+
+    def presence_poll_count
+      page.evaluate_script("window.presencePollCount")
+    end
+
+    def refresh_presence_poller
+      page.execute_script(<<~JS)
+        window.Stimulus
+          .getControllerForElementAndIdentifier(
+            document.querySelector('[data-controller~="huddle-presence"]'), "huddle-presence")
+          .refresh()
+      JS
+    end
+
+    # Shadows the prototype getter for the test, then deletes the shadow
+    # so the real visibility state shows through again.
+    def set_visibility_state(state)
+      page.execute_script(<<~JS, state)
+        Object.defineProperty(document, "visibilityState", {
+          configurable: true,
+          get: () => arguments[0]
+        })
+      JS
+    end
+
+    def restore_visibility_state
+      page.execute_script("delete document.visibilityState")
+    rescue StandardError
+      nil
     end
 end
