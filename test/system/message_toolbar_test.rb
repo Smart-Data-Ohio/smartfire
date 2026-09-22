@@ -79,8 +79,8 @@ class MessageToolbarTest < ApplicationSystemTestCase
     find("#emoji-picker-panel .emoji-picker__option[aria-label='Fire']").click
 
     assert_no_selector "#emoji-picker-panel", visible: true
-    assert Boost.exists?(content: "🔥", message: messages(:third))
     assert_selector ".reaction-chip[data-reaction='🔥'] .reaction-chip__count", text: "1", wait: 10
+    assert Boost.exists?(content: "🔥", message: messages(:third))
   end
 
   test "the picker shows category tabs and switches between them" do
@@ -120,6 +120,7 @@ class MessageToolbarTest < ApplicationSystemTestCase
     within_message(messages(:third)) { click_button "Add reaction" }
     assert_selector "#emoji-picker-panel .emoji-picker__option[aria-label='Grinning face']", visible: true, wait: 10
     find("#emoji-picker-panel .emoji-picker__option[aria-label='Grinning face']").click
+    assert_selector "##{dom_id(messages(:third))} .boost-item", text: "😀", wait: 10
     assert Boost.exists?(content: "😀", message: messages(:third))
 
     hover_toolbar(messages(:third))
@@ -144,8 +145,8 @@ class MessageToolbarTest < ApplicationSystemTestCase
     find("#emoji-picker-panel .emoji-picker__option[aria-label='Acme Corp']").click
 
     assert_no_selector "#emoji-picker-panel", visible: true
-    assert Boost.exists?(content: ":acme:", message: messages(:third))
     assert_selector "##{dom_id(messages(:third))} .boost-item", wait: 10
+    assert Boost.exists?(content: ":acme:", message: messages(:third))
   end
 
   test "the picker reacts with a brand icon shortcode" do
@@ -158,8 +159,8 @@ class MessageToolbarTest < ApplicationSystemTestCase
     find("#emoji-picker-panel .emoji-picker__option[aria-label='OpenAI']").click
 
     assert_no_selector "#emoji-picker-panel", visible: true
-    assert Boost.exists?(content: ":openai:", message: messages(:third))
     assert_selector "##{dom_id(messages(:third))} .boost-item", wait: 10
+    assert Boost.exists?(content: ":openai:", message: messages(:third))
   end
 
   test "picker arrows move through options, Enter selects, and Escape returns focus" do
@@ -186,8 +187,8 @@ class MessageToolbarTest < ApplicationSystemTestCase
     page.send_keys :enter
 
     assert_no_selector "#emoji-picker-panel", visible: true
-    assert Boost.exists?(content: "😀", message: messages(:third))
     assert_selector "##{dom_id(messages(:third))} .boost-item", text: "😀", wait: 10
+    assert Boost.exists?(content: "😀", message: messages(:third))
   end
 
   test "picker tabs move with arrow keys and switch the grid" do
