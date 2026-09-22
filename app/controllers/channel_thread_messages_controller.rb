@@ -94,8 +94,11 @@ class ChannelThreadMessagesController < ApplicationController
   end
 
   def destroy
+    replies = @message.replies.to_a
     @message.destroy!
     @message.broadcast_remove
+    broadcast_reply_tombstones(replies)
+    broadcast_thread_summary_refresh(@thread)
 
     respond_to do |format|
       format.html { redirect_to room_thread_path(@room, @thread) }
@@ -160,6 +163,30 @@ class ChannelThreadMessagesController < ApplicationController
         permitted[:reply_notify_author] = ActiveModel::Type::Boolean.new.cast(permitted[:reply_notify_author])
       end
       permitted.to_h.symbolize_keys
+    end
+
+    # Deleting a message leaves a tombstone on each reply (see
+    # Message#preserve_reply_tombstones); replace the replies in other
+    # clients so their previews flip to it.
+    def broadcast_reply_tombstones(replies)
+      replies.each(&:reload)
+      Message.preload_rendering_details(replies)
+
+      replies.each do |reply|
+        reply.broadcast_replace_to reply.message_stream_target, :messages,
+          target: reply, partial: "messages/message", attributes: { maintain_scroll: true }
+      end
+    end
+
+    # A delete changes the parent thread's summary (message counts,
+    # previews) in other clients' thread browsers. The browser reloads
+    # on UnreadThreadsChannel messages; refreshOnly gets the reload
+    # without marking the thread unread.
+    def broadcast_thread_summary_refresh(thread)
+      thread.room.memberships.pluck(:user_id).each do |user_id|
+        ActionCable.server.broadcast UnreadThreadsChannel.stream_name_for(user_id),
+          { threadId: thread.id, roomId: thread.room_id, refreshOnly: true }
+      end
     end
 
     def render_error(message, status: :unprocessable_content)

@@ -91,6 +91,33 @@ class ChannelThreadMessagesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "destroy broadcasts tombstone updates and a thread summary refresh" do
+    source = @thread.post_message!(
+      creator: users(:jz),
+      attributes: { markdown_source: "thread source", client_message_id: "thread-tombstone-source" }
+    )
+    reply = @thread.post_message!(
+      creator: users(:jz),
+      attributes: {
+        markdown_source: "thread reply", reply_to_message_id: source.id, client_message_id: "thread-tombstone-reply"
+      }
+    )
+    sign_in :jz
+
+    delete room_thread_message_url(@room, @thread, source, format: :turbo_stream)
+
+    assert_response :success
+    assert_rendered_turbo_stream_broadcast @thread, :messages, action: "remove", target: source
+    assert_rendered_turbo_stream_broadcast @thread, :messages, action: "replace", target: reply do
+      assert_select ".message__reply-preview", text: /Replying to a deleted message/
+    end
+
+    refreshes = ActionCable.server.pubsub.broadcasts(UnreadThreadsChannel.stream_name_for(users(:jz).id))
+      .map { |broadcast| JSON.parse(broadcast) }
+      .select { |payload| payload["threadId"] == @thread.id && payload["refreshOnly"] == true }
+    assert_equal 1, refreshes.size
+  end
+
   test "nested HTML message URL redirects into the parent room shell" do
     sign_in :jz
     get room_thread_message_url(@room, @thread, @message)

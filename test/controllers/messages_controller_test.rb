@@ -315,6 +315,33 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "destroy broadcasts tombstone updates to replies" do
+    source = @room.messages.where(creator: users(:david)).first
+    reply = @room.messages.create!(
+      creator: users(:david), markdown_source: "a reply", reply_to_message: source, client_message_id: "tombstone-reply"
+    )
+
+    delete room_message_url(@room, source, format: :turbo_stream)
+
+    assert_response :success
+    assert_rendered_turbo_stream_broadcast @room, :messages, action: "remove", target: source
+    assert_rendered_turbo_stream_broadcast @room, :messages, action: "replace", target: reply do
+      assert_select ".message__reply-preview", text: /Replying to a deleted message/
+    end
+  end
+
+  test "destroying a thread parent broadcasts a thread summary refresh" do
+    parent = @room.messages.where(creator: users(:david)).first
+    thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Parented thread", parent_message: parent)
+
+    delete room_message_url(@room, parent, format: :turbo_stream)
+
+    assert_response :success
+    refreshes = thread_summary_refreshes_for(users(:david), thread)
+    assert_equal 1, refreshes.size
+    assert_equal @room.id, refreshes.sole["roomId"]
+  end
+
   test "ensure non-admin can't update a message belonging to another user" do
     sign_in :jz
     assert_not users(:jz).administrator?
@@ -411,6 +438,12 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def thread_summary_refreshes_for(user, thread)
+      ActionCable.server.pubsub.broadcasts(UnreadThreadsChannel.stream_name_for(user.id))
+        .map { |broadcast| JSON.parse(broadcast) }
+        .select { |payload| payload["threadId"] == thread.id && payload["refreshOnly"] == true }
+    end
+
     def ensure_messages_present(*messages, count: 1)
       messages.each do |message|
         assert_select "#" + dom_id(message), count:

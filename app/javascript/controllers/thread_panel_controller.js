@@ -1345,7 +1345,10 @@ export default class extends Controller {
     const roomId = payload?.roomId ?? payload?.room_id
     if (String(roomId) !== String(this.#config().roomId)) return
     const threadId = payload?.threadId ?? payload?.thread_id
-    if (threadId !== undefined) {
+    // A delete refreshes the browser row (counts, previews) through the
+    // same channel without marking the thread unread.
+    const refreshOnly = payload?.refreshOnly ?? payload?.refresh_only
+    if (threadId !== undefined && !refreshOnly) {
       this.#unreadThreadIds.add(String(threadId))
       if (this.#currentThread && String(this.#currentThread.id) === String(threadId)) {
         this.#currentThread.unread = true
