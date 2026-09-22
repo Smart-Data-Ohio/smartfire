@@ -277,6 +277,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
       markdown_source: "Hey @[Bender Bot]", client_message_id: "agent-once" } }
 
     perform_enqueued_jobs only: Agent::DeliveryJob
+    perform_enqueued_jobs only: Agent::EventWebhookJob
     perform_enqueued_jobs only: Bot::WebhookJob
 
     assert_requested :post, webhooks(:bender).url, times: 1
@@ -293,6 +294,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
 
     grant.revoke!
     perform_enqueued_jobs only: Agent::DeliveryJob
+    perform_enqueued_jobs only: Agent::EventWebhookJob
     perform_enqueued_jobs only: Bot::WebhookJob
 
     assert_not_requested :post, webhooks(:bender).url

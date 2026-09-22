@@ -139,6 +139,7 @@ class ChannelThreadsController < ApplicationController
   end
 
   def destroy
+    @thread.deleted_by = Current.user
     @thread.destroy!
     respond_to do |format|
       format.html { redirect_to room_path(@room) }

@@ -1,4 +1,55 @@
 class Github::PerformAgentActionJob < ApplicationJob
+  # A running claim older than this is presumed stuck (its worker crashed
+  # between the claim insert and the outcome rewrite) and failed by the
+  # periodic sweep.
+  STUCK_CLAIM_AFTER = 15.minutes
+
+  # Both claim writers (finish_claim below and the stuck-claim sweep)
+  # condition their outcome rewrite on the claim still running, so a
+  # worker finishing while the sweep runs — or vice versa — cannot
+  # overwrite the winner's result: the first write wins and the other
+  # becomes a no-op that enqueues no webhook.
+  RUNNING_CLAIM_CONDITION = "json_extract(agent_events.metadata, '$.status') = 'running'"
+
+  # Marks stuck running claims failed. Runs from the periodic
+  # periodic runner (bin/periodic) alongside the webhook sweep. Each stuck row is
+  # rewritten like a failed finish_claim (failed status with a timeout
+  # message, webhook enqueued when configured) and logged at error
+  # level, since a stuck claim means a GitHub write may or may not have
+  # happened. Never raises.
+  def self.recover_stuck_claims!(now: Time.current)
+    AgentEvent.where(event_type: "github_action_completed")
+      .where("agent_events.created_at < ?", now - STUCK_CLAIM_AFTER)
+      .where(RUNNING_CLAIM_CONDITION)
+      .find_each do |event|
+        begin
+          event = AgentEvent.find(event.id)
+          next unless event.metadata.is_a?(Hash) && event.metadata["status"] == "running"
+
+          message = "GitHub action execution timed out"
+          metadata = event.metadata.merge("status" => "failed", "message" => message)
+          pending_webhook = event.agent.user.webhook.present?
+          written = AgentEvent.where(id: event.id).where(RUNNING_CLAIM_CONDITION)
+            .update_all(
+              detail: message,
+              webhook_status: pending_webhook ? "pending" : "none",
+              webhook_next_attempt_at: (Time.current if pending_webhook),
+              metadata: metadata
+            ) == 1
+          next unless written
+
+          event.reload
+          if pending_webhook
+            Agent::EventWebhookJob.perform_later(event.id, event.webhook_attempts.to_i)
+          end
+          Rails.logger.error "Stuck GitHub claim #{event.id} for approval #{event.metadata["approval_id"]} " \
+            "marked failed after #{STUCK_CLAIM_AFTER.inspect}"
+        rescue => error
+          Rails.logger.error "Stuck GitHub claim recovery failed for event #{event.id}: #{error.class}: #{error.message}"
+        end
+      end
+  end
+
   # Runs an approved agent GitHub write action. Re-checks everything at
   # perform time — the approval is still approved, the agent is active and
   # still belongs to the room with external_action, the PR thread mapping
@@ -66,28 +117,41 @@ class Github::PerformAgentActionJob < ApplicationJob
         message: GithubConnectedAccount::UNREADABLE_TOKEN_REASON)
     end
 
+    # The outcome row is claimed before the GitHub write: the unique index
+    # admits exactly one claim per approval, so a concurrent job that also
+    # passed already_executed? loses the insert here and returns without
+    # calling GitHub. The winner rewrites its claim with the real outcome
+    # below, so a failed call still records a failure, never a retry.
+    event = claim_execution(approval, agent, room)
+    return unless event
+
     begin
       response = action.perform(client)
     rescue Github::WriteClient::Unauthorized
       account.mark_disconnected!("GitHub rejected the linked token (401)")
-      return record_outcome(approval, agent, room, status: "failed",
+      return finish_claim(event, approval, agent, status: "failed",
         message: "GitHub rejected the agent's linked token (401)")
     rescue Github::WriteClient::Refused, Github::WriteClient::Error => error
-      return record_outcome(approval, agent, room, status: "failed", message: error.message)
+      return finish_claim(event, approval, agent, status: "failed", message: error.message)
     end
 
     url = response.is_a?(Hash) ? response["html_url"] : nil
-    record_outcome(approval, agent, room, status: "completed", url: url)
+    finish_claim(event, approval, agent, status: "completed", url: url)
   end
 
   private
-    # Outcome rows are JSON metadata keyed by approval_id; SQLite's
-    # json_extract reads it without a dedicated column.
+    # Historical duplicate rows keep agent_approval_id NULL (the additive
+    # migration backfills only the lowest id per approval), so the column
+    # lookup falls back to the metadata payload SQLite already stores.
     def already_executed?(agent, approval)
-      agent.agent_events
-        .where(event_type: "github_action_completed")
-        .where("json_extract(agent_events.metadata, '$.approval_id') = ?", approval.id)
-        .exists?
+      completion_events(agent, approval).exists?
+    end
+
+    def completion_events(agent, approval)
+      agent.agent_events.where(event_type: "github_action_completed").where(
+        "agent_approval_id = ? OR CAST(json_extract(metadata, '$.approval_id') AS INTEGER) = ?",
+        approval.id, approval.id
+      )
     end
 
     def premature_failure_reason(approval, agent, room)
@@ -107,13 +171,21 @@ class Github::PerformAgentActionJob < ApplicationJob
       nil
     end
 
+    # The unique index on (agent, approval) for completion rows makes the
+    # insert the atomic claim: a duplicate enqueue that passed
+    # already_executed? first lands here, loses the insert, and returns
+    # the winner instead of writing a second row.
     def record_outcome(approval, agent, room, status:, message: nil, url: nil)
+      pending_webhook = agent.user.webhook.present?
       event = agent.agent_events.create!(
         event_type: "github_action_completed",
         room: room,
         actor: approval.decided_by,
         outcome: "delivered",
         detail: (message if status == "failed"),
+        agent_approval_id: approval.id,
+        webhook_status: pending_webhook ? "pending" : "none",
+        webhook_next_attempt_at: (Time.current if pending_webhook),
         metadata: {
           "approval_id" => approval.id,
           "action" => approval.action,
@@ -122,18 +194,67 @@ class Github::PerformAgentActionJob < ApplicationJob
           "message" => message
         }.compact
       )
-      post_webhook(event, agent)
+      enqueue_outcome_webhook(event)
+      event
+    rescue ActiveRecord::RecordNotUnique
+      completion_events(agent, approval).order(:id).first!
+    end
+
+    # Inserts the winner's outcome row ahead of the GitHub write. Returns
+    # the claim, or nil when another job already owns this approval (its
+    # claim, completed row, or premature-failure row holds the key). The
+    # claim carries webhook_status none so no webhook goes out until the
+    # winner rewrites it with the real outcome.
+    def claim_execution(approval, agent, room)
+      agent.agent_events.create!(
+        event_type: "github_action_completed",
+        room: room,
+        actor: approval.decided_by,
+        outcome: "delivered",
+        agent_approval_id: approval.id,
+        webhook_status: "none",
+        metadata: {
+          "approval_id" => approval.id,
+          "action" => approval.action,
+          "status" => "running"
+        }
+      )
+    rescue ActiveRecord::RecordNotUnique
+      nil
+    end
+
+    # Rewrites the winner's claim with the GitHub result. A crash between
+    # the claim and this write leaves a "running" row behind, which keeps
+    # later runs from posting a duplicate write; at-most-once is the
+    # correct bias for a call GitHub may already have applied. The rewrite
+    # lands only while the claim is still running: when the stuck-claim
+    # sweep already failed the row, this becomes a no-op that enqueues no
+    # webhook, so the two writers cannot overwrite each other's outcome.
+    def finish_claim(event, approval, agent, status:, message: nil, url: nil)
+      pending_webhook = agent.user.webhook.present?
+      written = AgentEvent.where(id: event.id).where(RUNNING_CLAIM_CONDITION)
+        .update_all(
+          detail: (message if status == "failed"),
+          webhook_status: pending_webhook ? "pending" : "none",
+          webhook_next_attempt_at: (Time.current if pending_webhook),
+          metadata: {
+            "approval_id" => approval.id,
+            "action" => approval.action,
+            "status" => status,
+            "url" => url,
+            "message" => message
+          }.compact
+        ) == 1
+      event.reload
+      enqueue_outcome_webhook(event) if written
       event
     end
 
-    def post_webhook(event, agent)
-      webhook = agent.user.webhook
-      return unless webhook
+    def enqueue_outcome_webhook(event)
+      return unless event.webhook_pending?
 
-      begin
-        Agent::Delivery.post_github_action_webhook!(webhook, event, agent: agent)
-      rescue StandardError => error
-        Rails.logger.warn "Agent github action webhook delivery #{event.id} failed: #{error.class}"
+      ActiveRecord.after_all_transactions_commit do
+        Agent::EventWebhookJob.perform_later(event.id, event.webhook_attempts.to_i)
       end
     end
 end

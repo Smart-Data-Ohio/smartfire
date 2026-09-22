@@ -225,6 +225,26 @@ class ActivityItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal room_event_path(event.room, event), payload.dig("source", "path")
   end
 
+  test "index expires overdue approvals and drops the decider's badge" do
+    approval = travel_to 8.days.ago do
+      AgentApproval.create!(agent: agents(:bender_agent), room: rooms(:designers), action: "deploy", summary: "Ship it")
+    end
+    item = ActivityItem.find_by!(user: users(:david), source: approval)
+    assert_nil item.handled_at
+
+    get unread_count_activity_items_url, as: :json
+    before = response.parsed_body["unread_count"]
+
+    get activity_items_url, as: :json
+
+    assert_response :success
+    assert_equal "expired", approval.reload.status
+    assert_not_nil item.reload.handled_at
+
+    get unread_count_activity_items_url, as: :json
+    assert_equal before - 1, response.parsed_body["unread_count"]
+  end
+
   test "agent approval items carry the approval in the JSON payload" do
     agent = agents(:bender_agent)
     approval = AgentApproval.create!(agent: agent, room: rooms(:designers), action: "deploy", summary: "Ship it")

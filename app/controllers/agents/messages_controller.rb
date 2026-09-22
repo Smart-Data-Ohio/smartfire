@@ -1,5 +1,6 @@
 class Agents::MessagesController < MessagesController
   include AgentAuthorization
+  include AgentApiThrottle
 
   allow_agent_access only: :create
 
@@ -14,6 +15,7 @@ class Agents::MessagesController < MessagesController
   before_action :set_room, only: :create
   before_action :ensure_agent_token, only: :create
   require_agent_capability :post_messages, only: :create
+  throttle_agent_api limit: 60, only: :create
 
   # POST /rooms/:room_id/agents/messages (Bearer-only, JSON). Posts a root
   # message, or — with a top-level thread_id — a reply inside that thread

@@ -14,11 +14,11 @@ class Agents::WorkDeliveryTest < ActionDispatch::IntegrationTest
   test "assignment appears in event polling with the work payload" do
     thread = assign_owned_thread!(name: "Polled work")
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
-    row = response.parsed_body.find { |entry| entry["event_type"] == "work_assigned" }
-    assert row, "expected a work_assigned row in #{response.parsed_body.inspect}"
+    row = response.parsed_body["events"].find { |entry| entry["event_type"] == "work_assigned" }
+    assert row, "expected a work_assigned row in #{response.parsed_body["events"].inspect}"
     assert_equal "delivered", row["outcome"]
     assert_nil row["message"]
     assert_equal @room.id, row.dig("room", "id")
@@ -37,10 +37,10 @@ class Agents::WorkDeliveryTest < ActionDispatch::IntegrationTest
     drive_url = "https://drive.google.com/file/d/1AbcDefGhIjKlMnOpQrSt/view"
     thread.work_thread_links.create!(kind: :drive_file, url: drive_url, created_by: users(:david))
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
-    row = response.parsed_body.find { |entry| entry["event_type"] == "work_assigned" }
+    row = response.parsed_body["events"].find { |entry| entry["event_type"] == "work_assigned" }
     links = row.dig("work", "links")
     assert_equal %w[ event drive_file ], links.map { |entry| entry["kind"] }
     assert_equal room_event_path(@room, events(:watercooler_sync)), links.first["url"]
@@ -52,11 +52,11 @@ class Agents::WorkDeliveryTest < ActionDispatch::IntegrationTest
     thread = assign_owned_thread!(name: "Unassigned work")
     thread.update_work!(actor: users(:david), work_owner_id: nil)
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
-    row = response.parsed_body.find { |entry| entry["event_type"] == "work_unassigned" }
-    assert row, "expected a work_unassigned row in #{response.parsed_body.inspect}"
+    row = response.parsed_body["events"].find { |entry| entry["event_type"] == "work_unassigned" }
+    assert row, "expected a work_unassigned row in #{response.parsed_body["events"].inspect}"
     assert_equal thread.id, row.dig("work", "thread_id")
     assert_equal "Unassigned work", row.dig("work", "title")
   end
@@ -72,10 +72,13 @@ class Agents::WorkDeliveryTest < ActionDispatch::IntegrationTest
     assert_equal "acknowledged", event.reload.outcome
   end
 
-  test "assignment posts the webhook with agent and work keys" do
+  test "assignment enqueues the webhook instead of blocking on it" do
     stub = WebMock.stub_request(:post, webhooks(:bender).url).to_return(status: 200)
 
     thread = assign_owned_thread!(name: "Hooked work")
+    assert_not_requested :post, webhooks(:bender).url
+
+    perform_enqueued_jobs only: Agent::EventWebhookJob
 
     assert_requested :post, webhooks(:bender).url, body: hash_including(
       "agent" => hash_including("id" => @agent.id, "name" => "Bender Bot"),
@@ -95,9 +98,13 @@ class Agents::WorkDeliveryTest < ActionDispatch::IntegrationTest
     AgentGrant.where(agent: @agent, capability: "read_messages").update_all(revoked_at: Time.current)
     stub = WebMock.stub_request(:post, webhooks(:bender).url).to_return(status: 200)
 
-    assert_difference -> { @agent.agent_events.where(event_type: "work_assigned").count }, 1 do
-      assign_owned_thread!(name: "Unread work")
+    assert_no_enqueued_jobs only: Agent::EventWebhookJob do
+      assert_difference -> { @agent.agent_events.where(event_type: "work_assigned").count }, 1 do
+        assign_owned_thread!(name: "Unread work")
+      end
     end
+
+    perform_enqueued_jobs only: Agent::EventWebhookJob
 
     assert_not_requested :post, webhooks(:bender).url
     assert_requested stub, times: 0
@@ -108,28 +115,28 @@ class Agents::WorkDeliveryTest < ActionDispatch::IntegrationTest
     AgentGrant.create!(agent: @agent, room: dm, granted_by: users(:david), capability: "read_messages")
     assign_owned_thread!(name: "Revoked work")
 
-    get agents_events_url, headers: bearer_headers
-    assert_equal 1, response.parsed_body.size
+    get agents_events_url(envelope: 1), headers: bearer_headers
+    assert_equal 1, response.parsed_body["events"].size
 
     AgentGrant.where(agent: @agent, room: @room, capability: "read_messages").sole.revoke!
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
     assert_response :success
-    assert_empty response.parsed_body
+    assert_empty response.parsed_body["events"]
   end
 
   test "polling omits work rows after membership removal" do
     AgentGrant.create!(agent: @agent, granted_by: users(:david), capability: "read_messages")
     assign_owned_thread!(name: "Left work")
 
-    get agents_events_url, headers: bearer_headers
-    assert_equal 1, response.parsed_body.size
+    get agents_events_url(envelope: 1), headers: bearer_headers
+    assert_equal 1, response.parsed_body["events"].size
 
     memberships(:bender_watercooler).destroy!
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
     assert_response :success
-    assert_empty response.parsed_body
+    assert_empty response.parsed_body["events"]
   end
 
   test "work events do not count toward the message rate limit" do

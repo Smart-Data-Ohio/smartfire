@@ -327,6 +327,30 @@ class AgentTest < ActiveSupport::TestCase
     assert_equal winner.to_i, agent.reload.last_seen_at.to_i
   end
 
+  test "signing secret generation mints exactly one secret when raced" do
+    agent = agents(:bender_agent)
+    agent.update_column(:webhook_signing_secret, nil)
+    stale = Agent.find(agent.id)
+    assert_nil stale.webhook_signing_secret
+
+    # A concurrent first delivery wins the race after this instance
+    # loaded a blank value; the loser must adopt the winner's secret
+    # instead of overwriting it with a competing one.
+    winner = Agent.find(agent.id).ensure_webhook_signing_secret!
+
+    assert_equal winner, stale.ensure_webhook_signing_secret!
+    assert_equal winner, agent.reload.webhook_signing_secret
+  end
+
+  test "signing secret reset takes the row lock" do
+    agent = agents(:bender_agent)
+
+    agent.expects(:with_lock).yields.once
+    agent.reset_webhook_signing_secret!
+
+    assert agent.reload.webhook_signing_secret.present?
+  end
+
   test "last_seen_at touch alone broadcasts nothing" do
     agent = agents(:bender_agent)
 
