@@ -20,10 +20,10 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       client_message_id: "poll-other"
     )
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
-    ids = response.parsed_body.map { |row| row["id"] }
+    ids = response.parsed_body["events"].map { |row| row["id"] }
     assert_equal @agent.agent_events.deliverable.pluck(:id).sort, ids.sort
     assert_not_includes ids, other_agent.agent_events.deliverable.last.id
   end
@@ -34,10 +34,10 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       client_message_id: "poll-payload"
     )
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
-    row = response.parsed_body.first
+    row = response.parsed_body["events"].first
     assert_equal "mention", row["event_type"]
     assert_equal message.id, row.dig("message", "id")
     assert_equal users(:david).id, row.dig("message", "creator", "id")
@@ -55,14 +55,14 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     )
     dm.messages.create!(creator: users(:kevin), body: "DM hello", client_message_id: "poll-revoked-dm")
 
-    get agents_events_url, headers: bearer_headers
-    assert_equal 2, response.parsed_body.size
+    get agents_events_url(envelope: 1), headers: bearer_headers
+    assert_equal 2, response.parsed_body["events"].size
 
     dm_grant.revoke!
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
     assert_response :success
-    assert_equal [ "mention" ], response.parsed_body.map { |row| row["event_type"] }
+    assert_equal [ "mention" ], response.parsed_body["events"].map { |row| row["event_type"] }
   end
 
   test "polling is forbidden when the last read grant is revoked" do
@@ -72,12 +72,12 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       client_message_id: "poll-revoked-all"
     )
 
-    get agents_events_url, headers: bearer_headers
-    assert_equal 1, response.parsed_body.size
+    get agents_events_url(envelope: 1), headers: bearer_headers
+    assert_equal 1, response.parsed_body["events"].size
 
     grant.revoke!
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
     assert_response :forbidden
   end
 
@@ -87,14 +87,14 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       client_message_id: "poll-membership"
     )
 
-    get agents_events_url, headers: bearer_headers
-    assert_equal 1, response.parsed_body.size
+    get agents_events_url(envelope: 1), headers: bearer_headers
+    assert_equal 1, response.parsed_body["events"].size
 
     memberships(:bender_watercooler).destroy!
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
     assert_response :success
-    assert_empty response.parsed_body
+    assert_empty response.parsed_body["events"]
   end
 
   test "polling omits rows for deleted messages" do
@@ -105,10 +105,10 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     event_id = @agent.agent_events.deliverable.last.id
     message.destroy!
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
-    assert_not_includes response.parsed_body.map { |row| row["id"] }, event_id
+    assert_not_includes response.parsed_body["events"].map { |row| row["id"] }, event_id
   end
 
   test "polling respects since and limit with a max of 100" do
@@ -120,15 +120,164 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     end
     ids = @agent.agent_events.deliverable.ordered.pluck(:id)
 
-    get agents_events_url(since: ids.first), headers: bearer_headers
-    assert_equal ids[1..], response.parsed_body.map { |row| row["id"] }
+    get agents_events_url(since: ids.first, envelope: 1), headers: bearer_headers
+    assert_equal ids[1..], response.parsed_body["events"].map { |row| row["id"] }
 
-    get agents_events_url(limit: 2), headers: bearer_headers
-    assert_equal 2, response.parsed_body.size
+    get agents_events_url(limit: 2, envelope: 1), headers: bearer_headers
+    assert_equal 2, response.parsed_body["events"].size
 
-    get agents_events_url(limit: 500), headers: bearer_headers
+    get agents_events_url(limit: 500, envelope: 1), headers: bearer_headers
     assert_response :success
-    assert_operator response.parsed_body.size, :<=, 100
+    assert_operator response.parsed_body["events"].size, :<=, 100
+  end
+
+  test "polling returns next_since as the last scanned id" do
+    3.times do |i|
+      @room.messages.create!(
+        creator: users(:david), body: "Ping #{i} #{mention_attachment_for(:bender)}",
+        client_message_id: "poll-cursor-#{i}"
+      )
+    end
+    ids = @agent.agent_events.deliverable.ordered.pluck(:id)
+
+    get agents_events_url(envelope: 1), headers: bearer_headers
+    assert_response :success
+    assert_equal ids, response.parsed_body["events"].map { |row| row["id"] }
+    assert_equal ids.last, response.parsed_body["next_since"]
+
+    get agents_events_url(since: response.parsed_body["next_since"], envelope: 1), headers: bearer_headers
+    assert_response :success
+    assert_empty response.parsed_body["events"]
+    assert_equal ids.last, response.parsed_body["next_since"]
+  end
+
+  test "polling defaults to a bare array with the cursor in a header" do
+    2.times do |i|
+      @room.messages.create!(
+        creator: users(:david), body: "Ping #{i} #{mention_attachment_for(:bender)}",
+        client_message_id: "poll-bare-#{i}"
+      )
+    end
+    ids = @agent.agent_events.deliverable.ordered.pluck(:id)
+
+    get agents_events_url, headers: bearer_headers
+
+    assert_response :success
+    assert_kind_of Array, response.parsed_body
+    assert_equal ids, response.parsed_body.map { |row| row["id"] }
+    assert_equal ids.last.to_s, response.headers["X-Smartfire-Next-Since"]
+  end
+
+  test "polling returns the envelope only with envelope=1" do
+    @room.messages.create!(
+      creator: users(:david), body: "Hey #{mention_attachment_for(:bender)}",
+      client_message_id: "poll-envelope"
+    )
+    event_id = @agent.agent_events.deliverable.last.id
+
+    get agents_events_url(envelope: 1), headers: bearer_headers
+
+    assert_response :success
+    assert_equal [ event_id ], response.parsed_body["events"].map { |row| row["id"] }
+    assert_equal event_id, response.parsed_body["next_since"]
+    assert_equal event_id.to_s, response.headers["X-Smartfire-Next-Since"]
+  end
+
+  test "a fully dropped page still advances next_since past the dropped rows" do
+    WebMock.stub_request(:post, webhooks(:bender).url).to_return(status: 200)
+
+    thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Doomed work")
+    thread.update_work!(actor: users(:david), work_status: "planned", work_owner_id: @bot.id)
+    assigned_id = @agent.agent_events.where(event_type: "work_assigned").last.id
+    thread.destroy!
+
+    # The snapshot-less assignment row still drops in Ruby after SQL
+    # filtering, so a one-row page over it returns nothing but moves the
+    # cursor past it; the deletion's unassignment follows on later pages.
+    get agents_events_url(limit: 1, envelope: 1), headers: bearer_headers
+
+    assert_response :success
+    assert_empty response.parsed_body["events"]
+    assert_equal assigned_id, response.parsed_body["next_since"]
+  end
+
+  test "a deleted thread's unassignment polls from its snapshot marked thread_deleted" do
+    WebMock.stub_request(:post, webhooks(:bender).url).to_return(status: 200)
+
+    thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Doomed work")
+    thread.update_work!(actor: users(:david), work_status: "planned", work_owner_id: @bot.id)
+    assigned_id = @agent.agent_events.where(event_type: "work_assigned").last.id
+    thread.deleted_by = users(:david)
+    thread.destroy!
+    unassigned = @agent.agent_events.where(event_type: "work_unassigned").last
+
+    get agents_events_url(envelope: 1), headers: bearer_headers
+
+    assert_response :success
+    rows = response.parsed_body["events"]
+    assert_equal [ unassigned.id ], rows.map { |row| row["id"] }
+    row = rows.sole
+    assert_equal "work_unassigned", row["event_type"]
+    assert_equal true, row["thread_deleted"]
+    assert_nil row["message"]
+    assert_equal "David", row.dig("actor", "name")
+    assert_equal unassigned.metadata["work_snapshot"], row["work"]
+    assert_equal "Doomed work", row.dig("work", "title")
+    assert_equal thread.id, row.dig("work", "thread_id")
+    assert_equal unassigned.id, response.parsed_body["next_since"]
+    assert_operator response.parsed_body["next_since"], :>, assigned_id
+  end
+
+  test "live work rows carry no thread_deleted key" do
+    thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Live work")
+    thread.update_work!(actor: users(:david), work_status: "planned", work_owner_id: @bot.id)
+
+    get agents_events_url(envelope: 1), headers: bearer_headers
+
+    assert_response :success
+    row = response.parsed_body["events"].sole
+    assert_equal "work_assigned", row["event_type"]
+    assert_not_includes row.keys, "thread_deleted"
+  end
+
+  test "a deleted thread's snapshot stays hidden after membership removal" do
+    thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Hidden work")
+    thread.update_work!(actor: users(:david), work_status: "planned", work_owner_id: @bot.id)
+    thread.destroy!
+    assert_equal 1, @agent.agent_events.where(event_type: "work_unassigned").count
+
+    memberships(:bender_watercooler).destroy!
+
+    get agents_events_url(envelope: 1), headers: bearer_headers
+
+    assert_response :success
+    assert_empty response.parsed_body["events"]
+  end
+
+  test "polling resolves membership and grants once per poll regardless of row count" do
+    AgentGrant.create!(agent: @agent, room: @room, granted_by: users(:david), capability: "read_messages")
+    @room.messages.create!(
+      creator: users(:david), body: "One #{mention_attachment_for(:bender)}",
+      client_message_id: "poll-count-1"
+    )
+
+    single = access_query_count { get agents_events_url(envelope: 1), headers: bearer_headers }
+    assert_response :success
+
+    7.times do |i|
+      @room.messages.create!(
+        creator: users(:david), body: "Many #{i} #{mention_attachment_for(:bender)}",
+        client_message_id: "poll-count-many-#{i}"
+      )
+    end
+
+    many = access_query_count { get agents_events_url(envelope: 1), headers: bearer_headers }
+    assert_response :success
+    assert_equal 8, response.parsed_body["events"].size
+
+    assert_equal single, many, "membership and grant queries must not grow per row"
+    # Endpoint capability check, readable_by, and the one-per-poll preload.
+    assert_operator many, :<=, 8
   end
 
   test "polling excludes ledger-only suppression and posted rows" do
@@ -138,16 +287,16 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       outcome: "suppressed", detail: "capped"
     )
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
-    assert_empty response.parsed_body
+    assert_empty response.parsed_body["events"]
   end
 
   test "polling requires read_messages anywhere" do
     AgentGrant.create!(agent: @agent, room: @room, granted_by: users(:david), capability: "post_messages")
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :forbidden
     assert_equal "Forbidden: agent lacks read_messages capability", response.parsed_body["error"]
@@ -163,10 +312,10 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     )
     dm.messages.create!(creator: users(:kevin), body: "DM hello", client_message_id: "poll-scoped-dm")
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
-    assert_equal [ "mention" ], response.parsed_body.map { |row| row["event_type"] }
+    assert_equal [ "mention" ], response.parsed_body["events"].map { |row| row["event_type"] }
   end
 
   test "polling filters revoked memberships before limiting" do
@@ -181,10 +330,10 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       creator: users(:kevin), body: "DM hello", client_message_id: "poll-filter-member-dm"
     )
 
-    get agents_events_url(limit: 1), headers: bearer_headers
+    get agents_events_url(limit: 1, envelope: 1), headers: bearer_headers
 
     assert_response :success
-    assert_equal [ "direct_message" ], response.parsed_body.map { |row| row["event_type"] }
+    assert_equal [ "direct_message" ], response.parsed_body["events"].map { |row| row["event_type"] }
   end
 
   test "polling filters revoked grants before limiting" do
@@ -197,10 +346,10 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       client_message_id: "poll-filter-grant-room"
     )
 
-    get agents_events_url(limit: 1), headers: bearer_headers
+    get agents_events_url(limit: 1, envelope: 1), headers: bearer_headers
 
     assert_response :success
-    assert_equal [ "mention" ], response.parsed_body.map { |row| row["event_type"] }
+    assert_equal [ "mention" ], response.parsed_body["events"].map { |row| row["event_type"] }
   end
 
   test "polling is Bearer-only" do
@@ -209,7 +358,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
 
     delete session_url
-    get agents_events_url(bot_key: @bot.bot_key)
+    get agents_events_url(bot_key: bot_key_for(@bot))
     assert_response :forbidden
   end
 
@@ -464,6 +613,24 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "Secret owner plans", response.body
   end
 
+  test "ledger page shows webhook delivery state honestly" do
+    sign_in :david
+    @room.messages.create!(
+      creator: users(:david), body: "Webhook state plans #{mention_attachment_for(:bender)}",
+      client_message_id: "ledger-webhook"
+    )
+    @agent.agent_events.deliverable.last.update!(
+      webhook_status: "failed", webhook_attempts: 5, webhook_last_error: "Net::OpenTimeout: execution expired"
+    )
+
+    get agent_events_url(@agent)
+
+    assert_response :success
+    assert_match "Webhook failed", response.body
+    assert_match "5 attempts", response.body
+    assert_match "Net::OpenTimeout", response.body
+  end
+
   test "ledger page shows content to an owner inside the room" do
     @agent.update!(owner: users(:kevin))
     sign_in users(:kevin)
@@ -495,6 +662,47 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     assert_select "menu li", text: "No events yet."
   end
 
+  test "a private PR's title and branches reach the agent only when its owner can read the repository" do
+    thread = discuss_pull_request(number: 12, client_id: "agent-private-pr", private: true)
+    thread.post_message!(
+      creator: users(:david),
+      attributes: { markdown_source: "Hey @[Bender Bot], review this", client_message_id: "agent-private-pr-1" }
+    )
+
+    get agents_events_url, headers: bearer_headers
+    pull_request = response.parsed_body.find { |entry| entry["event_type"] == "mention" }["pull_request"]
+    assert_equal 12, pull_request["number"]
+    assert_nil pull_request["title"]
+    assert_nil pull_request["head_branch"]
+    assert_nil pull_request["base_branch"]
+
+    GithubConnectedAccount.create!(user: agents(:bender_agent).owner, github_login: "david-gh", access_token: "david-token")
+    readable = stub_request(:get, "https://api.github.com/repos/rails/rails").to_return(status: 200, body: "{}")
+
+    get agents_events_url, headers: bearer_headers
+    pull_request = response.parsed_body.find { |entry| entry["event_type"] == "mention" }["pull_request"]
+    assert_requested readable
+    assert_equal "Fix login", pull_request["title"]
+    assert_equal "shiny", pull_request["head_branch"]
+    assert_equal "main", pull_request["base_branch"]
+  end
+
+  test "a private PR stays redacted when the owner's token cannot read the repository" do
+    thread = discuss_pull_request(number: 12, client_id: "agent-private-pr-denied", private: nil)
+    thread.post_message!(
+      creator: users(:david),
+      attributes: { markdown_source: "Hey @[Bender Bot], review this", client_message_id: "agent-private-pr-denied-1" }
+    )
+    GithubConnectedAccount.create!(user: agents(:bender_agent).owner, github_login: "david-gh", access_token: "david-token")
+    stub_request(:get, "https://api.github.com/repos/rails/rails").to_return(status: 404, body: "{}")
+
+    get agents_events_url, headers: bearer_headers
+
+    pull_request = response.parsed_body.find { |entry| entry["event_type"] == "mention" }["pull_request"]
+    assert_nil pull_request["title"]
+    assert_nil pull_request["head_branch"]
+  end
+
   test "a mention in a PR thread carries the pull_request object" do
     thread = discuss_pull_request(number: 12, client_id: "agent-pr-mention")
     thread.post_message!(
@@ -502,11 +710,11 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       attributes: { markdown_source: "Hey @[Bender Bot], review this", client_message_id: "agent-pr-mention-1" }
     )
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
-    row = response.parsed_body.find { |entry| entry["event_type"] == "mention" }
-    assert row, "expected a mention row in #{response.parsed_body.inspect}"
+    row = response.parsed_body["events"].find { |entry| entry["event_type"] == "mention" }
+    assert row, "expected a mention row in #{response.parsed_body["events"].inspect}"
     assert_equal thread.messages.last.id, row.dig("message", "id")
     assert_equal(
       {
@@ -534,10 +742,10 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     )
     human_says("Hey @[Bender Bot] in the room", "agent-null-room")
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
-    rows = response.parsed_body.select { |entry| entry["event_type"] == "mention" }
+    rows = response.parsed_body["events"].select { |entry| entry["event_type"] == "mention" }
     assert_equal 2, rows.size
     rows.each do |row|
       assert row.key?("pull_request"), "expected an explicit null pull_request in #{row.inspect}"
@@ -546,7 +754,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
-    def discuss_pull_request(number:, client_id:)
+    def discuss_pull_request(number:, client_id:, private: false)
       parent = @room.messages.create!(
         creator: users(:david),
         markdown_source: "review https://github.com/rails/rails/pull/#{number}",
@@ -554,7 +762,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
       )
       pull_request = parent.github_pull_requests.first
       pull_request.update!(
-        title: "Fix login", state: "open", base_branch: "main", head_branch: "shiny",
+        private: private, title: "Fix login", state: "open", base_branch: "main", head_branch: "shiny",
         review_decision: "approved", check_status: "passing",
         html_url: "https://github.com/rails/rails/pull/#{number}"
       )
@@ -566,6 +774,20 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
 
     def bearer_headers
       { "Authorization" => "Bearer #{@secret}" }
+    end
+
+    def access_query_count(&block)
+      queries = []
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        next if payload[:cached]
+
+        sql = payload[:sql].to_s
+        queries << sql if sql.include?("memberships") || sql.include?("agent_grants")
+      end
+      block.call
+      queries.size
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
     end
 
     def create_agent_in(room, name:)
@@ -590,6 +812,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
 
     def assert_delivered(agent, hop:)
       perform_enqueued_jobs only: Agent::DeliveryJob
+      perform_enqueued_jobs only: Agent::EventWebhookJob
 
       event = agent.agent_events.deliverable.last
       assert_equal "delivered", event.outcome

@@ -17,6 +17,10 @@ gem "puma", "~> 7.2", ">= 7.2.1"
 # Jobs
 gem "resque", "~> 2.7.0"
 gem "resque-pool", "~> 0.7.1"
+# Delayed jobs (retry backoff) without a scheduler daemon: the periodic
+# runner calls Resque::Scheduler.handle_delayed_items on every tick.
+# 5.x needs resque 3, so this stays on the 4.x line.
+gem "resque-scheduler", "~> 4.11"
 
 # Assets
 gem "propshaft", github: "rails/propshaft"

@@ -12,12 +12,12 @@ class AgentCapabilityTest < ActionDispatch::IntegrationTest
     assert @agent.legacy_capabilities?
 
     assert_difference -> { Message.count }, +1 do
-      post room_bot_messages_url(@room, @bot.bot_key), params: +"Hello!"
+      post room_bot_messages_url(@room, bot_key_for(@bot)), params: +"Hello!"
       assert_response :created
     end
 
     assert_difference -> { Boost.count }, +1 do
-      post room_bot_message_boosts_url(@room, @bot.bot_key, messages(:fourth)), params: +"👀"
+      post room_bot_message_boosts_url(@room, bot_key_for(@bot), messages(:fourth)), params: +"👀"
       assert_response :created
     end
   end
@@ -26,10 +26,10 @@ class AgentCapabilityTest < ActionDispatch::IntegrationTest
     grant!(capability: "post_messages", room: @room)
     grant!(capability: "react", room: @room)
 
-    post room_bot_messages_url(@room, @bot.bot_key), params: +"Hello!"
+    post room_bot_messages_url(@room, bot_key_for(@bot)), params: +"Hello!"
     assert_response :created
 
-    post room_bot_message_boosts_url(@room, @bot.bot_key, messages(:fourth)), params: +"👀"
+    post room_bot_message_boosts_url(@room, bot_key_for(@bot), messages(:fourth)), params: +"👀"
     assert_response :created
   end
 
@@ -37,7 +37,7 @@ class AgentCapabilityTest < ActionDispatch::IntegrationTest
     grant!(capability: "post_messages", room: @room).revoke!
 
     assert_no_difference -> { Message.count } do
-      post room_bot_messages_url(@room, @bot.bot_key), params: +"Hello!"
+      post room_bot_messages_url(@room, bot_key_for(@bot)), params: +"Hello!"
     end
 
     assert_response :forbidden
@@ -48,7 +48,7 @@ class AgentCapabilityTest < ActionDispatch::IntegrationTest
     grant!(capability: "react", room: @room).revoke!
 
     assert_no_difference -> { Boost.count } do
-      post room_bot_message_boosts_url(@room, @bot.bot_key, messages(:fourth)), params: +"👀"
+      post room_bot_message_boosts_url(@room, bot_key_for(@bot), messages(:fourth)), params: +"👀"
     end
 
     assert_response :forbidden
@@ -58,7 +58,7 @@ class AgentCapabilityTest < ActionDispatch::IntegrationTest
   test "room grant for another room does not authorize posting" do
     grant!(capability: "post_messages", room: rooms(:designers))
 
-    post room_bot_messages_url(@room, @bot.bot_key), params: +"Hello!"
+    post room_bot_messages_url(@room, bot_key_for(@bot)), params: +"Hello!"
     assert_response :forbidden
   end
 
@@ -66,7 +66,7 @@ class AgentCapabilityTest < ActionDispatch::IntegrationTest
     grant!(capability: "post_messages")
 
     assert_no_difference -> { Message.count } do
-      post room_bot_messages_url(rooms(:designers), @bot.bot_key), params: +"Hello!"
+      post room_bot_messages_url(rooms(:designers), bot_key_for(@bot)), params: +"Hello!"
     end
     assert_response :not_found
   end
@@ -74,7 +74,7 @@ class AgentCapabilityTest < ActionDispatch::IntegrationTest
   test "suspended agent is forbidden from posting, even with legacy fallback" do
     @agent.suspend!
 
-    post room_bot_messages_url(@room, @bot.bot_key), params: +"Hello!"
+    post room_bot_messages_url(@room, bot_key_for(@bot)), params: +"Hello!"
     assert_response :forbidden
   end
 
@@ -82,7 +82,7 @@ class AgentCapabilityTest < ActionDispatch::IntegrationTest
     grant!(capability: "post_messages", room: @room)
     memberships(:bender_watercooler).destroy!
 
-    post room_bot_messages_url(@room, @bot.bot_key), params: +"Hello!"
+    post room_bot_messages_url(@room, bot_key_for(@bot)), params: +"Hello!"
     assert_response :not_found
   end
 
@@ -141,7 +141,7 @@ class AgentCapabilityTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
     delete session_url
 
-    post room_agent_messages_url(@room, bot_key: @bot.bot_key),
+    post room_agent_messages_url(@room, bot_key: bot_key_for(@bot)),
       params: { message: { body: "Legacy", client_message_id: "bearer-legacy-key" } }.to_json,
       headers: { "Content-Type" => "application/json" }
     assert_response :forbidden

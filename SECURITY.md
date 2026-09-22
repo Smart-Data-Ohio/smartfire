@@ -14,8 +14,9 @@ network path held by the Smartfire process but not by the operator's own shell.
 
 ## Intentional behavior
 
-Bot webhook URLs are unrestricted: an administrator can point one at any address,
-including internal ones, because operators legitimately wire bots to their own services.
-Link unfurling is different because any member can trigger it by pasting a URL, so it
-validates destinations through `RestrictedHTTP::PrivateNetworkGuard`. The difference is who
-picks the destination.
+Every webhook POST, legacy bot or agent delivery, resolves through
+`RestrictedHTTP::PrivateNetworkGuard` and pins the connection to the
+resolved public address, like link unfurling: loopback and private
+destinations are refused instead of posted to. Operators who need bots
+on internal services must expose them at a public address the guard
+accepts.

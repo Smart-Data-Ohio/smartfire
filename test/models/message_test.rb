@@ -9,6 +9,16 @@ class MessageTest < ActiveSupport::TestCase
     end
   end
 
+  test "plain_text_body memoizes per instance and refreshes after edits" do
+    message = rooms(:designers).messages.create!(creator: users(:david),
+      markdown_source: "original", client_message_id: "memo-text")
+
+    assert_same message.plain_text_body, message.plain_text_body
+
+    message.update!(markdown_source: "edited")
+    assert_equal "edited", message.plain_text_body
+  end
+
   test "all emoji" do
     assert Message.new(body: "😄🤘").plain_text_body.all_emoji?
     assert_not Message.new(body: "Haha! 😄🤘").plain_text_body.all_emoji?
@@ -32,6 +42,16 @@ class MessageTest < ActiveSupport::TestCase
 
     message_mentioning_a_non_member = Message.new room: rooms(:pets), body: "<div>Hey #{mention_attachment_for(:kevin)}</div>", creator: users(:jason), client_message_id: "earth"
     assert_equal [], message_mentioning_a_non_member.mentionees
+  end
+
+  test "idempotency and page indexes exist alongside the pre-existing single-column indexes" do
+    connection = Message.connection
+    assert connection.index_exists?(:messages, %i[room_id creator_id client_message_id])
+    assert connection.index_exists?(:messages, %i[room_id thread_id created_at])
+    assert connection.index_exists?(:messages, %i[thread_id created_at])
+    # The redundant singles stay: migrations never drop indexes.
+    assert connection.index_exists?(:messages, :room_id)
+    assert connection.index_exists?(:messages, :thread_id)
   end
 
   private

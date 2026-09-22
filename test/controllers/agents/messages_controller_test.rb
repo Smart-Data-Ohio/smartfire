@@ -132,7 +132,7 @@ class Agents::MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal bearer_token_error, response.parsed_body["error"]
     delete session_url
 
-    post room_agent_messages_url(@room, bot_key: @bot.bot_key),
+    post room_agent_messages_url(@room, bot_key: bot_key_for(@bot)),
       params: { thread_id: thread.id, message: { markdown_source: "Legacy" } }.to_json,
       headers: { "Content-Type" => "application/json" }
     assert_response :forbidden
@@ -171,10 +171,10 @@ class Agents::MessagesControllerTest < ActionDispatch::IntegrationTest
     thread.post_message!(creator: users(:david),
       attributes: { markdown_source: "Hey @[Bender Bot], help here." })
 
-    get agents_events_url, headers: bearer_headers
+    get agents_events_url(envelope: 1), headers: bearer_headers
 
     assert_response :success
-    assert_equal [ "mention" ], response.parsed_body.map { |row| row["event_type"] }
+    assert_equal [ "mention" ], response.parsed_body["events"].map { |row| row["event_type"] }
   end
 
   test "thread replies accept drive file ids" do
@@ -207,6 +207,38 @@ class Agents::MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
 
     assert_empty thread.messages
+  end
+
+  test "retried root post returns the original message" do
+    payload = { message: { markdown_source: "Agent once", client_message_id: "agent-retry-root" } }
+
+    post room_agent_messages_url(@room), params: payload.to_json, headers: bearer_headers
+    assert_response :created
+    original_id = response.parsed_body["id"]
+
+    assert_no_difference -> { @room.messages.count } do
+      post room_agent_messages_url(@room), params: payload.to_json, headers: bearer_headers
+      assert_response :created
+    end
+
+    assert_equal original_id, response.parsed_body["id"]
+  end
+
+  test "retried thread reply returns the original message" do
+    thread = create_thread!(room: @room, creator: users(:david))
+    payload = { thread_id: thread.id,
+      message: { markdown_source: "Agent reply once", client_message_id: "agent-retry-reply" } }
+
+    post room_agent_messages_url(@room), params: payload.to_json, headers: bearer_headers
+    assert_response :created
+    original_id = response.parsed_body["id"]
+
+    assert_no_difference -> { thread.messages.count } do
+      post room_agent_messages_url(@room), params: payload.to_json, headers: bearer_headers
+      assert_response :created
+    end
+
+    assert_equal original_id, response.parsed_body["id"]
   end
 
   private

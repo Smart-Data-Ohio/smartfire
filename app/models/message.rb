@@ -42,6 +42,7 @@ class Message < ApplicationRecord
   before_create -> { self.client_message_id ||= Random.uuid } # Bots don't care
   before_destroy :preserve_reply_tombstones, prepend: true
   after_create_commit :receive_in_conversation
+  after_create_commit :close_stale_sibling_threads, if: :thread_message?
   after_create_commit :record_activity_items
   # Create and update need distinct callback filters: registering the same
   # method twice on the commit chain keeps only one registration.
@@ -83,7 +84,7 @@ class Message < ApplicationRecord
     with_creator
       .with_rich_text_body_and_embeds
       .with_attached_attachment
-      .preload(:room, :thread, :channel_thread, :drive_attachments, reply_to_message: [ :room, :rich_text_body, { creator: :avatar_attachment } ])
+      .preload(:room, { thread: :room }, :channel_thread, :drive_attachments, reply_to_message: [ :room, :rich_text_body, { creator: :avatar_attachment } ])
   }
 
   class << self
@@ -103,6 +104,17 @@ class Message < ApplicationRecord
       ActiveRecord::Associations::Preloader.new(records: records, associations: rendering_associations).call
       records
     end
+
+    # A message this user already posted in this room with the same client
+    # id, if any, so a retried create returns the original instead of
+    # posting twice. There is deliberately no unique index behind this
+    # (production already holds duplicates), so concurrent double-submits
+    # can still both land; sequential retries always hit this lookup.
+    def find_duplicate(room:, creator:, client_message_id:)
+      return if client_message_id.blank? || room.nil? || creator.nil?
+
+      find_by(room_id: room.id, creator_id: creator.id, client_message_id: client_message_id)
+    end
   end
 
   # Sorting in Ruby rather than with the `ordered` scope, because applying a
@@ -112,11 +124,30 @@ class Message < ApplicationRecord
     boosts.sort_by { |boost| [ boost.created_at, boost.id ] }
   end
 
-  def plain_text_body
-    text = markdown? ? Markdown.plain_text(body.body) : body.to_plain_text
-    text = text.presence || attachment&.filename&.to_s || ""
+  # Rendered two or three times per message (tag class, presentation,
+  # reply preview), and each computation re-resolves mention attachables,
+  # so the result is memoized per instance. Keyed on the inputs rather than
+  # a bare ivar so an in-place edit still reads fresh.
+  # Reloading drops the memoized plain text along with the attributes.
+  def reload(*)
+    @plain_text_body = nil
+    @plain_text_body_key = nil
+    super
+  end
 
-    forward_note.present? ? [ forward_note, text ].compact_blank.join("\n\n") : text
+  def plain_text_body
+    # to_html serializes the stored nodes; to_s would render the attachments
+    # and resolve every mention with a query.
+    cache_key = [ body.body&.to_html, attachment&.filename&.to_s, forward_note ]
+    return @plain_text_body if defined?(@plain_text_body) && @plain_text_body_key == cache_key
+
+    @plain_text_body_key = cache_key
+    @plain_text_body = begin
+      text = markdown? ? Markdown.plain_text(body.body) : body.to_plain_text
+      text = text.presence || attachment&.filename&.to_s || ""
+
+      forward_note.present? ? [ forward_note, text ].compact_blank.join("\n\n") : text
+    end
   end
 
   def markdown?
@@ -217,6 +248,14 @@ class Message < ApplicationRecord
       else
         room.receive(self)
       end
+    end
+
+    # Thread writes run the room's archive sweep: with no scheduled-job
+    # facility this callback is what persists closed_at for stale threads.
+    # Reads stay correct between sweeps because ChannelThread#status
+    # reports stale threads as closed without writing.
+    def close_stale_sibling_threads
+      ChannelThread.close_stale_in(room:)
     end
 
     def preserve_reply_tombstones

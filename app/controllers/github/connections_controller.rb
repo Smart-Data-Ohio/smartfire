@@ -31,17 +31,14 @@ module Github
     end
 
     private
+      # Linking sets the profile login from the one GitHub confirmed (see
+      # GithubConnectedAccount#claim_verified_login), unless another member's
+      # own linked token already confirms it.
       def link_notice(login)
-        if Current.user.github_login.blank?
-          if Current.user.update(github_login: login)
-            "GitHub connected as #{login}."
-          else
-            "GitHub connected as #{login}. That username is linked to another member, so your profile username was left blank."
-          end
-        elsif Current.user.github_login != login.to_s.downcase
-          "GitHub connected as #{login}, which differs from your profile username (#{Current.user.github_login}). Review requests still use the profile username."
-        else
+        if Current.user.reload.github_login == login.to_s.downcase
           "GitHub connected as #{login}."
+        else
+          "GitHub connected as #{login}. Another member's linked GitHub account already uses that username, so your profile username was left unchanged."
         end
       end
   end

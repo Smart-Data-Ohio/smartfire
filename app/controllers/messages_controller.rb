@@ -17,7 +17,10 @@ class MessagesController < ApplicationController
 
     if @messages.any?
       fresh_when @messages
-      Message.preload_rendering_details(@messages) unless performed?
+      unless performed?
+        Message.preload_rendering_details(@messages)
+        Message::MentionPreloader.preload_for(@messages)
+      end
     else
       head :no_content
     end
@@ -25,13 +28,20 @@ class MessagesController < ApplicationController
 
   def create
     set_room
-    @message = @room.root_messages.new(message_params)
-    apply_drive_file_ids!(@message) if drive_file_ids_key_present?
-    @message.save!
-    @message.process_attachment
 
-    @message.broadcast_create
-    deliver_webhooks_to_bots
+    if (duplicate = Message.find_duplicate(room: @room, creator: Current.user, client_message_id: params.dig(:message, :client_message_id)))
+      # A retried create: the original request already saved, broadcast, and
+      # delivered this message, so return it without repeating side effects.
+      @message = duplicate
+    else
+      @message = @room.root_messages.new(message_params)
+      apply_drive_file_ids!(@message) if drive_file_ids_key_present?
+      @message.save!
+      @message.process_attachment
+
+      @message.broadcast_create
+      deliver_webhooks_to_bots
+    end
   rescue ActiveRecord::RecordNotFound
     render action: :room_not_found
   rescue ActiveRecord::RecordInvalid => error
@@ -154,10 +164,15 @@ class MessagesController < ApplicationController
 
     def deliver_webhooks_to_bots
       # Agent-backed bots are delivered only through Agent::DeliveryJob (see
-      # Message::AgentDelivery); the legacy webhook bypasses grant, rate, and
-      # hop checks, so it serves bots without an Agent row only.
-      bots_eligible_for_webhook.excluding(@message.creator).where.missing(:agent)
-        .each { |bot| bot.deliver_webhook_later(@message) }
+      # Message::AgentDelivery); the legacy webhook bypasses grant and rate
+      # checks, so it serves bots without an Agent row only. The hop limit
+      # still applies: a chain that reached it stops here instead of
+      # looping through a legacy bot.
+      bots = bots_eligible_for_webhook.excluding(@message.creator).where.missing(:agent)
+      return if bots.empty?
+      return if Agent::Delivery.hop_for_message(@message) >= Agent::Delivery::HOP_LIMIT
+
+      bots.each { |bot| bot.deliver_webhook_later(@message) }
     end
 
     def bots_eligible_for_webhook

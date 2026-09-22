@@ -53,6 +53,14 @@ class Github::PullRequest < ApplicationRecord
     claimed
   end
 
+  # Give up a claim whose enqueue failed (the queue is down): the next
+  # render may try again instead of waiting out the staleness window.
+  # Skips callbacks, so releasing never broadcasts a card update.
+  def release_fetch_request!
+    self.class.where(id: id).update_all(fetch_requested_at: nil)
+    self.fetch_requested_at = nil
+  end
+
   # Find or create the record for a referenced PR. Safe to call concurrently:
   # a lost insert race falls back to finding the winner's row. Names are
   # downcased so links in any case resolve to the same row.
@@ -130,19 +138,35 @@ class Github::PullRequest < ApplicationRecord
 
   # The pull_request object carried by agent delivery payloads for mentions
   # in this PR's threads. checks_state mirrors the card's check_status.
-  def agent_payload
+  #
+  # Title and branch names follow the card rule: they are included only
+  # when the repository is known public or the agent's owner's own linked
+  # GitHub account can read it. A private or still-unknown repository
+  # otherwise carries null for them. Callers without an agent get the
+  # public-only form.
+  def agent_payload(agent: nil)
+    details = details_visible_to_agent?(agent)
+
     {
       url: html_url.presence || "https://github.com/#{full_name}/pull/#{number}",
       owner: owner,
       repo: repo,
       number: number,
-      title: title,
+      title: (title if details),
       state: state,
-      head_branch: head_branch,
-      base_branch: base_branch,
+      head_branch: (head_branch if details),
+      base_branch: (base_branch if details),
       review_decision: review_decision,
       checks_state: check_status
     }
+  end
+
+  # Same private/unknown rule as Github::PullRequestsHelper#github_pr_visible_to?,
+  # with the agent's owner as the viewer.
+  def details_visible_to_agent?(agent)
+    return true if private == false
+
+    agent&.owner&.github_connected_account&.can_read_repository?(owner, repo) || false
   end
 
   # Parsed changed-files summary: { "files" => [...], "total_count" => n }.

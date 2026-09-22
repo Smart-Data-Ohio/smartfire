@@ -107,7 +107,11 @@ export default class extends Controller {
   #findMessage(id) {
     if (!id) return null
     const normalizedId = String(id).replace(/^#/, "")
-    return document.getElementById(normalizedId) || document.getElementById(`message_${normalizedId}`)
+    // data-message-id is the stable per-message lookup; keep the dom-id
+    // forms as a fallback for nodes that only carry an element id.
+    return document.querySelector(`.message[data-message-id="${CSS.escape(normalizedId)}"]`)
+      || document.getElementById(normalizedId)
+      || document.getElementById(`message_${normalizedId}`)
   }
 
   #idFromHref(href) {

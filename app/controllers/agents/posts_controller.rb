@@ -1,5 +1,6 @@
 class Agents::PostsController < ApplicationController
   include AgentAuthorization
+  include AgentApiThrottle
 
   allow_agent_access only: %i[ index create ]
 
@@ -13,6 +14,7 @@ class Agents::PostsController < ApplicationController
   require_agent_capability :read_messages, only: :index
   require_agent_capability :post_messages, only: :create
   require_agent_capability :manage_threads, only: :create
+  throttle_agent_api limit: 30, only: :create
   # After the capability checks so a member without a grant sees 403, not
   # a hint about what kind of room this is.
   before_action :ensure_board_room, only: %i[ index create ]
@@ -70,7 +72,7 @@ class Agents::PostsController < ApplicationController
       scope = scope.where(id: ThreadTag.where(name: tag_filter).select(:channel_thread_id))
     end
 
-    render json: scope.limit(LIST_MAX_LIMIT).map { |thread| Agents::WorkPayload.for(thread) }
+    render json: scope.limit(LIST_MAX_LIMIT).map { |thread| Agents::WorkPayload.for(thread, agent: Current.agent) }
   end
 
   # POST /rooms/:room_id/agents/posts (Bearer-only, JSON). Creates a post
@@ -95,7 +97,7 @@ class Agents::PostsController < ApplicationController
       first_message: params[:body]
     )
 
-    render json: Agents::WorkPayload.for(thread), status: :created
+    render json: Agents::WorkPayload.for(thread, agent: Current.agent), status: :created
   rescue ActiveRecord::RecordNotFound
     head :not_found
   rescue ActiveRecord::RecordInvalid => error

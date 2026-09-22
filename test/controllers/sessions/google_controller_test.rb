@@ -148,7 +148,8 @@ class Sessions::GoogleControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "existing account links by verified email, preserving id, history, role, and password" do
-    user = User.create!(name: "Riel", email_address: "riel@smartdata.net", password: "secret123456", role: :administrator)
+    user = User.create!(name: "Riel", email_address: "riel@smartdata.net", password: "secret123456", role: :administrator,
+      google_email_link_allowed: true)
     message = Message.create!(room: rooms(:pets), creator: user, body: "history stays")
 
     state = start_google_sign_in
@@ -635,6 +636,19 @@ class Sessions::GoogleControllerTest < ActionDispatch::IntegrationTest
   test "token endpoint outage fails closed with a retry message" do
     state = start_google_sign_in
     stub_request(:post, GOOGLE_TOKEN_URL).to_timeout
+
+    assert_no_user_or_session_change do
+      get session_google_callback_path, params: { state:, code: "auth-code" }
+    end
+
+    assert_redirected_to new_session_url
+    follow_redirect!
+    assert_select ".flash", text: /unavailable right now/
+  end
+
+  test "token endpoint connection failure fails closed with a retry message" do
+    state = start_google_sign_in
+    stub_request(:post, GOOGLE_TOKEN_URL).to_raise(Errno::ECONNREFUSED)
 
     assert_no_user_or_session_change do
       get session_google_callback_path, params: { state:, code: "auth-code" }

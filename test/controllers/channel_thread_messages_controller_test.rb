@@ -66,4 +66,20 @@ class ChannelThreadMessagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to room_url(@room, thread: @thread.id, message_id: @message.id)
   end
+
+  test "retried post with the same client id returns the original message" do
+    sign_in :jz
+    params = { message: { markdown_source: "Reply once", client_message_id: "retry-thread-reply" } }
+
+    post room_thread_messages_url(@room, @thread, format: :json), params: params
+    assert_response :created
+    original_id = response.parsed_body["id"]
+
+    assert_no_difference -> { @thread.messages.count } do
+      post room_thread_messages_url(@room, @thread, format: :json), params: params
+      assert_response :created
+    end
+
+    assert_equal original_id, response.parsed_body["id"]
+  end
 end

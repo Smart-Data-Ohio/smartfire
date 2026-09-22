@@ -1,5 +1,18 @@
+# Bot keys are "<id>-<token>". Authentication compares the token's SHA-256
+# digest (bot_token_digest), as agent credentials do, and the UI shows a key
+# only once: right after creation or a reset.
+#
+# TRANSITIONAL: the plaintext bot_token column is still written and kept
+# this release, so a rolled-back previous container still authenticates and
+# legacy webhook payloads (Webhook#room_bot_messages_path) keep a working
+# room.path. A follow-up release drops bot_token; after that bot_key falls
+# back to BOT_KEY_PLACEHOLDER for stored bots.
 module User::Bot
   extend ActiveSupport::Concern
+
+  # Stands in for the key wherever it has to appear but is not shown, such
+  # as the curl examples on the bots page.
+  BOT_KEY_PLACEHOLDER = "BOT_KEY"
 
   included do
     scope :active_bots, -> { active.where(role: :bot) }
@@ -13,18 +26,43 @@ module User::Bot
       bot_token = generate_bot_token
       webhook_url = attributes.delete(:webhook_url)
 
-      User.create!(**attributes, bot_token: bot_token, role: :bot).tap do |user|
+      User.create!(**attributes, bot_token: bot_token, bot_token_digest: digest_bot_token(bot_token), role: :bot).tap do |user|
+        user.plain_bot_token = bot_token
         user.create_webhook!(url: webhook_url) if webhook_url
       end
     end
 
+    # Looks the bot up by id and compares in constant time.
+    #
+    # TRANSITIONAL: while the plaintext bot_token column exists it is
+    # authoritative, because a rolled-back previous release writes only the
+    # plaintext (a key reset there leaves the digest describing the old,
+    # possibly leaked key). A digest that no longer matches the plaintext is
+    # re-backfilled. Once bot_token is dropped, the digest alone decides.
     def authenticate_bot(bot_key)
-      bot_id, bot_token = bot_key.split("-")
-      active_bots.find_by(id: bot_id, bot_token: bot_token)
+      bot_id, bot_token = bot_key.to_s.split("-", 2)
+      return if bot_id.blank? || bot_token.blank? || !bot_id.match?(/\A\d+\z/)
+
+      bot = active_bots.find_by(id: bot_id)
+      return if bot.nil?
+
+      if bot.has_attribute?(:bot_token) && bot.bot_token.present?
+        return unless ActiveSupport::SecurityUtils.secure_compare(bot.bot_token, bot_token)
+
+        digest = digest_bot_token(bot_token)
+        bot.update_columns(bot_token_digest: digest) unless bot.bot_token_digest == digest
+        bot
+      elsif bot.bot_token_digest.present?
+        bot if ActiveSupport::SecurityUtils.secure_compare(bot.bot_token_digest, digest_bot_token(bot_token))
+      end
     end
 
     def generate_bot_token
       SecureRandom.alphanumeric(12)
+    end
+
+    def digest_bot_token(token)
+      Digest::SHA256.hexdigest(token.to_s)
     end
   end
 
@@ -36,7 +74,9 @@ module User::Bot
     success = false
 
     transaction do
-      update_webhook_url!(attributes.delete(:webhook_url))
+      # Only a submitted webhook_url (blank included) changes the webhook; an
+      # edit that leaves the key out keeps it.
+      update_webhook_url!(attributes.delete(:webhook_url)) if attributes.key?(:webhook_url)
       success = update(attributes)
       raise ActiveRecord::Rollback unless success
     end
@@ -45,12 +85,29 @@ module User::Bot
   end
 
 
-  def bot_key
-    "#{id}-#{bot_token}"
+  # The plaintext token, known only in the object that just created or
+  # reset it. Never persisted.
+  attr_accessor :plain_bot_token
+
+  # The full key while it is still known, otherwise nil.
+  def plain_bot_key
+    "#{id}-#{plain_bot_token}" if plain_bot_token.present?
   end
 
+  # The full key. TRANSITIONAL: read from the plaintext column while it
+  # exists; once it is dropped, only a just-created or just-reset bot knows
+  # its key and stored bots answer BOT_KEY_PLACEHOLDER.
+  def bot_key
+    plain_bot_key || (has_attribute?(:bot_token) && bot_token.present? ? "#{id}-#{bot_token}" : BOT_KEY_PLACEHOLDER)
+  end
+
+  # Issues a new token, invalidating the old key, and returns the new key.
+  # TRANSITIONAL: writes the plaintext alongside the digest (see above).
   def reset_bot_key
-    update! bot_token: self.class.generate_bot_token
+    token = self.class.generate_bot_token
+    update! bot_token: token, bot_token_digest: self.class.digest_bot_token(token)
+    self.plain_bot_token = token
+    plain_bot_key
   end
 
 

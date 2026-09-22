@@ -21,13 +21,17 @@
     <% end %>
   </div>
 
+  <% if bot.rooms.without_directs.any? %>
+    <p class="txt-small margin-none txt-align-start">Replace <code><%= User::Bot::BOT_KEY_PLACEHOLDER %></code> with the bot's key, shown once when the bot was created or its key was last generated.</p>
+  <% end %>
+
   <% bot.rooms.without_directs.ordered.each do |room| %>
     <fieldset class="gap max-width pad border border-radius">
       <legend class="min-width txt-align-start pad-inline">
         <strong class="overflow-ellipsis"><%= room_display_name(room) %></strong>
       </legend>
 
-      <% curl_text_line = "curl -d 'Hello!' #{room_bot_messages_url(room, bot.bot_key)}" %>
+      <% curl_text_line = "curl -d 'Hello!' #{room_bot_messages_url(room, User::Bot::BOT_KEY_PLACEHOLDER)}" %>
       <div class="flex align-center gap">
         <%= image_tag "messages-outlined.svg", aria: { hidden: "true" }, size: 24, class: "colorize--black" %>
 
@@ -43,7 +47,7 @@
         </div>
       </div>
 
-      <% curl_upload_line = %[curl -F "attachment=@/path/to/file" #{room_bot_messages_url(room, bot.bot_key)}] %>
+      <% curl_upload_line = %[curl -F "attachment=@/path/to/file" #{room_bot_messages_url(room, User::Bot::BOT_KEY_PLACEHOLDER)}] %>
       <div class="flex align-center gap">
         <%= image_tag "attachment.svg", aria: { hidden: "true" }, size: 24, class: "colorize--black" %>
 

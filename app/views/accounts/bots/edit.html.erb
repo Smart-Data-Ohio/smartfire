@@ -13,7 +13,7 @@
 
   <hr class="separator full-width margin-block-double">
 
-  <% if Current.user.administrator? %>
+  <% if Current.user.administrator? || @bot.agent&.owner == Current.user %>
     <div class="flex align-center gap justify-space-between margin-block-end">
       <%= link_to account_bot_credentials_path(@bot), class: "btn full-width txt--small" do %>
         <%= image_tag "key.svg", aria: { hidden: "true" }, size: 20 %>
@@ -46,6 +46,24 @@
 
   <hr class="separator full-width margin-block-double">
 
+  <section aria-labelledby="webhook-signing-secret-title">
+    <h2 id="webhook-signing-secret-title" class="txt-large margin-block-end">Webhook signing secret</h2>
+
+    <% secret = @bot.agent&.webhook_signing_secret || @bot.webhook&.signing_secret %>
+
+    <% if secret.present? %>
+      <p>Deliveries carry an <code>X-Smartfire-Signature</code> header. Copy this secret into the receiving service to verify them:</p>
+      <p><code><%= secret %></code></p>
+      <%= button_to "Reset signing secret", account_bot_webhook_secret_path(@bot), class: "btn btn--negative",
+            form: { data: { turbo_confirm: "Reset the signing secret? The receiving service must be updated with the new secret." } } %>
+    <% else %>
+      <p>No signing secret yet. Deliveries go out unsigned until one is generated.</p>
+      <%= button_to "Generate signing secret", account_bot_webhook_secret_path(@bot), class: "btn" %>
+    <% end %>
+  </section>
+
+  <hr class="separator full-width margin-block-double">
+
   <section aria-labelledby="github-connection-title">
     <h2 id="github-connection-title" class="txt-large margin-block-end">GitHub account</h2>
 
@@ -54,8 +72,12 @@
     <% if account&.usable? %>
       <p>Connected as <%= account.github_login %></p>
       <p>Approved write actions post from PR threads as <strong>@<%= account.github_login %></strong> on GitHub.</p>
+      <% if Current.user.administrator? %>
       <%= button_to "Disconnect GitHub", account_bot_github_connection_path(@bot), method: :delete, class: "btn btn--negative",
             form: { data: { turbo_confirm: "Disconnect GitHub? This agent will no longer be able to request PR write actions." } } %>
+      <% end %>
+    <% elsif !Current.user.administrator? %>
+      <p>No GitHub account is connected. Only an administrator can connect one.</p>
     <% else %>
       <% if account %>
         <p>GitHub rejected the connection<% if account.disconnected_reason.present? %> (<%= account.disconnected_reason %>)<% end %>. Paste a new token to reconnect.</p>

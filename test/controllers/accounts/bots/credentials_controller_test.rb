@@ -88,5 +88,32 @@ class Accounts::Bots::CredentialsControllerTest < ActionDispatch::IntegrationTes
 
     get account_bot_credentials_url(@bot)
     assert_response :forbidden
+
+    assert_no_difference -> { AgentCredential.count } do
+      post account_bot_credentials_url(@bot), params: { agent_credential: { name: "Sneaky" } }
+    end
+    assert_response :forbidden
+
+    delete account_bot_credential_url(@bot, agent_credentials(:bender_main))
+    assert_response :forbidden
+    assert_not agent_credentials(:bender_main).reload.revoked?
+  end
+
+  test "an owner without admin rights lists and revokes credentials but cannot issue them" do
+    agents(:bender_agent).update!(owner: users(:kevin))
+    sign_in :kevin
+
+    get account_bot_credentials_url(@bot)
+    assert_response :ok
+    assert_select "input[name=?]", "agent_credential[name]", 0
+
+    assert_no_difference -> { AgentCredential.count } do
+      post account_bot_credentials_url(@bot), params: { agent_credential: { name: "Sneaky" } }
+    end
+    assert_response :forbidden
+
+    delete account_bot_credential_url(@bot, agent_credentials(:bender_main))
+    assert_redirected_to account_bot_credentials_url(@bot)
+    assert agent_credentials(:bender_main).reload.revoked?
   end
 end

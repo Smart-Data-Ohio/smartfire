@@ -1,4 +1,18 @@
 module RoomsHelper
+  # Stimulus identifiers preloaded on first paint of the room page: message
+  # list rendering and position, the composer, timestamps, and presence.
+  # Every other controller lazy-loads on demand when its element appears.
+  FIRST_PAINT_CONTROLLERS = %w[
+    messages maintain_scroll reply composer markdown_editor
+    typing_notifications local_time presence
+  ].freeze
+
+  def first_paint_controller_preloads
+    javascript_module_preload_tag(
+      *FIRST_PAINT_CONTROLLERS.map { |name| asset_path("controllers/#{name}_controller.js") }
+    )
+  end
+
   def link_to_room(room, **attributes, &)
     link_to room_path(room), **attributes, data: {
       rooms_list_target: "room", room_id: room.id, badge_dot_target: "unread", sorted_list_target: "item"

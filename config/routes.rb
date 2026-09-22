@@ -14,12 +14,19 @@ Rails.application.routes.draw do
     end
   end
 
+  post "csp_reports", to: "content_security_policy_reports#create", as: :content_security_policy_reports
+
   post "session/google", to: "sessions/google#create", as: :session_google
   get "session/google/callback", to: "sessions/google#callback", as: :session_google_callback
+  post "user/profile/google_sign_in_link", to: "users/google_sign_in_links#create", as: :user_google_sign_in_link
 
   resource :account do
     scope module: "accounts" do
-      resources :users
+      resources :users do
+        scope module: "users" do
+          resource :google_link, only: %i[ create destroy ]
+        end
+      end
 
       resources :bots do
         scope module: "bots" do
@@ -27,6 +34,7 @@ Rails.application.routes.draw do
           resources :credentials, only: %i[ index create destroy ]
           resources :grants, only: %i[ index create destroy ]
           resource :github_connection, only: %i[ create destroy ]
+          resource :webhook_secret, only: :create
         end
       end
 

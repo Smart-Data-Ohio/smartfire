@@ -4,13 +4,17 @@ class ChannelThreadsController < ApplicationController
   class ThreadUpdateForbidden < StandardError; end
   class InvalidThreadInvolvement < StandardError; end
 
-  before_action :close_stale_threads
   before_action :set_thread, except: %i[ index new create ]
   before_action :ensure_channel_room, only: :create
   before_action :ensure_thread_lifecycle_manager, only: :destroy
 
   def index
     @threads = thread_scope
+    # One grouped count for the page, so rows render no count query of
+    # their own. Threads without messages are absent; the view defaults
+    # them to zero.
+    thread_ids = @threads.map(&:id)
+    @message_counts = thread_ids.any? ? Message.where(thread_id: thread_ids).group(:thread_id).count : {}
     no_store_response! if request.format.json?
 
     respond_to do |format|
@@ -40,6 +44,7 @@ class ChannelThreadsController < ApplicationController
   def content
     no_store_response!
     @messages, @content_anchor = find_content_messages
+    Message::MentionPreloader.preload_for(@messages)
     response.headers["X-Thread-Content-At-Latest"] = (@content_anchor.nil?).to_s
     render partial: "channel_threads/conversation", locals: {
       room: @room,
@@ -93,6 +98,10 @@ class ChannelThreadsController < ApplicationController
           elsif @thread.closed?
             @thread.update!(closed_at: nil)
           end
+          # Reads report a time-stale thread as closed, so an explicit
+          # reopen restarts its archive clock; otherwise the 200 response
+          # leaves the thread visibly closed.
+          @thread.update!(last_activity_at: Time.current) if @thread.stale?
         when "closed"
           @thread.update!(closed_at: Time.current) unless @thread.locked? || @thread.closed?
         when "locked"
@@ -130,6 +139,7 @@ class ChannelThreadsController < ApplicationController
   end
 
   def destroy
+    @thread.deleted_by = Current.user
     @thread.destroy!
     respond_to do |format|
       format.html { redirect_to room_path(@room) }
@@ -172,10 +182,6 @@ class ChannelThreadsController < ApplicationController
   end
 
   private
-    def close_stale_threads
-      ChannelThread.close_stale_in(room: @room)
-    end
-
     def set_thread
       @thread = @room.channel_threads.find(params[:id])
     end
@@ -184,20 +190,31 @@ class ChannelThreadsController < ApplicationController
       scope = @room.channel_threads.ordered
       case params[:state].to_s
       when "active", "open", ""
-        scope.active
+        reject_stale(scope.active)
       when "work", "working"
         scope.work.where.not(work_status: "done")
       when "done", "completed"
         scope.work.where(work_status: "done")
       when "closed"
-        scope.closed
+        scope.effectively_closed
       when "locked"
         scope.locked
       when "all"
         scope
       else
-        scope.active
+        reject_stale(scope.active)
       end
+    end
+
+    # Reads report stale threads as closed without writing (see
+    # ChannelThread#status), so the active listing drops them in memory
+    # after loading the rows it renders anyway. The closed listing
+    # applies the same rule in SQL (see effectively_closed). Boards
+    # never go stale and skip the in-memory filter.
+    def reject_stale(threads)
+      return threads if @room.board?
+
+      threads.to_a.reject(&:stale?)
     end
 
     def ensure_channel_room
@@ -211,12 +228,18 @@ class ChannelThreadsController < ApplicationController
     def create_channel_thread
       parent_message = parent_message_from_params
 
-      ChannelThread.transaction do
-        @thread = @room.channel_threads.create!(thread_attributes.merge(creator: Current.user, parent_message: parent_message))
-        ThreadMembership.join!(@thread, Current.user)
+      if (duplicate_thread = duplicate_initial_message_thread)
+        # A retried creation whose first message already exists: return the
+        # existing thread instead of opening a duplicate.
+        @thread = duplicate_thread
+      else
+        ChannelThread.transaction do
+          @thread = @room.channel_threads.create!(thread_attributes.merge(creator: Current.user, parent_message: parent_message))
+          ThreadMembership.join!(@thread, Current.user)
 
-        if initial_message_attributes.present?
-          create_thread_message!(initial_message_attributes)
+          if initial_message_attributes.present?
+            create_thread_message!(initial_message_attributes)
+          end
         end
       end
 
@@ -327,7 +350,7 @@ class ChannelThreadsController < ApplicationController
     end
 
     def set_show_details
-      @messages = @thread.messages.with_rendering_details.last_page
+      @messages = Message::MentionPreloader.preload_for(@thread.messages.with_rendering_details.last_page)
       if @thread.work? && request.format.html?
         @work_links = @thread.work_thread_links.ordered.includes(:github_pull_request, :event).to_a
         @linkable_events = @room.events.upcoming.soonest_first
@@ -403,6 +426,20 @@ class ChannelThreadsController < ApplicationController
       attributes[:reply_to_message_id] = attributes[:reply_to_message_id].presence
       attributes[:reply_notify_author] = ActiveModel::Type::Boolean.new.cast(attributes[:reply_notify_author]) if attributes.key?(:reply_notify_author)
       @thread.post_message!(creator: Current.user, attributes: attributes)
+    end
+
+    # The existing in-room thread for a retried creation, if the first
+    # message's client id already produced a thread reply here. Anything
+    # else (no client id, no duplicate, a root message) falls through to
+    # normal creation.
+    def duplicate_initial_message_thread
+      client_message_id = initial_message_attributes[:client_message_id]
+      return if client_message_id.blank?
+
+      duplicate = Message.find_duplicate(room: @room, creator: Current.user, client_message_id: client_message_id)
+      return unless duplicate&.thread&.room_id == @room.id
+
+      duplicate.thread
     end
 
     def find_content_messages

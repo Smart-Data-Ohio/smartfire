@@ -4,7 +4,9 @@
 # Additive only: existing keys keep their names and shapes.
 module Agents
   class WorkPayload
-    def self.for(thread)
+    # agent: the requesting agent, whose owner's GitHub access decides
+    # whether private pull-request titles appear in the links.
+    def self.for(thread, agent: nil)
       room = thread.room
       owner = thread.work_owner
 
@@ -22,7 +24,7 @@ module Agents
         run_url: thread.run_url,
         url: Rails.application.routes.url_helpers.room_path(room, thread: thread.id),
         updated_at: thread.updated_at&.utc,
-        links: WorkThreadLink.agent_payloads_for(thread)
+        links: WorkThreadLink.agent_payloads_for(thread, agent: agent)
       }
     end
   end

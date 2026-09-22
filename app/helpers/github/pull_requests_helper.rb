@@ -91,37 +91,12 @@ module Github::PullRequestsHelper
 
   # Whether the viewer may see the PR's card content. Public repositories
   # are visible to every room member; private (or still unknown) ones only
-  # to members whose own linked GitHub account can read the repository,
-  # checked with their token against GET /repos/{owner}/{repo}.
-  #
-  # The decision is cached per viewer and repository for 10 minutes, both
-  # grants and denials, so a page of cards from one repository costs at
-  # most one GitHub request per viewer per window. The key carries the
-  # linked account's updated_at, so linking, relinking, or repairing the
-  # account invalidates that member's cached decisions without enumerating
-  # repositories. Members without a usable linked account are denied with
-  # no request, and a transport failure denies without caching so the next
-  # load retries.
+  # to members whose own linked GitHub account can read the repository
+  # (GithubConnectedAccount#can_read_repository?, cached per member).
   def github_pr_visible_to?(pull_request, user)
     return true if github_pr_public?(pull_request)
 
-    account = user&.github_connected_account
-    return false unless account&.usable?
-
-    # updated_at at float precision: a relink in the same second as a cached
-    # denial must still retire it.
-    Rails.cache.fetch([ "github_repo_access", user.id, account.updated_at.to_f, pull_request.owner, pull_request.repo ], expires_in: 10.minutes) do
-      Github::WriteClient.new(token: account.access_token)
-        .repository_readable?(pull_request.owner, pull_request.repo)
-    rescue Github::WriteClient::Unauthorized
-      account.mark_disconnected!("GitHub rejected the linked token (401)")
-      false
-    end
-  rescue ActiveRecord::Encryption::Errors::Decryption
-    account.mark_disconnected!(GithubConnectedAccount::UNREADABLE_TOKEN_REASON)
-    false
-  rescue Github::WriteClient::Error
-    false
+    user&.github_connected_account&.can_read_repository?(pull_request.owner, pull_request.repo) || false
   end
 
   private
@@ -142,7 +117,15 @@ module Github::PullRequestsHelper
     def request_pr_refresh(pull_request)
       return unless pull_request.stale?
       return unless (@github_pr_fetches ||= Set.new).add?(pull_request.id)
+      return unless pull_request.claim_fetch_request!
 
-      Github::FetchPullRequestJob.perform_later(pull_request) if pull_request.claim_fetch_request!
+      begin
+        Github::FetchPullRequestJob.perform_later(pull_request)
+      rescue Redis::BaseError, RedisClient::Error => error
+        # The queue is down: serve the stale card instead of breaking the page,
+        # and release the claim so the next render retries the refresh.
+        pull_request.release_fetch_request!
+        Rails.logger.warn "Skipping PR refresh enqueue for #{pull_request.id}: #{error.class}"
+      end
     end
 end

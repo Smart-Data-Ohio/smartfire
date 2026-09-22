@@ -215,6 +215,8 @@ class ChannelThreadsBoardTest < ActionDispatch::IntegrationTest
   test "the owning agent can change the status but cannot reassign" do
     agent = agents(:bender_agent)
     @room.memberships.grant_to(users(:bender))
+    AgentGrant.create!(agent: agent, room: @room, granted_by: users(:david), capability: "read_messages")
+    WebMock.stub_request(:post, webhooks(:bender).url).to_return(status: 200)
     AgentGrant.create!(agent: agent, room: @room, granted_by: users(:david), capability: "post_messages")
     AgentGrant.create!(agent: agent, room: @room, granted_by: users(:david), capability: "manage_threads")
     @post.update_work!(actor: @creator, work_owner_id: users(:bender).id)
@@ -230,6 +232,8 @@ class ChannelThreadsBoardTest < ActionDispatch::IntegrationTest
   test "the owning agent without manage_threads cannot change the status" do
     agent = agents(:bender_agent)
     @room.memberships.grant_to(users(:bender))
+    AgentGrant.create!(agent: agent, room: @room, granted_by: users(:david), capability: "read_messages")
+    WebMock.stub_request(:post, webhooks(:bender).url).to_return(status: 200)
     AgentGrant.create!(agent: agent, room: @room, granted_by: users(:david), capability: "post_messages")
     @post.update_work!(actor: @creator, work_owner_id: users(:bender).id)
     headers = { "Authorization" => "Bearer bender-test-secret-1234", "Content-Type" => "application/json" }
@@ -623,11 +627,11 @@ class ChannelThreadsBoardTest < ActionDispatch::IntegrationTest
   test "bot posting API returns 422 in a board" do
     @room.memberships.grant_to(users(:bender))
 
-    post room_bot_messages_url(@room, users(:bender).bot_key), params: +"Board root message"
+    post room_bot_messages_url(@room, bot_key_for(users(:bender))), params: +"Board root message"
     assert_response :unprocessable_entity
     assert_empty @room.root_messages
 
-    post room_bot_messages_url(rooms(:watercooler), users(:bender).bot_key), params: +"Channel root message"
+    post room_bot_messages_url(rooms(:watercooler), bot_key_for(users(:bender))), params: +"Channel root message"
     assert_response :created
   end
 

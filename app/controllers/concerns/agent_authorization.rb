@@ -42,6 +42,6 @@ module AgentAuthorization
       return @room if defined?(@room) && @room.present?
       return @message.room if defined?(@message) && @message.present?
 
-      Room.find_by(id: params[:room_id]) if params[:room_id].present?
+      Room.alive.find_by(id: params[:room_id]) if params[:room_id].present?
     end
 end

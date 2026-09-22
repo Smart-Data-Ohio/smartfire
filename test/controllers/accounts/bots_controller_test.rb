@@ -54,12 +54,37 @@ class Accounts::BotsControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
 
     post account_bots_url, params: { user: { name: "Bender's Friend" } }
-    assert_redirected_to account_bots_url
+    assert_response :created
     assert_equal "Bender's Friend", User.bot.last.name
 
     agent = User.bot.last.agent
     assert agent.workspace?
     assert_equal users(:david), agent.owner
+  end
+
+  test "create shows the new key once and stores its digest" do
+    post account_bots_url, params: { user: { name: "Key Bot" } }
+
+    assert_response :created
+    assert_equal "no-store", response.headers["Cache-Control"]
+    bot = User.bot.find_by!(name: "Key Bot")
+    key = css_select("input[aria-label='Bot key']").first["value"]
+    assert_match(/\A#{bot.id}-[A-Za-z0-9]{12}\z/, key)
+    assert_equal bot, User.authenticate_bot(key)
+    assert_equal Digest::SHA256.hexdigest(key.split("-", 2).last), bot.bot_token_digest
+
+    get account_bots_url
+    assert_response :success
+    assert_not_includes response.body, key
+  end
+
+  test "members cannot create bots" do
+    sign_in :kevin
+
+    assert_no_difference -> { User.bot.count } do
+      post account_bots_url, params: { user: { name: "Sneaky Bot" } }
+    end
+    assert_response :forbidden
   end
 
   test "update" do
@@ -95,7 +120,8 @@ class Accounts::BotsControllerTest < ActionDispatch::IntegrationTest
     bot = users(:bender).reload
     assert_equal "openai", bot.icon_name
     assert bot.bot?
-    assert_not_equal "forged-token", bot.bot_token
+    assert_not_equal Digest::SHA256.hexdigest("forged-token"), bot.bot_token_digest
+    assert_equal bot, User.authenticate_bot(bot_key_for(bot))
   end
 
   test "updating the icon busts the fresh avatar cache through updated_at" do
@@ -150,7 +176,8 @@ class Accounts::BotsControllerTest < ActionDispatch::IntegrationTest
 
     get edit_account_bot_url(users(:bender))
     assert_response :ok
-    assert_no_match "Manage agent credentials", response.body
+    # Owners may review and revoke credentials; issuing needs an administrator.
+    assert_match "Manage agent credentials", response.body
 
     put account_bot_url(users(:bender)), params: {
       user: { name: "Bender Bot" },
@@ -204,8 +231,55 @@ class Accounts::BotsControllerTest < ActionDispatch::IntegrationTest
 
   test "remove webhook" do
     assert_difference -> { Webhook.count }, -1 do
-      put account_bot_url(users(:bender)), params: { user: { name: "Bender's New Friend", webook_url: "" } }
+      put account_bot_url(users(:bender)), params: { user: { name: "Bender's New Friend", webhook_url: "" } }
       assert_redirected_to account_bots_url
     end
+  end
+
+  test "an edit without the webhook field keeps the webhook" do
+    assert_no_difference -> { Webhook.count } do
+      put account_bot_url(users(:bender)), params: { user: { name: "Bender's New Friend" } }
+      assert_redirected_to account_bots_url
+    end
+    assert_equal "Bender's New Friend", users(:bender).reload.name
+  end
+
+  test "an owner without admin rights cannot change the webhook URL" do
+    agents(:bender_agent).update!(owner: users(:kevin))
+    sign_in users(:kevin)
+    original = users(:bender).webhook_url
+
+    put account_bot_url(users(:bender)), params: { user: { name: "Bender Bot", webhook_url: "https://attacker.example/hook" } }
+    assert_response :forbidden
+    assert_equal original, users(:bender).reload.webhook_url
+
+    put account_bot_url(users(:bender)), params: { user: { name: "Bender Bot", webhook_url: "" } }
+    assert_response :forbidden
+    assert_equal original, users(:bender).reload.webhook_url
+  end
+
+  test "an owner without admin rights edits other fields and keeps the webhook" do
+    agents(:bender_agent).update!(owner: users(:kevin))
+    sign_in users(:kevin)
+    original = users(:bender).webhook_url
+
+    get edit_account_bot_url(users(:bender))
+    assert_select "input[name='user[webhook_url]'][disabled]", 1
+
+    put account_bot_url(users(:bender)), params: { user: { name: "Bender Renamed" } }
+    assert_redirected_to account_bots_url
+    assert_equal "Bender Renamed", users(:bender).reload.name
+    assert_equal original, users(:bender).webhook_url
+
+    put account_bot_url(users(:bender)), params: { user: { name: "Bender Again", webhook_url: original } }
+    assert_redirected_to account_bots_url
+    assert_equal original, users(:bender).reload.webhook_url
+  end
+
+  test "administrators change the webhook URL" do
+    put account_bot_url(users(:bender)), params: { user: { name: "Bender Bot", webhook_url: "https://example.com/new-hook" } }
+
+    assert_redirected_to account_bots_url
+    assert_equal "https://example.com/new-hook", users(:bender).reload.webhook_url
   end
 end

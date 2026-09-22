@@ -56,6 +56,12 @@ class ChannelThread < ApplicationRecord
   after_create_commit :announce_board_post, if: :board_post?
   after_update_commit :broadcast_board_row_replace_on_change, if: :board_post?
   after_destroy_commit :broadcast_board_row_remove, if: :board_post?
+  before_destroy :capture_deleted_work_snapshot
+  after_destroy_commit :emit_deleted_work_unassigned
+
+  # Set by the destroy endpoint so the work_unassigned row records who
+  # deleted the thread. Cascade and merge destroys leave it nil.
+  attr_accessor :deleted_by
 
   scope :ordered, -> { order(last_activity_at: :desc, id: :desc) }
   scope :active, -> { where(closed_at: nil, locked_at: nil) }
@@ -63,6 +69,15 @@ class ChannelThread < ApplicationRecord
   # view. A separate locked scope remains available for moderation tooling.
   scope :closed, -> { where.not(closed_at: nil) }
   scope :locked, -> { where.not(locked_at: nil) }
+  # Threads the closed listing shows: explicitly closed threads (locked
+  # threads set closed_at too) plus time-stale threads, which reads
+  # report as closed. Mirrors #stale? in SQL; boards never go stale.
+  scope :effectively_closed, -> {
+    stale = where(closed_at: nil, locked_at: nil)
+      .where.not(room_id: Room.boards.select(:id))
+      .where("datetime(last_activity_at, '+' || auto_archive_after_minutes || ' minutes') <= datetime(?)", Time.current.utc.to_fs(:db))
+    closed.or(stale)
+  }
   scope :not_deleted, -> { all }
   scope :work, -> { where.not(work_status: nil) }
   scope :unfinished_work, -> { where(work_status: WORK_STATUSES - [ "done" ]) }
@@ -75,14 +90,21 @@ class ChannelThread < ApplicationRecord
   }
 
   class << self
-    # There is no scheduled-job facility in this Smartfire deployment. Expire
-    # stale conversations whenever the thread surface is consulted, and take a
-    # row lock for the final decision so a concurrent post always wins.
-    # Board posts never auto-archive: closing stays a moderator action.
+    # There is no scheduled-job facility in this Smartfire deployment, so the
+    # archive sweep runs at thread write time (see Message's create callback),
+    # never on GET paths. One UPDATE with no per-row load or save; the single
+    # statement is atomic, so a concurrent post either lands first (and the
+    # thread is no longer stale) or reopens afterwards — either way the post
+    # wins, the same guarantee the old row lock gave. Board posts never
+    # auto-archive: closing stays a moderator action.
     def close_stale_in(room: nil)
       scope = room ? room.channel_threads : all
-      scope = scope.where.not(room_id: Room.boards.select(:id))
-      scope.active.find_each(&:close_if_stale!)
+      now = Time.current
+      scope
+        .where.not(room_id: Room.boards.select(:id))
+        .where(closed_at: nil, locked_at: nil)
+        .where("datetime(last_activity_at, '+' || auto_archive_after_minutes || ' minutes') <= datetime(?)", now.utc.to_fs(:db))
+        .update_all(closed_at: now, updated_at: now)
     end
 
     # The board index query behind GET /rooms/:id for a board room. Filters
@@ -265,9 +287,12 @@ class ChannelThread < ApplicationRecord
       end
   end
 
+  # Reads report stale threads as closed without writing: the persisted
+  # closed_at only catches up at the next thread write, so the display rule
+  # lives here rather than in the sweep.
   def status
     return "locked" if locked_at.present?
-    return "closed" if closed_at.present?
+    return "closed" if closed_at.present? || stale?
 
     "active"
   end
@@ -342,7 +367,7 @@ class ChannelThread < ApplicationRecord
   end
 
   def stale?
-    active? && auto_archive_at <= Time.current
+    closed_at.nil? && locked_at.nil? && last_activity_at.present? && !board_post? && auto_archive_at <= Time.current
   end
 
   def close_if_stale!(expected_last_activity_at: nil)
@@ -359,6 +384,7 @@ class ChannelThread < ApplicationRecord
     with_lock do
       reload
       update!(closed_at: nil) if closed? && !locked?
+      update!(last_activity_at: Time.current) if stale?
     end
     self
   end
@@ -387,6 +413,7 @@ class ChannelThread < ApplicationRecord
     with_lock do
       reload
       update!(locked_at: nil, closed_at: nil)
+      update!(last_activity_at: Time.current) if stale?
     end
     self
   end
@@ -894,41 +921,54 @@ class ChannelThread < ApplicationRecord
     # agent owner (if any) gets work_unassigned and the new agent owner
     # (if any) gets work_assigned. Status-only changes notify nobody.
     # Bots without an Agent row have no ledger to write to and are
-    # skipped. Returns the created rows for webhook delivery after the
+    # skipped. An assignment whose chain reached the hop limit suppresses
+    # instead of delivering, so two agents assigning posts to each other
+    # stop. Returns the created rows for webhook delivery after the
     # transaction commits.
     def record_work_assignment_events!(from_owner:, to_owner:, actor:)
       return [] if from_owner&.id == to_owner&.id
 
+      hop, chain_id = Agent::Delivery.work_assignment_hop_and_chain_for(actor)
+
       events = []
       if (previous_agent = agent_for_work_owner(from_owner))
-        events << previous_agent.agent_events.create!(
-          event_type: "work_unassigned",
-          room: room,
-          actor: actor,
-          outcome: "delivered",
-          metadata: {
-            "thread_id" => id,
-            "title" => name,
-            "work_status" => work_status,
-            "assigned_by" => actor&.name
-          }
-        )
+        events << record_work_assignment_event!(previous_agent, "work_unassigned", actor, hop, chain_id)
       end
       if (next_agent = agent_for_work_owner(to_owner))
-        events << next_agent.agent_events.create!(
-          event_type: "work_assigned",
+        events << record_work_assignment_event!(next_agent, "work_assigned", actor, hop, chain_id)
+      end
+      events
+    end
+
+    def record_work_assignment_event!(agent, event_type, actor, hop, chain_id)
+      metadata = {
+        "thread_id" => id,
+        "title" => name,
+        "work_status" => work_status,
+        "assigned_by" => actor&.name,
+        "hop" => hop
+      }
+
+      if hop >= Agent::Delivery::HOP_LIMIT
+        agent.agent_events.create!(
+          event_type: "delivery_suppressed_hop_limit",
+          room: room,
+          actor: actor,
+          outcome: "suppressed",
+          detail: "Hop limit reached (hop #{hop})",
+          chain_id: chain_id,
+          metadata: metadata
+        )
+      else
+        agent.agent_events.create!(
+          event_type: event_type,
           room: room,
           actor: actor,
           outcome: "delivered",
-          metadata: {
-            "thread_id" => id,
-            "title" => name,
-            "work_status" => work_status,
-            "assigned_by" => actor&.name
-          }
+          chain_id: chain_id,
+          metadata: metadata
         )
       end
-      events
     end
 
     def agent_for_work_owner(owner)
@@ -941,19 +981,57 @@ class ChannelThread < ApplicationRecord
     # Gated on current room membership plus read_messages like message
     # delivery: an agent removed from the room learns nothing more about
     # its work there, even if a workspace-wide grant survives.
+    # Captured before destroy while tags, links, and the room are still
+    # intact, so the deletion webhook can describe the thread the job can
+    # no longer load. Only agent-owned work needs it.
+    def capture_deleted_work_snapshot
+      return unless agent_for_work_owner(work_owner)
+
+      @deleted_work_snapshot = Agent::Delivery.work_payload(self, assigned_by: deleted_by&.name)
+    end
+
+    # An agent-owned thread that is deleted unassigns its owner the same
+    # way clearing the owner does. The row is readable in the ledger and
+    # by webhook, and polling returns its pre-destroy snapshot marked
+    # thread_deleted; assignment rows without a snapshot stay dropped,
+    # and next_since still advances past them.
+    def emit_deleted_work_unassigned
+      agent = agent_for_work_owner(work_owner)
+      return unless agent
+
+      metadata = {
+        "thread_id" => id,
+        "title" => name,
+        "work_status" => work_status,
+        "assigned_by" => deleted_by&.name,
+        "hop" => 0
+      }
+      metadata["work_snapshot"] = @deleted_work_snapshot if @deleted_work_snapshot
+
+      event = agent.agent_events.create!(
+        event_type: "work_unassigned",
+        room_id: room_id,
+        actor: deleted_by,
+        outcome: "delivered",
+        chain_id: SecureRandom.uuid,
+        metadata: metadata
+      )
+      deliver_work_assignment_webhooks([ event ])
+    end
+
     def deliver_work_assignment_webhooks(events)
       events.each do |event|
+        next unless AgentEvent::WORK_DELIVERABLE_TYPES.include?(event.event_type)
+
         agent = event.agent
-        next unless Membership.exists?(user_id: agent.user_id, room_id: room_id) && agent.can?(:read_messages, room)
+        event_room = room || Room.find_by(id: room_id)
+        next unless event_room
+        next unless Membership.exists?(user_id: agent.user_id, room_id: room_id) && agent.can?(:read_messages, event_room)
+        next unless agent.user.webhook
+        next unless event.webhook_status == "none"
 
-        webhook = agent.user.webhook
-        next unless webhook
-
-        begin
-          Agent::Delivery.post_work_webhook!(webhook, event, thread: self, agent: agent)
-        rescue StandardError => error
-          Rails.logger.warn "Agent work webhook delivery #{event.id} failed: #{error.class}"
-        end
+        event.update!(webhook_status: "pending", webhook_next_attempt_at: Time.current)
+        Agent::EventWebhookJob.perform_later(event.id, event.webhook_attempts.to_i)
       end
     end
 

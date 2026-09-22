@@ -31,14 +31,10 @@ jobs:
     timeout-minutes: 45
     strategy:
       fail-fast: false
+      # Pull requests only prove the amd64 image builds; main and tags build and
+      # publish both architectures.
       matrix:
-        include:
-          - runner: ubuntu-latest
-            platform: linux/amd64
-            arch: amd64
-          - runner: ubuntu-24.04-arm
-            platform: linux/arm64
-            arch: arm64
+        include: ${{ fromJSON(github.event_name == 'pull_request' && '[{"runner":"ubuntu-latest","platform":"linux/amd64","arch":"amd64"}]' || '[{"runner":"ubuntu-latest","platform":"linux/amd64","arch":"amd64"},{"runner":"ubuntu-24.04-arm","platform":"linux/arm64","arch":"arm64"}]') }}
     env:
       REGISTRY: ghcr.io
       IMAGE_NAME: ${{ github.repository }}
@@ -112,7 +108,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.platform }}
-          cache-to: type=gha,scope=${{ matrix.platform }},mode=max
+          # Only main and tags write the layer cache; pull requests read it.
+          cache-to: ${{ github.event_name != 'pull_request' && format('type=gha,scope={0},mode=max', matrix.platform) || '' }}
           sbom: false
           provenance: false
 

@@ -396,7 +396,7 @@ class Rooms::EventsControllerTest < ActionDispatch::IntegrationTest
   test "bots are denied" do
     delete session_url
 
-    post room_events_url(@room, bot_key: users(:bender).bot_key), params: {
+    post room_events_url(@room, bot_key: bot_key_for(users(:bender))), params: {
       event: { title: "Bot party", starts_at: "2026-09-25T15:30", time_zone: "UTC" }
     }
 

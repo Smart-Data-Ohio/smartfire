@@ -4,6 +4,8 @@ class Agent < ApplicationRecord
   # grants count; revoking the last grant removes access.
   LEGACY_CAPABILITIES = %w[ read_messages post_messages react ].freeze
 
+  encrypts :webhook_signing_secret
+
   # Self-reported status vocabulary, set only by the agent itself through
   # PATCH /agents/me. `waiting` means waiting on a human. Suspension is
   # separate and still comes from `suspended_at`.
@@ -122,9 +124,11 @@ class Agent < ApplicationRecord
   end
 
   # Room-scoped capability check. Reads the database on every call; no
-  # caching. Room membership is checked separately by the controllers.
+  # caching. Room membership is checked separately by the controllers. A
+  # soft-deleted room grants nothing, however the grant row reads.
   def can?(capability, room = nil)
     return false unless active?
+    return false if room.is_a?(Room) && room.deleted?
 
     capability = capability.to_s
     return false unless AgentGrant::CAPABILITIES.include?(capability)
@@ -146,6 +150,35 @@ class Agent < ApplicationRecord
     else
       scope.where(room_id: nil).exists?
     end
+  end
+
+  # The HMAC secret signing this agent's webhook deliveries, generated
+  # lazily on first delivery so older rows need no backfill. Shown to
+  # admins and the owner on the bot edit page, never logged. Generated
+  # under the agent's row lock with a fresh read, so concurrent first
+  # deliveries cannot mint competing secrets and invalidate each
+  # other's signatures.
+  def ensure_webhook_signing_secret!
+    return webhook_signing_secret if webhook_signing_secret.present?
+
+    with_lock do
+      reload
+      return webhook_signing_secret if webhook_signing_secret.present?
+
+      update!(webhook_signing_secret: self.class.generate_webhook_signing_secret)
+      webhook_signing_secret
+    end
+  end
+
+  def reset_webhook_signing_secret!
+    with_lock do
+      update!(webhook_signing_secret: self.class.generate_webhook_signing_secret)
+      webhook_signing_secret
+    end
+  end
+
+  def self.generate_webhook_signing_secret
+    SecureRandom.hex(32)
   end
 
   # True when the agent holds the capability in any room or workspace-wide.
