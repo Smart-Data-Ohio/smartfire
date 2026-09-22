@@ -83,6 +83,47 @@ class ChannelThreadsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "closed", response.parsed_body["threads"].find { |row| row["id"] == @thread.id }["status"]
   end
 
+  test "reopening a time-stale thread restarts its archive clock instead of leaving it closed" do
+    @thread.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+    assert_predicate @thread.reload, :closed?
+
+    sign_in :jz
+    patch room_thread_url(@room, @thread, format: :json), params: { thread: { status: "active" } }
+    assert_response :success
+    assert_predicate @thread.reload, :active?
+    assert @thread.last_activity_at > 1.minute.ago
+
+    get room_threads_url(@room, format: :json)
+    assert_response :success
+    assert_includes response.parsed_body.fetch("threads").pluck("id"), @thread.id
+
+    get room_threads_url(@room, state: "closed", format: :json)
+    assert_response :success
+    assert_not_includes response.parsed_body.fetch("threads").pluck("id"), @thread.id
+
+    stale = ChannelThread.create!(room: @room, creator: @creator, name: "Model reopen")
+    stale.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+    stale.reopen!
+    assert_predicate stale.reload, :active?
+  end
+
+  test "unlocking a time-stale thread reopens it instead of leaving it closed" do
+    @thread.lock_conversation!
+    @thread.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+
+    sign_in :david
+    patch room_thread_url(@room, @thread, format: :json), params: { thread: { status: "active" } }
+    assert_response :success
+    assert_predicate @thread.reload, :active?
+    assert @thread.last_activity_at > 1.minute.ago
+
+    locked = ChannelThread.create!(room: @room, creator: @creator, name: "Model unlock")
+    locked.lock_conversation!
+    locked.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+    locked.unlock_conversation!
+    assert_predicate locked.reload, :active?
+  end
+
   test "posting to a thread persists closed_at for its stale siblings" do
     sign_in :jz
     stale = ChannelThread.create!(room: @room, creator: @creator, name: "Stale sibling")

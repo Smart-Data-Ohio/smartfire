@@ -98,6 +98,10 @@ class ChannelThreadsController < ApplicationController
           elsif @thread.closed?
             @thread.update!(closed_at: nil)
           end
+          # Reads report a time-stale thread as closed, so an explicit
+          # reopen restarts its archive clock; otherwise the 200 response
+          # leaves the thread visibly closed.
+          @thread.update!(last_activity_at: Time.current) if @thread.stale?
         when "closed"
           @thread.update!(closed_at: Time.current) unless @thread.locked? || @thread.closed?
         when "locked"

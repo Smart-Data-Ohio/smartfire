@@ -369,6 +369,7 @@ class ChannelThread < ApplicationRecord
     with_lock do
       reload
       update!(closed_at: nil) if closed? && !locked?
+      update!(last_activity_at: Time.current) if stale?
     end
     self
   end
@@ -397,6 +398,7 @@ class ChannelThread < ApplicationRecord
     with_lock do
       reload
       update!(locked_at: nil, closed_at: nil)
+      update!(last_activity_at: Time.current) if stale?
     end
     self
   end
