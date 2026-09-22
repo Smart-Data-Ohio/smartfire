@@ -52,37 +52,45 @@ Google's default reminders. No Google attendees are added.
 
 Publishing is reconciled by `Calendar::SyncEntryJob`, which recomputes the
 desired state from the database on every run: an entry exists exactly when
-the member is connected, is going or maybe, the event is not cancelled,
-and the member is still in the room. Each occurrence of a recurring event
-is its own calendar entry. The job is enqueued when an RSVP is
-created or changes, when an event's time, title, or description changes,
-when an event is cancelled, when an account is connected (all upcoming
-going/maybe RSVPs), and when a membership ends.
+the member is connected with the calendar scope granted, is going or
+maybe, the event is not cancelled, and the member is still in the room.
+Each occurrence of a recurring event is its own calendar entry. The job is
+enqueued when an RSVP is created or changes, when an event's time, title,
+or description changes, when an event is cancelled, when an account is
+connected (all upcoming going/maybe RSVPs), and when a membership ends.
 
-There is no delayed-job scheduler in this deployment, so failures are not
-retried on a timer: a failure is recorded on the entry and the next change
-retries. The Google event id is deterministic per event and member
-(`campfire` plus base32hex of the packed ids), and the local row is
-reserved before the first request, so a retried insert reuses the same id
-and concurrent first runs converge through the insert-conflict path
-instead of creating duplicates. If Google reports the account's grant
-revoked (`invalid_grant`), the account is marked disconnected, the local
-entry being synced is destroyed immediately (its remote copy is
-unreachable), and the profile offers a reconnect instead of publishing.
+Transient failures (Google rate limits, timeouts, connection drops) are
+retried by the job with backoff; permanent failures are recorded on the
+entry and the next change retries. The Google event id is deterministic
+per event and member (`campfire` plus base32hex of the packed ids), and
+the local row is reserved before the first request, so a retried insert
+reuses the same id and concurrent first runs converge through the
+insert-conflict path instead of creating duplicates. If Google reports the
+account's grant revoked (`invalid_grant`), the account is marked
+disconnected, the local entry being synced is dropped immediately (its
+remote copy is unreachable), and the profile offers a reconnect instead of
+publishing. The same reconnect prompt appears when the stored grant lacks
+the calendar scope (deselected at consent) or when the stored tokens can
+no longer be decrypted.
+
+Destroying a local entry outside the reconciler (deleting a room,
+shrinking a series, deleting an event) enqueues a remote delete for its
+Google copy, so remote copies are removed however the destroy was
+triggered. A remote copy already gone (404 or 410) counts as deleted.
 
 ## Disconnecting
 
-**Disconnect** on the profile removes the connection and every calendar
-entry the app created for that member, best effort: entries Google refuses
-to remove are logged and forgotten. Deleting a room destroys its local
-entry rows; copies already in Google Calendar are left for the member to
-remove.
+**Disconnect** on the profile immediately removes the connection and every
+local calendar entry for that member, then a background job removes the
+remote copies and revokes the Google grant, best effort: entries Google
+refuses to remove are logged and forgotten.
 
-Deactivating a member removes their room memberships, marks their Google
-account disconnected ("Account deactivated") so no further syncs run for
-it, and enqueues one cleanup sync per calendar entry; the reconciler sees
-no membership and drops the local rows. Copies already in Google Calendar
-are left for the member to remove, as with room deletion.
+Deactivating a member removes their room memberships, revokes the Google
+grant in the background, marks the Google account disconnected ("Account
+deactivated") so no further syncs run for it, and enqueues one cleanup
+sync per calendar entry; the reconciler sees no membership and drops the
+local rows. Copies already in Google Calendar are left for the member to
+remove.
 
 ## Token storage
 
