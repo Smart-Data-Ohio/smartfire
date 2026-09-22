@@ -182,9 +182,10 @@ class HuddlePresenceTest < ApplicationSystemTestCase
       sleep 0.05 until page.evaluate_script("window.presenceFetches") >= 1
     end
     # No settle sleep: the two refresh() calls ran in one synchronous
-    # script block, so the second already decided to skip (or wrongly
-    # fetched) before the first fetch above could be observed. The count is
-    # final; the 15 s interval cannot add another in this test.
+    # script block, and the in-flight guard runs before refresh's first
+    # await, so the second already decided to skip (or wrongly fetched)
+    # before the first fetch above could be observed. The count is final;
+    # the 15 s interval cannot add another in this test.
     assert_equal 1, page.evaluate_script("window.presenceFetches"),
       "back-to-back refreshes issued duplicate aggregate polls"
   end
