@@ -107,6 +107,19 @@ so a rollback to the previous release keeps every bot working. The
 plaintext column is removed in a follow-up release; after that, rolling
 back past it would require resetting every bot key.
 
+#### Google sign-in email links after upgrading
+
+Migration `20260922210400` marks every existing human account whose email
+was never self-changed as allowed to link Google sign-in by email
+(`users.google_email_link_allowed`). It trusts the email addresses already
+stored, so an address a member typed in before this release (for example
+at a join-code signup) is trusted too. After deploying, an administrator
+should review members' email addresses. The account page has no control
+yet to withdraw an email link, so for any address that is not the
+member's own Workspace address, have it corrected (or deactivate the
+account) before the real owner of that address signs in with Google; an
+identity already linked by mistake can be unlinked on the account page.
+
 #### Content Security Policy
 
 Every page sends a `Content-Security-Policy-Report-Only` header (see
