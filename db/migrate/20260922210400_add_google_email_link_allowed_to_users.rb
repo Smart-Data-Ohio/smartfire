@@ -15,7 +15,11 @@ class AddGoogleEmailLinkAllowedToUsers < ActiveRecord::Migration[8.2]
     SQL
   end
 
+  # Rolls back with SQLite's native DROP COLUMN. remove_column would rebuild
+  # the table inside the migration transaction, where foreign keys cannot be
+  # switched off, so dropping the old table would fire ON DELETE actions on
+  # the tables that reference it.
   def down
-    remove_column :users, :google_email_link_allowed
+    execute "ALTER TABLE users DROP COLUMN google_email_link_allowed"
   end
 end

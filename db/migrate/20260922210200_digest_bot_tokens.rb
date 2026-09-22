@@ -18,8 +18,12 @@ class DigestBotTokens < ActiveRecord::Migration[8.2]
   end
 
   # Lossless: the plaintext column was never touched.
+  # Rolls back with SQLite's native DROP COLUMN. remove_column would rebuild
+  # the table inside the migration transaction, where foreign keys cannot be
+  # switched off, so dropping the old table would fire ON DELETE actions on
+  # the tables that reference it.
   def down
     remove_index :users, :bot_token_digest
-    remove_column :users, :bot_token_digest
+    execute "ALTER TABLE users DROP COLUMN bot_token_digest"
   end
 end
