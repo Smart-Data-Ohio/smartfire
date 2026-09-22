@@ -1,6 +1,6 @@
 namespace :generate do
   task "lines": :environment do
-    room = Room.find_by(name: "Lobby")
+    room = Room.alive.find_by(name: "Lobby")
     users = User.all
 
     1.upto(500) do |i|

@@ -195,7 +195,7 @@ class HuddleGrant < ApplicationRecord
     def broadcast_voice_presence
       return unless Huddle.configured?
 
-      huddle_room = Room.find_by(id: room_id)
+      huddle_room = Room.alive.find_by(id: room_id)
       return unless huddle_room
 
       participants = self.class.participants_for(huddle_room)

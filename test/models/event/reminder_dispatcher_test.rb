@@ -134,6 +134,20 @@ class Event::ReminderDispatcherTest < ActiveSupport::TestCase
     assert_equal "event_reminder", ActivityItem.find_by!(user: users(:jason), source: occurrences.second).event_type
   end
 
+  test "events in soft-deleted rooms are skipped" do
+    # Memberships stay intact so only the soft-delete can skip the event:
+    # begin_destroy! would also fail the organizer check on the remind stamp.
+    @room.update_columns(deleted_at: Time.current)
+
+    assert_no_enqueued_jobs only: Event::ReminderPushJob do
+      assert_no_difference -> { ActivityItem.where(source: @event).count } do
+        Event::ReminderDispatcher.dispatch_due!
+      end
+    end
+
+    assert_nil @event.reload.reminded_at
+  end
+
   test "one failing event does not stop the others" do
     other = @room.events.create!(
       organizer: @organizer, title: "Other standup", starts_at: 10.minutes.from_now, time_zone: "UTC"

@@ -126,6 +126,18 @@ class Agent::DeliveryJobTest < ActiveSupport::TestCase
     assert_empty @agent.agent_events.where(event_type: "delivery_suppressed_rate_limit")
   end
 
+  test "room soft-deleted before delivery suppresses without a new suppression row" do
+    create_mentioning_message(@room, @bot, creator: users(:david))
+    event = @agent.agent_events.deliverable.last
+    @room.begin_destroy!
+
+    assert_no_difference -> { @agent.agent_events.count } do
+      perform_enqueued_jobs only: Agent::DeliveryJob
+    end
+
+    assert_equal "suppressed", event.reload.outcome
+  end
+
   test "message deleted before delivery suppresses without crashing or posting" do
     WebMock.stub_request(:post, webhooks(:bender).url).to_return(status: 200)
 

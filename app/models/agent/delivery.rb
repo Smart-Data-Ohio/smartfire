@@ -163,7 +163,7 @@ class Agent::Delivery
       return unless AgentEvent::MESSAGE_DELIVERABLE_TYPES.include?(event.event_type)
 
       agent = event.agent
-      room = Room.find_by(id: event.room_id)
+      room = Room.alive.find_by(id: event.room_id)
       message = Message.find_by(id: event.message_id)
 
       if message.nil? || room.nil?

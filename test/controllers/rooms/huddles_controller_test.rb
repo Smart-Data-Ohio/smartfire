@@ -140,6 +140,15 @@ class Rooms::HuddlesControllerTest < ActionDispatch::IntegrationTest
     assert_json_error :not_found, "Room not found or inaccessible"
   end
 
+  test "GET denies access to a soft-deleted room" do
+    sign_in :david
+    rooms(:watercooler).update_columns(deleted_at: Time.current)
+
+    get room_huddle_url(rooms(:watercooler))
+
+    assert_json_error :not_found, "Room not found or inaccessible"
+  end
+
   test "participants lists the room's in-call members without caching" do
     room = Rooms::Voice.create_for({ name: "Lounge", creator: users(:david) }, users: [ users(:david), users(:jason) ])
     david_grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: room.memberships.find_by!(user: users(:david)))

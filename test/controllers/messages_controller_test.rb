@@ -16,6 +16,14 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     ensure_messages_present @messages.last
   end
 
+  test "index is not found for a soft-deleted room" do
+    @room.update_columns(deleted_at: Time.current)
+
+    assert_raises ActiveRecord::RecordNotFound do
+      get room_messages_url(@room)
+    end
+  end
+
   test "index returns a page before the specified message" do
     get room_messages_url(@room, before: @messages.third)
 

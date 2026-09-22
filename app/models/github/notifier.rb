@@ -37,7 +37,8 @@ module Github
         posts = plan_posts(github_event, payload)
         return if posts.blank?
 
-        subscriptions = Github::RepositorySubscription.where(owner: posts.first.owner, repo: posts.first.repo)
+        subscriptions = Github::RepositorySubscription.joins(:room).merge(Room.alive)
+          .where(owner: posts.first.owner, repo: posts.first.repo)
           .select { |subscription| subscription.subscribed_to?(posts.first.event_key) }
         return if subscriptions.empty?
 
