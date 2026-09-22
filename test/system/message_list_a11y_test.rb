@@ -253,6 +253,51 @@ class MessageListA11yTest < ApplicationSystemTestCase
     assert_equal "width=device-width, initial-scale=1, interactive-widget=resizes-content", meta["content"]
   end
 
+  test "text fields stay at 16px on touch devices without changing the desktop look" do
+    board = Rooms::Board.create_for({ name: "Launch", creator: users(:jz) }, users: [ users(:jz) ])
+    post = ChannelThread.create!(room: board, creator: users(:jz), name: "Ship it", work_status: "planned")
+
+    visit room_thread_path(board, post)
+    dismiss_pwa_install_prompt
+    find("summary", text: "Update work").click
+
+    fields = [
+      ".board-post__form input[name='thread[tags]']",
+      ".board-post__form select[name='thread[work_status]']",
+    ]
+    fields.each { |field| assert_selector field, visible: true }
+
+    # The desktop look keeps its small sizing; the override below only
+    # applies to coarse pointers, and these small fields prove the test
+    # would catch a missing override.
+    fields.each do |field|
+      assert_operator font_size(field), :<, 16, "expected #{field} to keep its desktop sizing"
+    end
+
+    page.driver.browser.execute_cdp("Emulation.setTouchEmulationEnabled", enabled: true, maxTouchPoints: 5)
+    assert page.evaluate_script("matchMedia('(pointer: coarse)').matches"),
+      "expected touch emulation to report a coarse pointer"
+
+    fields.each do |field|
+      assert_operator font_size(field), :>=, 16, "expected #{field} at 16px on touch devices"
+    end
+
+    # Worst case: bare fields inheriting a tiny size are covered by the
+    # same global rule.
+    page.execute_script <<~JS
+      document.body.insertAdjacentHTML("beforeend",
+        "<div id='coarse-probe' style='font-size: 10px'>" +
+        "<input id='coarse-input' type='text' aria-label='probe input'>" +
+        "<select id='coarse-select' aria-label='probe select'><option>probe</option></select>" +
+        "<textarea id='coarse-area' aria-label='probe textarea'></textarea></div>")
+    JS
+    %w[ coarse-input coarse-select coarse-area ].each do |id|
+      assert_operator font_size("##{id}"), :>=, 16, "expected ##{id} at 16px on touch devices"
+    end
+  ensure
+    page.driver.browser.execute_cdp("Emulation.setTouchEmulationEnabled", enabled: false) if page
+  end
+
   test "profile message and ban buttons have accessible names" do
     visit user_url(users(:kevin))
     assert_selector "button[aria-label='Message Kevin']"
@@ -284,4 +329,9 @@ class MessageListA11yTest < ApplicationSystemTestCase
   ensure
     page.driver.browser.execute_cdp("Emulation.setEmulatedMedia", features: [ { name: "prefers-reduced-motion", value: "no-preference" } ]) if page
   end
+
+  private
+    def font_size(selector)
+      page.evaluate_script("parseFloat(getComputedStyle(document.querySelector(\"#{selector}\")).fontSize)")
+    end
 end
