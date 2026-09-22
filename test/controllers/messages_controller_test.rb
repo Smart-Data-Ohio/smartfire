@@ -40,6 +40,66 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :no_content
   end
 
+  test "index etag changes when an off-page reply source is edited" do
+    source = @room.messages.create!(creator: users(:david), markdown_source: "etag source", client_message_id: "etag-source")
+    40.times do |index|
+      @room.messages.create!(creator: users(:david), markdown_source: "etag filler #{index}", client_message_id: "etag-filler-#{index}")
+    end
+    reply = @room.messages.create!(
+      creator: users(:david), markdown_source: "etag reply", reply_to_message: source, client_message_id: "etag-reply"
+    )
+
+    get room_messages_url(@room)
+    assert_response :success
+    assert_select "##{dom_id(reply)}", count: 1
+    assert_select "##{dom_id(source)}", count: 0
+    etag = response.headers["ETag"]
+
+    get room_messages_url(@room), headers: { "If-None-Match" => etag }
+    assert_response :not_modified
+
+    put room_message_url(@room, source), params: { message: { markdown_source: "etag source edited" } }
+
+    get room_messages_url(@room), headers: { "If-None-Match" => etag }
+    assert_response :success
+  end
+
+  test "index etag changes when a card fetch completes" do
+    pull_request = Github::PullRequest.for_reference(owner: "rails", repo: "rails", number: 520)
+    pull_request.update!(private: false, title: "Before fetch", state: "open", fetched_at: Time.current)
+    @room.messages.create!(
+      creator: users(:david), markdown_source: "see https://github.com/rails/rails/pull/520", client_message_id: "etag-card"
+    )
+
+    get room_messages_url(@room)
+    assert_response :success
+    etag = response.headers["ETag"]
+
+    get room_messages_url(@room), headers: { "If-None-Match" => etag }
+    assert_response :not_modified
+
+    pull_request.update!(title: "After fetch", fetched_at: Time.current)
+
+    get room_messages_url(@room), headers: { "If-None-Match" => etag }
+    assert_response :success
+  end
+
+  test "index etag changes when an author is renamed" do
+    @room.messages.create!(creator: users(:jason), markdown_source: "rename me", client_message_id: "etag-rename")
+
+    get room_messages_url(@room)
+    assert_response :success
+    etag = response.headers["ETag"]
+
+    get room_messages_url(@room), headers: { "If-None-Match" => etag }
+    assert_response :not_modified
+
+    users(:jason).update!(name: "Jason Renamed")
+
+    get room_messages_url(@room), headers: { "If-None-Match" => etag }
+    assert_response :success
+  end
+
   test "get renders a single message belonging to the user" do
     message = @room.messages.where(creator: users(:david)).first
 
