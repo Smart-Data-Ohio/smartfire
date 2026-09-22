@@ -42,7 +42,7 @@ Only the organizer or an administrator can edit or cancel an event, from the **E
 Fifteen minutes before the start, every going or maybe attendee (the organizer included) receives an **Event reminder** inbox item and a Web Push notification. Events starting more than an hour ago are never reminded. Reminders are not scheduled jobs; a small loop process polls for due ones:
 
 - `Event::ReminderDispatcher.dispatch_due!` finds unreminded, uncancelled events starting within the next 15 minutes (and no more than 60 minutes in the past), records one reminder item per going or maybe attendee, stamps `reminded_at`, and enqueues `Event::ReminderPushJob`, which delivers the push notification through `Event::ReminderPusher`.
-- `bin/periodic` runs the dispatcher every 30 seconds (`EVENT_REMINDERS_INTERVAL` overrides the interval) alongside the other periodic tasks (delayed-job retries, retention prune) and is started by the `periodic` Procfile entry. Per-event failures are logged and do not stop the run.
+- `bin/periodic` runs the dispatcher every 30 seconds (`EVENT_REMINDERS_INTERVAL` overrides the interval) alongside the other periodic tasks (delayed-job retries, stuck-room recovery, retention prune) and is started by the `periodic` Procfile entry. Per-event failures are logged and do not stop the run.
 
 Deleting a room removes its events, attendances, and their inbox items.
 
