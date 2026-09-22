@@ -38,6 +38,17 @@ module Twitter
         references
       end
 
+      # The text of rendered message HTML outside code spans and fenced
+      # blocks, for reference extraction that ignores URLs quoted in
+      # code. Hrefs outside code are kept alongside the visible text so
+      # labeled links still resolve.
+      def non_code_text(html)
+        fragment = Nokogiri::HTML5.fragment(html.to_s)
+        fragment.css("code, pre").remove
+
+        [ fragment.text, *fragment.css("a[href]").map { |link| link["href"] } ].join("\n")
+      end
+
       def post_url?(url)
         url.to_s.match?(PATTERN)
       end

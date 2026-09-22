@@ -27,7 +27,7 @@ module Github
 
       private
         def reference_text(message)
-          [ message.markdown_source, message.plain_text_body ].compact_blank.join("\n")
+          [ PullRequestUrl.non_code_text(message.body.body&.to_html), message.forward_note ].compact_blank.join("\n")
         end
     end
   end

@@ -51,6 +51,21 @@ class Twitter::PostUrlTest < ActiveSupport::TestCase
     assert_empty Twitter::PostUrl.extract(nil)
   end
 
+  test "non_code_text drops code spans and fenced blocks but keeps prose and labeled links" do
+    html = <<~HTML
+      <p>see <code>https://x.com/jack/status/21</code> and https://x.com/jack/status/22</p>
+      <pre><code class="language-text">https://x.com/jack/status/23</code></pre>
+      <p><a href="https://x.com/jack/status/24">the post</a></p>
+    HTML
+
+    text = Twitter::PostUrl.non_code_text(html)
+
+    assert_not_includes text, "status/21"
+    assert_not_includes text, "status/23"
+    assert_includes text, "status/22"
+    assert_includes text, "status/24"
+  end
+
   test "post_url? matches only post URLs" do
     assert Twitter::PostUrl.post_url?("https://x.com/jack/status/20")
     assert Twitter::PostUrl.post_url?("https://twitter.com/jack/status/20?s=20")
