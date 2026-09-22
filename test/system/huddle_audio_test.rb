@@ -76,14 +76,13 @@ class HuddleAudioTest < ApplicationSystemTestCase
 
     toggle_mute_and_await(1, "muting did not reach the room")
     toggle_mute_and_await(2, "unmuting did not reach the room")
-    wait_for_condition("the noise sync did not run after unmuting") do
-      page.evaluate_script("window.__constraintCalls.length") > 0
-    end
+    settle_noise_sync
 
     assert_empty page.evaluate_script("window.__processorCalls")
+    assert_empty page.evaluate_script("window.__restartCalls")
   end
 
-  test "toggling noise suppression off restores browser suppression on the live track" do
+  test "toggling noise suppression off re-acquires the microphone with browser suppression" do
     visit room_path(rooms(:designers))
     wait_for_cable_connection
     install_stub_room(noise_enabled: true, processor: "campfire-rnnoise")
@@ -93,18 +92,21 @@ class HuddleAudioTest < ApplicationSystemTestCase
     wait_for_condition("toggling off did not stop the noise processor") do
       page.evaluate_script("window.__processorCalls.length") > 0
     end
-    wait_for_condition("toggling off did not update the capture constraints") do
-      page.evaluate_script("window.__constraintCalls.length") > 0
+    wait_for_condition("toggling off did not re-acquire the microphone") do
+      page.evaluate_script("window.__restartCalls.length") > 0
     end
 
     assert_equal [ [ "stop" ] ], page.evaluate_script("window.__processorCalls")
     assert_equal(
-      { "noiseSuppression" => true, "echoCancellation" => true, "autoGainControl" => true },
-      page.evaluate_script("window.__constraintCalls").last
+      {
+        "noiseSuppression" => true, "echoCancellation" => true, "autoGainControl" => true,
+        "voiceIsolation" => true, "deviceId" => "stub-device"
+      },
+      page.evaluate_script("window.__restartCalls").last
     )
   end
 
-  test "toggling noise suppression on disables browser suppression on the live track" do
+  test "toggling noise suppression on re-acquires the microphone without browser suppression" do
     visit room_path(rooms(:designers))
     wait_for_cable_connection
     install_stub_room(noise_enabled: false)
@@ -114,14 +116,38 @@ class HuddleAudioTest < ApplicationSystemTestCase
     wait_for_condition("toggling on did not attach the noise processor") do
       page.evaluate_script("window.__processorCalls.length") > 0
     end
-    wait_for_condition("toggling on did not update the capture constraints") do
-      page.evaluate_script("window.__constraintCalls.length") > 0
+    wait_for_condition("toggling on did not re-acquire the microphone") do
+      page.evaluate_script("window.__restartCalls.length") > 0
     end
 
     assert_equal [ [ "set", "campfire-rnnoise" ] ], page.evaluate_script("window.__processorCalls")
     assert_equal(
-      { "noiseSuppression" => false, "echoCancellation" => true, "autoGainControl" => true },
-      page.evaluate_script("window.__constraintCalls").last
+      {
+        "noiseSuppression" => false, "echoCancellation" => true, "autoGainControl" => true,
+        "voiceIsolation" => true, "deviceId" => "stub-device"
+      },
+      page.evaluate_script("window.__restartCalls").last
+    )
+  end
+
+  test "toggling noise suppression off without a stored device re-acquires on the live device" do
+    visit room_path(rooms(:designers))
+    wait_for_cable_connection
+    install_stub_room(noise_enabled: true, processor: "campfire-rnnoise")
+    page.execute_script("window.__audioTrack._constraints = { noiseSuppression: false, echoCancellation: true, autoGainControl: true }")
+
+    find("[data-huddle-target='noise']").click
+
+    wait_for_condition("toggling off did not re-acquire the microphone") do
+      page.evaluate_script("window.__restartCalls.length") > 0
+    end
+
+    assert_equal(
+      {
+        "noiseSuppression" => true, "echoCancellation" => true, "autoGainControl" => true,
+        "voiceIsolation" => true, "deviceId" => { "ideal" => "live-device" }
+      },
+      page.evaluate_script("window.__restartCalls").last
     )
   end
 
@@ -135,17 +161,22 @@ class HuddleAudioTest < ApplicationSystemTestCase
     wait_for_condition("toggling off did not stop the noise processor") do
       page.evaluate_script("window.__processorCalls.length") > 0
     end
+    settle_noise_sync
+    assert_empty page.evaluate_script("window.__restartCalls")
 
     # The stopped track rejects the update while muted; unmuting retries
     # it against the live track.
     toggle_mute_and_await(2, "unmuting did not reach the room")
-    wait_for_condition("unmuting did not update the capture constraints") do
-      page.evaluate_script("window.__constraintCalls.length") > 0
+    wait_for_condition("unmuting did not re-acquire the microphone") do
+      page.evaluate_script("window.__restartCalls.length") > 0
     end
 
     assert_equal(
-      { "noiseSuppression" => true, "echoCancellation" => true, "autoGainControl" => true },
-      page.evaluate_script("window.__constraintCalls").last
+      {
+        "noiseSuppression" => true, "echoCancellation" => true, "autoGainControl" => true,
+        "voiceIsolation" => true, "deviceId" => "stub-device"
+      },
+      page.evaluate_script("window.__restartCalls").last
     )
   end
 
@@ -168,10 +199,21 @@ class HuddleAudioTest < ApplicationSystemTestCase
       assert true
     end
 
+    # The noise sync runs on a queue behind the toggle that triggered it, so
+    # "nothing happened" assertions settle it first instead of racing it.
+    def settle_noise_sync
+      page.driver.browser.execute_async_script(<<~JS)
+        (window.__huddleController.noiseOperation || Promise.resolve())
+          .then(() => arguments[arguments.length - 1](true));
+      JS
+    end
+
     # A connected panel with a stubbed room: setMicrophoneEnabled records
     # its arguments and flips, the mic publication carries a stub audio
-    # track that records processor and constraint calls. Constraint updates
-    # reject while muted, like a stopped live track.
+    # track that records processor, restart, and constraint calls. Restarts
+    # and constraint updates reject while muted, like a stopped live track,
+    # and the stored constraints start as the SDK's own capture would leave
+    # them: the full set on the actual device.
     def install_stub_room(noise_enabled:, processor: nil)
       page.execute_script(<<~JS, noise_enabled, processor)
         const controller = window.Stimulus
@@ -185,11 +227,22 @@ class HuddleAudioTest < ApplicationSystemTestCase
         controller.canPublish = true;
         window.__micCalls = [];
         window.__processorCalls = [];
+        window.__restartCalls = [];
         window.__constraintCalls = [];
         window.__audioCaptureDefaults = null;
         let micEnabled = true;
         let processor = arguments[1] ? { name: arguments[1] } : null;
         const audioTrack = {
+          _constraints: {
+            noiseSuppression: !arguments[0],
+            echoCancellation: true,
+            autoGainControl: true,
+            voiceIsolation: true,
+            deviceId: "stub-device"
+          },
+          get constraints() { return this._constraints; },
+          get isMuted() { return !micEnabled; },
+          getSourceTrackSettings: () => ({ deviceId: "live-device", channelCount: 1 }),
           setProcessor: (next) => {
             window.__processorCalls.push([ "set", next?.name || "unidentified" ]);
             processor = next;
@@ -201,12 +254,20 @@ class HuddleAudioTest < ApplicationSystemTestCase
             return Promise.resolve();
           },
           getProcessor: () => processor,
+          restartTrack: (constraints) => {
+            window.__restartCalls.push({ ...constraints });
+            if (!micEnabled) return Promise.reject(new DOMException("Test stopped track", "InvalidStateError"));
+            audioTrack._constraints = { ...constraints };
+            return Promise.resolve();
+          },
           applyConstraints: (constraints) => {
             if (!micEnabled) return Promise.reject(new DOMException("Test stopped track", "InvalidStateError"));
             window.__constraintCalls.push({ ...constraints });
+            audioTrack._constraints = { ...audioTrack._constraints, ...constraints };
             return Promise.resolve();
           }
         };
+        window.__audioTrack = audioTrack;
         const participant = {
           identity: "fake",
           name: "Jason",

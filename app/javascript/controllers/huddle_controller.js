@@ -2185,33 +2185,67 @@ export default class extends Controller {
     await this.#syncCaptureNoiseSuppression(track, Boolean(track.getProcessor?.()))
   }
 
-  // The SDK re-applies the track's *stored* constraints after the processor
-  // stops, and unmuting re-acquires from them, so refreshing the room's
-  // `audioCaptureDefaults` cannot restore browser filtering — only the
-  // track's own constraints reach the microphone. The track-level call
-  // updates both the live track and the stored copy. Never throws: the
-  // microphone matters more than its filtering.
-  async #syncCaptureNoiseSuppression(track, rnnoiseOn) {
-    const constraints = {
-      noiseSuppression: !rnnoiseOn,
-      echoCancellation: true,
-      autoGainControl: true
+  // The full capture set for a noise-suppression sync: the same processing the
+  // join asks for, with browser suppression following the processor instead of
+  // the preference, on the currently selected device. The SDK replaces the
+  // track's stored constraints wholesale on restart, so a partial set would
+  // drop the device — and voice isolation — from the next unmute. The track's
+  // own device wins over the stored preference: an SDK retarget may have moved
+  // capture since the preference was saved.
+  #noiseSyncConstraints(track, rnnoiseOn) {
+    const constraints = { ...this.#audioCaptureOptions(), noiseSuppression: !rnnoiseOn }
+    const active = track.constraints?.deviceId
+
+    if (active) {
+      constraints.deviceId = active
+    } else if (!constraints.deviceId) {
+      const liveId = track.getSourceTrackSettings?.()?.deviceId
+      if (liveId) constraints.deviceId = { ideal: liveId }
     }
 
+    return constraints
+  }
+
+  // Chromium rebuilds its audio processing (noise suppression, echo
+  // cancellation, gain control) only at capture time: `applyConstraints` on a
+  // live track updates the stored copy without touching the processing graph.
+  // So a processor change while live re-acquires the microphone with the new
+  // constraints. The SDK carries the processor, if any, onto the new track and
+  // replaces the stored constraints; the meter re-attaches to the new track.
+  // While muted the source track is stopped — restarting it would light the OS
+  // mic indicator for a track nobody can hear — so the update stays
+  // best-effort until the unmute re-acquires. Never throws: the microphone
+  // matters more than its filtering.
+  async #syncCaptureNoiseSuppression(track, rnnoiseOn) {
+    const wanted = !rnnoiseOn
+    const constraints = this.#noiseSyncConstraints(track, rnnoiseOn)
+    const storedMatches = track.constraints?.noiseSuppression === wanted
+    const live = this.room?.localParticipant.isMicrophoneEnabled && track.isMuted !== true
+
+    if (!live) {
+      try {
+        await track.applyConstraints?.(constraints)
+      } catch (error) {
+        // A muted (stopped) track rejects the update; the unmute that follows
+        // re-acquires, and its sync retries against the live track.
+      }
+      return
+    }
+
+    if (storedMatches) return
+
     try {
-      if (typeof track.applyConstraints === "function") {
-        await track.applyConstraints(constraints)
-      } else if (typeof track.restartTrack === "function" && this.room?.localParticipant.isMicrophoneEnabled) {
-        // No live-track update available: re-acquire, but only while
-        // unmuted — restarting a muted track would light the OS mic
-        // indicator for a track nobody can hear.
+      if (typeof track.restartTrack === "function") {
         await track.restartTrack(constraints)
+        // The restart replaced the meter's track; the old one reads as ended.
+        this.#startMicrophoneMeter()
+      } else if (typeof track.applyConstraints === "function") {
+        await track.applyConstraints(constraints)
       } else {
         await track.mediaStreamTrack?.applyConstraints?.(constraints)
       }
     } catch (error) {
-      // A muted (stopped) track rejects the update; the next sync — after
-      // unmute — applies it to the live track instead.
+      // The next sync — after unmute, or after the next toggle — retries.
     }
   }
 
