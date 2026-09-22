@@ -274,6 +274,21 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "legacy rich-text edits re-sync card references" do
+    room = rooms(:designers)
+    event = events(:launch_party)
+    message = room.messages.create!(creator: users(:david), body: "<div>no links here</div>", client_message_id: "legacy-resync")
+
+    put room_message_url(room, message), params: {
+      message: { body: "<div>see https://github.com/rails/rails/pull/512 and https://x.com/jack/status/424242 and /rooms/#{room.id}/events/#{event.id}</div>" }
+    }
+
+    assert_redirected_to room_message_url(room, message)
+    assert_equal [ [ "rails", "rails", 512 ] ], message.reload.github_pull_requests.map { |pr| [ pr.owner, pr.repo, pr.number ] }
+    assert_equal [ "424242" ], message.twitter_posts.map(&:post_id)
+    assert_equal [ event ], message.events
+  end
+
   test "messages render empty card containers for future broadcasts" do
     message = @room.messages.create!(creator: users(:david), markdown_source: "no links", client_message_id: "empty-cards")
 

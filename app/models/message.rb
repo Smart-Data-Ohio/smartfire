@@ -213,7 +213,7 @@ class Message < ApplicationRecord
     end
 
     def resync_github_pull_request_references
-      Github::PullRequestReferenceSync.call(self) if saved_change_to_markdown_source?
+      Github::PullRequestReferenceSync.call(self) if references_source_changed?
     end
 
     def sync_twitter_post_references
@@ -221,7 +221,7 @@ class Message < ApplicationRecord
     end
 
     def resync_twitter_post_references
-      Twitter::PostReferenceSync.call(self) if saved_change_to_markdown_source?
+      Twitter::PostReferenceSync.call(self) if references_source_changed?
     end
 
     def sync_event_references
@@ -229,7 +229,15 @@ class Message < ApplicationRecord
     end
 
     def resync_event_references
-      Event::ReferenceSync.call(self) if saved_change_to_markdown_source?
+      Event::ReferenceSync.call(self) if references_source_changed?
+    end
+
+    # Markdown edits rewrite the body through the renderer; legacy edits
+    # rewrite only the rich-text row. Either must re-sync references. The
+    # association check avoids loading the body when it was untouched.
+    def references_source_changed?
+      saved_change_to_markdown_source? ||
+        (association(:rich_text_body).loaded? && rich_text_body&.saved_change_to_body?)
     end
 
     def receive_in_conversation
