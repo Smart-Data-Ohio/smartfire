@@ -32,7 +32,9 @@ credential cannot starve others sharing the agent:
 
 Overflowing a bucket returns 429 with a `Retry-After` header in
 seconds and a `{ "error": "rate_limited" }` body. Human session
-requests are not throttled. These limits are separate from the
+requests are not throttled, and neither are the frozen legacy
+bot-key endpoints, which carry no credential to key a bucket on.
+These limits are separate from the
 20-deliveries-per-minute-per-room delivery guard below.
 
 ## Capability grants
@@ -501,8 +503,9 @@ curl -X PATCH https://smartfire.example.com/agents/work/7 \
   -d '{"work_status":"in_progress","note":"Reproducing the bug"}'
 ```
 
-This is the first enforcement of `manage_threads`: the status update
-requires it in the thread's room, with the standard 403 error shape.
+The status update requires `manage_threads` in the thread's room,
+with the standard 403 error shape; board post creation requires it
+too (see Boards).
 
 ### Link payloads
 
