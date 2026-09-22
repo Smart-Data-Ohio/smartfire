@@ -13,25 +13,26 @@ class AddHopChainAndApprovalToAgentEvents < ActiveRecord::Migration[8.2]
         execute <<~SQL.squish
           UPDATE agent_events
           SET agent_approval_id = CAST(json_extract(metadata, '$.approval_id') AS INTEGER)
-          WHERE event_type IN ('github_action_completed', 'approval_decided')
+          WHERE event_type = 'approval_decided'
         SQL
 
         # Concurrent writers could record the same completion twice before
-        # the unique index below existed. Drop every duplicate but the
-        # lowest id per key so the index builds cleanly in production.
-        duplicate_scope = <<~SQL.squish
-          event_type = 'github_action_completed'
-            AND agent_approval_id IS NOT NULL
-            AND id NOT IN (
+        # the unique index below existed. The backfill claims the new column
+        # only for the lowest id per (agent, approval) group and leaves later
+        # duplicates NULL, so the index builds cleanly without touching
+        # pre-existing rows or columns; SQLite allows multiple NULLs.
+        # Runtime lookups fall back to the metadata payload for those rows.
+        execute <<~SQL.squish
+          UPDATE agent_events
+          SET agent_approval_id = CAST(json_extract(metadata, '$.approval_id') AS INTEGER)
+          WHERE event_type = 'github_action_completed'
+            AND id IN (
               SELECT MIN(id) FROM agent_events
               WHERE event_type = 'github_action_completed'
-                AND agent_approval_id IS NOT NULL
-              GROUP BY agent_id, agent_approval_id
+                AND json_extract(metadata, '$.approval_id') IS NOT NULL
+              GROUP BY agent_id, CAST(json_extract(metadata, '$.approval_id') AS INTEGER)
             )
         SQL
-        duplicates = select_value("SELECT COUNT(*) FROM agent_events WHERE #{duplicate_scope}")
-        execute("DELETE FROM agent_events WHERE #{duplicate_scope}")
-        say "Removed #{duplicates} duplicate github_action_completed rows, keeping the lowest id per approval"
       end
     end
 

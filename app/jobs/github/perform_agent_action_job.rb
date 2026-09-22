@@ -79,10 +79,18 @@ class Github::PerformAgentActionJob < ApplicationJob
   end
 
   private
-    # Outcome rows are JSON metadata keyed by approval_id; SQLite's
-    # json_extract reads it without a dedicated column.
+    # Historical duplicate rows keep agent_approval_id NULL (the additive
+    # migration backfills only the lowest id per approval), so the column
+    # lookup falls back to the metadata payload SQLite already stores.
     def already_executed?(agent, approval)
-      agent.agent_events.where(event_type: "github_action_completed", agent_approval_id: approval.id).exists?
+      completion_events(agent, approval).exists?
+    end
+
+    def completion_events(agent, approval)
+      agent.agent_events.where(event_type: "github_action_completed").where(
+        "agent_approval_id = ? OR CAST(json_extract(metadata, '$.approval_id') AS INTEGER) = ?",
+        approval.id, approval.id
+      )
     end
 
     def premature_failure_reason(approval, agent, room)
@@ -126,7 +134,7 @@ class Github::PerformAgentActionJob < ApplicationJob
       enqueue_outcome_webhook(event)
       event
     rescue ActiveRecord::RecordNotUnique
-      agent.agent_events.find_by!(event_type: "github_action_completed", agent_approval_id: approval.id)
+      completion_events(agent, approval).order(:id).first!
     end
 
     # Inserts the winner's outcome row ahead of the GitHub write. Returns
