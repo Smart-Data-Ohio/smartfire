@@ -1,0 +1,138 @@
+require "test_helper"
+
+class Room::DestroyJobTest < ActiveJob::TestCase
+  setup do
+    @original_api_secret = ENV["LIVEKIT_API_SECRET"]
+    ENV["LIVEKIT_API_SECRET"] = "test-api-secret"
+
+    @david = users(:david)
+    @jason = users(:jason)
+    @room = Rooms::Stage.create_for({ name: "Town Hall", creator: @david }, users: [ @david, @jason, users(:kevin) ])
+
+    @root_message = @room.root_messages.create!(creator: @david, markdown_source: "Hello")
+    @thread = ChannelThread.create!(room: @room, creator: @david, name: "Planning")
+    ThreadMembership.join!(@thread, @jason)
+    @thread_message = @thread.post_message!(creator: @jason, attributes: { markdown_source: "Threaded" })
+    @thread.update_work!(actor: @david, work_status: "planned")
+    @work_event = @thread.work_thread_events.last!
+
+    @pull_request = Github::PullRequest.create!(owner: "rails", repo: "rails", number: 12)
+    @pr_thread = ChannelThread.create!(room: @room, creator: @david, name: "PR discussion")
+    @pr_mapping = Github::PullRequestThread.create!(pull_request: @pull_request, room: @room, channel_thread: @pr_thread)
+    Github::PullRequestReference.create!(message: @root_message, pull_request: @pull_request)
+
+    @subscription = Github::RepositorySubscription.create!(
+      room: @room, owner: "rails", repo: "rails", events: %w[opened], created_by: @david)
+    @notification = Github::Notification.create!(subscription: @subscription, dedupe_key: "opened:rails/rails#12")
+
+    @event = @room.events.create!(organizer: @david, title: "Planning session",
+      starts_at: 2.days.from_now, time_zone: "UTC")
+    @event.attendances.create!(user: @jason, response: "going")
+    @calendar_entry = EventCalendarEntry.create!(event: @event, user: @david, google_event_id: "campfire-test-entry")
+    EventReference.create!(message: @root_message, event: @event)
+
+    membership = @room.memberships.find_by!(user: @david)
+    @stream = Stream.create!(room: @room, membership:, user: @david, quality: "1080p15")
+
+    @grant = HuddleGrant.issue!(session: sessions(:david_safari), membership:)
+    @revoked_grant = HuddleGrant.issue!(session: @david.sessions.create!(user_agent: "Other"), membership:)
+    @revoked_grant.revoke!
+
+    agent = agents(:bender_agent)
+    @agent_event = agent.agent_events.create!(event_type: "mention", room: @room,
+      message: @root_message, outcome: "pending")
+    @approval = AgentApproval.create!(agent:, room: @room, action: "github.comment",
+      summary: "Comment on #12", expires_at: 1.hour.from_now)
+    @agent_grant = AgentGrant.create!(agent:, capability: "read_messages", room: @room, granted_by: @david)
+
+    Boost.create!(message: @root_message, booster: @jason, content: "Hello")
+    @root_message.drive_attachments.create!(file_id: "1AbcDefGhIjKlMnOpQrSt")
+
+    @message_item = ActivityItem.create!(user: @jason, source: @root_message, event_type: "mention")
+    @work_item = ActivityItem.create!(user: @jason, source: @work_event, event_type: "work_update")
+    @grant_item = ActivityItem.create!(user: @david, source: @grant, event_type: "huddle_missed")
+    @event_item = ActivityItem.find_by!(user: @jason, source: @event)
+  end
+
+  teardown do
+    ENV["LIVEKIT_API_SECRET"] = @original_api_secret
+  end
+
+  test "begin_destroy! immediately removes the room from everyone" do
+    @room.begin_destroy!
+
+    assert_predicate @room.reload, :deleted?
+    assert_empty @room.memberships
+    assert_predicate @grant.reload, :revoked?
+    assert_predicate @agent_grant.reload, :revoked?
+    assert_not_nil @stream.reload.ended_at
+    # Content waits for the job.
+    assert @room.messages.exists?
+    assert Room.exists?(@room.id)
+  end
+
+  test "destroy removes the room and leaves no orphans" do
+    room_id = @room.id
+    event_id = @event.id
+    thread_ids = @room.channel_thread_ids
+    message_ids = @room.message_ids
+    grant_ids = HuddleGrant.where(room_id:).ids
+    source_item_ids = [ @message_item.id, @work_item.id, @grant_item.id, @event_item.id ]
+    approval_item_ids = ActivityItem.where(source: @approval).ids
+    assert_not_empty approval_item_ids
+
+    @room.begin_destroy!
+    Room::DestroyJob.perform_now(room_id)
+
+    assert_empty Room.where(id: room_id)
+    assert_empty Membership.where(room_id:)
+    assert_empty Message.where(room_id:)
+    assert_empty ChannelThread.where(room_id:)
+    assert_empty Event.where(room_id:)
+    assert_empty EventAttendance.where(event_id:)
+    assert_empty EventCalendarEntry.where(event_id:)
+    assert_empty Stream.where(room_id:)
+    assert_empty HuddleGrant.where(room_id:)
+    assert_empty ThreadMembership.where(thread_id: thread_ids)
+    assert_empty Boost.where(message_id: message_ids)
+    assert_empty DriveAttachment.where(message_id: message_ids)
+    assert_empty Github::PullRequestReference.where(message_id: message_ids)
+    assert_empty EventReference.where(message_id: message_ids)
+    assert_empty Github::PullRequestThread.where(room_id:)
+    assert_empty Github::RepositorySubscription.where(room_id:)
+    assert_empty Github::Notification.where(id: @notification.id)
+    assert_empty ActivityItem.where(id: source_item_ids)
+
+    # The agent ledger outlives the room with its room link cleared.
+    assert_empty AgentEvent.where(room_id:)
+    assert_nil @agent_event.reload.room_id
+    assert_empty AgentApproval.where(room_id:)
+    assert_nil @approval.reload.room_id
+    assert_equal approval_item_ids.sort, ActivityItem.where(source: @approval).ids.sort
+
+    # Cleanup rows survive the grant unlink with their own room copies.
+    assert HuddleCleanup.where(operation: :delete_room, room_name: @grant.room_name).exists?
+    assert_empty HuddleCleanup.where(huddle_grant_id: grant_ids)
+  end
+
+  test "destroy keeps working when run twice" do
+    @room.begin_destroy!
+    Room::DestroyJob.perform_now(@room.id)
+    Room::DestroyJob.perform_now(@room.id)
+
+    assert_empty Room.where(id: @room.id)
+  end
+
+  test "destroy ignores rooms that were never marked" do
+    Room::DestroyJob.perform_now(@room.id)
+
+    assert Room.exists?(@room.id)
+    assert_not_predicate @room.reload, :deleted?
+  end
+
+  test "destroy ignores missing rooms" do
+    assert_no_difference -> { Room.count } do
+      Room::DestroyJob.perform_now(Room.maximum(:id).to_i + 100)
+    end
+  end
+end

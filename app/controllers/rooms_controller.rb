@@ -12,7 +12,13 @@ class RoomsController < ApplicationController
   end
 
   def destroy
-    @room.destroy
+    # Marking and enqueueing share one transaction: if the queue is down the
+    # request fails with the room intact instead of stranding a room that is
+    # marked deleted with no job to finish it.
+    Room.transaction do
+      @room.begin_destroy!
+      Room::DestroyJob.perform_later(@room.id)
+    end
 
     broadcast_remove_room
     redirect_to root_url

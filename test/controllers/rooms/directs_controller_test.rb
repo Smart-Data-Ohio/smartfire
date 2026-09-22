@@ -23,10 +23,18 @@ class Rooms::DirectsControllerTest < ActionDispatch::IntegrationTest
 
   test "destroy only allowed for all room users" do
     sign_in :kevin
+    room = rooms(:david_and_kevin)
+
+    assert_enqueued_with(job: Room::DestroyJob, args: [ room.id ]) do
+      delete rooms_direct_url(room)
+      assert_redirected_to root_url
+    end
+
+    assert_predicate room.reload, :deleted?
+    assert_empty room.memberships
 
     assert_difference -> { Room.count }, -1 do
-      delete rooms_direct_url(rooms(:david_and_kevin))
-      assert_redirected_to root_url
+      perform_enqueued_jobs
     end
   end
 
