@@ -56,6 +56,11 @@ class ChannelThread < ApplicationRecord
   after_create_commit :announce_board_post, if: :board_post?
   after_update_commit :broadcast_board_row_replace_on_change, if: :board_post?
   after_destroy_commit :broadcast_board_row_remove, if: :board_post?
+  after_destroy_commit :emit_deleted_work_unassigned
+
+  # Set by the destroy endpoint so the work_unassigned row records who
+  # deleted the thread. Cascade and merge destroys leave it nil.
+  attr_accessor :deleted_by
 
   scope :ordered, -> { order(last_activity_at: :desc, id: :desc) }
   scope :active, -> { where(closed_at: nil, locked_at: nil) }
@@ -954,12 +959,39 @@ class ChannelThread < ApplicationRecord
     # Gated on current room membership plus read_messages like message
     # delivery: an agent removed from the room learns nothing more about
     # its work there, even if a workspace-wide grant survives.
+    # An agent-owned thread that is deleted unassigns its owner the same
+    # way clearing the owner does. The row is readable in the ledger and
+    # by webhook; polling drops it like any row whose thread is gone, and
+    # next_since still advances past it.
+    def emit_deleted_work_unassigned
+      agent = agent_for_work_owner(work_owner)
+      return unless agent
+
+      event = agent.agent_events.create!(
+        event_type: "work_unassigned",
+        room_id: room_id,
+        actor: deleted_by,
+        outcome: "delivered",
+        chain_id: SecureRandom.uuid,
+        metadata: {
+          "thread_id" => id,
+          "title" => name,
+          "work_status" => work_status,
+          "assigned_by" => deleted_by&.name,
+          "hop" => 0
+        }
+      )
+      deliver_work_assignment_webhooks([ event ])
+    end
+
     def deliver_work_assignment_webhooks(events)
       events.each do |event|
         next unless AgentEvent::WORK_DELIVERABLE_TYPES.include?(event.event_type)
 
         agent = event.agent
-        next unless Membership.exists?(user_id: agent.user_id, room_id: room_id) && agent.can?(:read_messages, room)
+        event_room = room || Room.find_by(id: room_id)
+        next unless event_room
+        next unless Membership.exists?(user_id: agent.user_id, room_id: room_id) && agent.can?(:read_messages, event_room)
 
         webhook = agent.user.webhook
         next unless webhook

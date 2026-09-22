@@ -76,8 +76,8 @@ class Agents::GithubActionDeliveryTest < ActionDispatch::IntegrationTest
     get agents_events_url, headers: bearer_headers
 
     assert_response :success
-    row = response.parsed_body.find { |entry| entry["event_type"] == "github_action_completed" }
-    assert row, "expected a github_action_completed row in #{response.parsed_body.inspect}"
+    row = response.parsed_body["events"].find { |entry| entry["event_type"] == "github_action_completed" }
+    assert row, "expected a github_action_completed row in #{response.parsed_body["events"].inspect}"
     assert_equal "delivered", row["outcome"]
     assert_nil row["message"]
     assert_equal(
@@ -104,8 +104,8 @@ class Agents::GithubActionDeliveryTest < ActionDispatch::IntegrationTest
     get agents_events_url, headers: bearer_headers
 
     assert_response :success
-    row = response.parsed_body.find { |entry| entry["event_type"] == "github_action_completed" }
-    assert row, "expected a github_action_completed row in #{response.parsed_body.inspect}"
+    row = response.parsed_body["events"].find { |entry| entry["event_type"] == "github_action_completed" }
+    assert row, "expected a github_action_completed row in #{response.parsed_body["events"].inspect}"
     assert_equal "failed", row.dig("github_action", "status")
     assert_equal "Agent is no longer a member of the room", row.dig("github_action", "message")
     assert_not row["github_action"].key?("url")
@@ -162,7 +162,7 @@ class Agents::GithubActionDeliveryTest < ActionDispatch::IntegrationTest
 
     get agents_events_url, headers: { "Authorization" => "Bearer #{other_secret}" }
     assert_response :success
-    assert_empty response.parsed_body.select { |entry| entry["event_type"] == "github_action_completed" }
+    assert_empty response.parsed_body["events"].select { |entry| entry["event_type"] == "github_action_completed" }
 
     post ack_agents_event_url(event), headers: { "Authorization" => "Bearer #{other_secret}" }
     assert_response :not_found

@@ -21,8 +21,8 @@ class Agents::DriveAttachmentsDeliveryTest < ActionDispatch::IntegrationTest
     get agents_events_url, headers: bearer_headers
 
     assert_response :success
-    row = response.parsed_body.find { |entry| entry.dig("message", "id") == message.id }
-    assert row, "expected a row for message #{message.id} in #{response.parsed_body.inspect}"
+    row = response.parsed_body["events"].find { |entry| entry.dig("message", "id") == message.id }
+    assert row, "expected a row for message #{message.id} in #{response.parsed_body["events"].inspect}"
     assert_equal [
       { "file_id" => FILE_A, "url" => "https://drive.google.com/open?id=#{FILE_A}" },
       { "file_id" => FILE_B, "url" => "https://drive.google.com/open?id=#{FILE_B}" }
@@ -38,7 +38,7 @@ class Agents::DriveAttachmentsDeliveryTest < ActionDispatch::IntegrationTest
     get agents_events_url, headers: bearer_headers
 
     assert_response :success
-    row = response.parsed_body.find { |entry| entry.dig("message", "id") == message.id }
+    row = response.parsed_body["events"].find { |entry| entry.dig("message", "id") == message.id }
     assert_equal [], row.dig("message", "drive_attachments")
   end
 

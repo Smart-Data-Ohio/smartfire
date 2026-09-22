@@ -394,6 +394,29 @@ class ChannelThreadAgentAssignmentTest < ActiveSupport::TestCase
     assert_equal suppressed.metadata["thread_id"], ChannelThread.order(:id).last.id
   end
 
+  test "deleting an agent-owned thread emits work_unassigned" do
+    @thread.update_work!(actor: @manager, work_owner_id: @bot.id)
+    @thread.deleted_by = @manager
+
+    assert_difference -> { @agent.agent_events.where(event_type: "work_unassigned").count }, 1 do
+      @thread.destroy!
+    end
+
+    event = @agent.agent_events.where(event_type: "work_unassigned").last
+    assert_equal "delivered", event.outcome
+    assert_equal @manager.id, event.actor_id
+    assert_equal @thread.id, event.metadata["thread_id"]
+    assert_equal "Agent work", event.metadata["title"]
+    assert_equal @manager.name, event.metadata["assigned_by"]
+    assert_requested :post, webhooks(:bender).url, times: 2
+  end
+
+  test "deleting a thread without an agent owner emits nothing" do
+    assert_no_difference -> { AgentEvent.count } do
+      @thread.destroy!
+    end
+  end
+
   test "a human assignment starts a new root at hop 0" do
     board = Rooms::Board.create_for({ name: "Human Board", creator: @manager }, users: [ @manager ])
     agent = create_agent_in(board, name: "Human Loop Agent")

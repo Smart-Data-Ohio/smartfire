@@ -11,13 +11,17 @@ class Agents::EventsController < ApplicationController
   POLL_DEFAULT_LIMIT = 50
   POLL_MAX_LIMIT = 100
 
-  # GET /agents/events?since=<id>&limit=<n> (Bearer-only, JSON). Returns the
-  # agent's own deliverable rows ordered by id. Readability (message exists,
-  # membership, read grant) filters in SQL before the limit applies, so
-  # revoked rows can never hide newer readable rows. Approval decision rows
-  # carry no message and render an approval payload instead; GitHub
-  # completion rows render a github_action payload instead, and work rows
-  # render a work payload instead.
+  # GET /agents/events?since=<id>&limit=<n> (Bearer-only, JSON). Returns
+  # the agent's own deliverable rows ordered by id, plus next_since: the
+  # last scanned row id, which the client passes back as since. Rows the
+  # Ruby payload builders drop after SQL filtering (a deleted thread, a
+  # revoked message) still advance the cursor, so a fully dropped page
+  # returns no rows but never strands the client. Readability (message
+  # exists, membership, read grant) filters in SQL before the limit
+  # applies, so revoked rows can never hide newer readable rows.
+  # Approval decision rows carry no message and render an approval
+  # payload instead; GitHub completion rows render a github_action
+  # payload instead, and work rows render a work payload instead.
   def index
     no_store_response!
 
@@ -36,8 +40,12 @@ class Agents::EventsController < ApplicationController
 
     @approval_cache = AgentApproval.where(id: events.filter_map { |event| event.metadata.is_a?(Hash) && event.metadata["approval_id"] }).index_by(&:id)
     @thread_cache = ChannelThread.where(id: events.filter_map { |event| event.metadata.is_a?(Hash) && event.metadata["thread_id"] }).includes(:room, :work_owner, :tags, work_thread_links: %i[ github_pull_request event ]).index_by(&:id)
+    preload_poll_access!(agent, events)
 
-    render json: events.filter_map { |event| poll_payload(agent, event) }
+    render json: {
+      events: events.filter_map { |event| poll_payload(event) },
+      next_since: events.last&.id || since
+    }
   end
 
   # POST /agents/events/:id/ack (Bearer-only, JSON). Idempotent.
@@ -113,7 +121,32 @@ class Agents::EventsController < ApplicationController
       @message = message
     end
 
-    def poll_payload(agent, event)
+    # Membership and grant checks for every row of one poll, resolved in
+    # three queries no matter how many rows the page holds. Mirrors
+    # Agent#can?(:read_messages, room) exactly: an inactive agent reads
+    # nothing, a legacy agent reads every member room, and anyone else
+    # needs a room or workspace-wide grant.
+    def preload_poll_access!(agent, events)
+      room_ids = events.filter_map(&:room_id).uniq
+      @poll_agent_active = agent.active?
+      @poll_member_room_ids = Membership.where(user_id: agent.user_id, room_id: room_ids).pluck(:room_id).to_set
+      @poll_legacy = agent.legacy_capabilities?
+
+      granted = AgentGrant.active.where(agent_id: agent.id, capability: "read_messages", room_id: [ room_ids, nil ].flatten)
+        .pluck(:room_id)
+      @poll_workspace_grant = granted.include?(nil)
+      @poll_granted_room_ids = granted.compact.to_set
+    end
+
+    def poll_room_readable?(room)
+      return false unless @poll_agent_active
+      return false unless @poll_member_room_ids.include?(room.id)
+      return true if @poll_legacy
+
+      @poll_workspace_grant || @poll_granted_room_ids.include?(room.id)
+    end
+
+    def poll_payload(event)
       if event.event_type == "github_action_completed"
         return github_action_poll_payload(event)
       end
@@ -123,14 +156,13 @@ class Agents::EventsController < ApplicationController
       end
 
       if AgentEvent::WORK_DELIVERABLE_TYPES.include?(event.event_type)
-        return work_poll_payload(agent, event)
+        return work_poll_payload(event)
       end
 
       message = event.message
       room = event.room
       return if message.nil? || room.nil?
-      return unless Membership.exists?(user_id: agent.user_id, room_id: room.id)
-      return unless agent.can?(:read_messages, room)
+      return unless poll_room_readable?(room)
 
       # pull_request merges after compact so it stays an explicit null
       # outside PR threads instead of disappearing from the payload.
@@ -146,13 +178,12 @@ class Agents::EventsController < ApplicationController
       }.compact.merge(pull_request: Github::PullRequestThread.payload_for_message(message))
     end
 
-    def work_poll_payload(agent, event)
+    def work_poll_payload(event)
       metadata = event.metadata.is_a?(Hash) ? event.metadata : {}
       thread = @thread_cache&.dig(metadata["thread_id"]) || ChannelThread.find_by(id: metadata["thread_id"])
       room = event.room
       return if thread.nil? || room.nil?
-      return unless Membership.exists?(user_id: agent.user_id, room_id: room.id)
-      return unless agent.can?(:read_messages, room)
+      return unless poll_room_readable?(room)
 
       {
         id: event.id,

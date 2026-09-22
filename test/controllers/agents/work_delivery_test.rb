@@ -17,8 +17,8 @@ class Agents::WorkDeliveryTest < ActionDispatch::IntegrationTest
     get agents_events_url, headers: bearer_headers
 
     assert_response :success
-    row = response.parsed_body.find { |entry| entry["event_type"] == "work_assigned" }
-    assert row, "expected a work_assigned row in #{response.parsed_body.inspect}"
+    row = response.parsed_body["events"].find { |entry| entry["event_type"] == "work_assigned" }
+    assert row, "expected a work_assigned row in #{response.parsed_body["events"].inspect}"
     assert_equal "delivered", row["outcome"]
     assert_nil row["message"]
     assert_equal @room.id, row.dig("room", "id")
@@ -40,7 +40,7 @@ class Agents::WorkDeliveryTest < ActionDispatch::IntegrationTest
     get agents_events_url, headers: bearer_headers
 
     assert_response :success
-    row = response.parsed_body.find { |entry| entry["event_type"] == "work_assigned" }
+    row = response.parsed_body["events"].find { |entry| entry["event_type"] == "work_assigned" }
     links = row.dig("work", "links")
     assert_equal %w[ event drive_file ], links.map { |entry| entry["kind"] }
     assert_equal room_event_path(@room, events(:watercooler_sync)), links.first["url"]
@@ -55,8 +55,8 @@ class Agents::WorkDeliveryTest < ActionDispatch::IntegrationTest
     get agents_events_url, headers: bearer_headers
 
     assert_response :success
-    row = response.parsed_body.find { |entry| entry["event_type"] == "work_unassigned" }
-    assert row, "expected a work_unassigned row in #{response.parsed_body.inspect}"
+    row = response.parsed_body["events"].find { |entry| entry["event_type"] == "work_unassigned" }
+    assert row, "expected a work_unassigned row in #{response.parsed_body["events"].inspect}"
     assert_equal thread.id, row.dig("work", "thread_id")
     assert_equal "Unassigned work", row.dig("work", "title")
   end
@@ -109,13 +109,13 @@ class Agents::WorkDeliveryTest < ActionDispatch::IntegrationTest
     assign_owned_thread!(name: "Revoked work")
 
     get agents_events_url, headers: bearer_headers
-    assert_equal 1, response.parsed_body.size
+    assert_equal 1, response.parsed_body["events"].size
 
     AgentGrant.where(agent: @agent, room: @room, capability: "read_messages").sole.revoke!
 
     get agents_events_url, headers: bearer_headers
     assert_response :success
-    assert_empty response.parsed_body
+    assert_empty response.parsed_body["events"]
   end
 
   test "polling omits work rows after membership removal" do
@@ -123,13 +123,13 @@ class Agents::WorkDeliveryTest < ActionDispatch::IntegrationTest
     assign_owned_thread!(name: "Left work")
 
     get agents_events_url, headers: bearer_headers
-    assert_equal 1, response.parsed_body.size
+    assert_equal 1, response.parsed_body["events"].size
 
     memberships(:bender_watercooler).destroy!
 
     get agents_events_url, headers: bearer_headers
     assert_response :success
-    assert_empty response.parsed_body
+    assert_empty response.parsed_body["events"]
   end
 
   test "work events do not count toward the message rate limit" do

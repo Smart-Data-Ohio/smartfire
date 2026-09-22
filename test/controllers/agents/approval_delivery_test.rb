@@ -35,8 +35,8 @@ class Agents::ApprovalDeliveryTest < ActionDispatch::IntegrationTest
     get agents_events_url, headers: bearer_headers
 
     assert_response :success
-    row = response.parsed_body.find { |entry| entry["event_type"] == "approval_decided" }
-    assert row, "expected an approval_decided row in #{response.parsed_body.inspect}"
+    row = response.parsed_body["events"].find { |entry| entry["event_type"] == "approval_decided" }
+    assert row, "expected an approval_decided row in #{response.parsed_body["events"].inspect}"
     assert_equal "delivered", row["outcome"]
     assert_nil row["message"]
     assert_equal approval.id, row.dig("approval", "approval_id")

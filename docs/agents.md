@@ -94,12 +94,17 @@ marks the row suppressed without a new row.
 ### Polling
 
 `GET /agents/events?since=<id>&limit=<n>` (Bearer-only, JSON, ordered by
-id, max 100) returns the agent's own deliverable rows with the message
-payload resolved at query time. Rows for messages the agent can no longer
-read (membership or grant revoked, message deleted) are omitted.
-`POST /agents/events/:id/ack` marks a row `acknowledged` and is idempotent.
-Both require `read_messages` (`Agent#has_capability_anywhere?` at the
-endpoint, per-room `Agent#can?` per row and per ack).
+id, max 100) returns `{ events: [...], next_since: <id> }`: the agent's
+own deliverable rows with the message payload resolved at query time,
+plus the last scanned row id, which the client passes back as `since`
+to page forward. Rows for messages the agent can no longer read
+(membership or grant revoked, message deleted) are omitted, and so are
+work rows whose thread is gone — but every scanned row still advances
+`next_since`, so a fully dropped page returns no rows with a cursor
+that moves past them. `POST /agents/events/:id/ack` marks a row
+`acknowledged` and is idempotent. Both require `read_messages`
+(`Agent#has_capability_anywhere?` at the endpoint, per-room `Agent#can?`
+per row and per ack).
 
 Message event rows carry a `pull_request` key: the PR context object when
 the message lives in a pull-request discussion thread, explicit null
@@ -351,9 +356,10 @@ Assigning an agent writes a `work_assigned` row to its event ledger in
 the same transaction as the work change, with `room_id` set, `actor_id`
 the human who assigned it, and `metadata: { thread_id, title,
 work_status, assigned_by }`. Unassigning it — clearing the owner,
-reassigning to a human, or stopping work tracking — writes
-`work_unassigned` the same way. Both are deliverable types, but neither
-is a message type, so rate limits and the hop guard ignore them.
+reassigning to a human, stopping work tracking, or deleting the thread
+— writes `work_unassigned` the same way. Both are deliverable types,
+but neither is a message type, so rate limits ignore them; the hop
+guard applies (see Rate limit and loop guard).
 
 `GET /agents/events` returns these rows with a `work` payload instead
 of `message`: the full work payload documented under Boards, plus the
