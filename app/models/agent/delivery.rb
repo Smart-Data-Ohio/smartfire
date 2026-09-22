@@ -297,7 +297,16 @@ class Agent::Delivery
         .find_each do |event|
           begin
             Agent::EventWebhookJob.perform_later(event.id, event.webhook_attempts.to_i)
-            AgentEvent.where(id: event.id).update_all(webhook_next_attempt_at: Time.current)
+            # Conditional on the values just read: a worker that ran after
+            # the sweep's read (a 429 storing a Retry-After delay, a
+            # delivery, a failure) changed the attempts or the next
+            # attempt, so this write backs off instead of clobbering it.
+            # The stale enqueue above is harmless: its attempt number no
+            # longer matches and the job exits on its claim.
+            AgentEvent.where(id: event.id, webhook_status: "pending",
+                webhook_attempts: event.webhook_attempts,
+                webhook_next_attempt_at: event.webhook_next_attempt_at)
+              .update_all(webhook_next_attempt_at: Time.current)
           rescue => error
             Rails.logger.error "Stranded webhook recovery failed for event #{event.id}: #{error.class}: #{error.message}"
           end

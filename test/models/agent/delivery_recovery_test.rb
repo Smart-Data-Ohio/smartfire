@@ -74,6 +74,25 @@ class Agent::DeliveryRecoveryTest < ActiveSupport::TestCase
     end
   end
 
+  test "the sweeper does not overwrite a Retry-After stored after its read" do
+    WebMock.stub_request(:post, webhooks(:bender).url)
+      .to_return(status: 429, headers: { "Retry-After" => "600" })
+    event = stranded_event(age: 3.minutes, attempts: 0)
+
+    # The worker runs after the sweep read the row but before the sweep
+    # writes: run it inline from the sweep's enqueue. (The retry the
+    # worker schedules goes through the configured job, not this stub,
+    # so nothing recurses.)
+    Agent::EventWebhookJob.expects(:perform_later).with do |event_id, _attempt|
+      Agent::EventWebhookJob.perform_now(event_id)
+      true
+    end
+    Agent::Delivery.recover_stranded_webhooks!
+
+    assert_equal 1, event.reload.webhook_attempts
+    assert_in_delta 600, event.reload.webhook_next_attempt_at - Time.current, 5
+  end
+
   test "a recovery pass keeps going past an enqueue failure" do
     first = stranded_event(age: 5.minutes, attempts: 0)
     second = stranded_event(age: 6.minutes, attempts: 0)
