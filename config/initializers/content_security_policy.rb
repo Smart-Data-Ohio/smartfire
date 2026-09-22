@@ -68,9 +68,14 @@ Rails.application.configure do
   end
 
   # One nonce per session rather than per request: Turbo Drive swaps pages
-  # without reloading the document, so scripts on later pages must carry the
-  # nonce of the policy the browser already enforces. The session id is
-  # hashed so it never appears in the page.
+  # without reloading the document, so the browser keeps enforcing the policy
+  # (and nonce) from the first full page load, while Turbo gives each inline
+  # script it activates the nonce from the new page's csp-nonce meta tag. A
+  # per-request nonce therefore reports every inline script reached by a
+  # Turbo visit (the system test "a Turbo visit to a page with an inline
+  # script raises no violations" fails with SecureRandom.base64(16) here).
+  # The session id is hashed so it never appears in the page, and a session
+  # without an id yet gets a random nonce.
   config.content_security_policy_nonce_generator = ->(request) do
     session_id = request.session.id.to_s
     session_id.present? ? Digest::SHA256.base64digest("csp-nonce:#{session_id}") : SecureRandom.base64(16)

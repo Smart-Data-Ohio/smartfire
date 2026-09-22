@@ -78,6 +78,20 @@ class ContentSecurityPolicyTest < ApplicationSystemTestCase
     assert_no_violations
   end
 
+  test "a Turbo visit to a page with an inline script raises no violations" do
+    sign_in "jz@37signals.com"
+    join_room rooms(:designers)
+
+    page.execute_script("window.cspTurboMarker = true")
+    page.execute_script("Turbo.visit(arguments[0])", new_room_event_path(rooms(:designers)))
+    assert_selector "[data-event-time-zone]", visible: :all
+    assert page.evaluate_script("window.cspTurboMarker === true"), "the visit stayed a Turbo visit"
+    # Turbo runs the page's inline time-zone script under the policy the
+    # first page load delivered, so it must carry that page's nonce.
+
+    assert_no_violations
+  end
+
   test "a forced inline script without the nonce is reported" do
     sign_in "jz@37signals.com"
     join_room rooms(:designers)
