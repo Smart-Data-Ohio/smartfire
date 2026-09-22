@@ -181,13 +181,24 @@ class PublicPagesControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/LEGAL_CONTACT_EMAIL/, response.body)
   end
 
+  test "public pages open in a new tab so following them never disturbs the current tab" do
+    get about_url
+
+    assert_response :success
+    assert_select 'nav[aria-label="Public pages"] a[target="_blank"][rel="noopener"]', count: 3
+    assert_select 'nav[aria-label="Footer"] a[target="_blank"][rel="noopener"]', count: 3
+    assert_select 'a.public-nav__signin[target="_blank"]', count: 0
+    assert_select 'main a[href="/privacy"][target="_blank"]'
+    assert_select 'main a[href="/terms"][target="_blank"]'
+  end
+
   test "sign-in page links the public pages without OAuth" do
     get new_session_url
     assert_response :success
 
-    assert_select 'nav[aria-label="About this workspace"] a[href="/about"]'
-    assert_select 'nav[aria-label="About this workspace"] a[href="/privacy"]'
-    assert_select 'nav[aria-label="About this workspace"] a[href="/terms"]'
+    assert_select 'nav[aria-label="About this workspace"] a[href="/about"][target="_blank"][rel="noopener"]'
+    assert_select 'nav[aria-label="About this workspace"] a[href="/privacy"][target="_blank"][rel="noopener"]'
+    assert_select 'nav[aria-label="About this workspace"] a[href="/terms"][target="_blank"][rel="noopener"]'
   end
 
   test "sign-in page keeps public links beside Google sign-in when configured" do
