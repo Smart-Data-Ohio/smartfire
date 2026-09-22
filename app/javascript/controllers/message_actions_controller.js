@@ -193,7 +193,6 @@ export default class extends Controller {
       setTimeout(() => this.#closeForwardDialog(), 650)
     } catch (error) {
       this.#setForwardStatus(error.message || "Couldn’t forward message.")
-    } finally {
       this.forwardSubmitTarget.disabled = false
     }
   }
@@ -357,6 +356,9 @@ export default class extends Controller {
       input.checked = false
       input.disabled = false
     })
+    // The submit stays disabled from a successful forward until the dialog
+    // closes, so the 650ms close delay cannot double-submit.
+    if (this.hasForwardSubmitTarget) this.forwardSubmitTarget.disabled = false
     if (this.hasForwardNoteTarget) this.forwardNoteTarget.value = ""
     this.#setForwardStatus("")
     const focusTarget = this.#forwardPreviouslyFocusedElement?.isConnected ? this.#forwardPreviouslyFocusedElement : this.#message
