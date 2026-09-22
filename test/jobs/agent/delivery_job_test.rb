@@ -507,6 +507,37 @@ class Agent::DeliveryJobTest < ActiveSupport::TestCase
     assert_equal 0, agent_b.agent_events.deliverable.last.hop
   end
 
+  test "self-assigned work does not raise the agent's own hop count" do
+    agent_b = create_agent_in(@room, name: "Self Hop Bot B")
+    board = Rooms::Board.create_for({ name: "Self Hop Board", creator: users(:david) }, users: [ users(:david) ])
+    board.memberships.grant_to(@bot)
+
+    @room.messages.create!(
+      creator: users(:david), markdown_source: "Hey @[#{@bot.name}]",
+      client_message_id: "self-hop-trigger"
+    )
+    perform_enqueued_jobs only: Agent::DeliveryJob
+    assert_equal 0, @agent.agent_events.deliverable.last.hop
+
+    2.times do |i|
+      ChannelThread.create_board_post!(
+        room: board, creator: @bot, name: "Self post #{i}",
+        work_status: "in_progress", owner_id: @bot.id
+      )
+    end
+    assert_equal 2, @agent.agent_events.where(event_type: "work_assigned").count
+
+    @room.messages.create!(
+      creator: @bot, markdown_source: "Hey @[#{agent_b.user.name}] help",
+      client_message_id: "self-hop-handoff"
+    )
+
+    event = agent_b.agent_events.deliverable.last
+    assert event.present?, "expected B to be delivered, not suppressed"
+    assert_equal 1, event.hop
+    assert_empty agent_b.agent_events.where(event_type: "delivery_suppressed_hop_limit")
+  end
+
   private
     def create_mentioning_message(room, bot, creator:)
       assert_equal users(:bender), bot, "this helper only mentions the fixture bot"

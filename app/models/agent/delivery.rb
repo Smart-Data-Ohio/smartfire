@@ -382,9 +382,13 @@ class Agent::Delivery
         message_hop_and_chain_for(message, sender_agent).first
       end
 
+      # Rows where the actor is the recipient (an agent assigning work
+      # to itself) never trigger hops, so self-assignment cannot raise
+      # the agent's own chain.
       def hop_trigger_for(agent)
         agent.agent_events.where(event_type: AgentEvent::HOP_TRIGGER_TYPES, outcome: AgentEvent::HOP_TRIGGER_OUTCOMES)
           .where("agent_events.created_at >= ?", TRIGGER_WINDOW.ago)
+          .where("agent_events.actor_id IS NULL OR agent_events.actor_id != ?", agent.user_id)
           .order(id: :desc).first
       end
 
