@@ -145,7 +145,9 @@ export default class MessagePaginator {
     const resp = await this.#fetchPage()
     if (resp.statusCode === 200) {
       const page = await this.#formatPage(resp)
+      const restoreLiveRegion = this.#silenceLiveRegion()
       this.#container.replaceChildren(page)
+      queueMicrotask(restoreLiveRegion)
     }
   }
 
@@ -160,6 +162,7 @@ export default class MessagePaginator {
     if (resp.statusCode === 200) {
       const page = await this.#formatPage(resp)
       const lastNewElement = page.lastElementChild
+      const restoreLiveRegion = this.#silenceLiveRegion()
 
       keepScroll(this.#container, top, () => {
         insertHTMLFragment(page, this.#container, top)
@@ -169,8 +172,28 @@ export default class MessagePaginator {
           this.#messageFormatter.format(lastNewElement.nextElementSibling, ThreadStyle.thread)
         }
       })
+      queueMicrotask(restoreLiveRegion)
 
       this.trimExcessMessages(!top)
+    }
+  }
+
+  // Paginated history must not be announced: only live appends reach the
+  // screen reader. The region is the list itself, or the conversation
+  // wrapper that carries the live region for thread lists.
+  #silenceLiveRegion() {
+    const region = this.#container.hasAttribute("aria-live")
+      ? this.#container
+      : this.#container.parentElement?.closest("[aria-live]")
+    if (!region) return () => {}
+
+    const value = region.getAttribute("aria-live")
+    region.setAttribute("aria-live", "off")
+    let restored = false
+    return () => {
+      if (restored) return
+      restored = true
+      region.setAttribute("aria-live", value)
     }
   }
 

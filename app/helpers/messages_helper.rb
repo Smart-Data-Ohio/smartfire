@@ -24,7 +24,12 @@ module MessagesHelper
     actions = [ maintain_scroll_actions ]
     actions << refresh_room_actions unless thread
 
-    tag.div id: messages_id, class: "messages", data: {
+    # The main list announces live appends like channel threads do. Thread
+    # lists skip this: their conversation wrapper already carries the same
+    # live region, and nested live regions double-announce.
+    live = thread ? {} : { role: "log", aria: { live: "polite", relevant: "additions" } }
+
+    tag.div id: messages_id, class: "messages", **live, data: {
       controller: controller,
       action: actions.join(" "),
       messages_target: "messages",
