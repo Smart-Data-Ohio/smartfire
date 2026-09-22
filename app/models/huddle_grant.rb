@@ -2,6 +2,10 @@ class HuddleGrant < ApplicationRecord
   class Ineligible < StandardError; end
 
   INVITATION_DEDUP_WINDOW = 2.minutes
+  # A retry belongs to the same attempt while the attempt's item is this
+  # young; older unhandled items are left alone and the retry opens a new
+  # one.
+  SAME_ATTEMPT_WINDOW = 10.minutes
   IN_CALL_WINDOW = 20.seconds
   SEEN_TOUCH_INTERVAL = 10.seconds
   # A banner-only ring lives at most the client's ring timeout, so a leave
@@ -275,6 +279,19 @@ class HuddleGrant < ApplicationRecord
         return
       end
 
+      # The retrying grant re-rings through the row it already owns for
+      # the recipient when one exists, handled or not: repointing another
+      # attempt's row at this grant instead would collide with that owned
+      # row on the unique recipient-plus-source index, and the recipient
+      # would never be rung. With the owned row claimed here, the rows the
+      # same-attempt lookup below can return never collide.
+      if (owned = owned_invitation_item(recipient))
+        return unless refresh_invitation!(owned)
+
+        Huddle::PushInvitationJob.perform_later(owned.id)
+        return
+      end
+
       # The same attempt re-rings through its own row even when the retry
       # comes from another session with a brand-new grant: same room, same
       # starter, same recipient, and the previous item still unhandled. A
@@ -294,14 +311,23 @@ class HuddleGrant < ApplicationRecord
       Huddle::PushInvitationJob.perform_later(item.id)
     end
 
+    # The row this grant already owns for the recipient, if any.
+    def owned_invitation_item(recipient)
+      ActivityItem.find_by(user_id: recipient.id, source_type: HuddleGrant.polymorphic_name, source_id: id)
+    end
+
     # The recipient's unhandled huddle item for this room from this starter,
-    # if any: a retry of the attempt it belongs to reuses it (repointed at
-    # the new grant) instead of stacking a second missed-call item beside
-    # it. Only unhandled rows qualify — ringing, missed, or dismissed — so a
-    # recipient who joined keeps their history and the retry reads as new.
+    # if one is still young enough to be the same attempt: a retry of the
+    # attempt it belongs to reuses it (repointed at the new grant) instead
+    # of stacking a second missed-call item beside it. Only unhandled rows
+    # qualify — ringing, missed, or dismissed — so a recipient who joined
+    # keeps their history and the retry reads as new, and only rows from
+    # the last ten minutes qualify, so a retry after a long silence opens
+    # a new item instead of resurrecting a stale one.
     def same_attempt_item(recipient)
       invitations_for(recipient.id)
         .where(handled_at: nil, invitation_grants: { user_id: user_id })
+        .where(activity_items: { created_at: SAME_ATTEMPT_WINDOW.ago.. })
         .order(created_at: :desc)
         .first
     end
