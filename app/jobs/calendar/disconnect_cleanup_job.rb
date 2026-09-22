@@ -42,13 +42,16 @@ class Calendar::DisconnectCleanupJob < ApplicationJob
     nil
   end
 
-  def perform(google_event_ids, credentials_blob)
+  def perform(google_event_ids, credentials_blob, account_id = nil)
     credentials = if credentials_blob.is_a?(Hash)
       credentials_blob # Legacy raw snapshot from before encryption.
     else
       self.class.decrypt_credentials(credentials_blob)
     end
-    return if credentials.blank?
+    if credentials.blank?
+      Rails.logger.warn "Calendar::DisconnectCleanupJob skipped cleanup for account #{account_id || "unknown"}: credentials expired or unreadable"
+      return
+    end
 
     credentials = credentials.with_indifferent_access
     client = Google::Client.new(

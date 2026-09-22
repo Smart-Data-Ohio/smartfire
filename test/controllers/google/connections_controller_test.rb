@@ -221,6 +221,7 @@ class Google::ConnectionsControllerTest < ActionDispatch::IntegrationTest
     job = enqueued_jobs.find { |enqueued| enqueued[:job] == Calendar::DisconnectCleanupJob }
     assert_equal [ first.google_event_id, second.google_event_id ].sort, job[:args].first.sort
     blob = job[:args].second
+    assert_equal account.id, job[:args].third
     assert_not_includes blob, refresh_token
     assert_equal refresh_token, Calendar::DisconnectCleanupJob.decrypt_credentials(blob).with_indifferent_access[:refresh_token]
 

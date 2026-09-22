@@ -66,7 +66,7 @@ class UserTest < ActiveSupport::TestCase
   end
 
   test "deactivating revokes the Google grant in the background" do
-    GoogleAccount.create!(user: users(:david), email: "david@gmail.test",
+    account = GoogleAccount.create!(user: users(:david), email: "david@gmail.test",
       refresh_token: "refresh-token", access_token: "access-token", access_token_expires_at: 1.hour.from_now)
 
     assert_enqueued_with(job: Calendar::DisconnectCleanupJob) do
@@ -76,6 +76,7 @@ class UserTest < ActiveSupport::TestCase
     job = enqueued_jobs.find { |enqueued| enqueued[:job] == Calendar::DisconnectCleanupJob }
     assert_equal [], job[:args].first
     blob = job[:args].second
+    assert_equal account.id, job[:args].third
     assert_not_includes blob, "refresh-token"
     assert_equal "refresh-token", Calendar::DisconnectCleanupJob.decrypt_credentials(blob).with_indifferent_access[:refresh_token]
 

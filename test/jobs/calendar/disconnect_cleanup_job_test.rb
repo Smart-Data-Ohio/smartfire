@@ -164,6 +164,27 @@ class Calendar::DisconnectCleanupJobTest < ActiveSupport::TestCase
     assert_not_requested :post, GOOGLE_REVOKE_URL
   end
 
+  test "an unreadable credentials blob logs a warning with the account id" do
+    account = connect_google!(@david)
+    access_token = account.access_token
+    refresh_token = account.refresh_token
+    blob = account.cleanup_snapshot
+    account_id = account.id
+    tampered = blob.dup
+    tampered[10] = (tampered[10] == "A" ? "B" : "A")
+    account.destroy!
+
+    log = capture_job_logs do
+      Calendar::DisconnectCleanupJob.perform_now([ "orphan-id" ], tampered, account_id)
+    end
+
+    assert_includes log, "account #{account_id}"
+    assert_not_includes log, access_token
+    assert_not_includes log, refresh_token
+    assert_not_requested :delete, %r{\A#{Regexp.escape(GOOGLE_EVENTS_URL)}/}
+    assert_not_requested :post, GOOGLE_REVOKE_URL
+  end
+
   test "tokens never reach the job logs" do
     account = connect_google!(@david)
     access_token = account.access_token

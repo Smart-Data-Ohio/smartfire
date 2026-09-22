@@ -58,9 +58,10 @@ module Google
       if (account = Current.user.google_account)
         google_event_ids = Current.user.event_calendar_entries.pluck(:google_event_id)
         snapshot = account.cleanup_snapshot
+        account_id = account.id
         Current.user.event_calendar_entries.delete_all
         account.destroy!
-        Calendar::DisconnectCleanupJob.perform_later(google_event_ids, snapshot) if snapshot
+        Calendar::DisconnectCleanupJob.perform_later(google_event_ids, snapshot, account_id) if snapshot
       end
 
       redirect_to user_profile_path, notice: "Google Calendar disconnected."
