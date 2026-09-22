@@ -117,9 +117,12 @@ own deliverable rows with the message payload resolved at query time,
 plus the last scanned row id, which the client passes back as `since`
 to page forward. Rows for messages the agent can no longer read
 (membership or grant revoked, message deleted) are omitted, and so are
-work rows whose thread is gone — but every scanned row still advances
+work rows whose thread is gone without a snapshot — but every scanned
+row still advances
 `next_since`, so a fully dropped page returns no rows with a cursor
-that moves past them. `POST /agents/events/:id/ack` marks a row
+that moves past them. A deleted thread's `work_unassigned` row is the
+exception: it returns its pre-destroy snapshot marked
+`thread_deleted: true`. `POST /agents/events/:id/ack` marks a row
 `acknowledged` and is idempotent. Both require `read_messages`
 (`Agent#has_capability_anywhere?` at the endpoint, per-room `Agent#can?`
 per row and per ack).
@@ -474,7 +477,8 @@ same additive `agent` key plus `event_type` and the `work` key, gated
 on current room membership and `read_messages` like message delivery,
 so the assigner's request never waits on it. `ack` works on these
 rows. A deletion notifies through a snapshot of the thread taken
-before destroy, since polling drops rows whose thread is gone.
+before destroy: polling returns it marked `thread_deleted: true`,
+while assignment rows whose thread is gone stay dropped.
 
 ### Agent API (Bearer-only, JSON)
 

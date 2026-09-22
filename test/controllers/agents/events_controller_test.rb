@@ -158,14 +158,68 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     thread.update_work!(actor: users(:david), work_status: "planned", work_owner_id: @bot.id)
     assigned_id = @agent.agent_events.where(event_type: "work_assigned").last.id
     thread.destroy!
-    unassigned_id = @agent.agent_events.where(event_type: "work_unassigned").last.id
+
+    # The snapshot-less assignment row still drops in Ruby after SQL
+    # filtering, so a one-row page over it returns nothing but moves the
+    # cursor past it; the deletion's unassignment follows on later pages.
+    get agents_events_url(limit: 1), headers: bearer_headers
+
+    assert_response :success
+    assert_empty response.parsed_body["events"]
+    assert_equal assigned_id, response.parsed_body["next_since"]
+  end
+
+  test "a deleted thread's unassignment polls from its snapshot marked thread_deleted" do
+    WebMock.stub_request(:post, webhooks(:bender).url).to_return(status: 200)
+
+    thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Doomed work")
+    thread.update_work!(actor: users(:david), work_status: "planned", work_owner_id: @bot.id)
+    assigned_id = @agent.agent_events.where(event_type: "work_assigned").last.id
+    thread.deleted_by = users(:david)
+    thread.destroy!
+    unassigned = @agent.agent_events.where(event_type: "work_unassigned").last
+
+    get agents_events_url, headers: bearer_headers
+
+    assert_response :success
+    rows = response.parsed_body["events"]
+    assert_equal [ unassigned.id ], rows.map { |row| row["id"] }
+    row = rows.sole
+    assert_equal "work_unassigned", row["event_type"]
+    assert_equal true, row["thread_deleted"]
+    assert_nil row["message"]
+    assert_equal "David", row.dig("actor", "name")
+    assert_equal unassigned.metadata["work_snapshot"], row["work"]
+    assert_equal "Doomed work", row.dig("work", "title")
+    assert_equal thread.id, row.dig("work", "thread_id")
+    assert_equal unassigned.id, response.parsed_body["next_since"]
+    assert_operator response.parsed_body["next_since"], :>, assigned_id
+  end
+
+  test "live work rows carry no thread_deleted key" do
+    thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Live work")
+    thread.update_work!(actor: users(:david), work_status: "planned", work_owner_id: @bot.id)
+
+    get agents_events_url, headers: bearer_headers
+
+    assert_response :success
+    row = response.parsed_body["events"].sole
+    assert_equal "work_assigned", row["event_type"]
+    assert_not_includes row.keys, "thread_deleted"
+  end
+
+  test "a deleted thread's snapshot stays hidden after membership removal" do
+    thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Hidden work")
+    thread.update_work!(actor: users(:david), work_status: "planned", work_owner_id: @bot.id)
+    thread.destroy!
+    assert_equal 1, @agent.agent_events.where(event_type: "work_unassigned").count
+
+    memberships(:bender_watercooler).destroy!
 
     get agents_events_url, headers: bearer_headers
 
     assert_response :success
     assert_empty response.parsed_body["events"]
-    assert_equal unassigned_id, response.parsed_body["next_since"]
-    assert_operator response.parsed_body["next_since"], :>, assigned_id
   end
 
   test "polling resolves membership and grants once per poll regardless of row count" do

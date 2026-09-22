@@ -971,8 +971,9 @@ class ChannelThread < ApplicationRecord
 
     # An agent-owned thread that is deleted unassigns its owner the same
     # way clearing the owner does. The row is readable in the ledger and
-    # by webhook; polling drops it like any row whose thread is gone, and
-    # next_since still advances past it.
+    # by webhook, and polling returns its pre-destroy snapshot marked
+    # thread_deleted; assignment rows without a snapshot stay dropped,
+    # and next_since still advances past them.
     def emit_deleted_work_unassigned
       agent = agent_for_work_owner(work_owner)
       return unless agent

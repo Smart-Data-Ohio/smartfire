@@ -16,14 +16,16 @@ class Agents::EventsController < ApplicationController
   # GET /agents/events?since=<id>&limit=<n> (Bearer-only, JSON). Returns
   # the agent's own deliverable rows ordered by id, plus next_since: the
   # last scanned row id, which the client passes back as since. Rows the
-  # Ruby payload builders drop after SQL filtering (a deleted thread, a
-  # revoked message) still advance the cursor, so a fully dropped page
-  # returns no rows but never strands the client. Readability (message
-  # exists, membership, read grant) filters in SQL before the limit
-  # applies, so revoked rows can never hide newer readable rows.
-  # Approval decision rows carry no message and render an approval
-  # payload instead; GitHub completion rows render a github_action
-  # payload instead, and work rows render a work payload instead.
+  # Ruby payload builders drop after SQL filtering (a revoked message, a
+  # deleted thread without a snapshot) still advance the cursor, so a
+  # fully dropped page returns no rows but never strands the client.
+  # Readability (message exists, membership, read grant) filters in SQL
+  # before the limit applies, so revoked rows can never hide newer
+  # readable rows. Approval decision rows carry no message and render an
+  # approval payload instead; GitHub completion rows render a
+  # github_action payload instead, and work rows render a work payload
+  # instead. A deleted thread's work_unassigned row renders its
+  # pre-destroy snapshot marked thread_deleted.
   def index
     no_store_response!
 
@@ -184,8 +186,24 @@ class Agents::EventsController < ApplicationController
       metadata = event.metadata.is_a?(Hash) ? event.metadata : {}
       thread = @thread_cache&.dig(metadata["thread_id"]) || ChannelThread.find_by(id: metadata["thread_id"])
       room = event.room
-      return if thread.nil? || room.nil?
+      return if room.nil?
       return unless poll_room_readable?(room)
+
+      # A deleted thread has no live payload to build, but its
+      # work_unassigned row carries a pre-destroy snapshot taken while the
+      # agent could still read it. Poll-only agents learn the deletion
+      # from exactly that snapshot, marked thread_deleted, with no live
+      # data beyond it. Assignment rows have no snapshot and stay dropped.
+      work = if thread
+        Agent::Delivery.work_payload(thread, assigned_by: metadata["assigned_by"])
+      else
+        return unless event.event_type == "work_unassigned"
+
+        snapshot = metadata["work_snapshot"]
+        return unless snapshot.is_a?(Hash)
+
+        snapshot
+      end
 
       {
         id: event.id,
@@ -194,7 +212,8 @@ class Agents::EventsController < ApplicationController
         created_at: event.created_at&.utc,
         room: { id: room.id, name: room.name },
         actor: event.actor ? { id: event.actor.id, name: event.actor.name } : nil,
-        work: Agent::Delivery.work_payload(thread, assigned_by: metadata["assigned_by"])
+        work: work,
+        thread_deleted: (true if thread.nil?)
       }.compact
     end
 
