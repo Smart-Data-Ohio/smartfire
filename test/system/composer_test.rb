@@ -134,21 +134,14 @@ class ComposerTest < ApplicationSystemTestCase
     assert_equal room_path(@room), current_path
   end
 
-  test "clicking a reply preview falls back to the permalink when the target is gone" do
+  test "clicking a reply preview falls back to the permalink when the target is not loaded" do
     target = messages(:third)
     reply = send_reply(target, "A reply for preview fallback")
 
-    within_message(target) do
-      find("[data-message-edit-format], [data-reply-target='body']", match: :first).right_click
-      assert_selector "[data-message-actions-target='menu']", visible: true, wait: 10
-      accept_confirm { click_on "Delete message", exact: true }
-    end
-    assert_no_selector "##{dom_id(target)}", wait: 10
-
-    # The stale preview link is still there: nothing re-rendered the reply yet.
-    within_message(reply) do
-      assert_selector ".message__reply-preview-link", visible: true
-    end
+    # Stand in for a target paginated out of the loaded history: the preview
+    # can no longer scroll to it, so the click must follow the permalink.
+    page.execute_script("document.getElementById(arguments[0]).remove()", dom_id(target))
+    assert_no_selector "##{dom_id(target)}"
 
     page.execute_script <<~JS
       window.__composerTestUrls = [];
@@ -161,18 +154,28 @@ class ComposerTest < ApplicationSystemTestCase
       find(".message__reply-preview-link").click
     end
 
-    # The link is followed instead of intercepted: the preview lives inside
-    # the message turbo-frame, so the permalink resolves as a frame visit
-    # that re-renders the tombstone without scrolling or highlighting.
     page.document.synchronize(Capybara.default_max_wait_time) do
       urls = page.evaluate_script("window.__composerTestUrls")
       raise Capybara::ElementNotFound unless urls.any? { |url| url.include?("/@") }
     end
+    assert_no_selector ".message--reply-target"
+  end
+
+  test "deleting a replied-to message turns open reply previews into a tombstone" do
+    target = messages(:third)
+    reply = send_reply(target, "A reply whose source goes away")
+
+    within_message(target) do
+      find("[data-message-edit-format], [data-reply-target='body']", match: :first).right_click
+      assert_selector "[data-message-actions-target='menu']", visible: true, wait: 10
+      accept_confirm { click_on "Delete message", exact: true }
+    end
+    assert_no_selector "##{dom_id(target)}", wait: 10
 
     within_message(reply) do
       assert_selector ".message__reply-preview", text: "Replying to a deleted message", wait: 10
+      assert_no_selector ".message__reply-preview-link"
     end
-    assert_no_selector ".message--reply-target"
   end
 
   test "two typers with the same name do not merge" do

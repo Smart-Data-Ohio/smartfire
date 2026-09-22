@@ -53,6 +53,14 @@
     </figure>
   </div>
 
+  <% if @query.present? && @messages.empty? %>
+    <p class="searches__empty">No messages match “<%= @query %>”.</p>
+  <% end %>
+
+  <% if @has_more_older %>
+    <%= render "searches/load_older", query: params[:q], oldest_id: @messages.first.id %>
+  <% end %>
+
   <%= search_results_tag do %>
     <%= render partial: "messages/message", collection: @messages, locals: { show_room_icon: true } %>
   <% end %>
@@ -66,8 +74,10 @@
       <span class="for-screen-reader">Exit search </span>
     <% end %>
 
+    <%# A full-page submit: results render as a page, while the turbo_stream
+        format is reserved for the "Load older results" prepend. %>
     <%= form_with url: searches_path, class: "margin-block flex-item-grow contain flex align-center gap",
-          data: { controller: "form", action: "keydown.esc->form#cancel" } do |form| %>
+          data: { turbo: false, controller: "form", action: "keydown.esc->form#cancel" } do |form| %>
       <div class="composer__input flex align-center flex-item-grow gap full-width input input--actor min-width">
         <%= image_tag "search.svg", size: 20, aria: { hidden: "true" }, class: "composer__input-hint colorize--black", style: "view-transition-name: input-btn;" %>
 

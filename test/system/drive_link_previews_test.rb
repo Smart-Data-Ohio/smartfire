@@ -74,7 +74,9 @@ class DriveLinkPreviewsTest < ApplicationSystemTestCase
     assert_selector '[role="dialog"][aria-label="Find a Drive file"]'
     assert_selector ".drive-picker__item", text: "Q3 Planning"
 
+    install_drive_search_recorder
     fill_in "Search Drive files", with: "plan"
+    wait_for_drive_search "plan"
 
     assert_selector ".drive-picker__item", text: "Q3 Planning"
     assert_selector ".drive-picker__meta", text: /Modified.+Riel/
@@ -99,6 +101,39 @@ class DriveLinkPreviewsTest < ApplicationSystemTestCase
   end
 
   private
+    # The picker's search is debounced, and the stub answers every query
+    # with the same files, so the list assertions pass on the stale initial
+    # results while the q=plan request is still pending. Waiting for it to
+    # settle keeps the debounced request from outliving the WebMock stubs
+    # at teardown, where it flaked as an unstubbed Drive files search.
+    def wait_for_drive_search(query, timeout: 10)
+      page.document.synchronize(timeout, errors: [ Capybara::ExpectationNotMet ]) do
+        unless page.evaluate_script("window.settledDriveSearches.includes(#{query.to_json})")
+          raise Capybara::ExpectationNotMet, "expected the debounced Drive search for #{query.inspect} to settle"
+        end
+      end
+    end
+
+    def install_drive_search_recorder
+      page.execute_script <<~JS
+        window.settledDriveSearches = [];
+        if (!window.driveSearchWrapped) {
+          window.driveSearchWrapped = true;
+          const originalFetch = window.fetch.bind(window);
+          window.fetch = (input, init) => {
+            const url = String((input && input.url) || input);
+            const promise = originalFetch(input, init);
+            if (url.includes("/google/drive/files")) {
+              const query = new URL(url, window.location.origin).searchParams.get("q");
+              const record = () => window.settledDriveSearches.push(query);
+              promise.then(record, record);
+            }
+            return promise;
+          };
+        }
+      JS
+    end
+
     def install_fetch_recorder
       page.execute_script <<~JS
         window.driveFetchUrls = [];

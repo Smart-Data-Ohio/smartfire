@@ -37,6 +37,33 @@ class MessageForwardsControllerTest < ActionDispatch::IntegrationTest
     assert response.parsed_body.key?("destinations")
   end
 
+  test "destinations excludes board rooms" do
+    board = Rooms::Board.create_for({ name: "Launch", creator: users(:jz) }, users: [ users(:jz) ])
+
+    get room_message_forward_destinations_url(@room, @message, format: :json)
+
+    assert_response :success
+    destinations = response.parsed_body.fetch("destinations")
+    assert destinations.none? { |destination| destination.fetch("room_id") == board.id }, "boards must not be offered"
+    assert destinations.any? { |destination| destination.fetch("room_id") == @room.id }, "channels are still offered"
+  end
+
+  test "create refuses board destinations on the server" do
+    board = Rooms::Board.create_for({ name: "Launch", creator: users(:jz) }, users: [ users(:jz) ])
+    board_post = ChannelThread.create!(room: board, creator: users(:jz), name: "Ship it", work_status: "planned")
+
+    # A thread destination: root forwards into boards already fail on the
+    # message validation, so only a post destination exercises the new check.
+    assert_no_difference -> { Message.count } do
+      post room_message_forwards_url(@room, @message, format: :json), params: {
+        forward: { destinations: [ { room_id: board.id, thread_id: board_post.id } ] }
+      }
+    end
+
+    assert_response :unprocessable_content
+    assert_match(/board/i, response.parsed_body.fetch("error"))
+  end
+
   test "direct destinations use the other participant's display name" do
     direct = Current.set(user: users(:jz)) do
       Rooms::Direct.find_or_create_for([ users(:jz), users(:kevin) ])

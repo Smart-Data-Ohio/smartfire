@@ -71,6 +71,52 @@ class Messages::ForwarderTest < ActiveSupport::TestCase
     assert_equal before_blobs, ActiveStorage::Blob.count
   end
 
+  test "marks forwards of Markdown sources as Markdown without making them Markdown records" do
+    forwarded = Messages::Forwarder.call(
+      source: @source, destinations: [ { room_id: @destination.id } ], creator: @creator
+    ).sole.message
+
+    assert_predicate @source, :markdown?
+    assert_predicate forwarded, :forwarded_markdown?
+    assert_not_predicate forwarded, :markdown?
+  end
+
+  test "leaves forwards of legacy sources on the legacy path" do
+    legacy = @source_room.root_messages.create!(
+      body: "<div>legacy source</div>", client_message_id: "legacy-forward-source", creator: @creator
+    )
+    forwarded = Messages::Forwarder.call(
+      source: legacy, destinations: [ { room_id: @destination.id } ], creator: @creator
+    ).sole.message
+
+    assert_not forwarded.forwarded_markdown?
+  end
+
+  test "forwarding a Markdown forward keeps the Markdown flag" do
+    first = Messages::Forwarder.call(
+      source: @source, destinations: [ { room_id: @destination.id } ], creator: @creator
+    ).sole.message
+    second = Messages::Forwarder.call(
+      source: first, destinations: [ { room_id: @source_room.id } ], creator: @creator
+    ).sole.message
+
+    assert_predicate second, :forwarded_markdown?
+  end
+
+  test "refuses board rooms as destinations" do
+    board = Rooms::Board.create_for({ name: "Launch", creator: @creator }, users: [ @creator ])
+    post = ChannelThread.create!(room: board, creator: @creator, name: "Ship it", work_status: "planned")
+
+    assert_raises(Messages::Forwarder::InvalidDestination) do
+      Messages::Forwarder.call(source: @source, destinations: [ { room_id: board.id } ], creator: @creator)
+    end
+    assert_raises(Messages::Forwarder::InvalidDestination) do
+      Messages::Forwarder.call(
+        source: @source, destinations: [ { room_id: board.id, thread_id: post.id } ], creator: @creator
+      )
+    end
+  end
+
   test "copied body mentions do not notify while a new forward note can" do
     forwarded = Messages::Forwarder.call(
       source: @source,

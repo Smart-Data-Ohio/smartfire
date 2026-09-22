@@ -127,6 +127,24 @@ class Twitter::PostTest < ActiveSupport::TestCase
     end
   end
 
+  test "URLs in code spans and fenced blocks create no references" do
+    message = @room.messages.create!(
+      creator: @creator,
+      markdown_source: <<~MARKDOWN,
+        see `https://x.com/jack/status/901` inline
+
+        ```text
+        https://x.com/jack/status/902
+        ```
+
+        but do read https://x.com/jack/status/903
+      MARKDOWN
+      client_message_id: "x-ref-code"
+    )
+
+    assert_equal [ "903" ], message.twitter_posts.map(&:post_id)
+  end
+
   test "editing a message to add a post URL adds the reference" do
     message = @room.messages.create!(
       creator: @creator, markdown_source: "just chatting", client_message_id: "x-ref-edit"
