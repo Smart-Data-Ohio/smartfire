@@ -12,6 +12,14 @@ module ApplicationHelper
     end
   end
 
+  # The saved zone for the timezone controller, or an empty marker when
+  # the member explicitly chose "Not set": the controller reports only
+  # while the tag has no content at all, so the marker suppresses a
+  # detection the server would ignore anyway.
+  def current_user_time_zone_meta_content
+    Current.user.time_zone.presence || ("" if Current.user.time_zone_explicit?)
+  end
+
   def custom_styles_tag
     if custom_styles = Current.account&.custom_styles
       tag.style(custom_styles.to_s.html_safe, data: { turbo_track: "reload" })

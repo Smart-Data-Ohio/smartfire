@@ -22,6 +22,15 @@ class Users::TimeZonesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Eastern Time (US & Canada)", users(:david).reload.time_zone
   end
 
+  test "detection never overwrites an explicit choice, not even Not set" do
+    users(:david).update!(time_zone_explicit: true)
+
+    patch user_time_zone_url, params: { time_zone: "America/New_York" }, as: :json
+
+    assert_response :success
+    assert_nil users(:david).reload.time_zone
+  end
+
   test "an unknown zone is ignored" do
     patch user_time_zone_url, params: { time_zone: "Narnia" }, as: :json
 

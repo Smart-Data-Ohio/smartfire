@@ -271,6 +271,49 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Pacific Time (US & Canada)", users(:david).time_zone
   end
 
+  test "an IANA time zone round-trips through the form" do
+    users(:david).update!(time_zone: "America/New_York")
+
+    get user_profile_url
+    assert_response :success
+    assert_select "select#user_time_zone option[selected][value='America/New_York']"
+
+    put user_profile_url, params: { user: { time_zone: "America/New_York" } }
+    assert_redirected_to user_profile_url
+    assert_equal "America/New_York", users(:david).reload.time_zone
+
+    get user_profile_url
+    assert_select "select#user_time_zone option[selected][value='America/New_York']"
+  end
+
+  test "a legacy Rails time zone name still shows selected" do
+    users(:david).update!(time_zone: "Pacific Time (US & Canada)")
+
+    get user_profile_url
+    assert_response :success
+    assert_select "select#user_time_zone option[selected][value='America/Los_Angeles']"
+  end
+
+  test "choosing a time zone or Not set records an explicit choice" do
+    put user_profile_url, params: { user: { time_zone: "America/New_York" } }
+    assert_redirected_to user_profile_url
+    assert_equal "America/New_York", users(:david).reload.time_zone
+    assert users(:david).time_zone_explicit?
+
+    put user_profile_url, params: { user: { time_zone: "" } }
+    assert_redirected_to user_profile_url
+    assert_nil users(:david).reload.time_zone
+    assert users(:david).time_zone_explicit?
+  end
+
+  test "the layout marks an explicit Not set so the browser skips detection" do
+    users(:david).update!(time_zone_explicit: true)
+
+    get user_profile_url
+    assert_response :success
+    assert_select "meta[name=current-user-time-zone][content='']", count: 1
+  end
+
   test "update rejects an unknown theme or time zone" do
     put user_profile_url, params: { user: { theme: "neon" } }
     assert_response :unprocessable_entity

@@ -109,10 +109,15 @@ constant query cost as followers and the roster grow.
 Each member has a time zone, detected from the browser on first visit
 (the `timezone` Stimulus controller reports
 `Intl.DateTimeFormat().resolvedOptions().timeZone` once, only while none
-is saved) and editable on the profile page. Every request renders in the
-member's zone (`SetTimeZone`, with an around hook that restores the
-previous zone even when the action raises), and quiet hours plus custom
-status expiries evaluate in it.
+is saved and none was explicitly chosen) and editable on the profile
+page. The form's options carry IANA identifiers (what detection
+stores); legacy Rails names still validate and map to their identifier
+for display. Saving the form — even as "Not set" — marks the choice
+explicit (`users.time_zone_explicit`), so detection never overwrites a
+decision the member made. Every request renders in the member's zone
+(`SetTimeZone`, with an around hook that restores the previous zone
+even when the action raises), and quiet hours plus custom status
+expiries evaluate in it.
 
 ## Theme
 

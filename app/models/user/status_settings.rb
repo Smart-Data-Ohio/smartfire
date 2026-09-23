@@ -21,6 +21,10 @@ module User::StatusSettings
     has_many :dnd_allowed_users, dependent: :delete_all
     has_many :dnd_allowed_people, through: :dnd_allowed_users, source: :allowed_user
 
+    # The "Not set" form option submits a blank string; store it as nil so
+    # every reader keeps testing blankness one way.
+    normalizes :time_zone, with: ->(zone) { zone.presence }
+
     validates :presence_setting, inclusion: { in: PRESENCE_SETTINGS }
     validates :theme, inclusion: { in: THEMES }
     validates :custom_status_emoji, length: { maximum: CUSTOM_STATUS_EMOJI_LIMIT }, allow_nil: true

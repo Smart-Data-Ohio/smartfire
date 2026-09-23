@@ -18,7 +18,8 @@
 
     <div class="flex align-center gap pad-block-half">
       <%= form.label :time_zone, "Time zone", class: "txt-medium" %>
-      <%= form.time_zone_select :time_zone, nil, { include_blank: "Not set (use system)" },
+      <%= form.select :time_zone, profile_time_zone_choices,
+            { include_blank: "Not set (use system)", selected: profile_time_zone_value(@user.time_zone) },
             { class: "input flex-item-grow", id: "user_time_zone" } %>
     </div>
     <p class="txt-small margin-none">Detected from your browser on first visit. Times, reminders, and quiet hours use it.</p>
