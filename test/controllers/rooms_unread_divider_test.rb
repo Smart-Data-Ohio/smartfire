@@ -48,9 +48,10 @@ class RoomsUnreadDividerTest < ActionDispatch::IntegrationTest
     assert_match "messages-scroll-to-divider-value=\"true\"", @response.body
   end
 
-  test "a first unread off the last page re-pages around it" do
+  test "a first unread off the last page keeps the page and links the pill to it" do
     first = @room.root_messages.ordered.first
     @membership.update!(unread_at: 1.hour.ago, last_read_message_id: first.id)
+    first_unread = @membership.first_unread_message
 
     (Message::PAGE_SIZE + 5).times do |i|
       travel 1.second do
@@ -60,9 +61,8 @@ class RoomsUnreadDividerTest < ActionDispatch::IntegrationTest
 
     get room_url(@room)
     assert_response :success
-    assert_match "unread-divider", @response.body
-    assert_match "messages-scroll-to-divider-value=\"true\"", @response.body
-    assert_match "Overflow 0", @response.body
+    assert_no_match "unread-divider", @response.body
+    assert_select "a#jump-to-unread[href=?]", room_path(@room, message_id: first_unread.id)
   end
 
   test "an anchored message keeps its own page with the divider when visible" do
