@@ -262,4 +262,106 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
     get user_profile_url
     assert_select "input[name=?]", "user[current_password]", count: 0
   end
+
+  test "update saves the theme and time zone" do
+    put user_profile_url, params: { user: { theme: "dark", time_zone: "Pacific Time (US & Canada)" } }
+
+    assert_redirected_to user_profile_url
+    assert_equal "dark", users(:david).reload.theme
+    assert_equal "Pacific Time (US & Canada)", users(:david).time_zone
+  end
+
+  test "an IANA time zone round-trips through the form" do
+    users(:david).update!(time_zone: "America/New_York")
+
+    get user_profile_url
+    assert_response :success
+    assert_select "select#user_time_zone option[selected][value='America/New_York']"
+
+    put user_profile_url, params: { user: { time_zone: "America/New_York" } }
+    assert_redirected_to user_profile_url
+    assert_equal "America/New_York", users(:david).reload.time_zone
+
+    get user_profile_url
+    assert_select "select#user_time_zone option[selected][value='America/New_York']"
+  end
+
+  test "a legacy Rails time zone name still shows selected" do
+    users(:david).update!(time_zone: "Pacific Time (US & Canada)")
+
+    get user_profile_url
+    assert_response :success
+    assert_select "select#user_time_zone option[selected][value='America/Los_Angeles']"
+  end
+
+  test "choosing a time zone or Not set records an explicit choice" do
+    put user_profile_url, params: { user: { time_zone: "America/New_York" } }
+    assert_redirected_to user_profile_url
+    assert_equal "America/New_York", users(:david).reload.time_zone
+    assert users(:david).time_zone_explicit?
+
+    put user_profile_url, params: { user: { time_zone: "" } }
+    assert_redirected_to user_profile_url
+    assert_nil users(:david).reload.time_zone
+    assert users(:david).time_zone_explicit?
+  end
+
+  test "the layout marks an explicit Not set so the browser skips detection" do
+    users(:david).update!(time_zone_explicit: true)
+
+    get user_profile_url
+    assert_response :success
+    assert_select "meta[name=current-user-time-zone][content='']", count: 1
+  end
+
+  test "update rejects an unknown theme or time zone" do
+    put user_profile_url, params: { user: { theme: "neon" } }
+    assert_response :unprocessable_entity
+
+    put user_profile_url, params: { user: { time_zone: "Narnia" } }
+    assert_response :unprocessable_entity
+
+    assert_equal "system", users(:david).reload.theme
+    assert_nil users(:david).time_zone
+  end
+
+  test "the layout carries the theme, time zone, and sound state" do
+    users(:david).update!(theme: "light", time_zone: "Pacific Time (US & Canada)", dnd_enabled: true)
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "html[data-theme=light]"
+    assert_select "meta[name=color-scheme][content=light]", count: 1
+    assert_select "meta[name=current-user-time-zone][content='Pacific Time (US & Canada)']", count: 1
+    assert_select "meta[name=notification-dnd][content=muted]", count: 1
+  end
+
+  test "the layout mutes sounds for the DND presence" do
+    users(:david).update!(presence_setting: "dnd")
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=notification-dnd][content=muted]", count: 1
+  end
+
+  test "the layout sends the quiet-hours window and zone for the sound gate" do
+    users(:david).update!(time_zone: "UTC", quiet_hours_enabled: true,
+      quiet_hours_start_minute: 1320, quiet_hours_end_minute: 420)
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=quiet-hours][content='1320-420']", count: 1
+    assert_select "meta[name=quiet-hours-zone][content='UTC']", count: 1
+
+    users(:david).update!(quiet_hours_enabled: false)
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=quiet-hours]", count: 0
+    assert_select "meta[name=quiet-hours-zone]", count: 0
+  end
 end

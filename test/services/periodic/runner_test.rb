@@ -18,7 +18,21 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
     Event::ReminderDispatcher.expects(:dispatch_due!).once
 
     assert_enqueued_with(job: Retention::PruneJob) do
-      assert_equal [ "delayed jobs", "event reminders", "saved item reminders", "stuck rooms", "stranded agent webhooks", "stuck GitHub claims", "calendar push channels", "retention prune" ], @runner.tick
+      assert_equal [ "delayed jobs", "event reminders", "saved item reminders", "stuck rooms", "stranded agent webhooks", "stuck GitHub claims", "calendar push channels", "retention prune", "presence leases" ], @runner.tick
+    end
+  end
+
+  test "a tick prunes expired presence leases" do
+    Periodic::DelayedJobDrain.stubs(:drain_due!)
+    Event::ReminderDispatcher.stubs(:dispatch_due!)
+
+    user = users(:david)
+    session = sessions(:david_safari)
+    2.times { WorkspacePresenceLease.establish(user:, session:) }
+    WorkspacePresenceLease.update_all(expires_at: 1.minute.ago)
+
+    assert_difference -> { WorkspacePresenceLease.count }, -2 do
+      @runner.tick
     end
   end
 

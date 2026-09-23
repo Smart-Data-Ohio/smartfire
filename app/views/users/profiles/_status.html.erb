@@ -1,0 +1,42 @@
+<%= form_with model: @user, url: user_status_path, method: :patch, data: { controller: "form" }, class: "flex flex-column gap" do |form| %>
+  <fieldset class="margin-none">
+    <legend class="txt-large">Status</legend>
+    <p class="txt-small margin-none">Automatic shows you online while you're here and idle after 10 quiet minutes. Your custom status shows beside your name.</p>
+
+    <div class="flex align-center gap pad-block-half">
+      <%= form.label :presence_setting, "Presence", class: "txt-medium" %>
+      <%= form.select :presence_setting,
+            options_for_select([ [ "Automatic", "auto" ], [ "Do not disturb", "dnd" ], [ "Invisible (appear offline)", "invisible" ] ], @user.presence_setting),
+            {}, { class: "input", id: "user_presence_setting" } %>
+    </div>
+    <% if @user.errors[:presence_setting].any? %>
+      <p class="txt-small margin-none" style="color: var(--color-negative)">Presence <%= @user.errors[:presence_setting].to_sentence %>.</p>
+    <% end %>
+
+    <div class="flex align-center gap pad-block-half">
+      <%= form.label :custom_status_emoji, "Emoji", class: "txt-medium" %>
+      <%= form.text_field :custom_status_emoji, class: "input", maxlength: User::StatusSettings::CUSTOM_STATUS_EMOJI_LIMIT,
+            placeholder: "😀", autocomplete: "off", size: 6, id: "user_custom_status_emoji" %>
+      <%= form.label :custom_status_text, "Status text", class: "txt-medium for-screen-reader" %>
+      <%= form.text_field :custom_status_text, class: "input flex-item-grow", maxlength: User::StatusSettings::CUSTOM_STATUS_TEXT_LIMIT,
+            placeholder: "Working from the train…", autocomplete: "off", id: "user_custom_status_text" %>
+    </div>
+    <% %i[ custom_status_emoji custom_status_text ].each do |attribute| %>
+      <% if @user.errors[attribute].any? %>
+        <p class="txt-small margin-none" style="color: var(--color-negative)">Custom status <%= @user.errors[attribute].to_sentence %>.</p>
+      <% end %>
+    <% end %>
+
+    <div class="flex align-center gap pad-block-half">
+      <%= form.label :custom_status_expires_in, "Clear after", class: "txt-medium" %>
+      <%= form.select :custom_status_expires_in,
+            options_for_select(User::StatusSettings::CUSTOM_STATUS_EXPIRY_LABELS.map { |value, label| [ label, value ] }, "never"),
+            {}, { class: "input", id: "user_custom_status_expires_in" } %>
+    </div>
+
+    <div class="flex align-center gap pad-block-half">
+      <%= profile_form_submit_button %>
+      <%= form.button "Clear status", name: "user[clear_custom_status]", value: "1", class: "btn txt-small" %>
+    </div>
+  </fieldset>
+<% end %>

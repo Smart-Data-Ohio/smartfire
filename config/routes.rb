@@ -59,14 +59,19 @@ Rails.application.routes.draw do
 
   resources :users, only: :show do
     get :huddle_presence, on: :collection, to: "users/huddle_presence#show"
+    get :presence, on: :collection, to: "users/presences#show"
 
     scope module: "users" do
       resource :avatar, only: %i[ show destroy ]
       resource :ban, only: %i[ create destroy ]
+      resource :dnd_allowance, only: %i[ create destroy ]
 
       scope defaults: { user_id: "me" } do
         resource :sidebar, only: :show
         resource :profile
+        resource :status, only: :update, controller: "statuses"
+        resource :notification_settings, only: :update
+        resource :time_zone, only: :update, controller: "time_zones"
         resources :push_subscriptions do
           scope module: "push_subscriptions" do
             resources :test_notifications, only: :create

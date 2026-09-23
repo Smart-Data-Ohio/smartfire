@@ -237,6 +237,16 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_034328) do
     t.index ["work_owner_id"], name: "index_channel_threads_on_work_owner_id"
   end
 
+  create_table "dnd_allowed_users", force: :cascade do |t|
+    t.integer "allowed_user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["allowed_user_id"], name: "index_dnd_allowed_users_on_allowed_user_id"
+    t.index ["user_id", "allowed_user_id"], name: "index_dnd_allowed_users_on_user_id_and_allowed_user_id", unique: true
+    t.index ["user_id"], name: "index_dnd_allowed_users_on_user_id"
+  end
+
   create_table "drive_attachments", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "file_id", null: false
@@ -465,6 +475,15 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_034328) do
     t.index ["user_id"], name: "index_huddle_grants_on_user_id"
   end
 
+  create_table "keyword_alerts", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "phrase", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["user_id", "phrase"], name: "index_keyword_alerts_on_user_id_and_phrase", unique: true
+    t.index ["user_id"], name: "index_keyword_alerts_on_user_id"
+  end
+
   create_table "memberships", force: :cascade do |t|
     t.datetime "connected_at"
     t.integer "connections", default: 0, null: false
@@ -656,6 +675,10 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_034328) do
     t.string "bot_token"
     t.string "bot_token_digest"
     t.datetime "created_at", null: false
+    t.string "custom_status_emoji"
+    t.datetime "custom_status_expires_at"
+    t.string "custom_status_text"
+    t.boolean "dnd_enabled", default: false, null: false
     t.string "email_address"
     t.datetime "email_self_changed_at"
     t.string "github_login"
@@ -664,8 +687,15 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_034328) do
     t.json "inbox_preferences", default: {}
     t.string "name", null: false
     t.string "password_digest"
+    t.string "presence_setting", default: "auto", null: false
+    t.boolean "quiet_hours_enabled", default: false, null: false
+    t.integer "quiet_hours_end_minute"
+    t.integer "quiet_hours_start_minute"
     t.integer "role", default: 0, null: false
     t.integer "status", default: 0, null: false
+    t.string "theme", default: "system", null: false
+    t.string "time_zone"
+    t.boolean "time_zone_explicit", default: false, null: false
     t.datetime "updated_at", null: false
     t.index "LOWER(github_login)", name: "index_users_on_lower_github_login", unique: true, where: "github_login IS NOT NULL"
     t.index ["bot_token"], name: "index_users_on_bot_token", unique: true
@@ -734,6 +764,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_034328) do
     t.string "connection_id", null: false
     t.datetime "created_at", null: false
     t.datetime "expires_at", null: false
+    t.datetime "last_active_at"
     t.integer "session_id", null: false
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
@@ -753,6 +784,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_034328) do
   add_foreign_key "channel_threads", "rooms"
   add_foreign_key "channel_threads", "users", column: "creator_id"
   add_foreign_key "channel_threads", "users", column: "work_owner_id", on_delete: :nullify
+  add_foreign_key "dnd_allowed_users", "users"
+  add_foreign_key "dnd_allowed_users", "users", column: "allowed_user_id"
   add_foreign_key "drive_attachments", "messages"
   add_foreign_key "event_calendar_entries", "events"
   add_foreign_key "event_calendar_entries", "users"
@@ -770,6 +803,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_034328) do
   add_foreign_key "github_repository_subscriptions", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "google_accounts", "users"
   add_foreign_key "google_identities", "users"
+  add_foreign_key "keyword_alerts", "users"
   add_foreign_key "message_pins", "messages"
   add_foreign_key "message_pins", "rooms"
   add_foreign_key "message_pins", "users", column: "pinner_id"
