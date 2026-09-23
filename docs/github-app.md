@@ -51,11 +51,13 @@ logged or shown again; unlinking deletes it.
 - Per-viewer PR card visibility uses the viewer's own token, refreshed
   first: cards for private repositories render only for viewers whose
   linked account can read the repository.
-- Agent GitHub actions use the owner's App token when the owner has a
-  usable one, else the agent's own linked account
-  (`Github::AgentIdentity`). The request, the approval card ("Acts on
-  GitHub as @login"), and execution all resolve the same identity, so the
-  decider's approval can never run as a different GitHub user.
+- Agent GitHub actions run as the owner's personal GitHub App identity
+  once the owner has linked it (else the agent's own linked account, via
+  `Github::AgentIdentity`). Every write needs a current administrator's
+  approval first — the agent's owner cannot approve a GitHub write, only
+  deny it. The request, the approval card ("Acts on GitHub as @login"),
+  and execution all resolve the same identity, so the decider's
+  approval can never run as a different GitHub user.
 - Tokens are encrypted at rest, never passed as job arguments (jobs take
   account and approval ids), and revocation is best effort (the save
   proceeds however revocation goes): a full disconnect deletes the whole
