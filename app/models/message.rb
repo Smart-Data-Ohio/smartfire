@@ -63,8 +63,10 @@ class Message < ApplicationRecord
 
   has_rich_text :body
 
-  # A streaming message that is never finalized is auto-finalized by the
-  # periodic runner after this long (see Message.finalize_overdue_streams!).
+  # A streaming message idle this long — no start, append, or replace —
+  # is auto-finalized by the periodic runner (see
+  # Message.finalize_overdue_streams!). Every save while streaming bumps
+  # streaming_updated_at and restarts the clock.
   STREAM_FINALIZE_AFTER = 10.minutes
   # Incremental stream broadcasts coalesce to about this interval per
   # message, so a fast agent cannot flood the room stream.
@@ -73,8 +75,12 @@ class Message < ApplicationRecord
   validates :markdown_source, length: { maximum: Markdown::SOURCE_LIMIT }, allow_nil: true
   validate :markdown_source_or_attachment, if: :requires_body?
   validate :drive_attachments_within_limit
+  # Streams only move toward final: nothing may flip a finalized message
+  # back to streaming.
+  validate :streaming_never_resumes, on: :update
 
   before_validation :render_markdown_body, if: :will_save_change_to_markdown_source?
+  before_save :touch_streaming_activity, if: :streaming?
   before_create -> { self.client_message_id ||= Random.uuid } # Bots don't care
   before_destroy :preserve_reply_tombstones, prepend: true
   before_destroy :capture_quote_referencing_ids, prepend: true
@@ -174,13 +180,18 @@ class Message < ApplicationRecord
       find_by(room_id: room.id, creator_id: creator.id, client_message_id: client_message_id)
     end
 
-    # Finalizes streaming messages the agent never finalized. Runs from
-    # the periodic runner. Each finalize is a conditional claim (see
+    # Finalizes streaming messages idle past STREAM_FINALIZE_AFTER. Runs
+    # from the periodic runner. Each finalize is a conditional claim (see
     # #finalize_stream!), so a sweep racing the agent finalizes once.
     # Streams in locked threads wait: the thread is frozen, so the sweep
-    # skips them and a later sweep finalizes them once unlocked.
+    # skips them and a later sweep finalizes them once unlocked. Rows the
+    # old code wrote mid-deploy carry no activity stamp; they inherit
+    # their creation time once, here.
     def finalize_overdue_streams!(now: Time.current)
-      where(streaming: true).where("messages.created_at < ?", now - STREAM_FINALIZE_AFTER).includes(:thread).find_each do |message|
+      where(streaming: true).where(streaming_updated_at: nil)
+        .update_all("streaming_updated_at = created_at")
+
+      overdue_streams(now: now).includes(:thread).find_each do |message|
         next if message.thread&.locked?
 
         begin
@@ -189,6 +200,12 @@ class Message < ApplicationRecord
           Rails.logger.error "Stream finalize failed for message #{message.id}: #{error.class}: #{error.message}"
         end
       end
+    end
+
+    # Streaming messages idle past the deadline, as a relation so the
+    # sweep and its index-coverage test share one query.
+    def overdue_streams(now: Time.current)
+      where(streaming: true).where("messages.streaming_updated_at < ?", now - STREAM_FINALIZE_AFTER)
     end
   end
 
@@ -500,6 +517,19 @@ class Message < ApplicationRecord
       self.body = [ rendered, @legacy_attachment_snapshot ].compact_blank.join("\n")
     ensure
       @legacy_attachment_snapshot = nil
+    end
+
+    # Every save while streaming — start, append, replace — restarts the
+    # sweep's inactivity clock. The finalize claim and the broadcast
+    # stamps bypass callbacks, so they never extend it.
+    def touch_streaming_activity
+      self.streaming_updated_at = Time.current
+    end
+
+    def streaming_never_resumes
+      if will_save_change_to_streaming?(from: false, to: true)
+        errors.add :streaming, "cannot resume once finalized"
+      end
     end
 
     # A stream may start empty and fill in with appends, so the body

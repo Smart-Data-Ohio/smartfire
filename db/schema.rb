@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_23_073200) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_092324) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -683,6 +683,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_073200) do
     t.integer "room_id", null: false
     t.datetime "stream_broadcast_at"
     t.boolean "streaming", default: false, null: false
+    t.datetime "streaming_updated_at"
     t.boolean "system_note", default: false, null: false
     t.integer "thread_id"
     t.datetime "updated_at", null: false
@@ -693,6 +694,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_073200) do
     t.index ["room_id", "thread_id", "created_at"], name: "index_messages_on_room_thread_created"
     t.index ["room_id"], name: "index_messages_on_room_id"
     t.index ["streaming", "created_at"], name: "index_messages_on_streaming_and_created_at", where: "streaming"
+    t.index ["streaming_updated_at"], name: "index_messages_on_streaming_updated_at", where: "streaming = 1"
     t.index ["thread_id", "created_at"], name: "index_messages_on_thread_created"
     t.index ["thread_id"], name: "index_messages_on_thread_id"
   end

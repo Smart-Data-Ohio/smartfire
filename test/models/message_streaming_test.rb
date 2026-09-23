@@ -117,7 +117,7 @@ class MessageStreamingTest < ActiveSupport::TestCase
       markdown_source: "Fresh", client_message_id: "stream-fresh")
     old = @room.root_messages.create!(creator: @bot, streaming: true,
       markdown_source: "Old hovercraft", client_message_id: "stream-old")
-    old.update_column(:created_at, 11.minutes.ago)
+    old.update_columns(created_at: 11.minutes.ago, streaming_updated_at: 11.minutes.ago)
 
     Message.finalize_overdue_streams!
 
@@ -127,12 +127,78 @@ class MessageStreamingTest < ActiveSupport::TestCase
     assert_equal 1, @agent.agent_events.where(event_type: "posted", message_id: old.id).count
   end
 
+  test "the sweep keys on inactivity, not creation" do
+    active = @room.root_messages.create!(creator: @bot, streaming: true,
+      markdown_source: "Still going", client_message_id: "stream-active")
+    active.update_columns(created_at: 20.minutes.ago, streaming_updated_at: 1.minute.ago)
+    idle = @room.root_messages.create!(creator: @bot, streaming: true,
+      markdown_source: "Gone quiet", client_message_id: "stream-idle")
+    idle.update_columns(created_at: 20.minutes.ago, streaming_updated_at: 11.minutes.ago)
+
+    Message.finalize_overdue_streams!
+
+    assert_predicate active.reload, :streaming?
+    assert_not idle.reload.streaming?
+  end
+
+  test "starting and appending stamp the stream's last activity" do
+    message = @room.root_messages.create!(creator: @bot, streaming: true,
+      markdown_source: "Draft", client_message_id: "stream-stamp")
+
+    assert_in_delta Time.current, message.reload.streaming_updated_at, 5
+
+    travel 5.minutes do
+      result = Agents::Streaming.update(agent: @agent, id: message.id, append: " more")
+
+      assert result.ok?
+      assert_in_delta Time.current, message.reload.streaming_updated_at, 5
+    end
+
+    travel 5.minutes do
+      result = Agents::Streaming.update(agent: @agent, id: message.id, markdown_source: "Replaced")
+
+      assert result.ok?
+      assert_in_delta Time.current, message.reload.streaming_updated_at, 5
+    end
+  end
+
+  test "an append after a finalize is refused and leaves the final alone" do
+    message = @room.root_messages.create!(creator: @bot, streaming: true,
+      markdown_source: "Draft", client_message_id: "stream-lost-race")
+
+    assert message.finalize_stream!
+
+    result = Agents::Streaming.update(agent: @agent, id: message.id, append: "Late")
+    assert_not result.ok?
+    assert_equal :unprocessable_entity, result.status
+    assert_equal "Message is not streaming", result.error
+
+    result = Agents::Streaming.update(agent: @agent, id: message.id, markdown_source: "Replaced late")
+    assert_not result.ok?
+    assert_equal :unprocessable_entity, result.status
+
+    assert_not message.reload.streaming?
+    assert_equal "Draft", message.markdown_source
+  end
+
+  test "a finalized stream can never resume" do
+    message = @room.root_messages.create!(creator: @bot, streaming: true,
+      markdown_source: "Draft", client_message_id: "stream-no-resume")
+
+    assert message.finalize_stream!
+
+    message.streaming = true
+
+    assert_not message.valid?
+    assert_equal [ "cannot resume once finalized" ], message.errors[:streaming]
+  end
+
   test "the sweep skips streams in locked threads until unlock" do
     thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Locked stream")
     ThreadMembership.join!(thread, users(:david))
     message = thread.post_message!(creator: @bot, attributes: {
       markdown_source: "Waiting", client_message_id: "stream-locked-sweep", streaming: true })
-    message.update_column(:created_at, 11.minutes.ago)
+    message.update_columns(created_at: 11.minutes.ago, streaming_updated_at: 11.minutes.ago)
     thread.lock_conversation!
 
     Message.finalize_overdue_streams!

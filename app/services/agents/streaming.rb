@@ -71,29 +71,44 @@ module Agents
 
     # Appends text to the stream, or replaces the whole body when append
     # is absent. Only Markdown streams exist, so both paths write
-    # markdown_source. The save always lands; the broadcast is throttled
-    # (see Message::Broadcasts#broadcast_stream_update).
+    # markdown_source. The write runs under the row lock on a fresh read:
+    # an append racing a finalize sees streaming=false and answers 422
+    # instead of editing the final message after its side effects fired
+    # (the model also refuses to flip a finalized message back to
+    # streaming). The broadcast is throttled (see
+    # Message::Broadcasts#broadcast_stream_update).
     def self.update(agent:, id:, append: nil, markdown_source: nil)
       message, denial = find_own_stream(agent, id)
       return denial if denial
 
-      if !append.nil?
-        message.markdown_source = message.markdown_source.to_s + append.to_s
-      elsif !markdown_source.nil?
-        message.markdown_source = markdown_source.to_s
-      else
+      if append.nil? && markdown_source.nil?
         return ServiceResult.fail("append or markdown_source is required")
       end
 
-      begin
-        message.save!
-      rescue ActiveRecord::RecordInvalid => error
-        return ServiceResult.fail(error.record.errors.full_messages.to_sentence,
-          payload: { errors: error.record.errors.to_hash })
+      finalized = false
+      message.with_lock do
+        message.reload
+        if message.streaming?
+          if !append.nil?
+            message.markdown_source = message.markdown_source.to_s + append.to_s
+          else
+            message.markdown_source = markdown_source.to_s
+          end
+          message.save!
+        else
+          finalized = true
+        end
       end
+      return ServiceResult.fail("Message is not streaming", status: :unprocessable_entity) if finalized
+
       message.broadcast_stream_update
 
       ServiceResult.ok(message)
+    rescue ActiveRecord::RecordInvalid => error
+      ServiceResult.fail(error.record.errors.full_messages.to_sentence,
+        payload: { errors: error.record.errors.to_hash })
+    rescue ActiveRecord::RecordNotFound
+      ServiceResult.fail("Message not found", status: :not_found)
     end
 
     # Idempotent: finalizing an already-final message succeeds without

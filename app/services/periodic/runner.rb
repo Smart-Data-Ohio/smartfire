@@ -9,7 +9,7 @@ module Periodic
   # extra long-running process for any of them. Add a sweeper by appending
   # to the task list below: a name, an interval in seconds, and an
   # idempotent callable. The streaming messages sweep finalizes agent
-  # streams older than 10 minutes.
+  # streams idle for 10 minutes.
   class Runner
     Task = Data.define(:name, :interval, :run)
 
