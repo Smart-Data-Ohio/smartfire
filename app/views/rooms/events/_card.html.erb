@@ -19,8 +19,8 @@
     <p class="event-card__venue">Where: <%= event.venue.name %></p>
   <% end %>
 
-  <% if event.meet_link.present? %>
-    <p class="event-card__meet"><%= link_to "Join Google Meet", event.meet_link %></p>
+  <% if (meet_link = safe_meet_link(event)) %>
+    <p class="event-card__meet"><%= link_to "Join Google Meet", meet_link %></p>
   <% end %>
 
   <p class="event-card__organizer">Organized by <%= event.organizer.name %></p>

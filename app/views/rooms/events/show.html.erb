@@ -53,9 +53,9 @@
           <% end %>
         </p>
       <% end %>
-      <% if @event.meet_link.present? %>
+      <% if (meet_link = safe_meet_link(@event)) %>
         <p class="room-events__times">
-          Meet: <%= link_to "Join Google Meet", @event.meet_link %>
+          Meet: <%= link_to "Join Google Meet", meet_link %>
         </p>
       <% end %>
     </div>

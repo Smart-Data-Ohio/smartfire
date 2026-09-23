@@ -31,8 +31,8 @@
           class: "input" %>
   </div>
 
-  <% if event.meet_link.present? %>
-    <p class="room-events__hint">Google Meet: <%= link_to event.meet_link, event.meet_link %></p>
+  <% if (meet_link = safe_meet_link(event)) %>
+    <p class="room-events__hint">Google Meet: <%= link_to meet_link, meet_link %></p>
   <% else %>
     <div>
       <label>

@@ -850,6 +850,16 @@ class Rooms::EventsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "Join Google Meet"
   end
 
+  test "show renders no Meet row for a non-https link" do
+    @event.update!(meet_link: "javascript:alert(1)")
+
+    get room_event_url(@room, @event)
+
+    assert_response :success
+    assert_not_includes response.body, "Join Google Meet"
+    assert_not_includes response.body, "javascript:"
+  end
+
   private
     def count_sql_queries(&block)
       queries = 0
