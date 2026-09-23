@@ -70,8 +70,8 @@ Right-click (or **Shift+F10**) any sidebar row for the room menu:
   also reachable from the header bell (which cycles through it). Muted
   rooms dim, go unread only when you are mentioned, and push only for
   mentions — no reply-author push, no reply or thread-activity inbox
-  items. Muting clears stale unread state. Unmuting from the menu
-  restores the room's default involvement.
+  items, though keyword alerts still record. Muting clears stale unread
+  state. Unmuting from the menu restores the room's default involvement.
 - **Categories**: user-defined collapsible sections for channels.
   Create one from **New category** under Channels, then drag channels
   in (or assign them from the room menu), collapse, rename, or delete
