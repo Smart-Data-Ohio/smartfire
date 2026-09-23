@@ -29,6 +29,7 @@ class BoardAutomationsTest < ApplicationSystemTestCase
     fill_in "sla_rules[blocked][nudge_after_minutes]", with: "30"
     fill_in "sla_rules[blocked][escalate_after_minutes]", with: "120"
     click_button "Save SLA timers"
+    assert_selector ".flash", text: "SLA timers saved."
 
     assert_equal 60, @board.board_sla_rules.find_by(work_status: "planned").nudge_after_minutes
     assert_equal 120, @board.board_sla_rules.find_by(work_status: "blocked").escalate_after_minutes
