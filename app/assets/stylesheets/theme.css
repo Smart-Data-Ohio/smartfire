@@ -34,6 +34,15 @@
   --workspace-border: #d5dbdc;
 }
 
+/* The theme picker keeps native radios: the base reset strips appearance
+   from every input, which would collapse them to zero size. */
+[role="radiogroup"] input[type="radio"] {
+  appearance: auto;
+  block-size: 1rem;
+  flex: none;
+  inline-size: 1rem;
+}
+
 :root[data-theme="dark"] {
   color-scheme: dark;
 

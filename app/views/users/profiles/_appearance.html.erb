@@ -1,10 +1,12 @@
-<%= profile_form_with @user, class: "flex flex-column gap" do |form| %>
+<%# A full-page submit: Turbo Drive leaves <html> attributes untouched, %>
+<%# so only a fresh render picks up the new data-theme without a flash. %>
+<%= form_with model: @user, url: user_profile_path, method: :patch, data: { turbo: false }, class: "flex flex-column gap" do |form| %>
   <fieldset class="margin-none">
     <legend class="txt-large">Appearance</legend>
 
     <div role="radiogroup" aria-label="Theme" class="flex align-center gap pad-block-half">
       <% [ [ "Light", "light" ], [ "Dark", "dark" ], [ "System", "system" ] ].each do |label, value| %>
-        <label class="flex align-center gap txt-medium">
+        <label class="txt-medium">
           <%= form.radio_button :theme, value, checked: @user.theme == value, id: "user_theme_#{value}" %>
           <%= label %>
         </label>

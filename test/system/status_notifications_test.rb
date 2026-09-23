@@ -6,6 +6,9 @@ class StatusNotificationsTest < ApplicationSystemTestCase
   end
 
   test "setting presence and a custom status" do
+    session = users(:david).sessions.create!(user_agent: "System test", ip_address: "127.0.0.1")
+    WorkspacePresenceLease.establish(user: users(:david), session:)
+
     visit user_profile_url
 
     select "Do not disturb", from: "user_presence_setting"
