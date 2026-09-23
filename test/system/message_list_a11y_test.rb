@@ -40,6 +40,7 @@ class MessageListA11yTest < ApplicationSystemTestCase
     assert_operator messages.length, :>=, 2
 
     page.execute_script("document.getElementById('#{messages.first}').focus()")
+    assert_focused "##{messages.first}"
     page.send_keys :down
     assert_focused "##{messages.second}"
 
