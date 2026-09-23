@@ -28,6 +28,8 @@ module Agents
         command.save!
       rescue ActiveRecord::RecordInvalid => error
         return ServiceResult.fail(error.record.errors.full_messages.to_sentence)
+      rescue ActiveRecord::RecordNotUnique
+        return adopt_race_winner(agent, room, normalized, description)
       end
 
       ServiceResult.ok(command_payload(command), status: :created)
@@ -61,5 +63,24 @@ module Agents
       { name: command.name, description: command.description, room_id: command.room_id, agent_id: command.agent_id }
     end
     private_class_method :command_payload
+
+    # A concurrent registration won the room/name index between the
+    # lookup and the save. Adopt the outcome instead of erroring: a
+    # name that landed on this agent completes the re-registration,
+    # anything else held reports taken like the lookup path does.
+    def self.adopt_race_winner(agent, room, name, description)
+      winner = AgentSlashCommand.find_by(room_id: room.id, name: name)
+
+      if winner&.agent_id == agent.id
+        if winner.update(description: description.to_s.strip.presence)
+          ServiceResult.ok(command_payload(winner), status: :created)
+        else
+          ServiceResult.fail(winner.errors.full_messages.to_sentence)
+        end
+      else
+        ServiceResult.fail("“/#{name}” is already registered in this room", status: :unprocessable_entity)
+      end
+    end
+    private_class_method :adopt_race_winner
   end
 end
