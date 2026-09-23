@@ -97,4 +97,20 @@ class AgentKillSwitchTest < ActiveSupport::TestCase
     assert_empty @agent.agent_events.where(message_id: message.id)
     assert_equal [], room.messages.search("hovercraft")
   end
+
+  test "kill switch leaves owned work assigned without reassigning it" do
+    board = Rooms::Board.create_for({ name: "Work Board", creator: users(:david) },
+      users: [ users(:david), @agent.user ])
+    AgentGrant.create!(agent: @agent, room: board, granted_by: users(:david), capability: "post_messages")
+    thread = ChannelThread.create_board_post!(room: board, creator: users(:david),
+      name: "Ship it", work_status: "in_progress", owner_id: @agent.user.id)
+
+    assert_no_difference -> { thread.work_thread_events.count } do
+      @agent.kill_switch!
+    end
+
+    assert_equal @agent.user.id, thread.reload.work_owner_id
+    assert_equal "in_progress", thread.work_status
+    assert_not thread.work_owner_active?
+  end
 end

@@ -1047,7 +1047,10 @@ replies inside the post count as messages, and an agent's reply to a
 `slash_command` event is an ordinary post through the same path.
 Slash commands and scheduled messages themselves are human-only (bots
 get 403 at the slash endpoint and the scheduled dispatcher skips
-bots), so they never touch budgets.
+bots), so they never touch budgets. Work handoffs count toward no
+budget either: handing a thread to another agent writes no message,
+board post, or approval request, so a handoff never burns a cap and
+still succeeds when every cap is exhausted.
 
 The bot edit page also carries the kill switch: one click suspends
 the agent (revoking every grant, which also blocks
@@ -1055,7 +1058,11 @@ approved-but-unexecuted external actions at perform time), quietly
 finalizes the agent's open streams (marked final with no push,
 mentions, inbox, delivery, or webhooks), cancels every still-pending
 approval request, clears working presence, and records
-`agent.kill_switch` in the audit log.
+`agent.kill_switch` in the audit log. Work the agent owns stays
+assigned: the kill switch never reassigns it, and the owner simply
+reads as unavailable until a manager assigns the thread to someone
+else. A suspended agent also cannot receive handoffs or tag
+auto-assignments until it is unsuspended.
 
 ## MCP server
 

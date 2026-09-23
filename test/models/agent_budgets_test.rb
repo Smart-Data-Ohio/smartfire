@@ -134,4 +134,37 @@ class AgentBudgetsTest < ActiveSupport::TestCase
     @agent.daily_message_cap = nil
     assert @agent.valid?
   end
+
+  test "an agent-created handoff counts toward no budget, even with caps exhausted" do
+    board = Rooms::Board.create_for({ name: "Handoff Board", creator: users(:david) },
+      users: [ users(:david), @agent.user ])
+    receiver = User.create_bot!(name: "Handoff Receiver")
+      .create_agent!(kind: :workspace, owner: users(:david))
+    board.memberships.grant_to(receiver.user)
+    %w[ read_messages post_messages manage_threads ].each do |capability|
+      AgentGrant.create!(agent: @agent, room: board, granted_by: users(:david), capability: capability)
+      AgentGrant.create!(agent: receiver, room: board, granted_by: users(:david), capability: capability)
+    end
+    first = ChannelThread.create_board_post!(room: board, creator: users(:david),
+      name: "First", work_status: "in_progress", owner_id: @agent.user.id)
+    second = ChannelThread.create_board_post!(room: board, creator: users(:david),
+      name: "Second", work_status: "in_progress", owner_id: @agent.user.id)
+
+    result = Agents::WorkHandoffs.create(agent: @agent, id: first.id,
+      receiver_agent_id: receiver.id, summary: "Halfway there")
+
+    assert_predicate result, :ok?
+    assert_equal({ messages: 0, board_posts: 0, external_actions: 0 }, Agents::Budgets.usage(@agent))
+
+    @agent.update!(daily_message_cap: 1, daily_board_post_cap: 1, daily_external_action_cap: 1)
+    @room.root_messages.create!(creator: @agent.user,
+      markdown_source: "One", client_message_id: "budget-handoff-exhaust")
+    assert_not_nil Agents::Budgets.check(@agent, :messages)
+
+    retry_handoff = Agents::WorkHandoffs.create(agent: @agent, id: second.id,
+      receiver_agent_id: receiver.id, summary: "Still yours")
+
+    assert_predicate retry_handoff, :ok?
+    assert_equal receiver.user.id, second.reload.work_owner_id
+  end
 end

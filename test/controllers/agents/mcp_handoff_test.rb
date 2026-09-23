@@ -79,6 +79,17 @@ class Agents::McpHandoffTest < ActionDispatch::IntegrationTest
     assert_equal @bot.id, @thread.reload.work_owner_id
   end
 
+  test "handoff_work denies a kill-switched receiver" do
+    @receiver.kill_switch!
+
+    body = call_tool("handoff_work", {
+      "work_id" => @thread.id, "receiver_agent_id" => @receiver.id, "summary" => "Nope"
+    })
+
+    assert_tool_error body, "Receiver must be an active agent member of this room with permission to post"
+    assert_equal @bot.id, @thread.reload.work_owner_id
+  end
+
   test "handoff_work rejects missing arguments" do
     body = call_tool("handoff_work", { "work_id" => @thread.id })
 
