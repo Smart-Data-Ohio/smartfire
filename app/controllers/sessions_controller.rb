@@ -9,9 +9,7 @@ class SessionsController < ApplicationController
 
   def create
     if user = User.active.authenticate_by(email_address: params[:email_address], password: params[:password])
-      start_new_session_for user
-      AuditLog.record!(action: "session.sign_in.success", actor: user, changes: { method: "password" })
-      redirect_to post_authenticating_url
+      begin_session_for user, method: "password"
     else
       render_rejection :unauthorized
     end

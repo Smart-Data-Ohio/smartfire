@@ -21,11 +21,17 @@ Rails.application.routes.draw do
   get "session/google/callback", to: "sessions/google#callback", as: :session_google_callback
   post "user/profile/google_sign_in_link", to: "users/google_sign_in_links#create", as: :user_google_sign_in_link
 
+  resource :two_factor_setup, only: %i[ show create destroy ], controller: "two_factor/setups"
+  resource :two_factor_challenge, only: %i[ show create ], controller: "two_factor/challenges"
+  resources :two_factor_backup_codes, only: %i[ create ], controller: "two_factor/backup_codes"
+  resources :two_factor_remembered_devices, only: %i[ destroy ], controller: "two_factor/remembered_devices"
+
   resource :account do
     scope module: "accounts" do
       resources :users do
         scope module: "users" do
           resource :google_link, only: %i[ create destroy ]
+          resource :two_factor_reset, only: %i[ create ]
         end
       end
 

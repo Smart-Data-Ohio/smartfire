@@ -332,6 +332,7 @@ GEM
       resque (>= 1.27)
       rufus-scheduler (~> 3.2, != 3.3)
     rexml (3.4.4)
+    rotp (6.3.0)
     rqrcode (3.2.0)
       chunky_png (~> 1.0)
       rqrcode_core (~> 2.0)
@@ -465,6 +466,7 @@ DEPENDENCIES
   resque (~> 2.7.0)
   resque-pool (~> 0.7.1)
   resque-scheduler (~> 4.11)
+  rotp (~> 6.3)
   rqrcode
   rubocop-rails-omakase
   selenium-webdriver

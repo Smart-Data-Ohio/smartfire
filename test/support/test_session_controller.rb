@@ -8,11 +8,14 @@ class TestSessionController < ApplicationController
 
   # Signs in with real credentials (the password is still verified) and a
   # real session row and cookie, skipping only the login form round-trips.
+  # The session counts as two-factor satisfied so the existing suite
+  # exercises the app without typing codes; two-factor itself has its
+  # own tests driving the real enrollment and challenge flows.
   # Served over GET so the browser helper reaches it with a plain visit;
   # CSRF only guards state-changing methods.
   def create
     if user = User.active.authenticate_by(email_address: params[:email_address], password: params[:password])
-      start_new_session_for user
+      start_new_session_for user, two_factor_verified: true
       redirect_to post_authenticating_url
     else
       render plain: "Unauthorized", status: :unauthorized

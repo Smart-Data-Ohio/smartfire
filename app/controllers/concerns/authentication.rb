@@ -30,6 +30,12 @@ module Authentication
     end
   end
 
+  TWO_FACTOR_PENDING_USER_KEY = :two_factor_pending_user_id
+  TWO_FACTOR_PENDING_EXPIRY_KEY = :two_factor_pending_expires_at
+  TWO_FACTOR_PENDING_METHOD_KEY = :two_factor_pending_method
+  TWO_FACTOR_PENDING_TTL = 10.minutes
+  TWO_FACTOR_REMEMBER_COOKIE = :two_factor_remember
+
   private
     def signed_in?
       Current.user.present?
@@ -85,16 +91,20 @@ module Authentication
     end
 
     def request_authentication
-      session[:return_to_after_authenticating] = request.url
-      redirect_to new_session_url
+      if two_factor_pending_user.present?
+        redirect_to two_factor_challenge_url
+      else
+        session[:return_to_after_authenticating] = request.url
+        redirect_to new_session_url
+      end
     end
 
     def redirect_signed_in_user_to_root
       redirect_to root_url if signed_in?
     end
 
-    def start_new_session_for(user)
-      user.sessions.start!(user_agent: request.user_agent, ip_address: request.remote_ip).tap do |session|
+    def start_new_session_for(user, two_factor_verified: false)
+      user.sessions.start!(user_agent: request.user_agent, ip_address: request.remote_ip, two_factor_verified: two_factor_verified).tap do |session|
         authenticated_as session
 
         # Establish the CSRF token before any page renders. Sign-ins that
@@ -118,6 +128,70 @@ module Authentication
       reset_session
       remove_authentication_cookie
       disconnect_remote_connections
+    end
+
+    # Finishes the first factor (password, Google, transfer) for a human
+    # user. Enrolled users either ride a valid remember-device cookie
+    # straight in or wait in the pending state for the challenge; no real
+    # session exists until the code is verified. Unenrolled users get a
+    # plain session and the enrollment enforcement sends them to setup.
+    def begin_session_for(user, method:, return_url: nil)
+      return_url ||= post_authenticating_url
+
+      if user.two_factor_enabled?
+        if TwoFactorRememberedDevice.find_valid(cookies.signed[TWO_FACTOR_REMEMBER_COOKIE], user)
+          start_new_session_for user, two_factor_verified: true
+          AuditLog.record!(action: "session.sign_in.success", actor: user,
+            changes: { method: method, two_factor: "remembered_device" })
+          redirect_to return_url
+        else
+          session[:return_to_after_authenticating] = return_url
+          stash_two_factor_pending(user, method)
+          redirect_to two_factor_challenge_url
+        end
+      else
+        start_new_session_for user
+        AuditLog.record!(action: "session.sign_in.success", actor: user, changes: { method: method })
+        redirect_to return_url
+      end
+    end
+
+    # The pending second-factor state: a user id plus an expiry in the
+    # encrypted cookie session. It grants nothing (Current.user stays
+    # nil); it only names who may attempt the challenge.
+    def stash_two_factor_pending(user, method)
+      session[TWO_FACTOR_PENDING_USER_KEY] = user.id
+      session[TWO_FACTOR_PENDING_EXPIRY_KEY] = TWO_FACTOR_PENDING_TTL.from_now.to_i
+      session[TWO_FACTOR_PENDING_METHOD_KEY] = method
+    end
+
+    def two_factor_pending_method
+      session[TWO_FACTOR_PENDING_METHOD_KEY].to_s.presence || "unknown"
+    end
+
+    def two_factor_pending_user
+      user_id = session[TWO_FACTOR_PENDING_USER_KEY]
+      expires_at = session[TWO_FACTOR_PENDING_EXPIRY_KEY]
+      return nil if user_id.blank? || expires_at.blank? || expires_at.to_i < Time.current.to_i
+
+      User.active.find_by(id: user_id)
+    end
+
+    def clear_two_factor_pending!
+      session.delete(TWO_FACTOR_PENDING_USER_KEY)
+      session.delete(TWO_FACTOR_PENDING_EXPIRY_KEY)
+      session.delete(TWO_FACTOR_PENDING_METHOD_KEY)
+    end
+
+    # A signed, httponly, secure cookie bound to a revocable server-side
+    # record. It survives sign-out by design; revocation deletes the row.
+    def remember_two_factor_device!(user)
+      _device, token = TwoFactorRememberedDevice.create_for!(user,
+        user_agent: request.user_agent, ip_address: request.remote_ip)
+      cookies.signed[TWO_FACTOR_REMEMBER_COOKIE] = {
+        value: token, expires: TwoFactorRememberedDevice::REMEMBER_FOR,
+        httponly: true, secure: true, same_site: :lax
+      }
     end
 
     def disconnect_remote_connections

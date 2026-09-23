@@ -9,8 +9,21 @@ class Session < ApplicationRecord
   before_destroy -> { HuddleGrant.revoke_for_session!(self) }
   before_create { self.last_active_at ||= Time.now }
 
-  def self.start!(user_agent:, ip_address:)
-    create! user_agent: user_agent, ip_address: ip_address
+  def self.start!(user_agent:, ip_address:, two_factor_verified: false)
+    create! user_agent: user_agent, ip_address: ip_address,
+      two_factor_verified_at: (Time.current if two_factor_verified)
+  end
+
+  def two_factor_verified?
+    two_factor_verified_at.present?
+  end
+
+  def mark_two_factor_verified!
+    update!(two_factor_verified_at: Time.current) unless two_factor_verified?
+  end
+
+  def clear_two_factor_verified!
+    update!(two_factor_verified_at: nil) if two_factor_verified?
   end
 
   def resume(user_agent:, ip_address:)

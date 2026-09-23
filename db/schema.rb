@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_23_092654) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_160100) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -883,6 +883,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_092654) do
     t.string "ip_address"
     t.datetime "last_active_at", null: false
     t.string "token", null: false
+    t.datetime "two_factor_verified_at"
     t.datetime "updated_at", null: false
     t.string "user_agent"
     t.integer "user_id", null: false
@@ -954,6 +955,39 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_092654) do
     t.datetime "updated_at", null: false
     t.string "url"
     t.index ["post_id"], name: "index_twitter_posts_on_post_id", unique: true
+  end
+
+  create_table "two_factor_backup_codes", force: :cascade do |t|
+    t.string "code_digest", null: false
+    t.datetime "created_at", null: false
+    t.integer "two_factor_credential_id", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "used_at"
+    t.index ["code_digest"], name: "index_two_factor_backup_codes_on_code_digest", unique: true
+    t.index ["two_factor_credential_id"], name: "index_two_factor_backup_codes_on_two_factor_credential_id"
+  end
+
+  create_table "two_factor_credentials", force: :cascade do |t|
+    t.datetime "confirmed_at"
+    t.datetime "created_at", null: false
+    t.bigint "last_totp_at"
+    t.string "secret"
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["user_id"], name: "index_two_factor_credentials_on_user_id", unique: true
+  end
+
+  create_table "two_factor_remembered_devices", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.string "ip_address"
+    t.datetime "last_used_at"
+    t.string "token_digest", null: false
+    t.datetime "updated_at", null: false
+    t.string "user_agent", limit: 512
+    t.integer "user_id", null: false
+    t.index ["token_digest"], name: "index_two_factor_remembered_devices_on_token_digest", unique: true
+    t.index ["user_id"], name: "index_two_factor_remembered_devices_on_user_id"
   end
 
   create_table "users", force: :cascade do |t|
@@ -1156,6 +1190,9 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_092654) do
   add_foreign_key "thread_memberships", "users", on_delete: :cascade
   add_foreign_key "twitter_post_references", "messages"
   add_foreign_key "twitter_post_references", "twitter_posts"
+  add_foreign_key "two_factor_backup_codes", "two_factor_credentials"
+  add_foreign_key "two_factor_credentials", "users"
+  add_foreign_key "two_factor_remembered_devices", "users"
   add_foreign_key "webhooks", "users"
   add_foreign_key "work_handoffs", "agents", column: "receiver_agent_id"
   add_foreign_key "work_handoffs", "channel_threads"

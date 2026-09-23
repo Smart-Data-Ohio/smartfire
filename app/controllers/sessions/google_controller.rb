@@ -58,18 +58,18 @@ module Sessions
       # Keep eligibility, identity linking, and session insertion together:
       # deactivation/ban must either win before this check or revoke the new
       # session afterwards. All network verification stays outside the lock.
+      # Enrolled users get no session here: begin_session_for leaves them
+      # pending for the challenge instead.
       User.transaction do
         user = Google::SignIn::AccountLinker.resolve!(claims)
-        start_new_session_for user
-        AuditLog.record!(action: "session.sign_in.success", actor: user, changes: { method: "google" })
         if user.previously_new_record?
           AuditLog.record!(action: "user.create", actor: user, target: user, changes: { method: "google" })
         elsif user.google_identity&.previously_new_record?
           AuditLog.record!(action: "google.sign_in.link", actor: user, target: user,
             changes: { email: claims["email"] })
         end
+        begin_session_for user, method: "google", return_url: safe_post_authenticating_url
       end
-      redirect_to safe_post_authenticating_url
     rescue Google::SignIn::Unavailable
       redirect_to new_session_url, alert: "Google sign-in is unavailable right now. Try again or sign in with email and password."
     rescue Google::SignIn::Rejected => error

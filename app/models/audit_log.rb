@@ -16,6 +16,11 @@ class AuditLog < ApplicationRecord
   ACTIONS = %w[
     session.sign_in.success
     session.sign_in.failure
+    sign_in.two_factor.failure
+    two_factor.enable
+    two_factor.disable
+    two_factor.reset
+    two_factor.backup_codes.regenerate
     user.create
     user.email.change
     user.password.change

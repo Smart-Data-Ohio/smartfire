@@ -1,0 +1,25 @@
+<% @page_title = "Two-step sign-in" %>
+
+<section class="txt-align-center">
+  <div class="panel <%= "shake" if flash[:alert] %> flex flex-column gap">
+    <h1 class="margin-none">Enter your code</h1>
+    <p class="margin-none">Open your authenticator app and enter the 6-digit code. Lost your phone? Use one of your backup codes instead.</p>
+
+    <%= form_with url: two_factor_challenge_path, class: "flex flex-column gap center" do |form| %>
+      <label class="flex align-center gap input input--actor txt-large">
+        <%= form.text_field :code, required: true, class: "input center", autofocus: true, autocomplete: "one-time-code",
+              maxlength: 20, placeholder: "Code or backup code", aria: { label: "Authenticator or backup code" } %>
+      </label>
+
+      <label class="flex align-center gap center txt-medium">
+        <%= form.check_box :remember_device, { checked: false }, "1", "0" %>
+        Remember this device for 30 days
+      </label>
+
+      <%= form.button class: "btn btn--reversed center txt-large", type: "submit" do %>
+        <%= image_tag "arrow-right.svg", aria: { hidden: "true" } %>
+        <span>Sign in</span>
+      <% end %>
+    <% end %>
+  </div>
+</section>

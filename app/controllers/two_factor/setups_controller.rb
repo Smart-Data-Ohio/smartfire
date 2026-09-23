@@ -1,0 +1,74 @@
+module TwoFactor
+  # Mandatory enrollment: the enforcement redirect lands every signed-in
+  # human without 2FA here. The page shows a QR code plus the manual
+  # key; confirming with a valid code enables 2FA and shows the backup
+  # codes once. Destroy disables 2FA, which immediately re-triggers the
+  # enrollment redirect.
+  class SetupsController < ApplicationController
+    rate_limit to: 10, within: 3.minutes, only: :create, with: -> { render_rate_limited }
+    rate_limit to: 10, within: 15.minutes, only: :create, name: "per-user",
+      by: -> { Current.user&.id }, with: -> { render_rate_limited }
+
+    before_action :ensure_human_user
+
+    def show
+      no_store_response!
+      return redirect_to user_profile_url if Current.user.two_factor_enabled?
+
+      @credential = enrollable_credential
+      @provisioning_uri = @credential.provisioning_uri
+    end
+
+    def create
+      no_store_response!
+      return redirect_to user_profile_url if Current.user.two_factor_enabled?
+
+      credential = enrollable_credential
+      if credential.confirm!(params[:code].to_s)
+        @backup_codes = TwoFactorBackupCode.regenerate_set!(credential)
+        Current.session.mark_two_factor_verified!
+        AuditLog.record!(action: "two_factor.enable", target: Current.user)
+        render "two_factor/backup_codes/show"
+      else
+        @credential = credential
+        @provisioning_uri = credential.provisioning_uri
+        flash.now[:alert] = "That code didn't work. Check your authenticator app and try again."
+        render :show, status: :unprocessable_entity
+      end
+    end
+
+    def destroy
+      if Current.user.two_factor_enabled?
+        Current.user.reset_two_factor!
+        Current.session.clear_two_factor_verified!
+        cookies.delete(TWO_FACTOR_REMEMBER_COOKIE)
+        AuditLog.record!(action: "two_factor.disable", target: Current.user)
+        redirect_to two_factor_setup_url, notice: "Two-step sign-in is off. Set it up again to keep signing in."
+      else
+        redirect_to two_factor_setup_url
+      end
+    end
+
+    private
+      def ensure_human_user
+        redirect_to root_url unless Current.user.requires_two_factor?
+      end
+
+      def enrollable_credential
+        Current.user.two_factor_credential ||
+          TwoFactorCredential.create_or_find_by!(user: Current.user) do |credential|
+            credential.secret = TwoFactorCredential.generate_secret
+          end
+      end
+
+      def render_rate_limited
+        no_store_response!
+        return redirect_to user_profile_url if Current.user&.two_factor_enabled?
+
+        @credential = enrollable_credential
+        @provisioning_uri = @credential.provisioning_uri
+        flash.now[:alert] = "Too many attempts. Try again in a few minutes."
+        render :show, status: :too_many_requests
+      end
+  end
+end

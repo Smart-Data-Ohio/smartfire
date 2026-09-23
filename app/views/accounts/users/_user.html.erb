@@ -11,6 +11,14 @@
 
   <% if Current.user.can_administer? && user.active? %>
     <% unless user.bot? %>
+      <% if user != Current.user && user.two_factor_enabled? %>
+        <%= button_to account_user_two_factor_reset_path(user), method: :post, class: "btn txt-small flex-item-no-shrink",
+              title: "Reset two-step sign-in",
+              data: { turbo_confirm: "Reset two-step sign-in for #{user.name}? They will sign out everywhere and set it up again at next sign-in." } do %>
+          <%= image_tag "key.svg", size: 20, aria: { hidden: "true" } %>
+          <span class="for-screen-reader">Reset two-step sign-in for <%= user.name %></span>
+        <% end %>
+      <% end %>
       <%= form_with model: user, url: account_user_path(user), data: { controller: "form" }, method: :patch do | form | %>
         <label class="btn txt-small flex-item-no-shrink" for="<%= dom_id(user, :role) %>">
           <span class="for-screen-reader">Role: <%= user.administrator? ? "Administrator" : "Member" %></span>

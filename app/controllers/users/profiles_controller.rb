@@ -3,6 +3,7 @@ class Users::ProfilesController < ApplicationController
 
   def show
     set_memberships
+    set_two_factor_devices
   end
 
   def update
@@ -15,6 +16,7 @@ class Users::ProfilesController < ApplicationController
       @user.assign_attributes(user_params)
       @user.errors.add(:current_password, params.dig(:user, :current_password).blank? ? "is required to change your email address" : "is incorrect")
       set_memberships
+      set_two_factor_devices
       return render :show, status: :unprocessable_entity
     end
 
@@ -32,6 +34,7 @@ class Users::ProfilesController < ApplicationController
       redirect_to user_profile_url, notice: update_notice
     else
       set_memberships
+      set_two_factor_devices
       render :show, status: :unprocessable_entity
     end
   end
@@ -44,6 +47,10 @@ class Users::ProfilesController < ApplicationController
     def set_memberships
       @direct_memberships, @shared_memberships =
         Current.user.memberships.with_ordered_room.partition { |m| m.room.direct? }
+    end
+
+    def set_two_factor_devices
+      @two_factor_devices = @user.two_factor_remembered_devices.recent_first.to_a
     end
 
     def user_params
@@ -78,6 +85,7 @@ class Users::ProfilesController < ApplicationController
       end
       if password_changing
         AuditLog.record!(action: "user.password.change", actor: @user, target: @user)
+        @user.revoke_two_factor_remembered_devices!
       end
     end
 

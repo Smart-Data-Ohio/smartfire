@@ -1,0 +1,28 @@
+<% @page_title = "Backup codes" %>
+
+<section class="txt-align-center">
+  <div class="panel flex flex-column gap">
+    <h1 class="margin-none">Save your backup codes</h1>
+    <p class="margin-none">Each code signs you in once if you lose your authenticator. They will not be shown again.</p>
+
+    <ul class="flex flex-column gap" id="two_factor_backup_codes" style="list-style: none;">
+      <% @backup_codes.each do |code| %>
+        <li><code class="txt-large"><%= code %></code></li>
+      <% end %>
+    </ul>
+
+    <div class="flex align-center center gap">
+      <%= button_to_copy_to_clipboard(@backup_codes.join("\n")) do %>
+        <%= image_tag "copy-paste.svg", aria: { hidden: "true" }, size: 20 %>
+        <span>Copy all</span>
+      <% end %>
+
+      <%= link_to "data:text/plain,#{u(@backup_codes.join("\n"))}", download: "smartfire-backup-codes.txt", class: "btn" do %>
+        <%= image_tag "arrow-right.svg", aria: { hidden: "true" }, size: 20 %>
+        <span>Download</span>
+      <% end %>
+    </div>
+
+    <%= link_to "Continue", root_path, class: "btn btn--reversed center" %>
+  </div>
+</section>
