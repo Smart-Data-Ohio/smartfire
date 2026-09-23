@@ -121,6 +121,20 @@ class Rooms::StageTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordInvalid) { room.memberships.find_by!(user: users(:david)).raise_hand! }
   end
 
+  test "raising twice keeps the first timestamp" do
+    room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david), users(:jason) ])
+    listener = room.memberships.find_by!(user: users(:jason))
+
+    assert listener.raise_hand!
+    first_raised_at = listener.reload.hand_raised_at
+
+    travel 5.seconds do
+      assert_not listener.raise_hand!
+    end
+
+    assert_equal first_raised_at, listener.reload.hand_raised_at
+  end
+
   test "lowering a hand that was never raised succeeds" do
     room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david), users(:jason) ])
     listener = room.memberships.find_by!(user: users(:jason))

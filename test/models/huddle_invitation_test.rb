@@ -13,6 +13,7 @@ class HuddleInvitationTest < ActiveSupport::TestCase
 
   teardown do
     ENV["LIVEKIT_API_SECRET"] = @original_api_secret
+    Huddle::RingPolicy.quiet_check = nil
   end
 
   test "issuing a grant in a one-to-one DM invites only the other participant" do
@@ -37,6 +38,30 @@ class HuddleInvitationTest < ActiveSupport::TestCase
     HuddleGrant.issue!(session: @starter_session, membership: @starter_membership)
 
     assert ActivityItem.exists?(user: users(:jason), event_type: "huddle_started")
+  end
+
+  test "a quiet check silences the invitation payload but keeps the item" do
+    Huddle::RingPolicy.quiet_check = ->(user) { user == users(:jason) }
+
+    HuddleGrant.issue!(session: @starter_session, membership: @starter_membership)
+
+    item = ActivityItem.find_by!(user: users(:jason), event_type: "huddle_started")
+    routes = Rails.application.routes.url_helpers
+    assert_broadcast_on(ActivityChannel.stream_name_for(users(:jason).id), {
+      activityItemId: item.id,
+      huddleInvitation: {
+        activityItemId: item.id,
+        eventType: "huddle_started",
+        state: "unread",
+        roomId: @room.id,
+        roomName: "David",
+        roomPath: routes.room_path(@room),
+        callerName: "David",
+        readPath: routes.read_activity_item_path(item, state: "read"),
+        handledPath: routes.handled_activity_item_path(item, state: "handled"),
+        silent: true
+      }
+    })
   end
 
   test "a recipient with notifications off or invisible gets no invitation" do
@@ -77,7 +102,8 @@ class HuddleInvitationTest < ActiveSupport::TestCase
         roomPath: Rails.application.routes.url_helpers.room_path(@room),
         callerName: "David",
         readPath: "",
-        handledPath: ""
+        handledPath: "",
+        silent: false
       }
     })
 

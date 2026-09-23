@@ -292,6 +292,55 @@
   font-weight: 700;
 }
 
+/* Local-only per-person controls: a volume slider and a mute on their own
+   row under the name, so the roster keeps its two-column rhythm. */
+.huddle__participant-controls {
+  align-items: center;
+  display: flex;
+  gap: 0.5em;
+  grid-column: 1 / -1;
+}
+
+.huddle__participant-controls[hidden] {
+  display: none;
+}
+
+.huddle__participant-volume {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.huddle__participant-mute {
+  flex: none;
+  font-size: 0.72rem;
+  padding: 0.15rem 0.45rem;
+}
+
+.huddle__participant--poor-connection .huddle__participant-activity {
+  color: var(--color-negative);
+}
+
+/* The reconnection bar: a countdown line with a manual control, wrapping
+   onto two lines in the narrow panel on phones. */
+.huddle__reconnect {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.6rem;
+  justify-content: space-between;
+  padding: 0.5rem 0.25rem;
+}
+
+.huddle__reconnect[hidden] {
+  display: none;
+}
+
+.huddle__reconnect-text {
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
 .huddle__controls {
   justify-content: stretch;
 }

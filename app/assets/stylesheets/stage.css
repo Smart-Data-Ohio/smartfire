@@ -177,6 +177,11 @@
   font-weight: 800;
 }
 
+.stage-panel__muted-badge {
+  color: var(--color-negative);
+  font-weight: 800;
+}
+
 .stage-panel__member-actions {
   display: flex;
   flex-wrap: wrap;

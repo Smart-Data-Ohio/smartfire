@@ -69,6 +69,7 @@
 
     <% if stage_membership %>
       <div class="stage-panel-wrap" data-controller="stage-panel">
+        <p class="for-screen-reader" role="status" data-stage-panel-target="handAnnouncement"></p>
         <button type="button" class="btn room-header__action"
                 aria-controls="<%= dom_id(room, :stage_panel_dialog) %>"
                 aria-expanded="false"
