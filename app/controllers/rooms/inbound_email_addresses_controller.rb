@@ -8,7 +8,7 @@ class Rooms::InboundEmailAddressesController < ApplicationController
 
   # Issues the room's first secret forward-to address, or rotates it.
   # Anyone who can administer the room (an administrator, or its creator)
-  # may rotate; direct rooms never have an address.
+  # may rotate; direct and board rooms never have an address.
   def create
     @room.regenerate_inbound_email_token!
 
@@ -17,7 +17,7 @@ class Rooms::InboundEmailAddressesController < ApplicationController
 
   private
     def ensure_emailable_room
-      head :not_found if @room.direct?
+      head :not_found unless @room.emailable?
     end
 
     def ensure_can_administer_room

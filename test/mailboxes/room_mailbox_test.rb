@@ -100,6 +100,17 @@ class RoomMailboxTest < ActionMailbox::TestCase
     end
   end
 
+  test "board rooms receive nothing" do
+    board = Rooms::Board.create_for({ name: "Launch", creator: users(:david) }, users: [ users(:david) ])
+    token = board.regenerate_inbound_email_token!
+
+    assert_no_difference -> { Message.count } do
+      receive_inbound_email_from_mail(
+        from: "david@37signals.com", to: "room-#{token}@mail.test", body: "Hello"
+      )
+    end
+  end
+
   test "html-only mail is sanitized to text" do
     mail = Mail.new(
       from: "david@37signals.com", to: room_address, subject: "Note",

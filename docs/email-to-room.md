@@ -1,6 +1,6 @@
 # Email to room
 
-Any room (except direct rooms) can have a secret forward-to address.
+Any chat room (direct and board rooms excluded) can have a secret forward-to address.
 Mail sent there posts in the room: from the matched member when the
 sender's address belongs to an active room member, otherwise from the
 workspace **Email** bot with the sender named in the body.
@@ -11,7 +11,8 @@ Each room's address looks like
 `room-<random-token>@<configured domain>`. Anyone who can administer the
 room (an administrator, or its creator) creates or rotates it from the
 room's settings page; rotating retires the old address immediately.
-Direct rooms never have an address, and deleted rooms receive nothing.
+Direct and board rooms never have an address, and deleted rooms receive
+nothing.
 
 While `INBOUND_EMAIL_DOMAIN` is unset, inbound email is disabled cleanly:
 the mailbox drops everything, the room settings explain what to set, and

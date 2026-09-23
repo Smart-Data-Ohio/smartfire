@@ -7,8 +7,9 @@ class RoomMailbox < ApplicationMailbox
 
   # Posts an email forwarded to a room's secret address as a room
   # message. Anything unauthenticatable is dropped silently: unknown
-  # tokens, disabled inbound email, and deleted or direct rooms all end
-  # here without a bounce, so the address reveals nothing to probers.
+  # tokens, disabled inbound email, and deleted, direct, or board rooms
+  # all end here without a bounce, so the address reveals nothing to
+  # probers.
   def process
     return unless Room.inbound_email_enabled?
     return if room.nil?
@@ -27,7 +28,8 @@ class RoomMailbox < ApplicationMailbox
     def room
       @room ||= begin
         token = room_token_from_recipients
-        token && Room.alive.without_directs.find_by(inbound_email_token: token)
+        found = token && Room.alive.without_directs.find_by(inbound_email_token: token)
+        found if found&.emailable?
       end
     end
 

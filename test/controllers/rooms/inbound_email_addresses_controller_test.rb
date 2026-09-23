@@ -50,6 +50,16 @@ class Rooms::InboundEmailAddressesControllerTest < ActionDispatch::IntegrationTe
     assert_response :not_found
   end
 
+  test "board rooms never have an address" do
+    board = Rooms::Board.create_for({ name: "Launch", creator: users(:david) }, users: [ users(:david) ])
+    sign_in :david
+
+    post room_inbound_email_address_url(board)
+
+    assert_response :not_found
+    assert_nil board.reload.inbound_email_token
+  end
+
   test "the edit page shows the address once created" do
     ENV["INBOUND_EMAIL_DOMAIN"] = "mail.test"
     sign_in :david

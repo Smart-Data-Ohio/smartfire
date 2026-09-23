@@ -1,4 +1,4 @@
-<% if Current.user.can_administer?(room) && !room.direct? %>
+<% if Current.user.can_administer?(room) && room.emailable? %>
   <section class="panel txt-align-center" id="inbound-email">
     <div class="pad-inline-double center">
       <h2 class="margin-none">Email to room</h2>

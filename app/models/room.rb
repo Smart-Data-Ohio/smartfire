@@ -130,11 +130,18 @@ class Room < ApplicationRecord
     "mentions"
   end
 
+  # Only chat rooms receive forwarded email: direct rooms never have an
+  # address, and boards take posts, not root messages, so a mailed root
+  # message would fail validation.
+  def emailable?
+    !direct? && !board?
+  end
+
   # The room's secret forward-to address, or nil while inbound email is
-  # disabled or the room has no token yet. Direct rooms never have one.
+  # disabled, the room is not emailable, or the room has no token yet.
   def inbound_email_address
     return nil unless self.class.inbound_email_enabled?
-    return nil if direct? || inbound_email_token.blank?
+    return nil if !emailable? || inbound_email_token.blank?
 
     "room-#{inbound_email_token}@#{self.class.inbound_email_domain}"
   end
