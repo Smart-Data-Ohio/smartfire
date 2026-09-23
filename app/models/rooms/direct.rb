@@ -5,6 +5,8 @@ class Rooms::Direct < Room
   MAX_MEMBERS = 10
   # Member first names listed in the default group name before the "+N" remainder.
   DEFAULT_NAME_PREVIEW_COUNT = 3
+  # A system note in the last minute suppresses the next rename note.
+  RENAME_NOTE_WINDOW = 1.minute
 
   class OverCapacity < StandardError; end
   class NotAGroup < StandardError; end
@@ -107,17 +109,23 @@ class Rooms::Direct < Room
   end
 
   # Renames the group, or clears the custom name back to the default when
-  # blank. One-to-one DMs always show the other member's name.
+  # blank. One-to-one DMs always show the other member's name. Rename
+  # notes are rate-limited to one per room per minute — a burst of
+  # renames still lands the latest name, but only the first note —
+  # measured by any recent system note so membership churn in the same
+  # window collapses into one line too.
   def rename(new_name, renamed_by:)
     raise NotAGroup unless group_capable?
 
     clean = new_name.to_s.strip
     transaction do
       update!(name: clean.presence)
-      if clean.present?
-        post_system_message("#{renamed_by.name} renamed the group to #{clean}", creator: renamed_by)
-      else
-        post_system_message("#{renamed_by.name} cleared the group name", creator: renamed_by)
+      unless recent_system_note?
+        if clean.present?
+          post_system_message("#{renamed_by.name} renamed the group to #{clean}", creator: renamed_by)
+        else
+          post_system_message("#{renamed_by.name} cleared the group name", creator: renamed_by)
+        end
       end
     end
   end
@@ -154,9 +162,15 @@ class Rooms::Direct < Room
   end
 
   private
+    def recent_system_note?
+      messages.where(system: true).where(created_at: RENAME_NOTE_WINDOW.ago..).exists?
+    end
+
     # System messages are plain Action Text, never Markdown: member names
-    # render literally instead of being parsed as formatting.
+    # render literally instead of being parsed as formatting. The broadcast
+    # appends the note to open timelines; the quiet contract on Message
+    # keeps it out of unread, push, agents, inbox, and search.
     def post_system_message(text, creator:)
-      messages.create!(creator: creator, system: true, body: text)
+      messages.create!(creator: creator, system: true, body: text).tap(&:broadcast_create)
     end
 end

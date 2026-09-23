@@ -41,7 +41,17 @@ class Message < ApplicationRecord
   before_validation :render_markdown_body, if: :will_save_change_to_markdown_source?
   before_create -> { self.client_message_id ||= Random.uuid } # Bots don't care
   before_destroy :preserve_reply_tombstones, prepend: true
-  after_create_commit :receive_in_conversation
+  # System messages (`system: true`) are quiet timeline notes — group
+  # renames, membership changes, pins — written by model code, never by
+  # users: no controller permits :system. They render in the timeline and
+  # broadcast there live, but skip every delivery channel: unread marking
+  # and push (receive_in_conversation below), inbox items
+  # (record_activity_items), agent deliveries (Message::AgentDelivery),
+  # search indexing (Message::Searchable), and bot webhooks
+  # (MessagesController#deliver_webhooks_to_bots only runs on user posts).
+  # Message::Broadcasts#broadcast_create appends them without the unread
+  # fan-out. New delivery channels must honor system? the same way.
+  after_create_commit :receive_in_conversation, unless: :system?
   after_create_commit :close_stale_sibling_threads, if: :thread_message?
   after_create_commit :record_activity_items
   # Create and update need distinct callback filters: registering the same

@@ -2,7 +2,7 @@ module Message::Searchable
   extend ActiveSupport::Concern
 
   included do
-    after_create_commit  :create_in_index
+    after_create_commit  :create_in_index, unless: :system?
     after_update_commit  :update_in_index
     after_destroy_commit :remove_from_index
 

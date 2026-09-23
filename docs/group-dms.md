@@ -38,7 +38,10 @@ name or a default first-names preview ("Riel, Jon, Chris +2"). Members
 can rename the group, add people up to the cap, and leave from the DM
 settings page; leaving removes only your membership, and the group keeps
 working. Renames, adds, and leaves post centered system messages in the
-timeline (`messages.system`), which never mention, reply, or notify.
+timeline (`messages.system`), which broadcast live but stay quiet: no
+unread, push, agent or bot delivery, inbox items, or search indexing (see
+the quiet contract on Message). Rename notes are rate-limited to one per
+room per minute; repeated renames still land the latest name.
 
 One-to-one history stays private: adding members to a one-to-one DM is
 rejected, so groups are always born from the selection path, never by

@@ -2,7 +2,7 @@ module Message::AgentDelivery
   extend ActiveSupport::Concern
 
   included do
-    after_create_commit :enqueue_agent_deliveries
+    after_create_commit :enqueue_agent_deliveries, unless: :system?
   end
 
   private

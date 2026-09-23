@@ -1,7 +1,9 @@
 module Message::Broadcasts
   def broadcast_create
     broadcast_append_to message_stream_target, :messages, target: [ message_stream_target, :messages ]
-    broadcast_unread_room unless thread_message?
+    # System notes appear in open timelines but never light up the room
+    # for anyone (see the quiet contract on Message).
+    broadcast_unread_room unless thread_message? || system?
   end
 
   def broadcast_remove

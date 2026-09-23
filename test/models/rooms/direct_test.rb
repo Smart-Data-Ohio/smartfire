@@ -177,6 +177,63 @@ class Rooms::DirectTest < ActiveSupport::TestCase
     assert_equal "JZ left the group", group.messages.where(system: true).last.plain_text_body
   end
 
+  test "rename notes mark nobody unread and enqueue no push" do
+    group = Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:kevin) ])
+
+    assert_no_enqueued_jobs(only: Room::PushMessageJob) do
+      group.rename("Weekend Plans", renamed_by: users(:david))
+    end
+
+    assert_empty group.memberships.unread
+  end
+
+  test "rename notes are never delivered to agents" do
+    group = Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:bender) ])
+    assert users(:bender).agent.present?
+
+    assert_no_difference -> { AgentEvent.count } do
+      assert_no_enqueued_jobs(only: Agent::DeliveryJob) do
+        group.rename("Weekend Plans", renamed_by: users(:david))
+      end
+    end
+  end
+
+  test "rename notes stay out of the search index" do
+    group = Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:kevin) ])
+
+    group.rename("Zymurgy Plans", renamed_by: users(:david))
+
+    assert_predicate group.messages.where(system: true).last, :present?
+    assert_empty Message.search("Zymurgy")
+  end
+
+  test "rename notes broadcast into the timeline without unread" do
+    group = Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:kevin) ])
+
+    rename = -> { group.rename("Weekend Plans", renamed_by: users(:david)) }
+    streams = group.users.map { |member| UnreadRoomsChannel.stream_name_for(member.id) }
+    quiet = streams.reverse.reduce(rename) { |block, stream| -> { assert_no_broadcasts(stream, &block) } }
+
+    assert_broadcasts room_messages_stream_name(group), 1, &quiet
+  end
+
+  test "rename notes are rate-limited to one per room per minute" do
+    group = Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:kevin) ])
+
+    group.rename("First Name", renamed_by: users(:david))
+    group.rename("Second Name", renamed_by: users(:david))
+
+    assert_equal "Second Name", group.reload.name
+    assert_equal 1, group.messages.where(system: true).count
+
+    travel 61.seconds do
+      group.rename("Third Name", renamed_by: users(:david))
+    end
+
+    assert_equal "Third Name", group.reload.name
+    assert_equal 2, group.messages.where(system: true).count
+  end
+
   test "leaving keeps the group working for everyone left" do
     group = Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:kevin) ])
 
@@ -196,4 +253,10 @@ class Rooms::DirectTest < ActiveSupport::TestCase
     assert_equal :destroyed, group.leave(users(:david))
     assert_predicate group.reload, :deleted?
   end
+
+  private
+    def room_messages_stream_name(room)
+      signed = Turbo::StreamsChannel.signed_stream_name([ room, :messages ])
+      Turbo::StreamsChannel.verified_stream_name(signed)
+    end
 end
