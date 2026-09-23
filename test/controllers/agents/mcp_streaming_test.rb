@@ -63,6 +63,9 @@ class Agents::McpStreamingTest < ActionDispatch::IntegrationTest
 
     assert_tool_error body, "Daily message budget exceeded (1/day)"
     assert_equal "too_many_requests", body.dig("result", "structuredContent", "status")
+    assert_equal "messages", body.dig("result", "structuredContent", "cap")
+    assert_equal 1, body.dig("result", "structuredContent", "limit")
+    assert body.dig("result", "structuredContent", "retry_after").positive?
   end
 
   test "set_presence sets and clears working presence" do
