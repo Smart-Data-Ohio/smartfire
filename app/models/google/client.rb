@@ -218,6 +218,25 @@ module Google
       api_request(:get, "/calendar/v3/calendars/primary/events/#{google_event_id}")
     end
 
+    # Timed event windows overlapping [time_min, time_max] for meeting
+    # status, under the existing calendar.events grant (no new scope).
+    # The fields mask keeps titles, descriptions, locations, and
+    # attendee identities out of the response entirely: only each
+    # event's start/end, status, transparency, and every attendee's
+    # self/declined flags arrive, and only the busy intervals derived
+    # from them are kept.
+    # https://developers.google.com/workspace/calendar/api/v3/reference/events/list
+    MEETING_STATUS_FIELDS = "items(start,end,status,transparency,attendees(self,responseStatus))"
+
+    def list_events(time_min:, time_max:)
+      api_request(:get, "/calendar/v3/calendars/primary/events", nil,
+        query: URI.encode_www_form(
+          singleEvents: true, orderBy: "startTime", maxResults: 250,
+          timeMin: time_min.iso8601, timeMax: time_max.iso8601,
+          fields: MEETING_STATUS_FIELDS
+        ))
+    end
+
     # Opens a push channel (events.watch) on the primary calendar. Google
     # POSTs a sync handshake then one notification per change to address,
     # echoing token back in X-Goog-Channel-Token. Returns the parsed

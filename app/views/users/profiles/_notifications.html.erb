@@ -39,6 +39,19 @@
       <p class="txt-small margin-none" style="color: var(--color-negative)">Quiet hours <%= @user.errors[:quiet_hours_start].to_sentence %>.</p>
     <% end %>
 
+    <div class="flex align-start gap pad-block-half">
+      <label class="switch flex-item-no-shrink">
+        <%= hidden_field_tag "user[meeting_dnd_enabled]", "0", id: nil %>
+        <%= check_box_tag "user[meeting_dnd_enabled]", "1", @user.meeting_dnd_enabled?, id: "user_meeting_dnd_enabled", class: "switch__input" %>
+        <span class="switch__btn round"></span>
+        <span class="for-screen-reader">Do not disturb during meetings</span>
+      </label>
+      <span>
+        <span class="txt-medium">Do not disturb during meetings</span><br>
+        <span class="txt-small">Silence push and sounds while you're in a meeting. Only works while "Show when I'm in a meeting" is on; starred people still get through.</span>
+      </span>
+    </div>
+
     <% if @user.dnd_allowed_people.any? %>
       <p class="txt-medium margin-none pad-block-half">Still notify me for:</p>
       <ul class="margin-none pad-inline">

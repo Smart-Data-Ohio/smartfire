@@ -44,6 +44,75 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?][method=post][data-turbo=false]", google_connect_path, count: 1
   end
 
+  test "profile links to connect for meeting status without an account" do
+    get user_profile_url
+
+    assert_response :success
+    assert_select "a[href='#google-calendar-title']", text: "Connect Google Calendar"
+    assert_select "input[name='user[meeting_status_enabled]'][type=checkbox]", count: 0
+  end
+
+  test "profile offers the meeting toggle for a connected account" do
+    connect_google!(users(:david), email: "david@gmail.test")
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "input[name='user[meeting_status_enabled]'][type=checkbox]", count: 1
+    assert_includes response.body, "never titles or attendees"
+  end
+
+  test "profile shows the meeting fetch notice when a refresh failed" do
+    connect_google!(users(:david), email: "david@gmail.test")
+    users(:david).update!(meeting_status_enabled: true)
+    Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current,
+      fetch_error: Calendar::MeetingRefresh::UNREACHABLE_MESSAGE)
+
+    get user_profile_url
+
+    assert_response :success
+    assert_includes response.body, CGI.escapeHTML(Calendar::MeetingRefresh::UNREACHABLE_MESSAGE)
+  end
+
+  test "profile asks to reconnect for meeting status left on after disconnect" do
+    users(:david).update!(meeting_status_enabled: true)
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "a[href='#google-calendar-title']", text: "Reconnect below"
+  end
+
+  test "profile lists the quiet-during-meetings switch" do
+    get user_profile_url
+
+    assert_response :success
+    assert_select "input[name='user[meeting_dnd_enabled]'][type=checkbox]", count: 1
+    assert_includes response.body, "Do not disturb during meetings"
+  end
+
+  test "the layout mutes sounds for quiet-during-meetings" do
+    users(:david).update!(meeting_status_enabled: true, meeting_dnd_enabled: true)
+    Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current,
+      busy_intervals: [ [ 5.minutes.ago.iso8601, 55.minutes.from_now.iso8601 ] ])
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=notification-dnd][content=muted]", count: 1
+  end
+
+  test "the layout leaves sounds alone for meetings when quiet-during-meetings is off" do
+    users(:david).update!(meeting_status_enabled: true)
+    Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current,
+      busy_intervals: [ [ 5.minutes.ago.iso8601, 55.minutes.from_now.iso8601 ] ])
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=notification-dnd]", count: 0
+  end
+
   test "profile shows the connected account with a disconnect button" do
     connect_google!(users(:david), email: "david@gmail.test")
 

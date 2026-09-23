@@ -10,6 +10,7 @@ class Users::StatusesController < ApplicationController
     end
 
     if @user.save
+      reconcile_meeting_status
       redirect_to user_profile_url, notice: "✓"
     else
       set_memberships
@@ -24,7 +25,21 @@ class Users::StatusesController < ApplicationController
 
   private
     def status_params
-      params.require(:user).permit(:presence_setting, :custom_status_emoji, :custom_status_text, :custom_status_expires_in)
+      params.require(:user).permit(:presence_setting, :custom_status_emoji, :custom_status_text, :custom_status_expires_in,
+        :meeting_status_enabled)
+    end
+
+    # Opting into meeting status fetches the first busy intervals right
+    # away instead of waiting for the 15-minute sweep; opting out drops
+    # the cached intervals immediately.
+    def reconcile_meeting_status
+      return unless @user.saved_change_to_meeting_status_enabled?
+
+      if @user.meeting_status_enabled?
+        Calendar::MeetingRefreshJob.perform_later(@user.id)
+      else
+        @user.meeting_cache&.destroy!
+      end
     end
 
     def set_memberships

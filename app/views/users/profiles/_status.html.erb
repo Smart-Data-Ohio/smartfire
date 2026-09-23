@@ -39,4 +39,36 @@
       <%= form.button "Clear status", name: "user[clear_custom_status]", value: "1", class: "btn txt-small" %>
     </div>
   </fieldset>
+
+  <fieldset class="margin-none">
+    <legend class="txt-large">Meetings</legend>
+    <% if !Google::Client.configured? %>
+      <p class="txt-small margin-none">Google Calendar is not configured for this workspace</p>
+    <% elsif @user.google_account&.connected? && @user.google_account.calendar? %>
+      <p class="txt-small margin-none">Show "In a meeting" beside your name while your Google Calendar says you're busy. Only free/busy times are read — never titles or attendees. A custom status or DND shows instead.</p>
+
+      <div class="flex align-start gap pad-block-half">
+        <label class="switch flex-item-no-shrink">
+          <%= hidden_field_tag "user[meeting_status_enabled]", "0", id: nil %>
+          <%= check_box_tag "user[meeting_status_enabled]", "1", @user.meeting_status_enabled?, id: "user_meeting_status_enabled", class: "switch__input" %>
+          <span class="switch__btn round"></span>
+          <span class="for-screen-reader">Show when I'm in a meeting</span>
+        </label>
+        <span>
+          <span class="txt-medium">Show when I'm in a meeting</span><br>
+          <span class="txt-small">Connected as <%= @user.google_account.email %>.</span>
+        </span>
+      </div>
+
+      <% if @user.meeting_cache&.fetch_error.present? %>
+        <p class="txt-small margin-none"><%= @user.meeting_cache.fetch_error %></p>
+      <% end %>
+    <% elsif @user.meeting_status_enabled? %>
+      <p class="txt-small margin-none">Meeting status is on, but Google Calendar isn't connected. <%= link_to "Reconnect below", "#google-calendar-title" %> to resume showing when you're in a meeting.</p>
+    <% else %>
+      <p class="txt-small margin-none">Show "In a meeting" beside your name while your Google Calendar says you're busy. <%= link_to "Connect Google Calendar", "#google-calendar-title" %> first — only free/busy times are read, never titles or attendees.</p>
+    <% end %>
+
+    <%= profile_form_submit_button %>
+  </fieldset>
 <% end %>

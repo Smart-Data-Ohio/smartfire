@@ -56,7 +56,7 @@ class Event::ReminderPusher
     # no per-person exception. One user lookup for the whole batch.
     def push_allowed_ids
       ids = recipient_ids
-      users = User.where(id: ids).index_by(&:id)
+      users = User.where(id: ids).includes(:meeting_cache).index_by(&:id)
 
       ids.select do |id|
         Notifications::Policy.new(recipient: users[id], kind: :reminder).push?

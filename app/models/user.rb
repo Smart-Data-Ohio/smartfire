@@ -15,6 +15,7 @@ class User < ApplicationRecord
   has_many :push_subscriptions, class_name: "Push::Subscription", dependent: :delete_all
 
   has_one :google_account, dependent: :destroy
+  has_one :meeting_cache, class_name: "Calendar::MeetingCache", dependent: :destroy
   has_one :google_identity, dependent: :destroy
   has_one :github_connected_account, dependent: :destroy
   has_one :fizzy_connected_account, dependent: :destroy
@@ -164,6 +165,7 @@ class User < ApplicationRecord
       sessions.delete_all
       Calendar::DisconnectCleanupJob.perform_later([], google_account.cleanup_snapshot, google_account.id) if google_account&.usable?
       push_channel&.destroy!
+      Calendar::MeetingCache.where(user_id: id).delete_all
       google_account&.mark_disconnected!("Account deactivated")
       github_connected_account&.mark_disconnected!("Account deactivated")
       fizzy_connected_account&.mark_disconnected!("Account deactivated")

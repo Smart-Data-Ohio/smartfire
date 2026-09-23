@@ -387,4 +387,51 @@ class Google::ClientTest < ActiveSupport::TestCase
     assert_equal GoogleAccount::UNREADABLE_TOKEN_REASON, @account.reload.disconnected_reason
     assert_not_requested :post, GOOGLE_EVENTS_URL
   end
+
+  test "list_events queries a single-event window with the free/busy fields mask" do
+    stub_request(:get, GOOGLE_EVENTS_URL)
+      .with(query: hash_including({ "singleEvents" => "true" }))
+      .to_return(status: 200, body: { "items" => [] }.to_json)
+
+    response = @client.list_events(
+      time_min: Time.zone.parse("2026-09-23T09:30:00Z"),
+      time_max: Time.zone.parse("2026-09-24T10:30:00Z"))
+
+    assert_equal [], response["items"]
+    assert_requested :get, GOOGLE_EVENTS_URL, query: hash_including({
+      "singleEvents" => "true",
+      "orderBy" => "startTime",
+      "timeMin" => "2026-09-23T09:30:00Z",
+      "timeMax" => "2026-09-24T10:30:00Z",
+      "fields" => Google::Client::MEETING_STATUS_FIELDS
+    })
+  end
+
+  test "a 429 on list_events raises RateLimited" do
+    stub_request(:get, %r{\A#{GOOGLE_EVENTS_URL}}).to_return(status: 429, body: {}.to_json)
+
+    assert_raises(Google::Client::RateLimited) do
+      @client.list_events(time_min: 1.hour.ago, time_max: 1.hour.from_now)
+    end
+  end
+
+  test "a quota 403 on list_events raises RateLimited" do
+    stub_request(:get, %r{\A#{GOOGLE_EVENTS_URL}})
+      .to_return(status: 403, body: google_forbidden_body("quotaExceeded").to_json)
+
+    assert_raises(Google::Client::RateLimited) do
+      @client.list_events(time_min: 1.hour.ago, time_max: 1.hour.from_now)
+    end
+  end
+
+  test "a revoked grant on list_events disconnects and raises Unauthorized" do
+    @account.update!(access_token_expires_at: 1.hour.ago)
+    stub_google_token_invalid_grant
+
+    assert_raises(Google::Client::Unauthorized) do
+      @client.list_events(time_min: 1.hour.ago, time_max: 1.hour.from_now)
+    end
+
+    assert_equal "Google rejected the connection", @account.reload.disconnected_reason
+  end
 end

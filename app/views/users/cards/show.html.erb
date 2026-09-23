@@ -10,7 +10,8 @@
 
         <span class="profile-card__presence">
           <% if @user.active? %>
-            <%= render_user_status_badge(@user) %>
+            <%= turbo_stream_from @user, :status %>
+            <span id="<%= dom_id(@user, :status_badge) %>"><%= render_user_status_badge(@user) %></span>
           <% elsif @user.deactivated? %>
             Deactivated
           <% else %>

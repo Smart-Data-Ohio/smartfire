@@ -50,4 +50,25 @@ class Users::PresencesControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal "offline", response.parsed_body["presences"].first["presence"]
   end
+
+  test "returns the meeting label while in a meeting" do
+    users(:jason).update!(meeting_status_enabled: true)
+    Calendar::MeetingCache.create!(user: users(:jason), fetched_at: Time.current,
+      busy_intervals: [ [ 5.minutes.ago.iso8601, 55.minutes.from_now.iso8601 ] ])
+
+    get presence_users_url(ids: [ users(:jason).id ])
+
+    assert_equal "📅 In a meeting", response.parsed_body["presences"].first["status"]
+  end
+
+  test "a custom status wins over the meeting label in the lookup" do
+    users(:jason).update!(meeting_status_enabled: true,
+      custom_status_emoji: "🚂", custom_status_text: "On a train")
+    Calendar::MeetingCache.create!(user: users(:jason), fetched_at: Time.current,
+      busy_intervals: [ [ 5.minutes.ago.iso8601, 55.minutes.from_now.iso8601 ] ])
+
+    get presence_users_url(ids: [ users(:jason).id ])
+
+    assert_equal "🚂 On a train", response.parsed_body["presences"].first["status"]
+  end
 end

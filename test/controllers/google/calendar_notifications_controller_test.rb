@@ -60,6 +60,25 @@ class Google::CalendarNotificationsControllerTest < ActionDispatch::IntegrationT
     assert_nil Calendar::PushChannel.find_by(id: @channel.id)
   end
 
+  test "a change notification also enqueues a meeting refresh" do
+    assert_enqueued_with(job: Calendar::MeetingRefreshJob, args: [ @user.id ]) do
+      post "/google/calendar/notifications", headers: notification_headers(number: "12")
+    end
+
+    assert_response :ok
+  end
+
+  test "a redelivered notification enqueues no second meeting refresh" do
+    post "/google/calendar/notifications", headers: notification_headers(number: "12")
+    assert_response :ok
+
+    assert_no_enqueued_jobs only: Calendar::MeetingRefreshJob do
+      post "/google/calendar/notifications", headers: notification_headers(number: "12")
+    end
+
+    assert_response :ok
+  end
+
   private
     def notification_headers(channel_id: "chan-1", token: "channel-token", state: "exists", number: "1")
       {

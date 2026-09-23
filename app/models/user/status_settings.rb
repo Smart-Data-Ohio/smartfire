@@ -91,6 +91,44 @@ module User::StatusSettings
     [ custom_status_emoji, custom_status_text ].compact_blank.join(" ")
   end
 
+  # The automatic meeting label. One string everywhere it shows (profile
+  # badge, member panel, DM tooltips): the 📅 is the calendar icon, so
+  # JSON surfaces render it with no HTML.
+  IN_MEETING_STATUS = "📅 In a meeting"
+
+  # True while the member opted into meeting status and now sits inside
+  # a cached busy interval. Reads the cache row only (preloaded with
+  # `includes(:meeting_cache)` on list paths); never touches Google.
+  def in_meeting?(now: Time.current)
+    meeting_status_enabled? && !!meeting_cache&.in_meeting?(now:)
+  end
+
+  # Whether the meeting label shows for this member. Precedence, top
+  # wins: invisible hides everything inferred; an active custom status
+  # wins over the automatic label; any manual DND (the toggle, DND
+  # presence, quiet hours) wins too, since DND already signals
+  # unavailability. Meeting auto-DND itself never suppresses the label,
+  # or the two features would cancel each other. The presence dot and
+  # label are unaffected: only the status line changes.
+  def meeting_status_visible?(now: Time.current)
+    in_meeting?(now:) && !custom_status_active?(now:) && !dnd_active?(now:) && presence_setting != "invisible"
+  end
+
+  # The status line beside the member's name: their custom status, the
+  # meeting label, or nothing. Every surface (badge, member panel, DM
+  # tooltips) reads through here.
+  def status_text_display(now: Time.current)
+    custom_status_display(now:) || (IN_MEETING_STATUS if meeting_status_visible?(now:))
+  end
+
+  # Quiet-during-meetings for Notifications::Policy. Only when meeting
+  # status itself is on; unlike the label, this ignores custom statuses
+  # and manual DND — quiet applies through the whole busy interval, and
+  # the "Allow during DND" people still get through.
+  def meeting_dnd_active?(now: Time.current)
+    meeting_dnd_enabled? && in_meeting?(now:)
+  end
+
   # The status form submits an expiry preset instead of a timestamp. "Today"
   # and "this week" end at midnight in the user's own time zone.
   def custom_status_expires_in=(preset)

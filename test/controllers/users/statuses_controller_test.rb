@@ -47,4 +47,31 @@ class Users::StatusesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to new_session_url
   end
+
+  test "opting into meeting status enqueues a first refresh" do
+    assert_enqueued_with(job: Calendar::MeetingRefreshJob, args: [ users(:david).id ]) do
+      patch user_status_url, params: { user: { meeting_status_enabled: "1" } }
+    end
+
+    assert_redirected_to user_profile_url
+    assert users(:david).reload.meeting_status_enabled?
+  end
+
+  test "opting out of meeting status drops the cached intervals" do
+    users(:david).update!(meeting_status_enabled: true)
+    Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current,
+      busy_intervals: [ [ 1.hour.ago.iso8601, 1.hour.from_now.iso8601 ] ])
+
+    patch user_status_url, params: { user: { meeting_status_enabled: "0" } }
+
+    assert_redirected_to user_profile_url
+    assert_not users(:david).reload.meeting_status_enabled?
+    assert_nil users(:david).meeting_cache
+  end
+
+  test "saving other status settings leaves meeting refreshes alone" do
+    assert_no_enqueued_jobs only: Calendar::MeetingRefreshJob do
+      patch user_status_url, params: { user: { presence_setting: "dnd" } }
+    end
+  end
 end

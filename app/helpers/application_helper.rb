@@ -22,12 +22,13 @@ module ApplicationHelper
 
   # Manual DND and the DND presence mute sounds outright; quiet hours send
   # their window and zone so the sound controller re-evaluates the
-  # time-based gate on every play without a reload.
+  # time-based gate on every play without a reload. Quiet-during-meetings
+  # mutes sounds the same way while a busy interval covers the render.
   def notification_sound_meta_tags
     return unless Current.user
 
     tags = []
-    if Current.user.manual_dnd_active? || Current.user.presence_setting == "dnd"
+    if Current.user.manual_dnd_active? || Current.user.presence_setting == "dnd" || Current.user.meeting_dnd_active?
       tags << tag.meta(name: "notification-dnd", content: "muted")
     end
     if Current.user.quiet_hours_enabled? && Current.user.quiet_hours_start_minute && Current.user.quiet_hours_end_minute

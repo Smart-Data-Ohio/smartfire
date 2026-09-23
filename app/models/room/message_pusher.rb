@@ -57,7 +57,7 @@ class Room::MessagePusher
       return [] if candidate_ids.empty?
 
       memberships = room.memberships.where(user_id: candidate_ids).index_by(&:user_id)
-      users = User.where(id: candidate_ids).index_by(&:id)
+      users = User.where(id: candidate_ids).includes(:meeting_cache).index_by(&:id)
       exceptions = Notifications::Policy.dnd_exceptions_for(candidate_ids, message.creator)
       mentioned = mentionee_ids.to_set
 

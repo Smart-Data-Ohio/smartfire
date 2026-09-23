@@ -4,7 +4,7 @@ class Rooms::MembersController < ApplicationController
   rescue_from ActiveRecord::RecordNotFound, with: -> { head :not_found }
 
   def index
-    members = @room.users.active.with_attached_avatar.includes(:agent).order(Arel.sql("LOWER(users.name) ASC"), :id).to_a
+    members = @room.users.active.with_attached_avatar.includes(:agent, :meeting_cache).order(Arel.sql("LOWER(users.name) ASC"), :id).to_a
     lease_states = WorkspacePresenceLease.presence_by_user_id(members.map(&:id))
 
     render json: {
@@ -41,7 +41,7 @@ class Rooms::MembersController < ApplicationController
           bot: member.bot?,
           online: presence != :offline,
           presence: presence.to_s,
-          status: member.custom_status_display
+          status: member.status_text_display
         }
       end
     end

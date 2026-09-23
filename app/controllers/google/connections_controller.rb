@@ -63,6 +63,7 @@ module Google
         snapshot = account.cleanup_snapshot
         account_id = account.id
         Current.user.event_calendar_entries.delete_all
+        Current.user.meeting_cache&.destroy!
         # Meet links were minted through this connection: clear them so
         # event cards stop advertising links the app no longer manages.
         # The request flag stays set (and update_all fires no callbacks),
@@ -110,6 +111,8 @@ module Google
         Event.where(organizer: user, meet_link_requested: true, meet_link: [ nil, "" ])
           .find_each { |event| Calendar::MeetLinkJob.perform_later(event.id) }
         Calendar::WatchChannelJob.perform_later(user.id)
+        # A reconnect heals meeting status for members who left it on.
+        Calendar::MeetingRefreshJob.perform_later(user.id) if user.meeting_status_enabled?
       end
   end
 end
