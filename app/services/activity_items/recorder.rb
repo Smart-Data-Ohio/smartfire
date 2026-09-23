@@ -173,9 +173,10 @@ module ActivityItems
       # somewhere never loads the whole roster. Every distinct phrase
       # compiles into its own pattern checked independently. A keyword
       # never overrides a mention, reply, or thread item for the same
-      # message (the policy picks the winner), and muted or invisible
-      # members match nothing. Members with room notifications off still
-      # match: a keyword is an explicit opt-in, like a mention.
+      # message (the policy picks the winner), and thread-muted or
+      # invisible members match nothing. Members with room notifications
+      # off or the room muted still match: a keyword is an explicit
+      # opt-in, like a mention.
       def room_keyword_matched_ids
         @room_keyword_matched_ids ||= begin
           text = @source.plain_text_body

@@ -15,6 +15,8 @@ module Notifications
   #   replies: replies are a follower benefit.
   # - At room level, mentions still record with notifications off
   #   (involvement "nothing"), but replies do not.
+  # - A muted room (involvement "muted") records mentions and keyword
+  #   alerts only; replies and followed-thread activity record nothing.
   # - Keyword matches record for every non-invisible room member.
   # - DND and quiet hours never suppress inbox items.
   #
@@ -22,6 +24,8 @@ module Notifications
   # - Push mirrors the inbox winner, except keyword matches (inbox only)
   #   and room-level "everything" followers, who get push for every
   #   message without an inbox item.
+  # - A muted room pushes mentions only: replies, thread activity, and
+  #   keyword alerts stay silent, and DND still applies on top.
   # - DND (manual, presence, or quiet hours) suppresses push and sounds
   #   for everything except messages from people the recipient starred
   #   with "Allow during DND". Reminders carry no sender, so they stay silent.
@@ -92,7 +96,7 @@ module Notifications
         return nil if room_membership.nil?
 
         return "mention" if mentioned && thread_mentions_enabled?
-        return "reply" if reply_to_recipient && thread_membership.involved_in_everything? && !room_membership.involved_in_nothing?
+        return "reply" if reply_to_recipient && thread_membership.involved_in_everything? && room_replies_enabled?
         return "thread_activity" if thread_membership.involved_in_everything? && room_replies_enabled?
         return "keyword_alert" if keyword_matched
 
@@ -120,6 +124,7 @@ module Notifications
         return false if room_membership.nil? || thread_membership.nil?
         return false if room_invisible? || room_membership.involved_in_nothing?
         return false if thread_membership.involved_in_nothing?
+        return mentioned && thread_mentions_enabled? if room_membership.involved_in_muted?
         return true if thread_membership.involved_in_everything?
         return true if mentioned && thread_mentions_enabled?
 
@@ -144,12 +149,15 @@ module Notifications
         room_membership&.involved_in_invisible?
       end
 
+      # Muted rooms still allow mention pushes; replies and thread
+      # activity stay silent through room_replies_enabled?.
       def room_mentions_enabled?
-        room_membership&.involved_in_mentions? || room_membership&.involved_in_everything?
+        room_membership&.involved_in_mentions? || room_membership&.involved_in_everything? ||
+          room_membership&.involved_in_muted?
       end
 
       def room_replies_enabled?
-        room_mentions_enabled?
+        room_membership&.involved_in_mentions? || room_membership&.involved_in_everything?
       end
 
       def thread_mentions_enabled?
