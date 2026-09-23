@@ -1,0 +1,98 @@
+<% @page_title = "Audit log" %>
+
+<% content_for :nav do %>
+  <div class="flex-item-justify-start">
+    <%= link_back_to edit_account_path %>
+  </div>
+<% end %>
+
+<section class="panel panel--wide txt-align-center flex flex-column position-relative" style="view-transition-name: audit-log">
+  <div class="flex align-center gap">
+    <div class="pad-inline-double center">
+      <h1 class="margin-none">Audit log</h1>
+      <p class="margin-none-block-start">Security-relevant actions across the workspace, kept for one year.</p>
+    </div>
+  </div>
+
+  <div class="pad-inline pad-block-start">
+    <%= form_with url: account_audit_log_path, method: :get, class: "audit-log__filters fill-shade border-radius pad txt-align-start" do |form| %>
+      <div class="audit-log__filters-grid">
+        <label class="flex flex-column gap">
+          <span class="txt-small"><strong>Actor</strong></span>
+          <%= form.text_field :actor, value: @filters[:actor], class: "input", autocomplete: "off", placeholder: "Name or email" %>
+        </label>
+
+        <label class="flex flex-column gap">
+          <span class="txt-small"><strong>Action</strong></span>
+          <%= form.select :audit_action, options_for_select([ [ "All actions", "" ] ] + AuditLog::ACTIONS.map { |action| [ action, action ] }, @filters[:audit_action]), {}, class: "input" %>
+        </label>
+
+        <label class="flex flex-column gap">
+          <span class="txt-small"><strong>Target</strong></span>
+          <%= form.select :target_type, options_for_select([ [ "All targets", "" ] ] + Accounts::AuditLogsController::TARGET_TYPES.map { |type| [ type, type ] }, @filters[:target_type]), {}, class: "input" %>
+        </label>
+
+        <label class="flex flex-column gap">
+          <span class="txt-small"><strong>From</strong></span>
+          <%= form.date_field :from, value: @filters[:from], class: "input" %>
+        </label>
+
+        <label class="flex flex-column gap">
+          <span class="txt-small"><strong>To</strong></span>
+          <%= form.date_field :to, value: @filters[:to], class: "input" %>
+        </label>
+      </div>
+
+      <div class="flex align-center gap margin-block-start">
+        <%= form.submit "Filter", class: "btn btn--reversed" %>
+        <%= link_to "Clear", account_audit_log_path, class: "btn btn--plain" %>
+        <span class="flex-item-justify-end">
+          <%= link_to "Export CSV", account_audit_log_path(@filters.compact_blank.merge(format: :csv)), class: "btn" %>
+        </span>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="pad-inline pad-block-start">
+    <% if @entries.any? %>
+      <div class="audit-log__table-wrap border-radius" tabindex="0" role="region" aria-label="Audit log entries">
+        <table class="audit-log__table">
+          <caption class="for-screen-reader">Audit log entries, newest first</caption>
+          <thead>
+            <tr>
+              <th scope="col">Time</th>
+              <th scope="col">Actor</th>
+              <th scope="col">Action</th>
+              <th scope="col">Target</th>
+              <th scope="col">Changes</th>
+              <th scope="col">IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @entries.each do |entry| %>
+              <tr>
+                <td><%= local_datetime_tag entry.created_at, style: :datetime do %><%= entry.created_at.to_fs(:short) %><% end %></td>
+                <td><%= entry.actor_label.presence || "—" %></td>
+                <td><code><%= entry.action %></code></td>
+                <td><%= entry.target_label.presence || "—" %></td>
+                <td class="audit-log__changes"><%= audit_changes_summary(entry.details) %></td>
+                <td><%= entry.ip_address.presence || "—" %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex center gap margin-block-start">
+        <% unless @page.first? %>
+          <%= link_to "Newest entries", account_audit_log_path(@filters.compact_blank), class: "btn" %>
+        <% end %>
+        <% unless @page.last? %>
+          <%= link_to "Older entries", account_audit_log_path(@filters.compact_blank.merge(page: @page.next_param)), class: "btn" %>
+        <% end %>
+      </div>
+    <% else %>
+      <p class="txt-subtle">No audit entries match these filters.</p>
+    <% end %>
+  </div>
+</section>
