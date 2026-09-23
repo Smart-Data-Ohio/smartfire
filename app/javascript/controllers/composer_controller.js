@@ -27,7 +27,12 @@ export default class extends Controller {
     this.#restoreDraft()
 
     if (!this.#usingTouchDevice) {
-      onNextEventLoopTick(() => this.markdownTarget?.focus())
+      // Page-load autofocus must not steal focus the user already moved to a
+      // message or another field (under load this tick can fire late). Focus
+      // left on a sidebar link after a Turbo visit still moves to the composer.
+      onNextEventLoopTick(() => {
+        if (!this.#focusIsOnMessageOrField) this.markdownTarget?.focus()
+      })
     }
   }
 
@@ -681,5 +686,11 @@ export default class extends Controller {
         <div>${escapeHTML(filename)} - <span>${percent}%</span></div>
       </div>
     `
+  }
+
+  get #focusIsOnMessageOrField() {
+    const active = document.activeElement
+    if (!active || active === document.body || active === this.markdownTarget) return false
+    return active.matches(".message, input, textarea, select, [contenteditable='true']")
   }
 }

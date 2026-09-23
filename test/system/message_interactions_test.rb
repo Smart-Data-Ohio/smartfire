@@ -33,7 +33,7 @@ class MessageInteractionsTest < ApplicationSystemTestCase
     JS
     assert_message_menu_open
     page.send_keys :escape
-    assert_selector "##{dom_id(messages(:third))}:focus"
+    assert_focused "##{dom_id(messages(:third))}"
 
     page.current_window.resize_to(390, 844)
     message = find("##{dom_id(messages(:third))}")
