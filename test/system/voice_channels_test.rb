@@ -332,8 +332,11 @@ class VoiceChannelsTest < ApplicationSystemTestCase
 
     # The sidebar row drops over the broadcast, or (when the test adapter
     # reorders the broadcast behind the connection reset) on the reconnect
-    # reload a few seconds later.
-    assert_no_selector "#voice_rooms .voice-room", text: "Lounge", wait: 15
+    # reload. That fallback is not "a few seconds": the cable monitor polls
+    # on a jittered 6-12 s interval and skips reopening a recent disconnect,
+    # so the reload lands 7-17 s after the revoke on a typical run. Budget
+    # the same 30 s the sidebar-reconnect test above gives that mechanism.
+    assert_no_selector "#voice_rooms .voice-room", text: "Lounge", wait: 30
 
     # The header stack usually drops over the same broadcast. If this run's
     # delivery reordered it behind the reset, drive the revoked poll instead:

@@ -54,6 +54,9 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
     find(".room-header__name").click
     press_keys(:alt, :arrow_up)
     assert_selector ".room-header__name", text: "Designers", wait: 10
+    # Let the new room's composer autofocus land before moving focus off
+    # it, or a late autofocus pulls focus back into the text field.
+    assert_focused "#message_markdown_source", wait: 10
 
     find(".room-header__name").click
     press_keys(:alt, :arrow_down)

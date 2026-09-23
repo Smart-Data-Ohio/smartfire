@@ -238,12 +238,23 @@ class HuddlePresenceTest < ApplicationSystemTestCase
   test "the aggregate poller skips while hidden and fetches on becoming visible" do
     visit room_path(@room)
     wait_for_cable_connection
+    # The poller lives in the async sidebar frame behind a lazy module: the
+    # first refresh below threw a null-controller JS error in CI when it ran
+    # before either arrived. Its connect also fires an immediate refresh, so
+    # wait that out too: a refresh issued while one is in flight is skipped,
+    # which would strand the poll count below.
+    wait_for_presence_controller
+    wait_for_presence_idle
     count_presence_polls
     refresh_presence_poller
 
     Timeout.timeout(10) do
       sleep 0.05 until presence_poll_count >= 1
     end
+    # The count above proves the fetch started, not that it finished. A slow
+    # first poll would still be in flight at the visibility steps below,
+    # skipping the fetch-on-visible refresh and timing the test out.
+    wait_for_presence_idle
 
     set_visibility_state("hidden")
     hidden_polls = presence_poll_count
@@ -322,6 +333,38 @@ class HuddlePresenceTest < ApplicationSystemTestCase
             document.querySelector('[data-controller~="huddle-presence"]'), "huddle-presence")
           .refresh()
       JS
+    end
+
+    def presence_controller_connected?
+      page.evaluate_script(<<~JS)
+        (() => {
+          const element = document.querySelector('[data-controller~="huddle-presence"]')
+          return !!(element && window.Stimulus &&
+            window.Stimulus.getControllerForElementAndIdentifier(element, "huddle-presence"))
+        })()
+      JS
+    end
+
+    def wait_for_presence_controller
+      Timeout.timeout(10) do
+        sleep 0.05 until presence_controller_connected?
+      end
+    end
+
+    # True once no aggregate poll is running: refresh() sets the flag
+    # synchronously and clears it when the poll settles, so polling it waits
+    # for a started fetch to finish rather than hoping the server is fast.
+    def wait_for_presence_idle
+      Timeout.timeout(10) do
+        sleep 0.05 until page.evaluate_script(<<~JS)
+          (() => {
+            const element = document.querySelector('[data-controller~="huddle-presence"]')
+            const controller = element && window.Stimulus &&
+              window.Stimulus.getControllerForElementAndIdentifier(element, "huddle-presence")
+            return !!controller && !controller.inFlightRefresh
+          })()
+        JS
+      end
     end
 
     # Shadows the prototype getter for the test, then deletes the shadow

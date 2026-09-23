@@ -8,6 +8,10 @@ class MessageListA11yTest < ApplicationSystemTestCase
     # Let the composer's page-load autofocus land first; under parallel load
     # it can otherwise arrive after a test has moved focus to a message.
     assert_focused "#message_markdown_source", wait: 10
+    # The roving tab stop proves the message-list controller connected and
+    # took over keyboard management. Without it a scripted message focus can
+    # run before the list is ready and silently stay on the composer.
+    assert_selector "##{dom_id(@room, :messages)} > .message[tabindex='0']", wait: 10
   end
 
   test "the message list is a single tab stop with a roving tabindex" do
