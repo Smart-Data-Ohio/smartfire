@@ -1,10 +1,12 @@
 module Google
   # Viewer-side Drive metadata for message link previews and the composer
   # file picker (JSON only). Resolves with the viewer's own Google
-  # credentials at view time; nothing is stored in the database. Every
-  # denial answers 404 with an empty body so the endpoint never reveals
-  # whether a file exists. Never logs file metadata: error paths carry
-  # statuses, never names.
+  # credentials at view time; nothing is stored in the database. The grant
+  # is drive.file, so Google answers only for files the viewer picked
+  # through the Picker: pasted links to anything else 404 here and stay
+  # plain chips in the browser. Every denial answers 404 with an empty
+  # body so the endpoint never reveals whether a file exists. Never logs
+  # file metadata: error paths carry statuses, never names.
   class DriveFilesController < ApplicationController
     allow_unauthenticated_access only: :index
     before_action :restore_authentication, only: :index

@@ -129,13 +129,16 @@
 
 <h2>Google Drive (optional)</h2>
 <p>
-  Where enabled, pasting a Drive link can show a preview chip (file name, type,
-  owner display name, modified time, and link) resolved at view time with the
-  <em>viewer's own</em> Google credentials; people who cannot open the file see
-  only the plain link. Preview metadata is cached briefly (about five minutes)
-  per viewer and never shared across members. Attaching a Drive file to a
-  message stores only the file's ID on the workspace server, never its name or
-  contents.
+  Where enabled, Drive links render as chips. Files you picked through
+  Smartfire's file picker can show a preview chip (file name, type, owner
+  display name, modified time, and link) resolved at view time with the
+  <em>viewer's own</em> Google credentials under per-file consent: Smartfire
+  can only see files you opened with it, never your whole Drive. Pasted
+  links to anything else show a plain chip naming only the file kind (such
+  as "Google Doc"), with no metadata lookup. Preview metadata is cached
+  briefly (about five minutes) per viewer and never shared across members.
+  Attaching a Drive file to a message stores only the file's ID on the
+  workspace server, never its name or contents.
 </p>
 <p>
   The file-sharing picker works entirely in your browser with per-file consent:

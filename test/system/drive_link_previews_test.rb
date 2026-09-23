@@ -28,7 +28,7 @@ class DriveLinkPreviewsTest < ApplicationSystemTestCase
     WebMock.disable!
   end
 
-  test "a viewer with the Drive scope sees the link upgraded to a preview chip" do
+  test "a viewer with the Drive scope sees a picked file upgraded to a preview chip" do
     connect_google!(users(:jz), scopes: DRIVE_SCOPES)
     stub_google_drive_file(FILE_ID)
     sign_in "jz@37signals.com"
@@ -39,17 +39,30 @@ class DriveLinkPreviewsTest < ApplicationSystemTestCase
     assert_selector ".drive-chip__name", text: "Q3 Planning"
     assert_selector ".drive-chip__meta", text: /Modified.+Riel/
     assert_selector ".drive-chip__icon svg"
+    assert_no_selector ".drive-chip--plain"
   end
 
-  test "a viewer without the Drive scope keeps the plain link and fetches nothing" do
+  test "a viewer with the Drive scope keeps a plain chip for a file never picked" do
+    connect_google!(users(:jz), scopes: DRIVE_SCOPES)
+    stub_google_drive_file(FILE_ID, status: 403, body: {})
+    sign_in "jz@37signals.com"
+    join_room rooms(:designers)
+
+    send_message "Please review #{DOCS_URL} before Friday"
+
+    assert_selector ".drive-chip--plain .drive-chip__name", text: "Google Doc"
+    assert_no_selector ".drive-chip__meta"
+  end
+
+  test "a viewer without the Drive scope sees a plain chip and fetches nothing" do
     sign_in "kevin@37signals.com"
     join_room rooms(:designers)
     install_fetch_recorder
 
     send_message "Please review #{DOCS_URL} before Friday"
 
-    assert_message_text "Please review"
-    assert_no_selector ".drive-chip"
+    assert_selector ".drive-chip--plain .drive-chip__name", text: "Google Doc"
+    assert_no_selector ".drive-chip__meta"
     drive_requests = page.evaluate_script(
       "window.driveFetchUrls.filter(url => url.includes('/google/drive/files'))"
     )

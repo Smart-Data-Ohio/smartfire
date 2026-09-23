@@ -1,13 +1,17 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Upgrades Drive links in a message body to compact preview chips using the
-// viewer's own Google credentials. Mirrors Google::DriveLink; keep the two
-// pattern lists and docs/google-drive.md in sync when either changes.
+// Renders Drive links in a message body as compact chips. Every recognized
+// Drive URL immediately becomes a plain chip (a Drive icon plus the file
+// flavor derived from the URL shape alone, no network). Only when the
+// layout carries the google-drive-previews meta tag does the controller
+// then attempt a preview upgrade with the viewer's own Google credentials:
+// the grant is drive.file, so only files the viewer picked through the
+// Picker resolve, and anything else keeps its plain chip. Mirrors
+// Google::DriveLink; keep the two pattern lists and docs/google-drive.md
+// in sync when either changes.
 //
-// Runs only when the layout carries the google-drive-previews meta tag, so
-// members without Drive consent send zero requests. One request per file id
-// per page load is shared across all message instances; any non-200 answer
-// leaves the anchor untouched.
+// Members without Drive consent send zero requests. One preview request
+// per file id per page load is shared across all message instances.
 const FILE_ID = "[A-Za-z0-9_-]{10,}"
 const ACCOUNT_PREFIX = "(?:u/\\d+/)?"
 const PATTERNS = [
@@ -15,6 +19,16 @@ const PATTERNS = [
   new RegExp(`^https://drive\\.google\\.com/${ACCOUNT_PREFIX}file/${ACCOUNT_PREFIX}d/(${FILE_ID})`, "i"),
   new RegExp(`^https://drive\\.google\\.com/${ACCOUNT_PREFIX}drive/${ACCOUNT_PREFIX}folders/(${FILE_ID})`, "i"),
   new RegExp(`^https://drive\\.google\\.com/${ACCOUNT_PREFIX}open\\?(?:[^#]*&)?id=(${FILE_ID})(?:&|#|$)`, "i")
+]
+
+// File flavor for a plain chip, from the URL shape alone. Anything the
+// patterns accept but no flavor matches is a generic Drive file.
+const FLAVORS = [
+  [/docs\.google\.com\/.*document\//i, "Google Doc"],
+  [/docs\.google\.com\/.*spreadsheets\//i, "Google Sheet"],
+  [/docs\.google\.com\/.*presentation\//i, "Google Slides"],
+  [/docs\.google\.com\/.*forms\//i, "Google Form"],
+  [/drive\.google\.com\/.*folders\//i, "Drive folder"]
 ]
 
 // fileId -> Promise resolving to the preview JSON, or null when the link
@@ -40,6 +54,13 @@ export function driveFileId(url) {
     if (match) return match[1]
   }
   return null
+}
+
+export function driveFileFlavor(url) {
+  for (const [pattern, flavor] of FLAVORS) {
+    if (pattern.test(String(url))) return flavor
+  }
+  return "Drive file"
 }
 
 export function relativeModifiedTime(isoString) {
@@ -103,19 +124,47 @@ function chipElement(data) {
   return chip
 }
 
+function plainChipElement(url) {
+  const chip = document.createElement("span")
+  chip.className = "drive-chip drive-chip--plain"
+
+  const icon = document.createElement("span")
+  icon.className = "drive-chip__icon"
+  icon.setAttribute("aria-hidden", "true")
+  icon.innerHTML = ICONS.file
+
+  const name = document.createElement("span")
+  name.className = "drive-chip__name"
+  name.textContent = driveFileFlavor(url)
+
+  chip.append(icon, name)
+  return chip
+}
+
+function renderChip(anchor, chip) {
+  anchor.textContent = ""
+  anchor.appendChild(chip)
+  anchor.classList.add("drive-chip-link")
+}
+
 export default class extends Controller {
   connect() {
-    if (!document.querySelector('meta[name="google-drive-previews"][content="enabled"]')) return
+    const previewsEnabled = !!document.querySelector('meta[name="google-drive-previews"][content="enabled"]')
 
     for (const anchor of this.element.querySelectorAll("a[href]")) {
       const fileId = driveFileId(anchor.href)
       if (!fileId || anchor.querySelector(".drive-chip")) continue
 
+      // Plain chip immediately, so Drive links never show as raw URLs;
+      // consented viewers get a preview upgrade in place when Drive
+      // resolves the file (Picker-picked files only).
+      renderChip(anchor, plainChipElement(anchor.href))
+
+      if (!previewsEnabled) continue
+
       fetchPreview(fileId).then((data) => {
         if (!data || !anchor.isConnected) return
-        anchor.textContent = ""
-        anchor.appendChild(chipElement(data))
-        anchor.classList.add("drive-chip-link")
+        renderChip(anchor, chipElement(data))
       })
     }
   }

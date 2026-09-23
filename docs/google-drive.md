@@ -1,36 +1,47 @@
 # Google Drive link previews
 
 When a message contains a Google Drive, Docs, Sheets, Slides, Forms, or
-Drive-folder link, members whose connected Google account can open that file
-see the link upgraded to a compact preview chip: a file-type icon, the file
-name, "Modified \<relative time\>", and the owner's name. Everyone else,
-including members without a connected Google account, sees the ordinary link.
+Drive-folder link, it renders as a compact chip. Files the viewer picked
+through Smartfire's Picker show a full preview chip: a file-type icon, the
+file name, "Modified \<relative time\>", and the owner's name. Pasted links
+to anything else render as plain Drive link chips: the same chip frame with
+a generic file icon and the file flavor read from the URL shape alone
+("Google Doc", "Google Sheet", "Google Slides", "Google Form",
+"Drive folder", or "Drive file"), with no metadata fetch.
 
 ## Who sees a preview and why
 
-Previews are resolved at **view time with the viewer's own Google
-credentials**, never at post time and never with the author's account. No file
-metadata is stored in the database. When the viewer opens a page, the
-`drive-link` Stimulus controller finds Drive anchors in each message body and
-asks `GET /google/drive/files/:id`, which calls Drive `files.get` with the
-viewer's token. A private document is therefore never revealed to a channel
-member who cannot open it: without access, Google answers 403 or 404 and the
-link stays plain.
+Previews exist only for files picked through the Picker, and are resolved
+at **view time with the viewer's own Google credentials**, never at post
+time and never with the author's account. No file metadata is stored in
+the database. When the viewer opens a page, the `drive-link` Stimulus
+controller first renders every Drive anchor as a plain chip, then — only
+when the page carries the `google-drive-previews` meta tag — asks
+`GET /google/drive/files/:id`, which calls Drive `files.get` with the
+viewer's token. The grant is `drive.file` (per-file Picker access), so
+Google answers only for files the viewer opened with Smartfire: a pasted
+link to anything else answers 403 or 404 and the plain chip stays, and a
+private document is never revealed to a channel member who cannot open it.
 
 ## Consent
 
 Drive previews need the extra OAuth scope
-`https://www.googleapis.com/auth/drive.metadata.readonly` (metadata only:
-id, name, type, modified time, owners, and links; never file contents). The
+`https://www.googleapis.com/auth/drive.file` (per-file access: only files
+the member opens with Smartfire through the Picker; metadata only — id,
+name, type, modified time, owners, and links — never file contents). The
 [Calendar connection](google-calendar.md) stays calendar-only unless the
 member opts in: the profile shows **Enable Drive previews** next to a
-connected account, which re-runs the OAuth flow requesting both scopes with
-`include_granted_scopes=true`. Google returns the granted scopes as a
+connected account, which re-runs the OAuth flow requesting the Calendar
+scopes plus the Drive scope. Each grant replaces the previous one (no
+incremental flag is sent), so reconnecting also sheds the retired
+`drive.metadata.readonly` grant. Google returns the granted scopes as a
 space-separated string, stored on `google_accounts.scopes`
 (`GoogleAccount#drive?` reads it; existing rows have null, treated as
-calendar only). Members without Drive consent send zero preview requests:
-the page omits the `google-drive-previews` meta tag and the controller does
-nothing. **Disconnect** removes the whole connection, as before.
+calendar only, and rows still carrying only the retired metadata scope
+read as disabled until the member reconnects). Members without Drive
+consent send zero preview requests: the page omits the
+`google-drive-previews` meta tag and the controller renders plain chips
+only. **Disconnect** removes the whole connection, as before.
 
 ## Link shapes
 
@@ -67,16 +78,19 @@ composer toolbar (it renders only when the page carries the
 search field and up to ten matching rows: a file-type icon, the file name,
 "Modified \<relative time\>", and the owner's name. The recent list shows
 immediately; typing filters by file name. Choosing a row inserts the file's
-link at the caret, and the preview chip renders it once the message is
-sent. Escape and outside click close the popover; arrow keys move through
-results.
+link at the caret, and the full preview chip renders it once the message
+is sent. Escape and outside click close the popover; arrow keys move
+through results.
 
 The popover talks to `GET /google/drive/files?q=<text>`, which calls Drive
 `files.list` with the viewer's token (`pageSize=10`,
 `fields=files(id,name,mimeType,modifiedTime,owners(displayName),webViewLink)`,
-`orderBy=modifiedTime desc`, `spaces=drive`). A blank `q` lists recent
-files (`trashed=false`); otherwise the query is `name contains '<term>'
-and trashed=false`, where single quotes and backslashes in the term are
+`orderBy=modifiedTime desc`, `spaces=drive`). Under the `drive.file` grant
+only files the member opened with Smartfire are visible, so this is a
+recents-and-reattach search over picked files, not a whole-Drive search.
+A blank `q` lists recent files (`trashed=false`); otherwise the query is
+`name contains '<term>' and trashed=false`, where single quotes and
+backslashes in the term are
 escaped per the Drive query grammar (`\'`, `\\`). `q` is trimmed and
 capped at 100 characters. The response shape (`{ files: [ { id, name,
 kind, modified_at, owner, url } ] }`) and the `kind` derivation match the
@@ -90,7 +104,8 @@ minute-bucketed counter); past that the endpoint answers 429 with
 
 Results are the viewer's own Drive view: nothing is shared until the
 member sends the message, and then only the link, which other viewers
-resolve with their own credentials as with pasted Drive links.
+resolve with their own credentials when they have picked the file, and
+otherwise see as a plain chip.
 
 ## Attachments
 
@@ -105,12 +120,12 @@ Only the file id is stored (`drive_attachments`: `message_id`, `file_id`).
 No name, MIME type, owner, or URL is persisted. The attachment renders as a
 block under the message body carrying an `open?id=` link, in markup that is
 identical for every viewer: a generic file icon, the text "Google Drive
-file", and an "Open in Drive" hint. The `drive-link` controller then
-upgrades the block with the viewer's own credentials, exactly like a
-pasted link: viewers who can open the file see its name, kind icon,
-modified time, and owner, while viewers without Drive consent or without
-access keep the generic block and learn nothing else. No new endpoints are
-involved, and the file name is never logged.
+file", and an "Open in Drive" hint. The `drive-link` controller first
+renders every block as a plain chip, then upgrades it with the viewer's own
+credentials, exactly like a pasted link: viewers who picked the file see
+its name, kind icon, modified time, and owner, while viewers without Drive
+consent or who never picked it keep the plain chip and learn nothing else.
+No new endpoints are involved, and the file name is never logged.
 
 The message's edit form lists the current attachments as removable chips
 (the author can drop all of them; only the existing edit permission
@@ -142,25 +157,24 @@ not accept attachments.
 When browser sharing is configured (see [Setup](#setup-google-cloud-console)
 and the [Workspace setup runbook](google-workspace-setup.md)), the composer
 carries a single **Drive** button for every signed-in human member — no
-Calendar or metadata consent required — driven by the `drive-share`
+Calendar or Drive consent required — driven by the `drive-share`
 Stimulus controller. Choosing a file opens the official Google Picker; a
 review dialog then offers two explicit actions: **Attach only**, which pins
 the file id exactly like the legacy picker and changes nothing in Drive, or
 **Grant view access and attach**, which grants the checked chat recipients
 reader access before pinning. When sharing is not configured, the composer
-falls back to the legacy metadata picker above, unchanged.
+falls back to the legacy server-side picker above, unchanged.
 
 Authorization uses Google Identity Services with **only** the
 `https://www.googleapis.com/auth/drive.file` scope and
 `include_granted_scopes=false`: the app can touch only files the user opens
-or creates with it, never the whole Drive, and it never requests or uses
-the separate `drive.metadata.readonly` grant. The access token lives in JS
+or creates with it, never the whole Drive. The access token lives in JS
 memory alone.
 It is never written to the DOM, hidden fields, Turbo snapshots, storage,
 logs, or the server, and it is dropped on Turbo cache, navigation, and
 controller disconnect. The official GIS and Picker scripts load lazily,
 only after the member presses the Drive button. The server-side
-Calendar/metadata connection is separate and untouched: stored refresh and
+Calendar/Drive connection is separate and untouched: stored refresh and
 access tokens are never rendered into the browser.
 
 The browser calls Drive REST directly with the token in an `Authorization`
@@ -231,9 +245,11 @@ partial failure, and mobile recovery — are listed in the
 
 The endpoint answers **404 with an empty body** in every denial case: the
 viewer has no Google account, the account is disconnected, the account lacks
-the Drive scope, Google answers 403 or 404, or the file id is malformed. One
-response shape for all denials, so the endpoint never reveals that a file
-exists. Google transport failures answer 503. The file name is never logged.
+the Drive scope (including the retired metadata-only grant), Google answers
+403 or 404 (a file the viewer never picked, or cannot open), or the file id
+is malformed. One response shape for all denials, so the endpoint never
+reveals that a file exists. Google transport failures answer 503. The file
+name is never logged.
 
 ## Caching
 
@@ -243,8 +259,8 @@ served to another. The browser additionally shares one in-memory request per
 file id per page load, so twenty messages linking the same document make one
 request. Preview calls are throttled to 60 per user per minute (a
 `Rails.cache` minute-bucketed counter like the list throttle); past that
-the endpoint answers 429 with `{ error: "rate_limited" }` and the link
-stays plain.
+the endpoint answers 429 with `{ error: "rate_limited" }` and the plain
+chip stays.
 
 ## Setup (Google Cloud Console)
 
@@ -273,5 +289,5 @@ web client (full checklist in the
    with the OAuth Bearer token, not the key.
 
 All three values must be present for the enhanced button; otherwise the
-composer keeps the legacy metadata picker for members with Drive consent,
-and the recipients endpoints answer 404.
+composer keeps the legacy server-side picker for members with Drive
+consent, and the recipients endpoints answer 404.
