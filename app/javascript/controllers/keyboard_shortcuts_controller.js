@@ -123,6 +123,10 @@ export default class extends Controller {
     // listener, so marking read here would swallow the collapse.
     if (document.fullscreenElement || document.webkitFullscreenElement) return true
     if (document.querySelector("#channel-huddle.huddle--theater")) return true
-    return Boolean(document.querySelector("dialog[open], :popover-open, [aria-modal='true']"))
+    if (document.querySelector("dialog[open], :popover-open")) return true
+    // A hidden or inert container keeps its dialog markup (the profile
+    // card's panel is always aria-modal) without covering the page.
+    return Array.from(document.querySelectorAll("[aria-modal='true']"))
+      .some(element => !element.closest("[hidden], [inert]"))
   }
 }
