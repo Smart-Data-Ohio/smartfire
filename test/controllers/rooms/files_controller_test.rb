@@ -96,7 +96,7 @@ class Rooms::FilesControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  test "rendering costs the same queries for 4 files as for 12" do
+  test "rendering costs the same queries for 4 files as for 16" do
     seed_files(2)
 
     # Warm request-scoped caches (custom icons) so both counted runs start even.
