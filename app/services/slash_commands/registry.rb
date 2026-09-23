@@ -47,7 +47,7 @@ module SlashCommands
       Command.new("remind", "Post and remind yourself about it later", "<when> <text>", MEMBER, :handle_remind),
       Command.new("status", "Set your custom status", "<emoji> <text>", MEMBER, :handle_status),
       Command.new("dnd", "Toggle Do Not Disturb, optionally for a while", "[duration|off]", MEMBER, :handle_dnd),
-      Command.new("ooo", "Set out of office with an optional note", "<duration or date> [note]|off", MEMBER, :handle_ooo),
+      Command.new("ooo", "Set out of office with an optional note", "<when> [note]|off", MEMBER, :handle_ooo),
       Command.new("shrug", "Post with a shrug", "[text]", MEMBER, :handle_shrug),
       Command.new("me", "Post an action line", "<action>", MEMBER, :handle_me),
       Command.new("play", "Play a chat sound", "<sound>", MEMBER, :handle_play)

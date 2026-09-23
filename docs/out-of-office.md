@@ -16,11 +16,14 @@ The status settings' "Out of office" section sets a manual OOO with an end:
 - A custom date and time picker, interpreted in the member's time zone.
 - An optional note, up to 140 characters, shown beside the label.
 
-`/ooo <duration or date> [note]` does the same from the composer, using the
-slash-command time language (`/ooo tomorrow Back soon`, `/ooo 1 week`,
-`/ooo friday 5pm Wrapping up`); `/ooo off` clears it. There is no profile
-menu in the app, so the settings section and the slash command are the two
-surfaces.
+`/ooo <when> [note]` does the same from the composer. Durations (`/ooo 3d`,
+`/ooo 1 week`) stay exact; bare days (`/ooo tomorrow Back soon`,
+`/ooo friday`) and bare dates (`/ooo 2026-10-05`, `/ooo oct 5`) run to the
+end of that day in the member's zone, like the form presets (bare weekdays
+resolve to the next one, a week out on the same weekday); an explicit clock
+time (`/ooo friday 5pm Wrapping up`) keeps that time. `/ooo off` clears it.
+There is no profile menu in the app, so the settings section and the slash
+command are the two surfaces.
 
 A manual OOO starts immediately and auto-clears at its end: past the end it
 reads as off with no cleanup job, and the minute-tick OOO dispatcher

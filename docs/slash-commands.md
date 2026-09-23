@@ -32,9 +32,10 @@ rules; see [status and notifications](notifications.md).
   switch; `/dnd 30m`, `/dnd 2h`, and `/dnd until 5pm` turn it on until
   then; `/dnd off` turns it off. Timed DND expires lazily like custom
   statuses do — no cleanup job.
-- `/ooo <duration or date> [note]` sets [out of
+- `/ooo <when> [note]` sets [out of
   office](out-of-office.md) until then with an optional note. For
-  example `/ooo tomorrow Back soon` or `/ooo 1 week`. `/ooo off`
+  example `/ooo tomorrow Back soon`, `/ooo friday`, `/ooo 2026-10-05`,
+  or `/ooo 3d`; bare days and dates run to the end of the day. `/ooo off`
   clears the manual OOO; a calendar OOO keeps showing if one covers
   you.
 - `/shrug [text]` posts the text (if any) with `¯\_(ツ)_/¯`.

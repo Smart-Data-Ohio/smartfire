@@ -185,6 +185,44 @@ class SlashCommands::DispatcherTest < ActiveSupport::TestCase
     assert_in_delta Time.zone.parse("2026-10-01T15:00:00-04:00").to_f, @user.reload.ooo_until.to_f, 1
   end
 
+  test "ooo bare tomorrow and weekdays run to the end of the day" do
+    zone = ActiveSupport::TimeZone["America/New_York"]
+
+    dispatch("/ooo tomorrow Back soon")
+    assert_in_delta zone.local(2026, 9, 24).end_of_day.to_f, @user.reload.ooo_until.to_f, 1
+    assert_equal "Back soon", @user.ooo_note
+
+    dispatch("/ooo friday")
+    assert_in_delta zone.local(2026, 9, 25).end_of_day.to_f, @user.reload.ooo_until.to_f, 1
+
+    dispatch("/ooo monday Wrapping up")
+    assert_in_delta zone.local(2026, 9, 28).end_of_day.to_f, @user.reload.ooo_until.to_f, 1
+    assert_equal "Wrapping up", @user.ooo_note
+  end
+
+  test "ooo bare dates run to the end of the day" do
+    zone = ActiveSupport::TimeZone["America/New_York"]
+
+    dispatch("/ooo 2026-10-05")
+    assert_in_delta zone.local(2026, 10, 5).end_of_day.to_f, @user.reload.ooo_until.to_f, 1
+
+    dispatch("/ooo oct 8 Back soon")
+    assert_in_delta zone.local(2026, 10, 8).end_of_day.to_f, @user.reload.ooo_until.to_f, 1
+    assert_equal "Back soon", @user.ooo_note
+  end
+
+  test "ooo bare month dates roll to next year when this year's passed" do
+    zone = ActiveSupport::TimeZone["America/New_York"]
+
+    dispatch("/ooo sep 1")
+    assert_in_delta zone.local(2027, 9, 1).end_of_day.to_f, @user.reload.ooo_until.to_f, 1
+  end
+
+  test "ooo day durations stay exact" do
+    dispatch("/ooo 3d")
+    assert_equal Time.current + 3.days, @user.reload.ooo_until
+  end
+
   test "ooo broadcasts the badge and the notice" do
     assert_turbo_stream_broadcasts [ @user, :status ], count: 1 do
       assert_turbo_stream_broadcasts [ @user, :ooo_notice ], count: 1 do
