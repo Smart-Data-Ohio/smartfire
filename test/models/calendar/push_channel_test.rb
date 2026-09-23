@@ -43,20 +43,42 @@ class Calendar::PushChannelTest < ActiveSupport::TestCase
     assert_equal 64, channel.token_digest.length
   end
 
-  test "watch_for stops the previous channel first" do
+  test "watch_for retires the previous channel only after the new watch succeeds" do
     connect_google!(@user)
     old = Calendar::PushChannel.create!(user: @user, channel_id: "old-id",
       resource_id: "old-resource", token_digest: Calendar::PushChannel.digest("old-token"))
+    order = []
     stop = stub_request(:post, "https://www.googleapis.com/calendar/v3/channels/stop")
-      .to_return(status: 200, body: {}.to_json)
-    stub_request(:post, "#{GOOGLE_EVENTS_URL}/watch")
-      .to_return(status: 200, body: { resourceId: "new-resource" }.to_json)
+      .to_return { |_| order << :stop; { status: 200, body: "{}" } }
+    watch = stub_request(:post, "#{GOOGLE_EVENTS_URL}/watch")
+      .to_return { |_| order << :watch; { status: 200, body: { resourceId: "new-resource" }.to_json } }
 
     channel = Calendar::PushChannel.watch_for!(@user)
 
     assert_requested stop, times: 1
+    assert_requested watch, times: 1
+    assert_equal [ :watch, :stop ], order
     assert_equal old.id, channel.id
     assert_equal "new-resource", channel.resource_id
+  end
+
+  test "a failed re-watch leaves the old channel alive with no gap" do
+    connect_google!(@user)
+    channel = Calendar::PushChannel.create!(user: @user, channel_id: "old-id",
+      resource_id: "old-resource", token_digest: Calendar::PushChannel.digest("old-token"))
+    stop = stub_request(:post, "https://www.googleapis.com/calendar/v3/channels/stop")
+    stub_request(:post, "#{GOOGLE_EVENTS_URL}/watch")
+      .to_return(status: 403, body: google_forbidden_body("forbidden").to_json,
+        headers: { "Content-Type" => "application/json" })
+
+    renewed = channel.renew!
+
+    assert_not_requested stop
+    assert_equal channel.id, renewed.id
+    assert_equal "old-id", channel.reload.channel_id
+    assert_equal "old-resource", channel.resource_id
+    assert_equal Calendar::PushChannel.digest("old-token"), channel.token_digest
+    assert channel.last_error.present?
   end
 
   test "token matching is constant-time against the digest" do

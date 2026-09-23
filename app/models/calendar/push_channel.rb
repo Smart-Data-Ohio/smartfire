@@ -30,6 +30,10 @@ module Calendar
 
       # Opens (or re-opens) the member's channel. No-op unless watching
       # is enabled and the account is usable. Returns the channel or nil.
+      # The new channel is watched before the old one is stopped, so a
+      # failed watch leaves the old channel alive with no gap: the row
+      # keeps its old identity (with last_error) and Google's deliveries
+      # keep authenticating until expiry.
       def watch_for!(user)
         return nil unless watching_enabled?
 
@@ -37,7 +41,6 @@ module Calendar
         return nil unless account&.usable? && account.calendar?
 
         existing = find_by(user_id: user.id)
-        existing&.stop_remote!
 
         channel_id = SecureRandom.uuid
         token = SecureRandom.hex(32)
@@ -45,6 +48,9 @@ module Calendar
           channel_id:, token:, address: callback_url
         )
 
+        # The new channel is live: retire the old one remotely, then
+        # swap the row to the new identity.
+        existing&.stop_remote!
         record = existing || new(user_id: user.id)
         record.assign_attributes(
           channel_id:, resource_id: response["resourceId"],
@@ -142,11 +148,12 @@ module Calendar
       expires_at.present? && expires_at <= now
     end
 
-    # Stops this channel remotely (best effort) and opens a fresh one.
-    # A failed re-watch keeps this row (with last_error) so Google's
-    # deliveries keep authenticating until expiry; the next sweep retries.
+    # Opens a fresh channel and retires this one. The new channel is
+    # watched before the old one is stopped, so a failed re-watch keeps
+    # this row and the old channel alive with no gap: Google's
+    # deliveries keep authenticating until expiry, and the next sweep
+    # retries.
     def renew!
-      stop_remote!
       self.class.watch_for!(user) || self
     end
 
