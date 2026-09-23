@@ -156,7 +156,10 @@ class WorkspaceMarkdownTest < ApplicationSystemTestCase
     find("#composer input[type='file']", visible: :all).set(upload_path)
     assert_selector "#composer", text: "markdown-workspace-attachment"
     click_on "Send Message"
-    assert_selector ".message[data-message-id] .message__reply-preview", text: "A useful point"
+    # The attachment POST (multipart + storage + stream render) outlasts the
+    # default wait under a parallel load; the pending row sits at 100% while
+    # its response is still in flight.
+    assert_selector ".message[data-message-id] .message__reply-preview", text: "A useful point", wait: 10
     assert_message_text "markdown-workspace-attachment.txt"
     assert Message.joins(:attachment_attachment).exists?(reply_to_message_id: message.id)
     assert_not Message.joins(:attachment_attachment).find_by!(reply_to_message_id: message.id).reply_notify_author?
@@ -331,7 +334,7 @@ class WorkspaceMarkdownTest < ApplicationSystemTestCase
     end
 
     def assert_highlighted_code
-      assert_selector "pre code.language-javascript[data-highlighted='yes'] .code-token", text: "const"
+      assert_selector "pre code.language-javascript[data-highlighted='yes'] .code-token", text: "const", wait: HIGHLIGHT_WAIT
       assert_selector ".markdown-code-copy", count: 1
     end
 

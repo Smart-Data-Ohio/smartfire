@@ -1,11 +1,10 @@
 module SystemTestHelper
+  # Fast authenticated path: the test-only route verifies the same
+  # credentials and issues the same session row and cookie as the login
+  # form, skipping only the form round-trips. Every test still drives a
+  # real browser session from here on.
   def sign_in(email_address, password = "secret123456")
-    visit root_url
-
-    fill_in "email_address", with: email_address
-    fill_in "password", with: password
-
-    click_on "log_in"
+    visit sign_in_for_tests_path(email_address: email_address, password: password)
     assert_selector "a.btn", text: "Designers"
   end
 
@@ -64,7 +63,12 @@ module SystemTestHelper
   end
 
   def dismiss_pwa_install_prompt
-    if page.has_css?("[data-pwa-install-target~='dialog']", visible: :visible, wait: 5)
+    # No view renders this dialog target anymore, so the check below only
+    # ever passes when a regression reintroduces it. join_room calls this
+    # after the cable connects, by which point any rendered dialog is
+    # present; a zero wait keeps the dismissal without burning 5 s per room
+    # visit on the miss path.
+    if page.has_css?("[data-pwa-install-target~='dialog']", visible: :visible, wait: 0)
       click_on("Close")
     end
   end

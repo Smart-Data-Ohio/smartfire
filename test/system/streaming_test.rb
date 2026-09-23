@@ -421,7 +421,11 @@ class StreamingTest < ApplicationSystemTestCase
 
     assert_equal [ false ], page.evaluate_script("window.__streamShareCalls")
 
-    sleep 0.5
+    # The stop handler runs synchronously off a MutationObserver and the
+    # stubbed share toggle resolves immediately with no network, so a
+    # duplicate toggle or DELETE would land within milliseconds. A short
+    # settle window is enough to catch the async tail.
+    sleep 0.2
     assert_equal [ false ], page.evaluate_script("window.__streamShareCalls")
     assert_equal [], page.evaluate_script("window.__streamDeleteSeen")
     assert_predicate Stream.find_by(room_id: room.id), :live?
