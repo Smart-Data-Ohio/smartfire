@@ -88,7 +88,10 @@ Revocations are audit-logged (`session.revoke`, `session.revoke_others`).
 
 Administrator sessions expire after 7 days idle (members never
 expire). Override with `ADMIN_SESSION_IDLE_TIMEOUT_DAYS` (whole days;
-unparseable values fall back to 7).
+unparseable values fall back to 7). Expired sessions are hidden from
+the sessions page, destroyed on their next request or cable connect,
+and rejected on the next presence heartbeat, so already-open cables
+close within seconds of the timeout.
 
 ## New-device sign-in alerts
 

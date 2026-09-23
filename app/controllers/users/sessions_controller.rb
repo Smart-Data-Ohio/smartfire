@@ -8,7 +8,10 @@ class Users::SessionsController < ApplicationController
   before_action :no_store_response!
 
   def index
-    @sessions = Current.user.sessions.order(last_active_at: :desc)
+    # Expired administrator sessions are already unusable (the next
+    # request or cable connect destroys them), so the page lists only
+    # sessions that can still act.
+    @sessions = Current.user.sessions.order(last_active_at: :desc).reject(&:expired?)
   end
 
   def destroy

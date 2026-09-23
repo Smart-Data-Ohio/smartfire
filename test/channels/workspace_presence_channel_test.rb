@@ -53,6 +53,18 @@ class WorkspacePresenceChannelTest < ActionCable::Channel::TestCase
     assert_not WorkspacePresenceLease.exists?(lease.id)
   end
 
+  test "heartbeat destroys an idle-timed-out administrator session and rejects" do
+    subscribe
+    lease = WorkspacePresenceLease.last
+    @session.update!(last_active_at: 8.days.ago)
+
+    perform :heartbeat
+
+    assert subscription.rejected?
+    assert_not Session.exists?(@session.id)
+    assert_not WorkspacePresenceLease.exists?(lease.id)
+  end
+
   test "heartbeat replaces a valid lease that was pruned" do
     subscribe
     original_lease = WorkspacePresenceLease.last

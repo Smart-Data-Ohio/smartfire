@@ -26,6 +26,18 @@ class Users::SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?]", user_session_path(david_session), count: 0
   end
 
+  test "index hides expired administrator sessions" do
+    sign_in users(:david)
+    expired = users(:david).sessions.create!(user_agent: CHROME_MAC, ip_address: "192.0.2.40", last_active_at: 8.days.ago)
+    fresh = users(:david).sessions.create!(user_agent: CHROME_MAC, ip_address: "192.0.2.41")
+
+    get user_sessions_url
+
+    assert_response :success
+    assert_select "form[action=?]", user_session_path(expired), count: 0
+    assert_select "form[action=?]", user_session_path(fresh), count: 1
+  end
+
   test "destroy signs out another session immediately and audit-logs it" do
     other_browser = open_session
     other_browser.post session_url, params: { email_address: "kevin@37signals.com", password: "secret123456" }
