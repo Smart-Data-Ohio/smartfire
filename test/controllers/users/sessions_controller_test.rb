@@ -67,6 +67,17 @@ class Users::SessionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "revoke_others with no other sessions writes no audit row" do
+    @other.destroy!
+
+    assert_no_difference -> { AuditLog.where(action: "session.revoke_others").count } do
+      delete revoke_others_user_sessions_url
+    end
+
+    assert_redirected_to user_sessions_url
+    assert_equal "No other sessions to sign out.", flash[:notice]
+  end
+
   test "revoke_others signs out every other session and audit-logs it" do
     third = users(:kevin).sessions.create!(user_agent: CHROME_MAC, ip_address: "192.0.2.30")
 

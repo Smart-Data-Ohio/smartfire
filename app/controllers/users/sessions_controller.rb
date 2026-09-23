@@ -30,6 +30,12 @@ class Users::SessionsController < ApplicationController
   def revoke_others
     others = Current.user.sessions.where.not(id: Current.session.id)
     count = others.count
+    # A no-op revocation writes no audit row and drops no connections,
+    # like every other idempotent revocation in the app.
+    if count.zero?
+      return redirect_to user_sessions_url, notice: "No other sessions to sign out."
+    end
+
     others.destroy_all
     Current.user.reset_remote_connections
     AuditLog.record!(action: "session.revoke_others", target: Current.user, changes: { count: count })
