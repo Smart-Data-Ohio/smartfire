@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_23_160100) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_170639) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -990,6 +990,15 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_160100) do
     t.index ["user_id"], name: "index_two_factor_remembered_devices_on_user_id"
   end
 
+  create_table "two_factor_setup_secrets", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.string "secret"
+    t.integer "session_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["session_id"], name: "index_two_factor_setup_secrets_on_session_id", unique: true
+  end
+
   create_table "user_stars", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "starred_user_id", null: false
@@ -1203,6 +1212,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_160100) do
   add_foreign_key "two_factor_backup_codes", "two_factor_credentials"
   add_foreign_key "two_factor_credentials", "users"
   add_foreign_key "two_factor_remembered_devices", "users"
+  add_foreign_key "two_factor_setup_secrets", "sessions"
   add_foreign_key "user_stars", "users", column: "starred_user_id", on_delete: :cascade
   add_foreign_key "user_stars", "users", on_delete: :cascade
   add_foreign_key "webhooks", "users"

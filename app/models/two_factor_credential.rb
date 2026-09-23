@@ -57,12 +57,25 @@ class TwoFactorCredential < ApplicationRecord
     false
   end
 
-  # Confirms a pending enrollment with a valid code. The used step is
-  # stamped (see verify_code), so the enrollment code cannot also sign in.
-  def confirm!(code)
-    return false unless verify_code(code)
+  # Confirms a pending enrollment with a code against the caller's
+  # session-bound pending secret (never the stored secret: until confirmed
+  # the row is shared by every session that opened setup). On success the
+  # pending secret becomes the credential, the used step is stamped so the
+  # enrollment code cannot also sign in, and the pending secret is spent.
+  def confirm_with_setup_secret!(setup_secret, code)
+    normalized = code.to_s.gsub(/\s+/, "")
+    return false if normalized.blank?
 
-    update!(confirmed_at: Time.current) unless enabled?
-    true
+    with_lock do
+      matched_at = ROTP::TOTP.new(setup_secret.secret).verify(normalized,
+        drift_ahead: DRIFT_SECONDS, drift_behind: DRIFT_SECONDS, after: last_totp_at)
+      return false if matched_at.nil?
+
+      update!(secret: setup_secret.secret, confirmed_at: Time.current, last_totp_at: matched_at)
+      setup_secret.destroy!
+      true
+    end
+  rescue ArgumentError
+    false
   end
 end

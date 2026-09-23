@@ -5,7 +5,11 @@ module TwoFactorTestHelper
   end
 
   def totp_code_for(credential, at: Time.current)
-    ROTP::TOTP.new(credential.secret).at(at)
+    totp_code_for_secret(credential.secret, at: at)
+  end
+
+  def totp_code_for_secret(secret, at: Time.current)
+    ROTP::TOTP.new(secret).at(at)
   end
 
   # Marks the user's newest session two-factor satisfied: the same state

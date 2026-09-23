@@ -6,23 +6,38 @@ class TwoFactorCredentialTest < ActiveSupport::TestCase
     @credential = TwoFactorCredential.create!(user: @user, secret: TwoFactorCredential.generate_secret)
   end
 
-  test "confirm! enables with a valid code and stamps the step" do
+  test "confirm_with_setup_secret! enables with a valid code, adopts the secret, and spends it" do
+    setup_secret = TwoFactorSetupSecret.issue_for!(sessions(:david_safari))
     assert_not @credential.enabled?
 
-    assert @credential.confirm!(totp_code_for(@credential))
+    assert @credential.confirm_with_setup_secret!(setup_secret, totp_code_for_secret(setup_secret.secret))
 
     assert @credential.reload.enabled?
+    assert_equal setup_secret.secret, @credential.secret
     assert @credential.last_totp_at.present?
+    assert_nil TwoFactorSetupSecret.find_by(id: setup_secret.id)
   end
 
-  test "confirm! rejects a wrong code" do
-    assert_not @credential.confirm!("000000")
+  test "confirm_with_setup_secret! rejects a wrong code and keeps the secret" do
+    setup_secret = TwoFactorSetupSecret.issue_for!(sessions(:david_safari))
+
+    assert_not @credential.confirm_with_setup_secret!(setup_secret, "000000")
     assert_not @credential.reload.enabled?
+    assert TwoFactorSetupSecret.exists?(setup_secret.id)
   end
 
-  test "confirm! tolerates spaces in the code" do
-    code = totp_code_for(@credential)
-    assert @credential.confirm!("#{code[0, 3]} #{code[3, 3]}")
+  test "confirm_with_setup_secret! tolerates spaces in the code" do
+    setup_secret = TwoFactorSetupSecret.issue_for!(sessions(:david_safari))
+    code = totp_code_for_secret(setup_secret.secret)
+
+    assert @credential.confirm_with_setup_secret!(setup_secret, "#{code[0, 3]} #{code[3, 3]}")
+  end
+
+  test "confirm_with_setup_secret! rejects a code for the stored unconfirmed secret" do
+    setup_secret = TwoFactorSetupSecret.issue_for!(sessions(:david_safari))
+
+    assert_not @credential.confirm_with_setup_secret!(setup_secret, totp_code_for(@credential))
+    assert_not @credential.reload.enabled?
   end
 
   test "verify_code accepts the adjacent steps (±1 drift)" do

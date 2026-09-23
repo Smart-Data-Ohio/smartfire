@@ -15,24 +15,28 @@ module TwoFactor
       no_store_response!
       return redirect_to user_profile_url if Current.user.two_factor_enabled?
 
-      @credential = enrollable_credential
-      @provisioning_uri = @credential.provisioning_uri
+      # A fresh secret on every visit: a secret displayed here is only
+      # ever confirmable from this session (see TwoFactorSetupSecret).
+      issue_setup_presentation
     end
 
     def create
       no_store_response!
       return redirect_to user_profile_url if Current.user.two_factor_enabled?
 
+      setup_secret = TwoFactorSetupSecret.valid_for(Current.session)
       credential = enrollable_credential
-      if credential.confirm!(params[:code].to_s)
+      if setup_secret && credential.confirm_with_setup_secret!(setup_secret, params[:code].to_s)
         @backup_codes = TwoFactorBackupCode.regenerate_set!(credential)
         Current.session.mark_two_factor_verified!
         AuditLog.record!(action: "two_factor.enable", target: Current.user)
         @continue_url = post_authenticating_url
         render "two_factor/backup_codes/show"
       else
-        @credential = credential
-        @provisioning_uri = credential.provisioning_uri
+        # Retry against the same live secret (re-scanning on every typo
+        # would be unusable); a missing or expired secret rotates, and
+        # the old code stops working.
+        reuse_setup_presentation
         flash.now[:alert] = "That code didn't work. Check your authenticator app and try again."
         render :show, status: :unprocessable_entity
       end
@@ -65,12 +69,29 @@ module TwoFactor
           end
       end
 
+      # The page renders a transient credential carrying the session's
+      # pending secret: the stored row is only written at confirm time.
+      def issue_setup_presentation
+        present_setup_secret TwoFactorSetupSecret.issue_for!(Current.session)
+      end
+
+      def reuse_setup_presentation
+        present_setup_secret(
+          TwoFactorSetupSecret.valid_for(Current.session) ||
+            TwoFactorSetupSecret.issue_for!(Current.session)
+        )
+      end
+
+      def present_setup_secret(setup_secret)
+        @credential = TwoFactorCredential.new(user: Current.user, secret: setup_secret.secret)
+        @provisioning_uri = @credential.provisioning_uri
+      end
+
       def render_rate_limited
         no_store_response!
         return redirect_to user_profile_url if Current.user&.two_factor_enabled?
 
-        @credential = enrollable_credential
-        @provisioning_uri = @credential.provisioning_uri
+        reuse_setup_presentation
         flash.now[:alert] = "Too many attempts. Try again in a few minutes."
         render :show, status: :too_many_requests
       end
