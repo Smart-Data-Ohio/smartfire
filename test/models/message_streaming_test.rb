@@ -129,6 +129,60 @@ class MessageStreamingTest < ActiveSupport::TestCase
     assert_equal 2, ActionCable.server.pubsub.broadcasts(stream).size
   end
 
+  test "a coalesced update sends a trailing broadcast with the final text" do
+    message = @room.root_messages.create!(creator: @bot, streaming: true,
+      markdown_source: "One", client_message_id: "stream-trailing")
+    stream = [ message.message_stream_target.to_gid_param, :messages ].join(":")
+
+    assert message.broadcast_stream_update
+    message.update!(markdown_source: "One two")
+
+    assert_enqueued_jobs 1, only: Message::StreamTrailingBroadcastJob do
+      assert_not message.broadcast_stream_update
+    end
+    assert_equal 1, ActionCable.server.pubsub.broadcasts(stream).size
+
+    perform_enqueued_jobs(only: Message::StreamTrailingBroadcastJob)
+
+    broadcasts = ActionCable.server.pubsub.broadcasts(stream)
+    assert_equal 2, broadcasts.size
+    assert_includes broadcasts.last, "One two"
+  end
+
+  test "a trailing broadcast stays quiet once a newer broadcast lands" do
+    message = @room.root_messages.create!(creator: @bot, streaming: true,
+      markdown_source: "One", client_message_id: "stream-trailing-stale")
+    stream = [ message.message_stream_target.to_gid_param, :messages ].join(":")
+
+    assert message.broadcast_stream_update
+    assert_not message.broadcast_stream_update
+
+    travel (Message::STREAM_BROADCAST_INTERVAL + 0.1.seconds), with_usec: true do
+      assert message.broadcast_stream_update
+      assert_equal 2, ActionCable.server.pubsub.broadcasts(stream).size
+
+      perform_enqueued_jobs(only: Message::StreamTrailingBroadcastJob)
+
+      assert_equal 2, ActionCable.server.pubsub.broadcasts(stream).size
+    end
+  end
+
+  test "a trailing broadcast stays quiet after finalize" do
+    message = @room.root_messages.create!(creator: @bot, streaming: true,
+      markdown_source: "One", client_message_id: "stream-trailing-final")
+    stream = [ message.message_stream_target.to_gid_param, :messages ].join(":")
+
+    assert message.broadcast_stream_update
+    message.update!(markdown_source: "One two")
+    assert_not message.broadcast_stream_update
+    message.finalize_stream!
+    before = ActionCable.server.pubsub.broadcasts(stream).size
+
+    perform_enqueued_jobs(only: Message::StreamTrailingBroadcastJob)
+
+    assert_equal before, ActionCable.server.pubsub.broadcasts(stream).size
+  end
+
   test "overdue streams finalize from the sweep, fresh ones stay streaming" do
     fresh = @room.root_messages.create!(creator: @bot, streaming: true,
       markdown_source: "Fresh", client_message_id: "stream-fresh")

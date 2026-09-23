@@ -13,9 +13,12 @@ module Message::Broadcasts
   # Replaces a streaming message in place, throttled to about 4 per
   # second per message (see STREAM_BROADCAST_INTERVAL). The stamp write
   # commits before the broadcast, so no SQLite lock is held across it.
-  # Returns true when the update broadcast, false when coalesced away.
+  # Returns true when the update broadcast, false when coalesced away;
+  # a coalesced update enqueues a trailing broadcast so the final text
+  # still goes out within the window.
   def broadcast_stream_update(now: Time.current)
     if stream_broadcast_at.present? && stream_broadcast_at > now - Message::STREAM_BROADCAST_INTERVAL
+      Message::StreamTrailingBroadcastJob.perform_later(id, stream_broadcast_at.utc.iso8601(6))
       return false
     end
 
