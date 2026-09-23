@@ -17,16 +17,21 @@ module Calendar
       User.active.where("ooo_until IS NOT NULL OR ooo_calendar_enabled = ?", true)
         .includes(:meeting_cache).find_each do |user|
         begin
+          cache = user.meeting_cache
+
           # Members with both opt-ins refresh through the meeting
           # dispatcher; only OOO-only members refresh here, so one tick
           # never enqueues two refreshes for the same member.
-          if user.ooo_calendar_enabled? && !user.meeting_status_enabled?
-            cache = user.meeting_cache
-
-            if cache.nil? || cache.fetched_at.nil? || cache.fetched_at <= now - REFRESH_STALE_AFTER
-              Calendar::MeetingRefreshJob.perform_later(user.id)
-            end
+          if user.ooo_calendar_enabled? && !user.meeting_status_enabled? &&
+              (cache.nil? || cache.fetched_at.nil? || cache.fetched_at <= now - REFRESH_STALE_AFTER)
+            Calendar::MeetingRefreshJob.perform_later(user.id)
           end
+
+          # No manual end, no cached intervals, and no prior flip: there is
+          # no state to announce, so skip the claim instead of broadcasting
+          # an empty first-false for a member the refresh above has not
+          # seeded yet.
+          next if user.ooo_until.nil? && cache.nil? && !user.ooo_broadcast?
 
           flips << user if user.claim_ooo_broadcast!(user.out_of_office?(now:), now:)
         rescue => error

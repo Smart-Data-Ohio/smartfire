@@ -111,6 +111,9 @@ class Users::StatusesController < ApplicationController
         else
           cache.destroy!
         end
+        # Claim first: the broadcast below announces the cleared state,
+        # so a later re-opt-in must find stored false to announce again.
+        @user.claim_ooo_broadcast!(@user.out_of_office?)
         Calendar::OooDispatcher.broadcast_ooo_for(@user)
       end
     end

@@ -66,9 +66,10 @@ module Google
         if Current.user.meeting_cache
           Current.user.meeting_cache.destroy!
           # The opt-in flags stay on for a later reconnect, so reset the
-          # association: the cleared-state broadcast below must read the
-          # dropped cache, not the just-destroyed row.
+          # association: the claim and cleared-state broadcast below must
+          # read the dropped cache, not the just-destroyed row.
           Current.user.association(:meeting_cache).reset
+          Current.user.claim_ooo_broadcast!(Current.user.out_of_office?)
           Calendar::OooDispatcher.broadcast_ooo_for(Current.user)
         end
         # Meet links were minted through this connection: clear them so
