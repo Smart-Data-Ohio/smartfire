@@ -10,5 +10,7 @@ class CreateCalendarMeetingCaches < ActiveRecord::Migration[8.2]
 
       t.index :user_id, unique: true
     end
+
+    add_foreign_key :calendar_meeting_caches, :users, column: :user_id, on_delete: :cascade
   end
 end

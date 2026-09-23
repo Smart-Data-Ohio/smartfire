@@ -24,10 +24,11 @@ The read uses `events.list` on the primary calendar under the existing
   transparency, and each attendee's self/declined flags arrive.
 - Busy intervals are derived in `Calendar::MeetingIntervals`: cancelled,
   out-of-office (`eventType: "outOfOffice"` — those feed [calendar
-  OOO](out-of-office.md) instead), declined-by-self, "Show as: Free"
-  (transparent), and all-day (date-only start) events never count.
-  Tentative and needs-action events count, matching Google's own
-  free/busy. Malformed items are skipped, never raised.
+  OOO](out-of-office.md) instead), focus-time (`eventType: "focusTime"`,
+  a do-not-disturb block rather than a meeting), declined-by-self,
+  "Show as: Free" (transparent), and all-day (date-only start) events
+  never count. Tentative and needs-action events count, matching
+  Google's own free/busy. Malformed items are skipped, never raised.
 
 The `freeBusy` endpoint was considered and rejected: it requires a
 scope the app does not request (`calendar.events` is not accepted —

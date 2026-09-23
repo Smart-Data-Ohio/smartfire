@@ -113,4 +113,13 @@ class Calendar::MeetingCacheTest < ActiveSupport::TestCase
       Calendar::MeetingCache.create!(user: @user)
     end
   end
+
+  test "the cache row references its member with a cascading foreign key" do
+    foreign_key = Calendar::MeetingCache.connection
+      .foreign_keys("calendar_meeting_caches").find { |key| key.column == "user_id" }
+
+    assert_not_nil foreign_key
+    assert_equal "users", foreign_key.to_table
+    assert_equal :cascade, foreign_key.on_delete
+  end
 end

@@ -25,6 +25,12 @@ class Calendar::MeetingIntervalsTest < ActiveSupport::TestCase
     assert_empty Calendar::MeetingIntervals.from_items(items)
   end
 
+  test "focus-time events never count as busy" do
+    items = [ timed_event("2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z", "eventType" => "focusTime") ]
+
+    assert_empty Calendar::MeetingIntervals.from_items(items)
+  end
+
   test "events declined by the member never count" do
     items = [
       timed_event("2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z",

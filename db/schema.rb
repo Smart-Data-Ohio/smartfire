@@ -1125,6 +1125,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_171300) do
   add_foreign_key "board_tag_assignments", "users", column: "assignee_id"
   add_foreign_key "board_tag_assignments", "users", column: "created_by_id"
   add_foreign_key "boosts", "messages"
+  add_foreign_key "calendar_meeting_caches", "users", on_delete: :cascade
   add_foreign_key "calendar_push_channels", "users"
   add_foreign_key "channel_threads", "messages", column: "parent_message_id", on_delete: :nullify
   add_foreign_key "channel_threads", "rooms"

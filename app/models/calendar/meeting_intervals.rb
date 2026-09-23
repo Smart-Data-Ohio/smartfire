@@ -4,10 +4,11 @@ module Calendar
   # descriptions, and attendee identities never arrive (the client's
   # fields mask excludes them) and nothing but [start, end] pairs is
   # kept. Cancelled, declined-by-self, "Show as: Free" (transparent),
-  # and all-day (date-only start) events never count as busy. Tentative
-  # and needs-action events do, matching Google's own free/busy.
-  # Malformed items are skipped, never raised: a shape change at Google
-  # must not break presence.
+  # focus-time (a do-not-disturb block, not a meeting), and all-day
+  # (date-only start) events never count as busy. Tentative and
+  # needs-action events do, matching Google's own free/busy. Malformed
+  # items are skipped, never raised: a shape change at Google must not
+  # break presence.
   module MeetingIntervals
     DECLINED = "declined"
 
@@ -21,6 +22,7 @@ module Calendar
       return false unless item.is_a?(Hash)
       return false if item["status"] == "cancelled"
       return false if item["eventType"] == "outOfOffice"
+      return false if item["eventType"] == "focusTime"
       return false if item["transparency"] == "transparent"
       return false if item.dig("start", "dateTime").blank?
       return false if declined_by_self?(item)
