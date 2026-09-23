@@ -1,5 +1,5 @@
 class MessagesController < ApplicationController
-  include ActiveStorage::SetCurrent, RoomScoped, Messages::DriveAttachable
+  include ActiveStorage::SetCurrent, RoomScoped, Messages::DriveAttachable, Messages::BotWebhooks
 
   before_action :set_room, except: :create
   before_action :set_message, only: %i[ show edit update destroy actions ]
@@ -40,7 +40,7 @@ class MessagesController < ApplicationController
       @message.process_attachment
 
       @message.broadcast_create
-      deliver_webhooks_to_bots
+      deliver_webhooks_to_bots(@message)
     end
   rescue ActiveRecord::RecordNotFound
     render action: :room_not_found
@@ -227,23 +227,5 @@ class MessagesController < ApplicationController
         format.json { render json: { errors: error.record.errors.to_hash }, status: :unprocessable_content }
         format.any { head :unprocessable_content }
       end
-    end
-
-
-    def deliver_webhooks_to_bots
-      # Agent-backed bots are delivered only through Agent::DeliveryJob (see
-      # Message::AgentDelivery); the legacy webhook bypasses grant and rate
-      # checks, so it serves bots without an Agent row only. The hop limit
-      # still applies: a chain that reached it stops here instead of
-      # looping through a legacy bot.
-      bots = bots_eligible_for_webhook.excluding(@message.creator).where.missing(:agent)
-      return if bots.empty?
-      return if Agent::Delivery.hop_for_message(@message) >= Agent::Delivery::HOP_LIMIT
-
-      bots.each { |bot| bot.deliver_webhook_later(@message) }
-    end
-
-    def bots_eligible_for_webhook
-      @room.direct? ? @room.users.active_bots : @message.mentionees.active_bots
     end
 end

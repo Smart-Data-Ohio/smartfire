@@ -5,7 +5,7 @@
 # the member's own linked Fizzy token, then posts a reply carrying the
 # new card's URL so it unfurls in the conversation.
 class Rooms::Fizzy::MessageCardsController < ApplicationController
-  include RoomScoped
+  include RoomScoped, Messages::BotWebhooks
 
   TITLE_PREFILL_CHARS = 120
 
@@ -64,6 +64,9 @@ class Rooms::Fizzy::MessageCardsController < ApplicationController
     redirect_to conversation_path, notice: "Fizzy card ##{card["number"]} created."
   rescue ChannelThread::LockedError => error
     redirect_to conversation_path, alert: error.message
+  rescue ActiveRecord::RecordInvalid => error
+    redirect_to conversation_path,
+      alert: "Fizzy card ##{card["number"]} created, but the reply could not be posted (#{error.record.errors.full_messages.to_sentence})."
   end
 
   private
@@ -139,5 +142,7 @@ class Rooms::Fizzy::MessageCardsController < ApplicationController
         @room.root_messages.create!(creator: Current.user, markdown_source: source, reply_to_message: @message)
       end
       reply.broadcast_create
+      deliver_webhooks_to_bots(reply) unless @thread
+      reply
     end
 end

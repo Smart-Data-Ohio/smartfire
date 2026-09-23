@@ -187,6 +187,48 @@ class Rooms::Fizzy::MessageCardsControllerTest < ActionDispatch::IntegrationTest
     assert_not_requested stub
   end
 
+  test "create when the reply cannot be posted keeps the card and explains" do
+    link_fizzy!(users(:david), token: "david-token")
+    long_url = "https://example.com/#{"x" * 60_000}"
+    create_stub = stub_request(:post, "https://app.fizzy.do/897362094/boards/03board1/cards.json")
+      .to_return(status: 201, body: fizzy_card_payload(number: 583).merge("url" => long_url).to_json)
+    sign_in :david
+
+    assert_no_difference -> { @room.messages.count } do
+      post room_message_fizzy_cards_url(@room, @message),
+        params: { board_id: "03board1", title: "Title", description: "Body" }
+    end
+
+    assert_requested create_stub
+    assert_redirected_to room_path(@room)
+    assert_includes flash[:alert], "Fizzy card #583 created"
+    assert_includes flash[:alert], "could not be posted"
+  end
+
+  test "create in a direct room delivers webhooks to legacy bots" do
+    room = rooms(:david_and_kevin)
+    message = room.messages.create!(
+      creator: users(:kevin),
+      markdown_source: "Direct problem",
+      client_message_id: "fizzy-create-direct-1"
+    )
+    bot = User.create_bot!(name: "Legacy Fizzy", webhook_url: "https://example.test/fizzy-hook")
+    room.memberships.grant_to(bot)
+    stub_request(:post, bot.webhook.url).to_return(status: 200)
+    link_fizzy!(users(:david), token: "david-token")
+    stub_request(:post, "https://app.fizzy.do/897362094/boards/03board1/cards.json")
+      .to_return(status: 201, body: fizzy_card_payload(number: 584).to_json)
+    stub_fizzy_card(584, token: "david-token", payload: fizzy_card_payload(number: 584))
+    sign_in :david
+
+    assert_enqueued_jobs 1, only: Bot::WebhookJob do
+      post room_message_fizzy_cards_url(room, message),
+        params: { board_id: "03board1", title: "Direct problem", description: "Details" }
+    end
+
+    assert_redirected_to room_path(room)
+  end
+
   test "a non-member cannot open the form" do
     link_fizzy!(users(:david), token: "david-token")
     sign_in :david
