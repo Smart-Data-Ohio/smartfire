@@ -33,3 +33,13 @@ room, the draft is dropped — never leaked to non-members — and the
 author gets a "Scheduled message not sent" inbox item pointing at the
 Scheduled view. A locked thread is transient, so its drafts wait for
 the next tick instead of dropping.
+
+## Deletion
+
+The `thread_id`, `reply_to_message_id`, and `sent_message_id` links
+nullify when their target is deleted, so deletes never fail on these
+rows. Deleting a thread drops its pending scheduled replies with an
+inbox item ("its thread was deleted") instead of letting them
+re-target the channel; sent history keeps its past with the cleared
+link. Deleting the room destroys its scheduled rows (and their inbox
+items) with everything else.

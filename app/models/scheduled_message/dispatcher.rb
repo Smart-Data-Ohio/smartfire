@@ -98,9 +98,8 @@ class ScheduledMessage::Dispatcher
         message
       end
 
-      def drop!(scheduled, now:)
-        scheduled.update!(dropped_at: now)
-        ActivityItem.create!(user: scheduled.user, source: scheduled, event_type: "scheduled_message_dropped")
+      def drop!(scheduled, now:, reason: nil)
+        scheduled.drop!(reason: reason, now: now)
       end
   end
 end

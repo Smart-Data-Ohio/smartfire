@@ -127,7 +127,11 @@ module ActivityItemsHelper
     when AgentApproval
       source.summary.to_s
     when ScheduledMessage
-      "You no longer have access to this room, so your scheduled message was not sent: #{source.markdown_source}"
+      if source.drop_reason.present?
+        "Your scheduled message was not sent (#{source.drop_reason}): #{source.markdown_source}"
+      else
+        "You no longer have access to this room, so your scheduled message was not sent: #{source.markdown_source}"
+      end
     else
       "Source updated"
     end

@@ -712,6 +712,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_054816) do
   create_table "scheduled_messages", force: :cascade do |t|
     t.datetime "claimed_at"
     t.datetime "created_at", null: false
+    t.text "drop_reason"
     t.datetime "dropped_at"
     t.text "markdown_source", null: false
     t.integer "reply_to_message_id"
@@ -979,9 +980,9 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_054816) do
   add_foreign_key "push_subscriptions", "users"
   add_foreign_key "saved_items", "messages"
   add_foreign_key "saved_items", "users"
-  add_foreign_key "scheduled_messages", "channel_threads", column: "thread_id"
-  add_foreign_key "scheduled_messages", "messages", column: "reply_to_message_id"
-  add_foreign_key "scheduled_messages", "messages", column: "sent_message_id"
+  add_foreign_key "scheduled_messages", "channel_threads", column: "thread_id", on_delete: :nullify
+  add_foreign_key "scheduled_messages", "messages", column: "reply_to_message_id", on_delete: :nullify
+  add_foreign_key "scheduled_messages", "messages", column: "sent_message_id", on_delete: :nullify
   add_foreign_key "scheduled_messages", "rooms"
   add_foreign_key "scheduled_messages", "users"
   add_foreign_key "searches", "users"

@@ -45,6 +45,14 @@ class ScheduledMessage < ApplicationRecord
     dropped_at.present?
   end
 
+  # Drops the row with a "not sent" inbox item for the author. reason is
+  # a short clause naming the cause (nil renders the default access-loss
+  # text). The row stays as history in the Scheduled view.
+  def drop!(reason: nil, now: Time.current)
+    update!(dropped_at: now, drop_reason: reason)
+    ActivityItem.create!(user: user, source: self, event_type: "scheduled_message_dropped")
+  end
+
   def conversation
     thread || room
   end
