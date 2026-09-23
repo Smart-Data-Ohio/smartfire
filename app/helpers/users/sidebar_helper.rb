@@ -4,7 +4,7 @@ module Users::SidebarHelper
       turbo_permanent: true,
       controller: "rooms-list read-rooms turbo-frame",
       rooms_list_unread_class: "unread",
-      action: "presence:present@window->rooms-list#read read-rooms:read->rooms-list#read turbo:frame-load->rooms-list#loaded refresh-room:visible@window->turbo-frame#reload".html_safe # otherwise -> is escaped
+      action: "presence:present@window->rooms-list#read room:mark-unread@window->rooms-list#markUnread read-rooms:read->rooms-list#read turbo:frame-load->rooms-list#loaded refresh-room:visible@window->turbo-frame#reload".html_safe # otherwise -> is escaped
     }, &
   end
 

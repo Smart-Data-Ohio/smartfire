@@ -207,6 +207,35 @@ export default class extends Controller {
     this.#closeMenu({ restoreFocus: false })
   }
 
+  async markUnread(event) {
+    event.preventDefault()
+
+    const message = this.#message
+    const messageId = message?.dataset.messageId
+    const roomId = message?.dataset.roomId || document.querySelector("meta[name='current-room-id']")?.content
+    if (!messageId || !roomId) {
+      this.#announce("Couldn’t mark unread")
+      return
+    }
+
+    const response = await fetch(`/rooms/${roomId}/read?message_id=${messageId}`, {
+      method: "DELETE",
+      headers: {
+        Accept: "application/json",
+        "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content || "",
+      },
+    }).catch(() => null)
+
+    if (!response?.ok) {
+      this.#announce("Couldn’t mark unread")
+      return
+    }
+
+    window.dispatchEvent(new CustomEvent("room:mark-unread", { detail: { roomId: Number(roomId) } }))
+    this.#announce("Marked unread")
+    if (this.#message === message) this.#closeMenu({ restoreFocus: false })
+  }
+
   async delete(event) {
     event.preventDefault()
     if (!window.confirm("Are you sure you want to delete this message?")) return
@@ -403,6 +432,9 @@ export default class extends Controller {
 
     this.#setActionAvailability(".message__edit-action", false)
     this.#setActionAvailability(".message__delete-action", false)
+    // Thread replies keep their own read state; only room messages can
+    // move the room's unread pointer.
+    this.#setActionAvailability(".message__mark-unread-action", !this.#message.dataset.threadId)
     if (this.hasThreadLabelTarget) this.threadLabelTarget.textContent = "Create thread"
     this.itemTargets.filter(item => item.dataset.reaction).forEach(item => {
       item.removeAttribute("aria-pressed")

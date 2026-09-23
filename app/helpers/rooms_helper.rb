@@ -54,6 +54,17 @@ module RoomsHelper
     end
   end
 
+  def button_to_jump_to_unread
+    tag.button \
+        id: "jump-to-unread",
+        class: "message-area__jump-to-unread btn",
+        data: { action: "messages#jumpToUnread" },
+        hidden: true do
+      image_tag("arrow-up.svg", aria: { hidden: "true" }, size: 20) +
+      tag.span("Jump to unread")
+    end
+  end
+
   def submit_room_button_tag
     button_tag class: "btn btn--reversed txt-large center", type: "submit" do
       image_tag("check.svg", aria: { hidden: "true" }, size: 20) +

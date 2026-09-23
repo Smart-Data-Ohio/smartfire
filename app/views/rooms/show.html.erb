@@ -19,15 +19,19 @@
   <%= render "rooms/show/thread_panel", room: @room %>
 <% end %>
 
-<%= message_area_tag(@room) do %>
+<%= message_area_tag(@room, scroll_to_divider: @scroll_to_unread_divider) do %>
   <%= render "messages/template" %>
 
   <%= messages_tag(@room) do %>
     <%= render "rooms/show/invitation", room: @room %>
-    <%= render partial: "messages/message", collection: @messages %>
+    <% @messages.each do |message| %>
+      <%= render "messages/unread_divider", unread_count: @unread_count if message.id == @unread_divider_message_id %>
+      <%= render "messages/message", message: message %>
+    <% end %>
   <% end %>
 
   <%= turbo_stream_from @room, :messages, channel: "RoomMessagesChannel" %>
+  <%= button_to_jump_to_unread %>
   <%= button_to_jump_to_newest_message %>
 <% end %>
 

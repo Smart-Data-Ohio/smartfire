@@ -41,6 +41,17 @@ export default class extends Controller {
     }
   }
 
+  // Local echo of "mark unread": unlike the cable path, this marks the
+  // current room too, since the requester asked for it explicitly.
+  markUnread({ detail: { roomId } }) {
+    const room = this.#findRoomTarget(roomId)
+
+    if (room) {
+      room.classList.add(this.unreadClass)
+      this.dispatch("unread", { detail: { targetId: room.id } })
+    }
+  }
+
   #channelConnected() {
     if (this.#disconnected) {
       this.#disconnected = false
