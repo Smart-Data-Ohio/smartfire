@@ -58,4 +58,24 @@ module Fizzy::CardsHelper
   rescue ArgumentError, TypeError
     nil
   end
+
+  # Card and avatar URLs come from the Fizzy API, so they are only used
+  # when they are absolute https URLs. Anything else falls back to the
+  # canonical card link, or to no avatar.
+  def fizzy_card_link_url(payload, card)
+    url = payload["url"].to_s
+    fizzy_https_url?(url) ? url : card.web_url
+  end
+
+  def fizzy_card_avatar_url(url)
+    url = url.to_s
+    fizzy_https_url?(url) ? url : nil
+  end
+
+  def fizzy_https_url?(url)
+    uri = URI.parse(url.to_s)
+    uri.scheme == "https" && uri.host.present?
+  rescue URI::InvalidURIError
+    false
+  end
 end

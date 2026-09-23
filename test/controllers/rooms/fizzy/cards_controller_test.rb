@@ -125,6 +125,29 @@ class Rooms::Fizzy::CardsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Couldn’t load this Fizzy card"
   end
 
+  test "non-https API URLs fall back to the canonical link and no avatar" do
+    link_fizzy!(users(:david), token: "david-token")
+    payload = fizzy_card_payload.merge(
+      "url" => "javascript:alert('card')",
+      "assignees" => [
+        { "name" => "Evil", "avatar_url" => "http://evil.example/avatar.png" },
+        { "name" => "Bad", "avatar_url" => "javascript:alert('avatar')" }
+      ]
+    )
+    Fizzy::CardCache.for_viewer(card: @card, user: users(:david))
+      .update!(payload: payload, fetched_at: Time.current)
+    sign_in :david
+
+    get room_fizzy_card_url(@room, @card, message_id: @message.id)
+
+    assert_response :success
+    assert_not_includes response.body, "javascript:"
+    assert_not_includes response.body, "http://evil.example"
+    assert_includes response.body, @card.web_url
+    assert_not_includes response.body, "fizzy-card__avatar"
+    assert_includes response.body, "Evil"
+  end
+
   test "a closed card shows its Closed status" do
     link_fizzy!(users(:david), token: "david-token")
     stub_fizzy_card(579, token: "david-token", payload: fizzy_card_payload(closed: true, column_name: nil))

@@ -11,8 +11,8 @@
     <div class="fizzy-card__meta">
       <% Array(payload["assignees"]).each do |assignee| %>
         <span class="fizzy-card__assignee">
-          <% if assignee["avatar_url"].present? %>
-            <%= image_tag assignee["avatar_url"], alt: "", size: "16x16", class: "fizzy-card__avatar", loading: "lazy" %>
+          <% if (avatar_url = fizzy_card_avatar_url(assignee["avatar_url"])) %>
+            <%= image_tag avatar_url, alt: "", size: "16x16", class: "fizzy-card__avatar", loading: "lazy" %>
           <% end %>
           <%= assignee["name"] %>
         </span>
@@ -37,7 +37,7 @@
     <% if (active_at = fizzy_card_last_active_at(payload)) %>
       <span class="fizzy-card__updated">Active <%= local_datetime_tag active_at %></span>
     <% end %>
-    <%= link_to "View in Fizzy", payload["url"].presence || card.web_url,
+    <%= link_to "View in Fizzy", fizzy_card_link_url(payload, card),
           class: "fizzy-card__link", target: "_blank", rel: "noopener noreferrer" %>
   </footer>
 </article>
