@@ -39,9 +39,13 @@ class Github::PerformAgentActionJob < ApplicationJob
           next unless written
 
           event.reload
-          if (approval = AgentApproval.find_by(id: event.agent_approval_id || event.metadata["approval_id"]))
-            AuditLog.record!(action: "agent.github_action.execute", actor: event.actor,
-              target: approval, changes: { action: approval.action, status: "failed", message: message })
+          begin
+            if (approval = AgentApproval.find_by(id: event.agent_approval_id || event.metadata["approval_id"]))
+              AuditLog.record!(action: "agent.github_action.execute", actor: event.actor,
+                target: approval, changes: { action: approval.action, status: "failed", message: message })
+            end
+          rescue => error
+            Rails.logger.error "Stuck GitHub claim audit failed for event #{event.id}: #{error.class}: #{error.message}"
           end
           if pending_webhook
             Agent::EventWebhookJob.perform_later(event.id, event.webhook_attempts.to_i)
@@ -264,9 +268,13 @@ class Github::PerformAgentActionJob < ApplicationJob
     end
 
     # The human who approved is the actor: the job executes with their authority.
+    # A failing audit write must not skip the outcome webhook below it, so it
+    # is rescued and logged here.
     def record_execution_audit(approval, status:, message: nil, url: nil)
       AuditLog.record!(action: "agent.github_action.execute", actor: approval.decided_by,
         target: approval, changes: { action: approval.action, status: status, url: url, message: message }.compact)
+    rescue => error
+      Rails.logger.error "GitHub execution audit failed for approval #{approval.id}: #{error.class}: #{error.message}"
     end
 
     def enqueue_outcome_webhook(event)

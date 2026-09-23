@@ -1,4 +1,5 @@
 require "test_helper"
+require "minitest/mock"
 
 class AuditLog::GithubExecutionAuditTest < ActiveJob::TestCase
   AGENT_TOKEN = "agent-token-abc"
@@ -64,6 +65,41 @@ class AuditLog::GithubExecutionAuditTest < ActiveJob::TestCase
     assert_no_difference -> { AuditLog.where(action: "agent.github_action.execute").count } do
       Github::PerformAgentActionJob.perform_now(approval.id)
     end
+  end
+
+  test "a failing audit write still enqueues the outcome webhook" do
+    stub_request(:post, "https://api.github.com/repos/rails/rails/issues/12/comments")
+      .to_return(status: 201, body: { html_url: "https://github.com/rails/rails/pull/12#issuecomment-1" }.to_json)
+    approval = approve!(build_approval(kind: "comment", body: "Nice work"))
+
+    AuditLog.stub :record!, proc { raise "audit store down" } do
+      assert_enqueued_with(job: Agent::EventWebhookJob) do
+        Github::PerformAgentActionJob.perform_now(approval.id)
+      end
+    end
+
+    event = @agent.agent_events.where(event_type: "github_action_completed").last
+    assert_equal "completed", event.metadata["status"]
+  end
+
+  test "a failing sweep audit write still enqueues the outcome webhook" do
+    approval = approve!(build_approval(kind: "comment", body: "Nice work"))
+    event = @agent.agent_events.create!(
+      event_type: "github_action_completed",
+      outcome: "delivered",
+      agent_approval_id: approval.id,
+      webhook_status: "none",
+      metadata: { "approval_id" => approval.id, "action" => approval.action, "status" => "running" }
+    )
+    event.update_columns(created_at: 20.minutes.ago)
+
+    AuditLog.stub :record!, proc { raise "audit store down" } do
+      assert_enqueued_with(job: Agent::EventWebhookJob) do
+        Github::PerformAgentActionJob.recover_stuck_claims!
+      end
+    end
+
+    assert_equal "failed", event.reload.metadata["status"]
   end
 
   test "a stuck claim recovered by the sweep is recorded as failed" do
