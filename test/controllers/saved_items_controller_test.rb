@@ -76,6 +76,19 @@ class SavedItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal Time.zone.parse(remind_at), @user.saved_items.sole.remind_at
   end
 
+  test "create again after a fired reminder re-arms it" do
+    saved_item = SavedItem.create!(user: @user, message: @message, remind_at: 1.minute.from_now)
+    travel_to(2.minutes.from_now) { SavedItem::ReminderDispatcher.dispatch_due! }
+    assert_not_nil saved_item.reload.reminded_at
+
+    remind_at = 2.hours.from_now.utc.iso8601(3)
+    post saved_items_url(format: :json), params: { message_id: @message.id, saved_item: { remind_at: } }
+
+    assert_response :created
+    assert_nil saved_item.reload.reminded_at
+    assert_equal Time.zone.parse(remind_at), saved_item.remind_at
+  end
+
   test "create rejects past and unparseable reminders" do
     post saved_items_url(format: :json), params: { message_id: @message.id, saved_item: { remind_at: 1.minute.ago.utc.iso8601 } }
     assert_response :unprocessable_entity

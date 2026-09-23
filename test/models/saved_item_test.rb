@@ -100,4 +100,22 @@ class SavedItemTest < ActiveSupport::TestCase
       @message.destroy!
     end
   end
+
+  test "setting a new reminder time after a firing re-arms the reminder" do
+    saved_item = SavedItem.create!(user: @user, message: @message, remind_at: 1.minute.from_now)
+
+    travel_to 2.minutes.from_now do
+      SavedItem::ReminderDispatcher.dispatch_due!
+    end
+    assert_not_nil saved_item.reload.reminded_at
+
+    saved_item.update!(remind_at: 1.hour.from_now)
+
+    assert_nil saved_item.reload.reminded_at
+    assert_predicate saved_item, :reminder_pending?
+
+    travel_to 61.minutes.from_now do
+      assert_includes SavedItem.due_reminders, saved_item
+    end
+  end
 end

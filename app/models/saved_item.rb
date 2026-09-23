@@ -7,6 +7,8 @@ class SavedItem < ApplicationRecord
   validates :message_id, uniqueness: { scope: :user_id }
   validate :remind_at_must_be_future, if: :will_save_change_to_remind_at?
 
+  before_save :clear_fired_claim, if: :will_save_change_to_remind_at?
+
   scope :ordered, -> { order(created_at: :desc, id: :desc) }
 
   class << self
@@ -59,6 +61,13 @@ class SavedItem < ApplicationRecord
   end
 
   private
+    # A new reminder time re-arms the reminder. Without this, a
+    # reminded_at left over from an earlier firing would suppress the
+    # new reminder, since due_reminders only fires unclaimed items.
+    def clear_fired_claim
+      self.reminded_at = nil
+    end
+
     def remind_at_must_be_future
       if remind_at.present? && remind_at <= Time.current
         errors.add :remind_at, "must be in the future"
