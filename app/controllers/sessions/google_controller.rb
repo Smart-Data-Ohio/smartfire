@@ -62,6 +62,12 @@ module Sessions
         user = Google::SignIn::AccountLinker.resolve!(claims)
         start_new_session_for user
         AuditLog.record!(action: "session.sign_in.success", actor: user, changes: { method: "google" })
+        if user.previously_new_record?
+          AuditLog.record!(action: "user.create", actor: user, target: user, changes: { method: "google" })
+        elsif user.google_identity&.previously_new_record?
+          AuditLog.record!(action: "google.sign_in.link", actor: user, target: user,
+            changes: { email: claims["email"] })
+        end
       end
       redirect_to safe_post_authenticating_url
     rescue Google::SignIn::Unavailable

@@ -81,6 +81,53 @@ class AuditLog::SignInAuditTest < ActionDispatch::IntegrationTest
     assert_equal({ "method" => "google" }, entry.details)
   end
 
+  test "Google sign-in that provisions a user records the creation" do
+    state = start_google_sign_in
+
+    assert_difference -> { AuditLog.where(action: "user.create").count }, +1 do
+      complete_google_sign_in(state:, email: "provisioned@smartdata.net", hd: "smartdata.net", sub: "google-sub-provisioned")
+    end
+
+    assert_redirected_to root_url
+    user = User.find_by!(email_address: "provisioned@smartdata.net")
+    entry = AuditLog.where(action: "user.create").last
+    assert_equal user.id, entry.actor_id
+    assert_equal user.id, entry.target_id
+    assert_equal({ "method" => "google" }, entry.details)
+  end
+
+  test "Google sign-in that auto-links an allowed address records the link" do
+    member = User.create!(name: "Linkable", email_address: "linkable@smartdata.net", google_email_link_allowed: true)
+    state = start_google_sign_in
+
+    assert_difference -> { AuditLog.where(action: "google.sign_in.link").count }, +1 do
+      assert_difference -> { AuditLog.where(action: "session.sign_in.success").count }, +1 do
+        complete_google_sign_in(state:, email: "linkable@smartdata.net", hd: "smartdata.net", sub: "google-sub-linkable")
+      end
+    end
+
+    assert_redirected_to root_url
+    entry = AuditLog.where(action: "google.sign_in.link").last
+    assert_equal member.id, entry.actor_id
+    assert_equal member.id, entry.target_id
+    assert_equal({ "email" => "linkable@smartdata.net" }, entry.details)
+  end
+
+  test "repeat Google sign-in records no link or creation row" do
+    member = User.create!(name: "Linked", email_address: "linked@smartdata.net", google_email_link_allowed: true)
+    first_state = start_google_sign_in
+    complete_google_sign_in(state: first_state, email: "linked@smartdata.net", hd: "smartdata.net", sub: "google-sub-linked")
+
+    delete session_url
+    second_state = start_google_sign_in
+
+    assert_no_difference -> { AuditLog.where(action: [ "google.sign_in.link", "user.create" ]).count } do
+      complete_google_sign_in(state: second_state, email: "linked@smartdata.net", hd: "smartdata.net", sub: "google-sub-linked")
+    end
+
+    assert_redirected_to root_url
+  end
+
   test "rejected Google sign-in is recorded as a failure" do
     state = start_google_sign_in
 

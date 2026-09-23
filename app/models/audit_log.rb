@@ -16,6 +16,7 @@ class AuditLog < ApplicationRecord
   ACTIONS = %w[
     session.sign_in.success
     session.sign_in.failure
+    user.create
     user.email.change
     user.password.change
     user.role.change
