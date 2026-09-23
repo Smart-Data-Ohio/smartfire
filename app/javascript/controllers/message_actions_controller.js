@@ -238,6 +238,43 @@ export default class extends Controller {
     if (this.#message === message) this.#closeMenu({ restoreFocus: false })
   }
 
+  async removeEmbeds(event) {
+    event.preventDefault()
+    const message = this.#message
+    await this.#ensureMetadata()
+    // Another menu opening mid-request must not redirect this action to
+    // its message; the newer menu stays open untouched.
+    if (this.#message !== message || !message?.isConnected) return
+    if (this.#boolean(this.#metadata || {}, "can_remove_embeds", "canRemoveEmbeds") !== true) {
+      this.#closeMenu({ restoreFocus: false })
+      return
+    }
+
+    const url = this.#stringFromMetadata("suppress_embeds_url", "suppressEmbedsUrl") || `${this.#messageUrl}/embed_suppression`
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Accept: "text/vnd.turbo-stream.html, application/json",
+        "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content || "",
+      },
+    }).catch(() => null)
+
+    if (!response?.ok) {
+      this.#announce("Couldn’t remove embeds")
+      return
+    }
+
+    const contentType = response.headers.get("content-type") || ""
+    if (contentType.includes("turbo-stream")) {
+      Turbo.renderStreamMessage(await response.text())
+    } else {
+      message.querySelectorAll(".link-embed-cards, .linkedin-post-cards").forEach(container => container.replaceChildren())
+    }
+    this.#announce("Embeds removed")
+
+    if (this.#message === message) this.#closeMenu({ restoreFocus: false })
+  }
+
   // Internal event handlers
 
   #onOpenRequest(event) {
@@ -403,6 +440,7 @@ export default class extends Controller {
 
     this.#setActionAvailability(".message__edit-action", false)
     this.#setActionAvailability(".message__delete-action", false)
+    this.#setActionAvailability(".message__remove-embeds-action", false)
     if (this.hasThreadLabelTarget) this.threadLabelTarget.textContent = "Create thread"
     this.itemTargets.filter(item => item.dataset.reaction).forEach(item => {
       item.removeAttribute("aria-pressed")
@@ -765,6 +803,7 @@ export default class extends Controller {
 
     this.#setActionAvailability(".message__edit-action", this.#boolean(metadata, "can_edit", "canEdit", "editable"))
     this.#setActionAvailability(".message__delete-action", this.#boolean(metadata, "can_delete", "canDelete", "deletable"))
+    this.#setActionAvailability(".message__remove-embeds-action", this.#boolean(metadata, "can_remove_embeds", "canRemoveEmbeds"))
 
     const threadSummary = metadata.thread_summary || metadata.threadSummary
     if (threadSummary && this.hasThreadLabelTarget) {

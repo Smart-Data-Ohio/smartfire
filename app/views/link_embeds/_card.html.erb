@@ -1,0 +1,27 @@
+<%# A Discord-style generic link embed: site name, linked title,
+    description, and the page's OpenGraph image. Unusable fetches (a
+    login gate, a missing page, a network failure) render nothing: the
+    author's link in the message body is the fallback. %>
+<% if embed.usable? %>
+  <article class="link-embed-card">
+    <div class="link-embed-card__body">
+      <% if embed.site_name.present? %>
+        <p class="link-embed-card__site"><%= embed.site_name %></p>
+      <% end %>
+      <% if embed.title.present? %>
+        <p class="link-embed-card__title">
+          <%= link_to embed.title, embed.display_url, target: "_blank", rel: "nofollow noopener noreferrer" %>
+        </p>
+      <% end %>
+      <% if embed.description.present? %>
+        <p class="link-embed-card__description"><%= embed.description %></p>
+      <% end %>
+    </div>
+    <% if embed.image_url.present? %>
+      <%= link_to embed.display_url, target: "_blank", rel: "nofollow noopener noreferrer",
+            class: "link-embed-card__image-link", tabindex: "-1", aria: { hidden: "true" } do %>
+        <%= image_tag embed.image_url, alt: "", loading: "lazy", class: "link-embed-card__image" %>
+      <% end %>
+    <% end %>
+  </article>
+<% end %>

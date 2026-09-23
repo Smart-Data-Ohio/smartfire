@@ -91,6 +91,8 @@ class MessagesController < ApplicationController
     # cases a broadcast target.
     @message.broadcast_replace_to @room, :messages, target: [ @message, :github_pr_cards ], partial: "github/pull_requests/cards", attributes: { maintain_scroll: true }
     @message.broadcast_replace_to @room, :messages, target: [ @message, :twitter_cards ], partial: "twitter/posts/cards", attributes: { maintain_scroll: true }
+    @message.broadcast_replace_to @room, :messages, target: [ @message, :linkedin_cards ], partial: "linkedin/posts/cards", attributes: { maintain_scroll: true }
+    @message.broadcast_replace_to @room, :messages, target: [ @message, :link_embed_cards ], partial: "link_embeds/cards", attributes: { maintain_scroll: true }
     if drive_file_ids_key_present?
       @message.broadcast_replace_to @room, :messages, target: [ @message, :drive_attachments ],
         partial: "messages/drive_attachments", locals: { message: @message }, attributes: { maintain_scroll: true }
@@ -165,6 +167,7 @@ class MessagesController < ApplicationController
         reply_ids.any? ? Message.where(id: reply_ids).maximum(:edited_at) : nil,
         Github::PullRequestReference.where(message_id: message_ids).joins(:pull_request).maximum("github_pull_requests.updated_at"),
         Twitter::PostReference.where(message_id: message_ids).joins(:post).maximum("twitter_posts.updated_at"),
+        LinkEmbedReference.where(message_id: message_ids).joins(:link_embed).maximum("link_embeds.updated_at"),
         EventReference.where(message_id: message_ids).joins(:event).maximum("events.updated_at"),
         User.where(id: messages.map(&:creator_id)).maximum(:updated_at)
       ].compact.max&.utc&.to_fs(:usec)

@@ -1,0 +1,12 @@
+<%# Without a message (messages/_template) this renders nothing: a pending
+    message carries no references yet and the server broadcast appends the
+    real block. Otherwise the container always renders, even with no cards:
+    edits broadcast-replace it, so a URL added by an edit needs the target
+    to exist and a removed URL needs its cards cleared. The ERB tags hug
+    the div so the empty container has no text nodes and the :empty rule
+    hides it. %>
+<% if (message = local_assigns[:message]) %>
+  <% embeds = linkedin_post_cards_for(message) %><div id="<%= dom_id(message, :linkedin_cards) %>" class="linkedin-post-cards"><% embeds.each do |embed| %>
+    <%= render "linkedin/posts/card", embed: embed %>
+  <% end %></div>
+<% end %>

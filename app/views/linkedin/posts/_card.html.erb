@@ -1,0 +1,44 @@
+<%# A LinkedIn post card: the mark, the fetched title and excerpt, the
+    page image, and a click-to-load official embed player. Login-gated
+    pages yield no usable OpenGraph data and render a compact link chip
+    instead. %>
+<% if embed.usable? %>
+  <article class="linkedin-post-card">
+    <header class="linkedin-post-card__header">
+      <span class="linkedin-post-card__mark" aria-hidden="true">in</span>
+      <span class="linkedin-post-card__source">LinkedIn</span>
+    </header>
+    <% if embed.title.present? %>
+      <p class="linkedin-post-card__title">
+        <%= link_to embed.title, embed.display_url, target: "_blank", rel: "nofollow noopener noreferrer" %>
+      </p>
+    <% end %>
+    <% if embed.description.present? %>
+      <p class="linkedin-post-card__excerpt"><%= embed.description %></p>
+    <% end %>
+    <% if embed.image_url.present? %>
+      <%= link_to embed.display_url, target: "_blank", rel: "nofollow noopener noreferrer",
+            class: "linkedin-post-card__image-link", tabindex: "-1", aria: { hidden: "true" } do %>
+        <%= image_tag embed.image_url, alt: "", loading: "lazy", class: "linkedin-post-card__image" %>
+      <% end %>
+    <% end %>
+    <footer class="linkedin-post-card__footer">
+      <%= link_to "View post on LinkedIn", embed.display_url, class: "linkedin-post-card__link",
+            target: "_blank", rel: "nofollow noopener noreferrer" %>
+      <% if (player_url = linkedin_embed_player_url(embed)).present? %>
+        <span data-controller="linkedin-embed" data-linkedin-embed-src-value="<%= player_url %>">
+          <button type="button" class="btn linkedin-post-card__embed-button"
+                  data-action="linkedin-embed#show"
+                  data-linkedin-embed-target="button">
+            Show embedded post
+          </button>
+        </span>
+      <% end %>
+    </footer>
+  </article>
+<% else %>
+  <p class="linkedin-post-chip">
+    <span class="linkedin-post-chip__mark" aria-hidden="true">in</span>
+    <%= link_to "View post on LinkedIn", embed.display_url, target: "_blank", rel: "nofollow noopener noreferrer" %>
+  </p>
+<% end %>

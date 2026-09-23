@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_22_223000) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_005133) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -435,6 +435,33 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_223000) do
     t.index ["user_id"], name: "index_huddle_grants_on_user_id"
   end
 
+  create_table "link_embed_references", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "link_embed_id", null: false
+    t.integer "message_id", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["link_embed_id"], name: "index_link_embed_references_on_link_embed_id"
+    t.index ["message_id", "link_embed_id"], name: "index_link_embed_references_on_message_and_embed", unique: true
+    t.index ["message_id"], name: "index_link_embed_references_on_message_id"
+  end
+
+  create_table "link_embeds", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.datetime "expires_at"
+    t.string "fetch_error"
+    t.datetime "fetch_requested_at"
+    t.datetime "fetched_at"
+    t.string "image_url"
+    t.string "normalized_url", null: false
+    t.string "site_name"
+    t.string "title"
+    t.datetime "updated_at", null: false
+    t.string "url"
+    t.index ["normalized_url"], name: "index_link_embeds_on_normalized_url", unique: true
+  end
+
   create_table "memberships", force: :cascade do |t|
     t.datetime "connected_at"
     t.integer "connections", default: 0, null: false
@@ -458,6 +485,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_223000) do
     t.datetime "created_at", null: false
     t.integer "creator_id", null: false
     t.datetime "edited_at"
+    t.boolean "embeds_suppressed", default: false, null: false
     t.text "forward_note"
     t.datetime "forwarded_at"
     t.integer "forwarded_from_message_id"
@@ -708,6 +736,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_223000) do
   add_foreign_key "github_repository_subscriptions", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "google_accounts", "users"
   add_foreign_key "google_identities", "users"
+  add_foreign_key "link_embed_references", "link_embeds"
+  add_foreign_key "link_embed_references", "messages"
   add_foreign_key "messages", "channel_threads", column: "thread_id", on_delete: :cascade
   add_foreign_key "messages", "messages", column: "forwarded_from_message_id", on_delete: :nullify
   add_foreign_key "messages", "messages", column: "reply_to_message_id", on_delete: :nullify

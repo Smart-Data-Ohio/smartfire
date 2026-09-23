@@ -113,6 +113,7 @@ Rails.application.routes.draw do
       post :preview, on: :collection
       get :actions, on: :member
       get :forward_source, on: :member, controller: "message_forward_sources"
+      resource :embed_suppression, controller: "message_embed_suppressions", only: :create
       resources :forwards, controller: "message_forwards", only: :create
       get "forwards/destinations", to: "message_forwards#destinations", as: :forward_destinations
     end
@@ -122,6 +123,7 @@ Rails.application.routes.draw do
       resources :messages, controller: "channel_thread_messages", only: %i[ index show create update destroy ] do
         get :actions, on: :member
         get :forward_source, on: :member, controller: "message_forward_sources"
+        resource :embed_suppression, controller: "message_embed_suppressions", only: :create
         resources :forwards, controller: "message_forwards", only: :create
         get "forwards/destinations", to: "message_forwards#destinations", as: :forward_destinations
       end
@@ -191,6 +193,7 @@ Rails.application.routes.draw do
 
   resources :messages do
     resources :forwards, controller: "message_forwards", only: :create
+    resource :embed_suppression, controller: "message_embed_suppressions", only: :create
     get :forward_source, on: :member, controller: "message_forward_sources"
     get "forwards/destinations", to: "message_forwards#destinations", as: :forward_destinations
 
