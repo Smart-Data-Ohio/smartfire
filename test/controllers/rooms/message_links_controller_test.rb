@@ -26,6 +26,17 @@ class Rooms::MessageLinksControllerTest < ActionDispatch::IntegrationTest
     assert_select "a", text: "Jump to message"
   end
 
+  test "a quote of a soft-deleted source room shows only the private chip" do
+    @other_room.begin_destroy!
+
+    get room_message_link_url(@room, @reference)
+
+    assert_response :success
+    assert_select ".message-quote-private", text: "Message in a private room"
+    assert_not_includes response.body, "cross-room quoted words"
+    assert_select ".message-quote", count: 0
+  end
+
   test "a non-member of the source room sees only the private chip" do
     sign_in :kevin
 

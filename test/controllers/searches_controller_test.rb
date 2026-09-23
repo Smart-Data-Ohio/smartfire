@@ -186,6 +186,44 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     assert_select ".message", count: 1
   end
 
+  test "in: a room the user is not in returns nothing" do
+    hidden = Rooms::Closed.create!(name: "NoEntryVault", creator: users(:kevin))
+    hidden.memberships.grant_to(users(:kevin))
+    hidden.messages.create!(body: "secluded alpha", client_message_id: "op-in-hidden", creator: users(:kevin))
+
+    get searches_url, params: { q: "in:#NoEntryVault secluded alpha" }
+
+    assert_response :success
+    assert_select ".message", count: 0
+    assert_select ".search-sections__section", count: 0
+  end
+
+  test "sections exclude soft-deleted rooms" do
+    board = Rooms::Board.create!(name: "Vanishing Board", creator: users(:david))
+    board.memberships.grant_to(users(:david))
+    board.channel_threads.create!(name: "Vanishing launch plan", creator: users(:david), work_status: "planned")
+    closed = Rooms::Closed.create!(name: "Vanishing Room", creator: users(:david))
+    closed.memberships.grant_to(users(:david))
+    closed.channel_threads.create!(name: "Vanishing launch work", creator: users(:david), work_status: "planned")
+    closed.events.create!(organizer: users(:david), title: "Vanishing launch gathering",
+      starts_at: 2.days.from_now, time_zone: "America/New_York")
+
+    get searches_url, params: { q: "vanishing launch" }
+
+    assert_response :success
+    assert_select ".search-sections__section", text: /Vanishing launch plan/
+    assert_select ".search-sections__section", text: /Vanishing launch work/
+    assert_select ".search-sections__section", text: /Vanishing launch gathering/
+
+    board.begin_destroy!
+    closed.begin_destroy!
+
+    get searches_url, params: { q: "vanishing launch" }
+
+    assert_response :success
+    assert_select ".search-sections__section", text: /Vanishing/, count: 0
+  end
+
   test "has:pin narrows results to pinned messages" do
     pinned = rooms(:designers).messages.create! body: "pinned alpha", client_message_id: "op-pin-yes", creator: users(:david)
     MessagePin.pin!(message: pinned, pinner: users(:david))
