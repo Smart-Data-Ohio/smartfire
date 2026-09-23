@@ -1,0 +1,5 @@
+Hi <%= @user.name %>,
+
+New sign-in to your account from <%= @session.device_description %>, <%= @item.created_at.strftime("%B %-d, %Y at %-I:%M %p %Z") %>. Wasn't you? Review your sessions:
+
+<%= user_sessions_url %>

@@ -1,5 +1,6 @@
 class Accounts::CustomStylesController < ApplicationController
   before_action :ensure_can_administer, :set_account
+  before_action :require_sudo_mode, only: :update
 
   def edit
   end

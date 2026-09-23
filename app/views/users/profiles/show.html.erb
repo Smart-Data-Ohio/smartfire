@@ -199,6 +199,8 @@
     </menu>
   </div>
 
+  <%= render "users/profiles/sessions" %>
+
   <%= render "users/profiles/transfer", user: @user %>
 
   <% if Rails.env.development? %>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_23_151800) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_162100) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -880,6 +880,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_151800) do
 
   create_table "sessions", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "device_id"
     t.string "ip_address"
     t.datetime "last_active_at", null: false
     t.string "token", null: false
@@ -887,6 +888,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_151800) do
     t.string "user_agent"
     t.integer "user_id", null: false
     t.index ["token"], name: "index_sessions_on_token", unique: true
+    t.index ["user_id", "device_id"], name: "index_sessions_on_user_id_and_device_id"
     t.index ["user_id"], name: "index_sessions_on_user_id"
   end
 
@@ -954,6 +956,16 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_151800) do
     t.datetime "updated_at", null: false
     t.string "url"
     t.index ["post_id"], name: "index_twitter_posts_on_post_id", unique: true
+  end
+
+  create_table "user_devices", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "device_id", null: false
+    t.datetime "updated_at", null: false
+    t.string "user_agent"
+    t.integer "user_id", null: false
+    t.index ["user_id", "device_id"], name: "index_user_devices_on_user_id_and_device_id", unique: true
+    t.index ["user_id"], name: "index_user_devices_on_user_id"
   end
 
   create_table "user_stars", force: :cascade do |t|
@@ -1166,6 +1178,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_151800) do
   add_foreign_key "thread_memberships", "users", on_delete: :cascade
   add_foreign_key "twitter_post_references", "messages"
   add_foreign_key "twitter_post_references", "twitter_posts"
+  add_foreign_key "user_devices", "users", on_delete: :cascade
   add_foreign_key "user_stars", "users", column: "starred_user_id", on_delete: :cascade
   add_foreign_key "user_stars", "users", on_delete: :cascade
   add_foreign_key "webhooks", "users"

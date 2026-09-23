@@ -22,11 +22,20 @@ module GoogleSignInFlow
         "purpose" => purpose
       }.merge(flow_attributes.stringify_keys)
 
+      # Sudo re-auth must prove a fresh Google login, not reuse an
+      # existing Google session: prompt=login forces the login screen and
+      # max_age=0 asks Google to report when it happened (auth_time),
+      # which the sudo callback verifies is minutes old. Sign-in and
+      # linking send neither.
+      fresh_login = purpose == "sudo"
+
       redirect_to Google::SignIn.authorize_url(
         redirect_uri: session_google_callback_url,
         state: google_sign_in_state_verifier.generate(raw_state),
         nonce: session[FLOW_SESSION_KEY]["nonce"],
-        challenge:
+        challenge:,
+        prompt: (fresh_login ? "login" : nil),
+        max_age: (fresh_login ? 0 : nil)
       ), allow_other_host: true
     end
 

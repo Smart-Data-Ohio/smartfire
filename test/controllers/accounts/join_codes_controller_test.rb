@@ -3,6 +3,7 @@ require "test_helper"
 class Accounts::JoinCodesControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in :david
+    grant_sudo_access
   end
 
   test "create new join code" do

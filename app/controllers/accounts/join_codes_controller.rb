@@ -1,5 +1,6 @@
 class Accounts::JoinCodesController < ApplicationController
   before_action :ensure_can_administer
+  before_action :require_sudo_mode
 
   def create
     Current.account.reset_join_code

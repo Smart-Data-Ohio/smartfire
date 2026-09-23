@@ -12,8 +12,13 @@ module ApplicationCable
     private
       def find_verified_user
         if verified_session = find_session_by_cookie
-          @current_session = verified_session
-          verified_session.user
+          if verified_session.expired?
+            verified_session.destroy!
+            reject_unauthorized_connection
+          else
+            @current_session = verified_session
+            verified_session.user
+          end
         else
           reject_unauthorized_connection
         end

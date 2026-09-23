@@ -1,5 +1,5 @@
 class ActivityItem < ApplicationRecord
-  EVENT_TYPES = %w[ mention reply thread_activity keyword_alert work_update work_assignment work_sla huddle_started huddle_missed event_invitation event_update event_cancelled event_reminder pr_review_request agent_approval_request agent_budget_exceeded message_reminder scheduled_message_dropped ].freeze
+  EVENT_TYPES = %w[ mention reply thread_activity keyword_alert work_update work_assignment work_sla huddle_started huddle_missed event_invitation event_update event_cancelled event_reminder pr_review_request agent_approval_request agent_budget_exceeded message_reminder scheduled_message_dropped new_sign_in ].freeze
   HUDDLE_EVENT_TYPES = %w[ huddle_started huddle_missed ].freeze
   FILTERS = %w[ unread read handled ].freeze
   TYPE_FILTERS = {
@@ -10,7 +10,8 @@ class ActivityItem < ApplicationRecord
     "agents" => "Agents",
     "github" => "GitHub",
     "huddles" => "Huddles",
-    "reminders" => "Reminders"
+    "reminders" => "Reminders",
+    "security" => "Security"
   }.freeze
   TYPE_FILTER_EVENT_TYPES = {
     "mentions" => %w[ mention reply keyword_alert ],
@@ -19,7 +20,8 @@ class ActivityItem < ApplicationRecord
     "agents" => %w[ agent_approval_request agent_budget_exceeded ],
     "github" => %w[ pr_review_request ],
     "huddles" => %w[ huddle_started huddle_missed ],
-    "reminders" => %w[ message_reminder ]
+    "reminders" => %w[ message_reminder ],
+    "security" => %w[ new_sign_in ]
   }.freeze
 
   belongs_to :user
@@ -28,6 +30,7 @@ class ActivityItem < ApplicationRecord
   validates :event_type, inclusion: { in: EVENT_TYPES }
 
   after_create_commit :broadcast_created
+  after_create_commit :enqueue_sign_in_alert_email, if: -> { event_type == "new_sign_in" }
   after_update_commit :broadcast_updated
 
   # Grouped thread and work updates refresh their item in place, so the
@@ -43,7 +46,7 @@ class ActivityItem < ApplicationRecord
     event_types ? where(event_type: event_types) : all
   }
   scope :message_sources, -> { where(source_type: Message.polymorphic_name) }
-  scope :supported_sources, -> { where(source_type: [ Message.polymorphic_name, SavedItem.polymorphic_name, "WorkThreadEvent", "BoardSlaNudge", HuddleGrant.polymorphic_name, Event.polymorphic_name, AgentApproval.polymorphic_name, AgentBudgetNotice.polymorphic_name, ScheduledMessage.polymorphic_name ]) }
+  scope :supported_sources, -> { where(source_type: [ Message.polymorphic_name, SavedItem.polymorphic_name, "WorkThreadEvent", "BoardSlaNudge", HuddleGrant.polymorphic_name, Event.polymorphic_name, AgentApproval.polymorphic_name, AgentBudgetNotice.polymorphic_name, ScheduledMessage.polymorphic_name, Session.polymorphic_name ]) }
 
   class << self
     # Source data is deliberately resolved from the source row at query time.
@@ -112,6 +115,9 @@ class ActivityItem < ApplicationRecord
           LEFT JOIN scheduled_messages AS activity_scheduled_messages
             ON activity_scheduled_messages.id = activity_items.source_id
             AND activity_items.source_type = #{connection.quote(ScheduledMessage.polymorphic_name)}
+          LEFT JOIN sessions AS activity_sign_in_sessions
+            ON activity_sign_in_sessions.id = activity_items.source_id
+            AND activity_items.source_type = #{connection.quote(Session.polymorphic_name)}
         SQL
         .merge(User.active.without_bots)
         .where(activity_items: { user_id: user.id })
@@ -134,6 +140,9 @@ class ActivityItem < ApplicationRecord
           OR (activity_items.source_type = #{connection.quote(ScheduledMessage.polymorphic_name)}
             AND activity_scheduled_messages.id IS NOT NULL
             AND activity_scheduled_messages.user_id = activity_items.user_id)
+          OR (activity_items.source_type = #{connection.quote(Session.polymorphic_name)}
+            AND activity_sign_in_sessions.id IS NOT NULL
+            AND activity_sign_in_sessions.user_id = activity_items.user_id)
         SQL
     end
 
@@ -186,6 +195,13 @@ class ActivityItem < ApplicationRecord
   private
     def broadcast_created
       broadcast_activity_change
+    end
+
+    # After commit, so a rolled back sign-in (the Google callback signs
+    # in inside a transaction) sends nothing. Only when mail is
+    # configured; otherwise the inbox item is the whole alert.
+    def enqueue_sign_in_alert_email
+      SecurityMailer.new_sign_in_alert(self).deliver_later if SecurityMailer.configured?
     end
 
     # A refreshed huddle invitation rings again through the same row, which

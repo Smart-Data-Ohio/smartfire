@@ -3,6 +3,7 @@ require "test_helper"
 class Accounts::Bots::CredentialsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in :david
+    grant_sudo_access
     @bot = users(:bender)
   end
 
@@ -102,6 +103,7 @@ class Accounts::Bots::CredentialsControllerTest < ActionDispatch::IntegrationTes
   test "an owner without admin rights lists and revokes credentials but cannot issue them" do
     agents(:bender_agent).update!(owner: users(:kevin))
     sign_in :kevin
+    grant_sudo_access
 
     get account_bot_credentials_url(@bot)
     assert_response :ok

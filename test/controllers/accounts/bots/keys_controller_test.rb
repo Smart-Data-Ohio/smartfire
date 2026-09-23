@@ -3,6 +3,7 @@ require "test_helper"
 class Accounts::Bots::KeysControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in :david
+    grant_sudo_access
   end
 
   test "update issues a new key, shows it once, and retires the old one" do

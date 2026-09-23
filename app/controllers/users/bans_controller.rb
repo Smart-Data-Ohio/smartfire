@@ -1,6 +1,7 @@
 class Users::BansController < ApplicationController
   before_action :ensure_can_administer
   before_action :set_user
+  before_action :require_sudo_mode
 
   def create
     previous_status = @user.status

@@ -3,6 +3,7 @@ require "test_helper"
 class Accounts::Bots::WebhookSecretsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in :david
+    grant_sudo_access
     @bot = users(:bender)
     @agent = agents(:bender_agent)
   end
@@ -20,6 +21,7 @@ class Accounts::Bots::WebhookSecretsControllerTest < ActionDispatch::Integration
   test "agent owner without admin rights resets the agent secret" do
     @agent.update!(owner: users(:kevin))
     sign_in users(:kevin)
+    grant_sudo_access
     old_secret = @agent.ensure_webhook_signing_secret!
 
     post account_bot_webhook_secret_url(@bot)

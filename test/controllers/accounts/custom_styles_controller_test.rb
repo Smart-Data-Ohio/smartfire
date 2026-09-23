@@ -3,6 +3,7 @@ require "test_helper"
 class Accounts::CustomStylesControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in :david
+    grant_sudo_access
   end
 
   test "edit" do

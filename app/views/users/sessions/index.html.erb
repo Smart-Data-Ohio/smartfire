@@ -1,0 +1,55 @@
+<% @page_title = "Your sessions" %>
+
+<% content_for :nav do %>
+  <div class="flex-item-justify-start">
+    <%= link_back_to user_profile_path %>
+  </div>
+<% end %>
+
+<section class="panel panel--wide txt-align-center flex flex-column gap">
+  <div class="pad-inline-double center">
+    <h1 class="margin-none">Your sessions</h1>
+    <p class="margin-none-block-start">Every browser signed in to your account. Signing out takes effect immediately, everywhere.</p>
+  </div>
+
+  <div class="pad-inline txt-align-start">
+    <menu class="flex flex-column gap margin-none pad">
+      <% @sessions.each do |session| %>
+        <li class="flex align-center gap flush fill-shade border-radius pad-block pad-inline-double">
+          <div class="flex flex-column flex-item-grow">
+            <strong>
+              <%= session.device_description %>
+              <% if session == Current.session %>
+                <span class="txt-small txt-subtle">(this device)</span>
+              <% end %>
+            </strong>
+            <span class="txt-small txt-subtle">
+              Last active <%= time_ago_in_words(session.last_active_at) %> ago
+              <% if session.ip_address.present? %>
+                · <%= session.ip_address %>
+              <% end %>
+              · signed in <%= local_datetime_tag session.created_at, style: :date do %><%= session.created_at.to_fs(:short) %><% end %>
+            </span>
+          </div>
+
+          <% if session == Current.session %>
+            <%= form_with url: user_session_path(session), method: :delete, data: { controller: "sessions" } do %>
+              <%= hidden_field_tag :push_subscription_endpoint, nil, data: { sessions_target: "pushSubscriptionEndpoint" } %>
+              <button class="btn" data-action="sessions#logout:prevent">Sign out</button>
+            <% end %>
+          <% else %>
+            <%= button_to "Sign out", user_session_path(session), method: :delete, class: "btn",
+                  form: { data: { turbo_confirm: "Sign out #{session.device_description}?" } } %>
+          <% end %>
+        </li>
+      <% end %>
+    </menu>
+
+    <% if @sessions.many? %>
+      <div class="flex center margin-block-start">
+        <%= button_to "Sign out of all other sessions", revoke_others_user_sessions_path, method: :delete, class: "btn btn--negative",
+              form: { data: { turbo_confirm: "Sign out every other session?" } } %>
+      </div>
+    <% end %>
+  </div>
+</section>

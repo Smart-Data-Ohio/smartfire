@@ -3,6 +3,7 @@ require "test_helper"
 class Github::ConnectionsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in :david
+    grant_sudo_access
   end
 
   test "linking validates the token with GET /user and stores the login" do

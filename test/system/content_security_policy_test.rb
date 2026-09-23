@@ -1,9 +1,10 @@
 require "application_system_test_case"
 
-# The policy is report-only, so a violation never breaks a page; these tests
-# make sure the main flows raise none. A listener installed before any page
-# script records every securitypolicyviolation event in sessionStorage, which
-# survives the full page loads between steps.
+# The policy is enforced, so a violation both breaks the page feature and
+# fires securitypolicyviolation; these tests make sure the main flows
+# raise none. A listener installed before any page script records every
+# event in sessionStorage, which survives the full page loads between
+# steps.
 class ContentSecurityPolicyTest < ApplicationSystemTestCase
   include GoogleCalendarTestHelper
 
@@ -101,21 +102,29 @@ class ContentSecurityPolicyTest < ApplicationSystemTestCase
     assert_no_violations
   end
 
-  test "a Turbo visit to a page with an inline script raises no violations" do
+  test "a Turbo visit to the event form fills the time zone with no violations" do
     sign_in "jz@37signals.com"
     join_room rooms(:designers)
 
     page.execute_script("window.cspTurboMarker = true")
     page.execute_script("Turbo.visit(arguments[0])", new_room_event_path(rooms(:designers)))
-    assert_selector "[data-event-time-zone]", visible: :all
+    assert_selector "form[data-controller~='event-time-zone']"
     assert page.evaluate_script("window.cspTurboMarker === true"), "the visit stayed a Turbo visit"
-    # Turbo runs the page's inline time-zone script under the policy the
-    # first page load delivered, so it must carry that page's nonce.
+
+    # The Stimulus controller (not an inline script, so no nonce is
+    # needed) fills the hidden field and its label from the browser's
+    # time zone. The label assertion retries until the lazily loaded
+    # controller runs; it sets the field first, so the field is filled
+    # by the time the label matches.
+    browser_zone = page.evaluate_script("Intl.DateTimeFormat().resolvedOptions().timeZone")
+    assert_predicate browser_zone, :present?
+    assert_selector "[data-event-time-zone-target='label']", text: browser_zone
+    assert_equal browser_zone, find("[data-event-time-zone-target='field']", visible: :all).value
 
     assert_no_violations
   end
 
-  test "a forced inline script without the nonce is reported" do
+  test "a forced inline script without the nonce is blocked and reported" do
     sign_in "jz@37signals.com"
     join_room rooms(:designers)
 
@@ -128,6 +137,48 @@ class ContentSecurityPolicyTest < ApplicationSystemTestCase
     violations = wait_for_violations
     assert violations.any? { |violation| violation["directive"].to_s.start_with?("script-src") },
       "expected the nonce-less script to be reported, got #{violations.inspect}"
+    assert_not page.evaluate_script("window.cspProbeRan === true"), "expected the nonce-less script to be blocked"
+  end
+
+  test "room, huddle, stage, board, search, settings, and the profile card raise no violations" do
+    david = users(:david)
+    stage = Rooms::Stage.create_for({ name: "Town Hall", creator: david }, users: [ david ])
+    board = Rooms::Board.create_for({ name: "Launch", creator: david }, users: [ david ])
+
+    sign_in "david@37signals.com"
+
+    join_room rooms(:designers)
+    click_button "Join huddle"
+    assert_selector "#channel-huddle:not([hidden])", wait: 10
+    if page.has_css?("#channel-huddle[data-state='prejoin']", wait: 5)
+      assert_selector "[data-huddle-target='checkJoin']:not([disabled])", wait: 20
+      find("[data-huddle-target='checkJoin']").click
+    end
+    # The connection to the closed LiveKit port fails; give it time to try.
+    assert_selector "#channel-huddle[data-state='failed']", visible: :all, wait: 15
+
+    join_room stage
+    assert_selector ".room--current", text: "Town Hall"
+
+    join_room board
+    assert_selector ".board__header h1", text: "Launch"
+
+    visit searches_path
+    assert_selector "#message-area"
+
+    visit edit_account_path
+    assert_selector "#account_users"
+
+    join_room rooms(:designers)
+    within "#message_#{messages(:first).client_message_id}" do
+      find(".message__avatar a").click
+    end
+    assert_selector "#profile-card-popover:not([hidden])", wait: 10
+    within "#user_card" do
+      assert_selector ".profile-card__name", text: "Jason"
+    end
+
+    assert_no_violations
   end
 
   private
