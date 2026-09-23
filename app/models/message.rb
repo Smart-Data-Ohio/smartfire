@@ -23,6 +23,10 @@ class Message < ApplicationRecord
   has_many :boosts, dependent: :destroy
   has_many :message_pins, dependent: :destroy
   has_many :saved_items, dependent: :destroy
+  # A stale-work digest note links its claim back here for the board page.
+  # The link clears with the message so the room destroy batches (which hit
+  # digest notes before the room's own digest rows go) never trip the FK.
+  has_many :board_stale_digests, foreign_key: :message_id, dependent: :nullify
   has_many :activity_items, as: :source, dependent: :destroy, inverse_of: :source
   # This callback must run before Active Record's dependent:nullify callback. It
   # leaves a small tombstone on each reply so the UI can still explain why its
