@@ -91,9 +91,10 @@ like DND through `Notifications::Policy`, with the same "Allow during DND"
 exception. Inbox items are still recorded. The per-member
 "Keep notifying me while I'm out of office" switch (notification settings,
 default off) opts back into notifications: with it on, OOO shows but never
-silences. `/play` chat sounds mute the same way: the layout sends the OOO
-end as epoch windows and the sound controller re-evaluates the gate on
-every play, so an end crossed mid-page unsilences without a reload.
+silences. `/play` chat sounds mute the same way: the layout sends the OOO spans as
+epoch windows, future ones included, and the sound controller re-evaluates
+the gate on every play, so a boundary crossed mid-page silences (or
+unsilences) without a reload.
 
 ## Refreshing and broadcasting
 

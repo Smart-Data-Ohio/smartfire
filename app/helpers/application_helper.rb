@@ -26,8 +26,10 @@ module ApplicationHelper
   # sends the cached busy intervals as epoch windows for the same live
   # treatment: a render-time marker would stick either way, since meeting
   # boundaries cross without a navigation. Out-of-office quiet (unless the
-  # member keeps notifications on) sends its end the same way: a manual
-  # OOO runs from the epoch to its end, calendar OOO as cached windows.
+  # member keeps notifications on) sends its spans the same way, future
+  # windows included, so an OOO starting mid-page mutes without a reload:
+  # a manual OOO runs from the epoch to its end, calendar OOO as cached
+  # windows.
   def notification_sound_meta_tags
     return unless Current.user
 
@@ -44,7 +46,7 @@ module ApplicationHelper
       epochs = Current.user.meeting_cache&.quiet_window_epochs.to_a
       tags << tag.meta(name: "meeting-quiet", content: epochs.map { |start, finish| "#{start}-#{finish}" }.join(",")) if epochs.any?
     end
-    if !Current.user.ooo_notify_enabled? && Current.user.out_of_office?
+    if !Current.user.ooo_notify_enabled? && (Current.user.manual_ooo_active? || Current.user.ooo_calendar_enabled?)
       epochs = []
       epochs << [ 0, Current.user.ooo_until.to_i ] if Current.user.manual_ooo_active?
       epochs.concat(Current.user.meeting_cache&.ooo_window_epochs.to_a) if Current.user.ooo_calendar_enabled?

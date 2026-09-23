@@ -137,6 +137,35 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_select "meta[name=meeting-quiet]", count: 0
   end
 
+  test "the layout sends OOO windows for the live sound gate" do
+    users(:david).update!(ooo_until: 1.day.from_now)
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=ooo-quiet][content=?]", "0-#{users(:david).ooo_until.to_i}", count: 1
+  end
+
+  test "the layout sends future calendar OOO windows before the OOO starts" do
+    users(:david).update!(ooo_calendar_enabled: true)
+    Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current,
+      ooo_intervals: [ [ 1.hour.from_now.iso8601, 2.hours.from_now.iso8601 ] ])
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=ooo-quiet]", count: 1
+  end
+
+  test "the layout sends no OOO windows when keeping notifications while out" do
+    users(:david).update!(ooo_until: 1.day.from_now, ooo_notify_enabled: true)
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=ooo-quiet]", count: 0
+  end
+
   test "the layout leaves sounds alone for meetings when quiet-during-meetings is off" do
     users(:david).update!(meeting_status_enabled: true)
     Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current,
