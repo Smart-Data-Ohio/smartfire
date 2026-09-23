@@ -44,8 +44,10 @@ module Github
       )
       account.save!
       account.touch
-      # A replaced App grant is revoked remotely (best effort, after the
-      # save) so no orphaned grant survives the relink.
+      # A replaced App token is revoked remotely (best effort, after the
+      # save) so no orphaned token survives the relink. Single-token
+      # revocation only: deleting the grant would take the new token
+      # with it.
       if old_app_token.present? && old_app_token != tokens["access_token"]
         Github::App.revoke_token(old_app_token)
       end

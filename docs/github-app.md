@@ -57,9 +57,11 @@ logged or shown again; unlinking deletes it.
   GitHub as @login"), and execution all resolve the same identity, so the
   decider's approval can never run as a different GitHub user.
 - Tokens are encrypted at rest, never passed as job arguments (jobs take
-  account and approval ids), and App grants are revoked remotely on
-  disconnect and when a relink replaces them (best effort; the save
-  proceeds however revocation goes).
+  account and approval ids), and revocation is best effort (the save
+  proceeds however revocation goes): a full disconnect deletes the whole
+  App authorization (`DELETE /applications/{client_id}/grant`), while a
+  relink revokes only the replaced token
+  (`DELETE /applications/{client_id}/token`) so the new token survives.
 
 ## Integration health page
 

@@ -133,9 +133,10 @@ class Github::AppConnectionsControllerTest < ActionDispatch::IntegrationTest
     )
     stub_request(:get, "https://api.github.com/user")
       .to_return(status: 200, body: { login: "octocat" }.to_json)
-    revoke = stub_request(:delete, "https://api.github.com/applications/app-client-id/grant")
+    revoke = stub_request(:delete, "https://api.github.com/applications/app-client-id/token")
       .with(body: hash_including("access_token" => "app-token"))
       .to_return(status: 204)
+    grant = stub_request(:delete, "https://api.github.com/applications/app-client-id/grant")
 
     post github_connection_url, params: { access_token: "github_pat_new" }
 
@@ -144,9 +145,10 @@ class Github::AppConnectionsControllerTest < ActionDispatch::IntegrationTest
     assert_nil account.refresh_token
     assert_nil account.token_expires_at
     assert_requested revoke
+    assert_not_requested grant
   end
 
-  test "reconnecting through the app revokes the previous app grant" do
+  test "reconnecting through the app revokes only the previous app token" do
     GithubConnectedAccount.create!(
       user: users(:david), github_login: "octocat", access_token: "old-app-token",
       token_source: "app", refresh_token: "old-refresh",
@@ -162,9 +164,10 @@ class Github::AppConnectionsControllerTest < ActionDispatch::IntegrationTest
       }.to_json)
     stub_request(:get, "https://api.github.com/user")
       .to_return(status: 200, body: { login: "octocat" }.to_json)
-    revoke = stub_request(:delete, "https://api.github.com/applications/app-client-id/grant")
+    revoke = stub_request(:delete, "https://api.github.com/applications/app-client-id/token")
       .with(body: hash_including("access_token" => "old-app-token"))
       .to_return(status: 204)
+    grant = stub_request(:delete, "https://api.github.com/applications/app-client-id/grant")
 
     get github_app_callback_url, params: {
       code: "code",
@@ -173,6 +176,7 @@ class Github::AppConnectionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to user_profile_path
     assert_requested revoke
+    assert_not_requested grant
     assert_equal "app-token", users(:david).reload.github_connected_account.access_token
   end
 end

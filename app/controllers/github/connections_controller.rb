@@ -21,8 +21,10 @@ module Github
       # The repo-access cache key carries updated_at: bump it even when the
       # token is unchanged so a cached denial never survives a relink.
       account.touch
-      # A replaced App grant is revoked remotely (best effort, after the
-      # save) so no orphaned grant survives the relink.
+      # A replaced App token is revoked remotely (best effort, after the
+      # save) so no orphaned token survives the relink. Single-token
+      # revocation only: deleting the grant would take the new token
+      # with it.
       Github::App.revoke_token(old_app_token) if old_app_token.present? && old_app_token != token
 
       redirect_to user_profile_path, notice: link_notice(login)

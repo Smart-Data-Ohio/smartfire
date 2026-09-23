@@ -63,18 +63,26 @@ class Github::AppTest < ActiveSupport::TestCase
     assert_equal "new-token", tokens["access_token"]
   end
 
-  test "revoke_token returns true on 204 and false on refusal, never raising" do
-    stub_request(:delete, "https://api.github.com/applications/app-client-id/grant")
+  test "revoke_token deletes one token and never raises" do
+    stub_request(:delete, "https://api.github.com/applications/app-client-id/token")
       .to_return(status: 204)
     assert Github::App.revoke_token("app-token")
 
     WebMock.reset!
-    stub_request(:delete, "https://api.github.com/applications/app-client-id/grant")
+    stub_request(:delete, "https://api.github.com/applications/app-client-id/token")
       .to_return(status: 403)
     assert_not Github::App.revoke_token("app-token")
 
     WebMock.reset!
-    stub_request(:delete, "https://api.github.com/applications/app-client-id/grant").to_timeout
+    stub_request(:delete, "https://api.github.com/applications/app-client-id/token").to_timeout
     assert_not Github::App.revoke_token("app-token")
+  end
+
+  test "revoke_grant deletes the whole authorization" do
+    grant = stub_request(:delete, "https://api.github.com/applications/app-client-id/grant")
+      .to_return(status: 204)
+
+    assert Github::App.revoke_grant("app-token")
+    assert_requested grant
   end
 end

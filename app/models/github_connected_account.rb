@@ -87,14 +87,14 @@ class GithubConnectedAccount < ApplicationRecord
     nil
   end
 
-  # Best-effort remote revocation of an App token for disconnect. PATs
-  # have no revocation endpoint, so nothing is sent for them. Never
-  # raises; disconnect proceeds however revocation goes.
+  # Best-effort remote revocation of the whole App authorization for
+  # disconnect. PATs have no revocation endpoint, so nothing is sent
+  # for them. Never raises; disconnect proceeds however revocation goes.
   def revoke_remote_token!
     return unless app_token?
 
     token = access_token
-    Github::App.revoke_token(token) if token.present?
+    Github::App.revoke_grant(token) if token.present?
   rescue ActiveRecord::Encryption::Errors::Decryption
     nil
   end
