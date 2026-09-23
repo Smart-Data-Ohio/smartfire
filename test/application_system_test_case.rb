@@ -11,7 +11,7 @@ Capybara.enable_aria_label = true
 # is checked per entry so concurrently booting workers never remove a
 # live sibling's profile.
 SystemTestChromeProfile.cleanup_stale!
-Minitest.after_run { FileUtils.rm_rf(SystemTestChromeProfile.dir) }
+Minitest.after_run { SystemTestChromeProfile.cleanup_own! }
 
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   # Cross-session Turbo Stream broadcasts (stage roles, voice presence,
