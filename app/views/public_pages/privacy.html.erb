@@ -114,8 +114,13 @@
   granted scopes on the workspace server, and writes private copies of Smartfire
   events you are Going to or Maybe attending onto your primary Google Calendar,
   including the title, description, time, and meeting links. Publishing is one
-  way: Smartfire never reads your existing calendar contents, and changes you
-  make in Google do not sync back.
+  way: Smartfire never reads your event titles, descriptions, locations, or
+  attendee lists, and changes you make in Google do not sync back. If you
+  separately opt into "Show when I'm in a meeting", Smartfire also reads the
+  start and end times of events on your primary calendar (declined, all-day,
+  and "free" events excluded) to derive your on/off meeting state; only that
+  state is ever shown to other members, and opting out or disconnecting deletes
+  the stored times.
 </p>
 <p>
   Disconnecting removes the connection and its local entries from the workspace

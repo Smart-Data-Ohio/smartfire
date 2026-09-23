@@ -38,6 +38,9 @@ controller from `GET /users/presence?ids[]=` so cached rows stay cached),
 on profile pages, and through the shared badge below. Agents keep their
 self-reported live status: bot rows in the member panel read from the
 agent (`status` plus `status_note`), never from presence leases.
+Members who opt into [meeting status](meeting-status.md) show "📅 In a
+meeting" in the status line while their Google Calendar says they are
+busy; a custom status or DND takes precedence over the automatic label.
 
 ### Profile card integration
 
@@ -63,7 +66,9 @@ no exception.
 
 Quiet hours schedule DND daily: an on/off switch plus a start and end
 time, evaluated in the member's time zone (overnight windows work).
-Quiet hours share the starred-people exception.
+Quiet hours share the starred-people exception. So does
+[quiet-during-meetings](meeting-status.md): while a busy interval
+covers an opted-in member, they read exactly as DND to the policy.
 
 Sounds (`/play` chat sounds, played by the `sound` Stimulus controller)
 re-evaluate muting on every play: the layout sends manual DND and the

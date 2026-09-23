@@ -3,8 +3,11 @@
 Members can connect their Google account from their profile. Once connected,
 every [native event](events.md) they are **going** or **maybe** to appears
 on their primary Google Calendar as a private copy. Publishing is one way,
-Smartfire to Google: edits made in Google are never read back, and the app
-never reads the calendar, free/busy data, or attendees.
+Smartfire to Google: edits made in Google are never read back for
+publishing, and the app never reads event titles, descriptions, or
+attendee lists. Members who opt into [meeting status](meeting-status.md)
+additionally let the app read event times (free/busy only) from their
+primary calendar; that is the only calendar read in the app.
 
 A later time change (or title/description edit) updates that same calendar
 entry; declining, cancelling, or leaving the room removes it. The event page

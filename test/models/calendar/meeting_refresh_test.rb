@@ -127,20 +127,10 @@ class Calendar::MeetingRefreshTest < ActiveSupport::TestCase
 
   private
     def stub_list_events(items:)
-      stub_request(:get, GOOGLE_EVENTS_URL)
-        .with(query: hash_including({
-          "singleEvents" => "true",
-          "fields" => Google::Client::MEETING_STATUS_FIELDS
-        }))
-        .to_return(status: 200, body: { "items" => items }.to_json,
-          headers: { "Content-Type" => "application/json" })
+      stub_google_events_list(items:)
     end
 
     def timed_item(start_at, end_at, **attrs)
-      {
-        "status" => "confirmed",
-        "start" => { "dateTime" => start_at },
-        "end" => { "dateTime" => end_at }
-      }.merge(attrs)
+      timed_calendar_item(Time.zone.parse(start_at), Time.zone.parse(end_at), **attrs)
     end
 end
