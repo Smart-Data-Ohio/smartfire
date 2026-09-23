@@ -165,8 +165,12 @@ class Message < ApplicationRecord
     # Finalizes streaming messages the agent never finalized. Runs from
     # the periodic runner. Each finalize is a conditional claim (see
     # #finalize_stream!), so a sweep racing the agent finalizes once.
+    # Streams in locked threads wait: the thread is frozen, so the sweep
+    # skips them and a later sweep finalizes them once unlocked.
     def finalize_overdue_streams!(now: Time.current)
-      where(streaming: true).where("messages.created_at < ?", now - STREAM_FINALIZE_AFTER).find_each do |message|
+      where(streaming: true).where("messages.created_at < ?", now - STREAM_FINALIZE_AFTER).includes(:thread).find_each do |message|
+        next if message.thread&.locked?
+
         begin
           message.finalize_stream!
         rescue => error

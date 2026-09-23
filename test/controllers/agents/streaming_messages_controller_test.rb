@@ -83,6 +83,39 @@ class Agents::StreamingMessagesControllerTest < ActionDispatch::IntegrationTest
     assert_predicate thread.messages.sole, :streaming?
   end
 
+  test "update and finalize pause while the thread is locked" do
+    thread = create_thread!(room: @room, creator: users(:david))
+
+    post room_agent_streaming_messages_url(@room),
+      params: { thread_id: thread.id,
+        message: { markdown_source: "On it.", client_message_id: "stream-locked" } }.to_json,
+      headers: bearer_headers
+    id = response.parsed_body["id"]
+
+    thread.lock_conversation!
+
+    patch agents_streaming_message_url(id),
+      params: { append: "Denied" }.to_json, headers: bearer_headers
+    assert_response :unprocessable_entity
+    assert_equal "This thread is locked", response.parsed_body["error"]
+
+    post finalize_agents_streaming_message_url(id), headers: bearer_headers
+    assert_response :unprocessable_entity
+    assert_equal "This thread is locked", response.parsed_body["error"]
+    assert_predicate Message.find(id), :streaming?
+
+    thread.unlock_conversation!
+
+    post finalize_agents_streaming_message_url(id), headers: bearer_headers
+    assert_response :success
+    assert_not Message.find(id).streaming?
+
+    thread.lock_conversation!
+
+    post finalize_agents_streaming_message_url(id), headers: bearer_headers
+    assert_response :success
+  end
+
   test "finalize fires side effects exactly once" do
     watcher = create_agent_in(@room, name: "Finalize Watcher")
     post room_agent_streaming_messages_url(@room),

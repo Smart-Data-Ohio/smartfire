@@ -885,8 +885,10 @@ broadcasts coalesce to about 4 per second per message.
 Notifications, push, mention recording, agent delivery, bot webhooks,
 and search indexing all fire exactly once, at finalize — nothing
 fires while streaming. Streams that are never finalized auto-finalize
-after 10 minutes from the periodic runner. The MCP mirrors are
-`start_stream`, `append_stream`, and `finalize_stream`.
+after 10 minutes from the periodic runner. A locked thread freezes
+in-flight streams too: appends and finalizes wait with 422 until it
+unlocks (finalizing an already-final message still succeeds). The MCP
+mirrors are `start_stream`, `append_stream`, and `finalize_stream`.
 
 ```sh
 curl -X POST https://smartfire.example.com/rooms/3/agents/streaming_messages \

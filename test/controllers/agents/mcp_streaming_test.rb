@@ -40,6 +40,20 @@ class Agents::McpStreamingTest < ActionDispatch::IntegrationTest
     assert_tool_error body, "Message not found"
   end
 
+  test "finalize_stream refuses a locked thread" do
+    thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Locked stream")
+    ThreadMembership.join!(thread, users(:david))
+    created = call_tool("start_stream",
+      { "room_id" => @room.id, "thread_id" => thread.id, "markdown_source" => "On it." })
+    message_id = structured(created)["id"]
+    thread.lock_conversation!
+
+    body = call_tool("finalize_stream", { "message_id" => message_id })
+
+    assert_tool_error body, "This thread is locked"
+    assert_predicate Message.find(message_id), :streaming?
+  end
+
   test "message budget denies start_stream with the same 429" do
     @agent.update!(daily_message_cap: 1)
     @room.root_messages.create!(creator: @bot,

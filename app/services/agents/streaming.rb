@@ -125,6 +125,13 @@ module Agents
         return [ nil, ServiceResult.fail("Message is not streaming", status: :unprocessable_entity) ]
       end
 
+      # A locked thread is frozen: humans cannot post, edit, or delete in
+      # it, and streams cannot start in it, so in-flight streams pause too.
+      # Already-final messages still finalize idempotently.
+      if message.streaming? && message.thread&.locked?
+        return [ nil, ServiceResult.fail("This thread is locked", status: :unprocessable_entity) ]
+      end
+
       [ message, nil ]
     end
 

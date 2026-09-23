@@ -127,6 +127,26 @@ class MessageStreamingTest < ActiveSupport::TestCase
     assert_equal 1, @agent.agent_events.where(event_type: "posted", message_id: old.id).count
   end
 
+  test "the sweep skips streams in locked threads until unlock" do
+    thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Locked stream")
+    ThreadMembership.join!(thread, users(:david))
+    message = thread.post_message!(creator: @bot, attributes: {
+      markdown_source: "Waiting", client_message_id: "stream-locked-sweep", streaming: true })
+    message.update_column(:created_at, 11.minutes.ago)
+    thread.lock_conversation!
+
+    Message.finalize_overdue_streams!
+
+    assert_predicate message.reload, :streaming?
+    assert_empty @agent.agent_events.where(message_id: message.id)
+
+    thread.unlock_conversation!
+    Message.finalize_overdue_streams!
+
+    assert_not message.reload.streaming?
+    assert_equal 1, @agent.agent_events.where(event_type: "posted", message_id: message.id).count
+  end
+
   test "finalize clears the streaming agent's working presence" do
     @agent.set_working_presence!("Thinking…")
     message = @room.root_messages.create!(creator: @bot, streaming: true,
