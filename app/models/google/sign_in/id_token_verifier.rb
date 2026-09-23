@@ -9,7 +9,7 @@ module Google
     # email_from_id_token, which must never serve as sign-in identity.
     class IdTokenVerifier
       class << self
-        def verify!(id_token, nonce:)
+        def verify!(id_token, nonce:, max_auth_age: nil)
           raise Rejected, :bad_token if id_token.blank? || nonce.blank?
 
           header = unverified_header(id_token)
@@ -20,7 +20,7 @@ module Google
           payload, = JWT.decode(id_token.to_s, key, true, algorithm: "RS256")
           raise Rejected, :bad_token unless payload.is_a?(Hash)
 
-          verify_claims!(payload, nonce: nonce.to_s)
+          verify_claims!(payload, nonce: nonce.to_s, max_auth_age: max_auth_age)
           payload
         rescue Rejected, Unavailable
           raise
@@ -36,7 +36,7 @@ module Google
             raise Rejected, :bad_token
           end
 
-          def verify_claims!(payload, nonce:)
+          def verify_claims!(payload, nonce:, max_auth_age:)
             raise Rejected, :bad_token unless payload["iss"].in?(SignIn::ISSUERS)
             verify_audience!(payload)
             verify_expiry!(payload)
@@ -45,6 +45,17 @@ module Google
             raise Rejected, :unverified_email unless payload["email_verified"] == true
             raise Rejected, :bad_nonce unless nonce_match?(payload["nonce"], nonce)
             verify_domain!(payload)
+            verify_auth_time!(payload, max_auth_age) if max_auth_age
+          end
+
+          # Step-up re-authentication requests max_age=0, so Google must
+          # include when the user last authenticated: refuse tokens older
+          # than the window, and tokens without the claim at all.
+          def verify_auth_time!(payload, max_auth_age)
+            auth_time = payload["auth_time"]
+            unless auth_time.is_a?(Numeric) && auth_time >= (Time.current - max_auth_age).to_i
+              raise Rejected, :stale_auth
+            end
           end
 
           # The audience must be this app. When several audiences are

@@ -55,6 +55,7 @@ class Sessions::GoogleControllerTest < ActionDispatch::IntegrationTest
     assert_equal "S256", query["code_challenge_method"]
     assert_not_includes query.keys, "access_type"
     assert_not_includes query.keys, "prompt"
+    assert_not_includes query.keys, "max_age"
     assert_not_includes query.keys, "hd"
     assert_not_includes query.keys, "include_granted_scopes"
   end

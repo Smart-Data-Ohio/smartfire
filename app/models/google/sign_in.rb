@@ -20,6 +20,17 @@ module Google
     # Clock skew tolerated when checking token expiry.
     CLOCK_SKEW = 30.seconds
 
+    # Step-up re-authentication (TwoFactor::ReauthenticationsController)
+    # must prove a FRESH Google sign-in, not ride an existing Google
+    # session: prompt=login with max_age=0 forces Google to authenticate
+    # the user again, and the id_token's auth_time must be this recent
+    # (see IdTokenVerifier). Per OpenID Connect Core 1.0, when max_age is
+    # requested the OP must re-authenticate past it and the ID Token
+    # carries auth_time (https://openid.net/specs/openid-connect-core-1_0.html).
+    REAUTH_PROMPT = "login"
+    REAUTH_MAX_AGE = 0
+    REAUTH_MAX_AUTH_AGE = 5.minutes
+
     # Fail-closed errors. Messages are safe to log: they never carry
     # tokens, codes, or raw claim values.
     class Error < StandardError; end
@@ -53,14 +64,17 @@ module Google
           .select { |domain| valid_domain?(domain) }.uniq
       end
 
-      def authorize_url(redirect_uri:, state:, nonce:, challenge:)
+      def authorize_url(redirect_uri:, state:, nonce:, challenge:, prompt: nil, max_age: nil)
         uri = URI::HTTPS.build(host: AUTHORIZE_HOST, path: "/o/oauth2/v2/auth")
-        uri.query = URI.encode_www_form(
+        params = {
           client_id: Google::Client.client_id, redirect_uri:,
           response_type: "code", scope: SCOPE,
           state:, nonce:,
           code_challenge: challenge, code_challenge_method: "S256"
-        )
+        }
+        params[:prompt] = prompt if prompt.present?
+        params[:max_age] = max_age unless max_age.nil?
+        uri.query = URI.encode_www_form(params)
         uri.to_s
       end
 

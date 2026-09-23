@@ -145,7 +145,8 @@ module Sessions
         id_token = Google::SignIn.exchange_code(
           code: params[:code].to_s, redirect_uri: session_google_callback_url, verifier: flow["verifier"]
         )
-        claims = Google::SignIn::IdTokenVerifier.verify!(id_token, nonce: flow["nonce"])
+        claims = Google::SignIn::IdTokenVerifier.verify!(id_token, nonce: flow["nonce"],
+          max_auth_age: Google::SignIn::REAUTH_MAX_AUTH_AGE)
 
         unless claims["sub"].to_s.present? && claims["sub"].to_s == Current.user.google_identity&.subject
           return redirect_to user_profile_url, alert: "That Google account is not linked here. Confirm with the Google account you sign in with."

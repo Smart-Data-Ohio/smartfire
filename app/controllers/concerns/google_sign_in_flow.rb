@@ -26,8 +26,20 @@ module GoogleSignInFlow
         redirect_uri: session_google_callback_url,
         state: google_sign_in_state_verifier.generate(raw_state),
         nonce: session[FLOW_SESSION_KEY]["nonce"],
-        challenge:
+        challenge:,
+        **reauth_authorize_params(purpose)
       ), allow_other_host: true
+    end
+
+    # Step-up re-authentication must prove a FRESH Google sign-in rather
+    # than riding an existing Google session; the callback checks the
+    # token's auth_time. Sign-in and linking keep the default prompt.
+    def reauth_authorize_params(purpose)
+      if purpose == "reauth"
+        { prompt: Google::SignIn::REAUTH_PROMPT, max_age: Google::SignIn::REAUTH_MAX_AGE }
+      else
+        {}
+      end
     end
 
     def google_sign_in_state_verifier

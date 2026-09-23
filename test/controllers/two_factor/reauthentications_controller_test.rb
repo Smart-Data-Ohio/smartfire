@@ -39,11 +39,21 @@ class TwoFactor::ReauthenticationsControllerTest < ActionDispatch::IntegrationTe
     assert_equal "Google confirmation needs a linked Google account.", flash[:alert]
   end
 
+  test "create forces a fresh Google sign-in" do
+    sign_in @user
+
+    post two_factor_reauthentication_path
+
+    query = Rack::Utils.parse_query(URI(response.location).query)
+    assert_equal "login", query["prompt"]
+    assert_equal "0", query["max_age"]
+  end
+
   test "callback arms a step-up and audits it" do
     sign_in @user
 
     state = start_google_reauth
-    complete_google_sign_in(state:, sub: @identity.subject, email: @identity.email)
+    complete_google_sign_in(state:, sub: @identity.subject, email: @identity.email, auth_time: Time.current.to_i)
 
     assert_redirected_to user_profile_url
     assert_equal "Confirmed with Google. Continue with what you were doing.", flash[:notice]
@@ -56,7 +66,7 @@ class TwoFactor::ReauthenticationsControllerTest < ActionDispatch::IntegrationTe
     sign_in @user
 
     state = start_google_reauth
-    complete_google_sign_in(state:, sub: "google-sub-attacker", email: "attacker@smartdata.net")
+    complete_google_sign_in(state:, sub: "google-sub-attacker", email: "attacker@smartdata.net", auth_time: Time.current.to_i)
 
     assert_redirected_to user_profile_url
     assert_equal "That Google account is not linked here. Confirm with the Google account you sign in with.", flash[:alert]
@@ -84,13 +94,39 @@ class TwoFactor::ReauthenticationsControllerTest < ActionDispatch::IntegrationTe
     sign_in @user
 
     state = start_google_reauth
-    complete_google_sign_in(state:, sub: @identity.subject, email: @identity.email)
+    complete_google_sign_in(state:, sub: @identity.subject, email: @identity.email, auth_time: Time.current.to_i)
     assert_redirected_to user_profile_url
 
     travel_to 11.minutes.from_now do
       post two_factor_backup_codes_url
       assert_redirected_to user_profile_url
     end
+  end
+
+  test "callback refuses a stale Google authentication" do
+    sign_in @user
+
+    state = start_google_reauth
+    complete_google_sign_in(state:, sub: @identity.subject, email: @identity.email, auth_time: 6.minutes.ago.to_i)
+
+    assert_redirected_to user_profile_url
+    assert_equal "Google confirmation failed. Try again.", flash[:alert]
+    assert_not AuditLog.exists?(action: "two_factor.reauthenticate")
+
+    # Nothing was armed: the sensitive action is still refused.
+    post two_factor_backup_codes_url
+    assert_redirected_to user_profile_url
+  end
+
+  test "callback refuses a token without auth_time" do
+    sign_in @user
+
+    state = start_google_reauth
+    complete_google_sign_in(state:, sub: @identity.subject, email: @identity.email, auth_time: nil)
+
+    assert_redirected_to user_profile_url
+    assert_equal "Google confirmation failed. Try again.", flash[:alert]
+    assert_not AuditLog.exists?(action: "two_factor.reauthenticate")
   end
 
   test "create signs out a stale unverified session instead of starting re-auth" do

@@ -113,7 +113,7 @@ class TwoFactor::RememberedDevicesControllerTest < ActionDispatch::IntegrationTe
     sign_in @user
 
     state = start_google_reauth
-    complete_google_sign_in(state:, sub: identity.subject, email: identity.email)
+    complete_google_sign_in(state:, sub: identity.subject, email: identity.email, auth_time: Time.current.to_i)
     assert_redirected_to user_profile_url
 
     assert_difference -> { @user.two_factor_remembered_devices.count }, -1 do

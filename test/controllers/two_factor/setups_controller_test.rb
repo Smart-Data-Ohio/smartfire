@@ -306,7 +306,7 @@ class TwoFactor::SetupsControllerTest < ActionDispatch::IntegrationTest
     sign_in @user
 
     state = start_google_reauth
-    complete_google_sign_in(state:, sub: identity.subject, email: identity.email)
+    complete_google_sign_in(state:, sub: identity.subject, email: identity.email, auth_time: Time.current.to_i)
     assert_redirected_to user_profile_url
 
     delete two_factor_setup_url
