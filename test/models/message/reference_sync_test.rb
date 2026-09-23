@@ -56,6 +56,62 @@ class Message::ReferenceSyncTest < ActiveSupport::TestCase
     assert_empty quote.reload.referenced_messages
   end
 
+  test "extract_message_ids caps at ten unique ids in order of appearance" do
+    ids = (1..12).to_a
+    text = ids.map { |id| "/rooms/1/@#{id}" }.join(" ") + " /rooms/1/@2"
+    assert_equal (1..10).to_a, Message::ReferenceSync.extract_message_ids(text)
+  end
+
+  test "posting more than ten permalinks quotes only the first ten" do
+    sources = 12.times.map do |index|
+      @room.messages.create!(
+        body: "capped source #{index}", client_message_id: "ref-sync-cap-#{index}", creator: users(:david)
+      )
+    end
+    links = sources.map { |source| "/rooms/#{@room.id}/@#{source.id}" }.join(" ")
+
+    quote = @room.messages.create!(
+      markdown_source: "many #{links}",
+      client_message_id: "ref-sync-cap-quote", creator: users(:david)
+    )
+
+    assert_equal sources.first(10).map(&:id).sort, quote.referenced_messages.map(&:id).sort
+  end
+
+  test "permalinks inside code spans and fenced blocks are ignored" do
+    quoted = @room.messages.create!(
+      body: "code test quoted", client_message_id: "ref-sync-code-quoted", creator: users(:david)
+    )
+    fenced = @room.messages.create!(
+      body: "code test fenced", client_message_id: "ref-sync-code-fenced", creator: users(:david)
+    )
+    spanned = @room.messages.create!(
+      body: "code test spanned", client_message_id: "ref-sync-code-spanned", creator: users(:david)
+    )
+
+    quote = @room.messages.create!(
+      markdown_source: <<~MARKDOWN,
+        look /rooms/#{@room.id}/@#{quoted.id}
+        `/rooms/#{@room.id}/@#{spanned.id}`
+        ```
+        /rooms/#{@room.id}/@#{fenced.id}
+        ```
+      MARKDOWN
+      client_message_id: "ref-sync-code-quote", creator: users(:david)
+    )
+
+    assert_equal [ quoted ], quote.referenced_messages
+  end
+
+  test "a labeled permalink still quotes through its href" do
+    quote = @room.messages.create!(
+      markdown_source: "look [over here](/rooms/#{@room.id}/@#{@source.id})",
+      client_message_id: "ref-sync-labeled", creator: users(:david)
+    )
+
+    assert_equal [ @source ], quote.referenced_messages
+  end
+
   test "missing, self, and system-note targets create nothing" do
     quote = @room.messages.create!(
       markdown_source: "missing /rooms/#{@room.id}/@999999999",

@@ -51,18 +51,21 @@ each scoped to rooms the viewer belongs to and further narrowed by
 Pasting a message permalink (`/rooms/:room_id/@:message_id`) quotes the
 source under the message as a card showing the author, the room, a
 200-character excerpt, and the time, with a jump link to the source.
-Quotes in the same room render inline; quotes from another room load
-lazily through a per-viewer frame, and viewers who cannot access the
-source room see only a plain "Message in a private room" chip with no
-author, excerpt, or time.
+Direct rooms show a neutral "a direct message" label that is the same
+for every viewer, since direct-room names differ per viewer. Quotes in
+the same room render inline; quotes from another room load lazily
+through a per-viewer frame, and viewers who cannot access the source
+room see only a plain "Message in a private room" chip with no author,
+excerpt, or time.
 
 A quote follows its source: editing the source refreshes quoting cards
 over the room stream, and deleting it clears them. Quote state rides in
 the message fragment cache key (the sources' newest edit stamp) and in
 the message list etag, so cached pages and conditional GETs stay
-correct. The sync ignores missing messages, self-links, and system
-notes. Thread permalinks (`?thread=&message_id=`) do not quote yet;
-only the `/@` form does.
+correct. Each message quotes at most ten permalinks, taken from text
+outside code spans and fenced blocks. The sync ignores missing
+messages, self-links, and system notes. Thread permalinks
+(`?thread=&message_id=`) do not quote yet; only the `/@` form does.
 
 ## Files tab
 

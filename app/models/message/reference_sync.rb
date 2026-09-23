@@ -5,6 +5,18 @@ module Message::ReferenceSync
   # message id alone, and the card always shows its true room.
   PATTERN = %r{/rooms/\d+/@(?<id>\d+)\b}
 
+  MAX_PER_MESSAGE = 10
+
+  # Block-level tags whose boundaries separate words when flattening
+  # HTML to text. fragment.text joins across them, which would glue a
+  # URL onto adjacent prose (.../@12thanks) and hide it from
+  # extraction. code and pre are absent: they are removed beforehand.
+  BLOCK_TAGS = %w[
+    address article aside blockquote dd dialog div dl dt fieldset
+    figcaption figure footer form h1 h2 h3 h4 h5 h6 header hgroup hr
+    li main nav ol p section table td th tr ul
+  ].freeze
+
   class << self
     # Reconciles a message's quote references with the permalinks its
     # content currently contains. Idempotent: re-running with unchanged
@@ -23,16 +35,38 @@ module Message::ReferenceSync
       retry
     end
 
-    # Unique quoted message ids in the given text.
+    # Unique quoted message ids in the given text, in order of
+    # appearance, capped at MAX_PER_MESSAGE.
     def extract_message_ids(text)
       return [] if text.blank?
 
-      text.to_s.scan(PATTERN).flatten.map(&:to_i).uniq
+      ids = []
+      text.to_s.scan(PATTERN) do
+        id = Regexp.last_match[:id].to_i
+        next if ids.include?(id)
+
+        ids << id
+        break if ids.size >= MAX_PER_MESSAGE
+      end
+      ids
+    end
+
+    # The text of rendered message HTML outside code spans and fenced
+    # blocks, for reference extraction that ignores URLs quoted in
+    # code. Hrefs outside code are kept alongside the visible text so
+    # labeled links still resolve.
+    def non_code_text(html)
+      fragment = Nokogiri::HTML5.fragment(html.to_s)
+      fragment.css("code, pre").remove
+      fragment.css("br").each { |br| br.replace("\n") }
+      fragment.css(BLOCK_TAGS.join(",")).each { |element| element.after("\n") }
+
+      [ fragment.text, *fragment.css("a[href]").map { |link| link["href"] } ].join("\n")
     end
 
     private
       def reference_text(message)
-        [ message.markdown_source, message.plain_text_body ].compact_blank.join("\n")
+        [ non_code_text(message.body.body&.to_html), message.forward_note ].compact_blank.join("\n")
       end
   end
 end
