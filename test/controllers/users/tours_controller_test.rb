@@ -3,7 +3,7 @@ require "test_helper"
 class Users::ToursControllerTest < ActionDispatch::IntegrationTest
   test "update stamps the tour as completed" do
     sign_in :david
-    assert_nil users(:david).tour_completed_at
+    users(:david).update!(tour_completed_at: nil)
 
     patch user_tour_url
 
