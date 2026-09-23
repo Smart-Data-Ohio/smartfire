@@ -91,6 +91,16 @@ class Threads::Work::HandoffsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, AuditLog.where(action: "work.handoff", target_id: @thread.id).count
   end
 
+  test "a manager hands off a thread owned by someone else" do
+    @thread.update_work!(actor: users(:david), work_owner_id: users(:jz).id)
+    sign_in :david
+
+    post thread_work_handoff_path(@thread), params: { receiver_agent_id: @agent.id, summary: "To the agent" }
+
+    assert_redirected_to room_thread_path(@board, @thread)
+    assert_equal users(:bender).id, @thread.reload.work_owner_id
+  end
+
   test "handoff answers json with the work payload and package" do
     sign_in :david
 

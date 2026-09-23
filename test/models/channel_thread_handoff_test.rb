@@ -90,6 +90,31 @@ class ChannelThreadHandoffTest < ActiveSupport::TestCase
     assert_includes error.record.errors[:work_owner], "is already the owner of this work"
   end
 
+  test "hand_off! refuses an agent sender that no longer owns the thread" do
+    @thread.update_work!(actor: users(:david), work_owner_id: users(:bender).id)
+    @thread.update_work!(actor: users(:david), work_owner_id: users(:jz).id)
+
+    assert_raises(ActiveRecord::RecordNotFound) do
+      @thread.hand_off!(sender: users(:bender), receiver_agent: @agent, summary: "Yours")
+    end
+
+    assert_equal users(:jz).id, @thread.reload.work_owner_id
+    assert_empty WorkHandoff.where(channel_thread_id: @thread.id)
+    assert_empty AuditLog.where(action: "work.handoff", target_id: @thread.id)
+  end
+
+  test "hand_off! refuses a human sender who can no longer manage the thread" do
+    @thread.update_work!(actor: users(:david), work_owner_id: users(:jz).id)
+    @board.memberships.revoke_from(users(:jz))
+
+    assert_raises(ChannelThread::WorkUpdateForbidden) do
+      @thread.hand_off!(sender: users(:jz), receiver_agent: @agent, summary: "Yours")
+    end
+
+    assert_equal users(:jz).id, @thread.reload.work_owner_id
+    assert_empty WorkHandoff.where(channel_thread_id: @thread.id)
+  end
+
   test "hand_off! rejects untracked threads" do
     plain = ChannelThread.create!(room: rooms(:designers), creator: users(:david), name: "Chat")
 

@@ -703,10 +703,13 @@ class ChannelThread < ApplicationRecord
   # handoff is recorded in Work history, the receiving agent gets a
   # work_handed_off ledger row (delivered through the normal poll and
   # webhook path), a previous agent owner gets work_unassigned, and the
-  # audit log records work.handoff. Sender authorization (the sender
-  # must be able to work the thread) and the receiver's manage_threads
-  # grant are checked by the callers, which own the 403/404; receiver
-  # ownership eligibility is validated on save, like any assignment.
+  # audit log records work.handoff. The callers pre-check authorization
+  # (the sender must be able to work the thread; the receiver needs
+  # manage_threads) to own the 403/404, and the sender is re-verified
+  # under the row lock on fresh state, like update_work!: an agent sender
+  # must still own the thread, a human sender must still manage work
+  # here. Receiver ownership eligibility is validated on save, like any
+  # assignment.
   def hand_off!(sender:, receiver_agent:, summary:, links: [], open_questions: [])
     raise ActiveRecord::RecordNotFound, "Work thread is not tracked" unless work?
     if work_owner_id == receiver_agent&.user_id
@@ -725,6 +728,7 @@ class ChannelThread < ApplicationRecord
           errors.add(:work_owner, "is already the owner of this work")
           raise ActiveRecord::RecordInvalid.new(self)
         end
+        verify_handoff_sender!(sender)
 
         before_owner = work_owner
         handoff = work_handoffs.create!(
@@ -1088,6 +1092,20 @@ class ChannelThread < ApplicationRecord
         events << record_work_assignment_event!(next_agent, "work_assigned", actor, hop, chain_id)
       end
       events
+    end
+
+    # The sender on fresh locked state: whoever owned or managed the
+    # thread when the caller checked may have lost it since. An agent
+    # sender must still own the thread (404, like update_work_by_agent!);
+    # a human sender must still manage work here (403, like update_work!).
+    def verify_handoff_sender!(sender)
+      if sender&.bot?
+        unless work_owner_id == sender.id
+          raise ActiveRecord::RecordNotFound, "Work thread is not owned by this agent"
+        end
+      elsif !work_manageable_by?(sender)
+        raise WorkUpdateForbidden, "You cannot manage work in this thread"
+      end
     end
 
     # Ledger rows for a handoff: the previous agent owner (if any, and

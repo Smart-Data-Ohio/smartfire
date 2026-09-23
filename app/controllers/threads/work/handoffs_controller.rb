@@ -34,6 +34,8 @@ class Threads::Work::HandoffsController < ApplicationController
       )
     rescue ActiveRecord::RecordInvalid => error
       return handoff_invalid_response(error.record.errors.full_messages.to_sentence)
+    rescue ChannelThread::WorkUpdateForbidden
+      return head :forbidden
     end
 
     respond_to do |format|
@@ -60,7 +62,10 @@ class Threads::Work::HandoffsController < ApplicationController
     end
 
     # The sender must be able to work the thread: a manager or the
-    # current owner. Anything else is 403.
+    # current owner. Anything else is 403, before any receiver
+    # validation. hand_off! re-verifies under the row lock; the create
+    # rescue below maps a sender who lost rights mid-request to the
+    # same 403.
     def ensure_can_hand_off
       head :forbidden unless @thread.work_manageable_by?(Current.user)
     end
