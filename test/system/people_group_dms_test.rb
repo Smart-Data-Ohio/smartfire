@@ -194,6 +194,53 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
     assert_current_path room_path(room)
   end
 
+  test "typing the next query during a pick commit still searches once the commit lands" do
+    join_room rooms(:designers)
+    click_link "New direct message"
+
+    within "#direct_rooms_control" do
+      find("[data-autocomplete-target='input']").fill_in(with: "Kev")
+    end
+    assert_selector "suggestion-option", text: "Kevin"
+
+    # The pick commit runs a multi-frame flash animation; under CI load those
+    # frames stretch past the next query's debounce and the search used to be
+    # dropped, leaving the second pick with no suggestions. Stall the frames
+    # so the "Jas" search deterministically lands inside the commit window.
+    page.execute_script(<<~JS)
+      window.__rafQueue = [];
+      window.__origRaf = window.requestAnimationFrame;
+      window.requestAnimationFrame = (callback) => { window.__rafQueue.push(callback); return 1; };
+    JS
+
+    find("suggestion-option", text: "Kevin").click
+
+    # The pill proves the commit started (its flash is held open by the
+    # stalled frames); typing now lands the search inside the commit window.
+    within "#direct_rooms_control" do
+      assert_selector ".autocomplete__pill", text: "Kevin"
+      find("[data-autocomplete-target='input']").fill_in(with: "Jas")
+    end
+    # The search debounce is 300 ms; this is scenario timing (the query must
+    # fire while the commit is held open), not a readiness wait.
+    sleep 0.5
+
+    page.execute_script(<<~JS)
+      window.requestAnimationFrame = window.__origRaf;
+      window.__rafQueue.splice(0).forEach((callback) => callback(performance.now()));
+    JS
+
+    assert_selector "suggestion-option", text: "Jason", wait: 10
+    find("suggestion-option", text: "Jason").click
+
+    within "#direct_rooms_control" do
+      assert_selector ".autocomplete__pill", text: "Kevin"
+      assert_selector ".autocomplete__pill", text: "Jason"
+    end
+  ensure
+    page.execute_script("window.requestAnimationFrame = window.__origRaf") if page
+  end
+
   test "group members rename, add, and leave with system notes in the timeline" do
     room = Current.set(user: users(:david)) do
       Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:kevin) ])

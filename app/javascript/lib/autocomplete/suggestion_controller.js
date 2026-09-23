@@ -6,6 +6,7 @@ export default class SuggestionController {
   #canceled   = false
   #committing = false
   #context
+  #pendingUpdate = null
   #resultsController
 
   constructor(delegate) {
@@ -21,7 +22,14 @@ export default class SuggestionController {
   }
 
   updateWithContentAndPosition(content, position) {
-    if (this.#committing) { return }
+    // A fast typist reaches the next query while the click commit's flash
+    // animation still runs. Dropping that update strands the input with no
+    // suggestions and nothing left to trigger them, so remember the latest
+    // one and replay it once the commit finishes deactivating.
+    if (this.#committing) {
+      this.#pendingUpdate = [ content, position ]
+      return
+    }
     const previousContext = this.#context
     this.#context = new SuggestionContext(this, content, position)
 
@@ -41,6 +49,7 @@ export default class SuggestionController {
   }
 
   destroy() {
+    this.#pendingUpdate = null
     this.#uninstallResultsController()
     this.#uninstallResizeListeners()
     this.#uninstallKeyboardListener()
@@ -60,7 +69,12 @@ export default class SuggestionController {
     this.#resultsController.flashSelection(() => {
       this.#committing = false
       this.#didCommitValuesAtRangeWithTerminator(values, range, terminator)
-      this.#deactivateSuggestionWithAnimation()
+      // With a query already waiting, skip the hide animation: deactivating
+      // synchronously lets the replay install a fresh results list instead
+      // of fetching into one the animation is about to destroy.
+      if (this.#pendingUpdate) this.#deactivateSuggestion()
+      else this.#deactivateSuggestionWithAnimation()
+      this.#replayPendingUpdate()
     })
 
     if (values.length > 1) {
@@ -112,6 +126,12 @@ export default class SuggestionController {
     this.#active = false
     this.#canceled = false
     this.#syncComboboxState()
+  }
+
+  #replayPendingUpdate() {
+    const pending = this.#pendingUpdate
+    this.#pendingUpdate = null
+    if (pending) this.updateWithContentAndPosition(...pending)
   }
 
   #cancelSuggestion() {
