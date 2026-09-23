@@ -1,0 +1,8 @@
+<%# Working indicator for a streaming agent message. Replaced away at
+    finalize, when the message broadcasts its final rendering. %>
+<% if message.streaming? %>
+  <p class="message__streaming" role="status">
+    <span class="message__streaming-dot" aria-hidden="true"></span>
+    Working…
+  </p>
+<% end %>

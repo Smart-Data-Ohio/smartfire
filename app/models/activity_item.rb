@@ -1,5 +1,5 @@
 class ActivityItem < ApplicationRecord
-  EVENT_TYPES = %w[ mention reply thread_activity keyword_alert work_update work_assignment huddle_started huddle_missed event_invitation event_update event_cancelled event_reminder pr_review_request agent_approval_request message_reminder ].freeze
+  EVENT_TYPES = %w[ mention reply thread_activity keyword_alert work_update work_assignment huddle_started huddle_missed event_invitation event_update event_cancelled event_reminder pr_review_request agent_approval_request agent_budget_exceeded message_reminder ].freeze
   HUDDLE_EVENT_TYPES = %w[ huddle_started huddle_missed ].freeze
   FILTERS = %w[ unread read handled ].freeze
   TYPE_FILTERS = {
@@ -16,7 +16,7 @@ class ActivityItem < ApplicationRecord
     "mentions" => %w[ mention reply keyword_alert ],
     "threads" => %w[ thread_activity work_update work_assignment ],
     "events" => %w[ event_invitation event_update event_cancelled event_reminder ],
-    "agents" => %w[ agent_approval_request ],
+    "agents" => %w[ agent_approval_request agent_budget_exceeded ],
     "github" => %w[ pr_review_request ],
     "huddles" => %w[ huddle_started huddle_missed ],
     "reminders" => %w[ message_reminder ]
@@ -43,7 +43,7 @@ class ActivityItem < ApplicationRecord
     event_types ? where(event_type: event_types) : all
   }
   scope :message_sources, -> { where(source_type: Message.polymorphic_name) }
-  scope :supported_sources, -> { where(source_type: [ Message.polymorphic_name, SavedItem.polymorphic_name, "WorkThreadEvent", HuddleGrant.polymorphic_name, Event.polymorphic_name, AgentApproval.polymorphic_name ]) }
+  scope :supported_sources, -> { where(source_type: [ Message.polymorphic_name, SavedItem.polymorphic_name, "WorkThreadEvent", HuddleGrant.polymorphic_name, Event.polymorphic_name, AgentApproval.polymorphic_name, AgentBudgetNotice.polymorphic_name ]) }
 
   class << self
     # Source data is deliberately resolved from the source row at query time.
@@ -98,6 +98,11 @@ class ActivityItem < ApplicationRecord
             ON activity_approval_agents.id = activity_approvals.agent_id
           LEFT JOIN users AS activity_approval_agent_users
             ON activity_approval_agent_users.id = activity_approval_agents.user_id
+          LEFT JOIN agent_budget_notices AS activity_budget_notices
+            ON activity_budget_notices.id = activity_items.source_id
+            AND activity_items.source_type = #{connection.quote(AgentBudgetNotice.polymorphic_name)}
+          LEFT JOIN agents AS activity_budget_agents
+            ON activity_budget_agents.id = activity_budget_notices.agent_id
         SQL
         .merge(User.active.without_bots)
         .where(activity_items: { user_id: user.id })
@@ -111,6 +116,10 @@ class ActivityItem < ApplicationRecord
             AND activity_approvals.id IS NOT NULL
             AND activity_approval_agent_users.status = #{connection.quote(User.statuses.fetch("active"))}
             AND (activity_approval_agents.owner_id = activity_items.user_id
+              OR users.role = #{connection.quote(User.roles.fetch("administrator"))}))
+          OR (activity_items.source_type = #{connection.quote(AgentBudgetNotice.polymorphic_name)}
+            AND activity_budget_notices.id IS NOT NULL
+            AND (activity_budget_agents.owner_id = activity_items.user_id
               OR users.role = #{connection.quote(User.roles.fetch("administrator"))}))
         SQL
     end

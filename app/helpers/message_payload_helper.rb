@@ -25,6 +25,7 @@ module MessagePayloadHelper
       reply_to: reply_payload(message),
       forwarded: forwarded_payload(message),
       drive_attachments: drive_attachments_payload(message),
+      streaming: (true if message.streaming?),
       url: message_permalink_url(message)
     }.compact
   end

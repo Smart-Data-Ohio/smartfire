@@ -397,6 +397,97 @@ module Agents
           "required" => [ "message_id" ]
         },
         throttle: [ 60, "agents/pins", "destroy" ]
+      ),
+      # --- Agent streaming, working presence, and steps (w3/agents-stream).
+      # Each delegates to the same service as its REST counterpart.
+      Tool.new(
+        name: "start_stream",
+        description: "Start a streaming message in a room, or a reply inside a thread (thread_id). markdown_source may start blank and fill in with append_stream; reply_to_message_id targets a message in the same conversation. Requires post_messages.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "room_id" => { "type" => "integer", "description" => "Room to stream in." },
+            "thread_id" => { "type" => "integer", "description" => "Thread to reply inside." },
+            "markdown_source" => { "type" => "string", "description" => "Initial Markdown body (may be blank)." },
+            "reply_to_message_id" => { "type" => "integer", "description" => "Message to reply to." },
+            "reply_notify_author" => { "type" => "boolean", "description" => "Notify the reply target's author." },
+            "client_message_id" => { "type" => "string", "description" => "Idempotency key: a retry returns the original message." }
+          },
+          "required" => [ "room_id" ]
+        },
+        throttle: [ 60, "agents/streaming_messages", "create" ]
+      ),
+      Tool.new(
+        name: "append_stream",
+        description: "Append text to one of the agent's streaming messages (append), or replace its whole body (markdown_source). Pass exactly one. Requires post_messages.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "message_id" => { "type" => "integer", "description" => "Streaming message id." },
+            "append" => { "type" => "string", "description" => "Markdown text to append." },
+            "markdown_source" => { "type" => "string", "description" => "Replacement Markdown body." }
+          },
+          "required" => [ "message_id" ]
+        },
+        throttle: [ 240, "agents/streaming_messages", "update" ]
+      ),
+      Tool.new(
+        name: "finalize_stream",
+        description: "End one of the agent's streaming messages, firing every deferred side effect exactly once. Idempotent. Requires post_messages.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "message_id" => { "type" => "integer", "description" => "Streaming message id." }
+          },
+          "required" => [ "message_id" ]
+        },
+        throttle: [ 60, "agents/streaming_messages", "finalize" ]
+      ),
+      Tool.new(
+        name: "set_presence",
+        description: "Set the agent's working presence ('Thinking…', 'Running tests…'), shown next to its name in the room member list. Blank clears. Expires after 5 minutes unless refreshed, and clears when a stream finalizes.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "text" => { "type" => "string", "description" => "Presence text, max 140 characters (blank clears)." }
+          }
+        },
+        throttle: nil
+      ),
+      Tool.new(
+        name: "add_step",
+        description: "Attach a structured step to one of the agent's messages (message_id) or to a work thread it owns (thread_id): name, status (pending, running, done, failed), input/output summaries, duration in milliseconds. Message steps need post_messages, thread steps need manage_threads.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "message_id" => { "type" => "integer", "description" => "The agent's own message id." },
+            "thread_id" => { "type" => "integer", "description" => "Owned work thread id." },
+            "name" => { "type" => "string", "description" => "Step name (required)." },
+            "status" => { "type" => "string", "description" => "pending, running, done, failed (default running)." },
+            "input_summary" => { "type" => "string", "description" => "Short input summary." },
+            "output_summary" => { "type" => "string", "description" => "Short output summary." },
+            "duration_ms" => { "type" => "integer", "description" => "Duration in milliseconds." }
+          },
+          "required" => [ "name" ]
+        },
+        throttle: [ 60, "agents/steps", "create" ]
+      ),
+      Tool.new(
+        name: "update_step",
+        description: "Update one of the agent's steps: name, status, summaries, duration. Each field updates only when given. Same grants as add_step.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "step_id" => { "type" => "integer", "description" => "Step id." },
+            "name" => { "type" => "string", "description" => "Step name." },
+            "status" => { "type" => "string", "description" => "pending, running, done, failed." },
+            "input_summary" => { "type" => "string", "description" => "Short input summary." },
+            "output_summary" => { "type" => "string", "description" => "Short output summary." },
+            "duration_ms" => { "type" => "integer", "description" => "Duration in milliseconds." }
+          },
+          "required" => [ "step_id" ]
+        },
+        throttle: [ 60, "agents/steps", "update" ]
       )
     ].freeze
 
@@ -759,6 +850,79 @@ module Agents
         message_id = args["message_id"].presence or raise InvalidParams, "Missing required argument: message_id"
 
         Pins.unpin(agent: @agent, message_id: message_id)
+      end
+
+      # --- Agent streaming, working presence, and steps (w3/agents-stream).
+
+      def tool_start_stream(args)
+        room_id = args["room_id"].presence or raise InvalidParams, "Missing required argument: room_id"
+        room = @agent.user.rooms.find_by(id: room_id)
+        return ServiceResult.fail("Room not found", status: :not_found) unless room
+        unless @agent.can?(:post_messages, room)
+          return ServiceResult.fail("Forbidden: agent lacks post_messages capability", status: :forbidden)
+        end
+
+        result = Streaming.start(
+          agent: @agent, room: room, thread_id: args["thread_id"],
+          attributes: args.slice("markdown_source", "reply_to_message_id", "reply_notify_author", "client_message_id").to_h.symbolize_keys
+        )
+        return result unless result.ok?
+
+        message = result.payload
+        ServiceResult.ok(@presenter.message_payload(message).merge(thread_id: message.thread_id, streaming: message.streaming?), status: :created)
+      rescue ActiveRecord::RecordNotFound
+        ServiceResult.fail("Reply target not found", status: :not_found)
+      end
+
+      def tool_append_stream(args)
+        message_id = args["message_id"].presence or raise InvalidParams, "Missing required argument: message_id"
+
+        result = Streaming.update(
+          agent: @agent, id: message_id,
+          append: args["append"], markdown_source: args["markdown_source"]
+        )
+        return result unless result.ok?
+
+        message = result.payload
+        ServiceResult.ok(@presenter.message_payload(message).merge(thread_id: message.thread_id, streaming: message.streaming?))
+      end
+
+      def tool_finalize_stream(args)
+        message_id = args["message_id"].presence or raise InvalidParams, "Missing required argument: message_id"
+
+        result = Streaming.finalize(agent: @agent, id: message_id)
+        return result unless result.ok?
+
+        message = result.payload
+        ServiceResult.ok(@presenter.message_payload(message).merge(thread_id: message.thread_id, streaming: message.streaming?))
+      end
+
+      def tool_set_presence(args)
+        WorkingPresence.set(agent: @agent, text: args["text"])
+      end
+
+      def tool_add_step(args)
+        args["name"].presence or raise InvalidParams, "Missing required argument: name"
+
+        result = Steps.create(
+          agent: @agent,
+          fields: args.slice("message_id", "thread_id", "name", "status", "input_summary", "output_summary", "duration_ms").to_h
+        )
+        return result unless result.ok?
+
+        ServiceResult.ok(Steps.step_payload(result.payload), status: :created)
+      end
+
+      def tool_update_step(args)
+        step_id = args["step_id"].presence or raise InvalidParams, "Missing required argument: step_id"
+
+        result = Steps.update(
+          agent: @agent, id: step_id,
+          fields: args.slice("name", "status", "input_summary", "output_summary", "duration_ms").to_h
+        )
+        return result unless result.ok?
+
+        ServiceResult.ok(Steps.step_payload(result.payload))
       end
 
       # Reads an updatable work field, returning the unset sentinel when

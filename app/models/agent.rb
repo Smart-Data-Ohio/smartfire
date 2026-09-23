@@ -14,6 +14,12 @@ class Agent < ApplicationRecord
   # `last_seen_at` is touched at most this often per agent.
   LAST_SEEN_THROTTLE = 1.minute
 
+  # Working presence ("Thinking…", "Running tests…"), shown next to the
+  # agent's name in the room member list. Expires after the TTL unless
+  # refreshed, and clears when the agent's stream finalizes.
+  WORKING_PRESENCE_LIMIT = 140
+  WORKING_PRESENCE_TTL = 5.minutes
+
   belongs_to :user
   belongs_to :owner, class_name: "User", optional: true
 
@@ -31,6 +37,9 @@ class Agent < ApplicationRecord
   validates :status, inclusion: { in: STATUSES }
   validates :description, length: { maximum: 500 }, allow_nil: true
   validates :status_note, length: { maximum: 200 }, allow_nil: true
+  validates :working_presence, length: { maximum: WORKING_PRESENCE_LIMIT }, allow_nil: true
+  validates :daily_message_cap, :daily_board_post_cap, :daily_external_action_cap,
+    numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
 
   before_update -> { AgentGrant.revoke_for_agent!(self) },
     if: -> { will_save_change_to_suspended_at? && suspended_at.present? }
@@ -62,6 +71,63 @@ class Agent < ApplicationRecord
 
     update!(suspended_at: Time.current)
     AuditLog.record!(action: "agent.suspend", target: self)
+  end
+
+  # The kill switch: suspends the agent (revoking every grant, which also
+  # blocks approved-but-unexecuted external actions at perform time),
+  # cancels every still-pending approval request, clears working
+  # presence, and records `agent.kill_switch`. Returns the number of
+  # approvals cancelled.
+  def kill_switch!
+    suspend!
+
+    cancelled = 0
+    transaction do
+      agent_approvals.where(status: "pending").find_each do |approval|
+        approval.expire_if_due!
+        if approval.pending_effective?
+          approval.cancel_by_agent!
+          cancelled += 1
+        end
+      end
+      clear_working_presence! if working_presence.present?
+    end
+
+    AuditLog.record!(action: "agent.kill_switch", target: self,
+      changes: { pending_approvals_cancelled: cancelled })
+    cancelled
+  end
+
+  # The working presence text, or nil when none is set or the TTL ran
+  # out. Expired rows read as cleared everywhere; no sweep rewrites them.
+  def working_presence_text(now: Time.current)
+    return nil if working_presence.blank?
+    return nil if working_presence_expires_at.present? && working_presence_expires_at <= now
+
+    working_presence
+  end
+
+  # Stages a working presence (or clears it when blank) on this instance,
+  # so PATCH /agents/me saves it together with the status fields.
+  def assign_working_presence(text)
+    if text.to_s.strip.blank?
+      self.working_presence = nil
+      self.working_presence_expires_at = nil
+    else
+      self.working_presence = text.to_s.strip
+      self.working_presence_expires_at = WORKING_PRESENCE_TTL.from_now
+    end
+  end
+
+  def set_working_presence!(text)
+    assign_working_presence(text)
+    save!
+  end
+
+  def clear_working_presence!
+    return unless working_presence.present?
+
+    update!(working_presence: nil, working_presence_expires_at: nil)
   end
 
   def kind_description

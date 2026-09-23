@@ -7,7 +7,8 @@ module Periodic
   # expired presence-lease sweep, and the daily retention prune all live
   # here so production needs no extra long-running process for any of
   # them. Add a sweeper by appending to the task list below: a name, an
-  # interval in seconds, and an idempotent callable.
+  # interval in seconds, and an idempotent callable. The streaming
+  # messages sweep finalizes agent streams older than 10 minutes.
   class Runner
     Task = Data.define(:name, :interval, :run)
 
@@ -15,6 +16,7 @@ module Periodic
     STUCK_ROOM_SWEEP_INTERVAL = 5.minutes
     AGENT_SWEEP_INTERVAL = 30.seconds
     PRESENCE_SWEEP_INTERVAL = 1.minute
+    STREAM_SWEEP_INTERVAL = 30.seconds
 
     def initialize(reminders_interval: 30, retention_interval: 24.hours.to_i, logger: Rails.logger)
       @tasks = [
@@ -23,6 +25,7 @@ module Periodic
         Task.new("saved item reminders", reminders_interval, -> { SavedItem::ReminderDispatcher.dispatch_due! }),
         Task.new("stuck rooms", STUCK_ROOM_SWEEP_INTERVAL, -> { Room::DestroyJob.reenqueue_stuck! }),
         Task.new("stranded agent webhooks", AGENT_SWEEP_INTERVAL, -> { Agent::Delivery.recover_stranded_webhooks! }),
+        Task.new("streaming messages", STREAM_SWEEP_INTERVAL, -> { Message.finalize_overdue_streams! }),
         Task.new("stuck GitHub claims", AGENT_SWEEP_INTERVAL, -> { Github::PerformAgentActionJob.recover_stuck_claims! }),
         Task.new("stuck Fizzy claims", AGENT_SWEEP_INTERVAL, -> { Fizzy::PerformAgentActionJob.recover_stuck_claims! }),
         Task.new("calendar push channels", Calendar::PushChannel::RENEW_INTERVAL, -> { Calendar::PushChannel.renew_expiring! }),

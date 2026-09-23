@@ -53,6 +53,10 @@ module Agents
     end
 
     def self.create(agent:, room:, title:, body: nil, tags: nil, work_status: nil, run_url: nil, owner_id: nil)
+      if (denial = Budgets.check(agent, :board_posts))
+        return denial
+      end
+
       thread = ChannelThread.create_board_post!(
         room: room,
         creator: agent.user,

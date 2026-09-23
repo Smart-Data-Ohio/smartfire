@@ -50,6 +50,10 @@ module Agents
         )
       end
 
+      if (denial = Budgets.check(agent, :external_actions))
+        return denial
+      end
+
       approval = AgentApproval.new(
         agent: agent,
         agent_credential: credential,

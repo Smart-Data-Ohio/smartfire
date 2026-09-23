@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_23_064819) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_073200) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -110,6 +110,15 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_064819) do
     t.index ["fizzy_connected_account_id"], name: "index_agent_approvals_on_fizzy_connected_account_id"
   end
 
+  create_table "agent_budget_notices", force: :cascade do |t|
+    t.integer "agent_id", null: false
+    t.string "cap", null: false
+    t.datetime "created_at", null: false
+    t.date "day", null: false
+    t.datetime "updated_at", null: false
+    t.index ["agent_id", "cap", "day"], name: "index_agent_budget_notices_on_agent_cap_day", unique: true
+  end
+
   create_table "agent_credentials", force: :cascade do |t|
     t.integer "agent_id", null: false
     t.datetime "created_at", null: false
@@ -164,8 +173,28 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_064819) do
     t.index ["agent_id", "room_id", "capability"], name: "index_agent_grants_on_agent_room_capability_active", unique: true, where: "revoked_at IS NULL AND room_id IS NOT NULL"
   end
 
+  create_table "agent_steps", force: :cascade do |t|
+    t.integer "agent_id", null: false
+    t.integer "channel_thread_id"
+    t.datetime "created_at", null: false
+    t.integer "duration_ms"
+    t.text "input_summary"
+    t.integer "message_id"
+    t.string "name", null: false
+    t.text "output_summary"
+    t.integer "position", default: 0, null: false
+    t.string "status", default: "running", null: false
+    t.datetime "updated_at", null: false
+    t.index ["agent_id"], name: "index_agent_steps_on_agent_id"
+    t.index ["channel_thread_id"], name: "index_agent_steps_on_channel_thread_id"
+    t.index ["message_id"], name: "index_agent_steps_on_message_id"
+  end
+
   create_table "agents", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.integer "daily_board_post_cap"
+    t.integer "daily_external_action_cap"
+    t.integer "daily_message_cap"
     t.text "description"
     t.string "kind", default: "personal", null: false
     t.datetime "last_seen_at"
@@ -179,6 +208,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_064819) do
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
     t.string "webhook_signing_secret"
+    t.string "working_presence"
+    t.datetime "working_presence_expires_at"
     t.index ["owner_id", "kind"], name: "index_agents_on_owner_id_and_kind"
     t.index ["user_id"], name: "index_agents_on_user_id", unique: true
   end
@@ -627,6 +658,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_064819) do
     t.datetime "reply_target_deleted_at"
     t.integer "reply_to_message_id"
     t.integer "room_id", null: false
+    t.datetime "stream_broadcast_at"
+    t.boolean "streaming", default: false, null: false
     t.boolean "system_note", default: false, null: false
     t.integer "thread_id"
     t.datetime "updated_at", null: false
@@ -636,6 +669,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_064819) do
     t.index ["room_id", "creator_id", "client_message_id"], name: "index_messages_on_room_creator_client_id"
     t.index ["room_id", "thread_id", "created_at"], name: "index_messages_on_room_thread_created"
     t.index ["room_id"], name: "index_messages_on_room_id"
+    t.index ["streaming", "created_at"], name: "index_messages_on_streaming_and_created_at", where: "streaming"
     t.index ["thread_id", "created_at"], name: "index_messages_on_thread_created"
     t.index ["thread_id"], name: "index_messages_on_thread_id"
   end
@@ -788,8 +822,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_064819) do
     t.json "inbox_preferences", default: {}
     t.string "name", null: false
     t.string "password_digest"
-    t.string "push_to_talk_key"
     t.string "presence_setting", default: "auto", null: false
+    t.string "push_to_talk_key"
     t.boolean "quiet_hours_enabled", default: false, null: false
     t.integer "quiet_hours_end_minute"
     t.integer "quiet_hours_start_minute"

@@ -1,0 +1,28 @@
+<%# Collapsible agent step list, like a CI log. Renders inside an
+    agent's message (message steps) or a work thread header (thread
+    steps). Every field renders escaped; summaries keep their line
+    breaks. %>
+<% if steps.any? %>
+  <details class="agent-steps">
+    <summary class="agent-steps__summary">Steps (<%= steps.size %>)</summary>
+    <ol class="agent-steps__list">
+      <% steps.each do |step| %>
+        <li class="agent-steps__step agent-steps__step--<%= step.status %>">
+          <div class="agent-steps__head">
+            <strong class="agent-steps__name"><%= step.name %></strong>
+            <span class="agent-steps__status"><%= step.status.humanize %></span>
+            <% if step.duration_ms.present? %>
+              <span class="agent-steps__duration"><%= agent_step_duration(step.duration_ms) %></span>
+            <% end %>
+          </div>
+          <% if step.input_summary.present? %>
+            <p class="agent-steps__io"><span class="agent-steps__io-label">In:</span> <%= simple_format(step.input_summary, {}, wrapper_tag: "span") %></p>
+          <% end %>
+          <% if step.output_summary.present? %>
+            <p class="agent-steps__io"><span class="agent-steps__io-label">Out:</span> <%= simple_format(step.output_summary, {}, wrapper_tag: "span") %></p>
+          <% end %>
+        </li>
+      <% end %>
+    </ol>
+  </details>
+<% end %>

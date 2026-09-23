@@ -55,3 +55,63 @@
 .agent-directory-row {
   list-style: none;
 }
+
+.agent-steps {
+  font-size: 0.85rem;
+  margin-block: 0.5rem;
+}
+
+.agent-steps__summary {
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.agent-steps__list {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+}
+
+.agent-steps__step {
+  border-inline-start: 2px solid var(--color-border-dark);
+  margin-block: 0.3rem;
+  padding-inline-start: 0.6rem;
+}
+
+.agent-steps__step--done {
+  border-inline-start-color: var(--color-positive);
+}
+
+.agent-steps__step--failed {
+  border-inline-start-color: var(--color-negative);
+}
+
+.agent-steps__step--running {
+  border-inline-start-color: var(--color-alert);
+}
+
+.agent-steps__head {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.agent-steps__status {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.agent-steps__duration {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.agent-steps__io {
+  margin: 0.15rem 0 0;
+}
+
+.agent-steps__io-label {
+  font-weight: 600;
+  opacity: 0.7;
+}

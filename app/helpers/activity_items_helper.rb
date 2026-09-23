@@ -19,6 +19,8 @@ module ActivityItemsHelper
       source.room ? room_event_path(source.room, source) : activity_items_path
     when AgentApproval
       agent_approvals_path(source.agent)
+    when AgentBudgetNotice
+      source.agent&.user ? edit_account_bot_path(source.agent.user) : activity_items_path
     else
       activity_items_path
     end
@@ -54,6 +56,8 @@ module ActivityItemsHelper
       "Review requested"
     when "agent_approval_request"
       "Approval request"
+    when "agent_budget_exceeded"
+      "Budget exceeded"
     when "message_reminder"
       "Reminder"
     else
@@ -83,6 +87,9 @@ module ActivityItemsHelper
       room = source.room
       base = agent ? agent.user.name : "Agent"
       room ? "#{base} · #{room_display_name(room)}" : base
+    when AgentBudgetNotice
+      agent_name = source.agent&.user&.name || "Agent"
+      "#{agent_name} · daily #{source.cap_label} budget"
     else
       source.class.name.humanize
     end
@@ -119,6 +126,9 @@ module ActivityItemsHelper
       activity_item_event_body(item)
     when AgentApproval
       source.summary.to_s
+    when AgentBudgetNotice
+      agent_name = source.agent&.user&.name || "The agent"
+      "#{agent_name} hit its daily #{source.cap_label} budget (#{source.budget_limit}/day)."
     else
       "Source updated"
     end
@@ -136,6 +146,8 @@ module ActivityItemsHelper
     when Event
       source.organizer&.name
     when AgentApproval
+      source.agent&.user&.name
+    when AgentBudgetNotice
       source.agent&.user&.name
     end
   end

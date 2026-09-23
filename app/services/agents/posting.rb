@@ -28,6 +28,10 @@ module Agents
         return ServiceResult.ok(duplicate)
       end
 
+      if (denial = Budgets.check(agent, :messages))
+        return denial
+      end
+
       message = room.root_messages.new(attrs)
       if (failure = apply_drive_file_ids(message, drive_file_ids))
         return failure
@@ -55,6 +59,10 @@ module Agents
       if (duplicate = Message.find_duplicate(room: room, creator: agent.user, client_message_id: attributes[:client_message_id] || attributes["client_message_id"]))
         # A retried create: return the original without re-posting.
         return ServiceResult.ok(duplicate)
+      end
+
+      if (denial = Budgets.check(agent, :messages))
+        return denial
       end
 
       ids = validated_drive_file_ids!(drive_file_ids)

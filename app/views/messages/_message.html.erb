@@ -16,8 +16,10 @@
           <%= render "messages/toolbar" %>
           <%= render "messages/pin_badge", message: message %>
           <%= render "messages/meta", message: message, show_room_icon: local_assigns[:show_room_icon] %>
+          <%= render "messages/streaming_indicator", message: message %>
           <%= render "messages/context", message: message %>
           <%= render "messages/presentation", message: message %>
+          <%= render "agent_steps/steps", steps: message.agent_steps.to_a %>
           <%= render "messages/drive_attachments", message: message %>
           <%= render "github/pull_requests/cards", message: message %>
           <%= render "twitter/posts/cards", message: message %>

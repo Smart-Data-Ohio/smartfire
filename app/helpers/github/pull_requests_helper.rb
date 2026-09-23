@@ -10,7 +10,8 @@ module Github::PullRequestsHelper
   # blind to an unpin whenever a newer card row dominates the maximum.
   # Like the card rows, the pins are read in memory off the preloaded
   # with_rendering_details association. The partial branches on the system
-  # note flag, so the key carries that too.
+  # note flag, so the key carries that too, and on the streaming flag
+  # and the step list, so those ride along as well.
   def message_with_pr_cards_cache_key(message)
     newest_card = (message.github_pull_requests.map(&:updated_at) + message.fizzy_cards.map(&:updated_at) + message.twitter_posts.map(&:updated_at) + message.events.map(&:updated_at)).compact.max
     # Link embeds are fetched after the message renders; their rows (and the
@@ -21,6 +22,8 @@ module Github::PullRequestsHelper
     key << github_pr_threads_stamp(message.room_id) if message.github_pull_requests.any?
     key << message.message_pins.map(&:updated_at).max
     key << message.system_note?
+    key << message.streaming?
+    key << message.agent_steps.map(&:updated_at).max
     key
   end
 
