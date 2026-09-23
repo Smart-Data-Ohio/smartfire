@@ -5,6 +5,7 @@
 class Users::CardsController < ApplicationController
   def show
     @user = User.includes(agent: :owner).with_attached_avatar.find(params[:id])
+    @starred = Current.user.starred?(@user)
 
     render layout: false
   end

@@ -1165,19 +1165,20 @@ summary.member-panel__group-heading {
   /* Header budget below 80rem. The labeled row (~740px plus the help menu)
      already spills past the bell at 64rem, before the voice stack joins
      it, so labels step aside here and every action becomes an icon-only
-     2rem square with no gaps. What fits where:
-     - 40rem and up: nine squares plus the stack (up to five avatars) and
-       the help menu clear 64rem with room for the name.
-     - Below 40rem: Files steps aside (search reaches uploads and Drive
-       files through has:file) and the help menu moves to the sidebar
-       footer, leaving eight squares plus the capped stack (three avatars
-       plus the count, ~72px, ~86px with the huddle pip).
-     - Below 30rem: events and pins step aside too (the search Events
-       section and has:pin), and threads steps aside in stage rooms,
-       which carry one extra action (is:thread still finds thread
-       messages). Elsewhere threads stay: the drawer is a core phone flow.
-     - At 360px: five 30px squares plus the stack leave ~70px for the
-       name in text and voice rooms, ~50px in stage rooms.
+     2rem square with no gaps. Nothing is ever silently hidden: the
+     less-used actions move into the header overflow menu instead.
+     What fits where:
+     - 40rem and up (tablets): members, search, call plus the capped
+       stack, stage, settings, notifications and the overflow button.
+       Threads, events, pins, Files, help and the switcher live in the
+       menu; the switcher hides in navigation.css like before.
+     - Below 40rem (phones): members, search, call plus the capped
+       stack (three avatars plus the count, ~72px, ~86px with the huddle
+       pip) and the overflow button. Stage, settings and notifications
+       join the menu too, so four 2rem squares plus the stack leave room
+       for the name.
+     - At 360px: four 30px squares plus the stack leave ~100px for the
+       name in every room kind.
      The identity yields first (its flex-shrink dwarfs the row's), so the
      name truncates with an ellipsis before any action shrinks; every
      action child keeps its natural width instead. The row's inner scroll
@@ -1228,6 +1229,19 @@ summary.member-panel__group-heading {
   .room-header__actions .huddle-share-indicator span {
     display: none;
   }
+
+  /* Below 80rem threads, events, pins and Files move into the overflow
+     menu, and the top-bar help menu joins them there too. */
+  .room-header__actions .room-header__action--threads,
+  .room-header__actions .room-header__action--events,
+  .room-header__actions .room-header__action--pins,
+  .room-header__actions .room-header__action--files {
+    display: none;
+  }
+
+  #nav .help-menu {
+    display: none;
+  }
 }
 
 @media (max-width: 40rem) {
@@ -1244,14 +1258,13 @@ summary.member-panel__group-heading {
     margin: 0;
   }
 
-  /* Files steps aside below 40rem; search reaches uploads and Drive files
-     through has:file. */
-  .room-header__actions .room-header__action--files {
-    display: none;
-  }
-
-  /* The help menu moves to the sidebar footer below 40rem; see tour.css. */
-  #nav .help-menu {
+  /* Below 40rem stage, settings and notifications join the overflow menu
+     too, leaving members, search, call and the overflow button. The pins
+     wrap collapses once its button hides; the stage wrap is
+     display:contents, so hiding its toggle is enough. */
+  .room-header__actions .room-header__action--stage,
+  .room-header__actions .room-header__action--settings,
+  .room-header__actions .button_to_change_notifying {
     display: none;
   }
 
@@ -1270,24 +1283,9 @@ summary.member-panel__group-heading {
   }
 }
 
-@media (max-width: 30rem) {
-  /* Below 30rem the live row no longer fits: events and pins step aside
-     (the search Events section and has:pin keep them one search away),
-     and threads steps aside in stage rooms, which carry one extra action
-     (is:thread still finds thread messages). */
-  .room-header__actions .room-header__action--events,
-  .room-header__actions .room-header__action--pins {
-    display: none;
-  }
-
-  .room-header__actions:has(.stage-panel-wrap) .room-header__action--threads {
-    display: none;
-  }
-}
-
-/* At the narrowest phones the threads browser steps aside everywhere, so
-   five 30px squares plus the capped stack fit 360px with room for the
-   name. The row's inner scroll above contains anything more exotic. */
+/* At the narrowest phones four 30px squares plus the capped stack fit
+   360px with room for the name. The row's inner scroll above contains
+   anything more exotic. */
 @media (max-width: 22.5rem) {
   .sidebar #nav {
     column-gap: 0.25rem;
@@ -1301,10 +1299,6 @@ summary.member-panel__group-heading {
 
     block-size: 1.875rem;
     inline-size: 1.875rem;
-  }
-
-  .room-header__actions .room-header__action--threads {
-    display: none;
   }
 
   /* With a live stack the name keeps only a sliver at 360px, so the
