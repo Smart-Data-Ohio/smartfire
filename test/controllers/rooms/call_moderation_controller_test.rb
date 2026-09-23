@@ -68,6 +68,20 @@ class Rooms::CallModerationControllerTest < ActionDispatch::IntegrationTest
     assert_match "Unmute", roster.to_html
   end
 
+  test "mute and unmute role events carry the server-muted state" do
+    sign_in :jz
+
+    post room_call_moderation_mute_url(@room, @speaker)
+    mute_event = capture_turbo_stream_broadcasts([ users(:kevin), :rooms ])
+      .find { |stream| stream["action"] == "append" }
+    assert_match(/data-huddle-rejoin-server-muted="true"/, mute_event.to_html)
+
+    delete room_call_moderation_unmute_url(@room, @speaker)
+    unmute_event = capture_turbo_stream_broadcasts([ users(:kevin), :rooms ])
+      .select { |stream| stream["action"] == "append" }.last
+    assert_match(/data-huddle-rejoin-server-muted="false"/, unmute_event.to_html)
+  end
+
   test "muting twice and unmuting a member who was never muted both succeed" do
     sign_in :jz
 

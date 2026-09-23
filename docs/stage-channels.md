@@ -116,7 +116,9 @@ trigger, so delayed delivery cannot reconnect twice. Consuming the event
 also refreshes the member's stored publishing hint and the join control on
 the current page, so a demoted speaker who retries a failed join — or leaves
 and rejoins without navigating — connects as a listener instead of entering
-microphone prejoin.
+microphone prejoin. A mute event carries the server-muted state the same
+way, so a muted speaker also skips microphone prejoin, and the panel tells
+them "A host muted you" until they are unmuted.
 
 ## Moderation
 

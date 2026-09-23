@@ -13,6 +13,7 @@ const PARTICIPANT_VOLUME_STORAGE_PREFIX = "campfire.huddle.volume."
 const PARTICIPANT_MUTE_STORAGE_PREFIX = "campfire.huddle.localMute."
 const RECONNECT_COUNTDOWN_SECONDS = 30
 const MICROPHONE_RESTART_ERROR = "The microphone couldn’t be restarted. Check that it is still connected and try again."
+const SERVER_MUTED_NOTICE = "A host muted you"
 let liveKitPromise
 
 const loadLiveKit = () => liveKitPromise ||= import("livekit-client").catch(error => {
@@ -358,21 +359,32 @@ export default class extends Controller {
 
     const roomId = Number(node.dataset.huddleRejoinRoomId)
     const stageRole = node.dataset.huddleRejoinStageRole
+    const serverMuted = node.dataset.huddleRejoinServerMuted === "true"
     node.remove()
-    this.#updatePublishHint(roomId, stageRole)
+    this.#updatePublishHint(roomId, stageRole, serverMuted)
     this.roleChanged({ detail: { roomId } })
   }
 
   // The persistent role event carries the member's new stage role. A demoted
   // speaker's stored retry hint and page launcher would otherwise stay true,
   // stranding them in microphone prejoin on retry or on leave-and-rejoin
-  // without navigating. Hosts and speakers publish; listeners do not. The
-  // token stays authoritative for actual publishing.
-  #updatePublishHint(roomId, stageRole) {
+  // without navigating. Hosts and speakers publish; listeners do not. A
+  // server-muted member publishes nothing, so a mute also flips the hint to
+  // skip the mic prejoin — and tells the muted member why. The token stays
+  // authoritative for actual publishing.
+  #updatePublishHint(roomId, stageRole, serverMuted = false) {
     if (stageRole !== "listener" && stageRole !== "speaker" && stageRole !== "host") return
 
-    const canPublish = stageRole !== "listener"
-    if (roomId === this.roomId) this.canPublishHint = canPublish
+    const canPublish = stageRole !== "listener" && !serverMuted
+    if (roomId === this.roomId) {
+      this.canPublishHint = canPublish
+
+      if (serverMuted) {
+        this.#showConnectedNotice(SERVER_MUTED_NOTICE)
+      } else if (this.noticeTarget.textContent === SERVER_MUTED_NOTICE) {
+        this.#clearConnectedNotice()
+      }
+    }
 
     const launcher = document.querySelector(
       `[data-controller="huddle-launcher"][data-huddle-launcher-room-id-value="${roomId}"]`
@@ -2969,8 +2981,12 @@ export default class extends Controller {
     this.element.hidden = state === "idle"
     this.roomNameTarget.textContent = this.roomName || "Huddle"
     this.statusTarget.textContent = isError ? errorStatus : message
-    this.noticeTarget.textContent = isError ? message : ""
-    this.noticeTarget.hidden = !isError
+    // A mute notice survives the rejoin it triggers: without this the
+    // connecting transition would clear the explanation before it is read.
+    // Failures still replace it, and leaving or unmuting clears it.
+    const mutedNotice = !isError && this.noticeTarget.textContent === SERVER_MUTED_NOTICE
+    this.noticeTarget.textContent = isError ? message : mutedNotice ? SERVER_MUTED_NOTICE : ""
+    this.noticeTarget.hidden = !(isError || mutedNotice)
 
     const connected = state === "connected"
     const reconnecting = state === "reconnecting"
