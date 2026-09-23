@@ -47,13 +47,32 @@ class BackupsDocsTest < ActiveSupport::TestCase
     assert_includes text, "chown --reference"
   end
 
-  test "identity section matches the no-VM-stop design" do
+  test "identity section matches the Actions-driven, no-VM-stop design" do
     text = File.read(DOC)
     identity = text[/^## Identities and least privilege.*?(?=^## )/m]
     assert identity, "identities section missing"
-    assert_includes identity, "cross-project"
-    assert_includes identity, "never stopped"
-    assert_includes identity, "smartfire-backup-writer"
+    normalized = identity.gsub(/\s+/, " ")
+    assert_includes normalized, "smartfire-backup-runner"
+    assert_includes normalized, "cross-project"
+    assert_includes normalized, "never stopped"
+    assert_includes normalized, "no service account and needs none"
+    refute_includes text, "smartfire-backup-writer"
+    refute_includes text, "campfire-backup.timer"
+    assert_includes text, "nightly-backup.yml"
+  end
+
+  test "restores move the WAL sidecars aside instead of deleting them" do
+    text = File.read(DOC)
+    assert_includes text, "pre-restore-$STAMP.sqlite3-wal"
+    assert_includes text, "pre-restore-$STAMP.sqlite3-shm"
+    refute_includes text, 'rm -f "$MOUNT/db/production.sqlite3-wal"'
+    refute_includes text, 'rm -f "$MOUNT/db/production.sqlite3-shm"'
+  end
+
+  test "documents the existing snapshot schedule" do
+    text = File.read(DOC)
+    assert_includes text, "default-schedule-1"
+    assert_includes text, "14:00 UTC"
   end
 
   private

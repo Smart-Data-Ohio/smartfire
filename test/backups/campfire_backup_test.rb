@@ -7,10 +7,12 @@ require "json"
 require "date"
 
 # Contract tests for deploy/backups/campfire-backup.sh. Each test builds a
-# fake ONCE storage volume (a temp SQLite database plus an uploads tree),
-# runs the real script against it in BACKUP_VOLUME_DIR mode, and captures the
-# upload through a stubbed `gcloud` on PATH. Only the cloud boundary is
-# stubbed; sqlite, tar, gzip, age and gpg are the real binaries.
+# fake ONCE storage volume (a temp SQLite database plus an uploads tree) and
+# runs the real script against it in BACKUP_VOLUME_DIR mode, producing the
+# encrypted archive in a temp output directory. Only the host/cloud boundary
+# is stubbed: a poison `gcloud` proves the script never shells out to the
+# cloud, and a stubbed `df` drives the free-space refusal. sqlite, tar, gzip,
+# age and gpg are the real binaries.
 #
 # The gpg path always runs (gpg ships on CI runners). The age path runs when
 # an `age` binary is on PATH and skips otherwise; pass extra directories via
@@ -56,17 +58,17 @@ class CampfireBackupTest < ActiveSupport::TestCase
     end
   end
 
-  test "uploaded bytes are encrypted and round-trip through decryption" do
+  test "output bytes are encrypted and round-trip through decryption" do
     with_backup_env do |env, dirs|
       seed_volume(dirs[:volume], messages: 5)
       _out, status = run_backup(env, dirs, "BACKUP_DATETIME" => "20260923-090000")
       assert status.success?
 
-      blob = uploaded_blob(dirs, "20260923-090000", "gpg")
-      refute_includes blob, DB_SENTINEL, "database contents leaked into the upload"
-      refute_includes blob, FILE_SENTINEL, "file contents leaked into the upload"
-      _out, gzip_status = Open3.capture2e("gzip", "-t", uploaded_path(dirs, "20260923-090000", "gpg"))
-      refute gzip_status.success?, "upload is plain gzip, not encrypted"
+      blob = output_blob(dirs, "20260923-090000", "gpg")
+      refute_includes blob, DB_SENTINEL, "database contents leaked into the output"
+      refute_includes blob, FILE_SENTINEL, "file contents leaked into the output"
+      _out, gzip_status = Open3.capture2e("gzip", "-t", output_path(dirs, "20260923-090000", "gpg"))
+      refute gzip_status.success?, "output is plain gzip, not encrypted"
 
       snapshot = extract_snapshot(dirs, "20260923-090000", age: false)
       assert_includes File.binread(snapshot[:db]), DB_SENTINEL
@@ -81,7 +83,7 @@ class CampfireBackupTest < ActiveSupport::TestCase
       _out, status = run_backup(env, dirs, "BACKUP_DATETIME" => "20260923-090000")
       assert status.success?
 
-      blob = uploaded_blob(dirs, "20260923-090000", "age")
+      blob = output_blob(dirs, "20260923-090000", "age")
       assert blob.start_with?("age-encryption.org/"), "missing age header"
       refute_includes blob, DB_SENTINEL
       refute_includes blob, FILE_SENTINEL
@@ -109,49 +111,107 @@ class CampfireBackupTest < ActiveSupport::TestCase
     end
   end
 
-  [
-    [ "20260923-090000", %w[daily] ],                      # an ordinary Wednesday
-    [ "20260920-090000", %w[daily weekly] ],               # a Sunday
-    [ "20260901-090000", %w[daily monthly] ],              # the 1st (a Tuesday)
-    [ "20260201-090000", %w[daily weekly monthly] ]        # a Sunday that is the 1st
-  ].each do |datetime, prefixes|
-    test "uploads #{prefixes.join('+')} for #{datetime}" do
-      with_backup_env do |env, dirs|
-        seed_volume(dirs[:volume], messages: 1)
-        _out, status = run_backup(env, dirs, "BACKUP_DATETIME" => datetime)
-        assert status.success?
+  test "output-dir mode produces only encrypted output and prints its path and checksum" do
+    with_backup_env do |env, dirs|
+      seed_volume(dirs[:volume], messages: 2)
+      out, status = run_backup(env, dirs, "BACKUP_DATETIME" => "20260923-090000")
+      assert status.success?, "backup failed: #{out}"
 
-        date = Date.strptime(datetime, "%Y%m%d-%H%M%S")
-        expected = %w[daily]
-        expected << "weekly" if date.sunday?
-        expected << "monthly" if date.mday == 1
-        assert_equal prefixes.sort, expected.sort, "test data drifted from the calendar"
+      expected = output_path(dirs, "20260923-090000", "gpg")
+      assert_equal [ expected ], Dir.glob(dirs[:out].join("*").to_s).sort,
+        "the output directory must hold exactly the encrypted archive"
+      assert_equal expected, out[/^BACKUP_FILE=(.*)$/, 1]&.strip,
+        "BACKUP_FILE line missing or wrong:\n#{out}"
+      assert_equal Digest::SHA256.file(expected).hexdigest, out[/^BACKUP_SHA256=(.*)$/, 1]&.strip,
+        "BACKUP_SHA256 line missing or wrong:\n#{out}"
 
-        base = "smartfire-backup-#{datetime}.tar.gz.gpg"
-        prefixes.each do |prefix|
-          object = dirs[:objects].join("#{prefix}/#{base}")
-          assert File.file?(object), "missing upload: #{prefix}/#{base}"
-        end
-        uploads = upload_log(dirs).select { |line| line.include?("cp-ok") }
-        assert_equal prefixes.sort, uploads.map { |line| line.split("/")[-2] }.sort
-        blobs = prefixes.map { |prefix| File.binread(dirs[:objects].join("#{prefix}/#{base}")) }
-        assert_equal 1, blobs.uniq.size, "prefix copies differ from each other"
+      # No plaintext anywhere: the unencrypted tarball is removed and the
+      # work directory goes with the EXIT trap.
+      assert_empty Dir.glob(dirs[:root].join("**/*.tar.gz").to_s),
+        "an unencrypted tarball survived the run"
+      assert_empty Dir.glob(dirs[:state].join("campfire-backup.*").to_s),
+        "the work directory survived the run"
+      assert dirs[:state].join("campfire-nightly-last.json").file?,
+        "the run summary was not written"
+
+      # The script never uploads: a poison gcloud fails the run if invoked.
+      assert_empty poison_log(dirs), "the script shelled out to gcloud"
+    end
+  end
+
+  test "accepts the output directory from BACKUP_OUTPUT_DIR" do
+    with_backup_env do |env, dirs|
+      seed_volume(dirs[:volume], messages: 1)
+      out, status = run_backup(env, dirs,
+        { "BACKUP_DATETIME" => "20260923-090000", "BACKUP_OUTPUT_DIR" => dirs[:out].to_s },
+        [])
+      assert status.success?, "backup failed: #{out}"
+      assert File.file?(output_path(dirs, "20260923-090000", "gpg"))
+    end
+  end
+
+  test "refuses an output directory inside its own work directory" do
+    with_backup_env do |env, dirs|
+      seed_volume(dirs[:volume], messages: 1)
+      inside = dirs[:state].join("campfire-backup.20260923-090000", "sub").to_s
+      _out, status = run_backup(env, dirs,
+        { "BACKUP_DATETIME" => "20260923-090000" }, [ "--output-dir", inside ])
+      refute status.success?, "an output dir inside the work dir would be deleted by the trap"
+    end
+  end
+
+  test "exits 75 when a release holds the release lock" do
+    with_backup_env do |env, dirs|
+      seed_volume(dirs[:volume], messages: 1)
+      lock_path = env.fetch("BACKUP_RELEASE_LOCK_FILE")
+      File.open(lock_path, "w") do |held|
+        assert held.flock(File::LOCK_EX | File::LOCK_NB), "could not take the test lock"
+        out, status = run_backup(env, dirs, "BACKUP_DATETIME" => "20260923-090000")
+        assert_equal 75, status.exitstatus, "expected EX_TEMPFAIL, got #{status.exitstatus}:\n#{out}"
+        assert_includes out, "a release holds"
       end
     end
   end
 
-  test "missing bucket exits non-zero" do
+  test "refuses to start without enough free space" do
+    with_backup_env do |env, dirs|
+      seed_volume(dirs[:volume], messages: 5)
+      write_df_stub(dirs, avail_bytes: 1024)
+      out, status = run_backup(env, dirs, "BACKUP_DATETIME" => "20260923-090000")
+      refute status.success?, "the backup must not start on a nearly-full disk"
+      assert_includes out, "bytes free"
+      assert_empty Dir.glob(dirs[:state].join("campfire-backup.*").to_s),
+        "a refused run must not stage anything"
+    end
+  end
+
+  test "prunes stale work directories at start and keeps the rest" do
     with_backup_env do |env, dirs|
       seed_volume(dirs[:volume], messages: 1)
-      _out, status = run_backup(env, dirs, "BACKUP_BUCKET" => nil, "BACKUP_DATETIME" => "20260923-090000")
-      refute status.success?
+      stale = dirs[:state].join("campfire-backup.20200101-000000")
+      fresh = dirs[:state].join("campfire-backup.fresh")
+      other = dirs[:state].join("unrelated-old-dir")
+      [ stale, fresh, other ].each do |dir|
+        dir.mkpath
+        dir.join("leftover").write("x")
+      end
+      old = Time.now - (3 * 24 * 3600)
+      File.utime(old, old, stale, stale.join("leftover"), other, other.join("leftover"))
+
+      _out, status = run_backup(env, dirs, "BACKUP_DATETIME" => "20260923-090000")
+      assert status.success?
+
+      refute stale.exist?, "a work dir older than a day must be pruned"
+      assert fresh.directory?, "a fresh work dir must be kept"
+      assert other.directory?, "a non-matching dir must be kept"
     end
   end
 
   test "missing database exits non-zero" do
     with_backup_env do |env, dirs|
-      _out, status = run_backup(env, dirs, "BACKUP_DATETIME" => "20260923-090000")
+      out, status = run_backup(env, dirs, "BACKUP_DATETIME" => "20260923-090000")
       refute status.success?
+      assert_includes out, "database file not found"
     end
   end
 
@@ -165,32 +225,11 @@ class CampfireBackupTest < ActiveSupport::TestCase
     end
   end
 
-  test "failing upload exits non-zero" do
-    with_backup_env do |env, dirs|
-      seed_volume(dirs[:volume], messages: 1)
-      _out, status = run_backup(env, dirs,
-        "BACKUP_DATETIME" => "20260923-090000", "STUB_GCLOUD_FAIL" => "1")
-      refute status.success?
-    end
-  end
-
   test "malformed stamp exits non-zero" do
     with_backup_env do |env, dirs|
       seed_volume(dirs[:volume], messages: 1)
       _out, status = run_backup(env, dirs, "BACKUP_DATETIME" => "yesterday-teatime")
       refute status.success?
-    end
-  end
-
-  test "example placeholder bucket exits non-zero without snapshotting" do
-    with_backup_env do |env, dirs|
-      seed_volume(dirs[:volume], messages: 1)
-      out, status = run_backup(env, dirs,
-        "BACKUP_DATETIME" => "20260923-090000",
-        "BACKUP_BUCKET" => "REPLACE-backup-bucket")
-      refute status.success?
-      assert_includes out, "placeholder"
-      refute_includes out, "snapshotting the database", "must fail before doing any work"
     end
   end
 
@@ -217,21 +256,19 @@ class CampfireBackupTest < ActiveSupport::TestCase
           root: root,
           volume: root.join("vol"),
           state: root.join("state"),
-          objects: root.join("objects"),
+          out: root.join("out"),
           bin: root.join("bin")
         }
         dirs.each_value(&:mkpath)
-        write_gcloud_stub(dirs)
+        write_gcloud_poison(dirs)
 
         env = {
-          "BACKUP_BUCKET" => "test-bucket",
           "BACKUP_ENCRYPTION" => encryption.to_s,
           "BACKUP_VOLUME_DIR" => dirs[:volume].to_s,
           "BACKUP_STATE_ROOT" => dirs[:state].to_s,
           "BACKUP_LOCK_FILE" => root.join("backup.lock").to_s,
-          "BACKUP_UPLOAD_BIN" => "gcloud",
-          "STUB_LOG" => root.join("calls.log").to_s,
-          "STUB_BUCKET_DIR" => dirs[:objects].to_s
+          "BACKUP_RELEASE_LOCK_FILE" => root.join("release.lock").to_s,
+          "STUB_LOG" => root.join("calls.log").to_s
         }
         if encryption == :age
           env["BACKUP_AGE_RECIPIENT"] = age_recipient(root)
@@ -250,11 +287,11 @@ class CampfireBackupTest < ActiveSupport::TestCase
       end
     end
 
-    def run_backup(env, dirs, overrides)
-      assert_path "gcloud", prepend: dirs[:bin].to_s
+    def run_backup(env, dirs, overrides, args = nil)
+      args ||= [ "--output-dir", dirs[:out].to_s ]
       full = stub_path_env(dirs).merge(env).merge(overrides.compact)
       overrides.each_key { |key| full.delete(key) if overrides[key].nil? }
-      Open3.capture2e(full, SCRIPT.to_s)
+      Open3.capture2e(full, SCRIPT.to_s, *args)
     end
 
     def stub_path_env(dirs = {})
@@ -262,23 +299,33 @@ class CampfireBackupTest < ActiveSupport::TestCase
       { "PATH" => extra }
     end
 
-    def write_gcloud_stub(dirs)
+    # The script must never invoke gcloud: the workflow uploads, not the VM.
+    # Any call fails loudly and is recorded for the assertion.
+    def write_gcloud_poison(dirs)
       stub = dirs[:bin].join("gcloud")
       stub.write(<<~SH)
         #!/usr/bin/env bash
         echo "gcloud $*" >> "$STUB_LOG"
-        if [ "${STUB_GCLOUD_FAIL:-0}" = "1" ]; then
-          echo "stubbed upload failure" >&2
-          exit 1
-        fi
-        if [ "$1" = "storage" ] && [ "$2" = "cp" ]; then
-          object="${4#gs://test-bucket/}"
-          mkdir -p "$STUB_BUCKET_DIR/$(dirname "$object")"
-          cp "$3" "$STUB_BUCKET_DIR/$object"
-          echo "cp-ok $4" >> "$STUB_LOG"
-        fi
+        echo "poison gcloud must never be invoked" >&2
+        exit 9
       SH
       FileUtils.chmod 0o755, stub
+    end
+
+    def write_df_stub(dirs, avail_bytes:)
+      stub = dirs[:bin].join("df")
+      stub.write(<<~SH)
+        #!/usr/bin/env bash
+        printf 'Avail\\n#{avail_bytes}\\n'
+      SH
+      FileUtils.chmod 0o755, stub
+    end
+
+    def poison_log(dirs)
+      log = dirs[:root].join("calls.log")
+      return [] unless log.file?
+
+      File.read(log).lines.map(&:strip)
     end
 
     def seed_volume(volume, messages:)
@@ -300,19 +347,15 @@ class CampfireBackupTest < ActiveSupport::TestCase
       db
     end
 
-    def uploaded_path(dirs, datetime, ext)
-      dirs[:objects].join("daily/smartfire-backup-#{datetime}.tar.gz.#{ext}").to_s
+    def output_path(dirs, datetime, ext)
+      dirs[:out].join("smartfire-backup-#{datetime}.tar.gz.#{ext}").to_s
     end
 
-    def uploaded_blob(dirs, datetime, ext)
-      File.binread(uploaded_path(dirs, datetime, ext))
+    def output_blob(dirs, datetime, ext)
+      File.binread(output_path(dirs, datetime, ext))
     end
 
-    def upload_log(dirs)
-      File.read(dirs[:root].join("calls.log")).lines.map(&:strip)
-    end
-
-    # Decrypts the daily upload and extracts it, mirroring the documented
+    # Decrypts the output archive and extracts it, mirroring the documented
     # restore path (decrypt -> tar -> SHA256SUMS), and returns the paths.
     def extract_snapshot(dirs, datetime, age:)
       work = dirs[:root].join("extracted")
@@ -321,12 +364,12 @@ class CampfireBackupTest < ActiveSupport::TestCase
       if age
         _out, status = Open3.capture2e(stub_path_env(dirs),
           "age", "--decrypt", "--identity", @age_identity.to_s,
-          "--output", plain, uploaded_path(dirs, datetime, "age"))
+          "--output", plain, output_path(dirs, datetime, "age"))
         assert status.success?, "age decryption failed"
       else
         _out, status = Open3.capture2e(
           "gpg", "--batch", "--yes", "--homedir", @gpg_home.to_s,
-          "--decrypt", "--output", plain, uploaded_path(dirs, datetime, "gpg"))
+          "--decrypt", "--output", plain, output_path(dirs, datetime, "gpg"))
         assert status.success?, "gpg decryption failed"
       end
       _out, status = Open3.capture2e("tar", "-xzf", plain, "-C", work.to_s)
