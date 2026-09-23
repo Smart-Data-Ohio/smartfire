@@ -52,6 +52,12 @@
         <span>Forward</span>
       <% end %>
 
+      <%= tag.a class: "btn message__menu-action", role: "menuitem",
+            data: { message_actions_target: "item fizzyCardLink" } do %>
+        <%= image_tag "add.svg", class: "colorize--black", size: 20, aria: { hidden: "true" } %>
+        <span>Create Fizzy card</span>
+      <% end %>
+
       <%= tag.button type: "button", class: "btn message__menu-action", role: "menuitem",
             data: { action: "message-actions#thread", message_actions_target: "item" } do %>
         <%= image_tag "messages-outlined.svg", class: "colorize--black", size: 20, aria: { hidden: "true" } %>

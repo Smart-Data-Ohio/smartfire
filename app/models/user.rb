@@ -17,6 +17,7 @@ class User < ApplicationRecord
   has_one :google_account, dependent: :destroy
   has_one :google_identity, dependent: :destroy
   has_one :github_connected_account, dependent: :destroy
+  has_one :fizzy_connected_account, dependent: :destroy
   has_many :event_calendar_entries, dependent: :destroy
 
   has_many :boosts, dependent: :destroy, foreign_key: :booster_id
@@ -125,6 +126,7 @@ class User < ApplicationRecord
       push_channel&.destroy!
       google_account&.mark_disconnected!("Account deactivated")
       github_connected_account&.mark_disconnected!("Account deactivated")
+      fizzy_connected_account&.mark_disconnected!("Account deactivated")
       # Agents this person owns stop with them: suspension revokes their
       # grants, suspended agents' Bearer tokens are refused (401), and their
       # bot keys fail every capability check (403).

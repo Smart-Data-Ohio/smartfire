@@ -96,6 +96,10 @@ class AgentApproval < ApplicationRecord
       Github::PerformAgentActionJob.perform_later(id)
     end
 
+    if decision == "approved" && fizzy_action?
+      Fizzy::PerformAgentActionJob.perform_later(id)
+    end
+
     if event.webhook_pending?
       ActiveRecord.after_all_transactions_commit do
         Agent::EventWebhookJob.perform_later(event.id, event.webhook_attempts.to_i)
@@ -136,6 +140,24 @@ class AgentApproval < ApplicationRecord
     github_identity_matches?(Github::AgentIdentity.resolve(agent))
   end
 
+  def fizzy_action?
+    action.to_s.start_with?("fizzy.")
+  end
+
+  # True when account is the Fizzy connection recorded when this fizzy.*
+  # action was requested: the same connection row, still linked to the
+  # same Fizzy user. A request that recorded none never matches.
+  def fizzy_identity_matches?(account)
+    account.present? && fizzy_connected_account_id.present? && fizzy_user_id.present? &&
+      account.id == fizzy_connected_account_id && account.fizzy_user_id.to_s == fizzy_user_id.to_s
+  end
+
+  # The agent owner's current Fizzy connection, if it still is the one
+  # recorded on this request.
+  def fizzy_identity_current?
+    fizzy_identity_matches?(agent&.owner&.fizzy_connected_account)
+  end
+
   def decidable_by?(user)
     return false unless user&.active? && !user.bot?
     return false unless agent&.user&.active?
@@ -143,11 +165,12 @@ class AgentApproval < ApplicationRecord
     user.administrator? || agent.owner_id == user.id
   end
 
-  # Approving a GitHub write action makes the agent act on GitHub, so only
-  # a current administrator may approve one, even as the agent's owner;
-  # owners may still deny. Other actions follow decidable_by?.
+  # Approving a GitHub or Fizzy write action makes the agent act on an
+  # external service, so only a current administrator may approve one,
+  # even as the agent's owner; owners may still deny. Other actions
+  # follow decidable_by?.
   def approvable_by?(user)
-    decidable_by?(user) && (!github_action? || user.administrator?)
+    decidable_by?(user) && (!(github_action? || fizzy_action?) || user.administrator?)
   end
 
   def deciders

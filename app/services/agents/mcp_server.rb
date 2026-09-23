@@ -251,6 +251,130 @@ module Agents
         throttle: [ 60, "agents/dms", "create" ]
       ),
       Tool.new(
+        name: "list_fizzy_boards",
+        description: "List the boards the agent owner's Fizzy account can access. Requires the workspace-wide fizzy capability.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "account_id" => { "type" => "string", "description" => "Fizzy account id (defaults to the owner's linked account)." }
+          }
+        },
+        throttle: [ 120, "agents/fizzy/boards", "index" ]
+      ),
+      Tool.new(
+        name: "get_fizzy_board",
+        description: "Show one Fizzy board with its columns, so a column id can be resolved before requesting a move. Requires the workspace-wide fizzy capability.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "board_id" => { "type" => "string", "description" => "Fizzy board id." },
+            "account_id" => { "type" => "string", "description" => "Fizzy account id (defaults to the owner's linked account)." }
+          },
+          "required" => [ "board_id" ]
+        },
+        throttle: [ 120, "agents/fizzy/boards", "show" ]
+      ),
+      Tool.new(
+        name: "search_fizzy_cards",
+        description: "Full-text search of Fizzy cards through the agent owner's Fizzy account. Requires the workspace-wide fizzy capability.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "q" => { "type" => "string", "description" => "Search query." },
+            "account_id" => { "type" => "string", "description" => "Fizzy account id (defaults to the owner's linked account)." }
+          },
+          "required" => [ "q" ]
+        },
+        throttle: [ 120, "agents/fizzy/cards", "search" ]
+      ),
+      Tool.new(
+        name: "get_fizzy_card",
+        description: "Show one Fizzy card, including its steps. Requires the workspace-wide fizzy capability.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "account_id" => { "type" => "string", "description" => "Fizzy account id." },
+            "number" => { "type" => "integer", "description" => "Card number." }
+          },
+          "required" => %w[ account_id number ]
+        },
+        throttle: [ 120, "agents/fizzy/cards", "show" ]
+      ),
+      Tool.new(
+        name: "create_fizzy_card",
+        description: "Ask a human to approve creating a Fizzy card in a board. Returns the approval's id, status, and expiry; the card is created only when approved. A repeated external_id returns the existing request. Requires external_action.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "board_id" => { "type" => "string", "description" => "Fizzy board id." },
+            "title" => { "type" => "string", "description" => "Card title." },
+            "description" => { "type" => "string", "description" => "Card description." },
+            "account_id" => { "type" => "string", "description" => "Fizzy account id (defaults to the owner's linked account)." },
+            "external_id" => { "type" => "string", "description" => "Idempotency key." }
+          },
+          "required" => %w[ board_id title ]
+        },
+        throttle: [ 60, "agents/fizzy/card_actions", "create" ]
+      ),
+      Tool.new(
+        name: "comment_on_fizzy_card",
+        description: "Ask a human to approve commenting on a Fizzy card. Returns the approval's id, status, and expiry; the comment is posted only when approved. A repeated external_id returns the existing request. Requires external_action.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "number" => { "type" => "integer", "description" => "Card number." },
+            "body" => { "type" => "string", "description" => "Comment body." },
+            "account_id" => { "type" => "string", "description" => "Fizzy account id (defaults to the owner's linked account)." },
+            "external_id" => { "type" => "string", "description" => "Idempotency key." }
+          },
+          "required" => %w[ number body ]
+        },
+        throttle: [ 60, "agents/fizzy/card_actions", "create" ]
+      ),
+      Tool.new(
+        name: "move_fizzy_card",
+        description: "Ask a human to approve moving a Fizzy card to another column. Returns the approval's id, status, and expiry; the card moves only when approved. A repeated external_id returns the existing request. Requires external_action.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "number" => { "type" => "integer", "description" => "Card number." },
+            "column_id" => { "type" => "string", "description" => "Destination column id." },
+            "account_id" => { "type" => "string", "description" => "Fizzy account id (defaults to the owner's linked account)." },
+            "external_id" => { "type" => "string", "description" => "Idempotency key." }
+          },
+          "required" => %w[ number column_id ]
+        },
+        throttle: [ 60, "agents/fizzy/card_actions", "create" ]
+      ),
+      Tool.new(
+        name: "close_fizzy_card",
+        description: "Ask a human to approve closing a Fizzy card. Returns the approval's id, status, and expiry; the card closes only when approved. A repeated external_id returns the existing request. Requires external_action.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "number" => { "type" => "integer", "description" => "Card number." },
+            "account_id" => { "type" => "string", "description" => "Fizzy account id (defaults to the owner's linked account)." },
+            "external_id" => { "type" => "string", "description" => "Idempotency key." }
+          },
+          "required" => [ "number" ]
+        },
+        throttle: [ 60, "agents/fizzy/card_actions", "create" ]
+      ),
+      Tool.new(
+        name: "reopen_fizzy_card",
+        description: "Ask a human to approve reopening a Fizzy card. Returns the approval's id, status, and expiry; the card reopens only when approved. A repeated external_id returns the existing request. Requires external_action.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "number" => { "type" => "integer", "description" => "Card number." },
+            "account_id" => { "type" => "string", "description" => "Fizzy account id (defaults to the owner's linked account)." },
+            "external_id" => { "type" => "string", "description" => "Idempotency key." }
+          },
+          "required" => [ "number" ]
+        },
+        throttle: [ 60, "agents/fizzy/card_actions", "create" ]
+      ),
+      Tool.new(
         name: "pin_message",
         description: "Pin a message in its room, posting the pin note as the agent. Idempotent: pinning an already-pinned message succeeds without duplicating. Requires post_messages.",
         input_schema: {
@@ -517,6 +641,111 @@ module Agents
             thread_id: message.thread_id
           },
           status: :created
+        )
+      end
+
+      def tool_list_fizzy_boards(args)
+        FizzyReads.boards(agent: @agent, account_id: args["account_id"])
+      end
+
+      def tool_get_fizzy_board(args)
+        board_id = args["board_id"].presence or raise InvalidParams, "Missing required argument: board_id"
+
+        FizzyReads.board(agent: @agent, board_id: board_id, account_id: args["account_id"])
+      end
+
+      def tool_search_fizzy_cards(args)
+        query = args["q"].presence or raise InvalidParams, "Missing required argument: q"
+
+        FizzyReads.search_cards(agent: @agent, query: query, account_id: args["account_id"])
+      end
+
+      def tool_get_fizzy_card(args)
+        account_id = args["account_id"].presence or raise InvalidParams, "Missing required argument: account_id"
+        number = args["number"].presence or raise InvalidParams, "Missing required argument: number"
+
+        FizzyReads.card(agent: @agent, account_id: account_id, number: number)
+      end
+
+      def tool_create_fizzy_card(args)
+        board_id = args["board_id"].presence or raise InvalidParams, "Missing required argument: board_id"
+        title = args["title"].presence or raise InvalidParams, "Missing required argument: title"
+
+        FizzyCardActions.create(
+          agent: @agent,
+          fields: {
+            "kind" => "create",
+            "account_id" => args["account_id"],
+            "board_id" => board_id,
+            "title" => title,
+            "description" => args["description"],
+            "external_id" => args["external_id"]
+          },
+          credential: @credential
+        )
+      end
+
+      def tool_comment_on_fizzy_card(args)
+        number = args["number"].presence or raise InvalidParams, "Missing required argument: number"
+        body = args["body"].presence or raise InvalidParams, "Missing required argument: body"
+
+        FizzyCardActions.create(
+          agent: @agent,
+          fields: {
+            "kind" => "comment",
+            "account_id" => args["account_id"],
+            "number" => number,
+            "body" => body,
+            "external_id" => args["external_id"]
+          },
+          credential: @credential
+        )
+      end
+
+      def tool_move_fizzy_card(args)
+        number = args["number"].presence or raise InvalidParams, "Missing required argument: number"
+        column_id = args["column_id"].presence or raise InvalidParams, "Missing required argument: column_id"
+
+        FizzyCardActions.create(
+          agent: @agent,
+          fields: {
+            "kind" => "move",
+            "account_id" => args["account_id"],
+            "number" => number,
+            "column_id" => column_id,
+            "external_id" => args["external_id"]
+          },
+          credential: @credential
+        )
+      end
+
+      def tool_close_fizzy_card(args)
+        number = args["number"].presence or raise InvalidParams, "Missing required argument: number"
+
+        FizzyCardActions.create(
+          agent: @agent,
+          fields: {
+            "kind" => "close",
+            "account_id" => args["account_id"],
+            "number" => number,
+            "external_id" => args["external_id"]
+          },
+          credential: @credential
+        )
+      end
+
+      def tool_reopen_fizzy_card(args)
+        number = args["number"].presence or raise InvalidParams, "Missing required argument: number"
+
+        FizzyCardActions.create(
+          agent: @agent,
+          fields: {
+            "kind" => "reopen",
+            "account_id" => args["account_id"],
+            "number" => number,
+            "external_id" => args["external_id"]
+          },
+          credential: @credential
         )
       end
 

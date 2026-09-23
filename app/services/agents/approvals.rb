@@ -69,6 +69,16 @@ module Agents
         )
       end
 
+      # fizzy.* approvals carry the same kind of server-built executable
+      # payload; they are only created through the Fizzy card actions
+      # endpoint, never with agent-supplied payloads.
+      if fields["action"].to_s.start_with?("fizzy.")
+        return ServiceResult.fail(
+          "fizzy.* actions are requested through /agents/fizzy/card_actions",
+          status: :unprocessable_entity
+        )
+      end
+
       approval = AgentApproval.new(
         agent: agent,
         room: room,
