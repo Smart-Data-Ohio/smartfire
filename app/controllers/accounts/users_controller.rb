@@ -11,7 +11,7 @@ class Accounts::UsersController < ApplicationController
     # against the in-memory role would log a row for a failed update.
     if (role_change = @user.previous_changes["role"])
       AuditLog.record!(action: "user.role.change", target: @user,
-        changes: { role: role_change })
+        changes: { role: AuditLog.pair(*role_change) })
     end
     redirect_to edit_account_url
   end
@@ -23,7 +23,7 @@ class Accounts::UsersController < ApplicationController
     user_label = AuditLog.label_for(@user)
     @user.deactivate
     AuditLog.record!(action: "user.deactivate", target: @user, target_label: user_label,
-      changes: { status: [ previous_status, "deactivated" ] })
+      changes: { status: AuditLog.pair(previous_status, "deactivated") })
     redirect_to edit_account_url
   end
 

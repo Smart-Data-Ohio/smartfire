@@ -59,9 +59,9 @@ class AuditLog::AgentsAuditTest < ActionDispatch::IntegrationTest
 
     entry = AuditLog.where(action: "agent.update").last
     assert_equal @agent.id, entry.target_id
-    assert_equal [ "Bender Bot", "Bender 2" ], entry.details["name"]
-    assert_equal [ nil, "openai" ], entry.details["provider"]
-    assert_equal [ nil, "Bending" ], entry.details["description"]
+    assert_equal({ "before" => "Bender Bot", "after" => "Bender 2" }, entry.details["name"])
+    assert_equal({ "before" => nil, "after" => "openai" }, entry.details["provider"])
+    assert_equal({ "before" => nil, "after" => "Bending" }, entry.details["description"])
   end
 
   test "unchanged agent edit writes no row" do
@@ -76,7 +76,8 @@ class AuditLog::AgentsAuditTest < ActionDispatch::IntegrationTest
     end
 
     entry = AuditLog.where(action: "agent.webhook_url.change").last
-    before, after = entry.details["webhook_url"]
+    before = entry.details["webhook_url"]["before"]
+    after = entry.details["webhook_url"]["after"]
     assert_equal "http://example.com", before["origin"]
     assert_equal "https://example.com", after["origin"]
     assert_equal 12, after["digest"].length
@@ -233,13 +234,13 @@ class AuditLog::AgentsAuditTest < ActionDispatch::IntegrationTest
     entry = AuditLog.where(action: "agent.approval.decide").last
     assert_equal users(:kevin).id, entry.actor_id
     assert_equal approval.id, entry.target_id
-    assert_equal [ "pending", "approved" ], entry.details["decision"]
+    assert_equal({ "before" => "pending", "after" => "approved" }, entry.details["decision"])
 
     second = AgentApproval.create!(agent: @agent, room: rooms(:watercooler), action: "deploy", summary: "Ship it")
     patch agent_approval_url(second, decision: "denied", decision_note: "not now"), as: :json
 
     denial = AuditLog.where(action: "agent.approval.decide").last
-    assert_equal [ "pending", "denied" ], denial.details["decision"]
+    assert_equal({ "before" => "pending", "after" => "denied" }, denial.details["decision"])
     assert_equal "not now", denial.details["note"]
   end
 

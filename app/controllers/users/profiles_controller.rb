@@ -74,7 +74,7 @@ class Users::ProfilesController < ApplicationController
     def record_account_security_changes(previous_email:, email_changing:, password_changing:)
       if email_changing
         AuditLog.record!(action: "user.email.change", actor: @user, target: @user,
-          changes: { email_address: [ previous_email, @user.email_address ] })
+          changes: { email_address: AuditLog.pair(previous_email, @user.email_address) })
       end
       if password_changing
         AuditLog.record!(action: "user.password.change", actor: @user, target: @user)

@@ -15,7 +15,7 @@ class AuditLog::MembersAuditTest < ActionDispatch::IntegrationTest
     entry = AuditLog.where(action: "user.email.change").last
     assert_equal users(:david).id, entry.actor_id
     assert_equal users(:david).id, entry.target_id
-    assert_equal [ "david@37signals.com", "david@smartdata.net" ], entry.details["email_address"]
+    assert_equal({ "before" => "david@37signals.com", "after" => "david@smartdata.net" }, entry.details["email_address"])
   end
 
   test "failed email change is not recorded" do
@@ -52,7 +52,7 @@ class AuditLog::MembersAuditTest < ActionDispatch::IntegrationTest
     entry = AuditLog.where(action: "user.role.change").last
     assert_equal users(:david).id, entry.actor_id
     assert_equal users(:kevin).id, entry.target_id
-    assert_equal [ "member", "administrator" ], entry.details["role"]
+    assert_equal({ "before" => "member", "after" => "administrator" }, entry.details["role"])
   end
 
   test "unchanged role writes no row" do
@@ -80,13 +80,13 @@ class AuditLog::MembersAuditTest < ActionDispatch::IntegrationTest
     ban = AuditLog.where(action: "user.ban").last
     assert_equal users(:david).id, ban.actor_id
     assert_equal users(:kevin).id, ban.target_id
-    assert_equal [ "active", "banned" ], ban.details["status"]
+    assert_equal({ "before" => "active", "after" => "banned" }, ban.details["status"])
 
     delete user_ban_url(users(:kevin))
 
     unban = AuditLog.where(action: "user.unban").last
     assert_equal users(:david).id, unban.actor_id
-    assert_equal [ "banned", "active" ], unban.details["status"]
+    assert_equal({ "before" => "banned", "after" => "active" }, unban.details["status"])
   end
 
   test "re-banning and re-unbanning write no rows" do
@@ -111,7 +111,7 @@ class AuditLog::MembersAuditTest < ActionDispatch::IntegrationTest
     entry = AuditLog.where(action: "user.deactivate").last
     assert_equal users(:david).id, entry.actor_id
     assert_equal users(:kevin).id, entry.target_id
-    assert_equal [ "active", "deactivated" ], entry.details["status"]
+    assert_equal({ "before" => "active", "after" => "deactivated" }, entry.details["status"])
     # Deactivation rewrites the email; the label must snapshot the
     # address the member actually used, not the mangled replacement.
     assert_equal "Kevin <kevin@37signals.com>", entry.target_label

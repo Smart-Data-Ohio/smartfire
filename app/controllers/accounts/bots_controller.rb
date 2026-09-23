@@ -92,14 +92,14 @@ class Accounts::BotsController < ApplicationController
         before = AuditLog.webhook_origin_summary(previous_webhook_url)
         after = AuditLog.webhook_origin_summary(@bot.webhook_url)
         AuditLog.record!(action: "agent.webhook_url.change", target: @agent || @bot,
-          changes: { webhook_url: [ before, after ] })
+          changes: { webhook_url: AuditLog.pair(before, after) })
       end
 
       bot_changes = @bot.previous_changes.slice("name", "icon_name")
       agent_changes = @agent ? @agent.previous_changes.slice("provider", "runtime", "description") : {}
       if bot_changes.present? || agent_changes.present?
-        AuditLog.record!(action: "agent.update", target: @agent || @bot,
-          changes: bot_changes.merge(agent_changes))
+        pairs = bot_changes.merge(agent_changes).transform_values { |change| AuditLog.pair(*change) }
+        AuditLog.record!(action: "agent.update", target: @agent || @bot, changes: pairs)
       end
     end
 

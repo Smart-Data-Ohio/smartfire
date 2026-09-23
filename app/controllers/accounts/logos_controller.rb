@@ -19,7 +19,7 @@ class Accounts::LogosController < ApplicationController
   def destroy
     Current.account.logo.destroy
     AuditLog.record!(action: "account.settings.change", target: Current.account,
-      changes: { logo: [ true, false ] })
+      changes: { logo: AuditLog.pair(true, false) })
     redirect_to edit_account_url
   end
 

@@ -36,12 +36,12 @@ class AccountsController < ApplicationController
 
     def record_settings_changes(previous_name:, previous_restrict:, previous_logo:)
       changes = {}
-      changes[:name] = [ previous_name, @account.name ] if @account.name != previous_name
+      changes[:name] = AuditLog.pair(previous_name, @account.name) if @account.name != previous_name
       current_restrict = @account.settings.restrict_room_creation_to_administrators?
       if current_restrict != previous_restrict
-        changes[:restrict_room_creation_to_administrators] = [ previous_restrict, current_restrict ]
+        changes[:restrict_room_creation_to_administrators] = AuditLog.pair(previous_restrict, current_restrict)
       end
-      changes[:logo] = [ previous_logo, @account.logo.attached? ] if @account.logo.attached? != previous_logo
+      changes[:logo] = AuditLog.pair(previous_logo, @account.logo.attached?) if @account.logo.attached? != previous_logo
 
       AuditLog.record!(action: "account.settings.change", target: @account, changes: changes) if changes.present?
     end

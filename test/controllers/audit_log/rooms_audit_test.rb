@@ -149,7 +149,7 @@ class AuditLog::RoomsAuditTest < ActionDispatch::IntegrationTest
       delete account_logo_url
     end
 
-    assert_equal [ true, false ], AuditLog.where(action: "account.settings.change").last.details["logo"]
+    assert_equal({ "before" => true, "after" => false }, AuditLog.where(action: "account.settings.change").last.details["logo"])
   end
 
   test "custom styles changes are recorded" do
@@ -160,7 +160,7 @@ class AuditLog::RoomsAuditTest < ActionDispatch::IntegrationTest
     end
 
     entry = AuditLog.where(action: "account.custom_styles.change").last
-    assert_equal [ previous, "body { color: red; }" ], entry.details["custom_styles"]
+    assert_equal({ "before" => previous, "after" => "body { color: red; }" }, entry.details["custom_styles"])
   end
 
   test "unchanged custom styles write no row" do

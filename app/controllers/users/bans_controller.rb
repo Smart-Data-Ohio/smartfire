@@ -22,7 +22,7 @@ class Users::BansController < ApplicationController
     def record_status_change(action, previous_status:)
       if @user.status != previous_status
         AuditLog.record!(action: action, target: @user,
-          changes: { status: [ previous_status, @user.status ] })
+          changes: { status: AuditLog.pair(previous_status, @user.status) })
       end
     end
 

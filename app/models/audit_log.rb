@@ -86,11 +86,11 @@ class AuditLog < ApplicationRecord
   # unnecessary since Current.user is already nil there.
   #
   #   AuditLog.record!(action: "user.role.change", target: user,
-  #     changes: { role: %w[ member administrator ] })
+  #     changes: { role: AuditLog.pair("member", "administrator") })
   #
-  # changes values SHOULD be [ before, after ] pairs; scalar context values
-  # (reasons, urls, notes) are allowed. Everything in changes passes through
-  # the secret filter before it is stored.
+  # changes values SHOULD be AuditLog.pair(before, after) pairs; scalar
+  # context values (reasons, urls, notes) are allowed. Everything in
+  # changes passes through the secret filter before it is stored.
   def self.record!(action:, actor: nil, actor_label: nil, target: nil, target_label: nil, changes: nil, request: nil, ip_address: nil, user_agent: nil)
     actor ||= Current.user
     request ||= Current.request
@@ -166,6 +166,13 @@ class AuditLog < ApplicationRecord
 
     origin = parse_webhook_origin(url.to_s)
     { origin: origin, digest: Digest::SHA256.hexdigest(url.to_s)[0, WEBHOOK_DIGEST_LENGTH] }
+  end
+
+  # Marks a before/after pair explicitly so the admin UI renders it as
+  # "before → after". Plain two-element arrays (name lists, digests)
+  # render as lists instead.
+  def self.pair(before, after)
+    { before: before, after: after }
   end
 
   def self.label_for(record)
