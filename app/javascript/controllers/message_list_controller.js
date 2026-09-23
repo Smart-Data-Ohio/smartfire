@@ -10,6 +10,7 @@ const MOVE_THRESHOLD = 10
 // per-message tabindex and the per-message window/document listeners.
 export default class extends Controller {
   #tabbable
+  #focusInside = false
   #menuId
   #longPressTimer
   #longPressPointer
@@ -20,6 +21,7 @@ export default class extends Controller {
     this.onContextMenu = this.#onContextMenu.bind(this)
     this.onKeydown = this.#onKeydown.bind(this)
     this.onFocusIn = this.#onFocusIn.bind(this)
+    this.onFocusOut = this.#onFocusOut.bind(this)
     this.onPointerDown = this.#onPointerDown.bind(this)
     this.onPointerMove = this.#onPointerMove.bind(this)
     this.onPointerUp = this.#onPointerUp.bind(this)
@@ -28,6 +30,7 @@ export default class extends Controller {
     this.element.addEventListener("contextmenu", this.onContextMenu)
     this.element.addEventListener("keydown", this.onKeydown)
     this.element.addEventListener("focusin", this.onFocusIn)
+    this.element.addEventListener("focusout", this.onFocusOut)
     this.element.addEventListener("pointerdown", this.onPointerDown)
     this.element.addEventListener("pointermove", this.onPointerMove)
     this.element.addEventListener("pointerup", this.onPointerUp)
@@ -47,6 +50,7 @@ export default class extends Controller {
     this.element.removeEventListener("contextmenu", this.onContextMenu)
     this.element.removeEventListener("keydown", this.onKeydown)
     this.element.removeEventListener("focusin", this.onFocusIn)
+    this.element.removeEventListener("focusout", this.onFocusOut)
     this.element.removeEventListener("pointerdown", this.onPointerDown)
     this.element.removeEventListener("pointermove", this.onPointerMove)
     this.element.removeEventListener("pointerup", this.onPointerUp)
@@ -99,16 +103,28 @@ export default class extends Controller {
     // stop to the replacement with the same id, and focus it when removal
     // dropped focus back to the page. (Turbo streams usually preserve focus
     // themselves; this also covers direct DOM swaps.)
+    let refocused = false
     if (tabbableRemoved) {
       const replacement = addedMessages.find(message => removedIds.has(message.id))
       if (replacement) {
         replacement.tabIndex = 0
         this.#tabbable = replacement
-        if (document.activeElement === document.body) replacement.focus()
+        if (this.#focusInside && document.activeElement === document.body) {
+          replacement.focus()
+          refocused = true
+        }
       }
     }
 
     if (changed) this.#ensureTabbable()
+
+    // A removal without a same-id replacement is a delete: focus fell to
+    // the page with the tab stop, so the next arrow key would be lost.
+    // Follow the surviving tab stop when the deleted message had focus.
+    if (!refocused && this.#focusInside && tabbableRemoved &&
+        document.activeElement === document.body && this.#tabbable?.isConnected) {
+      this.#tabbable.focus()
+    }
   }
 
   #ensureTabbable() {
@@ -126,11 +142,23 @@ export default class extends Controller {
 
   #onFocusIn(event) {
     const message = event.target.closest?.(MESSAGE_SELECTOR)
-    if (!message || !this.element.contains(message) || message === this.#tabbable) return
+    if (!message || !this.element.contains(message)) return
+    this.#focusInside = true
+    if (message === this.#tabbable) return
 
     if (this.#tabbable?.isConnected) this.#tabbable.tabIndex = -1
     message.tabIndex = 0
     this.#tabbable = message
+  }
+
+  #onFocusOut(event) {
+    // A focusout to nowhere (relatedTarget null) is removal fallout when a
+    // message is deleted, so it must not clear the flag the observer reads.
+    // Clicking empty space shares the signature and leaves the flag stale,
+    // but then a later delete only moves the already-moving tab stop.
+    if (!event.relatedTarget) return
+    if (this.element.contains(event.relatedTarget)) return
+    this.#focusInside = false
   }
 
   #annotate(message) {

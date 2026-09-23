@@ -16,7 +16,7 @@ class MessageListA11yTest < ApplicationSystemTestCase
 
     newest_id = tabbables.first
     page.execute_script("document.getElementById('#{newest_id}').focus()")
-    assert_selector "##{newest_id}:focus"
+    assert_focused "##{newest_id}"
 
     # The author's avatar link comes first in the message; the revealed
     # toolbar follows it.
@@ -38,25 +38,25 @@ class MessageListA11yTest < ApplicationSystemTestCase
 
     page.execute_script("document.getElementById('#{messages.first}').focus()")
     page.send_keys :down
-    assert_selector "##{messages.second}:focus"
+    assert_focused "##{messages.second}"
 
     page.send_keys :down
-    assert_selector "##{messages.third}:focus" if messages.third
+    assert_focused "##{messages.third}" if messages.third
 
     page.send_keys :up
-    assert_selector "##{messages.second}:focus"
+    assert_focused "##{messages.second}"
 
     page.send_keys :home
-    assert_selector "##{messages.first}:focus"
+    assert_focused "##{messages.first}"
 
     page.send_keys :end
-    assert_selector "##{messages.last}:focus"
+    assert_focused "##{messages.last}"
   end
 
   test "a stream replacing the focused message keeps focus and the tab stop on its replacement" do
     message = find("##{dom_id(messages(:second))}")
     page.execute_script("arguments[0].focus()", message)
-    assert_selector "##{dom_id(messages(:second))}:focus"
+    assert_focused "##{dom_id(messages(:second))}"
 
     page.execute_script <<~JS, dom_id(messages(:second))
       const clone = document.getElementById(arguments[0]).cloneNode(true);
@@ -74,7 +74,7 @@ class MessageListA11yTest < ApplicationSystemTestCase
   test "a direct DOM swap of the focused message keeps focus and the tab stop on its replacement" do
     message = find("##{dom_id(messages(:second))}")
     page.execute_script("arguments[0].focus()", message)
-    assert_selector "##{dom_id(messages(:second))}:focus"
+    assert_focused "##{dom_id(messages(:second))}"
 
     # Outside Turbo (which preserves focus itself), the list controller
     # moves the tab stop and focus to the same-id replacement.
@@ -89,10 +89,48 @@ class MessageListA11yTest < ApplicationSystemTestCase
     assert_focus_and_tab_stop_on messages(:second)
   end
 
+  test "deleting the focused message moves focus to the surviving tab stop" do
+    message = find("##{dom_id(messages(:second))}")
+    page.execute_script("arguments[0].focus()", message)
+    assert_focused "##{dom_id(messages(:second))}"
+
+    # A delete has no same-id replacement, so without the restore focus
+    # would strand on the page body and swallow the next arrow key.
+    page.execute_script <<~JS, dom_id(messages(:second))
+      Turbo.renderStreamMessage(`<turbo-stream action="remove" target="${arguments[0]}"></turbo-stream>`);
+    JS
+
+    assert_no_selector "##{dom_id(messages(:second))}"
+    assert_focused "##{dom_id(messages(:third))}", wait: 10
+
+    page.send_keys :up
+    assert_focused "##{dom_id(messages(:first))}"
+  end
+
+  test "a focus move during a stream render survives Turbo's focus restore" do
+    find_field("Write a message").click
+    assert_focused "#message_markdown_source"
+
+    # Move focus to a message in the same task as the stream render: the move
+    # deterministically lands inside Turbo's animation-frame restore window,
+    # which would otherwise clobber focus back to the composer.
+    focused_id = page.evaluate_async_script(<<~'JS', dom_id(messages(:first)))
+      const [id, done] = arguments;
+      Turbo.renderStreamMessage(`<turbo-stream action="append" target="main-content"><template><span data-stream-focus-probe="true"></span></template></turbo-stream>`);
+      document.getElementById(id).focus();
+      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => done(document.activeElement.id), 50)));
+    JS
+
+    assert_equal dom_id(messages(:first)), focused_id
+
+    page.send_keys :down
+    assert_focused "##{dom_id(messages(:second))}"
+  end
+
   test "the ContextMenu key opens the shared menu and Escape returns focus" do
     message = find("##{dom_id(messages(:third))}")
     page.execute_script("arguments[0].focus()", message)
-    assert_selector "##{dom_id(messages(:third))}:focus"
+    assert_focused "##{dom_id(messages(:third))}"
 
     page.execute_script <<~JS, message
       arguments[0].dispatchEvent(new KeyboardEvent("keydown", {
@@ -105,7 +143,7 @@ class MessageListA11yTest < ApplicationSystemTestCase
 
     page.send_keys :escape
     assert_no_selector ".message[data-message-actions-open]"
-    assert_selector "##{dom_id(messages(:third))}:focus"
+    assert_focused "##{dom_id(messages(:third))}"
   end
 
   test "a late composer autofocus does not steal focus from a message" do
@@ -114,7 +152,7 @@ class MessageListA11yTest < ApplicationSystemTestCase
     # composer with focus already on a message must leave it there.
     message = find("##{dom_id(messages(:third))}")
     page.execute_script("arguments[0].focus()", message)
-    assert_selector "##{dom_id(messages(:third))}:focus"
+    assert_focused "##{dom_id(messages(:third))}"
 
     page.execute_script(<<~JS)
       const composer = document.querySelector("[data-controller~='composer']");
@@ -126,8 +164,8 @@ class MessageListA11yTest < ApplicationSystemTestCase
 
     # Let the Stimulus reconnect and its deferred autofocus tick fire.
     sleep 0.5
-    assert_selector "##{dom_id(messages(:third))}:focus"
-    assert_no_selector "#message_markdown_source:focus"
+    assert_focused "##{dom_id(messages(:third))}"
+    assert_not_focused "#message_markdown_source"
   end
 
   test "up arrow from an empty composer still edits my last message" do
@@ -507,7 +545,7 @@ class MessageListA11yTest < ApplicationSystemTestCase
 
   private
     def assert_focus_and_tab_stop_on(message)
-      assert_selector "##{dom_id(message)}:focus", wait: 10
+      assert_focused "##{dom_id(message)}", wait: 10
       assert_equal dom_id(message), page.evaluate_script("document.activeElement.id")
       assert_equal 0, page.evaluate_script("document.getElementById('#{dom_id(message)}').tabIndex")
       assert_equal(-1, page.evaluate_script("document.getElementById('#{dom_id(messages(:third))}').tabIndex"),

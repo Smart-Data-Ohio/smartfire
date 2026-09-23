@@ -196,7 +196,7 @@ class ThreadsTest < ApplicationSystemTestCase
     page.current_window.resize_to(390, 844)
     open_threads
     assert_selector "#thread-panel[aria-hidden='false']", visible: true
-    assert_selector "button[aria-label='Close threads']:focus"
+    assert_focused "button[aria-label='Close threads']"
     assert page.evaluate_script("document.querySelector('#thread-panel').contains(document.activeElement)"), "focus should stay in the thread drawer"
 
     assert_selector "#thread-panel [data-thread-panel-target='browserList'] .thread-panel__thread-item", text: "Mobile thread", wait: 10
@@ -229,7 +229,7 @@ class ThreadsTest < ApplicationSystemTestCase
     save_thread_screenshot "mobile-drawer.png"
     click_button "Close threads"
     assert_no_selector "body.thread-panel-open"
-    assert_selector "[data-thread-panel-target='browserToggle']:focus"
+    assert_focused "[data-thread-panel-target='browserToggle']"
     assert_selector ".room-header__name", text: "Designers"
     assert_no_horizontal_overflow
   ensure
