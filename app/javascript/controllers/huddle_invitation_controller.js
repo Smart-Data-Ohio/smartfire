@@ -216,7 +216,7 @@ export default class extends Controller {
     this.#ensureRinging()
   }
 
-  #ensureRinging() {
+  #ensureRinging(retried = false) {
     if (!this.shouldRing || this.ringing) return
 
     const AudioContextClass = window.AudioContext || window.webkitAudioContext
@@ -229,7 +229,9 @@ export default class extends Controller {
     }
 
     if (this.ringContext.state === "suspended") {
-      this.ringContext.resume().catch(() => {})
+      // One chained retry per gesture: the unlock listeners below keep
+      // retrying on later gestures either way.
+      if (!retried) this.ringContext.resume().then(() => this.#ensureRinging(true)).catch(() => {})
       return
     }
 

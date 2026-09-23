@@ -505,6 +505,49 @@ class StageTest < ApplicationSystemTestCase
     assert_no_selector "#channel-huddle [data-huddle-target='mute']", visible: :visible
   end
 
+  test "a host server-mutes a speaker and they rejoin muted, then unmutes them" do
+    skip "Run with LIVEKIT_SYSTEM_TESTS=1 and a configured LiveKit server" unless livekit_enabled?
+    room = create_stage_room(name: "Town Hall", members: [ users(:david), users(:jason) ])
+    room.memberships.find_by!(user: users(:jason)).change_stage_role!("speaker")
+
+    sign_in "jason@37signals.com"
+    visit room_path(room)
+    wait_for_cable_connection
+    join_stage_and_confirm
+    assert_equal true, local_can_publish?
+
+    using_session("Host") do
+      @stage_sessions << "Host"
+      sign_in "david@37signals.com"
+      visit room_path(room)
+      wait_for_cable_connection
+      find("button[aria-label='Show stage']").click
+
+      jason_row = "##{dom_id(room.memberships.find_by!(user: users(:jason)), :stage_row)}"
+      within jason_row do
+        click_button "Mute"
+      end
+    end
+
+    wait_for_condition("the muted speaker kept publishing", timeout: LIVEKIT_REJOIN_WAIT) do
+      page.has_css?("#channel-huddle[data-state='connected']", wait: 0) && local_can_publish? == false
+    end
+    assert_selector "#channel-huddle [data-huddle-target='listeningNote']", text: "You are listening"
+    assert_no_selector "#channel-huddle [data-huddle-target='mute']", visible: :visible
+
+    using_session("Host") do
+      jason_row = "##{dom_id(room.memberships.find_by!(user: users(:jason)), :stage_row)}"
+      within jason_row, wait: 10 do
+        click_button "Unmute"
+      end
+    end
+
+    wait_for_condition("the unmuted speaker did not rejoin publishing", timeout: LIVEKIT_REJOIN_WAIT) do
+      page.has_css?("#channel-huddle[data-state='connected']", wait: 0) && local_can_publish? == true
+    end
+    assert_selector "#channel-huddle [data-huddle-target='mute']", text: "Mute microphone", visible: :visible
+  end
+
   test "a listener survives a full reconnect and stays subscribe-only" do
     skip "Run with LIVEKIT_SYSTEM_TESTS=1 and a configured LiveKit server" unless livekit_enabled?
     room = create_stage_room(name: "Town Hall", members: [ users(:david), users(:jason) ])

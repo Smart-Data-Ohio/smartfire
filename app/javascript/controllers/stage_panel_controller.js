@@ -132,7 +132,7 @@ export default class extends Controller {
     return this.element.querySelector(".stage-panel__member-actions") != null
   }
 
-  #chime() {
+  #chime(retried = false) {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext
     if (!AudioContextClass) return
 
@@ -140,7 +140,7 @@ export default class extends Controller {
       this.handChimeContext ||= new AudioContextClass()
       const context = this.handChimeContext
       if (context.state === "suspended") {
-        context.resume().catch(() => {})
+        if (!retried) context.resume().then(() => this.#chime(true)).catch(() => {})
         return
       }
 

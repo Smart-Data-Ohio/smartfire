@@ -77,6 +77,7 @@ export default class extends Controller {
     this.connectionStatsTimer = null
     this.connectionStatsSampling = false
     this.connectionStatsSummary = null
+    this.captureRestartFailed = false
     // LiveKit identity -> Smartfire user id, from the participants endpoint.
     // Per-user client state (remembered volumes, speaking highlights) maps
     // through here; the room only knows identities.
@@ -2378,6 +2379,11 @@ export default class extends Controller {
     const track = room.localParticipant.getTrackPublication?.(Track.Source.Microphone)?.audioTrack
     if (!track || typeof track.setProcessor !== "function") return
 
+    // Each sync judges fresh: a restart failure below blocks the healthy
+    // clear at the end, while a sync that needs no restart clears a stale
+    // error once the processor and constraints agree again.
+    this.captureRestartFailed = false
+
     // The processor stays attached across mute: the stopped mic track it
     // feeds goes silent, so nothing audible is filtered while muted, and
     // unmuting hands the live track back to the same worklet and
@@ -2434,6 +2440,17 @@ export default class extends Controller {
     // processor did not change: toggling the switch while muted refreshes the
     // stored constraints, and the unmute that follows re-acquires from them.
     await this.#syncCaptureNoiseSuppression(track, Boolean(track.getProcessor?.()))
+
+    // A sync that lands a healthy state — the wanted processor attached,
+    // the stored constraints agreeing with it, and no restart failing along
+    // the way — clears a stale restart error. A still-broken state keeps the
+    // notice up.
+    const settled = this.noiseSuppressionAvailable && this.noiseSuppressionEnabled
+    if (!this.captureRestartFailed &&
+        settled === Boolean(track.getProcessor?.()) &&
+        track.constraints?.noiseSuppression === !settled) {
+      this.#clearMicrophoneRestartError()
+    }
   }
 
   // The full capture set for a noise-suppression sync: the same processing the
@@ -2502,21 +2519,22 @@ export default class extends Controller {
   // A failed re-acquire retries once, then falls back to the track's own
   // stored constraints. A track that is still live keeps working with its
   // old filtering and the next sync retries; a silent one shows a clear
-  // error instead of leaving a dead microphone unexplained. A later success
-  // clears the notice, but only while it still holds this error — never a
-  // camera failure's.
+  // error instead of leaving a dead microphone unexplained. A later healthy
+  // sync clears the notice through #syncNoiseSuppression.
   async #restartCaptureTrack(track, constraints) {
     const attempts = [ constraints, constraints, track.constraints ]
 
     for (const attempt of attempts) {
       try {
         await track.restartTrack(attempt)
-        this.#clearMicrophoneRestartError()
+        this.captureRestartFailed = false
         return
       } catch (error) {
         // Next attempt: one retry, then the stored constraints.
       }
     }
+
+    this.captureRestartFailed = true
 
     if (track.isMuted === true || track.mediaStreamTrack?.readyState === "ended") {
       this.#showConnectedNotice(MICROPHONE_RESTART_ERROR)
@@ -2629,13 +2647,13 @@ export default class extends Controller {
     volume.value = "100"
     volume.className = "huddle__participant-volume"
     volume.dataset.action = "input->huddle#participantVolumeChanged"
-    volume.dataset.huddleParticipantIdentityParam = identity
+    volume.dataset.huddleIdentityParam = identity
 
     const mute = document.createElement("button")
     mute.type = "button"
     mute.className = "btn btn--plain huddle__participant-mute"
     mute.dataset.action = "huddle#toggleParticipantMute"
-    mute.dataset.huddleParticipantIdentityParam = identity
+    mute.dataset.huddleIdentityParam = identity
     mute.setAttribute("aria-pressed", "false")
     mute.textContent = "Mute for me"
 
@@ -2828,7 +2846,11 @@ export default class extends Controller {
 
   #storedParticipantVolume(userId) {
     try {
-      const value = Number(window.localStorage.getItem(`${PARTICIPANT_VOLUME_STORAGE_PREFIX}${userId}`))
+      // Number(null) and Number("") are both 0, which would read a missing
+      // preference as silence; only a real stored value overrides the 100.
+      const raw = window.localStorage.getItem(`${PARTICIPANT_VOLUME_STORAGE_PREFIX}${userId}`)
+      if (raw == null || raw === "") return 100
+      const value = Number(raw)
       if (Number.isFinite(value)) return Math.max(0, Math.min(200, value))
     } catch (error) {
       // Private browsing modes can refuse storage; the default stands in.

@@ -127,4 +127,121 @@ class HuddleInvitationsTest < ApplicationSystemTestCase
     assert_selector "#huddle-invitation[hidden]", visible: :all
     assert_predicate item.reload, :unread?
   end
+
+  test "an incoming call rings audibly until it is answered" do
+    visit room_path(rooms(:designers))
+    wait_for_cable_connection
+
+    HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_david_and_jason))
+
+    assert_selector "#huddle-invitation:not([hidden])", text: "David started a huddle", wait: 10
+    assert invitation_ringing_wanted?, "expected the banner to want its ringtone"
+
+    # The first real click unlocks audio; the ring starts on it. The title
+    # carries no action, so the click only counts as a gesture.
+    find("#huddle-invitation [data-huddle-invitation-target='title']").click
+    wait_for_condition("the ringtone never started") { invitation_ringing? }
+
+    within "#huddle-invitation" do
+      click_button "Dismiss"
+    end
+
+    assert_selector "#huddle-invitation[hidden]", visible: :all, wait: 10
+    assert_not invitation_ringing_wanted?
+    assert_not invitation_ringing?
+  end
+
+  test "a silent invitation shows the banner without any sound" do
+    Huddle::RingPolicy.quiet_check = ->(_user) { true }
+    begin
+      visit room_path(rooms(:designers))
+      wait_for_cable_connection
+
+      HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_david_and_jason))
+
+      assert_selector "#huddle-invitation:not([hidden])", text: "David started a huddle", wait: 10
+      assert_not invitation_ringing_wanted?
+      assert_not invitation_ringing?
+    ensure
+      Huddle::RingPolicy.quiet_check = nil
+    end
+  end
+
+  test "a hidden tab raises a system notification for the call" do
+    visit room_path(rooms(:designers))
+    wait_for_cable_connection
+    page.execute_script(<<~JS)
+      window.__notifications = [];
+      window.__nativeNotification = window.Notification;
+      window.__NotificationStub = class {
+        static permission = "granted";
+        constructor(title, options) {
+          window.__notifications.push({ title, options });
+          this.closed = false;
+        }
+        close() { this.closed = true; }
+      };
+      window.Notification = window.__NotificationStub;
+      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    JS
+
+    begin
+      HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_david_and_jason))
+
+      assert_selector "#huddle-invitation:not([hidden])", text: "David started a huddle", wait: 10
+      wait_for_condition("no system notification was raised") do
+        page.evaluate_script("window.__notifications.length") >= 1
+      end
+
+      notification = page.evaluate_script("window.__notifications[0]")
+      assert_equal "David started a huddle", notification["title"]
+      assert_match "Join the huddle in David", notification["options"]["body"]
+    ensure
+      page.execute_script(<<~JS)
+        window.Notification = window.__nativeNotification;
+        delete document.visibilityState;
+      JS
+    end
+  end
+
+  test "the ring stops when the caller leaves" do
+    visit room_path(rooms(:designers))
+    wait_for_cable_connection
+
+    grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_david_and_jason))
+    assert_selector "#huddle-invitation:not([hidden])", text: "David started a huddle", wait: 10
+    assert invitation_ringing_wanted?
+
+    grant.update_columns(last_seen_at: Time.current)
+    grant.revoke!
+
+    assert_selector "#huddle-invitation:not([hidden])", text: "David left the huddle", wait: 10
+    assert_not invitation_ringing_wanted?
+    assert_not invitation_ringing?
+  end
+
+  private
+    def invitation_controller_script(expression)
+      page.evaluate_script(<<~JS, expression)
+        window.Stimulus.getControllerForElementAndIdentifier(
+          document.getElementById("huddle-invitation"), "huddle-invitation")[arguments[0]]
+      JS
+    end
+
+    def invitation_ringing_wanted?
+      invitation_controller_script("shouldRing") == true
+    end
+
+    def invitation_ringing?
+      invitation_controller_script("ringing") == true
+    end
+
+    def wait_for_condition(message, timeout: 10)
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+      until yield
+        flunk message if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+        sleep 0.05
+      end
+      assert true
+    end
 end
