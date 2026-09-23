@@ -96,6 +96,17 @@ class AuditLogTest < ActiveSupport::TestCase
     assert_equal "plain", entry.details["list"][1]
   end
 
+  test "record! filters join codes and transfer ids out of changes" do
+    entry = AuditLog.record!(
+      action: "account.join_code.reset", target: Account.first,
+      changes: { join_code: "SECRET-CODE", transfer_id: "single-use-id", name: "Fine" }
+    )
+
+    assert_equal "[FILTERED]", entry.details["join_code"]
+    assert_equal "[FILTERED]", entry.details["transfer_id"]
+    assert_equal "Fine", entry.details["name"]
+  end
+
   test "record! keeps emails readable" do
     entry = AuditLog.record!(
       action: "user.email.change", target: users(:kevin),

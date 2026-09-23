@@ -61,7 +61,7 @@ class AuditLog < ApplicationRecord
   # pass explicit change hashes (never raw params), and this filter is the
   # backstop. Deliberately narrower than the request log filter: actor and
   # target emails stay readable in the log.
-  SECRET_KEY_PATTERN = /passw|passwd|pwd|secret|token|api[-_]?key|_key\z|credential|authorization|cookie|session/i
+  SECRET_KEY_PATTERN = /passw|passwd|pwd|secret|token|api[-_]?key|_key\z|credential|authorization|cookie|session|join[-_]?code|transfer[-_]?id/i
   FILTERED = "[FILTERED]".freeze
 
   validates :action, presence: true
