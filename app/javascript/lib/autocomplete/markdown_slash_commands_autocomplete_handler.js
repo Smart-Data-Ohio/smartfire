@@ -11,14 +11,32 @@ export default class MarkdownSlashCommandsAutocompleteHandler extends BaseAutoco
   }
 
   // The picker follows the first word while the caret stays on the first
-  // line: it opens on "/", filters as the word grows, and closes once the
-  // caret leaves the word (a space ends the word, so the context update
-  // deactivates it) or a later line. Later words starting with "/"
-  // never open it.
+  // line: it opens on "/", filters as the word grows, and closes once an
+  // argument starts (matchQueryAndTerminatorForWord rejects words with a
+  // space, so the context update deactivates it) or on a later line.
+  // Later words starting with "/" never open it.
   shouldAutocompleteWithContentAndPosition(content, position) {
     const before = content.slice(0, position)
     if (before.includes("\n")) return false
     return before.split(/\s/)[0]?.startsWith("/") === true
+  }
+
+  matchQueryAndTerminatorForWord(word) {
+    // A space ends the command word: once "/command " has arguments the
+    // picker has nothing to complete, so the context goes inactive and
+    // the update deactivates the picker instead of re-querying for the
+    // whole line. (Space stays a non-boundary character below so typing
+    // it never commits the top match; this only ends the match.)
+    if (/\s/.test(word)) return undefined
+    return super.matchQueryAndTerminatorForWord(word)
+  }
+
+  // Once "/command " is chosen — arguments started or just a trailing
+  // space — Enter submits the form instead of committing the suggestion.
+  // The picker update is debounced, so without this a stale active state
+  // would swallow the submit while the deactivating update is pending.
+  shouldSubmitOnReturnKey() {
+    return /^\s*\/[^\s]+\s/.test(this.element.value)
   }
 
   // Retyping "/" (the "//" escape, or a fresh "/" after clearing) must

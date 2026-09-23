@@ -614,30 +614,46 @@ export default class extends Controller {
     this.#setBusy(true)
     this.#clearFeedback()
 
-    let known = false
+    let liveNames = []
     try {
       const response = await fetch(this.slashCommandsListUrlValue, {
         headers: { Accept: "application/json" },
       })
       if (!response.ok) throw new Error(`command list failed (${response.status})`)
       const commands = await response.json()
-      known = commands.some((command) => String(command.name || "").toLowerCase() === word)
+      liveNames = commands.map((command) => String(command.name || "").toLowerCase())
     } catch {
-      known = false
+      liveNames = []
     } finally {
       this.#submitting = false
       this.#setBusy(false)
     }
 
-    // The draft may have changed during the check: only a text that
-    // still opens with the known word runs as a command.
-    if (known && this.#leadingSlashWord() === word) {
-      this.#slashSubmit(this.markdownTarget.value.trim())
+    this.#routeSubmitAfterSlashCheck(liveNames)
+  }
+
+  // Routes the draft after the live check resolves. The draft may have
+  // changed while the check was pending — a second Enter may even have
+  // switched it to another command while #submitting swallowed it — so
+  // route what is there now against the just-fetched list instead of
+  // the stale word. The pending check absorbs the queued submit; the
+  // routing mirrors submit() so nothing is lost or misrouted.
+  #routeSubmitAfterSlashCheck(liveNames) {
+    const current = this.markdownTarget.value
+
+    if (!current.startsWith("//")) {
+      const word = this.#leadingSlashWord()
+      if (word && word !== "play" && (this.#knownSlashCommands().includes(word) || liveNames.includes(word))) {
+        this.#slashSubmit(current.trim())
+        return
+      }
     } else {
-      this.#submitFiles()
-      this.#submitMessage()
-      this.markdownTarget.focus()
+      this.#setMarkdownValue(current.replace(/^\/\//, "/"))
     }
+
+    this.#submitFiles()
+    this.#submitMessage()
+    this.markdownTarget.focus()
   }
 
   async #slashSubmit(text = this.#slashCommandText()) {

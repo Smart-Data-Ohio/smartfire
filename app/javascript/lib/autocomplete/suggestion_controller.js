@@ -257,6 +257,13 @@ export default class SuggestionController {
 
   #didPressReturnKey() {
     if (this.#active) {
+      // A delegate may yield Enter to the form: the slash picker does
+      // once "/command " is chosen, so a stale active state never
+      // swallows the submit while the debounced update is still pending.
+      if (this.delegate.shouldSubmitOnReturnKey?.() === true) {
+        this.#deactivateSuggestion()
+        return
+      }
       this.commitSuggestion()
       return false
     }
