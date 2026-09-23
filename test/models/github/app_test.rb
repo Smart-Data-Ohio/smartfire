@@ -85,4 +85,14 @@ class Github::AppTest < ActiveSupport::TestCase
     assert Github::App.revoke_grant("app-token")
     assert_requested grant
   end
+
+  test "revoke_grant treats an unknown token as failure, revoke_token as gone" do
+    stub_request(:delete, "https://api.github.com/applications/app-client-id/grant")
+      .to_return(status: 404)
+    stub_request(:delete, "https://api.github.com/applications/app-client-id/token")
+      .to_return(status: 404)
+
+    assert_not Github::App.revoke_grant("app-token")
+    assert Github::App.revoke_token("old-token")
+  end
 end

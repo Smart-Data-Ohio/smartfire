@@ -99,6 +99,46 @@ class Github::AppConnectionsControllerTest < ActionDispatch::IntegrationTest
     assert_nil users(:david).reload.github_connected_account
   end
 
+  test "disconnect refreshes an expired token before revoking the grant" do
+    GithubConnectedAccount.create!(
+      user: users(:david), github_login: "octocat", access_token: "old-app-token",
+      token_source: "app", refresh_token: "old-refresh",
+      token_expires_at: 1.minute.ago
+    )
+    refresh = stub_request(:post, "https://github.com/login/oauth/access_token")
+      .to_return(status: 200, body: {
+        access_token: "fresh-token", refresh_token: "fresh-refresh", expires_in: 28_800
+      }.to_json)
+    grant = stub_request(:delete, "https://api.github.com/applications/app-client-id/grant")
+      .with(body: hash_including("access_token" => "fresh-token"))
+      .to_return(status: 204)
+    stale = stub_request(:delete, "https://api.github.com/applications/app-client-id/grant")
+      .with(body: hash_including("access_token" => "old-app-token"))
+
+    delete github_connection_url
+
+    assert_requested refresh
+    assert_requested grant
+    assert_not_requested stale
+    assert_nil users(:david).reload.github_connected_account
+  end
+
+  test "disconnect proceeds when the refresh fails" do
+    GithubConnectedAccount.create!(
+      user: users(:david), github_login: "octocat", access_token: "old-app-token",
+      token_source: "app", refresh_token: "old-refresh",
+      token_expires_at: 1.minute.ago
+    )
+    stub_request(:post, "https://github.com/login/oauth/access_token").to_timeout
+    grant = stub_request(:delete, "https://api.github.com/applications/app-client-id/grant")
+
+    delete github_connection_url
+
+    assert_redirected_to user_profile_path
+    assert_not_requested grant
+    assert_nil users(:david).reload.github_connected_account
+  end
+
   test "disconnect proceeds when revocation fails" do
     GithubConnectedAccount.create!(
       user: users(:david), github_login: "octocat", access_token: "app-token",

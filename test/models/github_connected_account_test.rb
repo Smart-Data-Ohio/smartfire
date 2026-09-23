@@ -119,6 +119,34 @@ class GithubConnectedAccountTest < ActiveSupport::TestCase
     assert account.last_error.present?
   end
 
+  test "revoke_remote_token refreshes an expired token first" do
+    account = connect_github!(users(:david), token_source: "app",
+      refresh_token: "old-refresh", token_expires_at: 1.minute.ago)
+    stub_request(:post, "https://github.com/login/oauth/access_token")
+      .to_return(status: 200, body: {
+        access_token: "fresh-token", refresh_token: "fresh-refresh", expires_in: 28_800
+      }.to_json)
+    grant = stub_request(:delete, %r{api\.github\.com/applications/.*/grant})
+      .with(body: hash_including("access_token" => "fresh-token"))
+      .to_return(status: 204)
+
+    account.revoke_remote_token!
+
+    assert_requested grant
+  end
+
+  test "revoke_remote_token records last_error and skips the revoke when the refresh fails" do
+    account = connect_github!(users(:david), token_source: "app",
+      refresh_token: "old-refresh", token_expires_at: 1.minute.ago)
+    stub_request(:post, "https://github.com/login/oauth/access_token").to_timeout
+    grant = stub_request(:delete, %r{api\.github\.com/applications/})
+
+    account.revoke_remote_token!
+
+    assert_not_requested grant
+    assert account.reload.last_error.present?
+  end
+
   test "agent identity prefers the owner's usable app token" do
     agent = agents(:bender_agent)
     GithubConnectedAccount.create!(user: agent.user, github_login: "bender-machine", access_token: "agent-pat")

@@ -56,30 +56,33 @@ module Github
 
       # Best-effort revocation of a single App user token, for relink:
       # the replaced token dies while the replacement grant's tokens
-      # survive. Returns true when GitHub accepted (or no longer knows)
-      # the token, false otherwise. Never raises: relink must not fail
-      # because revocation did.
+      # survive. Returns true when GitHub accepted the revocation, or no
+      # longer knows the token at all (a token GitHub cannot identify is
+      # already dead, which is the relink's goal). Never raises: relink
+      # must not fail because revocation did.
       #
       # DELETE /applications/{client_id}/token revokes one token; the
       # /grant sibling deletes the whole authorization, including every
       # other token issued for it, so it must never run on relink:
       # https://docs.github.com/en/rest/apps/oauth-applications?apiVersion=2022-11-28
       def revoke_token(token)
-        delete_application_path("token", token)
+        delete_application_path("token", token, unknown_means_gone: true)
       end
 
       # Best-effort revocation of the whole App authorization, for a full
       # disconnect only: GitHub deletes every token issued for the grant
-      # and drops the authorization screen entry. Same best-effort
-      # contract as revoke_token. Never raises.
+      # and drops the authorization screen entry. Only a 204 counts: the
+      # caller revokes with a freshly refreshed token, so a 404 means
+      # GitHub did not act on this grant. Never raises: disconnect must
+      # not fail because revocation did.
       #
       # https://docs.github.com/en/rest/apps/oauth-applications?apiVersion=2022-11-28
       def revoke_grant(token)
-        delete_application_path("grant", token)
+        delete_application_path("grant", token, unknown_means_gone: false)
       end
 
       private
-        def delete_application_path(segment, token)
+        def delete_application_path(segment, token, unknown_means_gone:)
           uri = URI::HTTPS.build(host: API_HOST, path: "/applications/#{client_id}/#{segment}")
           response = Net::HTTP.start(uri.host, uri.port, use_ssl: true,
               open_timeout: TIMEOUT, read_timeout: TIMEOUT, write_timeout: TIMEOUT) do |http|
@@ -91,7 +94,7 @@ module Github
             request.body = { access_token: token }.to_json
             http.request(request)
           end
-          response.is_a?(Net::HTTPNoContent) || response.code == "404"
+          response.is_a?(Net::HTTPNoContent) || (unknown_means_gone && response.code == "404")
         rescue StandardError => error
           Rails.logger.warn "Github::App revoke failed: #{error.class}"
           false

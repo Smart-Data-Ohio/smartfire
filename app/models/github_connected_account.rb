@@ -88,12 +88,16 @@ class GithubConnectedAccount < ApplicationRecord
   end
 
   # Best-effort remote revocation of the whole App authorization for
-  # disconnect. PATs have no revocation endpoint, so nothing is sent
-  # for them. Never raises; disconnect proceeds however revocation goes.
+  # disconnect. The token is refreshed first: revoking with an expired
+  # token would miss the live grant (GitHub answers 404 for a token it
+  # no longer knows). A failed refresh records last_error (transport)
+  # or disconnects (rejected grant) and skips the revoke; either way
+  # the local disconnect proceeds. PATs have no revocation endpoint,
+  # so nothing is sent for them. Never raises.
   def revoke_remote_token!
     return unless app_token?
 
-    token = access_token
+    token = access_token_for_use
     Github::App.revoke_grant(token) if token.present?
   rescue ActiveRecord::Encryption::Errors::Decryption
     nil
