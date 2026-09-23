@@ -81,7 +81,7 @@
     <% if stage_membership %>
       <div class="stage-panel-wrap" data-controller="stage-panel">
         <p class="for-screen-reader" role="status" data-stage-panel-target="handAnnouncement"></p>
-        <button type="button" class="btn room-header__action"
+        <button type="button" class="btn room-header__action room-header__action--stage"
                 aria-controls="<%= dom_id(room, :stage_panel_dialog) %>"
                 aria-expanded="false"
                 aria-label="Show stage"
@@ -127,5 +127,7 @@
     <% end %>
 
     <%= render "rooms/involvements/bell", room: room %>
+
+    <%= render "rooms/show/header_overflow", room: room %>
   </div>
 <% end %>

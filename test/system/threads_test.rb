@@ -250,7 +250,9 @@ class ThreadsTest < ApplicationSystemTestCase
     save_thread_screenshot "mobile-drawer.png"
     click_button "Close threads"
     assert_no_selector "body.thread-panel-open"
-    assert_focused "[data-thread-panel-target='browserToggle']"
+    # Opened from the More menu, so focus returns to More rather than the
+    # hidden menu item.
+    assert_focused "#header-overflow-button"
     assert_selector ".room-header__name", text: "Designers"
     assert_no_horizontal_overflow
   ensure
@@ -442,7 +444,18 @@ class ThreadsTest < ApplicationSystemTestCase
 
   private
     def open_threads
-      find("[data-thread-panel-target='browserToggle']").click unless page.has_css?("body.thread-panel-open", wait: 0)
+      unless page.has_css?("body.thread-panel-open", wait: 0)
+        # On phones the header toggle hides and threads live in the More
+        # menu, so open it the way a phone user would.
+        if page.has_css?("[data-thread-panel-target='browserToggle']", visible: true, wait: 0)
+          find("[data-thread-panel-target='browserToggle']").click
+        else
+          click_button "More actions"
+          within "#header-overflow-menu" do
+            find("[data-thread-panel-target='browserToggle']").click
+          end
+        end
+      end
       assert_selector "#thread-panel[aria-hidden='false']", visible: true, wait: 10
     end
 
