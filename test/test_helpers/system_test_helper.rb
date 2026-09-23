@@ -1,4 +1,61 @@
 module SystemTestHelper
+  # Reports whether document.activeElement matches the selector, plus a
+  # one-line description of the focused element for failure messages.
+  FOCUS_CHECK_SCRIPT = <<~'JS'
+    (() => {
+      const selector = arguments[0];
+      const active = document.activeElement;
+      const describe = (element) => {
+        if (!(element instanceof Element)) return "(no element focused)";
+        let label = element.tagName.toLowerCase();
+        if (element.id) {
+          label += `#${element.id}`;
+        } else if (typeof element.className === "string" && element.className.trim()) {
+          label += `.${element.className.trim().split(/\s+/).slice(0, 2).join(".")}`;
+        }
+        const text = (element.innerText || "").trim().replace(/\s+/g, " ").slice(0, 40);
+        if (text) label += ` "${text}"`;
+        return label;
+      };
+      return [ active instanceof Element && active.matches(selector), describe(active) ];
+    })()
+  JS
+
+  # Asserts focus through document.activeElement instead of the :focus
+  # pseudo-class. :focus stops matching when the headless window loses OS
+  # focus under parallel runs, even though activeElement is correct, so
+  # assert_selector "...:focus" flakes there. The wait loop raises
+  # Capybara::ExpectationNotMet (a Minitest::Assertion is not a
+  # StandardError, so synchronize would not retry it) and the verdict
+  # below converts the last observation into a counted assertion.
+  def assert_focused(selector, wait: Capybara.default_max_wait_time)
+    matched, focused = false, "(unknown)"
+    begin
+      page.document.synchronize(wait) do
+        matched, focused = page.evaluate_script(FOCUS_CHECK_SCRIPT, selector)
+        raise Capybara::ExpectationNotMet unless matched
+      end
+    rescue Capybara::ExpectationNotMet
+      # Fall through to the assert with the last observed focus target.
+    end
+    assert matched, "expected #{selector} to have focus, but focus is on #{focused}"
+  end
+
+  # Negative counterpart to assert_focused: waits for focus to leave the
+  # selector rather than asserting it never arrives.
+  def assert_not_focused(selector, wait: Capybara.default_max_wait_time)
+    matched = true
+    begin
+      page.document.synchronize(wait) do
+        matched, _focused = page.evaluate_script(FOCUS_CHECK_SCRIPT, selector)
+        raise Capybara::ExpectationNotMet if matched
+      end
+    rescue Capybara::ExpectationNotMet
+      # Fall through to the assert below.
+    end
+    assert_not matched, "expected #{selector} not to have focus"
+  end
+
   # Fast authenticated path: the test-only route verifies the same
   # credentials and issues the same session row and cookie as the login
   # form, skipping only the form round-trips. Every test still drives a
