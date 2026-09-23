@@ -21,6 +21,22 @@ class Huddle::InvitationResolverTest < ActiveSupport::TestCase
     assert_predicate @item, :unread?
   end
 
+  test "unanswered group invitations each become missed calls" do
+    room = Current.set(user: users(:david)) do
+      Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:kevin) ])
+    end
+    grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: room.memberships.find_by!(user: users(:david)))
+
+    travel 46.seconds do
+      Huddle::InvitationResolver.resolve_overdue!
+    end
+
+    [ users(:jason), users(:kevin) ].each do |recipient|
+      item = ActivityItem.find_by!(user: recipient, event_type: "huddle_missed", source: grant)
+      assert_predicate item, :unread?
+    end
+  end
+
   test "a recipient who was issued a grant since the start has their invitation handled" do
     # Created directly to simulate an issuance concurrent with resolution;
     # issue! itself would have handled the open invitation as a join.

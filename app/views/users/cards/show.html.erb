@@ -19,16 +19,18 @@
           <% end %>
         </span>
 
-        <span class="profile-card__badges">
-          <% if @user.administrator? %>
-            <span class="profile-card__badge">Admin</span>
-          <% end %>
-          <% if @user.agent %>
-            <span class="profile-card__badge">Agent</span>
-          <% elsif @user.bot? %>
-            <span class="profile-card__badge">Bot</span>
-          <% end %>
-        </span>
+        <% if @user.administrator? || @user.agent || @user.bot? %>
+          <span class="profile-card__badges">
+            <% if @user.administrator? %>
+              <span class="profile-card__badge">Admin</span>
+            <% end %>
+            <% if @user.agent %>
+              <span class="profile-card__badge">Agent</span>
+            <% elsif @user.bot? %>
+              <span class="profile-card__badge">Bot</span>
+            <% end %>
+          </span>
+        <% end %>
 
         <% if @user.agent&.owner %>
           <span class="profile-card__owner">Agent owned by <%= @user.agent.owner.name %></span>

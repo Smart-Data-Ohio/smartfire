@@ -7,6 +7,7 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
 
   test "clicking a message author opens their profile card and Message lands in the DM" do
     visit room_path(rooms(:designers))
+    wait_for_controller "profile-card"
 
     within "#message_#{messages(:first).client_message_id}" do
       find(".message__avatar a").click
@@ -25,6 +26,7 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
 
   test "the profile card opens by keyboard, traps focus, and returns it on Esc" do
     visit room_path(rooms(:designers))
+    wait_for_controller "profile-card"
 
     author_button = find("#message_#{messages(:first).client_message_id} .message__author button")
     author_button.send_keys(:enter)
@@ -40,6 +42,7 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
 
   test "multi-selecting three people in the directory lands in their group DM" do
     visit users_path
+    wait_for_controller "multi-select"
 
     check "select_user_#{users(:jason).id}"
     check "select_user_#{users(:kevin).id}"
@@ -57,6 +60,7 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
 
   test "the member panel multi-select starts a huddle with exactly that set" do
     visit room_path(rooms(:designers))
+    wait_for_controller "multi-select"
 
     # Wide screens open the panel on load (flipping the toggle to Hide).
     click_button "Show members" if page.has_button?("Show members", wait: 5)
@@ -75,8 +79,44 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
     assert_current_path room_path(room, huddle: "start")
   end
 
+  test "shift-click extends the checkbox range" do
+    visit users_path
+    wait_for_controller "multi-select"
+
+    check "select_user_#{users(:bender).id}"
+    box = find("#select_user_#{users(:kevin).id}")
+    page.driver.browser.action.key_down(:shift).click(box.native).key_up(:shift).perform
+
+    within "[data-multi-select-target='bar']" do
+      assert_selector "button", text: "Message (4)"
+      assert_selector "button", text: "Start huddle (3)"
+    end
+  end
+
+  test "long-press selects a row on touch" do
+    visit users_path
+    wait_for_controller "multi-select"
+    row = find(".people-directory__row", text: "Jason")
+
+    page.execute_script(<<~JS, row)
+      const row = arguments[0]
+      const touch = new Touch({ identifier: 1, target: row, clientX: 10, clientY: 10 })
+      row.dispatchEvent(new TouchEvent("touchstart", { touches: [ touch ], bubbles: true, cancelable: true }))
+    JS
+    sleep 0.7
+    page.execute_script(<<~JS, row)
+      arguments[0].dispatchEvent(new TouchEvent("touchend", { bubbles: true, cancelable: true }))
+    JS
+
+    assert_checked_field "select_user_#{users(:jason).id}", visible: :all
+    within "[data-multi-select-target='bar']" do
+      assert_selector "button", text: "Message (1)"
+    end
+  end
+
   test "agents are selectable for messages but excluded from huddles" do
     visit users_path
+    wait_for_controller "multi-select"
 
     check "select_user_#{users(:bender).id}"
 
@@ -137,6 +177,17 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
   end
 
   private
+    # Controllers lazy-load when their element appears; under load the
+    # module can lag behind the first interaction, so wait for it.
+    def wait_for_controller(identifier)
+      sleep 0.05 until page.evaluate_script(<<~JS)
+        (() => {
+          const element = document.querySelector("[data-controller~='#{identifier}']")
+          return !!(element && window.Stimulus && window.Stimulus.getControllerForElementAndIdentifier(element, "#{identifier}"))
+        })()
+      JS
+    end
+
     def with_huddle_environment(&block)
       names = Huddle::REQUIRED_ENVIRONMENT
       original = ENV.values_at(*names)

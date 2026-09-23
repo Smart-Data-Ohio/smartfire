@@ -19,9 +19,10 @@ export default class extends Controller {
   // seconds): reconnected checkboxes restore from here, so removal only
   // ever happens through an explicit toggle or Clear. Class fields, not
   // connect(): target callbacks fire before connect for elements already
-  // in the DOM.
+  // in the DOM. The range anchor is a user id rather than an index for
+  // the same reason.
   selectedIds = new Set()
-  lastIndex = null
+  lastId = null
 
   connect() {
     if (!this.noteTarget.id) this.noteTarget.id = `multi-select-note-${++noteIdCounter}`
@@ -34,12 +35,17 @@ export default class extends Controller {
   }
 
   toggle(event) {
+    // A long-press ends in a synthetic click on the row: the row already
+    // selected itself, so the click must not toggle back.
+    if (this.pressJustFired) return
+
     const checkbox = event.currentTarget
     const boxes = this.checkboxTargets
     const index = boxes.indexOf(checkbox)
+    const lastIndex = boxes.findIndex((box) => box.dataset.userId === this.lastId)
 
-    if (event.shiftKey && this.lastIndex !== null && this.lastIndex !== index) {
-      const [ from, to ] = [ this.lastIndex, index ].sort((a, b) => a - b)
+    if (event.shiftKey && lastIndex !== -1 && lastIndex !== index) {
+      const [ from, to ] = [ lastIndex, index ].sort((a, b) => a - b)
       boxes.slice(from, to + 1).forEach((box) => {
         box.checked = checkbox.checked
         this.#track(box)
@@ -48,13 +54,13 @@ export default class extends Controller {
       this.#track(checkbox)
     }
 
-    this.lastIndex = index
+    this.lastId = checkbox.dataset.userId
     this.update()
   }
 
   clear() {
     this.selectedIds.clear()
-    this.lastIndex = null
+    this.lastId = null
     this.checkboxTargets.forEach((box) => { box.checked = false })
     this.update()
   }
@@ -73,7 +79,7 @@ export default class extends Controller {
       if (checkbox && !checkbox.checked) {
         checkbox.checked = true
         this.#track(checkbox)
-        this.lastIndex = this.checkboxTargets.indexOf(checkbox)
+        this.lastId = checkbox.dataset.userId
         this.update()
       }
       this.pressJustFired = true

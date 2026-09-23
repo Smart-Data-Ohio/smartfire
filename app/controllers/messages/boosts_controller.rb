@@ -60,8 +60,10 @@ class Messages::BoostsController < ApplicationController
     end
 
     def broadcast_reactions
-      # The reactor tooltip reads every boost's booster; the toggle above
-      # reloaded the message, so preload again instead of querying per row.
+      # The reactor tooltip reads every boost's booster. Reset first: the
+      # toggle above created or destroyed a row, and a preloaded collection
+      # would re-render it stale.
+      @message.boosts.reset
       ActiveRecord::Associations::Preloader.new(records: [ @message ], associations: { boosts: :booster }).call
       @message.broadcast_replace_to @message.conversation, :messages,
         target: ActionView::RecordIdentifier.dom_id(@message, :boosts),

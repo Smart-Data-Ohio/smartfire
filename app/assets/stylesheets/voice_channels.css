@@ -129,7 +129,7 @@
     flex: none;
   }
 
-  .room-header__actions .voice-stack__avatar:nth-child(n+4) {
+  .room-header__actions .voice-stack__avatars > :nth-child(n+4) {
     display: none;
   }
 }
