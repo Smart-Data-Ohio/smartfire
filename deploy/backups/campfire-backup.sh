@@ -50,7 +50,7 @@
 #
 # SECURITY: the ONCE container label and its Config.Env contain secret_key_base,
 # VAPID keys and LiveKit secrets. Nothing here prints or archives them: only
-# the non-secret subset (host, image, env var NAMES) goes into the manifest.
+# the non-secret subset (host, image) goes into the manifest.
 
 set -euo pipefail
 
@@ -255,8 +255,8 @@ main() {
     warn "uploads directory is missing, staging an empty one: $VOLUME_DIR/$BACKUP_FILES_REL"
   fi
 
-  # The manifest carries facts ABOUT the backup, never secrets and never the
-  # values of the app environment (key names only, and only when discoverable).
+  # The manifest carries facts ABOUT the backup, never secrets and never
+  # anything from the app environment (not even key names).
   local created_at recipient
   created_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   if [ "$BACKUP_ENCRYPTION" = "age" ]; then recipient="$BACKUP_AGE_RECIPIENT"; else recipient="$BACKUP_GPG_RECIPIENT"; fi
