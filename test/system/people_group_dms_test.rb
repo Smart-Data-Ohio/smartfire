@@ -173,18 +173,19 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
   test "the new-DM picker types, picks suggestions, and messages the picked set" do
     join_room rooms(:designers)
     click_link "New direct message"
+    wait_for_controller "autocomplete"
 
     within "#direct_rooms_control" do
       find("[data-autocomplete-target='input']").fill_in(with: "Kev")
     end
-    assert_selector "suggestion-option", text: "Kevin"
+    assert_selector "suggestion-option", text: "Kevin", wait: 10
     find("suggestion-option", text: "Kevin").click
 
     within "#direct_rooms_control" do
       assert_selector ".autocomplete__pill", text: "Kevin"
       find("[data-autocomplete-target='input']").fill_in(with: "Jas")
     end
-    assert_selector "suggestion-option", text: "Jason"
+    assert_selector "suggestion-option", text: "Jason", wait: 10
     find("suggestion-option", text: "Jason").click
 
     within "#direct_rooms_control" do
