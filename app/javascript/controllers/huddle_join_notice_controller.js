@@ -10,7 +10,8 @@ export default class extends Controller {
   static targets = [ "sound", "toasts" ]
   static values = {
     toastTimeout: { type: Number, default: 6000 },
-    batchWindow: { type: Number, default: 4000 }
+    batchWindow: { type: Number, default: 4000 },
+    leaveDelay: { type: Number, default: 5000 }
   }
 
   async connect() {
@@ -79,6 +80,8 @@ export default class extends Controller {
     this.leaveToastTimers = []
     this.joinBatch = null
     this.joinToastNode = null
+    for (const timer of this.pendingLeaves?.values() || []) clearTimeout(timer)
+    this.pendingLeaves = new Map()
     // Toasts are transient; banners re-render from the stored notices.
     if (this.hasToastsTarget) this.toastsTarget.replaceChildren()
   }
@@ -111,13 +114,18 @@ export default class extends Controller {
     if (notice.eventType === "huddle_joined") {
       this.#joined(notice, roomId)
     } else if (notice.eventType === "huddle_left") {
-      if (this.#inCall(roomId)) this.#toastLeave(notice.joinerName)
+      if (this.#inCall(roomId)) this.#scheduleLeaveToast(roomId, notice.joinerId, notice.joinerName)
     } else if (notice.eventType === "huddle_ended") {
       this.#dismissNotice(roomId)
     }
   }
 
   #joined(notice, roomId) {
+    // A join inside the leave delay answers a pending leave from the same
+    // person and stays silent itself: a server-mute revoke plus its
+    // automatic rejoin reads as one quiet cycle instead of "left" + "joined".
+    if (this.#cancelPendingLeave(roomId, notice.joinerId)) return
+
     if (this.#inCall(roomId)) {
       this.#toastJoin(roomId, notice.joinerName)
     } else if (this.huddleKnown) {
@@ -290,9 +298,33 @@ export default class extends Controller {
     this.joinToastNode = null
   }
 
-  #toastLeave(name) {
+  // A leave waits out the mute-cycle delay before toasting: a join from
+  // the same person inside the window cancels it (see #joined), so a
+  // server mute never flashes "left" + "joined". A leave that stands
+  // alone toasts once the delay passes, if the viewer is still in.
+  #scheduleLeaveToast(roomId, joinerId, name) {
     if (!name) return
+    this.#cancelPendingLeave(roomId, joinerId)
 
+    const key = leaveKey(roomId, joinerId)
+    const timer = setTimeout(() => {
+      this.pendingLeaves?.delete(key)
+      if (this.#inCall(roomId)) this.#showLeaveToast(name)
+    }, this.leaveDelayValue)
+    this.pendingLeaves ||= new Map()
+    this.pendingLeaves.set(key, timer)
+  }
+
+  #cancelPendingLeave(roomId, joinerId) {
+    const timer = this.pendingLeaves?.get(leaveKey(roomId, joinerId))
+    if (timer === undefined) return false
+
+    clearTimeout(timer)
+    this.pendingLeaves.delete(leaveKey(roomId, joinerId))
+    return true
+  }
+
+  #showLeaveToast(name) {
     const toast = document.createElement("div")
     toast.className = "huddle-join-toast huddle-join-toast--leave shadow"
     toast.setAttribute("role", "status")
@@ -321,6 +353,10 @@ export default class extends Controller {
       detail: { roomId, roomName }
     }))
   }
+}
+
+function leaveKey(roomId, joinerId) {
+  return `${roomId}:${joinerId}`
 }
 
 function roomIdFromParticipantsUrl(url) {

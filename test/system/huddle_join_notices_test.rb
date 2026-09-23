@@ -97,7 +97,7 @@ class HuddleJoinNoticesTest < ApplicationSystemTestCase
     visit room_path(room)
     wait_for_cable_connection
     wait_for_join_notice_controller
-    hold_toasts_open
+    hold_toasts_open(leave_delay: 200)
     record_played_sounds
 
     jason_grant = HuddleGrant.issue!(session: second_session_for(users(:jason)),
@@ -111,6 +111,34 @@ class HuddleJoinNoticesTest < ApplicationSystemTestCase
 
     assert_selector ".huddle-join-toast--leave", text: "David left", wait: 10
     sleep 0.5
+    assert_empty played_sounds
+  end
+
+  test "a server mute cycle toasts neither left nor joined" do
+    room = rooms(:david_and_jason)
+    visit room_path(room)
+    wait_for_cable_connection
+    wait_for_join_notice_controller
+    hold_toasts_open(leave_delay: 300)
+    record_played_sounds
+
+    jason_grant = HuddleGrant.issue!(session: second_session_for(users(:jason)),
+      membership: memberships(:jason_david_and_jason))
+    jason_grant.update_columns(last_seen_at: Time.current)
+    mark_in_call(room)
+
+    grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_david_and_jason))
+    grant.update_columns(last_seen_at: Time.current)
+
+    # A server mute revokes the grant (leave fires) and the client rejoins
+    # with a fresh grant (join fires) inside the leave delay.
+    grant.revoke!
+    rejoined = HuddleGrant.issue!(session: sessions(:david_safari),
+      membership: memberships(:david_david_and_jason))
+    notify_join_and_deliver(rejoined)
+
+    sleep 1 # past the 300ms leave delay
+    assert_no_selector ".huddle-join-toast"
     assert_empty played_sounds
   end
 
@@ -199,11 +227,13 @@ class HuddleJoinNoticesTest < ApplicationSystemTestCase
     end
 
     # Toasts auto-dismiss after seconds; hold them open so assertions
-    # never race the timeout.
-    def hold_toasts_open(batch_window: 4_000)
-      page.execute_script(<<~JS, batch_window)
+    # never race the timeout. Leaves wait out a mute-cycle delay before
+    # toasting; shorten it so leave assertions never wait the full delay.
+    def hold_toasts_open(batch_window: 4_000, leave_delay: 5_000)
+      page.execute_script(<<~JS, batch_window, leave_delay)
         document.getElementById("huddle-join-notices").setAttribute("data-huddle-join-notice-toast-timeout-value", "60000")
         document.getElementById("huddle-join-notices").setAttribute("data-huddle-join-notice-batch-window-value", String(arguments[0]))
+        document.getElementById("huddle-join-notices").setAttribute("data-huddle-join-notice-leave-delay-value", String(arguments[1]))
       JS
     end
 
