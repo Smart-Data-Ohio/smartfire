@@ -91,6 +91,7 @@ class MessagesController < ApplicationController
     # cases a broadcast target.
     @message.broadcast_replace_to @room, :messages, target: [ @message, :github_pr_cards ], partial: "github/pull_requests/cards", attributes: { maintain_scroll: true }
     @message.broadcast_replace_to @room, :messages, target: [ @message, :twitter_cards ], partial: "twitter/posts/cards", attributes: { maintain_scroll: true }
+    @message.broadcast_replace_to @room, :messages, target: [ @message, :message_link_cards ], partial: "messages/message_links/cards", attributes: { maintain_scroll: true }
     if drive_file_ids_key_present?
       @message.broadcast_replace_to @room, :messages, target: [ @message, :drive_attachments ],
         partial: "messages/drive_attachments", locals: { message: @message }, attributes: { maintain_scroll: true }
@@ -149,7 +150,8 @@ class MessagesController < ApplicationController
     # The newest timestamp over everything the page renders that the
     # messages' own rows don't cover: reply sources (whose edits must
     # refresh previews even when the source scrolled off the page),
-    # card rows (whose fetch completion must refresh cards) and
+    # card rows (whose fetch completion must refresh cards),
+    # quoted sources (whose edits must refresh quote cards) and
     # creators (whose renames must refresh authors). Aggregate queries
     # only, so a conditional GET still never loads bodies. edited_at is
     # folded in beside updated_at because a legacy body edit rewrites
@@ -157,6 +159,7 @@ class MessagesController < ApplicationController
     def rendered_related_stamp(messages)
       message_ids = messages.map(&:id)
       reply_ids = messages.filter_map(&:reply_to_message_id)
+      quoted_ids = MessageReference.where(message_id: message_ids).select(:referenced_message_id)
 
       # Formatted at microsecond precision like collection cache keys:
       # a raw Time expands into an etag at whole seconds, which blinds
@@ -168,6 +171,8 @@ class MessagesController < ApplicationController
         Github::PullRequestReference.where(message_id: message_ids).joins(:pull_request).maximum("github_pull_requests.updated_at"),
         Twitter::PostReference.where(message_id: message_ids).joins(:post).maximum("twitter_posts.updated_at"),
         EventReference.where(message_id: message_ids).joins(:event).maximum("events.updated_at"),
+        Message.where(id: quoted_ids).maximum(:updated_at),
+        Message.where(id: quoted_ids).maximum(:edited_at),
         User.where(id: messages.map(&:creator_id)).maximum(:updated_at)
       ].compact.max&.utc&.to_fs(:usec)
     end

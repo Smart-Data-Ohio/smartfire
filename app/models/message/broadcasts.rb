@@ -14,6 +14,19 @@ module Message::Broadcasts
     broadcast_remove_to message_stream_target, :messages
   end
 
+  # Replaces this message's quote-card container, used when a quoted
+  # source is edited or deleted. Rendering preloads first so the cards
+  # read sources from memory, like reply tombstone broadcasts do.
+  def broadcast_quote_cards_replace
+    self.class.preload_rendering_details([ self ])
+    Message::MentionPreloader.preload_for([ self ])
+
+    broadcast_replace_to message_stream_target, :messages,
+      target: ActionView::RecordIdentifier.dom_id(self, :message_link_cards),
+      partial: "messages/message_links/cards", locals: { message: self },
+      attributes: { maintain_scroll: true }
+  end
+
   private
     # Fanned out to the room's members rather than published on one global stream, so
     # that the timing of activity in a room only reaches people who are in it.

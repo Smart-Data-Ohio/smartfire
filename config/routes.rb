@@ -148,6 +148,7 @@ Rails.application.routes.draw do
 
     scope module: "rooms" do
       resources :members, only: :index
+      resources :message_links, only: :show
       resources :pins, only: :index
       resources :drive_recipients, only: :index do
         post :validate, on: :collection

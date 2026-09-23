@@ -43,6 +43,11 @@ class Message < ApplicationRecord
   has_many :event_references, dependent: :destroy
   has_many :events, through: :event_references
 
+  has_many :message_references, dependent: :destroy
+  has_many :referenced_messages, through: :message_references, source: :referenced_message
+  has_many :incoming_message_references, class_name: "MessageReference",
+    foreign_key: :referenced_message_id, dependent: :destroy, inverse_of: :referenced_message
+
   # autosave so records marked for destruction (an edit replacing the set)
   # are destroyed in the same transaction as the message save.
   has_many :drive_attachments, -> { order(:id) }, dependent: :destroy, autosave: true
@@ -56,6 +61,7 @@ class Message < ApplicationRecord
   before_validation :render_markdown_body, if: :will_save_change_to_markdown_source?
   before_create -> { self.client_message_id ||= Random.uuid } # Bots don't care
   before_destroy :preserve_reply_tombstones, prepend: true
+  before_destroy :capture_quote_referencing_ids, prepend: true
   after_create_commit :receive_in_conversation
   after_create_commit :close_stale_sibling_threads, if: :thread_message?
   after_create_commit :record_activity_items
@@ -67,6 +73,10 @@ class Message < ApplicationRecord
   after_update_commit :resync_twitter_post_references
   after_create_commit :sync_event_references
   after_update_commit :resync_event_references
+  after_create_commit :sync_message_references
+  after_update_commit :resync_message_references
+  after_update_commit :broadcast_quote_card_updates, if: :references_source_changed?
+  after_destroy_commit :broadcast_quote_cards_removal
 
   # Tie-broken by id so the page windows agree with the (created_at, id)
   # tuple cursors in Pagination: ordering by created_at alone lets the
@@ -94,6 +104,7 @@ class Message < ApplicationRecord
       .with_boosts
       .preload(:message_pins)
       .preload(:room, :github_pull_requests, :twitter_posts, :drive_attachments, events: [ :room, :organizer, :venue ],
+        message_references: { referenced_message: [ :room, :rich_text_body, { creator: :avatar_attachment } ] },
         reply_to_message: [ :room, :rich_text_body, { creator: :avatar_attachment } ])
   }
   # The JSON payload reads the creator, body, attachment filename, room, reply
@@ -277,6 +288,41 @@ class Message < ApplicationRecord
 
     def resync_event_references
       Event::ReferenceSync.call(self) if references_source_changed?
+    end
+
+    def sync_message_references
+      Message::ReferenceSync.call(self)
+    end
+
+    def resync_message_references
+      Message::ReferenceSync.call(self) if references_source_changed?
+    end
+
+    # An edit to a quoted message refreshes every quote card pointing at
+    # it, in whatever room or thread the quoting message lives. Each card
+    # re-renders from its quoting message, so per-viewer access still
+    # applies: cross-room quotes broadcast as frame placeholders that
+    # reload through the quote endpoint.
+    def broadcast_quote_card_updates
+      incoming_message_references.includes(:message).each do |reference|
+        reference.message.broadcast_quote_cards_replace
+      end
+    end
+
+    # Deleting a quoted message destroys its reference rows, which alone
+    # would leave stale quote cards in cached fragments and open clients:
+    # bump the quoting messages (without touching their rooms, like the
+    # pin stamp) and replace their card containers over the stream.
+    def capture_quote_referencing_ids
+      @quote_referencing_ids = incoming_message_references.pluck(:message_id)
+    end
+
+    def broadcast_quote_cards_removal
+      ids = @quote_referencing_ids || []
+      return if ids.empty?
+
+      Message.where(id: ids).update_all(updated_at: Time.current)
+      Message.where(id: ids).find_each(&:broadcast_quote_cards_replace)
     end
 
     # Markdown edits rewrite the body through the renderer; legacy edits
