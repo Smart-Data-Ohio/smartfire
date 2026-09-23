@@ -166,6 +166,7 @@ Rails.application.routes.draw do
       resource :settings, only: :show
       resource :involvement, only: %i[ show update ]
       resources :github_subscriptions, only: %i[ create update destroy ]
+      resource :inbound_email_address, only: :create, controller: "inbound_email_addresses"
     end
 
     namespace :github do

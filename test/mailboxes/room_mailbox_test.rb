@@ -1,0 +1,154 @@
+require "test_helper"
+
+class RoomMailboxTest < ActionMailbox::TestCase
+  setup do
+    @domain_before = ENV["INBOUND_EMAIL_DOMAIN"]
+    ENV["INBOUND_EMAIL_DOMAIN"] = "mail.test"
+    @room = rooms(:designers)
+    @token = @room.regenerate_inbound_email_token!
+  end
+
+  teardown do
+    ENV["INBOUND_EMAIL_DOMAIN"] = @domain_before
+  end
+
+  test "mail from a member posts as that member" do
+    assert_difference -> { @room.messages.count }, 1 do
+      receive_inbound_email_from_mail(
+        from: "david@37signals.com",
+        to: room_address,
+        subject: "Launch update",
+        body: "We ship Friday."
+      )
+    end
+
+    message = @room.messages.order(:created_at).last
+    assert_equal users(:david), message.creator
+    assert_includes message.markdown_source, "We ship Friday."
+    assert_includes message.markdown_source, "Launch update"
+  end
+
+  test "member matching is case-insensitive" do
+    receive_inbound_email_from_mail(
+      from: "David@37Signals.com", to: room_address, body: "Hello"
+    )
+
+    assert_equal users(:david), @room.messages.order(:created_at).last.creator
+  end
+
+  test "mail from a non-member posts as the Email bot with the sender shown" do
+    receive_inbound_email_from_mail(
+      from: "outsider@example.com", to: room_address,
+      subject: "Tip", body: "Saw this."
+    )
+
+    message = @room.messages.order(:created_at).last
+    assert_equal "Email", message.creator.name
+    assert_predicate message.creator, :bot?
+    assert_includes message.markdown_source, "outsider@example.com"
+    assert_includes message.markdown_source, "Saw this."
+    assert @room.memberships.exists?(user_id: message.creator_id)
+  end
+
+  test "mail from a member of another room posts as the Email bot" do
+    other = users(:kevin)
+    memberships(:kevin_designers).destroy!
+
+    receive_inbound_email_from_mail(
+      from: other.email_address, to: room_address, body: "Hello"
+    )
+
+    assert_equal "Email", @room.messages.order(:created_at).last.creator.name
+  end
+
+  test "an unknown token posts nothing" do
+    assert_no_difference -> { Message.count } do
+      receive_inbound_email_from_mail(
+        from: "david@37signals.com", to: "room-bogus@mail.test", body: "Hello"
+      )
+    end
+  end
+
+  test "nothing posts while inbound email is disabled" do
+    ENV.delete("INBOUND_EMAIL_DOMAIN")
+
+    assert_no_difference -> { Message.count } do
+      receive_inbound_email_from_mail(
+        from: "david@37signals.com", to: room_address, body: "Hello"
+      )
+    end
+  end
+
+  test "a rotated token retires the old address" do
+    old_address = room_address
+    @room.regenerate_inbound_email_token!
+
+    assert_no_difference -> { Message.count } do
+      receive_inbound_email_from_mail(
+        from: "david@37signals.com", to: old_address, body: "Hello"
+      )
+    end
+  end
+
+  test "deleted rooms receive nothing" do
+    @room.update!(deleted_at: Time.current)
+
+    assert_no_difference -> { Message.count } do
+      receive_inbound_email_from_mail(
+        from: "david@37signals.com", to: room_address, body: "Hello"
+      )
+    end
+  end
+
+  test "html-only mail is sanitized to text" do
+    mail = Mail.new(
+      from: "david@37signals.com", to: room_address, subject: "Note",
+      content_type: "text/html",
+      body: "<p>Hello <b>there</b></p><script>alert('x')</script>"
+    )
+
+    receive_inbound_email_from_source(mail.to_s)
+
+    message = @room.messages.order(:created_at).last
+    assert_includes message.markdown_source, "Hello"
+    assert_not_includes message.markdown_source, "<script>"
+    assert_not_includes message.markdown_source, "alert("
+    assert_not_includes message.markdown_source, "<b>"
+  end
+
+  test "an attachment within the limit lands on the message" do
+    mail = Mail.new(from: "david@37signals.com", to: room_address, subject: "File", body: "See attached.")
+    mail.add_file(filename: "notes.txt", content: "file-bytes")
+
+    receive_inbound_email_from_source(mail.to_s)
+
+    message = @room.messages.order(:created_at).last
+    assert message.attachment.attached?
+    assert_equal "notes.txt", message.attachment.filename.to_s
+    assert_includes message.markdown_source, "notes.txt"
+  end
+
+  test "an oversized attachment is named, not attached" do
+    mail = Mail.new(from: "david@37signals.com", to: room_address, subject: "Big", body: "Big file.")
+    mail.add_file(filename: "big.bin", content: "x" * (RoomMailbox::MAX_ATTACHMENT_BYTES + 1))
+
+    receive_inbound_email_from_source(mail.to_s)
+
+    message = @room.messages.order(:created_at).last
+    assert_not message.attachment.attached?
+    assert_includes message.markdown_source, "big.bin (not attached: over the 10 MB limit)"
+  end
+
+  test "an empty mail with no attachment posts nothing" do
+    assert_no_difference -> { Message.count } do
+      receive_inbound_email_from_mail(
+        from: "david@37signals.com", to: room_address, body: "  "
+      )
+    end
+  end
+
+  private
+    def room_address
+      "room-#{@token}@mail.test"
+    end
+end

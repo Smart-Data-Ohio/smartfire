@@ -54,6 +54,17 @@ class Room < ApplicationRecord
   scope :destroy_unclaimed_before, ->(cutoff) { where("destroy_enqueued_at IS NULL OR destroy_enqueued_at < ?", cutoff) }
 
   class << self
+    # Forward-to-room is enabled by a configured inbound domain; without
+    # one the mailbox drops everything and the room settings say what to
+    # set. See docs/email-to-room.md.
+    def inbound_email_domain
+      ENV["INBOUND_EMAIL_DOMAIN"].presence
+    end
+
+    def inbound_email_enabled?
+      inbound_email_domain.present?
+    end
+
     def create_for(attributes, users:)
       transaction do
         create!(attributes).tap do |room|
@@ -117,6 +128,24 @@ class Room < ApplicationRecord
 
   def default_involvement
     "mentions"
+  end
+
+  # The room's secret forward-to address, or nil while inbound email is
+  # disabled or the room has no token yet. Direct rooms never have one.
+  def inbound_email_address
+    return nil unless self.class.inbound_email_enabled?
+    return nil if direct? || inbound_email_token.blank?
+
+    "room-#{inbound_email_token}@#{self.class.inbound_email_domain}"
+  end
+
+  # Issues the room's first inbound token, or rotates it. A lost token
+  # race retries: the unique index admits exactly one winner.
+  def regenerate_inbound_email_token!
+    update!(inbound_email_token: SecureRandom.hex(16))
+    inbound_email_token
+  rescue ActiveRecord::RecordNotUnique
+    retry
   end
 
   private
