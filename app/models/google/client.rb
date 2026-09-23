@@ -192,8 +192,13 @@ module Google
       api_request(:post, "/calendar/v3/calendars/primary/events", payload)
     end
 
-    def update_event(google_event_id, payload)
-      api_request(:put, "/calendar/v3/calendars/primary/events/#{google_event_id}", payload)
+    def update_event(google_event_id, payload, conference_data_version: false)
+      query = URI.encode_www_form(conferenceDataVersion: 1) if conference_data_version
+      api_request(:put, "/calendar/v3/calendars/primary/events/#{google_event_id}", payload, query:)
+    end
+
+    def get_event(google_event_id)
+      api_request(:get, "/calendar/v3/calendars/primary/events/#{google_event_id}")
     end
 
     def delete_event(google_event_id)

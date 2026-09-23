@@ -91,6 +91,10 @@ module Google
           .joins(:event).merge(Event.upcoming).pluck(:event_id).each do |event_id|
             Calendar::SyncEntryJob.perform_later(event_id, user.id)
           end
+        # A fresh connection provisions Meet links that were requested
+        # before the organizer connected Google.
+        Event.where(organizer: user, meet_link_requested: true, meet_link: [ nil, "" ])
+          .find_each { |event| Calendar::MeetLinkJob.perform_later(event.id) }
       end
   end
 end

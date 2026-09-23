@@ -825,6 +825,31 @@ class Rooms::EventsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "Where:"
   end
 
+  test "creating with a Meet request stores the flag" do
+    post room_events_url(@room), params: {
+      event: { title: "Demo day", starts_at: "2026-09-25T15:30", time_zone: "America/New_York", meet_link_requested: "1" }
+    }
+
+    assert Event.order(:created_at).last.meet_link_requested?
+  end
+
+  test "show renders the Meet link when present" do
+    @event.update!(meet_link: "https://meet.google.com/abc-defg-hij")
+
+    get room_event_url(@room, @event)
+
+    assert_response :success
+    assert_includes response.body, "Join Google Meet"
+    assert_includes response.body, "https://meet.google.com/abc-defg-hij"
+  end
+
+  test "show renders no Meet row without a link" do
+    get room_event_url(@room, @event)
+
+    assert_response :success
+    assert_not_includes response.body, "Join Google Meet"
+  end
+
   private
     def count_sql_queries(&block)
       queries = 0
