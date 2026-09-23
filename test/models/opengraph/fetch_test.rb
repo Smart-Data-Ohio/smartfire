@@ -110,6 +110,55 @@ class Opengraph::FetchTest < ActiveSupport::TestCase
     end
   end
 
+  test "#fetch_document follows at most max_redirects redirects" do
+    3.times do |index|
+      WebMock.stub_request(:get, "https://www.example.com/capped-#{index}")
+        .to_return(status: 302, headers: { location: "https://www.example.com/capped-#{index + 1}" })
+    end
+    WebMock.stub_request(:get, "https://www.example.com/capped-3")
+      .to_return(status: 200, body: "<body>ok<body>", headers: { content_type: "text/html" })
+
+    assert_equal "<body>ok<body>",
+      @fetch.fetch_document(URI.parse("https://www.example.com/capped-0"), max_redirects: 3)
+
+    WebMock.stub_request(:get, "https://www.example.com/capped-3")
+      .to_return(status: 302, headers: { location: "https://www.example.com/capped-4" })
+    WebMock.stub_request(:get, "https://www.example.com/capped-4")
+      .to_return(status: 200, body: "<body>ok<body>", headers: { content_type: "text/html" })
+
+    assert_raises Opengraph::Fetch::TooManyRedirectsError do
+      @fetch.fetch_document(URI.parse("https://www.example.com/capped-0"), max_redirects: 3)
+    end
+  end
+
+  test "#fetch_document aborts a slow drip past the deadline" do
+    WebMock.disable_net_connect!(allow_localhost: true)
+    server = TCPServer.new("127.0.0.1", 0)
+    thread = Thread.new do
+      socket = server.accept
+      begin
+        socket.gets("\r\n\r\n")
+        socket.write "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 64\r\nConnection: close\r\n\r\n"
+        socket.write "x" * 32
+        socket.flush
+        sleep 5
+        socket.write "x" * 32
+      rescue IOError, Errno::EPIPE
+      ensure
+        socket.close rescue nil
+      end
+    end
+
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    assert_raises Timeout::Error do
+      @fetch.fetch_document(URI.parse("http://127.0.0.1:#{server.addr[1]}/drip"), ip: "127.0.0.1", deadline: 0.5)
+    end
+    assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 4
+  ensure
+    thread&.kill
+    server&.close
+  end
+
   test "#fetch_document ignores large responses" do
     WebMock.stub_request(:get, "https://www.example.com/")
       .to_return(status: 200, body: "too large", headers: { content_length: 1.gigabyte, content_type: "text/html" })
