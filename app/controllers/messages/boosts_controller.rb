@@ -38,7 +38,7 @@ class Messages::BoostsController < ApplicationController
 
   private
     def set_message
-      @message = Current.user.reachable_messages.find(params[:message_id])
+      @message = Current.user.reachable_messages.includes(boosts: :booster).find(params[:message_id])
     end
 
     def set_boost

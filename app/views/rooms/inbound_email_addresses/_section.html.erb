@@ -1,0 +1,26 @@
+<% if Current.user.can_administer?(room) && room.emailable? %>
+  <section class="panel txt-align-center" id="inbound-email">
+    <div class="pad-inline-double center">
+      <h2 class="margin-none">Email to room</h2>
+      <% if Room.inbound_email_enabled? %>
+        <% if room.inbound_email_address.present? %>
+          <p class="txt-small margin-none-block-start">
+            Forward email to this address to post it in the room. Mail from a member's address posts as them; everything else posts as the Email bot with the sender named.
+          </p>
+          <p><code><%= room.inbound_email_address %></code></p>
+          <%= button_to "Rotate address", room_inbound_email_address_path(room), class: "btn btn--negative txt-small",
+                form: { data: { turbo_confirm: "Rotate this room's email address? The old address stops working." } } %>
+        <% else %>
+          <p class="txt-small margin-none-block-start">
+            No email address yet. Create one to post forwarded mail in this room.
+          </p>
+          <%= button_to "Create email address", room_inbound_email_address_path(room), class: "btn txt-small" %>
+        <% end %>
+      <% else %>
+        <p class="txt-small margin-none-block-start">
+          Inbound email is not configured for this workspace. Set <code>INBOUND_EMAIL_DOMAIN</code> and the relay ingress password to enable forward-to-room.
+        </p>
+      <% end %>
+    </div>
+  </section>
+<% end %>

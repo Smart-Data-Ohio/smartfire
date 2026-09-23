@@ -421,7 +421,8 @@ body.sidebar {
 }
 
 .sidebar-item:hover,
-.sidebar-item:focus-visible {
+.sidebar-item:focus-visible,
+.sidebar-item.direct:focus-within {
   background: var(--workspace-sidebar-hover);
   color: var(--workspace-text);
   filter: none;
@@ -493,6 +494,15 @@ body.sidebar {
 
 .direct__author {
   margin: 0;
+}
+
+/* The room name is its own link beside the avatar triggers: it fills the
+   row's middle column and inherits the row's color. */
+.direct__link {
+  color: inherit;
+  display: block;
+  min-inline-size: 0;
+  text-decoration: none;
 }
 
 .unread .direct__author {
@@ -914,7 +924,7 @@ summary.member-panel__group-heading {
   position: absolute;
 }
 
-.member-panel__member[data-online="true"] .member-panel__presence {
+.member-panel__member[data-online="true"] .member-panel__presence:not([data-presence]) {
   background: var(--color-positive);
 }
 

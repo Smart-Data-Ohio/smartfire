@@ -4,6 +4,12 @@ class UsersController < ApplicationController
   before_action :set_user, only: :show
   before_action :verify_join_code, only: %i[ new create ]
 
+  # People directory: every active member except yourself, with presence.
+  def index
+    @users = User.active.includes(:agent).with_attached_avatar.ordered.where.not(id: Current.user.id)
+    @online_ids = WorkspacePresenceLease.online_user_ids(@users.map(&:id)).to_set
+  end
+
   def new
     @user = User.new
   end
@@ -17,6 +23,7 @@ class UsersController < ApplicationController
   end
 
   def show
+    @dnd_allowed = Current.user ? Current.user.dnd_allowed_users.exists?(allowed_user_id: @user.id) : false
   end
 
   private

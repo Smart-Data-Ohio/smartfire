@@ -26,6 +26,14 @@ class SavedItem::ReminderPusherTest < ActiveSupport::TestCase
     SavedItem::ReminderPusher.new(saved_item: @saved_item).push
   end
 
+  test "no push goes out while the saver is in Do Not Disturb" do
+    users(:david).update!(presence_setting: "dnd")
+
+    Rails.configuration.x.web_push_pool.expects(:queue).never
+
+    SavedItem::ReminderPusher.new(saved_item: @saved_item).push
+  end
+
   test "a thread message reminder links into its thread" do
     thread = ChannelThread.create!(room: rooms(:designers), creator: users(:jason), name: "Deep dive")
     reply = thread.post_message!(creator: users(:jason), attributes: { markdown_source: "Threaded thought", client_message_id: "pusher-thread" })

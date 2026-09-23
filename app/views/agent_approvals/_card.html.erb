@@ -15,6 +15,9 @@
   <% if approval.github_action? && approval.github_login.present? %>
     <p class="txt-small agent-approval-card__identity-note">Acts on GitHub as @<%= approval.github_login %></p>
   <% end %>
+  <% if approval.fizzy_action? && approval.fizzy_user_name.present? %>
+    <p class="txt-small agent-approval-card__identity-note">Acts on Fizzy as <%= approval.fizzy_user_name %></p>
+  <% end %>
 
   <div class="txt-small agent-approval-card__meta">
     <% case approval.effective_status %>
@@ -37,7 +40,7 @@
       <% if approval.approvable_by?(Current.user) %>
         <%= button_to "Approve", agent_approval_path(approval, decision: "approved"), method: :patch, class: "btn btn--primary", form: { class: "agent-approval-card__action-form" } %>
       <% else %>
-        <span class="txt-small">Only an administrator can approve GitHub write actions.</span>
+        <span class="txt-small">Only an administrator can approve <%= approval.fizzy_action? ? "Fizzy" : "GitHub" %> write actions.</span>
       <% end %>
       <%= form_with url: agent_approval_path(approval), method: :patch, class: "agent-approval-card__deny-form" do %>
         <%= hidden_field_tag :decision, "denied" %>

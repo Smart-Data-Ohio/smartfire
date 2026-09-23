@@ -86,6 +86,20 @@ class UserTest < ActiveSupport::TestCase
     assert_requested revoke, body: hash_including({ "token" => "refresh-token" })
   end
 
+  test "deactivating stops the calendar push channel remotely" do
+    user = users(:david)
+    connect_google!(user)
+    Calendar::PushChannel.create!(user:, channel_id: "chan-1",
+      resource_id: "resource-1", token_digest: Calendar::PushChannel.digest("token"))
+    stop = stub_request(:post, "https://www.googleapis.com/calendar/v3/channels/stop")
+      .to_return(status: 200, body: {}.to_json)
+
+    user.deactivate
+
+    assert_requested stop, times: 1
+    assert_nil Calendar::PushChannel.find_by(user_id: user.id)
+  end
+
   test "deactivating with an unreadable Google token skips the revoke" do
     account = GoogleAccount.create!(user: users(:david), email: "david@gmail.test",
       refresh_token: "refresh-token", access_token: "access-token", access_token_expires_at: 1.hour.from_now)

@@ -1,9 +1,10 @@
 <%= sidebar_turbo_frame_tag do %>
   <div class="sidebar__container"
-      data-controller="badge-dot<%= " huddle-presence" if Huddle.configured? %>"
+      data-controller="badge-dot dm-presence<%= " huddle-presence" if Huddle.configured? %>"
       data-badge-dot-unread-class="unread"
+      data-dm-presence-url-value="<%= presence_users_path %>"
       data-huddle-presence-url-value="<%= huddle_presence_users_path %>"
-      data-action="rooms-list:unread@window->badge-dot#update rooms-list:read@window->badge-dot#update turbo:submit-start->turbo-frame#unpermanize">
+      data-action="rooms-list:unread@window->badge-dot#update rooms-list:read@window->badge-dot#update turbo:submit-start->turbo-frame#unpermanize workspace-presence:connected@window->dm-presence#refresh">
     <header class="workspace-identity">
       <div class="workspace-identity__mark" aria-hidden="true">
         <% if Current.account.logo.attached? %>
@@ -41,6 +42,10 @@
         <%= link_to agents_path, class: "sidebar-item btn", data: { workspace_destination: agents_path } do %>
           <%= image_tag "bot.svg", size: 20, aria: { hidden: "true" }, class: "colorize--black" %>
           <span class="sidebar-item__label">Agents</span>
+        <% end %>
+        <%= link_to users_path, class: "sidebar-item btn", data: { workspace_destination: users_path } do %>
+          <%= image_tag "everyone.svg", size: 20, aria: { hidden: "true" }, class: "colorize--black" %>
+          <span class="sidebar-item__label">People</span>
         <% end %>
       </nav>
 

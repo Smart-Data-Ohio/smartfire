@@ -1,0 +1,71 @@
+<%= form_with model: @user, url: user_notification_settings_path, method: :patch, data: { controller: "form" }, class: "flex flex-column gap" do |form| %>
+  <fieldset class="margin-none">
+    <legend class="txt-large">Do not disturb</legend>
+    <p class="txt-small margin-none">While DND is on, push notifications and sounds stay silent. Your inbox still records everything.</p>
+
+    <div class="flex align-start gap pad-block-half">
+      <label class="switch flex-item-no-shrink">
+        <%= hidden_field_tag "user[dnd_enabled]", "0", id: nil %>
+        <%= check_box_tag "user[dnd_enabled]", "1", @user.dnd_enabled?, id: "user_dnd_enabled", class: "switch__input" %>
+        <span class="switch__btn round"></span>
+        <span class="for-screen-reader">Do not disturb</span>
+      </label>
+      <span>
+        <span class="txt-medium">Do not disturb</span><br>
+        <span class="txt-small">Silence push and sounds until you turn this off.</span>
+      </span>
+    </div>
+
+    <div class="flex align-start gap pad-block-half">
+      <label class="switch flex-item-no-shrink">
+        <%= hidden_field_tag "user[quiet_hours_enabled]", "0", id: nil %>
+        <%= check_box_tag "user[quiet_hours_enabled]", "1", @user.quiet_hours_enabled?, id: "user_quiet_hours_enabled", class: "switch__input" %>
+        <span class="switch__btn round"></span>
+        <span class="for-screen-reader">Quiet hours</span>
+      </label>
+      <span>
+        <span class="txt-medium">Quiet hours</span><br>
+        <span class="txt-small">Scheduled DND every day, in your time zone.</span>
+      </span>
+    </div>
+
+    <div class="flex align-center gap pad-block-half">
+      <%= form.label :quiet_hours_start, "Quiet from", class: "txt-medium" %>
+      <%= form.time_field :quiet_hours_start, class: "input", id: "user_quiet_hours_start" %>
+      <%= form.label :quiet_hours_end, "until", class: "txt-medium" %>
+      <%= form.time_field :quiet_hours_end, class: "input", id: "user_quiet_hours_end" %>
+    </div>
+    <% if @user.errors[:quiet_hours_start].any? %>
+      <p class="txt-small margin-none" style="color: var(--color-negative)">Quiet hours <%= @user.errors[:quiet_hours_start].to_sentence %>.</p>
+    <% end %>
+
+    <% if @user.dnd_allowed_people.any? %>
+      <p class="txt-medium margin-none pad-block-half">Still notify me for:</p>
+      <ul class="margin-none pad-inline">
+        <% @user.dnd_allowed_people.ordered.each do |person| %>
+          <li class="flex align-center gap pad-block-half">
+            <span class="flex-item-grow"><%= person.name %></span>
+            <%= button_to "Remove", user_dnd_allowance_path(person), method: :delete, class: "btn btn--negative txt-small", aria: { label: "Remove #{person.name} from DND exceptions" } %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+    <p class="txt-small">Star people from their profile page to let their messages through DND.</p>
+
+    <%= profile_form_submit_button %>
+  </fieldset>
+
+  <fieldset class="margin-none">
+    <legend class="txt-large">Keyword alerts</legend>
+    <p class="txt-small margin-none">One word or phrase per line, up to <%= KeywordAlert::MAX_PER_USER %>. A match in any room you belong to lands in your inbox.</p>
+    <%= form.label :keyword_alerts, "Keywords", class: "txt-medium for-screen-reader" %>
+    <%= text_area_tag "user[keyword_alerts]", @user.keyword_alerts.order(:phrase).pluck(:phrase).join("\n"),
+          rows: 4, class: "input full-width", id: "user_keyword_alerts", autocomplete: "off",
+          placeholder: "production\ndeploy freeze" %>
+    <% if @user.errors[:base].any? %>
+      <p class="txt-small margin-none" style="color: var(--color-negative)"><%= @user.errors[:base].to_sentence %>.</p>
+    <% end %>
+
+    <%= profile_form_submit_button %>
+  </fieldset>
+<% end %>

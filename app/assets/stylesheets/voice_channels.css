@@ -31,7 +31,7 @@
   object-fit: cover;
 }
 
-.voice-stack__avatar + .voice-stack__avatar {
+.voice-stack__avatars > * + * {
   margin-inline-start: -7px;
 }
 
@@ -39,6 +39,11 @@
    no pulse, so reduced-motion settings need no exception. */
 .voice-stack__avatar--speaking {
   box-shadow: 0 0 0 2px var(--color-positive);
+}
+
+.voice-stack__trigger {
+  display: inline-flex;
+  line-height: 0;
 }
 
 .voice-stack__count {
@@ -130,7 +135,7 @@
     flex: none;
   }
 
-  .room-header__actions .voice-stack__avatar:nth-child(n+4) {
+  .room-header__actions .voice-stack__avatars > :nth-child(n+4) {
     display: none;
   }
 }

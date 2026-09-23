@@ -5,7 +5,8 @@
        inert
        data-member-panel-target="panel"
        data-members-url="<%= room_members_path(room, format: :json) %>"
-       data-default-avatar-url="<%= asset_path("default-avatar.svg") %>">
+       data-default-avatar-url="<%= asset_path("default-avatar.svg") %>"
+       data-card-url-template="<%= profile_card_url_template %>">
   <button type="button"
           class="member-panel__backdrop"
           aria-hidden="true"
@@ -14,7 +15,7 @@
           data-action="member-panel#close"
           hidden></button>
 
-  <section class="member-panel__surface" aria-labelledby="channel-members-title">
+  <section class="member-panel__surface" aria-labelledby="channel-members-title" data-controller="multi-select">
     <header class="member-panel__header">
       <div class="min-width">
         <h2 id="channel-members-title">Members</h2>
@@ -33,5 +34,6 @@
 
     <p class="member-panel__status" role="status" data-member-panel-target="status">Open the member list to load members.</p>
     <div class="member-panel__content" data-member-panel-target="content"></div>
+    <%= render "shared/multi_select_bar" %>
   </section>
 </aside>

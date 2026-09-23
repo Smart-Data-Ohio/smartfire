@@ -384,6 +384,7 @@ class ActivityItemsControllerTest < ActionDispatch::IntegrationTest
 
       ActivityItem.create!(user:, source: new_message.call("hello"), event_type: "mention")
       ActivityItem.create!(user:, source: new_message.call("reply"), event_type: "reply")
+      ActivityItem.create!(user:, source: new_message.call("deploy"), event_type: "keyword_alert")
       reminder_saved_item = SavedItem.create!(user:, message: new_message.call("reminder"))
       ActivityItem.create!(user:, source: reminder_saved_item, event_type: "message_reminder")
 

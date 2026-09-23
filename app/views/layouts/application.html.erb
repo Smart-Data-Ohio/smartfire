@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html data-theme="<%= user_theme %>">
   <head>
     <%= page_title_tag %>
 
     <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
     <meta name="view-transition" content="same-origin">
-    <meta name="color-scheme" content="light dark">
+    <meta name="color-scheme" content="<%= theme_color_scheme_meta_content %>">
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#15171c" media="(prefers-color-scheme: dark)">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -24,6 +24,11 @@
       <%= tag.meta name: "google-cloud-project-number", content: Google::Picker.project_number %>
     <% end %>
     <%= tag.meta name: "brand-icon-names", content: Icons.client_icon_names.join(",") %>
+    <% if Current.user %>
+      <%= tag.meta name: "current-user-time-zone", content: current_user_time_zone_meta_content %>
+      <%= tag.meta name: "time-zone-url", content: user_time_zone_path %>
+      <%= notification_sound_meta_tags %>
+    <% end %>
 
     <%= tag.link rel: "manifest", href: webmanifest_path(format: :json) %>
     <%= tag.link rel: "icon", href: fresh_account_logo_path, type: "image/png" %>
@@ -38,8 +43,8 @@
   </head>
 
   <body class="<%= body_classes %>"
-        data-controller="local-time lightbox workspace-navigation member-panel thread-panel"
-        data-action="keydown.esc@window->workspace-navigation#close keydown.esc@window->member-panel#close keydown.esc@window->thread-panel#close keydown@window->member-panel#trapFocus keydown@window->thread-panel#trapFocus member-panel:opening@window->workspace-navigation#close member-panel:opening@window->thread-panel#close workspace-navigation:opening@window->member-panel#close workspace-navigation:opening@window->thread-panel#close thread-messages:changed->thread-panel#messagesChanged thread-panel:opening@window->member-panel#close thread-panel:opening@window->workspace-navigation#close workspace-presence:connected@window->member-panel#refreshPresence turbo:before-cache@document->member-panel#prepareForCache turbo:before-cache@document->thread-panel#prepareForCache turbo:frame-load@document->workspace-navigation#syncCurrentRoom turbo:load@document->workspace-navigation#syncCurrentRoom turbo:load@document->member-panel#roomChanged rooms-list:unread@window->workspace-navigation#updateUnreadStatus rooms-list:read@window->workspace-navigation#updateUnreadStatus">
+        data-controller="local-time lightbox workspace-navigation member-panel thread-panel profile-card timezone"
+        data-action="keydown.esc@window->workspace-navigation#close keydown.esc@window->member-panel#close keydown.esc@window->thread-panel#close keydown.esc@window->profile-card#close keydown@window->member-panel#trapFocus keydown@window->thread-panel#trapFocus keydown@window->profile-card#trapFocus member-panel:opening@window->workspace-navigation#close member-panel:opening@window->thread-panel#close workspace-navigation:opening@window->member-panel#close workspace-navigation:opening@window->thread-panel#close thread-messages:changed->thread-panel#messagesChanged thread-panel:opening@window->member-panel#close thread-panel:opening@window->workspace-navigation#close workspace-presence:connected@window->member-panel#refreshPresence turbo:before-cache@document->member-panel#prepareForCache turbo:before-cache@document->thread-panel#prepareForCache turbo:frame-load@document->workspace-navigation#syncCurrentRoom turbo:load@document->workspace-navigation#syncCurrentRoom turbo:load@document->member-panel#roomChanged rooms-list:unread@window->workspace-navigation#updateUnreadStatus rooms-list:read@window->workspace-navigation#updateUnreadStatus">
     <a href="#main-content" class="skip-navigation btn">Skip to main content</a>
 
     <nav id="nav">
@@ -111,6 +116,7 @@
 
     <%= render "layouts/lightbox" %>
 
+    <%= render "users/cards/popover" if Current.user %>
     <%= render "messages/actions" %>
     <%= render "messages/emoji_picker" %>
 

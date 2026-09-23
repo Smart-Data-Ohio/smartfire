@@ -93,25 +93,14 @@ trix-editor {
 
   &::before {
     opacity: 1 !important;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    &::before {
-      filter: invert(100);
-    }
+    filter: var(--icon-filter, none);
   }
 
   &.trix-active {
     background-color: var(--color-text) !important;
 
     &::before {
-      filter: invert(100);
-    }
-
-    @media (prefers-color-scheme: dark) {
-      &::before {
-        filter: invert(0);
-      }
+      filter: var(--icon-filter-inverse, invert(100));
     }
   }
 

@@ -10,11 +10,13 @@
     <ul class="stage-panel__list">
       <% hosts.each do |member| %>
         <li id="<%= dom_id(member, :stage_row) %>" class="stage-panel__member">
-          <span class="avatar stage-panel__avatar">
+          <%= button_tag type: "button", class: "avatar stage-panel__avatar profile-card-avatar",
+                aria: { label: "View profile of #{member.user.name}" },
+                data: profile_card_trigger(member.user) do %>
             <%= image_tag fresh_user_avatar_path(member.user), size: 32, aria: { hidden: "true" } %>
-          </span>
+          <% end %>
           <span class="stage-panel__identity">
-            <strong class="overflow-ellipsis"><%= member.user.name %></strong>
+            <%= button_tag type: "button", class: "profile-card-name overflow-ellipsis", data: profile_card_trigger(member.user) do %><strong><%= member.user.name %></strong><% end %>
             <span class="stage-panel__role">Host<% if member.server_muted? %> · <span class="stage-panel__muted-badge">Muted</span><% end %></span>
           </span>
           <% if can_manage %>
@@ -54,11 +56,13 @@
       <ul class="stage-panel__list">
         <% speakers.each do |member| %>
           <li id="<%= dom_id(member, :stage_row) %>" class="stage-panel__member">
-            <span class="avatar stage-panel__avatar">
+            <%= button_tag type: "button", class: "avatar stage-panel__avatar profile-card-avatar",
+                  aria: { label: "View profile of #{member.user.name}" },
+                  data: profile_card_trigger(member.user) do %>
               <%= image_tag fresh_user_avatar_path(member.user), size: 32, aria: { hidden: "true" } %>
-            </span>
+            <% end %>
             <span class="stage-panel__identity">
-              <strong class="overflow-ellipsis"><%= member.user.name %></strong>
+              <%= button_tag type: "button", class: "profile-card-name overflow-ellipsis", data: profile_card_trigger(member.user) do %><strong><%= member.user.name %></strong><% end %>
               <span class="stage-panel__role">Speaker<% if member.server_muted? %> · <span class="stage-panel__muted-badge">Muted</span><% end %></span>
             </span>
             <% if can_manage %>
@@ -99,11 +103,13 @@
         <% listeners.each do |member| %>
           <% raised_position += 1 if member.hand_raised? %>
           <li id="<%= dom_id(member, :stage_row) %>" class="stage-panel__member">
-            <span class="avatar stage-panel__avatar">
+            <%= button_tag type: "button", class: "avatar stage-panel__avatar profile-card-avatar",
+                  aria: { label: "View profile of #{member.user.name}" },
+                  data: profile_card_trigger(member.user) do %>
               <%= image_tag fresh_user_avatar_path(member.user), size: 32, aria: { hidden: "true" } %>
-            </span>
+            <% end %>
             <span class="stage-panel__identity">
-              <strong class="overflow-ellipsis"><%= member.user.name %></strong>
+              <%= button_tag type: "button", class: "profile-card-name overflow-ellipsis", data: profile_card_trigger(member.user) do %><strong><%= member.user.name %></strong><% end %>
               <span class="stage-panel__role">
                 Listener<% if member.hand_raised? %> · <span class="stage-panel__hand-badge">Hand raised · #<%= raised_position %> in queue</span><% end %>
               </span>

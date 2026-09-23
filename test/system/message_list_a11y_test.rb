@@ -159,6 +159,32 @@ class MessageListA11yTest < ApplicationSystemTestCase
     assert_focused "##{dom_id(messages(:second))}"
   end
 
+  test "a no-change room refresh does not yank focus back to the composer" do
+    # The connection refresh used to answer whitespace with a turbo-stream
+    # content type when nothing changed, and request.js renders every such
+    # response. Turbo's animation-frame focus restore then clobbered an
+    # in-window focus move back to the composer, with no stream element and
+    # hence no before-stream-render to hook the re-apply onto.
+    refresh_url = page.evaluate_script(
+      "document.querySelector('[data-refresh-room-url-value]').dataset.refreshRoomUrlValue")
+    focused_id = page.evaluate_async_script(<<~'JS', dom_id(messages(:first)), refresh_url)
+      const [id, url, done] = arguments;
+      const response = await fetch(`${url}?${new URLSearchParams({ since: Date.now(), reason: "connection" })}`, {
+        headers: { Accept: "text/vnd.turbo-stream.html" }
+      });
+      const contentType = response.headers.get("content-type") || "";
+      const body = await response.text();
+      // request.js renders only turbo-stream responses; replicate the gate so
+      // the render (if any) and the focus move share one task, deterministically
+      // inside Turbo's restore window.
+      if (contentType.includes("turbo-stream")) Turbo.renderStreamMessage(body);
+      document.getElementById(id).focus();
+      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => done(document.activeElement.id), 50)));
+    JS
+
+    assert_equal dom_id(messages(:first)), focused_id
+  end
+
   test "the ContextMenu key opens the shared menu and Escape returns focus" do
     message = find("##{dom_id(messages(:third))}")
     page.execute_script("arguments[0].focus()", message)
@@ -541,7 +567,8 @@ class MessageListA11yTest < ApplicationSystemTestCase
 
     visit user_profile_url
     fill_in "user_bio", with: "Reduced motion flash check"
-    click_button "Save changes"
+    # The profile page has several forms; save the one holding the bio.
+    find_field("user_bio").ancestor("form").click_button "Save changes"
 
     assert_selector ".flash", wait: 10
     duration = page.evaluate_script("document.querySelector('.flash__inner').getAnimations().map(animation => animation.effect.getTiming().duration)")
@@ -565,7 +592,8 @@ class MessageListA11yTest < ApplicationSystemTestCase
 
     visit user_profile_url
     fill_in "user_bio", with: "Reduced motion dismiss check"
-    click_button "Save changes"
+    # The profile page has several forms; save the one holding the bio.
+    find_field("user_bio").ancestor("form").click_button "Save changes"
 
     assert_selector ".flash", wait: 10
     find(".flash__dismiss").click

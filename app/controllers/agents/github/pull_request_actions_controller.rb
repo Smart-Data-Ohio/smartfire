@@ -12,8 +12,9 @@ class Agents::Github::PullRequestActionsController < ApplicationController
 
   # POST /rooms/:room_id/agents/github/pull_request_actions (Bearer-only,
   # JSON). Requests a pull-request write action — comment, approve,
-  # request_changes, or request_review — as the agent's own linked GitHub
-  # account. Never calls GitHub: it creates an AgentApproval for a human
+  # request_changes, or request_review — as the owner's GitHub App token
+  # when available, else the agent's own linked GitHub account (see
+  # Github::AgentIdentity). Never calls GitHub: it creates an AgentApproval for a human
   # decider, and the action only runs when the request is approved. A
   # repeated external_id returns the existing row with 200, like
   # POST /agents/approvals.
@@ -95,7 +96,7 @@ class Agents::Github::PullRequestActionsController < ApplicationController
     end
 
     def ensure_agent_github_account
-      @github_account = Current.agent.user.github_connected_account
+      @github_account = Github::AgentIdentity.resolve(Current.agent)
 
       unless @github_account&.usable?
         render json: { error: "Agent has no usable GitHub account" }, status: :unprocessable_entity

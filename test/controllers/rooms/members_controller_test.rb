@@ -5,19 +5,61 @@ class Rooms::MembersControllerTest < ActionDispatch::IntegrationTest
     sign_in :david
   end
 
-  test "returns active room members and only minimal presence fields" do
+  test "returns active room members with presence and status fields" do
     room = rooms(:designers)
     jason_session = users(:jason).sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
     WorkspacePresenceLease.establish(user: users(:jason), session: jason_session)
+    users(:jason).update!(custom_status_emoji: "🚂", custom_status_text: "On a train")
 
     get room_members_url(room, format: :json)
 
     assert_response :success
     members = response.parsed_body.fetch("members")
     assert_equal members.sort_by { |member| [ member.fetch("name").downcase, member.fetch("id") ] }, members
-    assert_equal %w[ avatar_url id name online ], members.first.keys.sort
-    assert members.find { |member| member["id"] == users(:jason).id }.fetch("online")
-    assert_not members.find { |member| member["id"] == users(:kevin).id }.fetch("online")
+    assert_equal %w[ avatar_url bot id name online presence status ], members.first.keys.sort
+
+    jason = members.find { |member| member["id"] == users(:jason).id }
+    assert jason.fetch("online")
+    assert_equal "online", jason.fetch("presence")
+    assert_equal "🚂 On a train", jason.fetch("status")
+    assert_not jason.fetch("bot")
+
+    kevin = members.find { |member| member["id"] == users(:kevin).id }
+    assert_not kevin.fetch("online")
+    assert_equal "offline", kevin.fetch("presence")
+    assert_nil kevin.fetch("status")
+  end
+
+  test "flags bots so the picker can exclude them from huddles" do
+    get room_members_url(rooms(:watercooler), format: :json)
+
+    assert_response :success
+    members = response.parsed_body.fetch("members")
+    assert members.find { |member| member["id"] == users(:bender).id }.fetch("bot")
+    assert_not members.find { |member| member["id"] == users(:david).id }.fetch("bot")
+  end
+
+  test "reports idle and do-not-disturb presence" do
+    jason_session = users(:jason).sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
+    lease = WorkspacePresenceLease.establish(user: users(:jason), session: jason_session)
+    lease.update_column(:last_active_at, 11.minutes.ago)
+
+    get room_members_url(rooms(:designers), format: :json)
+    jason = response.parsed_body.fetch("members").find { |member| member["id"] == users(:jason).id }
+    assert jason.fetch("online")
+    assert_equal "idle", jason.fetch("presence")
+
+    users(:jason).update!(presence_setting: "dnd")
+    get room_members_url(rooms(:designers), format: :json)
+    jason = response.parsed_body.fetch("members").find { |member| member["id"] == users(:jason).id }
+    assert jason.fetch("online")
+    assert_equal "dnd", jason.fetch("presence")
+
+    users(:jason).update!(presence_setting: "invisible")
+    get room_members_url(rooms(:designers), format: :json)
+    jason = response.parsed_body.fetch("members").find { |member| member["id"] == users(:jason).id }
+    assert_not jason.fetch("online")
+    assert_equal "offline", jason.fetch("presence")
   end
 
   test "does not return inactive users" do

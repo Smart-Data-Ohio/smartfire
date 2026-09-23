@@ -145,15 +145,38 @@ class Users::SidebarsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "group direct rooms render no stack" do
+  test "group direct rooms render member names and a huddle stack" do
     group = Rooms::Direct.create_for({ creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
     issue_in_call_grant!(user: users(:jason), room: group)
 
     get user_sidebar_url
 
     assert_response :success
-    assert_select "##{dom_id(group, :list)}", text: "Ping with J+K"
-    assert_select "##{dom_id(group, :list)} .voice-stack", count: 0
+    assert_select "##{dom_id(group, :list)}", text: /Ping with Jason, Kevin/
+    assert_select "##{dom_id(group, :list)} .voice-stack--live.voice-stack--huddle" do
+      assert_select ".voice-stack__count", text: "1"
+      assert_select "img.voice-stack__avatar[data-user-id='#{users(:jason).id}'][title='Jason']"
+    end
+  end
+
+  test "direct rows keep avatar card triggers as siblings of the room link" do
+    group = Rooms::Direct.create_for({ creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
+
+    get user_sidebar_url
+
+    assert_response :success
+
+    [ rooms(:david_and_jason), group ].each do |room|
+      row = "##{dom_id(room, :list)}"
+      # No nested interactive content: the room link holds no control.
+      assert_select "#{row} a[href='#{room_path(room)}'] button", count: 0
+      assert_select "#{row} a[href='#{room_path(room)}'] [role='button']", count: 0
+    end
+
+    # ...while each other member keeps a keyboard-reachable trigger.
+    assert_select "##{dom_id(rooms(:david_and_jason), :list)} > button.profile-card-avatar" +
+      "[aria-label='View profile of Jason']", count: 1
+    assert_select "##{dom_id(group, :list)} .avatar__group > button.profile-card-avatar", count: 2
   end
 
   test "no channel or DM stacks without huddle configuration" do
@@ -188,6 +211,24 @@ class Users::SidebarsControllerTest < ActionDispatch::IntegrationTest
     assert_equal baseline.count, with_more_rooms.count,
       "expected no per-row queries, saw #{with_more_rooms.count - baseline.count} more:\n#{(with_more_rooms - baseline).join("\n")}"
     assert_equal 1, with_more_rooms.count { |sql| sql.include?("FROM \"huddle_grants\"") }
+  end
+
+  test "sidebar query count does not grow with group DMs, named or not" do
+    create_quiet_group(users(:jason), users(:kevin))
+    get user_sidebar_url # Warm up one-time queries before counting.
+    baseline = capture_select_sql { get user_sidebar_url }
+    assert_response :success
+
+    5.times do |index|
+      peer = User.create!(name: "Group peer #{index}", email_address: "grouppeer#{index}@example.test")
+      group = create_quiet_group(users(:jason), peer)
+      group.update_column(:name, "Named group #{index}") if index.even?
+    end
+    with_more_groups = capture_select_sql { get user_sidebar_url }
+    assert_response :success
+
+    assert_equal baseline.count, with_more_groups.count,
+      "expected no per-row queries, saw #{with_more_groups.count - baseline.count} more:\n#{(with_more_groups - baseline).join("\n")}"
   end
 
   private
@@ -225,6 +266,10 @@ class Users::SidebarsControllerTest < ActionDispatch::IntegrationTest
 
     def create_quiet_direct(peer)
       Rooms::Direct.create_for({ creator: users(:david) }, users: [ users(:david), peer ])
+    end
+
+    def create_quiet_group(*peers)
+      Current.set(user: users(:david)) { Rooms::Direct.find_or_create_for([ users(:david), *peers ]) }
     end
 
     def create_quiet_board(name)

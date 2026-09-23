@@ -2,6 +2,13 @@ import { Controller } from "@hotwired/stimulus"
 
 const DESKTOP_QUERY = "(min-width: 80rem)"
 const REFRESH_INTERVAL = 12 * 1000
+const PRESENCE_LABELS = {
+  online: "Online",
+  idle: "Idle",
+  dnd: "Do not disturb",
+  agent: "Agent",
+  offline: "Offline"
+}
 const FOCUSABLE_SELECTOR = [
   "a[href]",
   "button:not([disabled])",
@@ -54,6 +61,10 @@ export default class extends Controller {
   close(event) {
     if (!this.isOpen) return
     if (event?.type === "keydown" && this.desktopQuery.matches) return
+    // An open profile card owns Esc: it closes the card and returns focus
+    // to its trigger inside this panel. This runs before profile-card#close
+    // (see the action order in the layout), so the card is still open here.
+    if (event?.type === "keydown" && this.#profileCardOpen()) return
 
     event?.preventDefault()
     this.#close({ restoreFocus: true })
@@ -88,6 +99,9 @@ export default class extends Controller {
   trapFocus(event) {
     if (event.key !== "Tab") return
     if (!this.isOpen || this.desktopQuery.matches || !this.hasPanelTarget) return
+    // The profile card traps focus itself while open; yielding avoids the
+    // two traps fighting over every Tab.
+    if (this.#profileCardOpen()) return
 
     const focusable = this.#focusableElements()
     if (focusable.length === 0) return
@@ -250,13 +264,38 @@ export default class extends Controller {
 
   #memberRow(member) {
     const online = member.online === true
+    const presence = typeof member.presence === "string" && member.presence.length > 0
+      ? member.presence
+      : (online ? "online" : "offline")
+    const label = PRESENCE_LABELS[presence] || presence
     const item = document.createElement("li")
-    item.className = "member-panel__member"
+    item.className = "member-panel__member multi-select-row"
     item.dataset.memberId = String(member.id)
     item.dataset.online = String(online)
+    item.dataset.action = "touchstart->multi-select#pressStart touchmove->multi-select#pressMove touchend->multi-select#pressEnd contextmenu->multi-select#suppressMenu"
 
-    const avatar = document.createElement("span")
-    avatar.className = "avatar member-panel__avatar"
+    const isSelf = String(member.id) === document.querySelector("meta[name='current-user-id']")?.content
+    if (!isSelf) {
+      const select = document.createElement("input")
+      select.type = "checkbox"
+      select.id = `select-member-${member.id}`
+      select.dataset.multiSelectTarget = "checkbox"
+      select.dataset.action = "click->multi-select#toggle"
+      select.dataset.userId = String(member.id)
+      select.dataset.bot = String(member.bot === true)
+      select.setAttribute("aria-label", `Select ${member.name}`)
+      item.append(select)
+    }
+
+    const cardUrl = this.#cardUrl(member.id)
+    const avatar = document.createElement(cardUrl ? "button" : "span")
+    if (cardUrl) {
+      avatar.type = "button"
+      avatar.setAttribute("aria-label", `View profile of ${member.name}`)
+      avatar.dataset.action = "click->profile-card#open"
+      avatar.dataset.profileCardUrl = cardUrl
+    }
+    avatar.className = "avatar member-panel__avatar profile-card-avatar"
     const image = document.createElement("img")
     image.src = member.avatar_url || this.panelTarget.dataset.defaultAvatarUrl
     image.alt = ""
@@ -265,21 +304,36 @@ export default class extends Controller {
 
     const dot = document.createElement("span")
     dot.className = "member-panel__presence"
-    dot.setAttribute("aria-label", online ? "Online" : "Offline")
+    dot.dataset.presence = presence
+    dot.setAttribute("aria-label", label)
     avatar.append(dot)
 
     const identity = document.createElement("span")
     identity.className = "member-panel__identity"
-    const name = document.createElement("strong")
-    name.className = "overflow-ellipsis"
-    name.textContent = member.name
+    const name = document.createElement(cardUrl ? "button" : "strong")
+    if (cardUrl) {
+      name.type = "button"
+      name.dataset.action = "click->profile-card#open"
+      name.dataset.profileCardUrl = cardUrl
+    }
+    name.className = cardUrl ? "profile-card-name overflow-ellipsis" : "overflow-ellipsis"
+    const nameText = document.createElement("strong")
+    nameText.textContent = member.name
+    name.append(nameText)
     const status = document.createElement("span")
     status.className = "member-panel__status-label"
-    status.textContent = online ? "Online" : "Offline"
+    status.textContent = (typeof member.status === "string" && member.status.length > 0) ? member.status : label
     identity.append(name, status)
 
     item.append(avatar, identity)
     return item
+  }
+
+  #cardUrl(memberId) {
+    const template = this.panelTarget.dataset.cardUrlTemplate
+    if (!template || memberId === undefined || memberId === null) return null
+
+    return template.replace("USER_ID", String(memberId))
   }
 
   #clearMembers(message) {
@@ -331,6 +385,11 @@ export default class extends Controller {
     return Array.from(this.panelTarget.querySelectorAll(FOCUSABLE_SELECTOR)).filter((element) => {
       return !element.hidden && element.tabIndex >= 0 && element.getClientRects().length > 0
     })
+  }
+
+  #profileCardOpen() {
+    const popover = document.getElementById("profile-card-popover")
+    return !!popover && !popover.hidden
   }
 
   #restoreFocus() {

@@ -9,7 +9,7 @@ const VIEWPORT_PADDING = 8
 // per-message URLs come from the message element's own data attributes.
 export default class extends Controller {
   static targets = [
-    "menu", "item", "downloadLink", "threadLabel", "pinLabel", "saveLabel", "status",
+    "menu", "item", "downloadLink", "fizzyCardLink", "threadLabel", "pinLabel", "saveLabel", "status",
     "forwardDialog", "forwardPreview", "forwardNote",
     "forwardDestinations", "forwardStatus", "forwardSubmit",
     "saveDialog", "savePreview", "saveOption", "saveCustomWrap", "saveCustom", "saveStatus", "saveSubmit"
@@ -352,6 +352,43 @@ export default class extends Controller {
     if (this.#message === message) this.#closeMenu({ restoreFocus: false })
   }
 
+  async removeEmbeds(event) {
+    event.preventDefault()
+    const message = this.#message
+    await this.#ensureMetadata()
+    // Another menu opening mid-request must not redirect this action to
+    // its message; the newer menu stays open untouched.
+    if (this.#message !== message || !message?.isConnected) return
+    if (this.#boolean(this.#metadata || {}, "can_remove_embeds", "canRemoveEmbeds") !== true) {
+      this.#closeMenu({ restoreFocus: false })
+      return
+    }
+
+    const url = this.#stringFromMetadata("suppress_embeds_url", "suppressEmbedsUrl") || `${this.#messageUrl}/embed_suppression`
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Accept: "text/vnd.turbo-stream.html, application/json",
+        "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content || "",
+      },
+    }).catch(() => null)
+
+    if (!response?.ok) {
+      this.#announce("Couldn’t remove embeds")
+      return
+    }
+
+    const contentType = response.headers.get("content-type") || ""
+    if (contentType.includes("turbo-stream")) {
+      Turbo.renderStreamMessage(await response.text())
+    } else {
+      message.querySelectorAll(".link-embed-cards, .linkedin-post-cards").forEach(container => container.replaceChildren())
+    }
+    this.#announce("Embeds removed")
+
+    if (this.#message === message) this.#closeMenu({ restoreFocus: false })
+  }
+
   // Internal event handlers
 
   #onOpenRequest(event) {
@@ -505,6 +542,12 @@ export default class extends Controller {
       form.setAttribute("data-turbo-frame", frame)
     })
 
+    // The create-card form lives under the message resource for both room
+    // and thread messages, so the per-message href needs no metadata fetch.
+    if (this.hasFizzyCardLinkTarget && this.#messageUrl) {
+      this.fizzyCardLinkTarget.href = `${this.#messageUrl.replace(/\/$/, "")}/fizzy_cards/new`
+    }
+
     if (this.hasDownloadLinkTarget) {
       const source = this.#message.querySelector(".message__body-content a.message__action-btn[href], .message__body-content a[data-lightbox-target='image'][href]")
       if (source) {
@@ -519,6 +562,7 @@ export default class extends Controller {
 
     this.#setActionAvailability(".message__edit-action", false)
     this.#setActionAvailability(".message__delete-action", false)
+    this.#setActionAvailability(".message__remove-embeds-action", false)
     if (this.hasThreadLabelTarget) this.threadLabelTarget.textContent = "Create thread"
     if (this.hasPinLabelTarget) this.pinLabelTarget.textContent = "Pin message"
     if (this.hasSaveLabelTarget) this.saveLabelTarget.textContent = "Save for later"
@@ -994,6 +1038,7 @@ export default class extends Controller {
 
     this.#setActionAvailability(".message__edit-action", this.#boolean(metadata, "can_edit", "canEdit", "editable"))
     this.#setActionAvailability(".message__delete-action", this.#boolean(metadata, "can_delete", "canDelete", "deletable"))
+    this.#setActionAvailability(".message__remove-embeds-action", this.#boolean(metadata, "can_remove_embeds", "canRemoveEmbeds"))
     this.#refreshPinSaveLabels()
 
     const threadSummary = metadata.thread_summary || metadata.threadSummary

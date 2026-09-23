@@ -57,6 +57,11 @@ class UnfurlLinksControllerTest < ActionDispatch::IntegrationTest
     assert_response :no_content
   end
 
+  test "create for a Fizzy card URL returns no content (Fizzy cards render instead)" do
+    post unfurl_link_url, params: { url: "https://app.fizzy.do/897362094/cards/579" }
+    assert_response :no_content
+  end
+
   test "create with a missing URL" do
     assert_raise ActionController::ParameterMissing do
       post unfurl_link_url, params: { url: "" }

@@ -72,6 +72,13 @@ An event can name a **venue**: the voice or Stage channel where it takes place. 
 - A repeating event copies its venue to every occurrence. A **This and following** edit propagates a venue change or clearing to the occurrence and every later one; a **This event** edit changes only that occurrence.
 - Deleting the venue channel clears the link; the event itself is kept.
 
+## Google Meet links
+
+Creating or editing an event can add a Google Meet link, created through
+the organizer's connected Google account. The link shows on the event
+card and the event page; without a connected organizer there is no link.
+See [Meet links and two-way RSVP sync](meet-and-rsvp.md).
+
 ## Follow-ups (not in this slice)
 
-Events a member is going or maybe to can appear in their Google Calendar; see [Google Calendar](google-calendar.md).
+Events a member is going or maybe to can appear in their Google Calendar; see [Google Calendar](google-calendar.md). RSVP changes made in Google sync back for connected members; see [Meet links and two-way RSVP sync](meet-and-rsvp.md).
