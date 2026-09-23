@@ -54,6 +54,30 @@ class Rooms::DirectsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to room_url(Room.last, huddle: "start")
   end
 
+  test "create ignores deactivated and banned users" do
+    users(:kevin).update!(status: :deactivated)
+    users(:jz).update!(status: :banned)
+
+    assert_no_difference -> { Room.directs.count } do
+      post rooms_directs_url, params: { user_ids: [ users(:jason).id, users(:kevin).id, users(:jz).id ] }
+    end
+
+    room = Rooms::Direct.find_for([ users(:david), users(:jason) ])
+    assert_redirected_to room_url(room)
+    assert_equal [ users(:david).id, users(:jason).id ].sort, room.user_ids.sort
+  end
+
+  test "create caps user_ids before querying" do
+    ids = 50.times.map { |i| User.create!(name: "Many #{i}", email_address: "many#{i}@example.test").id }
+
+    queries = capture_user_queries do
+      post rooms_directs_url, params: { user_ids: ids }
+    end
+
+    assert_redirected_to new_rooms_direct_path
+    assert_capped_id_lists queries
+  end
+
   test "a member can rename the group and everyone sees the system message" do
     room = create_group_dm!([ users(:david), users(:jason), users(:kevin) ])
 
@@ -109,6 +133,19 @@ class Rooms::DirectsControllerTest < ActionDispatch::IntegrationTest
     sign_in :jz
     post add_members_rooms_direct_url(room), params: { user_ids: [ users(:kevin).id ] }
     assert_redirected_to root_url
+  end
+
+  test "adding members caps user_ids before querying" do
+    room = create_group_dm!([ users(:david), users(:jason), users(:kevin) ])
+    ids = 50.times.map { |i| User.create!(name: "Extra #{i}", email_address: "addmany#{i}@example.test").id }
+
+    queries = capture_user_queries do
+      post add_members_rooms_direct_url(room), params: { user_ids: ids }
+    end
+
+    assert_redirected_to edit_rooms_direct_path(room)
+    assert_match(/at most/, flash[:alert])
+    assert_capped_id_lists queries
   end
 
   test "leaving removes only your membership and the group keeps working" do
@@ -219,5 +256,30 @@ class Rooms::DirectsControllerTest < ActionDispatch::IntegrationTest
     def create_group_dm!(*members)
       members = members.flatten
       Current.set(user: members.first) { Rooms::Direct.find_or_create_for(members) }
+    end
+
+    # Every IN-list lookup stays within the capped submission plus the
+    # current user, who joins the list after the cap.
+    def assert_capped_id_lists(queries)
+      lists = queries.filter_map { |sql| sql[/IN \(([^)]*)\)/, 1] }
+
+      assert_not_empty lists, "expected at least one capped users lookup"
+      lists.each do |list|
+        assert_operator list.count("?"), :<=, Rooms::Direct::MAX_MEMBERS + 1, "expected a capped id list, got: #{list}"
+      end
+    end
+
+    # Every users-table statement the block runs, except query-cache hits.
+    def capture_user_queries(&block)
+      queries = []
+      subscription = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        queries << payload[:sql] if !payload[:cached] && payload[:sql].include?('FROM "users"')
+      end
+
+      ActiveRecord::Base.connection.clear_query_cache
+      block.call
+      queries
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscription)
     end
 end

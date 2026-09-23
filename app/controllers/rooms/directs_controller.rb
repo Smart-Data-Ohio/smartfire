@@ -33,7 +33,7 @@ class Rooms::DirectsController < RoomsController
   end
 
   def add_members
-    added = @room.add_members(User.active.where(id: params[:user_ids]), added_by: Current.user)
+    added = @room.add_members(User.active.where(id: selected_users_ids), added_by: Current.user)
 
     if added.any?
       redirect_to edit_rooms_direct_path(@room), notice: "Added #{added.map(&:name).to_sentence} to the group."
@@ -57,11 +57,13 @@ class Rooms::DirectsController < RoomsController
 
   private
     def selected_users
-      User.where(id: selected_users_ids.including(Current.user.id))
+      User.active.where(id: selected_users_ids.including(Current.user.id))
     end
 
+    # Capped before querying so a crafted id list cannot widen the lookup;
+    # the member-count check still rejects a set over the cap.
     def selected_users_ids
-      params.fetch(:user_ids, [])
+      Array(params.fetch(:user_ids, [])).first(Rooms::Direct::MAX_MEMBERS)
     end
 
     def start_huddle?
