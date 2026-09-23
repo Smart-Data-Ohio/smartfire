@@ -134,6 +134,47 @@ class GithubConnectedAccountTest < ActiveSupport::TestCase
     assert_predicate account.reload, :connected?
   end
 
+  test "the refresh HTTP call runs with no refresh transaction open" do
+    account = connect_github!(users(:david), token_source: "app",
+      refresh_token: "old-refresh", token_expires_at: 1.minute.ago)
+    # Tests run inside their own transaction, so the assertion is
+    # that the refresh opens nothing on top of it: holding a lock
+    # across the HTTP call would stall every SQLite writer.
+    baseline = ActiveRecord::Base.connection.open_transactions
+    observed = nil
+    stub_request(:post, "https://github.com/login/oauth/access_token").to_return(
+      status: 200,
+      body: lambda { |request|
+        observed = ActiveRecord::Base.connection.open_transactions
+        { access_token: "new-token", refresh_token: "new-refresh", expires_in: 28_800 }.to_json
+      })
+
+    assert_equal "new-token", account.access_token_for_use
+    assert_equal baseline, observed
+  end
+
+  test "two concurrent refreshes converge on one token" do
+    account = connect_github!(users(:david), token_source: "app",
+      refresh_token: "old-refresh", token_expires_at: 1.minute.ago)
+    stub_request(:post, "https://github.com/login/oauth/access_token").to_return(
+      status: 200,
+      body: lambda { |request|
+        # A concurrent refresh rotates the row while this HTTP call
+        # is in flight; this caller must discard its tokens and use
+        # the winner's.
+        GithubConnectedAccount.find(account.id).update!(
+          access_token: "winner-token", refresh_token: "winner-refresh",
+          token_expires_at: 1.hour.from_now)
+        { access_token: "loser-token", refresh_token: "loser-refresh", expires_in: 28_800 }.to_json
+      })
+
+    assert_equal "winner-token", account.access_token_for_use
+
+    account.reload
+    assert_equal "winner-token", account.access_token
+    assert_equal "winner-refresh", account.refresh_token
+  end
+
   test "a failed refresh transport records last_error and keeps the old token" do
     account = connect_github!(users(:david), token_source: "app",
       refresh_token: "old-refresh", token_expires_at: 1.minute.ago)

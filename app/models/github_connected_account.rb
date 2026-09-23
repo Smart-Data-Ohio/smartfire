@@ -124,21 +124,27 @@ class GithubConnectedAccount < ApplicationRecord
 
   private
     # Refreshes an expired App token in place, rotating the stored
-    # refresh token. One refresh happens per rotation: the row lock
-    # serializes concurrent refreshers, and the expiry is rechecked
-    # inside the lock, so losers reuse the winner's freshly rotated
-    # token instead of burning their own rotated-out refresh token
-    # (which GitHub would reject). Refreshes run at most every few
-    # hours per account, so the short lock hold is safe. A rejected
-    # refresh disconnects the account so the profile offers a
-    # reconnect; a transport failure records last_error and keeps the
-    # old token, so the next call retries.
+    # refresh token. The GitHub call runs with no transaction or row
+    # lock held: SQLite takes the database-wide write lock for those,
+    # so holding one across a network call would stall every writer.
+    # Instead the refresh is optimistic: read the current refresh
+    # token, call GitHub, then write the new tokens in a short locked
+    # check-then-set that only persists when the stored refresh token
+    # is still the one used. A loser whose grant rotated out from
+    # under it reuses the winner's token instead of disconnecting
+    # (GitHub rejects the loser's rotated-out refresh token). A
+    # rejected refresh disconnects the account so the profile offers
+    # a reconnect; a transport failure records last_error and keeps
+    # the old token, so the next call retries.
     def refresh_app_token_if_expired!
+      reload if persisted?
       return true unless app_token_expired?
-      return false if refresh_token.blank?
 
-      refresh = -> { refresh_expired_app_token! }
-      persisted? ? with_lock(&refresh) : refresh.call
+      used_refresh_token = refresh_token
+      return false if used_refresh_token.blank?
+
+      tokens = Github::App.refresh_access_token(refresh_token: used_refresh_token)
+      store_refreshed_tokens(tokens, used_refresh_token)
     rescue Github::App::Unauthorized
       concurrent_refresh_won? || disconnect_rejected!
     rescue Github::App::Error => error
@@ -146,16 +152,30 @@ class GithubConnectedAccount < ApplicationRecord
       false
     end
 
-    # Runs inside the row lock (which reloads first): recheck the
-    # expiry against the locked row before refreshing.
-    def refresh_expired_app_token!
-      return true unless app_token_expired?
-      return false if refresh_token.blank?
+    # Short locked write for tokens fetched without a lock: persist
+    # them only when the stored refresh token is still the one the
+    # HTTP call used, so a concurrent refresh that already rotated
+    # the row wins and this caller falls back to its token. The
+    # column is encrypted non-deterministically, so the comparison
+    # reads the decrypted value inside the lock rather than a WHERE
+    # clause on the ciphertext.
+    def store_refreshed_tokens(tokens, used_refresh_token)
+      return write_refreshed_tokens(tokens, used_refresh_token) unless persisted?
 
-      tokens = Github::App.refresh_access_token(refresh_token: refresh_token)
+      with_lock { write_refreshed_tokens(tokens, used_refresh_token) }
+    end
+
+    # Runs inside the row lock (which reloads first): recheck the
+    # expiry and the refresh token against the locked row before
+    # writing.
+    def write_refreshed_tokens(tokens, used_refresh_token)
+      if refresh_token != used_refresh_token || !app_token_expired?
+        return concurrent_refresh_won?
+      end
+
       update!(
         access_token: tokens["access_token"],
-        refresh_token: tokens["refresh_token"].presence || refresh_token,
+        refresh_token: tokens["refresh_token"].presence || used_refresh_token,
         token_expires_at: Time.current + tokens["expires_in"].to_i.seconds,
         last_error: nil
       )
