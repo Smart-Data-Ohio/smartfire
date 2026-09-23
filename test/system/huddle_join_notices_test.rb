@@ -57,7 +57,11 @@ class HuddleJoinNoticesTest < ApplicationSystemTestCase
       membership: group.memberships.find_by!(user: users(:david)))
     kevin_grant = HuddleGrant.issue!(session: second_session_for(users(:kevin)),
       membership: group.memberships.find_by!(user: users(:kevin)))
+    # Asserted between notifies: the two broadcasts can arrive in either
+    # order, so the batch asserts one name at a time (the 30s batch window
+    # holds the toast open across the round trip).
     notify_join_and_deliver(david_grant)
+    assert_selector ".huddle-join-toast:not(.huddle-join-toast--leave)", text: "David joined", wait: 10
     notify_join_and_deliver(kevin_grant)
 
     assert_selector ".huddle-join-toast:not(.huddle-join-toast--leave)", text: "David and Kevin joined", wait: 10
@@ -288,7 +292,10 @@ class HuddleJoinNoticesTest < ApplicationSystemTestCase
     wait_for_join_notice_controller
     assert_selector "##{dom_id(group, :list)}", wait: 10
 
+    # Asserted between notifies: the two broadcasts can arrive in either
+    # order, so the roster asserts one name at a time.
     notify_join_and_deliver(david_grant)
+    assert_selector "#huddle-join-banner-slot .huddle-join-banner", text: "David is in your huddle", wait: 10
     notify_join_and_deliver(kevin_grant)
     assert_selector "#huddle-join-banner-slot .huddle-join-banner", text: "David and Kevin are in your huddle", wait: 10
 
@@ -316,7 +323,10 @@ class HuddleJoinNoticesTest < ApplicationSystemTestCase
     wait_for_join_notice_controller
     assert_selector "##{dom_id(group, :list)}", wait: 10
 
+    # Asserted between notifies: the two broadcasts can arrive in either
+    # order, so the roster asserts one name at a time.
     notify_join_and_deliver(david_grant)
+    assert_selector "#huddle-join-banner-slot .huddle-join-banner", text: "David is in your huddle", wait: 10
     notify_join_and_deliver(kevin_grant)
     assert_selector "#huddle-join-banner-slot .huddle-join-banner", text: "David and Kevin are in your huddle", wait: 10
 
