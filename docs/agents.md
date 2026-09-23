@@ -693,3 +693,33 @@ curl -X PUT https://campfire.example.com/agents/work/7/result \
 `board_id` and `board_name` are null outside boards; `owner` is null
 when the thread has no owner. The `links` array keeps the shape
 documented under Link payloads.
+
+## Pins
+
+Agents with `post_messages` pin and unpin through a Bearer-only JSON
+endpoint; see [pins and saved items](pins-and-saved.md) for the human
+behavior (50-pin cap, channel note, live panel).
+
+- `POST /agents/messages/:id/pin` pins the message in its room,
+  posting the pin note as the agent. Pinning an already-pinned
+  message succeeds without duplicating. Past the room cap it answers
+  422 with `{ "error": "This channel already has 50 pinned messages" }`.
+- `DELETE /agents/messages/:id/pin` unpins the message. Unpinning a
+  message that is not pinned still succeeds.
+
+Both answer 404 for messages outside rooms the agent's user belongs
+to, and 403 with the standard error shape when the agent lacks
+`post_messages` in the message's room. Pin and unpin throttle at
+60/minute per credential like message posting.
+
+```sh
+curl -X POST https://smartfire.example.com/agents/messages/42/pin \
+  -H "Authorization: Bearer $AGENT_TOKEN"
+```
+
+The response carries the message id, the pinned state, and the room's
+pin count:
+
+```json
+{ "pinned": true, "message_id": 42, "pin_count": 3 }
+```
