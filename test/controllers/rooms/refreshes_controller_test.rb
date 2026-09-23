@@ -59,6 +59,17 @@ class Rooms::RefreshesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "refresh with no changes is a quiet 204" do
+    # An empty turbo-stream body still runs Turbo's focus restore on the
+    # client, which can yank a fresh focus move back to the composer with no
+    # stream element to hook the re-apply onto. 204 keeps request.js from
+    # rendering anything at all.
+    get room_refresh_url(rooms(:hq), format: :turbo_stream), params: { since: Time.current.to_fs(:epoch) }
+
+    assert_response :no_content
+    assert_empty @response.body
+  end
+
   test "refreshing a room the user no longer belongs to is a quiet 404" do
     get room_refresh_url(rooms(:watercooler), format: :turbo_stream), params: { since: 0 }
     assert_response :success
