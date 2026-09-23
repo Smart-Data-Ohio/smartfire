@@ -127,6 +127,20 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
     end
   end
 
+  test "start huddle keeps agents in the DM but out of the call" do
+    visit users_path
+    wait_for_controller "multi-select"
+
+    check "select_user_#{users(:jason).id}"
+    check "select_user_#{users(:bender).id}"
+
+    within "[data-multi-select-target='bar']" do
+      assert_selector "button", text: "Message (2)"
+      assert_selector "button", text: "Start huddle (1)"
+      assert_text "1 agent stays in the DM but won't be rung."
+    end
+  end
+
   test "the new-DM picker types, picks suggestions, and messages the picked set" do
     join_room rooms(:designers)
     click_link "New direct message"

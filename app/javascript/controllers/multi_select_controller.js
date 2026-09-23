@@ -127,7 +127,7 @@ export default class extends Controller {
     if (overCap) reasons.push(`Group DMs hold at most ${MAX_OTHERS + 1} people including you.`)
     if (bots > 0) reasons.push(humans.length === 0
       ? "Agents can't join huddles."
-      : `${bots} ${bots === 1 ? "agent" : "agents"} can't join huddles and ${bots === 1 ? "is" : "are"} excluded.`)
+      : `${bots} ${bots === 1 ? "agent stays" : "agents stay"} in the DM but won't be rung.`)
 
     this.noteTarget.hidden = reasons.length === 0
     this.noteTarget.textContent = reasons.join(" ")

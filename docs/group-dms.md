@@ -27,8 +27,9 @@ toggles; long-press selects on touch. One person opens the 1:1 DM; two to
 nine others open the group DM with exactly that set plus you, reusing it
 when it exists; more than nine disables the bar with the reason. Agents
 can be messaged but never join calls: Start huddle counts humans only and
-says how many agents it excluded. Start huddle lands in the DM with
-`?huddle=start`, which the join control consumes exactly once.
+says how many agents stay in the DM without being rung. Start huddle
+lands in the DM with `?huddle=start`, which the join control consumes
+exactly once.
 
 ## Group DMs
 
