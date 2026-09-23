@@ -363,7 +363,10 @@ class Message < ApplicationRecord
     end
 
     def no_root_messages_in_boards
-      errors.add :thread, "must be present in a board" if thread_id.nil? && room&.board?
+      # Quiet system notes (the stale-work digest) are not chat: they skip
+      # unread, push, agents, inbox, and search, so boards accept them
+      # while still refusing root chat messages.
+      errors.add :thread, "must be present in a board" if thread_id.nil? && room&.board? && !system_note?
     end
 
     def validate_forward_metadata

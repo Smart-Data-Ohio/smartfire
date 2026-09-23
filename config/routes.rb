@@ -112,6 +112,7 @@ Rails.application.routes.draw do
   get "agents/work/:id", to: "agents/work#show", defaults: { format: :json }, as: :agents_work_thread
   patch "agents/work/:id", to: "agents/work#update", defaults: { format: :json }
   put "agents/work/:id/result", to: "agents/work#result", defaults: { format: :json }
+  post "agents/work/:id/handoff", to: "agents/work#handoff", defaults: { format: :json }
   post "rooms/:room_id/agents/messages", to: "agents/messages#create", defaults: { format: :json }, as: :room_agent_messages
   post "agents/messages/:id/pin", to: "agents/pins#create", defaults: { format: :json }, as: :agents_message_pin
   delete "agents/messages/:id/pin", to: "agents/pins#destroy", defaults: { format: :json }
@@ -227,6 +228,11 @@ Rails.application.routes.draw do
     resources :boards
   end
 
+  get "rooms/boards/:board_id/automations", to: "rooms/boards/automations#show", as: :board_automations
+  post "rooms/boards/:board_id/automations/tag_assignments", to: "rooms/boards/automations#create_tag_assignment", as: :board_automation_tag_assignments
+  delete "rooms/boards/:board_id/automations/tag_assignments/:id", to: "rooms/boards/automations#destroy_tag_assignment", as: :board_automation_tag_assignment
+  patch "rooms/boards/:board_id/automations/sla_rules", to: "rooms/boards/automations#update_sla_rules", as: :board_automation_sla_rules
+
   resources :messages do
     resources :forwards, controller: "message_forwards", only: :create
     resource :embed_suppression, controller: "message_embed_suppressions", only: :create
@@ -257,6 +263,8 @@ Rails.application.routes.draw do
   get "threads/:thread_id/work/links", to: "threads/work/links#index", as: :thread_work_links
   post "threads/:thread_id/work/links", to: "threads/work/links#create"
   delete "threads/:thread_id/work/links/:id", to: "threads/work/links#destroy", as: :thread_work_link
+  get "threads/:thread_id/work/handoff/new", to: "threads/work/handoffs#new", as: :new_thread_work_handoff
+  post "threads/:thread_id/work/handoff", to: "threads/work/handoffs#create", as: :thread_work_handoff
 
   resource :unfurl_link, only: :create
 

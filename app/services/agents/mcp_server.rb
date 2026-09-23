@@ -397,6 +397,22 @@ module Agents
           "required" => [ "message_id" ]
         },
         throttle: [ 60, "agents/pins", "destroy" ]
+      ),
+      Tool.new(
+        name: "handoff_work",
+        description: "Hand a work thread the agent owns to another agent with a context package: summary (required), links (up to 10 URLs), open_questions (up to 10). Ownership transfers and the receiver gets a work_handed_off event. Requires manage_threads.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "work_id" => { "type" => "integer", "description" => "Work thread id." },
+            "receiver_agent_id" => { "type" => "integer", "description" => "Receiving agent id." },
+            "summary" => { "type" => "string", "description" => "Handoff summary (required)." },
+            "links" => { "type" => "array", "items" => { "type" => "string" }, "description" => "Context links (up to 10)." },
+            "open_questions" => { "type" => "array", "items" => { "type" => "string" }, "description" => "Open questions (up to 10)." }
+          },
+          "required" => %w[ work_id receiver_agent_id summary ]
+        },
+        throttle: [ 60, "agents/work", "handoff" ]
       )
     ].freeze
 
@@ -759,6 +775,27 @@ module Agents
         message_id = args["message_id"].presence or raise InvalidParams, "Missing required argument: message_id"
 
         Pins.unpin(agent: @agent, message_id: message_id)
+      end
+
+      def tool_handoff_work(args)
+        work_id = args["work_id"].presence or raise InvalidParams, "Missing required argument: work_id"
+        receiver_agent_id = args["receiver_agent_id"].presence or raise InvalidParams, "Missing required argument: receiver_agent_id"
+        summary = args["summary"].presence or raise InvalidParams, "Missing required argument: summary"
+
+        result = WorkHandoffs.create(
+          agent: @agent, id: work_id,
+          receiver_agent_id: receiver_agent_id,
+          summary: summary,
+          links: args["links"],
+          open_questions: args["open_questions"]
+        )
+        return result unless result.ok?
+
+        ServiceResult.ok(
+          Agents::WorkPayload.for(result.payload[:thread], agent: @agent)
+            .merge(handoff: result.payload[:handoff].payload),
+          status: :created
+        )
       end
 
       # Reads an updatable work field, returning the unset sentinel when

@@ -109,6 +109,8 @@
               <%= form.submit "Save tags", class: "btn btn--reversed" %>
             <% end %>
           <% end %>
+
+          <%= link_to "Hand off to an agent", new_thread_work_handoff_path(@thread), class: "btn" %>
         </div>
       </details>
     <% end %>
@@ -176,6 +178,15 @@
           <li>
             <% if event.event_type == "result_updated" %>
               <%= event.actor&.name || "Former member" %> updated the result
+            <% elsif event.event_type == "work_handoff" %>
+              <%= event.actor&.name || "Former member" %> handed off
+              owner <%= event.from_owner_name || "Unassigned" %>
+              → <%= event.to_owner_name || "Unassigned" %>
+              <% if event.metadata.is_a?(Hash) && event.metadata["handoff_summary"].present? %>
+                · <%= event.metadata["handoff_summary"] %>
+                (<%= event.metadata["handoff_links_count"].to_i %> <%= "link".pluralize(event.metadata["handoff_links_count"].to_i) %>,
+                <%= event.metadata["handoff_questions_count"].to_i %> open <%= "question".pluralize(event.metadata["handoff_questions_count"].to_i) %>)
+              <% end %>
             <% else %>
               <%= event.actor&.name || "Former member" %> ·
               <% if event.status_changed? %>

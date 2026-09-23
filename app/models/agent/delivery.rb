@@ -122,15 +122,17 @@ class Agent::Delivery
 
     # Posts a work assignment change to the agent's webhook. The payload
     # carries the same additive agent key as other deliveries plus the
-    # event type (work_assigned or work_unassigned) and a work key with
-    # the thread fields. Response bodies are ignored: an assignment
-    # notification never creates a reply message.
-    def post_work_webhook!(webhook, event, work:, agent:)
+    # event type (work_assigned, work_unassigned, or work_handed_off) and
+    # a work key with the thread fields; handoffs add the snapshotted
+    # context package as handoff. Response bodies are ignored: an
+    # assignment notification never creates a reply message.
+    def post_work_webhook!(webhook, event, work:, agent:, handoff: nil)
       payload = {
         agent: { id: agent.id, name: agent.user.name, owner: agent.owner&.name, delivery_id: event.id },
         event_type: event.event_type,
-        work: work
-      }.to_json
+        work: work,
+        handoff: handoff
+      }.compact.to_json
 
       webhook.post_payload(payload, secret: agent.ensure_webhook_signing_secret!)
     end
@@ -228,7 +230,8 @@ class Agent::Delivery
         end
         raise UndeliverableWebhook, "Thread no longer available" unless work
 
-        post_work_webhook!(webhook, event, work: work, agent: agent)
+        handoff = metadata["handoff"] if event.event_type == "work_handed_off"
+        post_work_webhook!(webhook, event, work: work, agent: agent, handoff: handoff)
       else
         raise UndeliverableWebhook, "Event type #{event.event_type} has no webhook payload"
       end

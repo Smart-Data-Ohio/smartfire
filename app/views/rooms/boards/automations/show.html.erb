@@ -1,0 +1,77 @@
+<% @page_title = "Automations for #{@room.name}" %>
+
+<% content_for :nav do %>
+  <div class="flex-item-justify-start">
+    <%= link_back_to_last_room_visited %>
+  </div>
+<% end %>
+
+<section class="panel" aria-labelledby="automations-title">
+  <h1 id="automations-title">Automations for <%= room_display_name(@room) %></h1>
+  <p>Tag rules and SLA timers run for every post on this board. Only the board's creator and administrators can change them.</p>
+
+  <h2 id="tag-rules-title">Auto-assign by tag</h2>
+  <p>When a post gains one of these tags while it has no owner, the post is assigned automatically. Rules never override an existing assignment.</p>
+
+  <% if @tag_assignments.any? %>
+    <ul aria-labelledby="tag-rules-title">
+      <% @tag_assignments.each do |assignment| %>
+        <li>
+          <span class="board-tag"><%= assignment.tag %></span>
+          → <%= assignment.assignee.name %><% if assignment.assignee.bot? %><span class="agent-badge">agent</span><% end %>
+          <%= button_to "Remove", board_automation_tag_assignment_path(@room, assignment), method: :delete, class: "btn",
+                aria: { label: "Remove auto-assign rule for #{assignment.tag}" } %>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p>No tag rules yet.</p>
+  <% end %>
+
+  <%= form_with url: board_automation_tag_assignments_path(@room), class: "board-post__form" do |form| %>
+    <% if @tag_error.present? %>
+      <p class="form-error" role="alert"><%= @tag_error %></p>
+    <% end %>
+    <label>
+      <span>Tag</span>
+      <%= form.text_field :tag, autocomplete: "off", placeholder: "bug", maxlength: ThreadTag::NAME_LIMIT, required: true %>
+    </label>
+    <label>
+      <span>Assign to</span>
+      <%= form.select :assignee_id, options_for_select(@candidates.map { |user| [ user.name, user.id ] }), { prompt: "Choose a member" }, required: true %>
+    </label>
+    <%= form.submit "Add rule", class: "btn btn--reversed" %>
+  <% end %>
+
+  <h2 id="sla-rules-title">SLA timers</h2>
+  <p>A post sitting in a status past the nudge time notifies its owner; past the escalation time it escalates to the board's creator. Each fires once per status change. Leave both blank to disable a status.</p>
+
+  <%= form_with url: board_automation_sla_rules_path(@room), method: :patch do |form| %>
+    <% if @sla_error.present? %>
+      <p class="form-error" role="alert"><%= @sla_error %></p>
+    <% end %>
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Status</th>
+          <th scope="col">Nudge after (minutes)</th>
+          <th scope="col">Escalate after (minutes)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% ChannelThread::WORK_STATUSES.each do |status| %>
+          <% rule = @sla_rules[status] %>
+          <tr>
+            <th scope="row"><%= ChannelThread::WORK_STATUS_LABELS.fetch(status) %></th>
+            <td><%= form.number_field "sla_rules[#{status}][nudge_after_minutes]", value: rule&.nudge_after_minutes, min: 1, max: BoardSlaRule::MAX_MINUTES, aria: { label: "#{status} nudge minutes" } %></td>
+            <td><%= form.number_field "sla_rules[#{status}][escalate_after_minutes]", value: rule&.escalate_after_minutes, min: 1, max: BoardSlaRule::MAX_MINUTES, aria: { label: "#{status} escalation minutes" } %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+    <%= form.submit "Save SLA timers", class: "btn btn--reversed" %>
+  <% end %>
+
+  <h2>Stale-work digest</h2>
+  <p>Every day the board posts one quiet digest of the posts sitting past their nudge time. No configuration needed.</p>
+</section>

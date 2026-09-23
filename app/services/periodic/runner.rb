@@ -15,6 +15,8 @@ module Periodic
     STUCK_ROOM_SWEEP_INTERVAL = 5.minutes
     AGENT_SWEEP_INTERVAL = 30.seconds
     PRESENCE_SWEEP_INTERVAL = 1.minute
+    BOARD_SLA_SWEEP_INTERVAL = 5.minutes
+    BOARD_DIGEST_SWEEP_INTERVAL = 1.hour
 
     def initialize(reminders_interval: 30, retention_interval: 24.hours.to_i, logger: Rails.logger)
       @tasks = [
@@ -27,7 +29,9 @@ module Periodic
         Task.new("stuck Fizzy claims", AGENT_SWEEP_INTERVAL, -> { Fizzy::PerformAgentActionJob.recover_stuck_claims! }),
         Task.new("calendar push channels", Calendar::PushChannel::RENEW_INTERVAL, -> { Calendar::PushChannel.renew_expiring! }),
         Task.new("retention prune", retention_interval, -> { Retention::PruneJob.perform_later }),
-        Task.new("presence leases", PRESENCE_SWEEP_INTERVAL, -> { WorkspacePresenceLease.prune })
+        Task.new("presence leases", PRESENCE_SWEEP_INTERVAL, -> { WorkspacePresenceLease.prune }),
+        Task.new("board sla nudges", BOARD_SLA_SWEEP_INTERVAL, -> { BoardAutomations::SlaDispatcher.dispatch_due! }),
+        Task.new("board stale digests", BOARD_DIGEST_SWEEP_INTERVAL, -> { BoardAutomations::DigestDispatcher.dispatch_due! })
       ]
       @last_run = {}
       @logger = logger

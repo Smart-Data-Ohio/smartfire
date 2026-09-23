@@ -31,6 +31,12 @@ class Room < ApplicationRecord
   # The agent ledger outlives the room; only the room link is cleared.
   has_many :agent_events, dependent: :nullify
   has_many :agent_approvals, dependent: :nullify
+  # Board automations are small per room, so the room destroy removes them
+  # directly instead of batching them like messages and threads.
+  has_many :board_tag_assignments, dependent: :delete_all
+  has_many :board_sla_rules, dependent: :delete_all
+  has_many :board_sla_nudges, dependent: :delete_all
+  has_many :board_stale_digests, dependent: :delete_all
 
   belongs_to :creator, class_name: "User", default: -> { Current.user }
 
