@@ -162,7 +162,7 @@ Rails.application.routes.draw do
       resource :involvement, only: %i[ show update ]
       resource :read, only: %i[ create destroy ], controller: "reads"
       resource :favorite, only: %i[ create destroy update ], controller: "favorites"
-      resource :category, only: :update, controller: "categories"
+      resource :category_assignment, only: :update, controller: "categories"
       resources :github_subscriptions, only: %i[ create update destroy ]
     end
 

@@ -7,22 +7,27 @@ class Rooms::InvolvementsController < ApplicationController
 
   def update
     @membership.update! involvement: params[:involvement]
+    # Read before the mute below clears the unread state with a second
+    # save, which would reset involvement_previously_was.
+    muted_transition = muted_transition?
+    was_invisible = @membership.involvement_previously_was.inquiry.invisible?
+
     # Muting clears the unread state: a muted room only goes unread on
     # mention, so anything unread from before the mute is stale.
     @membership.read if @membership.involved_in_muted?
 
-    broadcast_visibility_changes
+    broadcast_visibility_changes(muted_transition, was_invisible)
     redirect_to room_involvement_url(@room)
   end
 
   private
-    def broadcast_visibility_changes
+    def broadcast_visibility_changes(muted_transition, was_invisible)
       case
       when @room.direct?
-        broadcast_replace_muted_row if muted_transition?
+        broadcast_replace_muted_row if muted_transition
       when @membership.involved_in_invisible?
         broadcast_remove_to @membership.user, :rooms, target: [ @room, :list ]
-      when @membership.involvement_previously_was.inquiry.invisible?
+      when was_invisible
         if @room.stage?
           broadcast_prepend_to @membership.user, :rooms, target: :stage_rooms, partial: "users/sidebars/rooms/stage", locals: { room: @room, membership: @membership }
         elsif @room.voice?
@@ -33,7 +38,7 @@ class Rooms::InvolvementsController < ApplicationController
           broadcast_prepend_to @membership.user, :rooms, target: :shared_rooms, partial: "users/sidebars/rooms/shared", locals: { room: @room, membership: @membership }
         end
       else
-        broadcast_replace_muted_row if muted_transition?
+        broadcast_replace_muted_row if muted_transition
       end
     end
 

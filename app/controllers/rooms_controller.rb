@@ -91,7 +91,7 @@ class RoomsController < ApplicationController
       end
 
       @unread_divider_message_id = first_unread.id
-      @scroll_to_unread_divider = @unread_count > UNREAD_DIVIDER_SCROLL_THRESHOLD
+      @scroll_to_unread_divider = true if @unread_count > UNREAD_DIVIDER_SCROLL_THRESHOLD
     end
 
     def room_params

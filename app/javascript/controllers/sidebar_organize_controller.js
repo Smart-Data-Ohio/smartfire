@@ -74,7 +74,7 @@ export default class extends Controller {
       const categoryId = target.dataset.categoryDrop || ""
       if (!categoryId && !this.#dragRow.dataset.menuCategoryId) return
       if (categoryId && categoryId === this.#dragRow.dataset.menuCategoryId) return
-      response = await this.#request(`/rooms/${roomId}/category`, "PATCH", { room_category_id: categoryId })
+      response = await this.#request(`/rooms/${roomId}/category_assignment`, "PATCH", { room_category_id: categoryId })
     }
 
     if (response?.ok) document.getElementById("user_sidebar")?.reload()

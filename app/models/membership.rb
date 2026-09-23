@@ -82,7 +82,8 @@ class Membership < ApplicationRecord
   def favorite!
     return if favorited?
 
-    update!(favorite_position: self.class.where(user_id: user_id).where.not(favorite_position: nil).maximum(:favorite_position).to_i + 1)
+    next_position = (self.class.where(user_id: user_id).where.not(favorite_position: nil).maximum(:favorite_position) || -1) + 1
+    update!(favorite_position: next_position)
   end
 
   def unfavorite!

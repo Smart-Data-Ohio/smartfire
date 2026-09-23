@@ -227,7 +227,7 @@ export default class extends Controller {
 
   #assignCategoryRequest(categoryId) {
     const body = categoryId ? { room_category_id: categoryId } : { room_category_id: "" }
-    return this.#request(`/rooms/${this.#roomId}/category`, "PATCH", body)
+    return this.#request(`/rooms/${this.#roomId}/category_assignment`, "PATCH", body)
   }
 
   async #request(url, method, body) {
