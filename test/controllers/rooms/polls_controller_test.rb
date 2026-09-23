@@ -49,6 +49,21 @@ class Rooms::PollsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "boards reject polls without posting" do
+    board = Rooms::Board.create_for({ name: "Launch", creator: users(:david) },
+      users: [ users(:david) ])
+
+    assert_no_difference -> { Message.count } do
+      assert_no_difference -> { Poll.count } do
+        post room_polls_url(board), params: {
+          poll: { question: "Lunch?", options: [ "Tacos", "Pizza" ] }
+        }, as: :json
+      end
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   test "votes replace the ballot and broadcast the card" do
     poll = create_poll
 

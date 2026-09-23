@@ -1,5 +1,5 @@
 class WorkThreadEvent < ApplicationRecord
-  EVENT_TYPES = %w[ work_update work_assignment result_updated ].freeze
+  EVENT_TYPES = %w[ work_update work_assignment work_handoff result_updated ].freeze
 
   belongs_to :thread, class_name: "ChannelThread", foreign_key: :channel_thread_id, inverse_of: :work_thread_events
   belongs_to :actor, class_name: "User", optional: true
@@ -42,6 +42,40 @@ class WorkThreadEvent < ApplicationRecord
           },
           "actor" => actor_snapshot(actor),
           "note" => note.presence
+        }
+      )
+    end
+
+    # A handoff transfers ownership like an assignment and additionally
+    # snapshots the context package (summary excerpt, link and question
+    # counts, handoff id) into the metadata for Work history. The full
+    # package lives on the WorkHandoff row and in the receiver's ledger
+    # event metadata.
+    def create_for_handoff!(thread:, actor:, from_owner:, to_owner:, handoff:)
+      create!(
+        thread:,
+        actor:,
+        event_type: "work_handoff",
+        from_status: thread.work_status,
+        to_status: thread.work_status,
+        from_owner_id: from_owner&.id,
+        to_owner_id: to_owner&.id,
+        from_owner_name: from_owner&.name,
+        to_owner_name: to_owner&.name,
+        metadata: {
+          "before" => {
+            "status" => thread.work_status,
+            "owner" => owner_snapshot(from_owner)
+          },
+          "after" => {
+            "status" => thread.work_status,
+            "owner" => owner_snapshot(to_owner)
+          },
+          "actor" => actor_snapshot(actor),
+          "handoff_id" => handoff.id,
+          "handoff_summary" => handoff.summary.to_s.truncate(200),
+          "handoff_links_count" => handoff.links.size,
+          "handoff_questions_count" => handoff.open_questions.size
         }
       )
     end
@@ -181,7 +215,12 @@ class WorkThreadEvent < ApplicationRecord
 
       # The inbox has no result_updated item type; a result edit lands as a
       # work_update item sourced at this event, grouped with other updates.
-      item_event_type = event_type == "result_updated" ? "work_update" : event_type
+      # A handoff lands as a work_assignment item: it transfers ownership.
+      item_event_type = case event_type
+      when "result_updated" then "work_update"
+      when "work_handoff" then "work_assignment"
+      else event_type
+      end
 
       recipients_by_id = User.active.without_bots.where(id: recipient_user_ids).index_by(&:id)
 

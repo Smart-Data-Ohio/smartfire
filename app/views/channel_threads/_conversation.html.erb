@@ -5,6 +5,8 @@
      data-thread-panel-target="messages"
      data-controller="thread-messages"
      data-action="turbo:before-stream-render@document->thread-messages#beforeStreamRender">
+  <%= render "agent_steps/thread_steps", thread: thread %>
+
   <%= message_area_tag(room, thread: thread, anchor_message_id: local_assigns[:anchor_message_id]) do %>
     <%= render "messages/template" %>
 

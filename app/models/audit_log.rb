@@ -50,9 +50,12 @@ class AuditLog < ApplicationRecord
     agent.approval.decide
     agent.github_action.execute
     agent.fizzy_action.execute
+    agent.kill_switch
     room.create
     room.destroy
     room.membership.change
+    board.automation.change
+    work.handoff
     workspace_icon.create
     workspace_icon.destroy
   ].freeze

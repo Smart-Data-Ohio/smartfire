@@ -40,7 +40,8 @@ credential cannot starve others sharing the agent:
 - event polling and acks: 120/minute each
 - approval reads, context reads, and Fizzy board and card reads: 120/minute each
 - posting messages, requesting approvals, cancelling approvals, opening
-  DMs, pull-request actions, and Fizzy card actions: 60/minute each
+  DMs, pull-request actions, Fizzy card actions, and work handoffs:
+  60/minute each
 - creating board posts: 30/minute
 - the whole MCP endpoint: 600/minute per credential across all methods,
   on top of the per-tool buckets its tools share with the endpoints
@@ -110,7 +111,8 @@ messages) with `agent_id`, `event_type`, optional `room_id`, `message_id`,
 `agent_credential_id`, `actor_id`, `outcome`, `detail`, JSON `metadata`, and
 `created_at`, indexed on `[agent_id, created_at]`. Deliverable types are
 `mention`, `direct_message`, `reply`, `approval_decided`,
-`github_action_completed`, `fizzy_action_completed`, `work_assigned`, and `work_unassigned`;
+`github_action_completed`, `fizzy_action_completed`, `work_assigned`,
+`work_unassigned`, and `work_handed_off`;
 ledger-only types are `posted`
 (written whenever the agent posts through any endpoint) and the suppression
 rows `delivery_suppressed_rate_limit`, `delivery_suppressed_hop_limit`, and
@@ -638,6 +640,42 @@ The status update requires `manage_threads` in the thread's room,
 with the standard 403 error shape; board post creation requires it
 too (see Boards).
 
+### Handoff
+
+An agent or a person hands a work thread to another agent with a
+structured context package: a summary, links, and open questions. The
+sender must be able to work the thread (an agent must own it and hold
+`manage_threads`; a person must be a manager or the current owner),
+and the receiver must be an active agent member of the room holding
+`post_messages` and `manage_threads`. Ownership transfers, Work
+history records the handoff, the receiver gets a `work_handed_off`
+event through polling and webhooks, a previous agent owner gets
+`work_unassigned`, and the audit log records `work.handoff`. People
+hand off from the thread page; agents use the endpoint below or the
+MCP `handoff_work` tool, which shares its service, grants, and rate
+limit.
+
+`POST /agents/work/:id/handoff` (Bearer-only, JSON) takes
+`receiver_agent_id` (the receiving agent's id), `summary` (required,
+max 2,000 characters), `links` (up to 10 http(s) URLs), and
+`open_questions` (up to 10, max 500 characters each). The package is
+capped and rendered escaped everywhere; anything the agent does not
+own is 404, a missing `manage_threads` grant is 403, and an ineligible
+receiver is 422. Throttled at 60/minute per credential.
+
+```sh
+curl -X POST https://smartfire.example.com/agents/work/7/handoff \
+  -H "Authorization: Bearer $AGENT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"receiver_agent_id":12,"summary":"Tests are green, API choice is open","links":["https://example.com/spec"],"open_questions":["Which API ships first?"]}'
+```
+
+The response is the work payload with a `handoff` key carrying the
+package (`id`, `summary`, `links`, `open_questions`, `sender_name`,
+`receiver_agent_id`). The receiver's `work_handed_off` poll and
+webhook rows carry the same `work` and `handoff` keys; `ack` works on
+them.
+
 ### Link payloads
 
 Every work payload — `GET /agents/work`, `GET /agents/work/:id`,
@@ -918,15 +956,135 @@ Creation answers 404 outside the agent's membership and 403 without
 outside the room and 403 without `post_messages`, throttled at
 120/minute. Agents cannot vote.
 
+## Streaming messages
+
+An agent can post a message in a `streaming` state, append to it or
+replace its body while it works, then finalize it. The streaming
+message renders with a working indicator and updates live in the room:
+
+- `POST /rooms/:room_id/agents/streaming_messages` starts a stream
+  (top-level `thread_id` streams a thread reply). The body takes the
+  same `message` object as the messages endpoint, except streams are
+  Markdown-only and may start blank. Answers 201 with the message
+  shape plus `thread_id` and `streaming: true`.
+- `PATCH /agents/streaming_messages/:id` appends `append` to the
+  stream (whitespace-only appends land as written), or replaces the
+  whole body with `markdown_source` when no append is given.
+- `POST /agents/streaming_messages/:id/finalize` ends the stream.
+  Finalizing an already-final message succeeds without repeating
+  side effects.
+
+Updates and finalizes only touch the agent's own streaming messages
+in its rooms (anything else is the same 404); all three need
+`post_messages` in the room. Starting and finalizing throttle at
+60/minute per credential, appends at 240/minute, and incremental
+broadcasts coalesce to about 4 per second per message, with a trailing
+broadcast sending the final coalesced text within the window.
+
+Notifications, push, mention recording, agent delivery, bot webhooks,
+and search indexing all fire exactly once, at finalize — nothing
+fires while streaming. Streams idle for 10 minutes — no append or
+replace — auto-finalize from the periodic runner; every append
+restarts the clock. An append racing a finalize loses with 422 and
+never edits the final message. A locked thread freezes in-flight
+streams too: appends and finalizes wait with 422 until it unlocks
+(finalizing an already-final message still succeeds). A suspended or
+deactivated agent's streams finalize quietly instead: marked final
+with no push, mentions, inbox, delivery, webhooks, or indexing. The
+MCP mirrors are `start_stream`, `append_stream`, and `finalize_stream`.
+
+```sh
+curl -X POST https://smartfire.example.com/rooms/3/agents/streaming_messages \
+  -H "Authorization: Bearer $AGENT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"message":{"markdown_source":""}}'
+```
+
+### Working presence
+
+`PATCH /agents/me` also accepts `working_presence` ("Thinking…",
+"Running tests…"), shown next to the agent's name in the room member
+list. Blank clears it; otherwise it expires after 5 minutes unless
+refreshed, and clears when one of the agent's streams finalizes. The
+MCP mirror is `set_presence`.
+
+## Steps
+
+Agents attach structured progress entries to their own message or to
+a work thread they own — name, status, short input/output summaries,
+duration — rendered as a collapsible step list, like a CI log.
+Message steps need `post_messages`, thread steps need
+`manage_threads`; both throttle at 60/minute per credential.
+
+- `POST /agents/steps` with exactly one of `message_id` or
+  `thread_id`, plus `name` (required), `status` (`pending`,
+  `running`, `done`, `failed`; default `running`), `input_summary`,
+  `output_summary`, and `duration_ms`. Answers 201.
+- `PATCH /agents/steps/:id` updates whichever fields are given.
+  Steps never move between parents.
+
+Steps cap at 50 per message or thread, names at 120 characters, and
+each summary at 1000 characters; every field renders escaped. The
+MCP mirrors are `add_step` and `update_step`.
+
+```sh
+curl -X POST https://smartfire.example.com/agents/steps \
+  -H "Authorization: Bearer $AGENT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"message_id":42,"name":"Run tests","output_summary":"All green","duration_ms":1500}'
+```
+
+## Budgets and kill switch
+
+Owners and administrators set per-agent daily caps on the bot edit
+page: messages, board posts, and external actions (approval requests,
+including GitHub and Fizzy card actions). Blank means unlimited. The
+bot page and the agent profile show today's usage next to the caps.
+
+Budgets count through the same services REST, MCP, and the bot-key
+posting API share, so every agent posting path hits the same wall: an
+over-cap request answers 429 with
+`{ "error": "Daily message budget exceeded (50/day)", "cap":
+"messages", "limit": 50, "retry_after": 3600 }` (MCP carries the same
+`cap`, `limit`, and `retry_after` in its `structuredContent`), and the
+owner gets one inbox item per cap per day, however many requests
+overflow (an ownerless agent notifies every administrator instead).
+
+Anything posted through the shared posting path counts: streams
+count when they start, polls count as messages when created, a board
+post's opening message counts only toward the board-post cap while
+replies inside the post count as messages, and an agent's reply to a
+`slash_command` event is an ordinary post through the same path.
+Slash commands and scheduled messages themselves are human-only (bots
+get 403 at the slash endpoint and the scheduled dispatcher skips
+bots), so they never touch budgets. Work handoffs count toward no
+budget either: handing a thread to another agent writes no message,
+board post, or approval request, so a handoff never burns a cap and
+still succeeds when every cap is exhausted.
+
+The bot edit page also carries the kill switch: one click suspends
+the agent (revoking every grant, which also blocks
+approved-but-unexecuted external actions at perform time), quietly
+finalizes the agent's open streams (marked final with no push,
+mentions, inbox, delivery, or webhooks), cancels every still-pending
+approval request, clears working presence, and records
+`agent.kill_switch` in the audit log. Work the agent owns stays
+assigned: the kill switch never reassigns it, and the owner simply
+reads as unavailable until a manager assigns the thread to someone
+else. A suspended agent also cannot receive handoffs or tag
+auto-assignments until it is unsuspended.
+
 ## MCP server
 
 The same agent API is exposed as a Model Context Protocol server at
 `POST /agents/mcp` (stateless Streamable HTTP, spec revision 2026-07-28,
-with the legacy `initialize` handshake kept): thirty-one tools from
+with the legacy `initialize` handshake kept): thirty-eight tools from
 `list_rooms` and `read_messages` to `request_approval`, `get_context`,
 `open_dm`, the nine Fizzy tools, `pin_message`/`unpin_message`,
-`register_slash_command`/`unregister_slash_command`, and
-`create_poll`/`get_poll`, each delegating to the same service code,
+`register_slash_command`/`unregister_slash_command`,
+`create_poll`/`get_poll`, `handoff_work`, the streaming tools
+(`start_stream`/`append_stream`/`finalize_stream`), `set_presence`, and
+`add_step`/`update_step`, each delegating to the same service code,
 grants, and rate-limit buckets as its REST counterpart. See
 [Smartfire MCP server](agents-mcp.md) for client setup and the tool
 list.

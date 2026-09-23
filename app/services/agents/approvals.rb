@@ -79,6 +79,10 @@ module Agents
         )
       end
 
+      if (denial = Budgets.check(agent, :external_actions))
+        return denial
+      end
+
       approval = AgentApproval.new(
         agent: agent,
         room: room,

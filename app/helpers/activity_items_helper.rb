@@ -13,12 +13,17 @@ module ActivityItemsHelper
     when WorkThreadEvent
       thread = source.thread
       thread ? room_path(thread.room, thread: thread.id) : activity_items_path
+    when BoardSlaNudge
+      thread = source.channel_thread
+      thread ? room_path(thread.room, thread: thread.id) : activity_items_path
     when HuddleGrant
       source.room ? room_path(source.room) : activity_items_path
     when Event
       source.room ? room_event_path(source.room, source) : activity_items_path
     when AgentApproval
       agent_approvals_path(source.agent)
+    when AgentBudgetNotice
+      source.agent&.user ? edit_account_bot_path(source.agent.user) : activity_items_path
     when ScheduledMessage
       scheduled_messages_path
     else
@@ -40,6 +45,8 @@ module ActivityItemsHelper
       "Work assignment"
     when "work_update"
       "Work update"
+    when "work_sla"
+      "SLA breach"
     when "huddle_started"
       "Incoming huddle"
     when "huddle_missed"
@@ -56,6 +63,8 @@ module ActivityItemsHelper
       "Review requested"
     when "agent_approval_request"
       "Approval request"
+    when "agent_budget_exceeded"
+      "Budget exceeded"
     when "message_reminder"
       "Reminder"
     when "scheduled_message_dropped"
@@ -78,6 +87,9 @@ module ActivityItemsHelper
       end
     when WorkThreadEvent
       source.thread ? "#{room_display_name(source.thread.room)} · #{source.thread.name}" : "Unavailable thread"
+    when BoardSlaNudge
+      thread = source.channel_thread
+      thread ? "#{room_display_name(thread.room)} · #{thread.name}" : "Unavailable thread"
     when HuddleGrant
       source.room ? room_display_name(source.room) : "Unavailable room"
     when Event
@@ -87,6 +99,9 @@ module ActivityItemsHelper
       room = source.room
       base = agent ? agent.user.name : "Agent"
       room ? "#{base} · #{room_display_name(room)}" : base
+    when AgentBudgetNotice
+      agent_name = source.agent&.user&.name || "Agent"
+      "#{agent_name} · daily #{source.cap_label} budget"
     when ScheduledMessage
       room = source.room
       room ? room_display_name(room) : "Unavailable room"
@@ -115,6 +130,15 @@ module ActivityItemsHelper
         changes << "Owner: #{source.from_owner_name.presence || "unassigned"} → #{source.to_owner_name.presence || "unassigned"}"
       end
       changes.presence&.to_sentence || "Work thread updated"
+    when BoardSlaNudge
+      status = ChannelThread::WORK_STATUS_LABELS.fetch(source.work_status, source.work_status.to_s.humanize)
+      waited = source.waited_minutes
+      age = waited >= 60 ? "#{(waited / 60.0).round(1)} hours" : "#{waited} minutes"
+      if source.stage == "escalation"
+        "Escalated: sitting in #{status} for #{age}"
+      else
+        "Sitting in #{status} for #{age}"
+      end
     when HuddleGrant
       caller = source.user&.name || "Someone"
       if item.event_type == "huddle_missed"
@@ -126,6 +150,9 @@ module ActivityItemsHelper
       activity_item_event_body(item)
     when AgentApproval
       source.summary.to_s
+    when AgentBudgetNotice
+      agent_name = source.agent&.user&.name || "The agent"
+      "#{agent_name} hit its daily #{source.cap_label} budget (#{source.budget_limit}/day)."
     when ScheduledMessage
       if source.drop_reason.present?
         "Your scheduled message was not sent (#{source.drop_reason}): #{source.markdown_source}"
@@ -149,6 +176,8 @@ module ActivityItemsHelper
     when Event
       source.organizer&.name
     when AgentApproval
+      source.agent&.user&.name
+    when AgentBudgetNotice
       source.agent&.user&.name
     when ScheduledMessage
       source.user&.name

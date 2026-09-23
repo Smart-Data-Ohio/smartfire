@@ -1,7 +1,10 @@
 class Agents::WorkController < ApplicationController
-  allow_agent_access only: %i[ index show update result ]
+  include AgentApiThrottle
 
-  before_action :ensure_agent_token, only: %i[ index show update result ]
+  allow_agent_access only: %i[ index show update result handoff ]
+
+  before_action :ensure_agent_token, only: %i[ index show update result handoff ]
+  throttle_agent_api limit: 60, only: :handoff
 
   # GET /agents/work (Bearer-only, JSON). Lists the threads the agent
   # currently owns, newest first, max 100, filtered to rooms the agent's
@@ -53,6 +56,37 @@ class Agents::WorkController < ApplicationController
       agent: Current.agent, id: params[:id],
       markdown: params[:markdown], markdown_given: params.key?(:markdown)
     )
+  end
+
+  # POST /agents/work/:id/handoff (Bearer-only, JSON). Hands a thread
+  # the agent owns to another agent with a context package: summary
+  # (required, max 2000 characters), links (up to 10 http(s) URLs), and
+  # open_questions (up to 10, max 500 characters each). Ownership
+  # transfers, Work history records the handoff, the receiver gets a
+  # work_handed_off event, and the audit log records work.handoff.
+  # Anything the agent does not own is 404; a missing manage_threads
+  # grant in the thread's room is 403; an ineligible receiver is 422.
+  # Throttled at 60/minute per credential, shared with the MCP
+  # handoff_work tool.
+  def handoff
+    no_store_response!
+
+    result = Agents::WorkHandoffs.create(
+      agent: Current.agent, id: params[:id],
+      receiver_agent_id: params[:receiver_agent_id],
+      summary: params[:summary].to_s,
+      links: params[:links],
+      open_questions: params[:open_questions]
+    )
+
+    if result.ok?
+      payload = work_thread_payload(result.payload[:thread]).merge(handoff: result.payload[:handoff].payload)
+      render json: payload, status: :created
+    elsif result.status == :not_found
+      head :not_found
+    else
+      render json: result.failure_body, status: result.status
+    end
   end
 
   private

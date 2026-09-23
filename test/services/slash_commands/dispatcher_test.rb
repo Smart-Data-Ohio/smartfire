@@ -165,6 +165,27 @@ class SlashCommands::DispatcherTest < ActiveSupport::TestCase
     assert_includes message.plain_text_body, "¯_(ツ)_/¯"
   end
 
+  test "posting commands in a board answer an error without posting" do
+    board = Rooms::Board.create_for({ name: "Launch", creator: @user }, users: [ @user ])
+
+    assert_no_difference -> { Message.count } do
+      result = SlashCommands::Dispatcher.dispatch(user: @user, room: board, text: "/shrug ship it")
+
+      assert_equal :error, result.kind
+      assert_match "board", result.message
+    end
+  end
+
+  test "posting commands in a board thread still post" do
+    board = Rooms::Board.create_for({ name: "Launch", creator: @user }, users: [ @user ])
+    post = ChannelThread.create_board_post!(room: board, creator: @user, name: "Stuck migration", work_status: "in_progress")
+
+    result = SlashCommands::Dispatcher.dispatch(user: @user, room: board, thread: post, text: "/shrug ship it")
+
+    assert_equal :posted, result.kind
+    assert_equal post.id, Message.find(result.payload[:message_id]).thread_id
+  end
+
   test "slash posts in threads skip the legacy webhook fanout" do
     legacy = User.create_bot!(name: "Legacy Note", webhook_url: "https://example.test/legacy-note")
     @room.memberships.grant_to(legacy)
@@ -218,6 +239,13 @@ class SlashCommands::DispatcherTest < ActiveSupport::TestCase
 
     assert_equal :posted, result.kind
     assert_equal "tada", @room.messages.ordered.last.sound.name
+  end
+
+  test "slash posts never start a stream" do
+    result = dispatch("/shrug ship it")
+
+    assert_equal :posted, result.kind
+    assert_not_predicate @room.messages.ordered.last, :streaming?
   end
 
   test "unknown commands error with the available list" do

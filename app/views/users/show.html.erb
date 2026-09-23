@@ -59,6 +59,7 @@
 
           <% if Current.user.administrator? || agent.owner == Current.user %>
             <div class="txt-small">Last 24 hours: <%= agent.activity_summary %></div>
+            <div class="txt-small">Today's usage: <%= agent_budget_usage_line(agent) %></div>
           <% end %>
         <% end %>
       </div>

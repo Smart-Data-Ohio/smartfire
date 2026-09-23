@@ -398,6 +398,10 @@ class ActivityItemsControllerTest < ActionDispatch::IntegrationTest
       work_thread.update_work!(actor: users(:jz), work_owner_id: users(:jason).id)
       ActivityItem.create!(user:, source: work_thread.work_thread_events.ordered.first, event_type: "work_assignment")
 
+      nudge = BoardSlaNudge.create!(room: @room, channel_thread: work_thread, work_status: "planned",
+        stage: "nudge", status_entered_at: 1.hour.ago, recipient: user)
+      ActivityItem.create!(user:, source: nudge, event_type: "work_sla")
+
       %w[ event_invitation event_update event_cancelled event_reminder ].each_with_index do |event_type, index|
         event = @room.events.create!(organizer: users(:jason), title: "Filter event #{index}", starts_at: 2.days.from_now, time_zone: "UTC")
         ActivityItem.find_by!(user:, source: event).update!(event_type:)
@@ -407,6 +411,9 @@ class ActivityItemsControllerTest < ActionDispatch::IntegrationTest
 
       approval = AgentApproval.create!(agent: agents(:bender_agent), room: @room, action: "deploy", summary: "Ship it")
       ActivityItem.find_by!(user:, source: approval)
+
+      notice = AgentBudgetNotice.create!(agent: agents(:bender_agent), cap: "messages", day: Date.current)
+      ActivityItem.create!(user:, source: notice, event_type: "agent_budget_exceeded")
 
       travel_to(3.minutes.ago) { start_dm_huddle_for(user, rooms(:david_and_jason)) }.update!(event_type: "huddle_missed")
       start_dm_huddle_for(user, rooms(:david_and_kevin))

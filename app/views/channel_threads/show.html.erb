@@ -14,24 +14,39 @@
         Work: <%= @thread.work_status_label %> · <%= owner_label %><% if owner&.bot? %><span class="agent-badge">agent</span><% end %>
       </p>
       <%= render "threads/work/links/box", thread: @thread, links: @work_links, linkable_events: @linkable_events, context: :header %>
+      <%= render "agent_steps/thread_steps", thread: @thread %>
+      <% if @thread.work_manageable_by?(Current.user) %>
+        <p><%= link_to "Hand off to an agent", new_thread_work_handoff_path(@thread), class: "btn" %></p>
+      <% end %>
       <% if @thread.work_thread_events.any? %>
         <details>
           <summary>Work history</summary>
           <ol>
             <% @thread.work_thread_events.ordered.each do |event| %>
               <li>
-                <%= event.actor&.name || "Former member" %> ·
-                <% if event.status_changed? %>
-                  status <%= ChannelThread::WORK_STATUS_LABELS.fetch(event.from_status, "Ordinary thread") %>
-                  → <%= ChannelThread::WORK_STATUS_LABELS.fetch(event.to_status, "Ordinary thread") %>
-                <% end %>
-                <% if event.owner_changed? %>
-                  <% if event.status_changed? %> · <% end %>
+                <% if event.event_type == "work_handoff" %>
+                  <%= event.actor&.name || "Former member" %> handed off
                   owner <%= event.from_owner_name || "Unassigned" %>
                   → <%= event.to_owner_name || "Unassigned" %>
-                <% end %>
-                <% if event.note.present? %>
-                  · Note: <%= event.note %>
+                  <% if event.metadata.is_a?(Hash) && event.metadata["handoff_summary"].present? %>
+                    · <%= event.metadata["handoff_summary"] %>
+                    (<%= event.metadata["handoff_links_count"].to_i %> <%= "link".pluralize(event.metadata["handoff_links_count"].to_i) %>,
+                    <%= event.metadata["handoff_questions_count"].to_i %> open <%= "question".pluralize(event.metadata["handoff_questions_count"].to_i) %>)
+                  <% end %>
+                <% else %>
+                  <%= event.actor&.name || "Former member" %> ·
+                  <% if event.status_changed? %>
+                    status <%= ChannelThread::WORK_STATUS_LABELS.fetch(event.from_status, "Ordinary thread") %>
+                    → <%= ChannelThread::WORK_STATUS_LABELS.fetch(event.to_status, "Ordinary thread") %>
+                  <% end %>
+                  <% if event.owner_changed? %>
+                    <% if event.status_changed? %> · <% end %>
+                    owner <%= event.from_owner_name || "Unassigned" %>
+                    → <%= event.to_owner_name || "Unassigned" %>
+                  <% end %>
+                  <% if event.note.present? %>
+                    · Note: <%= event.note %>
+                  <% end %>
                 <% end %>
               </li>
             <% end %>

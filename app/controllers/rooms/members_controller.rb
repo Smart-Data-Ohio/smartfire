@@ -29,7 +29,7 @@ class Rooms::MembersController < ApplicationController
           bot: member.bot?,
           online: live,
           presence: live ? "agent" : "offline",
-          status: agent.status_note.presence || agent.status.to_s.humanize
+          status: agent.working_presence_text.presence || agent.status_note.presence || agent.status.to_s.humanize
         }
       else
         presence = member.effective_presence(lease_states[member.id] || :offline)

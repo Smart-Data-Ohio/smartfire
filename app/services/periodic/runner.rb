@@ -5,10 +5,13 @@ module Periodic
   # retries, event and saved-item reminders, scheduled-message dispatch,
   # poll closing, stuck room-destroy recovery, stranded agent webhook and
   # stuck GitHub/Fizzy-claim recovery, the expired presence-lease sweep,
-  # the one-time plaintext bot-token clearing, and the daily retention prune all live here so production needs no
-  # extra long-running process for any of them. Add a sweeper by appending
+  # board SLA nudges and stale digests, the one-time plaintext bot-token
+  # clearing, and the daily retention prune all
+  # live here so production needs no extra long-running process for any
+  # of them. Add a sweeper by appending
   # to the task list below: a name, an interval in seconds, and an
-  # idempotent callable.
+  # idempotent callable. The streaming messages sweep finalizes agent
+  # streams idle for 10 minutes.
   class Runner
     Task = Data.define(:name, :interval, :run)
 
@@ -17,6 +20,9 @@ module Periodic
     AGENT_SWEEP_INTERVAL = 30.seconds
     BOT_TOKEN_CLEAR_INTERVAL = 24.hours.to_i
     PRESENCE_SWEEP_INTERVAL = 1.minute
+    BOARD_SLA_SWEEP_INTERVAL = 5.minutes
+    BOARD_DIGEST_SWEEP_INTERVAL = 1.hour
+    STREAM_SWEEP_INTERVAL = 30.seconds
 
     def initialize(reminders_interval: 30, retention_interval: 24.hours.to_i, logger: Rails.logger)
       bot_tokens_cleared = false
@@ -40,7 +46,10 @@ module Periodic
         Task.new("calendar push channels", Calendar::PushChannel::RENEW_INTERVAL, -> { Calendar::PushChannel.renew_expiring! }),
         Task.new("clear plaintext bot tokens", BOT_TOKEN_CLEAR_INTERVAL, clear_bot_tokens_once),
         Task.new("retention prune", retention_interval, -> { Retention::PruneJob.perform_later }),
-        Task.new("presence leases", PRESENCE_SWEEP_INTERVAL, -> { WorkspacePresenceLease.prune })
+        Task.new("presence leases", PRESENCE_SWEEP_INTERVAL, -> { WorkspacePresenceLease.prune }),
+        Task.new("board sla nudges", BOARD_SLA_SWEEP_INTERVAL, -> { BoardAutomations::SlaDispatcher.dispatch_due! }),
+        Task.new("board stale digests", BOARD_DIGEST_SWEEP_INTERVAL, -> { BoardAutomations::DigestDispatcher.dispatch_due! }),
+        Task.new("streaming messages", STREAM_SWEEP_INTERVAL, -> { Message.finalize_overdue_streams! })
       ]
       @last_run = {}
       @logger = logger

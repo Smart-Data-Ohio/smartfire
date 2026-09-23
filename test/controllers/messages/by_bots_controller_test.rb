@@ -171,6 +171,34 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "create denies an agent at its message cap with 429" do
+    agents(:bender_agent).update!(daily_message_cap: 1)
+    @room.root_messages.create!(creator: users(:bender),
+      markdown_source: "Spent", client_message_id: "bot-key-spent")
+
+    assert_no_difference -> { Message.count } do
+      post room_bot_messages_url(@room, bot_key_for(users(:bender))), params: +"Over the cap"
+    end
+
+    assert_response :too_many_requests
+    assert_equal "Daily message budget exceeded (1/day)", response.parsed_body["error"]
+    assert_equal "messages", response.parsed_body["cap"]
+    assert_equal 1, response.parsed_body["limit"]
+    assert response.parsed_body["retry_after"].positive?
+  end
+
+  test "create still posts for a legacy bot without an agent row" do
+    bot = User.create_bot!(name: "Legacy Poster")
+    @room.memberships.grant_to(bot)
+
+    assert_difference -> { Message.count }, 1 do
+      post room_bot_messages_url(@room, bot_key_for(bot)), params: +"Legacy hello"
+    end
+
+    assert_response :created
+    assert_equal "Legacy hello", Message.last.plain_text_body
+  end
+
   test "create without a body or attachment" do
     assert_no_difference -> { Message.count } do
       post room_bot_messages_url(@room, bot_key_for(users(:bender)))

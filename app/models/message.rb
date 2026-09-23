@@ -24,6 +24,10 @@ class Message < ApplicationRecord
   has_one :poll, dependent: :destroy
   has_many :message_pins, dependent: :destroy
   has_many :saved_items, dependent: :destroy
+  # A stale-work digest note links its claim back here for the board page.
+  # The link clears with the message so the room destroy batches (which hit
+  # digest notes before the room's own digest rows go) never trip the FK.
+  has_many :board_stale_digests, foreign_key: :message_id, dependent: :nullify
   has_many :activity_items, as: :source, dependent: :destroy, inverse_of: :source
   # This callback must run before Active Record's dependent:nullify callback. It
   # leaves a small tombstone on each reply so the UI can still explain why its
@@ -59,34 +63,53 @@ class Message < ApplicationRecord
   # are destroyed in the same transaction as the message save.
   has_many :drive_attachments, -> { order(:id) }, dependent: :destroy, autosave: true
 
+  has_many :agent_steps, -> { ordered }, dependent: :destroy
+
   has_rich_text :body
 
+  # A streaming message idle this long — no start, append, or replace —
+  # is auto-finalized by the periodic runner (see
+  # Message.finalize_overdue_streams!). Every save while streaming bumps
+  # streaming_updated_at and restarts the clock.
+  STREAM_FINALIZE_AFTER = 10.minutes
+  # Incremental stream broadcasts coalesce to about this interval per
+  # message, so a fast agent cannot flood the room stream.
+  STREAM_BROADCAST_INTERVAL = 0.25.seconds
+
   validates :markdown_source, length: { maximum: Markdown::SOURCE_LIMIT }, allow_nil: true
-  validate :markdown_source_or_attachment, if: :markdown?
+  validate :markdown_source_or_attachment, if: :requires_body?
   validate :drive_attachments_within_limit
+  # Streams only move toward final: nothing may flip a finalized message
+  # back to streaming.
+  validate :streaming_never_resumes, on: :update
 
   before_validation :render_markdown_body, if: :will_save_change_to_markdown_source?
+  before_save :touch_streaming_activity, if: :streaming?
   before_create -> { self.client_message_id ||= Random.uuid } # Bots don't care
   before_destroy :preserve_reply_tombstones, prepend: true
   before_destroy :capture_quote_referencing_ids, prepend: true
-  after_create_commit :receive_in_conversation
+  # Streaming messages defer every noisy side effect to finalize (see
+  # #finalize_stream!): unread marks, push, inbox items, agent delivery,
+  # webhooks, search indexing, and reference syncs all fire exactly once,
+  # when the stream finalizes. Nothing fires while streaming.
+  after_create_commit :receive_in_conversation, unless: :streaming?
   after_create_commit :close_stale_sibling_threads, if: :thread_message?
-  after_create_commit :record_activity_items
+  after_create_commit :record_activity_items, unless: :streaming?
   # Create and update need distinct callback filters: registering the same
   # method twice on the commit chain keeps only one registration.
-  after_create_commit :sync_github_pull_request_references
+  after_create_commit :sync_github_pull_request_references, unless: :streaming?
   after_update_commit :resync_github_pull_request_references
-  after_create_commit :sync_fizzy_card_references
+  after_create_commit :sync_fizzy_card_references, unless: :streaming?
   after_update_commit :resync_fizzy_card_references
-  after_create_commit :sync_twitter_post_references
+  after_create_commit :sync_twitter_post_references, unless: :streaming?
   after_update_commit :resync_twitter_post_references
-  after_create_commit :sync_event_references
+  after_create_commit :sync_event_references, unless: :streaming?
   after_update_commit :resync_event_references
-  after_create_commit :sync_message_references
+  after_create_commit :sync_message_references, unless: :streaming?
   after_update_commit :resync_message_references
   after_update_commit :enqueue_quote_cards_refresh, if: :references_source_changed?
   after_destroy_commit :broadcast_quote_cards_removal
-  after_create_commit :sync_link_embed_references
+  after_create_commit :sync_link_embed_references, unless: :streaming?
   after_update_commit :resync_link_embed_references
 
   # Tie-broken by id so the page windows agree with the (created_at, id)
@@ -114,6 +137,7 @@ class Message < ApplicationRecord
       .with_attachment_details
       .with_boosts
       .preload(:message_pins)
+      .preload(:agent_steps)
       .preload(poll: [ :poll_options, { poll_votes: :user } ])
       .preload(:room, :github_pull_requests, :fizzy_cards, :twitter_posts, :drive_attachments, link_embed_references: :link_embed,
         events: [ :room, :organizer, :venue ],
@@ -158,6 +182,36 @@ class Message < ApplicationRecord
       return if client_message_id.blank? || room.nil? || creator.nil?
 
       find_by(room_id: room.id, creator_id: creator.id, client_message_id: client_message_id)
+    end
+
+    # Finalizes streaming messages idle past STREAM_FINALIZE_AFTER. Runs
+    # from the periodic runner. Each finalize is a conditional claim (see
+    # #finalize_stream!), so a sweep racing the agent finalizes once.
+    # Streams in locked threads wait: the thread is frozen, so the sweep
+    # skips them and a later sweep finalizes them once unlocked. Rows the
+    # old code wrote mid-deploy carry no activity stamp; they inherit
+    # their creation time once, here.
+    def finalize_overdue_streams!(now: Time.current)
+      where("messages.streaming = 1").where(streaming_updated_at: nil)
+        .update_all("streaming_updated_at = created_at")
+
+      overdue_streams(now: now).includes(:thread).find_each do |message|
+        next if message.thread&.locked?
+
+        begin
+          message.finalize_stream!
+        rescue => error
+          Rails.logger.error "Stream finalize failed for message #{message.id}: #{error.class}: #{error.message}"
+        end
+      end
+    end
+
+    # Streaming messages idle past the deadline, as a relation so the
+    # sweep and its index-coverage test share one query. The `= 1` must
+    # match the partial index predicate textually: `where(streaming:
+    # true)` emits `= TRUE`, which SQLite does not resolve to the index.
+    def overdue_streams(now: Time.current)
+      where("messages.streaming = 1").where("messages.streaming_updated_at < ?", now - STREAM_FINALIZE_AFTER)
     end
   end
 
@@ -265,6 +319,51 @@ class Message < ApplicationRecord
     conversation
   end
 
+  # Ends a stream, firing every deferred side effect exactly once:
+  # unread marks and push, inbox items, agent delivery (including the
+  # sender's `posted` ledger row), legacy bot webhooks, search indexing,
+  # and card reference syncs. A suspended or deactivated agent's streams
+  # end quietly instead — marked final with none of those — so a kill
+  # switch or suspension never fans a half-written draft out. Suspension
+  # finalizes open streams up front (see Agent#suspend!); this branch
+  # covers anything it misses, like the overdue sweep or an orphaned
+  # stream. Also clears the streaming agent's working presence.
+  def finalize_stream!
+    return false unless claim_stream_finalized!
+
+    unless creator.agent&.active?
+      creator.agent&.clear_working_presence!
+      broadcast_stream_final
+      return true
+    end
+
+    create_in_index
+    receive_in_conversation
+    record_activity_items
+    enqueue_agent_deliveries
+    sync_all_references
+    # Normal thread replies never fan out to legacy webhooks, and neither
+    # does a thread finalize.
+    Message::BotWebhookFanout.deliver_for(self) unless thread_message?
+    # Like a normal root message, finalizing a root stream lights up
+    # sidebar badges; thread finalizes stay on the thread channel.
+    broadcast_unread_room unless thread_message? || system_note?
+    creator.agent&.clear_working_presence!
+    broadcast_stream_final
+    true
+  end
+
+  # Marks the stream final without any deferred side effect: no unread,
+  # push, mentions, inbox, delivery, webhooks, or indexing. The final
+  # rendering still broadcasts so clients drop the working indicator.
+  def finalize_stream_quietly!
+    return false unless claim_stream_finalized!
+
+    creator.agent&.clear_working_presence!
+    broadcast_stream_final
+    true
+  end
+
   def to_key
     [ client_message_id ]
   end
@@ -285,6 +384,18 @@ class Message < ApplicationRecord
 
 
   private
+    # Flips the streaming flag with a conditional claim, so an agent
+    # finalize racing the overdue sweep (or a retry) finalizes once; the
+    # loser gets false. The claim commits before any broadcast or job
+    # enqueue, so no SQLite lock is held across them.
+    def claim_stream_finalized!
+      now = Time.current
+      claimed = self.class.where(id: id, streaming: true)
+        .update_all(streaming: false, updated_at: now) == 1
+      reload if claimed
+      claimed
+    end
+
     def record_activity_items
       ActivityItems::Recorder.record_message!(self) unless system_note?
     end
@@ -363,9 +474,23 @@ class Message < ApplicationRecord
     # Markdown edits rewrite the body through the renderer; legacy edits
     # rewrite only the rich-text row. Either must re-sync references. The
     # association check avoids loading the body when it was untouched.
+    # Streaming appends never re-sync: references sync once at finalize,
+    # from the final body.
     def references_source_changed?
+      return false if streaming?
+
       saved_change_to_markdown_source? ||
         (association(:rich_text_body).loaded? && rich_text_body&.saved_change_to_body?)
+    end
+
+    # The reference syncs, run once at finalize from the final body.
+    def sync_all_references
+      sync_github_pull_request_references
+      sync_fizzy_card_references
+      sync_twitter_post_references
+      sync_event_references
+      sync_message_references
+      sync_link_embed_references
     end
 
     def receive_in_conversation
@@ -406,7 +531,10 @@ class Message < ApplicationRecord
     end
 
     def no_root_messages_in_boards
-      errors.add :thread, "must be present in a board" if thread_id.nil? && room&.board?
+      # Quiet system notes (the stale-work digest) are not chat: they skip
+      # unread, push, agents, inbox, and search, so boards accept them
+      # while still refusing root chat messages.
+      errors.add :thread, "must be present in a board" if thread_id.nil? && room&.board? && !system_note?
     end
 
     def validate_forward_metadata
@@ -429,6 +557,25 @@ class Message < ApplicationRecord
       self.body = [ rendered, @legacy_attachment_snapshot ].compact_blank.join("\n")
     ensure
       @legacy_attachment_snapshot = nil
+    end
+
+    # Every save while streaming — start, append, replace — restarts the
+    # sweep's inactivity clock. The finalize claim and the broadcast
+    # stamps bypass callbacks, so they never extend it.
+    def touch_streaming_activity
+      self.streaming_updated_at = Time.current
+    end
+
+    def streaming_never_resumes
+      if will_save_change_to_streaming?(from: false, to: true)
+        errors.add :streaming, "cannot resume once finalized"
+      end
+    end
+
+    # A stream may start empty and fill in with appends, so the body
+    # requirement applies only once the message is final.
+    def requires_body?
+      markdown? && !streaming?
     end
 
     def markdown_source_or_attachment
