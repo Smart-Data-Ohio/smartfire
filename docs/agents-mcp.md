@@ -39,7 +39,9 @@ endpoints, per credential per minute:
 | `poll_events`, `ack_events` | event polling | 120 |
 | `get_approval` | approval reads | 120 |
 | `get_context` | context reads | 120 |
+| `list_fizzy_boards`, `get_fizzy_board`, `search_fizzy_cards`, `get_fizzy_card` | Fizzy board and card reads | 120 |
 | `post_message`, `request_approval`, `open_dm` | posting / approvals / DMs | 60 |
+| `create_fizzy_card`, `comment_on_fizzy_card`, `move_fizzy_card`, `close_fizzy_card`, `reopen_fizzy_card` | Fizzy card actions | 60 |
 | `pin_message`, `unpin_message` | pinning / unpinning | 60 |
 | `create_board_post` | board post creation | 30 |
 
@@ -105,6 +107,8 @@ curl https://smartfire.example.com/agents/mcp \
 | `request_approval`, `get_approval` | `external_action` | `/agents/approvals` |
 | `get_context` | `read_messages` | `GET /agents/context` |
 | `open_dm` | `post_messages` + owner, prior contact, or `dm_anyone` | `POST /agents/dms` |
+| `list_fizzy_boards`, `get_fizzy_board`, `search_fizzy_cards`, `get_fizzy_card` | workspace-wide `fizzy` | `GET /agents/fizzy/...` |
+| `create_fizzy_card`, `comment_on_fizzy_card`, `move_fizzy_card`, `close_fizzy_card`, `reopen_fizzy_card` | workspace-wide `external_action` | `POST /agents/fizzy/card_actions` |
 | `pin_message`, `unpin_message` | `post_messages` in the room | `POST`/`DELETE /agents/messages/:id/pin` |
 
 `tools/list` always returns the full set; per-tool enforcement happens at
@@ -117,3 +121,11 @@ written when the human mentions the agent, replies to the agent, or
 posts in a direct room with the agent. It counts whatever the row's
 outcome, and survives the human leaving or the room being deleted. See
 [Agent DMs](agents.md#agent-dms) for the exact rule.
+
+The Fizzy tools read through the agent owner's linked Fizzy account
+and write only through human approval: each write tool creates a
+`fizzy.*` approval and returns its id, status, and expiry, exactly
+like `POST /agents/fizzy/card_actions`. Completions arrive through
+`poll_events` with a `fizzy_action` payload. See
+[Fizzy reads](agents.md#fizzy-reads) and
+[Fizzy write actions](agents.md#fizzy-write-actions) for the gates.

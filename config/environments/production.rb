@@ -91,4 +91,10 @@ Rails.application.configure do
   config.active_record.attributes_for_inspect = [ :id ]
 
   config.active_job.queue_adapter = :resque
+
+  # Forward-to-room inbound email arrives through an SMTP relay; the relay
+  # authenticates with basic auth (user actionmailbox) against the ingress
+  # password in credentials (action_mailbox.ingress_password) or the
+  # RAILS_INBOUND_EMAIL_PASSWORD environment variable. See docs/email-to-room.md.
+  config.action_mailbox.ingress = :relay
 end

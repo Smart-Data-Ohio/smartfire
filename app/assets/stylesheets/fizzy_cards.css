@@ -1,0 +1,191 @@
+.fizzy-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+
+  /* The container always renders so edits can broadcast-replace it;
+     hide it when an edit (or a fresh message) leaves it empty. */
+  &:empty {
+    display: none;
+  }
+}
+
+/* Bare turbo-frames are display:contents (see base.css) and never intersect
+   the viewport, so the lazy card frame needs its own box to load. */
+.fizzy-card-frame {
+  display: block;
+}
+
+.fizzy-card {
+  border: 1px solid var(--color-border-dark);
+  border-radius: 0.5em;
+  background-color: var(--color-bg);
+  padding: 0.6rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.fizzy-card__header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.fizzy-card__board {
+  font-weight: 600;
+}
+
+.fizzy-card__number {
+  color: var(--color-text);
+  opacity: 0.7;
+}
+
+.fizzy-card__state {
+  margin-inline-start: auto;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-dark);
+}
+
+.fizzy-card--closed .fizzy-card__state    { color: var(--color-negative); }
+.fizzy-card--postponed .fizzy-card__state { color: var(--color-alert); }
+.fizzy-card--column .fizzy-card__state    { color: var(--color-positive); }
+
+.fizzy-card__title {
+  margin: 0.35rem 0 0;
+  font-weight: 500;
+}
+
+.fizzy-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  opacity: 0.9;
+}
+
+.fizzy-card__assignee {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.fizzy-card__avatar {
+  border-radius: 50%;
+}
+
+.fizzy-card__more-assignees {
+  opacity: 0.7;
+}
+
+.fizzy-card__tag {
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
+.fizzy-card__steps {
+  font-size: 0.75rem;
+}
+
+.fizzy-card__error {
+  margin: 0.35rem 0 0;
+  color: var(--color-negative);
+}
+
+.fizzy-card__error-detail {
+  opacity: 0.85;
+}
+
+.fizzy-card__loading {
+  margin: 0.35rem 0 0;
+  opacity: 0.7;
+}
+
+.fizzy-card__footer {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.fizzy-card__updated {
+  opacity: 0.7;
+}
+
+.fizzy-card__link {
+  margin-inline-start: auto;
+}
+
+.fizzy-chip {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+}
+
+.fizzy-chip__hint {
+  opacity: 0.7;
+  margin-inline-start: 0.4rem;
+}
+
+.fizzy-card-form {
+  max-width: 60ch;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.fizzy-card-form__eyebrow {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin-bottom: 0;
+}
+
+.fizzy-card-form__source {
+  border-inline-start: 3px solid var(--color-border-dark);
+  margin: 1rem 0;
+  padding: 0.25rem 0 0.25rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.fizzy-card-form__source p {
+  margin: 0;
+}
+
+.fizzy-card-form__source cite {
+  font-style: normal;
+  opacity: 0.7;
+  font-size: 0.8rem;
+}
+
+.fizzy-card-form__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.fizzy-card-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.fizzy-card-form__field textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.fizzy-card-form__actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.fizzy-card-form__note {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}

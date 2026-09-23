@@ -46,6 +46,8 @@ class Event < ApplicationRecord
   after_create_commit :fan_out_invitations
   after_create_commit :announce_in_channel
   after_update_commit :broadcast_event_card_updates
+  after_create_commit :enqueue_meet_link_on_create, if: :needs_meet_link?
+  after_update_commit :enqueue_meet_link_on_update, if: :needs_meet_link?
 
   def cancelled?
     cancelled_at.present?
@@ -224,6 +226,13 @@ class Event < ApplicationRecord
       .each { |user_id| Calendar::SyncEntryJob.perform_later(id, user_id) }
   end
 
+  # True while a Meet link was asked for but none is stored yet. The
+  # provisioning job no-ops until the organizer connects Google, so
+  # staying enqueued is how a late connection finds pending events.
+  def needs_meet_link?
+    meet_link_requested? && meet_link.blank? && !cancelled?
+  end
+
   private
     def time_zone_must_be_valid
       return if time_zone.blank? || ActiveSupport::TimeZone[time_zone].present?
@@ -364,6 +373,7 @@ class Event < ApplicationRecord
       ).drop(1).each do |(slot_starts, slot_ends)|
         room.events.create!(
           organizer:, title:, description:, venue_room_id:,
+          meet_link_requested:,
           starts_at: slot_starts, ends_at: slot_ends, time_zone:,
           series_id: id, recurrence_rule:, recurrence_until:
         )
@@ -372,6 +382,16 @@ class Event < ApplicationRecord
 
     def record_organizer_attendance
       attendances.create!(user: organizer, response: :going)
+    end
+
+    # Create and update need distinct callback filters: registering the
+    # same method twice on the commit chain keeps only one registration.
+    def enqueue_meet_link_on_create
+      Calendar::MeetLinkJob.perform_later(id)
+    end
+
+    def enqueue_meet_link_on_update
+      Calendar::MeetLinkJob.perform_later(id)
     end
 
     def fan_out_invitations
@@ -455,6 +475,7 @@ class Event < ApplicationRecord
         time_changed = TIME_CHANGE_ATTRIBUTES.any? { |attribute| will_save_change_to_attribute?(attribute) }
         title_changed = will_save_change_to_title?
         venue_changed = will_save_change_to_venue_room_id?
+        meet_changed = will_save_change_to_meet_link_requested?
         description_changed = will_save_change_to_description?
         zone_changed = will_save_change_to_time_zone?
         starts_delta = will_save_change_to_starts_at? ? starts_at - starts_at_was : 0
@@ -468,14 +489,14 @@ class Event < ApplicationRecord
         if starts_delta.nonzero? && followers.any?
           shift_series_and_following_with_parking!(followers,
             starts_delta:, ends_delta:, ends_added:, ends_removed:,
-            title_changed:, venue_changed:, description_changed:, zone_changed:, rule_changed:, time_changed:)
+            title_changed:, venue_changed:, meet_changed:, description_changed:, zone_changed:, rule_changed:, time_changed:)
         else
           with_following_reorder { with_recurrence_mutation { save! } }
 
           followers.each do |occurrence|
             assign_following_changes(occurrence,
               starts_delta:, ends_delta:, ends_added:, ends_removed:,
-              title_changed:, venue_changed:, description_changed:, zone_changed:, rule_changed:, time_changed:)
+              title_changed:, venue_changed:, meet_changed:, description_changed:, zone_changed:, rule_changed:, time_changed:)
             occurrence.send(:with_series_follower_save) { occurrence.save! }
           end
         end
@@ -502,7 +523,7 @@ class Event < ApplicationRecord
     # every mover is parked and placed in series order with a guarded save,
     # so no destination can collide with a slot another mover still holds.
     def shift_series_and_following_with_parking!(followers, starts_delta:, ends_delta:, ends_added:, ends_removed:,
-        title_changed:, venue_changed:, description_changed:, zone_changed:, rule_changed:, time_changed:)
+        title_changed:, venue_changed:, meet_changed:, description_changed:, zone_changed:, rule_changed:, time_changed:)
       with_following_reorder do
         with_recurrence_mutation do
           raise ActiveRecord::RecordInvalid, self unless valid?
@@ -512,7 +533,7 @@ class Event < ApplicationRecord
       followers.each do |occurrence|
         assign_following_changes(occurrence,
           starts_delta:, ends_delta:, ends_added:, ends_removed:,
-          title_changed:, venue_changed:, description_changed:, zone_changed:, rule_changed:, time_changed:)
+          title_changed:, venue_changed:, meet_changed:, description_changed:, zone_changed:, rule_changed:, time_changed:)
       end
 
       parked_series_id = series_id
@@ -527,9 +548,10 @@ class Event < ApplicationRecord
     end
 
     def assign_following_changes(occurrence, starts_delta:, ends_delta:, ends_added:, ends_removed:,
-        title_changed:, venue_changed:, description_changed:, zone_changed:, rule_changed:, time_changed:)
+        title_changed:, venue_changed:, meet_changed:, description_changed:, zone_changed:, rule_changed:, time_changed:)
       occurrence.title = title if title_changed
       occurrence.venue_room_id = venue_room_id if venue_changed
+      occurrence.meet_link_requested = meet_link_requested if meet_changed
       occurrence.description = description if description_changed
       occurrence.time_zone = time_zone if zone_changed
       shift_occurrence_times!(occurrence, starts_delta:, ends_delta:, ends_added:, ends_removed:)
@@ -625,6 +647,7 @@ class Event < ApplicationRecord
       unmatched_slots.each do |(slot_starts, slot_ends)|
         room.events.create!(
           organizer:, title:, description:, venue_room_id:,
+          meet_link_requested:,
           starts_at: slot_starts, ends_at: slot_ends, time_zone:,
           series_id: id, recurrence_rule:, recurrence_until:
         ).tap { |occurrence| copy_attendances_to!(occurrence) }

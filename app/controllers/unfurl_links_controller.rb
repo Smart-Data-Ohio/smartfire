@@ -4,6 +4,9 @@ class UnfurlLinksController < ApplicationController
     # generic OpenGraph embed so they don't render twice.
     return head(:no_content) if Github::PullRequestUrl.pull_request_url?(url_param)
 
+    # Fizzy card URLs render as first-class cards under the message too.
+    return head(:no_content) if Fizzy::CardUrl.card_url?(url_param)
+
     opengraph = Opengraph::Metadata.from_url(url_param)
 
     if opengraph.valid?

@@ -6,6 +6,7 @@ class Retention::PruneJob < ApplicationJob
   WEBHOOK_DELIVERIES_RETENTION = 14.days
   CLEANUPS_RETENTION = 7.days
   GRANTS_RETENTION = 30.days
+  FIZZY_CARD_CACHES_RETENTION = 1.day
   # Rooms marked deleted longer ago than this that are still present get
   # their destroy re-enqueued: the original job never ran.
   STUCK_ROOM_GRACE = 1.hour
@@ -15,6 +16,7 @@ class Retention::PruneJob < ApplicationJob
     prune_activity_items
     Github::WebhookDelivery.where(created_at: ...WEBHOOK_DELIVERIES_RETENTION.ago).in_batches.delete_all
     HuddleCleanup.where.not(completed_at: nil).where(completed_at: ...CLEANUPS_RETENTION.ago).in_batches.delete_all
+    Fizzy::CardCache.where(updated_at: ...FIZZY_CARD_CACHES_RETENTION.ago).in_batches.delete_all
     prune_huddle_grants
     reenqueue_stuck_room_destroys
   end

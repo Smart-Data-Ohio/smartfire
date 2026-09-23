@@ -1,0 +1,43 @@
+<article class="fizzy-card fizzy-card--<%= fizzy_card_status_kind(payload) %>" data-fizzy-card="<%= card.account_id %>#<%= card.number %>">
+  <header class="fizzy-card__header">
+    <span class="fizzy-card__board"><%= payload.dig("board", "name") %></span>
+    <span class="fizzy-card__number">#<%= card.number %></span>
+    <span class="fizzy-card__state"><%= fizzy_card_status_label(payload) %></span>
+  </header>
+
+  <% if payload["title"].present? %>
+    <p class="fizzy-card__title"><%= payload["title"] %></p>
+
+    <div class="fizzy-card__meta">
+      <% Array(payload["assignees"]).each do |assignee| %>
+        <span class="fizzy-card__assignee">
+          <% if (avatar_url = fizzy_card_avatar_url(assignee["avatar_url"])) %>
+            <%= image_tag avatar_url, alt: "", size: "16x16", class: "fizzy-card__avatar", loading: "lazy" %>
+          <% end %>
+          <%= assignee["name"] %>
+        </span>
+      <% end %>
+      <% if payload["has_more_assignees"] %>
+        <span class="fizzy-card__more-assignees">+ more</span>
+      <% end %>
+
+      <% Array(payload["tags"]).each do |tag| %>
+        <span class="fizzy-card__tag">#<%= tag %></span>
+      <% end %>
+
+      <% if (steps = fizzy_card_steps_label(payload)) %>
+        <span class="fizzy-card__steps"><%= steps %></span>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="fizzy-card__loading">Loading card…</p>
+  <% end %>
+
+  <footer class="fizzy-card__footer">
+    <% if (active_at = fizzy_card_last_active_at(payload)) %>
+      <span class="fizzy-card__updated">Active <%= local_datetime_tag active_at %></span>
+    <% end %>
+    <%= link_to "View in Fizzy", fizzy_card_link_url(payload, card),
+          class: "fizzy-card__link", target: "_blank", rel: "noopener noreferrer" %>
+  </footer>
+</article>
