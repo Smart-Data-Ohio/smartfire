@@ -19,7 +19,8 @@
       </div>
     </header>
 
-    <div class="sidebar__scroll overflow-y overflow-hide-scrollbar">
+    <div class="sidebar__scroll overflow-y overflow-hide-scrollbar"
+         data-controller="room-menu sidebar-organize">
       <nav class="sidebar-list workspace-destinations" aria-label="Your workspace">
         <%= link_to activity_items_path, class: "sidebar-item btn", data: {
               workspace_destination: activity_items_path,
@@ -40,7 +41,25 @@
         <% end %>
       </nav>
 
-      <section class="sidebar-section sidebar-section--channels rooms" aria-labelledby="channels-heading">
+      <% if @favorite_memberships.any? %>
+        <section class="sidebar-section sidebar-section--favorites rooms" aria-labelledby="favorites-heading">
+          <header class="sidebar-section__header">
+            <h2 id="favorites-heading"><span aria-hidden="true">★ </span>Favourites</h2>
+          </header>
+
+          <div id="favorite_rooms" class="sidebar-list">
+            <% @favorite_memberships.each do |membership| %>
+              <% if membership.room.direct? %>
+                <%= render "users/sidebars/rooms/direct", membership: membership %>
+              <% else %>
+                <%= render sidebar_room_partial_for(membership.room), room: membership.room, unread: membership.unread?, membership: membership %>
+              <% end %>
+            <% end %>
+          </div>
+        </section>
+      <% end %>
+
+      <section class="sidebar-section sidebar-section--channels rooms" aria-labelledby="channels-heading" data-category-drop="">
         <header class="sidebar-section__header">
           <h2 id="channels-heading">Channels</h2>
           <% if Current.user.administrator? || !Current.account.settings.restrict_room_creation_to_administrators? %>
@@ -53,11 +72,13 @@
         <div id="shared_rooms" class="sidebar-list" data-controller="sorted-list">
           <% @other_memberships.each do |membership| %>
             <% unless membership.room.stage? || membership.room.board? %>
-              <%= render "users/sidebars/rooms/shared", room: membership.room, unread: membership.unread? %>
+              <%= render "users/sidebars/rooms/shared", room: membership.room, unread: membership.unread?, membership: membership %>
             <% end %>
           <% end %>
         </div>
       </section>
+
+      <%= render "users/sidebars/room_categories", categories: @room_categories, memberships: @categorized_memberships %>
 
       <section class="sidebar-section sidebar-section--boards rooms" aria-labelledby="boards-heading">
         <header class="sidebar-section__header">
@@ -72,7 +93,7 @@
         <div id="board_rooms" class="sidebar-list" data-controller="sorted-list">
           <% @other_memberships.each do |membership| %>
             <% if membership.room.board? %>
-              <%= render "users/sidebars/rooms/board", room: membership.room, unread: membership.unread? %>
+              <%= render "users/sidebars/rooms/board", room: membership.room, unread: membership.unread?, membership: membership %>
             <% end %>
           <% end %>
         </div>
@@ -90,7 +111,7 @@
 
         <div id="voice_rooms" class="sidebar-list" data-controller="sorted-list">
           <% @voice_memberships.each do |membership| %>
-            <%= render "users/sidebars/rooms/voice", room: membership.room, unread: membership.unread? %>
+            <%= render "users/sidebars/rooms/voice", room: membership.room, unread: membership.unread?, membership: membership %>
           <% end %>
         </div>
       </section>
@@ -108,7 +129,7 @@
         <div id="stage_rooms" class="sidebar-list" data-controller="sorted-list">
           <% @other_memberships.each do |membership| %>
             <% if membership.room.stage? %>
-              <%= render "users/sidebars/rooms/stage", room: membership.room, unread: membership.unread? %>
+              <%= render "users/sidebars/rooms/stage", room: membership.room, unread: membership.unread?, membership: membership %>
             <% end %>
           <% end %>
         </div>
@@ -134,6 +155,8 @@
           </div>
         </section>
       </turbo-frame>
+
+      <%= render "users/sidebars/room_menu", categories: @room_categories %>
     </div>
   </div>
 
@@ -151,5 +174,10 @@
     <%= link_to edit_account_path, class: "btn sidebar__tool", aria: { label: "Account settings" }, title: "Account settings" do %>
       <%= image_tag "settings.svg", size: 20, aria: { hidden: "true" }, style: "view-transition-name: account-settings" %>
     <% end %>
+
+    <button type="button" class="btn sidebar__tool" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)"
+            data-action="click->keyboard-shortcuts#openHelp">
+      <%= image_tag "help-circle.svg", size: 20, aria: { hidden: "true" } %>
+    </button>
   </div>
 <% end %>

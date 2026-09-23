@@ -1,4 +1,34 @@
 module Users::SidebarHelper
+  # The sidebar row partial for a room outside its home section (the
+  # Favourites section mixes every room kind in one list).
+  def sidebar_room_partial_for(room)
+    if room.direct?
+      "users/sidebars/rooms/direct"
+    elsif room.stage?
+      "users/sidebars/rooms/stage"
+    elsif room.voice?
+      "users/sidebars/rooms/voice"
+    elsif room.board?
+      "users/sidebars/rooms/board"
+    else
+      "users/sidebars/rooms/shared"
+    end
+  end
+
+  # Data attributes behind the shared room context menu (see
+  # room_menu_controller.js), read off the row when it opens. Broadcast
+  # renders pass no membership and read the new-room defaults.
+  def room_menu_data(room, membership)
+    {
+      menu_categorizable: room.open? || room.closed?,
+      menu_favorited: membership&.favorited? || false,
+      menu_favorite_position: membership&.favorite_position,
+      menu_muted: membership&.involved_in_muted? || false,
+      menu_default_involvement: room.default_involvement,
+      menu_category_id: membership&.room_category_id
+    }
+  end
+
   def sidebar_turbo_frame_tag(src: nil, &)
     turbo_frame_tag :user_sidebar, src: src, target: "_top", data: {
       turbo_permanent: true,
