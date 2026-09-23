@@ -24,6 +24,9 @@ class Accounts::Bots::GithubConnectionsController < ApplicationController
       token_source: "pat", refresh_token: nil, token_expires_at: nil, last_error: nil
     )
     account.save!
+    # The pasted token never reaches the log: only the login GitHub confirmed.
+    AuditLog.record!(action: "agent.github.connect", target: @bot.agent || @bot,
+      changes: { github_login: login })
 
     redirect_to edit_account_bot_path(@bot), notice: "GitHub connected as #{login}."
   rescue Github::WriteClient::Unauthorized
@@ -36,6 +39,8 @@ class Accounts::Bots::GithubConnectionsController < ApplicationController
     if (account = @bot.github_connected_account)
       account.revoke_remote_token!
       account.destroy!
+      AuditLog.record!(action: "agent.github.disconnect", target: @bot.agent || @bot,
+        changes: { github_login: account.github_login })
     end
     redirect_to edit_account_bot_path(@bot), notice: "GitHub disconnected."
   end

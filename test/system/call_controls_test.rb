@@ -306,6 +306,30 @@ class CallControlsTest < ApplicationSystemTestCase
     assert_equal "50", slider.value
   end
 
+  test "a later presence update replaces the participant mapping" do
+    room = rooms(:designers)
+    david = users(:david)
+    mapping = [ { id: david.id, name: "David", avatar_url: "", identities: [ "remote-1" ] } ]
+
+    visit room_path(room)
+    wait_for_cable_connection
+    pin_participant_mapping(room.id, mapping)
+    install_stub_room(room.id)
+    dispatch_participant_mapping(room.id, mapping)
+
+    find("li[data-participant-identity='remote-1'] .huddle__participant-volume")
+
+    # The roster follows the latest report: an update with nobody in the
+    # call hides the per-person controls until a mapping names them again.
+    # The pin above waits out the page-load poll so only these deliberate
+    # updates can reorder the mapping mid-test.
+    dispatch_participant_mapping(room.id, [])
+    assert_no_selector "li[data-participant-identity='remote-1'] .huddle__participant-volume"
+
+    dispatch_participant_mapping(room.id, mapping)
+    assert_selector "li[data-participant-identity='remote-1'] .huddle__participant-volume"
+  end
+
   test "a local mute stops one participant for this browser only" do
     room = rooms(:designers)
     david = users(:david)
@@ -1028,6 +1052,22 @@ class CallControlsTest < ApplicationSystemTestCase
           return window.__nativeFetch(...args);
         };
       JS
+
+      # The sidebar's aggregate poll fired on page load with the native fetch,
+      # before this stub existed. Its real response — nobody in the call —
+      # must land before the synthetic mapping the test dispatches next; on a
+      # slow runner it arrives after it instead and wipes the mapping, hiding
+      # the per-participant controls the test is about to find. Later polls
+      # use the stub above and reaffirm the pinned mapping.
+      wait_for_condition("the sidebar presence poll never settled") do
+        page.evaluate_script(<<~JS)
+          ([ ...document.querySelectorAll('[data-controller~="huddle-presence"]') ])
+            .every((element) => {
+              const controller = window.Stimulus?.getControllerForElementAndIdentifier(element, "huddle-presence");
+              return !controller || !controller.inFlightRefresh;
+            })
+        JS
+      end
     end
 
     def dispatch_participant_mapping(room_id, participants)

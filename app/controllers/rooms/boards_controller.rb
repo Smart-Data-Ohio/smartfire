@@ -17,6 +17,7 @@ class Rooms::BoardsController < RoomsController
 
   def create
     room = Rooms::Board.create_for(room_params, users: grantees)
+    record_room_creation(room)
 
     broadcast_create_room(room)
     redirect_to room_url(room)
@@ -32,7 +33,7 @@ class Rooms::BoardsController < RoomsController
 
   def update
     if @room.update(room_params)
-      @room.memberships.revise(granted: grantees, revoked: revokees)
+      revise_memberships_with_audit(@room, granted: grantees, revoked: revokees)
 
       broadcast_update_room
       redirect_to room_url(@room)

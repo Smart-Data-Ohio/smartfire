@@ -89,7 +89,11 @@ module Google
               end
               raise Rejected, :admin_link_required unless email_link_allowed?(user)
 
-              GoogleIdentity.create!(user:, subject:, email:, domain:)
+              identity = GoogleIdentity.create!(user:, subject:, email:, domain:)
+              # Expose the fresh identity on the returned user so the
+              # sign-in flow can audit the auto-link; a re-queried
+              # identity would no longer report itself as new.
+              user.association(:google_identity).target = identity
               return user
             end
 

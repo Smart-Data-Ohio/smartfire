@@ -202,6 +202,24 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_equal true, users(:david).reload.inbox_preferences.github_review_requests
   end
 
+  test "DND switch reflects the effective state after a timed expiry" do
+    users(:david).update!(dnd_enabled: true, dnd_until: 1.hour.ago)
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "#user_dnd_enabled[checked]", count: 0
+  end
+
+  test "DND switch stays on while a timer runs" do
+    users(:david).update!(dnd_enabled: true, dnd_until: 1.hour.from_now)
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "#user_dnd_enabled[checked]", count: 1
+  end
+
   test "profile lists the call settings with their defaults" do
     get user_profile_url
 

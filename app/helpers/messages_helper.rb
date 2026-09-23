@@ -73,7 +73,7 @@ module MessagesHelper
     end
 
     tag.div id: dom_id(message),
-      class: [ "message", ("message--emoji" if !message.system_note? && message.plain_text_body.all_emoji?), ("message--system-note" if message.system_note?) ].compact.join(" "),
+      class: [ "message", ("message--emoji" if !message.system_note? && message.plain_text_body.all_emoji?), ("message--system-note" if message.system_note?), ("message--action" if !message.system_note? && message.action?) ].compact.join(" "),
       role: ("note" if message.system_note?),
       data: data, &
   rescue Exception => e

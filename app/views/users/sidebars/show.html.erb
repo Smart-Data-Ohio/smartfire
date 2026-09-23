@@ -40,6 +40,10 @@
           <%= image_tag "bookmark.svg", size: 20, aria: { hidden: "true" }, class: "colorize--black" %>
           <span class="sidebar-item__label">Saved</span>
         <% end %>
+        <%= link_to scheduled_messages_path, class: "sidebar-item btn", data: { workspace_destination: scheduled_messages_path } do %>
+          <%= image_tag "calendar.svg", size: 20, aria: { hidden: "true" }, class: "colorize--black" %>
+          <span class="sidebar-item__label">Scheduled</span>
+        <% end %>
         <%= link_to agents_path, class: "sidebar-item btn", data: { workspace_destination: agents_path } do %>
           <%= image_tag "bot.svg", size: 20, aria: { hidden: "true" }, class: "colorize--black" %>
           <span class="sidebar-item__label">Agents</span>
