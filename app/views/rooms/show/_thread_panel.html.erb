@@ -8,6 +8,7 @@
        data-thread-panel-threads-url="<%= room_threads_path(room, format: :json) %>"
        data-thread-panel-create-url="<%= room_threads_path(room, format: :json) %>"
        data-thread-panel-channel-name="<%= room_display_name(room, for_user: nil) %>"
+       data-thread-panel-card-url-template="<%= profile_card_url_template %>"
        data-thread-panel-default-avatar-url="<%= asset_path("default-avatar.svg") %>">
   <button type="button"
           class="thread-panel__backdrop"

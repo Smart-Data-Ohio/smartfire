@@ -44,6 +44,7 @@ Rails.application.routes.draw do
       resource :join_code, only: :create
       resource :logo, only: %i[ show destroy ]
       resource :custom_styles, only: %i[ edit update ]
+      resource :integrations_health, only: :show, controller: "integrations_health"
     end
   end
 
@@ -56,7 +57,9 @@ Rails.application.routes.draw do
 
   resources :qr_code, only: :show
 
-  resources :users, only: :show do
+  get "users/:id/card", to: "users/cards#show", as: :user_card
+
+  resources :users, only: %i[ index show ] do
     get :huddle_presence, on: :collection, to: "users/huddle_presence#show"
     get :presence, on: :collection, to: "users/presences#show"
 
@@ -120,6 +123,11 @@ Rails.application.routes.draw do
   post "rooms/:room_id/agents/posts", to: "agents/posts#create", defaults: { format: :json }
   post "rooms/:room_id/agents/github/pull_request_actions", to: "agents/github/pull_request_actions#create",
     defaults: { format: :json }, as: :room_agent_github_pull_request_actions
+  get "agents/fizzy/boards", to: "agents/fizzy/boards#index", defaults: { format: :json }
+  get "agents/fizzy/boards/:id", to: "agents/fizzy/boards#show", defaults: { format: :json }
+  get "agents/fizzy/cards/search", to: "agents/fizzy/cards#search", defaults: { format: :json }
+  get "agents/fizzy/cards/:account_id/:number", to: "agents/fizzy/cards#show", defaults: { format: :json }
+  post "agents/fizzy/card_actions", to: "agents/fizzy/card_actions#create", defaults: { format: :json }
 
   direct :fresh_user_avatar do |user, options|
     route_for :user_avatar, user.avatar_token, v: user.updated_at.to_fs(:number)
@@ -130,8 +138,10 @@ Rails.application.routes.draw do
       post :preview, on: :collection
       get :actions, on: :member
       get :forward_source, on: :member, controller: "message_forward_sources"
+      resource :embed_suppression, controller: "message_embed_suppressions", only: :create
       resources :forwards, controller: "message_forwards", only: :create
       get "forwards/destinations", to: "message_forwards#destinations", as: :forward_destinations
+      resources :fizzy_cards, only: %i[ new create ], controller: "rooms/fizzy/message_cards"
     end
 
     resources :threads, controller: "channel_threads", only: %i[ index show new create update destroy ] do
@@ -139,8 +149,10 @@ Rails.application.routes.draw do
       resources :messages, controller: "channel_thread_messages", only: %i[ index show create update destroy ] do
         get :actions, on: :member
         get :forward_source, on: :member, controller: "message_forward_sources"
+        resource :embed_suppression, controller: "message_embed_suppressions", only: :create
         resources :forwards, controller: "message_forwards", only: :create
         get "forwards/destinations", to: "message_forwards#destinations", as: :forward_destinations
+        resources :fizzy_cards, only: %i[ new create ], controller: "rooms/fizzy/message_cards"
       end
       post :join, on: :member
       delete :leave, on: :member
@@ -183,6 +195,7 @@ Rails.application.routes.draw do
       resource :settings, only: :show
       resource :involvement, only: %i[ show update ]
       resources :github_subscriptions, only: %i[ create update destroy ]
+      resource :inbound_email_address, only: :create, controller: "inbound_email_addresses"
     end
 
     namespace :github do
@@ -199,13 +212,21 @@ Rails.application.routes.draw do
     # viewer while the surrounding message HTML is cached across viewers.
     get "github/pull_requests/:id/card", to: "rooms/github/pull_request_cards#show", as: :github_pull_request_card
 
+    # Per-viewer card frame for Fizzy cards referenced in the room. Every
+    # Fizzy card loads through here (there is no public fast path: card
+    # content always depends on the viewer's own Fizzy token).
+    get "fizzy/cards/:id/card", to: "rooms/fizzy/cards#show", as: :fizzy_card
+
     get "@:message_id", to: "rooms#show", as: :at_message
   end
 
   namespace :rooms do
     resources :opens
     resources :closeds
-    resources :directs
+    resources :directs do
+      post :add_members, on: :member
+      delete :leave, on: :member
+    end
     resources :voices
     resources :stages
     resources :boards
@@ -213,6 +234,7 @@ Rails.application.routes.draw do
 
   resources :messages do
     resources :forwards, controller: "message_forwards", only: :create
+    resource :embed_suppression, controller: "message_embed_suppressions", only: :create
     get :forward_source, on: :member, controller: "message_forward_sources"
     get "forwards/destinations", to: "message_forwards#destinations", as: :forward_destinations
     resource :pin, controller: "messages/pins", only: %i[ create destroy ]
@@ -251,12 +273,19 @@ Rails.application.routes.draw do
   namespace :github do
     post "webhooks", to: "webhooks#create"
     resource :connection, only: %i[ create destroy ], controller: "connections"
+    get "app/connect", to: "app_connections#connect", as: :app_connect
+    get "app/callback", to: "app_connections#callback", as: :app_callback
+  end
+
+  namespace :fizzy do
+    resource :connection, only: %i[ create destroy ], controller: "connections"
   end
 
   namespace :google do
     post "connect", to: "connections#connect"
     get "callback", to: "connections#callback"
     delete "connection", to: "connections#destroy"
+    post "calendar/notifications", to: "calendar_notifications#create"
     get "drive/files", to: "drive_files#index", as: :drive_files
     get "drive/files/:id", to: "drive_files#show", as: :drive_file
   end

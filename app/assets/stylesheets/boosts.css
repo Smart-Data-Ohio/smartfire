@@ -12,6 +12,41 @@
   display: contents;
 }
 
+.reaction-chip__wrap {
+  display: inline-flex;
+  position: relative;
+}
+
+/* Reactor list: hover or keyboard focus on the chip reveals who reacted
+   as plain text. A tooltip must not contain interactive content, so the
+   names are spans, not profile-card buttons. */
+.reaction-chip__tooltip {
+  background: var(--workspace-surface, var(--color-bg));
+  border: 1px solid var(--workspace-border, var(--color-border));
+  border-radius: 0.5rem;
+  box-shadow: 0 0.25rem 1rem rgb(0 0 0 / 0.15);
+  color: var(--workspace-text, var(--color-text));
+  display: none;
+  flex-direction: column;
+  gap: 0.15rem;
+  inset-block-end: calc(100% + 6px);
+  inset-inline-start: 0;
+  max-inline-size: 14rem;
+  padding: 0.4rem 0.55rem;
+  position: absolute;
+  z-index: 30;
+}
+
+.reaction-chip__wrap:hover .reaction-chip__tooltip,
+.reaction-chip__wrap:focus-within .reaction-chip__tooltip {
+  display: flex;
+}
+
+.reaction-chip__reactor {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
 .reaction-chip {
   --reaction-border-color: var(--color-border-dark);
 

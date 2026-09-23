@@ -34,9 +34,9 @@ Agent endpoints throttle per credential per minute, so one busy
 credential cannot starve others sharing the agent:
 
 - event polling and acks: 120/minute each
-- approval reads and context reads: 120/minute each
+- approval reads, context reads, and Fizzy board and card reads: 120/minute each
 - posting messages, requesting approvals, cancelling approvals, opening
-  DMs, and pull-request actions: 60/minute each
+  DMs, pull-request actions, and Fizzy card actions: 60/minute each
 - creating board posts: 30/minute
 - the whole MCP endpoint: 600/minute per credential across all methods,
   on top of the per-tool buckets its tools share with the endpoints
@@ -54,7 +54,7 @@ These limits are separate from the
 `agent_grants` rows scope what an agent may do: `agent_id`, nullable `room_id`
 (`NULL` means workspace-wide), `capability`, `granted_by_id`, `revoked_at`, and
 a partial unique index over active rows. Capabilities are `read_messages`,
-`post_messages`, `react`, `manage_threads`, `external_action`, and `dm_anyone`.
+`post_messages`, `react`, `manage_threads`, `external_action`, `fizzy`, and `dm_anyone`.
 `dm_anyone` is granted workspace-wide only: the grant form rejects a room
 scope, and the DM check counts only active workspace-wide grants (a
 room-scoped row, if one predates the validation, grants nothing).
@@ -65,7 +65,8 @@ message endpoints, the bot boost endpoints,
 `POST /rooms/:room_id/agents/messages` (JSON, Bearer-only), and the event
 polling endpoints below; `external_action` is enforced on the approval
 endpoints (see Approvals), `manage_threads` is enforced on the agent
-work endpoints (see Work threads), and `dm_anyone` is enforced on the
+work endpoints (see Work threads), `fizzy` is enforced on the agent
+Fizzy read endpoints (see Fizzy reads), and `dm_anyone` is enforced on the
 agent DM endpoints (see Agent DMs). Enforcement reads the database on every
 request; nothing is cached.
 
@@ -105,7 +106,7 @@ messages) with `agent_id`, `event_type`, optional `room_id`, `message_id`,
 `agent_credential_id`, `actor_id`, `outcome`, `detail`, JSON `metadata`, and
 `created_at`, indexed on `[agent_id, created_at]`. Deliverable types are
 `mention`, `direct_message`, `reply`, `approval_decided`,
-`github_action_completed`, `work_assigned`, and `work_unassigned`;
+`github_action_completed`, `fizzy_action_completed`, `work_assigned`, and `work_unassigned`;
 ledger-only types are `posted`
 (written whenever the agent posts through any endpoint) and the suppression
 rows `delivery_suppressed_rate_limit`, `delivery_suppressed_hop_limit`, and
@@ -432,11 +433,12 @@ the inbox never shows them the item.
 Each decider gets one `agent_approval_request` activity item on create.
 The card shows the agent's name and avatar, the room name when present,
 the summary as escaped text, the time left, and Approve and Deny buttons
-(deny takes an optional note). A `github.*` request can be approved only
-by a current administrator: an owner who is not one sees no Approve
-button and gets 403 from `PATCH /agent_approvals/:id?decision=approved`,
-but may still deny. Deciding marks every decider's item
-handled. Marking an inbox item read or handled never decides the request.
+(deny takes an optional note). A `github.*` or `fizzy.*` request can be
+approved only by a current administrator: an owner who is not one sees
+no Approve button and gets 403 from `PATCH
+/agent_approvals/:id?decision=approved`, but may still deny. Deciding
+marks every decider's item handled. Marking an inbox item read or
+handled never decides the request.
 
 ### Delivery of decisions
 
@@ -470,6 +472,74 @@ instead of `message`, `ack` works on it, the completion enqueues a
 webhook POST with the same additive `agent` key plus `github_action`,
 and the ledger page lists it with its status. Rate limits and the hop
 guard do not apply, like approval rows.
+
+### Fizzy reads
+
+An agent with the workspace-wide `fizzy` capability reads Fizzy
+through its owner's linked account: `GET /agents/fizzy/boards`
+(boards), `GET /agents/fizzy/boards/:id` (board with columns), `GET
+/agents/fizzy/cards/search?q=` (card search), and `GET
+/agents/fizzy/cards/:account_id/:number` (one card with steps). The
+reads default to the owner's stored Fizzy account and accept an
+`account_id` override where the token can access more than one. A
+missing grant is 403; a missing owner or unusable owner account is
+422. A board or card the owner's token cannot access (Fizzy answers
+404 or 403) reads as 404. The MCP `list_fizzy_boards`,
+`get_fizzy_board`, `search_fizzy_cards`, and `get_fizzy_card` tools
+read through the same service, grants, and rate limits. See
+[Fizzy cards](fizzy.md) for the identity model.
+
+### Fizzy write actions
+
+An agent requests a Fizzy write action — create a card, comment, move
+a card to a column, close, or reopen — through `POST
+/agents/fizzy/card_actions`, which creates a `fizzy.*` approval for
+the usual deciders instead of calling Fizzy. The gates, in order:
+agent authentication (401 for a bad or revoked token, 403 for a legacy
+bot key or a human session), the workspace-wide `external_action`
+capability (403), a usable linked Fizzy account on the agent's owner
+(422), and the input rules per kind — create needs a board and a
+title, comment needs a card and a body, move needs a card and a
+column, close and reopen need a card (422 with field errors). The
+endpoint never calls Fizzy: it returns 202 with the approval's `id`,
+`status`, and `expires_at`, and a repeated `external_id` returns the
+existing row with 200. Only this endpoint may create `fizzy.*`
+approvals (`POST /agents/approvals` refuses the prefix with 422), and
+at execution time the payload must rebuild to exactly the action name
+and summary the decider saw.
+
+```sh
+curl -X POST https://smartfire.example.com/agents/fizzy/card_actions \
+  -H "Authorization: Bearer $AGENT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"kind":"comment","account_id":"897362094","number":579,"body":"Nice work","external_id":"fizzy-123"}'
+```
+
+The request records the owner's linked account and Fizzy user
+(`fizzy_connected_account_id`, `fizzy_user_id`, `fizzy_user_name`),
+and the card shows "Acts on Fizzy as NAME". Approving is refused
+(422) if the connection changed since the request, and only a current
+administrator may approve (the owner may deny). When a `fizzy.*`
+request is approved, the server re-checks everything (still approved,
+agent active, grant still held, account still usable and still the
+recorded one, no earlier outcome recorded for the approval) and
+performs the action with the owner's token. A read-only owner token
+fails the action without disconnecting the account, since Fizzy
+rejects writes from read tokens with 401; only a truly rejected token
+disconnects it.
+
+Every outcome appends a `fizzy_action_completed` event to the agent's
+ledger: non-message, `outcome: delivered`, always readable by its own
+agent, with `metadata` carrying `approval_id`, `action`, `status`
+(`completed` or `failed`), the Fizzy `url` when completed, or a
+`message` when failed. `GET /agents/events` returns it with a
+`fizzy_action` key instead of `message`, `ack` works on it, the
+completion enqueues a webhook POST with the same additive `agent` key
+plus `fizzy_action`, and the ledger page lists it with its status.
+Rate limits and the hop guard do not apply, like approval rows. The
+MCP `create_fizzy_card`, `comment_on_fizzy_card`, `move_fizzy_card`,
+`close_fizzy_card`, and `reopen_fizzy_card` tools request through the
+same service, grants, and rate limits.
 
 ## Work threads
 
@@ -841,9 +911,9 @@ outside the room and 403 without `post_messages`, throttled at
 
 The same agent API is exposed as a Model Context Protocol server at
 `POST /agents/mcp` (stateless Streamable HTTP, spec revision 2026-07-28,
-with the legacy `initialize` handshake kept): twenty-two tools from
+with the legacy `initialize` handshake kept): thirty-one tools from
 `list_rooms` and `read_messages` to `request_approval`, `get_context`,
-`open_dm`, `pin_message`/`unpin_message`,
+`open_dm`, the nine Fizzy tools, `pin_message`/`unpin_message`,
 `register_slash_command`/`unregister_slash_command`, and
 `create_poll`/`get_poll`, each delegating to the same service code,
 grants, and rate-limit buckets as its REST counterpart. See

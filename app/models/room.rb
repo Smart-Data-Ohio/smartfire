@@ -3,6 +3,9 @@ class Room < ApplicationRecord
     def grant_to(users)
       room = proxy_association.owner
       Membership.insert_all(Array(users).collect { |user| { room_id: room.id, user_id: user.id, involvement: room.default_involvement } })
+      # insert_all skips membership callbacks, so direct rooms refresh here;
+      # removals refresh through the membership destroy callback instead.
+      room.refresh_direct_member_key! if room.direct?
     end
 
     def revoke_from(users)
@@ -57,6 +60,25 @@ class Room < ApplicationRecord
   scope :destroy_unclaimed_before, ->(cutoff) { where("destroy_enqueued_at IS NULL OR destroy_enqueued_at < ?", cutoff) }
 
   class << self
+    # Forward-to-room is enabled by a configured inbound domain; without
+    # one the mailbox drops everything and the room settings say what to
+    # set. See docs/email-to-room.md.
+    def inbound_email_domain
+      ENV["INBOUND_EMAIL_DOMAIN"].presence
+    end
+
+    def inbound_email_enabled?
+      inbound_email_domain.present?
+    end
+
+    # The authserv-id the inbound relay stamps on its own
+    # Authentication-Results header. Sender verification trusts only
+    # headers carrying it; while unset, nothing verifies. See
+    # docs/email-to-room.md.
+    def inbound_email_authserv_id
+      ENV["INBOUND_EMAIL_AUTHSERV_ID"].presence
+    end
+
     def create_for(attributes, users:)
       transaction do
         create!(attributes).tap do |room|
@@ -88,7 +110,7 @@ class Room < ApplicationRecord
   # Room::DestroyJob, which removes the remaining content in batches.
   def begin_destroy!
     transaction do
-      update!(deleted_at: Time.current)
+      update!(deleted_at: Time.current, direct_member_key: nil)
       memberships.delete_all
       HuddleGrant.revoke_for_room!(self)
       AgentGrant.revoke_for_room!(self)
@@ -122,6 +144,31 @@ class Room < ApplicationRecord
 
   def default_involvement
     "mentions"
+  end
+
+  # Only chat rooms receive forwarded email: direct rooms never have an
+  # address, and boards take posts, not root messages, so a mailed root
+  # message would fail validation.
+  def emailable?
+    !direct? && !board?
+  end
+
+  # The room's secret forward-to address, or nil while inbound email is
+  # disabled, the room is not emailable, or the room has no token yet.
+  def inbound_email_address
+    return nil unless self.class.inbound_email_enabled?
+    return nil if !emailable? || inbound_email_token.blank?
+
+    "room-#{inbound_email_token}@#{self.class.inbound_email_domain}"
+  end
+
+  # Issues the room's first inbound token, or rotates it. A lost token
+  # race retries: the unique index admits exactly one winner.
+  def regenerate_inbound_email_token!
+    update!(inbound_email_token: SecureRandom.hex(16))
+    inbound_email_token
+  rescue ActiveRecord::RecordNotUnique
+    retry
   end
 
   private

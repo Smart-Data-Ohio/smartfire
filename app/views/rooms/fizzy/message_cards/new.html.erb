@@ -1,0 +1,53 @@
+<% @page_title = "Create Fizzy card" %>
+<% @body_class = "sidebar" %>
+
+<% back_path = @thread ? room_thread_path(@room, @thread) : room_path(@room) %>
+<% content_for :nav do %>
+  <div class="flex-item-justify-start">
+    <%= link_back_to back_path %>
+  </div>
+<% end %>
+
+<% content_for :sidebar, sidebar_turbo_frame_tag(src: user_sidebar_path) %>
+
+<main class="fizzy-card-form" aria-labelledby="fizzy-card-form-title">
+  <p class="fizzy-card-form__eyebrow">Create Fizzy card in <%= link_to room_display_name(@room), back_path %></p>
+  <h1 id="fizzy-card-form-title">Create Fizzy card</h1>
+
+  <blockquote class="fizzy-card-form__source">
+    <p><%= truncate(@message.plain_text_body, length: 280) %></p>
+    <cite>— <%= @message.creator.name %></cite>
+  </blockquote>
+
+  <% if !@account&.usable? %>
+    <p role="alert">Connect your Fizzy account first: card previews and creation use your own Fizzy access.</p>
+    <p><%= link_to "Connect Fizzy on your profile", user_profile_path, class: "btn" %></p>
+  <% else %>
+    <%= form_with url: (@thread ? room_thread_message_fizzy_cards_path(@room, @thread, @message) : room_message_fizzy_cards_path(@room, @message)),
+          class: "fizzy-card-form__form" do |form| %>
+      <label class="fizzy-card-form__field">
+        <span>Board</span>
+        <%= form.select :board_id, options_for_select(Array(@boards).map { |board| [ board["name"], board["id"] ] }, @board_id),
+              { prompt: "Choose a board" }, required: true %>
+      </label>
+
+      <label class="fizzy-card-form__field">
+        <span>Title</span>
+        <%= form.text_field :title, value: @title, required: true, maxlength: 500,
+              autofocus: true, autocomplete: "off", placeholder: "Card title" %>
+      </label>
+
+      <label class="fizzy-card-form__field">
+        <span>Description</span>
+        <%= form.text_area :description, value: @description, rows: 8, maxlength: 50_000 %>
+      </label>
+
+      <div class="fizzy-card-form__actions">
+        <%= link_to "Cancel", back_path, class: "btn" %>
+        <%= form.submit "Create card", class: "btn btn--primary" %>
+      </div>
+    <% end %>
+
+    <p class="fizzy-card-form__note">Creates the card as <%= @account.fizzy_user_name %> in <%= @account.fizzy_account_name %>, then posts a reply here with the new card.</p>
+  <% end %>
+</main>

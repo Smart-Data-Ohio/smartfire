@@ -90,7 +90,7 @@ class Rooms::EventsController < ApplicationController
     end
 
     def event_attributes
-      permitted = params.require(:event).permit(:title, :description, :starts_at, :ends_at, :time_zone, :recurrence_rule, :recurrence_until, :venue_room_id)
+      permitted = params.require(:event).permit(:title, :description, :starts_at, :ends_at, :time_zone, :recurrence_rule, :recurrence_until, :venue_room_id, :meet_link_requested)
       # The zone is fixed when the event is scheduled. Edits keep reading the
       # posted times in that zone, so an editor elsewhere cannot move the event
       # by saving the form untouched.

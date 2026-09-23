@@ -56,7 +56,7 @@ The live one-to-one DM Huddles slice was followed by one persistent voice-channe
 
 Done for the first slice when two members can start and join a Huddle from their DM, communicate, share a screen, show camera video, reconnect, and leave, while a third member cannot access the call; the starter's call rings the other participant, and an unanswered call leaves a missed-call item. Done for the next slice when members find a persistent voice channel, see who is in it, join and leave with working text chat, and lose the call along with the room when removed.
 
-**Status:** Stage channels shipped with host, speaker, and listener roles, token and grant-revocation enforcement for listeners, hand raising, and host moderation from the stage panel; see [stage channels](docs/stage-channels.md). Streaming shipped with explicit presenter/viewer behavior and quality controls; see [streaming](docs/streaming.md). Agent boards slice 1 shipped: boards for people with posts, status/owner/tags/result, list and board renderings, and inbox updates; see [agent boards](docs/boards.md). Agent boards slice 2 shipped the agent API: agents create and list posts, reply inside them, update tags and run links, and write the pinned result; see [AI agents](docs/agents.md#boards).
+**Status:** Stage channels shipped with host, speaker, and listener roles, token and grant-revocation enforcement for listeners, hand raising, and host moderation from the stage panel; see [stage channels](docs/stage-channels.md). Streaming shipped with explicit presenter/viewer behavior and quality controls; see [streaming](docs/streaming.md). Agent boards slice 1 shipped: boards for people with posts, status/owner/tags/result, list and board renderings, and inbox updates; see [agent boards](docs/boards.md). Agent boards slice 2 shipped the agent API: agents create and list posts, reply inside them, update tags and run links, and write the pinned result; see [AI agents](docs/agents.md#boards). Group DMs shipped: profile cards, multi-select messaging and huddles, named groups with add/leave, and group calls ringing every member; see [group DMs](docs/group-dms.md).
 
 ### 3. AI agents as first-class participants
 
@@ -72,7 +72,7 @@ Done for the first slice when a personal agent and a workspace agent can indepen
 
 Approval requests are live: an agent asks for human authority with `POST /agents/approvals`, the owner and administrators decide from the activity inbox, and the decision returns through event polling and webhooks. See [AI agents](docs/agents.md#approvals).
 
-Agent DMs, conversation context, and an MCP server are live: an agent opens 1:1 DMs with its owner, prior contacts, or anyone with the `dm_anyone` grant, loads trigger context with `GET /agents/context`, and serves twenty-two tools over `POST /agents/mcp` for Claude, Cursor, Codex, and similar clients. See [AI agents](docs/agents.md#agent-dms) and [Smartfire MCP server](docs/agents-mcp.md).
+Agent DMs, conversation context, and an MCP server are live: an agent opens 1:1 DMs with its owner, prior contacts, or anyone with the `dm_anyone` grant, loads trigger context with `GET /agents/context`, and serves thirty-one tools over `POST /agents/mcp` for Claude, Cursor, Codex, and similar clients. See [AI agents](docs/agents.md#agent-dms) and [Smartfire MCP server](docs/agents-mcp.md).
 
 ### 4. GitHub work inside conversations
 

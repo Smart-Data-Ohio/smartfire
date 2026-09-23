@@ -1,0 +1,16 @@
+<%= turbo_frame_tag @frame_id do %>
+  <% if @connect_required %>
+    <%= render "fizzy/cards/chip", card: @card, connect_hint: true %>
+  <% elsif @cache.payload.present? %>
+    <%= render "fizzy/cards/card", card: @card, payload: @cache.payload %>
+  <% elsif @cache.not_found? %>
+    <%= render "fizzy/cards/chip", card: @card %>
+  <% elsif @cache.fetch_error.present? %>
+    <p class="fizzy-card__error">
+      Couldn’t load this Fizzy card.
+      <span class="fizzy-card__error-detail"><%= @cache.fetch_error %></span>
+    </p>
+  <% else %>
+    <p class="fizzy-card__loading">Loading Fizzy card…</p>
+  <% end %>
+<% end %>

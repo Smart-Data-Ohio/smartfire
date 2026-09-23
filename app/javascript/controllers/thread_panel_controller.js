@@ -766,19 +766,33 @@ export default class extends Controller {
     if (message.room?.id !== undefined) card.dataset.roomId = String(message.room.id)
     if (message.thread_id !== undefined) card.dataset.threadId = String(message.thread_id)
 
+    const cardUrl = this.#cardUrl(creator.id)
+    const avatarWrap = document.createElement(cardUrl ? "button" : "span")
+    if (cardUrl) {
+      avatarWrap.type = "button"
+      avatarWrap.setAttribute("aria-label", `View profile of ${creator.name || "Unknown member"}`)
+      avatarWrap.dataset.action = "click->profile-card#open"
+      avatarWrap.dataset.profileCardUrl = cardUrl
+    }
+    avatarWrap.className = `${parent ? "thread-panel__parent-avatar" : "thread-panel__avatar"} profile-card-avatar`
     const avatar = document.createElement("img")
-    avatar.className = parent ? "thread-panel__parent-avatar" : "thread-panel__avatar"
     avatar.alt = ""
     avatar.setAttribute("aria-hidden", "true")
     const avatarURL = creator.avatar_url || creator.avatarUrl || this.#config().defaultAvatarUrl
     avatar.src = this.#safeHTMLURL(avatarURL) ? avatarURL : this.#config().defaultAvatarUrl
+    avatarWrap.append(avatar)
 
     const main = document.createElement("div")
     main.className = parent ? "thread-panel__parent-main" : "thread-panel__message-main"
     const heading = document.createElement("div")
     heading.className = parent ? "thread-panel__parent-heading" : "thread-panel__message-heading"
-    const author = document.createElement("span")
-    author.className = parent ? "thread-panel__parent-author" : "thread-panel__message-author"
+    const author = document.createElement(cardUrl ? "button" : "span")
+    if (cardUrl) {
+      author.type = "button"
+      author.dataset.action = "click->profile-card#open"
+      author.dataset.profileCardUrl = cardUrl
+    }
+    author.className = `${parent ? "thread-panel__parent-author" : "thread-panel__message-author"}${cardUrl ? " profile-card-name" : ""}`
     author.textContent = creator.name || "Unknown member"
     heading.append(author)
 
@@ -825,11 +839,18 @@ export default class extends Controller {
     main.append(body)
 
     if (parent) {
-      card.append(avatar, main)
+      card.append(avatarWrap, main)
     } else {
-      card.append(avatar, main)
+      card.append(avatarWrap, main)
     }
     return card
+  }
+
+  #cardUrl(creatorId) {
+    const template = this.#config().cardUrlTemplate
+    if (!template || creatorId === undefined || creatorId === null) return null
+
+    return template.replace("USER_ID", String(creatorId))
   }
 
   #appendSafeHTML(container, html) {
@@ -1119,6 +1140,7 @@ export default class extends Controller {
       threadsUrl: data.threadPanelThreadsUrl,
       createUrl: data.threadPanelCreateUrl || data.threadPanelThreadsUrl,
       channelName: data.threadPanelChannelName,
+      cardUrlTemplate: data.threadPanelCardUrlTemplate,
       defaultAvatarUrl: data.threadPanelDefaultAvatarUrl,
     }
   }

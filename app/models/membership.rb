@@ -13,6 +13,8 @@ class Membership < ApplicationRecord
   after_destroy_commit :reset_user_remote_connections
   after_destroy_commit :remove_thread_membership
   after_destroy_commit :sync_removed_room_calendar_entries
+  after_create_commit :refresh_direct_member_key
+  after_destroy_commit :refresh_direct_member_key
 
   enum :involvement, %w[ invisible nothing mentions everything ].index_by(&:itself), prefix: :involved_in
 
@@ -64,6 +66,14 @@ class Membership < ApplicationRecord
   end
 
   private
+    # Direct rooms are found by the hash of their exact member set, so any
+    # membership change recomputes it. Channel inserts through grant_to
+    # refresh inline instead (insert_all skips this callback); a second
+    # refresh from another path is a no-op.
+    def refresh_direct_member_key
+      room.refresh_direct_member_key! if room&.direct?
+    end
+
     def default_stage_role
       self.stage_role ||= :listener if room&.stage?
     end

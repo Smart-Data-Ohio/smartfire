@@ -53,6 +53,11 @@
           <% end %>
         </p>
       <% end %>
+      <% if (meet_link = safe_meet_link(@event)) %>
+        <p class="room-events__times">
+          Meet: <%= link_to "Join Google Meet", meet_link %>
+        </p>
+      <% end %>
     </div>
 
     <% if @event.manageable_by?(Current.user) %>

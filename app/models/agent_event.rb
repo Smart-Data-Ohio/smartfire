@@ -7,8 +7,8 @@ class AgentEvent < ApplicationRecord
   # read_messages gate like every other event type.
   SLASH_DELIVERABLE_TYPES = %w[ slash_command ].freeze
   # Decision-adjacent rows with no message that are always readable by their
-  # own agent: approval decisions and completed GitHub write actions.
-  ALWAYS_READABLE_TYPES = %w[ approval_decided github_action_completed ].freeze
+  # own agent: approval decisions and completed GitHub/Fizzy write actions.
+  ALWAYS_READABLE_TYPES = %w[ approval_decided github_action_completed fizzy_action_completed ].freeze
   DELIVERABLE_TYPES = (MESSAGE_DELIVERABLE_TYPES + ALWAYS_READABLE_TYPES + WORK_DELIVERABLE_TYPES + SLASH_DELIVERABLE_TYPES).freeze
   SUPPRESSED_TYPES = %w[
     delivery_suppressed_rate_limit

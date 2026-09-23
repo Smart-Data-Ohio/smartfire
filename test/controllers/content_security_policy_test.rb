@@ -54,6 +54,16 @@ class ContentSecurityPolicyTest < ActionDispatch::IntegrationTest
     assert_includes connect_sources, "https://www.googleapis.com"
   end
 
+  test "the report-only policy allows the LinkedIn embed player in a frame" do
+    sign_in :david
+    get room_url(rooms(:watercooler))
+
+    assert_response :success
+    policy = directives(response.headers["Content-Security-Policy-Report-Only"])
+
+    assert_includes policy["frame-src"], "https://www.linkedin.com"
+  end
+
   test "the event form's inline time-zone script carries the nonce" do
     sign_in :david
     get new_room_event_url(rooms(:watercooler))

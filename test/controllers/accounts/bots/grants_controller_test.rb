@@ -44,7 +44,7 @@ class Accounts::Bots::GrantsControllerTest < ActionDispatch::IntegrationTest
     get account_bot_grants_url(@bot)
 
     assert_response :ok
-    assert_select "select[name='agent_grant[room_id]'] option[value='#{direct_room.id}']", text: "Bender Bot and Kevin"
+    assert_select "select[name='agent_grant[room_id]'] option[value='#{direct_room.id}']", text: "Bender, Kevin"
   end
 
   test "index names direct-room grants after the other participants" do
@@ -53,7 +53,7 @@ class Accounts::Bots::GrantsControllerTest < ActionDispatch::IntegrationTest
     get account_bot_grants_url(@bot)
 
     assert_response :ok
-    assert_match "Bender Bot and Kevin", response.body
+    assert_match "Bender, Kevin", response.body
     assert_no_match "Deleted room", response.body
   end
 
