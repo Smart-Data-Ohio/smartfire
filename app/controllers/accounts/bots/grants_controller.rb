@@ -38,9 +38,12 @@ class Accounts::Bots::GrantsController < ApplicationController
 
   def destroy
     grant = @agent.agent_grants.find(params[:id])
-    grant.revoke!
-    AuditLog.record!(action: "agent.grant.revoke", target: grant,
-      changes: { capability: grant.capability, room: grant.room&.name })
+    # revoke! is idempotent: re-revoking changes nothing and writes no row.
+    unless grant.revoked?
+      grant.revoke!
+      AuditLog.record!(action: "agent.grant.revoke", target: grant,
+        changes: { capability: grant.capability, room: grant.room&.name })
+    end
     redirect_to account_bot_grants_url(@bot)
   end
 

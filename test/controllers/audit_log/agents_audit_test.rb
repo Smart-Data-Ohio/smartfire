@@ -103,6 +103,10 @@ class AuditLog::AgentsAuditTest < ActionDispatch::IntegrationTest
     revoke = AuditLog.where(action: "agent.credential.revoke").last
     assert_equal credential.id, revoke.target_id
     assert_equal "CI runner", revoke.details["name"]
+
+    assert_no_difference -> { AuditLog.where(action: "agent.credential.revoke").count } do
+      delete account_bot_credential_url(@bot, credential)
+    end
   end
 
   test "bot key reset is recorded without the key" do
@@ -135,6 +139,10 @@ class AuditLog::AgentsAuditTest < ActionDispatch::IntegrationTest
     revoke = AuditLog.where(action: "agent.grant.revoke").last
     assert_equal grant.id, revoke.target_id
     assert_equal "post_messages", revoke.details["capability"]
+
+    assert_no_difference -> { AuditLog.where(action: "agent.grant.revoke").count } do
+      delete account_bot_grant_url(@bot, grant)
+    end
   end
 
   test "re-granting an existing capability writes no second row" do

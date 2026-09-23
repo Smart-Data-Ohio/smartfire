@@ -33,9 +33,12 @@ class Accounts::Bots::CredentialsController < ApplicationController
 
   def destroy
     credential = @agent.agent_credentials.find(params[:id])
-    credential.revoke!
-    AuditLog.record!(action: "agent.credential.revoke", target: credential,
-      changes: { name: credential.name })
+    # revoke! is idempotent: re-revoking changes nothing and writes no row.
+    unless credential.revoked?
+      credential.revoke!
+      AuditLog.record!(action: "agent.credential.revoke", target: credential,
+        changes: { name: credential.name })
+    end
     redirect_to account_bot_credentials_url(@bot)
   end
 
