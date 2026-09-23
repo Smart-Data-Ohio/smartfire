@@ -93,15 +93,16 @@ by itself (an `everything` follower still gets the broadcast push for
 the message itself, keyword or not).
 
 Matching runs once per message: thread messages reuse the already-loaded
-memberships, root messages load the roster in a fixed set of queries,
-and every distinct phrase compiles into its own pattern checked
-independently (`Notifications::KeywordMatcher`), so overlapping phrases
-held by different users all match. Muted and invisible members
+memberships, root messages match only members holding an alert (a join
+from `keyword_alerts` into the room's memberships, so the roster size
+never matters), and every distinct phrase compiles into its own pattern
+checked independently (`Notifications::KeywordMatcher`), so overlapping
+phrases held by different users all match. Muted and invisible members
 match nothing; members with room notifications off still match, since a
 keyword is an explicit opt-in like a mention. A keyword never overrides
 a mention, reply, or thread item for the same message. The query-count
-test in `test/services/activity_items/recorder_keyword_test.rb` pins the
-constant query cost as followers grow.
+tests in `test/services/activity_items/recorder_keyword_test.rb` pin the
+constant query cost as followers and the roster grow.
 
 ## Time zone
 
@@ -138,14 +139,16 @@ Every push path calls `push?` (`Room::MessagePusher`,
 `ChannelThread::MessagePusher`, `Event::ReminderPusher`,
 `Huddle::InvitationPusher`); sounds follow through the
 `notification-sounds` meta tag the layout renders from the same DND
-state. The inbox recorder does not call the policy per recipient:
-`ActivityItems::Recorder` reimplements the inbox rules in its own
-candidate flow (same winners, same mention-over-reply-over-activity-
-over-keyword precedence) so it can batch keyword matching once per
-message. Keep the two in sync: the matrix test in
-`test/models/notifications/policy_test.rb` pins the policy side, and
-`test/services/activity_items/recorder_keyword_test.rb` plus the push
-gating tests pin the recorder side.
+state. The inbox recorder calls `inbox_event_type` for each candidate:
+`ActivityItems::Recorder` batches keyword matching once per message
+(the candidates are the thread members for thread messages, and the
+mentionees plus the reply author plus the keyword matches for room
+messages), then asks the policy for each candidate's winner with the
+already-loaded memberships. The matrix test in
+`test/models/notifications/policy_test.rb` pins the rules, and
+`test/services/activity_items/recorder_test.rb` plus
+`test/services/activity_items/recorder_keyword_test.rb` pin the
+recorder's identical behavior and flat query cost.
 
 Pushers preload one membership map, one user map, and one DND-exception
 set (`Policy.dnd_exceptions_for`) per batch, then decide per recipient

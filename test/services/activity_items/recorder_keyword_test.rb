@@ -108,6 +108,41 @@ class ActivityItems::RecorderKeywordTest < ActiveSupport::TestCase
     assert_equal 1, ActivityItem.where(user: @recipient, source: message).count
   end
 
+  test "a room keyword match loads only the matching members' memberships" do
+    KeywordAlert.create!(user: @recipient, phrase: "deploy")
+    KeywordAlert.create!(user: users(:kevin), phrase: "deploy")
+    3.times { |i| @room.memberships.create!(user: User.create!(name: "Room bystander #{i}")) }
+
+    message = @room.messages.create!(
+      creator: @author, body: "Deploy now", client_message_id: "keyword-scoped"
+    )
+
+    memberships = ActivityItems::Recorder.new(message).send(:room_memberships)
+
+    assert_equal [ @recipient.id, users(:kevin).id ].sort, memberships.keys.sort
+  end
+
+  test "a room message keeps candidate queries flat as the roster grows" do
+    KeywordAlert.create!(user: @recipient, phrase: "deploy")
+    KeywordAlert.create!(user: users(:kevin), phrase: "deploy")
+    add_room_members(count: 5, offset: 0)
+
+    message = @room.messages.create!(
+      creator: @author, body: "Deploy now", client_message_id: "keyword-room-ceiling"
+    )
+
+    ActivityItem.where(source: message).delete_all
+    small = count_candidate_queries { ActivityItems::Recorder.record_message!(message) }
+
+    add_room_members(count: 25, offset: 5)
+    ActivityItem.where(source: message).delete_all
+    large = count_candidate_queries { ActivityItems::Recorder.record_message!(message) }
+
+    assert_equal small, large,
+      "candidate queries should stay constant, got #{small} for a small roster and #{large} for a large one"
+    assert_operator small, :>=, 1, "the probe message should actually exercise the keyword path"
+  end
+
   test "matching queries the keyword table a constant number of times as followers grow" do
     thread = ChannelThread.create!(room: @room, creator: @author, name: "Keyword ceiling thread")
     ThreadMembership.join!(thread, @author)
@@ -136,6 +171,25 @@ class ActivityItems::RecorderKeywordTest < ActiveSupport::TestCase
         ThreadMembership.join!(thread, user).update!(involvement: "mentions")
         KeywordAlert.create!(user:, phrase: "deploy")
       end
+    end
+
+    def add_room_members(count:, offset:)
+      count.times do |i|
+        @room.memberships.create!(user: User.create!(name: "Room member #{offset + i}"))
+      end
+    end
+
+    def count_candidate_queries
+      count = 0
+      subscription = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        count += 1 if payload[:name] != "SCHEMA" && !payload[:cached] && payload[:sql].match?(/membership|keyword_alert/i)
+      end
+
+      ActiveRecord::Base.connection_pool.clear_query_cache
+      yield
+      count
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscription)
     end
 
     def count_keyword_queries

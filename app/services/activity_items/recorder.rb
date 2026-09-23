@@ -74,65 +74,71 @@ module ActivityItems
       # source_allows_recipient?, so recomputing here would re-query
       # memberships once per recipient.
       def message_candidates
-        @message_candidates ||=
-          begin
-            candidates = @source.thread ? thread_message_candidates : room_message_candidates
-            merge_keyword_candidates(candidates)
-            candidates
-          end
+        @message_candidates ||= @source.thread ? thread_message_candidates : room_message_candidates
       end
 
+      # The notification policy picks each candidate's winner (mention over
+      # reply over keyword); the candidates are the mentionees, the reply
+      # author, and the keyword matches, with one membership load for all
+      # of them.
       def room_message_candidates
         candidates = {}
-        room_memberships.each_value do |membership|
-          next unless mentionable_room_membership?(membership)
+        mentioned = mention_ids.to_set
 
-          if mention_ids.include?(membership.user_id)
-            choose_candidate(candidates, membership.user, "mention")
-          end
+        candidate_ids.each do |user_id|
+          membership = room_memberships[user_id]
+          next if membership.nil?
 
-          if reply_author_id == membership.user_id && @source.reply_notify_author? && room_replies_enabled?(membership)
-            choose_candidate(candidates, membership.user, "reply")
-          end
+          event_type = Notifications::Policy.new(
+            recipient: membership.user,
+            sender: @source.creator,
+            kind: :room_message,
+            room_membership: membership,
+            mentioned: mentioned.include?(user_id),
+            reply_to_recipient: user_id == reply_author_id && @source.reply_notify_author?,
+            keyword_matched: room_keyword_matched_ids.include?(user_id)
+          ).inbox_event_type
+
+          choose_candidate(candidates, membership.user, event_type) if event_type
         end
         candidates
       end
 
       def thread_message_candidates
         candidates = {}
+        mentioned = mention_ids.to_set
+        matched = thread_keyword_matched_ids
+
         thread_memberships.each do |thread_membership|
-          room_membership = room_memberships[thread_membership.user_id]
-          next unless mentionable_room_membership?(room_membership)
-          next unless eligible_thread_membership?(thread_membership)
+          event_type = Notifications::Policy.new(
+            recipient: thread_membership.user,
+            sender: @source.creator,
+            kind: :thread_message,
+            room_membership: room_memberships[thread_membership.user_id],
+            thread_membership:,
+            mentioned: mentioned.include?(thread_membership.user_id),
+            reply_to_recipient: thread_membership.user_id == reply_author_id && @source.reply_notify_author?,
+            keyword_matched: matched.include?(thread_membership.user_id)
+          ).inbox_event_type
 
-          unless room_membership.involved_in_nothing?
-            if thread_membership.involved_in_everything?
-              choose_candidate(candidates, thread_membership.user, "thread_activity")
-            end
-
-            # Replies are a follower benefit: unfollowed threads ("mentions")
-            # stay silent unless the member is mentioned outright.
-            if reply_author_id == thread_membership.user_id && @source.reply_notify_author? &&
-                thread_membership.involved_in_everything?
-              choose_candidate(candidates, thread_membership.user, "reply")
-            end
-          end
-
-          if mention_ids.include?(thread_membership.user_id) && thread_mentions_enabled?(thread_membership)
-            choose_candidate(candidates, thread_membership.user, "mention")
-          end
+          choose_candidate(candidates, thread_membership.user, event_type) if event_type
         end
         candidates
       end
 
+      def candidate_ids
+        mention_ids | [ reply_author_id ].compact | room_keyword_matched_ids.to_a
+      end
+
       # Only the memberships the candidate check can read: the thread's
       # members for thread messages, the mentionees plus the reply author
-      # for root messages. A root post to a large room used to load every
-      # room membership to notify at most a handful of members.
+      # plus the keyword matches for root messages. A root post to a large
+      # room used to load every room membership to notify at most a handful
+      # of members.
       def room_memberships
         @room_memberships ||=
           begin
-            ids = @source.thread ? thread_memberships.map(&:user_id) : (mention_ids | [ reply_author_id ].compact)
+            ids = @source.thread ? thread_memberships.map(&:user_id) : candidate_ids
             if ids.empty?
               {}
             else
@@ -160,72 +166,52 @@ module ActivityItems
         membership.present? && !membership.involved_in_invisible? && ActivityItem.active_human?(membership.user)
       end
 
-      def room_replies_enabled?(membership)
-        membership.involved_in_mentions? || membership.involved_in_everything?
-      end
-
-      def eligible_thread_membership?(membership)
-        membership.present? && !membership.involved_in_nothing? && ActivityItem.active_human?(membership.user)
-      end
-
-      def thread_mentions_enabled?(membership)
-        membership.involved_in_mentions? || membership.involved_in_everything?
-      end
-
       # Keyword alerts match once per message over the candidate
-      # recipients: thread members reuse the already-loaded memberships,
-      # root messages load the room roster in a fixed set of queries, and
-      # the phrases compile into one pattern scanned a single time. A
-      # keyword never overrides a mention, reply, or thread item for the
-      # same message (priority 0), and muted or invisible members match
-      # nothing. Members with room notifications off still match: a
-      # keyword is an explicit opt-in, like a mention.
-      def merge_keyword_candidates(candidates)
-        text = @source.plain_text_body
-        return if text.blank?
-        return unless KeywordAlert.exists?
+      # recipients: thread messages reuse the already-loaded memberships,
+      # and root messages match only members holding an alert (a join from
+      # keyword_alerts into the room's memberships), so a keyword alert
+      # somewhere never loads the whole roster. Every distinct phrase
+      # compiles into its own pattern checked independently. A keyword
+      # never overrides a mention, reply, or thread item for the same
+      # message (the policy picks the winner), and muted or invisible
+      # members match nothing. Members with room notifications off still
+      # match: a keyword is an explicit opt-in, like a mention.
+      def room_keyword_matched_ids
+        @room_keyword_matched_ids ||= begin
+          text = @source.plain_text_body
 
-        if @source.thread
-          merge_thread_keyword_candidates(candidates, text)
-        else
-          merge_room_keyword_candidates(candidates, text)
+          if text.blank?
+            Set.new
+          else
+            holder_ids = KeywordAlert.where(user_id: @source.room.memberships.select(:user_id)).distinct.pluck(:user_id)
+
+            if holder_ids.empty?
+              Set.new
+            else
+              phrases = KeywordAlert.where(user_id: holder_ids).pluck(:user_id, :phrase)
+              Notifications::KeywordMatcher.matching_user_ids(phrases_by_user(phrases), text).to_set
+            end
+          end
         end
       end
 
-      def merge_thread_keyword_candidates(candidates, text)
-        eligible = thread_memberships.filter_map do |membership|
-          room_membership = room_memberships[membership.user_id]
-          next unless mentionable_room_membership?(room_membership)
-          next if membership.involved_in_nothing?
+      def thread_keyword_matched_ids
+        @thread_keyword_matched_ids ||= begin
+          text = @source.plain_text_body
+          eligible = thread_memberships.filter_map do |membership|
+            room_membership = room_memberships[membership.user_id]
+            next unless mentionable_room_membership?(room_membership)
+            next if membership.involved_in_nothing?
 
-          membership
-        end
-        return if eligible.empty?
+            membership
+          end
 
-        phrases = KeywordAlert.where(user_id: eligible.map(&:user_id)).pluck(:user_id, :phrase)
-        matched = Notifications::KeywordMatcher.matching_user_ids(phrases_by_user(phrases), text).to_set
-        return if matched.empty?
-
-        eligible.each do |membership|
-          choose_candidate(candidates, membership.user, "keyword_alert") if matched.include?(membership.user_id)
-        end
-      end
-
-      def merge_room_keyword_candidates(candidates, text)
-        roster = @source.room.memberships.includes(:user).to_a
-        eligible_ids = roster.filter_map do |membership|
-          membership.user_id if mentionable_room_membership?(membership)
-        end
-        return if eligible_ids.empty?
-
-        phrases = KeywordAlert.where(user_id: eligible_ids).pluck(:user_id, :phrase)
-        return if phrases.empty?
-
-        matched = Notifications::KeywordMatcher.matching_user_ids(phrases_by_user(phrases), text).to_set
-        return if matched.empty?
-
-        roster.each do |membership|
-          choose_candidate(candidates, membership.user, "keyword_alert") if matched.include?(membership.user_id)
+          if text.blank? || eligible.empty?
+            Set.new
+          else
+            phrases = KeywordAlert.where(user_id: eligible.map(&:user_id)).pluck(:user_id, :phrase)
+            Notifications::KeywordMatcher.matching_user_ids(phrases_by_user(phrases), text).to_set
+          end
         end
       end
 

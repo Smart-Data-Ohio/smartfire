@@ -1,10 +1,10 @@
 module Notifications
   # The one place deciding whether a new message, reminder, or huddle
-  # invitation pushes (and sounds) for one recipient: every push path
-  # calls this with preloaded memberships instead of re-deciding the
-  # rules itself. The inbox recorder mirrors the inbox rules below in
-  # its own candidate flow (same winners, same precedence) so it can
-  # batch keyword matching; keep the two in sync.
+  # invitation pushes (and sounds) for one recipient, and which inbox
+  # item it records: every push path and the inbox recorder call this
+  # with preloaded memberships instead of re-deciding the rules
+  # themselves. The recorder batches keyword matching once per message
+  # and then asks for each candidate's winner here.
   #
   # Inbox rules:
   # - Invisible room memberships get nothing, ever.
@@ -79,6 +79,7 @@ module Notifications
 
     private
       def room_inbox_event_type
+        return nil if room_membership.nil?
         return "mention" if mentioned
         return "reply" if reply_to_recipient && room_replies_enabled?
         return "keyword_alert" if keyword_matched

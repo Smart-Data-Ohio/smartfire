@@ -79,6 +79,15 @@ class Notifications::PolicyTest < ActiveSupport::TestCase
     assert policy.push?
   end
 
+  test "a room message without a membership records nothing, not even mentions or keywords" do
+    policy = Notifications::Policy.new(
+      recipient: @recipient, sender: @sender, kind: :room_message,
+      room_membership: nil, mentioned: true, reply_to_recipient: true, keyword_matched: true
+    )
+
+    assert_nil policy.inbox_event_type
+  end
+
   test "mention beats reply beats keyword for one room message" do
     assert_equal "mention", room_policy(room_involvement: "mentions",
       mentioned: true, reply_to_recipient: true, keyword_matched: true).inbox_event_type
