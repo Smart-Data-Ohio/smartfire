@@ -15,6 +15,17 @@ class LogScrubbingFormatterTest < ActiveSupport::TestCase
     assert_not_includes line, "Zt9QmK1xz3Ab"
   end
 
+  test "redacts a signed reply token path segment from a request log line" do
+    token = users(:bender).reply_token_for(rooms(:watercooler))
+    path = Rails.application.routes.url_helpers.room_bot_messages_path(rooms(:watercooler), token)
+
+    line = format(%(Started POST "#{path}" for 203.0.113.10))
+
+    assert_includes line, "/rooms/#{rooms(:watercooler).id}/[FILTERED]/messages"
+    assert_not_includes line, token.split("--").first
+    assert_not_includes line, token.split("--").last
+  end
+
   test "redacts every occurrence on a line" do
     line = format("/rooms/1/5-Ab3xK9mQz1Rt/messages and /rooms/2/6-Cd4yL0nR2St7/messages/9/boosts")
     assert_not_includes line, "Ab3xK9mQz1Rt"
@@ -25,6 +36,12 @@ class LogScrubbingFormatterTest < ActiveSupport::TestCase
   test "leaves non-bot room paths untouched" do
     line = format(%(Started GET "/rooms/1/messages" for 203.0.113.10))
     assert_includes line, "/rooms/1/messages"
+    assert_not_includes line, "[FILTERED]"
+  end
+
+  test "leaves the agent messages path untouched" do
+    line = format(%(Started POST "/rooms/1/agents/messages" for 203.0.113.10))
+    assert_includes line, "/rooms/1/agents/messages"
     assert_not_includes line, "[FILTERED]"
   end
 

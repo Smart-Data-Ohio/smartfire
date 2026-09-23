@@ -1,0 +1,20 @@
+<%# Help menu for the top bar. Native details+summary for keyboard support,
+    with the popup controller for orientation and outside-click closing. %>
+<details class="help-menu position-relative"
+        data-controller="popup help-menu"
+        data-action="keydown.esc->popup#close toggle->popup#toggle click@document->popup#closeOnClickOutside"
+        data-popup-orientation-top-class="popup-orientation-top">
+  <summary id="<%= local_assigns.fetch(:button_id, "help-menu-button") %>" class="<%= local_assigns.fetch(:summary_class, "btn btn--borderless room-header__action") %>" aria-label="Help" title="Help">
+    <%= image_tag "help.svg", size: 20, aria: { hidden: "true" } %>
+  </summary>
+  <div class="help-menu__menu shadow" data-popup-target="menu" role="menu" aria-label="Help">
+    <button type="button" class="btn btn--borderless help-menu__item" role="menuitem"
+            data-help-menu-target="shortcuts" data-action="help-menu#openShortcuts">
+      Keyboard shortcuts
+    </button>
+    <button type="button" class="btn btn--borderless help-menu__item" role="menuitem"
+            data-action="help-menu#restartTour">
+      Restart tour
+    </button>
+  </div>
+</details>

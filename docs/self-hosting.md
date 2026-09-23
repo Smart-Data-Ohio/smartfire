@@ -100,12 +100,14 @@ To disable Sentry initialization entirely, set `SKIP_TELEMETRY=true`.
 
 #### Bot key storage
 
-Bot keys now authenticate against a SHA-256 digest
+Bot keys authenticate against a SHA-256 digest only
 (`users.bot_token_digest`, backfilled by migration `20260922210200`).
-This release still keeps the plaintext `users.bot_token` column populated
-so a rollback to the previous release keeps every bot working. The
-plaintext column is removed in a follow-up release; after that, rolling
-back past it would require resetting every bot key.
+The retired plaintext `users.bot_token` column is never read or written;
+run `bin/rails bots:clear_plaintext_tokens` after deploying (the periodic
+runner also clears it once) to null leftover values wherever a digest
+exists. The column itself stays because migrations must remain strictly
+additive. Rolling back to a release before digests would require
+resetting every bot key.
 
 #### Google sign-in email links after upgrading
 

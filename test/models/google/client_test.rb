@@ -164,18 +164,19 @@ class Google::ClientTest < ActiveSupport::TestCase
     assert_raises(Google::Client::Error) { Google::Client.exchange_code(code: "bad", redirect_uri: "http://test.host/x") }
   end
 
-  test "authorize_url with drive requests both scopes and incremental auth" do
+  test "authorize_url with drive requests Calendar plus the per-file Drive scope" do
     url = Google::Client.authorize_url(redirect_uri: "http://test.host/google/callback", state: "signed-state", drive: true)
     query = Rack::Utils.parse_query(URI(url).query)
 
-    assert_equal "openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.metadata.readonly", query["scope"]
-    assert_equal "true", query["include_granted_scopes"]
+    assert_equal "openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file", query["scope"]
+    assert_not_includes query.keys, "include_granted_scopes"
   end
 
-  test "authorize_url without drive omits incremental auth" do
+  test "authorize_url without drive omits the Drive scope" do
     url = Google::Client.authorize_url(redirect_uri: "http://test.host/google/callback", state: "signed-state")
     query = Rack::Utils.parse_query(URI(url).query)
 
+    assert_equal "openid email https://www.googleapis.com/auth/calendar.events", query["scope"]
     assert_not_includes query.keys, "include_granted_scopes"
   end
 

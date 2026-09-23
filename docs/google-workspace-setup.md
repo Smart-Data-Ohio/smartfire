@@ -70,7 +70,7 @@ In [Google Auth Platform](https://console.cloud.google.com/auth/overview?project
    | Sign-in | `openid`, `email`, `profile` |
    | Calendar connection | `openid`, `email`, `https://www.googleapis.com/auth/calendar.events` |
    | Select a Drive file and offer recipient access | `https://www.googleapis.com/auth/drive.file` |
-   | Optional Drive metadata previews and legacy search | `https://www.googleapis.com/auth/drive.metadata.readonly` |
+   | Optional Drive previews and picked-file search | `https://www.googleapis.com/auth/drive.file` (same grant, requested with the Calendar scopes through the connect flow) |
 
 6. Use **In production** publishing status for rollout. In Testing, Calendar
    authorizations and offline refresh tokens expire after seven days; basic
@@ -83,12 +83,11 @@ In [Google Auth Platform](https://console.cloud.google.com/auth/overview?project
    before wider rollout. External file sharing must also be permitted by
    each organization's Drive policies.
 
-Google classifies `drive.file` as non-sensitive and
-`drive.metadata.readonly` as restricted. The new sharing flow requests only
-the former; metadata previews remain a separate opt-in. Do not replace it
-with full Drive access. Restricted scopes can require verification and a
-security assessment unless an applicable exception covers the deployment.
-See [Google's scope guidance](https://developers.google.com/workspace/drive/api/guides/api-specific-auth).
+Google classifies `drive.file` as non-sensitive; the retired
+`drive.metadata.readonly` grant was restricted, and reconnecting sheds it.
+Both Drive features request only `drive.file`: previews remain a separate
+opt-in on the Calendar connection. Do not replace it with full Drive
+access. See [Google's scope guidance](https://developers.google.com/workspace/drive/api/guides/api-specific-auth).
 
 ## Picker key and host configuration
 

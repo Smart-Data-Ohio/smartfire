@@ -8,7 +8,7 @@ module Authentication
     before_action :deny_agent_tokens
     helper_method :signed_in?
 
-    protect_from_forgery with: :exception, unless: -> { authenticated_by.bot_key? || authenticated_by.agent_token? }
+    protect_from_forgery with: :exception, unless: -> { authenticated_by.bot_key? || authenticated_by.bot_reply? || authenticated_by.agent_token? }
   end
 
   class_methods do
@@ -46,9 +46,15 @@ module Authentication
     end
 
     def bot_authentication
-      if params[:bot_key].present? && bot = User.authenticate_bot(params[:bot_key].strip)
+      return if params[:bot_key].blank?
+
+      key = params[:bot_key].strip
+      if (bot = User.authenticate_bot(key))
         Current.user = bot
         set_authenticated_by(:bot_key)
+      elsif (bot = User.authenticate_bot_reply_token(key, room_id: params[:room_id]))
+        Current.user = bot
+        set_authenticated_by(:bot_reply)
       end
     end
 
@@ -90,6 +96,15 @@ module Authentication
     def start_new_session_for(user)
       user.sessions.start!(user_agent: request.user_agent, ip_address: request.remote_ip).tap do |session|
         authenticated_as session
+
+        # Establish the CSRF token before any page renders. Sign-ins that
+        # skip rendering a form (test helper, OAuth, first run, invites)
+        # would otherwise leave the session without one, and then the first
+        # concurrent page + sidebar renders each generate their own token;
+        # the sidebar's commit lands last and invalidates the page meta, so
+        # the next PATCH/POST 422s. Reading the token here commits it with
+        # the sign-in response, so every later request reuses it.
+        form_authenticity_token
       end
     end
 
@@ -130,7 +145,7 @@ module Authentication
     end
 
     def deny_bots
-      head :forbidden if authenticated_by.bot_key?
+      head :forbidden if authenticated_by.bot_key? || authenticated_by.bot_reply?
     end
 
     def deny_agent_tokens

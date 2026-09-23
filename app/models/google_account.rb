@@ -35,8 +35,10 @@ class GoogleAccount < ApplicationRecord
     scopes.blank? || scopes.to_s.split.include?(Google::Client::CALENDAR_SCOPE)
   end
 
-  # True when the stored OAuth grant includes the Drive metadata scope.
-  # Existing rows have null scopes (calendar only).
+  # True when the stored OAuth grant includes the Drive scope
+  # (drive.file, per-file Picker access). Existing rows have null scopes
+  # (calendar only), and rows granted the retired drive.metadata.readonly
+  # scope read as false until the member reconnects.
   def drive?
     scopes.to_s.split.include?(Google::Client::DRIVE_SCOPE)
   end

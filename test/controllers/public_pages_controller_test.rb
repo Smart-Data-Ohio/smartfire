@@ -45,6 +45,16 @@ class PublicPagesControllerTest < ActionDispatch::IntegrationTest
     assert_match(/direct messages/i, response.body)
   end
 
+  test "privacy discloses picker-only Drive previews" do
+    get privacy_url
+
+    assert_response :success
+    assert_match(/per-file consent/, response.body)
+    assert_match(/never your whole Drive/, response.body)
+    assert_match(/plain chip/, response.body)
+    assert_no_match(/metadata\.readonly/, response.body)
+  end
+
   test "terms renders signed-out with software-license framing" do
     get terms_url
 

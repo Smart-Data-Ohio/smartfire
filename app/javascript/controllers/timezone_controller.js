@@ -10,6 +10,10 @@ export default class extends Controller {
     const url = document.querySelector("meta[name='time-zone-url']")?.getAttribute("content")
     if (!url || this.#savedZone() !== null) return
 
+    // Without a CSRF token the PATCH can never verify, so skip it rather
+    // than sending a request guaranteed to 422.
+    if (!document.querySelector("meta[name='csrf-token']")?.getAttribute("content")) return
+
     const detected = this.#detectedZone()
     if (!detected) return
 

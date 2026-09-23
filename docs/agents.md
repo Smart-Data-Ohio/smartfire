@@ -24,9 +24,13 @@ same way: `users.bot_token_digest` holds the token's SHA-256 digest,
 compared in constant time after an id lookup, and the UI shows the key
 once, on the page that follows creating the bot or generating a new key
 (the bots page's curl examples use a `BOT_KEY` placeholder). Existing keys
-kept their value. For one release the plaintext `users.bot_token` column is
-still written, so rolling back stays possible and the legacy webhook
-payload's `room.path` keeps the real key; a follow-up release removes it.
+kept their value. The retired plaintext `users.bot_token` column is never
+written and never read for authentication; `bin/rails
+bots:clear_plaintext_tokens` (also run once by the periodic runner)
+recomputes each leftover row's digest from its plaintext — the key its
+holder was shown — then nulls the plaintext, so rows with a stale or
+missing digest keep working. The column itself stays because
+migrations must remain strictly additive.
 
 ### Rate limits
 
@@ -226,14 +230,20 @@ records a timeout in the agent's ledger row and retries like any
 transport failure, with no timeout message; legacy bots keep the
 "Failed to respond within 7 seconds" message.
 
-The `room.path` in agent deliveries is the plain room path. It never
-carries the bot key; receivers that post back use their own agent
-token. Legacy bots (bot users without an `Agent` row) keep receiving
-the bot-key `room.path` this release, since existing integrations
-reply through it; agent-backed bots never get a key in the payload.
-The bot key in the payload is planned for removal in a future
-release: legacy integrations should switch to posting back with their
-own stored bot key or, for new integrations, an agent token.
+Agent-backed bots get the plain room path as `room.path`: receivers post
+back with their own agent token, never anything from the payload. No
+payload ever carries the bot key. Legacy bots (bot users without an
+`Agent` row) instead receive the signed reply path as `room.path` — the
+same path as `reply_url`: fresh per delivery, expiring after 15 minutes,
+posting replies through the bot posting endpoint (`POST` to it with the
+reply body, exactly like the old keyed `room.path`). The reply path
+authenticates create only: reads, edits, deletes, and boosts through it
+answer 403. Expired, tampered, or wrong-room tokens authenticate nobody,
+so those requests redirect to sign-in like any unauthenticated request.
+An integration that replies more than 15 minutes after a delivery should
+post with its stored bot key instead.
+Receivers with a stored bot key keep using it, and new integrations
+should prefer an agent token.
 
 ### Verifying signatures
 

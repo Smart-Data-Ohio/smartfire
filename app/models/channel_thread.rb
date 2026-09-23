@@ -405,10 +405,14 @@ class ChannelThread < ApplicationRecord
     self
   end
 
+  # An explicit close persists closed_at even when the thread already
+  # reads as closed from staleness: without the stamp a later post or
+  # reopen check cannot tell "closed by a moderator" from "gone quiet",
+  # and the closed listing keeps deriving the state from the clock.
   def close!
     with_lock do
       reload
-      update!(closed_at: Time.current) unless locked? || closed?
+      update!(closed_at: Time.current) unless locked? || closed_at.present?
     end
     self
   end

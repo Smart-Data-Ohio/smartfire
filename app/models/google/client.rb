@@ -14,7 +14,10 @@ module Google
     TIMEOUT = 10
     CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.events"
     SCOPE = "openid email #{CALENDAR_SCOPE}"
-    DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.metadata.readonly"
+    # Per-file access only: the grant covers files the member opens with
+    # Smartfire through the Picker, never the whole Drive. Pasted links to
+    # other files answer 403/404 from Google and render as plain chips.
+    DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file"
     ID_TOKEN_ISSUERS = %w[ https://accounts.google.com accounts.google.com ].freeze
 
     # In-memory credentials for post-disconnect cleanup, when the account
@@ -84,6 +87,10 @@ module Google
         ENV["GOOGLE_CLIENT_SECRET"].presence
       end
 
+      # The requested set is always complete (Calendar base plus the
+      # optional Drive scope), so no incremental flag is sent: each grant
+      # replaces the previous one, which is what sheds the retired
+      # drive.metadata.readonly grant on reconnect.
       def authorize_url(redirect_uri:, state:, drive: false)
         uri = URI::HTTPS.build(host: AUTHORIZE_HOST, path: "/o/oauth2/v2/auth")
         params = {
@@ -91,7 +98,6 @@ module Google
           scope: drive ? "#{SCOPE} #{DRIVE_SCOPE}" : SCOPE,
           access_type: "offline", prompt: "consent", state:
         }
-        params[:include_granted_scopes] = "true" if drive
         uri.query = URI.encode_www_form(params)
         uri.to_s
       end
@@ -238,9 +244,10 @@ module Google
 
     DRIVE_FILE_FIELDS = "id,name,mimeType,modifiedTime,owners(displayName),webViewLink,iconLink"
 
-    # Viewer-side Drive metadata for link previews. A 403 means the viewer
-    # cannot open the file, so it maps to NotFound just like a 404: callers
-    # must not distinguish "no access" from "does not exist".
+    # Viewer-side Drive metadata for link previews. Under the drive.file
+    # grant a 403 means the viewer never picked this file with Smartfire
+    # (or cannot open it), so it maps to NotFound just like a 404:
+    # callers must not distinguish "no access" from "does not exist".
     def drive_file(file_id)
       api_request(:get, "/drive/v3/files/#{file_id}", nil,
         query: URI.encode_www_form(fields: DRIVE_FILE_FIELDS, supportsAllDrives: true),
@@ -249,9 +256,11 @@ module Google
 
     DRIVE_LIST_FIELDS = "files(id,name,mimeType,modifiedTime,owners(displayName),webViewLink)"
 
-    # Viewer-side Drive search for the composer picker. A blank query lists
-    # recent files; otherwise matches by name. Single quotes and backslashes
-    # in the term are escaped per the Drive query grammar.
+    # Viewer-side Drive search for the composer picker. Under the
+    # drive.file grant only files the viewer opened with Smartfire are
+    # visible. A blank query lists recent files; otherwise matches by
+    # name. Single quotes and backslashes in the term are escaped per the
+    # Drive query grammar.
     def list_drive_files(query:)
       drive_query = if query.to_s.present?
         "name contains '#{escape_drive_query(query.to_s)}' and trashed=false"

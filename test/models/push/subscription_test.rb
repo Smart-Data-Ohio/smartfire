@@ -89,7 +89,7 @@ class Push::SubscriptionTest < ActiveSupport::TestCase
     Resolv.stubs(:getaddresses).with { |*| lookups += 1; true }.returns([ DnsTestHelper::WEB_PUSH_PUBLIC_TEST_IP ])
 
     subscription = build_subscription(endpoint: "https://fcm.googleapis.com/fcm/send/abc123")
-    notification = subscription.notification(title: "t", body: "b", path: "/")
+    notification = subscription.notification(title: "t", body: "b", path: "/", tag: "room-1")
     assert_equal 0, lookups, "building the notification must not resolve DNS on the serial enqueue path"
 
     WebPush.stubs(:payload_send)
@@ -103,7 +103,7 @@ class Push::SubscriptionTest < ActiveSupport::TestCase
 
     assert_nil subscription.resolved_endpoint_ip
     WebPush.expects(:payload_send).never
-    subscription.notification(title: "t", body: "b", path: "/").deliver
+    subscription.notification(title: "t", body: "b", path: "/", tag: "room-1").deliver
   end
 
   test "delivery is skipped for a non-permitted host even when it resolves publicly" do
@@ -113,7 +113,7 @@ class Push::SubscriptionTest < ActiveSupport::TestCase
 
     assert_nil subscription.resolved_endpoint_ip
     WebPush.expects(:payload_send).never
-    subscription.notification(title: "t", body: "b", path: "/").deliver
+    subscription.notification(title: "t", body: "b", path: "/", tag: "room-1").deliver
   end
 
   test "delivery is skipped for a permitted host on a non-default port" do
@@ -122,14 +122,23 @@ class Push::SubscriptionTest < ActiveSupport::TestCase
 
     assert_nil subscription.resolved_endpoint_ip
     WebPush.expects(:payload_send).never
-    subscription.notification(title: "t", body: "b", path: "/").deliver
+    subscription.notification(title: "t", body: "b", path: "/", tag: "room-1").deliver
   end
 
   test "delivery sends with the pinned endpoint_ip" do
     subscription = build_subscription(endpoint: "https://fcm.googleapis.com/fcm/send/abc123")
 
     WebPush.expects(:payload_send).with(has_entry(endpoint_ip: DnsTestHelper::WEB_PUSH_PUBLIC_TEST_IP))
-    subscription.notification(title: "t", body: "b", path: "/").deliver
+    subscription.notification(title: "t", body: "b", path: "/", tag: "room-1").deliver
+  end
+
+  test "the encoded message carries the notification tag for room grouping" do
+    subscription = build_subscription(endpoint: "https://fcm.googleapis.com/fcm/send/abc123")
+
+    encoded = JSON.parse(subscription.notification(title: "t", body: "b", path: "/", tag: "room-7").send(:encoded_message))
+
+    assert_equal "room-7", encoded.dig("options", "tag")
+    assert_equal "/", encoded.dig("options", "data", "path")
   end
 
   test "accepts all permitted push service domains" do

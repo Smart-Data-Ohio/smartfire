@@ -61,7 +61,8 @@ class RoomsControllerTest < ActionDispatch::IntegrationTest
     get room_url(room)
 
     assert_response :success
-    assert_match %r{<img src="https://example\.com/image\.png"}, response.body
+    assert_match %r{<img src="/embeds/image/[^"]+"}, response.body
+    assert_not_includes response.body, "https://example.com/image.png"
     assert_match %r{href="https://example\.com/page"}, response.body
   end
 

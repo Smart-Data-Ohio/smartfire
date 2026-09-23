@@ -5,7 +5,8 @@ module Periodic
   # retries, event and saved-item reminders, scheduled-message dispatch,
   # poll closing, stuck room-destroy recovery, stranded agent webhook and
   # stuck GitHub/Fizzy-claim recovery, the expired presence-lease sweep,
-  # board SLA nudges and stale digests, and the daily retention prune all
+  # board SLA nudges and stale digests, the one-time plaintext bot-token
+  # clearing, and the daily retention prune all
   # live here so production needs no extra long-running process for any
   # of them. Add a sweeper by appending
   # to the task list below: a name, an interval in seconds, and an
@@ -17,12 +18,21 @@ module Periodic
     DELAYED_JOBS_INTERVAL = 30.seconds
     STUCK_ROOM_SWEEP_INTERVAL = 5.minutes
     AGENT_SWEEP_INTERVAL = 30.seconds
+    BOT_TOKEN_CLEAR_INTERVAL = 24.hours.to_i
     PRESENCE_SWEEP_INTERVAL = 1.minute
     BOARD_SLA_SWEEP_INTERVAL = 5.minutes
     BOARD_DIGEST_SWEEP_INTERVAL = 1.hour
     STREAM_SWEEP_INTERVAL = 30.seconds
 
     def initialize(reminders_interval: 30, retention_interval: 24.hours.to_i, logger: Rails.logger)
+      bot_tokens_cleared = false
+      clear_bot_tokens_once = -> do
+        unless bot_tokens_cleared
+          Bots::ClearPlaintextTokens.run!
+          bot_tokens_cleared = true
+        end
+      end
+
       @tasks = [
         Task.new("delayed jobs", DELAYED_JOBS_INTERVAL, -> { Periodic::DelayedJobDrain.drain_due! }),
         Task.new("event reminders", reminders_interval, -> { Event::ReminderDispatcher.dispatch_due! }),
@@ -34,6 +44,7 @@ module Periodic
         Task.new("stuck GitHub claims", AGENT_SWEEP_INTERVAL, -> { Github::PerformAgentActionJob.recover_stuck_claims! }),
         Task.new("stuck Fizzy claims", AGENT_SWEEP_INTERVAL, -> { Fizzy::PerformAgentActionJob.recover_stuck_claims! }),
         Task.new("calendar push channels", Calendar::PushChannel::RENEW_INTERVAL, -> { Calendar::PushChannel.renew_expiring! }),
+        Task.new("clear plaintext bot tokens", BOT_TOKEN_CLEAR_INTERVAL, clear_bot_tokens_once),
         Task.new("retention prune", retention_interval, -> { Retention::PruneJob.perform_later }),
         Task.new("presence leases", PRESENCE_SWEEP_INTERVAL, -> { WorkspacePresenceLease.prune }),
         Task.new("board sla nudges", BOARD_SLA_SWEEP_INTERVAL, -> { BoardAutomations::SlaDispatcher.dispatch_due! }),

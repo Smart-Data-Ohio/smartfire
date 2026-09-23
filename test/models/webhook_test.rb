@@ -22,7 +22,7 @@ class WebhookTest < ActiveSupport::TestCase
     assert_equal "First post!", payload.dig("message", "body", "html")
     assert_equal "First post!", payload.dig("message", "body", "plain")
     assert_equal message_path, payload.dig("message", "path")
-    assert_not_includes captured, users(:bender).bot_key
+    assert_not_includes captured, bot_key_for(users(:bender))
   end
 
   test "delivery" do

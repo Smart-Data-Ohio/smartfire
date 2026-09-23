@@ -15,6 +15,7 @@
 
   <div class="room-header__actions">
     <%= link_to room_path(@room), class: "btn room-header__action", aria: { label: "Back to #{room_display_name(@room)}" }, title: "Back to #{room_display_name(@room)}" do %>
+      <%= image_tag "arrow-left.svg", size: 20, aria: { hidden: "true" } %>
       <span class="room-header__action-label">Back to <%= room_display_name(@room) %></span>
     <% end %>
   </div>

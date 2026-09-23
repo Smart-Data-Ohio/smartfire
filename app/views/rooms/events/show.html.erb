@@ -15,6 +15,7 @@
 
   <div class="room-header__actions">
     <%= link_to room_events_path(@room), class: "btn room-header__action", aria: { label: "All events" }, title: "All events" do %>
+      <%= image_tag "arrow-left.svg", size: 20, aria: { hidden: "true" } %>
       <span class="room-header__action-label">All events</span>
     <% end %>
   </div>

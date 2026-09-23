@@ -94,6 +94,7 @@ class MessageConversationsTest < ActiveSupport::TestCase
 
     Rails.configuration.x.web_push_pool.expects(:queue).once.with do |payload, subscriptions|
       assert_equal Rails.application.routes.url_helpers.room_path(room, thread: thread.id, message_id: message.id), payload[:path]
+      assert_equal "room-#{room.id}", payload[:tag]
       assert_equal [ users(:jason).id ], subscriptions.order(:id).pluck(:user_id)
       true
     end

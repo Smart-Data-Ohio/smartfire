@@ -26,8 +26,8 @@ publishing status and Workspace administrator approval.
    the `id_token` returned by the token endpoint (issuer, audience, and
    expiry are verified); the app makes no extra API call to learn it.
    Members who opt into [Drive link previews](google-drive.md) grant the
-   additional `https://www.googleapis.com/auth/drive.metadata.readonly`
-   scope through the same connect flow.
+   additional `https://www.googleapis.com/auth/drive.file` scope (per-file
+   Picker access only) through the same connect flow.
 4. Set the client credentials on the app host:
    `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
 5. Set `APP_URL` to the public application origin, for example

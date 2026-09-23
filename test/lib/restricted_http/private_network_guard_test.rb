@@ -140,6 +140,37 @@ class RestrictedHTTP::PrivateNetworkGuardTest < ActiveSupport::TestCase
     assert_equal "93.184.216.34", RestrictedHTTP::PrivateNetworkGuard.resolve("example.com")
   end
 
+  test "resolve refuses hostnames answering only blocked IPv6 addresses" do
+    [ "::1", "fd00::1", "fe80::1", "::ffff:127.0.0.1" ].each do |ip|
+      Resolv.stubs(:getaddresses).returns([ ip ])
+
+      assert_raises RestrictedHTTP::Violation, "expected #{ip} to be refused" do
+        RestrictedHTTP::PrivateNetworkGuard.resolve("images.example.com")
+      end
+    end
+  end
+
+  test "resolve refuses numeric IPv4 literals however they are spelled" do
+    # inet_aton spellings of loopback and private addresses: IPAddr only
+    # takes dotted quads, but the connection layer decodes these too.
+    [ "2130706433", "0x7f000001", "017700000001", "127.1", "3232235521" ].each do |host|
+      assert_raises RestrictedHTTP::Violation, "expected #{host} to be refused" do
+        RestrictedHTTP::PrivateNetworkGuard.resolve(host)
+      end
+    end
+  end
+
+  test "resolve returns the normalized address for public numeric literals" do
+    assert_equal "8.8.8.8", RestrictedHTTP::PrivateNetworkGuard.resolve("134744072")
+    assert_equal "8.8.8.8", RestrictedHTTP::PrivateNetworkGuard.resolve("8.8.8.8")
+  end
+
+  test "resolve refuses bracketed IPv6 literals pointing at blocked addresses" do
+    assert_raises RestrictedHTTP::Violation do
+      RestrictedHTTP::PrivateNetworkGuard.resolve("[::1]")
+    end
+  end
+
   test "resolve raises Unresolvable, not Violation, when the host resolves to nothing" do
     Resolv.stubs(:getaddresses).returns([])
     assert_raises Surfguard::Unresolvable do

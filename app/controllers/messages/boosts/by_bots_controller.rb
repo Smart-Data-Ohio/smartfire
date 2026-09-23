@@ -3,6 +3,9 @@ class Messages::Boosts::ByBotsController < Messages::BoostsController
 
   allow_bot_access only: %i[ create destroy ]
 
+  # A signed webhook reply token posts a message reply only, never a boost.
+  before_action :deny_bot_reply_token
+
   require_agent_capability :react, only: %i[ create destroy ]
   before_action :ensure_content_present, only: :create
 
@@ -18,6 +21,10 @@ class Messages::Boosts::ByBotsController < Messages::BoostsController
   end
 
   private
+    def deny_bot_reply_token
+      head :forbidden if authenticated_by.bot_reply?
+    end
+
     def set_message
       if room = Current.user.rooms.find_by(id: params[:room_id])
         @message = room.messages.find_by(id: params[:message_id])

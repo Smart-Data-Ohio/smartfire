@@ -32,9 +32,13 @@ class GoogleAccountTest < ActiveSupport::TestCase
 
     assert_not_predicate account, :drive?
 
-    account.update!(scopes: "openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.metadata.readonly")
+    account.update!(scopes: "openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file")
 
     assert_predicate account, :drive?
+
+    account.update!(scopes: "openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.metadata.readonly")
+
+    assert_not_predicate account, :drive?, "the retired metadata grant no longer counts"
   end
 
   test "connected, usable, and expiry predicates" do

@@ -984,6 +984,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_092654) do
     t.string "theme", default: "system", null: false
     t.string "time_zone"
     t.boolean "time_zone_explicit", default: false, null: false
+    t.datetime "tour_completed_at"
     t.datetime "updated_at", null: false
     t.string "voice_mode"
     t.index "LOWER(github_login)", name: "index_users_on_lower_github_login", unique: true, where: "github_login IS NOT NULL"

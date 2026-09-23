@@ -18,7 +18,7 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
     Event::ReminderDispatcher.expects(:dispatch_due!).once
 
     assert_enqueued_with(job: Retention::PruneJob) do
-      assert_equal [ "delayed jobs", "event reminders", "saved item reminders", "scheduled messages", "poll closing", "stuck rooms", "stranded agent webhooks", "stuck GitHub claims", "stuck Fizzy claims", "calendar push channels", "retention prune", "presence leases", "board sla nudges", "board stale digests", "streaming messages" ], @runner.tick
+      assert_equal [ "delayed jobs", "event reminders", "saved item reminders", "scheduled messages", "poll closing", "stuck rooms", "stranded agent webhooks", "stuck GitHub claims", "stuck Fizzy claims", "calendar push channels", "clear plaintext bot tokens", "retention prune", "presence leases", "board sla nudges", "board stale digests", "streaming messages" ], @runner.tick
     end
   end
 
@@ -99,6 +99,24 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
     travel_to(now + 11.minutes) do
       assert_enqueued_with(job: Room::DestroyJob, args: [ stuck.id ]) { @runner.tick }
     end
+  end
+
+  test "the plaintext bot-token clearing runs once per runner" do
+    Periodic::DelayedJobDrain.stubs(:drain_due!)
+    Event::ReminderDispatcher.stubs(:dispatch_due!)
+    SavedItem::ReminderDispatcher.stubs(:dispatch_due!)
+
+    bot = User.create_bot!(name: "Runner Clear")
+    bot.update_columns(bot_token: "RunnerClear1")
+
+    now = Time.current
+    travel_to(now) { @runner.tick }
+    assert_nil bot.reload.read_attribute(:bot_token)
+
+    bot.update_columns(bot_token: "RunnerAgain2")
+    travel_to(now + 25.hours) { @runner.tick }
+    assert_equal "RunnerAgain2", bot.reload.read_attribute(:bot_token),
+      "the one-time flag stops later ticks from clearing again"
   end
 
   test "a tick enqueues the retention prune once its interval has elapsed" do

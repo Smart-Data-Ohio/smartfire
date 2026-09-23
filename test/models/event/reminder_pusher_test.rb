@@ -10,6 +10,7 @@ class Event::ReminderPusherTest < ActiveSupport::TestCase
     pool.expects(:queue).with do |payload, subscriptions|
       payload.fetch(:body) == "Starts in 15 minutes: Launch party planning" &&
         payload.fetch(:path) == Rails.application.routes.url_helpers.room_event_path(event.room, event) &&
+        payload.fetch(:tag) == "event-#{event.id}" &&
         subscriptions.map(&:user_id) == [ users(:david).id ]
     end
 

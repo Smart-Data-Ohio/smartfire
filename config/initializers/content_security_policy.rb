@@ -16,9 +16,9 @@
 #   over HTTPS on the same host), and the Google endpoints the picker and
 #   Drive sharing call from the browser.
 # - img-src 'self', data:, blob: (upload previews), and https:. Link
-#   previews embed the og:image of any linked site, so no host list can
-#   cover them; https: also covers X media and avatars (pbs.twimg.com),
-#   GitHub avatars (avatars.githubusercontent.com), and Google avatars.
+#   preview images load through the same-origin /embeds/image proxy, so
+#   https: remains only for X media and avatars (pbs.twimg.com), GitHub
+#   avatars (avatars.githubusercontent.com), and Google avatars.
 # - style-src 'self' 'unsafe-inline': views use inline style attributes and
 #   the account's custom styles; Google Identity Services adds its own
 #   stylesheet. Inline styles cannot run script.

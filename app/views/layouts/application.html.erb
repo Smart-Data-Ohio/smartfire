@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html data-theme="<%= user_theme %>">
+<html data-theme="<%= user_theme %>" data-service-worker="<%= service_worker_auto_register? %>">
   <head>
     <%= page_title_tag %>
 
@@ -59,6 +59,8 @@
       </button>
 
       <%= yield :nav %>
+
+      <%= render "layouts/help_menu" if Current.user && !Current.user.bot? %>
     </nav>
 
     <% if notice = flash[:notice] || flash[:alert] %>
@@ -124,6 +126,7 @@
       <%= render "layouts/quick_switcher" %>
       <%= render "layouts/keyboard_shortcuts" %>
     <% end %>
+    <%= render "layouts/tour" if Current.user && !Current.user.bot? %>
 
     <a href="https://github.com/Smart-Data-Ohio/smartfire" id="app-logo" target="_blank" aria-label="Smartfire on GitHub">
       <%= image_tag "campfire-icon.png", alt: "Smartfire logo", width: 256, height: 216 %>

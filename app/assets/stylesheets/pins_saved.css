@@ -151,10 +151,10 @@
   padding-inline: 0.35rem;
 }
 
-/* Narrow phones keep header actions as 2rem icon-only squares; the pins
-   count would force its button wider, so it steps aside with the labels.
-   The button keeps its accessible name. */
-@media (max-width: 40rem) {
+/* Below 80rem header actions are icon-only squares; the pins count would
+   force its button wider, so it steps aside with the labels. The button
+   keeps its accessible name. */
+@media (max-width: 79.999rem) {
   .room-header__pins-count {
     display: none;
   }

@@ -87,7 +87,7 @@ class SearchFilesTest < ApplicationSystemTestCase
     visit room_url(@room)
     click_link "Show files"
     assert_selector ".room-files__name", text: "system-cover.png", wait: 10
-    assert_selector ".room-files__drive-link", text: /Google Drive file/
+    assert_selector ".room-files__drive-link", text: /Drive file/
 
     fill_in "Search by filename", with: "cover"
     click_button "Search"

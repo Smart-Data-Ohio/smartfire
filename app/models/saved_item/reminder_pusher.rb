@@ -21,7 +21,8 @@ class SavedItem::ReminderPusher
       {
         title: room.direct? ? message.creator.name : room.name,
         body: "Reminder: #{message.plain_text_body.truncate(140)}",
-        path: message_path(message)
+        path: message_path(message),
+        tag: "saved-#{saved_item.id}"
       }
     end
 

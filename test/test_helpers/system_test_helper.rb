@@ -62,7 +62,7 @@ module SystemTestHelper
   # real browser session from here on.
   def sign_in(email_address, password = "secret123456")
     visit sign_in_for_tests_path(email_address: email_address, password: password)
-    assert_selector "a.btn", text: "Designers"
+    assert_selector "a.btn", text: "Designers", wait: 10
   end
 
   def wait_for_cable_connection

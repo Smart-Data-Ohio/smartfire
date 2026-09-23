@@ -79,6 +79,16 @@ class Google::DriveFilesControllerTest < ActionDispatch::IntegrationTest
     assert_not_requested :get, %r{\A#{Regexp.escape(GOOGLE_DRIVE_FILES_URL)}/}
   end
 
+  test "show is 404 with an empty body for the retired metadata grant" do
+    connect_google!(@david, scopes: LEGACY_DRIVE_SCOPES)
+
+    get google_drive_file_path("1AbcDefGhIjKlMnOpQrSt"), headers: { "Accept" => "application/json" }
+
+    assert_response :not_found
+    assert_empty response.body
+    assert_not_requested :get, %r{\A#{Regexp.escape(GOOGLE_DRIVE_FILES_URL)}/}
+  end
+
   test "show is 404 with an empty body when Google answers 403 or 404" do
     connect_google!(@david, scopes: DRIVE_SCOPES)
     stub_google_drive_file("forbidden-file-id", status: 403)

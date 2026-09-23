@@ -73,6 +73,7 @@ Rails.application.routes.draw do
       scope defaults: { user_id: "me" } do
         resource :sidebar, only: :show
         resource :profile
+        resource :tour, only: :update
         resource :status, only: :update, controller: "statuses"
         resource :notification_settings, only: :update
         resource :time_zone, only: :update, controller: "time_zones"
@@ -295,6 +296,8 @@ Rails.application.routes.draw do
   post "threads/:thread_id/work/handoff", to: "threads/work/handoffs#create", as: :thread_work_handoff
 
   resource :unfurl_link, only: :create
+
+  get "embeds/image/:signed", to: "embeds/images#show", as: :embed_image
 
   namespace :github do
     post "webhooks", to: "webhooks#create"

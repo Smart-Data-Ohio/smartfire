@@ -61,6 +61,14 @@ module ApplicationHelper
     end
   end
 
+
+  # Every page registers the service worker, except in tests: each fresh
+  # test browser would install and claim one mid-page and route every
+  # asset through it. Service worker tests opt back in with a cookie.
+  def service_worker_auto_register?
+    !Rails.env.test? || cookies[:enable_service_worker].present?
+  end
+
   private
     def admin_body_class
       "admin" if Current.user&.can_administer?

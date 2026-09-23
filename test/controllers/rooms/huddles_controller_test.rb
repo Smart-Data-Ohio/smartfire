@@ -506,7 +506,7 @@ class Rooms::HuddlesControllerTest < ActionDispatch::IntegrationTest
     post leave_room_huddle_url(rooms(:watercooler))
     assert_json_error :unauthorized, "Authentication required"
 
-    post leave_room_huddle_url(rooms(:watercooler)), params: { bot_key: users(:bender).bot_key }
+    post leave_room_huddle_url(rooms(:watercooler)), params: { bot_key: bot_key_for(users(:bender)) }
     assert_json_error :forbidden, "Bots cannot join huddles"
 
     sign_in :jz

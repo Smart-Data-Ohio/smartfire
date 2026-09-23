@@ -58,7 +58,10 @@ class ActionText::Attachment::OpengraphEmbedTest < ActiveSupport::TestCase
     html = render_embed href: "https://example.com/page", url: "https://example.com/image.png"
 
     assert_match %r{<a rel="noreferrer" target="_blank" href="https://example\.com/page">Title</a>}, html
-    assert_match %r{<img src="https://example\.com/image\.png"}, html
+    assert_match %r{<img src="/embeds/image/[^"]+"}, html
+    assert_not_includes html, "https://example.com/image.png"
+    signed = html[%r{<img src="/embeds/image/([^"]+)"}, 1]
+    assert_equal "https://example.com/image.png", Embeds::ImageProxy.verified_url(CGI.unescape(signed))
   end
 
   test "renders no image and no link when neither is a web URL" do

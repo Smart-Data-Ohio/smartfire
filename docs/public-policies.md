@@ -81,10 +81,12 @@ The privacy page documents, in plain language corroborated against
   email/scopes, publishes one-way private copies of Going/Maybe events to
   the primary calendar, never reads calendar contents, and cleans up
   best-effort on disconnect (sign-in identity is separate and retained).
-- Drive metadata previews resolve at view time with the viewer's
-  credentials with a short per-viewer cache; attachments store file IDs
-  only. The picker-based sharing flow uses per-file `drive.file` consent
-  with a short-lived browser-memory token, grants reader access only to
+- Drive previews resolve at view time with the viewer's credentials
+  under per-file `drive.file` consent (picked files only; pasted links to
+  anything else render as plain chips with no metadata lookup) with a
+  short per-viewer cache; attachments store file IDs only. The
+  picker-based sharing flow uses the same per-file consent with a
+  short-lived browser-memory token, grants reader access only to
   explicitly chosen current room members, and persists grants as stated in
   the dialog.
 - File contents are never downloaded or stored by the Drive integrations;

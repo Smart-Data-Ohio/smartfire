@@ -25,6 +25,13 @@ class Messages::Boosts::ByBotsControllerTest < ActionDispatch::IntegrationTest
     assert_equal room_message_url(@room, @message), json["message"]["url"]
   end
 
+  test "create with a reply token is forbidden" do
+    assert_no_difference -> { Boost.count } do
+      post room_bot_message_boosts_url(@room, @bot.reply_token_for(@room), @message), params: +"👀"
+      assert_response :forbidden
+    end
+  end
+
   test "create with text content" do
     assert_difference -> { Boost.count }, +1 do
       post room_bot_message_boosts_url(@room, bot_key_for(@bot), @message), params: +"Nice!"

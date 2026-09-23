@@ -5,8 +5,9 @@ module GoogleCalendarTestHelper
   GOOGLE_REVOKE_URL = "https://oauth2.googleapis.com/revoke"
   GOOGLE_EVENTS_URL = "https://www.googleapis.com/calendar/v3/calendars/primary/events"
   GOOGLE_DRIVE_FILES_URL = "https://www.googleapis.com/drive/v3/files"
-  DRIVE_SCOPES = "openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.metadata.readonly"
+  DRIVE_SCOPES = "openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file"
   CALENDAR_SCOPES = "openid email https://www.googleapis.com/auth/calendar.events"
+  LEGACY_DRIVE_SCOPES = "openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.metadata.readonly"
 
   included do
     setup :configure_google_for_test

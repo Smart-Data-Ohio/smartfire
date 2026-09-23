@@ -84,6 +84,15 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "Enable Drive previews"
   end
 
+  test "profile offers Drive previews again for the retired metadata grant" do
+    connect_google!(users(:david), email: "david@gmail.test", scopes: LEGACY_DRIVE_SCOPES)
+
+    get user_profile_url
+
+    assert_includes response.body, "Enable Drive previews"
+    assert_not_includes response.body, "Drive previews enabled"
+  end
+
   test "profile shows no Drive row when Google is not configured" do
     disconnect_google_env!
 

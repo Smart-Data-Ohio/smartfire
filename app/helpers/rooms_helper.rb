@@ -1,7 +1,14 @@
 module RoomsHelper
-  # Stimulus identifiers preloaded on first paint of the room page: message
-  # list rendering and position, the composer, timestamps, and presence.
-  # Every other controller lazy-loads on demand when its element appears.
+  # The Stimulus controllers the room page needs before first interaction,
+  # preloaded so first paint never waits on a lazy-load waterfall. Only the
+  # message list, the composer, and live presence qualify: everything the
+  # room renders beyond this (panels, toolbars, pickers, the sidebar frame,
+  # tour/help, and the huddle/stage/Drive conditionals) lazy-loads through
+  # stimulus-loading on element connect, exactly as it did before
+  # preloading existed. Keep this list small on purpose: every entry costs
+  # a high-priority request on every room load, and a long list crowds out
+  # real fetches (sidebar frame, emoji data) and starves the 250-entry
+  # resource-timing buffer. RoomControllerPreloadsTest pins this contract.
   FIRST_PAINT_CONTROLLERS = %w[
     messages maintain_scroll reply composer markdown_editor
     typing_notifications local_time presence message_list

@@ -1139,32 +1139,80 @@ summary.member-panel__group-heading {
 
 }
 
-@media (max-width: 40rem) {
-  :root {
-    --workspace-header-height: 3.75rem;
-  }
-
+@media (max-width: 79.999rem) {
   .sidebar #nav {
+    column-gap: 0.375rem;
     padding-inline: 0.55rem;
   }
 
-  .room-header__kind,
+  /* The sidebar toggle is the odd one out at 58px; squaring it with the
+     actions keeps the header inside the viewport once labels step aside.
+     The inline size is explicit: bare aspect-ratio leaves flex-item
+     buttons content-sized. */
+  .workspace-navigation__open {
+    --btn-padding: 0.3rem;
+    --btn-size: 2rem;
+
+    aspect-ratio: 1;
+    block-size: 2rem;
+    inline-size: 2rem;
+  }
+
   .room-header__action-label {
     display: none;
   }
 
-  .room__contents {
-    font-size: 0.96rem;
-    margin: 0;
+  /* Header budget below 80rem. The labeled row (~740px plus the help menu)
+     already spills past the bell at 64rem, before the voice stack joins
+     it, so labels step aside here and every action becomes an icon-only
+     2rem square with no gaps. What fits where:
+     - 40rem and up: nine squares plus the stack (up to five avatars) and
+       the help menu clear 64rem with room for the name.
+     - Below 40rem: Files steps aside (search reaches uploads and Drive
+       files through has:file) and the help menu moves to the sidebar
+       footer, leaving eight squares plus the capped stack (three avatars
+       plus the count, ~72px, ~86px with the huddle pip).
+     - Below 30rem: events and pins step aside too (the search Events
+       section and has:pin), and threads steps aside in stage rooms,
+       which carry one extra action (is:thread still finds thread
+       messages). Elsewhere threads stay: the drawer is a core phone flow.
+     - At 360px: five 30px squares plus the stack leave ~70px for the
+       name in text and voice rooms, ~50px in stage rooms.
+     The identity yields first (its flex-shrink dwarfs the row's), so the
+     name truncates with an ellipsis before any action shrinks; every
+     action child keeps its natural width instead. The row's inner scroll
+     stays as a backstop for conditional extras (the share indicator, a
+     live badge, an unread badge) so they can never push the document
+     sideways. The top padding keeps the member-count badge's overhang
+     from clipping, with a negative margin that cancels the padding's
+     layout cost. */
+  .room-header__identity {
+    flex-shrink: 999;
   }
 
-  /* Eight icon-only actions (members, search, threads, events, pins,
-     huddle, settings, notifications) plus Files have to fit beside the
-     sidebar toggle on a phone, so the actions sit flush and each is a 2rem
-     square; Files steps aside entirely below 22.5rem, where even the eight
-     only just fit on a 320px phone. */
   .room-header__actions {
+    flex: 0 1 auto;
     gap: 0;
+    margin-block-start: -0.25rem;
+    max-inline-size: 100%;
+    min-inline-size: 0;
+    overflow-x: auto;
+    padding-block-start: 0.25rem;
+    position: relative;
+  }
+
+  .room-header__actions > * {
+    flex: none;
+  }
+
+  @media (pointer: coarse) {
+    .room-header__actions {
+      scrollbar-width: none;
+    }
+
+    .room-header__actions::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   .room-header__actions .btn,
@@ -1178,6 +1226,32 @@ summary.member-panel__group-heading {
 
   .room-header__actions .huddle-launcher span,
   .room-header__actions .huddle-share-indicator span {
+    display: none;
+  }
+}
+
+@media (max-width: 40rem) {
+  :root {
+    --workspace-header-height: 3.75rem;
+  }
+
+  .room-header__kind {
+    display: none;
+  }
+
+  .room__contents {
+    font-size: 0.96rem;
+    margin: 0;
+  }
+
+  /* Files steps aside below 40rem; search reaches uploads and Drive files
+     through has:file. */
+  .room-header__actions .room-header__action--files {
+    display: none;
+  }
+
+  /* The help menu moves to the sidebar footer below 40rem; see tour.css. */
+  #nav .help-menu {
     display: none;
   }
 
@@ -1196,11 +1270,47 @@ summary.member-panel__group-heading {
   }
 }
 
-/* At the narrowest phones the ninth header action no longer fits beside
-   the sidebar toggle, so Files steps aside like the voice stack: the
-   header keeps eight 2rem actions and the room name keeps its share. */
+@media (max-width: 30rem) {
+  /* Below 30rem the live row no longer fits: events and pins step aside
+     (the search Events section and has:pin keep them one search away),
+     and threads steps aside in stage rooms, which carry one extra action
+     (is:thread still finds thread messages). */
+  .room-header__actions .room-header__action--events,
+  .room-header__actions .room-header__action--pins {
+    display: none;
+  }
+
+  .room-header__actions:has(.stage-panel-wrap) .room-header__action--threads {
+    display: none;
+  }
+}
+
+/* At the narrowest phones the threads browser steps aside everywhere, so
+   five 30px squares plus the capped stack fit 360px with room for the
+   name. The row's inner scroll above contains anything more exotic. */
 @media (max-width: 22.5rem) {
-  .room-header__actions .room-header__action--files {
+  .sidebar #nav {
+    column-gap: 0.25rem;
+    padding-inline: 0.5rem;
+  }
+
+  .room-header__actions .btn,
+  .room-header__action,
+  .workspace-navigation__open {
+    --btn-size: 1.875rem;
+
+    block-size: 1.875rem;
+    inline-size: 1.875rem;
+  }
+
+  .room-header__actions .room-header__action--threads {
+    display: none;
+  }
+
+  /* With a live stack the name keeps only a sliver at 360px, so the
+     decorative room icon yields and the sliver shows text. */
+  #nav:has(.room-header__actions .voice-stack--live) .room-header__icon,
+  #nav:has(.room-header__actions .voice-stack--live) .room-header__hash {
     display: none;
   }
 }

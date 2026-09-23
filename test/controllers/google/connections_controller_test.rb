@@ -32,13 +32,13 @@ class Google::ConnectionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_url
   end
 
-  test "connect with features[]=drive requests both scopes with incremental auth" do
+  test "connect with features[]=drive requests Calendar plus the per-file Drive scope" do
     post google_connect_path, params: { features: [ "drive" ] }
 
     assert_response :redirect
     query = Rack::Utils.parse_query(URI(response.location).query)
-    assert_equal "openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.metadata.readonly", query["scope"]
-    assert_equal "true", query["include_granted_scopes"]
+    assert_equal "openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file", query["scope"]
+    assert_not_includes query.keys, "include_granted_scopes"
   end
 
   test "connect without features requests only the Calendar scope" do
