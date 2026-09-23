@@ -17,6 +17,18 @@ class LinkEmbed::UrlClassifierTest < ActiveSupport::TestCase
       LinkEmbed::UrlClassifier.extract("(see https://example.com/page)")
   end
 
+  test "keeps balanced parentheses that belong to the URL" do
+    assert_equal [ "https://en.wikipedia.org/wiki/Rust_(programming_language)" ],
+      LinkEmbed::UrlClassifier.extract("see https://en.wikipedia.org/wiki/Rust_(programming_language) today")
+  end
+
+  test "strips unbalanced closing parentheses and brackets" do
+    assert_equal [ "https://example.com/page" ],
+      LinkEmbed::UrlClassifier.extract("see https://example.com/page).")
+    assert_equal [ "https://example.com/page" ],
+      LinkEmbed::UrlClassifier.extract("[see https://example.com/page]")
+  end
+
   test "skips GitHub PR, X, LinkedIn, Drive, Fizzy, and internal URLs" do
     assert_empty LinkEmbed::UrlClassifier.extract("https://github.com/rails/rails/pull/123")
     assert_empty LinkEmbed::UrlClassifier.extract("https://x.com/jack/status/20")

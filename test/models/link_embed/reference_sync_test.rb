@@ -68,6 +68,16 @@ class LinkEmbed::ReferenceSyncTest < ActiveSupport::TestCase
     assert_equal [ "https://www.linkedin.com/posts/slug-55" ], message.reload.link_embeds.map(&:normalized_url)
   end
 
+  test "syncs parenthesized URLs intact" do
+    message = @room.messages.create!(
+      creator: @creator, client_message_id: "embed-sync-parens",
+      markdown_source: "see https://en.wikipedia.org/wiki/Rust_(programming_language) today"
+    )
+
+    assert_equal [ "https://en.wikipedia.org/wiki/Rust_(programming_language)" ],
+      message.reload.link_embeds.map(&:normalized_url)
+  end
+
   test "caps generic URLs at three but syncs LinkedIn URLs separately" do
     message = @room.messages.create!(
       creator: @creator, client_message_id: "embed-sync-caps",

@@ -2,10 +2,10 @@ class LinkEmbed::UrlClassifier
   # Up to this many generic (non-special) URLs per message render embeds.
   MAX_PER_MESSAGE = 3
 
-  # A permissive absolute-URL scan; trailing punctuation is stripped after
-  # the match, and every candidate still has to normalize and pass the
-  # special-URL filters below.
-  URL_PATTERN = %r{https?://[^\s<>"')\]]+}i
+  # A permissive absolute-URL scan; trailing punctuation and unbalanced
+  # closers are stripped after the match, and every candidate still has to
+  # normalize and pass the special-URL filters below.
+  URL_PATTERN = %r{https?://[^\s<>"']+}i
 
   # Angle-bracketed URLs are embed-suppressed, as in Discord: <https://…>
   # renders as a plain link with no card. The suppression set is built
@@ -74,12 +74,28 @@ class LinkEmbed::UrlClassifier
 
     # A URL at the end of a sentence picks up the period. Strip the
     # trailing characters that never end a URL rather than failing to
-    # match the page.
+    # match the page. A closing paren survives when it balances an opener
+    # in the URL itself (a Wiki link) and is stripped when it closes
+    # surrounding prose instead ("(see https://…/page)"); brackets are
+    # stripped the same way. The passes repeat until the candidate stops
+    # shrinking, so mixed trails ("https://…/page).") clean fully.
     def clean_candidate(url)
-      url.to_s.sub(/[.,;:!?}]+\z/, "")
+      cleaned = url.to_s.dup
+      loop do
+        stripped = strip_unbalanced_closer(strip_unbalanced_closer(
+          cleaned.sub(/[.,;:!?}]+\z/, ""), "(", ")"), "[", "]")
+        break cleaned if stripped == cleaned
+
+        cleaned = stripped
+      end
     end
 
     private
+      def strip_unbalanced_closer(url, opener, closer)
+        url = url.chomp(closer) while url.end_with?(closer) && url.count(closer) > url.count(opener)
+        url
+      end
+
       def host_of(url)
         URI.parse(url.to_s).host
       rescue URI::InvalidURIError
