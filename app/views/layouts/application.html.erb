@@ -116,6 +116,8 @@
 
     <%= render "layouts/huddle_invitation" if Current.user && Huddle.configured? %>
 
+    <%= render "layouts/huddle_join_notice" if Current.user && Huddle.configured? %>
+
     <%= render "layouts/lightbox" %>
 
     <%= render "users/cards/popover" if Current.user %>

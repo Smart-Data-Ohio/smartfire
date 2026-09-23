@@ -1,0 +1,7 @@
+<div id="huddle-join-notices" data-controller="huddle-join-notice" data-turbo-permanent>
+  <div class="huddle-join-toasts" data-huddle-join-notice-target="toasts"></div>
+  <div data-controller="sound"
+       data-huddle-join-notice-target="sound"
+       data-sound-url-value="<%= asset_path("incoming.mp3") %>"
+       hidden></div>
+</div>
