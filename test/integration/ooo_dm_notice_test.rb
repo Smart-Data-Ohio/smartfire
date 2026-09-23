@@ -74,6 +74,39 @@ class OooDmNoticeTest < ActionDispatch::IntegrationTest
     assert_select ".ooo-notice", count: 0
   end
 
+  test "an invisible member's manual OOO shows no notice" do
+    users(:david).update!(presence_setting: "invisible", ooo_until: 1.day.from_now, ooo_note: "Back soon")
+    sign_in :jason
+
+    get room_url(@dm)
+
+    assert_response :success
+    assert_select ".ooo-notice", count: 0
+  end
+
+  test "an invisible member's calendar OOO shows no notice" do
+    users(:david).update!(presence_setting: "invisible", ooo_calendar_enabled: true)
+    Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current,
+      ooo_intervals: [ [ 5.minutes.ago.iso8601, 2.days.from_now.iso8601 ] ])
+    sign_in :jason
+
+    get room_url(@dm)
+
+    assert_response :success
+    assert_select ".ooo-notice", count: 0
+  end
+
+  test "an invisible member's OOO flip broadcasts an emptied notice line" do
+    users(:david).update!(presence_setting: "invisible", ooo_until: 1.hour.from_now)
+
+    streams = capture_turbo_stream_broadcasts([ users(:david), :ooo_notice ]) do
+      Calendar::OooDispatcher.dispatch_due!
+    end
+
+    assert_equal 1, streams.size
+    assert_not_includes streams.first.to_html, "is out of office"
+  end
+
   test "an OOO end broadcasts an emptied notice line" do
     users(:david).update!(ooo_until: 1.hour.from_now)
     users(:david).reload.claim_ooo_broadcast!(true)

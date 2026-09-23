@@ -1,5 +1,5 @@
 <%# The line names only the member's return date and own note — the same
     string for every viewer, so one broadcast serves all subscribers. %>
-<% if user.out_of_office? %>
+<% if user.ooo_status_visible? %>
   <p class="ooo-notice txt-small" role="status"><%= user.name %> is out of office until <%= user.ooo_until_date %>.<% if user.manual_ooo_active? && user.ooo_note.present? %> <%= user.ooo_note %><% end %></p>
 <% end %>
