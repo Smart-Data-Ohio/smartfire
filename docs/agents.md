@@ -25,11 +25,12 @@ compared in constant time after an id lookup, and the UI shows the key
 once, on the page that follows creating the bot or generating a new key
 (the bots page's curl examples use a `BOT_KEY` placeholder). Existing keys
 kept their value. The retired plaintext `users.bot_token` column is never
-read or written; leftover values are nulled by
-`bin/rails bots:clear_plaintext_tokens` (also run once by the periodic
-runner) wherever a digest exists. The column itself stays because
-migrations must remain strictly additive. A bot row without a digest
-cannot authenticate until its key is reset.
+written and never read for authentication; `bin/rails
+bots:clear_plaintext_tokens` (also run once by the periodic runner)
+recomputes each leftover row's digest from its plaintext — the key its
+holder was shown — then nulls the plaintext, so rows with a stale or
+missing digest keep working. The column itself stays because
+migrations must remain strictly additive.
 
 ### Rate limits
 

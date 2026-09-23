@@ -2,13 +2,14 @@
 # digest (bot_token_digest), as agent credentials do, and the UI shows a key
 # only once: right after creation or a reset.
 #
-# The plaintext bot_token column is retired: it is never read and never
-# written. It cannot be dropped because production migrations must stay
-# strictly additive, so a runtime task (Bots::ClearPlaintextTokens, via
+# The plaintext bot_token column is retired: it is never written and
+# never read for authentication. It cannot be dropped because production
+# migrations must stay strictly additive, so a runtime task
+# (Bots::ClearPlaintextTokens, via
 # `bin/rails bots:clear_plaintext_tokens` and a one-time Periodic::Runner
-# task) nulls leftover values where a digest exists. New and reset bots
-# store the digest alone, and stored bots answer bot_key with
-# BOT_KEY_PLACEHOLDER.
+# task) recomputes each leftover row's digest from its plaintext, then
+# nulls the plaintext. New and reset bots store the digest alone, and
+# stored bots answer bot_key with BOT_KEY_PLACEHOLDER.
 module User::Bot
   extend ActiveSupport::Concern
 

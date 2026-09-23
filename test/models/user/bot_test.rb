@@ -57,7 +57,8 @@ class User::BotTest < ActiveSupport::TestCase
   test "bot auth keeps working after plaintext clearing" do
     bot = User.create_bot!(name: "Bender")
     key = bot.plain_bot_key
-    bot.update_columns(bot_token: "PreRetire123")
+    # A pre-retirement row carries the same token in both columns.
+    bot.update_columns(bot_token: key.split("-", 2).last)
 
     Bots::ClearPlaintextTokens.run!
     assert_nil bot.reload.read_attribute(:bot_token)

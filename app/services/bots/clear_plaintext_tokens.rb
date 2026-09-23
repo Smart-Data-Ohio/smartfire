@@ -1,12 +1,20 @@
 module Bots
-  # Nulls the retired plaintext bot_token column wherever a digest exists,
-  # so the key survives only as a SHA-256 digest. New and reset bots
-  # already store the digest alone; this clears rows written before the
-  # retirement. Rows without a digest are left untouched: their key is
-  # unknown and must be reset, not silently dropped. Idempotent.
+  # Heals rows written before the digest retirement and nulls the retired
+  # plaintext bot_token column: for every row that still has a plaintext
+  # token, the digest is recomputed from that plaintext — the key its
+  # holder was shown — and the plaintext is nulled, in one update per
+  # row. Rows without a plaintext are untouched. Idempotent.
   class ClearPlaintextTokens
     def self.run!
-      User.where.not(bot_token: nil).where.not(bot_token_digest: nil).update_all(bot_token: nil)
+      cleared = 0
+      User.where.not(bot_token: nil).find_each do |user|
+        user.update_columns(
+          bot_token_digest: User.digest_bot_token(user.read_attribute(:bot_token)),
+          bot_token: nil
+        )
+        cleared += 1
+      end
+      cleared
     end
   end
 end
