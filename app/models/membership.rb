@@ -43,7 +43,12 @@ class Membership < ApplicationRecord
     unread_at.present?
   end
 
+  # Idempotent: a double raise keeps the first timestamp, so the listener
+  # keeps their place in the queue. Reports whether the hand was newly
+  # raised, so callers can skip the roster broadcast when nothing changed.
   def raise_hand!
+    return false if hand_raised?
+
     update!(hand_raised_at: Time.current)
   end
 

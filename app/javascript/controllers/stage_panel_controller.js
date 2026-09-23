@@ -1,5 +1,9 @@
 import { Controller } from "@hotwired/stimulus"
 
+// One chime and announcement per membership per minute: a listener
+// hammering raise and lower still only notifies their hosts once.
+const HAND_CHIME_DEBOUNCE_MS = 60_000
+
 // The stage drawer: a Hosts/Speakers/Listeners roster that opens from the
 // room header. It is a modal dialog, so it renders in the top layer above
 // the member panel and the rest of the workspace. Its contents stay live
@@ -12,6 +16,8 @@ export default class extends Controller {
     this.huddleRoomId = null
     this.huddleState = "idle"
     this.handCount = this.#raisedHandCount()
+    this.raisedHandIds = this.#raisedHandIds()
+    this.handChimeAtById = new Map()
     this.handleHuddleChange = this.#handleHuddleChange.bind(this)
     window.addEventListener("huddle:changed", this.handleHuddleChange)
 
@@ -116,7 +122,15 @@ export default class extends Controller {
     this.handCount = count
     window.dispatchEvent(new CustomEvent("stage:hands-changed", { detail: { count } }))
 
+    const ids = this.#raisedHandIds()
+    const fresh = [ ...ids ].filter((id) => !this.raisedHandIds.has(id))
+    this.raisedHandIds = ids
     if (!grew || !this.#viewerCanManage() || !this.hasHandAnnouncementTarget) return
+
+    const now = Date.now()
+    const due = fresh.filter((id) => now - (this.handChimeAtById.get(id) || 0) >= HAND_CHIME_DEBOUNCE_MS)
+    if (due.length === 0) return
+    for (const id of due) this.handChimeAtById.set(id, now)
 
     this.handAnnouncementTarget.textContent = count === 1
       ? "A listener raised their hand."
@@ -126,6 +140,13 @@ export default class extends Controller {
 
   #raisedHandCount() {
     return this.element.querySelectorAll(".stage-panel__hand-badge").length
+  }
+
+  #raisedHandIds() {
+    return new Set(
+      [ ...this.element.querySelectorAll(".stage-panel__hand-badge") ]
+        .map((badge, index) => badge.closest("li[id]")?.id || `badge-${index}`)
+    )
   }
 
   #viewerCanManage() {

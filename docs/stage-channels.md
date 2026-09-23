@@ -97,7 +97,10 @@ and a newly raised hand notifies viewers who can act on it (hosts and
 administrators) with an announcement and a short chime; other listeners see
 the queue update without the fanfare. The queue numbers and the notification
 are presentation over the same `hand_raised_at` ordering the roster already
-used.
+used. Raising is idempotent — a double raise keeps the first timestamp and
+queue place — and throttled to 10 raises per membership per minute; host
+chimes and announcements debounce to one per membership per minute, so
+hammering raise and lower notifies only once.
 
 After a role change, a per-viewer roster is broadcast to every member's own
 rooms stream — host action forms render only for hosts and administrators —

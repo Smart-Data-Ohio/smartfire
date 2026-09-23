@@ -615,6 +615,82 @@ class CallControlsTest < ApplicationSystemTestCase
     end
   end
 
+  test "host hand-raise chimes debounce per membership" do
+    room = create_call_room(Rooms::Stage, name: "Town Hall", members: [ users(:david), users(:jason), users(:kevin) ])
+    jason_row = "##{dom_id(room.memberships.find_by!(user: users(:jason)), :stage_row)}"
+    kevin_row = "##{dom_id(room.memberships.find_by!(user: users(:kevin)), :stage_row)}"
+
+    sign_in "david@37signals.com"
+    visit room_path(room)
+    wait_for_cable_connection
+    find("button[aria-label='Show stage']").click
+    assert_selector "#{jason_row} .stage-panel__role"
+
+    page.execute_script(<<~JS)
+      window.__handEvents = [];
+      window.addEventListener("stage:hands-changed", (event) => window.__handEvents.push(event.detail.count));
+      window.__chimeOscillators = 0;
+      window.__RealAudioContext = window.AudioContext;
+      window.AudioContext = class {
+        constructor() { this.state = "running"; this.currentTime = 0; this.destination = {}; }
+        resume() { return Promise.resolve(); }
+        createOscillator() {
+          window.__chimeOscillators += 1;
+          return { type: "", frequency: {}, connect() {}, start() {}, stop() {} };
+        }
+        createGain() {
+          return { gain: { setValueAtTime() {}, linearRampToValueAtTime() {} }, connect() {} };
+        }
+      };
+      window.__now = Date.now();
+      window.__RealDateNow = Date.now;
+      Date.now = () => window.__now;
+      window.__setHandRaised = (row, raised) => {
+        const role = document.querySelector(`${row} .stage-panel__role`);
+        role.querySelector(".stage-panel__hand-badge")?.remove();
+        if (raised) {
+          const badge = document.createElement("span");
+          badge.className = "stage-panel__hand-badge";
+          badge.textContent = "Hand raised";
+          role.appendChild(badge);
+        }
+      };
+    JS
+
+    # A first raise chimes and announces.
+    page.execute_script("window.__setHandRaised('#{jason_row}', true)")
+    wait_for_condition("the first raise never chimed") { page.evaluate_script("window.__chimeOscillators") == 2 }
+    assert_selector "[data-stage-panel-target='handAnnouncement']", text: "A listener raised their hand.", visible: :all
+
+    # Lowering and re-raising within a minute stays silent, while every
+    # roster change still reports the queue itself.
+    page.execute_script("window.__setHandRaised('#{jason_row}', false)")
+    wait_for_condition("the lower never registered") { page.evaluate_script("window.__handEvents") == [ 1, 0 ] }
+    page.execute_script("window.__setHandRaised('#{jason_row}', true)")
+    sleep 0.5
+    assert_equal 2, page.evaluate_script("window.__chimeOscillators")
+    assert_equal [ 1, 0, 1 ], page.evaluate_script("window.__handEvents")
+
+    # Another member's raise still chimes.
+    page.execute_script("window.__setHandRaised('#{kevin_row}', true)")
+    wait_for_condition("the second member never chimed") { page.evaluate_script("window.__chimeOscillators") == 4 }
+    assert_selector "[data-stage-panel-target='handAnnouncement']", text: "2 listeners have their hands raised.", visible: :all
+
+    # After a minute the first member chimes again.
+    page.execute_script(<<~JS)
+      window.__now += 61_000;
+      window.__setHandRaised('#{jason_row}', false);
+    JS
+    wait_for_condition("the second lower never registered") { page.evaluate_script("window.__handEvents") == [ 1, 0, 1, 2, 1 ] }
+    page.execute_script("window.__setHandRaised('#{jason_row}', true)")
+    wait_for_condition("the re-raise after a minute never chimed") { page.evaluate_script("window.__chimeOscillators") == 6 }
+
+    page.execute_script(<<~JS)
+      window.AudioContext = window.__RealAudioContext;
+      Date.now = window.__RealDateNow;
+    JS
+  end
+
   test "a host mutes and unmutes a speaker from the stage panel" do
     room = create_call_room(Rooms::Stage, name: "Town Hall", members: [ users(:david), users(:jason) ])
     speaker = room.memberships.find_by!(user: users(:jason))
