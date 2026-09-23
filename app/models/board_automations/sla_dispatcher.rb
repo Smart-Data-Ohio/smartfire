@@ -48,8 +48,21 @@ module BoardAutomations
           entered_at = thread.work_status_changed_at
           return if entered_at.nil?
 
-          fire_stage!(rule, thread, "nudge", entered_at, now) if entered_at <= now - rule.nudge_after_minutes.minutes
-          fire_stage!(rule, thread, "escalation", entered_at, now) if entered_at <= now - rule.escalate_after_minutes.minutes
+          claimed = claimed_stages_for(rule, thread, entered_at)
+          fire_stage!(rule, thread, "nudge", entered_at, now) if !claimed.include?("nudge") && entered_at <= now - rule.nudge_after_minutes.minutes
+          fire_stage!(rule, thread, "escalation", entered_at, now) if !claimed.include?("escalation") && entered_at <= now - rule.escalate_after_minutes.minutes
+        end
+
+        # Stages already claimed for this status crossing, read before any
+        # write so repeat sweeps never open a claim transaction for them.
+        # A racing runner can still win between this read and the insert;
+        # fire_stage! keeps its unique-violation rescue for that.
+        def claimed_stages_for(rule, thread, entered_at)
+          BoardSlaNudge.where(
+            channel_thread_id: thread.id,
+            work_status: rule.work_status,
+            status_entered_at: entered_at
+          ).pluck(:stage)
         end
 
         def fire_stage!(rule, thread, stage, entered_at, now)
@@ -68,7 +81,8 @@ module BoardAutomations
           ActivityItems::Recorder.record!(recipient: recipient, source: nudge, event_type: "work_sla")
           BoardAutomations::NudgePushJob.perform_later(nudge)
         rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
-          # Another runner claimed this crossing first: exactly-once holds.
+          # A racing runner claimed this crossing between the pre-check
+          # and the insert: exactly-once holds.
           nil
         end
 

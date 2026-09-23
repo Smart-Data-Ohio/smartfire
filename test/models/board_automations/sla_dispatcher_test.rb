@@ -32,6 +32,21 @@ class BoardAutomations::SlaDispatcherTest < ActiveSupport::TestCase
     assert_equal post.id, nudge.channel_thread_id
   end
 
+  test "a repeat sweep opens no write transaction for claimed crossings" do
+    stale_post!(owner: users(:jz), status: "in_progress", entered_ago: 5.hours)
+    BoardAutomations::SlaDispatcher.dispatch_due!
+    assert_equal 2, BoardSlaNudge.count
+
+    statements = []
+    callback = ->(_name, _start, _finish, _id, payload) { statements << payload[:sql] }
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      BoardAutomations::SlaDispatcher.dispatch_due!
+    end
+
+    writes = statements.grep(/\A\s*(begin|commit|rollback|insert|update|delete)/i)
+    assert_empty writes
+  end
+
   test "a post past the escalation threshold escalates to the board creator" do
     stale_post!(owner: users(:jz), status: "in_progress", entered_ago: 5.hours)
 
