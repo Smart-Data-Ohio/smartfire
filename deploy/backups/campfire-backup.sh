@@ -5,25 +5,32 @@
 # Packages a consistent SQLite snapshot (taken through the online backup API,
 # never a raw copy of the live database), the Active Storage uploads tree, and
 # a non-secret config manifest into one tarball, compresses and encrypts it
-# client-side, and uploads it to gs://<backup-bucket>/daily/ in the SEPARATE
-# backup GCP project. The timer additionally uploads the same file under
-# weekly/ on Sundays and monthly/ on the 1st; bucket lifecycle ages each
-# prefix out (see lifecycle.json).
+# client-side, and leaves the encrypted archive in an output directory.
 #
-# This runs on the VM host from a systemd timer, NOT inside the app container,
-# and never stops the app or freezes writes: the database snapshot uses
-# SQLite's online backup API, which takes only brief page locks.
+# This runs on the VM host, NOT inside the app container, and never stops the
+# app or freezes writes: the database snapshot uses SQLite's online backup
+# API, which takes only brief page locks.
 #
-# Least privilege: the VM uploads with a service account that holds ONLY
-# roles/storage.objectCreator on the backup bucket. It can create objects but
-# can neither read, delete nor overwrite them. Promotion to weekly/monthly is
-# therefore a second upload of the same local file, not a server-side copy
-# (which would need read access). Upload success cannot be verified by
-# reading back; the monthly restore check (backup-restore-check.yml) with a
-# separate reader identity is what proves an upload is good.
+# The nightly GitHub Actions workflow (.github/workflows/nightly-backup.yml)
+# drives this script over IAP SSH, downloads the encrypted archive, verifies
+# its checksum, and uploads it to gs://<backup-bucket>/daily/ (plus weekly/
+# on Sundays and monthly/ on the 1st). Encryption happens HERE, on the VM, to
+# the age public recipient, so plaintext never leaves the VM. The VM itself
+# holds no cloud credentials and never uploads anything: it cannot reach
+# Cloud Storage at all.
+#
+# --- usage ---------------------------------------------------------------
+# campfire-backup.sh --output-dir DIR
+#
+# Prints two machine-readable lines on success, which the workflow parses:
+#   BACKUP_FILE=/path/to/smartfire-backup-<stamp>.tar.gz.age
+#   BACKUP_SHA256=<hex>
 #
 # --- inputs ---------------------------------------------------------------
-# BACKUP_BUCKET       required. Backup bucket name WITHOUT gs:// prefix.
+# --output-dir DIR / BACKUP_OUTPUT_DIR
+#                   where the encrypted archive is left (default
+#                   BACKUP_STATE_ROOT). Created when missing. Must not sit
+#                   inside this run's work directory.
 # BACKUP_ENCRYPTION   age (the default) or gpg.
 # BACKUP_AGE_RECIPIENT  required for age: the age1... public recipient. The
 #                     matching private key must NEVER be on this VM.
@@ -41,11 +48,18 @@
 #                     container label unless set.
 # BACKUP_STATE_ROOT   parent of the work directories (default /var/backups).
 # BACKUP_WORK_DIR     override for this run's work directory.
-# BACKUP_DATETIME     override for the stamp, YYYYMMDD-HHMMSS in UTC. Used for
-#                     the object name and the weekly/monthly decision (tests).
-# BACKUP_LOCK_FILE   /default /var/lock/campfire-backup.lock.
-# BACKUP_UPLOAD_BIN   gcloud (the default) or gsutil. gcloud is preferred when
-#                     both are installed.
+# BACKUP_DATETIME     override for the stamp, YYYYMMDD-HHMMSS in UTC (tests).
+# BACKUP_LOCK_FILE    backup-vs-backup lock (default
+#                     /var/lock/campfire-backup.lock).
+# BACKUP_RELEASE_LOCK_FILE  the RELEASE lock (default
+#                     /var/lock/campfire-release.lock, the same lock
+#                     campfire-release.sh uses). Taken non-blocking around the
+#                     prepare-backup snapshot: when a release holds it the
+#                     backup exits 75 so the workflow retries or alerts, and
+#                     storage/backups/production.sqlite3 is never written
+#                     concurrently with a release.
+# BACKUP_FREE_SPACE_FACTOR  free-space multiple of database+uploads required
+#                     up front (default 3).
 # BACKUP_KEEP_WORKDIR 1 keeps the unencrypted work directory for debugging.
 #
 # SECURITY: the ONCE container label and its Config.Env contain secret_key_base,
@@ -54,7 +68,6 @@
 
 set -euo pipefail
 
-BACKUP_BUCKET="${BACKUP_BUCKET:-}"
 BACKUP_ENCRYPTION="${BACKUP_ENCRYPTION:-age}"
 BACKUP_AGE_RECIPIENT="${BACKUP_AGE_RECIPIENT:-}"
 BACKUP_GPG_RECIPIENT="${BACKUP_GPG_RECIPIENT:-}"
@@ -65,12 +78,18 @@ BACKUP_FILES_REL="${BACKUP_FILES_REL:-files}"
 BACKUP_APP_HOST="${BACKUP_APP_HOST:-}"
 BACKUP_STATE_ROOT="${BACKUP_STATE_ROOT:-/var/backups}"
 BACKUP_WORK_DIR="${BACKUP_WORK_DIR:-}"
+BACKUP_OUTPUT_DIR="${BACKUP_OUTPUT_DIR:-}"
 BACKUP_DATETIME="${BACKUP_DATETIME:-}"
 BACKUP_LOCK_FILE="${BACKUP_LOCK_FILE:-/var/lock/campfire-backup.lock}"
-BACKUP_UPLOAD_BIN="${BACKUP_UPLOAD_BIN:-}"
+BACKUP_RELEASE_LOCK_FILE="${BACKUP_RELEASE_LOCK_FILE:-/var/lock/campfire-release.lock}"
+BACKUP_FREE_SPACE_FACTOR="${BACKUP_FREE_SPACE_FACTOR:-3}"
 BACKUP_KEEP_WORKDIR="${BACKUP_KEEP_WORKDIR:-0}"
 
+# EX_TEMPFAIL: a release holds the lock, so retrying later may succeed.
+EXIT_RELEASE_BUSY=75
+
 WORK_DIR=""
+OUTPUT_DIR=""
 APP_IMAGE="unknown"
 APP_HOST="unknown"
 VOLUME_DIR=""
@@ -79,6 +98,36 @@ log()  { printf '[%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
 warn() { printf '[%s] WARNING: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2; }
 die()  { printf '[%s] ERROR: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2; exit 1; }
 
+usage() {
+  sed -n '2,/^# SECURITY/p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+parse_args() {
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --output-dir)
+        [ "$#" -ge 2 ] || die "--output-dir needs a directory"
+        OUTPUT_DIR="$2"
+        shift 2
+        ;;
+      --output-dir=*)
+        OUTPUT_DIR="${1#--output-dir=}"
+        shift
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        die "unknown argument: $1 (see --help)"
+        ;;
+    esac
+  done
+  [ -n "$OUTPUT_DIR" ] || OUTPUT_DIR="$BACKUP_OUTPUT_DIR"
+  [ -n "$OUTPUT_DIR" ] || OUTPUT_DIR="$BACKUP_STATE_ROOT"
+  [ -n "$OUTPUT_DIR" ] || die "no output directory (pass --output-dir)"
+}
+
 cleanup() {
   if [ -n "$WORK_DIR" ] && [ -d "$WORK_DIR" ] && [ "$BACKUP_KEEP_WORKDIR" != "1" ]; then
     rm -rf "$WORK_DIR"
@@ -86,7 +135,7 @@ cleanup() {
 }
 
 require_tools() {
-  for tool in tar gzip sha256sum flock; do
+  for tool in tar gzip sha256sum flock stat du df realpath; do
     command -v "$tool" >/dev/null || die "$tool is not installed"
   done
   case "$BACKUP_ENCRYPTION" in
@@ -103,6 +152,21 @@ refuse_once_busy() {
   local busy
   busy="$(pgrep -a -f '/usr/local/bin/once[[:space:]]+(backup|restore|update|deploy)' || true)"
   [ -z "$busy" ] || die "an ONCE operation is in flight; refusing to back up now: $busy"
+}
+
+# Work directories older than a day are leftovers of a killed run (a clean
+# run removes its own through the EXIT trap): prune them so a dead run's
+# plaintext staging does not pile up. Only our own naming pattern, only under
+# the state root, never anything fresh enough to belong to a live run.
+prune_stale_workdirs() {
+  [ -d "$BACKUP_STATE_ROOT" ] || return 0
+  local stale
+  while IFS= read -r stale; do
+    [ -n "$stale" ] || continue
+    log "pruning stale work directory: $stale"
+    rm -rf "$stale"
+  done < <(find "$BACKUP_STATE_ROOT" -maxdepth 1 -mindepth 1 -type d \
+    -name 'campfire-backup.*' -mmin +1440 -print)
 }
 
 # The single running ONCE application container. A stopped app means a release
@@ -151,25 +215,75 @@ resolve_volume() {
   log "app volume: $VOLUME_DIR"
 }
 
+# Live bytes that will be staged: the database plus the uploads tree.
+live_data_bytes() {
+  local db="$VOLUME_DIR/$BACKUP_DB_REL" total=0 size
+  [ -f "$db" ] || die "database file not found: $db"
+  size="$(stat -c%s "$db")"
+  total=$((total + size))
+  if [ -d "$VOLUME_DIR/$BACKUP_FILES_REL" ]; then
+    size="$(du -sb "$VOLUME_DIR/$BACKUP_FILES_REL" | awk '{print $1}')"
+    total=$((total + size))
+  fi
+  printf '%s' "$total"
+}
+
+# Peak staging is about 2.5x the live data (snapshot copy + tarball +
+# encrypted copy, briefly coexisting), so refuse to start below
+# BACKUP_FREE_SPACE_FACTOR x rather than dying mid-run with ENOSPC.
+require_free_space() {
+  local dir="$1" needed="$2"
+  local avail
+  avail="$(df -B1 --output=avail "$dir" 2>/dev/null | tail -n 1 | tr -d '[:space:]')"
+  [[ "$avail" =~ ^[0-9]+$ ]] || die "could not read free space for $dir"
+  [ "$avail" -ge "$needed" ] || \
+    die "only $avail bytes free under $dir, need $needed ($BACKUP_FREE_SPACE_FACTOR x the live data)"
+}
+
+# The release lock, taken WITHOUT waiting: a release in flight means
+# storage/backups/production.sqlite3 may be mid-rewrite, so the backup must
+# not trigger prepare-backup now. Exit 75 (EX_TEMPFAIL) so the workflow
+# retries or alerts instead of recording a plain failure.
+take_release_lock() {
+  exec 10>"$BACKUP_RELEASE_LOCK_FILE" \
+    || die "cannot open the release lock $BACKUP_RELEASE_LOCK_FILE"
+  flock -n 10 || {
+    printf '[%s] ERROR: a release holds %s; rerun this backup after the release finishes\n' \
+      "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$BACKUP_RELEASE_LOCK_FILE" >&2
+    exit "$EXIT_RELEASE_BUSY"
+  }
+}
+
+release_release_lock() {
+  flock -u 10 2>/dev/null || true
+  exec 10>&- || true
+}
+
 # Online snapshot through SQLite's backup API. In container mode this runs
 # script/admin/prepare-backup inside the app (the VM has no sqlite3 binary);
 # with BACKUP_VOLUME_DIR it runs the equivalent `.backup` on the host. Both
-# hold only brief page locks: writers keep writing.
+# hold only brief page locks: writers keep writing. The release lock is held
+# from before prepare-backup until the copy out of the volume completes, so
+# storage/backups/production.sqlite3 is never written concurrently with a
+# release; it is released again immediately after, so a backup never blocks a
+# release longer than the snapshot takes.
 snapshot_database() {
   local destination="$1"
+  take_release_lock
   if [ -n "$BACKUP_VOLUME_DIR" ]; then
     local db="$VOLUME_DIR/$BACKUP_DB_REL"
-    [ -f "$db" ] || die "database file not found: $db"
-    command -v sqlite3 >/dev/null || die "sqlite3 CLI is required when BACKUP_VOLUME_DIR is set"
+    [ -f "$db" ] || { release_release_lock; die "database file not found: $db"; }
+    command -v sqlite3 >/dev/null || { release_release_lock; die "sqlite3 CLI is required when BACKUP_VOLUME_DIR is set"; }
     sqlite3 "$db" ".backup main \"$destination\""
   else
     local container produced
     container="$(discover_container)"
     docker exec "$container" /rails/script/admin/prepare-backup
     produced="$VOLUME_DIR/backups/production.sqlite3"
-    [ -f "$produced" ] || die "prepare-backup did not produce $produced"
+    [ -f "$produced" ] || { release_release_lock; die "prepare-backup did not produce $produced"; }
     install -m 0600 "$produced" "$destination"
   fi
+  release_release_lock
   [ -s "$destination" ] || die "database snapshot is empty: $destination"
 }
 
@@ -179,59 +293,52 @@ json_escape() {
   printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' | tr -d '\n\r'
 }
 
-upload_object() {
-  local src="$1" object="$2"
-  local dest="gs://${BACKUP_BUCKET}/${object}"
-  local bin="$BACKUP_UPLOAD_BIN"
-  if [ -z "$bin" ]; then
-    if command -v gcloud >/dev/null; then bin=gcloud; elif command -v gsutil >/dev/null; then bin=gsutil; fi
-  fi
-  case "$bin" in
-    gcloud) gcloud storage cp "$src" "$dest" ;;
-    gsutil) gsutil cp "$src" "$dest" ;;
-    *) die "neither gcloud nor gsutil is installed (BACKUP_UPLOAD_BIN='$BACKUP_UPLOAD_BIN')" ;;
-  esac
-}
-
 main() {
-  [ -n "$BACKUP_BUCKET" ] || die "BACKUP_BUCKET is required"
-  case "$BACKUP_BUCKET" in
-    gs://*|*/*) die "BACKUP_BUCKET must be a bare bucket name, not '$BACKUP_BUCKET'" ;;
-  esac
-  # The installer enables the timer before the lead edits the config, so an
-  # unedited example would otherwise burn a full snapshot+encrypt cycle and
-  # then fail in gcloud's words. Fail fast, in ours.
-  case "$BACKUP_BUCKET" in
-    REPLACE-*) die "BACKUP_BUCKET still has the example placeholder; edit /etc/campfire-backups/backup.env" ;;
-  esac
+  parse_args "$@"
   case "$BACKUP_ENCRYPTION" in
     age)
       [ -n "$BACKUP_AGE_RECIPIENT" ] || die "BACKUP_AGE_RECIPIENT is required for BACKUP_ENCRYPTION=age"
       case "$BACKUP_AGE_RECIPIENT" in
-        REPLACE-*) die "BACKUP_AGE_RECIPIENT still has the example placeholder; edit /etc/campfire-backups/backup.env" ;;
+        REPLACE-*) die "BACKUP_AGE_RECIPIENT still has the example placeholder" ;;
       esac
       ;;
     gpg) [ -n "$BACKUP_GPG_RECIPIENT" ] || die "BACKUP_GPG_RECIPIENT is required for BACKUP_ENCRYPTION=gpg" ;;
   esac
+  [[ "$BACKUP_FREE_SPACE_FACTOR" =~ ^[0-9]+$ ]] || die "BACKUP_FREE_SPACE_FACTOR must be a number"
   require_tools
 
   local stamp="${BACKUP_DATETIME:-$(date -u +%Y%m%d-%H%M%S)}"
   [[ "$stamp" =~ ^[0-9]{8}-[0-9]{6}$ ]] || die "stamp must look like YYYYMMDD-HHMMSS, not '$stamp'"
-  local datestr="${stamp%%-*}"
+
+  if [ -z "$BACKUP_WORK_DIR" ]; then
+    WORK_DIR="$BACKUP_STATE_ROOT/campfire-backup.$stamp"
+  else
+    WORK_DIR="$BACKUP_WORK_DIR"
+  fi
+  local work_abs output_abs
+  work_abs="$(realpath -m "$WORK_DIR")"
+  output_abs="$(realpath -m "$OUTPUT_DIR")"
+  case "$output_abs" in
+    "$work_abs"|"$work_abs"/*)
+      die "--output-dir must not sit inside this run's work directory ($WORK_DIR)" ;;
+  esac
 
   mkdir -p "$BACKUP_STATE_ROOT"
+  mkdir -p "$OUTPUT_DIR"
   exec 9>"$BACKUP_LOCK_FILE"
   flock -n 9 || die "another backup holds $BACKUP_LOCK_FILE"
   trap cleanup EXIT
 
+  prune_stale_workdirs
   refuse_once_busy
   resolve_volume
 
-  if [ -z "$BACKUP_WORK_DIR" ]; then
-    WORK_DIR="$BACKUP_STATE_ROOT/campfire-nightly-$stamp"
-  else
-    WORK_DIR="$BACKUP_WORK_DIR"
-  fi
+  local live_bytes needed
+  live_bytes="$(live_data_bytes)"
+  needed=$((live_bytes * BACKUP_FREE_SPACE_FACTOR))
+  require_free_space "$BACKUP_STATE_ROOT" "$needed"
+  require_free_space "$OUTPUT_DIR" "$needed"
+
   rm -rf "$WORK_DIR"
   mkdir -p "$WORK_DIR"
   chmod 0700 "$WORK_DIR"
@@ -302,42 +409,23 @@ main() {
   esac
   chmod 0600 "$encrypted"
   rm -f "$plain"
-  local enc_sha enc_bytes basename
-  enc_sha="$(sha256sum "$encrypted" | awk '{print $1}')"
-  enc_bytes="$(stat -c%s "$encrypted")"
+
+  # The encrypted archive is the ONLY thing that leaves the work directory:
+  # the EXIT trap removes every byte of plaintext staging with it.
+  local basename final
   basename="$(basename "$encrypted")"
-
-  log "uploading $basename ($enc_bytes bytes, sha256 $enc_sha)"
-  local -a objects=("daily/$basename")
-  # GNU date parses YYYYMMDD. %u: 1=Monday..7=Sunday.
-  local dow dom
-  dow="$(date -u -d "$datestr" +%u)"
-  dom="$(date -u -d "$datestr" +%-d)"
-  [ "$dow" = "7" ] && objects+=("weekly/$basename")
-  [ "$dom" = "1" ] && objects+=("monthly/$basename")
-
-  local object
-  for object in "${objects[@]}"; do
-    # One upload per prefix: a create-only credential cannot read an object
-    # back for a server-side copy.
-    upload_object "$encrypted" "$object"
-    log "uploaded gs://${BACKUP_BUCKET}/${object}"
-  done
+  final="$OUTPUT_DIR/$basename"
+  mv "$encrypted" "$final"
+  chmod 0600 "$final"
+  local enc_sha enc_bytes
+  enc_sha="$(sha256sum "$final" | awk '{print $1}')"
+  enc_bytes="$(stat -c%s "$final")"
 
   {
     printf '{\n'
     printf '  "stamp": "%s",\n' "$stamp"
     printf '  "created_at": "%s",\n' "$created_at"
-    printf '  "bucket": "%s",\n' "$(json_escape "$BACKUP_BUCKET")"
-    printf '  "object": "%s",\n' "$(json_escape "$basename")"
-    printf '  "prefixes": ['
-    local first=1 prefix
-    for object in "${objects[@]}"; do
-      prefix="${object%%/*}"
-      if [ "$first" = "1" ]; then first=0; else printf ', '; fi
-      printf '"%s"' "$prefix"
-    done
-    printf '],\n'
+    printf '  "file": "%s",\n' "$(json_escape "$basename")"
     printf '  "sha256": "%s",\n' "$enc_sha"
     printf '  "bytes": %s,\n' "$enc_bytes"
     printf '  "db_sha256": "%s",\n' "$db_sha"
@@ -348,7 +436,9 @@ main() {
   } > "$BACKUP_STATE_ROOT/campfire-nightly-last.json"
   chmod 0600 "$BACKUP_STATE_ROOT/campfire-nightly-last.json"
 
-  log "backup complete: $basename in ${objects[*]}"
+  log "backup complete: $basename ($enc_bytes bytes, sha256 $enc_sha)"
+  printf 'BACKUP_FILE=%s\n' "$final"
+  printf 'BACKUP_SHA256=%s\n' "$enc_sha"
 }
 
 main "$@"
