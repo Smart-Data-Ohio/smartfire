@@ -471,15 +471,52 @@ class HuddleInvitationTest < ActiveSupport::TestCase
     assert_predicate item.reload, :handled?
   end
 
-  test "direct rooms without exactly two human users get no invitation" do
+  test "a DM with only bots besides the starter gets no invitation" do
     assert_no_difference -> { ActivityItem.count } do
       HuddleGrant.issue!(session: second_session_for(users(:kevin)), membership: memberships(:kevin_bender_and_kevin))
     end
+  end
 
+  test "issuing a grant in a group DM invites every other human member" do
     group_room = Rooms::Direct.create_for({ creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
-    assert_no_difference -> { ActivityItem.count } do
+
+    assert_enqueued_jobs 2, only: Huddle::PushInvitationJob do
       HuddleGrant.issue!(session: @starter_session, membership: group_room.memberships.find_by(user: users(:david)))
     end
+
+    [ users(:jason), users(:kevin) ].each do |recipient|
+      item = ActivityItem.find_by!(user: recipient, event_type: "huddle_started")
+      assert_equal group_room.id, item.source.room_id
+      assert_equal users(:david).id, item.source.user_id
+      assert_predicate item, :unread?
+    end
+    assert_not ActivityItem.exists?(user: users(:david), event_type: "huddle_started")
+  end
+
+  test "group DM invitations skip bots and members who switched the room off" do
+    group_room = Rooms::Direct.create_for({ creator: users(:david) },
+      users: [ users(:david), users(:jason), users(:kevin), users(:bender) ])
+    group_room.memberships.find_by!(user: users(:kevin)).update!(involvement: "nothing")
+
+    HuddleGrant.issue!(session: @starter_session, membership: group_room.memberships.find_by(user: users(:david)))
+
+    assert ActivityItem.exists?(user: users(:jason), event_type: "huddle_started")
+    assert_not ActivityItem.exists?(user: users(:kevin), event_type: "huddle_started")
+    assert_not ActivityItem.exists?(user: users(:bender), event_type: "huddle_started")
+  end
+
+  test "a removed group member gets no invitation and loses their grant" do
+    group_room = Rooms::Direct.create_for({ creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
+    grant = HuddleGrant.issue!(session: second_session_for(users(:kevin)),
+      membership: group_room.memberships.find_by(user: users(:kevin)))
+
+    group_room.memberships.find_by!(user: users(:kevin)).destroy!
+    assert_predicate grant.reload, :revoked?
+
+    HuddleGrant.issue!(session: @starter_session, membership: group_room.memberships.find_by(user: users(:david)))
+
+    assert ActivityItem.exists?(user: users(:jason), event_type: "huddle_started")
+    assert_not ActivityItem.exists?(user: users(:kevin), event_type: "huddle_started")
   end
 
   private

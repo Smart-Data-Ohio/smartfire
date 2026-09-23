@@ -145,15 +145,18 @@ class Users::SidebarsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "group direct rooms render no stack" do
+  test "group direct rooms render member names and a huddle stack" do
     group = Rooms::Direct.create_for({ creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
     issue_in_call_grant!(user: users(:jason), room: group)
 
     get user_sidebar_url
 
     assert_response :success
-    assert_select "##{dom_id(group, :list)}", text: "Ping with J+K"
-    assert_select "##{dom_id(group, :list)} .voice-stack", count: 0
+    assert_select "##{dom_id(group, :list)}", text: /Ping with Jason, Kevin/
+    assert_select "##{dom_id(group, :list)} .voice-stack--live.voice-stack--huddle" do
+      assert_select ".voice-stack__count", text: "1"
+      assert_select "img.voice-stack__avatar[data-user-id='#{users(:jason).id}'][title='Jason']"
+    end
   end
 
   test "no channel or DM stacks without huddle configuration" do

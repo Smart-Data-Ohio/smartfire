@@ -206,10 +206,10 @@ class HuddleGrant < ApplicationRecord
 
   # Post-commit work for every issuance, created or reused: obtaining a grant
   # means joining the room's call, so the issuer's own open invitations for
-  # the room are handled and the DM peer rings for a new call.
+  # the room are handled and the DM's other members ring for a new call.
   def after_issued!
     clear_open_invitations!
-    invite_direct_participant
+    invite_direct_participants
     broadcast_voice_presence
   end
 
@@ -217,10 +217,10 @@ class HuddleGrant < ApplicationRecord
     { grant_id: id, room_name: room_name, identity: identity }
   end
 
-  # Contract consumed by ActivityItems::Recorder. Only the other human in a
-  # one-to-one DM can receive a huddle invitation from this grant.
+  # Contract consumed by ActivityItems::Recorder. Every other human member
+  # of a direct room can receive a huddle invitation from this grant.
   def activity_recipient_ids
-    [ direct_huddle_recipient&.id ].compact
+    direct_huddle_recipients.map(&:id)
   end
 
   # Refresh the presence stacks in the room members' sidebars and in the
@@ -258,18 +258,20 @@ class HuddleGrant < ApplicationRecord
       open_invitations_for(user_id).find_each(&:mark_handled!)
     end
 
-    # A huddle "starts" for a DM when a grant is issued while the other
-    # participant is not in the call. Grants persist per session, so issuance
-    # (created or reused) drives the ring and the dedup window guards it: any
-    # invitation or missed item from the last two minutes, handled or not,
-    # keeps reconnects and rejoins silent.
-    def invite_direct_participant
-      # Voice and stage channels are standing calls that members join at
-      # will: nobody is ever invited, rung, or marked as missing the call.
-      return if room.is_a?(Rooms::Voice) || room.is_a?(Rooms::Stage)
+    # A huddle "starts" for a DM when a grant is issued while another
+    # member is not in the call. Grants persist per session, so issuance
+    # (created or reused) drives the ring and the dedup window guards it:
+    # any invitation or missed item from the last two minutes, handled or
+    # not, keeps reconnects and rejoins silent. Channel huddles and the
+    # standing voice and stage calls never invite: only direct rooms ring,
+    # and then every other human member at once.
+    def invite_direct_participants
+      direct_huddle_recipients.each do |recipient|
+        invite_direct_recipient(recipient)
+      end
+    end
 
-      recipient = direct_huddle_recipient
-      return unless recipient
+    def invite_direct_recipient(recipient)
       return if HuddleGrant.in_call.where(room_id: room_id, user_id: recipient.id).exists?
       return if recent_invitation?(recipient)
       return if recent_grant_issuance?
@@ -366,21 +368,22 @@ class HuddleGrant < ApplicationRecord
       refreshed
     end
 
-    def direct_huddle_recipient
-      return unless room.is_a?(Rooms::Direct)
+    # Every other human member of a direct room, one-to-one or group.
+    # Bots hold no sessions and can never join, so they never ring.
+    # Members who switched the room off or hid it get nothing.
+    def direct_huddle_recipients
+      return [] unless room.is_a?(Rooms::Direct)
 
-      member_ids = room.memberships.pluck(:user_id)
-      return unless member_ids.size == 2
-      return unless User.active.without_bots.where(id: member_ids).count == 2
+      other_ids = room.memberships.pluck(:user_id) - [ user_id ]
+      return [] if other_ids.empty?
 
-      other_id = (member_ids - [ user_id ]).first
-      return unless other_id
+      recipients = User.active.without_bots.where(id: other_ids).to_a
+      return [] if recipients.empty?
 
-      recipient = User.active.without_bots.find_by(id: other_id)
-      return unless recipient
-      return if room.memberships.where(user_id: other_id, involvement: %w[ nothing invisible ]).exists?
-
-      recipient
+      silenced = room.memberships
+        .where(user_id: recipients.map(&:id), involvement: %w[ nothing invisible ])
+        .pluck(:user_id).to_set
+      recipients.reject { |recipient| silenced.include?(recipient.id) }
     end
 
     def recent_invitation?(recipient)
@@ -423,21 +426,26 @@ class HuddleGrant < ApplicationRecord
       saved_change_to_revoked_at? && in_call?
     end
 
-    # Tells the DM peer's banner the call ended: the starter hung up, was
-    # removed, or joined another room. Open invitations for this grant flip
-    # the banner to a "caller left" state instead of ringing until the
+    # Tells each rung member's banner the call ended: the starter hung up,
+    # was removed, or joined another room. Open invitations for this grant
+    # flip the banner to a "caller left" state instead of ringing until the
     # missed-call resolution; a banner-only ring (items switched off) gets
     # the same payload with a zero id. The items themselves still resolve
     # to missed calls on their own schedule.
     def broadcast_call_ended_to_invitee
       return unless room && user
 
-      delivered = false
+      delivered_user_ids = Set.new
       open_call_items.find_each do |item|
         ActionCable.server.broadcast ActivityChannel.stream_name_for(item.user_id), call_ended_payload(item)
-        delivered = true
+        delivered_user_ids << item.user_id
       end
-      broadcast_suppressed_call_ended! unless delivered
+
+      direct_huddle_recipients.each do |recipient|
+        next if delivered_user_ids.include?(recipient.id)
+
+        broadcast_suppressed_call_ended_to!(recipient)
+      end
     end
 
     def open_call_items
@@ -465,9 +473,7 @@ class HuddleGrant < ApplicationRecord
       }
     end
 
-    def broadcast_suppressed_call_ended!
-      recipient = direct_huddle_recipient
-      return unless recipient
+    def broadcast_suppressed_call_ended_to!(recipient)
       return if recipient.inbox_preferences.huddle_invitations
       return unless last_issued_at.present? && last_issued_at > CALL_ENDED_WINDOW.ago
       return unless ActivityItem.active_human?(recipient)
@@ -516,7 +522,7 @@ class HuddleGrant < ApplicationRecord
 
     def suppressed_invitation_room_name(recipient)
       if room.direct?
-        room.users.without(recipient).pluck(:name).to_sentence.presence || recipient.name
+        room.direct_display_name(for_user: recipient)
       else
         room.name
       end

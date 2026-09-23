@@ -30,9 +30,9 @@
       <% end %>
     </span>
   </span>
-  <%# Only two-person DMs can huddle. The collection cache key already covers %>
-  <%# presence, so the stack renders inline with the rest of the row. %>
-  <% if Huddle.configured? && two_person_direct_room_ids.include?(membership.room_id) %>
+  <%# Every DM can huddle. The collection cache key already covers presence, %>
+  <%# so the stack renders inline with the rest of the row. %>
+  <% if Huddle.configured? %>
     <span class="voice-room__trailing">
       <%= render "rooms/huddles/participants", room: membership.room, placement: :sidebar, participants: huddle_participants_by_room_id[membership.room_id] || [] %>
     </span>
