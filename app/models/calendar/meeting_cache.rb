@@ -47,6 +47,18 @@ module Calendar
       parsed_ooo_intervals.map { |start_at, end_at| [ start_at.to_i, end_at.to_i ] }
     end
 
+    # Claims the one follow-up refresh owed when a push notification
+    # lands inside the throttle window: the conditional UPDATE wins only
+    # when no follow-up was claimed within the window, so a burst of
+    # pushes enqueues exactly one delayed job. Any completed fetch
+    # clears the claim. Returns true when this call won and the caller
+    # must enqueue.
+    def claim_refresh_followup!(now: Time.current, window: MeetingRefresh::PUSH_THROTTLE)
+      self.class.where(id:)
+        .where("refresh_pending_at IS NULL OR refresh_pending_at <= ?", now - window)
+        .update_all(refresh_pending_at: now, updated_at: Time.current) == 1
+    end
+
     # Claims a boundary flip: the conditional UPDATE wins only when the
     # stored broadcast state differs, so concurrent dispatchers (or a
     # re-run) announce each flip exactly once. Returns true when this

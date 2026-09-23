@@ -160,6 +160,44 @@ class Calendar::MeetingRefreshTest < ActiveSupport::TestCase
     assert_not_requested stub
   end
 
+  test "a throttled refresh enqueues one delayed follow-up" do
+    Calendar::MeetingCache.create!(user: @user, fetched_at: 30.seconds.ago)
+    stub = stub_list_events(items: [])
+
+    assert_equal :fresh, Calendar::MeetingRefresh.refresh(@user.id)
+
+    assert_not_requested stub
+    followups = ActiveJob::Base.queue_adapter.enqueued_jobs
+      .select { |job| job[:job] == Calendar::MeetingRefreshJob }
+    assert_equal 1, followups.size
+    assert_equal [ @user.id ], followups.first[:args]
+    assert_in_delta Calendar::MeetingRefresh::PUSH_THROTTLE.from_now.to_f, followups.first[:at], 5
+  end
+
+  test "a second throttled refresh inside the window enqueues no further follow-up" do
+    Calendar::MeetingCache.create!(user: @user, fetched_at: 30.seconds.ago)
+
+    assert_equal :fresh, Calendar::MeetingRefresh.refresh(@user.id)
+
+    assert_no_enqueued_jobs only: Calendar::MeetingRefreshJob do
+      assert_equal :fresh, Calendar::MeetingRefresh.refresh(@user.id)
+    end
+  end
+
+  test "a completed fetch clears the follow-up claim" do
+    Calendar::MeetingCache.create!(user: @user, fetched_at: 30.seconds.ago)
+    stub_list_events(items: [])
+
+    assert_equal :fresh, Calendar::MeetingRefresh.refresh(@user.id)
+    travel 61.seconds do
+      assert_equal :ok, Calendar::MeetingRefresh.refresh(@user.id)
+    end
+
+    assert_enqueued_with(job: Calendar::MeetingRefreshJob, args: [ @user.id ]) do
+      assert_equal :fresh, Calendar::MeetingRefresh.refresh(@user.id)
+    end
+  end
+
   test "an OOO-only member's refresh stores OOO intervals with the wider lookahead" do
     @user.update!(meeting_status_enabled: false, ooo_calendar_enabled: true)
     stub_list_events(items: [

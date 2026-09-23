@@ -72,7 +72,8 @@ its own opt-in:
 
 - immediately on opt-in, on reconnect, and on calendar push
   notifications (throttled to one fetch per minute per member, so push
-  bursts never hammer Google);
+  bursts never hammer Google; a push inside the window claims one
+  delayed follow-up, so the change is never dropped);
 - at most every 15 minutes by the periodic sweep.
 
 The `meeting status` task in `Periodic::Runner` runs every minute. Each

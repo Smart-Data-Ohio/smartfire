@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_23_164100) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_171300) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -321,6 +321,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_164100) do
     t.datetime "fetched_at"
     t.boolean "in_meeting_broadcast"
     t.json "ooo_intervals", default: [], null: false
+    t.datetime "refresh_pending_at"
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
     t.index ["user_id"], name: "index_calendar_meeting_caches_on_user_id", unique: true

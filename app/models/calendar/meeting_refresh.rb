@@ -13,6 +13,9 @@ module Calendar
   # bodies) keep the last good intervals so the status keeps showing.
   # The 15-minute refresh cadence is the retry; failures stamp
   # fetched_at too, so a dead grant backs off instead of hot-looping.
+  # A push that lands inside the throttle window is never dropped: the
+  # first one claims a delayed follow-up on the cache row, so the burst
+  # re-reads once the window passes.
   class MeetingRefresh
     LOOKBEHIND = 1.hour
     LOOKAHEAD = 24.hours
@@ -37,7 +40,12 @@ module Calendar
       end
 
       cache = user.meeting_cache
-      return :fresh if cache&.fetched_at && cache.fetched_at > now - PUSH_THROTTLE
+      if cache&.fetched_at && cache.fetched_at > now - PUSH_THROTTLE
+        if cache.claim_refresh_followup!(now:)
+          Calendar::MeetingRefreshJob.set(wait: PUSH_THROTTLE).perform_later(user.id)
+        end
+        return :fresh
+      end
 
       lookahead = user.ooo_calendar_enabled? ? OOO_LOOKAHEAD : LOOKAHEAD
       response = Google::Client.new(account).list_events(time_min: now - LOOKBEHIND, time_max: now + lookahead)
@@ -61,7 +69,7 @@ module Calendar
           user_id: user.id,
           busy_intervals: user.meeting_status_enabled? ? iso_pairs(busy) : [],
           ooo_intervals: user.ooo_calendar_enabled? ? iso_pairs(ooo) : [],
-          fetched_at: now, fetch_error: nil
+          fetched_at: now, fetch_error: nil, refresh_pending_at: nil
         },
         unique_by: :user_id
       )
@@ -69,7 +77,8 @@ module Calendar
 
     def self.store_error!(user, message, now:)
       MeetingCache.upsert(
-        { user_id: user.id, busy_intervals: [], ooo_intervals: [], fetched_at: now, fetch_error: message },
+        { user_id: user.id, busy_intervals: [], ooo_intervals: [], fetched_at: now, fetch_error: message,
+          refresh_pending_at: nil },
         unique_by: :user_id
       )
     end
@@ -81,7 +90,7 @@ module Calendar
     # the 15-minute cadence.
     def self.store_transient_error!(user, message, now:)
       MeetingCache.upsert(
-        { user_id: user.id, fetched_at: now, fetch_error: message },
+        { user_id: user.id, fetched_at: now, fetch_error: message, refresh_pending_at: nil },
         unique_by: :user_id
       )
     end

@@ -98,7 +98,8 @@ Calendar OOO intervals live in `calendar_meeting_caches` beside the busy
 intervals and refresh through `Calendar::MeetingRefreshJob`:
 
 - immediately on opt-in, on reconnect, and on calendar push
-  notifications (throttled to one fetch per minute per member);
+  notifications (throttled to one fetch per minute per member, with one
+  delayed follow-up claimed per burst so the change is never dropped);
 - at most every 15 minutes by the periodic sweep (OOO-only members
   refresh through the OOO dispatcher; members with both opt-ins refresh
   through the meeting dispatcher, so one tick never enqueues two).
