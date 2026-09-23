@@ -104,7 +104,7 @@ class AuditLog < ApplicationRecord
       target_label: target_label || label_for(target),
       details: filter_secrets(changes),
       ip_address: ip_address || request&.remote_ip,
-      user_agent: user_agent || request&.user_agent
+      user_agent: (user_agent || request&.user_agent)&.truncate(USER_AGENT_MAX)
     )
   end
 
@@ -159,13 +159,14 @@ class AuditLog < ApplicationRecord
   # keeps only the origin (scheme + host + non-default port) plus a
   # digest prefix of the full URL: a change stays visible without the
   # secret. Nil in, nil out, so clearing a URL still logs.
-  WEBHOOK_DIGEST_LENGTH = 12
+  DIGEST_PREFIX_LENGTH = 12
+  USER_AGENT_MAX = 512
 
   def self.webhook_origin_summary(url)
     return nil if url.blank?
 
     origin = parse_webhook_origin(url.to_s)
-    { origin: origin, digest: Digest::SHA256.hexdigest(url.to_s)[0, WEBHOOK_DIGEST_LENGTH] }
+    { origin: origin, digest: Digest::SHA256.hexdigest(url.to_s)[0, DIGEST_PREFIX_LENGTH] }
   end
 
   # Marks a before/after pair explicitly so the admin UI renders it as

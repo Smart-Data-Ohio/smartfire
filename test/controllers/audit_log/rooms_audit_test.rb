@@ -152,7 +152,7 @@ class AuditLog::RoomsAuditTest < ActionDispatch::IntegrationTest
     assert_equal({ "before" => true, "after" => false }, AuditLog.where(action: "account.settings.change").last.details["logo"])
   end
 
-  test "custom styles changes are recorded" do
+  test "custom styles changes are recorded as size and digest" do
     previous = Current.account.custom_styles
 
     assert_difference -> { AuditLog.where(action: "account.custom_styles.change").count }, +1 do
@@ -160,7 +160,12 @@ class AuditLog::RoomsAuditTest < ActionDispatch::IntegrationTest
     end
 
     entry = AuditLog.where(action: "account.custom_styles.change").last
-    assert_equal({ "before" => previous, "after" => "body { color: red; }" }, entry.details["custom_styles"])
+    pair = entry.details["custom_styles"]
+    assert_equal previous.to_s.bytesize, pair["before"]["size"]
+    assert_equal "body { color: red; }".bytesize, pair["after"]["size"]
+    assert_equal Digest::SHA256.hexdigest(previous.to_s)[0, 12], pair["before"]["digest"]
+    assert_equal Digest::SHA256.hexdigest("body { color: red; }")[0, 12], pair["after"]["digest"]
+    assert_no_match "color: red", entry.details.to_json
   end
 
   test "unchanged custom styles write no row" do

@@ -116,6 +116,13 @@ class AuditLogTest < ActiveSupport::TestCase
     assert_equal [ "kevin@37signals.com", "new@example.com" ], entry.details["email_address"]
   end
 
+  test "record! truncates long user agents" do
+    entry = AuditLog.record!(action: "user.ban", target: users(:kevin), user_agent: "a" * 600)
+
+    assert_equal 512, entry.user_agent.length
+    assert_equal "#{"a" * 509}...", entry.user_agent
+  end
+
   test "persisted rows are readonly" do
     entry = AuditLog.record!(action: "user.ban", target: users(:kevin))
 
