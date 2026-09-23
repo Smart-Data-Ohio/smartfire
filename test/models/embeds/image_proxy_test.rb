@@ -109,6 +109,28 @@ class Embeds::ImageProxyTest < ActiveSupport::TestCase
     end
   end
 
+  test "fetch refuses hosts resolving to blocked IPv6 addresses" do
+    [ "::1", "fd00::1", "fe80::1", "::ffff:127.0.0.1" ].each do |ip|
+      stub_dns_resolution(ip)
+
+      assert_raises RestrictedHTTP::Violation, "expected #{ip} to be refused" do
+        @proxy.fetch(@url)
+      end
+    end
+
+    assert_not_requested :get, @url
+  end
+
+  test "fetch refuses IP-literal urls pointing at blocked addresses" do
+    [ "http://127.0.0.1/", "http://[::1]/", "http://2130706433/" ].each do |url|
+      assert_raises RestrictedHTTP::Violation, "expected #{url} to be refused" do
+        @proxy.fetch(url)
+      end
+    end
+
+    assert_not_requested :get, /.*/
+  end
+
   test "fetch does not follow redirects to private networks" do
     WebMock.stub_request(:get, @url)
       .to_return(status: 302, headers: { location: "https://internal.example.com/photo.png" })
