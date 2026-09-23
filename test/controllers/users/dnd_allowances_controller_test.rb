@@ -23,6 +23,18 @@ class Users::DndAllowancesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, users(:david).dnd_allowed_users.count
   end
 
+  test "a concurrent star reports success instead of an error" do
+    # Two simultaneous stars both miss the lookup; the loser's insert
+    # hits the unique index. Simulate the loser's insert deterministically.
+    losing_proxy = DndAllowedUser.where(user: users(:david))
+    losing_proxy.stubs(:find_or_create_by!).raises(ActiveRecord::RecordNotUnique)
+    User.any_instance.stubs(:dnd_allowed_users).returns(losing_proxy)
+
+    post user_dnd_allowance_url(users(:jason))
+
+    assert_redirected_to user_url(users(:jason))
+  end
+
   test "cannot star yourself" do
     post user_dnd_allowance_url(users(:david))
 

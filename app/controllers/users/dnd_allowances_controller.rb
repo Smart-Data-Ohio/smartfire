@@ -8,6 +8,10 @@ class Users::DndAllowancesController < ApplicationController
     Current.user.dnd_allowed_users.find_or_create_by!(allowed_user: @allowed_user)
 
     redirect_to user_url(@allowed_user), notice: "✓"
+  rescue ActiveRecord::RecordNotUnique
+    # A concurrent star won the unique index first; the exception the
+    # member wanted already exists.
+    redirect_to user_url(@allowed_user), notice: "✓"
   end
 
   def destroy
