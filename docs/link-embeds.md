@@ -61,7 +61,13 @@ The fetch client (`LinkEmbed::Fetcher`) reuses the existing
 SSRF guard (hostnames resolved through `PrivateNetworkGuard` with the
 resolved address pinned for the connection, redirect targets
 re-resolved), explicit 5 s open/read/write timeouts, the 5 MB body cap,
-and no cookies (no `Cookie` header is ever set). The parser
+and no cookies (no `Cookie` header is ever set). On top of that each
+embed fetch has an overall 10 s deadline across all its redirects and
+reads (`LinkEmbed::Fetcher::FETCH_DEADLINE_SECONDS`, enforced with
+`Timeout`, with `Net::HTTP`'s silent idempotent retry disabled so the
+retry cannot swallow the deadline's own fire) and follows at most 3
+redirects (`LinkEmbed::Fetcher::MAX_REDIRECTS`); a slow drip or a
+redirect loop records the usual negative result. The parser
 (`LinkEmbed::MetadataParser`) reads OpenGraph tags first, then the
 Twitter-card equivalents, then the document `<title>` and meta
 description; `og:site_name` falls back to the page host. There is no

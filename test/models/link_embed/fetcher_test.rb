@@ -96,6 +96,43 @@ class LinkEmbed::FetcherTest < ActiveSupport::TestCase
     assert_not_requested :get, "https://intranet.example/secret"
   end
 
+  test "follows three redirects but gives up on the fourth" do
+    3.times do |index|
+      WebMock.stub_request(:get, "https://example.com/hop-#{index}")
+        .to_return(status: 302, headers: { location: "https://example.com/hop-#{index + 1}" })
+    end
+    WebMock.stub_request(:get, "https://example.com/hop-3")
+      .to_return(status: 200, body: "<html><head><meta property=\"og:title\" content=\"Three hops\"></head></html>",
+        headers: { content_type: "text/html" })
+
+    embed = LinkEmbed.create!(normalized_url: "https://example.com/hop-0")
+    LinkEmbed::Fetcher.new(embed).fetch
+
+    assert_equal "Three hops", embed.reload.title
+    assert_nil embed.fetch_error
+
+    WebMock.stub_request(:get, "https://example.com/hop-3")
+      .to_return(status: 302, headers: { location: "https://example.com/hop-4" })
+    WebMock.stub_request(:get, "https://example.com/hop-4")
+      .to_return(status: 200, body: "<html><head><meta property=\"og:title\" content=\"Four hops\"></head></html>",
+        headers: { content_type: "text/html" })
+
+    LinkEmbed::Fetcher.new(embed).fetch
+
+    assert_equal "Could not load this link", embed.reload.fetch_error
+  end
+
+  test "records a fetch past the deadline instead of raising" do
+    WebMock.stub_request(:get, "https://example.com/slow").to_raise(Timeout::Error)
+
+    embed = LinkEmbed.create!(normalized_url: "https://example.com/slow")
+    LinkEmbed::Fetcher.new(embed).fetch
+    embed.reload
+
+    assert_equal "Could not load this link", embed.fetch_error
+    assert_in_delta LinkEmbed::NEGATIVE_TTL.from_now.to_i, embed.expires_at.to_i, 5
+  end
+
   test "records network failures instead of raising" do
     WebMock.stub_request(:get, "https://example.com/down").to_raise(Errno::ECONNREFUSED)
 
