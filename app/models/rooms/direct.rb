@@ -215,9 +215,10 @@ class Rooms::Direct < Room
     # render as one compact centered line with the actor's name, broadcast
     # into open timelines, and skip unread, push, agents, inbox, and
     # search. The note text only — the presentation owns the actor name.
-    # Plain Action Text, never Markdown: member and group names render
-    # literally instead of being parsed as formatting.
+    # Plain Action Text, never Markdown: the text is escaped on the way in
+    # so member and group names render literally instead of being parsed
+    # as formatting.
     def post_system_note(text, creator:)
-      messages.create!(creator: creator, system_note: true, body: text).tap(&:broadcast_create)
+      messages.create!(creator: creator, system_note: true, body: ERB::Util.h(text)).tap(&:broadcast_create)
     end
 end

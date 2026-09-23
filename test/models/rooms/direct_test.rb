@@ -233,6 +233,23 @@ class Rooms::DirectTest < ActiveSupport::TestCase
     assert_broadcasts room_messages_stream_name(group), 1, &quiet
   end
 
+  test "membership notes escape member and group names instead of parsing them as HTML" do
+    tricky = User.create!(name: "<b>x</b>", email_address: "tricky-member@example.test")
+    group = Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:kevin) ])
+
+    group.add_members([ tricky ], added_by: users(:david))
+    added = group.messages.where(system_note: true).last
+    assert_equal "added <b>x</b> to the group", added.plain_text_body
+    assert_includes added.body.body.to_html, "added &lt;b&gt;x&lt;/b&gt; to the group"
+
+    travel 61.seconds do
+      group.rename("<img src=x onerror=alert(1)>", renamed_by: users(:david))
+    end
+    renamed = group.messages.where(system_note: true).last
+    assert_equal "renamed the group to <img src=x onerror=alert(1)>", renamed.plain_text_body
+    assert_includes renamed.body.body.to_html, "&lt;img src=x onerror=alert(1)&gt;"
+  end
+
   test "rename notes are rate-limited to one per room per minute" do
     group = Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:kevin) ])
 
