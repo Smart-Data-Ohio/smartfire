@@ -67,6 +67,27 @@ class ThreadsTest < ApplicationSystemTestCase
     assert_selector "#thread-panel .boosts__reactions", text: "👍", wait: 10
   end
 
+  test "a stray create re-entry does not wipe the half-filled thread name" do
+    thread_name = "Survives a stray reset"
+    first_message = "The name survives the re-entry."
+
+    open_threads
+    click_button "New thread"
+    assert_selector "#thread-panel [data-thread-panel-target='create']", visible: true, wait: 10
+    fill_in "Thread name", with: thread_name
+    fill_in "First message", with: first_message
+
+    # A second beginCreate for the same context used to blank the name, and
+    # the server defaults a blank name to "New thread", opening the wrong
+    # thread. A fresh open, a parent change, or an explicit name still
+    # resets it; only the same-context re-entry preserves the draft.
+    page.execute_script("window.dispatchEvent(new CustomEvent('message:thread', { detail: {} }))")
+
+    find("#thread-panel [data-thread-panel-target='createSubmit']").click
+    wait_for_thread_conversation(thread_name)
+    assert_thread_message first_message
+  end
+
   test "browses active and closed threads and can join or leave a closed one" do
     active_name = "Active planning thread"
     closed_name = "Closed planning thread"
