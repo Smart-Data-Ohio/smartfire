@@ -9,11 +9,12 @@ import {
   validDriveFileId
 } from "helpers/drive_attachments"
 
-// Enhanced Drive composer button: picks a file with the official Google
+// Enhanced Drive composer flow: picks a file with the official Google
 // Picker, then offers to attach it as-is or explicitly grant the current
-// chat recipients reader access first. Renders only when the layout
-// carries the google-drive-share meta tag (see RoomsHelper); otherwise
-// the composer falls back to the legacy drive-picker.
+// chat recipients reader access first. Started from the attach menu's
+// "From Google Drive" item; renders only when the layout carries the
+// google-drive-share meta tag (see RoomsHelper), otherwise the composer
+// falls back to the legacy drive-picker.
 //
 // Authorization uses Google Identity Services with ONLY the drive.file
 // scope and include_granted_scopes:false. The access token lives in JS
@@ -149,7 +150,7 @@ export default class extends Controller {
       return
     }
     // "continue" means the scripts finished loading and the panel offers
-    // a Continue button; pressing the Drive button itself works the same.
+    // a Continue button; choosing From Google Drive again works the same.
     if (this.phase !== "idle" && this.phase !== "continue") return
 
     const config = this.#config()
@@ -1176,7 +1177,7 @@ export default class extends Controller {
   #showPanel(message, { action = null, onAction = null } = {}) {
     this.panelTarget.replaceChildren()
     this.panelTarget.hidden = false
-    this.buttonTarget.setAttribute("aria-expanded", "true")
+    if (this.hasButtonTarget) this.buttonTarget.setAttribute("aria-expanded", "true")
 
     const header = document.createElement("div")
     header.className = "drive-share__header"
@@ -1225,11 +1226,11 @@ export default class extends Controller {
   }
 
   #hidePanel() {
-    if (!this.hasPanelTarget || !this.hasButtonTarget) return
+    if (!this.hasPanelTarget) return
     this.#disarmOutsideDismiss()
     this.panelTarget.hidden = true
     this.panelTarget.replaceChildren()
-    this.buttonTarget.setAttribute("aria-expanded", "false")
+    if (this.hasButtonTarget) this.buttonTarget.setAttribute("aria-expanded", "false")
     this.panelHandler = null
   }
 
@@ -1250,7 +1251,7 @@ export default class extends Controller {
 
   // Quiet cancel: picker CANCEL, closed consent popup, denied consent,
   // or the panel's own Cancel/Close/Escape. No dialog, no message;
-  // focus returns to the Drive button and the next click starts fresh.
+  // focus returns to the + button and the next click starts fresh.
   #cancelToIdle(flowId) {
     if (!this.#current(flowId)) return
     this.flowId++
@@ -1259,7 +1260,7 @@ export default class extends Controller {
     try { this.picker?.setVisible(false) } catch { /* picker already gone */ }
     this.picker = null
     this.#hidePanel()
-    this.buttonTarget.focus({ preventScroll: true })
+    this.#returnFocus()
   }
 
   // Dismisses whatever the panel currently shows. Idle error panels
@@ -1275,7 +1276,16 @@ export default class extends Controller {
     try { this.picker?.setVisible(false) } catch { /* picker already gone */ }
     this.picker = null
     this.#hidePanel()
-    this.buttonTarget.focus({ preventScroll: true })
+    this.#returnFocus()
+  }
+
+  // Focus returns to the composer's + button: the flow starts from
+  // its menu, and the standalone Drive button is gone.
+  #returnFocus() {
+    const target = this.hasButtonTarget
+      ? this.buttonTarget
+      : this.element.closest("form")?.querySelector("[data-attach-menu-target='button']")
+    target?.focus({ preventScroll: true })
   }
 
   #armOutsideDismiss() {
@@ -1325,7 +1335,7 @@ export default class extends Controller {
       this.dialog = null
     }
     this.#hidePanel()
-    this.buttonTarget.focus({ preventScroll: true })
+    this.#returnFocus()
   }
 
   // Turbo snapshot/navigation and Stimulus disconnect: dismiss Google UI,

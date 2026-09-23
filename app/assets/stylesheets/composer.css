@@ -162,11 +162,17 @@
   outline: none;
 }
 
-.composer__attachment-btn,
+.composer__attach,
 .composer__send {
   --btn-size: 2.15rem;
   align-self: flex-end;
   margin-block-end: max(0px, calc((var(--composer-editor-min-size) - var(--btn-size)) / 2));
+}
+
+/* The + button's wrapper sizes to the button; the file input and the
+   menu are out of flow, so the button keeps its exact geometry. */
+.composer__attach {
+  display: grid;
 }
 
 .composer__attachment-btn {
@@ -199,6 +205,37 @@
   font-weight: 300;
   line-height: 1;
   margin-block-start: -0.1em;
+}
+
+/* The device file input stays rendered (a display:none input cannot be
+   clicked open everywhere) but invisible and out of reach: the + button
+   and its menu are the only controls. */
+.attach-menu__file {
+  block-size: 1px;
+  inline-size: 1px;
+  margin: 0;
+  opacity: 0;
+  overflow: clip;
+  pointer-events: none;
+  position: absolute;
+}
+
+/* The + menu reuses .room-menu for its popover frame; both items keep
+   touch-sized targets on every pointer, and the menu opens above the
+   composer, where the controller clamps it into the viewport. */
+.attach-menu {
+  z-index: 20;
+}
+
+.attach-menu .room-menu__item {
+  min-block-size: 44px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attach-menu,
+  .attach-menu .room-menu__item {
+    transition: none;
+  }
 }
 
 .composer__send {

@@ -13,7 +13,7 @@ class DriveSharePickerTest < ActionDispatch::IntegrationTest
     ENV["GOOGLE_PICKER_API_KEY"], ENV["GOOGLE_CLOUD_PROJECT_NUMBER"] = @picker_env_before_test
   end
 
-  test "composer carries a single enhanced Drive button when sharing is configured" do
+  test "composer carries a single enhanced Drive menu item when sharing is configured" do
     configure_picker!
 
     get room_url(@room)
@@ -24,11 +24,12 @@ class DriveSharePickerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, '<meta name="google-picker-api-key" content="test-picker-key">'
     assert_includes response.body, '<meta name="google-cloud-project-number" content="123456789012">'
     assert_select '[data-controller="drive-share"]', count: 1
-    assert_select "button.composer__drive-btn", text: "Drive", count: 1
+    assert_select "button.composer__attachment-btn[aria-haspopup='menu']", count: 1
+    assert_select ".attach-menu [role='menuitem']", text: "From Google Drive", count: 1
     assert_select '[data-controller="drive-picker"]', count: 0
   end
 
-  test "enhanced button needs no Drive consent and wins over the legacy picker" do
+  test "enhanced menu item needs no Drive consent and wins over the legacy picker" do
     configure_picker!
     connect_google!(users(:david), scopes: DRIVE_SCOPES)
 
@@ -51,13 +52,14 @@ class DriveSharePickerTest < ActionDispatch::IntegrationTest
     assert_select '[data-controller="drive-picker"]', count: 1
   end
 
-  test "composer omits every Drive button without sharing or Drive consent" do
+  test "composer omits every Drive menu item without sharing or Drive consent" do
     get room_url(@room)
 
     assert_response :success
     assert_not_includes response.body, "google-drive-share"
     assert_select '[data-controller="drive-share"]', count: 0
     assert_select '[data-controller="drive-picker"]', count: 0
+    assert_select ".attach-menu", count: 0
   end
 
   test "signed-out visitors see no share metas or buttons" do
