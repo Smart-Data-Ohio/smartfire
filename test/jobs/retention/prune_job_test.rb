@@ -48,6 +48,25 @@ class Retention::PruneJobTest < ActiveJob::TestCase
     assert AuditLog.exists?(new_entry.id)
   end
 
+  test "prunes expired two-factor devices and setup secrets and keeps live ones" do
+    user = users(:david)
+    live_device, _token = TwoFactorRememberedDevice.create_for!(user, user_agent: "Browser", ip_address: "1.2.3.4")
+    expired_device, _token = TwoFactorRememberedDevice.create_for!(user, user_agent: "Old", ip_address: "5.6.7.8")
+    expired_device.update!(expires_at: 1.minute.ago)
+
+    live_secret = TwoFactorSetupSecret.issue_for!(sessions(:david_safari))
+    other_session = user.sessions.create!(user_agent: "Other", ip_address: "9.9.9.9")
+    expired_secret = TwoFactorSetupSecret.issue_for!(other_session)
+    expired_secret.update!(expires_at: 1.minute.ago)
+
+    Retention::PruneJob.perform_now
+
+    assert_empty TwoFactorRememberedDevice.where(id: expired_device.id)
+    assert TwoFactorRememberedDevice.exists?(live_device.id)
+    assert_empty TwoFactorSetupSecret.where(id: expired_secret.id)
+    assert TwoFactorSetupSecret.exists?(live_secret.id)
+  end
+
   test "prunes old webhook deliveries and keeps recent ones" do
     old_delivery = travel_to(15.days.ago) do
       Github::WebhookDelivery.create!(delivery_guid: "old-guid", event: "pull_request")
