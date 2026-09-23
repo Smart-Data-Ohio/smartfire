@@ -130,17 +130,20 @@ module SlashCommands
       private
         def post_message(context, markdown_source, action: false)
           message = if context.thread
+            # post_message! already processes attachments, and the thread
+            # path never fans out to legacy webhooks (see
+            # ChannelThreadMessagesController#create).
             context.thread.post_message!(
               creator: context.user,
               attributes: { markdown_source:, action: }
             )
           else
             context.room.root_messages.create!(creator: context.user, markdown_source:, action:)
+              .tap(&:process_attachment)
           end
 
-          message.process_attachment
           message.broadcast_create
-          Message::BotWebhookFanout.deliver_for(message)
+          Message::BotWebhookFanout.deliver_for(message) unless context.thread
           message
         end
 

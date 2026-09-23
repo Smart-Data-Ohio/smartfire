@@ -165,6 +165,38 @@ class SlashCommands::DispatcherTest < ActiveSupport::TestCase
     assert_includes message.plain_text_body, "¯_(ツ)_/¯"
   end
 
+  test "slash posts in threads skip the legacy webhook fanout" do
+    legacy = User.create_bot!(name: "Legacy Note", webhook_url: "https://example.test/legacy-note")
+    @room.memberships.grant_to(legacy)
+    thread = ChannelThread.create!(room: @room, creator: @user, name: "Side chat")
+
+    assert_no_enqueued_jobs only: Bot::WebhookJob do
+      result = SlashCommands::Dispatcher.dispatch(
+        user: @user, room: @room, thread: thread, text: "/shrug Hey @[Legacy Note]"
+      )
+      assert_equal :posted, result.kind
+    end
+  end
+
+  test "slash posts in channels fan out to legacy webhooks" do
+    legacy = User.create_bot!(name: "Legacy Note", webhook_url: "https://example.test/legacy-note")
+    @room.memberships.grant_to(legacy)
+
+    assert_enqueued_jobs 1, only: Bot::WebhookJob do
+      result = dispatch("/shrug Hey @[Legacy Note]")
+      assert_equal :posted, result.kind
+    end
+  end
+
+  test "slash posts in threads process attachments once" do
+    thread = ChannelThread.create!(room: @room, creator: @user, name: "Side chat")
+    Message.any_instance.expects(:process_attachment).once
+
+    result = SlashCommands::Dispatcher.dispatch(user: @user, room: @room, thread: thread, text: "/shrug hi")
+
+    assert_equal :posted, result.kind
+  end
+
   test "me posts an action line" do
     result = dispatch("/me is reviewing the deploy")
 

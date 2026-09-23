@@ -88,6 +88,7 @@ class ScheduledMessage::Dispatcher
           reply_id = scheduled.reply_to_message_id if Message.exists?(id: scheduled.reply_to_message_id)
 
           if scheduled.thread
+            # post_message! already processes attachments.
             message = scheduled.thread.post_message!(
               creator: scheduled.user,
               attributes: { markdown_source: scheduled.markdown_source, reply_to_message_id: reply_id }.compact
@@ -99,13 +100,15 @@ class ScheduledMessage::Dispatcher
               reply_to_message_id: reply_id
             )
             message.save!
+            message.process_attachment
           end
-          message.process_attachment
           scheduled.update!(sent_at: now, sent_message: message)
         end
 
         message.broadcast_create
-        Message::BotWebhookFanout.deliver_for(message)
+        # The thread path never fans out to legacy webhooks (see
+        # ChannelThreadMessagesController#create).
+        Message::BotWebhookFanout.deliver_for(message) unless scheduled.thread_id
         message
       end
 

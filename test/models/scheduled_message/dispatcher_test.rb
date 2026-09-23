@@ -96,6 +96,20 @@ class ScheduledMessage::DispatcherTest < ActiveSupport::TestCase
     end
   end
 
+  test "thread rows post like thread replies: no legacy fanout, one attachment pass" do
+    legacy = User.create_bot!(name: "Legacy Note", webhook_url: "https://example.test/legacy-note")
+    @room.memberships.grant_to(legacy)
+    thread = ChannelThread.create!(room: @room, creator: @user, name: "Side chat")
+    schedule_due!(markdown_source: "Hey @[Legacy Note]", thread: thread)
+    Message.any_instance.expects(:process_attachment).once
+
+    assert_no_enqueued_jobs only: Bot::WebhookJob do
+      assert_difference -> { thread.messages.count }, 1 do
+        ScheduledMessage::Dispatcher.dispatch_due!
+      end
+    end
+  end
+
   test "locked threads retry instead of dropping" do
     thread = ChannelThread.create!(room: @room, creator: @user, name: "Side chat")
     scheduled = schedule_due!(markdown_source: "Thread hi", thread: thread)
