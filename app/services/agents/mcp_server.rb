@@ -445,7 +445,7 @@ module Agents
       ),
       Tool.new(
         name: "set_presence",
-        description: "Set the agent's working presence ('Thinking…', 'Running tests…'), shown next to its name in the room member list. Blank clears. Expires after 5 minutes unless refreshed, and clears when a stream finalizes.",
+        description: "Set the agent's working presence ('Thinking…', 'Running tests…'), shown next to its name in the room member list. Blank clears; omitted leaves it alone. Expires after 5 minutes unless refreshed, and clears when a stream finalizes.",
         input_schema: {
           "type" => "object",
           "properties" => {
@@ -898,6 +898,12 @@ module Agents
       end
 
       def tool_set_presence(args)
+        # Like PATCH /agents/me, an omitted text leaves presence alone;
+        # only an explicit blank clears it.
+        unless args.key?("text")
+          return ServiceResult.ok({ working_presence: @agent.working_presence_text })
+        end
+
         WorkingPresence.set(agent: @agent, text: args["text"])
       end
 

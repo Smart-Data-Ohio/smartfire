@@ -77,6 +77,15 @@ class Agents::McpStreamingTest < ActionDispatch::IntegrationTest
     assert_nil @agent.reload.working_presence
   end
 
+  test "set_presence without text leaves presence alone" do
+    @agent.set_working_presence!("Thinking…")
+
+    kept = call_tool("set_presence", {})
+
+    assert_equal "Thinking…", structured(kept)["working_presence"]
+    assert_equal "Thinking…", @agent.reload.working_presence_text
+  end
+
   test "add_step and update_step round-trip on the agent's message" do
     message = @room.root_messages.create!(creator: @bot,
       markdown_source: "Working", client_message_id: "mcp-step-parent")
