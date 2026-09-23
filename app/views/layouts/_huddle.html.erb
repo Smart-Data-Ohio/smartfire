@@ -46,6 +46,11 @@
 
   <p class="huddle__notice" data-huddle-target="notice" role="alert" hidden></p>
 
+  <div class="huddle__reconnect" data-huddle-target="reconnect" role="status" hidden>
+    <p class="huddle__reconnect-text">Connection lost. Retrying<span aria-hidden="true"> in <span data-huddle-target="reconnectCountdown">30</span>s</span>…</p>
+    <button type="button" class="btn btn--reversed huddle__reconnect-now" data-action="huddle#reconnectNow">Reconnect now</button>
+  </div>
+
   <p class="huddle__listening" data-huddle-target="listeningNote" hidden>You are listening</p>
 
   <div class="huddle__sharing" data-huddle-target="sharing" hidden>

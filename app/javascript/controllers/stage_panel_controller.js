@@ -6,18 +6,23 @@ import { Controller } from "@hotwired/stimulus"
 // over Turbo Streams; this controller only opens and closes the dialog
 // itself. Escape closes natively through the `close` event below.
 export default class extends Controller {
-  static targets = [ "panel", "toggle" ]
+  static targets = [ "panel", "toggle", "handAnnouncement" ]
 
   connect() {
     this.huddleRoomId = null
     this.huddleState = "idle"
+    this.handCount = this.#raisedHandCount()
     this.handleHuddleChange = this.#handleHuddleChange.bind(this)
     window.addEventListener("huddle:changed", this.handleHuddleChange)
 
     // Turbo replaces the panel body — and with it the Go live form — on
     // every stream start and end, so a swapped-in form is evaluated against
-    // the last known huddle state as soon as it lands.
-    this.goLiveObserver = new MutationObserver(() => this.#updateGoLiveControl())
+    // the last known huddle state as soon as it lands. The same observer
+    // notices raised hands arriving over the roster stream.
+    this.goLiveObserver = new MutationObserver(() => {
+      this.#updateGoLiveControl()
+      this.#handsMaybeChanged()
+    })
     this.goLiveObserver.observe(this.element, { childList: true, subtree: true })
     this.#updateGoLiveControl()
 
@@ -97,6 +102,68 @@ export default class extends Controller {
     this.huddleRoomId = Number(detail?.roomId) || null
     this.huddleState = detail?.state || "idle"
     this.#updateGoLiveControl()
+  }
+
+  // A newly raised hand notifies viewers who can act on it — hosts and
+  // administrators, who are exactly the viewers with action forms — with an
+  // announcement and a short chime. Everyone watching gets the queue itself
+  // through the roster stream either way.
+  #handsMaybeChanged() {
+    const count = this.#raisedHandCount()
+    if (count === this.handCount) return
+
+    const grew = count > this.handCount
+    this.handCount = count
+    window.dispatchEvent(new CustomEvent("stage:hands-changed", { detail: { count } }))
+
+    if (!grew || !this.#viewerCanManage() || !this.hasHandAnnouncementTarget) return
+
+    this.handAnnouncementTarget.textContent = count === 1
+      ? "A listener raised their hand."
+      : `${count} listeners have their hands raised.`
+    this.#chime()
+  }
+
+  #raisedHandCount() {
+    return this.element.querySelectorAll(".stage-panel__hand-badge").length
+  }
+
+  #viewerCanManage() {
+    return this.element.querySelector(".stage-panel__member-actions") != null
+  }
+
+  #chime() {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext
+    if (!AudioContextClass) return
+
+    try {
+      this.handChimeContext ||= new AudioContextClass()
+      const context = this.handChimeContext
+      if (context.state === "suspended") {
+        context.resume().catch(() => {})
+        return
+      }
+
+      const startedAt = context.currentTime
+      for (const [ index, frequency ] of [ 660, 880 ].entries()) {
+        const oscillator = context.createOscillator()
+        oscillator.type = "sine"
+        oscillator.frequency.value = frequency
+
+        const gain = context.createGain()
+        const at = startedAt + index * 0.12
+        gain.gain.setValueAtTime(0, at)
+        gain.gain.linearRampToValueAtTime(0.12, at + 0.02)
+        gain.gain.linearRampToValueAtTime(0, at + 0.12)
+
+        oscillator.connect(gain)
+        gain.connect(context.destination)
+        oscillator.start(at)
+        oscillator.stop(at + 0.15)
+      }
+    } catch {
+      // The badge and the announcement remain; the chime is a nicety.
+    }
   }
 
   // Going live needs the call: the share starts on top of the huddle
