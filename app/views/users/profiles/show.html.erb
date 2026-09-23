@@ -154,6 +154,12 @@
     </div>
   <% end %>
 
+  <%= render "users/profiles/status" %>
+
+  <%= render "users/profiles/notifications" %>
+
+  <%= render "users/profiles/appearance" %>
+
   <%= render "users/profiles/google_sign_in", user: @user %>
 
   <%= render "users/profiles/google_calendar", user: @user %>

@@ -19,6 +19,7 @@ class Room < ApplicationRecord
 
   has_many :users, through: :memberships
   has_many :messages, dependent: :destroy
+  has_many :message_pins, dependent: :delete_all
   has_many :root_messages, -> { where(thread_id: nil) }, class_name: "Message", foreign_key: :room_id
   has_many :channel_threads, dependent: :destroy
   has_many :events, dependent: :destroy
@@ -68,6 +69,8 @@ class Room < ApplicationRecord
   end
 
   def receive(message)
+    return if message.system_note?
+
     unread_memberships(message)
     push_later(message)
   end

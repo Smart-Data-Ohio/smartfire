@@ -108,6 +108,26 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "index etag changes when the older of two pins is removed" do
+    older = @room.messages.create!(creator: users(:david), markdown_source: "etag pinned older", client_message_id: "etag-pin-older")
+    newer = @room.messages.create!(creator: users(:david), markdown_source: "etag pinned newer", client_message_id: "etag-pin-newer")
+
+    MessagePin.pin!(message: older, pinner: users(:david))
+    MessagePin.pin!(message: newer, pinner: users(:david))
+
+    get room_messages_url(@room)
+    assert_response :success
+    etag = response.headers["ETag"]
+
+    get room_messages_url(@room), headers: { "If-None-Match" => etag }
+    assert_response :not_modified
+
+    MessagePin.find_by!(message: older).unpin!
+
+    get room_messages_url(@room), headers: { "If-None-Match" => etag }
+    assert_response :success
+  end
+
   test "get renders a single message belonging to the user" do
     message = @room.messages.where(creator: users(:david)).first
 
@@ -398,6 +418,22 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_select ".message__edited[title^='Edited ']"
   end
 
+  test "the edited marker renders the same UTC time in every time zone" do
+    message = @room.messages.create!(creator: users(:david), markdown_source: "original", client_message_id: "edited-tz")
+    message.update!(edited_at: Time.zone.parse("2026-09-22 12:00"))
+
+    titles = [ "Pacific Time (US & Canada)", "Tokyo" ].map do |zone|
+      users(:david).update!(time_zone: zone)
+
+      get room_message_url(@room, message)
+      assert_response :success
+      css_select("time.message__edited").first["title"]
+    end
+
+    assert_equal titles.first, titles.second
+    assert_equal "Edited #{message.reload.edited_at.utc.to_fs(:long)}", titles.first
+  end
+
   test "editing a message broadcasts its meta so other clients see the edited marker" do
     message = @room.messages.create!(creator: users(:david), markdown_source: "original", client_message_id: "edited-meta")
 
@@ -609,6 +645,61 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal original_id, @room.messages.order(:id).last.id
     assert_equal "retry-root-post", @room.messages.order(:id).last.client_message_id
+  end
+
+  test "system notes render as a compact note without message chrome" do
+    note = @room.root_messages.create!(creator: users(:david), markdown_source: "pinned a message", system_note: true, client_message_id: "note-chrome")
+
+    get room_messages_url(@room)
+    assert_response :success
+
+    assert_select "##{dom_id(note)}[role='note'].message--system-note", 1 do
+      assert_select ".message__system-note-author", text: users(:david).name
+      assert_select ".message__system-note-text", text: /pinned a message/
+      assert_select ".message__system-note time", 1
+      assert_select ".message__avatar", 0
+      assert_select ".message__toolbar", 0
+      assert_select "[data-message-edit-format]", 0
+    end
+    assert_select "##{dom_id(note)}[data-actions-url]", 0
+    assert_select "##{dom_id(note)}[data-message-url]", 0
+    assert_select "##{dom_id(note)}[data-boost-url]", 0
+  end
+
+  test "system notes cannot be edited or deleted by their actor" do
+    note = @room.root_messages.create!(creator: users(:david), markdown_source: "pinned a message", system_note: true, client_message_id: "note-immutable")
+
+    get edit_room_message_url(@room, note)
+    assert_response :forbidden
+
+    assert_no_changes -> { note.reload.plain_text_body } do
+      patch room_message_url(@room, note, format: :json), params: { message: { markdown_source: "Edited" } }
+      assert_response :forbidden
+    end
+
+    assert_no_difference -> { Message.count } do
+      delete room_message_url(@room, note, format: :turbo_stream)
+      assert_response :forbidden
+    end
+  end
+
+  test "system notes cannot be deleted by an administrator" do
+    assert users(:david).administrator?
+    note = @room.root_messages.create!(creator: users(:jason), markdown_source: "pinned a message", system_note: true, client_message_id: "note-admin")
+
+    assert_no_difference -> { Message.count } do
+      delete room_message_url(@room, note, format: :turbo_stream)
+      assert_response :forbidden
+    end
+  end
+
+  test "system note actions report no edit or delete" do
+    note = @room.root_messages.create!(creator: users(:david), markdown_source: "pinned a message", system_note: true, client_message_id: "note-actions")
+
+    get actions_room_message_url(@room, note, format: :json)
+    assert_response :success
+    assert_not response.parsed_body.dig("actions", "can_edit")
+    assert_not response.parsed_body.dig("actions", "can_delete")
   end
 
   private

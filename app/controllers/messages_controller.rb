@@ -16,7 +16,7 @@ class MessagesController < ApplicationController
     @messages = find_paged_messages
 
     if @messages.any?
-      fresh_when @messages, etag: [ @messages, rendered_related_stamp(@messages) ]
+      fresh_when @messages, etag: [ @messages, rendered_related_stamp(@messages), rendered_pin_stamp(@messages) ]
       unless performed?
         Message.preload_rendering_details(@messages)
         Message::MentionPreloader.preload_for(@messages)
@@ -118,12 +118,14 @@ class MessagesController < ApplicationController
       @message = @room.root_messages.find(params[:id])
     end
 
+    # System notes are immutable timeline entries: nobody edits or deletes
+    # them, not even their actor or an administrator.
     def ensure_can_edit
-      head :forbidden unless Current.user == @message.creator
+      head :forbidden if @message.system_note? || Current.user != @message.creator
     end
 
     def ensure_can_delete
-      head :forbidden unless Current.user == @message.creator || Current.user.administrator?
+      head :forbidden if @message.system_note? || (Current.user != @message.creator && !Current.user.administrator?)
     end
 
 
@@ -168,6 +170,17 @@ class MessagesController < ApplicationController
         EventReference.where(message_id: message_ids).joins(:event).maximum("events.updated_at"),
         User.where(id: messages.map(&:creator_id)).maximum(:updated_at)
       ].compact.max&.utc&.to_fs(:usec)
+    end
+
+    # Pin state rides as its own etag element because pin and unpin never
+    # touch the message rows. A maximum over the pin rows cannot see an
+    # unpin (removing an older pin leaves the maximum unchanged), so the
+    # stamp digests the sorted [message_id, pin_id] pairs instead: any
+    # pin or unpin of the page's messages changes it. An aggregate query
+    # only, so a conditional GET still never loads bodies.
+    def rendered_pin_stamp(messages)
+      pairs = MessagePin.where(message_id: messages.map(&:id)).order(:message_id, :id).pluck(:message_id, :id)
+      Digest::SHA256.hexdigest(pairs.inspect)
     end
 
 
@@ -230,19 +243,6 @@ class MessagesController < ApplicationController
 
 
     def deliver_webhooks_to_bots
-      # Agent-backed bots are delivered only through Agent::DeliveryJob (see
-      # Message::AgentDelivery); the legacy webhook bypasses grant and rate
-      # checks, so it serves bots without an Agent row only. The hop limit
-      # still applies: a chain that reached it stops here instead of
-      # looping through a legacy bot.
-      bots = bots_eligible_for_webhook.excluding(@message.creator).where.missing(:agent)
-      return if bots.empty?
-      return if Agent::Delivery.hop_for_message(@message) >= Agent::Delivery::HOP_LIMIT
-
-      bots.each { |bot| bot.deliver_webhook_later(@message) }
-    end
-
-    def bots_eligible_for_webhook
-      @room.direct? ? @room.users.active_bots : @message.mentionees.active_bots
+      Message::BotWebhookFanout.deliver_for(@message)
     end
 end

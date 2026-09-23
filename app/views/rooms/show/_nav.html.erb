@@ -38,6 +38,8 @@
       <span class="room-header__action-label">Events</span>
     <% end %>
 
+    <%= render "rooms/pins/panel", room: room %>
+
     <% stage_membership = room.stage? ? room.memberships.find_by(user: Current.user) : nil %>
     <% huddleable = Huddle.configured? && (!room.direct? || room.users.count == 2) %>
     <% if huddleable %>

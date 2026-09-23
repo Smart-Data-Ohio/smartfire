@@ -12,6 +12,32 @@ module ApplicationHelper
     end
   end
 
+  # The saved zone for the timezone controller, or an empty marker when
+  # the member explicitly chose "Not set": the controller reports only
+  # while the tag has no content at all, so the marker suppresses a
+  # detection the server would ignore anyway.
+  def current_user_time_zone_meta_content
+    Current.user.time_zone.presence || ("" if Current.user.time_zone_explicit?)
+  end
+
+  # Manual DND and the DND presence mute sounds outright; quiet hours send
+  # their window and zone so the sound controller re-evaluates the
+  # time-based gate on every play without a reload.
+  def notification_sound_meta_tags
+    return unless Current.user
+
+    tags = []
+    if Current.user.dnd_enabled? || Current.user.presence_setting == "dnd"
+      tags << tag.meta(name: "notification-dnd", content: "muted")
+    end
+    if Current.user.quiet_hours_enabled? && Current.user.quiet_hours_start_minute && Current.user.quiet_hours_end_minute
+      tags << tag.meta(name: "quiet-hours",
+        content: "#{Current.user.quiet_hours_start_minute}-#{Current.user.quiet_hours_end_minute}")
+      tags << tag.meta(name: "quiet-hours-zone", content: Current.user.time_zone_or_default)
+    end
+    safe_join(tags)
+  end
+
   def custom_styles_tag
     if custom_styles = Current.account&.custom_styles
       tag.style(custom_styles.to_s.html_safe, data: { turbo_track: "reload" })

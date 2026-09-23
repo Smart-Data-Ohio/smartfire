@@ -55,7 +55,7 @@ class Messages::ByBotsController < MessagesController
     end
 
     def ensure_can_manage_bot_message
-      head :forbidden unless Current.user.can_administer?(@message)
+      head :forbidden if @message.system_note? || !Current.user.can_administer?(@message)
     end
 
     def set_pagination_headers

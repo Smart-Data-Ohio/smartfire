@@ -8,8 +8,8 @@ class WorkspacePresenceChannel < ApplicationCable::Channel
     @lease&.delete
   end
 
-  def heartbeat
-    return if @lease&.refresh
+  def heartbeat(data = {})
+    return if @lease&.refresh(active: data["active"] == true)
 
     @lease = WorkspacePresenceLease.establish(user: current_user, session: connection.current_session)
     reject unless @lease

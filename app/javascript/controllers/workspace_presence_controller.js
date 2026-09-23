@@ -2,12 +2,16 @@ import { Controller } from "@hotwired/stimulus"
 import { cable } from "@hotwired/turbo-rails"
 
 const HEARTBEAT_INTERVAL = 25 * 1000
+const ACTIVITY_WINDOW = 60 * 1000
 
 export default class extends Controller {
   connect() {
     this.active = true
+    this.lastActivity = Date.now()
     window.addEventListener("pagehide", this.#pageHidden)
     window.addEventListener("pageshow", this.#pageShown)
+    window.addEventListener("pointerdown", this.#noteActivity, { passive: true })
+    window.addEventListener("keydown", this.#noteActivity)
     this.#startSubscription()
   }
 
@@ -15,6 +19,8 @@ export default class extends Controller {
     this.active = false
     window.removeEventListener("pagehide", this.#pageHidden)
     window.removeEventListener("pageshow", this.#pageShown)
+    window.removeEventListener("pointerdown", this.#noteActivity)
+    window.removeEventListener("keydown", this.#noteActivity)
     this.#closeSubscription()
   }
 
@@ -35,7 +41,11 @@ export default class extends Controller {
   }
 
   #heartbeat = () => {
-    this.channel?.send({ action: "heartbeat" })
+    this.channel?.send({ action: "heartbeat", active: Date.now() - this.lastActivity < ACTIVITY_WINDOW })
+  }
+
+  #noteActivity = () => {
+    this.lastActivity = Date.now()
   }
 
   #pageHidden = () => {

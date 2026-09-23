@@ -13,6 +13,7 @@
   <% else %>
     <span class="avatar">
       <%= image_tag fresh_user_avatar_path(members.first), size: 48, aria: { hidden: "true" } %>
+      <span class="avatar__presence" data-dm-presence-user-id="<%= members.first.id %>" data-presence="offline" role="img" aria-label="Offline"></span>
     </span>
   <% end %>
 

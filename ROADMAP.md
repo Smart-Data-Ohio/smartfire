@@ -25,7 +25,7 @@ The first activity inbox, human-owned work threads, one-to-one DM Huddles, and n
 
 The first DM Huddle slice uses a shared join control with audio, screen sharing, and camera video, and the invitation slice adds ringing through an incoming-huddle banner, push notifications, and missed-call inbox items. The inbox starts with new messaging and work events, plus native event invitations, updates, cancellations, and reminders; agent and GitHub sources follow their integrations.
 
-The first agent identity slice is live: agents 1:1 with bot users, Bearer credentials with a management UI, and room-scoped or workspace-wide capability grants (all five enforced: `read_messages`, `post_messages`, `react`, `manage_threads`, `external_action`) with immediate cascade revocation, and event delivery with an activity ledger, polling, rate limits, and loop prevention, plus agent profiles, an agent directory, and self-reported live status. See [AI agents](docs/agents.md). Approvals follow separately.
+The first agent identity slice is live: agents 1:1 with bot users, Bearer credentials with a management UI, and room-scoped or workspace-wide capability grants (all six enforced: `read_messages`, `post_messages`, `react`, `manage_threads`, `external_action`, `dm_anyone`) with immediate cascade revocation, and event delivery with an activity ledger, polling, rate limits, and loop prevention, plus agent profiles, an agent directory, and self-reported live status. See [AI agents](docs/agents.md). Approvals follow separately.
 
 GitHub's first read-only slice is live: messages linking a pull request URL render a PR card (repository, title, author, state, branches, review decision, checks, updated time) that refreshes via background fetch and webhook with redelivery deduplication, and subscribed rooms now receive selected PR events as GitHub bot messages with review requests in the linked reviewer's inbox. Cards use the workspace-level token and are visible to everyone in the room the link was posted in; per-user GitHub identity and write actions remain planned. See [GitHub pull request cards](docs/github.md).
 
@@ -72,6 +72,8 @@ Done for the first slice when a personal agent and a workspace agent can indepen
 
 Approval requests are live: an agent asks for human authority with `POST /agents/approvals`, the owner and administrators decide from the activity inbox, and the decision returns through event polling and webhooks. See [AI agents](docs/agents.md#approvals).
 
+Agent DMs, conversation context, and an MCP server are live: an agent opens 1:1 DMs with its owner, prior contacts, or anyone with the `dm_anyone` grant, loads trigger context with `GET /agents/context`, and serves eighteen tools over `POST /agents/mcp` for Claude, Cursor, Codex, and similar clients. See [AI agents](docs/agents.md#agent-dms) and [Smartfire MCP server](docs/agents-mcp.md).
+
 ### 4. GitHub work inside conversations
 
 - First-class PR cards: repository, author, summary, branch, review state, and checks.
@@ -108,7 +110,7 @@ Done for the first slice when one Drive workflow and one selected Smart App work
 
 ### 7. Unified activity inbox
 
-The first messaging and human-work slice is live, with event invitations, updates, cancellations, and reminders as inbox sources; PR review requests already land in the reviewer's inbox and agent approval requests (`agent_approval_request`) already land in each decider's inbox. Per-channel involvement controls, per-integration notification switches, thread-update grouping, and type filters have shipped as well. Other agent and GitHub sources follow their integrations.
+The first messaging and human-work slice is live, with event invitations, updates, cancellations, and reminders as inbox sources; PR review requests already land in the reviewer's inbox and agent approval requests (`agent_approval_request`) already land in each decider's inbox. Per-channel involvement controls, per-integration notification switches, thread-update grouping, and type filters have shipped as well. User status with Do Not Disturb and quiet hours, thread follow/mute, keyword alerts, per-user time zones, and a manual theme have shipped as well; see [Status, Do Not Disturb, and notifications](docs/notifications.md). Other agent and GitHub sources follow their integrations.
 
 - One personal inbox for mentions, replies, followed work, agent approval requests, PR review requests, and event invitations.
 - Clear unread/read and handled states, links to the source conversation or object, and filters that make the next useful action easy to find.

@@ -171,4 +171,20 @@ class ChannelThreadMessagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal original_id, response.parsed_body["id"]
   end
+
+  test "thread system notes cannot be edited or deleted" do
+    sign_in :jz
+    note = @thread.messages.create!(room: @room, creator: users(:jz),
+      markdown_source: "renamed this thread", system_note: true, client_message_id: "thread-note-immutable")
+
+    assert_no_changes -> { note.reload.plain_text_body } do
+      patch room_thread_message_url(@room, @thread, note, format: :json), params: { message: { markdown_source: "Edited" } }
+      assert_response :forbidden
+    end
+
+    assert_no_difference -> { Message.count } do
+      delete room_thread_message_url(@room, @thread, note, format: :json)
+      assert_response :forbidden
+    end
+  end
 end
