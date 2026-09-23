@@ -1,21 +1,18 @@
 # Whether an incoming call rings audibly for a user. The banner always
-# shows; this only gates the ringtone and the system Notification. Do-not-
-# disturb and quiet hours live in Notifications::Policy on the
-# status/notifications branch, which is not on main yet: when it lands,
-# integration wires it here with one line (for example in an initializer):
-#
-#   Huddle::RingPolicy.quiet_check = ->(user) { Notifications::Policy.quiet_now?(user) }
-#
-# Until then every invitation rings.
+# shows; this only gates the ringtone and the system Notification, and
+# follows Notifications::Policy: do-not-disturb (including timed DND)
+# silences the ring unless the caller is on the recipient's "Allow during
+# DND" list. Tests may override the decision with `quiet_check`.
 class Huddle::RingPolicy
   class << self
     attr_writer :quiet_check
 
-    def ring?(user)
-      check = @quiet_check
-      return true unless check
-
-      !check.call(user)
+    def ring?(user, caller: nil)
+      if (check = @quiet_check)
+        !check.call(user)
+      else
+        Notifications::Policy.new(recipient: user, sender: caller, kind: :huddle).sound?
+      end
     end
   end
 end

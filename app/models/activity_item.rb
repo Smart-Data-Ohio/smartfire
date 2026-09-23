@@ -208,7 +208,7 @@ class ActivityItem < ApplicationRecord
           callerName: caller.name,
           readPath: routes.read_activity_item_path(self, state: "read"),
           handledPath: routes.handled_activity_item_path(self, state: "handled"),
-          silent: !Huddle::RingPolicy.ring?(user)
+          silent: !Huddle::RingPolicy.ring?(user, caller: caller)
         }
       }
     end

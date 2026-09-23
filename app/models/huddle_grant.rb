@@ -549,7 +549,7 @@ class HuddleGrant < ApplicationRecord
           callerName: user&.name || "Someone",
           readPath: "",
           handledPath: "",
-          silent: !Huddle::RingPolicy.ring?(recipient)
+          silent: !Huddle::RingPolicy.ring?(recipient, caller: user)
         }
       }
     end
