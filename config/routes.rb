@@ -69,6 +69,7 @@ Rails.application.routes.draw do
       resource :avatar, only: %i[ show destroy ]
       resource :ban, only: %i[ create destroy ]
       resource :dnd_allowance, only: %i[ create destroy ]
+      resource :star, only: %i[ create destroy ]
 
       scope defaults: { user_id: "me" } do
         resource :sidebar, only: :show

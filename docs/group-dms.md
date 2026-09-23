@@ -78,3 +78,24 @@ go only to current members: removing a member revokes their grants
 immediately, and their join tokens stay denied afterwards. See
 [huddles](huddles.md) for invitations and the
 [authorization boundary](huddle-enforcement.md) for the enforcement model.
+
+## Starred people
+
+Star the people you talk to most and they float to the top of the people
+lists: a Starred group at the top of the channel member panel (with the
+usual presence dots), and starred-first ordering in the people directory
+(`/users`) and the new-DM picker's "choose people" list. Anyone shown in
+Starred is excluded from the Online and Offline groups below it.
+
+Two ways to toggle a star: the ☆ Star / ★ Unstar button on someone's
+profile card (opens from any avatar or name, updates in place), or the
+member panel row menu — right-click a row, or press Shift+F10 (or the menu
+key) with a control in the row focused, then Star/Unstar. The panel
+re-sorts immediately after either toggle.
+
+Stars are private: only you see your stars, and the starred person is
+never told. You cannot star yourself. Bots and agents can be starred, but
+starring is a human preference — bots and agent tokens cannot create
+stars, and there is deliberately no MCP tool for it. Deactivated members
+drop out of every display while keeping their star rows, so the stars
+reappear if they return.
