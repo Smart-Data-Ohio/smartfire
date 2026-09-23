@@ -64,10 +64,12 @@ one-way publishing is unaffected.
   notifications by message number (one conditional `UPDATE`, so
   concurrent redeliveries cannot both win), and enqueues
   `Calendar::InboundSyncJob` for the winner.
-- Channel expiry is handled three ways: the periodic runner renews
+- Channel expiry is handled four ways: the periodic runner renews
   channels expiring within 24 hours every hour, a `not_exists`
-  notification drops the row and enqueues a re-watch, and disconnecting
-  or deactivating stops and removes the channel.
+  notification drops the row and enqueues a re-watch, disconnecting
+  or deactivating stops and removes the channel, and the same hourly
+  sweep opens a channel for any connected account that has none (a
+  failed first watch leaves no row to renew).
 - Transient Google failures retry with backoff; permanent ones land on
   the channel's `last_error`, visible on the integration health page
   alongside channel counts and upcoming expiries.

@@ -61,8 +61,9 @@ module Calendar
         nil
       end
 
-      # Renews channels expiring soon and drops channels whose account
-      # went away. Runs from the periodic runner every hour; never raises.
+      # Renews channels expiring soon, opens channels for connected
+      # accounts that have none, and drops channels whose account went
+      # away. Runs from the periodic runner every hour; never raises.
       def renew_expiring!(now: Time.current)
         return unless watching_enabled?
 
@@ -77,6 +78,25 @@ module Calendar
             end
           rescue => error
             Rails.logger.error "Calendar::PushChannel renewal failed for user #{channel.user_id}: #{error.class}"
+          end
+        end
+
+        heal_missing_channels!
+      end
+
+      # A first watch that failed permanently — or a re-watch after Google
+      # dropped the channel — leaves no row behind, so the renewal loop
+      # above would never retry it. Open one channel per connected
+      # calendar account that is missing one; failures log and retry on
+      # the next sweep.
+      def heal_missing_channels!
+        GoogleAccount.where(disconnected_reason: nil).find_each do |account|
+          next if exists?(user_id: account.user_id)
+
+          begin
+            watch_for!(account.user)
+          rescue => error
+            Rails.logger.error "Calendar::PushChannel watch failed for user #{account.user_id}: #{error.class}"
           end
         end
       end

@@ -105,6 +105,28 @@ class Calendar::PushChannelTest < ActiveSupport::TestCase
     assert_nil Calendar::PushChannel.find_by(id: channel.id)
   end
 
+  test "renew_expiring opens a channel for a connected account missing one" do
+    connect_google!(@user)
+    watch = stub_request(:post, "#{GOOGLE_EVENTS_URL}/watch")
+      .to_return(status: 200, body: { resourceId: "resource-1" }.to_json,
+        headers: { "Content-Type" => "application/json" })
+
+    Calendar::PushChannel.renew_expiring!
+
+    assert_requested watch, times: 1
+    assert_equal "resource-1", Calendar::PushChannel.find_by(user_id: @user.id).resource_id
+  end
+
+  test "renew_expiring opens nothing for a disconnected account missing one" do
+    connect_google!(@user, disconnected_reason: "revoked")
+    watch = stub_request(:post, "#{GOOGLE_EVENTS_URL}/watch")
+
+    Calendar::PushChannel.renew_expiring!
+
+    assert_not_requested watch
+    assert_nil Calendar::PushChannel.find_by(user_id: @user.id)
+  end
+
   test "renew_expiring never raises" do
     connect_google!(@user)
     Calendar::PushChannel.create!(user: @user, channel_id: "old-id",
