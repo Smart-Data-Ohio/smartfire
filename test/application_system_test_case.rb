@@ -4,12 +4,14 @@ require_relative "support/system_test_chrome_profile"
 WebMock.disable!
 Capybara.enable_aria_label = true
 
-# Headless Chrome's temporary profile goes to the repo's tmp/ (one
-# directory per worker PID) instead of the shared /tmp tmpfs, which
-# parallel workers filled to quota. Stale entries are removed here; each
-# worker removes its own directory after the suite (below). PID liveness
-# is checked per entry so concurrently booting workers never remove a
-# live sibling's profile.
+# Headless Chrome's temporary profiles go to ~/.cache/campfire-chrome-tmp
+# (one directory per worker PID) instead of the shared /tmp tmpfs, which
+# parallel workers filled to quota. See SystemTestChromeProfile: the
+# redirect goes through TMPDIR at browser launch, never --user-data-dir
+# (which leaves the driven tab inactive). Stale entries are removed here;
+# each worker removes its own directory after the suite (below). PID
+# liveness is checked per entry so concurrently booting workers never
+# remove a live sibling's profile.
 SystemTestChromeProfile.cleanup_stale!
 Minitest.after_run { SystemTestChromeProfile.cleanup_own! }
 
@@ -39,12 +41,11 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   parallelize(workers: [ Etc.nprocessors, 4 ].min)
 
   # --mute-audio keeps chat sounds (/play, notifications) off the host
-  # speakers while tests run. --user-data-dir keeps the temporary Chrome
-  # profile under the repo's tmp/ (see SystemTestChromeProfile); the block
-  # runs lazily so forked parallel workers each resolve their own PID.
+  # speakers while tests run. The temporary Chrome profile needs no flag:
+  # SystemTestChromeProfile redirects TMPDIR at browser launch so
+  # chromedriver's managed profile lands off the /tmp tmpfs.
   driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1400 ] do |options|
     options.add_argument "--mute-audio"
-    options.add_argument "--user-data-dir=#{SystemTestChromeProfile.dir}"
   end
 
   include SystemTestHelper

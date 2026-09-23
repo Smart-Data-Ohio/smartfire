@@ -1,35 +1,33 @@
 require "capybara/selenium/driver"
 
-# System-test Chrome profiles live under the repo's tmp/ instead of the
-# shared /tmp tmpfs, which parallel workers filled to quota with leaked
-# headless-Chrome profiles. Each browser launch takes the next per-process
-# directory: the driven_by block runs once per test, but multi-session
-# tests launch one Chrome per session, and two live Chromes cannot share a
-# --user-data-dir (SingletonLock), so Capybara::Selenium::Driver instances
-# each get a detached copy of the shared Selenium options below.
+# System-test Chrome profiles live under ~/.cache/campfire-chrome-tmp (one
+# directory per worker PID) instead of the shared /tmp tmpfs, which
+# parallel workers filled to quota with leaked headless-Chrome profiles.
+# The redirect goes through TMPDIR at browser launch: chromedriver then
+# keeps its managed-profile launch path, including the data:, startup tab
+# that activates the window. Never pass --user-data-dir here instead: an
+# explicit profile dir launches Chrome without that startup tab, leaving
+# the driven tab inactive (document.hasFocus() false), which suppresses
+# focus/focusin delivery and flakes every focus-dependent system test.
 # Stale directories (whose PID no longer runs) are removed at suite start;
-# each worker removes its own directories after the suite.
+# each worker removes its own directory after the suite.
 module SystemTestChromeProfile
-  PROFILE_ARG_PREFIX = "--user-data-dir=".freeze
-
   class << self
-    # Placeholder for the driven_by block (always replaced per browser).
-    def dir
-      Rails.root.join("tmp/chrome-profiles/#{Process.pid}").to_s
-    end
-
-    def next_dir
-      @counter ||= 0
-      @counter += 1
-      Rails.root.join("tmp/chrome-profiles/#{Process.pid}-#{@counter}").to_s
+    # Per-process TMPDIR for browser launches, created on demand.
+    def tmpdir
+      dir = File.join(base, Process.pid.to_s)
+      FileUtils.mkdir_p(dir)
+      dir
     end
 
     def cleanup_own!
-      FileUtils.rm_rf(Dir[base.join("#{Process.pid}*")])
+      FileUtils.rm_rf(File.join(base, Process.pid.to_s))
     end
 
     def cleanup_stale!
-      Dir[base.join("*")].each do |path|
+      return unless File.directory?(base)
+
+      Dir[File.join(base, "*")].each do |path|
         pid = File.basename(path).to_i
         next if pid <= 0 || process_running?(pid)
 
@@ -37,32 +35,30 @@ module SystemTestChromeProfile
       end
     end
 
-    # A copy of the shared Selenium options pointing at a fresh profile
-    # directory. Selenium::Options#dup shares the internal args array, so
-    # the copy detaches it before swapping the directory, then verifies
-    # through the serialized capabilities.
-    def detached_options(shared)
-      copy = shared.dup
-      detached = shared.instance_variable_get(:@options).dup
-      detached[:args] = Array(detached[:args]).reject { |arg| arg.to_s.start_with?(PROFILE_ARG_PREFIX) }
-      copy.instance_variable_set(:@options, detached)
-
-      dir = next_dir
-      copy.add_argument("#{PROFILE_ARG_PREFIX}#{dir}")
-
-      serialized = Array(copy.as_json.dig("goog:chromeOptions", "args"))
-      unless serialized.one? { |arg| arg == "#{PROFILE_ARG_PREFIX}#{dir}" }
-        raise "SystemTestChromeProfile could not set a unique profile dir (selenium #{Selenium::WebDriver::VERSION})"
+    # Runs the block with TMPDIR pointed at this process's browser dir.
+    # Chromedriver and Chrome inherit it when they spawn, so temp
+    # profiles land there; the previous value is always restored, so no
+    # other part of the test process observes the redirect.
+    def with_browser_tmpdir
+      old_tmpdir = ENV["TMPDIR"]
+      ENV["TMPDIR"] = tmpdir
+      yield
+    ensure
+      if old_tmpdir.nil?
+        ENV.delete("TMPDIR")
+      else
+        ENV["TMPDIR"] = old_tmpdir
       end
+    end
 
-      copy
+    # Under $HOME (not the repo): Chrome's SingletonSocket path must fit
+    # the 108-byte sun_path limit, and a worktree-nested tmp/ blows past
+    # it (Chrome exits FATAL). Short, per-user, off the /tmp tmpfs.
+    def base
+      File.join(Dir.home, ".cache/campfire-chrome-tmp")
     end
 
     private
-      def base
-        Rails.root.join("tmp/chrome-profiles")
-      end
-
       def process_running?(pid)
         Process.kill(0, pid)
         true
@@ -74,15 +70,11 @@ module SystemTestChromeProfile
       end
   end
 
-  module PerBrowserProfileDir
-    def initialize(app, **options)
-      selenium_options = options[:options]
-      if selenium_options.is_a?(Selenium::WebDriver::Chromium::Options)
-        options = options.merge(options: SystemTestChromeProfile.detached_options(selenium_options))
-      end
-      super(app, **options)
+  module TmpdirBrowserLaunch
+    def browser
+      SystemTestChromeProfile.with_browser_tmpdir { super }
     end
   end
 end
 
-Capybara::Selenium::Driver.prepend(SystemTestChromeProfile::PerBrowserProfileDir)
+Capybara::Selenium::Driver.prepend(SystemTestChromeProfile::TmpdirBrowserLaunch)

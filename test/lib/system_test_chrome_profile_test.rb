@@ -2,51 +2,62 @@ require "test_helper"
 require_relative "../support/system_test_chrome_profile"
 
 class SystemTestChromeProfileTest < ActiveSupport::TestCase
-  test "dir points at the repo tmp with the current PID" do
-    dir = SystemTestChromeProfile.dir
+  test "tmpdir is a per-PID dir under the home cache, off the /tmp tmpfs" do
+    dir = SystemTestChromeProfile.tmpdir
 
-    assert_equal Rails.root.join("tmp/chrome-profiles/#{Process.pid}").to_s, dir
+    assert_equal File.join(SystemTestChromeProfile.base, Process.pid.to_s), dir
     assert_not_includes dir, "/tmp/org.chromium"
+    assert File.directory?(dir), "expected tmpdir to create the directory"
+  ensure
+    SystemTestChromeProfile.cleanup_own!
   end
 
-  test "next_dir hands out a fresh directory per browser" do
-    first = SystemTestChromeProfile.next_dir
-    second = SystemTestChromeProfile.next_dir
+  test "a managed profile under tmpdir fits Chrome's socket path limit" do
+    # Chrome exits FATAL when the SingletonSocket path exceeds sun_path
+    # (108 bytes); chromedriver appends org.chromium.Chromium.XXXXXX.
+    socket = File.join(SystemTestChromeProfile.tmpdir, "org.chromium.Chromium.XXXXXX/SingletonSocket")
 
-    assert_not_equal first, second
-    assert_match %r{\A#{Regexp.escape(Rails.root.join("tmp/chrome-profiles").to_s)}/#{Process.pid}-\d+\z}, first
+    assert_operator socket.bytesize, :<, 108,
+      "expected the profile socket path (#{socket.bytesize} bytes) to fit sun_path: #{socket}"
+  ensure
+    SystemTestChromeProfile.cleanup_own!
   end
 
-  test "detached_options swaps the profile dir without touching the shared options" do
-    shared = Selenium::WebDriver::Chrome::Options.new
-    shared.add_argument("--mute-audio")
-    shared.add_argument("--user-data-dir=/tmp/placeholder")
+  test "with_browser_tmpdir redirects TMPDIR inside and restores it after" do
+    with_env("TMPDIR", "/tmp/original") do
+      SystemTestChromeProfile.with_browser_tmpdir do
+        assert_equal SystemTestChromeProfile.tmpdir, ENV["TMPDIR"]
+      end
 
-    first = SystemTestChromeProfile.detached_options(shared)
-    second = SystemTestChromeProfile.detached_options(shared)
-
-    [ first, second ].each do |copy|
-      args = copy.as_json["goog:chromeOptions"]["args"]
-      assert_includes args, "--mute-audio"
-      assert_equal 1, args.grep(%r{\A--user-data-dir=#{Regexp.escape(Rails.root.join("tmp/chrome-profiles").to_s)}/}).size
+      assert_equal "/tmp/original", ENV["TMPDIR"]
     end
-    assert_not_equal first.as_json, second.as_json
-
-    shared_args = shared.as_json["goog:chromeOptions"]["args"]
-    assert_equal [ "--mute-audio", "--user-data-dir=/tmp/placeholder" ], shared_args
+  ensure
+    SystemTestChromeProfile.cleanup_own!
   end
 
-  test "cleanup_own! removes every directory of this process" do
-    base = Rails.root.join("tmp/chrome-profiles")
-    own = [ base.join(Process.pid.to_s), base.join("#{Process.pid}-3") ]
-    other = base.join("987654320-1")
-    own.each { |dir| FileUtils.mkdir_p(dir) }
+  test "with_browser_tmpdir restores an unset TMPDIR and survives exceptions" do
+    with_env("TMPDIR", nil) do
+      assert_raises(RuntimeError) do
+        SystemTestChromeProfile.with_browser_tmpdir { raise "boom" }
+      end
+
+      assert_nil ENV["TMPDIR"]
+    end
+  ensure
+    SystemTestChromeProfile.cleanup_own!
+  end
+
+  test "cleanup_own! removes this process's directory and keeps others" do
+    base = SystemTestChromeProfile.base
+    own = File.join(base, Process.pid.to_s)
+    other = File.join(base, "987654320")
+    FileUtils.mkdir_p(own)
     FileUtils.mkdir_p(other)
 
     begin
       SystemTestChromeProfile.cleanup_own!
 
-      own.each { |dir| assert_not File.exist?(dir) }
+      assert_not File.exist?(own)
       assert File.exist?(other)
     ensure
       FileUtils.rm_rf(own)
@@ -55,32 +66,27 @@ class SystemTestChromeProfileTest < ActiveSupport::TestCase
   end
 
   test "cleanup_stale! removes dead-PID profiles and keeps live ones" do
-    base = Rails.root.join("tmp/chrome-profiles")
-    dead = base.join("987654321")
-    dead_browser = base.join("987654321-2")
-    live = base.join(Process.pid.to_s)
-    live_browser = base.join("#{Process.pid}-9")
-    [ dead, dead_browser, live, live_browser ].each { |dir| FileUtils.mkdir_p(dir) }
-    File.write(dead.join("Preferences"), "{}")
+    base = SystemTestChromeProfile.base
+    dead = File.join(base, "987654321")
+    live = File.join(base, Process.pid.to_s)
+    FileUtils.mkdir_p(dead)
+    FileUtils.mkdir_p(live)
+    File.write(File.join(dead, "SingletonLock"), "stale\n")
 
     begin
       SystemTestChromeProfile.cleanup_stale!
 
       assert_not File.exist?(dead)
-      assert_not File.exist?(dead_browser)
       assert File.exist?(live)
-      assert File.exist?(live_browser)
     ensure
       FileUtils.rm_rf(dead)
-      FileUtils.rm_rf(dead_browser)
       FileUtils.rm_rf(live)
-      FileUtils.rm_rf(live_browser)
     end
   end
 
   test "cleanup_stale! ignores non-PID entries" do
-    base = Rails.root.join("tmp/chrome-profiles")
-    other = base.join("README")
+    base = SystemTestChromeProfile.base
+    other = File.join(base, "README")
     FileUtils.mkdir_p(base)
     File.write(other, "do not delete\n")
 
@@ -92,4 +98,14 @@ class SystemTestChromeProfileTest < ActiveSupport::TestCase
       FileUtils.rm_f(other)
     end
   end
+
+  private
+    def with_env(key, value)
+      existed = ENV.key?(key)
+      old = ENV[key]
+      value.nil? ? ENV.delete(key) : ENV[key] = value
+      yield
+    ensure
+      existed ? ENV[key] = old : ENV.delete(key)
+    end
 end
