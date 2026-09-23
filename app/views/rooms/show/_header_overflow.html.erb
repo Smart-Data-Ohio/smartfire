@@ -3,10 +3,15 @@
     in the bar; phones move those (and the stage toggle) here too, leaving
     only members, search, call and this button. Items reuse the header
     controls: links navigate to the same paths, threads and the switcher
-    share their body-level actions, and scoped controls forward a click to
-    the real, hidden button. %>
-<% stage_membership = room.stage? ? room.memberships.find_by(user: Current.user) : nil %>
-<div class="header-overflow" data-controller="header-overflow">
+    share their body-level actions, scoped controls forward a click to
+    the real, hidden button, and notifications names its level in an
+    explicit chooser instead of cycling the bell blind. %>
+<% membership = room.memberships.find_by(user: Current.user) %>
+<% stage_membership = room.stage? ? membership : nil %>
+<% involvement = membership&.involvement || room.default_involvement %>
+<div class="header-overflow" data-controller="header-overflow"
+     data-header-overflow-involvement-url-value="<%= room_involvement_path(room) %>"
+     data-header-overflow-involvement-frame-value="<%= dom_id(room, :involvement) %>">
   <button type="button"
           id="header-overflow-button"
           class="btn room-header__action header-overflow__button"
@@ -67,12 +72,32 @@
       </button>
     <% end %>
 
-    <button type="button" class="btn room-menu__item header-overflow__item header-overflow__item--phone-only" role="menuitem"
-            data-action="header-overflow#forward"
-            data-header-overflow-forward-value=".room-header__actions .button_to_change_notifying button">
-      <%= image_tag "notification-bell-everything.svg", size: 20, aria: { hidden: "true" } %>
-      <span>Notifications</span>
-    </button>
+    <%# The notification chooser names the current level and submits each
+        level explicitly through the involvement endpoint. Forwarding a
+        click to the bell would blindly cycle mentions → everything →
+        muted → nothing → invisible, hiding the room from the sidebar. %>
+    <div class="header-overflow__notifications">
+      <button type="button" class="btn room-menu__item header-overflow__item header-overflow__item--phone-only" role="menuitem"
+              aria-expanded="false" aria-controls="header-overflow-notifications"
+              data-action="header-overflow#toggleNotifications">
+        <%= image_tag "notification-bell-#{involvement}.svg", size: 20, aria: { hidden: "true" }, data: { header_overflow_target: "notificationsIcon" } %>
+        <span data-header-overflow-target="notificationsLabel">Notifications: <%= short_involvement_label(involvement) %></span>
+      </button>
+      <div id="header-overflow-notifications" class="header-overflow__submenu" role="group" aria-label="Notification level"
+           hidden data-header-overflow-target="notificationsPanel">
+        <% involvement_levels_for(room).each do |level| %>
+          <button type="button" class="btn room-menu__item header-overflow__submenu-item" role="menuitemradio"
+                  aria-checked="<%= level == involvement %>" title="<%= involvement_description(level) %>"
+                  data-action="header-overflow#chooseInvolvement"
+                  data-header-overflow-level-value="<%= level %>"
+                  data-header-overflow-label-value="<%= short_involvement_label(level) %>">
+            <span class="header-overflow__check" aria-hidden="true" data-header-overflow-check><%= "✓" if level == involvement %></span>
+            <span><%= short_involvement_label(level) %></span>
+          </button>
+        <% end %>
+        <p class="for-screen-reader" role="status" data-header-overflow-target="notificationsStatus"></p>
+      </div>
+    </div>
 
     <%= link_to [ :edit, room ], class: "btn room-menu__item header-overflow__item header-overflow__item--phone-only", role: "menuitem" do %>
       <%= image_tag "settings.svg", size: 20, aria: { hidden: "true" } %>

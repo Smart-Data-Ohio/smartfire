@@ -211,21 +211,20 @@ class RoomHeaderTest < ApplicationSystemTestCase
       page.send_keys :escape
       assert_no_selector "#quick-switcher[open]"
 
-      # Notifications forwards a click to the real bell button. The bell
-      # frame needs push to load, which headless Chrome lacks, so assert the
-      # forward itself (the header button receives the click) rather than an
-      # involvement cycle the test browser can never drive.
-      page.execute_script(<<~JS)
-        window.bellClicked = false
-        document.querySelector(".room-header__actions .button_to_change_notifying button")
-          ?.addEventListener("click", () => window.bellClicked = true, { once: true })
-      JS
+      # Notifications opens an explicit chooser naming the current level.
+      # Choosing Muted sets exactly muted (no blind cycle toward
+      # invisible), updates the label, and leaves the room in the sidebar.
       click_button "More actions"
       within "#header-overflow-menu" do
-        click_on "Notifications"
+        click_on "Notifications: Everything"
+        assert_selector "#header-overflow-notifications [role='menuitemradio'][aria-checked='true']", text: "Everything"
+        find("#header-overflow-notifications [role='menuitemradio']", text: "Muted").click
+        assert_selector "[data-header-overflow-target='notificationsLabel']", text: "Notifications: Muted"
       end
-      assert_no_selector "#header-overflow-menu", visible: true
-      assert page.evaluate_script("window.bellClicked"), "expected the menu item to click the header bell"
+      assert_equal "muted", rooms(:designers).memberships.find_by!(user: users(:jz)).reload.involvement
+      assert_selector "#user_sidebar a[data-room-id='#{rooms(:designers).id}']", visible: :all
+      # The header bell refreshes to the new level through its frame.
+      assert_selector ".room-header__actions .button_to_change_notifying button.muted", visible: :all, wait: 10
     ensure
       page.current_window.resize_to(1400, 1400)
     end

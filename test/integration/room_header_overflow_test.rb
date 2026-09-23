@@ -50,6 +50,38 @@ class RoomHeaderOverflowTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "notifications item opens an explicit chooser with the current level checked" do
+    memberships(:david_designers).update!(involvement: "muted")
+
+    get room_url(rooms(:designers))
+    assert_response :success
+
+    within_overflow_menu do
+      assert_select "button[aria-controls='header-overflow-notifications'][aria-expanded='false']",
+        text: /Notifications: Muted/, count: 1
+      assert_select "#header-overflow-notifications[hidden][role='group']", count: 1
+      assert_select "#header-overflow-notifications [role='menuitemradio']", count: 5
+      assert_select "#header-overflow-notifications [role='menuitemradio'][aria-checked='true']",
+        text: /Muted/, count: 1
+      assert_select "#header-overflow-notifications [role='menuitemradio'][aria-checked='false']", count: 4
+      # No blind forward to the cycling bell: every level submits explicitly.
+      assert_select "[data-header-overflow-forward-value='.room-header__actions .button_to_change_notifying button']", count: 0
+    end
+  end
+
+  test "direct rooms offer only the direct notification levels in the chooser" do
+    get room_url(rooms(:david_and_jason))
+    assert_response :success
+
+    within_overflow_menu do
+      assert_select "button[aria-controls='header-overflow-notifications']",
+        text: /Notifications: Everything/, count: 1
+      assert_select "#header-overflow-notifications [role='menuitemradio']", count: 3
+      assert_select "#header-overflow-notifications [role='menuitemradio'][aria-checked='true']",
+        text: /Everything/, count: 1
+    end
+  end
+
   test "direct rooms omit threads from the overflow menu" do
     get room_url(rooms(:david_and_jason))
     assert_response :success

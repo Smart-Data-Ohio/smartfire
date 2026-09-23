@@ -13,10 +13,11 @@ const VIEWPORT_PADDING = 8
 // Items trigger exactly the same actions as the header buttons they stand
 // in for. Links navigate to the same paths; buttons that own a
 // body-level controller (threads, the quick switcher) share its action;
-// everything scoped to a header wrapper (pins, stage, notifications, the
-// help items) forwards a click to the real, hidden control.
+// everything else scoped to a header wrapper (pins, stage, the help
+// items) forwards a click to the real, hidden control; notifications
+// names its level in an explicit chooser over the involvement endpoint.
 export default class extends Controller {
-  static targets = [ "button", "menu", "dot", "pinsCount" ]
+  static targets = [ "button", "menu", "dot", "pinsCount", "notificationsLabel", "notificationsPanel", "notificationsStatus", "notificationsIcon" ]
 
   #open = false
   #badgeObserver
@@ -79,12 +80,59 @@ export default class extends Controller {
   // Scoped-control items carry data-header-overflow-forward-value with a
   // selector for the real header control. The menu closes back onto its
   // button first, then the real control runs, so dialogs and panels take
-  // focus from the button and plain toggles (notifications) land there.
+  // focus from the button and plain toggles land there.
   forward(event) {
     event.preventDefault()
     const selector = event.currentTarget?.dataset.headerOverflowForwardValue
     this.#closeMenu()
     if (selector) document.querySelector(selector)?.click()
+  }
+
+  // The notifications toggle names the current level and expands an
+  // explicit chooser. Choosing submits exactly that level through the
+  // involvement endpoint (the same one the bell uses) instead of cycling
+  // blind through mentions → everything → muted → nothing → invisible.
+  toggleNotifications(event) {
+    event.preventDefault()
+    const panel = this.notificationsPanelTarget
+    const button = event.currentTarget
+    const open = panel.hidden
+    panel.hidden = !open
+    button.setAttribute("aria-expanded", String(open))
+    this.#positionMenu()
+    if (open) panel.querySelector("[role='menuitemradio'][aria-checked='true']")?.focus({ preventScroll: true })
+  }
+
+  async chooseInvolvement(event) {
+    event.preventDefault()
+    const option = event.currentTarget
+    const level = option.dataset.headerOverflowLevelValue
+    const url = this.element.dataset.headerOverflowInvolvementUrlValue
+    const response = await fetch(`${url}?involvement=${encodeURIComponent(level)}`, {
+      method: "PUT",
+      headers: {
+        Accept: "application/json",
+        "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content || ""
+      }
+    }).catch(() => null)
+
+    if (!response?.ok) {
+      this.notificationsStatusTarget.textContent = "Couldn't change the notification level"
+      return
+    }
+
+    this.notificationsStatusTarget.textContent = ""
+    this.notificationsLabelTarget.textContent = `Notifications: ${option.dataset.headerOverflowLabelValue}`
+    this.notificationsPanelTarget.querySelectorAll("[role='menuitemradio']").forEach(candidate => {
+      const current = candidate === option
+      candidate.setAttribute("aria-checked", String(current))
+      candidate.querySelector("[data-header-overflow-check]").textContent = current ? "✓" : ""
+    })
+    if (this.hasNotificationsIconTarget) {
+      const icon = this.notificationsIconTarget
+      icon.src = icon.src.replace(/notification-bell-[a-z]+/, `notification-bell-${level}`)
+    }
+    this.#reloadInvolvementFrame()
   }
 
   #onMenuKeydown(event) {
@@ -254,6 +302,16 @@ export default class extends Controller {
     })
     this.#badgeObserver.observe(headerActions, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: [ "hidden" ] })
     this.#badgeObserver.observe(this.menuTarget, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: [ "hidden" ] })
+  }
+
+  // After an explicit choice the header bell still offers the next level
+  // from the old state, so refresh its frame. A bell that never loaded
+  // (push never became ready) has no src to reload, so set it instead.
+  #reloadInvolvementFrame() {
+    const frame = document.getElementById(this.element.dataset.headerOverflowInvolvementFrameValue || "")
+    if (!frame) return
+    if (frame.getAttribute("src")) frame.reload()
+    else frame.src = this.element.dataset.headerOverflowInvolvementUrlValue
   }
 
   #syncPinsCount() {

@@ -80,6 +80,25 @@
   display: none;
 }
 
+/* The notifications chooser names the current level on its toggle and
+   lists every level explicitly below it, with the current one checked.
+   The indented options submit through the involvement endpoint instead
+   of cycling the bell blind. */
+.header-overflow__submenu {
+  display: grid;
+  gap: 0.1rem;
+  padding-inline-start: 0.75rem;
+}
+
+.header-overflow__submenu[hidden] {
+  display: none;
+}
+
+.header-overflow__check {
+  inline-size: 1rem;
+  text-align: center;
+}
+
 /* Stage, notifications and settings stay in the bar on tablets (40rem to
    80rem) and join the menu only on phones, where the bar keeps members,
    search, call and this button alone. The menu scope outranks
@@ -88,9 +107,17 @@
   display: none;
 }
 
+.header-overflow__menu .header-overflow__notifications {
+  display: none;
+}
+
 @media (max-width: 40rem) {
   .header-overflow__menu .header-overflow__item--phone-only {
     display: flex;
+  }
+
+  .header-overflow__menu .header-overflow__notifications {
+    display: grid;
   }
 }
 
