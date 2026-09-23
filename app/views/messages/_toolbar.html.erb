@@ -1,0 +1,27 @@
+<%# Per-message hover/focus toolbar (desktop only; hidden on touch, where the %>
+<%# long-press menu stays). Cache-safe: it carries no forms or tokens, so the %>
+<%# paginated message cache can serve it to every viewer. Submissions %>
+<%# delegate to the layout-rendered shared menu and picker forms. %>
+<div class="message__toolbar shadow" data-controller="message-toolbar" role="group" aria-label="Message actions">
+  <button type="button" class="message__toolbar-btn" data-action="message-toolbar#react"
+          title="React with thumbs up" aria-label="React with thumbs up">
+    <span aria-hidden="true">👍</span>
+  </button>
+  <button type="button" class="message__toolbar-btn" data-action="message-toolbar#pickEmoji"
+          title="Add reaction" aria-label="Add reaction">
+    <%= image_tag "boost.svg", class: "colorize--black", size: 20, aria: { hidden: "true" } %>
+  </button>
+  <button type="button" class="message__toolbar-btn" data-action="message-toolbar#reply"
+          title="Reply to message" aria-label="Reply to message">
+    <%= image_tag "reply.svg", class: "colorize--black", size: 20, aria: { hidden: "true" } %>
+  </button>
+  <button type="button" class="message__toolbar-btn" data-action="message-toolbar#thread"
+          title="Open thread" aria-label="Open thread">
+    <%= image_tag "messages-outlined.svg", class: "colorize--black", size: 20, aria: { hidden: "true" } %>
+  </button>
+  <button type="button" class="message__toolbar-btn" data-action="message-toolbar#more"
+          title="More message actions" aria-label="More message actions"
+          aria-haspopup="menu" aria-controls="message-actions-menu" aria-expanded="false">
+    <%= image_tag "menu-dots-horizontal.svg", class: "colorize--black", size: 20, aria: { hidden: "true" } %>
+  </button>
+</div>

@@ -51,7 +51,22 @@ class ContentSecurityPolicyTest < ApplicationSystemTestCase
     @env_before_test.each { |name, value| ENV[name] = value }
   end
 
+  test "signing in through the real login form lands on the signed-in page" do
+    # Every other system test signs in through the test-only route, so this
+    # is the one test that submits the real login form end to end.
+    visit new_session_url
+    fill_in "email_address", with: "jz@37signals.com"
+    fill_in "password", with: "secret123456"
+    click_on "log_in"
+    assert_selector "a.btn", text: "Designers"
+    assert_no_violations
+  end
+
   test "sign-in, a room, markdown, the Drive picker composer, and the huddle panel raise no violations" do
+    # The fast sign-in helper skips the login form; load it explicitly so
+    # the sign-in page keeps its violation coverage.
+    visit new_session_url
+    assert_field "email_address"
     sign_in "jz@37signals.com"
     assert Huddle.configured?
     join_room rooms(:designers)

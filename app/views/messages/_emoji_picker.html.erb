@@ -1,0 +1,52 @@
+<%# Shared emoji picker, rendered once per page from the layout. The message %>
+<%# toolbar opens it through the emoji-picker:open window event. Categories %>
+<%# render from a static data asset fetched lazily on first open (never on %>
+<%# page load); search merges that data with the icon autocomplete endpoint; %>
+<%# selecting an option submits a boost through the form below. %>
+<div class="emoji-picker"
+     data-controller="emoji-picker"
+     data-emoji-picker-icons-url-value="<%= autocompletable_icons_path %>"
+     data-emoji-picker-data-url-value="<%= asset_path("emoji.json") %>">
+  <div id="emoji-picker-panel"
+       class="emoji-picker__panel border shadow"
+       popover="manual"
+       role="dialog"
+       aria-label="Choose a reaction"
+       hidden
+       data-emoji-picker-target="panel">
+    <input type="search" class="input emoji-picker__search"
+           placeholder="Search emoji and icons" aria-label="Search emoji and icons"
+           autocomplete="off" autocorrect="off"
+           data-emoji-picker-target="search"
+           data-action="input->emoji-picker#search">
+    <div class="emoji-picker__tabs" role="tablist" aria-label="Emoji categories"
+         data-emoji-picker-target="tabs"
+         data-action="click->emoji-picker#chooseTab keydown->emoji-picker#tabsKeydown">
+      <% [ [ "recent", "Recent", "🕒" ], [ "smileys", "Smileys", "😀" ], [ "people", "People", "👋" ],
+           [ "nature", "Nature", "🐻" ], [ "food", "Food", "🍔" ], [ "activities", "Activities", "⚽" ],
+           [ "travel", "Travel", "✈️" ], [ "objects", "Objects", "💡" ], [ "symbols", "Symbols", "🔣" ],
+           [ "flags", "Flags", "🏳️" ], [ "custom", "Custom", "🧩" ] ].each do |id, name, glyph| %>
+        <button type="button" class="emoji-picker__tab" role="tab" id="emoji-picker-tab-<%= id %>"
+                aria-selected="false" aria-controls="emoji-picker-grid" tabindex="-1" title="<%= name %>"
+                data-emoji-picker-target="tab" data-tab="<%= id %>">
+          <span aria-hidden="true"><%= glyph %></span>
+          <span class="for-screen-reader"><%= name %></span>
+        </button>
+      <% end %>
+    </div>
+    <div id="emoji-picker-grid" class="emoji-picker__grid" role="tabpanel"
+         aria-labelledby="emoji-picker-tab-smileys"
+         data-emoji-picker-target="grid"
+         data-action="click->emoji-picker#choose">
+      <% EmojiHelper::REACTIONS.each do |character, title| %>
+        <button type="button" class="emoji-picker__option" data-content="<%= character %>" aria-label="<%= title %>" tabindex="-1">
+          <span aria-hidden="true"><%= character %></span>
+        </button>
+      <% end %>
+    </div>
+    <p class="emoji-picker__status txt-small" role="status" data-emoji-picker-target="status"></p>
+    <%= form_with url: "#", method: :post, data: { emoji_picker_target: "form" } do %>
+      <%= hidden_field_tag "boost[content]", "", data: { emoji_picker_target: "content" } %>
+    <% end %>
+  </div>
+</div>

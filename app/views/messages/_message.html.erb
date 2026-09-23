@@ -10,6 +10,7 @@
     <turbo-frame id="<%= dom_id(message, :edit) %>">
       <div class="message__body">
         <div class="message__body-content">
+          <%= render "messages/toolbar" %>
           <%= render "messages/meta", message: message, show_room_icon: local_assigns[:show_room_icon] %>
           <%= render "messages/context", message: message %>
           <%= render "messages/presentation", message: message %>

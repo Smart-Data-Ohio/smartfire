@@ -3,7 +3,7 @@
 <% else %>
 <% @page_title = @thread.name %>
 
-<main class="thread" aria-labelledby="thread-title">
+<%= tag.main class: "thread", aria: { labelledby: "thread-title" }, data: static_message_list_data do %>
   <header>
     <h1 id="thread-title"><%= @thread.name %></h1>
     <p><%= @thread.status %> · <%= @thread.message_count %> messages</p>
@@ -52,5 +52,5 @@
   <section aria-label="Thread messages">
     <%= render partial: "messages/message", collection: @messages %>
   </section>
-</main>
+<% end %>
 <% end %>

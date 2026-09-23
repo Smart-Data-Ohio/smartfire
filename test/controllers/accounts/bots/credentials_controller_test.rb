@@ -13,6 +13,7 @@ class Accounts::Bots::CredentialsControllerTest < ActionDispatch::IntegrationTes
     assert_match "Main", response.body
     assert_match "f4f0", response.body
     assert_no_match "bender-test-secret-1234", response.body
+    assert_select "time[data-local-time-target='datetime'][datetime]", minimum: 1
   end
 
   test "create reveals the secret once" do

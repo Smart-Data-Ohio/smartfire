@@ -521,6 +521,7 @@ class Agents::EventsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match "Activity for Bender Bot", response.body
     assert_match "mention", response.body
+    assert_select "time[data-local-time-target='datetime'][datetime]", minimum: 1
   end
 
   test "ledger page renders for the agent owner without admin rights" do
