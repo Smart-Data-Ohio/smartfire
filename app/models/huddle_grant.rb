@@ -53,9 +53,10 @@ class HuddleGrant < ApplicationRecord
             .where.not(room_id: current_room.id)
 
           stage_role = current_room.stage? ? current_membership.stage_role : nil
+          server_muted = current_membership.server_muted?
 
           existing = active.find_by(session_id: current_session.id, membership_id: current_membership.id)
-          if existing && existing.stage_role == stage_role
+          if existing && existing.stage_role == stage_role && existing.server_muted == server_muted
             existing.update!(last_issued_at: Time.current)
             existing
           else
@@ -68,6 +69,7 @@ class HuddleGrant < ApplicationRecord
               membership_id: current_membership.id,
               room_id: current_room.id,
               stage_role: stage_role,
+              server_muted: server_muted,
               last_issued_at: Time.current
             )
           end
@@ -119,6 +121,16 @@ class HuddleGrant < ApplicationRecord
         .sort_by { |user| user.name.downcase }
     end
 
+    # LiveKit participant identities per in-call user id. The browser knows
+    # call participants by LiveKit identity only, so per-user client state
+    # (remembered volumes, speaking highlights) maps through here. Identities
+    # authorize nothing on their own — the gateway checks the live grant —
+    # so exposing them to room members leaks no access.
+    def participant_identities_for(room)
+      active.in_call.where(room_id: room.id)
+        .group_by(&:user_id).transform_values { |grants| grants.map(&:identity) }
+    end
+
     private
       def revoke_scope!(scope, create_cleanup: true)
         scope.find_each { |grant| grant.revoke!(create_cleanup: create_cleanup) }
@@ -139,7 +151,12 @@ class HuddleGrant < ApplicationRecord
     # gateway's per-second check revokes through here, so a demoted speaker
     # whose grant somehow survived the role-change revocation still loses the
     # call on the next check.
-    !room.stage? || membership.stage_role == stage_role
+    return false if room.stage? && membership.stage_role != stage_role
+
+    # A server mute revokes publish the same way: a grant issued before the
+    # mute (or before the unmute) no longer matches the membership, so the
+    # gateway drops it and the client rejoins with a fresh token.
+    membership.server_muted? == server_muted?
   end
 
   # The gateway calls this about once per second per connected participant,

@@ -162,6 +162,9 @@ Rails.application.routes.draw do
         get :participants
         post :leave
       end
+      post "call_moderation/:membership_id/mute", to: "call_moderation#mute", as: :call_moderation_mute
+      delete "call_moderation/:membership_id/mute", to: "call_moderation#unmute", as: :call_moderation_unmute
+      post "call_moderation/:membership_id/disconnect", to: "call_moderation#disconnect", as: :call_moderation_disconnect
       resource :refresh, only: :show
       resource :settings, only: :show
       resource :involvement, only: %i[ show update ]

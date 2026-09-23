@@ -22,9 +22,11 @@ class Membership < ApplicationRecord
 
   before_validation :default_stage_role, on: :create
   before_update :sync_huddle_grants_on_stage_role_change, if: :stage_role_changed?
+  before_update :sync_huddle_grants_on_server_mute_change, if: :server_muted_at_changed?
 
   validate :stage_attributes_only_for_stage_rooms
   validate :raised_hands_only_for_listeners
+  validate :server_mute_only_for_call_rooms
   validate :at_least_one_host_remains, on: :update, if: :stage_role_changed?
 
   scope :with_ordered_room, -> { includes(:room).joins(:room).order("LOWER(rooms.name)") }
@@ -63,6 +65,22 @@ class Membership < ApplicationRecord
     update!(stage_role: new_role, hand_raised_at: nil)
   end
 
+  # A host or administrator server-mute: the member's active grants are
+  # revoked in the same transaction (see the callback below), so the gateway
+  # removes them and the client rejoins subscribe-only until unmuted. Applies
+  # to stage and voice rooms; every other room leaves the column nil.
+  def server_muted?
+    server_muted_at.present?
+  end
+
+  def server_mute!
+    update!(server_muted_at: Time.current)
+  end
+
+  def server_unmute!
+    update!(server_muted_at: nil)
+  end
+
   private
     def default_stage_role
       self.stage_role ||= :listener if room&.stage?
@@ -87,6 +105,19 @@ class Membership < ApplicationRecord
       if hand_raised_at.present? && stage_role != "listener"
         errors.add(:hand_raised_at, "can only be raised by a listener")
       end
+    end
+
+    # Muting or unmuting revokes the member's active grants in the same
+    # transaction, like a publish-boundary role change: the muted member
+    # rejoins subscribe-only, and the unmuted member rejoins with publish.
+    def sync_huddle_grants_on_server_mute_change
+      HuddleGrant.revoke_for_membership!(self)
+    end
+
+    def server_mute_only_for_call_rooms
+      return if room&.stage? || room&.voice?
+
+      errors.add(:server_muted_at, "only exists on stage and voice rooms") if server_muted_at.present?
     end
 
     def at_least_one_host_remains
