@@ -30,11 +30,21 @@ nothing errors.
 - The first attachment within the 10 MB limit lands on the message
   (messages carry one file); every file is named in the body, and files
   over the limit are named with the reason instead of arriving silently
-  missing.
+  missing. The size is estimated from the encoded MIME part before
+  decoding, so a huge part is rejected without paying for the decode.
+- Only images, PDFs, text files, and office documents are attached;
+  other types are named with `file type not allowed` and never land on
+  the message.
 - Bodies are capped at the normal message length. Empty mail with no
   attachment posts nothing.
+- Each room accepts at most 30 emailed messages per hour (hour bucket
+  in `Rails.cache`, like the agent API throttle); over-limit mail is
+  dropped silently.
 - Unknown tokens post nothing and bounce nothing, so the address reveals
-  nothing to probers.
+  nothing to probers. Mail to a non-room address (no `room-` token at
+  all) is marked bounced instead of raising a routing error — with no
+  reply sent, since the app has no outbound mail and answering
+  misaddressed mail would backscatter.
 
 ## Ingress setup (relay provider)
 

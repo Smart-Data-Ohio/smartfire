@@ -5,6 +5,27 @@ class RoomMailbox < ApplicationMailbox
   # attachment); the rest are named in the body.
   MAX_ATTACHMENT_BYTES = 10.megabytes
 
+  # At most this many emailed messages per room per hour, so one
+  # address cannot flood a room.
+  MAX_EMAILS_PER_ROOM_PER_HOUR = 30
+
+  # Only these attachment types ever land on the message: images,
+  # PDFs, plain text, and office documents. Everything else is named
+  # in the body with the reason, never attached.
+  ALLOWED_ATTACHMENT_PREFIXES = %w[
+    image/
+    text/
+    application/vnd.openxmlformats-officedocument
+    application/vnd.oasis.opendocument
+  ].freeze
+  ALLOWED_ATTACHMENT_TYPES = %w[
+    application/pdf
+    application/rtf
+    application/msword
+    application/vnd.ms-excel
+    application/vnd.ms-powerpoint
+  ].freeze
+
   # Posts an email forwarded to a room's secret address as a room
   # message. Anything unauthenticatable is dropped silently: unknown
   # tokens, disabled inbound email, and deleted, direct, or board rooms
@@ -13,6 +34,7 @@ class RoomMailbox < ApplicationMailbox
   def process
     return unless Room.inbound_email_enabled?
     return if room.nil?
+    return if rate_limited?
 
     room.memberships.find_or_create_by!(user: creator) unless from_member?
     message = room.root_messages.new(creator:, markdown_source: composed_source)
@@ -37,6 +59,18 @@ class RoomMailbox < ApplicationMailbox
     def room_token_from_recipients
       mail.recipients.lazy.filter_map { |recipient| recipient.to_s[/room-(.+)@/i, 1] }
         .first.to_s.strip.presence
+    end
+
+    # Hour-bucketed per-room limit. Backed by Rails.cache like the agent
+    # API throttle, so it only bites when a real cache store is
+    # configured. Over-limit mail is dropped silently: it reached a
+    # valid address, so no bounce that confirms anything.
+    def rate_limited?
+      bucket = Time.current.strftime("%Y%m%d%H")
+      count = Rails.cache.increment(
+        "room_inbound_email:#{room.id}:#{bucket}", 1, expires_in: 1.hour + 5.minutes
+      ).to_i
+      count > MAX_EMAILS_PER_ROOM_PER_HOUR
     end
 
     # A sender whose address belongs to an active member of the room
@@ -163,8 +197,44 @@ class RoomMailbox < ApplicationMailbox
 
     def attachable_files
       @attachable_files ||= mail.attachments.select do |attachment|
-        attachment.filename.present? && attachment.decoded.bytesize <= MAX_ATTACHMENT_BYTES
+        attachment.filename.present? && attachment_verdict(attachment) == :ok
       end
+    end
+
+    # One verdict per attachment, memoized so a part is decoded at most
+    # once: too big (by estimate, then exactly), a disallowed type, or
+    # ok. Size is checked first so an oversized part of any type names
+    # the limit.
+    def attachment_verdict(attachment)
+      @attachment_verdicts ||= {}
+      @attachment_verdicts[attachment.object_id] ||= begin
+        if !estimated_size_ok?(attachment) || !decoded_size_ok?(attachment)
+          :too_big
+        elsif !allowed_attachment_type?(attachment)
+          :disallowed_type
+        else
+          :ok
+        end
+      end
+    end
+
+    def allowed_attachment_type?(attachment)
+      type = attachment.mime_type.to_s.downcase
+      ALLOWED_ATTACHMENT_TYPES.include?(type) ||
+        ALLOWED_ATTACHMENT_PREFIXES.any? { |prefix| type.start_with?(prefix) }
+    end
+
+    # Estimated from the encoded MIME part before decoding: base64
+    # inflates 4:3, so the raw part size bounds the decoded size without
+    # paying for the decode of a huge part.
+    def estimated_size_ok?(attachment)
+      attachment.body.raw_source.to_s.bytesize * 3 / 4 <= MAX_ATTACHMENT_BYTES
+    end
+
+    # Exact check once decoded: unencoded (7bit) parts are not inflated,
+    # so the estimate above cannot reject them.
+    def decoded_size_ok?(attachment)
+      attachment.decoded.bytesize <= MAX_ATTACHMENT_BYTES
     end
 
     def attach_first_file!(message)
@@ -179,7 +249,8 @@ class RoomMailbox < ApplicationMailbox
     end
 
     # Names every attached and skipped file so nothing arrives silently
-    # missing: skipped files name the reason (over the size limit).
+    # missing: skipped files name the reason (over the size limit, or a
+    # type outside the allowlist).
     def attachment_note
       @attachment_note ||= begin
         names = mail.attachments.filter_map do |attachment|
@@ -187,9 +258,17 @@ class RoomMailbox < ApplicationMailbox
           next if filename.nil?
           next filename if attachable_files.include?(attachment)
 
-          "#{filename} (not attached: over the #{MAX_ATTACHMENT_BYTES / 1.megabyte} MB limit)"
+          "#{filename} (not attached: #{skip_reason(attachment)})"
         end
         names.any? ? "Attached files: #{names.join(", ")}" : nil
+      end
+    end
+
+    def skip_reason(attachment)
+      if attachment_verdict(attachment) == :too_big
+        "over the #{MAX_ATTACHMENT_BYTES / 1.megabyte} MB limit"
+      else
+        "file type not allowed"
       end
     end
 end

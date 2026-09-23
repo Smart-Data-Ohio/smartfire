@@ -1,6 +1,8 @@
 require "test_helper"
 
 class RoomMailboxTest < ActionMailbox::TestCase
+  ONE_PIXEL_PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+
   setup do
     @domain_before = ENV["INBOUND_EMAIL_DOMAIN"]
     ENV["INBOUND_EMAIL_DOMAIN"] = "mail.test"
@@ -190,6 +192,55 @@ class RoomMailboxTest < ActionMailbox::TestCase
     assert_includes message.markdown_source, "big.bin (not attached: over the 10 MB limit)"
   end
 
+  test "a disallowed attachment type is named, not attached" do
+    mail = Mail.new(from: "david@37signals.com", to: room_address, subject: "Tool", body: "Run this.")
+    mail.add_file(filename: "tool.exe", content: "MZ-bytes")
+
+    receive_inbound_email_from_source(mail.to_s)
+
+    message = @room.messages.order(:created_at).last
+    assert_not message.attachment.attached?
+    assert_includes message.markdown_source, "tool.exe (not attached: file type not allowed)"
+  end
+
+  test "an office document within the limit lands on the message" do
+    mail = Mail.new(from: "david@37signals.com", to: room_address, subject: "Report", body: "See attached.")
+    mail.add_file(filename: "report.docx", content: "PK-bytes")
+
+    receive_inbound_email_from_source(mail.to_s)
+
+    message = @room.messages.order(:created_at).last
+    assert message.attachment.attached?
+    assert_equal "report.docx", message.attachment.filename.to_s
+  end
+
+  test "an image within the limit lands on the message" do
+    mail = Mail.new(from: "david@37signals.com", to: room_address, subject: "Photo", body: "See attached.")
+    mail.add_file(filename: "photo.png", content: Base64.decode64(ONE_PIXEL_PNG))
+
+    receive_inbound_email_from_source(mail.to_s)
+
+    message = @room.messages.order(:created_at).last
+    assert message.attachment.attached?
+    assert_equal "photo.png", message.attachment.filename.to_s
+  end
+
+  test "a room accepts at most 30 emailed messages per hour" do
+    travel_to Time.current.change(min: 30) do
+      with_memory_cache do
+        assert_difference -> { @room.messages.count }, 30 do
+          30.times do |index|
+            deliver_room_mail(from: "outsider#{index}@example.com", body: "Hello #{index}")
+          end
+        end
+
+        assert_no_difference -> { Message.count } do
+          deliver_room_mail(from: "late@example.com", body: "One too many")
+        end
+      end
+    end
+  end
+
   test "an empty mail with no attachment posts nothing" do
     assert_no_difference -> { Message.count } do
       receive_inbound_email_from_mail(
@@ -221,5 +272,14 @@ class RoomMailboxTest < ActionMailbox::TestCase
       mail = Mail.new({ from:, to: room_address, body:, **options })
       mail.header["Authentication-Results"] = authentication_results if authentication_results
       receive_inbound_email_from_source(mail.to_s)
+    end
+
+    def with_memory_cache
+      store = ActiveSupport::Cache::MemoryStore.new
+      previous = Rails.cache
+      Rails.cache = store
+      yield
+    ensure
+      Rails.cache = previous
     end
 end
