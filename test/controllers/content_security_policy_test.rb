@@ -64,6 +64,28 @@ class ContentSecurityPolicyTest < ActionDispatch::IntegrationTest
     assert_includes policy["frame-src"], "https://www.linkedin.com"
   end
 
+  test "form-action allows every host a sudo or form flow redirects to" do
+    sign_in :david
+    get room_url(rooms(:watercooler))
+
+    form_action = directives(response.headers["Content-Security-Policy"])["form-action"]
+    assert_includes form_action, "'self'"
+
+    # Read from the same constants the redirects are built with, so a new
+    # OAuth host fails here until the policy allows it: Google sign-in,
+    # sudo re-auth, sign-in linking, and Calendar/Drive connect all land
+    # on accounts.google.com, while GitHub App connect lands on
+    # github.com (reached through a sudo-continued redirect chain, which
+    # Chromium checks against form-action end to end).
+    oauth_hosts = [
+      Google::SignIn::AUTHORIZE_HOST, Google::Client::AUTHORIZE_HOST, Github::App::AUTHORIZE_HOST
+    ].uniq
+    assert oauth_hosts.many?, "expected both a Google and a GitHub OAuth host, got #{oauth_hosts.inspect}"
+    oauth_hosts.each do |host|
+      assert_includes form_action, "https://#{host}"
+    end
+  end
+
   test "the event form's inline time-zone script carries the nonce" do
     sign_in :david
     get new_room_event_url(rooms(:watercooler))

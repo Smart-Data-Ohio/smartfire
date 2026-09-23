@@ -24,8 +24,11 @@
 # - frame-src for the Google Picker and sign-in iframes, plus LinkedIn's
 #   official embed player (linkedin.com/embed/…), which a LinkedIn post
 #   card loads only after the reader clicks "Show embedded post".
-# - form-action 'self' plus accounts.google.com, where the Google sign-in and
-#   Calendar/Drive connect forms redirect.
+# - form-action 'self' plus every host a form submission can redirect to:
+#   accounts.google.com (Google sign-in, sudo re-auth, and Calendar/Drive
+#   connect) and github.com (GitHub App connect). Chromium checks the whole
+#   redirect chain of a form POST against form-action, so the sudo prompt's
+#   plain POST needs the final OAuth host too, not just the first hop.
 # - object-src 'none', base-uri 'self'.
 module ContentSecurityPolicySources
   GOOGLE_SCRIPTS = %w[ https://accounts.google.com/gsi/ https://apis.google.com ].freeze
@@ -34,6 +37,7 @@ module ContentSecurityPolicySources
   LINKEDIN_FRAMES = %w[ https://www.linkedin.com ].freeze
   GOOGLE_STYLES = %w[ https://accounts.google.com/gsi/style ].freeze
   GOOGLE_FORMS = %w[ https://accounts.google.com ].freeze
+  GITHUB_FORMS = %w[ https://github.com ].freeze
 
   SCHEME_PAIRS = { "wss" => "https", "ws" => "http", "https" => "wss", "http" => "ws" }.freeze
 
@@ -65,7 +69,7 @@ Rails.application.configure do
     policy.frame_src    :self, *ContentSecurityPolicySources::GOOGLE_FRAMES, *ContentSecurityPolicySources::LINKEDIN_FRAMES
     policy.worker_src   :self, :blob
     policy.manifest_src :self
-    policy.form_action  :self, *ContentSecurityPolicySources::GOOGLE_FORMS
+    policy.form_action  :self, *ContentSecurityPolicySources::GOOGLE_FORMS, *ContentSecurityPolicySources::GITHUB_FORMS
     policy.report_uri   "/csp_reports"
   end
 
