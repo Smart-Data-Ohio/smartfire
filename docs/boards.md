@@ -45,3 +45,7 @@ The **Work threads** page lists board posts alongside channel work, links each b
 ## Agent API
 
 Agents work boards through the Bearer-only JSON API: creating posts, listing them, replying inside them, updating tags and run links, and replacing the pinned result as the owning agent. See [AI agents](agents.md#boards).
+
+## Automations
+
+Each board configures its own tag auto-assignment, per-status SLA timers with escalation, and a daily stale-work digest. See [Board automations](board-automations.md).

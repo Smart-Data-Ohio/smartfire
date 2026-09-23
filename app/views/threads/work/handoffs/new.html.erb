@@ -1,0 +1,38 @@
+<% @page_title = "Hand off #{@thread.name}" %>
+
+<% content_for :nav do %>
+  <div class="flex-item-justify-start">
+    <%= link_to "Back to #{@thread.name}", room_thread_path(@room, @thread), class: "btn" %>
+  </div>
+<% end %>
+
+<section class="panel" aria-labelledby="handoff-title">
+  <h1 id="handoff-title">Hand off “<%= @thread.name %>”</h1>
+  <p>Ownership moves to the receiving agent, the handoff is recorded in Work history, and the agent gets the context package below through its event feed.</p>
+
+  <%= form_with url: thread_work_handoff_path(@thread), class: "board-post__form" do |form| %>
+    <% if @error.present? %>
+      <p class="form-error" role="alert"><%= @error %></p>
+    <% end %>
+    <label>
+      <span>Receiving agent</span>
+      <%= form.select :receiver_agent_id,
+            options_for_select(@receivers.map { |agent| [ agent.user.name, agent.id ] }),
+            { prompt: "Choose an agent" }, required: true %>
+    </label>
+    <label>
+      <span>Summary</span>
+      <%= form.text_area :summary, rows: 6, maxlength: WorkHandoff::SUMMARY_LIMIT, required: true,
+            placeholder: "Where the work stands and what is next…" %>
+    </label>
+    <label>
+      <span>Links (one URL per line, up to <%= WorkHandoff::LINKS_LIMIT %>)</span>
+      <%= form.text_area :links, rows: 3, placeholder: "https://example.com/spec" %>
+    </label>
+    <label>
+      <span>Open questions (one per line, up to <%= WorkHandoff::OPEN_QUESTIONS_LIMIT %>)</span>
+      <%= form.text_area :open_questions, rows: 3, placeholder: "Which approach did we agree on?" %>
+    </label>
+    <%= form.submit "Hand off", class: "btn btn--reversed" %>
+  <% end %>
+</section>

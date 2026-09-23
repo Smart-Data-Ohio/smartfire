@@ -24,6 +24,10 @@ class Message < ApplicationRecord
   has_one :poll, dependent: :destroy
   has_many :message_pins, dependent: :destroy
   has_many :saved_items, dependent: :destroy
+  # A stale-work digest note links its claim back here for the board page.
+  # The link clears with the message so the room destroy batches (which hit
+  # digest notes before the room's own digest rows go) never trip the FK.
+  has_many :board_stale_digests, foreign_key: :message_id, dependent: :nullify
   has_many :activity_items, as: :source, dependent: :destroy, inverse_of: :source
   # This callback must run before Active Record's dependent:nullify callback. It
   # leaves a small tombstone on each reply so the UI can still explain why its
@@ -406,7 +410,10 @@ class Message < ApplicationRecord
     end
 
     def no_root_messages_in_boards
-      errors.add :thread, "must be present in a board" if thread_id.nil? && room&.board?
+      # Quiet system notes (the stale-work digest) are not chat: they skip
+      # unread, push, agents, inbox, and search, so boards accept them
+      # while still refusing root chat messages.
+      errors.add :thread, "must be present in a board" if thread_id.nil? && room&.board? && !system_note?
     end
 
     def validate_forward_metadata

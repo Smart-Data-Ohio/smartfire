@@ -44,8 +44,19 @@
     <nav class="board__views" aria-label="Board rendering">
       <%= link_to "List", room_path(@room, view: "list", **filter_params), class: [ "btn", "board__view", "active": board_view == "list" ] %>
       <%= link_to "Board", room_path(@room, view: "board", **filter_params.except(:status)), class: [ "btn", "board__view", "active": board_view == "board" ] %>
+      <% if Current.user.can_administer?(@room) %>
+        <%= link_to "Automations", board_automations_path(@room), class: "btn board__view" %>
+      <% end %>
     </nav>
   </header>
+
+  <% latest_digest = @room.board_stale_digests.includes(:message).order(digest_on: :desc).first %>
+  <% if latest_digest&.message %>
+    <section class="board__digest" aria-label="Latest stale-work digest">
+      <h2>Stale-work digest · <%= latest_digest.digest_on.strftime("%B %-d, %Y") %></h2>
+      <%= simple_format(latest_digest.message.plain_text_body) %>
+    </section>
+  <% end %>
 
   <%= form_with url: room_path(@room), method: :get, class: "board__filters" do |form| %>
     <%= form.hidden_field :view, value: board_view %>

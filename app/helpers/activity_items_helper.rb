@@ -13,6 +13,9 @@ module ActivityItemsHelper
     when WorkThreadEvent
       thread = source.thread
       thread ? room_path(thread.room, thread: thread.id) : activity_items_path
+    when BoardSlaNudge
+      thread = source.channel_thread
+      thread ? room_path(thread.room, thread: thread.id) : activity_items_path
     when HuddleGrant
       source.room ? room_path(source.room) : activity_items_path
     when Event
@@ -40,6 +43,8 @@ module ActivityItemsHelper
       "Work assignment"
     when "work_update"
       "Work update"
+    when "work_sla"
+      "SLA breach"
     when "huddle_started"
       "Incoming huddle"
     when "huddle_missed"
@@ -78,6 +83,9 @@ module ActivityItemsHelper
       end
     when WorkThreadEvent
       source.thread ? "#{room_display_name(source.thread.room)} · #{source.thread.name}" : "Unavailable thread"
+    when BoardSlaNudge
+      thread = source.channel_thread
+      thread ? "#{room_display_name(thread.room)} · #{thread.name}" : "Unavailable thread"
     when HuddleGrant
       source.room ? room_display_name(source.room) : "Unavailable room"
     when Event
@@ -115,6 +123,15 @@ module ActivityItemsHelper
         changes << "Owner: #{source.from_owner_name.presence || "unassigned"} → #{source.to_owner_name.presence || "unassigned"}"
       end
       changes.presence&.to_sentence || "Work thread updated"
+    when BoardSlaNudge
+      status = ChannelThread::WORK_STATUS_LABELS.fetch(source.work_status, source.work_status.to_s.humanize)
+      waited = source.waited_minutes
+      age = waited >= 60 ? "#{(waited / 60.0).round(1)} hours" : "#{waited} minutes"
+      if source.stage == "escalation"
+        "Escalated: sitting in #{status} for #{age}"
+      else
+        "Sitting in #{status} for #{age}"
+      end
     when HuddleGrant
       caller = source.user&.name || "Someone"
       if item.event_type == "huddle_missed"

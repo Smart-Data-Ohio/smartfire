@@ -179,8 +179,19 @@ module Agents
           room: { id: room.id, name: room.name },
           actor: event.actor ? { id: event.actor.id, name: event.actor.name } : nil,
           work: work,
+          handoff: handoff_payload_for(event),
           thread_deleted: (true if thread.nil?)
         }.compact
+      end
+
+      # The context package travels snapshotted in the event metadata, so
+      # polling never depends on the handoff row surviving. Other work
+      # event types carry no handoff key.
+      def handoff_payload_for(event)
+        return unless event.event_type == "work_handed_off"
+
+        snapshot = event.metadata.is_a?(Hash) ? event.metadata["handoff"] : nil
+        snapshot.is_a?(Hash) ? snapshot.slice("id", "summary", "links", "open_questions", "sender_name", "receiver_agent_id") : nil
       end
 
       def slash_command_poll_payload(event)

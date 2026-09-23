@@ -46,6 +46,7 @@ endpoints, per credential per minute:
 | `pin_message`, `unpin_message` | pinning / unpinning | 60 |
 | `register_slash_command`, `unregister_slash_command` | command registration | 60 |
 | `create_poll` | poll creation | 60 |
+| `handoff_work` | work handoffs | 60 |
 | `create_board_post` | board post creation | 30 |
 
 The remaining tools have no throttle, like their REST counterparts.
@@ -115,6 +116,7 @@ curl https://smartfire.example.com/agents/mcp \
 | `pin_message`, `unpin_message` | `post_messages` in the room | `POST`/`DELETE /agents/messages/:id/pin` |
 | `register_slash_command`, `unregister_slash_command` | `post_messages` in the room | `POST`/`DELETE /rooms/:id/agents/slash_commands` |
 | `create_poll`, `get_poll` | `post_messages` in the room | `POST`/`GET /rooms/:id/agents/polls` |
+| `handoff_work` | ownership + `manage_threads` | `POST /agents/work/:id/handoff` |
 
 `tools/list` always returns the full set; per-tool enforcement happens at
 call time, so a client can show every tool and let denials explain which

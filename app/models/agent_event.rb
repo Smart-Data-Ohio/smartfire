@@ -1,6 +1,6 @@
 class AgentEvent < ApplicationRecord
   MESSAGE_DELIVERABLE_TYPES = %w[ mention direct_message reply ].freeze
-  WORK_DELIVERABLE_TYPES = %w[ work_assigned work_unassigned ].freeze
+  WORK_DELIVERABLE_TYPES = %w[ work_assigned work_unassigned work_handed_off ].freeze
   # Room-scoped rows with no message, readable like work rows: a member
   # invoking one of the agent's registered slash commands. Registration
   # and invocation require post_messages; polling keeps the standard

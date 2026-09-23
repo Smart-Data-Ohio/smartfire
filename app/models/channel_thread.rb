@@ -32,6 +32,8 @@ class ChannelThread < ApplicationRecord
   has_many :users, through: :memberships
   has_many :work_thread_events, foreign_key: :channel_thread_id, inverse_of: :thread, dependent: :destroy
   has_many :work_thread_links, foreign_key: :channel_thread_id, inverse_of: :channel_thread, dependent: :destroy
+  has_many :work_handoffs, foreign_key: :channel_thread_id, inverse_of: :channel_thread, dependent: :destroy
+  has_many :board_sla_nudges, foreign_key: :channel_thread_id, dependent: :destroy
   # No dependent option: the foreign key nullifies thread_id on delete.
   # Pending rows are dropped with an inbox item first (see below); sent
   # history rows keep their past with the thread link cleared.
@@ -56,9 +58,14 @@ class ChannelThread < ApplicationRecord
   before_validation :set_default_name, on: :create
   before_validation :set_default_last_activity_at, on: :create
   before_save :apply_pending_tag_names, if: :pending_tag_names?
+  before_save :stamp_work_status_changed_at, if: :will_save_change_to_work_status?
 
   after_create_commit :announce_board_post, if: :board_post?
   after_update_commit :broadcast_board_row_replace_on_change, if: :board_post?
+  # Create and update need distinct callback filters: registering the same
+  # method twice on the commit chain keeps only one registration.
+  after_create_commit :apply_board_tag_auto_assign_on_create
+  after_update_commit :apply_board_tag_auto_assign_on_update
   after_destroy_commit :broadcast_board_row_remove, if: :board_post?
   before_destroy :capture_deleted_work_snapshot
   after_destroy_commit :emit_deleted_work_unassigned
@@ -699,6 +706,72 @@ class ChannelThread < ApplicationRecord
     self
   end
 
+  # Hands this work thread to another agent with a structured context
+  # package (summary, links, open questions), transferring ownership. The
+  # handoff is recorded in Work history, the receiving agent gets a
+  # work_handed_off ledger row (delivered through the normal poll and
+  # webhook path), a previous agent owner gets work_unassigned, and the
+  # audit log records work.handoff. The callers pre-check authorization
+  # (the sender must be able to work the thread; the receiver needs
+  # manage_threads) to own the 403/404, and the sender is re-verified
+  # under the row lock on fresh state, like update_work!: an agent sender
+  # must still own the thread, a human sender must still manage work
+  # here. Receiver ownership eligibility is validated on save, like any
+  # assignment.
+  def hand_off!(sender:, receiver_agent:, summary:, links: [], open_questions: [])
+    raise ActiveRecord::RecordNotFound, "Work thread is not tracked" unless work?
+    if work_owner_id == receiver_agent&.user_id
+      errors.add(:work_owner, "is already the owner of this work")
+      raise ActiveRecord::RecordInvalid.new(self)
+    end
+
+    handoff = nil
+    assignment_events = []
+
+    self.class.transaction(requires_new: true) do
+      with_lock do
+        reload
+        raise ActiveRecord::RecordNotFound, "Work thread is not tracked" unless work?
+        if work_owner_id == receiver_agent&.user_id
+          errors.add(:work_owner, "is already the owner of this work")
+          raise ActiveRecord::RecordInvalid.new(self)
+        end
+        verify_handoff_sender!(sender)
+
+        before_owner = work_owner
+        handoff = work_handoffs.create!(
+          sender: sender,
+          receiver_agent: receiver_agent,
+          summary: summary,
+          links: links,
+          open_questions: open_questions
+        )
+        update!(work_owner: receiver_agent.user)
+        association(:work_owner).reset
+        WorkThreadEvent.create_for_handoff!(
+          thread: self,
+          actor: sender,
+          from_owner: before_owner,
+          to_owner: work_owner,
+          handoff: handoff
+        )
+        assignment_events = record_handoff_events!(
+          from_owner: before_owner, receiver_agent: receiver_agent, sender: sender, handoff: handoff
+        )
+        AuditLog.record!(action: "work.handoff", actor: sender, target: self,
+          changes: {
+            from_owner: before_owner&.name,
+            to_owner: work_owner&.name,
+            summary: summary.to_s.truncate(200)
+          })
+      end
+    end
+
+    ActiveRecord.after_all_transactions_commit { deliver_work_assignment_webhooks(assignment_events) }
+
+    handoff
+  end
+
   # People who may own a board post through the new-post form or the owner
   # control: active human members plus eligible agents, the same set the
   # Update work control offers.
@@ -771,7 +844,86 @@ class ChannelThread < ApplicationRecord
 
       tags.where.not(name: names).destroy_all
       existing = tags.reload.map(&:name)
+      @added_tag_names = names - existing
       (names - existing).each { |name| tags.build(name:) }
+    end
+
+    # SLA timers start when the status last changed. Stamped on every
+    # save that changes work_status, whatever path wrote it.
+    def stamp_work_status_changed_at
+      self.work_status_changed_at = Time.current
+    end
+
+    # Board auto-assign-by-tag: after a post gains tags, the first matching
+    # rule assigns its target — but only when the post has no owner, so a
+    # rule never overrides a human (or any) assignment. Runs after commit
+    # in its own transaction; a concurrent assignment winning the race
+    # simply leaves nothing to do.
+    def apply_board_tag_auto_assign_on_create
+      apply_board_tag_auto_assign
+    end
+
+    def apply_board_tag_auto_assign_on_update
+      apply_board_tag_auto_assign
+    end
+
+    def apply_board_tag_auto_assign
+      added = @added_tag_names
+      @added_tag_names = nil
+      return if added.blank? || !board_post? || work_owner_id.present?
+
+      rule = BoardTagAssignment.where(room_id: room_id, tag: added).order(:tag).first
+      return unless rule
+
+      auto_assign_by_tag!(rule.assignee)
+    rescue => error
+      Rails.logger.error "Board tag auto-assign failed for thread #{id}: #{error.class}: #{error.message}"
+    end
+
+    # System assignment without a permission check: the rule's own
+    # configuration (board creator or administrator) is the authority, and
+    # the actor is nil. Mirrors update_work!'s write path — the history
+    # event, the agent ledger rows, and their webhooks — under the row
+    # lock with a re-check that the post is still unassigned.
+    def auto_assign_by_tag!(assignee)
+      events = []
+
+      self.class.transaction(requires_new: true) do
+        with_lock do
+          reload
+          return self if work_owner_id.present? || !board_post?
+
+          unless assignee_eligible_for_auto_assign?(assignee)
+            Rails.logger.info "Board tag auto-assign skipped for thread #{id}: assignee #{assignee.id} no longer eligible"
+            return self
+          end
+
+          update!(work_owner: assignee)
+          association(:work_owner).reset
+          WorkThreadEvent.create_for_change!(
+            thread: self,
+            actor: nil,
+            from_status: work_status,
+            to_status: work_status,
+            from_owner: nil,
+            to_owner: work_owner,
+            note: "Auto-assigned by board tag rule"
+          )
+          events = record_work_assignment_events!(from_owner: nil, to_owner: work_owner, actor: nil)
+        end
+      end
+
+      ActiveRecord.after_all_transactions_commit { deliver_work_assignment_webhooks(events) }
+
+      self
+    end
+
+    def assignee_eligible_for_auto_assign?(assignee)
+      return false unless assignee&.active? && room.memberships.exists?(user_id: assignee.id)
+      return true unless assignee.bot?
+
+      agent = assignee.agent || Agent.find_by(user_id: assignee.id)
+      agent&.active? && agent.can?(:post_messages, room) && agent.can?(:read_messages, room)
     end
 
     # A new post prepends into the board list and its status column and,
@@ -953,14 +1105,45 @@ class ChannelThread < ApplicationRecord
       events
     end
 
-    def record_work_assignment_event!(agent, event_type, actor, hop, chain_id)
+    # The sender on fresh locked state: whoever owned or managed the
+    # thread when the caller checked may have lost it since. An agent
+    # sender must still own the thread (404, like update_work_by_agent!);
+    # a human sender must still manage work here (403, like update_work!).
+    def verify_handoff_sender!(sender)
+      if sender&.bot?
+        unless work_owner_id == sender.id
+          raise ActiveRecord::RecordNotFound, "Work thread is not owned by this agent"
+        end
+      elsif !work_manageable_by?(sender)
+        raise WorkUpdateForbidden, "You cannot manage work in this thread"
+      end
+    end
+
+    # Ledger rows for a handoff: the previous agent owner (if any, and
+    # not the receiver) gets work_unassigned, and the receiver gets
+    # work_handed_off with the context package snapshotted into the
+    # metadata so poll and webhook payloads never depend on the handoff
+    # row surviving. The hop guard applies like any assignment.
+    def record_handoff_events!(from_owner:, receiver_agent:, sender:, handoff:)
+      hop, chain_id = Agent::Delivery.work_assignment_hop_and_chain_for(sender)
+
+      events = []
+      if (previous_agent = agent_for_work_owner(from_owner)) && previous_agent.id != receiver_agent.id
+        events << record_work_assignment_event!(previous_agent, "work_unassigned", sender, hop, chain_id)
+      end
+      events << record_work_assignment_event!(receiver_agent, "work_handed_off", sender, hop, chain_id,
+        extra_metadata: { "handoff" => handoff.payload })
+      events
+    end
+
+    def record_work_assignment_event!(agent, event_type, actor, hop, chain_id, extra_metadata: {})
       metadata = {
         "thread_id" => id,
         "title" => name,
         "work_status" => work_status,
         "assigned_by" => actor&.name,
         "hop" => hop
-      }
+      }.merge(extra_metadata)
 
       if hop >= Agent::Delivery::HOP_LIMIT
         agent.agent_events.create!(
