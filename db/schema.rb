@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_23_020341) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_025153) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -511,6 +511,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_020341) do
     t.datetime "destroy_enqueued_at"
     t.string "icon_name"
     t.string "name"
+    t.datetime "pins_changed_at"
     t.string "type", null: false
     t.datetime "updated_at", null: false
   end

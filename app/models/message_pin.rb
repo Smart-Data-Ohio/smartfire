@@ -4,7 +4,7 @@ class MessagePin < ApplicationRecord
 
   class CapReachedError < StandardError; end
 
-  belongs_to :message
+  belongs_to :message, touch: true
   belongs_to :room
   belongs_to :pinner, class_name: "User"
 
@@ -15,6 +15,7 @@ class MessagePin < ApplicationRecord
   # declaring the same method under after_create_commit and
   # after_destroy_commit would keep only one registration.
   after_commit :broadcast_pin_change, on: %i[ create destroy ]
+  after_commit :stamp_room_pins_changed, on: %i[ create destroy ]
 
   scope :ordered, -> { order(created_at: :desc, id: :desc) }
 
@@ -80,6 +81,15 @@ class MessagePin < ApplicationRecord
       locals: { room: },
       attributes: { maintain_scroll: true }
     )
+  end
+
+  # Unpins destroy their row, so a reconnect refresh could never spot one
+  # from the pins table alone; the room stamp marks every pin change for
+  # it. update_columns skips callbacks and leaves room updated_at alone
+  # (no room reorder); after_commit keeps a rolled-back pin from
+  # stamping, like the broadcasts above.
+  def stamp_room_pins_changed
+    room.update_columns(pins_changed_at: Time.current)
   end
 
   # A quiet one-line system note in the channel: rendered as a compact
