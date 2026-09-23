@@ -72,15 +72,16 @@ per chip.
 
 ## Finding files from the composer
 
-Members with Drive previews enabled get a **Drive** button in the message
-composer toolbar (it renders only when the page carries the
-`google-drive-previews` meta tag). The button opens a small popover with a
-search field and up to ten matching rows: a file-type icon, the file name,
-"Modified \<relative time\>", and the owner's name. The recent list shows
-immediately; typing filters by file name. Choosing a row inserts the file's
-link at the caret, and the full preview chip renders it once the message
-is sent. Escape and outside click close the popover; arrow keys move
-through results.
+Members with Drive previews enabled get a **From Google Drive** item in
+the message composer's **+** attach menu (it renders only when the page
+carries the `google-drive-previews` meta tag). The item opens a small
+popover with a search field and up to ten matching rows: a file-type icon,
+the file name, "Modified \<relative time\>", and the owner's name. The
+recent list shows immediately; typing filters by file name. Choosing a row
+inserts the file's link at the caret, and the full preview chip renders it
+once the message is sent. Escape and outside click close the popover;
+arrow keys move through results. Without Drive access the **+** button
+opens the device file picker directly, with no menu.
 
 The popover talks to `GET /google/drive/files?q=<text>`, which calls Drive
 `files.list` with the viewer's token (`pageSize=10`,
@@ -155,10 +156,11 @@ not accept attachments.
 ## Sharing a file with chat members (enhanced picker)
 
 When browser sharing is configured (see [Setup](#setup-google-cloud-console)
-and the [Workspace setup runbook](google-workspace-setup.md)), the composer
-carries a single **Drive** button for every signed-in human member — no
-Calendar or Drive consent required — driven by the `drive-share`
-Stimulus controller. Choosing a file opens the official Google Picker; a
+and the [Workspace setup runbook](google-workspace-setup.md)), the composer's
+**+** menu carries a single **From Google Drive** item for every signed-in
+human member — no Calendar or Drive consent required — driven by the
+`drive-share` Stimulus controller. Choosing a file opens the official
+Google Picker; a
 review dialog then offers two explicit actions: **Attach only**, which pins
 the file id exactly like the legacy picker and changes nothing in Drive, or
 **Grant view access and attach**, which grants the checked chat recipients
@@ -173,7 +175,7 @@ memory alone.
 It is never written to the DOM, hidden fields, Turbo snapshots, storage,
 logs, or the server, and it is dropped on Turbo cache, navigation, and
 controller disconnect. The official GIS and Picker scripts load lazily,
-only after the member presses the Drive button. The server-side
+only after the member chooses From Google Drive. The server-side
 Calendar/Drive connection is separate and untouched: stored refresh and
 access tokens are never rendered into the browser.
 

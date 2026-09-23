@@ -36,31 +36,48 @@
             <%# Pending Drive attachment chips, added by the drive-picker; keep empty so :empty hides the strip. %><div class="composer__drive-attachments" aria-live="polite"></div>
 
             <div class="composer__surface flex align-end gap">
-              <label class="composer__attachment-btn btn btn--borderless flex-item-no-shrink input--file" title="Attach a file">
-                <span class="composer__attachment-mark" aria-hidden="true">+</span>
-                <input type="file" data-action="composer#filePicked" multiple />
-                <span class="for-screen-reader">Attach a file</span>
-              </label>
+              <%# The + button owns a menu (From this device / From Google
+                  Drive) exactly when the composer renders a Drive flow
+                  below; otherwise it opens the device picker directly. %>
+              <% attach_menu_id = thread ? dom_id(thread, :attach_menu) : "attach-menu" %>
+              <% drive_menu_available = drive_share_picker_available? || Current.user&.google_account&.drive? %>
+              <div class="composer__attach flex-item-no-shrink" data-controller="attach-menu">
+                <button type="button" class="btn btn--borderless composer__attachment-btn"
+                        title="Attach a file" aria-label="Attach a file"
+                        <% if drive_menu_available %>aria-haspopup="menu" aria-expanded="false" aria-controls="<%= attach_menu_id %>"<% end %>
+                        data-attach-menu-target="button"
+                        data-action="click->attach-menu#toggle keydown->attach-menu#buttonKeydown">
+                  <span class="composer__attachment-mark" aria-hidden="true">+</span>
+                </button>
+                <input type="file" class="attach-menu__file" tabindex="-1" aria-hidden="true" multiple
+                       data-attach-menu-target="fileInput" data-action="composer#filePicked" />
+                <% if drive_menu_available %>
+                  <div id="<%= attach_menu_id %>" class="room-menu attach-menu" popover="manual"
+                       role="menu" aria-label="Attach a file" hidden data-attach-menu-target="menu">
+                    <button type="button" class="btn room-menu__item attach-menu__item" role="menuitem"
+                            data-action="attach-menu#chooseDevice">
+                      From this device
+                    </button>
+                    <button type="button" class="btn room-menu__item attach-menu__item" role="menuitem"
+                            data-action="attach-menu#chooseDrive">
+                      From Google Drive
+                    </button>
+                  </div>
+                <% end %>
+              </div>
 
+              <%# Drive flows without their own buttons: the attach menu's
+                  "From Google Drive" item starts them, and these wrappers
+                  anchor their panels exactly as before. %>
               <% if drive_share_picker_available? %>
                 <div class="drive-share flex-item-no-shrink" data-controller="drive-share"
                      data-drive-share-room-id-value="<%= room.id %>"
                      data-drive-share-thread-id-value="<%= thread&.id %>">
-                  <button type="button" class="btn btn--borderless composer__drive-btn" title="Attach a Drive file"
-                          aria-haspopup="dialog" aria-expanded="false"
-                          data-action="drive-share#open" data-drive-share-target="button">
-                    Drive
-                  </button>
                   <div class="drive-share__panel" role="dialog" aria-label="Share a Drive file" hidden
                        data-drive-share-target="panel" data-action="keydown->drive-share#panelKey"></div>
                 </div>
               <% elsif Current.user&.google_account&.drive? %>
                 <div class="drive-picker flex-item-no-shrink" data-controller="drive-picker">
-                  <button type="button" class="btn btn--borderless composer__drive-btn" title="Insert a Drive file"
-                          aria-haspopup="dialog" aria-expanded="false"
-                          data-action="drive-picker#toggle" data-drive-picker-target="button">
-                    Drive
-                  </button>
                   <div class="drive-picker__panel" role="dialog" aria-label="Find a Drive file" hidden
                        data-drive-picker-target="panel" data-action="keydown->drive-picker#key">
                     <input type="text" class="drive-picker__search input" placeholder="Search Drive files"

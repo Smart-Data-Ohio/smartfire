@@ -4,9 +4,10 @@ import { debounce } from "helpers/timing_helpers"
 
 // Composer popover listing the viewer's Google Drive files, recent first and
 // filterable by name, so a file link can be inserted without leaving
-// Smartfire. The button renders only when the layout carries the
-// google-drive-previews meta tag; connect double-checks so a stale page
-// sends zero requests. Choosing a row inserts the file's webViewLink at the
+// Smartfire. Started from the attach menu's "From Google Drive" item; it
+// renders only when the layout carries the google-drive-previews meta
+// tag, and connect double-checks so a stale page sends zero requests.
+// Choosing a row inserts the file's webViewLink at the
 // caret; the existing preview chip renders it once the message is sent.
 // Each row also carries an Attach button that pins the file to the message
 // as a pending chip in the composer's drive-attachments strip instead.
@@ -62,7 +63,7 @@ export default class extends Controller {
     if (this.isOpen || this.element.hidden) return
     this.isOpen = true
     this.panelTarget.hidden = false
-    this.buttonTarget.setAttribute("aria-expanded", "true")
+    if (this.hasButtonTarget) this.buttonTarget.setAttribute("aria-expanded", "true")
     this.searchTarget.setAttribute("aria-expanded", "true")
     document.addEventListener("click", this.onDocumentClick)
     this.searchTarget.value = ""
@@ -75,7 +76,7 @@ export default class extends Controller {
     this.isOpen = false
     this.requestId++
     this.panelTarget.hidden = true
-    this.buttonTarget.setAttribute("aria-expanded", "false")
+    if (this.hasButtonTarget) this.buttonTarget.setAttribute("aria-expanded", "false")
     this.searchTarget.setAttribute("aria-expanded", "false")
     this.searchTarget.removeAttribute("aria-activedescendant")
     document.removeEventListener("click", this.onDocumentClick)
@@ -120,7 +121,7 @@ export default class extends Controller {
       event.preventDefault()
       event.stopPropagation()
       this.close()
-      this.buttonTarget.focus()
+      this.#returnFocus()
       return
     }
 
@@ -299,6 +300,15 @@ export default class extends Controller {
 
   #closeOnClickOutside(event) {
     if (!this.element.contains(event.target)) this.close()
+  }
+
+  // Focus returns to the composer's + button, whose menu started the
+  // picker; the standalone Drive button is gone.
+  #returnFocus() {
+    const target = this.hasButtonTarget
+      ? this.buttonTarget
+      : this.element.closest("form")?.querySelector("[data-attach-menu-target='button']")
+    target?.focus()
   }
 
   #setStatus(message) {
