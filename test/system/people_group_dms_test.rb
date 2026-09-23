@@ -40,6 +40,22 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
     assert_includes page.evaluate_script("document.activeElement.textContent"), "Jason"
   end
 
+  test "Esc with a closed profile card stays unhandled for later listeners" do
+    visit room_path(rooms(:designers))
+    wait_for_controller "profile-card"
+
+    assert_selector "#profile-card-popover[hidden]", visible: :all
+    prevented = page.evaluate_script(<<~JS)
+      (() => {
+        const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })
+        window.dispatchEvent(event)
+        return event.defaultPrevented
+      })()
+    JS
+
+    assert_not prevented, "a closed profile card must not preventDefault Escape (huddle theater owns it)"
+  end
+
   test "the sidebar avatar trigger opens the profile card by keyboard" do
     visit room_path(rooms(:designers))
     wait_for_controller "profile-card"

@@ -49,8 +49,10 @@ export default class extends Controller {
   }
 
   close(event) {
-    event?.preventDefault?.()
+    // A closed card must leave the event alone: later window listeners
+    // (huddle theater's Escape handler) bail on defaultPrevented.
     if (!this.hasPopoverTarget || this.popoverTarget.hidden) return
+    event?.preventDefault?.()
 
     const trigger = this.trigger
     this.hide()
