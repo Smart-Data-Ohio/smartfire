@@ -1,4 +1,5 @@
 require "test_helper"
+require "timeout"
 
 class AuditLogTest < ActiveSupport::TestCase
   test "record! stores actor target labels changes and request context" do
@@ -198,6 +199,20 @@ class AuditLogTest < ActiveSupport::TestCase
 
     long = "#{"a" * 300}@example.com"
     assert_equal 254, AuditLog.record_sign_in_failure!(email: long, method: "password").actor_label.length
+  end
+
+  test "failure_actor_label rejects long adversarial input in linear time" do
+    # The old /[^@\s]+@[^@\s]+\.[^@\s]+/ pattern backtracked
+    # quadratically on many dots with a failing tail; the split-based
+    # check must return promptly instead of hanging the request.
+    adversarial = "a@" + "a." * 20_000 + " "
+    label = Timeout.timeout(5) { AuditLog.failure_actor_label(adversarial) }
+    assert_equal "[unrecognized]", label
+
+    # A valid shape past the length cap is also unrecognized rather than
+    # stored: nothing that long is a real email.
+    overlong = "#{"a" * 990}@example.com"
+    assert_equal "[unrecognized]", AuditLog.failure_actor_label(overlong)
   end
 
   test "webhook_origin_summary keeps the origin and a digest, not the URL" do

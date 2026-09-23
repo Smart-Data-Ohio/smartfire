@@ -68,9 +68,12 @@ class AuditLog < ApplicationRecord
   # A failed sign-in stores the typed email only when it matches a real
   # account or has an email shape; anything else is likely a password
   # typed into the email field, which must not be kept for a year.
-  FAILURE_EMAIL_SHAPE = /\A[^@\s]+@[^@\s]+\.[^@\s]+\z/
   UNRECOGNIZED_ACTOR_LABEL = "[unrecognized]".freeze
   FAILURE_LABEL_MAX = 254
+  # Longest input the email-shape check examines. Real emails top out at
+  # 254 chars; anything past this is a pasted password or an attack, and
+  # is never stored as a label (see failure_actor_label).
+  FAILURE_EMAIL_SHAPE_MAX = 1000
 
   # Keys whose values are secrets and must never land in the log. Callers
   # pass explicit change hashes (never raw params), and this filter is the
@@ -150,9 +153,25 @@ class AuditLog < ApplicationRecord
     typed = email.to_s.strip
     return UNRECOGNIZED_ACTOR_LABEL if typed.blank?
 
-    known = typed.match?(FAILURE_EMAIL_SHAPE) ||
+    known = failure_email_shape?(typed) ||
       User.where("LOWER(email_address) = ?", typed.downcase).exists?
     known ? typed.truncate(FAILURE_LABEL_MAX) : UNRECOGNIZED_ACTOR_LABEL
+  end
+
+  # Linear email-shape check: exactly one "@", a non-empty local part, a
+  # domain with a dot that is neither first nor last, and no whitespace.
+  # Split-based with no nested or ambiguous quantifiers, so adversarial
+  # input with many dots cannot cause backtracking; overlong input fails
+  # fast on the length cap before any splitting.
+  def self.failure_email_shape?(value)
+    return false if value.length > FAILURE_EMAIL_SHAPE_MAX
+    return false unless value.count("@") == 1
+
+    local, _, domain = value.partition("@")
+    return false if local.empty? || domain.empty?
+    return false if domain.start_with?(".") || domain.end_with?(".")
+    return false unless domain.include?(".")
+    !(local.match?(/\s/) || domain.match?(/\s/))
   end
 
   # Webhook URLs often carry secrets in the path or query, so the log
