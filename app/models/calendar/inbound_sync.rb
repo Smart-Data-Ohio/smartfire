@@ -60,7 +60,11 @@ module Calendar
         when :confirmed
           event.respond!(@user, "going") if local == "declined"
         end
-      rescue Google::Client::Unavailable
+      rescue Google::Client::Unavailable, Google::Client::Unauthorized
+        # A revoked grant fails every entry identically, so abort the
+        # sweep instead of burning one refresh per entry. The outer
+        # rescue records it on the channel; the renewal sweep later
+        # drops the channel once the account reads as disconnected.
         raise
       rescue Google::Client::Error => error
         Rails.logger.warn "Calendar::InboundSync entry failed for event #{event.id}: #{error.class}"

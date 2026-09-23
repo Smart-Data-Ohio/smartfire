@@ -72,4 +72,18 @@ class Calendar::InboundSyncJobTest < ActiveSupport::TestCase
 
     assert_not_requested get
   end
+
+  test "a revoked grant aborts the sweep instead of failing every entry" do
+    other = events(:watercooler_sync)
+    other_id = Calendar::EntrySync.google_event_id_for(other.id, @david.id)
+    EventCalendarEntry.create!(event: other, user: @david, google_event_id: other_id, synced_at: Time.current)
+    gets = stub_request(:get, %r{#{GOOGLE_EVENTS_URL}/}).to_return(status: 401)
+    stub_request(:post, GOOGLE_TOKEN_URL)
+      .to_return(status: 400, body: { error: "invalid_grant" }.to_json)
+
+    Calendar::InboundSyncJob.perform_now(@david.id)
+
+    assert_requested gets, times: 1
+    assert_not_predicate @david.google_account.reload, :connected?
+  end
 end
