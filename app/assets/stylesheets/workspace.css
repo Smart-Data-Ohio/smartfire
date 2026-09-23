@@ -1119,8 +1119,10 @@ summary.member-panel__group-heading {
   }
 
   /* Eight icon-only actions (members, search, threads, events, pins,
-     huddle, settings, notifications) have to fit beside the sidebar toggle
-     on a 320px phone, so the actions sit flush and each is a 2rem square. */
+     huddle, settings, notifications) plus Files have to fit beside the
+     sidebar toggle on a phone, so the actions sit flush and each is a 2rem
+     square; Files steps aside entirely below 22.5rem, where even the eight
+     only just fit on a 320px phone. */
   .room-header__actions {
     gap: 0;
   }
@@ -1151,6 +1153,15 @@ summary.member-panel__group-heading {
 
   .sidebar .message__author {
     font-size: 0.84rem;
+  }
+}
+
+/* At the narrowest phones the ninth header action no longer fits beside
+   the sidebar toggle, so Files steps aside like the voice stack: the
+   header keeps eight 2rem actions and the room name keeps its share. */
+@media (max-width: 22.5rem) {
+  .room-header__actions .room-header__action--files {
+    display: none;
   }
 }
 
