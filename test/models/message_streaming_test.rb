@@ -66,11 +66,28 @@ class MessageStreamingTest < ActiveSupport::TestCase
     assert_equal 1, replaces.size
     assert_includes replaces.sole, ActionView::RecordIdentifier.dom_id(message)
 
+    david_badges = ActionCable.server.pubsub.broadcasts(UnreadRoomsChannel.stream_name_for(users(:david).id))
+    assert_equal 1, david_badges.size
+    assert_equal @room.id, JSON.parse(david_badges.sole)["roomId"]
+
     assert_no_difference [ "ActivityItem.count", "AgentEvent.count" ] do
       assert_no_enqueued_jobs do
         assert_not message.finalize_stream!
       end
     end
+  end
+
+  test "finalizing a thread stream sends no unread-room broadcast" do
+    thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Thread badges")
+    ThreadMembership.join!(thread, users(:david))
+    message = thread.post_message!(creator: @bot, attributes: {
+      markdown_source: "Replying", client_message_id: "stream-thread-badge", streaming: true })
+
+    message.finalize_stream!
+
+    assert_not message.reload.streaming?
+    assert_empty ActionCable.server.pubsub.broadcasts(UnreadRoomsChannel.stream_name_for(users(:david).id))
+    assert_empty ActionCable.server.pubsub.broadcasts(UnreadRoomsChannel.stream_name_for(users(:jason).id))
   end
 
   test "appends re-render without firing side effects" do
