@@ -34,7 +34,7 @@
 
     <section class="margin-block-end">
       <h2 class="txt-large">Add people</h2>
-      <% candidates = User.active.ordered.where.not(id: @room.user_ids) %>
+      <% candidates = User.active.ordered.with_attached_avatar.where.not(id: @room.user_ids) %>
       <% if candidates.any? %>
         <%= form_with url: add_members_rooms_direct_path(@room), method: :post do %>
           <div class="flex flex-column gap txt-align-start">

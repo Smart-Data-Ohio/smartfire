@@ -266,6 +266,8 @@ class HuddleGrant < ApplicationRecord
     # standing voice and stage calls never invite: only direct rooms ring,
     # and then every other human member at once.
     def invite_direct_participants
+      return if recent_grant_issuance?
+
       direct_huddle_recipients.each do |recipient|
         invite_direct_recipient(recipient)
       end
@@ -274,7 +276,6 @@ class HuddleGrant < ApplicationRecord
     def invite_direct_recipient(recipient)
       return if HuddleGrant.in_call.where(room_id: room_id, user_id: recipient.id).exists?
       return if recent_invitation?(recipient)
-      return if recent_grant_issuance?
 
       unless recipient.inbox_preferences.huddle_invitations
         broadcast_suppressed_invitation!(recipient)

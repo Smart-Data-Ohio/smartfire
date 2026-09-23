@@ -193,6 +193,24 @@ class Users::SidebarsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, with_more_rooms.count { |sql| sql.include?("FROM \"huddle_grants\"") }
   end
 
+  test "sidebar query count does not grow with group DMs, named or not" do
+    create_quiet_group(users(:jason), users(:kevin))
+    get user_sidebar_url # Warm up one-time queries before counting.
+    baseline = capture_select_sql { get user_sidebar_url }
+    assert_response :success
+
+    5.times do |index|
+      peer = User.create!(name: "Group peer #{index}", email_address: "grouppeer#{index}@example.test")
+      group = create_quiet_group(users(:jason), peer)
+      group.update_column(:name, "Named group #{index}") if index.even?
+    end
+    with_more_groups = capture_select_sql { get user_sidebar_url }
+    assert_response :success
+
+    assert_equal baseline.count, with_more_groups.count,
+      "expected no per-row queries, saw #{with_more_groups.count - baseline.count} more:\n#{(with_more_groups - baseline).join("\n")}"
+  end
+
   private
     def issue_in_call_grant!(user:, room:)
       issue_quiet_grant!(user: user, room: room).tap do |grant|
@@ -228,6 +246,10 @@ class Users::SidebarsControllerTest < ActionDispatch::IntegrationTest
 
     def create_quiet_direct(peer)
       Rooms::Direct.create_for({ creator: users(:david) }, users: [ users(:david), peer ])
+    end
+
+    def create_quiet_group(*peers)
+      Current.set(user: users(:david)) { Rooms::Direct.find_or_create_for([ users(:david), *peers ]) }
     end
 
     def create_quiet_board(name)
