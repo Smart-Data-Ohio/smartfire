@@ -1,4 +1,5 @@
 require "net/http"
+require "timeout"
 require "restricted_http/private_network_guard"
 
 class Opengraph::Fetch
@@ -10,23 +11,45 @@ class Opengraph::Fetch
   class TooManyRedirectsError < StandardError; end
   class RedirectDeniedError < StandardError; end
 
-  def fetch_document(url, ip: RestrictedHTTP::PrivateNetworkGuard.resolve(url.host))
-    request(url, Net::HTTP::Get, ip: ip) do |response|
-      return body_if_acceptable(response)
+  # max_redirects caps how many redirects are followed before
+  # TooManyRedirectsError (the default keeps the legacy unfurl budget).
+  # deadline, in seconds, bounds the whole fetch — every redirect and
+  # every read — with Timeout::Error. Callers that record failures
+  # instead of raising (LinkEmbed::Fetcher) rescue it like any network
+  # error. Nil means no overall deadline: each operation still has its
+  # own open/read/write timeout.
+  def fetch_document(url, ip: RestrictedHTTP::PrivateNetworkGuard.resolve(url.host), max_redirects: MAX_REDIRECTS, deadline: nil)
+    with_deadline(deadline) do
+      request(url, Net::HTTP::Get, ip: ip, max_redirects: max_redirects, deadline: deadline) do |response|
+        return body_if_acceptable(response)
+      end
     end
   end
 
-  def fetch_content_type(url, ip: RestrictedHTTP::PrivateNetworkGuard.resolve(url.host))
-    request(url, Net::HTTP::Head, ip: ip) do |response|
-      return response["Content-Type"]
+  def fetch_content_type(url, ip: RestrictedHTTP::PrivateNetworkGuard.resolve(url.host), max_redirects: MAX_REDIRECTS, deadline: nil)
+    with_deadline(deadline) do
+      request(url, Net::HTTP::Head, ip: ip, max_redirects: max_redirects, deadline: deadline) do |response|
+        return response["Content-Type"]
+      end
     end
   end
 
   private
-    def request(url, request_class, ip:)
-      MAX_REDIRECTS.times do
+    def with_deadline(deadline)
+      return yield if deadline.nil?
+
+      Timeout.timeout(deadline, Timeout::Error, "fetch deadline exceeded") { yield }
+    end
+
+    def request(url, request_class, ip:, max_redirects:, deadline:)
+      (max_redirects + 1).times do
         Net::HTTP.start(url.host, url.port, ipaddr: ip, use_ssl: url.scheme == "https",
             open_timeout: TIMEOUT, read_timeout: TIMEOUT, write_timeout: TIMEOUT) do |http|
+          # Net::HTTP retries idempotent requests once on Timeout::Error.
+          # With an overall deadline armed that retry would swallow the
+          # deadline's own fire — Timeout is one-shot, so the retried
+          # attempt would run unbounded — hence no silent retries here.
+          http.max_retries = 0 unless deadline.nil?
           http.request request_class.new(url) do |response|
             if response.is_a?(Net::HTTPRedirection)
               url, ip = resolve_redirect(response["location"], url)

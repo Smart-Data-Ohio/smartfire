@@ -3,11 +3,12 @@ module Periodic
   # Each tick runs every task whose interval has elapsed; a failing task is
   # logged without stopping the other tasks or the loop. Delayed ActiveJob
   # retries, event and saved-item reminders, stuck room-destroy recovery,
-  # stranded agent webhook and stuck GitHub-claim recovery, the one-time
-  # plaintext bot-token clearing, and the daily retention prune all live
-  # here so production needs no extra long-running process for any of them.
-  # Add a sweeper by appending to the task list below: a name, an interval
-  # in seconds, and an idempotent callable.
+  # stranded agent webhook and stuck GitHub/Fizzy-claim recovery, the
+  # expired presence-lease sweep, the one-time plaintext bot-token
+  # clearing, and the daily retention prune all live
+  # here so production needs no extra long-running process for any of
+  # them. Add a sweeper by appending to the task list below: a name, an
+  # interval in seconds, and an idempotent callable.
   class Runner
     Task = Data.define(:name, :interval, :run)
 
@@ -15,6 +16,7 @@ module Periodic
     STUCK_ROOM_SWEEP_INTERVAL = 5.minutes
     AGENT_SWEEP_INTERVAL = 30.seconds
     BOT_TOKEN_CLEAR_INTERVAL = 24.hours.to_i
+    PRESENCE_SWEEP_INTERVAL = 1.minute
 
     def initialize(reminders_interval: 30, retention_interval: 24.hours.to_i, logger: Rails.logger)
       bot_tokens_cleared = false
@@ -32,8 +34,11 @@ module Periodic
         Task.new("stuck rooms", STUCK_ROOM_SWEEP_INTERVAL, -> { Room::DestroyJob.reenqueue_stuck! }),
         Task.new("stranded agent webhooks", AGENT_SWEEP_INTERVAL, -> { Agent::Delivery.recover_stranded_webhooks! }),
         Task.new("stuck GitHub claims", AGENT_SWEEP_INTERVAL, -> { Github::PerformAgentActionJob.recover_stuck_claims! }),
+        Task.new("stuck Fizzy claims", AGENT_SWEEP_INTERVAL, -> { Fizzy::PerformAgentActionJob.recover_stuck_claims! }),
+        Task.new("calendar push channels", Calendar::PushChannel::RENEW_INTERVAL, -> { Calendar::PushChannel.renew_expiring! }),
         Task.new("clear plaintext bot tokens", BOT_TOKEN_CLEAR_INTERVAL, clear_bot_tokens_once),
-        Task.new("retention prune", retention_interval, -> { Retention::PruneJob.perform_later })
+        Task.new("retention prune", retention_interval, -> { Retention::PruneJob.perform_later }),
+        Task.new("presence leases", PRESENCE_SWEEP_INTERVAL, -> { WorkspacePresenceLease.prune })
       ]
       @last_run = {}
       @logger = logger

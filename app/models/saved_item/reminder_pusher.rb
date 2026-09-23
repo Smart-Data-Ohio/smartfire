@@ -7,6 +7,8 @@ class SavedItem::ReminderPusher
 
   def push
     return unless still_a_member?
+    # DND and quiet hours apply like event reminders; the inbox item still records.
+    return unless Notifications::Policy.new(recipient: saved_item.user, kind: :reminder).push?
 
     enqueue_payload_for_delivery build_payload, Push::Subscription.where(user_id: saved_item.user_id)
   end

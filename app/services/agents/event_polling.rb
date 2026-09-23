@@ -110,6 +110,10 @@ module Agents
           return github_action_poll_payload(event)
         end
 
+        if event.event_type == "fizzy_action_completed"
+          return fizzy_action_poll_payload(event)
+        end
+
         if event.event_type == "approval_decided" || event.message_id.nil? && event.metadata.is_a?(Hash) && event.metadata["approval_id"]
           return approval_poll_payload(event)
         end
@@ -183,6 +187,26 @@ module Agents
           room: room ? { id: room.id, name: room.name } : nil,
           actor: event.actor ? { id: event.actor.id, name: event.actor.name } : nil,
           github_action: {
+            approval_id: metadata["approval_id"],
+            action: metadata["action"],
+            status: metadata["status"],
+            url: metadata["url"],
+            message: metadata["message"]
+          }.compact
+        }.compact
+      end
+
+      def fizzy_action_poll_payload(event)
+        metadata = event.metadata.is_a?(Hash) ? event.metadata : {}
+        room = event.room
+        {
+          id: event.id,
+          event_type: event.event_type,
+          outcome: event.outcome,
+          created_at: event.created_at&.utc,
+          room: room ? { id: room.id, name: room.name } : nil,
+          actor: event.actor ? { id: event.actor.id, name: event.actor.name } : nil,
+          fizzy_action: {
             approval_id: metadata["approval_id"],
             action: metadata["action"],
             status: metadata["status"],

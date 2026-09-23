@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Agents::ApiThrottleTest < ActionDispatch::IntegrationTest
+  include FizzyTestHelper
+
   setup do
     @room = rooms(:watercooler)
     @bot = users(:bender)
@@ -194,6 +196,71 @@ class Agents::ApiThrottleTest < ActionDispatch::IntegrationTest
 
         post room_agent_github_pull_request_actions_url(@room),
           params: { pull_request_id: pull_request.id, kind: "comment", body: "Throttle over" }.to_json,
+          headers: bearer_headers(@secret)
+
+        assert_response :too_many_requests
+        assert_retry_after
+      end
+    end
+  end
+
+  test "listing Fizzy boards throttles past 120 requests a minute" do
+    AgentGrant.create!(agent: @agent, room: nil, granted_by: users(:david), capability: "fizzy")
+    link_fizzy!(users(:david), token: "owner-token-abc")
+    stub_request(:get, "https://app.fizzy.do/897362094/boards.json")
+      .to_return(status: 200, body: [].to_json)
+
+    with_memory_cache do
+      freeze_time do
+        120.times do
+          get "/agents/fizzy/boards", headers: bearer_headers(@secret)
+          assert_response :success
+        end
+
+        get "/agents/fizzy/boards", headers: bearer_headers(@secret)
+
+        assert_response :too_many_requests
+        assert_retry_after
+      end
+    end
+  end
+
+  test "searching Fizzy cards throttles past 120 requests a minute" do
+    AgentGrant.create!(agent: @agent, room: nil, granted_by: users(:david), capability: "fizzy")
+    link_fizzy!(users(:david), token: "owner-token-abc")
+    stub_request(:get, "https://app.fizzy.do/897362094/search.json?q=throttle")
+      .to_return(status: 200, body: [].to_json)
+
+    with_memory_cache do
+      freeze_time do
+        120.times do
+          get "/agents/fizzy/cards/search?q=throttle", headers: bearer_headers(@secret)
+          assert_response :success
+        end
+
+        get "/agents/fizzy/cards/search?q=throttle", headers: bearer_headers(@secret)
+
+        assert_response :too_many_requests
+        assert_retry_after
+      end
+    end
+  end
+
+  test "requesting Fizzy card actions throttles past 60 requests a minute" do
+    AgentGrant.create!(agent: @agent, room: nil, granted_by: users(:david), capability: "external_action")
+    link_fizzy!(users(:david), token: "owner-token-abc")
+
+    with_memory_cache do
+      freeze_time do
+        60.times do |i|
+          post "/agents/fizzy/card_actions",
+            params: { kind: "comment", account_id: "897362094", number: 579, body: "Throttle #{i}" }.to_json,
+            headers: bearer_headers(@secret)
+          assert_response :accepted
+        end
+
+        post "/agents/fizzy/card_actions",
+          params: { kind: "comment", account_id: "897362094", number: 579, body: "Throttle over" }.to_json,
           headers: bearer_headers(@secret)
 
         assert_response :too_many_requests

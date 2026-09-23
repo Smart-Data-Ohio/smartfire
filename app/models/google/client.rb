@@ -198,8 +198,44 @@ module Google
       api_request(:post, "/calendar/v3/calendars/primary/events", payload)
     end
 
-    def update_event(google_event_id, payload)
-      api_request(:put, "/calendar/v3/calendars/primary/events/#{google_event_id}", payload)
+    def update_event(google_event_id, payload, conference_data_version: false)
+      query = URI.encode_www_form(conferenceDataVersion: 1) if conference_data_version
+      api_request(:put, "/calendar/v3/calendars/primary/events/#{google_event_id}", payload, query:)
+    end
+
+    # Partial update: only the supplied fields change. Conference
+    # creation uses this: events.update replaces the whole resource and
+    # requires start/end, so a conferenceData-only update is rejected
+    # with 400, while events.patch accepts it:
+    # https://developers.google.com/workspace/calendar/api/v3/reference/events/patch
+    # https://developers.google.com/workspace/calendar/api/v3/reference/events/update
+    def patch_event(google_event_id, payload, conference_data_version: false)
+      query = URI.encode_www_form(conferenceDataVersion: 1) if conference_data_version
+      api_request(:patch, "/calendar/v3/calendars/primary/events/#{google_event_id}", payload, query:)
+    end
+
+    def get_event(google_event_id)
+      api_request(:get, "/calendar/v3/calendars/primary/events/#{google_event_id}")
+    end
+
+    # Opens a push channel (events.watch) on the primary calendar. Google
+    # POSTs a sync handshake then one notification per change to address,
+    # echoing token back in X-Goog-Channel-Token. Returns the parsed
+    # watch response (resourceId, expiration in ms).
+    def watch_events(channel_id:, token:, address:)
+      api_request(:post, "/calendar/v3/calendars/primary/events/watch", {
+        "id" => channel_id, "type" => "web_hook", "address" => address, "token" => token
+      })
+    end
+
+    # Closes a push channel. A 404 means Google already dropped it, so it
+    # counts as stopped.
+    def stop_channel(channel_id:, resource_id:)
+      api_request(:post, "/calendar/v3/channels/stop", {
+        "id" => channel_id, "resourceId" => resource_id
+      })
+    rescue NotFound
+      true
     end
 
     def delete_event(google_event_id)

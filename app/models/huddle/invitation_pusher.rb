@@ -5,6 +5,7 @@ class Huddle::InvitationPusher
 
   def push
     return unless grant && room && recipient && caller
+    return unless Notifications::Policy.new(recipient:, sender: caller, kind: :huddle).push?
 
     enqueue_payload_for_delivery build_payload, push_subscriptions_for_recipient
   end

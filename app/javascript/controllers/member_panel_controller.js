@@ -2,6 +2,13 @@ import { Controller } from "@hotwired/stimulus"
 
 const DESKTOP_QUERY = "(min-width: 80rem)"
 const REFRESH_INTERVAL = 12 * 1000
+const PRESENCE_LABELS = {
+  online: "Online",
+  idle: "Idle",
+  dnd: "Do not disturb",
+  agent: "Agent",
+  offline: "Offline"
+}
 const FOCUSABLE_SELECTOR = [
   "a[href]",
   "button:not([disabled])",
@@ -250,6 +257,10 @@ export default class extends Controller {
 
   #memberRow(member) {
     const online = member.online === true
+    const presence = typeof member.presence === "string" && member.presence.length > 0
+      ? member.presence
+      : (online ? "online" : "offline")
+    const label = PRESENCE_LABELS[presence] || presence
     const item = document.createElement("li")
     item.className = "member-panel__member"
     item.dataset.memberId = String(member.id)
@@ -265,7 +276,8 @@ export default class extends Controller {
 
     const dot = document.createElement("span")
     dot.className = "member-panel__presence"
-    dot.setAttribute("aria-label", online ? "Online" : "Offline")
+    dot.dataset.presence = presence
+    dot.setAttribute("aria-label", label)
     avatar.append(dot)
 
     const identity = document.createElement("span")
@@ -275,7 +287,7 @@ export default class extends Controller {
     name.textContent = member.name
     const status = document.createElement("span")
     status.className = "member-panel__status-label"
-    status.textContent = online ? "Online" : "Offline"
+    status.textContent = (typeof member.status === "string" && member.status.length > 0) ? member.status : label
     identity.append(name, status)
 
     item.append(avatar, identity)

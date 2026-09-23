@@ -256,6 +256,32 @@ class Google::ConnectionsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to user_profile_path
   end
 
+  test "disconnect clears the organizer's stored Meet links but keeps the request" do
+    connect_google!(@david)
+    event = events(:launch_party)
+    event.update!(meet_link_requested: true, meet_link: "https://meet.google.com/abc-defg-hij")
+    other = events(:watercooler_sync)
+    other.update!(meet_link_requested: true, meet_link: "https://meet.google.com/xyz-abcd-efg")
+
+    delete google_connection_path
+
+    assert_nil event.reload.meet_link
+    assert event.meet_link_requested?
+    assert_nil other.reload.meet_link
+    assert other.meet_link_requested?
+  end
+
+  test "disconnect leaves another organizer's Meet links alone" do
+    connect_google!(@david)
+    other = events(:watercooler_sync)
+    other.update!(organizer: users(:jason), meet_link_requested: true,
+      meet_link: "https://meet.google.com/xyz-abcd-efg")
+
+    delete google_connection_path
+
+    assert_equal "https://meet.google.com/xyz-abcd-efg", other.reload.meet_link
+  end
+
   test "disconnect only touches the current user's entries" do
     connect_google!(@david)
     connect_google!(users(:jason))

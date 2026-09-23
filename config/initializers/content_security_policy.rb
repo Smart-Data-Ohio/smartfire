@@ -22,7 +22,9 @@
 # - style-src 'self' 'unsafe-inline': views use inline style attributes and
 #   the account's custom styles; Google Identity Services adds its own
 #   stylesheet. Inline styles cannot run script.
-# - frame-src for the Google Picker and sign-in iframes.
+# - frame-src for the Google Picker and sign-in iframes, plus LinkedIn's
+#   official embed player (linkedin.com/embed/…), which a LinkedIn post
+#   card loads only after the reader clicks "Show embedded post".
 # - form-action 'self' plus accounts.google.com, where the Google sign-in and
 #   Calendar/Drive connect forms redirect.
 # - object-src 'none', base-uri 'self'.
@@ -30,6 +32,7 @@ module ContentSecurityPolicySources
   GOOGLE_SCRIPTS = %w[ https://accounts.google.com/gsi/ https://apis.google.com ].freeze
   GOOGLE_CONNECT = %w[ https://accounts.google.com https://www.googleapis.com https://content.googleapis.com ].freeze
   GOOGLE_FRAMES = %w[ https://docs.google.com https://drive.google.com https://accounts.google.com ].freeze
+  LINKEDIN_FRAMES = %w[ https://www.linkedin.com ].freeze
   GOOGLE_STYLES = %w[ https://accounts.google.com/gsi/style ].freeze
   GOOGLE_FORMS = %w[ https://accounts.google.com ].freeze
 
@@ -60,7 +63,7 @@ Rails.application.configure do
     policy.font_src     :self, :data
     policy.media_src    :self, :data, :blob
     policy.connect_src  :self, *ContentSecurityPolicySources::GOOGLE_CONNECT, -> { ContentSecurityPolicySources.livekit }
-    policy.frame_src    :self, *ContentSecurityPolicySources::GOOGLE_FRAMES
+    policy.frame_src    :self, *ContentSecurityPolicySources::GOOGLE_FRAMES, *ContentSecurityPolicySources::LINKEDIN_FRAMES
     policy.worker_src   :self, :blob
     policy.manifest_src :self
     policy.form_action  :self, *ContentSecurityPolicySources::GOOGLE_FORMS

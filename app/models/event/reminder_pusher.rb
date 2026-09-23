@@ -49,7 +49,18 @@ class Event::ReminderPusher
     end
 
     def push_subscriptions_for_recipients
-      Push::Subscription.where(user_id: recipient_ids)
+      Push::Subscription.where(user_id: push_allowed_ids)
+    end
+
+    # Reminders carry no sender, so DND and quiet hours silence them with
+    # no per-person exception. One user lookup for the whole batch.
+    def push_allowed_ids
+      ids = recipient_ids
+      users = User.where(id: ids).index_by(&:id)
+
+      ids.select do |id|
+        Notifications::Policy.new(recipient: users[id], kind: :reminder).push?
+      end
     end
 
     def recipient_ids

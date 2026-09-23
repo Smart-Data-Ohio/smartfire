@@ -173,10 +173,30 @@ class Agent::Delivery
       webhook.post_payload(payload, secret: agent.ensure_webhook_signing_secret!)
     end
 
+    # Posts a Fizzy write-action result to the agent's webhook. The payload
+    # carries the same additive agent key as approval decisions plus a
+    # fizzy_action key with the completion fields. Response bodies are
+    # ignored: a completion notification never creates a reply message.
+    def post_fizzy_action_webhook!(webhook, event, agent:)
+      metadata = event.metadata.is_a?(Hash) ? event.metadata : {}
+      payload = {
+        agent: { id: agent.id, name: agent.user.name, owner: agent.owner&.name, delivery_id: event.id },
+        fizzy_action: {
+          approval_id: metadata["approval_id"],
+          action: metadata["action"],
+          status: metadata["status"],
+          url: metadata["url"],
+          message: metadata["message"]
+        }.compact
+      }.to_json
+
+      webhook.post_payload(payload, secret: agent.ensure_webhook_signing_secret!)
+    end
+
     # Posts one event row to the agent's webhook. Message events carry
     # the message payload with sync replies; approval, GitHub action,
-    # and work events carry their own payloads and ignore response
-    # bodies. Raises UndeliverableWebhook when the payload cannot be
+    # Fizzy action, and work events carry their own payloads and ignore
+    # response bodies. Raises UndeliverableWebhook when the payload cannot be
     # built, RetryableWebhookResponse on a 429, 408, or 5xx answer,
     # PermanentWebhookResponse on any other non-2xx answer, and lets
     # transport errors propagate for the caller to retry. Only a 2xx
@@ -196,6 +216,8 @@ class Agent::Delivery
         post_approval_webhook!(webhook, approval, agent: agent, delivery_id: event.id)
       when "github_action_completed"
         post_github_action_webhook!(webhook, event, agent: agent)
+      when "fizzy_action_completed"
+        post_fizzy_action_webhook!(webhook, event, agent: agent)
       when *AgentEvent::WORK_DELIVERABLE_TYPES
         metadata = event.metadata.is_a?(Hash) ? event.metadata : {}
         thread = ChannelThread.find_by(id: metadata["thread_id"])

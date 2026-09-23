@@ -40,6 +40,7 @@ class MessageListA11yTest < ApplicationSystemTestCase
     assert_operator messages.length, :>=, 2
 
     page.execute_script("document.getElementById('#{messages.first}').focus()")
+    assert_focused "##{messages.first}"
     page.send_keys :down
     assert_focused "##{messages.second}"
 
@@ -72,6 +73,22 @@ class MessageListA11yTest < ApplicationSystemTestCase
     # and asserting focus first would pass on the not-yet-replaced node.
     assert_selector "##{dom_id(messages(:second))}[data-replaced='true']", wait: 10
     assert_focus_and_tab_stop_on messages(:second)
+  end
+
+  test "a stream replacing the tab-stop message while focus is elsewhere keeps the tab stop on the replacement" do
+    # Focus stays in the composer (setup); the newest message is the tab stop.
+    page.execute_script <<~JS, dom_id(messages(:third))
+      const clone = document.getElementById(arguments[0]).cloneNode(true);
+      clone.setAttribute("data-replaced", "true");
+      Turbo.renderStreamMessage(`<turbo-stream action="replace" target="${arguments[0]}"><template>${clone.outerHTML}</template></turbo-stream>`);
+    JS
+
+    assert_selector "##{dom_id(messages(:third))}[data-replaced='true']", wait: 10
+    tabbables = page.evaluate_script(<<~JS)
+      Array.from(document.querySelectorAll("##{dom_id(@room, :messages)} > .message"))
+        .filter(message => message.tabIndex === 0).map(message => message.id)
+    JS
+    assert_equal [ dom_id(messages(:third)) ], tabbables
   end
 
   test "a direct DOM swap of the focused message keeps focus and the tab stop on its replacement" do
@@ -261,10 +278,9 @@ class MessageListA11yTest < ApplicationSystemTestCase
   end
 
   test "the main message list is a live log" do
-    list = find("##{dom_id(@room, :messages)}", visible: false)
-    assert_equal "log", list["role"]
-    assert_equal "polite", list["aria-live"]
-    assert_equal "additions", list["aria-relevant"]
+    # Page-load renders briefly silence the region (aria-live="off"), so wait
+    # for the settled attributes rather than reading them once.
+    assert_selector "##{dom_id(@room, :messages)}[role='log'][aria-live='polite'][aria-relevant='additions']", visible: false, wait: 10
   end
 
   test "paginated history stays quiet past the insert, then the live region comes back" do
@@ -525,7 +541,8 @@ class MessageListA11yTest < ApplicationSystemTestCase
 
     visit user_profile_url
     fill_in "user_bio", with: "Reduced motion flash check"
-    click_button "Save changes"
+    # The profile page has several forms; save the one holding the bio.
+    find_field("user_bio").ancestor("form").click_button "Save changes"
 
     assert_selector ".flash", wait: 10
     duration = page.evaluate_script("document.querySelector('.flash__inner').getAnimations().map(animation => animation.effect.getTiming().duration)")
@@ -549,7 +566,8 @@ class MessageListA11yTest < ApplicationSystemTestCase
 
     visit user_profile_url
     fill_in "user_bio", with: "Reduced motion dismiss check"
-    click_button "Save changes"
+    # The profile page has several forms; save the one holding the bio.
+    find_field("user_bio").ancestor("form").click_button "Save changes"
 
     assert_selector ".flash", wait: 10
     find(".flash__dismiss").click
