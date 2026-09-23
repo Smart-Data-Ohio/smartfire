@@ -112,6 +112,27 @@ navigate the Campfire page), and `allow-downloads`. The referrer policy
 keeps room URLs out of LinkedIn's logs: LinkedIn sees only the Campfire
 origin, never which room or message linked the post.
 
+## Privacy
+
+Be plain about what loading a card discloses, because the room decides
+who sees the card:
+
+- **Preview images load directly from the remote host in each viewer's
+  browser.** There is no image proxy: opening a room with an embed
+  makes every viewer's browser request the image URL straight from the
+  page's server, disclosing the viewer's IP address (and a Campfire
+  `Referer`) to that host. The server-side fetch leaks nothing about
+  viewers — it runs from the Campfire host with no cookies — but the
+  image request is per-viewer. An image proxy that re-serves approved
+  images from Campfire storage is the follow-up that would close this;
+  until then, treat card images like any other third-party image load.
+- **LinkedIn content loads only on click.** The card shell (title,
+  excerpt, image, links) renders from the server-side fetch, but the
+  official embed player iframe — and LinkedIn's tracking inside it —
+  is created only when the reader clicks "Show embedded post". The
+  iframe's `referrerpolicy="strict-origin-when-cross-origin"` means
+  LinkedIn sees the Campfire origin, never the room or message URL.
+
 ## Accessibility and layout
 
 Cards are plain articles, links, and buttons: fully keyboard operable
