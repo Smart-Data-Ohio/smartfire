@@ -28,6 +28,19 @@ class Users::BansControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "create succeeds when the user has a pending two-factor setup secret" do
+    user = users(:kevin)
+    session = user.sessions.create!(ip_address: "203.0.113.1", user_agent: "Test")
+    TwoFactorSetupSecret.issue_for!(session)
+
+    assert_difference -> { user.sessions.count }, -1 do
+      post user_ban_url(user)
+    end
+
+    assert_redirected_to user_url(user)
+    assert_empty TwoFactorSetupSecret.where(session_id: session.id)
+  end
+
   test "create enqueues RemoveBannedContentJob" do
     user = users(:kevin)
 

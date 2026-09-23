@@ -7,7 +7,7 @@ class CreateTwoFactorSetupSecrets < ActiveRecord::Migration[8.2]
   # by the retention job.
   def change
     create_table :two_factor_setup_secrets do |t|
-      t.references :session, null: false, index: { unique: true }, foreign_key: true
+      t.references :session, null: false, index: { unique: true }, foreign_key: { on_delete: :cascade }
       t.string :secret
       t.datetime :expires_at, null: false
       t.timestamps

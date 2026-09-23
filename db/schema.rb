@@ -1215,7 +1215,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_171812) do
   add_foreign_key "two_factor_backup_codes", "two_factor_credentials"
   add_foreign_key "two_factor_credentials", "users"
   add_foreign_key "two_factor_remembered_devices", "users"
-  add_foreign_key "two_factor_setup_secrets", "sessions"
+  add_foreign_key "two_factor_setup_secrets", "sessions", on_delete: :cascade
   add_foreign_key "user_stars", "users", column: "starred_user_id", on_delete: :cascade
   add_foreign_key "user_stars", "users", on_delete: :cascade
   add_foreign_key "webhooks", "users"
