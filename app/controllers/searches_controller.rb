@@ -8,7 +8,7 @@ class SearchesController < ApplicationController
   end
 
   def create
-    if display_query.blank?
+    if parsed_query.blank_query?
       redirect_back_or_to searches_url, notice: "Enter a word to search for."
     else
       Current.user.searches.record(display_query)
@@ -33,11 +33,15 @@ class SearchesController < ApplicationController
     # messages/_message, which reads boosts and attachments either way,
     # and preloading costs ~12 queries against ~370 lazy ones.
     def set_messages
+      @search_query = parsed_query
       @messages = Message.none
+      @board_posts = []
+      @work_threads = []
+      @events = []
       @has_more_older = false
-      return if query.blank?
+      return if @search_query.blank_query?
 
-      scope = Current.user.reachable_messages.search(query)
+      scope = @search_query.apply_to_messages(Current.user.reachable_messages)
       scope = scope.before(search_cursor) if params[:before].present?
 
       ids = scope.reorder(created_at: :desc, id: :desc)
@@ -49,26 +53,28 @@ class SearchesController < ApplicationController
         Current.user.reachable_messages.with_rendering_details
           .where(id: page_ids).ordered.to_a
       )
+
+      # Boards, work threads, and events search the operator-free text as
+      # capped side sections on the first page only: older message
+      # windows prepend without repeating them.
+      if params[:before].blank?
+        @board_posts = @search_query.board_posts_for(Current.user).to_a
+        @work_threads = @search_query.work_threads_for(Current.user).to_a
+        @events = @search_query.events_for(Current.user).to_a
+      end
     end
 
     def search_cursor
       Current.user.reachable_messages.find(params[:before])
     end
 
-    # The FTS5 MATCH expression. Every token is quoted as a phrase, so
-    # operator words (AND, OR, NOT), trailing operators and quote
-    # characters are searched literally instead of raising
-    # "fts5: syntax error" or silently becoming a boolean query. Tokens
-    # are word-character runs, so they cannot contain phrase syntax and
-    # need no escaping. Porter stemming still applies inside phrases;
-    # there was no prefix behaviour to keep (the expression never
-    # appended `*`).
-    def query
-      display_query.to_s.scan(/[[:word:]]+/).map { |token| %("#{token}") }.join(" ").presence
+    def parsed_query
+      @parsed_query ||= SearchQuery.parse(params[:q])
     end
 
-    # The human-readable query for display, history and redirects.
+    # The human-readable query for display, history and redirects,
+    # operators included.
     def display_query
-      params[:q].to_s.gsub(/[^[:word:]]/, " ").squish.presence
+      params[:q].to_s.squish.presence
     end
 end

@@ -1,0 +1,16 @@
+<%# Active search operators as removable chips. Each chip links back to the
+    same search without its operator; the query text itself stays editable
+    in the composer below. %>
+<% if @search_query&.filters? %>
+  <ul class="search-filters" aria-label="Active filters">
+    <% @search_query.chips.each do |chip| %>
+      <li class="search-filter-chip">
+        <span class="search-filter-chip__label"><%= chip.label %></span>
+        <%= link_to searches_path(q: chip.remove_query), class: "search-filter-chip__remove",
+              aria: { label: "Remove #{chip.label} filter" } do %>
+          <%= image_tag "remove.svg", aria: { hidden: "true" }, size: 12, class: "colorize--black" %>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+<% end %>
