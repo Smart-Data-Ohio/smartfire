@@ -86,6 +86,27 @@ class ContentSecurityPolicyTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the enforced policy allows everything the Google Picker loads" do
+    sign_in :david
+    get room_url(rooms(:watercooler))
+
+    assert_response :success
+    policy = directives(response.headers["Content-Security-Policy"])
+
+    # Per Google's picker CSP guidance (googleworkspace/drive-picker-element
+    # README): the API and Identity Services loaders, the picker and auth
+    # frames, thumbnails, injected fonts, and the Drive API calls the
+    # composer makes from the browser.
+    assert_includes policy["script-src"], "https://apis.google.com"
+    assert_includes policy["script-src"], "https://accounts.google.com/gsi/"
+    assert_includes policy["frame-src"], "https://docs.google.com"
+    assert_includes policy["frame-src"], "https://drive.google.com"
+    assert_includes policy["frame-src"], "https://accounts.google.com"
+    assert_includes policy["img-src"], "https://*.googleusercontent.com"
+    assert_includes policy["font-src"], "https://fonts.gstatic.com"
+    assert_includes policy["connect-src"], "https://www.googleapis.com"
+  end
+
   test "the event form fills its time zone with a Stimulus controller, not an inline script" do
     sign_in :david
     get new_room_event_url(rooms(:watercooler))

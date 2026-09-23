@@ -18,12 +18,18 @@
 #   preview images load through the same-origin /embeds/image proxy, so
 #   https: remains only for X media and avatars (pbs.twimg.com), GitHub
 #   avatars (avatars.githubusercontent.com), and Google avatars.
+#   *.googleusercontent.com is listed explicitly for the Drive picker's
+#   thumbnails (per Google's picker CSP guidance), so the picker keeps
+#   working if https: is ever scoped down.
+# - font-src 'self', data:, and fonts.gstatic.com for fonts the picker
+#   and Identity Services scripts inject.
 # - style-src 'self' 'unsafe-inline': views use inline style attributes and
 #   the account's custom styles; Google Identity Services adds its own
 #   stylesheet. Inline styles cannot run script.
-# - frame-src for the Google Picker and sign-in iframes, plus LinkedIn's
-#   official embed player (linkedin.com/embed/…), which a LinkedIn post
-#   card loads only after the reader clicks "Show embedded post".
+# - frame-src for the Google Picker (docs.google.com) and sign-in iframes,
+#   plus LinkedIn's official embed player (linkedin.com/embed/…), which a
+#   LinkedIn post card loads only after the reader clicks "Show embedded
+#   post".
 # - form-action 'self' plus every host a form submission can redirect to:
 #   accounts.google.com (Google sign-in, sudo re-auth, and Calendar/Drive
 #   connect) and github.com (GitHub App connect). Chromium checks the whole
@@ -38,6 +44,10 @@ module ContentSecurityPolicySources
   GOOGLE_STYLES = %w[ https://accounts.google.com/gsi/style ].freeze
   GOOGLE_FORMS = %w[ https://accounts.google.com ].freeze
   GITHUB_FORMS = %w[ https://github.com ].freeze
+  # The picker's thumbnails and injected fonts, per Google's picker CSP
+  # guidance (googleworkspace/drive-picker-element README).
+  GOOGLE_IMAGES = %w[ https://*.googleusercontent.com ].freeze
+  GOOGLE_FONTS = %w[ https://fonts.gstatic.com ].freeze
 
   SCHEME_PAIRS = { "wss" => "https", "ws" => "http", "https" => "wss", "http" => "ws" }.freeze
 
@@ -62,8 +72,8 @@ Rails.application.configure do
     policy.object_src   :none
     policy.script_src   :self, :wasm_unsafe_eval, *ContentSecurityPolicySources::GOOGLE_SCRIPTS
     policy.style_src    :self, :unsafe_inline, *ContentSecurityPolicySources::GOOGLE_STYLES
-    policy.img_src      :self, :data, :blob, :https
-    policy.font_src     :self, :data
+    policy.img_src      :self, :data, :blob, :https, *ContentSecurityPolicySources::GOOGLE_IMAGES
+    policy.font_src     :self, :data, *ContentSecurityPolicySources::GOOGLE_FONTS
     policy.media_src    :self, :data, :blob
     policy.connect_src  :self, *ContentSecurityPolicySources::GOOGLE_CONNECT, -> { ContentSecurityPolicySources.livekit }
     policy.frame_src    :self, *ContentSecurityPolicySources::GOOGLE_FRAMES, *ContentSecurityPolicySources::LINKEDIN_FRAMES
