@@ -115,8 +115,10 @@ class Huddle
     # Only stage listeners are publish-restricted: hosts and speakers publish
     # like any other huddle participant, and every non-stage room is unchanged.
     # The grant's role was read under lock at issuance, and a stage grant
-    # without a recorded role publishes nothing.
+    # without a recorded role publishes nothing. A server mute revokes publish
+    # in any room type until the member is unmuted.
     def can_publish?
+      return false if grant.server_muted?
       return true unless room.stage?
 
       grant.stage_role.in?(%w[ host speaker ])

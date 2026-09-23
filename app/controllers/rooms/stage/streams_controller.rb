@@ -8,15 +8,20 @@ class Rooms::Stage::StreamsController < ApplicationController
   # Hosts and speakers go live with their screen at an explicit quality. One
   # room carries at most one live stream: starting while another is live
   # answers 409 naming the presenter, including when a concurrent start wins
-  # the race and the partial unique index rejects this one. Going live also
-  # requires an in-call huddle grant for the room — one the gateway has seen
-  # recently, not just an active one — so a stream never starts without a
-  # live call to publish over. The Stream callbacks broadcast the header
-  # badge, sidebar dot, and per-viewer panel; the response only swaps the
-  # actor's own panel without navigating.
+  # the race and the partial unique index rejects this one. A server-muted
+  # host or speaker answers 403: their share would die with the mute anyway.
+  # Going live also requires an in-call huddle grant for the room — one the
+  # gateway has seen recently, not just an active one — so a stream never
+  # starts without a live call to publish over. The Stream callbacks broadcast
+  # the header badge, sidebar dot, and per-viewer panel; the response only
+  # swaps the actor's own panel without navigating.
   def create
     unless @membership.host? || @membership.speaker?
       return render plain: "Only hosts and speakers can go live", status: :forbidden
+    end
+
+    if @membership.server_muted?
+      return render plain: "Muted members cannot go live", status: :forbidden
     end
 
     unless HuddleGrant.active.in_call.exists?(room_id: @room.id, membership_id: @membership.id)

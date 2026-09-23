@@ -512,6 +512,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
     t.datetime "revoked_at"
     t.integer "room_id", null: false
     t.string "room_name", null: false
+    t.boolean "server_muted", default: false, null: false
     t.integer "session_id", null: false
     t.string "stage_role"
     t.datetime "updated_at", null: false
@@ -568,6 +569,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
     t.datetime "hand_raised_at"
     t.string "involvement", default: "mentions"
     t.integer "room_id", null: false
+    t.datetime "server_muted_at"
     t.string "stage_role"
     t.datetime "unread_at"
     t.datetime "updated_at", null: false
@@ -777,6 +779,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
     t.json "inbox_preferences", default: {}
     t.string "name", null: false
     t.string "password_digest"
+    t.string "push_to_talk_key"
     t.string "presence_setting", default: "auto", null: false
     t.boolean "quiet_hours_enabled", default: false, null: false
     t.integer "quiet_hours_end_minute"
@@ -787,6 +790,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
     t.string "time_zone"
     t.boolean "time_zone_explicit", default: false, null: false
     t.datetime "updated_at", null: false
+    t.string "voice_mode"
     t.index "LOWER(github_login)", name: "index_users_on_lower_github_login", unique: true, where: "github_login IS NOT NULL"
     t.index ["bot_token"], name: "index_users_on_bot_token", unique: true
     t.index ["bot_token_digest"], name: "index_users_on_bot_token_digest", unique: true

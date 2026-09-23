@@ -24,6 +24,12 @@ class Rooms::Stage::RolesController < ApplicationController
     target = @room.memberships.find_by(id: params[:membership_id])
     return head :not_found unless target
 
+    # Same rank rule as call moderation: only administrators change an
+    # administrator's stage role.
+    if target.user.administrator? && !Current.user.administrator? && target.user != Current.user
+      return render plain: "Only administrators can change an administrator's stage role", status: :forbidden
+    end
+
     unless STAGE_ROLES.include?(params[:stage_role].to_s)
       return render plain: "Unknown stage role", status: :unprocessable_entity
     end

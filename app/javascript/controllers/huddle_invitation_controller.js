@@ -52,6 +52,9 @@ export default class extends Controller {
     this.subscription = undefined
     clearTimeout(this.ringTimer)
     clearTimeout(this.endedTimer)
+    this.#stopRinging()
+    this.tabNotification?.close()
+    this.tabNotification = null
     window.removeEventListener("huddle:join", this.handleHuddleJoin)
     window.removeEventListener("huddle:changed", this.handleHuddleChange)
   }
@@ -156,6 +159,16 @@ export default class extends Controller {
     this.descriptionTarget.textContent = `Join the huddle in ${invitation.roomName}`
     this.element.hidden = false
 
+    // A silent invitation still shows the banner but never makes a sound or
+    // a system notification: the recipient is in do-not-disturb or quiet
+    // hours. The banner itself is the ring.
+    if (invitation.silent) {
+      this.#stopRinging()
+    } else {
+      this.#startRinging()
+      this.#notifyHiddenTab(invitation)
+    }
+
     // A ring that nothing ever stops — a lost "call ended" event, a missed
     // inbox resolution — stops itself here.
     clearTimeout(this.ringTimer)
@@ -168,6 +181,9 @@ export default class extends Controller {
   // so a stale event can never cut off a newer call.
   #showCallEnded(invitation) {
     clearTimeout(this.ringTimer)
+    this.#stopRinging()
+    this.tabNotification?.close()
+    this.tabNotification = null
     this.titleTarget.textContent = `${invitation.callerName} left the huddle`
     this.descriptionTarget.textContent = `Missed call in ${invitation.roomName}`
     this.element.hidden = false
@@ -184,9 +200,128 @@ export default class extends Controller {
     return Number(invitation.roomId) === this.roomIdValue
   }
 
+  // The audible ring: a two-tone pattern on a shared AudioContext, no
+  // audio asset needed. Autoplay policies suspend audio before the first
+  // gesture, so a suspended context waits for one instead of failing: the
+  // banner still shows, and the ring starts on the next click or keypress.
+  #startRinging() {
+    this.shouldRing = true
+
+    if (!this.ringUnlock) {
+      this.ringUnlock = () => this.#ensureRinging()
+      window.addEventListener("pointerdown", this.ringUnlock)
+      window.addEventListener("keydown", this.ringUnlock)
+    }
+
+    this.#ensureRinging()
+  }
+
+  #ensureRinging(retried = false) {
+    if (!this.shouldRing || this.ringing) return
+
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext
+    if (!AudioContextClass) return
+
+    try {
+      this.ringContext ||= new AudioContextClass()
+    } catch {
+      return
+    }
+
+    if (this.ringContext.state === "suspended") {
+      // One chained retry per gesture: the unlock listeners below keep
+      // retrying on later gestures either way.
+      if (!retried) this.ringContext.resume().then(() => this.#ensureRinging(true)).catch(() => {})
+      return
+    }
+
+    const context = this.ringContext
+    const gain = context.createGain()
+    gain.gain.value = 0.12
+    gain.connect(context.destination)
+
+    const playTone = () => {
+      if (!this.shouldRing) return
+
+      const startedAt = context.currentTime
+      for (const frequency of [ 440, 480 ]) {
+        const oscillator = context.createOscillator()
+        oscillator.type = "sine"
+        oscillator.frequency.value = frequency
+
+        const envelope = context.createGain()
+        envelope.gain.setValueAtTime(0, startedAt)
+        envelope.gain.linearRampToValueAtTime(1, startedAt + 0.05)
+        envelope.gain.setValueAtTime(1, startedAt + 0.9)
+        envelope.gain.linearRampToValueAtTime(0, startedAt + 1)
+
+        oscillator.connect(envelope)
+        envelope.connect(gain)
+        oscillator.start(startedAt)
+        oscillator.stop(startedAt + 1.05)
+      }
+    }
+
+    playTone()
+    this.ringInterval = setInterval(playTone, 3000)
+    this.ringing = true
+    this.ringGain = gain
+
+    if (this.ringUnlock) {
+      window.removeEventListener("pointerdown", this.ringUnlock)
+      window.removeEventListener("keydown", this.ringUnlock)
+      this.ringUnlock = null
+    }
+  }
+
+  #stopRinging() {
+    this.shouldRing = false
+    this.ringing = false
+    clearInterval(this.ringInterval)
+    this.ringInterval = null
+
+    try {
+      this.ringGain?.disconnect()
+    } catch {
+      // Already gone; the interval stopping is what matters.
+    }
+    this.ringGain = null
+
+    if (this.ringUnlock) {
+      window.removeEventListener("pointerdown", this.ringUnlock)
+      window.removeEventListener("keydown", this.ringUnlock)
+      this.ringUnlock = null
+    }
+  }
+
+  // A hidden tab cannot show the banner, so the call raises a system
+  // notification instead — only with an already-granted permission, since
+  // asking needs a gesture the ring does not have.
+  #notifyHiddenTab(invitation) {
+    if (document.visibilityState !== "hidden") return
+    if (typeof Notification === "undefined" || Notification.permission !== "granted") return
+
+    try {
+      this.tabNotification?.close()
+      this.tabNotification = new Notification(`${invitation.callerName} started a huddle`, {
+        body: `Join the huddle in ${invitation.roomName}`,
+        tag: `huddle-invitation-${invitation.roomId}`
+      })
+      this.tabNotification.onclick = () => {
+        window.focus()
+        this.tabNotification?.close()
+      }
+    } catch {
+      // The banner still shows when the tab becomes visible.
+    }
+  }
+
   #hide() {
     clearTimeout(this.ringTimer)
     clearTimeout(this.endedTimer)
+    this.#stopRinging()
+    this.tabNotification?.close()
+    this.tabNotification = null
     this.activityItemIdValue = 0
     this.roomIdValue = 0
     this.element.hidden = true
