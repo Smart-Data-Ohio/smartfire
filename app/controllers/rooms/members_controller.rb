@@ -6,9 +6,13 @@ class Rooms::MembersController < ApplicationController
   def index
     members = @room.users.active.with_attached_avatar.includes(:agent).order(Arel.sql("LOWER(users.name) ASC"), :id).to_a
     lease_states = WorkspacePresenceLease.presence_by_user_id(members.map(&:id))
+    # Per viewer, computed live on every request: this JSON is never
+    # cached or etagged across viewers, so one viewer's stars cannot
+    # leak into another's panel.
+    starred_ids = Current.user.starred_ids_among(members.map(&:id))
 
     render json: {
-      members: members.map { |member| member_json(member, lease_states:) }
+      members: members.map { |member| member_json(member, lease_states:, starred_ids:) }
     }
   end
 
@@ -17,7 +21,9 @@ class Rooms::MembersController < ApplicationController
       request.format.json? ? head(:unauthorized) : super
     end
 
-    def member_json(member, lease_states:)
+    def member_json(member, lease_states:, starred_ids:)
+      starred = starred_ids.include?(member.id)
+
       if member.bot? && member.agent
         agent = member.agent
         live = agent.suspended_at.nil? && agent.last_seen_at.present?
@@ -29,7 +35,8 @@ class Rooms::MembersController < ApplicationController
           bot: member.bot?,
           online: live,
           presence: live ? "agent" : "offline",
-          status: agent.working_presence_text.presence || agent.status_note.presence || agent.status.to_s.humanize
+          status: agent.working_presence_text.presence || agent.status_note.presence || agent.status.to_s.humanize,
+          starred:
         }
       else
         presence = member.effective_presence(lease_states[member.id] || :offline)
@@ -41,7 +48,8 @@ class Rooms::MembersController < ApplicationController
           bot: member.bot?,
           online: presence != :offline,
           presence: presence.to_s,
-          status: member.custom_status_display
+          status: member.custom_status_display,
+          starred:
         }
       end
     end
