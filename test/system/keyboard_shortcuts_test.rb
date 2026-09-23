@@ -1,4 +1,5 @@
 require "application_system_test_case"
+require "timeout"
 
 class KeyboardShortcutsTest < ApplicationSystemTestCase
   setup do
@@ -76,9 +77,7 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
     designers = rooms(:designers)
     join_room designers
 
-    open_message_menu designers.root_messages.ordered.second
-    click_on "Mark unread"
-    assert_room_unread designers
+    mark_current_room_unread designers.root_messages.ordered.second
 
     press_keys(:escape)
     assert_room_read designers
@@ -88,9 +87,7 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
     designers = rooms(:designers)
     join_room designers
 
-    open_message_menu designers.root_messages.ordered.first
-    click_on "Mark unread"
-    assert_room_unread designers
+    mark_current_room_unread designers.root_messages.ordered.first
 
     find_field("message_markdown_source").click
     press_keys(:escape)
@@ -101,14 +98,79 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
     designers = rooms(:designers)
     join_room designers
 
-    open_message_menu designers.root_messages.ordered.first
-    click_on "Mark unread"
-    assert_room_unread designers
+    mark_current_room_unread designers.root_messages.ordered.first
 
     open_message_menu designers.root_messages.ordered.second
     press_keys(:escape)
     assert_no_selector ".message[data-message-actions-open]", wait: 5
     assert_room_unread designers
+  end
+
+  test "escape with the huddle theater open yields to the theater instead of marking read" do
+    designers = rooms(:designers)
+    join_room designers
+
+    mark_current_room_unread designers.root_messages.ordered.first
+
+    # Theater mode is a class on the huddle panel, not a dialog or
+    # popover. The probe binds after page load the way the huddle
+    # controller binds its own Escape handler when the theater opens:
+    # if the global handler swallowed the event first, the probe
+    # would see an already-prevented event and the room would go read.
+    page.execute_script(<<~JS)
+      let panel = document.getElementById("channel-huddle");
+      if (!panel) {
+        panel = document.createElement("aside");
+        panel.id = "channel-huddle";
+        document.body.appendChild(panel);
+      }
+      panel.classList.add("huddle--theater");
+      window.__theaterEscapePrevented = "unseen";
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") window.__theaterEscapePrevented = event.defaultPrevented;
+      });
+    JS
+
+    press_keys(:escape)
+    assert_equal false, page.evaluate_script("window.__theaterEscapePrevented")
+    assert_room_unread designers
+
+    page.execute_script(<<~JS)
+      document.getElementById("channel-huddle").classList.remove("huddle--theater")
+    JS
+
+    press_keys(:escape)
+    assert_room_read designers
+  end
+
+  test "escape in full screen leaves the room unread" do
+    designers = rooms(:designers)
+    join_room designers
+
+    mark_current_room_unread designers.root_messages.ordered.first
+
+    page.evaluate_script("document.documentElement.requestFullscreen()")
+    assert page.evaluate_script("document.fullscreenElement !== null"), "expected full screen to engage"
+
+    # Headless full screen resizes below the desktop breakpoint, which
+    # closes the member drawer; wait for both to settle so the Escape
+    # below meets nothing open but full screen itself. A synthetic
+    # Escape: a trusted one would exit full screen in the browser
+    # before any assertion could run.
+    Timeout.timeout(10) do
+      sleep 0.05 until page.evaluate_script("!matchMedia('(min-width: 80rem)').matches")
+    end
+    assert_no_selector "body.member-panel-open", wait: 5
+
+    page.execute_script(<<~JS)
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }))
+    JS
+
+    # The narrow fullscreen layout hides the sidebar rows, so match
+    # the badge class regardless of visibility.
+    assert_selector ".rooms a.unread", text: "Designers", visible: :all, wait: 5
+  ensure
+    page.evaluate_script("document.exitFullscreen().catch(() => {})") if page
   end
 
   test "alt+arrows while typing stay in the room" do
@@ -169,5 +231,30 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
     # so the setup message below persists server-side.
     def expire_connection(user, room)
       user.memberships.find_by!(room: room).update_columns(connected_at: nil, connections: 0)
+    end
+
+    # Marks the room unread through the message menu and waits for the
+    # roundtrip: the menu announces "Marked unread" once the DELETE
+    # lands and the local badge echo is dispatched (the server
+    # broadcast skips the current room by design, so only that echo
+    # paints the badge).
+    def mark_current_room_unread(message)
+      wait_for_room_presence
+      open_message_menu message
+      click_on "Mark unread"
+      assert_selector "[data-message-actions-target='status']", text: "Marked unread", visible: :all, wait: 10
+      assert_room_unread message.room
+    end
+
+    # The room presence controller marks the current room read when its
+    # subscription connects; under load that can land after the
+    # mark-unread echo and wipe the badge, so wait for it first.
+    def wait_for_room_presence
+      Timeout.timeout(10) do
+        sleep 0.05 until page.evaluate_script(<<~JS)
+          !!window.Stimulus.getControllerForElementAndIdentifier(
+            document.querySelector("[data-controller~='presence']"), "presence")?.channel
+        JS
+      end
     end
 end

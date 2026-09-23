@@ -116,7 +116,13 @@ export default class extends Controller {
   #overlayOpen() {
     // Panels mark themselves aria-modal only when modal (the member
     // panel is a persistent side panel on desktop, where Esc must
-    // still mark the room read).
+    // still mark the room read). Theater mode and real full screen
+    // are element state rather than overlays, so they need their own
+    // checks: Esc there belongs to the theater collapse and to the
+    // browser, and this handler runs before the huddle's own Escape
+    // listener, so marking read here would swallow the collapse.
+    if (document.fullscreenElement || document.webkitFullscreenElement) return true
+    if (document.querySelector("#channel-huddle.huddle--theater")) return true
     return Boolean(document.querySelector("dialog[open], :popover-open, [aria-modal='true']"))
   }
 }
