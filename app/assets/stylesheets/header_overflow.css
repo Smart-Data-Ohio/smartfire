@@ -18,8 +18,8 @@
   position: relative;
 }
 
-/* The dot lights when any menu item carries a badge or unread state: a
-   pins count above zero or threads with unread. */
+/* The dot lights for unread threads only: a pins count is inventory,
+   not attention, and would show a permanent dot. */
 .header-overflow__dot {
   background: var(--color-negative, #b3261e);
   block-size: 0.5rem;
@@ -69,6 +69,12 @@
 }
 
 .header-overflow__badge:empty {
+  display: none;
+}
+
+/* The controller hides a zero count explicitly: :empty never matches the
+   text "0". */
+.header-overflow__badge[hidden] {
   display: none;
 }
 

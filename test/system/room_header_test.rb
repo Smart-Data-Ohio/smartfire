@@ -321,7 +321,7 @@ class RoomHeaderTest < ApplicationSystemTestCase
     end
   end
 
-  test "the overflow button shows a dot when pins exist" do
+  test "the overflow dot lights for unread threads, not pins, and the pins badge hides at zero" do
     sign_in "jz@37signals.com"
     join_room rooms(:designers)
 
@@ -330,12 +330,40 @@ class RoomHeaderTest < ApplicationSystemTestCase
       assert_selector "#header-overflow-button", visible: true
       assert_selector "#header-overflow-button .header-overflow__dot[hidden]", visible: :all
 
+      # No pins: the menu badge hides instead of showing "0".
+      click_button "More actions"
+      within "#header-overflow-menu" do
+        assert_selector "[data-header-overflow-target='pinsCount'][hidden]", visible: :all
+      end
+      page.send_keys :escape
+
+      # Pins fill the badge but never light the dot.
       MessagePin.pin!(message: messages(:third), pinner: users(:jz))
       visit room_url(rooms(:designers))
       page.current_window.resize_to(390, 844)
+      click_button "More actions"
+      within "#header-overflow-menu" do
+        assert_selector "[data-header-overflow-target='pinsCount']:not([hidden])", text: "1"
+      end
+      page.send_keys :escape
+      assert_selector "#header-overflow-button .header-overflow__dot[hidden]", visible: :all
 
-      assert_no_selector "#header-overflow-button .header-overflow__dot[hidden]", visible: :all, wait: 10
-      assert_selector "#header-overflow-button .header-overflow__dot", visible: true
+      # An unread thread lights the dot once the browser reports it.
+      thread = ChannelThread.create!(room: rooms(:designers), creator: users(:kevin), name: "Dot check")
+      ThreadMembership.join!(thread, users(:jz))
+      Message.create!(room: rooms(:designers), thread: thread, creator: users(:kevin),
+        markdown_source: "News for the dot.", client_message_id: "dot-check-1")
+
+      click_button "More actions"
+      within "#header-overflow-menu" do
+        find("[role='menuitem']", text: "Threads").click
+      end
+      assert_selector "#thread-panel [data-thread-panel-target='browserList'] .thread-panel__thread-item[data-unread='true']",
+        text: "Dot check", wait: 10
+      find(".thread-panel__close").click
+      assert_no_selector "body.thread-panel-open", wait: 5
+
+      assert_selector "#header-overflow-button .header-overflow__dot:not([hidden])", visible: true, wait: 10
     ensure
       page.current_window.resize_to(1400, 1400)
     end

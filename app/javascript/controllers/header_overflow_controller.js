@@ -295,8 +295,8 @@ export default class extends Controller {
 
   // Badges travel with their items: the pins menu badge mirrors the header
   // count (hidden below 80rem with its button), while the threads menu item
-  // is a second thread-panel browser toggle so its unread badge updates in
-  // place. The button dot lights when any of them carries state.
+  // keeps its thread-panel browser-toggle target so its unread badge
+  // updates in place. The button dot follows the threads badges alone.
   #observeBadges() {
     const headerActions = this.element.closest(".room-header__actions") || document.body
     this.#badgeObserver = new MutationObserver(() => {
@@ -324,28 +324,22 @@ export default class extends Controller {
     // write would queue another mutation on every callback forever.
     const text = source?.textContent?.trim() || ""
     if (this.pinsCountTarget.textContent !== text) this.pinsCountTarget.textContent = text
+    // :empty never matches the text "0", so hide a zero count explicitly.
+    const hidden = text === "" || text === "0"
+    if (this.pinsCountTarget.hidden !== hidden) this.pinsCountTarget.hidden = hidden
   }
 
+  // The dot means something needs attention: unread threads only. A pin
+  // count is inventory, not attention, and would show a permanent dot in
+  // any room with a pin.
   #updateDot() {
     if (!this.hasDotTarget) return
-
-    const pins = document.querySelector(".room-header__actions .room-header__pins-count")?.textContent?.trim()
-    const pinsUnread = pins !== undefined && pins !== "" && pins !== "0"
 
     const threadsUnread = Array.from(document.querySelectorAll(".room-header__actions [data-thread-panel-unread], #header-overflow-menu [data-thread-panel-unread]"))
       .some(badge => !badge.hidden && badge.textContent?.trim() !== "")
 
-    const menuBadgesUnread = Array.from(this.menuTarget.querySelectorAll("[data-header-overflow-badge]"))
-      .some(badge => {
-        if (badge.hidden || badge.closest("[hidden]")) return false
-        if (!this.#isVisible(badge)) return false
-        const text = badge.textContent?.trim() || ""
-        return text !== "" && text !== "0"
-      })
-
     // Guarded like the pins mirror above: setting hidden unconditionally
     // re-triggers the badge observer on every callback.
-    const hidden = !(pinsUnread || threadsUnread || menuBadgesUnread)
-    if (this.dotTarget.hidden !== hidden) this.dotTarget.hidden = hidden
+    if (this.dotTarget.hidden !== !threadsUnread) this.dotTarget.hidden = !threadsUnread
   }
 }
