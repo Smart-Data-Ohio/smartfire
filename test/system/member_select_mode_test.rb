@@ -100,6 +100,23 @@ class MemberSelectModeTest < ApplicationSystemTestCase
     assert_checked_field "select-member-#{users(:kevin).id}"
   end
 
+  test "ctrl-shift-click on a checked checkbox adds the range instead of clearing it" do
+    ctrl_click(row_name_button(users(:jason)))
+    within_bar { assert_selector "button", text: "Message (1)" }
+
+    # A plain click in selection mode toggles without moving the anchor,
+    # so the anchor stays on Jason while Kevin is checked.
+    row_name_button(users(:kevin)).click
+    within_bar { assert_selector "button", text: "Message (2)" }
+
+    box = find("#channel-members #select-member-#{users(:kevin).id}")
+    ctrl_shift_click(box)
+    within_bar { assert_selector "button", text: "Message (3)" }
+    assert_checked_field "select-member-#{users(:jason).id}"
+    assert_checked_field "select-member-#{users(:jz).id}"
+    assert_checked_field "select-member-#{users(:kevin).id}"
+  end
+
   test "esc and the exit button leave selection mode with the panel open" do
     ctrl_click(row_name_button(users(:jason)))
     within_bar { assert_selector "button", text: "Message (1)" }

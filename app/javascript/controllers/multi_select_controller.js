@@ -70,6 +70,15 @@ export default class extends Controller {
     if (this.pressJustFired) return
 
     const checkbox = event.currentTarget
+
+    // Selection-mode ranges add, as file managers do: Ctrl/Cmd-Shift-click
+    // on the checkbox itself takes the same path as on the row, instead of
+    // the inbox-style set-to-clicked-state range below (which would uncheck
+    // the whole range when the clicked box just toggled off).
+    if (this.selectionModeValue && event.shiftKey && (event.ctrlKey || event.metaKey)) {
+      this.#selectRange(checkbox)
+      return
+    }
     const boxes = this.checkboxTargets
     const index = boxes.indexOf(checkbox)
     const lastIndex = boxes.findIndex((box) => box.dataset.userId === this.lastId)
