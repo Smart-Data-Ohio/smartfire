@@ -35,10 +35,48 @@ class StatusNotificationsTest < ApplicationSystemTestCase
     wait_for_condition("DND was not enabled") { users(:david).reload.dnd_enabled? }
 
     visit room_url(rooms(:designers))
-    assert_selector "meta[name='notification-sounds'][content='muted']", visible: :all
+    assert_selector "meta[name='notification-dnd'][content='muted']", visible: :all
 
     visit user_profile_url
     assert_selector "#user_dnd_enabled:checked", visible: :all
+  end
+
+  test "chat sounds follow the live quiet-hours window without a reload" do
+    message = rooms(:designers).messages.create!(
+      creator: users(:jason), body: "/play tada", client_message_id: "sound-gate-#{SecureRandom.hex(4)}"
+    )
+    now_minute = (Time.current.seconds_since_midnight / 60).to_i
+    users(:david).update!(
+      time_zone: "UTC", quiet_hours_enabled: true,
+      quiet_hours_start_minute: (now_minute - 60) % 1440,
+      quiet_hours_end_minute: (now_minute + 60) % 1440
+    )
+
+    visit room_url(rooms(:designers))
+    assert_selector "meta[name='quiet-hours']", visible: :all
+    page.execute_script <<~JS
+      window.playedSounds = [];
+      window.Audio = class {
+        constructor(url) { window.playedSounds.push(url); }
+        play() { return Promise.resolve(); }
+      };
+    JS
+
+    within_message(message) { click_button "🔊" }
+    sleep 0.5
+    assert_empty page.evaluate_script("window.playedSounds")
+
+    # Time passes out of the window; the page never reloads.
+    opposite = (now_minute + 720) % 1440
+    page.execute_script <<~JS
+      document.querySelector("meta[name='quiet-hours']")
+        .setAttribute("content", "#{(opposite - 30) % 1440}-#{(opposite + 30) % 1440}");
+    JS
+
+    within_message(message) { click_button "🔊" }
+    wait_for_condition("the sound did not play after quiet hours ended") do
+      page.evaluate_script("window.playedSounds.length") == 1
+    end
   end
 
   test "switching the theme applies without a reload flash" do

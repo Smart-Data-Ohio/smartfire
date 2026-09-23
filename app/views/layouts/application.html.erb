@@ -27,7 +27,7 @@
     <% if Current.user %>
       <%= tag.meta name: "current-user-time-zone", content: current_user_time_zone_meta_content %>
       <%= tag.meta name: "time-zone-url", content: user_time_zone_path %>
-      <%= tag.meta name: "notification-sounds", content: "muted" if Current.user.dnd_active? %>
+      <%= notification_sound_meta_tags %>
     <% end %>
 
     <%= tag.link rel: "manifest", href: webmanifest_path(format: :json) %>

@@ -11,8 +11,10 @@ class WorkspacePresenceLease < ApplicationRecord
   validates :expires_at, presence: true
 
   class << self
+    # Establishing and reading never prune: both run on hot paths (every
+    # tab connect and every 60 s presence poll), and a DELETE takes the
+    # SQLite write lock. The periodic sweep below removes stale rows.
     def establish(user:, session:)
-      prune
       return unless identity_valid?(user:, session:)
 
       create!(
@@ -34,8 +36,6 @@ class WorkspacePresenceLease < ApplicationRecord
     # query for the whole set. A nil activity stamp (a lease established
     # before this column existed) counts as active; heartbeats refresh it.
     def presence_by_user_id(user_ids)
-      prune
-
       cutoff = IDLE_AFTER.ago
       live_leases_for(user_ids).pluck(:user_id, :last_active_at)
         .group_by(&:first)
@@ -58,6 +58,7 @@ class WorkspacePresenceLease < ApplicationRecord
         Session.exists?(id: session.id, user_id: user.id)
     end
 
+    # The periodic sweep calls this; reads never do (see above).
     def prune(limit: 100)
       stale_ids = where(<<~SQL.squish, Time.current).limit(limit).pluck(:id)
         expires_at < ? OR NOT EXISTS (

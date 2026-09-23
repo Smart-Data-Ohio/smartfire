@@ -30,6 +30,18 @@ class Users::PresencesControllerTest < ActionDispatch::IntegrationTest
     assert_nil response.parsed_body["presences"].first["status"]
   end
 
+  test "a presence lookup never prunes expired leases" do
+    lease = WorkspacePresenceLease.establish(user: users(:jason), session: @jason_session)
+    lease.update_column(:expires_at, 1.minute.ago)
+
+    get presence_users_url(ids: [ users(:jason).id ])
+
+    assert_response :success
+    assert_equal "offline", response.parsed_body["presences"].first["presence"]
+    assert WorkspacePresenceLease.exists?(lease.id),
+      "pruning is the periodic sweep's job, not a hot read's"
+  end
+
   test "invisible members read offline" do
     WorkspacePresenceLease.establish(user: users(:jason), session: @jason_session)
     users(:jason).update!(presence_setting: "invisible")

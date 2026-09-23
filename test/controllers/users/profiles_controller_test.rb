@@ -334,7 +334,7 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_select "html[data-theme=light]"
     assert_select "meta[name=color-scheme][content=light]", count: 1
     assert_select "meta[name=current-user-time-zone][content='Pacific Time (US & Canada)']", count: 1
-    assert_select "meta[name=notification-sounds][content=muted]", count: 1
+    assert_select "meta[name=notification-dnd][content=muted]", count: 1
   end
 
   test "the layout mutes sounds for the DND presence" do
@@ -343,6 +343,25 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
     get user_profile_url
 
     assert_response :success
-    assert_select "meta[name=notification-sounds][content=muted]", count: 1
+    assert_select "meta[name=notification-dnd][content=muted]", count: 1
+  end
+
+  test "the layout sends the quiet-hours window and zone for the sound gate" do
+    users(:david).update!(time_zone: "UTC", quiet_hours_enabled: true,
+      quiet_hours_start_minute: 1320, quiet_hours_end_minute: 420)
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=quiet-hours][content='1320-420']", count: 1
+    assert_select "meta[name=quiet-hours-zone][content='UTC']", count: 1
+
+    users(:david).update!(quiet_hours_enabled: false)
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=quiet-hours]", count: 0
+    assert_select "meta[name=quiet-hours-zone]", count: 0
   end
 end

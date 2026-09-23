@@ -21,7 +21,10 @@ whether it saw input in the last minute, and the server stamps
 `workspace_presence_leases.last_active_at` only then. A lease that stays
 connected but quiet reads idle after `IDLE_AFTER` (10 minutes). The
 presence map for a set of users costs one query
-(`WorkspacePresenceLease.presence_by_user_id`).
+(`WorkspacePresenceLease.presence_by_user_id`); reads and lease setup
+never prune, since a DELETE takes the SQLite write lock on a hot path.
+Expired leases are swept once a minute by the `presence leases` periodic
+task instead.
 
 A custom status is an emoji plus text with an expiry of 30 minutes,
 1 hour, 4 hours, today, this week, or never. "Today" and "this week" end
@@ -63,10 +66,13 @@ time, evaluated in the member's time zone (overnight windows work).
 Quiet hours share the starred-people exception.
 
 Sounds (`/play` chat sounds, played by the `sound` Stimulus controller)
-read the server-rendered `<meta name="notification-sounds">` tag: when
-its content is `muted`, `play()` returns without playing. The tag
-reflects DND at page render; the policy's `sound?` (always equal to
-`push?`) gates any server-side sound decision the same way.
+re-evaluate muting on every play: the layout sends manual DND and the
+DND presence as a muted marker plus the quiet-hours window and zone,
+and the controller computes the window live, so crossing a quiet-hours
+boundary silences or unsilences sounds without a reload. (A DND switch
+flipped in another tab still needs a navigation; only the time-based
+gate is live.) The policy's `sound?` (always equal to `push?`) gates
+any server-side sound decision the same way.
 
 ## Thread controls
 
@@ -142,9 +148,9 @@ have no theme picker and keep following the OS.
 
 Every push path calls `push?` (`Room::MessagePusher`,
 `ChannelThread::MessagePusher`, `Event::ReminderPusher`,
-`Huddle::InvitationPusher`); sounds follow through the
-`notification-sounds` meta tag the layout renders from the same DND
-state. The inbox recorder calls `inbox_event_type` for each candidate:
+`Huddle::InvitationPusher`); sounds follow through the DND marker and
+quiet-hours window the layout renders for the `sound` controller. The
+inbox recorder calls `inbox_event_type` for each candidate:
 `ActivityItems::Recorder` batches keyword matching once per message
 (the candidates are the thread members for thread messages, and the
 mentionees plus the reply author plus the keyword matches for room

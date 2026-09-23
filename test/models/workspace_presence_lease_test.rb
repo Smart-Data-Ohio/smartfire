@@ -36,7 +36,7 @@ class WorkspacePresenceLeaseTest < ActiveSupport::TestCase
     Session.delete(@session.id)
 
     assert_not_includes WorkspacePresenceLease.online_user_ids([ @user.id ]), @user.id
-    assert_not WorkspacePresenceLease.exists?(lease.id), "the database must remove leases even when callbacks are skipped"
+    assert_not WorkspacePresenceLease.exists?(lease.id), "revoking the session drops its leases even when callbacks are skipped"
   end
 
   test "refresh deletes the lease when its session has been revoked" do
@@ -66,6 +66,15 @@ class WorkspacePresenceLeaseTest < ActiveSupport::TestCase
     lease.update_column(:user_id, users(:jason).id)
 
     assert_not_includes WorkspacePresenceLease.online_user_ids([ users(:jason).id ]), users(:jason).id
+  end
+
+  test "prune removes leases whose session belongs to another user" do
+    lease = WorkspacePresenceLease.establish(user: @user, session: @session)
+    lease.update_column(:user_id, users(:jason).id)
+
+    WorkspacePresenceLease.prune
+
+    assert_not WorkspacePresenceLease.exists?(lease.id)
   end
 
   test "prune removes expired leases in bounded batches" do
