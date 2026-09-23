@@ -147,6 +147,24 @@ class AuditLogTest < ActiveSupport::TestCase
     assert_equal 1, AuditLog.where(action: "session.sign_in.failure").count
   end
 
+  test "record_sign_in_failure! stores emails but never a mistyped password" do
+    assert_equal "victim@example.com",
+      AuditLog.record_sign_in_failure!(email: "victim@example.com", method: "password").actor_label
+    assert_equal "DAVID@37signals.com",
+      AuditLog.record_sign_in_failure!(email: "DAVID@37signals.com", method: "password").actor_label
+    assert_equal "[unrecognized]",
+      AuditLog.record_sign_in_failure!(email: "hunter2", method: "password").actor_label
+    assert_equal "[unrecognized]",
+      AuditLog.record_sign_in_failure!(email: "", method: "google").actor_label
+
+    User.create!(name: "Dotless", email_address: "dotless@intranet")
+    assert_equal "dotless@intranet",
+      AuditLog.record_sign_in_failure!(email: "dotless@intranet", method: "password").actor_label
+
+    long = "#{"a" * 300}@example.com"
+    assert_equal 254, AuditLog.record_sign_in_failure!(email: long, method: "password").actor_label.length
+  end
+
   test "record_sign_in_failure! records again from another IP or after the window" do
     first_request = ActionDispatch::TestRequest.create
     first_request.remote_addr = "198.51.100.9"

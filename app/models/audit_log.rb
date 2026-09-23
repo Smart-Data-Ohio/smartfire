@@ -60,6 +60,13 @@ class AuditLog < ApplicationRecord
   # credential-stuffing flood leaves one row instead of thousands.
   SIGN_IN_FAILURE_THROTTLE_WINDOW = 5.minutes
 
+  # A failed sign-in stores the typed email only when it matches a real
+  # account or has an email shape; anything else is likely a password
+  # typed into the email field, which must not be kept for a year.
+  FAILURE_EMAIL_SHAPE = /\A[^@\s]+@[^@\s]+\.[^@\s]+\z/
+  UNRECOGNIZED_ACTOR_LABEL = "[unrecognized]".freeze
+  FAILURE_LABEL_MAX = 254
+
   # Keys whose values are secrets and must never land in the log. Callers
   # pass explicit change hashes (never raw params), and this filter is the
   # backstop. Deliberately narrower than the request log filter: actor and
@@ -108,8 +115,21 @@ class AuditLog < ApplicationRecord
       return nil
     end
 
-    record!(action: "session.sign_in.failure", actor_label: email.presence,
+    record!(action: "session.sign_in.failure", actor_label: failure_actor_label(email),
       changes: { method: method }, request: request)
+  end
+
+  # The actor label for a failed sign-in: the typed value, truncated,
+  # when it matches an existing account (case-insensitively, like
+  # sign-in itself) or has an email shape; "[unrecognized]" otherwise,
+  # so a password typed into the email field is never stored.
+  def self.failure_actor_label(email)
+    typed = email.to_s.strip
+    return UNRECOGNIZED_ACTOR_LABEL if typed.blank?
+
+    known = typed.match?(FAILURE_EMAIL_SHAPE) ||
+      User.where("LOWER(email_address) = ?", typed.downcase).exists?
+    known ? typed.truncate(FAILURE_LABEL_MAX) : UNRECOGNIZED_ACTOR_LABEL
   end
 
   def self.label_for(record)

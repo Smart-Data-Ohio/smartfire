@@ -27,6 +27,15 @@ class AuditLog::SignInAuditTest < ActionDispatch::IntegrationTest
     assert_equal({ "method" => "password" }, entry.details)
   end
 
+  test "a password typed into the email field is not stored" do
+    post session_url, params: { email_address: "correct horse battery staple", password: "wrong" }
+
+    assert_response :unauthorized
+    entry = AuditLog.where(action: "session.sign_in.failure").last
+    assert_equal "[unrecognized]", entry.actor_label
+    assert_no_match "correct horse", entry.attributes.values.join(" ")
+  end
+
   test "sign-in failures from one IP collapse to a single row" do
     3.times do
       post session_url, params: { email_address: "david@37signals.com", password: "wrong" }
@@ -54,6 +63,7 @@ class AuditLog::SignInAuditTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
 
     failure = AuditLog.where(action: "session.sign_in.failure").last
+    assert_equal "[unrecognized]", failure.actor_label
     assert_equal({ "method" => "transfer" }, failure.details)
     assert_no_match "bogus-transfer-id", failure.details.to_json
   end
@@ -79,6 +89,7 @@ class AuditLog::SignInAuditTest < ActionDispatch::IntegrationTest
     end
 
     entry = AuditLog.where(action: "session.sign_in.failure").last
+    assert_equal "[unrecognized]", entry.actor_label
     assert_equal({ "method" => "google" }, entry.details)
   end
 end
