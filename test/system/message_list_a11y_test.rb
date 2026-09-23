@@ -278,10 +278,9 @@ class MessageListA11yTest < ApplicationSystemTestCase
   end
 
   test "the main message list is a live log" do
-    list = find("##{dom_id(@room, :messages)}", visible: false)
-    assert_equal "log", list["role"]
-    assert_equal "polite", list["aria-live"]
-    assert_equal "additions", list["aria-relevant"]
+    # Page-load renders briefly silence the region (aria-live="off"), so wait
+    # for the settled attributes rather than reading them once.
+    assert_selector "##{dom_id(@room, :messages)}[role='log'][aria-live='polite'][aria-relevant='additions']", visible: false, wait: 10
   end
 
   test "paginated history stays quiet past the insert, then the live region comes back" do
