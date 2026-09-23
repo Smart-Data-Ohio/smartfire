@@ -1,0 +1,17 @@
+<%# A quoted message: author, room, excerpt, and time, with a jump link to
+    the source. Same-room quotes render inline (every viewer of the
+    quoting message belongs to the room); cross-room quotes load through
+    the quote endpoint, which checks the viewer's own access first. %>
+<blockquote class="message-quote">
+  <div class="message-quote__meta">
+    <span class="message-quote__author"><%= source.creator.name %></span>
+    <span class="message-quote__room">in <%= viewer_neutral_room_label(source.room) %></span>
+    <%= local_datetime_tag source.created_at, class: "message-quote__time" %>
+  </div>
+  <p class="message-quote__excerpt"><%= source.plain_text_body.truncate(200) %></p>
+  <%# The card renders inside the message's edit frame (or its own quote
+      frame for cross-room sources); _top breaks the jump out to the page,
+      like the pins panel's jump links. %>
+  <%= link_to "Jump to message", message_link_url(source), class: "message-quote__jump",
+        data: { turbo_frame: "_top" } %>
+</blockquote>

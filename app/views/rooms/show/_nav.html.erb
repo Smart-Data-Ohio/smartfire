@@ -33,6 +33,11 @@
       <span class="room-header__action-label">Events</span>
     <% end %>
 
+    <%= link_to room_files_path(room), class: "btn room-header__action room-header__action--files", aria: { label: "Show files" }, title: "Show files" do %>
+      <%= image_tag "attachment.svg", size: 20, aria: { hidden: "true" } %>
+      <span class="room-header__action-label">Files</span>
+    <% end %>
+
     <%= render "rooms/pins/panel", room: room %>
 
     <% stage_membership = room.stage? ? room.memberships.find_by(user: Current.user) : nil %>

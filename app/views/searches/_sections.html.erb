@@ -1,0 +1,36 @@
+<%# Board posts, work threads, and events matching the operator-free text,
+    each capped and scoped to rooms the viewer belongs to. %>
+<% sections = [
+     [ "board-posts", "Board posts", @board_posts ],
+     [ "work-threads", "Work threads", @work_threads ],
+     [ "events", "Events", @events ]
+   ].select { |_, _, records| records.any? } %>
+<% if sections.any? %>
+  <div class="search-sections">
+    <% sections.each do |id, heading, records| %>
+      <section class="search-sections__section" aria-labelledby="search-<%= id %>">
+        <h2 id="search-<%= id %>" class="search-sections__heading"><%= heading %></h2>
+        <ul class="search-sections__list">
+          <% records.each do |record| %>
+            <li class="search-sections__item">
+              <% if record.is_a?(Event) %>
+                <%= link_to record.title, room_event_path(record.room, record), class: "search-sections__link" %>
+                <span class="search-sections__meta">
+                  <%= viewer_neutral_room_label(record.room) %> ·
+                  <%= local_datetime_tag record.starts_at %><%= " · Cancelled" if record.cancelled? %>
+                </span>
+              <% else %>
+                <%= link_to record.name, room_thread_path(record.room, record), class: "search-sections__link" %>
+                <span class="search-sections__meta">
+                  <%= viewer_neutral_room_label(record.room) %> ·
+                  <%= record.work_status_label %> ·
+                  <%= local_datetime_tag record.last_activity_at %>
+                </span>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      </section>
+    <% end %>
+  </div>
+<% end %>

@@ -22,6 +22,8 @@ module ActivityItemsHelper
       source.room ? room_event_path(source.room, source) : activity_items_path
     when AgentApproval
       agent_approvals_path(source.agent)
+    when ScheduledMessage
+      scheduled_messages_path
     else
       activity_items_path
     end
@@ -61,6 +63,8 @@ module ActivityItemsHelper
       "Approval request"
     when "message_reminder"
       "Reminder"
+    when "scheduled_message_dropped"
+      "Scheduled message not sent"
     else
       item.event_type.humanize
     end
@@ -91,6 +95,9 @@ module ActivityItemsHelper
       room = source.room
       base = agent ? agent.user.name : "Agent"
       room ? "#{base} · #{room_display_name(room)}" : base
+    when ScheduledMessage
+      room = source.room
+      room ? room_display_name(room) : "Unavailable room"
     else
       source.class.name.humanize
     end
@@ -136,6 +143,12 @@ module ActivityItemsHelper
       activity_item_event_body(item)
     when AgentApproval
       source.summary.to_s
+    when ScheduledMessage
+      if source.drop_reason.present?
+        "Your scheduled message was not sent (#{source.drop_reason}): #{source.markdown_source}"
+      else
+        "You no longer have access to this room, so your scheduled message was not sent: #{source.markdown_source}"
+      end
     else
       "Source updated"
     end
@@ -154,6 +167,8 @@ module ActivityItemsHelper
       source.organizer&.name
     when AgentApproval
       source.agent&.user&.name
+    when ScheduledMessage
+      source.user&.name
     end
   end
 

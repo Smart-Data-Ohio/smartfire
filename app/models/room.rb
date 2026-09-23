@@ -37,6 +37,8 @@ class Room < ApplicationRecord
   has_many :board_sla_rules, dependent: :delete_all
   has_many :board_sla_nudges, dependent: :delete_all
   has_many :board_stale_digests, dependent: :delete_all
+  has_many :agent_slash_commands, dependent: :delete_all
+  has_many :scheduled_messages, dependent: :delete_all
 
   belongs_to :creator, class_name: "User", default: -> { Current.user }
 
