@@ -16,13 +16,13 @@
               <% if record.is_a?(Event) %>
                 <%= link_to record.title, room_event_path(record.room, record), class: "search-sections__link" %>
                 <span class="search-sections__meta">
-                  <%= room_display_name(record.room) %> ·
+                  <%= viewer_neutral_room_label(record.room) %> ·
                   <%= local_datetime_tag record.starts_at %><%= " · Cancelled" if record.cancelled? %>
                 </span>
               <% else %>
                 <%= link_to record.name, room_thread_path(record.room, record), class: "search-sections__link" %>
                 <span class="search-sections__meta">
-                  <%= room_display_name(record.room) %> ·
+                  <%= viewer_neutral_room_label(record.room) %> ·
                   <%= record.work_status_label %> ·
                   <%= local_datetime_tag record.last_activity_at %>
                 </span>

@@ -5,7 +5,7 @@
 <blockquote class="message-quote">
   <div class="message-quote__meta">
     <span class="message-quote__author"><%= source.creator.name %></span>
-    <span class="message-quote__room">in <%= room_display_name(source.room) %></span>
+    <span class="message-quote__room">in <%= viewer_neutral_room_label(source.room) %></span>
     <%= local_datetime_tag source.created_at, class: "message-quote__time" %>
   </div>
   <p class="message-quote__excerpt"><%= source.plain_text_body.truncate(200) %></p>

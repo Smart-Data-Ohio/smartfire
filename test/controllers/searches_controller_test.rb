@@ -278,6 +278,26 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     assert_select ".search-sections__section", text: /Launch party planning/
   end
 
+  test "search sections cost the same queries regardless of section size" do
+    one = [ create_dm_event(users(:jason), "count-one") ]
+    small = count_sections_queries(one)
+
+    many = one + [ create_dm_event(users(:kevin), "count-two"), create_dm_event(users(:jz), "count-three") ]
+    large = count_sections_queries(many)
+
+    assert_equal 0, small
+    assert_equal small, large
+  end
+
+  test "search sections label direct rooms neutrally" do
+    create_dm_event(users(:jason), "label-one")
+
+    get searches_url, params: { q: "sectioncount" }
+
+    assert_response :success
+    assert_select ".search-sections__meta", text: /a direct message/
+  end
+
   test "operator values cannot inject SQL or FTS syntax" do
     get searches_url, params: { q: %(" OR 1=1 --) }
     assert_response :success
@@ -293,4 +313,44 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     get searches_url, params: { q: "on:2026-13-45 hello" }
     assert_response :success
   end
+
+  private
+    # An event in its own direct room, so every section row's room lookup
+    # carries distinct binds and can never hide in the query cache.
+    def create_dm_event(peer, seq)
+      dm = with_current_user(users(:david)) do
+        Rooms::Direct.find_or_create_for([ users(:david), peer ])
+      end
+      Event.create!(
+        room: dm, organizer: users(:david), title: "Sectioncount gathering #{seq}",
+        starts_at: 2.days.from_now, time_zone: "America/New_York"
+      ).id
+    end
+
+    def count_sections_queries(event_ids)
+      events = Event.where(id: event_ids).includes(:room).to_a
+      count = 0
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        count += 1 unless payload[:name] == "SCHEMA" || payload[:cached]
+      end
+
+      ActiveRecord::Base.connection_pool.clear_query_cache
+      with_current_user(users(:david)) do
+        ApplicationController.render(
+          partial: "searches/sections",
+          assigns: { board_posts: [], work_threads: [], events: events }
+        )
+      end
+      count
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+    end
+
+    def with_current_user(user)
+      previous = Current.user
+      Current.user = user
+      yield
+    ensure
+      Current.user = previous
+    end
 end

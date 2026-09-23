@@ -15,7 +15,7 @@ class Rooms::MessageLinksController < ApplicationController
     @source = @reference.referenced_message
     ActiveRecord::Associations::Preloader.new(
       records: [ @source ],
-      associations: [ :room, :rich_text_body, { creator: :avatar_attachment } ]
+      associations: [ :room, :rich_text_body, { attachment_attachment: :blob }, { creator: :avatar_attachment } ]
     ).call
 
     @visible = helpers.message_quote_visible_to?(@source, Current.user)

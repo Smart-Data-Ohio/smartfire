@@ -8,7 +8,7 @@ module MessageLinksHelper
       message.message_references.sort_by(&:id)
     else
       message.message_references
-        .includes(referenced_message: [ :room, :rich_text_body, { creator: :avatar_attachment } ])
+        .includes(referenced_message: [ :room, :rich_text_body, { attachment_attachment: :blob }, { creator: :avatar_attachment } ])
         .order(:id).to_a
     end
   end
