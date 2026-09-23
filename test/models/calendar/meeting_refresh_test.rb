@@ -86,35 +86,69 @@ class Calendar::MeetingRefreshTest < ActiveSupport::TestCase
     assert_equal "Google rejected the connection", @account.reload.disconnected_reason
   end
 
-  test "rate limits record a retry notice and turn the status off" do
-    Calendar::MeetingCache.create!(user: @user,
-      busy_intervals: [ [ "2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z" ] ])
+  test "rate limits keep the last good intervals and record a retry notice" do
+    busy = [ [ "2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z" ] ]
+    Calendar::MeetingCache.create!(user: @user, busy_intervals: busy)
     stub_request(:get, %r{\A#{GOOGLE_EVENTS_URL}})
       .to_return(status: 429, body: {}.to_json)
 
     assert_equal :error, Calendar::MeetingRefresh.refresh(@user.id)
 
     cache = @user.reload.meeting_cache
-    assert_empty cache.busy_intervals
+    assert_equal busy, cache.busy_intervals
     assert_equal Calendar::MeetingRefresh::UNREACHABLE_MESSAGE, cache.fetch_error
+    assert_not_nil cache.fetched_at
   end
 
-  test "a quota 403 records a retry notice" do
+  test "a quota 403 keeps the last good intervals and records a retry notice" do
+    busy = [ [ "2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z" ] ]
+    Calendar::MeetingCache.create!(user: @user, busy_intervals: busy)
     stub_request(:get, %r{\A#{GOOGLE_EVENTS_URL}})
       .to_return(status: 403, body: google_forbidden_body("userRateLimitExceeded").to_json)
 
     assert_equal :error, Calendar::MeetingRefresh.refresh(@user.id)
 
-    assert_equal Calendar::MeetingRefresh::UNREACHABLE_MESSAGE, @user.reload.meeting_cache.fetch_error
+    cache = @user.reload.meeting_cache
+    assert_equal busy, cache.busy_intervals
+    assert_equal Calendar::MeetingRefresh::UNREACHABLE_MESSAGE, cache.fetch_error
   end
 
-  test "a server error records a retry notice" do
+  test "a server error keeps the last good intervals and records a retry notice" do
+    busy = [ [ "2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z" ] ]
+    Calendar::MeetingCache.create!(user: @user, busy_intervals: busy)
     stub_request(:get, %r{\A#{GOOGLE_EVENTS_URL}})
       .to_return(status: 500, body: "boom")
 
     assert_equal :error, Calendar::MeetingRefresh.refresh(@user.id)
 
-    assert_equal Calendar::MeetingRefresh::UNREACHABLE_MESSAGE, @user.reload.meeting_cache.fetch_error
+    cache = @user.reload.meeting_cache
+    assert_equal busy, cache.busy_intervals
+    assert_equal Calendar::MeetingRefresh::UNREACHABLE_MESSAGE, cache.fetch_error
+  end
+
+  test "a malformed response body keeps the last good intervals and records a retry notice" do
+    busy = [ [ "2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z" ] ]
+    Calendar::MeetingCache.create!(user: @user, busy_intervals: busy)
+    stub_request(:get, %r{\A#{GOOGLE_EVENTS_URL}})
+      .to_return(status: 200, body: "{oops")
+
+    assert_equal :error, Calendar::MeetingRefresh.refresh(@user.id)
+
+    cache = @user.reload.meeting_cache
+    assert_equal busy, cache.busy_intervals
+    assert_equal Calendar::MeetingRefresh::UNREACHABLE_MESSAGE, cache.fetch_error
+  end
+
+  test "a JSON parse failure escaping the client is recorded instead of raising" do
+    busy = [ [ "2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z" ] ]
+    Calendar::MeetingCache.create!(user: @user, busy_intervals: busy)
+    Google::Client.any_instance.stubs(:list_events).raises(JSON::ParserError.new("unexpected token"))
+
+    assert_equal :error, Calendar::MeetingRefresh.refresh(@user.id)
+
+    cache = @user.reload.meeting_cache
+    assert_equal busy, cache.busy_intervals
+    assert_equal Calendar::MeetingRefresh::UNREACHABLE_MESSAGE, cache.fetch_error
   end
 
   test "a fresh cache is not refetched" do
@@ -179,18 +213,34 @@ class Calendar::MeetingRefreshTest < ActiveSupport::TestCase
       query: hash_including("timeMax" => (now + 24.hours).iso8601)
   end
 
-  test "a failed refresh clears OOO intervals too" do
+  test "a server error keeps OOO intervals too" do
     @user.update!(ooo_calendar_enabled: true)
-    Calendar::MeetingCache.create!(user: @user,
-      ooo_intervals: [ [ "2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z" ] ])
+    ooo = [ [ "2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z" ] ]
+    Calendar::MeetingCache.create!(user: @user, ooo_intervals: ooo)
     stub_request(:get, %r{\A#{GOOGLE_EVENTS_URL}})
       .to_return(status: 500, body: "boom")
 
     assert_equal :error, Calendar::MeetingRefresh.refresh(@user.id)
 
     cache = @user.reload.meeting_cache
-    assert_empty cache.ooo_intervals
+    assert_equal ooo, cache.ooo_intervals
     assert_equal Calendar::MeetingRefresh::UNREACHABLE_MESSAGE, cache.fetch_error
+  end
+
+  test "a revoked grant clears both meeting and OOO intervals" do
+    @user.update!(ooo_calendar_enabled: true, meeting_status_enabled: true)
+    @account.update!(access_token_expires_at: 1.hour.ago)
+    Calendar::MeetingCache.create!(user: @user,
+      busy_intervals: [ [ "2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z" ] ],
+      ooo_intervals: [ [ "2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z" ] ])
+    stub_google_token_invalid_grant
+
+    assert_equal :error, Calendar::MeetingRefresh.refresh(@user.id)
+
+    cache = @user.reload.meeting_cache
+    assert_empty cache.busy_intervals
+    assert_empty cache.ooo_intervals
+    assert_equal Calendar::MeetingRefresh::RECONNECT_MESSAGE, cache.fetch_error
   end
 
   private

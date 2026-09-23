@@ -114,11 +114,13 @@ Turbo streams).
 ## Failure behavior
 
 A revoked grant, API error, or rate limit never raises into presence: the
-refresh clears the cached intervals (calendar OOO silently turns off),
-stores a gentle notice for the settings page, and stamps the fetch time so
-the failure backs off to the 15-minute cadence instead of hot-looping. The
-next successful refresh clears the notice. The next minute-tick claims the
-resulting flip and broadcasts the cleared label. Disconnecting Google,
+refresh stores a gentle notice for the settings page and stamps the fetch
+time so the failure backs off to the 15-minute cadence instead of
+hot-looping. A dead grant clears the cached intervals (calendar OOO
+silently turns off); a transient failure — rate limit, 5xx, timeout,
+malformed body — keeps the last good intervals so the status keeps showing.
+The next successful refresh clears the notice. The next minute-tick claims
+any resulting flip and broadcasts it. Disconnecting Google,
 opting out, deactivating, or destroying the member drops the cached
 intervals immediately.
 

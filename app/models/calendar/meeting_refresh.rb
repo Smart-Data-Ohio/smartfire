@@ -6,10 +6,13 @@ module Calendar
   # one place. Returns :ok, :error, :fresh (fetched within the push
   # throttle), or :skipped.
   #
-  # Google failures never raise: the intervals clear (status reads as
-  # off) and a gentle notice is stored for the settings page. The
-  # 15-minute refresh cadence is the retry; failures stamp fetched_at
-  # too, so a dead grant backs off instead of hot-looping.
+  # Google failures never raise: a gentle notice is stored for the
+  # settings page either way. A dead grant (Unauthorized) or a missing
+  # account clears the intervals, since the status can no longer be
+  # trusted; transient failures (rate limits, 5xx, timeouts, malformed
+  # bodies) keep the last good intervals so the status keeps showing.
+  # The 15-minute refresh cadence is the retry; failures stamp
+  # fetched_at too, so a dead grant backs off instead of hot-looping.
   class MeetingRefresh
     LOOKBEHIND = 1.hour
     LOOKAHEAD = 24.hours
@@ -42,8 +45,11 @@ module Calendar
       store_intervals!(user, MeetingIntervals.from_items(items),
         OooIntervals.from_items(items, zone: user.time_zone_or_default), now:)
       :ok
-    rescue Google::Client::Error => error
+    rescue Google::Client::Unauthorized => error
       store_error!(user, message_for(error), now:)
+      :error
+    rescue Google::Client::Error, JSON::ParserError => error
+      store_transient_error!(user, message_for(error), now:)
       :error
     end
 
@@ -68,6 +74,18 @@ module Calendar
       )
     end
 
+    # A transient failure keeps the last good intervals: the upsert names
+    # only the notice columns, so a conflicting row keeps its stored
+    # sets (a first fetch that never succeeded keeps the empty
+    # defaults). The fetch time still stamps, so the retry backs off to
+    # the 15-minute cadence.
+    def self.store_transient_error!(user, message, now:)
+      MeetingCache.upsert(
+        { user_id: user.id, fetched_at: now, fetch_error: message },
+        unique_by: :user_id
+      )
+    end
+
     def self.iso_pairs(intervals)
       intervals.map { |start_at, end_at| [ start_at.iso8601, end_at.iso8601 ] }
     end
@@ -78,6 +96,6 @@ module Calendar
       else UNREACHABLE_MESSAGE
       end
     end
-    private_class_method :store_intervals!, :store_error!, :iso_pairs, :message_for
+    private_class_method :store_intervals!, :store_error!, :store_transient_error!, :iso_pairs, :message_for
   end
 end
