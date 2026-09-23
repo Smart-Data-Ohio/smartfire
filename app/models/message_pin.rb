@@ -11,24 +11,34 @@ class MessagePin < ApplicationRecord
   validates :message_id, uniqueness: true
   validate :message_must_belong_to_room
 
+  # One registration for both halves: like Message's reference syncs,
+  # declaring the same method under after_create_commit and
+  # after_destroy_commit would keep only one registration.
+  after_commit :broadcast_pin_change, on: %i[ create destroy ]
+
   scope :ordered, -> { order(created_at: :desc, id: :desc) }
 
   class << self
     # Pins a message for a room member (or the member's agent). Raises
     # CapReachedError past MAX_PER_ROOM and RecordInvalid when the message
-    # is already pinned. Posts the pin note and broadcasts inside the same
-    # transaction; the count check runs under SQLite's immediate write
-    # lock, so two concurrent pins cannot both pass the cap.
+    # is already pinned. The pin and its note commit atomically; the count
+    # check runs under SQLite's immediate write lock, so two concurrent
+    # pins cannot both pass the cap. Every broadcast fires after commit:
+    # the note through the explicit call below, the badge, count, and
+    # panel through the commit callbacks (which also cover unpin, message
+    # deletion, and user deletion).
     def pin!(message:, pinner:)
+      pin = nil
+      note = nil
       transaction do
         room = message.room
         raise CapReachedError, "This channel already has #{MAX_PER_ROOM} pinned messages" if room.message_pins.count >= MAX_PER_ROOM
 
         pin = create!(message:, room:, pinner:)
-        pin.post_pin_note!
-        pin.broadcast_pin_change
-        pin
+        note = pin.post_pin_note!
       end
+      note&.broadcast_create
+      pin
     end
 
     def pinned?(message)
@@ -37,10 +47,7 @@ class MessagePin < ApplicationRecord
   end
 
   def unpin!
-    transaction do
-      destroy!
-      broadcast_pin_change
-    end
+    destroy!
   end
 
   def broadcast_pin_change
@@ -67,11 +74,12 @@ class MessagePin < ApplicationRecord
     )
   end
 
-  # A quiet one-line system note in the channel, appended over the room
-  # messages stream like event announcements, but never marking the room
-  # unread, pushing, delivering, recording inbox items, or indexing for
-  # search. The note source is deterministic per message, so a pin/unpin
-  # toggle storm posts at most one note per message per window.
+  # A quiet one-line system note in the channel: rendered in the timeline
+  # like event announcements, but never marking the room unread, pushing,
+  # delivering, recording inbox items, or indexing for search. The note
+  # source is deterministic per message, so a pin/unpin toggle storm posts
+  # at most one note per message per window. Returns the note, or nil when
+  # the window already holds one; the caller broadcasts after commit.
   def post_pin_note!
     source = pin_note_source
     return if room.root_messages.where(system_note: true, markdown_source: source)
@@ -79,7 +87,7 @@ class MessagePin < ApplicationRecord
 
     room.root_messages.create_with_attachment!(
       creator: pinner, markdown_source: source, system_note: true
-    ).tap(&:broadcast_create)
+    )
   end
 
   private

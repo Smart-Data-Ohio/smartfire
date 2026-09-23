@@ -23,7 +23,10 @@ rate-limited to one note per message per 10 minutes.
 
 Pins broadcast live over the room messages stream (badge, header
 count, and panel list), and access follows the room: only members can
-pin, unpin, or list, and pins vanish with the room.
+pin, unpin, or list, and pins vanish with the room. Pin broadcasts
+fire after commit, so a rolled-back pin or unpin never reaches
+clients. Deleting a user removes their pins and broadcasts the
+removal; deactivating a user keeps their pins attributed.
 
 Agents with `post_messages` pin through the agent API; see
 [AI agents](agents.md#pins).

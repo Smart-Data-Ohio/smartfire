@@ -99,6 +99,63 @@ class MessagePinTest < ActiveSupport::TestCase
     assert_equal MessagePin::MAX_PER_ROOM, @room.message_pins.count
   end
 
+  test "pin change broadcasts are skipped when the pin transaction rolls back" do
+    streams = capture_turbo_stream_broadcasts [ @room, :messages ] do
+      MessagePin.transaction do
+        MessagePin.pin!(message: @message, pinner: @pinner)
+        raise ActiveRecord::Rollback
+      end
+    end
+
+    assert_not MessagePin.pinned?(@message)
+    assert_empty streams.select { |stream| stream["action"] == "replace" }
+  end
+
+  test "unpin change broadcasts are skipped when the unpin transaction rolls back" do
+    pin = MessagePin.pin!(message: @message, pinner: @pinner)
+    ActionCable.server.pubsub.clear
+
+    assert_no_turbo_stream_broadcasts [ @room, :messages ] do
+      MessagePin.transaction do
+        pin.unpin!
+        raise ActiveRecord::Rollback
+      end
+    end
+
+    assert MessagePin.pinned?(@message)
+  end
+
+  test "deleting a user broadcasts their pins' removal" do
+    MessagePin.pin!(message: @message, pinner: users(:kevin))
+    ActionCable.server.pubsub.clear
+
+    streams = capture_turbo_stream_broadcasts [ @room, :messages ] do
+      users(:kevin).destroy!
+    end
+
+    assert_not MessagePin.pinned?(@message)
+
+    replaces = streams.select { |stream| stream["action"] == "replace" }.index_by { |stream| stream["target"] }
+    badge_target = ActionView::RecordIdentifier.dom_id(@message, :pin_badge)
+    count_target = ActionView::RecordIdentifier.dom_id(@room, :pins_count)
+    list_target = ActionView::RecordIdentifier.dom_id(@room, :pins_list)
+
+    assert_includes replaces.keys, badge_target
+    assert_includes replaces.keys, count_target
+    assert_includes replaces.keys, list_target
+    assert replaces.fetch(badge_target).at_css(".message__pin-badge[hidden]")
+    assert_equal "0", replaces.fetch(count_target).at_css("span").text
+    assert replaces.fetch(list_target).at_css(".pins-panel__empty")
+  end
+
+  test "deactivating a user keeps their pins attributed" do
+    MessagePin.pin!(message: @message, pinner: users(:kevin))
+
+    users(:kevin).deactivate
+
+    assert_equal users(:kevin), MessagePin.find_by!(message: @message).pinner
+  end
+
   test "unpinning removes the pin and broadcasts without a note" do
     pin = MessagePin.pin!(message: @message, pinner: @pinner)
     ActionCable.server.pubsub.clear
