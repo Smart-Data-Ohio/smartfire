@@ -1,0 +1,5 @@
+<%# Always rendered: pin and unpin replace this container over the room messages stream. %>
+<span id="<%= dom_id(message, :pin_badge) %>" class="message__pin-badge"<%= " hidden" unless message_pinned?(message) %>>
+  <%= image_tag "pin.svg", size: 14, aria: { hidden: "true" } %>
+  <span>Pinned</span>
+</span>

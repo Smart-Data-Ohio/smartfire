@@ -39,29 +39,42 @@ module MessagesHelper
     }, &
   end
 
+  # System notes render as a note, not as a message from their actor: the
+  # role announces them that way, and the omitted user and action URLs keep
+  # the formatter's me/threaded classes, the Up-to-edit shortcut, and every
+  # menu path (context menu, keyboard, long-press, toolbar) from attaching.
+  # Everything the list itself needs (id, timestamps, sort value, Stimulus
+  # targets) stays, so notes paginate, refresh, and stream like messages.
   def message_tag(message, &)
     message_timestamp_milliseconds = message.created_at.to_fs(:epoch)
 
-    tag.div id: dom_id(message),
-      class: "message #{"message--emoji" if message.plain_text_body.all_emoji?}",
-      data: {
-        controller: "reply",
+    data = {
+      controller: "reply",
+      message_id: message.id,
+      room_id: message.room_id,
+      thread_id: message.thread_id,
+      message_timestamp: message_timestamp_milliseconds,
+      message_updated_at: message.updated_at.to_fs(:epoch),
+      sort_value: message_timestamp_milliseconds,
+      messages_target: "message",
+      message_format_target: "message",
+      search_results_target: "message",
+      refresh_room_target: ("message" unless message.thread_message?),
+      reply_composer_outlet: message.thread_message? ? "##{dom_id(message.thread, :composer)}" : "#composer"
+    }
+    unless message.system_note?
+      data.merge!(
         user_id: message.creator_id,
-        message_id: message.id,
-        room_id: message.room_id,
-        thread_id: message.thread_id,
         actions_url: message_actions_url(message),
         message_url: message_action_url(message),
-        boost_url: message_boosts_url(message),
-        message_timestamp: message_timestamp_milliseconds,
-        message_updated_at: message.updated_at.to_fs(:epoch),
-        sort_value: message_timestamp_milliseconds,
-        messages_target: "message",
-        message_format_target: "message",
-        search_results_target: "message",
-        refresh_room_target: ("message" unless message.thread_message?),
-        reply_composer_outlet: message.thread_message? ? "##{dom_id(message.thread, :composer)}" : "#composer"
-      }, &
+        boost_url: message_boosts_url(message)
+      )
+    end
+
+    tag.div id: dom_id(message),
+      class: [ "message", ("message--emoji" if !message.system_note? && message.plain_text_body.all_emoji?), ("message--system-note" if message.system_note?) ].compact.join(" "),
+      role: ("note" if message.system_note?),
+      data: data, &
   rescue Exception => e
     Sentry.capture_exception(e, extra: { message: message })
     Rails.logger.error "Exception while rendering message #{message.class.name}##{message.id}, failed with: #{e.class} `#{e.message}`"
@@ -99,6 +112,16 @@ module MessagesHelper
 
   def message_timestamp(message, **attributes)
     local_datetime_tag message.created_at, **attributes
+  end
+
+  # Reads the preloaded association on message pages; single-message
+  # renders (broadcasts, permalinks) answer with one query instead.
+  def message_pinned?(message)
+    if message.association(:message_pins).loaded?
+      message.message_pins.any?
+    else
+      MessagePin.exists?(message_id: message.id)
+    end
   end
 
   # Data attributes for pages that render messages without the room shell

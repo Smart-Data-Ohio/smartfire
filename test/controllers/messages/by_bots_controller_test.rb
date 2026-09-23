@@ -361,6 +361,20 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @room.messages.ordered.map(&:id), response.parsed_body.map { it["id"] }
   end
 
+  test "update and destroy refuse system notes" do
+    note = @room.messages.create!(creator: users(:bender),
+      markdown_source: "pinned a message", system_note: true, client_message_id: "bot-note-immutable")
+
+    patch room_bot_message_url(@room, bot_key_for(users(:bender)), note), params: +"Edited."
+    assert_response :forbidden
+    assert_equal "pinned a message", note.reload.plain_text_body
+
+    assert_no_difference -> { Message.count } do
+      delete room_bot_message_url(@room, bot_key_for(users(:bender)), note)
+      assert_response :forbidden
+    end
+  end
+
   private
     def post_bot_message(body)
       post room_bot_messages_url(@room, bot_key_for(users(:bender))), params: +body

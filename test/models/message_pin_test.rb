@@ -1,0 +1,216 @@
+require "test_helper"
+
+class MessagePinTest < ActiveSupport::TestCase
+  include ActionCable::TestHelper
+
+  setup do
+    @room = rooms(:designers)
+    @message = messages(:first)
+    @pinner = users(:david)
+  end
+
+  test "pinning records the pin and posts a channel note as the pinner" do
+    assert_difference -> { @room.message_pins.count }, 1 do
+      assert_difference -> { @room.messages.count }, 1 do
+        MessagePin.pin!(message: @message, pinner: @pinner)
+      end
+    end
+
+    pin = MessagePin.last
+    assert_equal @message, pin.message
+    assert_equal @room, pin.room
+    assert_equal @pinner, pin.pinner
+    assert MessagePin.pinned?(@message)
+
+    note = @room.messages.ordered.last
+    assert_equal @pinner, note.creator
+    assert_includes note.plain_text_body, "pinned a message"
+    link = Nokogiri::HTML5.fragment(note.body.body.to_html).at_css("a")
+    assert_equal "jump to message", link.text
+    assert_equal Rails.application.routes.url_helpers.room_at_message_path(@room, @message), link["href"]
+  end
+
+  test "pinning broadcasts the badge, count, and panel list" do
+    assert_turbo_stream_broadcasts [ @room, :messages ], count: 4 do
+      MessagePin.pin!(message: @message, pinner: @pinner)
+    end
+  end
+
+  test "pin notes are quiet system notes: visible, but no unread, push, delivery, inbox, or search" do
+    member_stream = UnreadRoomsChannel.stream_name_for(users(:jason).id)
+
+    assert_no_enqueued_jobs do
+      assert_no_broadcasts member_stream do
+        assert_no_difference -> { ActivityItem.count } do
+          assert_no_changes -> { memberships(:jason_designers).reload.unread_at } do
+            MessagePin.pin!(message: @message, pinner: @pinner)
+          end
+        end
+      end
+    end
+
+    note = @room.messages.ordered.last
+    assert_predicate note, :system_note?
+    assert_not_includes @room.messages.search("pinned"), note
+  end
+
+  test "pin notes by agents record no delivery events" do
+    assert_no_difference -> { AgentEvent.count } do
+      assert_no_enqueued_jobs do
+        MessagePin.pin!(message: @message, pinner: users(:bender))
+      end
+    end
+  end
+
+  test "repeated pin toggles post at most one note per message per 10 minutes" do
+    assert_difference -> { @room.messages.count }, 1 do
+      5.times do
+        MessagePin.pin!(message: @message, pinner: @pinner).unpin!
+      end
+    end
+
+    travel_to 11.minutes.from_now do
+      assert_difference -> { @room.messages.count }, 1 do
+        MessagePin.pin!(message: @message, pinner: @pinner)
+      end
+    end
+  end
+
+  test "unpinning stamps the message for refresh without reordering the room" do
+    pin = MessagePin.pin!(message: @message, pinner: @pinner)
+    room_updated_at = @room.reload.updated_at
+
+    travel 1.minute do
+      pin.unpin!
+      assert_equal room_updated_at, @room.reload.updated_at
+      assert_in_delta Time.current, @message.reload.updated_at, 1.second
+    end
+  end
+
+  test "re-pinning returns the existing pin without posting another note" do
+    pin = MessagePin.pin!(message: @message, pinner: @pinner)
+
+    assert_no_difference -> { MessagePin.count } do
+      assert_no_difference -> { @room.messages.count } do
+        assert_equal pin, MessagePin.pin!(message: @message, pinner: users(:jason))
+      end
+    end
+  end
+
+  test "re-pinning in a full room returns success" do
+    MessagePin::MAX_PER_ROOM.times do |n|
+      message = @room.root_messages.create!(creator: @pinner, markdown_source: "Pinnable #{n}", client_message_id: "repin-cap-#{n}")
+      MessagePin.pin!(message:, pinner: @pinner)
+    end
+    assert_equal MessagePin::MAX_PER_ROOM, @room.message_pins.count
+
+    repinned = @room.root_messages.find_by!(client_message_id: "repin-cap-0")
+
+    pin = MessagePin.pin!(message: repinned, pinner: @pinner)
+
+    assert_equal repinned, pin.message
+    assert_equal MessagePin::MAX_PER_ROOM, @room.message_pins.count
+  end
+
+  test "pins cap at 50 per room" do
+    MessagePin::MAX_PER_ROOM.times do |n|
+      message = @room.root_messages.create!(creator: @pinner, markdown_source: "Pinnable #{n}", client_message_id: "cap-#{n}")
+      MessagePin.pin!(message:, pinner: @pinner)
+    end
+
+    extra = @room.root_messages.create!(creator: @pinner, markdown_source: "One too many", client_message_id: "cap-extra")
+
+    error = assert_raises MessagePin::CapReachedError do
+      MessagePin.pin!(message: extra, pinner: @pinner)
+    end
+    assert_equal "This channel already has 50 pinned messages", error.message
+    assert_equal MessagePin::MAX_PER_ROOM, @room.message_pins.count
+  end
+
+  test "pin change broadcasts are skipped when the pin transaction rolls back" do
+    streams = capture_turbo_stream_broadcasts [ @room, :messages ] do
+      MessagePin.transaction do
+        MessagePin.pin!(message: @message, pinner: @pinner)
+        raise ActiveRecord::Rollback
+      end
+    end
+
+    assert_not MessagePin.pinned?(@message)
+    assert_empty streams.select { |stream| stream["action"] == "replace" }
+  end
+
+  test "unpin change broadcasts are skipped when the unpin transaction rolls back" do
+    pin = MessagePin.pin!(message: @message, pinner: @pinner)
+    ActionCable.server.pubsub.clear
+
+    assert_no_turbo_stream_broadcasts [ @room, :messages ] do
+      MessagePin.transaction do
+        pin.unpin!
+        raise ActiveRecord::Rollback
+      end
+    end
+
+    assert MessagePin.pinned?(@message)
+  end
+
+  test "deleting a user broadcasts their pins' removal" do
+    MessagePin.pin!(message: @message, pinner: users(:kevin))
+    ActionCable.server.pubsub.clear
+
+    streams = capture_turbo_stream_broadcasts [ @room, :messages ] do
+      users(:kevin).destroy!
+    end
+
+    assert_not MessagePin.pinned?(@message)
+
+    replaces = streams.select { |stream| stream["action"] == "replace" }.index_by { |stream| stream["target"] }
+    badge_target = ActionView::RecordIdentifier.dom_id(@message, :pin_badge)
+    count_target = ActionView::RecordIdentifier.dom_id(@room, :pins_count)
+    list_target = ActionView::RecordIdentifier.dom_id(@room, :pins_list)
+
+    assert_includes replaces.keys, badge_target
+    assert_includes replaces.keys, count_target
+    assert_includes replaces.keys, list_target
+    assert replaces.fetch(badge_target).at_css(".message__pin-badge[hidden]")
+    assert_equal "0", replaces.fetch(count_target).at_css("span").text
+    assert replaces.fetch(list_target).at_css(".pins-panel__empty")
+  end
+
+  test "deactivating a user keeps their pins attributed" do
+    MessagePin.pin!(message: @message, pinner: users(:kevin))
+
+    users(:kevin).deactivate
+
+    assert_equal users(:kevin), MessagePin.find_by!(message: @message).pinner
+  end
+
+  test "unpinning removes the pin and broadcasts without a note" do
+    pin = MessagePin.pin!(message: @message, pinner: @pinner)
+    ActionCable.server.pubsub.clear
+
+    assert_turbo_stream_broadcasts [ @room, :messages ], count: 3 do
+      assert_no_difference -> { @room.messages.count } do
+        assert_difference -> { @room.message_pins.count }, -1 do
+          pin.unpin!
+        end
+      end
+    end
+
+    assert_not MessagePin.pinned?(@message)
+  end
+
+  test "pins order newest first" do
+    first = MessagePin.pin!(message: messages(:first), pinner: @pinner)
+    second = MessagePin.pin!(message: messages(:second), pinner: @pinner)
+
+    assert_equal [ second, first ], @room.message_pins.ordered.to_a
+  end
+
+  test "destroying the message destroys its pin" do
+    MessagePin.pin!(message: @message, pinner: @pinner)
+
+    assert_difference -> { MessagePin.count }, -1 do
+      @message.destroy!
+    end
+  end
+end

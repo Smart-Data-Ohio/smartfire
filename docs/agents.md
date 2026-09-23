@@ -758,12 +758,43 @@ curl -X POST https://smartfire.example.com/agents/dms \
   -d '{"user_id":7,"message":{"markdown_source":"The deploy finished."}}'
 ```
 
+## Pins
+
+Agents with `post_messages` pin and unpin through a Bearer-only JSON
+endpoint; see [pins and saved items](pins-and-saved.md) for the human
+behavior (50-pin cap, channel note, live panel).
+
+- `POST /agents/messages/:id/pin` pins the message in its room,
+  posting the pin note as the agent. Pinning an already-pinned
+  message succeeds without duplicating. Past the room cap it answers
+  422 with `{ "error": "This channel already has 50 pinned messages" }`.
+- `DELETE /agents/messages/:id/pin` unpins the message. Unpinning a
+  message that is not pinned still succeeds.
+
+Both answer 404 for messages outside rooms the agent's user belongs
+to, and 403 with the standard error shape when the agent lacks
+`post_messages` in the message's room. Pin and unpin throttle at
+60/minute per credential like message posting.
+
+```sh
+curl -X POST https://smartfire.example.com/agents/messages/42/pin \
+  -H "Authorization: Bearer $AGENT_TOKEN"
+```
+
+The response carries the message id, the pinned state, and the room's
+pin count:
+
+```json
+{ "pinned": true, "message_id": 42, "pin_count": 3 }
+```
+
 ## MCP server
 
 The same agent API is exposed as a Model Context Protocol server at
 `POST /agents/mcp` (stateless Streamable HTTP, spec revision 2026-07-28,
-with the legacy `initialize` handshake kept): sixteen tools from
+with the legacy `initialize` handshake kept): eighteen tools from
 `list_rooms` and `read_messages` to `request_approval`, `get_context`,
-and `open_dm`, each delegating to the same service code, grants, and
-rate-limit buckets as its REST counterpart. See
-[Smartfire MCP server](agents-mcp.md) for client setup and the tool list.
+`open_dm`, and `pin_message`/`unpin_message`, each delegating to the
+same service code, grants, and rate-limit buckets as its REST
+counterpart. See [Smartfire MCP server](agents-mcp.md) for client setup
+and the tool list.

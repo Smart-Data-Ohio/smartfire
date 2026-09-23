@@ -14,6 +14,9 @@ class Rooms::RefreshesController < ApplicationController
       @room.root_messages.with_rendering_details.page_created_since(@last_updated_at))
     @updated_messages = Message::MentionPreloader.preload_for(
       @room.root_messages.without(@new_messages).with_rendering_details.page_updated_since(@last_updated_at))
+    # Pins touch their message (badges arrive through @updated_messages),
+    # but the header count and panel list render only when the stamp moved.
+    @pins_changed = @room.pins_changed_at.present? && @room.pins_changed_at > @last_updated_at
   end
 
   private

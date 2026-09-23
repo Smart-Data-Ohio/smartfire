@@ -85,7 +85,7 @@
 }
 
 @media (max-width: 40rem) {
-  /* The phone header already squeezes seven icon-only actions beside the
+  /* The phone header already squeezes eight icon-only actions beside the
      sidebar toggle, so the voice stack yields first: at most three
      overlapping avatars plus the count, never wrapping, clipping its own
      width before the room name shrinks. The tighter header gap covers the
