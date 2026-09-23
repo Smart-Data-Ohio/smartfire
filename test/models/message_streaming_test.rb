@@ -210,6 +210,14 @@ class MessageStreamingTest < ActiveSupport::TestCase
     assert_equal [ "cannot resume once finalized" ], message.errors[:streaming]
   end
 
+  test "the overdue sweep query uses the streaming activity index" do
+    plan = ActiveRecord::Base.connection.execute(
+      "EXPLAIN QUERY PLAN #{Message.overdue_streams.to_sql}"
+    ).map { |row| row["detail"] }.join("\n")
+
+    assert_match(/SEARCH messages USING INDEX index_messages_on_streaming_updated_at/, plan)
+  end
+
   test "the sweep skips streams in locked threads until unlock" do
     thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Locked stream")
     ThreadMembership.join!(thread, users(:david))

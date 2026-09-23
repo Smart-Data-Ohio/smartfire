@@ -188,7 +188,7 @@ class Message < ApplicationRecord
     # old code wrote mid-deploy carry no activity stamp; they inherit
     # their creation time once, here.
     def finalize_overdue_streams!(now: Time.current)
-      where(streaming: true).where(streaming_updated_at: nil)
+      where("messages.streaming = 1").where(streaming_updated_at: nil)
         .update_all("streaming_updated_at = created_at")
 
       overdue_streams(now: now).includes(:thread).find_each do |message|
@@ -203,9 +203,11 @@ class Message < ApplicationRecord
     end
 
     # Streaming messages idle past the deadline, as a relation so the
-    # sweep and its index-coverage test share one query.
+    # sweep and its index-coverage test share one query. The `= 1` must
+    # match the partial index predicate textually: `where(streaming:
+    # true)` emits `= TRUE`, which SQLite does not resolve to the index.
     def overdue_streams(now: Time.current)
-      where(streaming: true).where("messages.streaming_updated_at < ?", now - STREAM_FINALIZE_AFTER)
+      where("messages.streaming = 1").where("messages.streaming_updated_at < ?", now - STREAM_FINALIZE_AFTER)
     end
   end
 
