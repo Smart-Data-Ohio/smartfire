@@ -70,7 +70,10 @@ Every remote row in the call roster carries a volume slider (0–200%) and a
 **Mute for me** button. Both are local only: the slider rides the audio
 element up to 100% and a Web Audio gain node above it, and the mute
 unsubscribes the person's microphone so the server stops sending it. Both are
-remembered per person in the browser. Nobody else hears a difference.
+remembered per person in the browser. Nobody else hears a difference. The
+boost gain follows the speaker picker where the browser routes audio
+contexts to an output device; where it cannot, the boost caps at 100% while
+a non-default speaker is selected, and the slider tooltip says why.
 
 ## Host moderation
 

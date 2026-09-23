@@ -1356,6 +1356,15 @@ export default class extends Controller {
         this.#startMicrophoneMeter()
         this.#applyNoiseSuppression(room)
       }
+
+      // The boost gain sits outside the SDK's path, so a speaker switch
+      // retargets it explicitly and re-applies every stored volume: a boost
+      // capped on the old speaker may engage on the new one, or cap anew.
+      if (kind === "audiooutput") {
+        this.#routeBoostedAudioToOutput()
+        for (const participant of room.remoteParticipants.values()) this.#applyStoredParticipantAudio(participant)
+        this.#renderRoster()
+      }
     } catch (error) {
       if (room !== this.room) return
       const names = { audioinput: "microphone", audiooutput: "speaker", videoinput: "camera" }
@@ -1395,6 +1404,7 @@ export default class extends Controller {
       const { audiooutput } = await listMediaDevices()
       if (!audiooutput.some((device) => device.deviceId === deviceId)) return
       await room.switchActiveDevice("audiooutput", deviceId)
+      this.#routeBoostedAudioToOutput()
     } catch (error) {
       // Output selection is a preference, never a reason to fail a join.
     }
@@ -1766,12 +1776,14 @@ export default class extends Controller {
       // choice, so a fallback never overwrites it: preferences are only
       // written from user selections (#switchDevice, #storeSelectedDevices,
       // and the pre-join change handlers). A retargeted microphone also gets
-      // the suppression setting restored onto its new track.
+      // the suppression setting restored onto its new track, and a
+      // retargeted speaker carries the boost gain with it.
       this.#refreshDeviceLists()
       if (kind === "audioinput") {
         this.#applyNoiseSuppression(room)
         this.#startMicrophoneMeter()
       }
+      if (kind === "audiooutput") this.#routeBoostedAudioToOutput()
     })
 
     this.roomListeners.set(room, listeners)
@@ -2713,6 +2725,9 @@ export default class extends Controller {
       // utterance, and resetting the value under the pointer would fight it.
       if (document.activeElement !== volume) volume.value = String(this.#storedParticipantVolume(userId))
       volume.setAttribute("aria-label", `${displayName} volume`)
+      volume.title = this.#boostCappedToElement()
+        ? "Boost above 100% needs the default speaker: this browser can't route boosted audio to another speaker."
+        : ""
 
       const locallyMuted = this.#participantLocallyMuted(userId)
       mute.setAttribute("aria-pressed", String(locallyMuted))
@@ -2836,6 +2851,11 @@ export default class extends Controller {
   #applyParticipantVolume(participant, publication, volume) {
     const track = publication?.track || publication?.audioTrack
 
+    // Where the boost cannot follow the speaker picker it caps at 100%
+    // instead of escaping to the default speaker; the slider tooltip says
+    // why, and the stored preference still applies on the default speaker.
+    if (volume > 100 && this.#boostCappedToElement()) volume = 100
+
     if (volume > 100) {
       const context = this.#remoteVolumeAudioContext()
       if (!context) {
@@ -2883,7 +2903,42 @@ export default class extends Controller {
       return null
     }
 
+    this.#routeBoostedAudioToOutput()
     return this.remoteAudioContext
+  }
+
+  // The boost gain node lives outside the SDK's audio path, so it needs its
+  // own output routing: without this a boosted participant plays through the
+  // default speaker while everyone else follows the speaker picker.
+  #routeBoostedAudioToOutput() {
+    const context = this.remoteAudioContext
+    if (!context || typeof context.setSinkId !== "function") return
+
+    context.setSinkId(this.#selectedOutputDeviceId()).catch(() => {
+      // The default output stands in when the selected one rejects.
+    })
+  }
+
+  // The active output, the speaker picker's choice, or the stored preference
+  // before the pickers fill in; "" means the default output.
+  #selectedOutputDeviceId() {
+    if (!audioOutputSupported()) return ""
+
+    const selected = [ this.#activeDeviceId("audiooutput"), this.speakerSelectTarget.value,
+      loadDevicePreferences().audiooutput ].find((id) => id && id !== "default")
+    return selected || ""
+  }
+
+  // AudioContext.setSinkId is newer than the element version: where it is
+  // missing, boosted audio would escape to the default speaker, so the boost
+  // caps at 100% until the default speaker is selected again.
+  #boostCappedToElement() {
+    return !this.#audioContextSinkSupported() && this.#selectedOutputDeviceId() !== ""
+  }
+
+  #audioContextSinkSupported() {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext
+    return typeof AudioContextClass?.prototype?.setSinkId === "function"
   }
 
   #storedParticipantVolume(userId) {

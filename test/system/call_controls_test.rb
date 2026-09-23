@@ -195,6 +195,101 @@ class CallControlsTest < ApplicationSystemTestCase
     assert_equal [ 1.5, 1 ], volume_calls
   end
 
+  test "boosted audio follows the speaker picker" do
+    room = rooms(:designers)
+    david = users(:david)
+    mapping = [ { id: david.id, name: "David", avatar_url: "", identities: [ "remote-1" ] } ]
+
+    visit room_path(room)
+    wait_for_cable_connection
+    pin_participant_mapping(room.id, mapping)
+    install_stub_room(room.id)
+    dispatch_participant_mapping(room.id, mapping)
+    page.execute_script(<<~JS)
+      window.__sinkCalls = [];
+      const proto = window.AudioContext.prototype;
+      window.__sinkHad = "setSinkId" in proto;
+      window.__sinkOrig = proto.setSinkId;
+      if (!proto.setSinkId) proto.setSinkId = function() { return Promise.resolve(); };
+      proto.setSinkId = function(deviceId) {
+        window.__sinkCalls.push(deviceId);
+        return Promise.resolve();
+      };
+      window.localStorage.setItem("campfire.huddle.devices", JSON.stringify({ audiooutput: "speaker-2" }));
+    JS
+
+    slider = find("li[data-participant-identity='remote-1'] .huddle__participant-volume")
+    set_slider(slider, 150)
+    wait_for_condition("the volume never applied") { volume_calls.length >= 1 }
+    assert_equal [ 1.5 ], volume_calls
+    assert_equal [ "speaker-2" ], page.evaluate_script("window.__sinkCalls")
+
+    # Switching speakers retargets the boost gain too.
+    page.execute_script(<<~JS)
+      const controller = window.__huddleController;
+      const select = document.querySelector("[data-huddle-target='speakerSelect']");
+      const option = document.createElement("option");
+      option.value = "speaker-3";
+      option.textContent = "Speaker 3";
+      select.appendChild(option);
+      select.value = "speaker-3";
+      controller.room.switchActiveDevice = () => Promise.resolve();
+      controller.speakerChanged();
+    JS
+    wait_for_condition("the switch never retargeted the boost") do
+      page.evaluate_script("window.__sinkCalls") == [ "speaker-2", "speaker-3" ]
+    end
+
+    page.execute_script(<<~JS)
+      const proto = window.AudioContext.prototype;
+      if (window.__sinkHad) {
+        proto.setSinkId = window.__sinkOrig;
+      } else {
+        delete proto.setSinkId;
+      }
+    JS
+  end
+
+  test "boost caps at 100% on a non-default speaker without context routing" do
+    room = rooms(:designers)
+    david = users(:david)
+    mapping = [ { id: david.id, name: "David", avatar_url: "", identities: [ "remote-1" ] } ]
+
+    visit room_path(room)
+    wait_for_cable_connection
+    pin_participant_mapping(room.id, mapping)
+    install_stub_room(room.id)
+    page.execute_script(<<~JS)
+      const proto = window.AudioContext.prototype;
+      window.__sinkHad = "setSinkId" in proto;
+      window.__sinkOrig = proto.setSinkId;
+      proto.setSinkId = undefined;
+      window.localStorage.setItem("campfire.huddle.devices", JSON.stringify({ audiooutput: "speaker-2" }));
+    JS
+    dispatch_participant_mapping(room.id, mapping)
+
+    slider = find("li[data-participant-identity='remote-1'] .huddle__participant-volume")
+    set_slider(slider, 150)
+    wait_for_condition("the capped volume never applied") { volume_calls.length >= 1 }
+    assert_equal [ 1 ], volume_calls
+    assert_empty audio_context_calls
+    assert_match(/default speaker/, slider[:title])
+
+    # Back on the default speaker the stored boost applies again.
+    page.execute_script(<<~JS)
+      const proto = window.AudioContext.prototype;
+      if (window.__sinkHad) {
+        proto.setSinkId = window.__sinkOrig;
+      } else {
+        delete proto.setSinkId;
+      }
+      window.localStorage.setItem("campfire.huddle.devices", JSON.stringify({ audiooutput: "" }));
+    JS
+    set_slider(slider, 150)
+    wait_for_condition("the restored boost never engaged") { audio_context_calls == [ "set" ] }
+    assert_equal [ 1, 1.5 ], volume_calls
+  end
+
   test "a stored volume renders on the slider before it is touched" do
     room = rooms(:designers)
     david = users(:david)
