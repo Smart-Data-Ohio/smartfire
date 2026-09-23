@@ -32,7 +32,48 @@ class GithubPullRequestsHelperTest < ActionView::TestCase
   end
 
   test "cache key for a message without pull requests is just the message" do
-    assert_equal [ messages(:first), nil ], message_with_pr_cards_cache_key(messages(:first))
+    assert_equal [ messages(:first), nil, nil, false ], message_with_pr_cards_cache_key(messages(:first))
+  end
+
+  test "cache key carries the system note flag" do
+    note = rooms(:designers).root_messages.create!(creator: users(:david),
+      markdown_source: "pinned a message", system_note: true, client_message_id: "note-cache-key")
+
+    assert_includes message_with_pr_cards_cache_key(note), true
+    assert_includes message_with_pr_cards_cache_key(messages(:first)), false
+  end
+
+  test "cache key changes when the message is pinned and unpinned" do
+    message = messages(:first)
+
+    before = message_with_pr_cards_cache_key(message)
+
+    travel 1.minute do
+      MessagePin.pin!(message:, pinner: users(:david))
+    end
+    pinned_key = message_with_pr_cards_cache_key(message.reload)
+    assert_not_equal before, pinned_key
+
+    travel 1.minute do
+      message.message_pins.sole.unpin!
+    end
+    assert_not_equal pinned_key, message_with_pr_cards_cache_key(message.reload)
+  end
+
+  test "cache key changes on unpin even when a referenced card is newer" do
+    message = messages(:first)
+    pull_request = Github::PullRequest.create!(owner: "smart-data-ohio", repo: "smartfire", number: 43)
+    Github::PullRequestReference.create!(message:, pull_request:)
+    MessagePin.pin!(message:, pinner: users(:david))
+
+    pinned_key = message_with_pr_cards_cache_key(message.reload)
+
+    travel 1.minute do
+      pull_request.update!(title: "Updated title")
+    end
+    message.message_pins.sole.unpin!
+
+    assert_not_equal pinned_key, message_with_pr_cards_cache_key(message.reload)
   end
 
   test "cache key changes when a referenced X post is fetched" do

@@ -127,6 +127,23 @@ class MessageEmbedSuppressionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal true, JSON.parse(response.body)["actions"]["can_remove_embeds"]
   end
 
+  test "system notes cannot have embeds removed, even by their actor" do
+    note = @room.root_messages.create!(
+      creator: users(:david), client_message_id: "embed-suppress-note",
+      markdown_source: "pinned a message", system_note: true
+    )
+    sign_in :david
+
+    post room_message_embed_suppression_url(@room, note), as: :json
+
+    assert_response :forbidden
+    assert_not note.reload.embeds_suppressed?
+
+    get actions_room_message_url(@room, note, format: :json)
+    assert_response :success
+    assert_not response.parsed_body.dig("actions", "can_remove_embeds")
+  end
+
   test "actions payload withholds removal from others and once removed" do
     sign_in :jason
     get actions_room_message_url(@room, @message)

@@ -6,6 +6,7 @@ class MessageEmbedSuppressionsController < ApplicationController
   # edit still re-syncs them for a potential restore.
   def create
     head :forbidden and return unless Current.user == @source.creator
+    head :forbidden and return if @source.system_note?
     head :forbidden and return if @source.thread_message? && @source.thread.locked?
 
     @source.update!(embeds_suppressed: true) unless @source.embeds_suppressed?

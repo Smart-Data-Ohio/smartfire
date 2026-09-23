@@ -61,10 +61,12 @@ module MessagePayloadHelper
   end
 
   def message_actions_payload(message)
+    saved_item = Current.user.saved_items.find_by(message_id: message.id)
+
     {
-      can_edit: Current.user == message.creator && !(message.thread_message? && message.thread.locked?),
-      can_delete: Current.user == message.creator || Current.user.administrator?,
-      can_remove_embeds: Current.user == message.creator && !message.embeds_suppressed? &&
+      can_edit: !message.system_note? && Current.user == message.creator && !(message.thread_message? && message.thread.locked?),
+      can_delete: !message.system_note? && (Current.user == message.creator || Current.user.administrator?),
+      can_remove_embeds: !message.system_note? && Current.user == message.creator && !message.embeds_suppressed? &&
         !(message.thread_message? && message.thread.locked?) && message.renderable_embeds?,
       suppress_embeds_url: if message.thread_message?
         room_thread_message_embed_suppression_url(message.room, message.thread, message)
@@ -86,7 +88,12 @@ module MessagePayloadHelper
                                 else
         room_message_forward_destinations_url(message.room, message, format: :json)
                                 end,
-      reactions: reaction_payload(message)
+      reactions: reaction_payload(message),
+      pinned: MessagePin.exists?(message_id: message.id),
+      pin_url: message_pin_url(message, format: :json),
+      saved: saved_item.present?,
+      save_url: saved_items_url(format: :json),
+      saved_item_url: saved_item && saved_item_url(saved_item, format: :json)
     }.compact
   end
 

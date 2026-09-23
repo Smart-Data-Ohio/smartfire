@@ -9,8 +9,10 @@ const VIEWPORT_PADDING = 8
 // per-message URLs come from the message element's own data attributes.
 export default class extends Controller {
   static targets = [
-    "menu", "item", "downloadLink", "threadLabel", "status", "forwardDialog", "forwardPreview", "forwardNote",
-    "forwardDestinations", "forwardStatus", "forwardSubmit"
+    "menu", "item", "downloadLink", "threadLabel", "pinLabel", "saveLabel", "status",
+    "forwardDialog", "forwardPreview", "forwardNote",
+    "forwardDestinations", "forwardStatus", "forwardSubmit",
+    "saveDialog", "savePreview", "saveOption", "saveCustomWrap", "saveCustom", "saveStatus", "saveSubmit"
   ]
 
   #message
@@ -28,6 +30,7 @@ export default class extends Controller {
   #mobileSheetQuery
   #announceTimer
   #forwardPreviouslyFocusedElement
+  #savePreviouslyFocusedElement
   #open = false
   #connected = false
 
@@ -45,11 +48,13 @@ export default class extends Controller {
     this.onEditLast = this.#onEditLast.bind(this)
     this.onReposition = this.#reposition.bind(this)
     this.onForwardClose = this.#onForwardClose.bind(this)
+    this.onSaveClose = this.#onSaveClose.bind(this)
     this.onBeforeCache = this.#onBeforeCache.bind(this)
 
     this.menuTarget.addEventListener("keydown", this.onMenuKeydown)
     this.menuTarget.addEventListener("click", this.onMenuClick)
     this.forwardDialogTarget?.addEventListener("close", this.onForwardClose)
+    this.saveDialogTarget?.addEventListener("close", this.onSaveClose)
     document.addEventListener("turbo:before-cache", this.onBeforeCache)
     document.addEventListener("pointerdown", this.onDocumentPointerDown)
     window.addEventListener("keydown", this.onWindowKeydown)
@@ -71,6 +76,7 @@ export default class extends Controller {
     this.menuTarget?.removeEventListener("keydown", this.onMenuKeydown)
     this.menuTarget?.removeEventListener("click", this.onMenuClick)
     this.forwardDialogTarget?.removeEventListener("close", this.onForwardClose)
+    this.saveDialogTarget?.removeEventListener("close", this.onSaveClose)
     document.removeEventListener("turbo:before-cache", this.onBeforeCache)
     document.removeEventListener("pointerdown", this.onDocumentPointerDown)
     window.removeEventListener("keydown", this.onWindowKeydown)
@@ -205,6 +211,114 @@ export default class extends Controller {
     if (this.#message !== message || !message?.isConnected) return
     this.#dispatchThread()
     this.#closeMenu({ restoreFocus: false })
+  }
+
+  async pin(event) {
+    event.preventDefault()
+    const message = this.#message
+    await this.#ensureMetadata()
+    if (this.#message !== message || !message?.isConnected) return
+
+    const url = this.#stringFromMetadata("pin_url", "pinUrl")
+    if (!url) {
+      this.#announce("Pinning is temporarily unavailable")
+      return
+    }
+
+    const pinned = this.#boolean(this.#metadata || {}, "pinned") === true
+    const response = await fetch(url, {
+      method: pinned ? "DELETE" : "POST",
+      headers: {
+        Accept: "application/json",
+        "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content || "",
+      },
+    }).catch(() => null)
+
+    if (!response?.ok) {
+      this.#announce(response ? await this.#responseError(response, "pin") : "Couldn't reach the server")
+      return
+    }
+
+    if (this.#metadata) this.#metadata.pinned = !pinned
+    this.#refreshPinSaveLabels()
+    this.#announce(pinned ? "Message unpinned" : "Message pinned")
+    if (this.#message === message) this.#closeMenu({ restoreFocus: false })
+  }
+
+  async save(event) {
+    event.preventDefault()
+    const message = this.#message
+    await this.#ensureMetadata()
+    if (this.#message !== message || !message?.isConnected) return
+
+    if (this.#boolean(this.#metadata || {}, "saved") === true) {
+      await this.#unsave(message)
+      return
+    }
+
+    this.#openSaveDialog()
+    this.#closeMenu({ restoreFocus: false })
+  }
+
+  closeSave(event) {
+    event?.preventDefault()
+    this.#closeSaveDialog()
+  }
+
+  revealSaveCustom() {
+    if (!this.hasSaveCustomWrapTarget) return
+    const custom = this.saveOptionTargets.find(input => input.checked)?.value === "custom"
+    this.saveCustomWrapTarget.hidden = !custom
+    if (custom) this.saveCustomTarget?.focus({ preventScroll: true })
+  }
+
+  async submitSave(event) {
+    event.preventDefault()
+    if (!this.hasSaveDialogTarget || this.saveSubmitTarget.disabled) return
+
+    let remindAt
+    try {
+      remindAt = this.#saveRemindAt()
+    } catch (error) {
+      this.#setSaveStatus(error.message)
+      return
+    }
+
+    const url = this.#stringFromMetadata("save_url", "saveUrl")
+    if (!url) {
+      this.#setSaveStatus("Saving is temporarily unavailable.")
+      return
+    }
+
+    this.saveSubmitTarget.disabled = true
+    this.#setSaveStatus("Saving…")
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content || "",
+        },
+        body: JSON.stringify({ message_id: this.#messageDetails().messageId, saved_item: { remind_at: remindAt } }),
+      })
+
+      if (!response.ok) throw new Error(await this.#responseError(response, "save"))
+
+      const payload = await response.json().catch(() => ({}))
+      if (this.#metadata) {
+        this.#metadata.saved = true
+        if (payload.url) this.#metadata.saved_item_url = payload.url
+      }
+      this.#refreshPinSaveLabels()
+      this.#announce(remindAt ? "Saved with a reminder" : "Saved for later")
+      this.#closeSaveDialog()
+      this.#closeMenu({ restoreFocus: false })
+    } catch (error) {
+      this.#setSaveStatus(error.message || "Couldn't save message.")
+      this.saveSubmitTarget.disabled = false
+    }
   }
 
   async delete(event) {
@@ -353,6 +467,7 @@ export default class extends Controller {
     if (!this.#open) return
     if (this.menuTarget.contains(event.target)) return
     if (this.hasForwardDialogTarget && this.forwardDialogTarget.contains(event.target)) return
+    if (this.hasSaveDialogTarget && this.saveDialogTarget.contains(event.target)) return
     if (this.#message?.contains(event.target)) return
     this.#closeMenu()
   }
@@ -368,6 +483,7 @@ export default class extends Controller {
     // Snapshots must not keep an open menu: the restored page would show
     // aria-expanded="true" on a message whose menu is gone.
     this.#closeMenu({ restoreFocus: false })
+    this.#closeSaveDialog()
   }
 
   #onForwardClose() {
@@ -442,6 +558,8 @@ export default class extends Controller {
     this.#setActionAvailability(".message__delete-action", false)
     this.#setActionAvailability(".message__remove-embeds-action", false)
     if (this.hasThreadLabelTarget) this.threadLabelTarget.textContent = "Create thread"
+    if (this.hasPinLabelTarget) this.pinLabelTarget.textContent = "Pin message"
+    if (this.hasSaveLabelTarget) this.saveLabelTarget.textContent = "Save for later"
     this.itemTargets.filter(item => item.dataset.reaction).forEach(item => {
       item.removeAttribute("aria-pressed")
       item.removeAttribute("data-reaction-active")
@@ -670,8 +788,119 @@ export default class extends Controller {
     if (this.hasForwardStatusTarget) this.forwardStatusTarget.textContent = message
   }
 
-  async #responseError(response) {
-    const fallback = `Couldn’t forward message (${response.status})`
+  async #unsave(message) {
+    const url = this.#stringFromMetadata("saved_item_url", "savedItemUrl")
+    if (!url) {
+      this.#announce("Removing is temporarily unavailable")
+      return
+    }
+
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers: {
+        Accept: "application/json",
+        "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content || "",
+      },
+    }).catch(() => null)
+
+    if (!response?.ok) {
+      this.#announce("Couldn't remove saved message")
+      return
+    }
+
+    if (this.#metadata) {
+      this.#metadata.saved = false
+      this.#metadata.saved_item_url = null
+    }
+    this.#refreshPinSaveLabels()
+    this.#announce("Removed from Saved")
+    if (this.#message === message) this.#closeMenu({ restoreFocus: false })
+  }
+
+  #openSaveDialog() {
+    if (!this.hasSaveDialogTarget) return
+
+    this.#savePreviouslyFocusedElement = this.#previouslyFocusedElement?.isConnected
+      ? this.#previouslyFocusedElement
+      : this.#message
+    if (this.hasSavePreviewTarget) this.savePreviewTarget.textContent = this.#messageDetails().previewText
+    if (this.saveDialogTarget.showModal) {
+      if (!this.saveDialogTarget.open) this.saveDialogTarget.showModal()
+    } else {
+      this.saveDialogTarget.setAttribute("open", "")
+    }
+  }
+
+  #closeSaveDialog() {
+    if (!this.hasSaveDialogTarget) return
+    if (this.saveDialogTarget.open && this.saveDialogTarget.close) {
+      this.saveDialogTarget.close()
+    } else {
+      this.saveDialogTarget.removeAttribute("open")
+      this.#onSaveClose()
+    }
+  }
+
+  #onSaveClose() {
+    if (this.hasSaveCustomTarget) this.saveCustomTarget.value = ""
+    if (this.hasSaveCustomWrapTarget) this.saveCustomWrapTarget.hidden = true
+    const first = this.saveOptionTargets[0]
+    if (first) first.checked = true
+    if (this.hasSaveSubmitTarget) this.saveSubmitTarget.disabled = false
+    this.#setSaveStatus("")
+    const focusTarget = this.#savePreviouslyFocusedElement?.isConnected ? this.#savePreviouslyFocusedElement : this.#message
+    this.#savePreviouslyFocusedElement = null
+    focusTarget?.focus?.({ preventScroll: true })
+  }
+
+  // Reminder presets resolve in the viewer's own time zone and submit
+  // as UTC ISO8601, so "tomorrow at 9am" means the viewer's tomorrow.
+  #saveRemindAt() {
+    const selected = this.saveOptionTargets.find(input => input.checked)?.value || "none"
+    const now = new Date()
+
+    switch (selected) {
+      case "minutes_20":
+        return new Date(now.getTime() + 20 * 60 * 1000).toISOString()
+      case "hour_1":
+        return new Date(now.getTime() + 60 * 60 * 1000).toISOString()
+      case "hours_3":
+        return new Date(now.getTime() + 3 * 60 * 60 * 1000).toISOString()
+      case "tomorrow_9am": {
+        const next = new Date(now)
+        next.setDate(next.getDate() + 1)
+        next.setHours(9, 0, 0, 0)
+        return next.toISOString()
+      }
+      case "custom": {
+        const value = this.hasSaveCustomTarget ? this.saveCustomTarget.value : ""
+        if (!value) throw new Error("Choose a custom time.")
+        const at = new Date(value)
+        if (Number.isNaN(at.getTime())) throw new Error("That time isn't valid.")
+        if (at <= now) throw new Error("Choose a time in the future.")
+        return at.toISOString()
+      }
+      default:
+        return null
+    }
+  }
+
+  #setSaveStatus(message) {
+    if (this.hasSaveStatusTarget) this.saveStatusTarget.textContent = message
+  }
+
+  #refreshPinSaveLabels() {
+    const metadata = this.#metadata || {}
+    if (this.hasPinLabelTarget) {
+      this.pinLabelTarget.textContent = this.#boolean(metadata, "pinned") === true ? "Unpin message" : "Pin message"
+    }
+    if (this.hasSaveLabelTarget) {
+      this.saveLabelTarget.textContent = this.#boolean(metadata, "saved") === true ? "Remove from Saved" : "Save for later"
+    }
+  }
+
+  async #responseError(response, verb = "forward") {
+    const fallback = `Couldn’t ${verb} message (${response.status})`
     try {
       const payload = await response.clone().json()
       const value = payload.error || payload.errors
@@ -804,6 +1033,7 @@ export default class extends Controller {
     this.#setActionAvailability(".message__edit-action", this.#boolean(metadata, "can_edit", "canEdit", "editable"))
     this.#setActionAvailability(".message__delete-action", this.#boolean(metadata, "can_delete", "canDelete", "deletable"))
     this.#setActionAvailability(".message__remove-embeds-action", this.#boolean(metadata, "can_remove_embeds", "canRemoveEmbeds"))
+    this.#refreshPinSaveLabels()
 
     const threadSummary = metadata.thread_summary || metadata.threadSummary
     if (threadSummary && this.hasThreadLabelTarget) {

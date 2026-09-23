@@ -1,6 +1,19 @@
 class Message < ApplicationRecord
   include Attachment, AgentDelivery, Broadcasts, Mentionee, Pagination, Searchable
 
+  # Quiet timeline notes (pin notes, and any future note type): a message
+  # with system_note still renders in the timeline and streams to it, but
+  # skips every noisy side effect — Room/ChannelThread#receive (unread
+  # marks and push), the unread badge broadcast, agent delivery, activity
+  # inbox items, and the search index. Reuse this flag for new note types
+  # instead of inventing another quiet path.
+  #
+  # Rendering is shared too: messages/_message branches on the flag into
+  # messages/_system_note, one muted centered line (icon, actor name, note
+  # text, timestamp) with role="note" and no avatar, toolbar, or menu
+  # hooks. The flag rides in the fragment cache key, and notes are
+  # immutable — every edit/delete path answers 403 for them.
+
   belongs_to :room, touch: true
   belongs_to :creator, class_name: "User", default: -> { Current.user }
   belongs_to :thread, class_name: "ChannelThread", optional: true, inverse_of: :messages
@@ -8,6 +21,8 @@ class Message < ApplicationRecord
   belongs_to :forwarded_from_message, class_name: "Message", optional: true
 
   has_many :boosts, dependent: :destroy
+  has_many :message_pins, dependent: :destroy
+  has_many :saved_items, dependent: :destroy
   has_many :activity_items, as: :source, dependent: :destroy, inverse_of: :source
   # This callback must run before Active Record's dependent:nullify callback. It
   # leaves a small tombstone on each reply so the UI can still explain why its
@@ -82,6 +97,7 @@ class Message < ApplicationRecord
     with_creator
       .with_attachment_details
       .with_boosts
+      .preload(:message_pins)
       .preload(:room, :github_pull_requests, :twitter_posts, :drive_attachments, link_embed_references: :link_embed,
         events: [ :room, :organizer, :venue ],
         reply_to_message: [ :room, :rich_text_body, { creator: :avatar_attachment } ])
@@ -252,7 +268,7 @@ class Message < ApplicationRecord
 
   private
     def record_activity_items
-      ActivityItems::Recorder.record_message!(self)
+      ActivityItems::Recorder.record_message!(self) unless system_note?
     end
 
     def sync_github_pull_request_references
