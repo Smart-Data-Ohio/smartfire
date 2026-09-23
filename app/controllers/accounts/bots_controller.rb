@@ -18,6 +18,9 @@ class Accounts::BotsController < ApplicationController
     @bot = User.create_bot! bot_params
     @bot.create_agent!(kind: :workspace, owner: Current.user)
     @bot_key = @bot.plain_bot_key
+    # The key itself never reaches the log: only that an agent was created.
+    AuditLog.record!(action: "agent.create", target: @bot.agent,
+      changes: { name: @bot.name, kind: "workspace" })
 
     no_store_response!
     render "accounts/bots/keys/show", status: :created
@@ -31,11 +34,13 @@ class Accounts::BotsController < ApplicationController
 
   def update
     @agent&.assign_attributes(agent_params)
+    previous_webhook_url = @bot.webhook_url
 
     if @agent&.invalid?
       render :edit, status: :unprocessable_entity
     elsif @bot.update_bot(bot_params)
       @agent&.save!
+      record_bot_changes(previous_webhook_url: previous_webhook_url)
       redirect_to account_bots_url
     else
       render :edit, status: :unprocessable_entity
@@ -43,7 +48,10 @@ class Accounts::BotsController < ApplicationController
   end
 
   def destroy
+    agent = @bot.agent
     @bot.deactivate
+    AuditLog.record!(action: "agent.suspend", target: agent || @bot,
+      changes: { by: "bot removed" })
     redirect_to account_bots_url
   end
 
@@ -71,6 +79,28 @@ class Accounts::BotsController < ApplicationController
     # its page must not silently convert it into an agent.
     def set_agent
       @agent = @bot.agent
+    end
+
+    # Runs after both saves so previous_changes reflects what persisted. A
+    # webhook URL change gets its own row; everything else shares one edit row.
+    def record_bot_changes(previous_webhook_url:)
+      # update_bot may have destroyed the webhook through the cached
+      # association, which would still answer the old URL.
+      @bot.association(:webhook).reload
+
+      if @bot.webhook_url != previous_webhook_url
+        before = AuditLog.webhook_origin_summary(previous_webhook_url)
+        after = AuditLog.webhook_origin_summary(@bot.webhook_url)
+        AuditLog.record!(action: "agent.webhook_url.change", target: @agent || @bot,
+          changes: { webhook_url: AuditLog.pair(before, after) })
+      end
+
+      bot_changes = @bot.previous_changes.slice("name", "icon_name")
+      agent_changes = @agent ? @agent.previous_changes.slice("provider", "runtime", "description") : {}
+      if bot_changes.present? || agent_changes.present?
+        pairs = bot_changes.merge(agent_changes).transform_values { |change| AuditLog.pair(*change) }
+        AuditLog.record!(action: "agent.update", target: @agent || @bot, changes: pairs)
+      end
     end
 
     def bot_params

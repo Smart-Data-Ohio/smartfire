@@ -39,6 +39,7 @@ gem "sentry-rails"
 
 # Other
 gem "bcrypt"
+gem "csv"
 gem "gemoji"
 gem "web-push"
 gem "rqrcode"

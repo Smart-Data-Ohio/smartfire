@@ -1,0 +1,48 @@
+.audit-log__filters-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+}
+
+.audit-log__table-wrap {
+  border: 1px solid var(--workspace-border);
+  max-inline-size: 100%;
+  overflow-x: auto;
+}
+
+.audit-log__table {
+  border-collapse: collapse;
+  inline-size: 100%;
+  font-size: 0.875rem;
+  text-align: start;
+}
+
+.audit-log__table th,
+.audit-log__table td {
+  border-block-end: 1px solid var(--workspace-border);
+  padding: 0.5rem 0.65rem;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.audit-log__table th {
+  background: var(--workspace-sidebar);
+  position: sticky;
+  top: 0;
+}
+
+.audit-log__table tbody tr:last-child th,
+.audit-log__table tbody tr:last-child td {
+  border-block-end: none;
+}
+
+.audit-log__changes {
+  max-inline-size: 24rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audit-log__table code {
+  font-size: 0.8125rem;
+}

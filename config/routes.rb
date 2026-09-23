@@ -44,6 +44,7 @@ Rails.application.routes.draw do
       resource :join_code, only: :create
       resource :logo, only: %i[ show destroy ]
       resource :custom_styles, only: %i[ edit update ]
+      resource :audit_log, only: :show, controller: "audit_logs"
       resource :integrations_health, only: :show, controller: "integrations_health"
     end
   end

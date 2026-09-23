@@ -11,6 +11,8 @@ class Accounts::IconsController < ApplicationController
     @workspace_icon.creator = Current.user
 
     if save_icon
+      AuditLog.record!(action: "workspace_icon.create", target: @workspace_icon,
+        changes: { name: @workspace_icon.name, title: @workspace_icon.title })
       redirect_to account_icons_url, notice: "Icon added"
     else
       @workspace_icons = WorkspaceIcon.ordered.with_attached_image.includes(:creator)
@@ -19,7 +21,10 @@ class Accounts::IconsController < ApplicationController
   end
 
   def destroy
-    WorkspaceIcon.find(params[:id]).destroy
+    icon = WorkspaceIcon.find(params[:id])
+    icon.destroy
+    AuditLog.record!(action: "workspace_icon.destroy", target: icon,
+      changes: { name: icon.name })
     redirect_to account_icons_url, notice: "Icon deleted"
   end
 

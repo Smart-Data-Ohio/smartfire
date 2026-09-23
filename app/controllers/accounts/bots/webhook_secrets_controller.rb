@@ -8,9 +8,12 @@ class Accounts::Bots::WebhookSecretsController < ApplicationController
   def create
     if @bot.agent
       @bot.agent.reset_webhook_signing_secret!
+      # The secret itself never reaches the log: only that it was reset.
+      AuditLog.record!(action: "agent.webhook_secret.reset", target: @bot.agent)
       redirect_to edit_account_bot_url(@bot), notice: "Signing secret reset. Update the receiving service with the new secret."
     elsif @bot.webhook
       @bot.webhook.reset_signing_secret!
+      AuditLog.record!(action: "agent.webhook_secret.reset", target: @bot)
       redirect_to edit_account_bot_url(@bot), notice: "Signing secret reset. Update the receiving service with the new secret."
     else
       redirect_to edit_account_bot_url(@bot), alert: "Set a webhook URL before generating a signing secret."

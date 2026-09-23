@@ -7,6 +7,7 @@ class Users::ProfilesController < ApplicationController
 
   def update
     email_changing = email_change_requested?
+    password_changing = params[:user].respond_to?(:key?) && params[:user][:password].present?
 
     # Check the current password before assigning anything: a submitted new
     # password would otherwise replace the digest it is checked against.
@@ -17,6 +18,7 @@ class Users::ProfilesController < ApplicationController
       return render :show, status: :unprocessable_entity
     end
 
+    previous_email = @user.email_address
     @user.assign_attributes(user_params)
     # A submitted zone (even a blank "Not set") is a choice the member made:
     # browser auto-detect must never overwrite it afterwards.
@@ -26,6 +28,7 @@ class Users::ProfilesController < ApplicationController
     @user.email_self_changed_at = Time.current if email_changing
 
     if @user.save
+      record_account_security_changes(previous_email: previous_email, email_changing: email_changing, password_changing: password_changing)
       redirect_to user_profile_url, notice: update_notice
     else
       set_memberships
@@ -64,6 +67,18 @@ class Users::ProfilesController < ApplicationController
       return true if @user.password_digest.blank?
 
       @user.authenticate(params.dig(:user, :current_password).to_s).present?
+    end
+
+    # Password values never reach the log: the row records that a change
+    # happened, not what it changed to.
+    def record_account_security_changes(previous_email:, email_changing:, password_changing:)
+      if email_changing
+        AuditLog.record!(action: "user.email.change", actor: @user, target: @user,
+          changes: { email_address: AuditLog.pair(previous_email, @user.email_address) })
+      end
+      if password_changing
+        AuditLog.record!(action: "user.password.change", actor: @user, target: @user)
+      end
     end
 
     def update_notice

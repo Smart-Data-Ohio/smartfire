@@ -21,6 +21,11 @@
         <%= image_tag "art.svg", size: 20, aria: { hidden: "true" } %>
         <span class="for-screen-reader">Custom styles</span>
       <% end %>
+
+      <%= link_to account_audit_log_path, class: "btn", style: "view-transition-name: audit-log" do %>
+        <%= image_tag "common-file-text.svg", size: 20, aria: { hidden: "true" } %>
+        <span class="for-screen-reader">Audit log</span>
+      <% end %>
     </div>
   <% end %>
 <% end %>
