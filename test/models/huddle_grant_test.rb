@@ -121,18 +121,22 @@ class HuddleGrantTest < ActiveSupport::TestCase
   test "record_seen! persists liveness at most once per ten seconds" do
     grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_watercooler))
 
-    freeze_time do
+    # Every block anchors to the same instant: relative travel would let
+    # real time between blocks push the sighting past the ten-second window.
+    sighted_at = Time.current
+
+    travel_to sighted_at do
       grant.record_seen!
       assert_equal Time.current, grant.reload.last_seen_at
     end
 
-    travel 9.seconds do
+    travel_to sighted_at + 9.seconds do
       assert_no_changes -> { grant.reload.last_seen_at } do
         grant.record_seen!
       end
     end
 
-    travel 11.seconds do
+    travel_to sighted_at + 11.seconds do
       assert_changes -> { grant.reload.last_seen_at } do
         grant.record_seen!
       end

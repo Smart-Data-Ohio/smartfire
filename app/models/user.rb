@@ -60,6 +60,20 @@ class User < ApplicationRecord
   scope :ordered, -> { order("LOWER(name)") }
   scope :filtered_by, ->(query) { where("name like ?", "%#{query}%") }
 
+  # Live presence for cards, the member panel, and the people directory.
+  # Bots hold no presence lease, so a bot with an agent reads live from the
+  # agent instead, like the agent profiles do: not suspended, and checked
+  # in at least once. Pass preloaded lease ids to avoid a query per user.
+  def online_now?(online_ids = nil)
+    return false unless active?
+
+    if bot? && agent
+      agent.suspended_at.nil? && agent.last_seen_at.present?
+    else
+      (online_ids || WorkspacePresenceLease.online_user_ids([ id ])).include?(id)
+    end
+  end
+
   # Per-integration inbox switches. Missing keys read as true so existing
   # users keep today's behavior; only explicit false suppresses an item.
   def inbox_preferences

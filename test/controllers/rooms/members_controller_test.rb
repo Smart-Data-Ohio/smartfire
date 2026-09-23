@@ -16,17 +16,27 @@ class Rooms::MembersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     members = response.parsed_body.fetch("members")
     assert_equal members.sort_by { |member| [ member.fetch("name").downcase, member.fetch("id") ] }, members
-    assert_equal %w[ avatar_url id name online presence status ], members.first.keys.sort
+    assert_equal %w[ avatar_url bot id name online presence status ], members.first.keys.sort
 
     jason = members.find { |member| member["id"] == users(:jason).id }
     assert jason.fetch("online")
     assert_equal "online", jason.fetch("presence")
     assert_equal "🚂 On a train", jason.fetch("status")
+    assert_not jason.fetch("bot")
 
     kevin = members.find { |member| member["id"] == users(:kevin).id }
     assert_not kevin.fetch("online")
     assert_equal "offline", kevin.fetch("presence")
     assert_nil kevin.fetch("status")
+  end
+
+  test "flags bots so the picker can exclude them from huddles" do
+    get room_members_url(rooms(:watercooler), format: :json)
+
+    assert_response :success
+    members = response.parsed_body.fetch("members")
+    assert members.find { |member| member["id"] == users(:bender).id }.fetch("bot")
+    assert_not members.find { |member| member["id"] == users(:david).id }.fetch("bot")
   end
 
   test "reports idle and do-not-disturb presence" do

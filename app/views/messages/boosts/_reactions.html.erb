@@ -5,8 +5,8 @@
 <div id="<%= dom_id(message, :boosts) %>" class="flex-inline flex-wrap gap">
   <% if grouped_reactions.any? %>
     <div class="boosts__reactions flex-inline flex-wrap gap" role="group" aria-label="Message reactions">
-      <% grouped_reactions.each do |content, group| %>
-        <%= render "messages/boosts/reaction", message:, content:, boosts: group %>
+      <% grouped_reactions.each_with_index do |(content, group), index| %>
+        <%= render "messages/boosts/reaction", message:, content:, boosts: group, index: %>
       <% end %>
     </div>
   <% end %>

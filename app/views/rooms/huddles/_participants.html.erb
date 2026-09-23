@@ -4,7 +4,7 @@
 <% accessible_label = participants.any? ? "#{participants.count} #{label}: #{participants.map(&:name).to_sentence}" : "Nobody #{label}" %>
 <span id="<%= dom_id(room, :"#{placement}_voice_participants") %>"
       class="voice-stack<%= " voice-stack--live" if participants.any? %><%= " voice-stack--huddle" unless room.voice? || room.stage? %>"
-      role="img"
+      role="group"
       aria-label="<%= accessible_label %>"
       title="<%= accessible_label %>"
       data-controller="huddle-participants"
@@ -12,11 +12,16 @@
       data-huddle-participants-max-value="<%= max_avatars %>"
       data-huddle-participants-interval-value="<%= placement == :sidebar ? 0 : 15000 %>"
       data-huddle-participants-label-value="<%= label %>"
+      data-huddle-participants-card-url-template-value="<%= profile_card_url_template %>"
       data-huddle-presence-room-id="<%= room.id %>">
   <span class="voice-stack__avatars" data-huddle-participants-target="avatars">
     <% participants.first(max_avatars).each do |participant| %>
-      <%= image_tag fresh_user_avatar_path(participant), size: 20, alt: "", title: participant.name,
-            class: "voice-stack__avatar", data: { user_id: participant.id } %>
+      <%= tag.span class: "voice-stack__trigger profile-card-trigger", tabindex: 0, role: "button",
+            aria: { label: "View profile of #{participant.name}" },
+            data: profile_card_trigger(participant, keyboard: true) do %>
+        <%= image_tag fresh_user_avatar_path(participant), size: 20, alt: "", title: participant.name,
+              class: "voice-stack__avatar", data: { user_id: participant.id } %>
+      <% end %>
     <% end %>
   </span>
   <span class="voice-stack__count" data-huddle-participants-target="count" <%= "hidden" unless participants.any? %>><%= participants.count if participants.any? %></span>
