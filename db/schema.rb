@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_23_162100) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_171300) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -312,6 +312,19 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_162100) do
     t.datetime "updated_at", null: false
     t.index ["booster_id"], name: "index_boosts_on_booster_id"
     t.index ["message_id"], name: "index_boosts_on_message_id"
+  end
+
+  create_table "calendar_meeting_caches", force: :cascade do |t|
+    t.json "busy_intervals", default: [], null: false
+    t.datetime "created_at", null: false
+    t.string "fetch_error"
+    t.datetime "fetched_at"
+    t.boolean "in_meeting_broadcast"
+    t.json "ooo_intervals", default: [], null: false
+    t.datetime "refresh_pending_at"
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["user_id"], name: "index_calendar_meeting_caches_on_user_id", unique: true
   end
 
   create_table "calendar_push_channels", force: :cascade do |t|
@@ -994,7 +1007,14 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_162100) do
     t.boolean "google_email_link_allowed", default: false, null: false
     t.string "icon_name"
     t.json "inbox_preferences", default: {}
+    t.boolean "meeting_dnd_enabled", default: false, null: false
+    t.boolean "meeting_status_enabled", default: false, null: false
     t.string "name", null: false
+    t.boolean "ooo_broadcast"
+    t.boolean "ooo_calendar_enabled", default: false, null: false
+    t.string "ooo_note", limit: 140
+    t.boolean "ooo_notify_enabled", default: false, null: false
+    t.datetime "ooo_until"
     t.string "password_digest"
     t.string "presence_setting", default: "auto", null: false
     t.string "push_to_talk_key"
@@ -1117,6 +1137,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_162100) do
   add_foreign_key "board_tag_assignments", "users", column: "assignee_id"
   add_foreign_key "board_tag_assignments", "users", column: "created_by_id"
   add_foreign_key "boosts", "messages"
+  add_foreign_key "calendar_meeting_caches", "users", on_delete: :cascade
   add_foreign_key "calendar_push_channels", "users"
   add_foreign_key "channel_threads", "messages", column: "parent_message_id", on_delete: :nullify
   add_foreign_key "channel_threads", "rooms"

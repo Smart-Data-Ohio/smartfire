@@ -21,6 +21,10 @@ module Google
       when "exists"
         if channel.claim_notification!(request.headers["X-Goog-Message-Number"])
           Calendar::InboundSyncJob.perform_later(channel.user_id)
+          # A calendar change may move a meeting or OOO boundary: refresh
+          # the member's busy and OOO intervals too. The refresh throttles
+          # bursts and skips members who never opted into either status.
+          Calendar::MeetingRefreshJob.perform_later(channel.user_id)
         end
         head :ok
       when "not_exists"

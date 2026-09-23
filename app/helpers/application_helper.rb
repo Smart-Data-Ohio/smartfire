@@ -22,7 +22,14 @@ module ApplicationHelper
 
   # Manual DND and the DND presence mute sounds outright; quiet hours send
   # their window and zone so the sound controller re-evaluates the
-  # time-based gate on every play without a reload.
+  # time-based gate on every play without a reload. Quiet-during-meetings
+  # sends the cached busy intervals as epoch windows for the same live
+  # treatment: a render-time marker would stick either way, since meeting
+  # boundaries cross without a navigation. Out-of-office quiet (unless the
+  # member keeps notifications on) sends its spans the same way, future
+  # windows included, so an OOO starting mid-page mutes without a reload:
+  # a manual OOO runs from the epoch to its end, calendar OOO as cached
+  # windows.
   def notification_sound_meta_tags
     return unless Current.user
 
@@ -34,6 +41,16 @@ module ApplicationHelper
       tags << tag.meta(name: "quiet-hours",
         content: "#{Current.user.quiet_hours_start_minute}-#{Current.user.quiet_hours_end_minute}")
       tags << tag.meta(name: "quiet-hours-zone", content: Current.user.time_zone_or_default)
+    end
+    if Current.user.meeting_dnd_enabled? && Current.user.meeting_status_enabled?
+      epochs = Current.user.meeting_cache&.quiet_window_epochs.to_a
+      tags << tag.meta(name: "meeting-quiet", content: epochs.map { |start, finish| "#{start}-#{finish}" }.join(",")) if epochs.any?
+    end
+    if !Current.user.ooo_notify_enabled? && (Current.user.manual_ooo_active? || Current.user.ooo_calendar_enabled?)
+      epochs = []
+      epochs << [ 0, Current.user.ooo_until.to_i ] if Current.user.manual_ooo_active?
+      epochs.concat(Current.user.meeting_cache&.ooo_window_epochs.to_a) if Current.user.ooo_calendar_enabled?
+      tags << tag.meta(name: "ooo-quiet", content: epochs.map { |start, finish| "#{start}-#{finish}" }.join(",")) if epochs.any?
     end
     safe_join(tags)
   end

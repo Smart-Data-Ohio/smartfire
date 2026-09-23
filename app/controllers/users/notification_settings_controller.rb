@@ -28,7 +28,8 @@ class Users::NotificationSettingsController < ApplicationController
 
   private
     def notification_params
-      params.require(:user).permit(:dnd_enabled, :quiet_hours_enabled, :quiet_hours_start, :quiet_hours_end)
+      params.require(:user).permit(:dnd_enabled, :quiet_hours_enabled, :quiet_hours_start, :quiet_hours_end,
+        :meeting_dnd_enabled, :ooo_notify_enabled)
     end
 
     # The settings switch means indefinite on/off, while /dnd can set a

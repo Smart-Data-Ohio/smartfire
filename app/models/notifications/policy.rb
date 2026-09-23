@@ -29,6 +29,13 @@ module Notifications
   # - DND (manual, presence, or quiet hours) suppresses push and sounds
   #   for everything except messages from people the recipient starred
   #   with "Allow during DND". Reminders carry no sender, so they stay silent.
+  # - Quiet-during-meetings (opt-in, and only while meeting status is on)
+  #   suppresses push and sounds during busy intervals exactly like DND,
+  #   with the same starred-people exception. Inbox items are still
+  #   recorded, as with every other DND form.
+  # - Out of office suppresses push and sounds the same way, unless the
+  #   recipient asked to keep being notified ("Keep notifying me while
+  #   I'm out of office"). Same starred-people exception, same inbox.
   class Policy
     KINDS = %i[ room_message thread_message reminder huddle ].freeze
 
@@ -132,13 +139,33 @@ module Notifications
       end
 
       def muted_for_push?
-        return false unless recipient.respond_to?(:dnd_active?) && recipient.dnd_active?(now:)
+        return false unless quiet_now?
 
         if @dnd_exception.nil?
           !recipient.dnd_allows?(sender)
         else
           !@dnd_exception
         end
+      end
+
+      # Manual DND, DND presence, and quiet hours silence push and
+      # sounds; so does quiet-during-meetings for members who opted into
+      # it (during a busy interval they read exactly as DND), and so does
+      # out of office unless the member asked to keep being notified —
+      # all with the same starred-people exception. Callers preloading
+      # users for a batch add `includes(:meeting_cache)` so the calendar
+      # checks stay off the hot path.
+      def quiet_now?
+        recipient.respond_to?(:dnd_active?) &&
+          (recipient.dnd_active?(now:) || meeting_quiet? || ooo_quiet?)
+      end
+
+      def meeting_quiet?
+        recipient.respond_to?(:meeting_dnd_active?) && recipient.meeting_dnd_active?(now:)
+      end
+
+      def ooo_quiet?
+        recipient.respond_to?(:ooo_dnd_active?) && recipient.ooo_dnd_active?(now:)
       end
 
       def active_human_recipient?

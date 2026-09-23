@@ -39,4 +39,110 @@
       <%= form.button "Clear status", name: "user[clear_custom_status]", value: "1", class: "btn txt-small" %>
     </div>
   </fieldset>
+
+  <fieldset class="margin-none">
+    <legend class="txt-large">Meetings</legend>
+    <% if !Google::Client.configured? %>
+      <p class="txt-small margin-none">Google Calendar is not configured for this workspace</p>
+    <% elsif @user.google_account&.connected? && @user.google_account.calendar? %>
+      <p class="txt-small margin-none">Show "In a meeting" beside your name while your Google Calendar says you're busy. Only free/busy times are read — never titles or attendees. A custom status or DND shows instead.</p>
+
+      <div class="flex align-start gap pad-block-half">
+        <label class="switch flex-item-no-shrink">
+          <%= hidden_field_tag "user[meeting_status_enabled]", "0", id: nil %>
+          <%= check_box_tag "user[meeting_status_enabled]", "1", @user.meeting_status_enabled?, id: "user_meeting_status_enabled", class: "switch__input" %>
+          <span class="switch__btn round"></span>
+          <span class="for-screen-reader">Show when I'm in a meeting</span>
+        </label>
+        <span>
+          <span class="txt-medium">Show when I'm in a meeting</span><br>
+          <span class="txt-small">Connected as <%= @user.google_account.email %>.</span>
+        </span>
+      </div>
+
+      <% if @user.meeting_cache&.fetch_error.present? %>
+        <p class="txt-small margin-none"><%= @user.meeting_cache.fetch_error %></p>
+      <% end %>
+    <% elsif @user.meeting_status_enabled? %>
+      <p class="txt-small margin-none">Meeting status is on, but Google Calendar isn't connected. <%= link_to "Reconnect below", "#google-calendar-title" %> to resume showing when you're in a meeting.</p>
+    <% else %>
+      <p class="txt-small margin-none">Show "In a meeting" beside your name while your Google Calendar says you're busy. <%= link_to "Connect Google Calendar", "#google-calendar-title" %> first — only free/busy times are read, never titles or attendees.</p>
+    <% end %>
+
+    <%= profile_form_submit_button %>
+  </fieldset>
+
+  <fieldset class="margin-none">
+    <legend class="txt-large">Out of office</legend>
+    <% if @user.out_of_office? %>
+      <p class="txt-small margin-none">
+        <% if @user.manual_ooo_active? %>
+          Out of office until <%= @user.ooo_until_date %>.
+        <% else %>
+          Out of office until <%= @user.ooo_until_date %> from your Google Calendar.
+        <% end %>
+      </p>
+    <% end %>
+    <p class="txt-small margin-none">Show "Out of office" beside your name until the end you pick. It clears itself when the end passes, and wins over a custom status, DND, and the meeting label.</p>
+
+    <div class="flex align-center gap pad-block-half">
+      <%= label_tag "user_ooo_preset", "Out until", class: "txt-medium" %>
+      <%= select_tag "user[ooo_preset]",
+            options_for_select([ [ "Don't change", "" ] ] + User::StatusSettings::OOO_PRESET_LABELS.map { |value, label| [ label, value ] }, ""),
+            class: "input", id: "user_ooo_preset" %>
+    </div>
+
+    <div class="flex align-center gap pad-block-half">
+      <%= label_tag "user_ooo_until_custom", "Custom end", class: "txt-medium" %>
+      <%= datetime_local_field_tag "user[ooo_until_custom]", nil, class: "input", id: "user_ooo_until_custom" %>
+      <span class="txt-small">in your time zone</span>
+    </div>
+    <% if @user.errors[:ooo_until].any? %>
+      <p class="txt-small margin-none" style="color: var(--color-negative)">Out of office <%= @user.errors[:ooo_until].to_sentence %>.</p>
+    <% end %>
+
+    <div class="flex align-center gap pad-block-half">
+      <%= label_tag "user_ooo_note", "Note", class: "txt-medium" %>
+      <%= text_field_tag "user[ooo_note]", @user.ooo_note, class: "input flex-item-grow",
+            maxlength: User::StatusSettings::OOO_NOTE_LIMIT, placeholder: "Back soon, slow to reply…",
+            autocomplete: "off", id: "user_ooo_note" %>
+    </div>
+    <% if @user.errors[:ooo_note].any? %>
+      <p class="txt-small margin-none" style="color: var(--color-negative)">Note <%= @user.errors[:ooo_note].to_sentence %>.</p>
+    <% end %>
+
+    <div class="flex align-center gap pad-block-half">
+      <%= profile_form_submit_button %>
+      <%= button_tag "Clear out of office", name: "user[clear_ooo]", value: "1", class: "btn txt-small" %>
+    </div>
+
+    <% if !Google::Client.configured? %>
+      <p class="txt-small margin-none">Google Calendar is not configured for this workspace</p>
+    <% elsif @user.google_account&.connected? && @user.google_account.calendar? %>
+      <p class="txt-small margin-none">Use out-of-office events from your Google Calendar: they mark you out for the event's span. Only the event type and times are read — never titles or details. When both apply, the later end shows; clearing above ends only the manual one.</p>
+
+      <div class="flex align-start gap pad-block-half">
+        <label class="switch flex-item-no-shrink">
+          <%= hidden_field_tag "user[ooo_calendar_enabled]", "0", id: nil %>
+          <%= check_box_tag "user[ooo_calendar_enabled]", "1", @user.ooo_calendar_enabled?, id: "user_ooo_calendar_enabled", class: "switch__input" %>
+          <span class="switch__btn round"></span>
+          <span class="for-screen-reader">Use my Google Calendar out-of-office</span>
+        </label>
+        <span>
+          <span class="txt-medium">Use my Google Calendar out-of-office</span><br>
+          <span class="txt-small">Connected as <%= @user.google_account.email %>.</span>
+        </span>
+      </div>
+
+      <% if @user.meeting_cache&.fetch_error.present? %>
+        <p class="txt-small margin-none"><%= @user.meeting_cache.fetch_error %></p>
+      <% end %>
+    <% elsif @user.ooo_calendar_enabled? %>
+      <p class="txt-small margin-none">Calendar out-of-office is on, but Google Calendar isn't connected. <%= link_to "Reconnect below", "#google-calendar-title" %> to resume showing it.</p>
+    <% else %>
+      <p class="txt-small margin-none">Use out-of-office events from your Google Calendar to mark yourself out automatically. <%= link_to "Connect Google Calendar", "#google-calendar-title" %> first — only the event type and times are read, never titles or details.</p>
+    <% end %>
+
+    <%= profile_form_submit_button %>
+  </fieldset>
 <% end %>

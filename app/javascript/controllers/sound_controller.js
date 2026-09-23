@@ -6,6 +6,8 @@ export default class extends Controller {
   play() {
     if (mutedByDnd()) return
     if (quietHoursActive()) return
+    if (meetingQuietActive()) return
+    if (oooQuietActive()) return
 
     const sound = new Audio(this.urlValue)
     sound.play()
@@ -40,6 +42,35 @@ function quietHoursActive(now = new Date()) {
   return start < end
     ? minute >= start && minute < end
     : minute >= start || minute < end
+}
+
+// Quiet-during-meetings and out-of-office quiet send their spans as
+// epoch-second windows, re-evaluated on every play like quiet hours, so a
+// boundary crossed mid-page silences (or unsilences) sounds without a
+// reload. Mirrors the cache readers: the start is inclusive and the end
+// exclusive. A calendar edit that moves the intervals needs a navigation,
+// the same as a quiet-hours edit.
+function meetingQuietActive(now = new Date()) {
+  return epochWindowsActive("meta[name='meeting-quiet']", now)
+}
+
+function oooQuietActive(now = new Date()) {
+  return epochWindowsActive("meta[name='ooo-quiet']", now)
+}
+
+function epochWindowsActive(selector, now = new Date()) {
+  const windows = document.querySelector(selector)?.getAttribute("content")
+  if (!windows) return false
+
+  const second = Math.floor(now.getTime() / 1000)
+  return windows.split(",").some((window) => {
+    const match = window.match(/^(\d+)-(\d+)$/)
+    if (!match) return false
+
+    const start = Number(match[1])
+    const end = Number(match[2])
+    return start <= second && second < end
+  })
 }
 
 function minutesSinceMidnight(now, zone) {

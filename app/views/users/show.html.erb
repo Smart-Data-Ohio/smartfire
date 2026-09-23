@@ -101,7 +101,8 @@
             <div><%= mail_to @user.email_address %></div>
           <% end %>
           <div><%= @user.bio %></div>
-          <div><%= render_user_status_badge(@user) %></div>
+          <%= turbo_stream_from @user, :status %>
+          <div id="<%= dom_id(@user, :status_badge) %>"><%= render_user_status_badge(@user) %></div>
         </div>
 
         <% if @user.active? %>

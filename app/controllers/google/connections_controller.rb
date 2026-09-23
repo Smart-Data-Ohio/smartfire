@@ -64,6 +64,15 @@ module Google
         snapshot = account.cleanup_snapshot
         account_id = account.id
         Current.user.event_calendar_entries.delete_all
+        if Current.user.meeting_cache
+          Current.user.meeting_cache.destroy!
+          # The opt-in flags stay on for a later reconnect, so reset the
+          # association: the claim and cleared-state broadcast below must
+          # read the dropped cache, not the just-destroyed row.
+          Current.user.association(:meeting_cache).reset
+          Current.user.claim_ooo_broadcast!(Current.user.out_of_office?)
+          Calendar::OooDispatcher.broadcast_ooo_for(Current.user)
+        end
         # Meet links were minted through this connection: clear them so
         # event cards stop advertising links the app no longer manages.
         # The request flag stays set (and update_all fires no callbacks),
@@ -111,6 +120,8 @@ module Google
         Event.where(organizer: user, meet_link_requested: true, meet_link: [ nil, "" ])
           .find_each { |event| Calendar::MeetLinkJob.perform_later(event.id) }
         Calendar::WatchChannelJob.perform_later(user.id)
+        # A reconnect heals meeting and calendar-OOO status for members who left them on.
+        Calendar::MeetingRefreshJob.perform_later(user.id) if user.meeting_status_enabled? || user.ooo_calendar_enabled?
       end
   end
 end
