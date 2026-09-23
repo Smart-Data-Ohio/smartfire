@@ -73,14 +73,19 @@ class Agent < ApplicationRecord
     return if suspended?
 
     update!(suspended_at: Time.current)
-    Message.where(creator_id: user_id, streaming: true).find_each do |message|
-      begin
-        message.finalize_stream_quietly!
-      rescue => error
-        Rails.logger.error "Quiet stream finalize failed for message #{message.id}: #{error.class}: #{error.message}"
-      end
-    end
+    # Deactivation and bans suspend inside their own transaction: finalize
+    # (which broadcasts) only once the suspension commits, never while the
+    # write lock is held, and not at all if the outer transaction rolls back.
+    ActiveRecord.after_all_transactions_commit { finalize_open_streams_quietly }
     AuditLog.record!(action: "agent.suspend", target: self)
+  end
+
+  def finalize_open_streams_quietly
+    Message.where(creator_id: user_id, streaming: true).find_each do |message|
+      message.finalize_stream_quietly!
+    rescue => error
+      Rails.logger.error "Quiet stream finalize failed for message #{message.id}: #{error.class}: #{error.message}"
+    end
   end
 
   # The kill switch: suspends the agent (revoking every grant, which also

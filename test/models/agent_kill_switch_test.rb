@@ -98,6 +98,22 @@ class AgentKillSwitchTest < ActiveSupport::TestCase
     assert_equal [], room.messages.search("hovercraft")
   end
 
+  test "a suspension that rolls back leaves open streams untouched" do
+    room = rooms(:watercooler)
+    message = room.root_messages.create!(creator: @agent.user, streaming: true,
+      markdown_source: "Still thinking", client_message_id: "rollback-stream")
+
+    assert_no_turbo_stream_broadcasts [ room, :messages ] do
+      Agent.transaction do
+        @agent.suspend!
+        raise ActiveRecord::Rollback
+      end
+    end
+
+    assert message.reload.streaming?
+    assert_not @agent.reload.suspended?
+  end
+
   test "kill switch leaves owned work assigned without reassigning it" do
     board = Rooms::Board.create_for({ name: "Work Board", creator: users(:david) },
       users: [ users(:david), @agent.user ])
