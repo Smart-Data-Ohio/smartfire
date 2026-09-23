@@ -61,6 +61,33 @@ class LinkEmbed::MetadataParserTest < ActiveSupport::TestCase
     assert_equal "bold words", result.description
   end
 
+  test "stores plain text so the card escapes it exactly once" do
+    result = LinkEmbed::MetadataParser.parse(<<~HTML, base_url: "https://example.com/")
+      <html><head>
+        <meta property="og:title" content="Tom &amp; Jerry say &quot;hi&quot; &lt;3">
+        <meta property="og:description" content="5 &gt; 3 &amp; 2 &lt; 4, &quot;quoted&quot;">
+      </head></html>
+    HTML
+
+    assert_equal 'Tom & Jerry say "hi" <3', result.title
+    assert_equal '5 > 3 & 2 < 4, "quoted"', result.description
+    assert_equal "Tom &amp; Jerry say &quot;hi&quot; &lt;3", ERB::Util.html_escape(result.title)
+  end
+
+  test "entity-decoded text carries no executable markup" do
+    result = LinkEmbed::MetadataParser.parse(<<~HTML, base_url: "https://example.com/")
+      <html><head>
+        <meta property="og:title" content="&lt;img src=x onerror=alert(1)&gt;Hi">
+        <meta property="og:description" content="<a href=&quot;javascript:alert(1)&quot;>click</a>">
+      </head></html>
+    HTML
+
+    assert_equal "Hi", result.title
+    assert_equal "click", result.description
+    assert_not_includes ERB::Util.html_escape(result.title), "<img"
+    assert_not_includes ERB::Util.html_escape(result.description), "<a"
+  end
+
   test "rejects non-web image targets" do
     result = LinkEmbed::MetadataParser.parse(<<~HTML, base_url: "https://example.com/")
       <html><head><meta property="og:image" content="javascript:alert(1)"></head></html>

@@ -36,6 +36,27 @@ class LinkEmbedsTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "card text is escaped exactly once" do
+    message = @room.messages.create!(
+      creator: users(:jason), client_message_id: "embed-escape-once",
+      markdown_source: "read https://example.com/escape"
+    )
+    LinkEmbed.find_by!(normalized_url: "https://example.com/escape").update!(
+      title: 'Tom & Jerry say "hi" <3', description: "5 > 3 & <b>bold</b>",
+      site_name: "Example", fetched_at: Time.current, fetch_error: nil,
+      expires_at: 1.hour.from_now
+    )
+
+    get room_url(@room)
+
+    assert_response :success
+    assert_select "##{dom_id(message, :link_embed_cards)} .link-embed-card__title",
+      text: 'Tom & Jerry say "hi" <3'
+    assert_includes response.body, "Tom &amp; Jerry say &quot;hi&quot; &lt;3"
+    assert_not_includes response.body, "&amp;amp;"
+    assert_not_includes response.body, "<b>bold</b>"
+  end
+
   test "LinkedIn URN links render a card with the embed button" do
     stub_page("https://www.linkedin.com/feed/update/urn:li:activity:4242", <<~HTML)
       <html><head>

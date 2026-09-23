@@ -52,9 +52,14 @@ class LinkEmbed::MetadataParser
         nil
       end
 
+      # Plain text for the model: tags stripped, then entities decoded.
+      # full_sanitizer returns entity-escaped text, and without the decode
+      # ERB would escape it a second time on render ("Tom &amp; Jerry").
+      # Decoding is safe here because the tags are already gone and the
+      # card escapes the value again on render.
       def clean(value, limit:)
         stripped = ActionView::Base.full_sanitizer.sanitize(value.to_s).strip
-        stripped.presence&.truncate(limit, omission: "")
+        CGI.unescapeHTML(stripped).presence&.truncate(limit, omission: "")
       end
 
       # og:image is supposed to be absolute, but pages in the wild serve
