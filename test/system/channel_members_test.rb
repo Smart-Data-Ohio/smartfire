@@ -91,6 +91,7 @@ class ChannelMembersTest < ApplicationSystemTestCase
     assert_no_selector "#channel-members", visible: true
     click_button "Show members"
     assert_selector "#channel-members"
+    assert_member_rows_inline
 
     page.current_window.resize_to(390, 844)
     assert_no_selector "#channel-members", visible: true
@@ -108,6 +109,7 @@ class ChannelMembersTest < ApplicationSystemTestCase
 
     click_button "Show members"
     settle_visual_transitions
+    assert_member_rows_inline
     page.save_screenshot Rails.root.join("tmp/screenshots/members-mobile.png")
     click_button "Close members"
     send_message "Still easy to chat on a phone."
@@ -154,6 +156,21 @@ class ChannelMembersTest < ApplicationSystemTestCase
         })()
       JS
       assert offsets.all? { |offset| offset <= 1 }, "composer controls are offset from the text line by #{offsets.inspect} pixels"
+    end
+
+    # Every row keeps its avatar and identity side by side on one line:
+    # the selection checkbox must not push the name onto a narrow second
+    # grid row.
+    def assert_member_rows_inline
+      assert_selector "#channel-members .member-panel__member .member-panel__identity"
+      broken = page.evaluate_script(<<~JS)
+        Array.from(document.querySelectorAll("#channel-members .member-panel__member")).filter(row => {
+          const avatar = row.querySelector(".member-panel__avatar").getBoundingClientRect()
+          const identity = row.querySelector(".member-panel__identity").getBoundingClientRect()
+          return identity.left < avatar.right || identity.top >= avatar.bottom || identity.width < 80
+        }).map(row => row.dataset.memberId)
+      JS
+      assert_empty broken, "member rows wrapped their names under the avatar"
     end
 
     def assert_no_horizontal_overflow
