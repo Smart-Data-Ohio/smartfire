@@ -92,7 +92,7 @@ class TwoFactorTest < ApplicationSystemTestCase
 
     visit user_profile_url
     assert_selector "h2", text: "Two-step sign-in"
-    within "menu li", match: :first do
+    within "#two_factor_devices li", match: :first do
       fill_in "Code or password", with: "secret123456"
       click_on "Revoke"
     end

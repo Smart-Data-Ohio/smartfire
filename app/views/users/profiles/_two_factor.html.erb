@@ -32,7 +32,7 @@
 
       <h3 class="margin-none txt-medium">Remembered devices</h3>
       <% if @two_factor_devices.any? %>
-        <menu class="flex flex-column gap margin-none pad-none">
+        <menu id="two_factor_devices" class="flex flex-column gap margin-none pad-none">
           <% @two_factor_devices.each do |device| %>
             <li class="flex align-center gap margin-none" id="<%= dom_id(device) %>">
               <div class="min-width flex-item-grow txt-small">
