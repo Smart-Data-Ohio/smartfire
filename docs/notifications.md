@@ -3,8 +3,9 @@
 People set a presence and custom status, silence push and sounds with Do
 Not Disturb or scheduled quiet hours, follow or mute channel threads,
 watch keywords, and pick a time zone and theme. One policy object,
-`Notifications::Policy`, decides every notification; pushers and the
-inbox recorder call it instead of re-deciding the rules.
+`Notifications::Policy`, gates every push and sound; the pushers call
+it instead of re-deciding the rules, and the inbox recorder implements
+the same inbox rules in its own candidate flow.
 
 ## Presence and custom status
 
@@ -87,7 +88,9 @@ level, replies still notify `mentions` members (unchanged).
 Each member watches up to 20 words or phrases (profile page, one per
 line). A new message in a room they belong to matches case-insensitively
 on word boundaries ("deploy" matches "Deploy now", not "Redeploying").
-A match records a `keyword_alert` inbox item; keywords never push.
+A match records a `keyword_alert` inbox item; a keyword never pushes
+by itself (an `everything` follower still gets the broadcast push for
+the message itself, keyword or not).
 
 Matching runs once per message: thread messages reuse the already-loaded
 memberships, root messages load the roster in a fixed set of queries,
@@ -127,15 +130,19 @@ OS setting.
   `thread_activity`, `keyword_alert`), or nil.
 - `push?` / `sound?`: whether push and sounds go out.
 
-Callers:
-
-- `ActivityItems::Recorder` (inbox; keyword matching included),
-- `Room::MessagePusher`, `ChannelThread::MessagePusher`,
-  `Event::ReminderPusher`, `Huddle::InvitationPusher` (push),
-- the `sound` controller via the meta tag (sounds).
+Every push path calls `push?` (`Room::MessagePusher`,
+`ChannelThread::MessagePusher`, `Event::ReminderPusher`,
+`Huddle::InvitationPusher`); sounds follow through the
+`notification-sounds` meta tag the layout renders from the same DND
+state. The inbox recorder does not call the policy per recipient:
+`ActivityItems::Recorder` reimplements the inbox rules in its own
+candidate flow (same winners, same mention-over-reply-over-activity-
+over-keyword precedence) so it can batch keyword matching once per
+message. Keep the two in sync: the matrix test in
+`test/models/notifications/policy_test.rb` pins the policy side, and
+`test/services/activity_items/recorder_keyword_test.rb` plus the push
+gating tests pin the recorder side.
 
 Pushers preload one membership map, one user map, and one DND-exception
 set (`Policy.dnd_exceptions_for`) per batch, then decide per recipient
-in Ruby. The matrix test in
-`test/models/notifications/policy_test.rb` pins every combination of
-DND, quiet hours, mute, follow, keyword, and mention.
+in Ruby.

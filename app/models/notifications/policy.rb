@@ -1,9 +1,10 @@
 module Notifications
-  # The one place deciding what a new message, reminder, or huddle
-  # invitation does for one recipient: which inbox item it records (if
-  # any), and whether push and sounds go out. The inbox recorder and
-  # every push path call this with preloaded memberships instead of
-  # re-deciding the rules themselves.
+  # The one place deciding whether a new message, reminder, or huddle
+  # invitation pushes (and sounds) for one recipient: every push path
+  # calls this with preloaded memberships instead of re-deciding the
+  # rules itself. The inbox recorder mirrors the inbox rules below in
+  # its own candidate flow (same winners, same precedence) so it can
+  # batch keyword matching; keep the two in sync.
   #
   # Inbox rules:
   # - Invisible room memberships get nothing, ever.
