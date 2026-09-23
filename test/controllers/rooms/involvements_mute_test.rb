@@ -48,6 +48,15 @@ class Rooms::InvolvementsMuteTest < ActionDispatch::IntegrationTest
     assert_equal dom_id(dm, :list), streams.first["target"]
   end
 
+  test "repeating the current level neither crashes nor broadcasts" do
+    @membership.update!(involvement: "muted")
+
+    assert_no_turbo_stream_broadcasts [ users(:david), :rooms ] do
+      put room_involvement_url(@room), params: { involvement: "muted" }
+      assert_redirected_to room_involvement_url(@room)
+    end
+  end
+
   test "the bell cycles through muted with its own icon" do
     @membership.update!(involvement: "everything")
 

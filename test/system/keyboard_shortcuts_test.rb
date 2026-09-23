@@ -8,7 +8,7 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
   test "? opens the shortcut sheet everywhere except while typing" do
     join_room rooms(:hq)
 
-    find("body").send_keys("?")
+    press_keys("?")
     assert_selector "#keyboard-shortcuts[open]", wait: 5
     within "#keyboard-shortcuts" do
       assert_text "Quick switcher"
@@ -18,7 +18,7 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
       assert_text "Message menu"
     end
 
-    find("#keyboard-shortcuts").send_keys(:escape)
+    press_keys(:escape)
     assert_no_selector "#keyboard-shortcuts[open]", wait: 5
   end
 
@@ -46,10 +46,10 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
   test "alt+up and alt+down move between rooms" do
     join_room rooms(:hq)
 
-    find("body").send_keys(:alt, :arrow_up)
+    press_keys(:alt, :arrow_up)
     assert_selector ".room-header__name", text: "Designers", wait: 10
 
-    find("body").send_keys(:alt, :arrow_down)
+    press_keys(:alt, :arrow_down)
     assert_selector ".room-header__name", text: "HQ", wait: 10
   end
 
@@ -57,10 +57,11 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
     designers = rooms(:designers)
     join_room rooms(:hq)
 
-    designers.root_messages.create!(creator: users(:kevin), body: "Unread me", client_message_id: "unread-jump-1")
+    # Direct creates skip the controller broadcast, so fan it out by hand.
+    designers.root_messages.create!(creator: users(:kevin), body: "Unread me", client_message_id: "unread-jump-1").broadcast_create
     assert_room_unread designers
 
-    find("body").send_keys([ :alt, :shift, :arrow_down ])
+    press_keys(:alt, :shift, :arrow_down)
     assert_selector ".room-header__name", text: "Designers", wait: 10
   end
 
@@ -72,7 +73,7 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
     click_on "Mark unread"
     assert_room_unread designers
 
-    find("body").send_keys(:escape)
+    press_keys(:escape)
     assert_room_read designers
   end
 
@@ -85,7 +86,7 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
     assert_room_unread designers
 
     open_message_menu designers.root_messages.ordered.second
-    find("[data-message-actions-target='menu']").send_keys(:escape)
+    press_keys(:escape)
     assert_no_selector ".message[data-message-actions-open]", wait: 5
     assert_room_unread designers
   end

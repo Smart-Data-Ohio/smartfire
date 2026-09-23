@@ -6,28 +6,31 @@ class Rooms::InvolvementsController < ApplicationController
   end
 
   def update
+    # Read before saving: the mute below clears the unread state with a
+    # second save, and a repeated level saves nothing at all, so dirty
+    # tracking cannot be trusted after this point.
+    previous_involvement = @membership.involvement
     @membership.update! involvement: params[:involvement]
-    # Read before the mute below clears the unread state with a second
-    # save, which would reset involvement_previously_was.
-    muted_transition = muted_transition?
-    was_invisible = @membership.involvement_previously_was.inquiry.invisible?
 
     # Muting clears the unread state: a muted room only goes unread on
     # mention, so anything unread from before the mute is stale.
     @membership.read if @membership.involved_in_muted?
 
-    broadcast_visibility_changes(muted_transition, was_invisible)
+    broadcast_visibility_changes(previous_involvement)
     redirect_to room_involvement_url(@room)
   end
 
   private
-    def broadcast_visibility_changes(muted_transition, was_invisible)
+    def broadcast_visibility_changes(previous_involvement)
+      was = previous_involvement.to_s.inquiry
+      muted_transition = @membership.involved_in_muted? != was.muted?
+
       case
       when @room.direct?
         broadcast_replace_muted_row if muted_transition
       when @membership.involved_in_invisible?
         broadcast_remove_to @membership.user, :rooms, target: [ @room, :list ]
-      when was_invisible
+      when was.invisible?
         if @room.stage?
           broadcast_prepend_to @membership.user, :rooms, target: :stage_rooms, partial: "users/sidebars/rooms/stage", locals: { room: @room, membership: @membership }
         elsif @room.voice?
@@ -40,10 +43,6 @@ class Rooms::InvolvementsController < ApplicationController
       else
         broadcast_replace_muted_row if muted_transition
       end
-    end
-
-    def muted_transition?
-      @membership.involved_in_muted? != @membership.involvement_previously_was.inquiry.muted?
     end
 
     # A mute or unmute redims the sidebar row in place: the row stays

@@ -82,6 +82,26 @@ module SystemTestHelper
     assert_message_menu_open
   end
 
+  # Sends keys at the browser level (Selenium actions), landing on
+  # whatever holds focus. Unlike element send_keys, chords and plain
+  # keys reach global handlers even when focus sits on the body.
+  def press_keys(*keys)
+    modifiers = %i[ control shift alt meta command ]
+    action = page.driver.browser.action
+
+    keys.each do |key|
+      if modifiers.include?(key)
+        action.key_down(key)
+      else
+        action.send_keys(key)
+      end
+    end
+    keys.reverse_each do |key|
+      action.key_up(key) if modifiers.include?(key)
+    end
+    action.perform
+  end
+
   def dismiss_pwa_install_prompt
     # No view renders this dialog target anymore, so the check below only
     # ever passes when a regression reintroduces it. join_room calls this

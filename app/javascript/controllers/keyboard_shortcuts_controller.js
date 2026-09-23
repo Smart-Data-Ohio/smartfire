@@ -114,7 +114,9 @@ export default class extends Controller {
   }
 
   #overlayOpen() {
-    if (document.querySelector("dialog[open], :popover-open")) return true
-    return Boolean(document.querySelector("#channel-members[aria-hidden='false'], #thread-panel[aria-hidden='false']"))
+    // Panels mark themselves aria-modal only when modal (the member
+    // panel is a persistent side panel on desktop, where Esc must
+    // still mark the room read).
+    return Boolean(document.querySelector("dialog[open], :popover-open, [aria-modal='true']"))
   }
 }

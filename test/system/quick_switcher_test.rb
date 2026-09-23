@@ -75,7 +75,7 @@ class QuickSwitcherTest < ApplicationSystemTestCase
 
   private
     def open_switcher
-      find("body").send_keys(:control, "k")
+      press_keys(:control, "k")
       assert_selector "#quick-switcher[open]", wait: 5
     end
 

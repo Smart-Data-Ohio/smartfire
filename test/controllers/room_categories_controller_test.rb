@@ -5,6 +5,16 @@ class RoomCategoriesControllerTest < ActionDispatch::IntegrationTest
     sign_in :david
   end
 
+  test "index lists only the user's categories in order" do
+    users(:david).room_categories.create!(name: "Second", position: 2)
+    users(:david).room_categories.create!(name: "First", position: 1)
+    users(:jason).room_categories.create!(name: "Theirs", position: 0)
+
+    get room_categories_url(format: :json)
+    assert_response :success
+    assert_equal %w[ First Second ], response.parsed_body.map { |entry| entry["name"] }
+  end
+
   test "create adds a category at the end" do
     users(:david).room_categories.create!(name: "First", position: 1)
 

@@ -197,11 +197,17 @@ export default class extends Controller {
     }
   }
 
-  // Subsequence match with contiguous and word-start bonuses; null when
-  // the needle is not a subsequence of every haystack.
+  // Subsequence match with contiguous and word-start bonuses; items
+  // whose every haystack misses are dropped. (Math.max over only nulls
+  // is 0, so the nulls filter out before the max.)
   #ranked(items, haystacksFor, query) {
     return items
-      .map(item => ({ item, score: Math.max(...haystacksFor(item).map(haystack => this.#fuzzyScore(haystack, query))) }))
+      .map(item => {
+        const scores = haystacksFor(item)
+          .map(haystack => this.#fuzzyScore(haystack, query))
+          .filter(score => score !== null)
+        return { item, score: scores.length > 0 ? Math.max(...scores) : null }
+      })
       .filter(match => match.score !== null)
       .sort((a, b) => b.score - a.score)
       .map(match => match.item)

@@ -67,15 +67,16 @@ class SidebarOrganizeTest < ApplicationSystemTestCase
     assert_selector "#sidebar a.muted[data-room-id='#{designers.id}']", wait: 10
 
     # The watercooler badge proves delivery is flowing while the muted
-    # room stays quiet for the same plain message.
-    designers.root_messages.create!(creator: users(:kevin), body: "Muted noise", client_message_id: "mute-quiet-1")
-    rooms(:watercooler).root_messages.create!(creator: users(:kevin), body: "Loud hello", client_message_id: "mute-quiet-2")
+    # room stays quiet for the same plain message. Direct creates skip
+    # the controller broadcast, so fan it out by hand.
+    designers.root_messages.create!(creator: users(:kevin), body: "Muted noise", client_message_id: "mute-quiet-1").broadcast_create
+    rooms(:watercooler).root_messages.create!(creator: users(:kevin), body: "Loud hello", client_message_id: "mute-quiet-2").broadcast_create
     assert_room_unread rooms(:watercooler)
     assert_room_read designers
 
     designers.root_messages.create!(
       creator: users(:kevin), body: "Hey #{mention_attachment_for(:david)}", client_message_id: "mute-quiet-3"
-    )
+    ).broadcast_create
     assert_room_unread designers
   end
 

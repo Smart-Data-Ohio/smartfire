@@ -10,7 +10,7 @@ export default class extends Controller {
   static targets = [
     "menu", "favoriteAction", "favoriteGlyph", "favoriteLabel", "moveUp", "moveDown",
     "muteAction", "muteLabel", "categoryGroup", "categoryList", "removeFromCategory",
-    "status", "categoriesData"
+    "status"
   ]
 
   #row
@@ -158,13 +158,14 @@ export default class extends Controller {
 
   // Internal
 
-  #openFor(row, point) {
+  async #openFor(row, point) {
     this.#row = row
-    this.#configureForRow()
+    await this.#configureForRow()
+    if (this.#row !== row) return
     this.#openMenu(point)
   }
 
-  #configureForRow() {
+  async #configureForRow() {
     const favorited = this.#row.dataset.menuFavorited === "true"
     this.favoriteGlyphTarget.textContent = favorited ? "★" : "☆"
     this.favoriteLabelTarget.textContent = favorited ? "Remove from favourites" : "Add to favourites"
@@ -180,7 +181,9 @@ export default class extends Controller {
     this.muteLabelTarget.textContent = muted ? "Unmute" : "Mute"
 
     const categorizable = this.#row.dataset.menuCategorizable === "true"
-    const categories = this.#categories()
+    // Fetched on every open: the sidebar frame reloads around the menu,
+    // so only a live read is guaranteed current.
+    const categories = categorizable ? await this.#fetchCategories() : []
     this.categoryGroupTarget.hidden = !categorizable || categories.length === 0
     if (!this.categoryGroupTarget.hidden) this.#renderCategories(categories)
     this.removeFromCategoryTarget.hidden = !this.#row.dataset.menuCategoryId
@@ -207,9 +210,11 @@ export default class extends Controller {
     })
   }
 
-  #categories() {
+  async #fetchCategories() {
     try {
-      return JSON.parse(this.categoriesDataTarget.textContent || "[]")
+      const response = await fetch("/room_categories.json", { headers: { Accept: "application/json" } })
+      if (!response.ok) return []
+      return await response.json()
     } catch {
       return []
     }

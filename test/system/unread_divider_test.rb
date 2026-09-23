@@ -51,8 +51,10 @@ class UnreadDividerTest < ApplicationSystemTestCase
     expire_connection
     join_room rooms(:hq)
 
-    7.times do |i|
-      @designers.root_messages.create!(creator: users(:kevin), body: "Pill #{i}", client_message_id: "divider-pill-#{i}")
+    # Enough two-line messages to overflow the list, so the divider can
+    # genuinely scroll off-screen.
+    25.times do |i|
+      @designers.root_messages.create!(creator: users(:kevin), body: "Pill #{i}\nsecond line", client_message_id: "divider-pill-#{i}")
     end
 
     join_room @designers

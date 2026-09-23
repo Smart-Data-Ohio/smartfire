@@ -207,7 +207,7 @@ Rails.application.routes.draw do
   end
 
   resource :switcher, only: :show
-  resources :room_categories, only: %i[ create update destroy ]
+  resources :room_categories, only: %i[ index create update destroy ]
 
   resources :activity_items, path: "activity", only: :index do
     get :unread_count, on: :collection
