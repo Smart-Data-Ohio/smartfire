@@ -47,4 +47,22 @@ class Huddle::RingPolicyTest < ActiveSupport::TestCase
     assert Huddle::RingPolicy.ring?(users(:jason).reload, caller: users(:david))
     assert_not Huddle::RingPolicy.ring?(users(:jason).reload, caller: users(:kevin))
   end
+
+  test "out of office silences the ring unless the member keeps notifications on" do
+    users(:jason).update!(ooo_until: 1.day.from_now)
+
+    assert_not Huddle::RingPolicy.ring?(users(:jason).reload, caller: users(:david))
+
+    users(:jason).update!(ooo_notify_enabled: true)
+
+    assert Huddle::RingPolicy.ring?(users(:jason).reload, caller: users(:david))
+  end
+
+  test "a caller allowed during do-not-disturb still rings through out of office" do
+    users(:jason).update!(ooo_until: 1.day.from_now)
+    DndAllowedUser.create!(user: users(:jason), allowed_user: users(:david))
+
+    assert Huddle::RingPolicy.ring?(users(:jason).reload, caller: users(:david))
+    assert_not Huddle::RingPolicy.ring?(users(:jason).reload, caller: users(:kevin))
+  end
 end

@@ -17,7 +17,7 @@ class SlashCommands::DispatcherTest < ActiveSupport::TestCase
   test "registry holds every shipped command with metadata" do
     names = SlashCommands::Registry.all.map(&:name)
 
-    assert_equal %w[ huddle event poll remind status dnd shrug me play ], names
+    assert_equal %w[ huddle event poll remind status dnd ooo shrug me play ], names
     SlashCommands::Registry.all.each do |command|
       assert command.description.present?, "#{command.name} needs a description"
       assert_respond_to SlashCommands::Handlers, command.handler
@@ -156,6 +156,67 @@ class SlashCommands::DispatcherTest < ActiveSupport::TestCase
 
     assert_equal :error, result.kind
     assert_match "Usage", result.message
+  end
+
+  test "ooo sets an end with a note, and off clears it" do
+    result = dispatch("/ooo 2h Back soon")
+
+    assert_equal :ephemeral, result.kind
+    assert_match "Out of office until", result.message
+    assert_match "Back soon", result.message
+    assert_equal Time.current + 2.hours, @user.reload.ooo_until
+    assert_equal "Back soon", @user.ooo_note
+
+    assert_equal "Out of office is off.", dispatch("/ooo off").message
+    assert_nil @user.reload.ooo_until
+    assert_nil @user.ooo_note
+  end
+
+  test "ooo takes week durations, dates, and datetimes" do
+    dispatch("/ooo 1 week")
+    assert_equal Time.current + 1.week, @user.reload.ooo_until
+
+    dispatch("/ooo friday 5pm Wrapping up")
+    assert_equal "Wrapping up", @user.reload.ooo_note
+    assert @user.ooo_until.friday?
+    assert_equal 17, @user.ooo_until.in_time_zone("America/New_York").hour
+
+    dispatch("/ooo 2026-10-01 15:00")
+    assert_in_delta Time.zone.parse("2026-10-01T15:00:00-04:00").to_f, @user.reload.ooo_until.to_f, 1
+  end
+
+  test "ooo broadcasts the badge and the notice" do
+    assert_turbo_stream_broadcasts [ @user, :status ], count: 1 do
+      assert_turbo_stream_broadcasts [ @user, :ooo_notice ], count: 1 do
+        dispatch("/ooo tomorrow Back soon")
+      end
+    end
+  end
+
+  test "ooo off while calendar OOO covers says the calendar still shows it" do
+    @user.update!(ooo_calendar_enabled: true, ooo_until: 1.day.from_now)
+    Calendar::MeetingCache.create!(user: @user, fetched_at: Time.current,
+      ooo_intervals: [ [ 5.minutes.ago.iso8601, 3.days.from_now.iso8601 ] ])
+    @user.reload
+
+    result = dispatch("/ooo off")
+
+    assert_equal :ephemeral, result.kind
+    assert_match "calendar still shows you out", result.message
+    assert_nil @user.reload.ooo_until
+    assert @user.out_of_office?
+  end
+
+  test "ooo rejects blank arguments, garbage, past times, and long notes" do
+    assert_equal :error, dispatch("/ooo").kind
+    assert_match "Usage", dispatch("/ooo").message
+    assert_match "Usage", dispatch("/ooo eventually").message
+    assert_match "in the past", dispatch("/ooo 2026-09-01 15:00").message
+
+    result = dispatch("/ooo tomorrow #{"x" * 141}")
+    assert_equal :error, result.kind
+    assert_match "too long", result.message
+    assert_nil @user.reload.ooo_until
   end
 
   test "shrug posts with the shrug" do

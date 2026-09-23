@@ -31,6 +31,7 @@ class Calendar::MeetingRefreshTest < ActiveSupport::TestCase
 
     assert_requested stub
     requested_fields = Google::Client::MEETING_STATUS_FIELDS
+    assert_includes requested_fields, "eventType"
     assert_not_includes requested_fields, "summary"
     assert_not_includes requested_fields, "description"
     assert_not_includes requested_fields, "email"
@@ -123,6 +124,73 @@ class Calendar::MeetingRefreshTest < ActiveSupport::TestCase
     assert_equal :fresh, Calendar::MeetingRefresh.refresh(@user.id)
 
     assert_not_requested stub
+  end
+
+  test "an OOO-only member's refresh stores OOO intervals with the wider lookahead" do
+    @user.update!(meeting_status_enabled: false, ooo_calendar_enabled: true)
+    stub_list_events(items: [
+      timed_item("2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z", "eventType" => "outOfOffice"),
+      timed_item("2026-09-23T13:00:00Z", "2026-09-23T13:30:00Z")
+    ])
+    now = Time.zone.parse("2026-09-23T10:30:00Z")
+
+    assert_equal :ok, Calendar::MeetingRefresh.refresh(@user.id, now:)
+
+    cache = @user.reload.meeting_cache
+    assert_equal [ [ "2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z" ] ], cache.ooo_intervals
+    assert_empty cache.busy_intervals
+    assert_requested :get, GOOGLE_EVENTS_URL,
+      query: hash_including("timeMax" => (now + 30.days).iso8601)
+  end
+
+  test "a member with both opt-ins stores both interval sets" do
+    @user.update!(ooo_calendar_enabled: true)
+    stub_list_events(items: [
+      timed_item("2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z", "eventType" => "outOfOffice"),
+      timed_item("2026-09-23T13:00:00Z", "2026-09-23T13:30:00Z")
+    ])
+
+    assert_equal :ok, Calendar::MeetingRefresh.refresh(@user.id, now: Time.zone.parse("2026-09-23T10:30:00Z"))
+
+    cache = @user.reload.meeting_cache
+    assert_equal [ [ "2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z" ] ], cache.ooo_intervals
+    assert_equal [ [ "2026-09-23T13:00:00Z", "2026-09-23T13:30:00Z" ] ], cache.busy_intervals
+  end
+
+  test "a meeting-only member stores no OOO intervals" do
+    stub_list_events(items: [
+      timed_item("2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z", "eventType" => "outOfOffice")
+    ])
+
+    assert_equal :ok, Calendar::MeetingRefresh.refresh(@user.id)
+
+    cache = @user.reload.meeting_cache
+    assert_empty cache.ooo_intervals
+    assert_empty cache.busy_intervals
+  end
+
+  test "a meeting-only member fetches the meeting lookahead" do
+    stub_list_events(items: [])
+    now = Time.zone.parse("2026-09-23T10:30:00Z")
+
+    Calendar::MeetingRefresh.refresh(@user.id, now:)
+
+    assert_requested :get, GOOGLE_EVENTS_URL,
+      query: hash_including("timeMax" => (now + 24.hours).iso8601)
+  end
+
+  test "a failed refresh clears OOO intervals too" do
+    @user.update!(ooo_calendar_enabled: true)
+    Calendar::MeetingCache.create!(user: @user,
+      ooo_intervals: [ [ "2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z" ] ])
+    stub_request(:get, %r{\A#{GOOGLE_EVENTS_URL}})
+      .to_return(status: 500, body: "boom")
+
+    assert_equal :error, Calendar::MeetingRefresh.refresh(@user.id)
+
+    cache = @user.reload.meeting_cache
+    assert_empty cache.ooo_intervals
+    assert_equal Calendar::MeetingRefresh::UNREACHABLE_MESSAGE, cache.fetch_error
   end
 
   private
