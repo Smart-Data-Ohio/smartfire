@@ -4,7 +4,7 @@ class MessagePin < ApplicationRecord
 
   class CapReachedError < StandardError; end
 
-  belongs_to :message, touch: true
+  belongs_to :message
   belongs_to :room
   belongs_to :pinner, class_name: "User"
 
@@ -89,7 +89,12 @@ class MessagePin < ApplicationRecord
   # (no room reorder); after_commit keeps a rolled-back pin from
   # stamping, like the broadcasts above.
   def stamp_room_pins_changed
-    room.update_columns(pins_changed_at: Time.current)
+    now = Time.current
+    room.update_columns(pins_changed_at: now)
+    # Bump the message's updated_at so reconnect refresh and the fragment
+    # cache see the pin change, without touching the room (a touch cascades
+    # to room.updated_at and would reorder the sidebar) or running callbacks.
+    Message.where(id: message_id).update_all(updated_at: now)
   end
 
   # A quiet one-line system note in the channel: rendered as a compact

@@ -76,6 +76,17 @@ class MessagePinTest < ActiveSupport::TestCase
     end
   end
 
+  test "unpinning stamps the message for refresh without reordering the room" do
+    pin = MessagePin.pin!(message: @message, pinner: @pinner)
+    room_updated_at = @room.reload.updated_at
+
+    travel 1.minute do
+      pin.unpin!
+      assert_equal room_updated_at, @room.reload.updated_at
+      assert_in_delta Time.current, @message.reload.updated_at, 1.second
+    end
+  end
+
   test "re-pinning returns the existing pin without posting another note" do
     pin = MessagePin.pin!(message: @message, pinner: @pinner)
 
