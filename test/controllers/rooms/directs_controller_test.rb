@@ -272,6 +272,49 @@ class Rooms::DirectsControllerTest < ActionDispatch::IntegrationTest
     assert rooms(:david_and_kevin).reload.persisted?
   end
 
+  test "a member cannot delete a group DM" do
+    room = create_group_dm!([ users(:david), users(:jason), users(:kevin) ])
+
+    sign_in :kevin
+    delete rooms_direct_url(room)
+
+    assert_response :forbidden
+    assert_not room.reload.deleted?
+    assert_equal 3, room.memberships.count
+  end
+
+  test "an administrator can delete a group DM" do
+    room = create_group_dm!([ users(:david), users(:jason), users(:kevin) ])
+
+    assert_enqueued_with(job: Room::DestroyJob, args: [ room.id ]) do
+      delete rooms_direct_url(room)
+      assert_redirected_to root_url
+    end
+
+    assert_predicate room.reload, :deleted?
+  end
+
+  test "the group settings hide the delete button from non-administrators" do
+    room = create_group_dm!([ users(:david), users(:jason), users(:kevin) ])
+
+    sign_in :kevin
+    get edit_rooms_direct_path(room)
+    assert_response :success
+    assert_select "form.button_to[action='#{rooms_direct_url(room)}'] input[name='_method'][value='delete']", count: 0
+
+    sign_in :david
+    get edit_rooms_direct_path(room)
+    assert_response :success
+    assert_select "form.button_to[action='#{rooms_direct_url(room)}'] input[name='_method'][value='delete']", count: 1
+  end
+
+  test "one-to-one DM settings still offer deletion to members" do
+    sign_in :kevin
+    get edit_rooms_direct_path(rooms(:david_and_kevin))
+    assert_response :success
+    assert_select "form.button_to[action='#{rooms_direct_url(rooms(:david_and_kevin))}'] input[name='_method'][value='delete']", count: 1
+  end
+
   private
     def create_group_dm!(*members)
       members = members.flatten

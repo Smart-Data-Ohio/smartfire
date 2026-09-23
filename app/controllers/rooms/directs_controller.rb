@@ -1,5 +1,9 @@
 class Rooms::DirectsController < RoomsController
   before_action :set_room, only: %i[ edit update destroy leave add_members ]
+  # Re-declared after set_room so the guard sees @room: re-declaring moves
+  # the inherited filter behind the wider set_room above (see the sibling
+  # room controllers), which the no-op guard never needed.
+  before_action :ensure_can_administer, only: %i[ destroy ]
 
   def new
     @room = Rooms::Direct.new
@@ -76,10 +80,15 @@ class Rooms::DirectsController < RoomsController
       end
     end
 
-    # All users in a direct room can administer it. Only direct rooms, though: this
-    # relaxation is why room_scope below has to keep every other type out of reach.
+    # One-to-one DMs keep today's behaviour: any member can delete the room
+    # for everyone. Group DMs hold shared history, so only workspace
+    # administrators can delete them; members leave instead. Only direct
+    # rooms, though: this relaxation is why room_scope below has to keep
+    # every other type out of reach.
     def ensure_can_administer
-      true
+      return true unless @room&.group_capable?
+
+      head :forbidden unless Current.user.administrator?
     end
 
     def room_scope
