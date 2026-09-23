@@ -24,6 +24,17 @@ class NewSignInAlertTest < ActionDispatch::IntegrationTest
     assert parsed_cookies.signed[:device_id].present?
   end
 
+  test "the device cookie is httponly and same-site" do
+    post session_url, params: { email_address: "kevin@37signals.com", password: "secret123456" }
+
+    set_cookie = Array(response.headers["Set-Cookie"]).join("\n")
+    device_cookie = set_cookie.split("\n").find { |line| line.start_with?("device_id=") }
+
+    assert device_cookie.present?, "expected a device_id cookie, got: #{set_cookie}"
+    assert_match(/;\s*httponly/i, device_cookie)
+    assert_match(/;\s*samesite=lax/i, device_cookie)
+  end
+
   test "signing in again from the same device does not alert" do
     post session_url, params: { email_address: "kevin@37signals.com", password: "secret123456" }
 

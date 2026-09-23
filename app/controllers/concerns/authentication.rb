@@ -127,8 +127,16 @@ module Authentication
     # reuses the browser's id or mints one, so a sign-in from a browser the
     # account has never used is recognizable. The w4-two-factor branch's
     # remember-device cookie is a separate concern; keep the names apart.
+    # HttpOnly and SameSite=Lax, like the session token: only sign-in
+    # reads it, so scripts never need it and it must not ride
+    # cross-site requests (a stolen id would let an attacker reuse a
+    # known device and skip the new-device alert).
     def ensure_device_cookie
-      cookies.signed.permanent[:device_id] ||= SecureRandom.hex(16)
+      cookies.signed[:device_id] || begin
+        device_id = SecureRandom.hex(16)
+        cookies.signed.permanent[:device_id] = { value: device_id, httponly: true, same_site: :lax }
+        device_id
+      end
     end
 
     def resume_session(session)
