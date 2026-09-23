@@ -2,7 +2,9 @@
 
 Any chat room (direct and board rooms excluded) can have a secret forward-to address.
 Mail sent there posts in the room: from the matched member when the
-sender's address belongs to an active room member, otherwise from the
+sender's address belongs to an active room member *and* the relay
+reports SPF, DKIM or DMARC passing for the `From` domain (see
+[Sender verification](#sender-verification)), otherwise from the
 workspace **Email** bot with the sender named in the body.
 
 ## The address
@@ -71,3 +73,25 @@ with HTTP basic auth as user `actionmailbox`.
 
 Inbound mail is deduplicated by message id, and processing runs through
 the normal job backend, so a failed run retries like any other job.
+
+## Sender verification
+
+`From` is trivially spoofable, so a member address alone never decides
+who a message posts as. Mail posts as the matched member only when the
+relay's `Authentication-Results` header ([RFC 8601](https://www.rfc-editor.org/rfc/rfc8601.html))
+reports `pass` for `spf`, `dkim` or `dmarc` with a domain property
+(`header.d`, `header.from`, `header.i`, `smtp.mailfrom`, `smtp.helo`)
+matching the `From` domain. Anything else — no header, a failure, a
+pass for another domain, or more than one `Authentication-Results`
+field — posts as the **Email** bot with the sender shown.
+
+Trusted headers: only `Authentication-Results` as stamped by the
+configured relay is trusted. No other sender header (`Received-SPF`,
+`DKIM-Signature`, `X-Spam-*`) is read. The relay **must strip any
+incoming `Authentication-Results` headers** from internet mail before
+stamping its own; otherwise an attacker can inject a passing result
+and post as any member. (Multiple `Authentication-Results` fields fail
+closed to the bot, but stripping is still required: a single injected
+header on a relay that never stamps would verify.) If the relay stamps
+no results for a message, member mail from that message posts as the
+bot — degraded, but safe.

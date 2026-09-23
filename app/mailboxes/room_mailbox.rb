@@ -17,7 +17,7 @@ class RoomMailbox < ApplicationMailbox
     room.memberships.find_or_create_by!(user: creator) unless from_member?
     message = room.root_messages.new(creator:, markdown_source: composed_source)
     attach_first_file!(message)
-    return if message.markdown_source.blank? && !message.attachment.attached?
+    return if nothing_to_say? && !message.attachment.attached?
 
     message.save!
     message.process_attachment
@@ -40,8 +40,11 @@ class RoomMailbox < ApplicationMailbox
     end
 
     # A sender whose address belongs to an active member of the room
-    # posts as themselves; everyone else posts as the workspace Email
-    # bot with the sender named in the body.
+    # posts as themselves, but only when the relay's
+    # Authentication-Results show SPF, DKIM or DMARC passing for the
+    # From domain; everyone else — including a spoofed member From with
+    # no pass — posts as the workspace Email bot with the sender named
+    # in the body.
     def creator
       @creator ||= member_sender || email_bot
     end
@@ -54,8 +57,51 @@ class RoomMailbox < ApplicationMailbox
       @member_sender ||= begin
         address = sender_address
         sender = address && User.active.without_bots.where("LOWER(email_address) = ?", address.downcase).first
-        sender if sender && room.memberships.exists?(user_id: sender.id)
+        sender if sender && room.memberships.exists?(user_id: sender.id) && authenticated_sender?(address)
       end
+    end
+
+    # True when the relay reports SPF, DKIM or DMARC passing for the
+    # From domain in Authentication-Results (RFC 8601, stamped by the
+    # relay at receive time):
+    # https://www.rfc-editor.org/rfc/rfc8601.html
+    #
+    # The relay must strip any incoming Authentication-Results before
+    # stamping its own (see docs/email-to-room.md); more than one
+    # header field means it did not, so nothing verifies. A pass only
+    # counts when the method's domain property (header.d, header.from,
+    # header.i, smtp.mailfrom, smtp.helo) matches the From domain.
+    def authenticated_sender?(address)
+      domain = address.to_s.split("@").last.to_s.downcase
+      return false if domain.blank?
+
+      results = authentication_results
+      return false unless results.one?
+
+      authentication_passed_for?(results.first, domain)
+    end
+
+    def authentication_results
+      mail.header.fields
+        .select { |field| field.name.casecmp?("Authentication-Results") }
+        .map { |field| field.value.to_s }
+    end
+
+    def authentication_passed_for?(results, domain)
+      clauses = results.split(";").map(&:strip)
+      clauses.shift # leading authserv-id carries no result
+      clauses.any? do |clause|
+        method, rest = clause.split("=", 2).map { |part| part.to_s.strip.downcase }
+        next false unless method.in?(%w[ spf dkim dmarc ])
+        next false unless rest.to_s.split(/[\s(]/, 2).first == "pass"
+
+        clause_domains(clause).include?(domain)
+      end
+    end
+
+    def clause_domains(clause)
+      clause.scan(/(?:header\.d|header\.from|header\.i|smtp\.mailfrom|smtp\.helo)=([^\s;()]+)/i)
+        .flatten.map { |value| value.downcase.sub(/\A@/, "").split("@").last }
     end
 
     def email_bot
@@ -73,6 +119,13 @@ class RoomMailbox < ApplicationMailbox
       parts << body_text if body_text.present?
       parts << attachment_note if attachment_note.present?
       parts.join("\n\n").truncate(Message::Markdown::SOURCE_LIMIT)
+    end
+
+    # Empty mail posts nothing, even though the composed source would
+    # carry a "From ..." line for bot-posted mail: only the subject,
+    # body, and file notes count as something to say.
+    def nothing_to_say?
+      mail.subject.blank? && body_text.blank? && attachment_note.blank?
     end
 
     def sender_display

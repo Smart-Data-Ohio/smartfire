@@ -14,11 +14,11 @@ class RoomMailboxTest < ActionMailbox::TestCase
 
   test "mail from a member posts as that member" do
     assert_difference -> { @room.messages.count }, 1 do
-      receive_inbound_email_from_mail(
+      deliver_room_mail(
         from: "david@37signals.com",
-        to: room_address,
         subject: "Launch update",
-        body: "We ship Friday."
+        body: "We ship Friday.",
+        authentication_results: "mx.mail.test; dkim=pass header.d=37signals.com"
       )
     end
 
@@ -29,11 +29,51 @@ class RoomMailboxTest < ActionMailbox::TestCase
   end
 
   test "member matching is case-insensitive" do
-    receive_inbound_email_from_mail(
-      from: "David@37Signals.com", to: room_address, body: "Hello"
+    deliver_room_mail(
+      from: "David@37Signals.com", body: "Hello",
+      authentication_results: "mx.mail.test; dkim=pass header.d=37signals.com"
     )
 
     assert_equal users(:david), @room.messages.order(:created_at).last.creator
+  end
+
+  test "a member From without an authentication pass posts as the Email bot" do
+    deliver_room_mail(from: "david@37signals.com", body: "Totally from David.")
+
+    message = @room.messages.order(:created_at).last
+    assert_equal "Email", message.creator.name
+    assert_predicate message.creator, :bot?
+    assert_includes message.markdown_source, "david@37signals.com"
+  end
+
+  test "a member From with a dmarc pass posts as the member" do
+    deliver_room_mail(
+      from: "david@37signals.com", body: "Hello",
+      authentication_results: "mx.mail.test; dmarc=pass (p=REJECT) header.from=37signals.com"
+    )
+
+    assert_equal users(:david), @room.messages.order(:created_at).last.creator
+  end
+
+  test "a pass for another domain posts as the Email bot" do
+    deliver_room_mail(
+      from: "david@37signals.com", body: "Hello",
+      authentication_results: "mx.mail.test; dkim=pass header.d=evil.test"
+    )
+
+    message = @room.messages.order(:created_at).last
+    assert_equal "Email", message.creator.name
+    assert_includes message.markdown_source, "david@37signals.com"
+  end
+
+  test "multiple authentication results post as the Email bot" do
+    mail = Mail.new(from: "david@37signals.com", to: room_address, body: "Hello")
+    mail.header["Authentication-Results"] = "mx.mail.test; dkim=pass header.d=37signals.com"
+    mail.header["Authentication-Results"] = "attacker.test; dkim=pass header.d=37signals.com"
+    receive_inbound_email_from_source(mail.to_s)
+
+    assert_equal 2, mail.header.fields.count { |field| field.name.casecmp?("Authentication-Results") }
+    assert_equal "Email", @room.messages.order(:created_at).last.creator.name
   end
 
   test "mail from a non-member posts as the Email bot with the sender shown" do
@@ -175,5 +215,11 @@ class RoomMailboxTest < ActionMailbox::TestCase
   private
     def room_address
       "room-#{@token}@mail.test"
+    end
+
+    def deliver_room_mail(from:, body: "Hello", authentication_results: nil, **options)
+      mail = Mail.new({ from:, to: room_address, body:, **options })
+      mail.header["Authentication-Results"] = authentication_results if authentication_results
+      receive_inbound_email_from_source(mail.to_s)
     end
 end
