@@ -41,6 +41,9 @@
             <%= button_tag type: "button", class: "profile-card-name overflow-ellipsis", data: profile_card_trigger(user) do %>
               <strong><%= user.name %></strong>
             <% end %>
+            <% if @starred_ids.include?(user.id) %>
+              <span class="profile-card__badge" role="img" aria-label="Starred by you" title="Starred by you">★</span>
+            <% end %>
             <% if user.agent %>
               <span class="profile-card__badge">Agent</span>
             <% end %>

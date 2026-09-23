@@ -4,10 +4,13 @@ class UsersController < ApplicationController
   before_action :set_user, only: :show
   before_action :verify_join_code, only: %i[ new create ]
 
-  # People directory: every active member except yourself, with presence.
+  # People directory: every active member except yourself, with presence,
+  # starred people first.
   def index
-    @users = User.active.includes(:agent).with_attached_avatar.ordered.where.not(id: Current.user.id)
-    @online_ids = WorkspacePresenceLease.online_user_ids(@users.map(&:id)).to_set
+    users = User.active.includes(:agent).with_attached_avatar.ordered.where.not(id: Current.user.id).to_a
+    @starred_ids = Current.user.starred_ids_among(users.map(&:id))
+    @users = users.partition { |user| @starred_ids.include?(user.id) }.flatten
+    @online_ids = WorkspacePresenceLease.online_user_ids(users.map(&:id)).to_set
   end
 
   def new

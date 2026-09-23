@@ -198,6 +198,23 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/JZ/, @response.body)
   end
 
+  test "index lists starred people first with a star marker" do
+    sign_in :david
+    users(:david).user_stars.create!(starred_user: users(:kevin))
+
+    get users_url
+
+    assert_response :ok
+    rows = css_select(".people-directory__row").map do |row|
+      row.at_css("input[data-multi-select-target='checkbox']")["data-user-id"].to_i
+    end
+    assert_equal users(:kevin).id, rows.first
+    kevin_row = css_select(".people-directory__row").find do |row|
+      row.at_css("input[data-multi-select-target='checkbox']")["data-user-id"].to_i == users(:kevin).id
+    end
+    assert_equal "★", kevin_row.at_css("[aria-label='Starred by you']").text
+  end
+
   test "index requires sign-in" do
     get users_url
 
