@@ -386,6 +386,17 @@
   min-inline-size: 0;
 }
 
+/* A closed disclosure skips rendering its content, so transitions down
+   there never paint — but Chrome still creates them and strands their
+   finished promises, hanging any waiter (see settle_visual_transitions).
+   Keep transitions off until the disclosure opens. */
+.room-category__rename:not([open]) > :not(summary),
+.room-category__rename:not([open]) > :not(summary) *,
+.room-category__new:not([open]) > :not(summary),
+.room-category__new:not([open]) > :not(summary) * {
+  transition: none;
+}
+
 .room-category__new {
   margin-block-start: 0.5rem;
   padding-inline: 0.55rem;
