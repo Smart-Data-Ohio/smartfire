@@ -27,15 +27,11 @@
     background: url(cancel.svg) no-repeat center center;
     block-size: auto;
     content: "";
-    filter: invert(0%);
+    filter: var(--icon-filter, none);
     inline-size: var(--avatar-size, 5ch);
     inset: 0;
     max-inline-size: 100%;
     position: absolute;
-
-    @media (prefers-color-scheme: dark) {
-      filter: invert(100%);
-    }
   }
 }
 

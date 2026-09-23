@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_23_010031) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_025153) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -216,6 +216,16 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_010031) do
     t.index ["room_id", "last_activity_at"], name: "index_channel_threads_on_room_id_and_last_activity_at"
     t.index ["room_id", "work_status", "last_activity_at"], name: "index_channel_threads_on_room_and_work_status_and_activity"
     t.index ["work_owner_id"], name: "index_channel_threads_on_work_owner_id"
+  end
+
+  create_table "dnd_allowed_users", force: :cascade do |t|
+    t.integer "allowed_user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["allowed_user_id"], name: "index_dnd_allowed_users_on_allowed_user_id"
+    t.index ["user_id", "allowed_user_id"], name: "index_dnd_allowed_users_on_user_id_and_allowed_user_id", unique: true
+    t.index ["user_id"], name: "index_dnd_allowed_users_on_user_id"
   end
 
   create_table "drive_attachments", force: :cascade do |t|
@@ -485,6 +495,15 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_010031) do
     t.index ["user_id"], name: "index_huddle_grants_on_user_id"
   end
 
+  create_table "keyword_alerts", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "phrase", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["user_id", "phrase"], name: "index_keyword_alerts_on_user_id_and_phrase", unique: true
+    t.index ["user_id"], name: "index_keyword_alerts_on_user_id"
+  end
+
   create_table "memberships", force: :cascade do |t|
     t.datetime "connected_at"
     t.integer "connections", default: 0, null: false
@@ -503,6 +522,18 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_010031) do
     t.index ["user_id"], name: "index_memberships_on_user_id"
   end
 
+  create_table "message_pins", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "message_id", null: false
+    t.integer "pinner_id", null: false
+    t.integer "room_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id"], name: "index_message_pins_on_message_id", unique: true
+    t.index ["pinner_id"], name: "index_message_pins_on_pinner_id"
+    t.index ["room_id", "created_at"], name: "index_message_pins_on_room_id_and_created_at"
+    t.index ["room_id"], name: "index_message_pins_on_room_id"
+  end
+
   create_table "messages", force: :cascade do |t|
     t.string "client_message_id", null: false
     t.datetime "created_at", null: false
@@ -517,6 +548,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_010031) do
     t.datetime "reply_target_deleted_at"
     t.integer "reply_to_message_id"
     t.integer "room_id", null: false
+    t.boolean "system_note", default: false, null: false
     t.integer "thread_id"
     t.datetime "updated_at", null: false
     t.index ["creator_id"], name: "index_messages_on_creator_id"
@@ -548,8 +580,24 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_010031) do
     t.datetime "destroy_enqueued_at"
     t.string "icon_name"
     t.string "name"
+    t.datetime "pins_changed_at"
     t.string "type", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "saved_items", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "message_id", null: false
+    t.datetime "remind_at"
+    t.datetime "reminded_at"
+    t.string "status", default: "in_progress", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["message_id"], name: "index_saved_items_on_message_id"
+    t.index ["remind_at"], name: "index_saved_items_on_remind_at", where: "remind_at IS NOT NULL AND reminded_at IS NULL"
+    t.index ["user_id", "message_id"], name: "index_saved_items_on_user_id_and_message_id", unique: true
+    t.index ["user_id", "status"], name: "index_saved_items_on_user_id_and_status"
+    t.index ["user_id"], name: "index_saved_items_on_user_id"
   end
 
   create_table "searches", force: :cascade do |t|
@@ -645,6 +693,10 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_010031) do
     t.string "bot_token"
     t.string "bot_token_digest"
     t.datetime "created_at", null: false
+    t.string "custom_status_emoji"
+    t.datetime "custom_status_expires_at"
+    t.string "custom_status_text"
+    t.boolean "dnd_enabled", default: false, null: false
     t.string "email_address"
     t.datetime "email_self_changed_at"
     t.string "github_login"
@@ -653,8 +705,15 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_010031) do
     t.json "inbox_preferences", default: {}
     t.string "name", null: false
     t.string "password_digest"
+    t.string "presence_setting", default: "auto", null: false
+    t.boolean "quiet_hours_enabled", default: false, null: false
+    t.integer "quiet_hours_end_minute"
+    t.integer "quiet_hours_start_minute"
     t.integer "role", default: 0, null: false
     t.integer "status", default: 0, null: false
+    t.string "theme", default: "system", null: false
+    t.string "time_zone"
+    t.boolean "time_zone_explicit", default: false, null: false
     t.datetime "updated_at", null: false
     t.index "LOWER(github_login)", name: "index_users_on_lower_github_login", unique: true, where: "github_login IS NOT NULL"
     t.index ["bot_token"], name: "index_users_on_bot_token", unique: true
@@ -723,6 +782,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_010031) do
     t.string "connection_id", null: false
     t.datetime "created_at", null: false
     t.datetime "expires_at", null: false
+    t.datetime "last_active_at"
     t.integer "session_id", null: false
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
@@ -741,6 +801,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_010031) do
   add_foreign_key "channel_threads", "rooms"
   add_foreign_key "channel_threads", "users", column: "creator_id"
   add_foreign_key "channel_threads", "users", column: "work_owner_id", on_delete: :nullify
+  add_foreign_key "dnd_allowed_users", "users"
+  add_foreign_key "dnd_allowed_users", "users", column: "allowed_user_id"
   add_foreign_key "drive_attachments", "messages"
   add_foreign_key "event_calendar_entries", "events"
   add_foreign_key "event_calendar_entries", "users"
@@ -763,12 +825,18 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_010031) do
   add_foreign_key "github_repository_subscriptions", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "google_accounts", "users"
   add_foreign_key "google_identities", "users"
+  add_foreign_key "keyword_alerts", "users"
+  add_foreign_key "message_pins", "messages"
+  add_foreign_key "message_pins", "rooms"
+  add_foreign_key "message_pins", "users", column: "pinner_id"
   add_foreign_key "messages", "channel_threads", column: "thread_id", on_delete: :cascade
   add_foreign_key "messages", "messages", column: "forwarded_from_message_id", on_delete: :nullify
   add_foreign_key "messages", "messages", column: "reply_to_message_id", on_delete: :nullify
   add_foreign_key "messages", "rooms"
   add_foreign_key "messages", "users", column: "creator_id"
   add_foreign_key "push_subscriptions", "users"
+  add_foreign_key "saved_items", "messages"
+  add_foreign_key "saved_items", "users"
   add_foreign_key "searches", "users"
   add_foreign_key "sessions", "users"
   add_foreign_key "thread_memberships", "channel_threads", column: "thread_id", on_delete: :cascade

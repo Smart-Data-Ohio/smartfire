@@ -1,5 +1,5 @@
 class User < ApplicationRecord
-  include Avatar, Bannable, Bot, Mentionable, Role, Transferable
+  include Avatar, Bannable, Bot, Mentionable, Role, StatusSettings, Transferable
 
   has_many :memberships, dependent: :delete_all
   # Listings, room scopes, and reachable messages all read through here, so
@@ -21,6 +21,12 @@ class User < ApplicationRecord
   has_many :event_calendar_entries, dependent: :destroy
 
   has_many :boosts, dependent: :destroy, foreign_key: :booster_id
+  # Destroyed (not deleted) so each removed pin broadcasts its badge,
+  # count, and panel updates through the pin commit callbacks. The
+  # message cascade above runs first, so pins on the user's own messages
+  # are already gone when this association loads: no pin broadcasts twice.
+  has_many :message_pins, dependent: :destroy, foreign_key: :pinner_id
+  has_many :saved_items, dependent: :delete_all
   has_many :searches, dependent: :delete_all
 
   has_many :sessions, dependent: :destroy

@@ -6,6 +6,8 @@ module Message::BotWebhookFanout
   # row only. The hop limit still applies: a chain that reached it stops
   # here instead of looping through a legacy bot.
   def self.deliver_for(message)
+    return if message.system_note?
+
     room = message.room
     bots = (room.direct? ? room.users.active_bots : message.mentionees.active_bots)
       .excluding(message.creator).where.missing(:agent)

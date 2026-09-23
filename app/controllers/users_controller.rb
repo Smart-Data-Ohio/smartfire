@@ -17,6 +17,7 @@ class UsersController < ApplicationController
   end
 
   def show
+    @dnd_allowed = Current.user ? Current.user.dnd_allowed_users.exists?(allowed_user_id: @user.id) : false
   end
 
   private

@@ -16,7 +16,7 @@ class MessagesController < ApplicationController
     @messages = find_paged_messages
 
     if @messages.any?
-      fresh_when @messages, etag: [ @messages, rendered_related_stamp(@messages) ]
+      fresh_when @messages, etag: [ @messages, rendered_related_stamp(@messages), rendered_pin_stamp(@messages) ]
       unless performed?
         Message.preload_rendering_details(@messages)
         Message::MentionPreloader.preload_for(@messages)
@@ -119,12 +119,14 @@ class MessagesController < ApplicationController
       @message = @room.root_messages.find(params[:id])
     end
 
+    # System notes are immutable timeline entries: nobody edits or deletes
+    # them, not even their actor or an administrator.
     def ensure_can_edit
-      head :forbidden unless Current.user == @message.creator
+      head :forbidden if @message.system_note? || Current.user != @message.creator
     end
 
     def ensure_can_delete
-      head :forbidden unless Current.user == @message.creator || Current.user.administrator?
+      head :forbidden if @message.system_note? || (Current.user != @message.creator && !Current.user.administrator?)
     end
 
 
@@ -169,6 +171,17 @@ class MessagesController < ApplicationController
         EventReference.where(message_id: message_ids).joins(:event).maximum("events.updated_at"),
         User.where(id: messages.map(&:creator_id)).maximum(:updated_at)
       ].compact.max&.utc&.to_fs(:usec)
+    end
+
+    # Pin state rides as its own etag element because pin and unpin never
+    # touch the message rows. A maximum over the pin rows cannot see an
+    # unpin (removing an older pin leaves the maximum unchanged), so the
+    # stamp digests the sorted [message_id, pin_id] pairs instead: any
+    # pin or unpin of the page's messages changes it. An aggregate query
+    # only, so a conditional GET still never loads bodies.
+    def rendered_pin_stamp(messages)
+      pairs = MessagePin.where(message_id: messages.map(&:id)).order(:message_id, :id).pluck(:message_id, :id)
+      Digest::SHA256.hexdigest(pairs.inspect)
     end
 
 
