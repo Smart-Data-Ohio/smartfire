@@ -172,6 +172,68 @@ class HuddleJoinNoticesTest < ApplicationSystemTestCase
     assert_no_selector ".huddle-join-pill", wait: 10
   end
 
+  test "the join banner drops each leaver and hides when empty" do
+    group = Rooms::Direct.create_for({ creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
+    david_grant = HuddleGrant.issue!(session: sessions(:david_safari),
+      membership: group.memberships.find_by!(user: users(:david)))
+    kevin_grant = HuddleGrant.issue!(session: second_session_for(users(:kevin)),
+      membership: group.memberships.find_by!(user: users(:kevin)))
+    ActivityItem.where(user: users(:jason), event_type: "huddle_started").update_all(event_type: "huddle_missed")
+
+    visit room_path(group)
+    wait_for_cable_connection
+    wait_for_join_notice_controller
+    assert_selector "##{dom_id(group, :list)}", wait: 10
+
+    notify_join_and_deliver(david_grant)
+    notify_join_and_deliver(kevin_grant)
+    assert_selector "#huddle-join-banner-slot .huddle-join-banner", text: "David and Kevin are in your huddle", wait: 10
+
+    assert kevin_grant.mark_out_of_call!
+    assert_selector "#huddle-join-banner-slot .huddle-join-banner", text: "David is in your huddle", wait: 10
+    within "##{dom_id(group, :list)}" do
+      assert_selector ".huddle-join-pill", text: "David is in your huddle", wait: 10
+    end
+
+    assert david_grant.mark_out_of_call!
+    assert_no_selector "#huddle-join-banner-slot .huddle-join-banner", wait: 10
+    assert_no_selector ".huddle-join-pill", wait: 10
+  end
+
+  test "the join banner reconciles its roster with presence refreshes" do
+    group = Rooms::Direct.create_for({ creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
+    david_grant = HuddleGrant.issue!(session: sessions(:david_safari),
+      membership: group.memberships.find_by!(user: users(:david)))
+    kevin_grant = HuddleGrant.issue!(session: second_session_for(users(:kevin)),
+      membership: group.memberships.find_by!(user: users(:kevin)))
+    ActivityItem.where(user: users(:jason), event_type: "huddle_started").update_all(event_type: "huddle_missed")
+
+    visit room_path(group)
+    wait_for_cable_connection
+    wait_for_join_notice_controller
+    assert_selector "##{dom_id(group, :list)}", wait: 10
+
+    notify_join_and_deliver(david_grant)
+    notify_join_and_deliver(kevin_grant)
+    assert_selector "#huddle-join-banner-slot .huddle-join-banner", text: "David and Kevin are in your huddle", wait: 10
+
+    participants_url = Rails.application.routes.url_helpers.participants_room_huddle_path(group)
+    page.execute_script(<<~JS, participants_url, users(:david).id)
+      window.dispatchEvent(new CustomEvent("huddle-participants:updated", {
+        detail: { url: arguments[0], participants: [ { id: arguments[1], name: "David" } ] }
+      }))
+    JS
+    assert_selector "#huddle-join-banner-slot .huddle-join-banner", text: "David is in your huddle", wait: 10
+
+    page.execute_script(<<~JS, participants_url)
+      window.dispatchEvent(new CustomEvent("huddle-participants:updated", {
+        detail: { url: arguments[0], participants: [] }
+      }))
+    JS
+    assert_no_selector "#huddle-join-banner-slot .huddle-join-banner", wait: 10
+    assert_no_selector ".huddle-join-pill", wait: 10
+  end
+
   test "the join banner clears when the huddle ends" do
     room = rooms(:david_and_jason)
     grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_david_and_jason))

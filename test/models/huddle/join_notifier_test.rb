@@ -348,14 +348,13 @@ class Huddle::JoinNotifierTest < ActiveSupport::TestCase
     })
   end
 
-  test "leaving tells out-of-call members nothing until the last one is out" do
+  test "leaving tells out-of-call DM members so their banner drops the leaver" do
     group = Rooms::Direct.create_for({ creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
     david_grant = issue_seen(group, users(:david), group.memberships.find_by!(user: users(:david)))
     issue_seen(group, users(:jason), group.memberships.find_by!(user: users(:jason)))
 
-    assert_broadcasts(notice_stream(users(:kevin)), 0) do
-      assert david_grant.mark_out_of_call!
-    end
+    assert david_grant.mark_out_of_call!
+
     assert_broadcast_on(notice_stream(users(:jason)), {
       huddleJoinNotice: {
         eventType: "huddle_left",
@@ -365,6 +364,26 @@ class Huddle::JoinNotifierTest < ActiveSupport::TestCase
         joinerName: "David"
       }
     })
+    assert_broadcast_on(notice_stream(users(:kevin)), {
+      huddleJoinNotice: {
+        eventType: "huddle_left",
+        roomId: group.id,
+        roomName: group.direct_display_name(for_user: users(:kevin)),
+        joinerId: users(:david).id,
+        joinerName: "David"
+      }
+    })
+  end
+
+  test "leaving a channel tells out-of-call members nothing" do
+    room = rooms(:watercooler)
+    Membership.create!(room: room, user: users(:kevin))
+    david_grant = issue_seen(room, users(:david), memberships(:david_watercooler))
+    issue_seen(room, users(:jason), memberships(:jason_watercooler))
+
+    assert_broadcasts(notice_stream(users(:kevin)), 0) do
+      assert david_grant.mark_out_of_call!
+    end
   end
 
   test "the last one out of a DM dismisses every other member's banner" do

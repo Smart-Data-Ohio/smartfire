@@ -115,6 +115,7 @@ export default class extends Controller {
       this.#joined(notice, roomId)
     } else if (notice.eventType === "huddle_left") {
       if (this.#inCall(roomId)) this.#scheduleLeaveToast(roomId, notice.joinerId, notice.joinerName)
+      this.#removeBannerJoiner(roomId, notice.joinerId, notice.joinerName)
     } else if (notice.eventType === "huddle_ended") {
       this.#dismissNotice(roomId)
     }
@@ -149,10 +150,20 @@ export default class extends Controller {
 
   // The presence poll is the backstop for quiet endings: a call that
   // expires without a leave report still empties the room, and the
-  // banner clears with it. A 404 removal clears too — the membership
-  // is gone, so there is nothing left to join.
+  // banner clears with it. A partial roster prunes joiners who are no
+  // longer in the call, so a missed leave notice still drops from the
+  // banner on the next refresh. A 404 removal clears too — the
+  // membership is gone, so there is nothing left to join.
   #participantsUpdated({ detail }) {
-    if (detail?.participants?.length === 0) this.#dismissNotice(roomIdFromParticipantsUrl(detail.url))
+    const roomId = roomIdFromParticipantsUrl(detail?.url)
+    const participants = detail?.participants
+    if (!roomId || !Array.isArray(participants)) return
+
+    if (participants.length === 0) {
+      this.#dismissNotice(roomId)
+    } else {
+      this.#reconcileBannerRoster(roomId, participants)
+    }
   }
 
   #participantsRemoved({ detail }) {
@@ -165,12 +176,47 @@ export default class extends Controller {
     }
     stored.roomName = notice.roomName || stored.roomName
     stored.roomPath = notice.roomPath || stored.roomPath
-    if (notice.joinerName && !stored.joiners.includes(notice.joinerName)) {
-      stored.joiners.push(notice.joinerName)
+    const joinerId = Number(notice.joinerId) || null
+    if (notice.joinerName && !stored.joiners.some((joiner) => joinerMatches(joiner, joinerId, notice.joinerName))) {
+      stored.joiners.push({ id: joinerId, name: notice.joinerName })
     }
     this.notices.set(roomId, stored)
     this.#renderRoomBanner()
     this.#syncSidebarPills()
+  }
+
+  // A leave drops its joiner from the banner roster while the others
+  // remain; the last name out hides the banner and its sidebar pill.
+  #removeBannerJoiner(roomId, joinerId, joinerName) {
+    const stored = this.notices.get(roomId)
+    if (!stored) return
+    const id = Number(joinerId) || null
+
+    stored.joiners = stored.joiners.filter((joiner) => !joinerMatches(joiner, id, joinerName))
+    if (stored.joiners.length === 0) {
+      this.#dismissNotice(roomId)
+    } else {
+      this.#renderRoomBanner()
+      this.#syncSidebarPills()
+    }
+  }
+
+  // Presence is authoritative: keep only roster names still listed in
+  // the call, and hide the banner when none remain.
+  #reconcileBannerRoster(roomId, participants) {
+    const stored = this.notices.get(roomId)
+    if (!stored) return
+    const presentIds = new Set(participants.map((participant) => Number(participant.id)).filter(Boolean))
+    const presentNames = new Set(participants.map((participant) => participant.name))
+
+    stored.joiners = stored.joiners.filter((joiner) =>
+      joiner.id ? presentIds.has(joiner.id) : presentNames.has(joiner.name))
+    if (stored.joiners.length === 0) {
+      this.#dismissNotice(roomId)
+    } else {
+      this.#renderRoomBanner()
+      this.#syncSidebarPills()
+    }
   }
 
   #dismissNotice(roomId) {
@@ -218,7 +264,7 @@ export default class extends Controller {
 
     const text = document.createElement("span")
     text.className = "huddle-join-banner__text overflow-ellipsis"
-    text.textContent = bannerText(notice.joiners)
+    text.textContent = bannerText(joinerNames(notice.joiners))
     banner.append(text)
 
     banner.append(this.#buildJoinButton(roomId, notice))
@@ -243,7 +289,7 @@ export default class extends Controller {
 
     const text = document.createElement("span")
     text.className = "huddle-join-pill__text overflow-ellipsis"
-    text.textContent = bannerText(notice.joiners)
+    text.textContent = bannerText(joinerNames(notice.joiners))
     pill.append(text)
 
     pill.append(this.#buildJoinButton(roomId, notice))
@@ -362,6 +408,15 @@ function leaveKey(roomId, joinerId) {
 function roomIdFromParticipantsUrl(url) {
   const match = String(url || "").match(PARTICIPANTS_URL_ROOM_ID)
   return match ? Number(match[1]) : 0
+}
+
+function joinerNames(joiners) {
+  return joiners.map((joiner) => joiner.name)
+}
+
+function joinerMatches(joiner, id, name) {
+  if (id) return joiner.id === id
+  return joiner.name === name
 }
 
 function bannerText(joiners) {

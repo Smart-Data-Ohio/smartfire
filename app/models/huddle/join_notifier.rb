@@ -50,9 +50,11 @@ class Huddle::JoinNotifier
 
     # Tells the members still in the call that the grant's user left it.
     # Runs inline from the leave report and revocation paths, in every
-    # room kind, in-call viewers only. When the last participant drops
-    # out of a DM call, the room's other members also get a dismissal so
-    # their join banners clear immediately instead of waiting out the
+    # room kind, in-call viewers only. In DMs the members outside the
+    # call hear about the leave too, so their join banners drop the
+    # leaver while the others remain. When the last participant drops
+    # out of a DM call, the room's other members get a dismissal instead
+    # so their join banners clear immediately instead of waiting out the
     # presence poll.
     def notify_leave(grant)
       room = Room.alive.find_by(id: grant.room_id)
@@ -66,6 +68,7 @@ class Huddle::JoinNotifier
         User.active.without_bots.where(id: in_call_ids).find_each do |viewer|
           broadcast_leave(room:, leaver:, viewer:, members:)
         end
+        broadcast_leave_to_outsiders(room:, leaver:, in_call_ids:, members:) if room.direct?
       elsif room.direct?
         dismiss_outside_call(room:, leaver:)
       end
@@ -130,6 +133,18 @@ class Huddle::JoinNotifier
             joinerName: leaver.name
           }
         }
+      end
+
+      # A leave while others remain in the call still reaches the DM's
+      # outsiders: their banners drop the leaver from the roster instead
+      # of listing someone already gone.
+      def broadcast_leave_to_outsiders(room:, leaver:, in_call_ids:, members:)
+        room.memberships.includes(:user).where.not(user_id: [ leaver.id, *in_call_ids ]).find_each do |membership|
+          viewer = membership.user
+          next unless active_human?(viewer)
+
+          broadcast_leave(room:, leaver:, viewer:, members:)
+        end
       end
 
       # The last one out clears every other member's banner: only outsiders
