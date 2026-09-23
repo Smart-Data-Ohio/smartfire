@@ -31,6 +31,15 @@ module Calendar
       broadcast_flips!(flips) if flips.any?
     end
 
+    # Re-renders badges for members whose meeting state changed outside
+    # the sweep (opting out, disconnecting): open profile pages and
+    # cards subscribed to [user, :status] clear the label at once
+    # instead of keeping it until a navigation.
+    def self.broadcast_badges_for(users)
+      users = Array(users)
+      broadcast_flips!(users) if users.any?
+    end
+
     def self.broadcast_flips!(users)
       lease_states = WorkspacePresenceLease.presence_by_user_id(users.map(&:id))
 

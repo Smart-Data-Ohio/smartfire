@@ -31,14 +31,17 @@ class Users::StatusesController < ApplicationController
 
     # Opting into meeting status fetches the first busy intervals right
     # away instead of waiting for the 15-minute sweep; opting out drops
-    # the cached intervals immediately.
+    # the cached intervals and clears the label on open profile pages
+    # and cards immediately. The opt-in flag is already off, so the
+    # re-rendered badge reads through the cleared state without a reload.
     def reconcile_meeting_status
       return unless @user.saved_change_to_meeting_status_enabled?
 
       if @user.meeting_status_enabled?
         Calendar::MeetingRefreshJob.perform_later(@user.id)
-      else
-        @user.meeting_cache&.destroy!
+      elsif @user.meeting_cache
+        @user.meeting_cache.destroy!
+        Calendar::MeetingDispatcher.broadcast_badges_for(@user)
       end
     end
 

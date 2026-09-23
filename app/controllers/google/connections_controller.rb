@@ -63,7 +63,14 @@ module Google
         snapshot = account.cleanup_snapshot
         account_id = account.id
         Current.user.event_calendar_entries.delete_all
-        Current.user.meeting_cache&.destroy!
+        if Current.user.meeting_cache
+          Current.user.meeting_cache.destroy!
+          # The opt-in flag stays on for a later reconnect, so reset the
+          # association: the cleared-badge broadcast below must read the
+          # dropped cache, not the just-destroyed row.
+          Current.user.association(:meeting_cache).reset
+          Calendar::MeetingDispatcher.broadcast_badges_for(Current.user)
+        end
         # Meet links were minted through this connection: clear them so
         # event cards stop advertising links the app no longer manages.
         # The request flag stays set (and update_all fires no callbacks),

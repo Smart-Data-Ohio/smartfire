@@ -69,6 +69,28 @@ class Users::StatusesControllerTest < ActionDispatch::IntegrationTest
     assert_nil users(:david).meeting_cache
   end
 
+  test "opting out while in a meeting broadcasts the cleared badge" do
+    users(:david).update!(meeting_status_enabled: true)
+    Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current,
+      busy_intervals: [ [ 5.minutes.ago.iso8601, 55.minutes.from_now.iso8601 ] ])
+
+    streams = capture_turbo_stream_broadcasts([ users(:david), :status ]) do
+      patch user_status_url, params: { user: { meeting_status_enabled: "0" } }
+    end
+
+    assert_redirected_to user_profile_url
+    assert_equal 1, streams.size
+    assert_not_includes streams.first.to_html, "In a meeting"
+  end
+
+  test "opting out without cached intervals broadcasts nothing" do
+    users(:david).update!(meeting_status_enabled: true)
+
+    assert_no_turbo_stream_broadcasts [ users(:david), :status ] do
+      patch user_status_url, params: { user: { meeting_status_enabled: "0" } }
+    end
+  end
+
   test "saving other status settings leaves meeting refreshes alone" do
     assert_no_enqueued_jobs only: Calendar::MeetingRefreshJob do
       patch user_status_url, params: { user: { presence_setting: "dnd" } }

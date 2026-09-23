@@ -77,7 +77,9 @@ broadcasts nothing. The broadcast replaces the member's status badge
 live on open profile pages and profile cards (the `[user, :status]`
 Turbo stream). The member panel and DM dots poll the same reader every
 12 and 60 seconds, so they converge on their own cadence with no
-broadcast. Cached rows and fragments hold no per-viewer data: the
+broadcast. Opting out or disconnecting while a label shows
+broadcasts the cleared badge immediately instead of waiting for the
+next sweep. Cached rows and fragments hold no per-viewer data: the
 label is the same string for every viewer.
 
 ## Quiet-during-meetings
