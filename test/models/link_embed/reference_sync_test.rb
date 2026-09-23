@@ -59,6 +59,15 @@ class LinkEmbed::ReferenceSyncTest < ActiveSupport::TestCase
     assert_equal [ "https://example.com/kept" ], message.reload.link_embeds.map(&:normalized_url)
   end
 
+  test "a sentence-final LinkedIn link syncs one reference" do
+    message = @room.messages.create!(
+      creator: @creator, client_message_id: "embed-sync-linkedin-period",
+      markdown_source: "see https://www.linkedin.com/posts/slug-55. Next sentence"
+    )
+
+    assert_equal [ "https://www.linkedin.com/posts/slug-55" ], message.reload.link_embeds.map(&:normalized_url)
+  end
+
   test "caps generic URLs at three but syncs LinkedIn URLs separately" do
     message = @room.messages.create!(
       creator: @creator, client_message_id: "embed-sync-caps",

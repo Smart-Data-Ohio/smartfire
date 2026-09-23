@@ -78,9 +78,26 @@ class Linkedin::PostUrlTest < ActiveSupport::TestCase
     assert_equal "urn:li:activity:66", urn.urn
   end
 
+  test "trailing sentence punctuation is not part of the slug or URN" do
+    assert_equal [ "https://www.linkedin.com/posts/abc123" ],
+      Linkedin::PostUrl.extract("see https://www.linkedin.com/posts/abc123. Next").map(&:url)
+    assert_equal [ "urn:li:activity:66" ],
+      Linkedin::PostUrl.extract("see https://www.linkedin.com/feed/update/urn:li:activity:66!").map(&:urn)
+  end
+
+  test "a sentence-final link extracts once" do
+    html = "<p>see " \
+      "<a href=\"https://www.linkedin.com/posts/abc123\">https://www.linkedin.com/posts/abc123</a>. Next</p>"
+
+    assert_equal [ "https://www.linkedin.com/posts/abc123" ],
+      Linkedin::PostUrl.extract(Linkedin::PostUrl.non_code_text(html)).map(&:url)
+  end
+
   test "embed_url_for builds the official player URL only for URN links" do
     assert_equal "https://www.linkedin.com/embed/feed/update/urn:li:share:12345",
       Linkedin::PostUrl.embed_url_for("https://www.linkedin.com/feed/update/urn:li:share:12345")
+    assert_equal "https://www.linkedin.com/embed/feed/update/urn:li:activity:66",
+      Linkedin::PostUrl.embed_url_for("https://www.linkedin.com/feed/update/urn:li:activity:66.")
     assert_nil Linkedin::PostUrl.embed_url_for("https://www.linkedin.com/posts/jane-doe_launch-day-123")
     assert_nil Linkedin::PostUrl.embed_url_for("https://example.com/")
   end

@@ -42,11 +42,12 @@ module Linkedin
         keys = Set.new
         text.to_s.scan(PATTERN) do
           match = Regexp.last_match
-          key = dedupe_key(match[0])
+          url = clean_url(match[0])
+          key = dedupe_key(url)
           next if keys.include?(key)
 
           keys << key
-          references << Reference.new(match[0], match[:urn])
+          references << Reference.new(url, extract_urn(url))
           break if references.size >= MAX_PER_MESSAGE
         end
         references
@@ -83,7 +84,17 @@ module Linkedin
         end
 
         def extract_urn(url)
-          url.to_s.match(PATTERN)&.[](:urn)
+          clean_url(url).match(PATTERN)&.[](:urn)
+        end
+
+        # A URL at the end of a sentence picks up the period. Strip the
+        # trailing characters that never end a post URL rather than
+        # syncing a dotted duplicate: the flattened text glues the period
+        # onto the link while the appended href stays clean, so one pasted
+        # link would otherwise extract twice. Mirrors
+        # LinkEmbed::UrlClassifier.clean_candidate.
+        def clean_url(url)
+          url.to_s.sub(/[.,;:!?}]+\z/, "")
         end
     end
   end
