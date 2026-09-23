@@ -1,9 +1,9 @@
 class Accounts::BotsController < ApplicationController
   before_action :ensure_can_administer, only: %i[ index new create destroy ]
-  before_action :set_bot, only: %i[ edit update destroy ]
-  before_action :ensure_can_manage_bot, only: %i[ edit update ]
+  before_action :set_bot, only: %i[ edit update destroy kill_switch ]
+  before_action :ensure_can_manage_bot, only: %i[ edit update kill_switch ]
   before_action :ensure_can_change_webhook, only: :update
-  before_action :set_agent, only: %i[ edit update ]
+  before_action :set_agent, only: %i[ edit update kill_switch ]
 
   def index
     @bots = User.active_bots.ordered.includes(agent: :owner)
@@ -55,6 +55,21 @@ class Accounts::BotsController < ApplicationController
     redirect_to account_bots_url
   end
 
+  # POST /account/bots/:id/kill_switch. Suspends the agent, cancels its
+  # pending approvals, and records `agent.kill_switch`. Administrators
+  # and the agent's owner.
+  def kill_switch
+    unless @agent
+      head :not_found
+      return
+    end
+
+    cancelled = @agent.kill_switch!
+
+    redirect_to edit_account_bot_url(@bot),
+      notice: "Agent suspended; #{cancelled} #{"approval".pluralize(cancelled)} cancelled."
+  end
+
   private
     def set_bot
       @bot = User.active_bots.find(params[:id])
@@ -96,7 +111,8 @@ class Accounts::BotsController < ApplicationController
       end
 
       bot_changes = @bot.previous_changes.slice("name", "icon_name")
-      agent_changes = @agent ? @agent.previous_changes.slice("provider", "runtime", "description") : {}
+      agent_changes = @agent ? @agent.previous_changes.slice("provider", "runtime", "description",
+        "daily_message_cap", "daily_board_post_cap", "daily_external_action_cap") : {}
       if bot_changes.present? || agent_changes.present?
         pairs = bot_changes.merge(agent_changes).transform_values { |change| AuditLog.pair(*change) }
         AuditLog.record!(action: "agent.update", target: @agent || @bot, changes: pairs)
@@ -110,6 +126,6 @@ class Accounts::BotsController < ApplicationController
     end
 
     def agent_params
-      params.permit(agent: %i[ provider runtime description ])[:agent] || {}
+      params.permit(agent: %i[ provider runtime description daily_message_cap daily_board_post_cap daily_external_action_cap ])[:agent] || {}
     end
 end

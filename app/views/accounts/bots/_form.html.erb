@@ -67,6 +67,24 @@
         <%= agent_fields.text_area :description, class: "input", placeholder: "What this agent does (max 500 characters)", rows: 3, maxlength: 500 %>
       </label>
     </div>
+
+    <fieldset>
+      <legend class="txt-small">Daily budgets (blank means unlimited)</legend>
+      <div class="flex align-center gap">
+        <label class="flex-item-grow">
+          <span class="txt-small">Messages per day</span>
+          <%= agent_fields.number_field :daily_message_cap, class: "input", min: 1, step: 1, placeholder: "Unlimited" %>
+        </label>
+        <label class="flex-item-grow">
+          <span class="txt-small">Board posts per day</span>
+          <%= agent_fields.number_field :daily_board_post_cap, class: "input", min: 1, step: 1, placeholder: "Unlimited" %>
+        </label>
+        <label class="flex-item-grow">
+          <span class="txt-small">External actions per day</span>
+          <%= agent_fields.number_field :daily_external_action_cap, class: "input", min: 1, step: 1, placeholder: "Unlimited" %>
+        </label>
+      </div>
+    </fieldset>
   <% end %>
 <% end %>
 

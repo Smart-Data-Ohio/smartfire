@@ -1,0 +1,5 @@
+<%# Thread-attached agent steps. The wrapper id matches
+    Agents::Steps.broadcast_parent, so step changes replace it live. %>
+<div id="<%= dom_id(thread, :agent_steps) %>">
+  <%= render "agent_steps/steps", steps: thread.agent_steps.to_a %>
+</div>

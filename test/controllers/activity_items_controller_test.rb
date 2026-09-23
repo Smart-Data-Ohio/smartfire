@@ -412,6 +412,9 @@ class ActivityItemsControllerTest < ActionDispatch::IntegrationTest
       approval = AgentApproval.create!(agent: agents(:bender_agent), room: @room, action: "deploy", summary: "Ship it")
       ActivityItem.find_by!(user:, source: approval)
 
+      notice = AgentBudgetNotice.create!(agent: agents(:bender_agent), cap: "messages", day: Date.current)
+      ActivityItem.create!(user:, source: notice, event_type: "agent_budget_exceeded")
+
       travel_to(3.minutes.ago) { start_dm_huddle_for(user, rooms(:david_and_jason)) }.update!(event_type: "huddle_missed")
       start_dm_huddle_for(user, rooms(:david_and_kevin))
     end

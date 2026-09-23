@@ -21,7 +21,7 @@ history. There are no foreign keys from the log to users or targets.
 | GitHub | `github.account.connect` (personal token and GitHub App OAuth), `github.account.disconnect` (members), `agent.github.connect`, `agent.github.disconnect` (agents) |
 | Fizzy | `fizzy.account.connect`, `fizzy.account.disconnect` (members) |
 | Account | `account.join_code.reset`, `account.settings.change`, `account.custom_styles.change` |
-| Agents | `agent.create`, `agent.update`, `agent.suspend`, `agent.credential.create`, `agent.credential.revoke`, `agent.credential.reset`, `agent.grant.create`, `agent.grant.revoke`, `agent.webhook_url.change`, `agent.webhook_secret.reset`, `agent.approval.decide`, `agent.github_action.execute`, `agent.fizzy_action.execute` |
+| Agents | `agent.create`, `agent.update`, `agent.suspend`, `agent.credential.create`, `agent.credential.revoke`, `agent.credential.reset`, `agent.grant.create`, `agent.grant.revoke`, `agent.webhook_url.change`, `agent.webhook_secret.reset`, `agent.approval.decide`, `agent.github_action.execute`, `agent.fizzy_action.execute`, `agent.kill_switch` |
 | Rooms | `room.create`, `room.destroy`, `room.membership.change` |
 | Boards | `board.automation.change` (tag rules and SLA timers; only actual changes) |
 | Work | `work.handoff` (ownership transfers to another agent, with a summary excerpt) |

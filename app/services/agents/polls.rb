@@ -11,6 +11,12 @@ module Agents
       unless agent.can?(:post_messages, room)
         return ServiceResult.fail("Forbidden: agent lacks post_messages capability", status: :forbidden)
       end
+      # A poll is a message with ballots attached: it counts against the
+      # message budget like any other agent post, checked here (after
+      # grants, before validation) so REST and MCP hit the same wall.
+      if (denial = Budgets.check(agent, :messages))
+        return denial
+      end
 
       closes_at, failure = parse_closes_at(closes_at)
       return failure if failure

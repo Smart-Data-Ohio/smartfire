@@ -178,6 +178,14 @@ class ScheduledMessage::DispatcherTest < ActiveSupport::TestCase
     assert stranded.reload.dropped?
   end
 
+  test "dispatched messages never start a stream" do
+    scheduled = schedule_due!(markdown_source: "Morning!")
+
+    ScheduledMessage::Dispatcher.dispatch_due!
+
+    assert_not_predicate scheduled.reload.sent_message, :streaming?
+  end
+
   private
     def schedule!(**attributes)
       ScheduledMessage.create!(user: @user, room: @room, **attributes)

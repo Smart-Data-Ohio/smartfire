@@ -68,8 +68,10 @@ stale posts, and later sweeps that day are silent no-ops. `Done` posts
 never appear, and boards with no stale posts post nothing. The digest
 goes out as one quiet system note (`messages.system_note`) — never a
 normal message — so it renders without unread, push, agent delivery,
-inbox, or search noise. The latest digest also renders on the board
-page under the header. Titles and names are escaped as plain text.
+inbox, or search noise. The note is written final rather than
+streamed, so the streaming-messages sweep never touches it. The
+latest digest also renders on the board page under the header.
+Titles and names are escaped as plain text.
 
 ## Running and idempotency
 

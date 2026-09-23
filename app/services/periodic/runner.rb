@@ -9,7 +9,8 @@ module Periodic
   # live here so production needs no extra long-running process for any
   # of them. Add a sweeper by appending
   # to the task list below: a name, an interval in seconds, and an
-  # idempotent callable.
+  # idempotent callable. The streaming messages sweep finalizes agent
+  # streams idle for 10 minutes.
   class Runner
     Task = Data.define(:name, :interval, :run)
 
@@ -19,6 +20,7 @@ module Periodic
     PRESENCE_SWEEP_INTERVAL = 1.minute
     BOARD_SLA_SWEEP_INTERVAL = 5.minutes
     BOARD_DIGEST_SWEEP_INTERVAL = 1.hour
+    STREAM_SWEEP_INTERVAL = 30.seconds
 
     def initialize(reminders_interval: 30, retention_interval: 24.hours.to_i, logger: Rails.logger)
       @tasks = [
@@ -35,7 +37,8 @@ module Periodic
         Task.new("retention prune", retention_interval, -> { Retention::PruneJob.perform_later }),
         Task.new("presence leases", PRESENCE_SWEEP_INTERVAL, -> { WorkspacePresenceLease.prune }),
         Task.new("board sla nudges", BOARD_SLA_SWEEP_INTERVAL, -> { BoardAutomations::SlaDispatcher.dispatch_due! }),
-        Task.new("board stale digests", BOARD_DIGEST_SWEEP_INTERVAL, -> { BoardAutomations::DigestDispatcher.dispatch_due! })
+        Task.new("board stale digests", BOARD_DIGEST_SWEEP_INTERVAL, -> { BoardAutomations::DigestDispatcher.dispatch_due! }),
+        Task.new("streaming messages", STREAM_SWEEP_INTERVAL, -> { Message.finalize_overdue_streams! })
       ]
       @last_run = {}
       @logger = logger

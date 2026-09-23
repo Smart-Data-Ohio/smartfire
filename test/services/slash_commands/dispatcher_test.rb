@@ -241,6 +241,13 @@ class SlashCommands::DispatcherTest < ActiveSupport::TestCase
     assert_equal "tada", @room.messages.ordered.last.sound.name
   end
 
+  test "slash posts never start a stream" do
+    result = dispatch("/shrug ship it")
+
+    assert_equal :posted, result.kind
+    assert_not_predicate @room.messages.ordered.last, :streaming?
+  end
+
   test "unknown commands error with the available list" do
     result = dispatch("/frobnicate")
 
