@@ -605,6 +605,16 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_054816) do
     t.index ["room_id"], name: "index_message_pins_on_room_id"
   end
 
+  create_table "message_references", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "message_id", null: false
+    t.integer "referenced_message_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id", "referenced_message_id"], name: "index_message_references_on_message_and_referenced", unique: true
+    t.index ["message_id"], name: "index_message_references_on_message_id"
+    t.index ["referenced_message_id"], name: "index_message_references_on_referenced_message_id"
+  end
+
   create_table "messages", force: :cascade do |t|
     t.boolean "action", default: false, null: false
     t.string "client_message_id", null: false
@@ -971,6 +981,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_054816) do
   add_foreign_key "message_pins", "messages"
   add_foreign_key "message_pins", "rooms"
   add_foreign_key "message_pins", "users", column: "pinner_id"
+  add_foreign_key "message_references", "messages"
+  add_foreign_key "message_references", "messages", column: "referenced_message_id"
   add_foreign_key "messages", "channel_threads", column: "thread_id", on_delete: :cascade
   add_foreign_key "messages", "messages", column: "forwarded_from_message_id", on_delete: :nullify
   add_foreign_key "messages", "messages", column: "reply_to_message_id", on_delete: :nullify

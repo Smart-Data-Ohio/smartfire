@@ -53,7 +53,10 @@
     </figure>
   </div>
 
-  <% if @query.present? && @messages.empty? %>
+  <%= render "searches/filters" %>
+  <%= render "searches/sections" %>
+
+  <% if @query.present? && @messages.empty? && @board_posts.empty? && @work_threads.empty? && @events.empty? %>
     <p class="searches__empty">No messages match “<%= @query %>”.</p>
   <% end %>
 

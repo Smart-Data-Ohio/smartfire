@@ -170,6 +170,8 @@ Rails.application.routes.draw do
 
     scope module: "rooms" do
       resources :members, only: :index
+      resources :message_links, only: :show
+      resources :files, only: :index
       resources :pins, only: :index
       resources :slash_commands, only: :create
       resources :polls, only: %i[ create show ] do
