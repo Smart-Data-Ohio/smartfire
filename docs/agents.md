@@ -34,9 +34,9 @@ Agent endpoints throttle per credential per minute, so one busy
 credential cannot starve others sharing the agent:
 
 - event polling and acks: 120/minute each
-- approval reads: 120/minute
-- posting messages, requesting approvals, cancelling approvals, and
-  pull-request actions: 60/minute each
+- approval reads and context reads: 120/minute each
+- posting messages, requesting approvals, cancelling approvals, opening
+  DMs, and pull-request actions: 60/minute each
 - creating board posts: 30/minute
 
 Overflowing a bucket returns 429 with a `Retry-After` header in
@@ -51,15 +51,16 @@ These limits are separate from the
 `agent_grants` rows scope what an agent may do: `agent_id`, nullable `room_id`
 (`NULL` means workspace-wide), `capability`, `granted_by_id`, `revoked_at`, and
 a partial unique index over active rows. Capabilities are `read_messages`,
-`post_messages`, `react`, `manage_threads`, and `external_action`.
+`post_messages`, `react`, `manage_threads`, `external_action`, and `dm_anyone`.
 
 `read_messages`, `post_messages`, and `react` are enforced through
 the `AgentAuthorization` concern (`require_agent_capability`) on the bot
 message endpoints, the bot boost endpoints,
 `POST /rooms/:room_id/agents/messages` (JSON, Bearer-only), and the event
 polling endpoints below; `external_action` is enforced on the approval
-endpoints (see Approvals), and `manage_threads` is enforced on the agent
-work endpoints (see Work threads). Enforcement reads the database on every
+endpoints (see Approvals), `manage_threads` is enforced on the agent
+work endpoints (see Work threads), and `dm_anyone` is enforced on the
+agent DM endpoints (see Agent DMs). Enforcement reads the database on every
 request; nothing is cached.
 
 Room membership still applies on top of grants: every endpoint returns 404 for
@@ -693,3 +694,51 @@ curl -X PUT https://campfire.example.com/agents/work/7/result \
 `board_id` and `board_name` are null outside boards; `owner` is null
 when the thread has no owner. The `links` array keeps the shape
 documented under Link payloads.
+
+## Conversation context
+
+`GET /agents/context?message_id=` (or `?thread_id=`) loads what an agent
+needs to answer a trigger: the triggering message, its thread summary and
+root message (null for room messages), the last N messages of the same
+conversation ending at the trigger, and the room. `limit` defaults to 30
+and caps at 100. Window messages carry the standard message shape with
+`agent`/`human` flags on each creator, plus an `authors` rollup; `room`
+carries `id`, `name`, and `purpose` (null — rooms have no purpose field
+yet). One of `message_id` or `thread_id` is required, and when both are
+given the message must be in the thread. Requires `read_messages` in the
+room (403 without it, 404 outside the agent's memberships).
+
+```sh
+curl "https://smartfire.example.com/agents/context?message_id=42&limit=10" \
+  -H "Authorization: Bearer $AGENT_TOKEN"
+```
+
+## Agent DMs
+
+`POST /agents/dms` with `user_id` opens (or reuses) the 1:1 DM between
+the agent's bot user and a human, then posts the agent's message through
+the standard posting flow (same `message` object as the messages API, or
+top-level `body`/`markdown_source`). The target must be an active human,
+and the call is allowed only when the target is the agent's owner, has
+previously messaged the agent (a mention, reply, or DM in the agent's
+ledger), or the agent holds the `dm_anyone` capability anywhere — an
+administrator grants it from the bot's grant page. Anything else is 403.
+This gate replaces the `post_messages` check, since a DM room cannot
+carry grants before it exists. Throttled at 60/minute per credential.
+
+```sh
+curl -X POST https://smartfire.example.com/agents/dms \
+  -H "Authorization: Bearer $AGENT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"user_id":7,"message":{"markdown_source":"The deploy finished."}}'
+```
+
+## MCP server
+
+The same agent API is exposed as a Model Context Protocol server at
+`POST /agents/mcp` (stateless Streamable HTTP, spec revision 2026-07-28,
+with the legacy `initialize` handshake kept): sixteen tools from
+`list_rooms` and `read_messages` to `request_approval`, `get_context`,
+and `open_dm`, each delegating to the same service code, grants, and
+rate-limit buckets as its REST counterpart. See
+[Smartfire MCP server](agents-mcp.md) for client setup and the tool list.
