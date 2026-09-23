@@ -457,9 +457,9 @@ class VoiceChannelsTest < ApplicationSystemTestCase
       kevin_grant = HuddleGrant.issue!(session: users(:kevin).sessions.create!(user_agent: "Test"), membership: @room.memberships.find_by!(user: users(:kevin)))
       wait_for_issuance_broadcast(after: renders)
       record_seen_and_deliver(kevin_grant)
-      # The window is phone-sized here, where the stack may be capped or
-      # stepped aside; match regardless of visibility, since the count text
-      # only proves the sighting render landed.
+      # The window is phone-sized here, where the stack is capped at three
+      # avatars plus the count; match regardless of visibility, since the
+      # count text only proves the sighting render landed.
       within(".room-header__actions") { assert_selector ".voice-stack__count", text: "3", visible: :all, wait: BROADCAST_WAIT }
       renders = header_voice_renders
       jz_grant = HuddleGrant.issue!(session: users(:jz).sessions.create!(user_agent: "Test"), membership: @room.memberships.find_by!(user: users(:jz)))
@@ -472,11 +472,13 @@ class VoiceChannelsTest < ApplicationSystemTestCase
         assert_selector "img.voice-stack__avatar", count: 4, wait: BROADCAST_WAIT
       end
 
-      # The narrowest phones have no room for the stack at all: it steps
-      # aside instead of clipping, while wider phones cap it at three avatars
-      # plus the count.
+      # Even the narrowest phones keep the capped stack now that the
+      # overflow menu freed the room: three avatars plus the count.
       page.current_window.resize_to(320, 740)
-      assert_no_selector ".room-header__actions .voice-stack"
+      within(".room-header__actions") do
+        assert_selector "img.voice-stack__avatar", count: 3
+        assert_selector ".voice-stack__count", text: "4"
+      end
       assert_no_horizontal_overflow
       assert_header_inside_viewport
 

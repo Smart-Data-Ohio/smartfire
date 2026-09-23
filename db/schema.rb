@@ -968,6 +968,16 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_164100) do
     t.index ["post_id"], name: "index_twitter_posts_on_post_id", unique: true
   end
 
+  create_table "user_stars", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "starred_user_id", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["starred_user_id"], name: "index_user_stars_on_starred_user_id"
+    t.index ["user_id", "starred_user_id"], name: "index_user_stars_on_user_id_and_starred_user_id", unique: true
+    t.index ["user_id"], name: "index_user_stars_on_user_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.text "bio"
     t.string "bot_token"
@@ -1175,6 +1185,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_164100) do
   add_foreign_key "thread_memberships", "users", on_delete: :cascade
   add_foreign_key "twitter_post_references", "messages"
   add_foreign_key "twitter_post_references", "twitter_posts"
+  add_foreign_key "user_stars", "users", column: "starred_user_id", on_delete: :cascade
+  add_foreign_key "user_stars", "users", on_delete: :cascade
   add_foreign_key "webhooks", "users"
   add_foreign_key "work_handoffs", "agents", column: "receiver_agent_id"
   add_foreign_key "work_handoffs", "channel_threads"

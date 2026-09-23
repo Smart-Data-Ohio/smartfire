@@ -35,13 +35,15 @@ const STEPS = [
     id: "switcher",
     title: "Jump anywhere with Ctrl+K",
     body: "Press Ctrl+K (or Cmd+K on a Mac) to open the room switcher and hop between conversations without touching the mouse.",
-    selector: '[aria-label^="Quick switcher"]'
+    selector: '[aria-label^="Quick switcher"]',
+    fallbackSelector: "#header-overflow-button"
   },
   {
     id: "shortcuts",
     title: "Shortcuts live under ?",
     body: "Press ? anywhere to see every keyboard shortcut. This Help menu holds them too, and restarts this tour whenever you like.",
-    selector: "#help-menu-button"
+    selector: "#help-menu-button",
+    fallbackSelector: "#header-overflow-button"
   }
 ]
 
@@ -107,8 +109,8 @@ export default class extends Controller {
 
   #render() {
     const step = STEPS[this.index]
-    const target = step.selector ? document.querySelector(step.selector) : null
-    const anchored = target && this.#isVisible(target)
+    const target = this.#visibleTarget(step)
+    const anchored = Boolean(target)
 
     this.#clearHighlight()
     this.titleTarget.textContent = step.title
@@ -163,6 +165,17 @@ export default class extends Controller {
 
     this.cardTarget.style.left = `${left}px`
     this.cardTarget.style.top = `${top}px`
+  }
+
+  #visibleTarget(step) {
+    // Below 80rem the switcher and help buttons live in the header
+    // overflow menu, so the tour highlights the overflow button itself.
+    for (const selector of [ step.selector, step.fallbackSelector ]) {
+      if (!selector) continue
+      const target = document.querySelector(selector)
+      if (target && this.#isVisible(target)) return target
+    }
+    return null
   }
 
   #isVisible(element) {

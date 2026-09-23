@@ -67,6 +67,14 @@ export default class extends Controller {
     this.trigger = null
   }
 
+  // A Star/Unstar toggle inside the card finished: tell open member
+  // panels to refetch so the person moves immediately, for this viewer
+  // only (every panel fetches its own viewer's JSON).
+  starToggled(event) {
+    if (event.detail?.success === false) return
+    window.dispatchEvent(new CustomEvent("user-star:changed"))
+  }
+
   trapFocus(event) {
     if (event.key !== "Tab" || !this.hasPopoverTarget || this.popoverTarget.hidden) return
 

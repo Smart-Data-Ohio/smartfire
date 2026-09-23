@@ -3,6 +3,12 @@ import { Controller } from "@hotwired/stimulus"
 const MESSAGE_SELECTOR = ".message"
 const LONG_PRESS_DELAY = 550
 const MOVE_THRESHOLD = 10
+// A touch release is followed by compatibility mouse events at the same
+// point. When the release opens the menu under the finger (the phone
+// bottom sheet covers the message), that click would activate the menu
+// item below it, so clicks near the press point are swallowed briefly.
+const SUPPRESS_CLICK_MS = 500
+const SUPPRESS_CLICK_RADIUS = MOVE_THRESHOLD * 2
 
 // One controller per message list. It owns the roving tabindex (the list is
 // a single Tab stop; Up/Down move between messages) and one delegated set of
@@ -15,6 +21,8 @@ export default class extends Controller {
   #longPressTimer
   #longPressPointer
   #longPressTriggered = false
+  #suppressClickAt
+  #suppressClickUntil = 0
   #observer
 
   connect() {
@@ -25,6 +33,7 @@ export default class extends Controller {
     this.onPointerDown = this.#onPointerDown.bind(this)
     this.onPointerMove = this.#onPointerMove.bind(this)
     this.onPointerUp = this.#onPointerUp.bind(this)
+    this.onSuppressClick = this.#onSuppressClick.bind(this)
     this.onCancelLongPress = this.#cancelLongPress.bind(this)
 
     this.element.addEventListener("contextmenu", this.onContextMenu)
@@ -35,6 +44,9 @@ export default class extends Controller {
     this.element.addEventListener("pointermove", this.onPointerMove)
     this.element.addEventListener("pointerup", this.onPointerUp)
     this.element.addEventListener("pointercancel", this.onPointerUp)
+    // Capture phase, before the menu's own click handlers: the swallowed
+    // click must never reach the menu item below the finger.
+    document.addEventListener("click", this.onSuppressClick, true)
     window.addEventListener("scroll", this.onCancelLongPress, true)
 
     this.#initTabindex()
@@ -55,6 +67,7 @@ export default class extends Controller {
     this.element.removeEventListener("pointermove", this.onPointerMove)
     this.element.removeEventListener("pointerup", this.onPointerUp)
     this.element.removeEventListener("pointercancel", this.onPointerUp)
+    document.removeEventListener("click", this.onSuppressClick, true)
     window.removeEventListener("scroll", this.onCancelLongPress, true)
   }
 
@@ -276,10 +289,27 @@ export default class extends Controller {
     if (this.#longPressPointer && event.pointerId === this.#longPressPointer.id && this.#longPressTriggered) {
       const { x, y, message } = this.#longPressPointer
       this.#cancelLongPress()
-      if (message.isConnected) setTimeout(() => this.#openMenuFor(message, { x, y }), 0)
+      if (!message.isConnected) return
+      this.#suppressClickAt = { x, y }
+      this.#suppressClickUntil = Date.now() + SUPPRESS_CLICK_MS
+      setTimeout(() => this.#openMenuFor(message, { x, y }), 0)
       return
     }
     if (!this.#longPressPointer || event.pointerId === this.#longPressPointer.id) this.#cancelLongPress()
+  }
+
+  // Swallows the compatibility click from a long-press release: any click
+  // within a short window near the press point. Anything later or farther
+  // away is a genuine tap and passes through.
+  #onSuppressClick(event) {
+    if (!this.#suppressClickAt || Date.now() > this.#suppressClickUntil) {
+      this.#suppressClickAt = null
+      return
+    }
+    const distance = Math.hypot(event.clientX - this.#suppressClickAt.x, event.clientY - this.#suppressClickAt.y)
+    if (distance > SUPPRESS_CLICK_RADIUS) return
+    event.preventDefault()
+    event.stopPropagation()
   }
 
   #openMenuFor(message, point) {

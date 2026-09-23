@@ -7,7 +7,9 @@ class Rooms::DirectsController < RoomsController
 
   def new
     @room = Rooms::Direct.new
-    @users = User.active.includes(:agent).with_attached_avatar.ordered.where.not(id: Current.user.id)
+    users = User.active.includes(:agent).with_attached_avatar.ordered.where.not(id: Current.user.id).to_a
+    @starred_ids = Current.user.starred_ids_among(users.map(&:id))
+    @users = users.partition { |user| @starred_ids.include?(user.id) }.flatten
   end
 
   def create

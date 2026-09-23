@@ -1,0 +1,12 @@
+<%# In-place Star/Unstar toggle for the profile card. The turbo-stream %>
+<%# response replaces this frame, and turbo:submit-end tells the member %>
+<%# panel to refetch so the person moves immediately. %>
+<%= turbo_frame_tag dom_id(user, :star) do %>
+  <% if starred %>
+    <%= button_to "★ Unstar", user_star_path(user), method: :delete, class: "btn full-width",
+          form: { data: { action: "turbo:submit-end->profile-card#starToggled" } } %>
+  <% else %>
+    <%= button_to "☆ Star", user_star_path(user), method: :post, class: "btn full-width",
+          form: { data: { action: "turbo:submit-end->profile-card#starToggled" } } %>
+  <% end %>
+<% end %>
