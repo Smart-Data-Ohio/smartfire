@@ -125,9 +125,18 @@ export default class extends Controller {
   beginCreate(event, detail = {}) {
     event?.preventDefault()
     if (!this.#isOpen) this.#openPanel({ focus: false })
+    const parentMessageId = detail.parentMessageId || ""
+    // A re-entry for the same context (a stray second trigger while the
+    // form is already up) must not wipe a half-filled name: the server
+    // defaults a blank name to "New thread", submitting the wrong thread.
+    // A fresh open, a parent change, or an explicit name still resets it.
+    if (detail.name !== undefined) {
+      this.createNameTarget.value = detail.name
+    } else if (this.createTarget.hidden || parentMessageId !== this.createParentIdTarget.value) {
+      this.createNameTarget.value = ""
+    }
     this.#threadParent = detail.parent || null
-    this.createParentIdTarget.value = detail.parentMessageId || ""
-    this.createNameTarget.value = detail.name || ""
+    this.createParentIdTarget.value = parentMessageId
     this.createStatusTarget.textContent = ""
     this.createParentTarget.replaceChildren()
     if (this.#threadParent) {

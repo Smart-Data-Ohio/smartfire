@@ -111,9 +111,13 @@ class Event::ReminderDispatcherTest < ActiveSupport::TestCase
   end
 
   test "consecutive occurrences of a series are each reminded once at their own time" do
+    # Derive the until-date from the start's own date: Date.current + 1
+    # equals the start date when 10.minutes.from_now crosses midnight UTC,
+    # which the recurrence validation correctly rejects.
+    starts_at = 10.minutes.from_now
     series = @room.events.create!(
-      organizer: @organizer, title: "Daily sync", starts_at: 10.minutes.from_now, time_zone: "UTC",
-      recurrence_rule: "daily", recurrence_until: Date.current + 1
+      organizer: @organizer, title: "Daily sync", starts_at:, time_zone: "UTC",
+      recurrence_rule: "daily", recurrence_until: starts_at.in_time_zone("UTC").to_date + 1
     )
     occurrences = series.series_events.to_a
     assert_equal 2, occurrences.size
@@ -132,6 +136,21 @@ class Event::ReminderDispatcherTest < ActiveSupport::TestCase
 
     assert_not_nil occurrences.second.reload.reminded_at
     assert_equal "event_reminder", ActivityItem.find_by!(user: users(:jason), source: occurrences.second).event_type
+  end
+
+  test "a series starting just before midnight still builds its occurrences" do
+    # At 23:50 UTC, 10.minutes.from_now lands on the next date; the
+    # until-date must follow the start's date, not Date.current.
+    travel_to Time.utc(2026, 9, 22, 23, 50) do
+      starts_at = 10.minutes.from_now
+      series = @room.events.create!(
+        organizer: @organizer, title: "Midnight sync", starts_at:, time_zone: "UTC",
+        recurrence_rule: "daily", recurrence_until: starts_at.in_time_zone("UTC").to_date + 1
+      )
+
+      assert_equal 2, series.series_events.count
+      assert_equal Date.new(2026, 9, 23), starts_at.in_time_zone("UTC").to_date
+    end
   end
 
   test "events in soft-deleted rooms are skipped" do
