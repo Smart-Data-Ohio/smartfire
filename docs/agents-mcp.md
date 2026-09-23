@@ -43,6 +43,7 @@ endpoints, per credential per minute:
 | `post_message`, `request_approval`, `open_dm` | posting / approvals / DMs | 60 |
 | `create_fizzy_card`, `comment_on_fizzy_card`, `move_fizzy_card`, `close_fizzy_card`, `reopen_fizzy_card` | Fizzy card actions | 60 |
 | `pin_message`, `unpin_message` | pinning / unpinning | 60 |
+| `handoff_work` | work handoffs | 60 |
 | `create_board_post` | board post creation | 30 |
 
 The remaining tools have no throttle, like their REST counterparts.
@@ -110,6 +111,7 @@ curl https://smartfire.example.com/agents/mcp \
 | `list_fizzy_boards`, `get_fizzy_board`, `search_fizzy_cards`, `get_fizzy_card` | workspace-wide `fizzy` | `GET /agents/fizzy/...` |
 | `create_fizzy_card`, `comment_on_fizzy_card`, `move_fizzy_card`, `close_fizzy_card`, `reopen_fizzy_card` | workspace-wide `external_action` | `POST /agents/fizzy/card_actions` |
 | `pin_message`, `unpin_message` | `post_messages` in the room | `POST`/`DELETE /agents/messages/:id/pin` |
+| `handoff_work` | ownership + `manage_threads` | `POST /agents/work/:id/handoff` |
 
 `tools/list` always returns the full set; per-tool enforcement happens at
 call time, so a client can show every tool and let denials explain which

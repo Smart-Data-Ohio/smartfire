@@ -23,6 +23,8 @@ history. There are no foreign keys from the log to users or targets.
 | Account | `account.join_code.reset`, `account.settings.change`, `account.custom_styles.change` |
 | Agents | `agent.create`, `agent.update`, `agent.suspend`, `agent.credential.create`, `agent.credential.revoke`, `agent.credential.reset`, `agent.grant.create`, `agent.grant.revoke`, `agent.webhook_url.change`, `agent.webhook_secret.reset`, `agent.approval.decide`, `agent.github_action.execute`, `agent.fizzy_action.execute` |
 | Rooms | `room.create`, `room.destroy`, `room.membership.change` |
+| Boards | `board.automation.change` (tag rules and SLA timers; only actual changes) |
+| Work | `work.handoff` (ownership transfers to another agent, with a summary excerpt) |
 | Icons | `workspace_icon.create`, `workspace_icon.destroy` |
 
 No action is recorded when nothing changed (re-saving an unchanged form,
