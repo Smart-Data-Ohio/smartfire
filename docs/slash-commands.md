@@ -48,8 +48,10 @@ with `/`, escape it with `//`.
 ## Agent commands
 
 Agents register custom slash commands per room. Invoking one delivers
-a `slash_command` event to the owning agent with the raw arguments and
-answers ephemerally ("Sent to \<agent\>") until the agent replies.
+a `slash_command` event to the owning agent with the raw arguments —
+plus the thread id when invoked in a thread, so the agent can reply
+in place — and answers ephemerally ("Sent to \<agent\>") until the
+agent replies.
 Registration and invocation both require the agent to hold
 `post_messages` in that room; a revoked agent's commands answer
 "no longer available". Reading the events keeps the standard

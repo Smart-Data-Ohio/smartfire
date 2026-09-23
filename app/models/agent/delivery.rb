@@ -141,8 +141,9 @@ class Agent::Delivery
 
     # Posts a slash-command invocation to the agent's webhook. The payload
     # carries the same additive agent key as other deliveries plus the
-    # event type, the invoking user, the room, and the command name with
-    # its raw arguments. Response bodies are ignored.
+    # event type, the invoking user, the room, the thread id when invoked
+    # in a thread (so the agent can reply in place), and the command name
+    # with its raw arguments. Response bodies are ignored.
     def post_slash_command_webhook!(webhook, event, agent:)
       metadata = event.metadata.is_a?(Hash) ? event.metadata : {}
       payload = {
@@ -150,6 +151,7 @@ class Agent::Delivery
         event_type: event.event_type,
         user: event.actor ? { id: event.actor.id, name: event.actor.name } : nil,
         room: event.room ? { id: event.room.id, name: event.room.name } : nil,
+        thread_id: metadata["thread_id"],
         command: { name: metadata["command"], arguments: metadata["arguments"] }
       }.compact.to_json
 

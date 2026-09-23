@@ -885,8 +885,9 @@ events, with the command name and raw arguments — and the invoker sees
 `post_messages` grant and membership, and one room's invocations are
 rate-limited to 20/minute per agent. The event payload carries
 `command: { name, arguments }` alongside the room and the invoking
-actor; the webhook nests the same under `command` with the standard
-`agent` key.
+actor, plus `thread_id` when invoked in a thread (absent in the
+channel), so the agent can reply in place; the webhook nests the same
+under `command` with the standard `agent` key.
 
 ## Polls
 

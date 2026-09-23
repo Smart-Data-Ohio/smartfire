@@ -216,6 +216,28 @@ class SlashCommands::DispatcherTest < ActiveSupport::TestCase
     assert_equal "staging", event.metadata["arguments"]
   end
 
+  test "invoking an agent command in a thread records the thread" do
+    agent = agents(:bender_agent)
+    AgentSlashCommand.create!(agent: agent, room: @room, name: "deploy", description: "Ship it")
+    thread = ChannelThread.create!(room: @room, creator: @user, name: "Side chat")
+
+    result = SlashCommands::Dispatcher.dispatch(user: @user, room: @room, thread: thread, text: "/deploy staging")
+
+    assert_equal :ephemeral, result.kind
+    event = agent.agent_events.ordered.last
+    assert_equal thread.id, event.metadata["thread_id"]
+  end
+
+  test "invoking an agent command in the channel records no thread" do
+    agent = agents(:bender_agent)
+    AgentSlashCommand.create!(agent: agent, room: @room, name: "deploy", description: "Ship it")
+
+    dispatch("/deploy staging")
+
+    event = agent.agent_events.ordered.last
+    assert_nil event.metadata["thread_id"]
+  end
+
   test "invoking an agent command requires post_messages" do
     agent = agents(:bender_agent)
     AgentSlashCommand.create!(agent: agent, room: @room, name: "deploy")

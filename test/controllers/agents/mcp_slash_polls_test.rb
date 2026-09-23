@@ -112,6 +112,22 @@ class Agents::McpSlashPollsTest < ActionDispatch::IntegrationTest
     assert_equal @room.id, command.dig("room", "id")
   end
 
+  test "invoked commands in threads poll with the thread id" do
+    grant!(capability: "post_messages", room: @room)
+    grant!(capability: "read_messages", room: @room)
+    AgentSlashCommand.create!(agent: @agent, room: @room, name: "deploy")
+    thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Side chat")
+
+    SlashCommands::Dispatcher.dispatch(user: users(:david), room: @room, thread: thread, text: "/deploy staging")
+
+    body = call_tool("poll_events", {})
+    events = structured(body)["events"]
+    command = events.find { |event| event["event_type"] == "slash_command" }
+
+    assert_not_nil command, "expected a slash_command event in #{events.map { |event| event["event_type"] }.inspect}"
+    assert_equal thread.id, command["thread_id"]
+  end
+
   test "slash_command events ack under the standard read gate" do
     grant!(capability: "post_messages", room: @room)
     grant!(capability: "read_messages", room: @room)

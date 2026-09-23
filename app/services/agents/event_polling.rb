@@ -196,6 +196,7 @@ module Agents
           created_at: event.created_at&.utc,
           room: { id: room.id, name: room.name },
           actor: event.actor ? { id: event.actor.id, name: event.actor.name } : nil,
+          thread_id: metadata["thread_id"],
           command: {
             name: metadata["command"],
             arguments: metadata["arguments"]

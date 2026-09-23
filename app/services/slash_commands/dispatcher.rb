@@ -65,7 +65,7 @@ module SlashCommands
             actor: context.user,
             outcome: "delivered",
             chain_id: SecureRandom.uuid,
-            metadata: { "command" => registration.name, "arguments" => context.args }
+            metadata: { "command" => registration.name, "arguments" => context.args, "thread_id" => context.thread&.id }.compact
           )
           Agent::Delivery.deliver_command_webhook(event)
 
