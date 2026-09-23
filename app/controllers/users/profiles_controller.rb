@@ -41,7 +41,7 @@ class Users::ProfilesController < ApplicationController
     end
 
     def user_params
-      permitted = %i[ name avatar email_address password bio ]
+      permitted = %i[ name avatar email_address password bio time_zone theme ]
       # A verified GitHub link owns the login; manual edits are ignored.
       permitted << :github_login unless @user.github_login_verified?
       params.require(:user).permit(*permitted, inbox_preferences: User::InboxPreferences::KEYS).compact

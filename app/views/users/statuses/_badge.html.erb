@@ -1,0 +1,7 @@
+<span class="user-status-badge">
+  <%= presence_dot_tag(user, presence:) %>
+  <span class="user-status-badge__label"><%= presence_label(presence) %></span>
+  <% if (status = user.custom_status_display) %>
+    <span class="user-status-badge__custom"><%= status %></span>
+  <% end %>
+</span>

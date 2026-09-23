@@ -100,9 +100,26 @@
             <div><%= mail_to @user.email_address %></div>
           <% end %>
           <div><%= @user.bio %></div>
+          <div><%= render_user_status_badge(@user) %></div>
         </div>
 
         <% if @user.active? %>
+          <% if Current.user != @user %>
+            <div class="pad-inline-double margin-inline margin-block-start">
+              <% if @dnd_allowed %>
+                <%= button_to user_dnd_allowance_path(@user), method: :delete, class: "btn full-width" do %>
+                  <%= image_tag "notification-bell-nothing.svg", aria: { hidden: "true" }, size: 20 %>
+                  <span>Mute during DND</span>
+                <% end %>
+              <% else %>
+                <%= button_to user_dnd_allowance_path(@user), method: :post, class: "btn full-width" do %>
+                  <%= image_tag "notification-bell-everything.svg", aria: { hidden: "true" }, size: 20, class: "colorize--black" %>
+                  <span>Allow during DND</span>
+                <% end %>
+              <% end %>
+            </div>
+          <% end %>
+
           <div class="pad-inline-double margin-inline margin-block-start">
             <%= button_to rooms_directs_path(user_ids: [ @user.id ]), class: "btn btn--reversed full-width txt-large" do %>
               <%= image_tag "messages.svg", aria: { hidden: "true", label: "Ping #{@user.name}" } %>
