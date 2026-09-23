@@ -40,6 +40,8 @@ The VMs have no runtime GCP service account. An authorized operator supplies a s
 
 The feature migrations add huddle grants and cleanup records, a nullable Markdown source column, workspace presence leases, channel threads, thread memberships, and nullable message conversation references. They do not rewrite existing message bodies. SQLite may renumber foreign-key IDs when adding a constraint; the verifier compares complete constraint definitions while preserving their column order and referential actions.
 
+Separately from these per-release checkpoints, the nightly-backup GitHub Actions workflow takes a rolling nightly backup (consistent database snapshot, uploads, config manifest) to Cloud Storage in a separate GCP project, with 7 daily, 4 weekly and 12 monthly retained. See [the backup runbook](../docs/backups.md).
+
 ## Public media acceptance
 
 Wait for both Huddles DNS records and valid certificates. Check public WSS, direct media, forced TURN/TLS relay, and revocation with isolated test accounts. The optional browser test topology is documented in [the Huddles guide](../docs/huddles.md). Do not point the fixture test runner at the live app database.
