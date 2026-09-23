@@ -82,4 +82,16 @@ class Fizzy::ConnectionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Fizzy disconnected.", flash[:notice]
     assert_nil users(:david).reload.fizzy_connected_account
   end
+
+  test "disconnecting deletes the member's card caches but keeps others" do
+    link_fizzy!(users(:david))
+    card = Fizzy::Card.for_reference(account_id: "897362094", number: 579)
+    david_cache = Fizzy::CardCache.for_viewer(card: card, user: users(:david))
+    jz_cache = Fizzy::CardCache.for_viewer(card: card, user: users(:jz))
+
+    delete fizzy_connection_url
+
+    assert_empty Fizzy::CardCache.where(id: david_cache.id)
+    assert Fizzy::CardCache.exists?(jz_cache.id)
+  end
 end

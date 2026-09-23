@@ -35,6 +35,7 @@ module Fizzy
     end
 
     def destroy
+      Fizzy::CardCache.where(user_id: Current.user.id).delete_all
       Current.user.fizzy_connected_account&.destroy!
       redirect_to user_profile_path, notice: "Fizzy disconnected."
     end
