@@ -231,7 +231,7 @@ module Agents
             "limit" => { "type" => "integer", "description" => "Max context messages (default 30, max 100)." }
           }
         },
-        throttle: nil
+        throttle: [ 120, "agents/contexts", "show" ]
       ),
       Tool.new(
         name: "open_dm",

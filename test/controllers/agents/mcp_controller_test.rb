@@ -526,6 +526,24 @@ class Agents::McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "get_context shares its bucket with the REST context endpoint" do
+    trigger = @room.messages.create!(creator: users(:david), body: "Shared bucket", client_message_id: "mcp-ctx-share")
+
+    with_memory_cache do
+      freeze_time do
+        120.times do
+          get agents_context_url(message_id: trigger.id), headers: mcp_headers
+          assert_response :success
+        end
+
+        body = call_tool("get_context", { "message_id" => trigger.id })
+
+        assert_equal true, body.dig("result", "isError")
+        assert_equal "rate_limited", body.dig("result", "structuredContent", "error")
+      end
+    end
+  end
+
   private
     def rpc(method, params = {}, id: 1, headers: {})
       post agents_mcp_url,

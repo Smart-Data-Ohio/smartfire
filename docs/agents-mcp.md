@@ -33,6 +33,7 @@ endpoints, per credential per minute:
 | ---- | ------------- | --------- |
 | `poll_events`, `ack_events` | event polling | 120 |
 | `get_approval` | approval reads | 120 |
+| `get_context` | context reads | 120 |
 | `post_message`, `request_approval`, `open_dm` | posting / approvals / DMs | 60 |
 | `create_board_post` | board post creation | 30 |
 
