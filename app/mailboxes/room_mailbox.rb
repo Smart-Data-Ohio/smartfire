@@ -5,6 +5,11 @@ class RoomMailbox < ApplicationMailbox
   # attachment); the rest are named in the body.
   MAX_ATTACHMENT_BYTES = 10.megabytes
 
+  # Slack in the pre-decode size estimate for transfer-encoding
+  # overhead (base64 line breaks), so a file just under the limit is
+  # not rejected before its real size is checked.
+  ESTIMATE_TOLERANCE = 1.05
+
   # At most this many emailed messages per room per hour, so one
   # address cannot flood a room.
   MAX_EMAILS_PER_ROOM_PER_HOUR = 30
@@ -249,9 +254,11 @@ class RoomMailbox < ApplicationMailbox
 
     # Estimated from the encoded MIME part before decoding: base64
     # inflates 4:3, so the raw part size bounds the decoded size without
-    # paying for the decode of a huge part.
+    # paying for the decode of a huge part. The estimate allows 5% for
+    # transfer-encoding overhead (line breaks); the decoded size is
+    # still checked exactly below.
     def estimated_size_ok?(attachment)
-      attachment.body.raw_source.to_s.bytesize * 3 / 4 <= MAX_ATTACHMENT_BYTES
+      attachment.body.raw_source.to_s.bytesize * 3 / 4 <= MAX_ATTACHMENT_BYTES * ESTIMATE_TOLERANCE
     end
 
     # Exact check once decoded: unencoded (7bit) parts are not inflated,

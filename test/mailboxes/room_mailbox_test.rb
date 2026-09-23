@@ -231,6 +231,20 @@ class RoomMailboxTest < ActionMailbox::TestCase
     assert_includes message.markdown_source, "notes.txt"
   end
 
+  test "an attachment just under the limit survives encoding overhead" do
+    # Base64 line breaks inflate the encoded part by ~2%, which the
+    # old pre-decode estimate counted against the limit; the estimate
+    # now tolerates 5% and the decoded size still rules.
+    mail = Mail.new(from: "david@37signals.com", to: room_address, subject: "Near limit", body: "See attached.")
+    mail.add_file(filename: "near.docx", content: "x" * (RoomMailbox::MAX_ATTACHMENT_BYTES - 50_000))
+
+    receive_inbound_email_from_source(mail.to_s)
+
+    message = @room.messages.order(:created_at).last
+    assert message.attachment.attached?
+    assert_equal "near.docx", message.attachment.filename.to_s
+  end
+
   test "an oversized attachment is named, not attached" do
     mail = Mail.new(from: "david@37signals.com", to: room_address, subject: "Big", body: "Big file.")
     mail.add_file(filename: "big.bin", content: "x" * (RoomMailbox::MAX_ATTACHMENT_BYTES + 1))

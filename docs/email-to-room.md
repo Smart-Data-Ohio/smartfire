@@ -35,7 +35,9 @@ everything that arrives posts as the **Email** bot.
   (messages carry one file); every file is named in the body, and files
   over the limit are named with the reason instead of arriving silently
   missing. The size is estimated from the encoded MIME part before
-  decoding, so a huge part is rejected without paying for the decode.
+  decoding, so a huge part is rejected without paying for the decode;
+  the estimate allows 5% for transfer-encoding overhead, and the
+  decoded size is then checked against the limit exactly.
 - Only images, PDFs, text files, and office documents are attached;
   other types are named with `file type not allowed` and never land on
   the message.
