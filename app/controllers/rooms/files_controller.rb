@@ -11,12 +11,22 @@ class Rooms::FilesController < ApplicationController
   FILES_PER_PAGE = 30
   MAX_PAGE = 20
   TYPES = %w[all images videos documents other].freeze
-  DOCUMENT_PATTERNS = [
-    "application/pdf", "text/%",
-    "application/msword", "application/vnd.ms-%",
-    "application/vnd.openxmlformats-officedocument.%",
-    "application/vnd.oasis.opendocument.%"
-  ].freeze
+  # Literal LIKE conditions: every pattern is fixed, so the type filter
+  # takes no binds and interpolates nothing.
+  DOCUMENT_CONDITION = "active_storage_blobs.content_type LIKE 'application/pdf' OR " \
+    "active_storage_blobs.content_type LIKE 'text/%' OR " \
+    "active_storage_blobs.content_type LIKE 'application/msword' OR " \
+    "active_storage_blobs.content_type LIKE 'application/vnd.ms-%' OR " \
+    "active_storage_blobs.content_type LIKE 'application/vnd.openxmlformats-officedocument.%' OR " \
+    "active_storage_blobs.content_type LIKE 'application/vnd.oasis.opendocument.%'"
+  OTHER_CONDITION = "active_storage_blobs.content_type NOT LIKE 'image/%' AND " \
+    "active_storage_blobs.content_type NOT LIKE 'video/%' AND " \
+    "active_storage_blobs.content_type NOT LIKE 'application/pdf' AND " \
+    "active_storage_blobs.content_type NOT LIKE 'text/%' AND " \
+    "active_storage_blobs.content_type NOT LIKE 'application/msword' AND " \
+    "active_storage_blobs.content_type NOT LIKE 'application/vnd.ms-%' AND " \
+    "active_storage_blobs.content_type NOT LIKE 'application/vnd.openxmlformats-officedocument.%' AND " \
+    "active_storage_blobs.content_type NOT LIKE 'application/vnd.oasis.opendocument.%'"
 
   def index
     @type = params[:type].to_s.presence_in(TYPES) || "all"
@@ -59,18 +69,13 @@ class Rooms::FilesController < ApplicationController
     def filter_by_type(scope)
       case @type
       when "images"
-        scope.where("active_storage_blobs.content_type LIKE ?", "image/%")
+        scope.where("active_storage_blobs.content_type LIKE 'image/%'")
       when "videos"
-        scope.where("active_storage_blobs.content_type LIKE ?", "video/%")
+        scope.where("active_storage_blobs.content_type LIKE 'video/%'")
       when "documents"
-        conditions = DOCUMENT_PATTERNS.map { "active_storage_blobs.content_type LIKE ?" }.join(" OR ")
-        scope.where(conditions, *DOCUMENT_PATTERNS)
+        scope.where(DOCUMENT_CONDITION)
       when "other"
-        conditions = DOCUMENT_PATTERNS.map { "active_storage_blobs.content_type LIKE ?" }.join(" OR ")
-        scope.where(
-          "active_storage_blobs.content_type NOT LIKE ? AND active_storage_blobs.content_type NOT LIKE ? AND NOT (#{conditions})",
-          "image/%", "video/%", *DOCUMENT_PATTERNS
-        )
+        scope.where(OTHER_CONDITION)
       else
         scope
       end

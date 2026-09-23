@@ -119,7 +119,7 @@ class SearchQuery
 
     scope = ChannelThread.where(room_id: user.rooms.boards.select(:id))
     scope = scope.where(room_id: rooms_matching(in_rooms)) if in_rooms.any?
-    with_text(scope, "channel_threads.name").ordered.includes(:room).limit(SECTION_LIMIT)
+    with_thread_name_text(scope).ordered.includes(:room).limit(SECTION_LIMIT)
   end
 
   def work_threads_for(user)
@@ -127,7 +127,7 @@ class SearchQuery
 
     scope = ChannelThread.work.where(room_id: user.rooms.where.not(type: "Rooms::Board").select(:id))
     scope = scope.where(room_id: rooms_matching(in_rooms)) if in_rooms.any?
-    with_text(scope, "channel_threads.name").ordered.includes(:room).limit(SECTION_LIMIT)
+    with_thread_name_text(scope).ordered.includes(:room).limit(SECTION_LIMIT)
   end
 
   def events_for(user)
@@ -175,9 +175,9 @@ class SearchQuery
       end || Room.none
     end
 
-    def with_text(scope, column)
+    def with_thread_name_text(scope)
       text_tokens.reduce(scope) do |current, token|
-        current.where("LOWER(#{column}) LIKE ? ESCAPE '\\'", like_pattern(token))
+        current.where("LOWER(channel_threads.name) LIKE ? ESCAPE '\\'", like_pattern(token))
       end
     end
 
