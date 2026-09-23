@@ -18,7 +18,9 @@ factor. There is no partially signed-in state to exploit.
 
 The first time you sign in, you land on the setup page before anything
 else. API and Turbo Stream requests cannot bypass it either: they are
-rejected until setup is done.
+rejected until setup is done. Until then the session can only finish
+enrolling or sign out — turning two-step sign-in off needs a session
+that already completed the second factor.
 
 1. Open your authenticator app and add an account.
 2. Scan the QR code, or enter the manual key if you cannot scan.
@@ -35,6 +37,11 @@ lose your authenticator. Copy or download them now: they are shown only
 once and are stored as one-way digests, so nobody can show them to you
 again later. You can make a fresh set at any time from your profile
 ("New backup codes"), which invalidates the old set.
+
+Confirming the code also signs out your other browsers and devices
+("Signed out your other devices") and drops their live connections, so
+no session from before enrollment keeps working. The sign-out is
+recorded in the audit log alongside the enrollment.
 
 ## Signing in
 
@@ -73,13 +80,17 @@ actions:
 Each of these — new codes, disabling, revoking one device, revoking
 all — asks for your current authenticator code or your password in the
 same request, so anyone holding your signed-in browser cannot take over
-the account through them. Members without a password (provisioned
-through Google) can instead **Confirm with Google**, which proves the
-same linked Google account again and arms exactly one action for the
-next 10 minutes. Backup codes never count as confirmation. These
-actions are rate limited, and disabling, regenerating, and admin resets
-drop every live connection, so open tabs and sockets reconnect as
-verified sessions or not at all.
+the account through them. Disabling additionally requires a session
+that completed the second factor: a stale session from before
+enrollment cannot turn two-step sign-in off, even with the password.
+Members without a password (provisioned through Google) can instead
+**Confirm with Google**, which proves the same linked Google account
+again — with a fresh Google sign-in no more than 5 minutes old — and
+arms exactly one action for the next 10 minutes. Backup codes never
+count as confirmation. These actions, and starting a Google
+confirmation, are rate limited, and disabling, regenerating, and admin
+resets drop every live connection, so open tabs and sockets reconnect
+as verified sessions or not at all.
 
 ## Lost phone or codes (recovery)
 
