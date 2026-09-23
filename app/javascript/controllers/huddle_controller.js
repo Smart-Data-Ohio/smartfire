@@ -530,8 +530,9 @@ export default class extends Controller {
   // Call shortcuts, active anywhere in the app while in a call:
   // Ctrl/Cmd+Shift+M toggles the microphone, and in push-to-talk mode
   // holding the configured key opens the microphone. The push-to-talk key
-  // never fires while typing, so it stays out of the composer's way; the
-  // mute chord is global because it cannot be typed by accident.
+  // never fires while typing, while composing text, or with Ctrl, Meta, or
+  // Alt held, so it stays out of the composer's and the shortcut system's
+  // way; the mute chord is global because it cannot be typed by accident.
   callKeyPressed = (event) => {
     if (event.repeat || event.defaultPrevented) return
 
@@ -542,7 +543,8 @@ export default class extends Controller {
       return
     }
 
-    if (event.key !== this.#pushToTalkKey()) return
+    if (!this.#pushToTalkKeyMatches(event)) return
+    if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return
     if (!this.#pushToTalkEnabled() || this.pushToTalkActive) return
     if (this.state !== "connected" || !this.room || !this.canPublish) return
     if (this.#eventTargetIsTyping(event)) return
@@ -564,7 +566,7 @@ export default class extends Controller {
   }
 
   callKeyReleased = (event) => {
-    if (event.key !== this.#pushToTalkKey()) return
+    if (!this.#pushToTalkKeyMatches(event)) return
     this.#releasePushToTalk()
   }
 
@@ -600,6 +602,14 @@ export default class extends Controller {
 
   #pushToTalkKey() {
     return this.pushToTalkKeyValue || "`"
+  }
+
+  // The default backtick is a dead key on international layouts, where the
+  // press reports key "Dead": match it by physical position instead, so the
+  // same key talks on every layout. Custom keys match the typed character.
+  #pushToTalkKeyMatches(event) {
+    const key = this.#pushToTalkKey()
+    return event.key === key || (key === "`" && event.code === "Backquote")
   }
 
   #eventTargetIsTyping(event) {
@@ -1038,6 +1048,9 @@ export default class extends Controller {
   }
 
   visibilityChanged = () => {
+    // Hiding the page drops the keyup like a blur does: release a held
+    // push-to-talk key instead of wedging the microphone open.
+    if (document.visibilityState === "hidden") this.#releasePushToTalk()
     if (document.visibilityState === "visible") this.#checkAuthentication()
   }
 

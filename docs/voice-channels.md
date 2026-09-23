@@ -52,10 +52,13 @@ never create invitations, ringing, or missed-call items.
 Each member chooses how their microphone opens from the **Calls** section of
 their profile: **voice activity** (live whenever unmuted, the default) or
 **push-to-talk** (open only while the configured key is held, backtick by
-default). The push-to-talk key never fires while typing, so holding it in the
+default). The default matches the backtick key by position, so it talks on
+international layouts where the backtick is a dead key; custom keys match the
+typed character. The push-to-talk key never fires while typing, while
+composing text, or with Ctrl, Meta, or Alt held, so holding it in the
 composer types the character instead of opening the microphone; switching
-browser tabs mid-sentence releases a held key rather than wedging the
-microphone open.
+browser tabs or hiding the page mid-sentence releases a held key rather than
+wedging the microphone open.
 
 **Ctrl/Cmd+Shift+M** toggles the microphone from anywhere in the app while in
 a call, including while typing. (The `?` shortcut sheet from the navigation

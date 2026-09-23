@@ -89,6 +89,59 @@ class CallControlsTest < ApplicationSystemTestCase
     assert_selector "[data-huddle-target='mute'][title='Hold v to talk']"
   end
 
+  test "push-to-talk ignores composing and modified keys, releases when hidden, and matches the backtick by position" do
+    room = rooms(:designers)
+    visit room_path(room)
+    wait_for_cable_connection
+    install_stub_room(room.id)
+    page.execute_script(<<~JS)
+      window.__huddleController.voiceModeValue = "push_to_talk";
+      window.__huddleController.pushToTalkKeyValue = "`";
+    JS
+
+    find("[data-huddle-target='mute']").click
+    wait_for_condition("muting did not reach the room") { mic_calls.length >= 1 }
+
+    # A dead key on an international layout still talks: the default matches
+    # the physical key, not the typed character.
+    page.execute_script(<<~JS)
+      document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Dead", code: "Backquote", bubbles: true }));
+    JS
+    wait_for_condition("the dead key did not open the microphone") { mic_calls.length >= 2 }
+    page.execute_script(<<~JS)
+      document.body.dispatchEvent(new KeyboardEvent("keyup", { key: "Dead", code: "Backquote", bubbles: true }));
+    JS
+    wait_for_condition("releasing the dead key did not close the microphone") { mic_calls.length >= 3 }
+    assert_equal [ false, true, false ], mic_calls
+
+    # Composing text swallows the key without touching the microphone.
+    page.execute_script(<<~JS)
+      document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "`", isComposing: true, bubbles: true }));
+    JS
+    sleep 0.3
+    assert_equal [ false, true, false ], mic_calls
+
+    # Modified presses are shortcuts, not talk requests.
+    page.execute_script(<<~JS)
+      for (const modifier of [ "ctrlKey", "metaKey", "altKey" ]) {
+        document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "`", [modifier]: true, bubbles: true }));
+      }
+    JS
+    sleep 0.3
+    assert_equal [ false, true, false ], mic_calls
+
+    # Hiding the page releases a held key.
+    hold_push_to_talk("`")
+    wait_for_condition("the hold did not open the microphone") { mic_calls.length >= 4 }
+    page.execute_script(<<~JS)
+      Object.defineProperty(document, "visibilityState", { value: "hidden", configurable: true });
+      document.dispatchEvent(new Event("visibilitychange"));
+    JS
+    wait_for_condition("hiding the page did not release the key") { mic_calls.length >= 5 }
+    assert_equal [ false, true, false, true, false ], mic_calls
+    page.execute_script("delete document.visibilityState")
+  end
+
   test "ctrl-shift-M toggles the microphone from anywhere, even while typing" do
     room = rooms(:designers)
     visit room_path(room)
