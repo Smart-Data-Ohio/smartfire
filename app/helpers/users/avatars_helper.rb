@@ -15,7 +15,8 @@ module Users::AvatarsHelper
   def avatar_tag(user, **options)
     size = options.delete(:size) || 48
 
-    link_to user_path(user), title: user.title, class: "btn avatar", data: { turbo_frame: "_top" } do
+    link_to user_path(user), title: user.title, class: "btn avatar",
+        data: { turbo_frame: "_top" }.merge(profile_card_trigger(user)) do
       avatar_image_tag user, size: size, aria: { hidden: "true" }, **options
     end
   end

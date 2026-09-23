@@ -7,8 +7,10 @@ class Opengraph::Location
 
   validate :validate_url, :validate_url_is_public
 
-  def initialize(url)
+  def initialize(url, max_redirects: Opengraph::Fetch::MAX_REDIRECTS, deadline: nil)
     @url = url
+    @max_redirects = max_redirects
+    @deadline = deadline
   end
 
   def read_html
@@ -16,7 +18,8 @@ class Opengraph::Location
   end
 
   def fetch_content_type
-    Opengraph::Fetch.new.fetch_content_type(parsed_url, ip: resolved_ip) if valid?
+    Opengraph::Fetch.new.fetch_content_type(parsed_url, ip: resolved_ip,
+      max_redirects: @max_redirects, deadline: @deadline) if valid?
   rescue => e
     Rails.logger.warn "Failed to fetch #{parsed_url} at #{resolved_ip} (#{e})"
     nil
@@ -44,7 +47,8 @@ class Opengraph::Location
     end
 
     def fetch_html
-      Opengraph::Fetch.new.fetch_document(parsed_url, ip: resolved_ip)
+      Opengraph::Fetch.new.fetch_document(parsed_url, ip: resolved_ip,
+        max_redirects: @max_redirects, deadline: @deadline)
     rescue => e
       Rails.logger.warn "Failed to fetch #{parsed_url} at #{resolved_ip} (#{e})"
       nil

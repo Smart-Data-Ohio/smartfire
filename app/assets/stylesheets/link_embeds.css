@@ -1,0 +1,195 @@
+/* Generic link embeds and LinkedIn post cards rendered under messages
+   (see docs/link-embeds.md). */
+
+.link-embed-cards,
+.linkedin-post-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+
+  /* The containers always render so edits can broadcast-replace them;
+     hide them when an edit (or a fresh message) leaves them empty. */
+  &:empty {
+    display: none;
+  }
+}
+
+.link-embed-card,
+.linkedin-post-card {
+  border: 1px solid var(--workspace-border, var(--color-border-dark));
+  border-radius: 0.5em;
+  background-color: var(--workspace-surface, var(--color-bg));
+  padding: 0.6rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  max-inline-size: 36rem;
+}
+
+/* Generic embeds read like Discord's: text on the left, a thumbnail on
+   the right when the page offered an image. */
+.link-embed-card {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.link-embed-card__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.link-embed-card__site {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--workspace-text-muted, var(--color-text-subtle));
+  overflow-wrap: anywhere;
+}
+
+.link-embed-card__title {
+  margin: 0.15rem 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.link-embed-card__description {
+  margin: 0.25rem 0 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: break-word;
+}
+
+.link-embed-card__image-link {
+  flex: none;
+  display: block;
+  inline-size: 7rem;
+  max-block-size: 7rem;
+  overflow: hidden;
+  border-radius: 0.375em;
+}
+
+.link-embed-card__image {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  max-block-size: 7rem;
+  object-fit: cover;
+}
+
+/* LinkedIn cards stack: the mark header, title, excerpt, image, and the
+   view link beside the click-to-load embed button. */
+.linkedin-post-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.linkedin-post-card__mark,
+.linkedin-post-chip__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 1.25em;
+  block-size: 1.25em;
+  border-radius: 0.2em;
+  background-color: #0a66c2;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+  flex: none;
+}
+
+.linkedin-post-card__source {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--workspace-text-muted, var(--color-text-subtle));
+}
+
+.linkedin-post-card__title {
+  margin: 0.3rem 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.linkedin-post-card__excerpt {
+  margin: 0.25rem 0 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: break-word;
+}
+
+.linkedin-post-card__image-link {
+  display: block;
+  margin-top: 0.5rem;
+  overflow: hidden;
+  border-radius: 0.375em;
+}
+
+.linkedin-post-card__image {
+  display: block;
+  inline-size: 100%;
+  max-block-size: 18rem;
+  object-fit: cover;
+}
+
+.linkedin-post-card__footer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.45rem;
+  font-size: 0.8rem;
+}
+
+.linkedin-post-card__embed-button {
+  font-size: 0.8rem;
+  padding: 0.2rem 0.6rem;
+}
+
+.linkedin-post-card__player {
+  inline-size: 100%;
+  max-inline-size: 36rem;
+  block-size: 24rem;
+  border: 1px solid var(--workspace-border, var(--color-border-dark));
+  border-radius: 0.375em;
+  margin-top: 0.45rem;
+}
+
+/* Login-gated LinkedIn pages yield no usable metadata: a compact chip
+   keeps the link one tap away. */
+.linkedin-post-chip {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 40rem) {
+  .link-embed-card,
+  .linkedin-post-card {
+    max-inline-size: none;
+  }
+
+  .link-embed-card {
+    flex-direction: column;
+  }
+
+  .link-embed-card__image-link {
+    inline-size: 100%;
+    max-block-size: 12rem;
+  }
+
+  .link-embed-card__image {
+    max-block-size: 12rem;
+  }
+
+  .linkedin-post-card__player {
+    block-size: 20rem;
+  }
+}

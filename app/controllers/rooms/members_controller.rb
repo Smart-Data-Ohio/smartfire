@@ -26,6 +26,7 @@ class Rooms::MembersController < ApplicationController
           id: member.id,
           name: member.name,
           avatar_url: fresh_user_avatar_url(member),
+          bot: member.bot?,
           online: live,
           presence: live ? "agent" : "offline",
           status: agent.status_note.presence || agent.status.to_s.humanize
@@ -37,6 +38,7 @@ class Rooms::MembersController < ApplicationController
           id: member.id,
           name: member.name,
           avatar_url: fresh_user_avatar_url(member),
+          bot: member.bot?,
           online: presence != :offline,
           presence: presence.to_s,
           status: member.custom_status_display

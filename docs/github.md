@@ -134,12 +134,14 @@ follows the per-viewer rule in [Visibility](#visibility).
 
 ## Connect your GitHub account
 
-PR write actions run as the member's own GitHub user through a per-user
-fine-grained personal access token — never the workspace token, and
-administrators get no special powers. Linking happens on the profile page:
-paste a token, the app validates it with `GET /user`, and stores the
-returned login with the encrypted token. The token is never logged or
-shown again; unlinking deletes it.
+PR write actions run as the member's own GitHub user — never the
+workspace token, and administrators get no special powers. The preferred
+path is **Connect with GitHub** on the profile page, which links through
+the workspace GitHub App with short-lived tokens and refresh; see
+[GitHub App identity](github-app.md). The fallback is a per-user
+fine-grained personal access token: paste a token, the app validates it
+with `GET /user`, and stores the returned login with the encrypted
+token. The token is never logged or shown again; unlinking deletes it.
 
 Create the token at GitHub Settings → Developer settings → Personal access
 tokens → Fine-grained tokens, with repository access to the repositories
@@ -194,11 +196,12 @@ decision.
 
 ### Identity
 
-An agent acts as its own linked GitHub account: the bot edit page carries
+An agent acts with the owner's GitHub App token when the owner has a
+usable one, else its own linked GitHub account: the bot edit page carries
 a "GitHub account" section where an administrator (only; the agent's
 owner sees the connection read-only) pastes a fine-grained token for a machine user dedicated to the agent
 (validated with `GET /user`, never shown again). The token is never the
-workspace `GITHUB_TOKEN` and never a person's token. Deactivating the
+workspace `GITHUB_TOKEN`. Deactivating the
 agent's bot disconnects the account, exactly like deactivating a human;
 unlinking deletes it.
 

@@ -1,4 +1,4 @@
 <div class="mention mention--user-<%= user.id %>" sgid="<%= user.attachable_sgid %>" data-user-id="<%= user.id %>">
   <%= avatar_tag user %>
-  <%= user.name %>
+  <%= button_tag user.name, type: "button", class: "profile-card-name", data: profile_card_trigger(user) %>
 </div>

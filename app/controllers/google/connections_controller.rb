@@ -60,6 +60,15 @@ module Google
         snapshot = account.cleanup_snapshot
         account_id = account.id
         Current.user.event_calendar_entries.delete_all
+        # Meet links were minted through this connection: clear them so
+        # event cards stop advertising links the app no longer manages.
+        # The request flag stays set (and update_all fires no callbacks),
+        # so reconnecting re-provisions each pending event.
+        Event.where(organizer: Current.user).where.not(meet_link: [ nil, "" ]).update_all(meet_link: nil)
+        if (channel = Calendar::PushChannel.find_by(user_id: Current.user.id))
+          channel.stop_remote!
+          channel.destroy!
+        end
         account.destroy!
         Calendar::DisconnectCleanupJob.perform_later(google_event_ids, snapshot, account_id) if snapshot
       end
@@ -91,6 +100,11 @@ module Google
           .joins(:event).merge(Event.upcoming).pluck(:event_id).each do |event_id|
             Calendar::SyncEntryJob.perform_later(event_id, user.id)
           end
+        # A fresh connection provisions Meet links that were requested
+        # before the organizer connected Google.
+        Event.where(organizer: user, meet_link_requested: true, meet_link: [ nil, "" ])
+          .find_each { |event| Calendar::MeetLinkJob.perform_later(event.id) }
+        Calendar::WatchChannelJob.perform_later(user.id)
       end
   end
 end

@@ -18,7 +18,7 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
     Event::ReminderDispatcher.expects(:dispatch_due!).once
 
     assert_enqueued_with(job: Retention::PruneJob) do
-      assert_equal [ "delayed jobs", "event reminders", "saved item reminders", "stuck rooms", "stranded agent webhooks", "stuck GitHub claims", "retention prune", "presence leases" ], @runner.tick
+      assert_equal [ "delayed jobs", "event reminders", "saved item reminders", "stuck rooms", "stranded agent webhooks", "stuck GitHub claims", "stuck Fizzy claims", "calendar push channels", "retention prune", "presence leases" ], @runner.tick
     end
   end
 
@@ -62,7 +62,7 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
       Event::ReminderDispatcher.expects(:dispatch_due!).once
 
       assert_no_enqueued_jobs do
-        assert_equal [ "delayed jobs", "event reminders", "saved item reminders", "stranded agent webhooks", "stuck GitHub claims" ], @runner.tick
+        assert_equal [ "delayed jobs", "event reminders", "saved item reminders", "stranded agent webhooks", "stuck GitHub claims", "stuck Fizzy claims" ], @runner.tick
       end
     end
   end
