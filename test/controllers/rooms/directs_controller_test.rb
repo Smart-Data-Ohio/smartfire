@@ -151,6 +151,23 @@ class Rooms::DirectsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 3, room.reload.memberships.count
   end
 
+  test "a non-member cannot read the group" do
+    room = create_group_dm!([ users(:jason), users(:kevin), users(:jz) ])
+
+    get room_url(room)
+
+    assert_redirected_to root_url
+  end
+
+  test "a removed member loses access to the group" do
+    room = create_group_dm!([ users(:david), users(:jason), users(:kevin) ])
+    room.leave(users(:david))
+
+    get room_url(room)
+
+    assert_redirected_to root_url
+  end
+
   test "destroy only allowed for all room users" do
     sign_in :kevin
     room = rooms(:david_and_kevin)

@@ -127,6 +127,33 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
     end
   end
 
+  test "the new-DM picker types, picks suggestions, and messages the picked set" do
+    join_room rooms(:designers)
+    click_link "New direct message"
+
+    within "#direct_rooms_control" do
+      find("[data-autocomplete-target='input']").fill_in(with: "Kev")
+    end
+    assert_selector "suggestion-option", text: "Kevin"
+    find("suggestion-option", text: "Kevin").click
+
+    within "#direct_rooms_control" do
+      assert_selector ".autocomplete__pill", text: "Kevin"
+      find("[data-autocomplete-target='input']").fill_in(with: "Jas")
+    end
+    assert_selector "suggestion-option", text: "Jason"
+    find("suggestion-option", text: "Jason").click
+
+    within "#direct_rooms_control" do
+      assert_selector ".autocomplete__pill", text: "Jason"
+      find("[data-autocomplete-target='input']").ancestor("form").find("button[type='submit']").click
+    end
+
+    assert_selector ".room--current", text: "Jason, Kevin", wait: 10
+    room = Rooms::Direct.find_for([ users(:david), users(:jason), users(:kevin) ])
+    assert_current_path room_path(room)
+  end
+
   test "group members rename, add, and leave with system messages in the timeline" do
     room = Current.set(user: users(:david)) do
       Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:kevin) ])
