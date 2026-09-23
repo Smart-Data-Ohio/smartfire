@@ -33,7 +33,7 @@ class DriveAttachmentsTest < ApplicationSystemTestCase
     sign_in "jz@37signals.com"
     join_room rooms(:designers)
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     assert_selector ".drive-picker__item", text: "Q3 Planning"
 
     within('[role="dialog"][aria-label="Find a Drive file"]') do
@@ -46,7 +46,7 @@ class DriveAttachmentsTest < ApplicationSystemTestCase
     assert_selector ".composer__drive-attachments .drive-attachment-chip", text: "Q3 Planning"
     assert_no_selector '[role="dialog"][aria-label="Find a Drive file"]'
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     attach_from_picker "Budget 2026"
     assert_selector ".composer__drive-attachments .drive-attachment-chip", count: 2
 
@@ -92,9 +92,9 @@ class DriveAttachmentsTest < ApplicationSystemTestCase
     sign_in "jz@37signals.com"
     join_room rooms(:designers)
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     attach_from_picker "Q3 Planning"
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     attach_from_picker "Budget 2026"
     fill_in "Write a message", with: "two files attached"
     click_on "Send Message"
@@ -135,9 +135,9 @@ class DriveAttachmentsTest < ApplicationSystemTestCase
 
     assert_selector "#thread-panel [data-thread-panel-target='conversation']", visible: true, wait: 10
     within("#thread-panel") do
-      find("button.composer__drive-btn", wait: 10)
+      find("button.composer__attachment-btn", wait: 10)
       wait_for_thread_panel_settled
-      find("button.composer__drive-btn").click
+      choose_drive_from_attach_menu
       assert_selector '[role="dialog"][aria-label="Find a Drive file"]', visible: true, wait: 10
       assert_selector ".drive-picker__item", text: "Q3 Planning", wait: 10
       attach_from_picker "Q3 Planning"
@@ -151,6 +151,13 @@ class DriveAttachmentsTest < ApplicationSystemTestCase
   end
 
   private
+    # The + button owns the Drive flow now: open its menu, then choose
+    # From Google Drive, exactly as the old Drive button click did.
+    def choose_drive_from_attach_menu
+      find("button.composer__attachment-btn").click
+      click_button "From Google Drive"
+    end
+
     # The thread drawer slides in over a 220ms transform transition while its
     # content mounts from a deep link, so the Drive button can exist (and be
     # found) while still translating. Clicking mid-slide can miss the moving

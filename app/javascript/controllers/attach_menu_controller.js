@@ -71,6 +71,11 @@ export default class extends Controller {
 
   chooseDrive(event) {
     event.preventDefault()
+    // The Drive flows arm document-level outside-click dismissal as
+    // they open; this click is still bubbling there, and its target
+    // (this menu item) sits outside their elements, so stop it here
+    // or it instantly closes what it just opened.
+    event.stopPropagation()
     this.#closeMenu()
     // The composer renders exactly one Drive controller element; its
     // lazy module connects on page load, so it is ready by click time.
