@@ -85,6 +85,46 @@ class Rooms::StageViewTest < ActionDispatch::IntegrationTest
     assert_match(/Make host/, response.body)
   end
 
+  test "a host sees no moderation controls on an administrator's row" do
+    room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:jz) }, users: [ users(:jz), users(:david) ])
+    admin = room.memberships.find_by!(user: users(:david))
+    admin.change_stage_role!("speaker")
+
+    sign_in :jz
+    get room_url(room)
+
+    assert_response :success
+    row = "##{ActionView::RecordIdentifier.dom_id(admin, :stage_row)}"
+    assert_select "#{row} form[action*='stage/roles']", minimum: 1
+    assert_select "#{row} form[action*='call_moderation']", count: 0
+  end
+
+  test "a muted administrator sees an unmute control on their own row" do
+    room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david), users(:kevin) ])
+    admin = room.memberships.find_by!(user: users(:david))
+    admin.update!(server_muted_at: Time.current)
+
+    sign_in :david
+    get room_url(room)
+
+    assert_response :success
+    row = "##{ActionView::RecordIdentifier.dom_id(admin, :stage_row)}"
+    assert_select "#{row} form[action*='call_moderation']", count: 1
+    assert_select "#{row} form[action*='call_moderation'] button", text: "Unmute"
+  end
+
+  test "an administrator sees moderation controls on every other row" do
+    room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:jz) }, users: [ users(:jz), users(:david) ])
+    host = room.memberships.find_by!(user: users(:jz))
+
+    sign_in :david
+    get room_url(room)
+
+    assert_response :success
+    row = "##{ActionView::RecordIdentifier.dom_id(host, :stage_row)}"
+    assert_select "#{row} form[action*='call_moderation']", minimum: 1
+  end
+
   test "the header Live badge renders only while live" do
     sign_in :kevin
     get room_url(@room)

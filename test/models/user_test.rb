@@ -172,6 +172,39 @@ class UserTest < ActiveSupport::TestCase
     assert_equal "acme", bot.reload.icon_name
   end
 
+  test "voice settings default to voice activity with the backtick key" do
+    user = users(:david)
+
+    assert_equal "voice_activity", user.voice_mode
+    assert_not_predicate user, :push_to_talk?
+    assert_equal "`", user.push_to_talk_key
+  end
+
+  test "voice settings accept push-to-talk with a named key and reject the rest" do
+    user = users(:david)
+    user.update!(voice_mode: "push_to_talk", push_to_talk_key: "CapsLock")
+
+    assert_predicate user.reload, :push_to_talk?
+    assert_equal "CapsLock", user.push_to_talk_key
+
+    user.voice_mode = "shout"
+    assert_not_predicate user, :valid?
+    assert_equal [ "is invalid" ], user.errors[:voice_mode]
+
+    user.voice_mode = "push_to_talk"
+    user.push_to_talk_key = "x" * 21
+    assert_not_predicate user, :valid?
+    assert_equal [ "is too long" ], user.errors[:push_to_talk_key]
+  end
+
+  test "clearing the push-to-talk key restores the backtick" do
+    user = users(:david)
+    user.update!(push_to_talk_key: "  ")
+
+    assert_nil user.reload[:push_to_talk_key]
+    assert_equal "`", user.push_to_talk_key
+  end
+
   private
     def create_new_user
       User.create!(name: "User", email_address: "user@example.com", password: "secret123456")
