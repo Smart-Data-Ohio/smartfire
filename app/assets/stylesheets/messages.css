@@ -1071,8 +1071,11 @@ img.message__attachment {
   }
 }
 
-.message-link-frame:empty {
-  display: none;
+/* Bare turbo-frames are display:contents (see base.css) and never intersect
+   the viewport, so the lazy quote frame needs its own box to load — hiding
+   it while empty would keep it from ever loading at all. */
+.message-link-frame {
+  display: block;
 }
 
 .message-quote {

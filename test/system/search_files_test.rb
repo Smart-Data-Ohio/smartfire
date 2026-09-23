@@ -43,6 +43,30 @@ class SearchFilesTest < ApplicationSystemTestCase
     assert_current_path %r{/rooms/#{@room.id}/@#{source.id}}, wait: 10
   end
 
+  test "a cross-room permalink loads its quote frame for members and outsiders" do
+    source_room = rooms(:watercooler)
+    source = source_room.messages.create!(
+      creator: users(:jason), markdown_source: "cross-room quoted system words",
+      client_message_id: "system-quote-cross-source"
+    )
+    @room.messages.create!(
+      creator: users(:jz), markdown_source: "see this /rooms/#{source_room.id}/@#{source.id}",
+      client_message_id: "system-quote-cross-quoting"
+    )
+
+    # JZ belongs to Designers but not Watercooler: the lazy frame loads and
+    # resolves to the private-room chip.
+    visit room_url(@room)
+    assert_selector "turbo-frame.message-link-frame", wait: 10
+    assert_selector ".message-quote-private", text: "Message in a private room", wait: 10
+
+    # David belongs to both rooms: the same frame loads the full card.
+    sign_in "david@37signals.com"
+    visit room_url(@room)
+    assert_selector "blockquote.message-quote", text: /cross-room quoted system words/, wait: 10
+    assert_selector ".message-quote__author", text: "Jason"
+  end
+
   test "the Files tab lists uploads and Drive rows with working filters" do
     message = @room.messages.create!(
       creator: users(:jz), body: "system file rows",
