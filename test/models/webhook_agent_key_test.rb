@@ -19,12 +19,11 @@ class WebhookAgentKeyTest < ActiveSupport::TestCase
     assert_not_includes JSON.parse(captured).keys, "agent"
   end
 
-  test "deliver for a legacy bot without an agent row sends a plain path plus a signed reply url" do
+  test "deliver for a legacy bot without an agent row sends the signed reply path as room.path" do
     legacy = User.create_bot!(name: "Legacy Path Bot", webhook_url: "https://example.test/legacy-path")
     key = legacy.plain_bot_key
     message = messages(:first)
     message.room.memberships.grant_to(legacy)
-    room_path = Rails.application.routes.url_helpers.room_path(message.room)
 
     captured = nil
     WebMock.stub_request(:post, legacy.webhook.url)
@@ -34,11 +33,10 @@ class WebhookAgentKeyTest < ActiveSupport::TestCase
     legacy.webhook.deliver(message)
 
     payload = JSON.parse(captured)
-    assert_equal room_path, payload.dig("room", "path")
-    assert_not_includes captured, key
     reply_url = payload["reply_url"]
-    assert reply_url.start_with?("#{room_path}/"),
-      "expected the reply url under the room path, got #{reply_url.inspect}"
+    assert_equal reply_url, payload.dig("room", "path"),
+      "room.path carries the same signed reply path so old integrations keep posting back"
+    assert_not_includes captured, key
     token = CGI.unescape(reply_url.split("/").fetch(-2))
     assert_equal legacy, User.authenticate_bot_reply_token(token, room_id: message.room.id)
     assert_not_includes payload.keys, "agent"

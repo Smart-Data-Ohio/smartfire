@@ -126,7 +126,8 @@ module User::Bot
 
   # A signed, expiring token authenticating this bot for one room's bot
   # posting endpoint (create only). Carried in legacy webhook payloads as
-  # reply_url so receivers can post back without a long-lived key.
+  # room.path and reply_url so receivers can post back without a
+  # long-lived key.
   def reply_token_for(room, expires_in: REPLY_URL_EXPIRY)
     self.class.reply_verifier.generate({ bot_id: id, room_id: room.id }, expires_in: expires_in)
   end

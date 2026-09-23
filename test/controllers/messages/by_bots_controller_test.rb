@@ -60,6 +60,27 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
     assert_response :redirect
   end
 
+  test "posting back to a legacy delivery room.path creates a reply" do
+    legacy = User.create_bot!(name: "Legacy Reply", webhook_url: "https://example.test/legacy-reply")
+    @room.memberships.grant_to(legacy)
+    message = @room.messages.create!(
+      creator: users(:david), markdown_source: "hey bot", client_message_id: "legacy-room-path"
+    )
+
+    captured = nil
+    WebMock.stub_request(:post, legacy.webhook.url)
+      .with { |request| captured = request.body; true }
+      .to_return(status: 200)
+    legacy.webhook.deliver(message)
+
+    assert_difference -> { Message.count }, +1 do
+      post JSON.parse(captured).dig("room", "path"), params: +"Replying through room.path!"
+      assert_response :created
+    end
+
+    assert_equal legacy, Message.last.creator
+  end
+
   test "create ignores drive_file_ids" do
     assert_difference -> { Message.count }, +1 do
       post room_bot_messages_url(@room, bot_key_for(users(:bender))),

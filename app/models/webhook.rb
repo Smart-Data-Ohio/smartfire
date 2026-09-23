@@ -92,15 +92,13 @@ class Webhook < ApplicationRecord
     end
 
     def payload(message, agent: nil, delivery_id: nil)
+      reply_path = reply_path_for(message.room) if legacy_bot?
       hash = {
         user:    { id: message.creator.id, name: message.creator.name },
-        room:    { id: message.room.id, name: message.room.name, path: room_payload_path(message.room) },
+        room:    { id: message.room.id, name: message.room.name, path: reply_path || room_payload_path(message.room) },
         message: { id: message.id, body: { html: message.body.body, plain: without_recipient_mentions(message.plain_text_body) }, path: message_path(message) }
       }
-      if legacy_bot?
-        hash[:reply_url] = Rails.application.routes.url_helpers
-          .room_bot_messages_path(message.room, user.reply_token_for(message.room))
-      end
+      hash[:reply_url] = reply_path if reply_path
       if agent
         hash[:agent] = { id: agent.id, name: agent.user.name, owner: agent.owner&.name, delivery_id: delivery_id }
         hash[:pull_request] = Github::PullRequestThread.payload_for_message(message, agent: agent)
@@ -115,14 +113,20 @@ class Webhook < ApplicationRecord
       Rails.application.routes.url_helpers.room_at_message_path(message.room, message)
     end
 
-    # Every delivery carries the plain room path: no payload ever embeds
-    # the bot key. Legacy bots (no Agent row) additionally get reply_url, a
-    # signed path that expires after User::Bot::REPLY_URL_EXPIRY and posts
-    # one reply through the bot posting endpoint (create only); receivers
-    # with a stored bot key or an agent token keep using those instead
-    # (see docs/agents.md).
+    # Agent-backed bots get the plain room path: receivers post back with
+    # their own agent token, never anything from the payload. Legacy bots
+    # (no Agent row) instead get the signed reply path as room.path — the
+    # same path as reply_url — so integrations that POST back to room.path
+    # keep working without a long-lived key. The reply path expires after
+    # User::Bot::REPLY_URL_EXPIRY and posts through the bot posting
+    # endpoint (create only); receivers with a stored bot key keep using
+    # that instead (see docs/agents.md). No payload ever embeds the bot key.
     def room_payload_path(room)
       Rails.application.routes.url_helpers.room_path(room)
+    end
+
+    def reply_path_for(room)
+      Rails.application.routes.url_helpers.room_bot_messages_path(room, user.reply_token_for(room))
     end
 
     def legacy_bot?
