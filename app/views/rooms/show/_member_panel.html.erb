@@ -6,7 +6,8 @@
        data-member-panel-target="panel"
        data-members-url="<%= room_members_path(room, format: :json) %>"
        data-default-avatar-url="<%= asset_path("default-avatar.svg") %>"
-       data-card-url-template="<%= profile_card_url_template %>">
+       data-card-url-template="<%= profile_card_url_template %>"
+       data-star-url-template="<%= user_star_path("USER_ID") %>">
   <button type="button"
           class="member-panel__backdrop"
           aria-hidden="true"
@@ -36,4 +37,13 @@
     <div class="member-panel__content" data-member-panel-target="content"></div>
     <%= render "shared/multi_select_bar" %>
   </section>
+
+  <%# One shared row menu per panel, configured per row like the shared %>
+  <%# message menu: right-click or Shift+F10 opens it for that member. %>
+  <div id="member-row-menu" class="member-row-menu border shadow" role="menu" aria-label="Member actions"
+      hidden data-member-panel-target="rowMenu" data-action="keydown->member-panel#rowMenuKeydown">
+    <button type="button" class="btn member-row-menu__item" role="menuitem"
+        data-member-panel-target="rowMenuStar" data-action="member-panel#toggleRowMenuStar">☆ Star</button>
+    <span class="for-screen-reader" role="status" data-member-panel-target="rowMenuStatus"></span>
+  </div>
 </aside>

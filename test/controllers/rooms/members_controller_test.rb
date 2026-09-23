@@ -16,7 +16,7 @@ class Rooms::MembersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     members = response.parsed_body.fetch("members")
     assert_equal members.sort_by { |member| [ member.fetch("name").downcase, member.fetch("id") ] }, members
-    assert_equal %w[ avatar_url bot id name online presence status ], members.first.keys.sort
+    assert_equal %w[ avatar_url bot id name online presence starred status ], members.first.keys.sort
 
     jason = members.find { |member| member["id"] == users(:jason).id }
     assert jason.fetch("online")
@@ -79,6 +79,27 @@ class Rooms::MembersControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
     assert_not_includes response.body, users(:jason).name
+  end
+
+  test "starred is per viewer and never leaks between viewers" do
+    users(:david).user_stars.create!(starred_user: users(:kevin))
+    users(:jason).user_stars.create!(starred_user: users(:jz))
+
+    get room_members_url(rooms(:designers), format: :json)
+    assert_response :success
+    david_view = response.parsed_body.fetch("members")
+    assert david_view.find { |member| member["id"] == users(:kevin).id }.fetch("starred")
+    assert_not david_view.find { |member| member["id"] == users(:jz).id }.fetch("starred")
+    assert_not david_view.find { |member| member["id"] == users(:david).id }.fetch("starred")
+
+    delete session_url
+    sign_in :jason
+
+    get room_members_url(rooms(:designers), format: :json)
+    assert_response :success
+    jason_view = response.parsed_body.fetch("members")
+    assert jason_view.find { |member| member["id"] == users(:jz).id }.fetch("starred")
+    assert_not jason_view.find { |member| member["id"] == users(:kevin).id }.fetch("starred")
   end
 
   test "requires authentication" do

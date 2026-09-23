@@ -5,6 +5,22 @@ class Rooms::DirectsControllerTest < ActionDispatch::IntegrationTest
     sign_in :david
   end
 
+  test "new lists starred people first with a star marker" do
+    users(:david).user_stars.create!(starred_user: users(:kevin))
+
+    get new_rooms_direct_url
+
+    assert_response :ok
+    rows = css_select(".dm-picker__row").map do |row|
+      row.at_css("input[data-multi-select-target='checkbox']")["data-user-id"].to_i
+    end
+    assert_equal users(:kevin).id, rows.first
+    kevin_row = css_select(".dm-picker__row").find do |row|
+      row.at_css("input[data-multi-select-target='checkbox']")["data-user-id"].to_i == users(:kevin).id
+    end
+    assert_equal "★", kevin_row.at_css("[aria-label='Starred by you']").text
+  end
+
   test "create" do
     post rooms_directs_url, params: { user_ids: [ users(:jz).id ] }
 
