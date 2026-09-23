@@ -734,6 +734,8 @@ class ChannelThread < ApplicationRecord
   end
 
   def receive(message)
+    return if message.system_note?
+
     unread_user_ids = mark_memberships_unread(message)
     broadcast_unread_threads(unread_user_ids)
     ChannelThread::PushMessageJob.perform_later(self, message)
