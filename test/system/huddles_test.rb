@@ -17,6 +17,9 @@ class HuddlesTest < ApplicationSystemTestCase
   driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1000 ], options: { name: :huddle_chrome } do |options|
     options.add_argument "--use-fake-device-for-media-stream"
     options.add_argument "--use-fake-ui-for-media-stream"
+    # Keep the fake microphone's beep (and any remote audio) off the
+    # host speakers; capture and Web Audio analysis are unaffected.
+    options.add_argument "--mute-audio"
     options.add_argument "--autoplay-policy=no-user-gesture-required"
   end
 
@@ -100,11 +103,11 @@ class HuddlesTest < ApplicationSystemTestCase
     assert_equal original_connection_count, page.evaluate_script("window.huddleTestPeerConnections.length")
     assert_media_received "audio"
 
-    click_button "Mute", exact: true
-    assert_button "Unmute", exact: true
+    click_button "Mute microphone", exact: true
+    assert_selector "[data-huddle-target='mute'][aria-pressed='true']", text: "Mute microphone"
     using_session("Kevin") { assert_selector ".huddle__participant", text: /JZ.*Muted/m }
-    click_button "Unmute", exact: true
-    assert_button "Mute", exact: true
+    click_button "Mute microphone", exact: true
+    assert_selector "[data-huddle-target='mute'][aria-pressed='false']", text: "Mute microphone"
 
     click_button "Stop sharing"
     assert_button "Share screen"
@@ -125,11 +128,11 @@ class HuddlesTest < ApplicationSystemTestCase
 
     assert_selector ".huddle__participant", count: 2
     assert_media_received "audio"
-    assert_selector "[data-huddle-target='camera'][aria-pressed='false']", text: "Camera off"
+    assert_selector "[data-huddle-target='camera'][aria-pressed='false']", text: "Camera"
     assert_no_selector ".huddle__camera video"
 
-    click_button "Camera off", exact: true
-    assert_selector "[data-huddle-target='camera'][aria-pressed='true']", text: "Camera on"
+    click_button "Camera", exact: true
+    assert_selector "[data-huddle-target='camera'][aria-pressed='true']", text: "Camera"
     assert_selector ".huddle__camera--local video"
     assert_selector ".huddle__camera figcaption", text: "JZ (you)"
     wait_for_condition("the local camera preview did not decode video") do
@@ -144,8 +147,8 @@ class HuddlesTest < ApplicationSystemTestCase
       end
       assert_media_received "video"
 
-      click_button "Camera off", exact: true
-      assert_selector "[data-huddle-target='camera'][aria-pressed='true']", text: "Camera on"
+      click_button "Camera", exact: true
+      assert_selector "[data-huddle-target='camera'][aria-pressed='true']", text: "Camera"
     end
 
     assert_selector ".huddle__camera", count: 2
@@ -154,14 +157,14 @@ class HuddlesTest < ApplicationSystemTestCase
     end
     assert_media_received "video"
 
-    click_button "Mute", exact: true
-    assert_button "Unmute", exact: true
+    click_button "Mute microphone", exact: true
+    assert_selector "[data-huddle-target='mute'][aria-pressed='true']", text: "Mute microphone"
     assert_selector ".huddle__camera", count: 2
     wait_for_condition("muting stopped the remote camera") do
       remote_camera_decoding?
     end
-    click_button "Unmute", exact: true
-    assert_button "Mute", exact: true
+    click_button "Mute microphone", exact: true
+    assert_selector "[data-huddle-target='mute'][aria-pressed='false']", text: "Mute microphone"
 
     click_button "Share screen"
     assert_button "Stop sharing"
@@ -190,8 +193,8 @@ class HuddlesTest < ApplicationSystemTestCase
       remote_camera_decoding?
     end
 
-    click_button "Camera on", exact: true
-    assert_selector "[data-huddle-target='camera'][aria-pressed='false']", text: "Camera off"
+    click_button "Camera", exact: true
+    assert_selector "[data-huddle-target='camera'][aria-pressed='false']", text: "Camera"
     assert_selector ".huddle__camera", count: 1
     using_session("Kevin") { assert_selector ".huddle__camera", count: 1 }
 
@@ -211,8 +214,27 @@ class HuddlesTest < ApplicationSystemTestCase
     click_button "Leave", exact: true
     assert_no_selector "#channel-huddle:not([hidden])"
     join_huddle_and_confirm
-    assert_selector "[data-huddle-target='camera'][aria-pressed='false']", text: "Camera off"
+    assert_selector "[data-huddle-target='camera'][aria-pressed='false']", text: "Camera"
     assert_no_selector ".huddle__camera video"
+  end
+
+  test "the mute and camera toggles keep stable labels with pressed state and tooltips" do
+    open_huddle_as "jz@37signals.com"
+
+    assert_toggle_state "mute", label: "Mute microphone", pressed: false, tooltip: "Microphone live"
+    assert_toggle_state "camera", label: "Camera", pressed: false, tooltip: "Camera off"
+
+    click_button "Mute microphone", exact: true
+    assert_toggle_state "mute", label: "Mute microphone", pressed: true, tooltip: "Microphone muted"
+
+    click_button "Mute microphone", exact: true
+    assert_toggle_state "mute", label: "Mute microphone", pressed: false, tooltip: "Microphone live"
+
+    click_button "Camera", exact: true
+    assert_toggle_state "camera", label: "Camera", pressed: true, tooltip: "Camera on"
+
+    click_button "Camera", exact: true
+    assert_toggle_state "camera", label: "Camera", pressed: false, tooltip: "Camera off"
   end
 
   test "a camera that fails to start keeps the huddle connected and stays retryable" do
@@ -231,11 +253,11 @@ class HuddlesTest < ApplicationSystemTestCase
       };
     JS
 
-    click_button "Camera off", exact: true
+    click_button "Camera", exact: true
 
     assert_selector "#channel-huddle[data-state='connected']"
     assert_selector "[data-huddle-target='notice']", text: /Camera wasn’t started/
-    assert_selector "[data-huddle-target='camera']:not([disabled])", text: "Camera off"
+    assert_selector "[data-huddle-target='camera']:not([disabled])", text: "Camera"
     assert_selector ".huddle__participant", count: 2
     assert_media_received "audio"
     using_session("Kevin") do
@@ -245,8 +267,8 @@ class HuddlesTest < ApplicationSystemTestCase
     end
 
     page.execute_script "navigator.mediaDevices.getUserMedia = window.huddleTestGetUserMedia"
-    click_button "Camera off", exact: true
-    assert_selector "[data-huddle-target='camera'][aria-pressed='true']", text: "Camera on"
+    click_button "Camera", exact: true
+    assert_selector "[data-huddle-target='camera'][aria-pressed='true']", text: "Camera"
     assert_no_selector "[data-huddle-target='notice']:not([hidden])"
     assert_selector ".huddle__camera--local video"
     using_session("Kevin") do
@@ -282,8 +304,8 @@ class HuddlesTest < ApplicationSystemTestCase
       };
     JS
 
-    click_button "Camera off", exact: true
-    assert_selector "[data-huddle-target='camera'][aria-pressed='true']", text: "Camera on"
+    click_button "Camera", exact: true
+    assert_selector "[data-huddle-target='camera'][aria-pressed='true']", text: "Camera"
     page.execute_script "navigator.mediaDevices.getUserMedia = window.huddleTestGetUserMedia"
     using_session("Kevin") do
       assert_selector ".huddle__camera video"
@@ -462,22 +484,90 @@ class HuddlesTest < ApplicationSystemTestCase
     assert_equal "on", page.evaluate_script("window.localStorage.getItem('campfire.huddle.noiseSuppression')")
   end
 
-  test "muting and unmuting keeps the noise suppressor on the microphone" do
+  test "the capture's browser suppression follows the RNNoise processor" do
     open_huddle_as "jz@37signals.com"
 
     wait_for_condition("the RNNoise processor never attached to the microphone") do
       microphone_processor_name == "campfire-rnnoise"
     end
+    assert_equal false, microphone_capture_setting("noiseSuppression")
+    assert_equal false, last_microphone_constraints["noiseSuppression"]
 
-    click_button "Mute"
-    assert_button "Unmute"
+    capture_device = microphone_capture_setting("deviceId")
+    first_track = microphone_track_id
+
+    click_button "Noise suppression on"
+
+    assert_selector "[data-huddle-target='noise'][aria-pressed='false']", text: "Noise suppression off"
+    wait_for_condition("the RNNoise processor was not removed") { microphone_processor_name.nil? }
+    wait_for_condition("the microphone was not re-acquired after switching suppression off") do
+      microphone_track_id.present? && microphone_track_id != first_track
+    end
+    assert_equal true, microphone_capture_setting("noiseSuppression")
+    assert_equal true, last_microphone_constraints["noiseSuppression"]
+
+    # The re-acquire keeps the selected device instead of falling back to the
+    # browser default.
+    assert_equal capture_device, last_microphone_constraints["deviceId"]
+
+    second_track = microphone_track_id
+    click_button "Noise suppression off"
+
+    assert_selector "[data-huddle-target='noise'][aria-pressed='true']", text: "Noise suppression on"
+    wait_for_condition("the RNNoise processor did not come back") do
+      microphone_processor_name == "campfire-rnnoise"
+    end
+    wait_for_condition("the microphone was not re-acquired after switching suppression on") do
+      microphone_track_id.present? && microphone_track_id != second_track
+    end
+    assert_equal false, microphone_capture_setting("noiseSuppression")
+    assert_equal false, last_microphone_constraints["noiseSuppression"]
+
+    # A processor that fails to start falls back to browser suppression on a
+    # freshly re-acquired capture, not the unfiltered one the join captured.
+    click_button "Leave", exact: true
+    assert_no_selector "#channel-huddle:not([hidden])"
+    break_noise_suppression
+    join_huddle_and_confirm
+
+    assert_selector "[data-huddle-target='status']", text: /Noise suppression couldn’t start/
+    assert_nil microphone_processor_name
+    assert_equal true, microphone_capture_setting("noiseSuppression")
+    assert_equal true, last_microphone_constraints["noiseSuppression"]
+  end
+
+  test "muting and unmuting keeps the noise suppressor on the microphone" do
+    open_huddle_as "jz@37signals.com"
+
+    assert page.evaluate_script(<<~JS), "expected the room to stop the mic track on mute"
+      window.Stimulus
+        .getControllerForElementAndIdentifier(document.getElementById('channel-huddle'), 'huddle')
+        ?.room?.options?.publishDefaults?.stopMicTrackOnMute === true
+    JS
+
+    wait_for_condition("the RNNoise processor never attached to the microphone") do
+      microphone_processor_name == "campfire-rnnoise"
+    end
+
+    click_button "Mute microphone"
+    assert_selector "[data-huddle-target='mute'][aria-pressed='true']", text: "Mute microphone"
     assert_selector "#channel-huddle.huddle--muted"
 
-    click_button "Unmute"
-    assert_button "Mute"
+    # Muting stops the mic track so the OS indicator clears; the processor
+    # stays attached to the silenced track instead of being rebuilt, so
+    # unmuting hands the live track back to the same worklet.
+    wait_for_condition("the mic track was not stopped on mute") do
+      microphone_track_state == "ended"
+    end
+    assert_equal "campfire-rnnoise", microphone_processor_name
 
-    # Muting disables the published track rather than replacing it, so the
-    # processor has to survive the round trip.
+    click_button "Mute microphone"
+    assert_selector "[data-huddle-target='mute'][aria-pressed='false']", text: "Mute microphone"
+
+    # Unmuting re-acquires the microphone onto the surviving processor.
+    wait_for_condition("the microphone was not re-acquired on unmute") do
+      microphone_track_state == "live"
+    end
     wait_for_condition("the RNNoise processor was lost across mute and unmute") do
       microphone_processor_name == "campfire-rnnoise"
     end
@@ -659,7 +749,7 @@ class HuddlesTest < ApplicationSystemTestCase
 
     # One fake camera means no second option to click; driving the handler with
     # the listed camera still restarts the capture on the real switch path.
-    click_button "Camera off", exact: true
+    click_button "Camera", exact: true
     using_session("Kevin") do
       assert_selector ".huddle__camera video"
       wait_for_condition("the camera did not decode video") { remote_camera_decoding? }
@@ -729,13 +819,13 @@ class HuddlesTest < ApplicationSystemTestCase
     assert_selector "[data-huddle-target='meter']:not([hidden])"
     wait_for_condition("the microphone meter never rose") { microphone_meter_level > 0 }
 
-    click_button "Mute", exact: true
+    click_button "Mute microphone", exact: true
     assert_no_selector "[data-huddle-target='meter']:not([hidden])"
     assert_equal 0, microphone_meter_level
     assert_not microphone_meter_running,
       "the meter kept polling while muted"
 
-    click_button "Unmute", exact: true
+    click_button "Mute microphone", exact: true
     assert_selector "[data-huddle-target='meter']:not([hidden])"
     wait_for_condition("the microphone meter never came back after unmuting") do
       microphone_meter_level > 0
@@ -1046,14 +1136,14 @@ class HuddlesTest < ApplicationSystemTestCase
       click_button "Join huddle"
       confirm_prejoin_if_present
       assert_selector "#channel-huddle[data-state='connected']", wait: 20
-      assert_button "Mute", exact: true
+      assert_button "Mute microphone", exact: true
     end
 
     def retry_huddle_and_confirm
       click_button "Try again"
       confirm_prejoin_if_present
       assert_selector "#channel-huddle[data-state='connected']", wait: 20
-      assert_button "Mute", exact: true
+      assert_button "Mute microphone", exact: true
     end
 
     def confirm_prejoin_if_present
@@ -1080,6 +1170,7 @@ class HuddlesTest < ApplicationSystemTestCase
         window.huddleTestLocalTracks = [];
         window.huddleTestCredentials = [];
         window.huddleTestWebSocketUrls = [];
+        window.huddleTestGetUserMediaConstraints = [];
 
         const nativeFetch = window.fetch.bind(window);
         window.fetch = async (...args) => {
@@ -1123,6 +1214,7 @@ class HuddlesTest < ApplicationSystemTestCase
         };
         const nativeGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
         navigator.mediaDevices.getUserMedia = async (...args) => {
+          window.huddleTestGetUserMediaConstraints.push(args[0]);
           const stream = await nativeGetUserMedia(...args);
           window.huddleTestLocalTracks.push(...stream.getTracks());
           return stream;
@@ -1214,6 +1306,20 @@ class HuddlesTest < ApplicationSystemTestCase
       JS
     end
 
+    # The raw capture track, not the noise suppressor's processed output:
+    # muting stops this one while the attached processor's track stays live.
+    def microphone_track_state
+      page.evaluate_script(<<~JS)
+        window.Stimulus
+          .getControllerForElementAndIdentifier(document.getElementById('channel-huddle'), 'huddle')
+          ?.room?.localParticipant?.getTrackPublication('microphone')?.audioTrack?._mediaStreamTrack?.readyState ?? null
+      JS
+    end
+
+    def assert_toggle_state(target, label:, pressed:, tooltip:)
+      assert_selector "[data-huddle-target='#{target}'][aria-pressed='#{pressed}'][title='#{tooltip}']", text: label
+    end
+
     def device_select_labels(target)
       page.evaluate_script(<<~JS, target)
         Array.from(document.querySelector(`[data-huddle-target='${arguments[0]}']`).options).map(option => option.text)
@@ -1284,6 +1390,26 @@ class HuddlesTest < ApplicationSystemTestCase
         window.Stimulus
           .getControllerForElementAndIdentifier(document.getElementById('channel-huddle'), 'huddle')
           ?.microphoneMeter?.running ?? false
+      JS
+    end
+
+    # The browser's own audio processing on the raw capture track, not the
+    # noise suppressor's processed output.
+    def microphone_capture_setting(name)
+      page.evaluate_script(<<~JS, name)
+        window.Stimulus
+          .getControllerForElementAndIdentifier(document.getElementById('channel-huddle'), 'huddle')
+          ?.room?.localParticipant?.getTrackPublication('microphone')?.audioTrack?._mediaStreamTrack?.getSettings()[arguments[0]] ?? null
+      JS
+    end
+
+    # The audio constraints of the most recent microphone capture, as passed
+    # to getUserMedia: what the app asked for, beside what the track reports.
+    def last_microphone_constraints
+      page.evaluate_script(<<~JS)
+        (window.huddleTestGetUserMediaConstraints || [])
+          .filter(constraints => constraints && typeof constraints.audio === "object")
+          .at(-1)?.audio ?? null
       JS
     end
 

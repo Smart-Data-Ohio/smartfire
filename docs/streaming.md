@@ -13,11 +13,15 @@ for the media foundation.
 
 Hosts and speakers see a **Go live** form in the stage panel: a quality
 select (`720p15`, `1080p15`, `1080p30`, defaulting to `1080p15`) and a
-button. Submitting posts the stream (`POST /rooms/:room_id/stage/stream`
-with a `quality` parameter) and, on success, the huddle panel starts
-sharing the presenter's screen at that quality. A host or speaker can also
+button. The click hands the whole sequence to the huddle panel, which
+captures the screen inside the click gesture first — Safari denies a
+capture that starts after the POST round-trip — then posts the stream
+(`POST /rooms/:room_id/stage/stream` with a `quality` parameter) and
+publishes the captured tracks at that quality. Denying the capture posts
+nothing; a failed POST stops the tracks. A host or speaker can also
 share through the ordinary Share screen control; that share carries the
-room default and never marks the room live.
+room default and never marks the room live. The Share control hides where
+`getDisplayMedia` is missing.
 
 One room carries at most one live stream. Starting while another stream is
 live answers 409 and names the presenter. Listeners cannot go live, and
@@ -62,7 +66,9 @@ for what is and is not measured.
 The stage panel shows **Stop stream** to the presenter and to hosts.
 Stopping (`DELETE /rooms/:room_id/stage/stream`) ends the live state; the
 presenter's browser stops sharing alongside it. An administrator member
-can also stop through the endpoint. Anyone else gets 403.
+can also stop through the endpoint. Anyone else gets 403. Both the Stop
+control and the presenting browser name the stream id they mean to stop,
+so a delayed stop can never end someone else's newer stream.
 
 A stream also ends, in the same transaction, when:
 
@@ -70,14 +76,17 @@ A stream also ends, in the same transaction, when:
 - the presenter's membership is removed;
 - the presenter's user is deactivated;
 - the presenter's last active grant for the room is revoked, including
-  through the gateway's authorization check. Any role change revokes
-  grants, so a promotion ends the stream too: rejoining drops the share,
-  and nothing stays live behind it.
+  through the gateway's authorization check. Only a change that crosses
+  the publish boundary (to or from listener) revokes grants; a host↔speaker
+  change keeps the grant and the stream it carries.
 
 Ending always broadcasts the same updates as an explicit stop. On the
 presenting browser, a cancelled or denied capture, the browser's own stop
-control, and leaving the call end the stream as well, so no live state
-dangles behind a share that is already gone. When a host stops someone else's stream, the presenter's browser is notified through the huddle panel and stops sharing, instead of the share continuing as an ordinary screen share.
+control, and leaving the call end the stream as well — the leaving call
+uses `keepalive` so it survives tab close — and the huddle reconciler ends
+any live stream whose presenter has had no in-call grant for thirty
+seconds, so no live state dangles behind a share that is already gone.
+When a host stops someone else's stream, the presenter's browser is notified through the huddle panel and stops sharing, instead of the share continuing as an ordinary screen share.
 
 ## Deliberately not included
 

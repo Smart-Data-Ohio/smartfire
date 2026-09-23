@@ -38,9 +38,14 @@ class ChannelThreadMessagesController < ApplicationController
   end
 
   def create
-    @message = @thread.post_message!(creator: Current.user, attributes: message_params, drive_file_ids: validated_drive_file_ids!)
+    if (duplicate = Message.find_duplicate(room: @room, creator: Current.user, client_message_id: params.dig(:message, :client_message_id)))
+      # A retried create: return the original without re-posting.
+      @message = duplicate
+    else
+      @message = @thread.post_message!(creator: Current.user, attributes: message_params, drive_file_ids: validated_drive_file_ids!)
+      @message.broadcast_create
+    end
 
-    @message.broadcast_create
     no_store_response! if request.format.json?
     respond_to do |format|
       format.html { redirect_to room_thread_path(@room, @thread) }
@@ -64,10 +69,24 @@ class ChannelThreadMessagesController < ApplicationController
       @message.preserve_legacy_attachments_on_next_markdown_render! if !@message.markdown? && attributes[:markdown_source].present?
       @message.assign_attributes(attributes)
       apply_drive_file_ids!(@message) if replace_drive_attachments
+      # Stamped only by the edit endpoints (see MessagesController), and
+      # only when the text itself changed: never by reaction touches,
+      # reply tombstones, card fetches, attachment-only or identical saves.
+      @message.edited_at = Time.current if @message.body_content_will_change?
       @message.save!
     end
     @message.broadcast_replace_to @thread, :messages,
       target: [ @message, :presentation ], partial: "messages/presentation", attributes: { maintain_scroll: true }
+    @message.broadcast_replace_to @thread, :messages,
+      target: [ @message, :meta ], partial: "messages/meta", attributes: { maintain_scroll: true }
+    # References re-sync on save (see Message's after_update_commit
+    # hooks), so an edit that adds or removes a URL replaces the card
+    # containers too. The containers always render, which gives both
+    # cases a broadcast target.
+    @message.broadcast_replace_to @thread, :messages,
+      target: [ @message, :github_pr_cards ], partial: "github/pull_requests/cards", attributes: { maintain_scroll: true }
+    @message.broadcast_replace_to @thread, :messages,
+      target: [ @message, :twitter_cards ], partial: "twitter/posts/cards", attributes: { maintain_scroll: true }
     if replace_drive_attachments
       @message.broadcast_replace_to @thread, :messages, target: [ @message, :drive_attachments ],
         partial: "messages/drive_attachments", locals: { message: @message }, attributes: { maintain_scroll: true }
@@ -85,8 +104,11 @@ class ChannelThreadMessagesController < ApplicationController
   end
 
   def destroy
+    replies = @message.replies.to_a
     @message.destroy!
     @message.broadcast_remove
+    broadcast_reply_tombstones(replies)
+    broadcast_thread_summary_refresh(@thread)
 
     respond_to do |format|
       format.html { redirect_to room_thread_path(@room, @thread) }
@@ -147,6 +169,30 @@ class ChannelThreadMessagesController < ApplicationController
         permitted[:reply_notify_author] = ActiveModel::Type::Boolean.new.cast(permitted[:reply_notify_author])
       end
       permitted.to_h.symbolize_keys
+    end
+
+    # Deleting a message leaves a tombstone on each reply (see
+    # Message#preserve_reply_tombstones); replace the replies in other
+    # clients so their previews flip to it.
+    def broadcast_reply_tombstones(replies)
+      replies.each(&:reload)
+      Message.preload_rendering_details(replies)
+
+      replies.each do |reply|
+        reply.broadcast_replace_to reply.message_stream_target, :messages,
+          target: reply, partial: "messages/message", attributes: { maintain_scroll: true }
+      end
+    end
+
+    # A delete changes the parent thread's summary (message counts,
+    # previews) in other clients' thread browsers. The browser reloads
+    # on UnreadThreadsChannel messages; refreshOnly gets the reload
+    # without marking the thread unread.
+    def broadcast_thread_summary_refresh(thread)
+      thread.room.memberships.pluck(:user_id).each do |user_id|
+        ActionCable.server.broadcast UnreadThreadsChannel.stream_name_for(user_id),
+          { threadId: thread.id, roomId: thread.room_id, refreshOnly: true }
+      end
     end
 
     def render_error(message, status: :unprocessable_content)

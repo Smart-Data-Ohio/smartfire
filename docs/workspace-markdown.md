@@ -53,6 +53,8 @@ Keep chat interactions close to Discord's model: replies stay visible in the cha
 
 Commonmarker renders Markdown with raw HTML disabled. A separate allowlist sanitizes the generated markup, and a second presentation sanitizer handles the existing server-rendered mention attachments. Markdown input is limited to 50,000 characters.
 
+Forwarded messages snapshot the source's rendered HTML and record whether the source was Markdown, so the forward renders through the same presentation. Forwards made before that flag shipped — including forwards of Markdown sources — keep legacy rendering.
+
 The compatibility preview endpoint remains available at `POST /rooms/:room_id/messages/preview`, with a `message[markdown_source]` field. It returns `{ "html": "..." }`. Message create/update requests accept the same source field; when present, the server renders the body instead of trusting a supplied HTML body.
 
 ## Local validation

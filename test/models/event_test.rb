@@ -39,6 +39,17 @@ class EventTest < ActiveSupport::TestCase
     assert_not @room.events.build(organizer: outsider, title: "Outsider party", starts_at:, time_zone: "UTC").valid?
   end
 
+  test "rejects a soft-deleted room as the venue" do
+    venue = Rooms::Voice.create_for({ name: "Lounge", creator: @organizer }, users: [ @organizer ])
+    venue.update_columns(deleted_at: Time.current)
+
+    event = @room.events.build(organizer: @organizer, title: "Voice party",
+      starts_at: 1.day.from_now, time_zone: "UTC", venue:)
+
+    assert_not event.valid?
+    assert_equal [ "must be a voice or Stage channel you belong to" ], event.errors[:venue]
+  end
+
   test "records the organizer as going" do
     event = create_event!
 

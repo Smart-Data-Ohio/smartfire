@@ -7,8 +7,12 @@ module Message::Pagination
     scope :last_page, -> { ordered.last(PAGE_SIZE) }
     scope :first_page, -> { ordered.first(PAGE_SIZE) }
 
-    scope :before, ->(message) { where("created_at < ?", message.created_at) }
-    scope :after, ->(message) { where("created_at > ?", message.created_at) }
+    # Tuple comparison on (created_at, id): a strict created_at
+    # comparison skips same-timestamp messages at page edges, and the
+    # qualified columns keep joined scopes (search results join rooms
+    # and memberships) from raising "ambiguous column name".
+    scope :before, ->(message) { where("(messages.created_at, messages.id) < (?, ?)", message.created_at, message.id) }
+    scope :after, ->(message) { where("(messages.created_at, messages.id) > (?, ?)", message.created_at, message.id) }
 
     scope :page_before, ->(message) { before(message).last_page }
     scope :page_after, ->(message) { after(message).first_page }

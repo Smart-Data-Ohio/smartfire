@@ -283,8 +283,9 @@ export function createGateway(options) {
     });
   }
 
-  async function checkGrant(grant, signal) {
-    const path = `/internal/huddle/grants/${encodeURIComponent(grant.grantId)}`;
+  async function checkGrant(grant, signal, recordSeen = true) {
+    const query = recordSeen ? "" : "?record_seen=0";
+    const path = `/internal/huddle/grants/${encodeURIComponent(grant.grantId)}${query}`;
     return boundedFetch(campfireEndpoint(path), {
       method: "GET",
       headers: {
@@ -326,6 +327,31 @@ export function createGateway(options) {
 
   function removalKey(grant) {
     return crypto.createHash("sha256").update(grant.roomName).update("\0").update(grant.identity).digest("hex");
+  }
+
+  // Tells Smartfire the participant is gone so presence clears immediately
+  // instead of waiting out the liveness window. Best effort only: it never
+  // blocks removal, never retries, and never triggers the fatal path, so
+  // enforcement behaves exactly as if the report did not exist.
+  async function reportLeft(grant, disconnectedAt) {
+    const path = `/internal/huddle/grants/${encodeURIComponent(grant.grantId)}/left`;
+    try {
+      await boundedFetch(campfireEndpoint(path), {
+        method: "POST",
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json",
+          "x-huddle-gateway-secret": config.gatewaySecret,
+        },
+        body: JSON.stringify({ disconnected_at: new Date(disconnectedAt).toISOString() }),
+      }, config.requestTimeoutMs, undefined, async (response) => {
+        await response.body?.cancel().catch(() => {});
+        if (response.status < 200 || response.status >= 300) throw new GatewayError("left_report_failed");
+      });
+      emit(config, "participant_left_reported");
+    } catch {
+      emit(config, "participant_left_report_failed");
+    }
   }
 
   function triggerFatal() {
@@ -458,10 +484,12 @@ export function createGateway(options) {
   function scheduleLeaseCleanup(lease) {
     if (closing || lease.denied || lease.cleanupStarted || lease.owners.size > 0 || lease.reservations.size > 0 || lease.graceTimer) return;
     const generation = lease.generation;
+    lease.disconnectedAt = Date.now();
     lease.graceTimer = setTimeout(() => {
       lease.graceTimer = null;
       if (lease.generation === generation && lease.owners.size === 0 && lease.reservations.size === 0) {
         emit(config, "reconnect_grace_expired");
+        void reportLeft(lease.grant, lease.disconnectedAt);
         beginLeaseCleanup(lease);
       }
     }, config.reconnectGraceMs);
@@ -474,7 +502,11 @@ export function createGateway(options) {
       if (lease.denied || lease.checking || closing) return;
       lease.checking = true;
       try {
-        await checkGrant(lease.grant);
+        // A lease in its reconnect grace has no signaling connection behind
+        // it: the check still enforces the grant, but records no liveness, so
+        // a participant whose leave report already cleared cannot be marked
+        // seen again by their own dead connection.
+        await checkGrant(lease.grant, undefined, lease.owners.size > 0);
         emit(config, "active_grant_allowed");
       } catch {
         denyLease(lease, "active_grant_denied");

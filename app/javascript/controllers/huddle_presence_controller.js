@@ -7,20 +7,28 @@ import { Controller } from "@hotwired/stimulus"
 // one per row. Rooms absent from the response get an empty list; a failed
 // poll keeps the last known participants. A refresh while one is already in
 // flight is skipped, so the connect fetch and an interval tick never double
-// up.
+// up. Hidden tabs do not poll: the interval tick skips while hidden, and
+// becoming visible fetches immediately through the same de-duplicated
+// refresh.
 export default class extends Controller {
   static values = { url: String, interval: { type: Number, default: 15000 } }
 
   connect() {
+    this.visibilityChanged = () => {
+      if (document.visibilityState === "visible") this.refresh()
+    }
+    document.addEventListener("visibilitychange", this.visibilityChanged)
     this.refresh()
     this.refreshTimer = setInterval(() => this.refresh(), this.intervalValue)
   }
 
   disconnect() {
     clearInterval(this.refreshTimer)
+    document.removeEventListener("visibilitychange", this.visibilityChanged)
   }
 
   async refresh() {
+    if (document.visibilityState === "hidden") return
     if (this.inFlightRefresh) return
     this.inFlightRefresh = true
 

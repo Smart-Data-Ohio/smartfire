@@ -28,7 +28,11 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   # PARALLEL_WORKERS still overrides this, which is how CI runs a single worker.
   parallelize(workers: [ Etc.nprocessors, 4 ].min)
 
-  driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1400 ]
+  # --mute-audio keeps chat sounds (/play, notifications) off the host
+  # speakers while tests run.
+  driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1400 ] do |options|
+    options.add_argument "--mute-audio"
+  end
 
   include SystemTestHelper
 

@@ -209,6 +209,38 @@ class Agents::MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_empty thread.messages
   end
 
+  test "retried root post returns the original message" do
+    payload = { message: { markdown_source: "Agent once", client_message_id: "agent-retry-root" } }
+
+    post room_agent_messages_url(@room), params: payload.to_json, headers: bearer_headers
+    assert_response :created
+    original_id = response.parsed_body["id"]
+
+    assert_no_difference -> { @room.messages.count } do
+      post room_agent_messages_url(@room), params: payload.to_json, headers: bearer_headers
+      assert_response :created
+    end
+
+    assert_equal original_id, response.parsed_body["id"]
+  end
+
+  test "retried thread reply returns the original message" do
+    thread = create_thread!(room: @room, creator: users(:david))
+    payload = { thread_id: thread.id,
+      message: { markdown_source: "Agent reply once", client_message_id: "agent-retry-reply" } }
+
+    post room_agent_messages_url(@room), params: payload.to_json, headers: bearer_headers
+    assert_response :created
+    original_id = response.parsed_body["id"]
+
+    assert_no_difference -> { thread.messages.count } do
+      post room_agent_messages_url(@room), params: payload.to_json, headers: bearer_headers
+      assert_response :created
+    end
+
+    assert_equal original_id, response.parsed_body["id"]
+  end
+
   private
     def grant!(capability:, room: nil)
       AgentGrant.create!(agent: @agent, room: room, granted_by: users(:david), capability: capability)

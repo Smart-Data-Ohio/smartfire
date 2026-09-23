@@ -36,6 +36,43 @@ class Github::PullRequestUrlTest < ActiveSupport::TestCase
     assert_empty Github::PullRequestUrl.extract(nil)
   end
 
+  test "extract caps references at Twitter's MAX_PER_MESSAGE" do
+    assert_equal Twitter::PostUrl::MAX_PER_MESSAGE, Github::PullRequestUrl::MAX_PER_MESSAGE
+
+    text = (1..6).map { |number| "https://github.com/rails/rails/pull/#{number}" }.join(" ")
+
+    assert_equal [ 1, 2, 3, 4 ], Github::PullRequestUrl.extract(text).map(&:number)
+  end
+
+  test "non_code_text drops code spans and fenced blocks but keeps prose and labeled links" do
+    html = <<~HTML
+      <p>see <code>https://github.com/o/r/pull/1</code> and https://github.com/o/r/pull/2</p>
+      <pre><code class="language-text">https://github.com/o/r/pull/3</code></pre>
+      <p><a href="https://github.com/o/r/pull/4">the PR</a></p>
+    HTML
+
+    text = Github::PullRequestUrl.non_code_text(html)
+
+    assert_not_includes text, "pull/1"
+    assert_not_includes text, "pull/3"
+    assert_includes text, "pull/2"
+    assert_includes text, "pull/4"
+  end
+
+  test "non_code_text keeps a URL at a br or block boundary matchable" do
+    html = <<~HTML
+      <div>see https://github.com/o/r/pull/12<br>thanks</div>
+      <p>also https://github.com/o/r/pull/13</p><p>for this</p>
+    HTML
+
+    text = Github::PullRequestUrl.non_code_text(html)
+
+    assert_equal [
+      Github::PullRequestUrl::Reference.new("o", "r", 12),
+      Github::PullRequestUrl::Reference.new("o", "r", 13)
+    ], Github::PullRequestUrl.extract(text)
+  end
+
   test "pull_request_url? matches only PR URLs" do
     assert Github::PullRequestUrl.pull_request_url?("https://github.com/rails/rails/pull/123")
     assert Github::PullRequestUrl.pull_request_url?("https://github.com/rails/rails/pulls/123/files")

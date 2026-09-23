@@ -11,6 +11,12 @@
 class Stream < ApplicationRecord
   QUALITIES = %w[ 720p15 1080p15 1080p30 ].freeze
 
+  # A presenter whose grants all went quiet this long ago is gone: the
+  # gateway touches liveness at least every ten seconds while connected, so
+  # thirty seconds without a sighting ends the stream. This is the backstop
+  # for a presenter tab closed without the leaving DELETE.
+  STALE_AFTER = 30.seconds
+
   belongs_to :room
   belongs_to :membership
   belongs_to :user
@@ -39,6 +45,21 @@ class Stream < ApplicationRecord
       live.where(user_id: user.id).each(&:end!)
     end
 
+    # Ends live streams whose presenter has no active grant the gateway has
+    # seen within STALE_AFTER. Called from the huddle reconciler loop, so a
+    # presenter tab closed without its leaving DELETE stops showing Live
+    # about half a minute later. Each end broadcasts the same updates as an
+    # explicit stop.
+    def end_stale_live!
+      live.find_each do |stream|
+        recent = HuddleGrant.active
+          .where(room_id: stream.room_id, membership_id: stream.membership_id)
+          .where("last_seen_at > ?", STALE_AFTER.ago)
+          .exists?
+        stream.end! unless recent
+      end
+    end
+
     # Ends the grant holder's stream once their last active grant for the
     # room goes away. Called from HuddleGrant#revoke!, in the same
     # transaction, so membership removal, deactivation, demotion, session
@@ -48,7 +69,7 @@ class Stream < ApplicationRecord
 
       # Streams only exist on stage rooms; every other revocation — DMs,
       # voice, plain channels — skips the membership and stream lookups.
-      stage_room = Room.find_by(id: grant.room_id)
+      stage_room = Room.alive.find_by(id: grant.room_id)
       return unless stage_room.is_a?(Rooms::Stage)
       return if HuddleGrant.active.where(room_id: grant.room_id, membership_id: grant.membership_id).exists?
 
@@ -95,7 +116,7 @@ class Stream < ApplicationRecord
     def broadcast_stream_stopped_event
       return if ended_by.nil? || ended_by.id == user_id
 
-      stage_room = Room.find_by(id: room_id)
+      stage_room = Room.alive.find_by(id: room_id)
       return unless stage_room.is_a?(Rooms::Stage)
 
       broadcast_append_to user, :rooms,
@@ -111,7 +132,7 @@ class Stream < ApplicationRecord
     # roster broadcasts. The event page carries the sidebar subscription, so
     # the venue dot updates without a reload.
     def broadcast_stream_changed
-      stage_room = Room.find_by(id: room_id)
+      stage_room = Room.alive.find_by(id: room_id)
       return unless stage_room.is_a?(Rooms::Stage)
 
       broadcast_replace_to stage_room, :messages,

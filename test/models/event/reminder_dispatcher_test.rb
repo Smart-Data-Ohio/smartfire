@@ -134,6 +134,20 @@ class Event::ReminderDispatcherTest < ActiveSupport::TestCase
     assert_equal "event_reminder", ActivityItem.find_by!(user: users(:jason), source: occurrences.second).event_type
   end
 
+  test "events in soft-deleted rooms are skipped" do
+    # Memberships stay intact so only the soft-delete can skip the event:
+    # begin_destroy! would also fail the organizer check on the remind stamp.
+    @room.update_columns(deleted_at: Time.current)
+
+    assert_no_enqueued_jobs only: Event::ReminderPushJob do
+      assert_no_difference -> { ActivityItem.where(source: @event).count } do
+        Event::ReminderDispatcher.dispatch_due!
+      end
+    end
+
+    assert_nil @event.reload.reminded_at
+  end
+
   test "a stale event after runner downtime is claimed without reminding or pushing" do
     # The 15-minute window passed while the runner was down; the event is
     # still inside the grace window, so it is claimed like any due event,

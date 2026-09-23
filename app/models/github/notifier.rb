@@ -42,7 +42,8 @@ module Github
 
         public_repository = payload.dig("repository", "private") == false
 
-        subscriptions = Github::RepositorySubscription.where(owner: posts.first.owner, repo: posts.first.repo)
+        subscriptions = Github::RepositorySubscription.joins(:room).merge(Room.alive)
+          .where(owner: posts.first.owner, repo: posts.first.repo)
           .select { |subscription| subscription.subscribed_to?(posts.first.event_key) }
         return if subscriptions.empty?
 

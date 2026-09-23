@@ -62,6 +62,53 @@ class HuddleInvitationsTest < ApplicationSystemTestCase
     assert_predicate item.reload, :handled?
   end
 
+  test "the banner flips to caller-left when the starter hangs up, then dismisses" do
+    visit room_path(rooms(:designers))
+    wait_for_cable_connection
+
+    grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_david_and_jason))
+    item = ActivityItem.find_by!(user: users(:jason), source: grant)
+    assert_selector "#huddle-invitation:not([hidden])", text: "David started a huddle", wait: 10
+
+    grant.update_columns(last_seen_at: Time.current)
+    grant.revoke!
+
+    assert_selector "#huddle-invitation:not([hidden])", text: "David left the huddle", wait: 10
+    assert_selector "#huddle-invitation:not([hidden])", text: "Missed call in David"
+    assert_selector "#huddle-invitation[hidden]", visible: :all, wait: 10
+    assert_equal "huddle_started", item.reload.event_type
+  end
+
+  test "a ring stops itself after the ring timeout" do
+    visit room_path(rooms(:designers))
+    wait_for_cable_connection
+    page.execute_script(<<~JS)
+      document.getElementById("huddle-invitation")
+        .setAttribute("data-huddle-invitation-ring-timeout-value", "300")
+    JS
+
+    HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_david_and_jason))
+
+    assert_selector "#huddle-invitation:not([hidden])", text: "David started a huddle", wait: 10
+    assert_selector "#huddle-invitation[hidden]", visible: :all, wait: 10
+  end
+
+  test "a banner-only ring stops itself after the ring timeout" do
+    users(:jason).update!(inbox_preferences: { "huddle_invitations" => false })
+    visit room_path(rooms(:designers))
+    wait_for_cable_connection
+    page.execute_script(<<~JS)
+      document.getElementById("huddle-invitation")
+        .setAttribute("data-huddle-invitation-ring-timeout-value", "300")
+    JS
+
+    HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_david_and_jason))
+
+    assert_selector "#huddle-invitation:not([hidden])", text: "David started a huddle", wait: 10
+    assert_selector "#huddle-invitation[hidden]", visible: :all, wait: 10
+    assert_not ActivityItem.exists?(user: users(:jason))
+  end
+
   test "the banner stays hidden while already in the room's huddle" do
     visit room_path(rooms(:designers))
     wait_for_cable_connection

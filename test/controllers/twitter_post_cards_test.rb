@@ -128,7 +128,8 @@ class TwitterPostCardsTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "##{dom_id(message)} .og-embed", count: 1
-    assert_select "##{dom_id(message, :twitter_cards)}", count: 0
+    # The container itself always renders as an edit-broadcast target.
+    assert_select "##{dom_id(message, :twitter_cards)} .x-post-card", count: 0
   end
 
   test "the backfill task turns legacy boxes into cards" do

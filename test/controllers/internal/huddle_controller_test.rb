@@ -233,6 +233,67 @@ class Internal::HuddleControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "an enforcement-only grant lookup authorizes without recording liveness" do
+    assert_nil @huddle.grant.last_seen_at
+
+    get "/internal/huddle/grants/#{@huddle.grant_id}?record_seen=0", headers: gateway_headers
+
+    assert_response :success
+    assert_equal expected_payload, response.parsed_body
+    assert_nil @huddle.grant.reload.last_seen_at
+  end
+
+  test "an enforcement-only lookup still revokes a stale grant" do
+    Membership.where(id: @huddle.grant.membership_id).delete_all
+
+    get "/internal/huddle/grants/#{@huddle.grant_id}?record_seen=0", headers: gateway_headers
+
+    assert_response :not_found
+    assert @huddle.grant.reload.revoked?
+    assert HuddleCleanup.exists?(operation: :remove_participant, huddle_grant_id: @huddle.grant_id)
+  end
+
+  test "a steady-state grant check runs no transaction and writes nothing" do
+    # Seen recently, so the throttled liveness write is skipped too: this is
+    # the per-second gateway check for a participant mid-call.
+    @huddle.grant.update_columns(last_seen_at: Time.current)
+
+    statements = []
+    callback = ->(*, payload) { statements << payload[:sql] unless payload[:name] == "SCHEMA" }
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      get "/internal/huddle/grants/#{@huddle.grant_id}", headers: gateway_headers
+    end
+
+    assert_response :success
+    assert_empty statements.select { |sql| sql.match?(/\A\s*(begin|commit|rollback|savepoint)/i) },
+      "expected no transaction statements, saw: #{statements.inspect}"
+    assert_empty statements.select { |sql| sql.match?(/\A\s*(insert|update|delete)/i) },
+      "expected no writes, saw: #{statements.inspect}"
+    assert_operator statements.count, :<=, 8, "steady-state check ran: #{statements.inspect}"
+  end
+
+  test "a denied lookup takes the lock and revokes exactly once" do
+    Membership.where(id: @huddle.grant.membership_id).delete_all
+
+    statements = []
+    callback = ->(*, payload) { statements << payload[:sql] unless payload[:name] == "SCHEMA" }
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      get "/internal/huddle/grants/#{@huddle.grant_id}", headers: gateway_headers
+    end
+
+    assert_response :not_found
+    assert @huddle.grant.reload.revoked?
+    # Inside the test transaction the write lock arrives as a savepoint; in
+    # production it is a top-level BEGIN IMMEDIATE. Either way the
+    # double-checked lock revokes exactly once.
+    assert_not_empty statements.select { |sql| sql.match?(/\A\s*(begin|savepoint)/i) },
+      "expected the denied check to take the lock, saw: #{statements.inspect}"
+    assert_equal 1, statements.count { |sql| sql.match?(/\A\s*update\s+"huddle_grants"/i) },
+      "expected one revocation write, saw: #{statements.inspect}"
+    assert_equal 1, statements.count { |sql| sql.match?(/\A\s*insert\s+into\s+"huddle_cleanups"/i) },
+      "expected one cleanup row, saw: #{statements.inspect}"
+  end
+
   test "a denied lookup does not record liveness" do
     @huddle.grant.revoke!
 
@@ -242,11 +303,67 @@ class Internal::HuddleControllerTest < ActionDispatch::IntegrationTest
     assert_nil @huddle.grant.reload.last_seen_at
   end
 
-  test "gateway authentication is required for both endpoints" do
+  test "a disconnect event marks the grant out of the call and refreshes presence" do
+    @huddle.grant.update_columns(last_seen_at: 5.seconds.ago)
+
+    assert_difference -> { capture_turbo_stream_broadcasts([ rooms(:watercooler), :messages ]).count } do
+      post "/internal/huddle/grants/#{@huddle.grant_id}/left",
+        params: { disconnected_at: Time.current.iso8601 }, headers: gateway_headers
+    end
+
+    assert_response :success
+    assert_nil @huddle.grant.reload.last_seen_at
+    assert_not @huddle.grant.revoked?
+  end
+
+  test "a stale disconnect event keeps a newer sighting" do
+    @huddle.grant.update_columns(last_seen_at: Time.current)
+
+    post "/internal/huddle/grants/#{@huddle.grant_id}/left",
+      params: { disconnected_at: 1.minute.ago.iso8601 }, headers: gateway_headers
+
+    assert_response :success
+    assert_not_nil @huddle.grant.reload.last_seen_at
+  end
+
+  test "a disconnect event with no timestamp clears liveness" do
+    @huddle.grant.update_columns(last_seen_at: Time.current)
+
+    post "/internal/huddle/grants/#{@huddle.grant_id}/left", headers: gateway_headers
+
+    assert_response :success
+    assert_nil @huddle.grant.reload.last_seen_at
+  end
+
+  test "a disconnect event with a malformed timestamp is unprocessable" do
+    @huddle.grant.update_columns(last_seen_at: Time.current)
+
+    [ "2026-13-99", "not-a-timestamp" ].each do |disconnected_at|
+      post "/internal/huddle/grants/#{@huddle.grant_id}/left",
+        params: { disconnected_at: }, headers: gateway_headers
+
+      assert_response :unprocessable_entity
+      assert_not_nil @huddle.grant.reload.last_seen_at
+    end
+  end
+
+  test "a disconnect event for an unknown grant is not found" do
+    post "/internal/huddle/grants/-1/left", headers: gateway_headers
+
+    assert_response :not_found
+  end
+
+  test "gateway authentication is required for every endpoint" do
     post "/internal/huddle/authorize", headers: { "Authorization" => "Bearer #{@huddle.token}" }
     assert_response :unauthorized
 
     get "/internal/huddle/grants/#{@huddle.grant_id}", headers: { "X-Huddle-Gateway-Secret" => "wrong" }
+    assert_response :unauthorized
+
+    post "/internal/huddle/grants/#{@huddle.grant_id}/left"
+    assert_response :unauthorized
+
+    post "/internal/huddle/grants/#{@huddle.grant_id}/left", headers: { "X-Huddle-Gateway-Secret" => "wrong" }
     assert_response :unauthorized
   end
 
@@ -257,6 +374,9 @@ class Internal::HuddleControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :service_unavailable
     assert_equal "no-store", response.headers["Cache-Control"]
+
+    post "/internal/huddle/grants/#{@huddle.grant_id}/left", headers: gateway_headers
+    assert_response :service_unavailable
   end
 
   private

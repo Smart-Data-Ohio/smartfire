@@ -15,6 +15,9 @@ class StageTest < ApplicationSystemTestCase
   driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1000 ], options: { name: :stage_chrome } do |options|
     options.add_argument "--use-fake-device-for-media-stream"
     options.add_argument "--use-fake-ui-for-media-stream"
+    # Keep the fake microphone's beep (and any remote audio) off the
+    # host speakers; capture and Web Audio analysis are unaffected.
+    options.add_argument "--mute-audio"
     options.add_argument "--autoplay-policy=no-user-gesture-required"
   end
 
@@ -452,7 +455,7 @@ class StageTest < ApplicationSystemTestCase
       join_stage_and_confirm
 
       assert_equal true, local_can_publish?
-      assert_selector "#channel-huddle [data-huddle-target='mute']", text: "Mute"
+      assert_selector "#channel-huddle [data-huddle-target='mute']", text: "Mute microphone"
       assert_selector ".huddle__participant", count: 2
     end
 
@@ -485,7 +488,7 @@ class StageTest < ApplicationSystemTestCase
     wait_for_condition("the invited listener did not rejoin publishing", timeout: LIVEKIT_REJOIN_WAIT) do
       page.has_css?("#channel-huddle[data-state='connected']", wait: 0) && local_can_publish? == true
     end
-    assert_selector "#channel-huddle [data-huddle-target='mute']", text: "Mute", visible: :visible
+    assert_selector "#channel-huddle [data-huddle-target='mute']", text: "Mute microphone", visible: :visible
     assert_no_selector "#channel-huddle [data-huddle-target='listeningNote']", visible: :visible
 
     using_session("Host") do

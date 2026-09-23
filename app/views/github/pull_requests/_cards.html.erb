@@ -1,14 +1,13 @@
-<% pull_requests = github_pr_cards_for(message) %>
-<% if pull_requests.any? %>
-  <div id="<%= dom_id(message, :github_pr_cards) %>" class="github-pr-cards">
-    <% pull_requests.each do |pull_request| %>
-      <% if github_pr_public?(pull_request) %>
-        <%= render "github/pull_requests/card", pull_request: pull_request, message: message %>
-      <% else %>
-        <%= turbo_frame_tag dom_id(pull_request, :"card_for_message_#{message.id}"),
-              src: room_github_pull_request_card_path(message.room_id, pull_request, message_id: message.id),
-              loading: "lazy", class: "github-pr-card-frame" %>
-      <% end %>
-    <% end %>
-  </div>
-<% end %>
+<%# Always rendered, even with no cards: edits broadcast-replace this
+    container, so a URL added by an edit needs the target to exist and a
+    removed URL needs its cards cleared. The ERB tags hug the div so the
+    empty container has no text nodes and the :empty rule hides it. %>
+<% pull_requests = github_pr_cards_for(message) %><div id="<%= dom_id(message, :github_pr_cards) %>" class="github-pr-cards"><% pull_requests.each do |pull_request| %>
+  <% if github_pr_public?(pull_request) %>
+    <%= render "github/pull_requests/card", pull_request: pull_request, message: message %>
+  <% else %>
+    <%= turbo_frame_tag dom_id(pull_request, :"card_for_message_#{message.id}"),
+          src: room_github_pull_request_card_path(message.room_id, pull_request, message_id: message.id),
+          loading: "lazy", class: "github-pr-card-frame" %>
+  <% end %>
+<% end %></div>

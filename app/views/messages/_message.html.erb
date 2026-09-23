@@ -10,20 +10,7 @@
     <turbo-frame id="<%= dom_id(message, :edit) %>">
       <div class="message__body">
         <div class="message__body-content">
-          <div class="message__meta">
-            <h3 class="message__heading">
-              <span class="message__author" title="<%= message.creator.title %>">
-                <strong data-reply-target="author"><%= message.creator.name %></strong>
-              </span>
-              <%= link_to message_timestamp(message, class: "message__timestamp"), message_link_url(message), target: "_top",
-                    class: "message__permalink" %>
-              <% room_icon = local_assigns[:show_room_icon] ? icon_avatar_tag(message.room.icon_name, size: 16) : nil %>
-              <span class="message__room<%= " message__room--custom" if room_icon %>">
-                <%= room_icon %><%= link_to room_display_name(message.room, for_user: nil), message_link_url(message), target: "_top", data: { reply_target: "link" } %>
-              </span>
-            </h3>
-            <%= render "messages/actions", message: message, url: message_link_url(message) %>
-          </div>
+          <%= render "messages/meta", message: message, show_room_icon: local_assigns[:show_room_icon] %>
           <%= render "messages/context", message: message %>
           <%= render "messages/presentation", message: message %>
           <%= render "messages/drive_attachments", message: message %>

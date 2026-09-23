@@ -32,7 +32,7 @@ module Twitter
 
       private
         def reference_text(message)
-          [ message.markdown_source, message.plain_text_body ].compact_blank.join("\n")
+          [ Twitter::PostUrl.non_code_text(message.body.body&.to_html), message.forward_note ].compact_blank.join("\n")
         end
 
         def canonical_url(reference)

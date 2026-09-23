@@ -86,6 +86,9 @@ async function createHarness(overrides = {}) {
     stallAuthorizeBody: false,
     seenAuthorization: [],
     grantChecks: 0,
+    grantCheckUrls: [],
+    leftPosts: [],
+    leftStatus: 200,
     upstreamConnections: 0,
     sendFirstSignal: true,
     upstreamSockets: new Set(),
@@ -112,12 +115,23 @@ async function createHarness(overrides = {}) {
       return json(response, state.authorizeStatus, state.authorizeStatus === 200 ? GRANT : {});
     }
 
-    const match = request.url?.match(/^\/internal\/huddle\/grants\/([^/?]+)$/);
+    const match = request.url?.match(/^\/internal\/huddle\/grants\/([^/?]+)(\?.*)?$/);
     if (request.method === "GET" && match) {
       state.grantChecks += 1;
+      state.grantCheckUrls.push(request.url);
       assert.equal(request.headers["x-huddle-gateway-secret"], SECRET);
       const status = state.grantCheckStatus ?? (state.active ? 200 : 403);
       return json(response, status, status === 200 ? GRANT : {});
+    }
+    const leftMatch = request.url?.match(/^\/internal\/huddle\/grants\/([^/?]+)\/left$/);
+    if (request.method === "POST" && leftMatch) {
+      const body = await readJson(request);
+      state.leftPosts.push({
+        grantId: leftMatch[1],
+        body,
+        secret: request.headers["x-huddle-gateway-secret"],
+      });
+      return json(response, state.leftStatus, {});
     }
     response.writeHead(404).end();
   });
@@ -248,6 +262,69 @@ for (const [name, status] of [["revocation", 403], ["backend outage", 503]]) {
   });
 }
 
+test("reports the participant as left after the reconnect grace expires", async (t) => {
+  const harness = await createHarness({ reconnectGraceMs: 60 });
+  t.after(() => harness.close());
+  const before = Date.now();
+  const result = await websocketAttempt(`ws://127.0.0.1:${harness.gatewayPort}/rtc?access_token=${TOKEN}`);
+  assert.equal(result.status, 101);
+  result.socket.close();
+  await once(result.socket, "close");
+
+  await waitFor(() => harness.state.leftPosts.length === 1);
+  await waitFor(() => harness.state.removals.length === 1);
+  // The left report runs unawaited beside the removal, so the POST
+  // landing does not mean its emit has run yet.
+  await waitFor(() => harness.state.decisions.some(({ type }) => type === "participant_left_reported"));
+
+  const [report] = harness.state.leftPosts;
+  assert.equal(report.grantId, "17");
+  assert.equal(report.secret, SECRET);
+  const disconnectedAt = Date.parse(report.body.disconnected_at);
+  assert.ok(Number.isFinite(disconnectedAt));
+  assert.ok(disconnectedAt >= before && disconnectedAt <= Date.now());
+  assert.ok(harness.state.decisions.some(({ type }) => type === "participant_left_reported"));
+});
+
+test("grant checks during the reconnect grace enforce without recording liveness", async (t) => {
+  const harness = await createHarness({ reconnectGraceMs: 250, checkIntervalMs: 30 });
+  t.after(() => harness.close());
+  const result = await websocketAttempt(`ws://127.0.0.1:${harness.gatewayPort}/rtc?access_token=${TOKEN}`);
+  assert.equal(result.status, 101);
+  await waitFor(() => harness.state.grantChecks >= 1);
+  result.socket.close();
+  await once(result.socket, "close");
+
+  await waitFor(() => harness.state.leftPosts.length === 1);
+
+  // Checks stop when the grace expires, so any enforcement-only check ran
+  // inside it. Everything before the first one still had a connection.
+  const firstEnforcementOnly = harness.state.grantCheckUrls.findIndex((url) => url.includes("record_seen=0"));
+  assert.ok(firstEnforcementOnly >= 0, "expected an enforcement-only check during the grace");
+  assert.ok(harness.state.grantCheckUrls.slice(0, firstEnforcementOnly).every((url) => !url.includes("record_seen=0")));
+  assert.ok(harness.state.grantCheckUrls.slice(firstEnforcementOnly).every((url) => url.includes("record_seen=0")));
+});
+
+test("a failing left report changes nothing about removal", async (t) => {
+  const harness = await createHarness({ reconnectGraceMs: 60 });
+  t.after(() => harness.close());
+  harness.state.leftStatus = 500;
+  const result = await websocketAttempt(`ws://127.0.0.1:${harness.gatewayPort}/rtc?access_token=${TOKEN}`);
+  assert.equal(result.status, 101);
+  result.socket.close();
+  await once(result.socket, "close");
+
+  await waitFor(() => harness.state.leftPosts.length === 1);
+  await waitFor(() => harness.state.removals.length === 1);
+  // The left report runs unawaited beside the removal, so the POST
+  // landing and the removal finishing do not mean its catch has recorded
+  // the failure yet.
+  await waitFor(() => harness.state.decisions.some(({ type }) => type === "participant_left_report_failed"));
+
+  assert.deepEqual(harness.state.fatals, []);
+  assert.ok(harness.state.decisions.some(({ type }) => type === "participant_left_report_failed"));
+});
+
 test("a reconnect inside the grace period cancels stale participant removal", async (t) => {
   const harness = await createHarness({ reconnectGraceMs: 120 });
   t.after(() => harness.close());
@@ -261,6 +338,7 @@ test("a reconnect inside the grace period cancels stale participant removal", as
   await new Promise((resolve) => setTimeout(resolve, 180));
 
   assert.equal(harness.state.removals.length, 0);
+  assert.equal(harness.state.leftPosts.length, 0);
   assert.equal(second.socket.readyState, WebSocket.OPEN);
 });
 
