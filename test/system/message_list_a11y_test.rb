@@ -74,6 +74,22 @@ class MessageListA11yTest < ApplicationSystemTestCase
     assert_focus_and_tab_stop_on messages(:second)
   end
 
+  test "a stream replacing the tab-stop message while focus is elsewhere keeps the tab stop on the replacement" do
+    # Focus stays in the composer (setup); the newest message is the tab stop.
+    page.execute_script <<~JS, dom_id(messages(:third))
+      const clone = document.getElementById(arguments[0]).cloneNode(true);
+      clone.setAttribute("data-replaced", "true");
+      Turbo.renderStreamMessage(`<turbo-stream action="replace" target="${arguments[0]}"><template>${clone.outerHTML}</template></turbo-stream>`);
+    JS
+
+    assert_selector "##{dom_id(messages(:third))}[data-replaced='true']", wait: 10
+    tabbables = page.evaluate_script(<<~JS)
+      Array.from(document.querySelectorAll("##{dom_id(@room, :messages)} > .message"))
+        .filter(message => message.tabIndex === 0).map(message => message.id)
+    JS
+    assert_equal [ dom_id(messages(:third)) ], tabbables
+  end
+
   test "a direct DOM swap of the focused message keeps focus and the tab stop on its replacement" do
     message = find("##{dom_id(messages(:second))}")
     page.execute_script("arguments[0].focus()", message)

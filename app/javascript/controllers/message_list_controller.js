@@ -108,9 +108,11 @@ export default class extends Controller {
     // dropped focus back to the page. (Turbo streams usually preserve focus
     // themselves; this also covers direct DOM swaps.)
     let refocused = false
+    let replaced = false
     if (tabbableRemoved) {
       const replacement = addedMessages.find(message => removedIds.has(message.id))
       if (replacement) {
+        replaced = true
         replacement.tabIndex = 0
         this.#tabbable = replacement
         if (this.#focusInside && document.activeElement === document.body) {
@@ -122,7 +124,7 @@ export default class extends Controller {
 
     // A deleted tab stop hands off to the message beside it, not the newest,
     // so someone reading history isn't yanked to the bottom.
-    if (tabbableRemoved && !refocused && tabbableNeighbour?.isConnected && this.element.contains(tabbableNeighbour)) {
+    if (tabbableRemoved && !replaced && tabbableNeighbour?.isConnected && this.element.contains(tabbableNeighbour)) {
       tabbableNeighbour.tabIndex = 0
       this.#tabbable = tabbableNeighbour
     }
