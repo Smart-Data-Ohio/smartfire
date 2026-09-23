@@ -1,4 +1,5 @@
 require "test_helper"
+require "timeout"
 
 class SearchQueryTest < ActiveSupport::TestCase
   setup do
@@ -244,5 +245,14 @@ class SearchQueryTest < ActiveSupport::TestCase
     assert_nothing_raised do
       SearchQuery.parse(%(" OR 1=1 --)).apply_to_messages(Message.all).to_a
     end
+  end
+
+  test "a long punctuation run in an operator value parses in linear time" do
+    adversarial = "#{"!" * 50_000}x"
+
+    query = Timeout.timeout(10) { SearchQuery.parse("from:#{adversarial} hello") }
+
+    assert_equal [ adversarial ], query.from_names
+    assert_equal "hello", query.text
   end
 end

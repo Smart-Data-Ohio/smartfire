@@ -25,6 +25,7 @@
 # parameters with LIKE wildcards escaped.
 class SearchQuery
   OPERATOR_PATTERN = /(?:\A|\s)(?<token>(?<name>from|in|has|before|after|on|is):(?<value>\S+))/
+  TRAILING_PUNCTUATION = [ ",", ".", "!", "?", ";", ":", ")" ].freeze
   HAS_VALUES = %w[link file image pin].freeze
   DATE_PATTERN = /\A\d{4}-\d{2}-\d{2}\z/
   SECTION_LIMIT = 10
@@ -145,7 +146,7 @@ class SearchQuery
     def clean_value(name, value)
       case name
       when "from", "in"
-        value.delete_prefix(name == "from" ? "@" : "#").sub(/[,.!?;:)]+\z/, "").presence
+        strip_trailing_punctuation(value.delete_prefix(name == "from" ? "@" : "#")).presence
       when "has"
         value.downcase.presence_in(HAS_VALUES)
       when "before", "after", "on"
@@ -155,6 +156,15 @@ class SearchQuery
       end
     rescue Date::Error
       nil
+    end
+
+    # Trailing punctuation pasted after a mention ("from:@jz,"). A plain
+    # loop: the obvious /[,.!?;:)]+\z/ scans every start position and
+    # backtracks the plus at each one, which is quadratic on untrusted
+    # filter values.
+    def strip_trailing_punctuation(value)
+      value = value.chop while value.end_with?(*TRAILING_PUNCTUATION)
+      value
     end
 
     def remove_token(token)
