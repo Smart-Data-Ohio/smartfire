@@ -1,5 +1,6 @@
 class MessagePin < ApplicationRecord
   MAX_PER_ROOM = 50
+  PIN_NOTE_WINDOW = 10.minutes
 
   class CapReachedError < StandardError; end
 
@@ -66,15 +67,26 @@ class MessagePin < ApplicationRecord
     )
   end
 
-  # A one-line channel note through the same path event announcements
-  # use, so every client appends it over the room messages stream.
+  # A quiet one-line system note in the channel, appended over the room
+  # messages stream like event announcements, but never marking the room
+  # unread, pushing, delivering, recording inbox items, or indexing for
+  # search. The note source is deterministic per message, so a pin/unpin
+  # toggle storm posts at most one note per message per window.
   def post_pin_note!
+    source = pin_note_source
+    return if room.root_messages.where(system_note: true, markdown_source: source)
+      .where(created_at: PIN_NOTE_WINDOW.ago..).exists?
+
     room.root_messages.create_with_attachment!(
-      creator: pinner, markdown_source: "📌 pinned a message: [jump to message](#{pin_permalink})"
+      creator: pinner, markdown_source: source, system_note: true
     ).tap(&:broadcast_create)
   end
 
   private
+    def pin_note_source
+      "📌 pinned a message: [jump to message](#{pin_permalink})"
+    end
+
     def message_must_belong_to_room
       if message && room_id != message.room_id
         errors.add :room, "must be the message's room"

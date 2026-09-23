@@ -1,7 +1,7 @@
 module Message::Broadcasts
   def broadcast_create
     broadcast_append_to message_stream_target, :messages, target: [ message_stream_target, :messages ]
-    broadcast_unread_room unless thread_message?
+    broadcast_unread_room unless thread_message? || system_note?
   end
 
   def broadcast_remove

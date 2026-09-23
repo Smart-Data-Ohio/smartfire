@@ -69,6 +69,8 @@ class Room < ApplicationRecord
   end
 
   def receive(message)
+    return if message.system_note?
+
     unread_memberships(message)
     push_later(message)
   end

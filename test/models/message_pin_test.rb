@@ -1,6 +1,8 @@
 require "test_helper"
 
 class MessagePinTest < ActiveSupport::TestCase
+  include ActionCable::TestHelper
+
   setup do
     @room = rooms(:designers)
     @message = messages(:first)
@@ -31,6 +33,46 @@ class MessagePinTest < ActiveSupport::TestCase
   test "pinning broadcasts the badge, count, and panel list" do
     assert_turbo_stream_broadcasts [ @room, :messages ], count: 4 do
       MessagePin.pin!(message: @message, pinner: @pinner)
+    end
+  end
+
+  test "pin notes are quiet system notes: visible, but no unread, push, delivery, inbox, or search" do
+    member_stream = UnreadRoomsChannel.stream_name_for(users(:jason).id)
+
+    assert_no_enqueued_jobs do
+      assert_no_broadcasts member_stream do
+        assert_no_difference -> { ActivityItem.count } do
+          assert_no_changes -> { memberships(:jason_designers).reload.unread_at } do
+            MessagePin.pin!(message: @message, pinner: @pinner)
+          end
+        end
+      end
+    end
+
+    note = @room.messages.ordered.last
+    assert_predicate note, :system_note?
+    assert_not_includes @room.messages.search("pinned"), note
+  end
+
+  test "pin notes by agents record no delivery events" do
+    assert_no_difference -> { AgentEvent.count } do
+      assert_no_enqueued_jobs do
+        MessagePin.pin!(message: @message, pinner: users(:bender))
+      end
+    end
+  end
+
+  test "repeated pin toggles post at most one note per message per 10 minutes" do
+    assert_difference -> { @room.messages.count }, 1 do
+      5.times do
+        MessagePin.pin!(message: @message, pinner: @pinner).unpin!
+      end
+    end
+
+    travel_to 11.minutes.from_now do
+      assert_difference -> { @room.messages.count }, 1 do
+        MessagePin.pin!(message: @message, pinner: @pinner)
+      end
     end
   end
 

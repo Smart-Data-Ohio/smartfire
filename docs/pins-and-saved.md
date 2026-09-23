@@ -15,8 +15,11 @@ The pin icon in the room header shows the pin count and opens the pins
 panel, which lists the pinned messages with the pinner and pin time, a
 jump-to link for each message, and an unpin action. Pinned messages
 carry a small "Pinned" marker in the message list. Pinning posts a
-one-line channel note ("📌 pinned a message", with a link to the
-message) as the pinner, through the same path event announcements use.
+one-line quiet system note ("📌 pinned a message", with a link to
+the message) as the pinner: it renders in the timeline like event
+announcements, but never marks the room unread, pushes, delivers to
+agents, records inbox items, or indexes for search. Toggles are
+rate-limited to one note per message per 10 minutes.
 
 Pins broadcast live over the room messages stream (badge, header
 count, and panel list), and access follows the room: only members can

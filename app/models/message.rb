@@ -239,7 +239,7 @@ class Message < ApplicationRecord
 
   private
     def record_activity_items
-      ActivityItems::Recorder.record_message!(self)
+      ActivityItems::Recorder.record_message!(self) unless system_note?
     end
 
     def sync_github_pull_request_references
