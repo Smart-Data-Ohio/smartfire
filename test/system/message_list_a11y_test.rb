@@ -5,6 +5,9 @@ class MessageListA11yTest < ApplicationSystemTestCase
     @room = rooms(:designers)
     sign_in "jz@37signals.com"
     join_room @room
+    # Let the composer's page-load autofocus land first; under parallel load
+    # it can otherwise arrive after a test has moved focus to a message.
+    assert_focused "#message_markdown_source", wait: 10
   end
 
   test "the message list is a single tab stop with a roving tabindex" do
