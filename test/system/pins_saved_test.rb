@@ -96,6 +96,35 @@ class PinsSavedTest < ApplicationSystemTestCase
     assert_text "Nothing saved here yet."
   end
 
+  test "tomorrow at 9am resolves across the DST fall-back" do
+    # The browser clock and time zone are fixed: noon in New York on
+    # November 1, 2025, the day before clocks fall back. Tomorrow at 9am
+    # is then 9am EST (UTC-5), an hour further from UTC than "now".
+    browser_zone = page.evaluate_script("Intl.DateTimeFormat().resolvedOptions().timeZone")
+    page.driver.browser.execute_cdp("Emulation.setTimezoneOverride", timezoneId: "America/New_York")
+
+    begin
+      travel_to Time.utc(2025, 11, 1, 16, 0) do
+        visit room_url(rooms(:designers))
+
+        open_message_menu messages(:third)
+        click_on "Save for later", exact: true
+
+        within ".message-save-dialog" do
+          choose "Tomorrow at 9am (your time)"
+          freeze_browser_clock_at "2025-11-01T12:00:00-04:00"
+          click_on "Save"
+        end
+
+        assert_no_selector ".message-save-dialog[open]"
+
+        assert_equal Time.utc(2025, 11, 2, 14, 0), SavedItem.sole.remind_at
+      end
+    ensure
+      page.driver.browser.execute_cdp("Emulation.setTimezoneOverride", timezoneId: browser_zone)
+    end
+  end
+
   test "saving with a custom reminder time" do
     open_message_menu messages(:second)
     click_on "Save for later", exact: true
@@ -113,4 +142,28 @@ class PinsSavedTest < ApplicationSystemTestCase
     visit saved_items_url
     assert_text "Reminds"
   end
+
+  private
+    # Freezes `new Date()` and `Date.now()` in the current page at the
+    # given instant, leaving constructed dates, parsing, and timers
+    # untouched. Scoped to this document: the next visit starts clean.
+    def freeze_browser_clock_at(iso_instant)
+      page.execute_script(<<~JS)
+        (() => {
+          const RealDate = window.Date
+          const frozenTime = new RealDate(#{iso_instant.to_json}).getTime()
+          function FrozenDate(...args) {
+            if (new.target) {
+              return args.length === 0 ? new RealDate(frozenTime) : new RealDate(...args)
+            }
+            return new RealDate(frozenTime).toString()
+          }
+          FrozenDate.prototype = RealDate.prototype
+          FrozenDate.now = () => frozenTime
+          FrozenDate.parse = RealDate.parse.bind(RealDate)
+          FrozenDate.UTC = RealDate.UTC.bind(RealDate)
+          window.Date = FrozenDate
+        })()
+      JS
+    end
 end
