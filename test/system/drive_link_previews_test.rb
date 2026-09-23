@@ -82,7 +82,7 @@ class DriveLinkPreviewsTest < ApplicationSystemTestCase
       editor.focus()
     JS
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
 
     assert_selector '[role="dialog"][aria-label="Find a Drive file"]'
     assert_selector ".drive-picker__item", text: "Q3 Planning"
@@ -106,14 +106,22 @@ class DriveLinkPreviewsTest < ApplicationSystemTestCase
     assert_no_selector '[role="dialog"][aria-label="Find a Drive file"]'
   end
 
-  test "composer omits the Drive button without the Drive scope" do
+  test "composer omits the Drive menu item without the Drive scope" do
     sign_in "kevin@37signals.com"
     join_room rooms(:designers)
 
-    assert_no_selector "button.composer__drive-btn"
+    assert_no_selector ".attach-menu"
+    assert_selector "button.composer__attachment-btn:not([aria-haspopup])"
   end
 
   private
+    # The + button owns the Drive flow now: open its menu, then choose
+    # From Google Drive, exactly as the old Drive button click did.
+    def choose_drive_from_attach_menu
+      find("button.composer__attachment-btn").click
+      click_button "From Google Drive"
+    end
+
     # The picker's search is debounced, and the stub answers every query
     # with the same files, so the list assertions pass on the stale initial
     # results while the q=plan request is still pending. Waiting for it to

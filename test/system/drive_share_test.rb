@@ -1,4 +1,5 @@
 require "application_system_test_case"
+require_relative "../support/drive_share_mocks"
 
 # Enhanced Drive share picker flows with a fully mocked Google: the
 # Identity Services token client, the Picker, and Drive REST are all
@@ -6,172 +7,7 @@ require "application_system_test_case"
 # and never change real Drive permissions.
 class DriveShareTest < ApplicationSystemTestCase
   include GoogleCalendarTestHelper
-
-  FILE_ID = "1AbcDefGhIjKlMnOpQrSt"
-
-  DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file"
-
-  # Installs window.google (GIS + Picker) and wraps window.fetch so Drive
-  # REST is answered from the scenario. Same-origin recipients calls pass
-  # through to the app but are logged. Receives the scenario JSON as its
-  # first script argument.
-  MOCK_JS = <<~JS
-    const scenario = JSON.parse(arguments[0]);
-    const mock = window.__driveShareMock = {
-      scenario,
-      initTokenCalls: [],
-      requestTokenCalls: [],
-      pickerBuilds: [],
-      pickerVisible: [],
-      driveCalls: [],
-      createOrder: [],
-      recipientsCalls: [],
-      listFailedOnce: false,
-      createFailedOnce: false
-    };
-
-    window.google = window.google || {};
-    window.google.accounts = { oauth2: {
-      initTokenClient(config) {
-        mock.lastTokenConfig = config;
-        mock.initTokenCalls.push({
-          scope: config.scope,
-          include_granted_scopes: config.include_granted_scopes,
-          client_id: config.client_id
-        });
-        return {
-          requestAccessToken(override) {
-            mock.requestTokenCalls.push(override || {});
-            if (mock.scenario.tokenErrorCallback) {
-              const err = JSON.parse(JSON.stringify(mock.scenario.tokenErrorCallback));
-              setTimeout(() => config.error_callback && config.error_callback(err), 0);
-              return;
-            }
-            const response = JSON.parse(JSON.stringify(mock.scenario.token));
-            setTimeout(() => config.callback(response), 0);
-          }
-        };
-      },
-      hasGrantedAllScopes: (response) => !response.error && !!response.access_token
-    }};
-
-    class MockDocsView {
-      constructor(viewId) { this.viewId = viewId; }
-      setIncludeFolders(value) { return this; }
-      setSelectFolderEnabled(value) { return this; }
-      setMode(value) { return this; }
-    }
-    class MockBuilder {
-      constructor() { this.args = {}; }
-      addView(view) { return this; }
-      setOAuthToken(token) { this.args.oauthToken = token; return this; }
-      setDeveloperKey(key) { this.args.developerKey = key; return this; }
-      setAppId(id) { this.args.appId = id; return this; }
-      setCallback(callback) { this.args.callback = callback; return this; }
-      setOrigin(origin) { this.args.origin = origin; return this; }
-      setTitle(title) { return this; }
-      build() {
-        mock.pickerBuilds.push({ ...this.args, callback: !!this.args.callback });
-        const callback = this.args.callback;
-        mock.lastPickerCallback = callback;
-        return { setVisible: (visible) => {
-          mock.pickerVisible.push(visible);
-          if (!visible) return;
-          setTimeout(() => {
-            const pick = mock.scenario.picker;
-            if (pick === "manual") return;
-            if (pick === "cancel") callback({ action: "cancel" });
-            else callback({ action: "picked", docs: [pick] });
-          }, 0);
-        }};
-      }
-    }
-    window.google.picker = {
-      DocsView: MockDocsView,
-      ViewId: { DOCS: "docs" },
-      DocsViewMode: { LIST: "list" },
-      PickerBuilder: MockBuilder,
-      Response: { ACTION: "action", DOCUMENTS: "docs" },
-      Action: { PICKED: "picked", CANCEL: "cancel" },
-      Document: { ID: "id", NAME: "name", MIME_TYPE: "mimeType" }
-    };
-
-    window.__driveShareRespond = (url, options) => {
-      const live = window.__driveShareMock;
-      const expectedAuth = `Bearer ${live.scenario.token.access_token}`;
-      if ((options.headers || {}).Authorization !== expectedAuth) {
-        return { status: 401, body: { error: { code: 401 } } };
-      }
-      const path = new URL(url).pathname;
-      const method = options.method || "GET";
-      if (method === "POST" && path.endsWith("/permissions")) {
-        const body = JSON.parse(options.body);
-        live.createOrder.push(body.emailAddress);
-        if (live.scenario.create401OnAttempt && live.createOrder.length === live.scenario.create401OnAttempt && !live.createFailedOnce) {
-          live.createFailedOnce = true;
-          return { status: 401, body: { error: { code: 401 } } };
-        }
-        if (live.scenario.fillStripOnCreate) {
-          const strip = document.querySelector(".composer__drive-attachments");
-          for (let i = 0; i < 10; i++) {
-            const chip = document.createElement("span");
-            chip.className = "drive-attachment-chip";
-            const input = document.createElement("input");
-            input.type = "hidden";
-            input.name = "message[drive_file_ids][]";
-            input.value = `midflight${i}1`;
-            chip.append(input);
-            strip.append(chip);
-          }
-          live.scenario.fillStripOnCreate = false;
-        }
-        const behavior = (live.scenario.creates || {})[body.emailAddress] || "ok";
-        if (behavior === "ok") return { status: 200, body: { id: `perm-${body.emailAddress}`, role: "reader" } };
-        return { status: behavior.status || 403, body: { error: { errors: [{ reason: behavior.reason || "forbidden" }], code: behavior.status || 403 } } };
-      }
-      if (method === "GET" && path.endsWith("/permissions")) {
-        if (live.scenario.failFirstListWith401 && !live.listFailedOnce) {
-          live.listFailedOnce = true;
-          return { status: 401, body: { error: { code: 401 } } };
-        }
-        const token = new URL(url).searchParams.get("pageToken");
-        const index = token ? parseInt(token.replace("page", ""), 10) : 0;
-        const pages = live.scenario.permissionPages || [[]];
-        const body = { permissions: pages[index] || [] };
-        if (index + 1 < pages.length) body.nextPageToken = `page${index + 1}`;
-        return { status: 200, body };
-      }
-      if (method === "GET" && path.startsWith("/drive/v3/files/")) {
-        if (live.scenario.file && live.scenario.file.error) {
-          return { status: live.scenario.file.error.status || 403, body: { error: { code: live.scenario.file.error.status || 403 } } };
-        }
-        return { status: 200, body: live.scenario.file };
-      }
-      return { status: 404, body: {} };
-    };
-
-    if (!window.__driveShareFetchWrapped) {
-      window.__driveShareFetchWrapped = true;
-      const realFetch = window.fetch.bind(window);
-      window.fetch = (input, options = {}) => {
-        const live = window.__driveShareMock;
-        const url = String(input && input.url ? input.url : input);
-        if (url.startsWith("https://www.googleapis.com/drive/v3/")) {
-          live.driveCalls.push({
-            url, method: options.method || "GET",
-            auth: (options.headers || {}).Authorization || null,
-            body: typeof options.body === "string" ? options.body : null
-          });
-          const { status, body } = window.__driveShareRespond(url, options);
-          return Promise.resolve(new Response(JSON.stringify(body), { status }));
-        }
-        if (url.includes("/drive_recipients")) {
-          live.recipientsCalls.push({ url, method: options.method || "GET", body: options.body || null });
-        }
-        return realFetch(input, options);
-      };
-    }
-  JS
+  include DriveShareMocks
 
   # GIS-only mocks plus a gapi.load stub that installs the Picker mock
   # asynchronously, exercising the lazy-load path without any network.
@@ -290,7 +126,7 @@ class DriveShareTest < ApplicationSystemTestCase
   test "review dialog offers attach-only and an explicit grant with names and emails" do
     inject_drive_share_mocks(drive_scenario)
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
 
     within(".drive-share-dialog") do
       assert_selector ".drive-share-dialog__file", text: "Q3 Planning"
@@ -325,7 +161,7 @@ class DriveShareTest < ApplicationSystemTestCase
   test "attach-only pins the chip and writes no Drive permissions" do
     inject_drive_share_mocks(drive_scenario)
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     within(".drive-share-dialog") { click_on "Attach only" }
 
     assert_no_selector ".drive-share-dialog"
@@ -360,7 +196,7 @@ class DriveShareTest < ApplicationSystemTestCase
       ]
     ))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     within(".drive-share-dialog") do
       find(".drive-share-dialog__select-all input").click
       assert_button "Grant view access and attach", disabled: false
@@ -397,7 +233,7 @@ class DriveShareTest < ApplicationSystemTestCase
       "creates" => { "kevin@37signals.com" => { "status" => 403, "reason" => "domainPolicy" } }
     ))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     within(".drive-share-dialog") do
       check_recipient("Jason")
       check_recipient("Kevin")
@@ -431,14 +267,14 @@ class DriveShareTest < ApplicationSystemTestCase
   test "cancelled picker selection shares nothing and can be retried" do
     inject_drive_share_mocks(drive_scenario("picker" => "cancel"))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     wait_for_drive_mock("pickerVisible", 1)
 
     assert_drive_panel_hidden
     assert_empty mock_calls("driveCalls")
 
     page.execute_script("window.__driveShareMock.scenario.picker = #{drive_scenario['picker'].to_json}")
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
 
     assert_selector ".drive-share-dialog", visible: true, wait: 10
     within(".drive-share-dialog") { click_on "Attach only" }
@@ -448,7 +284,7 @@ class DriveShareTest < ApplicationSystemTestCase
   test "cancelled Google authorization shares nothing and can be retried" do
     inject_drive_share_mocks(drive_scenario("token" => { "error" => "access_denied" }))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     wait_for_drive_mock("requestTokenCalls", 1)
 
     assert_drive_panel_hidden
@@ -456,7 +292,7 @@ class DriveShareTest < ApplicationSystemTestCase
     assert_empty mock_calls("pickerBuilds")
 
     page.execute_script("window.__driveShareMock.scenario.token = #{drive_scenario['token'].to_json}")
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
 
     assert_selector ".drive-share-dialog", visible: true, wait: 10
   end
@@ -464,15 +300,15 @@ class DriveShareTest < ApplicationSystemTestCase
   test "picker cancel returns quietly and the drive button works again" do
     inject_drive_share_mocks(drive_scenario("picker" => "cancel"))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     wait_for_drive_mock("pickerVisible", 1)
 
     assert_drive_panel_hidden
-    assert_drive_button_focused
+    assert_attach_button_focused
     assert_empty mock_calls("driveCalls")
 
     page.execute_script("window.__driveShareMock.scenario.picker = #{drive_scenario['picker'].to_json}")
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
 
     assert_selector ".drive-share-dialog", visible: true, wait: 10
     within(".drive-share-dialog") { click_on "Attach only" }
@@ -482,16 +318,16 @@ class DriveShareTest < ApplicationSystemTestCase
   test "closed consent popup returns quietly to the composer" do
     inject_drive_share_mocks(drive_scenario("token" => { "error" => "popup_closed" }))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     wait_for_drive_mock("requestTokenCalls", 1)
 
     assert_drive_panel_hidden
-    assert_drive_button_focused
+    assert_attach_button_focused
     assert_empty mock_calls("pickerBuilds")
     assert_empty mock_calls("driveCalls")
 
     page.execute_script("window.__driveShareMock.scenario.token = #{drive_scenario['token'].to_json}")
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
 
     assert_selector ".drive-share-dialog", visible: true, wait: 10
   end
@@ -499,15 +335,15 @@ class DriveShareTest < ApplicationSystemTestCase
   test "consent popup closed via GIS error callback returns quietly" do
     inject_drive_share_mocks(drive_scenario.merge("tokenErrorCallback" => { "type" => "popup_closed" }))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     wait_for_drive_mock("requestTokenCalls", 1)
 
     assert_drive_panel_hidden
-    assert_drive_button_focused
+    assert_attach_button_focused
     assert_empty mock_calls("pickerBuilds")
 
     page.execute_script("window.__driveShareMock.scenario.tokenErrorCallback = null")
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
 
     assert_selector ".drive-share-dialog", visible: true, wait: 10
   end
@@ -515,7 +351,7 @@ class DriveShareTest < ApplicationSystemTestCase
   test "real error dialog closes with the Close button and the drive button works again" do
     inject_drive_share_mocks(drive_scenario("token" => { "error" => "server_error" }))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
 
     within(".drive-share__panel") do
       assert_text "Google authorization failed. Nothing was shared.", wait: 10
@@ -526,10 +362,10 @@ class DriveShareTest < ApplicationSystemTestCase
     within(".drive-share__panel") { click_on "Close" }
 
     assert_drive_panel_hidden
-    assert_drive_button_focused
+    assert_attach_button_focused
 
     page.execute_script("window.__driveShareMock.scenario.token = #{drive_scenario['token'].to_json}")
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
 
     assert_selector ".drive-share-dialog", visible: true, wait: 10
   end
@@ -537,7 +373,7 @@ class DriveShareTest < ApplicationSystemTestCase
   test "real error dialog closes with Esc" do
     inject_drive_share_mocks(drive_scenario("token" => { "error" => "server_error" }))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
 
     within(".drive-share__panel") do
       assert_text "Google authorization failed. Nothing was shared.", wait: 10
@@ -546,13 +382,13 @@ class DriveShareTest < ApplicationSystemTestCase
     find(".drive-share__panel .drive-share__action").send_keys(:escape)
 
     assert_drive_panel_hidden
-    assert_drive_button_focused
+    assert_attach_button_focused
   end
 
   test "try again re-opens the picker after a real error" do
     inject_drive_share_mocks(drive_scenario("token" => { "error" => "server_error" }))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
 
     within(".drive-share__panel") do
       assert_text "Google authorization failed. Nothing was shared.", wait: 10
@@ -571,7 +407,7 @@ class DriveShareTest < ApplicationSystemTestCase
   test "script load failure offers retry without hanging the composer" do
     page.execute_script(LAZY_MOCK_JS, drive_scenario("failPickerLoad" => true).to_json)
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
 
     within(".drive-share__panel") do
       assert_text "Google Drive could not be reached.", wait: 10
@@ -587,7 +423,7 @@ class DriveShareTest < ApplicationSystemTestCase
   test "first use loads scripts then continues on a fresh gesture" do
     page.execute_script(LAZY_MOCK_JS, drive_scenario.to_json)
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
 
     within(".drive-share__panel") do
       assert_button "Continue with Google", wait: 10
@@ -602,7 +438,7 @@ class DriveShareTest < ApplicationSystemTestCase
     file = drive_scenario["file"].merge("capabilities" => { "canShare" => false })
     inject_drive_share_mocks(drive_scenario("file" => file))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
 
     within(".drive-share-dialog") do
       assert_text "do not have permission to share this file"
@@ -620,7 +456,7 @@ class DriveShareTest < ApplicationSystemTestCase
     file = picker.merge("capabilities" => { "canShare" => true })
     inject_drive_share_mocks(drive_scenario("picker" => picker, "file" => file))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
 
     within(".drive-share-dialog") do
       assert_selector ".drive-share-dialog__file", text: "Team folder"
@@ -636,7 +472,7 @@ class DriveShareTest < ApplicationSystemTestCase
   test "expired Google session reconnects on an explicit gesture and continues" do
     inject_drive_share_mocks(drive_scenario("failFirstListWith401" => true))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     within(".drive-share-dialog") do
       check_recipient("Jason")
       click_on "Grant view access and attach"
@@ -659,7 +495,7 @@ class DriveShareTest < ApplicationSystemTestCase
   test "grant rejects a recipient who left mid-review and refreshes the list" do
     inject_drive_share_mocks(drive_scenario)
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     within(".drive-share-dialog") do
       assert_selector ".drive-share-dialog__recipient", text: "Kevin"
     end
@@ -691,7 +527,7 @@ class DriveShareTest < ApplicationSystemTestCase
     inject_drive_share_mocks(drive_scenario)
 
     within("#thread-panel") do
-      find("button.composer__drive-btn", wait: 10).click
+      choose_drive_from_attach_menu(wait: 10)
     end
 
     within(".drive-share-dialog") do
@@ -716,7 +552,7 @@ class DriveShareTest < ApplicationSystemTestCase
   test "navigation disposes the dialog, token, and picker state" do
     inject_drive_share_mocks(drive_scenario)
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     assert_selector ".drive-share-dialog", visible: true
 
     page.execute_script("document.dispatchEvent(new Event('turbo:before-cache'))")
@@ -739,7 +575,7 @@ class DriveShareTest < ApplicationSystemTestCase
     begin
       inject_drive_share_mocks(drive_scenario)
 
-      find("button.composer__drive-btn").click
+      choose_drive_from_attach_menu
 
       assert_selector ".drive-share-dialog", visible: true
       assert_selector ".drive-share-dialog__recipient", visible: true
@@ -768,7 +604,7 @@ class DriveShareTest < ApplicationSystemTestCase
   test "grant requires fresh review when a recipient email changes" do
     inject_drive_share_mocks(drive_scenario)
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     within(".drive-share-dialog") do
       assert_selector ".drive-share-dialog__recipient", text: "kevin@37signals.com"
     end
@@ -792,7 +628,7 @@ class DriveShareTest < ApplicationSystemTestCase
     users(:kevin).update_column(:email_address, "kevin.new@37signals.com")
     inject_drive_share_mocks(drive_scenario)
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     within(".drive-share-dialog") do
       check_recipient("Kevin")
       click_on "Grant view access and attach"
@@ -810,7 +646,7 @@ class DriveShareTest < ApplicationSystemTestCase
       "creates" => { "kevin@37signals.com" => { "status" => 403, "reason" => "domainPolicy" } }
     ))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     within(".drive-share-dialog") do
       check_recipient("Jason")
       check_recipient("Kevin")
@@ -837,7 +673,7 @@ class DriveShareTest < ApplicationSystemTestCase
   test "reconnect revalidates before resuming grants" do
     inject_drive_share_mocks(drive_scenario("failFirstListWith401" => true))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     within(".drive-share-dialog") do
       check_recipient("Jason")
       check_recipient("Kevin")
@@ -872,13 +708,13 @@ class DriveShareTest < ApplicationSystemTestCase
       };
     JS
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     within(".drive-share__panel") do
       assert_text "Waiting for Google authorization"
       click_on "Cancel"
     end
     assert_drive_panel_hidden
-    assert_drive_button_focused
+    assert_attach_button_focused
 
     page.execute_script("window.__driveShareMock.lastTokenConfig.callback({access_token: 'delayed-token'})")
 
@@ -890,13 +726,13 @@ class DriveShareTest < ApplicationSystemTestCase
   test "cancelled picker invalidates a delayed selection callback" do
     inject_drive_share_mocks(drive_scenario("picker" => "manual"))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     within(".drive-share__panel") do
       assert_text "Choose a file in the Google Drive window", wait: 10
       click_on "Cancel"
     end
     assert_drive_panel_hidden
-    assert_drive_button_focused
+    assert_attach_button_focused
 
     page.execute_script(
       "window.__driveShareMock.lastPickerCallback({action: 'picked', docs: [#{drive_scenario['picker'].to_json}]})"
@@ -922,7 +758,7 @@ class DriveShareTest < ApplicationSystemTestCase
     JS
     inject_drive_share_mocks(drive_scenario)
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     within(".drive-share-dialog") do
       check_recipient("David")
       click_on "Grant view access and attach"
@@ -944,7 +780,7 @@ class DriveShareTest < ApplicationSystemTestCase
   test "mid-flight capacity loss preserves grant outcomes" do
     inject_drive_share_mocks(drive_scenario("fillStripOnCreate" => true))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     within(".drive-share-dialog") do
       check_recipient("David")
       check_recipient("Jason")
@@ -972,7 +808,7 @@ class DriveShareTest < ApplicationSystemTestCase
       "creates" => { "kevin@37signals.com" => { "status" => 429 } }
     ))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     within(".drive-share-dialog") do
       check_recipient("Jason")
       check_recipient("Kevin")
@@ -998,7 +834,7 @@ class DriveShareTest < ApplicationSystemTestCase
       .tap { |user| rooms(:designers).memberships.grant_to(user) }
     inject_drive_share_mocks(drive_scenario)
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     assert_selector ".drive-share-dialog__recipient", text: "Alexandria Montgomery-Beauregard", wait: 10
 
     styles = page.evaluate_script(<<~JS)
@@ -1031,7 +867,7 @@ class DriveShareTest < ApplicationSystemTestCase
       "creates" => { "kevin@37signals.com" => { "status" => 403, "reason" => "domainPolicy" } }
     ))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     within(".drive-share-dialog") do
       check_recipient("Jason")
       check_recipient("Kevin")
@@ -1069,7 +905,7 @@ class DriveShareTest < ApplicationSystemTestCase
   test "completed outcomes stay visible through reconnect and refreshed review" do
     inject_drive_share_mocks(drive_scenario("create401OnAttempt" => 2))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     within(".drive-share-dialog") do
       check_recipient("David")
       check_recipient("Jason")
@@ -1104,7 +940,7 @@ class DriveShareTest < ApplicationSystemTestCase
       "creates" => { "kevin@37signals.com" => { "status" => 500 } }
     ))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     within(".drive-share-dialog") do
       check_recipient("Jason")
       check_recipient("Kevin")
@@ -1134,7 +970,7 @@ class DriveShareTest < ApplicationSystemTestCase
       "permissionPages" => [ [ { "id" => "perm-jason", "type" => "user", "role" => "writer", "emailAddress" => "jason@37signals.com" } ] ],
       "creates" => { "kevin@37signals.com" => { "status" => 500 } }
     ))
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     within(".drive-share-dialog") do
       check_recipient("Jason")
       check_recipient("Kevin")
@@ -1162,7 +998,7 @@ class DriveShareTest < ApplicationSystemTestCase
       "creates" => { "kevin@37signals.com" => { "status" => 503 } }
     ))
 
-    find("button.composer__drive-btn").click
+    choose_drive_from_attach_menu
     within(".drive-share-dialog") do
       check_recipient("Kevin")
       click_on "Grant view access and attach"
@@ -1185,28 +1021,6 @@ class DriveShareTest < ApplicationSystemTestCase
   end
 
   private
-    def drive_scenario(overrides = {})
-      {
-        "token" => {
-          "access_token" => "mock-token-1", "token_type" => "Bearer",
-          "expires_in" => 3600, "scope" => DRIVE_FILE_SCOPE
-        },
-        "picker" => { "id" => FILE_ID, "name" => "Q3 Planning", "mimeType" => "application/vnd.google-apps.document" },
-        "file" => {
-          "id" => FILE_ID, "name" => "Q3 Planning",
-          "mimeType" => "application/vnd.google-apps.document",
-          "capabilities" => { "canShare" => true }
-        },
-        "permissionPages" => [ [] ],
-        "creates" => {},
-        "failFirstListWith401" => false
-      }.merge(overrides)
-    end
-
-    def inject_drive_share_mocks(scenario)
-      page.execute_script(MOCK_JS, scenario.to_json)
-    end
-
     def mock_calls(name)
       page.evaluate_script("window.__driveShareMock.#{name}")
     end
@@ -1241,13 +1055,24 @@ class DriveShareTest < ApplicationSystemTestCase
     # Focus assertions use document.activeElement inside a synchronize
     # block: :focus selectors stop matching when parallel headless
     # windows lose window focus.
-    def assert_drive_button_focused
+    def assert_attach_button_focused
       page.document.synchronize do
         focused = page.evaluate_script(
-          "document.activeElement === document.querySelector('button.composer__drive-btn')"
+          "document.activeElement === document.querySelector('button.composer__attachment-btn')"
         )
-        assert focused, "expected focus to return to the Drive button"
+        assert focused, "expected focus to return to the attach button"
       end
+    end
+
+    # The + button owns the Drive flow now: open its menu, then choose
+    # From Google Drive, exactly as the old Drive button click did.
+    def choose_drive_from_attach_menu(wait: nil)
+      if wait
+        find("button.composer__attachment-btn", wait: wait).click
+      else
+        find("button.composer__attachment-btn").click
+      end
+      click_button "From Google Drive"
     end
 
     def wait_for_drive_mock(name, count, timeout: 10)

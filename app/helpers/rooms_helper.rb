@@ -12,7 +12,7 @@ module RoomsHelper
   FIRST_PAINT_CONTROLLERS = %w[
     messages maintain_scroll reply composer markdown_editor
     typing_notifications local_time presence message_list
-    header_overflow
+    header_overflow attach_menu
   ].freeze
 
   def first_paint_controller_preloads
