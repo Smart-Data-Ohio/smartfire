@@ -21,8 +21,8 @@ class AgentGrantTest < ActiveSupport::TestCase
     end
   end
 
-  test "read, post, react, manage_threads, and external_action are enforced" do
-    assert_equal %w[ read_messages post_messages react manage_threads external_action ], AgentGrant::ENFORCED_CAPABILITIES
+  test "read, post, react, manage_threads, external_action, and dm_anyone are enforced" do
+    assert_equal %w[ read_messages post_messages react manage_threads external_action dm_anyone ], AgentGrant::ENFORCED_CAPABILITIES
   end
 
   test "room is optional and means workspace-wide" do
