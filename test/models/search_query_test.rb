@@ -72,11 +72,17 @@ class SearchQueryTest < ActiveSupport::TestCase
       body: "drive filefilter plan", client_message_id: "has-file-drive", creator: users(:david)
     )
     drive_message.drive_attachments.create!(file_id: "1a2b3c4d5e6f7g8h9i0j")
+    upload_message = @room.messages.create!(
+      body: "upload filefilter plan", client_message_id: "has-file-upload", creator: users(:david)
+    )
+    upload_message.attachment.attach(
+      io: StringIO.new("plan"), filename: "plan.txt", content_type: "text/plain"
+    )
     @room.messages.create!(body: "no filefilter here", client_message_id: "has-file-no", creator: users(:david))
 
     results = SearchQuery.parse("has:file filefilter").apply_to_messages(Message.all)
 
-    assert_equal [ drive_message ], results.to_a
+    assert_equal [ drive_message.id, upload_message.id ].sort, results.ids.sort
   end
 
   test "has:image matches image uploads only" do
