@@ -82,6 +82,33 @@ class Rooms::Stage::StreamsControllerTest < ActionDispatch::IntegrationTest
     assert_nil @room.live_stream
   end
 
+  test "a server-muted speaker cannot go live" do
+    @listener.change_stage_role!("speaker")
+    @listener.server_mute!
+    issue_in_call_grant!(users(:jason), @listener)
+    sign_in :jason
+
+    assert_no_difference -> { Stream.live.count } do
+      post room_stage_stream_url(@room), params: { quality: "1080p15" }
+    end
+
+    assert_response :forbidden
+    assert_equal "Muted members cannot go live", response.body
+  end
+
+  test "a server-muted host cannot go live" do
+    @host.server_mute!
+    issue_in_call_grant!(users(:david), @host)
+    sign_in :david
+
+    assert_no_difference -> { Stream.live.count } do
+      post room_stage_stream_url(@room), params: { quality: "1080p15" }
+    end
+
+    assert_response :forbidden
+    assert_equal "Muted members cannot go live", response.body
+  end
+
   test "a host without a huddle grant cannot go live" do
     sign_in :david
 

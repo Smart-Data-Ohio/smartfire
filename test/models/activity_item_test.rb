@@ -118,7 +118,8 @@ class ActivityItemTest < ActiveSupport::TestCase
         roomPath: Rails.application.routes.url_helpers.room_path(rooms(:david_and_jason)),
         callerName: "David",
         readPath: Rails.application.routes.url_helpers.read_activity_item_path(item, state: "read"),
-        handledPath: Rails.application.routes.url_helpers.handled_activity_item_path(item, state: "handled")
+        handledPath: Rails.application.routes.url_helpers.handled_activity_item_path(item, state: "handled"),
+        silent: false
       }
     })
   end

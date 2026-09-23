@@ -14,6 +14,8 @@ class Membership < ApplicationRecord
   after_destroy_commit :reset_user_remote_connections
   after_destroy_commit :remove_thread_membership
   after_destroy_commit :sync_removed_room_calendar_entries
+  after_create_commit :refresh_direct_member_key
+  after_destroy_commit :refresh_direct_member_key
 
   enum :involvement, %w[ invisible nothing muted mentions everything ].index_by(&:itself), prefix: :involved_in
 
@@ -23,9 +25,11 @@ class Membership < ApplicationRecord
 
   before_validation :default_stage_role, on: :create
   before_update :sync_huddle_grants_on_stage_role_change, if: :stage_role_changed?
+  before_update :sync_huddle_grants_on_server_mute_change, if: :server_muted_at_changed?
 
   validate :stage_attributes_only_for_stage_rooms
   validate :raised_hands_only_for_listeners
+  validate :server_mute_only_for_call_rooms
   validate :at_least_one_host_remains, on: :update, if: :stage_role_changed?
   validate :room_category_belongs_to_user
 
@@ -120,7 +124,12 @@ class Membership < ApplicationRecord
     Message.where(room_id: room_id, thread_id: nil).order(created_at: :desc, id: :desc).pick(:id)
   end
 
+  # Idempotent: a double raise keeps the first timestamp, so the listener
+  # keeps their place in the queue. Reports whether the hand was newly
+  # raised, so callers can skip the roster broadcast when nothing changed.
   def raise_hand!
+    return false if hand_raised?
+
     update!(hand_raised_at: Time.current)
   end
 
@@ -142,7 +151,37 @@ class Membership < ApplicationRecord
     update!(stage_role: new_role, hand_raised_at: nil)
   end
 
+  # A host or administrator server-mute: the member's active grants are
+  # revoked in the same transaction (see the callback below), so the gateway
+  # removes them and the client rejoins subscribe-only until unmuted. Applies
+  # to stage and voice rooms; every other room leaves the column nil.
+  def server_muted?
+    server_muted_at.present?
+  end
+
+  # Both report whether the mute state changed, so callers can skip the
+  # rejoin broadcasts when a repeated request changed nothing.
+  def server_mute!
+    return false if server_muted?
+
+    update!(server_muted_at: Time.current)
+  end
+
+  def server_unmute!
+    return false unless server_muted?
+
+    update!(server_muted_at: nil)
+  end
+
   private
+    # Direct rooms are found by the hash of their exact member set, so any
+    # membership change recomputes it. Channel inserts through grant_to
+    # refresh inline instead (insert_all skips this callback); a second
+    # refresh from another path is a no-op.
+    def refresh_direct_member_key
+      room.refresh_direct_member_key! if room&.direct?
+    end
+
     def default_stage_role
       self.stage_role ||= :listener if room&.stage?
     end
@@ -172,6 +211,17 @@ class Membership < ApplicationRecord
       if room_category.present? && room_category.user_id != user_id
         errors.add(:room_category, "must belong to the member")
       end
+    # Muting or unmuting revokes the member's active grants in the same
+    # transaction, like a publish-boundary role change: the muted member
+    # rejoins subscribe-only, and the unmuted member rejoins with publish.
+    def sync_huddle_grants_on_server_mute_change
+      HuddleGrant.revoke_for_membership!(self)
+    end
+
+    def server_mute_only_for_call_rooms
+      return if room&.stage? || room&.voice?
+
+      errors.add(:server_muted_at, "only exists on stage and voice rooms") if server_muted_at.present?
     end
 
     def at_least_one_host_remains

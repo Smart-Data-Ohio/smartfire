@@ -44,6 +44,8 @@ On top of that, Smartfire runs **RNNoise** on the microphone as a LiveKit audio 
 
 The huddle controls carry a "Noise suppression on/off" toggle. It defaults to on and is remembered per browser in `localStorage` under `campfire.huddle.noiseSuppression`. Browser-level suppression runs exactly while the toggle is off. The Mute button sits first in the controls and turns red while the microphone is off.
 
+Three follow-ups hardened the microphone path. A failed `restartTrack` retries once, then falls back to the track's own stored constraints; a track that is still live keeps working with its old filtering, while a silent one shows "The microphone couldn't be restarted…" until a later healthy sync clears it. When the SDK retargets the microphone after a device unplug, the suppression setting is restored onto the new track through the `activeDeviceChanged` handler and a track-`ended` listener, so an unplug no longer strands the microphone on the wrong filtering. And switching RNNoise off re-acquires first with browser suppression on while the processor still filters, then stops the processor: the microphone is double-filtered for a moment, never unfiltered. Stub-room system tests pin the retry order, the restore, and the off ordering; the LiveKit suite keeps covering the toggle and the mute survival.
+
 ### Screen sharing
 
 `setScreenShareEnabled` now requests `contentHint: "detail"`, `surfaceSwitching: "include"`, and tab audio (`audio: true`, `systemAudio: "exclude"`). Screen-share audio was already inside the token's publish grant.

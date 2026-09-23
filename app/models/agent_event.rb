@@ -2,8 +2,8 @@ class AgentEvent < ApplicationRecord
   MESSAGE_DELIVERABLE_TYPES = %w[ mention direct_message reply ].freeze
   WORK_DELIVERABLE_TYPES = %w[ work_assigned work_unassigned ].freeze
   # Decision-adjacent rows with no message that are always readable by their
-  # own agent: approval decisions and completed GitHub write actions.
-  ALWAYS_READABLE_TYPES = %w[ approval_decided github_action_completed ].freeze
+  # own agent: approval decisions and completed GitHub/Fizzy write actions.
+  ALWAYS_READABLE_TYPES = %w[ approval_decided github_action_completed fizzy_action_completed ].freeze
   DELIVERABLE_TYPES = (MESSAGE_DELIVERABLE_TYPES + ALWAYS_READABLE_TYPES + WORK_DELIVERABLE_TYPES).freeze
   SUPPRESSED_TYPES = %w[
     delivery_suppressed_rate_limit

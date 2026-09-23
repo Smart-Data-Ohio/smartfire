@@ -47,6 +47,65 @@ screen share, camera, device controls, and reconnect behave identically.
 Leaving goes through the panel's own Leave control. Voice and stage rooms
 never create invitations, ringing, or missed-call items.
 
+## Microphone modes and shortcuts
+
+Each member chooses how their microphone opens from the **Calls** section of
+their profile: **voice activity** (live whenever unmuted, the default) or
+**push-to-talk** (open only while the configured key is held, backtick by
+default). The default matches the backtick key by position, so it talks on
+international layouts where the backtick is a dead key; custom keys match the
+typed character. The push-to-talk key never fires while typing, while
+composing text, or with Ctrl, Meta, or Alt held, so holding it in the
+composer types the character instead of opening the microphone; switching
+browser tabs or hiding the page mid-sentence releases a held key rather than
+wedging the microphone open.
+
+**Ctrl/Cmd+Shift+M** toggles the microphone from anywhere in the app while in
+a call, including while typing. (The `?` shortcut sheet from the navigation
+branch is not on `main` yet; when it lands, both shortcuts belong there.)
+
+## Per-person volume and local mute
+
+Every remote row in the call roster carries a volume slider (0–200%) and a
+**Mute for me** button. Both are local only: the slider rides the audio
+element up to 100% and a Web Audio gain node above it, and the mute
+unsubscribes the person's microphone so the server stops sending it. Both are
+remembered per person in the browser. Nobody else hears a difference. The
+boost gain follows the speaker picker where the browser routes audio
+contexts to an output device; where it cannot, the boost caps at 100% while
+a non-default speaker is selected, and the slider tooltip says why. A
+remembered boost that engages while its audio context is still suspended
+surfaces the **Play huddle audio** control, which resumes it.
+
+## Host moderation
+
+Voice rooms have no host role, so only administrators moderate: they can
+server-mute any member, including another administrator, which revokes
+publish until the member is unmuted, or disconnect a member from the call
+without touching their membership. A server-muted administrator can unmute
+themselves. Muting
+and unmuting rejoin the affected browser with a fresh token, exactly like a
+stage publish-boundary change; disconnecting sends no rejoin, so the member
+stays out until they join again. Enforcement is server-side through grants —
+the muted token cannot publish and the gateway's per-second check drops any
+grant that no longer matches the membership — with no separate UI in voice
+rooms yet: the same endpoints serve the stage roster's Mute, Unmute, and
+Disconnect buttons (see [stage channels](stage-channels.md)).
+
+## Reconnection and quality
+
+When the connection drops, the panel shows a reconnection bar with a countdown
+and a **Reconnect now** button, which rejoins fresh instead of waiting for the
+SDK's own retry. The countdown expiring never forces a failure: the SDK may
+still recover, and the manual control stays up. Each roster row carries a poor-
+connection badge while the server reports that participant struggling, and the
+header connection indicator keeps its details panel with round-trip time,
+loss, jitter, bitrates, and transport for your own link.
+
+Whoever is speaking gets a static ring on their avatar in the sidebar and
+header stacks, driven by the call's speaker events with no polling of its own.
+There is no pulse, so reduced-motion settings need no exception.
+
 ## Sidebar
 
 Voice channels list under the **Voice** section below the channels list,

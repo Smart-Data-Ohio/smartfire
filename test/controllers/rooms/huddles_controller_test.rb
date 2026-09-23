@@ -106,14 +106,34 @@ class Rooms::HuddlesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "group direct rooms cannot start a huddle" do
+  test "group direct rooms can start a huddle" do
     room = Rooms::Direct.create_for({ creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
     sign_in :david
 
-    post room_huddle_url(room)
+    assert_enqueued_with(job: Huddle::PushInvitationJob) do
+      post room_huddle_url(room)
+    end
 
-    assert_json_error :unprocessable_entity, "Huddles are only available in one-to-one direct messages"
-    assert_not HuddleGrant.exists?(room_id: room.id)
+    assert_response :success
+    assert HuddleGrant.exists?(room_id: room.id, user_id: users(:david).id)
+    assert ActivityItem.exists?(user: users(:jason), event_type: "huddle_started")
+    assert ActivityItem.exists?(user: users(:kevin), event_type: "huddle_started")
+  end
+
+  test "a nonmember cannot get a grant in a group DM and a removed member loses theirs" do
+    room = Rooms::Direct.create_for({ creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
+    grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: room.memberships.find_by!(user: users(:david)))
+
+    sign_in :jz
+    post room_huddle_url(room)
+    assert_json_error :not_found, "Room not found or inaccessible"
+
+    room.memberships.find_by!(user: users(:david)).destroy!
+    assert_predicate grant.reload, :revoked?
+
+    sign_in :david
+    post room_huddle_url(room)
+    assert_json_error :not_found, "Room not found or inaccessible"
   end
 
   test "GET confirms ongoing access without returning credentials" do
@@ -162,8 +182,10 @@ class Rooms::HuddlesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "no-store", response.headers["Cache-Control"]
     assert_equal [
-      { "id" => users(:david).id, "name" => users(:david).name, "avatar_url" => fresh_user_avatar_url(users(:david)) },
-      { "id" => users(:jason).id, "name" => users(:jason).name, "avatar_url" => fresh_user_avatar_url(users(:jason)) }
+      { "id" => users(:david).id, "name" => users(:david).name, "avatar_url" => fresh_user_avatar_url(users(:david)),
+        "identities" => [ david_grant.identity ] },
+      { "id" => users(:jason).id, "name" => users(:jason).name, "avatar_url" => fresh_user_avatar_url(users(:jason)),
+        "identities" => [ jason_grant.identity ] }
     ], response.parsed_body
   end
 

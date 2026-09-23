@@ -86,6 +86,20 @@ class UserTest < ActiveSupport::TestCase
     assert_requested revoke, body: hash_including({ "token" => "refresh-token" })
   end
 
+  test "deactivating stops the calendar push channel remotely" do
+    user = users(:david)
+    connect_google!(user)
+    Calendar::PushChannel.create!(user:, channel_id: "chan-1",
+      resource_id: "resource-1", token_digest: Calendar::PushChannel.digest("token"))
+    stop = stub_request(:post, "https://www.googleapis.com/calendar/v3/channels/stop")
+      .to_return(status: 200, body: {}.to_json)
+
+    user.deactivate
+
+    assert_requested stop, times: 1
+    assert_nil Calendar::PushChannel.find_by(user_id: user.id)
+  end
+
   test "deactivating with an unreadable Google token skips the revoke" do
     account = GoogleAccount.create!(user: users(:david), email: "david@gmail.test",
       refresh_token: "refresh-token", access_token: "access-token", access_token_expires_at: 1.hour.from_now)
@@ -156,6 +170,39 @@ class UserTest < ActiveSupport::TestCase
 
     assert bot.update(name: "Renamed Bot")
     assert_equal "acme", bot.reload.icon_name
+  end
+
+  test "voice settings default to voice activity with the backtick key" do
+    user = users(:david)
+
+    assert_equal "voice_activity", user.voice_mode
+    assert_not_predicate user, :push_to_talk?
+    assert_equal "`", user.push_to_talk_key
+  end
+
+  test "voice settings accept push-to-talk with a named key and reject the rest" do
+    user = users(:david)
+    user.update!(voice_mode: "push_to_talk", push_to_talk_key: "CapsLock")
+
+    assert_predicate user.reload, :push_to_talk?
+    assert_equal "CapsLock", user.push_to_talk_key
+
+    user.voice_mode = "shout"
+    assert_not_predicate user, :valid?
+    assert_equal [ "is invalid" ], user.errors[:voice_mode]
+
+    user.voice_mode = "push_to_talk"
+    user.push_to_talk_key = "x" * 21
+    assert_not_predicate user, :valid?
+    assert_equal [ "is too long" ], user.errors[:push_to_talk_key]
+  end
+
+  test "clearing the push-to-talk key restores the backtick" do
+    user = users(:david)
+    user.update!(push_to_talk_key: "  ")
+
+    assert_nil user.reload[:push_to_talk_key]
+    assert_equal "`", user.push_to_talk_key
   end
 
   private

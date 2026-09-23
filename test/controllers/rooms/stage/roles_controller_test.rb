@@ -164,6 +164,17 @@ class Rooms::Stage::RolesControllerTest < ActionDispatch::IntegrationTest
     assert_not grant.reload.revoked?
   end
 
+  test "a host who is not an administrator cannot demote an administrator" do
+    @room.memberships.find_by!(user: users(:kevin)).change_stage_role!("host")
+    admin_host = @room.memberships.find_by!(user: users(:david))
+    sign_in :kevin
+
+    patch room_stage_role_url(@room, admin_host), params: { stage_role: "listener" }
+
+    assert_response :forbidden
+    assert_not admin_host.reload.listener?
+  end
+
   test "a listener cannot change anyone's role" do
     sign_in :kevin
 

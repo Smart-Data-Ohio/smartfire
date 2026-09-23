@@ -1,13 +1,13 @@
 class AgentGrant < ApplicationRecord
-  CAPABILITIES = %w[ read_messages post_messages react manage_threads external_action dm_anyone ].freeze
+  CAPABILITIES = %w[ read_messages post_messages react manage_threads external_action fizzy dm_anyone ].freeze
 
   # Every documented capability is enforced: posting and boosting
   # through the bot/agent endpoints, reading through event polling and
   # delivery, external actions through the approval endpoints, work
-  # status updates through the agent work endpoints, and agent-initiated
-  # DMs to strangers through the agent DM endpoints. See
-  # AgentAuthorization.
-  ENFORCED_CAPABILITIES = %w[ read_messages post_messages react manage_threads external_action dm_anyone ].freeze
+  # status updates through the agent work endpoints, Fizzy reads
+  # through the agent Fizzy endpoints, and agent-initiated DMs to
+  # strangers through the agent DM endpoints. See AgentAuthorization.
+  ENFORCED_CAPABILITIES = %w[ read_messages post_messages react manage_threads external_action fizzy dm_anyone ].freeze
 
   belongs_to :agent
   belongs_to :room, optional: true

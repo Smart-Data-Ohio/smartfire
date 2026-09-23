@@ -63,16 +63,4 @@ module Users::SidebarHelper
         .transform_values { |room_memberships| room_memberships.map(&:user) }
     end
   end
-
-  # Two-person DM ids for the current user, counted once: only those DMs can
-  # huddle, so only their rows render a stack. One grouped count instead of a
-  # COUNT per row.
-  def two_person_direct_room_ids
-    return [].to_set unless Huddle.configured?
-
-    @two_person_direct_room_ids ||= begin
-      direct_room_ids = Current.user.memberships.joins(:room).where(room: { type: "Rooms::Direct" }).select(:room_id)
-      Membership.where(room_id: direct_room_ids).group(:room_id).count.select { |_, count| count == 2 }.keys.to_set
-    end
-  end
 end
