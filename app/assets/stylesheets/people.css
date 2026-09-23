@@ -95,6 +95,15 @@
   inline-size: 100%;
 }
 
+.profile-card__star {
+  margin-block-start: 0.5rem;
+}
+
+.profile-card__star .btn,
+.profile-card__star form {
+  inline-size: 100%;
+}
+
 /* Name triggers read as names until hovered or focused. */
 .profile-card-name {
   appearance: none;
@@ -140,6 +149,38 @@ button.profile-card-avatar {
   .profile-card-popover__panel {
     transition: none;
   }
+}
+
+/* Shared member-row menu: one per member panel, Star/Unstar inside. */
+.member-row-menu[hidden] {
+  display: none;
+}
+
+.member-row-menu {
+  background: var(--workspace-surface, var(--color-bg));
+  border-radius: 0.7rem;
+  color: var(--workspace-text, var(--color-text));
+  inline-size: max-content;
+  margin: 0;
+  max-inline-size: min(92vw, 16rem);
+  min-inline-size: 10rem;
+  padding: 0.35rem;
+  position: fixed;
+  z-index: 30;
+}
+
+.member-row-menu__item {
+  --btn-background: transparent;
+  --btn-border-color: transparent;
+
+  inline-size: 100%;
+  justify-content: flex-start;
+  text-align: start;
+}
+
+.member-row-menu__item:hover,
+.member-row-menu__item:focus-visible {
+  background: var(--workspace-sidebar-hover);
 }
 
 /* Sticky multi-select bar. */

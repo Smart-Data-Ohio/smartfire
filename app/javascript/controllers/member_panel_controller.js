@@ -20,14 +20,18 @@ const FOCUSABLE_SELECTOR = [
 ].join(",")
 
 export default class extends Controller {
-  static targets = [ "panel", "backdrop", "close", "content", "status", "summary", "toggle", "toggleCount" ]
+  static targets = [ "panel", "backdrop", "close", "content", "status", "summary", "toggle", "toggleCount", "rowMenu", "rowMenuStar", "rowMenuStatus" ]
 
   connect() {
     this.desktopQuery = window.matchMedia(DESKTOP_QUERY)
     this.handleViewportChange = this.#handleViewportChange.bind(this)
     this.handleVisibilityChange = this.#handleVisibilityChange.bind(this)
+    this.handleRowMenuPointerDown = this.#handleRowMenuPointerDown.bind(this)
+    this.handleRowMenuWindowKeydown = this.#handleRowMenuWindowKeydown.bind(this)
     this.desktopQuery.addEventListener("change", this.handleViewportChange)
     document.addEventListener("visibilitychange", this.handleVisibilityChange)
+    document.addEventListener("pointerdown", this.handleRowMenuPointerDown)
+    window.addEventListener("keydown", this.handleRowMenuWindowKeydown)
     this.desktopClosed = false
     this.isOpen = false
 
@@ -41,8 +45,11 @@ export default class extends Controller {
   disconnect() {
     this.desktopQuery?.removeEventListener("change", this.handleViewportChange)
     document.removeEventListener("visibilitychange", this.handleVisibilityChange)
+    document.removeEventListener("pointerdown", this.handleRowMenuPointerDown)
+    window.removeEventListener("keydown", this.handleRowMenuWindowKeydown)
     this.#stopRefreshing()
     this.#abortRequest()
+    this.#closeRowMenu({ restoreFocus: false })
     this.element.classList.remove("member-panel-open")
   }
 
@@ -84,6 +91,7 @@ export default class extends Controller {
     if (nextUrl === this.loadedUrl && this.contentTarget.childElementCount > 0) return
 
     this.#abortRequest()
+    this.#closeRowMenu({ restoreFocus: false })
     this.loadedUrl = null
     this.#clearMembers("Loading members…")
     if (this.isOpen) this.#fetchMembers()
@@ -125,6 +133,82 @@ export default class extends Controller {
     }
   }
 
+  // Right-click on a member row opens the row menu (Star/Unstar). A
+  // touch long-press ends in a synthetic contextmenu too, but that one
+  // already selected the row: multi-select#suppressMenu ran first and
+  // prevented it, so the menu stays shut there.
+  openMenu(event) {
+    if (event.defaultPrevented || !this.hasRowMenuTarget) return
+
+    const row = event.target.closest?.("[data-member-id]")
+    if (!row || !this.element.contains(row) || this.#isSelfRow(row)) return
+
+    event.preventDefault()
+    this.#openRowMenu(row, { x: event.clientX, y: event.clientY })
+  }
+
+  // Keyboard path to the same menu: the menu key or Shift+F10 on any
+  // focused control inside a row, like the sidebar room menu.
+  rowKeydown(event) {
+    const menuKey = event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey)
+    if (!menuKey || !this.hasRowMenuTarget) return
+
+    const row = event.target.closest?.("[data-member-id]")
+    if (!row || !this.element.contains(row) || this.#isSelfRow(row)) return
+
+    event.preventDefault()
+    const rect = row.getBoundingClientRect()
+    this.#openRowMenu(row, { x: rect.left + Math.min(rect.width / 2, 240), y: rect.bottom })
+  }
+
+  async toggleRowMenuStar() {
+    const userId = this.menuUserId
+    if (!userId || !this.hasRowMenuTarget) return
+
+    const starred = this.#menuRow()?.dataset.starred === "true"
+    const url = this.#starUrl(userId)
+    if (!url) return
+
+    this.rowMenuStarTarget.disabled = true
+    try {
+      const response = await fetch(url, {
+        method: starred ? "DELETE" : "POST",
+        headers: {
+          Accept: "application/json",
+          "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content || ""
+        }
+      }).catch(() => null)
+
+      if (!response?.ok) {
+        this.rowMenuStatusTarget.textContent = starred ? "Couldn’t unstar" : "Couldn’t star"
+        return
+      }
+
+      const payload = await response.json().catch(() => ({}))
+      const nowStarred = payload.starred ?? !starred
+      // The refetch below replaces the row element, so the menu keeps
+      // only the user id: look the row up fresh every time.
+      this.#menuRow()?.setAttribute("data-starred", String(nowStarred))
+      this.rowMenuStarTarget.textContent = nowStarred ? "★ Unstar" : "☆ Star"
+      this.rowMenuStatusTarget.textContent = ""
+      this.refreshPresence()
+    } finally {
+      this.rowMenuStarTarget.disabled = false
+    }
+  }
+
+  rowMenuKeydown(event) {
+    if (!this.hasRowMenuTarget || this.rowMenuTarget.hidden) return
+
+    if (event.key === "Escape" || event.key === "Tab") {
+      // Stop here: the window-level Esc handlers would otherwise close
+      // the whole panel (and the card trap) behind the menu.
+      event.preventDefault()
+      event.stopPropagation()
+      this.#closeRowMenu({ restoreFocus: true })
+    }
+  }
+
   #open({ focusPanel = false, announce = true } = {}) {
     if (!this.hasPanelTarget) return
 
@@ -144,6 +228,7 @@ export default class extends Controller {
     this.element.classList.remove("member-panel-open")
     this.#stopRefreshing()
     this.#abortRequest()
+    this.#closeRowMenu({ restoreFocus: false })
     this.#syncAccessibility()
 
     if (restoreFocus) this.#restoreFocus()
@@ -225,13 +310,16 @@ export default class extends Controller {
   }
 
   #renderMembers(members) {
-    const online = members.filter((member) => member.online === true)
-    const offline = members.filter((member) => member.online !== true)
+    const starred = members.filter((member) => member.starred === true)
+    const unstarred = members.filter((member) => member.starred !== true)
+    const online = unstarred.filter((member) => member.online === true)
+    const offline = unstarred.filter((member) => member.online !== true)
     const currentOfflineGroup = this.contentTarget.querySelector(".member-panel__offline")
     const offlineWasOpen = currentOfflineGroup?.open ?? true
     const offlineSummaryHadFocus = currentOfflineGroup?.querySelector("summary") === document.activeElement
     const fragment = document.createDocumentFragment()
 
+    if (starred.length > 0) fragment.append(this.#memberGroup("Starred", starred, false))
     fragment.append(this.#memberGroup("Online", online, false))
 
     const offlineGroup = this.#memberGroup("Offline", offline, true)
@@ -272,7 +360,8 @@ export default class extends Controller {
     item.className = "member-panel__member multi-select-row"
     item.dataset.memberId = String(member.id)
     item.dataset.online = String(online)
-    item.dataset.action = "touchstart->multi-select#pressStart touchmove->multi-select#pressMove touchend->multi-select#pressEnd contextmenu->multi-select#suppressMenu"
+    item.dataset.starred = String(member.starred === true)
+    item.dataset.action = "touchstart->multi-select#pressStart touchmove->multi-select#pressMove touchend->multi-select#pressEnd contextmenu->multi-select#suppressMenu contextmenu->member-panel#openMenu keydown->member-panel#rowKeydown"
 
     const isSelf = String(member.id) === document.querySelector("meta[name='current-user-id']")?.content
     if (!isSelf) {
@@ -334,6 +423,81 @@ export default class extends Controller {
     if (!template || memberId === undefined || memberId === null) return null
 
     return template.replace("USER_ID", String(memberId))
+  }
+
+  #starUrl(memberId) {
+    const template = this.panelTarget.dataset.starUrlTemplate
+    if (!template || memberId === undefined || memberId === null) return null
+
+    return template.replace("USER_ID", String(memberId))
+  }
+
+  #menuRow() {
+    if (!this.menuUserId || !this.hasContentTarget) return null
+    return this.contentTarget.querySelector(`[data-member-id="${this.menuUserId}"]`)
+  }
+
+  #isSelfRow(row) {
+    return row.dataset.memberId === document.querySelector("meta[name='current-user-id']")?.content
+  }
+
+  #openRowMenu(row, point) {
+    this.menuUserId = row.dataset.memberId
+    this.menuReturnFocus = row.querySelector("[data-action*='profile-card#open']")
+    this.rowMenuStarTarget.textContent = row.dataset.starred === "true" ? "★ Unstar" : "☆ Star"
+    this.rowMenuStarTarget.disabled = false
+    this.rowMenuStatusTarget.textContent = ""
+
+    const menu = this.rowMenuTarget
+    menu.hidden = false
+    menu.style.left = "0px"
+    menu.style.top = "0px"
+    const rect = menu.getBoundingClientRect()
+    const left = Math.min(point.x, window.innerWidth - rect.width - 8)
+    const top = Math.min(point.y, window.innerHeight - rect.height - 8)
+    menu.style.left = `${Math.max(8, left)}px`
+    menu.style.top = `${Math.max(8, top)}px`
+
+    this.rowMenuStarTarget.focus({ preventScroll: true })
+  }
+
+  #closeRowMenu({ restoreFocus } = {}) {
+    if (!this.hasRowMenuTarget || this.rowMenuTarget.hidden) {
+      this.menuUserId = null
+      this.menuReturnFocus = null
+      return
+    }
+
+    this.rowMenuTarget.hidden = true
+    const userId = this.menuUserId
+    this.menuUserId = null
+
+    if (restoreFocus) {
+      const fallback = this.menuReturnFocus?.isConnected
+        ? this.menuReturnFocus
+        : this.contentTarget.querySelector(`[data-member-id="${userId}"] [data-action*='profile-card#open']`)
+      fallback?.focus({ preventScroll: true })
+    }
+    this.menuReturnFocus = null
+  }
+
+  #handleRowMenuPointerDown(event) {
+    if (!this.hasRowMenuTarget || this.rowMenuTarget.hidden) return
+    if (this.rowMenuTarget.contains(event.target)) return
+    if (this.#menuRow()?.contains(event.target)) return
+    this.#closeRowMenu({ restoreFocus: false })
+  }
+
+  // Escape still reaches the menu after focus moved elsewhere (the
+  // profile card opened from the same row, say): the menu's own keydown
+  // handler only sees keys pressed inside it. Mirrors the sidebar room
+  // menu; the contains check keeps the two handlers from double-closing.
+  #handleRowMenuWindowKeydown(event) {
+    if (!this.hasRowMenuTarget || this.rowMenuTarget.hidden) return
+    if (event.key !== "Escape" || this.rowMenuTarget.contains(event.target)) return
+
+    event.preventDefault()
+    this.#closeRowMenu({ restoreFocus: true })
   }
 
   #clearMembers(message) {

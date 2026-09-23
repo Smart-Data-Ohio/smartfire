@@ -52,6 +52,39 @@ class MessageInteractionsTest < ApplicationSystemTestCase
     page.current_window.resize_to(1400, 1400)
   end
 
+  test "a release click landing on the just-opened menu does not activate it" do
+    page.current_window.resize_to(390, 844)
+    message = find("##{dom_id(messages(:third))}")
+
+    long_press(message)
+    assert_message_menu_open
+
+    # The browser fires compatibility mouse events at the release point after
+    # every touch. When the menu opens under the finger first, that click
+    # lands on the menu item below it (Reply on phones) and must be
+    # swallowed instead of activating it.
+    hit = page.evaluate_script(<<~JS, dom_id(messages(:third)))
+      ((messageId) => {
+        const message = document.getElementById(messageId)
+        const rect = message.getBoundingClientRect()
+        const x = rect.left + rect.width / 2
+        const y = rect.top + rect.height / 2
+        const target = document.elementFromPoint(x, y)
+        if (!target || !target.closest("#message-actions-menu")) return target ? target.tagName : "none"
+        target.dispatchEvent(new MouseEvent("click", {
+          bubbles: true, cancelable: true, clientX: x, clientY: y, view: window
+        }))
+        return "menu"
+      })(arguments[0])
+    JS
+    assert_equal "menu", hit, "expected the press point to hit the open menu"
+
+    assert_message_menu_open
+    assert_selector "[data-composer-target='context'][hidden]", visible: false
+  ensure
+    page.current_window.resize_to(1400, 1400)
+  end
+
   test "shows the message action menu as a bottom sheet on phones" do
     page.current_window.resize_to(390, 844)
     within_message(messages(:third)) do

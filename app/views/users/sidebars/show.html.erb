@@ -192,10 +192,5 @@
             data-action="click->keyboard-shortcuts#openHelp">
       <%= image_tag "help-circle.svg", size: 20, aria: { hidden: "true" } %>
     </button>
-
-    <%# Below 40rem the top-bar help menu steps aside; this one carries the
-        tour restart (and a shortcuts duplicate) in the drawer instead. %>
-    <%= render "layouts/help_menu", button_id: "help-menu-button-sidebar",
-          summary_class: "btn btn--borderless sidebar__tool" if Current.user && !Current.user.bot? %>
   </div>
 <% end %>

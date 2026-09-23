@@ -29,6 +29,9 @@
               <% end %>
               <span class="people-directory__presence"><%= user.online_now?(@online_ids) ? "Online" : "Offline" %></span>
             </span>
+            <% if @starred_ids.include?(user.id) %>
+              <span class="profile-card__badge" role="img" aria-label="Starred by you" title="Starred by you">★</span>
+            <% end %>
             <% if user.agent %>
               <span class="profile-card__badge">Agent</span>
             <% elsif user.bot? %>

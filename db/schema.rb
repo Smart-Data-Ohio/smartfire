@@ -988,6 +988,14 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_160100) do
     t.integer "user_id", null: false
     t.index ["token_digest"], name: "index_two_factor_remembered_devices_on_token_digest", unique: true
     t.index ["user_id"], name: "index_two_factor_remembered_devices_on_user_id"
+  create_table "user_stars", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "starred_user_id", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["starred_user_id"], name: "index_user_stars_on_starred_user_id"
+    t.index ["user_id", "starred_user_id"], name: "index_user_stars_on_user_id_and_starred_user_id", unique: true
+    t.index ["user_id"], name: "index_user_stars_on_user_id"
   end
 
   create_table "users", force: :cascade do |t|
@@ -1193,6 +1201,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_160100) do
   add_foreign_key "two_factor_backup_codes", "two_factor_credentials"
   add_foreign_key "two_factor_credentials", "users"
   add_foreign_key "two_factor_remembered_devices", "users"
+  add_foreign_key "user_stars", "users", column: "starred_user_id", on_delete: :cascade
+  add_foreign_key "user_stars", "users", on_delete: :cascade
   add_foreign_key "webhooks", "users"
   add_foreign_key "work_handoffs", "agents", column: "receiver_agent_id"
   add_foreign_key "work_handoffs", "channel_threads"

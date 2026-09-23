@@ -12,6 +12,7 @@ module RoomsHelper
   FIRST_PAINT_CONTROLLERS = %w[
     messages maintain_scroll reply composer markdown_editor
     typing_notifications local_time presence message_list
+    header_overflow
   ].freeze
 
   def first_paint_controller_preloads
@@ -29,7 +30,7 @@ module RoomsHelper
   def link_to_edit_room(room, &)
     link_to \
       [ :edit, @room ],
-      class: "btn",
+      class: "btn room-header__action room-header__action--settings",
       style: "view-transition-name: edit-room-#{@room.id}",
       data: { room_id: @room.id },
       &

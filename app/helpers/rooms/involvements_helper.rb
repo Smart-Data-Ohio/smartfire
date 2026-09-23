@@ -5,6 +5,20 @@ module Rooms::InvolvementsHelper
     }, &
   end
 
+  # The levels the header overflow menu's notification chooser offers:
+  # the same orders the bell cycles through, submitted explicitly instead.
+  def involvement_levels_for(room)
+    room.direct? ? DIRECT_INVOLVEMENT_ORDER : SHARED_INVOLVEMENT_ORDER
+  end
+
+  def short_involvement_label(level)
+    SHORT_INVOLVEMENT_LABELS.fetch(level.to_s)
+  end
+
+  def involvement_description(level)
+    HUMANIZE_INVOLVEMENT.fetch(level.to_s)
+  end
+
   def button_to_change_involvement(room, involvement)
     button_to room_involvement_path(room, involvement: next_involvement_for(room, involvement: involvement)),
       method: :put,
@@ -26,6 +40,14 @@ module Rooms::InvolvementsHelper
 
     SHARED_INVOLVEMENT_ORDER = %w[ mentions everything muted nothing invisible ]
     DIRECT_INVOLVEMENT_ORDER = %w[ everything muted nothing ]
+
+    SHORT_INVOLVEMENT_LABELS = {
+      "mentions" => "Mentions",
+      "everything" => "Everything",
+      "muted" => "Muted",
+      "nothing" => "Off",
+      "invisible" => "Invisible"
+    }.freeze
 
     def next_involvement_for(room, involvement:)
       if room.direct?
