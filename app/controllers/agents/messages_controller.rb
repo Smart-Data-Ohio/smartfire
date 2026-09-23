@@ -21,16 +21,29 @@ class Agents::MessagesController < MessagesController
   # message, or — with a top-level thread_id — a reply inside that thread
   # through ChannelThread#post_message!. The thread must belong to the room
   # (404 otherwise) and must not be locked (422). The response carries
-  # thread_id, null for root messages.
+  # thread_id, null for root messages. The posting flow lives in
+  # Agents::Posting, shared with the MCP post_message tool.
   def create
-    if params[:thread_id].present?
-      create_thread_reply
-    else
-      super
-      return if performed?
+    result = Agents::Posting.post(
+      agent: Current.agent,
+      room: @room,
+      thread_id: params[:thread_id],
+      attributes: agent_message_attributes,
+      drive_file_ids: agent_drive_file_ids
+    )
 
+    if result.ok?
+      @message = result.payload
       render json: message_payload(@message).merge(thread_id: @message.thread_id), status: :created
+    elsif result.status == :not_found
+      head :not_found
+    elsif result.payload
+      render json: result.payload, status: result.status
+    else
+      render json: result.failure_body, status: result.status
     end
+  rescue ActiveRecord::RecordNotFound
+    render action: :room_not_found
   end
 
   private
@@ -48,52 +61,22 @@ class Agents::MessagesController < MessagesController
       render json: { error: "Forbidden: Bearer agent token required" }, status: :forbidden
     end
 
-    def create_thread_reply
-      thread = @room.channel_threads.find_by(id: params[:thread_id])
-      return head :not_found unless thread
-
-      if thread.locked?
-        render json: { error: "This thread is locked" }, status: :unprocessable_entity
-        return
-      end
-
-      if (duplicate = Message.find_duplicate(room: @room, creator: Current.user, client_message_id: params.dig(:message, :client_message_id)))
-        # A retried create: return the original without re-posting.
-        @message = duplicate
-      else
-        @message = thread.post_message!(
-          creator: Current.user,
-          attributes: thread_message_params,
-          drive_file_ids: validated_drive_file_ids!
-        )
-        @message.broadcast_create
-      end
-
-      render json: message_payload(@message).merge(thread_id: @message.thread_id), status: :created
-    rescue ActiveRecord::RecordInvalid => error
-      render_record_invalid(error)
-    rescue ChannelThread::LockedError => error
-      render json: { error: error.message }, status: :unprocessable_entity
+    def agent_message_attributes
+      params.require(:message).permit(
+        :body, :attachment, :client_message_id, :markdown_source,
+        :reply_to_message_id, :reply_notify_author
+      ).to_h.symbolize_keys
     end
 
-    # Thread replies take the same message fields as root posts, but a reply
-    # target stays a plain id: the model validates that it lives in the same
-    # conversation. Mirrors ChannelThreadMessagesController.
-    def thread_message_params
-      permitted = params.require(:message).permit(
-        :body, :attachment, :client_message_id, :markdown_source,
-        :reply_to_message_id, :reply_notify_author, drive_file_ids: []
-      )
-      permitted.delete(:drive_file_ids)
+    # :absent when the form sent no Drive key at all, nil when the key
+    # held no usable array (which fails validation, like the human
+    # endpoint), otherwise the id array.
+    def agent_drive_file_ids
+      return :absent unless drive_file_ids_key_present?
 
-      if permitted.key?(:markdown_source) && !permitted[:markdown_source].nil?
-        permitted.delete(:body)
-      end
+      raw = params[:message][:drive_file_ids]
+      return nil unless raw.is_a?(Array)
 
-      permitted[:reply_to_message_id] = permitted[:reply_to_message_id].presence if permitted.key?(:reply_to_message_id)
-      if permitted.key?(:reply_notify_author)
-        permitted[:reply_notify_author] = ActiveModel::Type::Boolean.new.cast(permitted[:reply_notify_author])
-      end
-      permitted.to_h.symbolize_keys
+      raw.map { |id| id.to_s.strip }.reject(&:blank?).uniq
     end
 end
