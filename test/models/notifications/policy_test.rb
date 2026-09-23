@@ -315,6 +315,48 @@ class Notifications::PolicyTest < ActiveSupport::TestCase
     assert huddle_policy.push?
   end
 
+  test "huddle join notices push for live memberships and record no inbox item" do
+    %w[ mentions everything muted ].each do |involvement|
+      policy = huddle_join_policy(room_involvement: involvement)
+
+      assert_nil policy.inbox_event_type, involvement
+      assert policy.push?, involvement
+      assert policy.sound?, involvement
+    end
+  end
+
+  test "huddle join notices stay silent with notifications off, hidden, or no membership" do
+    %w[ nothing invisible ].each do |involvement|
+      policy = huddle_join_policy(room_involvement: involvement)
+
+      assert_nil policy.inbox_event_type, involvement
+      assert_not policy.push?, involvement
+    end
+
+    assert_not huddle_join_policy(room_involvement: nil).push?
+  end
+
+  test "huddle join notices honor DND with a starred-caller exception" do
+    assert huddle_join_policy(room_involvement: "mentions").push?
+
+    @recipient.update!(dnd_enabled: true)
+    assert_not huddle_join_policy(room_involvement: "mentions").push?
+
+    DndAllowedUser.create!(user: @recipient, allowed_user: @sender)
+    assert huddle_join_policy(room_involvement: "mentions").push?
+  end
+
+  test "huddle join notices stay silent during meetings and out of office" do
+    opt_into_meeting_quiet
+    assert_not huddle_join_policy(room_involvement: "mentions").push?
+
+    @recipient.update!(meeting_dnd_enabled: false, ooo_until: 1.day.from_now)
+    assert_not huddle_join_policy(room_involvement: "mentions").push?
+
+    @recipient.update!(ooo_notify_enabled: true)
+    assert huddle_join_policy(room_involvement: "mentions").push?
+  end
+
   # Quiet-during-meetings: exactly like DND during busy intervals
 
   test "quiet-during-meetings suppresses push and sound but still records the inbox item" do
@@ -464,6 +506,15 @@ class Notifications::PolicyTest < ActiveSupport::TestCase
 
     def huddle_policy
       Notifications::Policy.new(recipient: @recipient, sender: @sender, kind: :huddle)
+    end
+
+    def huddle_join_policy(room_involvement:, recipient: @recipient, sender: @sender)
+      membership = room_involvement &&
+        Membership.new(room: @room, user: recipient, involvement: room_involvement)
+
+      Notifications::Policy.new(
+        recipient:, sender:, kind: :huddle_join, room_membership: membership
+      )
     end
 
     def opt_into_meeting_quiet

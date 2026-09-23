@@ -36,8 +36,14 @@ module Notifications
   # - Out of office suppresses push and sounds the same way, unless the
   #   recipient asked to keep being notified ("Keep notifying me while
   #   I'm out of office"). Same starred-people exception, same inbox.
+  # - Huddle join notices (`huddle_join`) push like invitations, except
+  #   the recipient's room involvement gates them: members who switched
+  #   the room off ("nothing") or hid it ("invisible") get no push, and
+  #   there is never an inbox item. Start-of-huddle rings keep the
+  #   `huddle` kind, which ignores involvement by itself (the invitation
+  #   pusher scopes subscriptions instead).
   class Policy
-    KINDS = %i[ room_message thread_message reminder huddle ].freeze
+    KINDS = %i[ room_message thread_message reminder huddle huddle_join ].freeze
 
     attr_reader :recipient, :sender, :kind, :room_membership, :thread_membership,
       :now, :mentioned, :reply_to_recipient, :keyword_matched
@@ -113,9 +119,18 @@ module Notifications
       def base_push?
         case kind
         when :reminder, :huddle then true
+        when :huddle_join then huddle_join_base_push?
         when :room_message then room_base_push?
         when :thread_message then thread_base_push?
         end
+      end
+
+      # A join push needs a live room membership: without one the
+      # recipient has no access, and switched-off or hidden rooms stay
+      # silent the same way they skip invitation rings. Muted rooms
+      # still push, matching invitations.
+      def huddle_join_base_push?
+        room_membership.present? && !room_invisible? && !room_membership.involved_in_nothing?
       end
 
       def room_base_push?
