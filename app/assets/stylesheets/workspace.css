@@ -924,7 +924,7 @@ summary.member-panel__group-heading {
   position: absolute;
 }
 
-.member-panel__member[data-online="true"] .member-panel__presence {
+.member-panel__member[data-online="true"] .member-panel__presence:not([data-presence]) {
   background: var(--color-positive);
 }
 

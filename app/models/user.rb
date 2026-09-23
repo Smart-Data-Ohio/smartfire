@@ -1,5 +1,5 @@
 class User < ApplicationRecord
-  include Avatar, Bannable, Bot, Mentionable, Role, Transferable
+  include Avatar, Bannable, Bot, Mentionable, Role, StatusSettings, Transferable
 
   has_many :memberships, dependent: :delete_all
   # Listings, room scopes, and reachable messages all read through here, so

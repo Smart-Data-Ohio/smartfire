@@ -5,10 +5,10 @@ class Rooms::MembersController < ApplicationController
 
   def index
     members = @room.users.active.with_attached_avatar.includes(:agent).order(Arel.sql("LOWER(users.name) ASC"), :id).to_a
-    online_user_ids = WorkspacePresenceLease.online_user_ids(members.map(&:id)).to_set
+    lease_states = WorkspacePresenceLease.presence_by_user_id(members.map(&:id))
 
     render json: {
-      members: members.map { |member| member_json(member, online_user_ids:) }
+      members: members.map { |member| member_json(member, lease_states:) }
     }
   end
 
@@ -17,13 +17,32 @@ class Rooms::MembersController < ApplicationController
       request.format.json? ? head(:unauthorized) : super
     end
 
-    def member_json(member, online_user_ids:)
-      {
-        id: member.id,
-        name: member.name,
-        avatar_url: fresh_user_avatar_url(member),
-        bot: member.bot?,
-        online: member.online_now?(online_user_ids)
-      }
+    def member_json(member, lease_states:)
+      if member.bot? && member.agent
+        agent = member.agent
+        live = agent.suspended_at.nil? && agent.last_seen_at.present?
+
+        {
+          id: member.id,
+          name: member.name,
+          avatar_url: fresh_user_avatar_url(member),
+          bot: member.bot?,
+          online: live,
+          presence: live ? "agent" : "offline",
+          status: agent.status_note.presence || agent.status.to_s.humanize
+        }
+      else
+        presence = member.effective_presence(lease_states[member.id] || :offline)
+
+        {
+          id: member.id,
+          name: member.name,
+          avatar_url: fresh_user_avatar_url(member),
+          bot: member.bot?,
+          online: presence != :offline,
+          presence: presence.to_s,
+          status: member.custom_status_display
+        }
+      end
     end
 end

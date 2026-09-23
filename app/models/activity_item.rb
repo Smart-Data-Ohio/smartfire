@@ -1,5 +1,5 @@
 class ActivityItem < ApplicationRecord
-  EVENT_TYPES = %w[ mention reply thread_activity work_update work_assignment huddle_started huddle_missed event_invitation event_update event_cancelled event_reminder pr_review_request agent_approval_request message_reminder ].freeze
+  EVENT_TYPES = %w[ mention reply thread_activity keyword_alert work_update work_assignment huddle_started huddle_missed event_invitation event_update event_cancelled event_reminder pr_review_request agent_approval_request message_reminder ].freeze
   HUDDLE_EVENT_TYPES = %w[ huddle_started huddle_missed ].freeze
   FILTERS = %w[ unread read handled ].freeze
   TYPE_FILTERS = {
@@ -13,7 +13,7 @@ class ActivityItem < ApplicationRecord
     "reminders" => "Reminders"
   }.freeze
   TYPE_FILTER_EVENT_TYPES = {
-    "mentions" => %w[ mention reply ],
+    "mentions" => %w[ mention reply keyword_alert ],
     "threads" => %w[ thread_activity work_update work_assignment ],
     "events" => %w[ event_invitation event_update event_cancelled event_reminder ],
     "agents" => %w[ agent_approval_request ],

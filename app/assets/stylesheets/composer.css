@@ -266,9 +266,7 @@
     margin-inline: 0.5em -0.5em;
   }
 
-  @media (prefers-color-scheme: dark) {
-    &::after { filter: invert(100%); }
-  }
+  &::after { filter: var(--icon-filter, none); }
 }
 
 /* Mention results */
