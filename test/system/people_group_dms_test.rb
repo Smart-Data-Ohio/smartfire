@@ -229,6 +229,54 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
     end
   end
 
+  test "Esc closes only the profile card inside the mobile member panel" do
+    page.current_window.resize_to(390, 844)
+    visit room_path(rooms(:designers))
+    wait_for_controller "member-panel"
+    wait_for_controller "profile-card"
+
+    click_button "Show members" if page.has_button?("Show members", wait: 5)
+    assert_selector "#channel-members .member-panel__member", minimum: 3, wait: 10
+
+    trigger = "#channel-members [data-member-id='#{users(:kevin).id}'] button.profile-card-name"
+    find(trigger).click
+    assert_selector "#profile-card-popover:not([hidden])", wait: 10
+
+    find(".profile-card-popover__panel").send_keys(:escape)
+
+    assert_selector "#profile-card-popover[hidden]", visible: :all, wait: 10
+    assert_selector "#channel-members", visible: true
+    assert_button "Close members"
+    assert_focused trigger
+  ensure
+    page.current_window.resize_to(1400, 1400)
+  end
+
+  test "Tab cycles within the profile card opened from the member panel" do
+    page.current_window.resize_to(390, 844)
+    visit room_path(rooms(:designers))
+    wait_for_controller "member-panel"
+    wait_for_controller "profile-card"
+
+    click_button "Show members" if page.has_button?("Show members", wait: 5)
+    assert_selector "#channel-members .member-panel__member", minimum: 3, wait: 10
+
+    find("#channel-members [data-member-id='#{users(:kevin).id}'] button.profile-card-name").click
+    assert_selector "#profile-card-popover:not([hidden])", wait: 10
+    assert_selector "#user_card .profile-card__name", text: "Kevin"
+
+    # Opening the card focuses its panel; Tab must then walk the card's
+    # own controls instead of being yanked back into the member panel.
+    find(".profile-card-popover__panel").send_keys(:tab)
+    assert_focused ".profile-card-popover__close"
+    find(".profile-card-popover__close").send_keys(:tab)
+    assert_focused "#user_card .profile-card__actions form:nth-of-type(1) button"
+    find("#user_card .profile-card__actions form:nth-of-type(1) button").send_keys(:tab)
+    assert_focused "#user_card .profile-card__actions form:nth-of-type(2) button"
+  ensure
+    page.current_window.resize_to(1400, 1400)
+  end
+
   private
     # Controllers lazy-load when their element appears; under load the
     # module can lag behind the first interaction, so wait for it.

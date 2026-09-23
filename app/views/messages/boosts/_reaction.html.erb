@@ -24,7 +24,7 @@
     <% if reactors.any? %>
       <span class="reaction-chip__tooltip" role="tooltip" id="<%= tooltip_id %>">
         <% reactors.each do |reactor| %>
-          <%= button_tag reactor.name, type: "button", class: "reaction-chip__reactor profile-card-name", data: profile_card_trigger(reactor) %>
+          <span class="reaction-chip__reactor"><%= reactor.name %></span>
         <% end %>
       </span>
     <% end %>

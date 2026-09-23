@@ -5,8 +5,9 @@
 Clicking (or pressing Enter on) any avatar or display name opens a
 Discord-style profile card in one shared popover, loaded lazily from
 `GET /users/:id/card`. Covered surfaces: the DM list, member panel,
-presence stacks, and stage roster; message authors, mentions, the reaction
-reactor list, and thread participants. The in-call huddle roster is the
+presence stacks, and stage roster; message authors, mentions, and thread
+participants. (Reaction chips list who reacted in a plain-text tooltip,
+which cannot hold interactive content.) The in-call huddle roster is the
 one exception: LiveKit participant identities are deliberately opaque, so
 those rows carry no user id to load a card from.
 

@@ -54,6 +54,10 @@ export default class extends Controller {
   close(event) {
     if (!this.isOpen) return
     if (event?.type === "keydown" && this.desktopQuery.matches) return
+    // An open profile card owns Esc: it closes the card and returns focus
+    // to its trigger inside this panel. This runs before profile-card#close
+    // (see the action order in the layout), so the card is still open here.
+    if (event?.type === "keydown" && this.#profileCardOpen()) return
 
     event?.preventDefault()
     this.#close({ restoreFocus: true })
@@ -88,6 +92,9 @@ export default class extends Controller {
   trapFocus(event) {
     if (event.key !== "Tab") return
     if (!this.isOpen || this.desktopQuery.matches || !this.hasPanelTarget) return
+    // The profile card traps focus itself while open; yielding avoids the
+    // two traps fighting over every Tab.
+    if (this.#profileCardOpen()) return
 
     const focusable = this.#focusableElements()
     if (focusable.length === 0) return
@@ -366,6 +373,11 @@ export default class extends Controller {
     return Array.from(this.panelTarget.querySelectorAll(FOCUSABLE_SELECTOR)).filter((element) => {
       return !element.hidden && element.tabIndex >= 0 && element.getClientRects().length > 0
     })
+  }
+
+  #profileCardOpen() {
+    const popover = document.getElementById("profile-card-popover")
+    return !!popover && !popover.hidden
   }
 
   #restoreFocus() {

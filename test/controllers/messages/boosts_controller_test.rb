@@ -230,4 +230,16 @@ class Messages::BoostsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2, reaction.fetch("count")
     assert reaction.fetch("active")
   end
+
+  test "the reaction tooltip lists reactors as plain text, never interactive content" do
+    Boost.create!(message: @message, booster: users(:jason), content: "👍")
+
+    get room_url(@message.room)
+
+    assert_response :success
+    assert_select ".reaction-chip__tooltip", text: /Jason/
+    assert_select ".reaction-chip__tooltip button", count: 0
+    assert_select ".reaction-chip__tooltip a", count: 0
+    assert_select ".reaction-chip__tooltip input", count: 0
+  end
 end

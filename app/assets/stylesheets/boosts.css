@@ -17,8 +17,9 @@
   position: relative;
 }
 
-/* Reactor list: hover or keyboard focus on the chip reveals who reacted,
-   each opening their profile card. */
+/* Reactor list: hover or keyboard focus on the chip reveals who reacted
+   as plain text. A tooltip must not contain interactive content, so the
+   names are spans, not profile-card buttons. */
 .reaction-chip__tooltip {
   background: var(--workspace-surface, var(--color-bg));
   border: 1px solid var(--workspace-border, var(--color-border));
