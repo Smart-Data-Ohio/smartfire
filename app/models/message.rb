@@ -1,6 +1,13 @@
 class Message < ApplicationRecord
   include Attachment, AgentDelivery, Broadcasts, Mentionee, Pagination, Searchable
 
+  # Quiet timeline notes (pin notes, and any future note type): a message
+  # with system_note still renders in the timeline and streams to it, but
+  # skips every noisy side effect — Room/ChannelThread#receive (unread
+  # marks and push), the unread badge broadcast, agent delivery, activity
+  # inbox items, and the search index. Reuse this flag for new note types
+  # instead of inventing another quiet path.
+
   belongs_to :room, touch: true
   belongs_to :creator, class_name: "User", default: -> { Current.user }
   belongs_to :thread, class_name: "ChannelThread", optional: true, inverse_of: :messages
