@@ -304,6 +304,7 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
 
     click_button "Show members" if page.has_button?("Show members", wait: 5)
     assert_selector "#channel-members .member-panel__member", minimum: 3, wait: 10
+    wait_for_member_panel_animation
 
     trigger = "#channel-members [data-member-id='#{users(:kevin).id}'] button.profile-card-name"
     find(trigger).click
@@ -327,6 +328,7 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
 
     click_button "Show members" if page.has_button?("Show members", wait: 5)
     assert_selector "#channel-members .member-panel__member", minimum: 3, wait: 10
+    wait_for_member_panel_animation
 
     find("#channel-members [data-member-id='#{users(:kevin).id}'] button.profile-card-name").click
     assert_selector "#profile-card-popover:not([hidden])", wait: 10
@@ -345,6 +347,29 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
   end
 
   private
+    # The member panel slides in over a 220 ms transform transition while
+    # the members fetch resolves in ~20 ms, so the rows render mid-slide
+    # and a WebDriver click computed from a stale rect lands on the row
+    # instead of the 32 px name button (real taps hit-test at touch time
+    # and cannot miss this way). Wait for the slide to settle before
+    # clicking row controls.
+    def wait_for_member_panel_animation
+      page.document.synchronize(Capybara.default_max_wait_time) do
+        settled = page.evaluate_script(<<~JS)
+          (() => {
+            const surface = document.querySelector(".member-panel__surface");
+            if (!surface) return true;
+            return surface.getAnimations().every((animation) => {
+              const timing = animation.effect?.getComputedTiming?.();
+              return !(timing && Number.isFinite(timing.endTime) &&
+                (animation.playState === "running" || animation.playState === "pending"));
+            });
+          })()
+        JS
+        raise Capybara::ExpectationNotMet, "member panel slide-in never settled" unless settled
+      end
+    end
+
     # Controllers lazy-load when their element appears; under load the
     # module can lag behind the first interaction, so wait for it.
     def wait_for_controller(identifier)
