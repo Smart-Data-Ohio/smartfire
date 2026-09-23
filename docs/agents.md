@@ -477,7 +477,8 @@ through its owner's linked account: `GET /agents/fizzy/boards`
 reads default to the owner's stored Fizzy account and accept an
 `account_id` override where the token can access more than one. A
 missing grant is 403; a missing owner or unusable owner account is
-422. See [Fizzy cards](fizzy.md) for the identity model.
+422. A board or card the owner's token cannot access (Fizzy answers
+404 or 403) reads as 404. See [Fizzy cards](fizzy.md) for the identity model.
 
 ### Fizzy write actions
 

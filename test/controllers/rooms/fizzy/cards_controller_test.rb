@@ -53,6 +53,25 @@ class Rooms::Fizzy::CardsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, "Fix the billing bug"
   end
 
+  test "a viewer Fizzy 403s sees the chip without a connect hint" do
+    link_fizzy!(users(:jz), token: "jz-token")
+    stub_request(:get, "https://app.fizzy.do/897362094/cards/579.json")
+      .to_return(status: 403, body: { error: "no access" }.to_json)
+    sign_in :jz
+
+    get room_fizzy_card_url(@room, @card, message_id: @message.id)
+    assert_includes response.body, "Loading Fizzy card"
+
+    perform_enqueued_jobs only: Fizzy::FetchCardJob
+
+    get room_fizzy_card_url(@room, @card, message_id: @message.id)
+    assert_response :success
+    assert_includes response.body, "Fizzy card #579"
+    assert_not_includes response.body, "Connect Fizzy to preview"
+    assert_not_includes response.body, "Fix the billing bug"
+    assert_not_includes response.body, "Couldn’t load this Fizzy card"
+  end
+
   test "a viewer without a connected account sees the chip with a connect hint" do
     sign_in :kevin
 

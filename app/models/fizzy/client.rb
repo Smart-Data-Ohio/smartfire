@@ -17,6 +17,10 @@ module Fizzy
     class Error < StandardError; end
     class Unauthorized < Error; end
     class NotFound < Error; end
+    # A 403 means the token cannot see or do the thing — not that the
+    # request was malformed — so read paths treat it like a 404 instead
+    # of surfacing an error.
+    class Forbidden < Error; end
     class Refused < Error; end
 
     # Ids interpolated into API paths (account, board, column): Fizzy
@@ -141,12 +145,14 @@ module Fizzy
           raise Unauthorized, "Fizzy rejected the linked token"
         when Net::HTTPNotFound
           raise NotFound, "Not found in Fizzy"
-        when Net::HTTPForbidden, Net::HTTPUnprocessableEntity
+        when Net::HTTPForbidden
+          raise Forbidden, "Fizzy refused: #{fizzy_message(response)}"
+        when Net::HTTPUnprocessableEntity
           raise Refused, "Fizzy refused: #{fizzy_message(response)}"
         else
           raise Error, "Fizzy returned #{response.code}"
         end
-      rescue Unauthorized, NotFound, Refused
+      rescue Unauthorized, NotFound, Forbidden, Refused
         raise
       rescue Error
         raise

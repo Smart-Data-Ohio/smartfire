@@ -34,6 +34,18 @@ class Fizzy::FetchCardJobTest < ActiveSupport::TestCase
     assert_nil cache.payload
   end
 
+  test "a 403 stores not-found so the frame renders the chip" do
+    link_fizzy!(users(:jz), token: "jz-token")
+    stub_request(:get, "https://app.fizzy.do/897362094/cards/579.json")
+      .to_return(status: 403, body: { error: "no access" }.to_json)
+
+    Fizzy::FetchCardJob.perform_now(@card, users(:jz))
+
+    cache = Fizzy::CardCache.find_by!(fizzy_card_id: @card.id, user_id: users(:jz).id)
+    assert_predicate cache, :not_found?
+    assert_nil cache.payload
+  end
+
   test "a 401 disconnects the account and clears the cache row" do
     account = link_fizzy!(users(:david), token: "david-token")
     stub_request(:get, "https://app.fizzy.do/897362094/cards/579.json").to_return(status: 401, body: {}.to_json)

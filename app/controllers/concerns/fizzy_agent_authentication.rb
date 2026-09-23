@@ -64,13 +64,16 @@ module FizzyAgentAuthentication
 
     # Maps Fizzy failures on agent reads to agent-facing statuses. A 401
     # disconnects the owner's account exactly like the member path, so
-    # the profile offers a reconnect instead of failing silently.
+    # the profile offers a reconnect instead of failing silently. A 403
+    # reads as 404, like the member card frame's minimal chip: the token
+    # cannot see the resource, and the response must not say whether it
+    # exists.
     def render_fizzy_read_error(error)
       case error
       when Fizzy::Client::Unauthorized
         @fizzy_account.mark_disconnected!("Fizzy rejected the linked token (401)")
         render json: { error: "Agent owner's Fizzy token was rejected" }, status: :unprocessable_entity
-      when Fizzy::Client::NotFound
+      when Fizzy::Client::NotFound, Fizzy::Client::Forbidden
         render json: { error: "Not found in Fizzy" }, status: :not_found
       when Fizzy::Client::Refused
         render json: { error: error.message }, status: :unprocessable_entity

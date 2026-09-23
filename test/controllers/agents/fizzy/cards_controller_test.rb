@@ -55,6 +55,18 @@ class Agents::Fizzy::CardsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "show for a forbidden card is 404" do
+    link_owner_fizzy!
+    grant_fizzy!
+    stub_request(:get, "https://app.fizzy.do/897362094/cards/579.json")
+      .to_return(status: 403, body: { error: "no access" }.to_json)
+
+    get "/agents/fizzy/cards/897362094/579", headers: bearer_headers
+
+    assert_response :not_found
+    assert_equal "Not found in Fizzy", response.parsed_body["error"]
+  end
+
   test "show with a bad number is 404 without a request" do
     link_owner_fizzy!
     grant_fizzy!

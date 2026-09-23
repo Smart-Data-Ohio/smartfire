@@ -98,11 +98,11 @@ class Fizzy::ClientTest < ActiveSupport::TestCase
     assert_raises(Fizzy::Client::NotFound) { @client.card("897362094", 404) }
   end
 
-  test "a 403 raises Refused with Fizzy's message" do
+  test "a 403 raises Forbidden with Fizzy's message" do
     stub_request(:get, "https://app.fizzy.do/897362094/cards/579.json")
       .to_return(status: 403, body: { error: "no access" }.to_json)
 
-    error = assert_raises(Fizzy::Client::Refused) { @client.card("897362094", 579) }
+    error = assert_raises(Fizzy::Client::Forbidden) { @client.card("897362094", 579) }
     assert_equal "Fizzy refused: no access", error.message
   end
 

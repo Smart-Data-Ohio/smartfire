@@ -22,7 +22,7 @@ class Fizzy::FetchCardJob < ApplicationJob
 
     begin
       payload = Fizzy::Client.new(token: account.access_token).card(card.account_id, card.number)
-    rescue Fizzy::Client::NotFound
+    rescue Fizzy::Client::NotFound, Fizzy::Client::Forbidden
       cache.update!(payload: nil, fetched_at: Time.current, fetch_error: Fizzy::CardCache::NOT_FOUND)
       card.broadcast_card_updates
       return
