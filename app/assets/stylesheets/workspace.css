@@ -1115,7 +1115,21 @@ summary.member-panel__group-heading {
   }
 
   .sidebar #nav {
+    column-gap: 0.375rem;
     padding-inline: 0.55rem;
+  }
+
+  /* The sidebar toggle is the odd one out at 58px; squaring it with the
+     actions keeps the 320px header inside the viewport now that the help
+     menu joins the row. The inline size is explicit: bare aspect-ratio
+     leaves flex-item buttons content-sized. */
+  .workspace-navigation__open {
+    --btn-padding: 0.3rem;
+    --btn-size: 2rem;
+
+    aspect-ratio: 1;
+    block-size: 2rem;
+    inline-size: 2rem;
   }
 
   .room-header__kind,
@@ -1128,11 +1142,33 @@ summary.member-panel__group-heading {
     margin: 0;
   }
 
-  /* Eight icon-only actions (members, search, threads, events, pins,
-     huddle, settings, notifications) have to fit beside the sidebar toggle
-     on a 320px phone, so the actions sit flush and each is a 2rem square. */
+  /* Seven icon-only actions (members, search, threads, events, pins,
+     settings, notifications) plus the help menu have to fit beside the
+     sidebar toggle on a 320px phone, so the actions sit flush, each is a
+     2rem square, and the nav gaps shrink to 0.375rem. The row also yields
+     before the page does: it shrinks and scrolls internally, so a crowded
+     live-huddle header with participant avatars can never push the
+     document sideways. The top padding keeps the member-count badge's
+     overhang from clipping, with a negative margin that cancels the
+     padding's layout cost. */
   .room-header__actions {
+    flex: 0 1 auto;
     gap: 0;
+    margin-block-start: -0.25rem;
+    min-inline-size: 0;
+    overflow-x: auto;
+    padding-block-start: 0.25rem;
+    position: relative;
+  }
+
+  @media (pointer: coarse) {
+    .room-header__actions {
+      scrollbar-width: none;
+    }
+
+    .room-header__actions::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   .room-header__actions .btn,
@@ -1161,6 +1197,26 @@ summary.member-panel__group-heading {
 
   .sidebar .message__author {
     font-size: 0.84rem;
+  }
+}
+
+/* At the narrowest phones a Huddle-configured room adds a Join button to
+   the row, which overflows 320px at 2rem a square; 30px squares plus
+   tighter chrome fit the current set cleanly, and the row's inner scroll
+   above contains anything more exotic. */
+@media (max-width: 22.5rem) {
+  .sidebar #nav {
+    column-gap: 0.25rem;
+    padding-inline: 0.5rem;
+  }
+
+  .room-header__actions .btn,
+  .room-header__action,
+  .workspace-navigation__open {
+    --btn-size: 1.875rem;
+
+    block-size: 1.875rem;
+    inline-size: 1.875rem;
   }
 }
 
