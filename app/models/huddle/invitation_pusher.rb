@@ -14,7 +14,8 @@ class Huddle::InvitationPusher
       {
         title: "#{caller.name} started a huddle",
         body: "Join from the conversation",
-        path: Rails.application.routes.url_helpers.room_path(room)
+        path: Rails.application.routes.url_helpers.room_path(room),
+        tag: "huddle-#{room.id}"
       }
     end
 

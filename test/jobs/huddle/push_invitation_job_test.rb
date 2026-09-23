@@ -17,6 +17,7 @@ class Huddle::PushInvitationJobTest < ActiveSupport::TestCase
     Rails.configuration.x.web_push_pool.expects(:queue).once.with do |payload, subscriptions|
       assert_equal "David started a huddle", payload[:title]
       assert_equal Rails.application.routes.url_helpers.room_path(@room), payload[:path]
+      assert_equal "huddle-#{@room.id}", payload[:tag]
       assert_equal [ users(:jason).id ], subscriptions.order(:id).pluck(:user_id)
       true
     end

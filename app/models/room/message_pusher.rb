@@ -22,7 +22,8 @@ class Room::MessagePusher
       {
         title: message.creator.name,
         body: message.plain_text_body,
-        path: Rails.application.routes.url_helpers.room_path(room)
+        path: Rails.application.routes.url_helpers.room_path(room),
+        tag: "room-#{room.id}"
       }
     end
 
@@ -30,7 +31,8 @@ class Room::MessagePusher
       {
         title: room.name,
         body: "#{message.creator.name}: #{message.plain_text_body}",
-        path: Rails.application.routes.url_helpers.room_path(room)
+        path: Rails.application.routes.url_helpers.room_path(room),
+        tag: "room-#{room.id}"
       }
     end
 

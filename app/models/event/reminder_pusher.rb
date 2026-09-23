@@ -29,7 +29,8 @@ class Event::ReminderPusher
       {
         title: event.room.direct? ? event.organizer.name : event.room.name,
         body:,
-        path: Rails.application.routes.url_helpers.room_event_path(event.room, event)
+        path: Rails.application.routes.url_helpers.room_event_path(event.room, event),
+        tag: "event-#{event.id}"
       }
     end
 

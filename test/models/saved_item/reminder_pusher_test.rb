@@ -12,6 +12,7 @@ class SavedItem::ReminderPusherTest < ActiveSupport::TestCase
         payload.fetch(:body).start_with?("Reminder: ") &&
         payload.fetch(:body).include?(messages(:first).plain_text_body.truncate(140)) &&
         payload.fetch(:path) == Rails.application.routes.url_helpers.room_at_message_path(rooms(:designers), messages(:first)) &&
+        payload.fetch(:tag) == "saved-#{@saved_item.id}" &&
         subscriptions.map(&:user_id) == [ users(:david).id ]
     end
 

@@ -45,7 +45,8 @@ class ChannelThread::MessagePusher
       {
         title: thread.name,
         body: "#{message.creator.name}: #{message.plain_text_body}",
-        path: Rails.application.routes.url_helpers.room_path(thread.room, thread: thread.id, message_id: message.id)
+        path: Rails.application.routes.url_helpers.room_path(thread.room, thread: thread.id, message_id: message.id),
+        tag: "room-#{thread.room_id}"
       }
     end
 
@@ -53,7 +54,8 @@ class ChannelThread::MessagePusher
       {
         title: "Reply in #{thread.name}",
         body: "#{message.creator.name}: #{message.plain_text_body}",
-        path: Rails.application.routes.url_helpers.room_path(thread.room, thread: thread.id, message_id: message.id)
+        path: Rails.application.routes.url_helpers.room_path(thread.room, thread: thread.id, message_id: message.id),
+        tag: "room-#{thread.room_id}"
       }
     end
 

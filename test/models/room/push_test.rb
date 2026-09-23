@@ -56,6 +56,21 @@ class Room::PushTest < ActiveSupport::TestCase
     wait_for_web_push_delivery_pool_tasks(3)
   end
 
+  test "message pushes carry the room tag so notifications group per room" do
+    room = rooms(:designers)
+    message = room.root_messages.create!(
+      creator: users(:david), markdown_source: "Tagged push", client_message_id: "room-tag-push"
+    )
+    clear_enqueued_jobs
+
+    Rails.configuration.x.web_push_pool.expects(:queue).once.with do |payload, _subscriptions|
+      assert_equal "room-#{room.id}", payload[:tag]
+      true
+    end
+
+    Room::MessagePusher.new(room:, message:).push
+  end
+
   test "a forwarded note follows the mention push path while its snapshot does not" do
     room = rooms(:watercooler)
     mentioned_user = users(:jason)
