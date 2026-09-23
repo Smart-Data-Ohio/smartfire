@@ -67,7 +67,7 @@ class WorkHandoff < ApplicationRecord
   end
 
   private
-    # Accepts arrays or newline/comma-separated strings from forms; stores
+    # Accepts arrays or newline-separated strings from forms; stores
     # stripped, de-duplicated string arrays.
     def normalize_collections
       self.links = normalize_list(links)
