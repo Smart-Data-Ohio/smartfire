@@ -65,8 +65,17 @@ module SystemTestHelper
     assert_selector "a.btn", text: "Designers", wait: 10
   end
 
-  def wait_for_cable_connection
-    assert_selector "turbo-cable-stream-source[connected]", count: 3, visible: false
+  # Waits until every Turbo stream source on the page is connected, however
+  # many the page renders (the layout's three, plus per-page extras such as
+  # status badges), with a budget sized for loaded CI runners.
+  def wait_for_cable_connection(wait: 15)
+    page.document.synchronize(wait) do
+      total = all("turbo-cable-stream-source", visible: false, wait: 0).size
+      connected = all("turbo-cable-stream-source[connected]", visible: false, wait: 0).size
+      unless total >= 3 && connected == total
+        raise Capybara::ExpectationNotMet, "expected all #{total} turbo-cable-stream-sources connected (at least 3), #{connected} connected"
+      end
+    end
   end
 
   def join_room(room)

@@ -89,7 +89,7 @@ class Calendar::MeetingRefreshTest < ActiveSupport::TestCase
   test "rate limits keep the last good intervals and record a retry notice" do
     busy = [ [ "2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z" ] ]
     Calendar::MeetingCache.create!(user: @user, busy_intervals: busy)
-    stub_request(:get, %r{\A#{GOOGLE_EVENTS_URL}})
+    stub_request(:get, %r{\A#{Regexp.escape(GOOGLE_EVENTS_URL)}})
       .to_return(status: 429, body: {}.to_json)
 
     assert_equal :error, Calendar::MeetingRefresh.refresh(@user.id)
@@ -103,7 +103,7 @@ class Calendar::MeetingRefreshTest < ActiveSupport::TestCase
   test "a quota 403 keeps the last good intervals and records a retry notice" do
     busy = [ [ "2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z" ] ]
     Calendar::MeetingCache.create!(user: @user, busy_intervals: busy)
-    stub_request(:get, %r{\A#{GOOGLE_EVENTS_URL}})
+    stub_request(:get, %r{\A#{Regexp.escape(GOOGLE_EVENTS_URL)}})
       .to_return(status: 403, body: google_forbidden_body("userRateLimitExceeded").to_json)
 
     assert_equal :error, Calendar::MeetingRefresh.refresh(@user.id)
@@ -116,7 +116,7 @@ class Calendar::MeetingRefreshTest < ActiveSupport::TestCase
   test "a server error keeps the last good intervals and records a retry notice" do
     busy = [ [ "2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z" ] ]
     Calendar::MeetingCache.create!(user: @user, busy_intervals: busy)
-    stub_request(:get, %r{\A#{GOOGLE_EVENTS_URL}})
+    stub_request(:get, %r{\A#{Regexp.escape(GOOGLE_EVENTS_URL)}})
       .to_return(status: 500, body: "boom")
 
     assert_equal :error, Calendar::MeetingRefresh.refresh(@user.id)
@@ -129,7 +129,7 @@ class Calendar::MeetingRefreshTest < ActiveSupport::TestCase
   test "a malformed response body keeps the last good intervals and records a retry notice" do
     busy = [ [ "2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z" ] ]
     Calendar::MeetingCache.create!(user: @user, busy_intervals: busy)
-    stub_request(:get, %r{\A#{GOOGLE_EVENTS_URL}})
+    stub_request(:get, %r{\A#{Regexp.escape(GOOGLE_EVENTS_URL)}})
       .to_return(status: 200, body: "{oops")
 
     assert_equal :error, Calendar::MeetingRefresh.refresh(@user.id)
@@ -255,7 +255,7 @@ class Calendar::MeetingRefreshTest < ActiveSupport::TestCase
     @user.update!(ooo_calendar_enabled: true)
     ooo = [ [ "2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z" ] ]
     Calendar::MeetingCache.create!(user: @user, ooo_intervals: ooo)
-    stub_request(:get, %r{\A#{GOOGLE_EVENTS_URL}})
+    stub_request(:get, %r{\A#{Regexp.escape(GOOGLE_EVENTS_URL)}})
       .to_return(status: 500, body: "boom")
 
     assert_equal :error, Calendar::MeetingRefresh.refresh(@user.id)

@@ -419,23 +419,23 @@ class Google::ClientTest < ActiveSupport::TestCase
     response = @client.list_events(time_min: 1.hour.ago, time_max: 1.hour.from_now)
 
     assert_equal [ { "id" => "one" }, { "id" => "two" } ], response["items"]
-    assert_requested :get, %r{\A#{GOOGLE_EVENTS_URL}}, times: 2
-    assert_requested :get, %r{\A#{GOOGLE_EVENTS_URL}},
+    assert_requested :get, %r{\A#{Regexp.escape(GOOGLE_EVENTS_URL)}}, times: 2
+    assert_requested :get, %r{\A#{Regexp.escape(GOOGLE_EVENTS_URL)}},
       query: hash_including({ "pageToken" => "token-2" }), times: 1
   end
 
   test "list_events stops paging at the cap" do
-    stub_request(:get, %r{\A#{GOOGLE_EVENTS_URL}})
+    stub_request(:get, %r{\A#{Regexp.escape(GOOGLE_EVENTS_URL)}})
       .to_return(status: 200, body: { "items" => [], "nextPageToken" => "more" }.to_json)
 
     response = @client.list_events(time_min: 1.hour.ago, time_max: 1.hour.from_now)
 
     assert_equal [], response["items"]
-    assert_requested :get, %r{\A#{GOOGLE_EVENTS_URL}}, times: Google::Client::LIST_MAX_PAGES
+    assert_requested :get, %r{\A#{Regexp.escape(GOOGLE_EVENTS_URL)}}, times: Google::Client::LIST_MAX_PAGES
   end
 
   test "a 429 on list_events raises RateLimited" do
-    stub_request(:get, %r{\A#{GOOGLE_EVENTS_URL}}).to_return(status: 429, body: {}.to_json)
+    stub_request(:get, %r{\A#{Regexp.escape(GOOGLE_EVENTS_URL)}}).to_return(status: 429, body: {}.to_json)
 
     assert_raises(Google::Client::RateLimited) do
       @client.list_events(time_min: 1.hour.ago, time_max: 1.hour.from_now)
@@ -443,7 +443,7 @@ class Google::ClientTest < ActiveSupport::TestCase
   end
 
   test "a quota 403 on list_events raises RateLimited" do
-    stub_request(:get, %r{\A#{GOOGLE_EVENTS_URL}})
+    stub_request(:get, %r{\A#{Regexp.escape(GOOGLE_EVENTS_URL)}})
       .to_return(status: 403, body: google_forbidden_body("quotaExceeded").to_json)
 
     assert_raises(Google::Client::RateLimited) do
