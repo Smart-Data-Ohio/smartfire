@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_23_025153) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_055332) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -167,6 +167,24 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_025153) do
     t.string "webhook_signing_secret"
     t.index ["owner_id", "kind"], name: "index_agents_on_owner_id_and_kind"
     t.index ["user_id"], name: "index_agents_on_user_id", unique: true
+  end
+
+  create_table "audit_logs", force: :cascade do |t|
+    t.string "action", null: false
+    t.bigint "actor_id"
+    t.string "actor_label"
+    t.datetime "created_at", null: false
+    t.json "details"
+    t.string "ip_address"
+    t.bigint "target_id"
+    t.string "target_label"
+    t.string "target_type"
+    t.datetime "updated_at", null: false
+    t.string "user_agent"
+    t.index ["action"], name: "index_audit_logs_on_action"
+    t.index ["actor_id"], name: "index_audit_logs_on_actor_id"
+    t.index ["created_at"], name: "index_audit_logs_on_created_at"
+    t.index ["target_type", "target_id"], name: "index_audit_logs_on_target_type_and_target_id"
   end
 
   create_table "bans", force: :cascade do |t|
