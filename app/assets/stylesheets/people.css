@@ -95,6 +95,15 @@
   inline-size: 100%;
 }
 
+.profile-card__star {
+  margin-block-start: 0.5rem;
+}
+
+.profile-card__star .btn,
+.profile-card__star form {
+  inline-size: 100%;
+}
+
 /* Name triggers read as names until hovered or focused. */
 .profile-card-name {
   appearance: none;

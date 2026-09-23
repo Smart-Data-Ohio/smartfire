@@ -53,10 +53,17 @@
             Copy mention
           <% end %>
         <% end %>
-        <%= render "users/stars/toggle", user: @user, starred: @starred %>
       <% else %>
         <%= link_to "View profile", user_path(@user), class: "btn full-width", data: { turbo_frame: "_top" } %>
       <% end %>
     </div>
+
+    <%# Below the actions, not inside: the toggle carries its own frame %>
+    <%# and form, which would otherwise join the actions' form order. %>
+    <% if @user != Current.user && @user.active? %>
+      <div class="profile-card__star">
+        <%= render "users/stars/toggle", user: @user, starred: @starred %>
+      </div>
+    <% end %>
   </div>
 <% end %>

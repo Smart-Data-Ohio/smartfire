@@ -72,7 +72,7 @@ class UserStarTest < ActiveSupport::TestCase
     assert users(:david).starred?(users(:kevin))
     assert_not users(:david).starred?(users(:jason))
     assert_not users(:jason).starred?(users(:kevin))
-    assert_equal Set[ users(:kevin).id ],
+    assert_equal Set[users(:kevin).id],
       users(:david).starred_ids_among([ users(:kevin).id, users(:jason).id ])
   end
 end
