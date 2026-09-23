@@ -70,6 +70,23 @@ class ScheduledMessage::DispatcherTest < ActiveSupport::TestCase
     assert_empty ActivityItem.accessible_to(users(:jason)).where(source: scheduled)
   end
 
+  test "rows in soft-deleted rooms are dropped with an inbox item" do
+    scheduled = schedule_due!(markdown_source: "Doomed room")
+    @room.begin_destroy!
+
+    assert_no_difference -> { Message.count } do
+      assert_difference -> { ActivityItem.where(user: @user, source: scheduled).count }, 1 do
+        ScheduledMessage::Dispatcher.dispatch_due!
+      end
+    end
+
+    scheduled.reload
+    assert scheduled.dropped?
+    assert_equal "its room was deleted", scheduled.drop_reason
+    assert_includes ActivityItem.accessible_to(@user),
+      ActivityItem.where(user: @user, source: scheduled).sole
+  end
+
   test "thread rows post inside the thread" do
     thread = ChannelThread.create!(room: @room, creator: @user, name: "Side chat")
     schedule_due!(markdown_source: "Thread hi", thread: thread)

@@ -31,8 +31,9 @@ sendable again.
 Access is re-checked at send time. If the author lost access to the
 room, the draft is dropped — never leaked to non-members — and the
 author gets a "Scheduled message not sent" inbox item pointing at the
-Scheduled view. A locked thread is transient, so its drafts wait for
-the next tick instead of dropping.
+Scheduled view. Drafts in a soft-deleted room drop the same way when
+due, naming the deleted room as the reason. A locked thread is
+transient, so its drafts wait for the next tick instead of dropping.
 
 ## Deletion
 

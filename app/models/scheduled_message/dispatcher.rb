@@ -22,10 +22,12 @@ class ScheduledMessage::Dispatcher
 
     private
       def due_candidates(now)
+        # No Room.alive scope: rows in soft-deleted rooms must still be
+        # visited so they drop with an inbox item instead of sitting
+        # pending forever. sendable? re-checks liveness per row.
         ScheduledMessage.due(now)
           .joins(:user, :room)
           .merge(User.active.without_bots)
-          .merge(Room.alive)
           .where("scheduled_messages.claimed_at IS NULL OR scheduled_messages.claimed_at < ?", now - ScheduledMessage::STALE_CLAIM_AFTER)
       end
 
@@ -46,7 +48,7 @@ class ScheduledMessage::Dispatcher
         end
 
         unless scheduled.sendable?
-          drop!(scheduled, now:)
+          drop!(scheduled, now:, reason: ("its room was deleted" if scheduled.room&.deleted?))
           return false
         end
 
