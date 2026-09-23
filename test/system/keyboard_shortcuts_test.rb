@@ -80,6 +80,19 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
     assert_room_read designers
   end
 
+  test "escape while typing leaves the room unread" do
+    designers = rooms(:designers)
+    join_room designers
+
+    open_message_menu designers.root_messages.ordered.first
+    click_on "Mark unread"
+    assert_room_unread designers
+
+    find_field("message_markdown_source").click
+    press_keys(:escape)
+    assert_room_unread designers
+  end
+
   test "escape with a menu open closes the menu instead of marking read" do
     designers = rooms(:designers)
     join_room designers
