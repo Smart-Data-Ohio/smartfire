@@ -1,0 +1,17 @@
+<%# TOTP confirmation for enrolled members: a current authenticator
+    code, not a backup code (see config/initializers/sudo_mode_totp.rb).
+    A plain POST like the password form: success renders the replay
+    form (200), which Turbo Drive form submissions reject. %>
+<%= form_with url: sudo_url, class: "flex flex-column gap margin-block-start", data: { turbo: false } do |form| %>
+  <%= hidden_field_tag :verifier, "totp" %>
+  <div class="flex align-center gap">
+    <label class="flex align-center gap input input--actor txt-large">
+      <%= form.text_field :totp_code, required: true, class: "input", autofocus: !@verifiers.include?(:password),
+            autocomplete: "one-time-code", inputmode: "numeric", maxlength: 10,
+            placeholder: "Enter your authenticator code", aria: { label: "Authenticator code" } %>
+      <%= image_tag "key.svg", aria: { hidden: "true" }, size: 24, class: "colorize--black" %>
+    </label>
+  </div>
+
+  <%= form.button "Confirm", class: "btn btn--reversed center txt-large", type: "submit", name: "confirm" %>
+<% end %>

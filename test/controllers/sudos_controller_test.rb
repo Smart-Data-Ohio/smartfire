@@ -52,23 +52,125 @@ class SudosControllerTest < ActionDispatch::IntegrationTest
   test "an unknown verifier is rejected as unavailable" do
     sign_in users(:david)
 
-    post sudo_url, params: { verifier: "totp", totp_code: "123456" }
+    post sudo_url, params: { verifier: "retina", retina_scan: "beep" }
 
     assert_response :unprocessable_entity
     assert_match "not available", response.body
   end
 
-  test "totp is an unsupported hook until two-factor lands" do
+  test "totp is registered at boot but unsupported without enrollment" do
+    assert_includes SudoMode.extra_verifiers, :totp
     assert_equal :unsupported, SudoMode.verify_with(:totp, users(:david), { totp_code: "123456" })
     assert_not SudoMode.verifier_available?(:totp, users(:david))
   end
 
-  test "register_verifier adds a verifier for two-factor to fill in" do
-    SudoMode.register_verifier(:totp)
+  test "register_verifier adds a verifier" do
+    SudoMode.register_verifier(:passkey)
 
-    assert_includes SudoMode.extra_verifiers, :totp
+    assert_includes SudoMode.extra_verifiers, :passkey
   ensure
-    SudoMode.extra_verifiers.delete(:totp)
+    SudoMode.extra_verifiers.delete(:passkey)
+  end
+
+  test "the prompt shows the TOTP form alongside the password for enrolled users" do
+    enroll_two_factor!(users(:david))
+    sign_in users(:david)
+
+    get new_sudo_url
+
+    assert_response :success
+    assert_select "form[action=?] input[name='password']", sudo_url, count: 1
+    assert_select "form[action=?] input[name='verifier'][value='totp']", sudo_url, count: 1
+    assert_select "form[action=?] input[name='totp_code']", sudo_url, count: 1
+  end
+
+  test "the prompt hides the TOTP form without enrollment" do
+    sign_in users(:david)
+
+    get new_sudo_url
+
+    assert_response :success
+    assert_select "input[name=totp_code]", count: 0
+  end
+
+  test "confirming with a current TOTP code verifies and audit-logs" do
+    user = users(:david)
+    credential = enroll_two_factor!(user)
+    sign_in user
+
+    assert_difference -> { AuditLog.where(action: "sudo.confirm.success").count }, +1 do
+      post sudo_url, params: { verifier: "totp", totp_code: totp_code_for(credential) }
+    end
+
+    assert_redirected_to root_url
+    assert_equal "totp", AuditLog.where(action: "sudo.confirm.success").order(:id).last.details["verifier"]
+  end
+
+  test "confirming with the password still works for enrolled users" do
+    enroll_two_factor!(users(:david))
+    sign_in users(:david)
+
+    post sudo_url, params: { password: "secret123456" }
+
+    assert_redirected_to root_url
+  end
+
+  test "confirming with a wrong TOTP code fails and stays gated" do
+    enroll_two_factor!(users(:david))
+    sign_in users(:david)
+
+    assert_difference -> { AuditLog.where(action: "sudo.confirm.failure").count }, +1 do
+      post sudo_url, params: { verifier: "totp", totp_code: "000000" }
+    end
+
+    assert_response :unauthorized
+    assert_equal "totp", AuditLog.where(action: "sudo.confirm.failure").order(:id).last.details["verifier"]
+
+    post account_join_code_url
+    assert_redirected_to new_sudo_url
+  end
+
+  test "a TOTP code cannot confirm sudo twice" do
+    user = users(:david)
+    credential = enroll_two_factor!(user)
+    sign_in user
+
+    travel_to Time.utc(2026, 9, 23, 12, 0, 10) do
+      code = totp_code_for(credential)
+      post sudo_url, params: { verifier: "totp", totp_code: code }
+      assert_redirected_to root_url
+
+      post sudo_url, params: { verifier: "totp", totp_code: code }
+
+      assert_response :unauthorized
+    end
+  end
+
+  test "wrong sudo codes share the challenge lockout" do
+    user = users(:david)
+    credential = enroll_two_factor!(user)
+    sign_in user
+
+    5.times { post sudo_url, params: { verifier: "totp", totp_code: "000000" } }
+
+    assert credential.reload.locked_out?
+
+    post sudo_url, params: { verifier: "totp", totp_code: totp_code_for(credential) }
+
+    assert_response :unauthorized
+  end
+
+  test "a backup code does not confirm sudo and is not spent" do
+    user = users(:david)
+    credential = enroll_two_factor!(user)
+    codes = TwoFactorBackupCode.regenerate_set!(credential)
+    sign_in user
+
+    assert_no_difference -> { credential.backup_codes.unused.count } do
+      post sudo_url, params: { verifier: "totp", totp_code: codes.first }
+    end
+
+    assert_response :unauthorized
   end
 
   test "a gated POST redirects to the prompt, then the replay form continues the action" do
@@ -138,6 +240,10 @@ class SudosControllerTest < ActionDispatch::IntegrationTest
     grant_sudo_access
 
     post session_url, params: { email_address: "david@37signals.com", password: "secret123456" }
+    # Password sign-in leaves unenrolled members on an unverified
+    # session; satisfy the second factor so this request reaches the
+    # sudo gate instead of enrollment (sudo itself stays unverified).
+    satisfy_two_factor!(users(:david))
 
     post account_join_code_url
     assert_redirected_to new_sudo_url
@@ -355,11 +461,15 @@ class SudosControllerTest < ActionDispatch::IntegrationTest
   private
     # Provisions Alice through the stubbed Google sign-in flow: no
     # password, linked identity for google-sub-alice, signed in.
+    # Google-provisioned members start unenrolled on an unverified
+    # session; sudo tests exercise confirmation, not enrollment.
     def sign_in_google_only_user
       state = start_google_sign_in
       complete_google_sign_in(state:, email: "alice@smartdata.net", hd: "smartdata.net", sub: "google-sub-alice")
       assert_response :redirect
 
-      User.find_by!(email_address: "alice@smartdata.net")
+      user = User.find_by!(email_address: "alice@smartdata.net")
+      satisfy_two_factor!(user)
+      user
     end
 end

@@ -115,6 +115,12 @@ Every sensitive step is recorded in the [audit log](audit-log.md):
 codes, and `sign_in.two_factor.lockout` for challenge lockouts. Codes
 and secrets never reach the log.
 
+Enrolled members can also confirm [sudo mode](security.md#sudo-mode)
+with a current authenticator code instead of their password (password
+OR code). The sudo prompt reuses the challenge's replay-protected
+verification and shared failure/lockout counters, so wrong sudo codes
+count toward the same lockout; backup codes are never accepted there.
+
 ## How it is stored
 
 - Authenticator secrets are encrypted at rest with Active Record

@@ -67,14 +67,18 @@ account is rejected. Confirmations are rate-limited and audit-logged
 (`sudo.confirm.success`, `sudo.confirm.failure`); a new sign-in
 always starts unverified.
 
-### Two-factor hook point
+### TOTP confirmation
 
-Once enforced TOTP two-step sign-in lands, a TOTP code also confirms
-sudo. The seams are ready: `SudoMode.register_verifier(:totp)` opts
-the verifier in, `SudoMode.verify_totp` checks the code,
-`SudoMode.verifier_available?` gates it on enrollment, and
-`sudos/new` renders the TOTP form when `:totp` is offered. Until then
-`:totp` answers `:unsupported`.
+Members with two-step sign-in enrolled can confirm sudo with a
+current authenticator code instead of their password (password OR
+code; the password alone still works). The check reuses the sign-in
+challenge's replay-protected verification and shared failure/lockout
+counters, under the prompt's own rate limit, and is audit-logged like
+every other verifier (`sudo.confirm.success`,
+`sudo.confirm.failure` with verifier `totp`). Backup codes are not
+accepted at the sudo prompt: they are single-use sign-in recovery.
+See `config/initializers/sudo_mode_totp.rb` and
+[two-step sign-in](two-factor.md).
 
 ## Sessions
 
