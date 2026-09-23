@@ -9,7 +9,11 @@ module Google
     # email_from_id_token, which must never serve as sign-in identity.
     class IdTokenVerifier
       class << self
-        def verify!(id_token, nonce:)
+        # max_auth_age (a duration, sudo re-auth only) additionally
+        # requires the id_token's auth_time -- when Google last
+        # authenticated the user -- to be that recent. Absent or stale,
+        # the confirmation is refused.
+        def verify!(id_token, nonce:, max_auth_age: nil)
           raise Rejected, :bad_token if id_token.blank? || nonce.blank?
 
           header = unverified_header(id_token)
@@ -20,7 +24,7 @@ module Google
           payload, = JWT.decode(id_token.to_s, key, true, algorithm: "RS256")
           raise Rejected, :bad_token unless payload.is_a?(Hash)
 
-          verify_claims!(payload, nonce: nonce.to_s)
+          verify_claims!(payload, nonce: nonce.to_s, max_auth_age:)
           payload
         rescue Rejected, Unavailable
           raise
@@ -36,10 +40,11 @@ module Google
             raise Rejected, :bad_token
           end
 
-          def verify_claims!(payload, nonce:)
+          def verify_claims!(payload, nonce:, max_auth_age:)
             raise Rejected, :bad_token unless payload["iss"].in?(SignIn::ISSUERS)
             verify_audience!(payload)
             verify_expiry!(payload)
+            verify_auth_time!(payload, max_auth_age) if max_auth_age
             raise Rejected, :bad_token if payload["sub"].blank?
             raise Rejected, :missing_email if payload["email"].blank?
             raise Rejected, :unverified_email unless payload["email_verified"] == true
@@ -62,6 +67,16 @@ module Google
           def verify_expiry!(payload)
             exp = payload["exp"]
             raise Rejected, :expired unless exp.is_a?(Numeric) && exp > (Time.current - SignIn::CLOCK_SKEW).to_i
+          end
+
+          # The re-auth proves a fresh login only when Google authenticated
+          # the user within max_auth_age. A missing auth_time (Google sends
+          # it because the request carried max_age) refuses like a stale
+          # one: otherwise an old session's token would pass.
+          def verify_auth_time!(payload, max_auth_age)
+            auth_time = payload["auth_time"]
+            cutoff = (max_auth_age.ago - SignIn::CLOCK_SKEW).to_i
+            raise Rejected, :stale_auth unless auth_time.is_a?(Numeric) && auth_time > cutoff
           end
 
           # Only a verified hd organization match proves Workspace

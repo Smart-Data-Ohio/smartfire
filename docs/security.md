@@ -59,10 +59,12 @@ Gated actions:
 
 Confirmation is by password, or by Google re-auth for members with a
 linked Google identity (Google-only members have no password); the
-re-auth verifies the Google subject matches the linked identity, so a
-different Google account is rejected. Confirmations are rate-limited
-and audit-logged (`sudo.confirm.success`, `sudo.confirm.failure`); a
-new sign-in always starts unverified.
+re-auth forces a fresh Google login and verifies both that the login
+happened within the last 5 minutes and that the Google subject
+matches the linked identity, so an older login or a different Google
+account is rejected. Confirmations are rate-limited and audit-logged
+(`sudo.confirm.success`, `sudo.confirm.failure`); a new sign-in
+always starts unverified.
 
 ### Two-factor hook point
 

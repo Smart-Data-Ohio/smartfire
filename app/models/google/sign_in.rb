@@ -19,6 +19,10 @@ module Google
     FLOW_TTL = 10.minutes
     # Clock skew tolerated when checking token expiry.
     CLOCK_SKEW = 30.seconds
+    # Sudo re-auth only: the Google login must have happened within this
+    # long ago (checked against the id_token's auth_time). Normal
+    # sign-in never checks auth_time.
+    SUDO_REAUTH_MAX_AGE = 5.minutes
 
     # Fail-closed errors. Messages are safe to log: they never carry
     # tokens, codes, or raw claim values.
@@ -53,14 +57,20 @@ module Google
           .select { |domain| valid_domain?(domain) }.uniq
       end
 
-      def authorize_url(redirect_uri:, state:, nonce:, challenge:)
+      # prompt/max_age stay absent unless given: only the sudo re-auth
+      # sends prompt=login and max_age=0 (see GoogleSignInFlow), forcing a
+      # fresh Google login whose auth_time the callback then checks.
+      def authorize_url(redirect_uri:, state:, nonce:, challenge:, prompt: nil, max_age: nil)
         uri = URI::HTTPS.build(host: AUTHORIZE_HOST, path: "/o/oauth2/v2/auth")
-        uri.query = URI.encode_www_form(
+        params = {
           client_id: Google::Client.client_id, redirect_uri:,
           response_type: "code", scope: SCOPE,
           state:, nonce:,
           code_challenge: challenge, code_challenge_method: "S256"
-        )
+        }
+        params[:prompt] = prompt if prompt.present?
+        params[:max_age] = max_age unless max_age.nil?
+        uri.query = URI.encode_www_form(params)
         uri.to_s
       end
 

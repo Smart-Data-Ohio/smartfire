@@ -269,6 +269,60 @@ class SudosControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_sudo_url
   end
 
+  test "Google re-auth forces a fresh Google login" do
+    sign_in_google_only_user
+
+    post sudo_google_url
+
+    assert_response :redirect
+    query = Rack::Utils.parse_query(URI(response.location).query)
+    assert_equal "login", query["prompt"]
+    assert_equal "0", query["max_age"]
+  end
+
+  test "Google re-auth with a stale Google login is rejected" do
+    sign_in_google_only_user
+
+    delete fizzy_connection_url
+    assert_redirected_to new_sudo_url
+
+    post sudo_google_url
+    query = Rack::Utils.parse_query(URI(response.location).query)
+
+    stub_google_jwks
+    stub_sign_in_code_exchange(id_token: sign_in_id_token(sub: "google-sub-alice", nonce: query["nonce"],
+      auth_time: 6.minutes.ago.to_i))
+
+    get session_google_callback_path, params: { state: query["state"], code: "auth-code" }
+
+    assert_redirected_to new_sudo_url
+    assert_match "confirmation failed", flash[:alert].downcase
+
+    delete fizzy_connection_url
+    assert_redirected_to new_sudo_url
+  end
+
+  test "Google re-auth without an auth_time is rejected" do
+    sign_in_google_only_user
+
+    delete fizzy_connection_url
+    assert_redirected_to new_sudo_url
+
+    post sudo_google_url
+    query = Rack::Utils.parse_query(URI(response.location).query)
+
+    stub_google_jwks
+    stub_sign_in_code_exchange(id_token: sign_in_id_token(sub: "google-sub-alice", nonce: query["nonce"],
+      auth_time: nil))
+
+    get session_google_callback_path, params: { state: query["state"], code: "auth-code" }
+
+    assert_redirected_to new_sudo_url
+
+    delete fizzy_connection_url
+    assert_redirected_to new_sudo_url
+  end
+
   test "Google confirmation is unavailable without a linked identity" do
     sign_in users(:david)
 

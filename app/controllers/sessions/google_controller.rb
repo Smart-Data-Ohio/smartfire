@@ -130,9 +130,11 @@ module Sessions
 
       # Finishes a sudo-mode Google re-auth started from SudosController:
       # the member who started the flow proves the linked Google account
-      # is theirs, the verified subject must match their linked
-      # identity (any other Google account is rejected), and then the
-      # stashed sudo request continues. Nobody is signed in or out.
+      # is theirs with a fresh Google login (auth_time within
+      # SUDO_REAUTH_MAX_AGE; an older login or a missing auth_time is
+      # refused), the verified subject must match their linked identity
+      # (any other Google account is rejected), and then the stashed sudo
+      # request continues. Nobody is signed in or out.
       def finish_sudo(flow)
         unless signed_in? && Current.user.id == flow["user_id"]
           return redirect_to(signed_in? ? user_profile_url : new_session_url, alert: "Confirmation expired. Try again.")
@@ -145,7 +147,9 @@ module Sessions
         id_token = Google::SignIn.exchange_code(
           code: params[:code].to_s, redirect_uri: session_google_callback_url, verifier: flow["verifier"]
         )
-        claims = Google::SignIn::IdTokenVerifier.verify!(id_token, nonce: flow["nonce"])
+        claims = Google::SignIn::IdTokenVerifier.verify!(
+          id_token, nonce: flow["nonce"], max_auth_age: Google::SignIn::SUDO_REAUTH_MAX_AGE
+        )
 
         unless claims["sub"].present? && claims["sub"] == Current.user.google_identity&.subject
           AuditLog.record!(action: "sudo.confirm.failure", changes: { verifier: "google", reason: "subject_mismatch" })
