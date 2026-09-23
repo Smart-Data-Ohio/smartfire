@@ -16,6 +16,7 @@ class Accounts::Users::TwoFactorResetsControllerTest < ActionDispatch::Integrati
     post account_user_two_factor_reset_url(@user)
 
     assert_redirected_to edit_account_url
+    assert_equal "Two-step sign-in reset for #{@user.name}. They will set it up again at next sign-in.", flash[:notice]
     assert_not @user.reload.two_factor_enabled?
     assert_equal 0, TwoFactorBackupCode.count
     assert_equal 0, @user.two_factor_remembered_devices.count

@@ -10,8 +10,11 @@
       <p class="txt-medium margin-none">On since <%= credential.confirmed_at.to_date.to_fs(:long) %>. Signing in asks for your authenticator code.</p>
 
       <div class="flex align-center gap">
+        <%# Full-page post like setup: the response renders the one-time codes
+            with a plain 200. No confirm: a Turbo-disabled form cannot show
+            one, and the fresh set appears right away. %>
         <%= button_to "New backup codes", two_factor_backup_codes_path, method: :post, class: "btn txt-small",
-              data: { turbo_confirm: "Replace your backup codes? The old set will stop working." } %>
+              data: { turbo: false } %>
         <%= button_to "Disable", two_factor_setup_path, method: :delete, class: "btn btn--negative txt-small",
               data: { turbo_confirm: "Turn off two-step sign-in? You will have to set it up again right away." } %>
       </div>

@@ -8,12 +8,15 @@ class Users::ProfilesTwoFactorTest < ActionDispatch::IntegrationTest
   test "profile shows the 2FA section with devices and revoke buttons" do
     credential = enroll_two_factor!(@user)
     device, _token = TwoFactorRememberedDevice.create_for!(@user, user_agent: "TestBrowser/1.0", ip_address: "1.2.3.4")
+    expired, _token = TwoFactorRememberedDevice.create_for!(@user, user_agent: "OldBrowser/1.0", ip_address: "5.6.7.8")
+    expired.update!(expires_at: 1.minute.ago)
     sign_in @user
 
     get user_profile_url
 
     assert_response :success
     assert_select "h2", text: "Two-step sign-in"
+    assert_select "##{dom_id(expired)}", count: 0
     assert_select "form[action='#{two_factor_backup_codes_path}']", count: 1
     assert_select "form[action='#{two_factor_setup_path}'] input[name='_method'][value='delete']", count: 1
     assert_select "##{dom_id(device)}", text: /TestBrowser/

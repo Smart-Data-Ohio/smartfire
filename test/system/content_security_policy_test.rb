@@ -53,11 +53,22 @@ class ContentSecurityPolicyTest < ApplicationSystemTestCase
 
   test "signing in through the real login form lands on the signed-in page" do
     # Every other system test signs in through the test-only route, so this
-    # is the one test that submits the real login form end to end.
+    # is the one test that submits the real login form end to end. The
+    # first sign-in detours through two-step enrollment, which keeps its
+    # own violation coverage on the way through.
     visit new_session_url
     fill_in "email_address", with: "jz@37signals.com"
     fill_in "password", with: "secret123456"
     click_on "log_in"
+
+    assert_selector "h1", text: "Set up two-step sign-in", wait: 10
+    secret = find("#two_factor_manual_key").text.gsub(/\s+/, "")
+    fill_in "Authenticator code", with: ROTP::TOTP.new(secret).now
+    click_on "Verify and continue"
+
+    assert_selector "h1", text: "Save your backup codes", wait: 10
+    click_on "Continue"
+
     # The login POST plus the first room render (with the huddle panel this
     # file enables) exceeds the default wait under parallel load, and a
     # specific room row is not the point: wait for the signed-in sidebar

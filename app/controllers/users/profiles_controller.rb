@@ -50,7 +50,7 @@ class Users::ProfilesController < ApplicationController
     end
 
     def set_two_factor_devices
-      @two_factor_devices = @user.two_factor_remembered_devices.recent_first.to_a
+      @two_factor_devices = @user.two_factor_remembered_devices.live.recent_first.to_a
     end
 
     def user_params

@@ -16,6 +16,9 @@ Google login is separate from [Calendar publishing](google-calendar.md) and
 does not connect Calendar or Drive, and does not store Google access or
 refresh tokens. Disconnecting Calendar does not disconnect Google login.
 
+Google sign-in is still only the first step: [two-step sign-in](two-factor.md)
+is enforced for everyone, including members who sign in with Google.
+
 ## Google Cloud setup
 
 For a deployment using Calendar and Drive too, follow the combined

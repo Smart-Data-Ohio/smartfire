@@ -16,6 +16,7 @@ history. There are no foreign keys from the log to users or targets.
 | Area | Actions |
 | --- | --- |
 | Sign-in | `session.sign_in.success`, `session.sign_in.failure` (password, Google, transfer). Failures collapse per IP and email label inside a 5-minute window, with a per-IP cap of 20 rows per window; past the cap the latest row's `suppressed_count` counts the rest. |
+| Two-step | `sign_in.two_factor.failure` (wrong code at the challenge), `two_factor.enable`, `two_factor.disable`, `two_factor.reset`, `two_factor.backup_codes.regenerate`. Codes and secrets never reach the log. |
 | Members | `user.create` (Google-provisioned), `user.email.change`, `user.password.change`, `user.role.change`, `user.ban`, `user.unban`, `user.deactivate` |
 | Google | `google.sign_in.link` (profile links and first-sign-in auto-links), `google.sign_in.link_allow`, `google.sign_in.unlink`, `google.account.connect`, `google.account.disconnect` |
 | GitHub | `github.account.connect` (personal token and GitHub App OAuth), `github.account.disconnect` (members), `agent.github.connect`, `agent.github.disconnect` (agents) |
