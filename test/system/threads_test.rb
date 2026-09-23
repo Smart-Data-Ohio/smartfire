@@ -168,6 +168,60 @@ class ThreadsTest < ApplicationSystemTestCase
     save_thread_screenshot "work-list.png"
   end
 
+  test "shows work-thread guidance in the new-thread form and on the work page" do
+    open_threads
+    click_button "New thread"
+    assert_selector "#thread-panel [data-thread-panel-target='create']", visible: true, wait: 10
+
+    within "#thread-panel [data-thread-panel-target='create']" do
+      assert_selector "details.thread-panel__guide:not([open]) summary", text: "How to start a work thread"
+      find("summary", text: "How to start a work thread").click
+      assert_selector "details.thread-panel__guide[open]", text: /Track as work/, wait: 10
+      assert_selector "details.thread-panel__guide[open]", text: /Fill in this form/
+      assert_no_selector "li", text: /Open a channel and choose/
+    end
+
+    visit work_threads_path
+    within "details.work-threads__guide" do
+      assert_selector "summary", text: "How to start a work thread"
+      assert_selector "li", text: /Track as work/
+      assert_selector "li", text: /Open a channel and choose/
+    end
+  end
+
+  test "keeps the new-thread guidance usable on a phone" do
+    page.current_window.resize_to(390, 844)
+    open_threads
+    click_button "New thread"
+    assert_selector "#thread-panel [data-thread-panel-target='create']", visible: true, wait: 10
+    assert_selector "#thread-panel details.thread-panel__guide:not([open])", visible: true
+
+    # The disclosure toggles from the keyboard like any native summary.
+    summary = find("#thread-panel details.thread-panel__guide summary")
+    page.evaluate_script("arguments[0].focus()", summary.native)
+    summary.send_keys(:enter)
+    assert_selector "#thread-panel details.thread-panel__guide[open]", text: /Track as work/, wait: 10
+    assert_no_horizontal_overflow
+
+    # The new tab stop joins the panel's focus trap instead of breaking it:
+    # Tab from the last control wraps back inside the panel.
+    submit = find("#thread-panel [data-thread-panel-target='createSubmit']")
+    page.evaluate_script("arguments[0].focus()", submit.native)
+    submit.send_keys(:tab)
+    wait_for_condition do
+      page.evaluate_script(<<~JS)
+        (() => {
+          const panel = document.querySelector("#thread-panel");
+          const submit = panel.querySelector("[data-thread-panel-target='createSubmit']");
+          return panel.contains(document.activeElement) && document.activeElement !== submit;
+        })()
+      JS
+    end
+    assert_no_horizontal_overflow
+  ensure
+    page.current_window.resize_to(1400, 1400)
+  end
+
   test "shows work assignment activity to the owner and opens the exact thread" do
     thread_name = "Cross-feature work handoff"
     message = "The assigned work message remains available."

@@ -90,6 +90,8 @@
 
         <div class="thread-panel__parent-preview" data-thread-panel-target="createParent" hidden></div>
 
+        <%= render "work_threads/guide", variant: :panel %>
+
         <form class="thread-panel__create-form" data-action="submit->thread-panel#createThread">
           <label class="thread-panel__field">
             <span>Thread name <small>(optional)</small></span>

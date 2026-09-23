@@ -33,16 +33,7 @@
     </nav>
   </header>
 
-  <details class="work-threads__guide" <%= "open" if @threads.empty? %>>
-    <summary>How to start a work thread</summary>
-    <ol>
-      <li>Open a channel and choose <strong>Threads</strong> in the channel header.</li>
-      <li>Open an existing thread, or choose <strong>New thread</strong> to start one from scratch or from a message.</li>
-      <li>In the thread, open <strong>Manage</strong> and choose <strong>Track as work</strong>. The thread starts as <strong>Planned</strong>.</li>
-      <li>Use <strong>Update work</strong> to assign an owner from the channel and move it through <strong>In progress</strong>, <strong>Blocked</strong>, and <strong>Done</strong>.</li>
-    </ol>
-    <p>The person who started the thread, the channel's creator, or an administrator can turn tracking on and assign an owner. The assigned owner can update the status. Completing work keeps the conversation and its history.</p>
-  </details>
+  <%= render "work_threads/guide", open: @threads.empty? %>
 
   <% if @threads.empty? %>
     <p class="work-threads__empty">

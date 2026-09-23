@@ -1,0 +1,18 @@
+<%# Shared "How to start a work thread" guidance, rendered on the Work threads
+    page and in the thread panel's New thread form. The panel variant drops
+    the "open the panel" steps: the reader is already starting a thread. %>
+<% panel = local_assigns.fetch(:variant, :page).to_sym == :panel %>
+<details class="<%= panel ? "thread-panel__guide" : "work-threads__guide" %>"<%= " open" if local_assigns.fetch(:open, false) %>>
+  <summary>How to start a work thread</summary>
+  <ol>
+    <% if panel %>
+      <li>Fill in this form to create the thread.</li>
+    <% else %>
+      <li>Open a channel and choose <strong>Threads</strong> in the channel header.</li>
+      <li>Open an existing thread, or choose <strong>New thread</strong> to start one from scratch or from a message.</li>
+    <% end %>
+    <li>In the thread, open <strong>Manage</strong> and choose <strong>Track as work</strong>. The thread starts as <strong>Planned</strong>.</li>
+    <li>Use <strong>Update work</strong> to assign an owner from the channel and move it through <strong>In progress</strong>, <strong>Blocked</strong>, and <strong>Done</strong>.</li>
+  </ol>
+  <p>The person who started the thread, the channel's creator, or an administrator can turn tracking on and assign an owner. The assigned owner can update the status. Completing work keeps the conversation and its history.</p>
+</details>

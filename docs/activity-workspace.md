@@ -71,6 +71,8 @@ A work thread is a channel thread with a status and an optional owner. Turn on w
 
 The person who started the thread, the channel's creator, or an administrator can turn tracking on, turn it off, and assign an owner. **Manage** only appears for those people. The assigned owner can update the status but cannot reassign the work.
 
+The same steps also appear under **How to start a work thread** in the channel's **New thread** form, so there is no need to switch back to the Work threads page while starting a thread.
+
 ### Tracking progress
 
 Work can be **Planned**, **In progress**, **Blocked**, or **Done**. **Complete work** sets the status to Done and **Reopen work** returns it to Planned. Ownership and status changes are recorded in the thread's **Work history**.
