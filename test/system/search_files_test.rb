@@ -17,6 +17,10 @@ class SearchFilesTest < ApplicationSystemTestCase
     assert_selector ".search-filter-chip", count: 2, wait: 10
     assert_selector ".search-filter-chip", text: "from: jz"
 
+    # No message matches (the note has no file), but the page is not empty:
+    # the watermark must stay hidden so it never covers the chip controls.
+    assert_no_selector ".message-area--empty", visible: true
+
     click_link "Remove has: file filter"
     assert_selector ".search-filter-chip", count: 1, wait: 10
     assert_selector ".search-filter-chip", text: "from: jz"

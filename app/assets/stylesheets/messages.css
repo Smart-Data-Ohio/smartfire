@@ -1,13 +1,17 @@
 .message-area {
   display: contents;
 
-  &:has(.message) {
+  /* Search pages render filter chips and board/work/event sections above
+     the messages; when no message matches, the empty-state watermark below
+     would stack over them (every child shares grid-area 1/1) and intercept
+     clicks on the chip controls, so they count as content too. */
+  &:has(.message, .search-filter-chip, .search-sections) {
     .message-area--empty {
       display: none;
     }
   }
 
-  &:not(:has(.message)) {
+  &:not(:has(.message, .search-filter-chip, .search-sections)) {
     --opacity: 0.2;
 
     block-size: 100vh;
