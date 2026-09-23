@@ -67,7 +67,7 @@ module Calendar
       def renew_expiring!(now: Time.current)
         return unless watching_enabled?
 
-        find_each do |channel|
+        includes(user: :google_account).find_each do |channel|
           begin
             account = channel.user.google_account
             if account&.usable? && account.calendar?

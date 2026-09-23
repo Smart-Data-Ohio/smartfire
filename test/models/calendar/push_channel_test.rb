@@ -137,4 +137,30 @@ class Calendar::PushChannelTest < ActiveSupport::TestCase
 
     assert_nothing_raised { Calendar::PushChannel.renew_expiring! }
   end
+
+  test "renew_expiring preloads users instead of querying per channel" do
+    other = users(:jason)
+    connect_google!(@user)
+    connect_google!(other)
+    Calendar::PushChannel.create!(user: @user, channel_id: "chan-1",
+      resource_id: "resource-1", token_digest: Calendar::PushChannel.digest("one"),
+      expires_at: 2.days.from_now)
+    Calendar::PushChannel.create!(user: other, channel_id: "chan-2",
+      resource_id: "resource-2", token_digest: Calendar::PushChannel.digest("two"),
+      expires_at: 2.days.from_now)
+
+    user_reads = count_sql_queries('FROM "users"') do
+      Calendar::PushChannel.renew_expiring!
+    end
+
+    assert_equal 1, user_reads
+  end
+
+  private
+    def count_sql_queries(fragment)
+      queries = []
+      callback = ->(*, payload) { queries << payload[:sql] if payload[:sql].include?(fragment) }
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { yield }
+      queries.size
+    end
 end
