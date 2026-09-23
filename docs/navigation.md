@@ -91,5 +91,6 @@ the sidebar renders them in a constant number of queries.
 | POST / DELETE | `/rooms/:id/favorite` | Favourite / unfavourite |
 | PATCH | `/rooms/:id/favorite` (`position`) | Move a favourite |
 | POST / PATCH / DELETE | `/room_categories` | Manage categories |
+| GET | `/room_categories.json` | List categories for the room menu |
 | PATCH | `/rooms/:id/category_assignment` | Assign a channel to a category |
 | PUT | `/rooms/:id/involvement` (`muted`) | Mute / unmute |
