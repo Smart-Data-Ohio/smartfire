@@ -894,15 +894,30 @@ summary.member-panel__group-heading {
   padding: 0;
 }
 
+/* Selection checkbox, avatar, identity. Your own row has no checkbox, so
+   the avatar and identity are placed explicitly and stay in the same
+   columns as every other row. */
 .member-panel__member {
   align-items: center;
   border-radius: 0.45rem;
   color: var(--workspace-text);
   display: grid;
   gap: 0.65rem;
-  grid-template-columns: 2rem minmax(0, 1fr);
+  grid-template-columns: 1.1rem 2rem minmax(0, 1fr);
   min-inline-size: 0;
   padding: 0.38rem 0.55rem;
+}
+
+.member-panel__member > input[type="checkbox"] {
+  grid-column: 1;
+}
+
+.member-panel__member > .member-panel__avatar {
+  grid-column: 2;
+}
+
+.member-panel__member > .member-panel__identity {
+  grid-column: 3;
 }
 
 .member-panel__member:hover {
