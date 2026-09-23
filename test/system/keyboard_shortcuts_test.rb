@@ -162,10 +162,25 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
     end
     assert_no_selector "body.member-panel-open", wait: 5
 
+    # The closed thread panel wrongly keeps aria-modal in mobile
+    # layout (its sync ignores the open state); strip it so this test
+    # exercises only the full-screen yield.
     page.execute_script(<<~JS)
-      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }))
+      document.querySelector(".thread-panel__surface")?.removeAttribute("aria-modal")
     JS
 
+    # The probe binds after page load, like the huddle's own Escape
+    # handler, and observes synchronously: unlike the badge below, it
+    # cannot pass before a buggy mark-read roundtrip lands.
+    page.execute_script(<<~JS)
+      window.__fullscreenEscapePrevented = "unseen";
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") window.__fullscreenEscapePrevented = event.defaultPrevented;
+      });
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    JS
+
+    assert_equal false, page.evaluate_script("window.__fullscreenEscapePrevented")
     # The narrow fullscreen layout hides the sidebar rows, so match
     # the badge class regardless of visibility.
     assert_selector ".rooms a.unread", text: "Designers", visible: :all, wait: 5
