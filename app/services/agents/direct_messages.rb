@@ -2,11 +2,15 @@ module Agents
   # Agent-initiated DMs for POST /agents/dms and the MCP open_dm tool.
   # Opens (or creates) the 1:1 DM between the agent's bot user and a human
   # target, then posts the agent's message through the standard posting
-  # flow. Allowed when the target is the agent's owner, has previously
-  # messaged the agent (a mention, reply, or DM delivery in the agent's
-  # ledger), or the agent holds the dm_anyone capability anywhere. This
-  # gate replaces the post_messages grant check: a DM room cannot carry
-  # grants before it exists.
+  # flow. Allowed when the agent holds post_messages somewhere (legacy
+  # agents keep their implicit access) and the target is the agent's
+  # owner, has previously messaged the agent (a mention, reply, or DM
+  # delivery in the agent's ledger), or the agent holds the dm_anyone
+  # capability anywhere. The target rule is an additional gate on top of
+  # the grant check, not a replacement. A DM room cannot carry grants
+  # before it exists, so a new DM checks the workspace-wide form only;
+  # posting into an already-existing DM also requires post_messages in
+  # that room.
   class DirectMessages
     def self.open_and_post(agent:, user_id:, attributes: {}, drive_file_ids: :absent)
       target = User.find_by(id: user_id)
@@ -19,6 +23,10 @@ module Agents
         return ServiceResult.fail("Cannot open a DM with an inactive account")
       end
 
+      unless agent.has_capability_anywhere?(:post_messages)
+        return ServiceResult.fail("Forbidden: agent lacks post_messages capability", status: :forbidden)
+      end
+
       unless allowed?(agent, target)
         return ServiceResult.fail(
           "Forbidden: agent may only DM its owner or humans who messaged it without the dm_anyone capability",
@@ -27,7 +35,11 @@ module Agents
       end
 
       room = ::Rooms::Direct.find_or_create_for(User.where(id: [ agent.user_id, target.id ]))
-      broadcast_new_room(room) if room.previously_new_record?
+      new_room = room.previously_new_record?
+      if !new_room && !agent.can?(:post_messages, room)
+        return ServiceResult.fail("Forbidden: agent lacks post_messages capability", status: :forbidden)
+      end
+      broadcast_new_room(room) if new_room
 
       result = Posting.post(agent: agent, room: room, attributes: attributes, drive_file_ids: drive_file_ids)
       return result unless result.ok?

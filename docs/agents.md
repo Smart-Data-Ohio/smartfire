@@ -719,12 +719,17 @@ curl "https://smartfire.example.com/agents/context?message_id=42&limit=10" \
 the agent's bot user and a human, then posts the agent's message through
 the standard posting flow (same `message` object as the messages API, or
 top-level `body`/`markdown_source`). The target must be an active human,
-and the call is allowed only when the target is the agent's owner, has
-previously messaged the agent (a mention, reply, or DM in the agent's
-ledger), or the agent holds the `dm_anyone` capability anywhere — an
-administrator grants it from the bot's grant page. Anything else is 403.
-This gate replaces the `post_messages` check, since a DM room cannot
-carry grants before it exists. Throttled at 60/minute per credential.
+and the call needs two grants: the agent must hold `post_messages`
+somewhere (legacy agents keep their implicit access), and the target
+rule must also pass — the target is the agent's owner, has previously
+messaged the agent (a mention, reply, or DM in the agent's ledger), or
+the agent holds the `dm_anyone` capability anywhere, which an
+administrator grants from the bot's grant page. Anything else is 403.
+Posting into a DM room that already exists additionally requires
+`post_messages` in that room, so revoking the grant forbids the next
+post; a brand-new DM room cannot carry grants yet, so the
+workspace-wide form is enough to open it. Throttled at 60/minute per
+credential.
 
 ```sh
 curl -X POST https://smartfire.example.com/agents/dms \

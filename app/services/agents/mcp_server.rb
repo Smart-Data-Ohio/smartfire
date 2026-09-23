@@ -235,7 +235,7 @@ module Agents
       ),
       Tool.new(
         name: "open_dm",
-        description: "Open (or reuse) the 1:1 DM with a human and post the agent's message. Allowed for the agent's owner, humans who messaged the agent, or with the dm_anyone capability.",
+        description: "Open (or reuse) the 1:1 DM with a human and post the agent's message. Requires post_messages, plus the agent's owner, prior contact, or the dm_anyone capability.",
         input_schema: {
           "type" => "object",
           "properties" => {

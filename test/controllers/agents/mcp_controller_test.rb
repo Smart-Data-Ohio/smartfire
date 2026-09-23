@@ -500,6 +500,34 @@ class Agents::McpControllerTest < ActionDispatch::IntegrationTest
       "Forbidden: agent may only DM its owner or humans who messaged it without the dm_anyone capability"
   end
 
+  test "open_dm denies its owner when all grants are revoked" do
+    grant = AgentGrant.create!(agent: @agent, granted_by: users(:david), capability: "post_messages")
+    grant.revoke!
+
+    assert_tool_error call_tool("open_dm", { "user_id" => users(:david).id, "markdown_source" => "Denied" }),
+      "Forbidden: agent lacks post_messages capability"
+  end
+
+  test "open_dm denies read-only agents" do
+    grant!(capability: "read_messages")
+
+    assert_tool_error call_tool("open_dm", { "user_id" => users(:david).id, "markdown_source" => "Denied" }),
+      "Forbidden: agent lacks post_messages capability"
+  end
+
+  test "open_dm denies an existing DM where posting was revoked" do
+    grant = AgentGrant.create!(agent: @agent, granted_by: users(:david), capability: "post_messages")
+
+    created = call_tool("open_dm", { "user_id" => users(:david).id, "markdown_source" => "One" })
+    assert_equal false, created.dig("result", "isError")
+
+    grant.revoke!
+    grant!(capability: "post_messages", room: @room)
+
+    assert_tool_error call_tool("open_dm", { "user_id" => users(:david).id, "markdown_source" => "Two" }),
+      "Forbidden: agent lacks post_messages capability"
+  end
+
   test "poll_events throttles past 120 calls a minute" do
     with_memory_cache do
       freeze_time do

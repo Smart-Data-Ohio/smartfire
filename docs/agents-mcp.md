@@ -90,7 +90,7 @@ curl https://smartfire.example.com/agents/mcp \
 | `list_work`, `update_work` | ownership (+ `manage_threads` for writes) | `GET/PATCH /agents/work` |
 | `request_approval`, `get_approval` | `external_action` | `/agents/approvals` |
 | `get_context` | `read_messages` | `GET /agents/context` |
-| `open_dm` | owner, prior contact, or `dm_anyone` | `POST /agents/dms` |
+| `open_dm` | `post_messages` + owner, prior contact, or `dm_anyone` | `POST /agents/dms` |
 
 `tools/list` always returns the full set; per-tool enforcement happens at
 call time, so a client can show every tool and let denials explain which

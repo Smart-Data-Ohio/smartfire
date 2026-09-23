@@ -41,6 +41,7 @@ class Agents::DmsControllerTest < ActionDispatch::IntegrationTest
 
   test "dm_anyone capability allows DMing a stranger" do
     AgentGrant.create!(agent: @agent, granted_by: users(:david), capability: "dm_anyone")
+    AgentGrant.create!(agent: @agent, granted_by: users(:david), capability: "post_messages")
 
     post agents_dms_url,
       params: { user_id: users(:jason).id, message: { markdown_source: "Cold hello" } }.to_json,
@@ -49,6 +50,76 @@ class Agents::DmsControllerTest < ActionDispatch::IntegrationTest
     assert_response :created
     room = Room.find(response.parsed_body.dig("room", "id"))
     assert_equal [ @bot.id, users(:jason).id ].sort, room.user_ids.sort
+  end
+
+  test "dm_anyone alone does not grant posting: post_messages is required too" do
+    AgentGrant.create!(agent: @agent, granted_by: users(:david), capability: "dm_anyone")
+
+    post agents_dms_url,
+      params: { user_id: users(:jason).id, message: { markdown_source: "Cold hello" } }.to_json,
+      headers: bearer_headers
+
+    assert_response :forbidden
+    assert_equal "Forbidden: agent lacks post_messages capability", response.parsed_body["error"]
+  end
+
+  test "an agent with all grants revoked cannot DM its owner" do
+    grant = AgentGrant.create!(agent: @agent, granted_by: users(:david), capability: "post_messages")
+    grant.revoke!
+
+    post agents_dms_url,
+      params: { user_id: users(:david).id, message: { markdown_source: "Hello owner" } }.to_json,
+      headers: bearer_headers
+
+    assert_response :forbidden
+    assert_equal "Forbidden: agent lacks post_messages capability", response.parsed_body["error"]
+  end
+
+  test "a read-only agent cannot DM its owner" do
+    AgentGrant.create!(agent: @agent, granted_by: users(:david), capability: "read_messages")
+
+    post agents_dms_url,
+      params: { user_id: users(:david).id, message: { markdown_source: "Hello owner" } }.to_json,
+      headers: bearer_headers
+
+    assert_response :forbidden
+    assert_equal "Forbidden: agent lacks post_messages capability", response.parsed_body["error"]
+  end
+
+  test "an existing DM denies when posting there was revoked" do
+    grant = AgentGrant.create!(agent: @agent, granted_by: users(:david), capability: "post_messages")
+
+    post agents_dms_url,
+      params: { user_id: users(:david).id, message: { markdown_source: "One" } }.to_json,
+      headers: bearer_headers
+    assert_response :created
+
+    grant.revoke!
+    AgentGrant.create!(agent: @agent, room: rooms(:watercooler), granted_by: users(:david), capability: "post_messages")
+
+    post agents_dms_url,
+      params: { user_id: users(:david).id, message: { markdown_source: "Two" } }.to_json,
+      headers: bearer_headers
+
+    assert_response :forbidden
+    assert_equal "Forbidden: agent lacks post_messages capability", response.parsed_body["error"]
+  end
+
+  test "an existing DM allows when posting there still holds" do
+    AgentGrant.create!(agent: @agent, granted_by: users(:david), capability: "post_messages")
+
+    post agents_dms_url,
+      params: { user_id: users(:david).id, message: { markdown_source: "One" } }.to_json,
+      headers: bearer_headers
+    assert_response :created
+    first_room_id = response.parsed_body.dig("room", "id")
+
+    post agents_dms_url,
+      params: { user_id: users(:david).id, message: { markdown_source: "Two" } }.to_json,
+      headers: bearer_headers
+
+    assert_response :created
+    assert_equal first_room_id, response.parsed_body.dig("room", "id")
   end
 
   test "strangers are denied without dm_anyone" do
