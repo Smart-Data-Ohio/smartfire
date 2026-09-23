@@ -4,7 +4,11 @@
     <% if scheduled.thread %>
       <span class="scheduled-message__thread">· <%= scheduled.thread.name %></span>
     <% end %>
-    <span class="scheduled-message__time">· Sends <%= local_datetime_tag scheduled.send_at, style: :datetime %></span>
+    <% if local_assigns[:stranded] %>
+      <span class="scheduled-message__time">· No longer sendable (channel access lost)</span>
+    <% else %>
+      <span class="scheduled-message__time">· Sends <%= local_datetime_tag scheduled.send_at, style: :datetime %></span>
+    <% end %>
   </div>
 
   <%= form_with model: scheduled, url: scheduled_message_path(scheduled), method: :patch, class: "scheduled-message__form" do |form| %>

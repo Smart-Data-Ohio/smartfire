@@ -37,6 +37,16 @@
     <% end %>
   </div>
 
+  <% if @stranded.any? %>
+    <h2 class="scheduled-messages__group-title">No longer sendable</h2>
+    <p class="scheduled-messages__description">You left these channels, or they were deleted. Cancel them here, or they will be dropped with an inbox notice when they come due.</p>
+    <div id="scheduled-messages-stranded" class="scheduled-messages__list">
+      <% @stranded.each do |scheduled| %>
+        <%= render "scheduled_messages/item", scheduled: scheduled, stranded: true %>
+      <% end %>
+    </div>
+  <% end %>
+
   <% if @past.any? %>
     <h2 class="scheduled-messages__group-title">Past</h2>
     <div id="scheduled-messages-past" class="scheduled-messages__list">

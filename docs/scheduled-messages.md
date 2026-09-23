@@ -10,7 +10,9 @@ The Scheduled view (sidebar) lists upcoming drafts with their channel,
 thread, and send time, and past ones (sent or dropped). Upcoming drafts
 can be edited (text and time), sent immediately, or cancelled.
 Cancelling deletes the draft; sent and dropped rows stay as history,
-with sent rows linking to the posted message.
+with sent rows linking to the posted message. Drafts stranded by lost
+channel access list separately as no longer sendable so they can still
+be cancelled; otherwise they drop with an inbox notice when due.
 
 ## Sending
 

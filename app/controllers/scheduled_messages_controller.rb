@@ -4,12 +4,14 @@ class ScheduledMessagesController < ApplicationController
   before_action :ensure_active_human
   before_action :no_store_response!
 
-  # GET /scheduled_messages. The author's upcoming rows (sendable ones;
-  # rows stranded by lost access wait for the dispatcher to drop them)
-  # plus sent and dropped history.
+  # GET /scheduled_messages. The author's upcoming rows, rows stranded
+  # by lost access (shown so they can be cancelled; the dispatcher
+  # drops them with an inbox item when they come due), plus sent and
+  # dropped history.
   def index
     rows = Current.user.scheduled_messages.includes(:room, :thread).ordered.to_a
     @upcoming = rows.select(&:pending?).select(&:sendable?)
+    @stranded = rows.select(&:pending?).reject(&:sendable?)
     @past = rows.reject(&:pending?).sort_by { |row| [ row.send_at, row.id ] }.reverse
   end
 

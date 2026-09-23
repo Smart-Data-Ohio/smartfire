@@ -28,6 +28,24 @@ class ScheduledMessagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{ActionView::RecordIdentifier.dom_id(other)}", count: 0
   end
 
+  test "index shows stranded rows so they can be cancelled" do
+    private_room = Rooms::Closed.create!(name: "Private", creator: users(:jason))
+    private_room.memberships.grant_to users(:jason)
+    private_room.memberships.grant_to @user
+    stranded = ScheduledMessage.create!(user: @user, room: private_room, markdown_source: "Stranded", send_at: 1.hour.from_now)
+    private_room.memberships.find_by(user: @user).destroy!
+
+    get scheduled_messages_url
+
+    assert_response :success
+    assert_select "##{ActionView::RecordIdentifier.dom_id(stranded)}"
+
+    delete scheduled_message_url(stranded)
+
+    assert_redirected_to scheduled_messages_url
+    assert_nil ScheduledMessage.find_by(id: stranded.id)
+  end
+
   test "creates a scheduled message" do
     send_at = 1.hour.from_now
 
