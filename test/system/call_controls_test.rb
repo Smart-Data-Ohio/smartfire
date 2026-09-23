@@ -645,6 +645,24 @@ class CallControlsTest < ApplicationSystemTestCase
     assert_not speaker.reload.server_muted?
   end
 
+  test "saving call settings updates the permanent panel without a reload" do
+    sign_in "david@37signals.com"
+    visit user_profile_url
+
+    assert_selector "#channel-huddle[data-huddle-voice-mode-value='voice_activity']", visible: :all
+
+    select "Push to talk", from: "Microphone mode"
+    fill_in "Push-to-talk key", with: "CapsLock"
+    page.execute_script("window.__noReload = true")
+    within(:xpath, "//fieldset[legend/text()='Calls']/ancestor::form") do
+      find("button[type='submit']").click
+    end
+
+    assert_selector "#channel-huddle[data-huddle-voice-mode-value='push_to_talk']", visible: :all, wait: 10
+    assert_selector "#channel-huddle[data-huddle-push-to-talk-key-value='CapsLock']", visible: :all
+    assert_equal true, page.evaluate_script("window.__noReload")
+  end
+
   private
     def create_call_room(type, name:, members:)
       type.create_for({ name:, creator: members.first }, users: members).tap do |room|
