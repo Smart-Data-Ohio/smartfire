@@ -34,7 +34,9 @@ module TwoFactor
       if setup_secret && credential.confirm_with_setup_secret!(setup_secret, params[:code].to_s)
         @backup_codes = TwoFactorBackupCode.regenerate_set!(credential)
         Current.session.mark_two_factor_verified!
-        AuditLog.record!(action: "two_factor.enable", target: Current.user)
+        @signed_out_other_devices = sign_out_other_sessions!
+        disconnect_remote_connections
+        AuditLog.record!(action: "two_factor.enable", target: Current.user, changes: enable_changes)
         @continue_url = post_authenticating_url
         render "two_factor/backup_codes/show"
       else
@@ -47,11 +49,13 @@ module TwoFactor
       end
     end
 
-    # Disabling needs a fresh TOTP code, the password, or a completed
-    # Google re-auth in the same request: anyone holding the session
-    # could otherwise disable and re-enroll on their own authenticator.
+    # Disabling needs a verified session plus a fresh TOTP code, the
+    # password, or a completed Google re-auth in the same request: anyone
+    # holding an unverified session could otherwise disable and re-enroll
+    # on their own authenticator.
     def destroy
       if Current.user.two_factor_enabled?
+        return refuse_unverified_two_factor_session unless Current.session.two_factor_verified?
         return refuse_without_reauthentication(Current.user) unless reauthenticated?(Current.user)
 
         Current.user.reset_two_factor!
@@ -69,6 +73,31 @@ module TwoFactor
     end
 
     private
+      # No unverified session outlives enrollment: every other session
+      # predates the second factor. Returns how many were signed out.
+      def sign_out_other_sessions!
+        Current.user.sessions.where.not(id: Current.session.id).destroy_all.size
+      end
+
+      def enable_changes
+        if @signed_out_other_devices.positive?
+          { signed_out_other_devices: @signed_out_other_devices }
+        end
+      end
+
+      # Defense in depth: enforcement already terminates unverified
+      # sessions before they reach this action (setup exempts only
+      # show/create), but disabling must never depend on that
+      # exemption staying narrow. Mirrors the enforcement rejection.
+      def refuse_unverified_two_factor_session
+        terminate_current_session
+        if request.format.html?
+          redirect_to new_session_url, alert: "Sign in again to verify two-step sign-in."
+        else
+          head :unauthorized
+        end
+      end
+
       def ensure_human_user
         redirect_to root_url unless Current.user.requires_two_factor?
       end

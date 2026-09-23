@@ -13,9 +13,12 @@
 module TwoFactorEnforcement
   extend ActiveSupport::Concern
 
-  # Whitelist: the two-factor flow itself, sign-out, and static
+  # Whitelist: the second-factor flow itself, sign-out, and static
   # endpoints. Health (rails/health) never reaches ApplicationController.
-  EXEMPT_CONTROLLER_PATHS = %w[ two_factor/setups two_factor/challenges pwa ].freeze
+  # Setup exempts only enrollment (show/create): destroy turns 2FA off
+  # and must never run on an unverified session, even with the password.
+  EXEMPT_CONTROLLER_PATHS = %w[ two_factor/challenges pwa ].freeze
+  EXEMPT_SETUP_ACTIONS = %w[ show create ].freeze
 
   included do
     before_action :require_two_factor_enrollment
@@ -53,6 +56,7 @@ module TwoFactorEnforcement
 
     def two_factor_exempt_request?
       EXEMPT_CONTROLLER_PATHS.include?(controller_path) ||
+        (controller_path == "two_factor/setups" && EXEMPT_SETUP_ACTIONS.include?(action_name)) ||
         (controller_path == "sessions" && action_name == "destroy")
     end
 

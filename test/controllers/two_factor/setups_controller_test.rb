@@ -144,6 +144,41 @@ class TwoFactor::SetupsControllerTest < ActionDispatch::IntegrationTest
     assert @user.reload.two_factor_enabled?
   end
 
+  test "create signs out other sessions, drops their connections, and audits it" do
+    @user.sessions.destroy_all
+    post session_url, params: { email_address: @user.email_address, password: "secret123456" }
+    get two_factor_setup_url
+    setup_secret = TwoFactorSetupSecret.valid_for(@user.sessions.order(:id).last)
+    other = @user.sessions.create!(user_agent: "Other", ip_address: "9.9.9.9")
+
+    remote_connections = mock
+    remote_connections.expects(:disconnect).with(reconnect: true)
+    ActionCable.server.stubs(:remote_connections).returns(mock.tap { |m| m.expects(:where).with(current_user: @user).returns(remote_connections) })
+
+    post two_factor_setup_url, params: { code: totp_code_for_secret(setup_secret.secret) }
+
+    assert_response :success
+    assert @user.reload.two_factor_enabled?
+    assert_nil Session.find_by(id: other.id)
+    assert_equal 1, @user.sessions.count
+    assert_select "p", text: "Signed out your other devices"
+    audit = AuditLog.find_by!(action: "two_factor.enable")
+    assert_equal 1, audit.details["signed_out_other_devices"]
+  end
+
+  test "create stays quiet about other devices when signed in once" do
+    @user.sessions.destroy_all
+    post session_url, params: { email_address: @user.email_address, password: "secret123456" }
+    get two_factor_setup_url
+    setup_secret = TwoFactorSetupSecret.valid_for(@user.sessions.order(:id).last)
+
+    post two_factor_setup_url, params: { code: totp_code_for_secret(setup_secret.secret) }
+
+    assert_response :success
+    assert_select "p", text: "Signed out your other devices", count: 0
+    assert_empty AuditLog.find_by!(action: "two_factor.enable").details
+  end
+
   test "create redirects enrolled users to the profile" do
     enroll_two_factor!(@user)
     sign_in @user
@@ -238,6 +273,20 @@ class TwoFactor::SetupsControllerTest < ActionDispatch::IntegrationTest
     assert @user.reload.two_factor_enabled?
     assert_equal 10, credential.backup_codes.unused.count
     assert_equal 1, @user.two_factor_remembered_devices.count
+  end
+
+  test "destroy refuses an unverified session even with the password" do
+    post session_url, params: { email_address: @user.email_address, password: "secret123456" }
+    token = parsed_cookies.signed[:session_token]
+    enroll_two_factor!(@user)
+
+    assert_no_difference -> { AuditLog.where(action: "two_factor.disable").count } do
+      delete two_factor_setup_url, params: { reauth: "secret123456" }
+    end
+
+    assert_redirected_to new_session_url
+    assert @user.reload.two_factor_enabled?
+    assert_nil Session.find_by(token: token)
   end
 
   test "destroy refuses a wrong code" do

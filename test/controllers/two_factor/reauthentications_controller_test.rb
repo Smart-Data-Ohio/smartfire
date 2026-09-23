@@ -93,6 +93,18 @@ class TwoFactor::ReauthenticationsControllerTest < ActionDispatch::IntegrationTe
     end
   end
 
+  test "create signs out a stale unverified session instead of starting re-auth" do
+    @credential.destroy!
+    post session_url, params: { email_address: @user.email_address, password: "secret123456" }
+    token = parsed_cookies.signed[:session_token]
+    enroll_two_factor!(@user)
+
+    post two_factor_reauthentication_path
+
+    assert_redirected_to new_session_url
+    assert_nil Session.find_by(token: token)
+  end
+
   test "create redirects visitors to sign in" do
     post two_factor_reauthentication_path
 

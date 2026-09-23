@@ -4,6 +4,9 @@
   <div class="panel flex flex-column gap">
     <h1 class="margin-none">Save your backup codes</h1>
     <p class="margin-none">Each code signs you in once if you lose your authenticator. They will not be shown again.</p>
+    <% if @signed_out_other_devices.to_i > 0 %>
+      <p class="margin-none">Signed out your other devices</p>
+    <% end %>
 
     <ul class="flex flex-column gap" id="two_factor_backup_codes" style="list-style: none;">
       <% @backup_codes.each do |code| %>
