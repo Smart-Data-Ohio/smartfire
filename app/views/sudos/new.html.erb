@@ -9,7 +9,9 @@
     <p class="txt-subtle">This action needs a fresh confirmation. Confirm once and it continues.</p>
 
     <% if @verifiers.include?(:password) %>
-      <%= form_with url: sudo_url, class: "flex flex-column gap" do |form| %>
+      <%# A plain POST: success renders the replay form (200), which Turbo
+          Drive form submissions reject ("must redirect to another location"). %>
+      <%= form_with url: sudo_url, class: "flex flex-column gap", data: { turbo: false } do |form| %>
         <%= hidden_field_tag :verifier, "password" %>
         <div class="flex align-center gap">
           <label class="flex align-center gap input input--actor txt-large">
