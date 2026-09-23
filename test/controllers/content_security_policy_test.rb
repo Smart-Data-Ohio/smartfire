@@ -86,12 +86,20 @@ class ContentSecurityPolicyTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "the event form's inline time-zone script carries the nonce" do
+  test "the event form fills its time zone with a Stimulus controller, not an inline script" do
     sign_in :david
     get new_room_event_url(rooms(:watercooler))
 
-    nonce = response.headers["Content-Security-Policy"][/'nonce-([^']+)'/, 1]
-    assert_select "script[nonce=?]", nonce, minimum: 2
+    assert_response :success
+    assert_select "form[data-controller~='event-time-zone']", count: 1
+    assert_select "[data-event-time-zone-target='field']", count: 1
+    assert_select "[data-event-time-zone-target='label']", count: 1
+
+    # No body inline script may depend on the nonce: after a
+    # Turbo-driven sign-out and sign-in the document keeps its old nonce
+    # and blocks any inline script carrying the new one. (The importmap
+    # tags carry types, so only a typeless inline script can be one.)
+    assert_empty css_select("script:not([src]):not([type])")
   end
 
   private

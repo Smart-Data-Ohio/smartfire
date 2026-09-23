@@ -5,8 +5,8 @@
 # (ContentSecurityPolicyReportsController logs them, rate-limited).
 #
 # Sources, and why each is allowed:
-# - script-src 'self' plus a per-session nonce (importmap tags and the few
-#   inline scripts carry it), 'wasm-unsafe-eval' for the huddle noise
+# - script-src 'self' plus a per-session nonce (only the importmap tags
+#   carry it; pages have no other inline scripts), 'wasm-unsafe-eval' for the huddle noise
 #   suppressor's RNNoise WebAssembly, and Google's Identity Services and
 #   API loaders for the Drive picker (accounts.google.com/gsi/,
 #   apis.google.com). No 'unsafe-inline' and no 'unsafe-eval'.
@@ -76,12 +76,14 @@ Rails.application.configure do
   # One nonce per session rather than per request: Turbo Drive swaps pages
   # without reloading the document, so the browser keeps enforcing the policy
   # (and nonce) from the first full page load, while Turbo gives each inline
-  # script it activates the nonce from the new page's csp-nonce meta tag. A
-  # per-request nonce therefore reports every inline script reached by a
-  # Turbo visit (the system test "a Turbo visit to a page with an inline
-  # script raises no violations" fails with SecureRandom.base64(16) here).
-  # The session id is hashed so it never appears in the page, and a session
-  # without an id yet gets a random nonce.
+  # script it activates the nonce from the new page's csp-nonce meta tag.
+  # With a per-request nonce, a Turbo-driven sign-out and sign-in leaves
+  # the document enforcing the old nonce against the new page's scripts.
+  # Pages currently carry no body inline scripts (the event form's
+  # time-zone script is a Stimulus controller instead), and the stable
+  # nonce keeps Turbo-cached pages violation-free. The session id is
+  # hashed so it never appears in the page, and a session without an id
+  # yet gets a random nonce.
   config.content_security_policy_nonce_generator = ->(request) do
     session_id = request.session.id.to_s
     session_id.present? ? Digest::SHA256.base64digest("csp-nonce:#{session_id}") : SecureRandom.base64(16)

@@ -12,8 +12,9 @@ report violations to `/csp_reports`, which logs one line per violation,
 rate-limited, without query strings. The main pages (room, huddle,
 stage, board, search, account settings, profile, event form, and the
 profile card) are covered by a system test asserting zero violations;
-inline scripts carry the session nonce, and there are no inline event
-handlers or `javascript:` URLs.
+only the importmap tags carry the session nonce (pages have no other
+inline scripts), and there are no inline event handlers or
+`javascript:` URLs.
 
 Uploaded SVG icons are served with their own script-blocking policy
 (`default-src 'none'`), so even a missed upload-validation vector

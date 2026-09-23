@@ -102,16 +102,24 @@ class ContentSecurityPolicyTest < ApplicationSystemTestCase
     assert_no_violations
   end
 
-  test "a Turbo visit to a page with an inline script raises no violations" do
+  test "a Turbo visit to the event form fills the time zone with no violations" do
     sign_in "jz@37signals.com"
     join_room rooms(:designers)
 
     page.execute_script("window.cspTurboMarker = true")
     page.execute_script("Turbo.visit(arguments[0])", new_room_event_path(rooms(:designers)))
-    assert_selector "[data-event-time-zone]", visible: :all
+    assert_selector "form[data-controller~='event-time-zone']"
     assert page.evaluate_script("window.cspTurboMarker === true"), "the visit stayed a Turbo visit"
-    # Turbo runs the page's inline time-zone script under the policy the
-    # first page load delivered, so it must carry that page's nonce.
+
+    # The Stimulus controller (not an inline script, so no nonce is
+    # needed) fills the hidden field and its label from the browser's
+    # time zone. The label assertion retries until the lazily loaded
+    # controller runs; it sets the field first, so the field is filled
+    # by the time the label matches.
+    browser_zone = page.evaluate_script("Intl.DateTimeFormat().resolvedOptions().timeZone")
+    assert_predicate browser_zone, :present?
+    assert_selector "[data-event-time-zone-target='label']", text: browser_zone
+    assert_equal browser_zone, find("[data-event-time-zone-target='field']", visible: :all).value
 
     assert_no_violations
   end
