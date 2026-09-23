@@ -30,7 +30,7 @@ class Messages::PinsController < ApplicationController
 
     respond_to do |format|
       format.html { redirect_back fallback_location: room_path(@message.room), notice: "Message unpinned" }
-      format.turbo_stream { head :ok }
+      format.turbo_stream { redirect_to room_pins_url(@message.room), status: :see_other }
       format.json { render json: { pinned: false, pin_count: @message.room.message_pins.count } }
     end
   end

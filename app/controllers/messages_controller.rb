@@ -161,6 +161,7 @@ class MessagesController < ApplicationController
       # the etag to same-second changes.
       [
         Message.where(id: message_ids).maximum(:edited_at),
+        MessagePin.where(message_id: message_ids).maximum(:updated_at),
         reply_ids.any? ? Message.where(id: reply_ids).maximum(:updated_at) : nil,
         reply_ids.any? ? Message.where(id: reply_ids).maximum(:edited_at) : nil,
         Github::PullRequestReference.where(message_id: message_ids).joins(:pull_request).maximum("github_pull_requests.updated_at"),

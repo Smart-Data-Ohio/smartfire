@@ -1,0 +1,421 @@
+/* Pinned messages, saved items, and reminders. Mirrors the message dialog,
+   room header, and activity inbox patterns. */
+
+/* A small marker above pinned messages. The container always renders so
+   pin and unpin broadcasts have a target; hidden when unpinned. */
+.message__pin-badge {
+  align-items: center;
+  color: var(--workspace-text-muted, var(--color-text));
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 700;
+  gap: 0.3rem;
+  margin-block-end: 0.2rem;
+  opacity: 0.85;
+
+  img {
+    block-size: 0.85rem;
+    inline-size: 0.85rem;
+  }
+}
+
+.message__pin-badge[hidden] {
+  display: none;
+}
+
+/* Save-for-later dialog, mirroring the forward dialog. */
+.message-save-dialog {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-darker);
+  border-radius: 0.85rem;
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 30%);
+  color: var(--color-text);
+  inline-size: min(30rem, calc(100vw - 2rem));
+  max-block-size: min(80dvh, 42rem);
+  max-inline-size: none;
+  padding: 0;
+
+  &::backdrop {
+    background: rgb(0 0 0 / 48%);
+  }
+}
+
+.message-save-dialog__form {
+  display: grid;
+  gap: 1rem;
+  max-block-size: inherit;
+  overflow-y: auto;
+  padding: 1.1rem;
+}
+
+.message-save-dialog__header,
+.message-save-dialog__footer {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.message-save-dialog__header h2 {
+  font-size: 1.1rem;
+  margin: 0.1rem 0 0;
+}
+
+.message-save-dialog__eyebrow {
+  color: var(--color-link);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.message-save-dialog__close {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.message-save-dialog__preview {
+  background: color-mix(in srgb, var(--color-border) 35%, transparent);
+  border-inline-start: 3px solid var(--color-link);
+  margin: 0;
+  max-block-size: 5rem;
+  padding: 0.55rem 0.7rem;
+  white-space: pre-wrap;
+}
+
+.message-save-dialog__options {
+  border: 1px solid var(--color-border);
+  border-radius: 0.55rem;
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0.6rem;
+}
+
+.message-save-dialog__options legend {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.message-save-dialog__option {
+  align-items: center;
+  border-radius: 0.4rem;
+  display: flex;
+  gap: 0.55rem;
+  min-block-size: 2.3rem;
+  padding: 0.25rem 0.35rem;
+
+  input {
+    appearance: auto;
+    block-size: 1rem;
+    flex: 0 0 1rem;
+    inline-size: 1rem;
+  }
+
+  &:hover {
+    background: color-mix(in srgb, var(--color-border) 35%, transparent);
+  }
+}
+
+.message-save-dialog__custom {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.25rem 0.35rem 0.35rem;
+
+  span {
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+}
+
+.message-save-dialog__custom[hidden] {
+  display: none;
+}
+
+.message-save-dialog__status {
+  color: var(--color-negative);
+  font-size: 0.85rem;
+  min-block-size: 1.2em;
+  margin: 0;
+}
+
+/* Room header pins button count. */
+.room-header__pins-count {
+  align-items: center;
+  background: color-mix(in srgb, var(--color-border) 55%, transparent);
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-weight: 800;
+  justify-content: center;
+  min-inline-size: 1.4rem;
+  padding-inline: 0.35rem;
+}
+
+/* Pins panel dialog. */
+.pins-panel {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-darker);
+  border-radius: 0.85rem;
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 30%);
+  color: var(--color-text);
+  inline-size: min(34rem, calc(100vw - 2rem));
+  max-block-size: min(80dvh, 44rem);
+  max-inline-size: none;
+  padding: 0;
+
+  &::backdrop {
+    background: rgb(0 0 0 / 48%);
+  }
+}
+
+.pins-panel__header {
+  align-items: center;
+  border-block-end: 1px solid var(--color-border);
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  padding: 0.9rem 1.1rem;
+  position: sticky;
+  inset-block-start: 0;
+  background: inherit;
+}
+
+.pins-panel__header h2 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.pins-panel__close {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.pins-panel__list {
+  max-block-size: calc(min(80dvh, 44rem) - 4rem);
+  overflow-y: auto;
+  padding: 0.9rem 1.1rem 1.1rem;
+}
+
+.pins-panel__items {
+  display: grid;
+  gap: 0.7rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pins-panel__item {
+  background: var(--workspace-surface, var(--color-bg));
+  border: 1px solid var(--workspace-border, var(--color-border));
+  border-radius: 0.65rem;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.7rem 0.8rem;
+}
+
+.pins-panel__meta {
+  color: var(--workspace-text-muted, var(--color-text));
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.72rem;
+  gap: 0.15rem 0.5rem;
+  justify-content: space-between;
+}
+
+.pins-panel__author {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.pins-panel__excerpt {
+  color: var(--workspace-text-muted, var(--color-text));
+  font-size: 0.82rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.pins-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-block-start: 0.35rem;
+}
+
+.pins-panel__actions .btn {
+  font-size: 0.76rem;
+}
+
+.pins-panel__empty,
+.pins-panel__loading {
+  color: var(--workspace-text-muted, var(--color-text));
+  margin: 0;
+  padding-block: 0.5rem;
+}
+
+/* Saved view, mirroring the activity inbox layout. */
+.saved-items__page {
+  inline-size: min(64rem, 100%);
+  margin: 0 auto;
+  overflow-y: auto;
+  padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 4vw, 3rem);
+}
+
+.saved-items__header {
+  align-items: flex-start;
+  border-block-end: 1px solid var(--workspace-border, var(--color-border));
+  display: flex;
+  gap: 1.5rem;
+  justify-content: space-between;
+  padding-block-end: 1.25rem;
+}
+
+.saved-items__kicker {
+  color: var(--workspace-text-muted, var(--color-text));
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.saved-items__description {
+  color: var(--workspace-text-muted, var(--color-text));
+  font-size: 0.85rem;
+  margin: 0.45rem 0 0;
+  max-inline-size: 38rem;
+}
+
+.saved-items__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-block-start: 1rem;
+}
+
+.saved-items__filter {
+  --btn-background: transparent;
+  --btn-border-color: var(--workspace-border, var(--color-border));
+  color: var(--workspace-text-muted, var(--color-text));
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.saved-items__filter.is-active {
+  --btn-background: var(--workspace-sidebar-active, var(--workspace-border, var(--color-border)));
+  color: var(--workspace-text, var(--color-text));
+}
+
+.saved-items__list {
+  display: grid;
+  gap: 0.6rem;
+  margin-block-start: 1.2rem;
+}
+
+.saved-item {
+  background: var(--workspace-surface, var(--color-bg));
+  border: 1px solid var(--workspace-border, var(--color-border));
+  border-radius: 0.65rem;
+  color: var(--workspace-text, var(--color-text));
+  display: grid;
+  gap: 0.55rem 0.8rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 0.85rem 0.95rem;
+}
+
+.saved-item--done {
+  opacity: 0.72;
+}
+
+.saved-item__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-inline-size: 6rem;
+}
+
+.saved-item__kind {
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.saved-item__time {
+  color: var(--workspace-text-muted, var(--color-text));
+  font-size: 0.72rem;
+}
+
+.saved-item__content {
+  min-inline-size: 0;
+}
+
+.saved-item__title {
+  font-size: 0.95rem;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.saved-item__author,
+.saved-item__body,
+.saved-item__reminder {
+  color: var(--workspace-text-muted, var(--color-text));
+  font-size: 0.8rem;
+  margin: 0.2rem 0 0;
+}
+
+.saved-item__body {
+  overflow-wrap: anywhere;
+}
+
+.saved-item__reminder {
+  font-weight: 700;
+}
+
+.saved-item__actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+.saved-item__action-form {
+  display: inline-flex;
+}
+
+.saved-item__actions .btn {
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+.saved-items__empty {
+  color: var(--workspace-text-muted, var(--color-text));
+  margin-block-start: 1.5rem;
+}
+
+.saved-items__empty-title {
+  color: var(--workspace-text, var(--color-text));
+  font-weight: 700;
+  margin-block-end: 0.3rem;
+}
+
+@media (max-width: 52rem) {
+  .saved-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .saved-item__meta {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .saved-item__actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 36rem) {
+  .saved-items__header {
+    display: grid;
+  }
+}

@@ -1,0 +1,3 @@
+<%# Replaced over the room messages stream on every pin and unpin. %>
+<% count = room.message_pins.count %>
+<span id="<%= dom_id(room, :pins_count) %>" class="room-header__pins-count" aria-label="<%= count %> pinned messages"><%= count %></span>

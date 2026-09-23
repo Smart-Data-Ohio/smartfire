@@ -58,6 +58,18 @@
         <span data-message-actions-target="threadLabel">Create thread</span>
       <% end %>
 
+      <%= tag.button type: "button", class: "btn message__menu-action", role: "menuitem",
+            data: { action: "message-actions#pin", message_actions_target: "item" } do %>
+        <%= image_tag "pin.svg", class: "colorize--black", size: 20, aria: { hidden: "true" } %>
+        <span data-message-actions-target="pinLabel">Pin message</span>
+      <% end %>
+
+      <%= tag.button type: "button", class: "btn message__menu-action", role: "menuitem",
+            data: { action: "message-actions#save", message_actions_target: "item" } do %>
+        <%= image_tag "bookmark.svg", class: "colorize--black", size: 20, aria: { hidden: "true" } %>
+        <span data-message-actions-target="saveLabel">Save for later</span>
+      <% end %>
+
       <%= tag.a class: "btn message__menu-action hide-in-ios-pwa", role: "menuitem", hidden: true,
             data: { message_actions_target: "item downloadLink" } do %>
         <%= image_tag "download.svg", class: "colorize--black", size: 20, aria: { hidden: "true" } %>
@@ -79,6 +91,61 @@
 
     <span class="for-screen-reader" role="status" aria-live="polite" data-message-actions-target="status"></span>
   </div>
+
+  <dialog class="message-save-dialog" aria-labelledby="message-save-title"
+          data-message-actions-target="saveDialog">
+    <form class="message-save-dialog__form" data-action="submit->message-actions#submitSave">
+      <header class="message-save-dialog__header">
+        <div>
+          <span class="message-save-dialog__eyebrow">Save for later</span>
+          <h2 id="message-save-title">Remind me</h2>
+        </div>
+        <button type="button" class="btn btn--borderless message-save-dialog__close"
+                aria-label="Close save dialog" data-action="message-actions#closeSave">×</button>
+      </header>
+
+      <p class="message-save-dialog__preview overflow-ellipsis" data-message-actions-target="savePreview"></p>
+
+      <fieldset class="message-save-dialog__options" data-action="change->message-actions#revealSaveCustom">
+        <legend>Optional reminder</legend>
+        <label class="message-save-dialog__option">
+          <%= radio_button_tag "reminder", "none", true, data: { message_actions_target: "saveOption" } %>
+          <span>No reminder</span>
+        </label>
+        <label class="message-save-dialog__option">
+          <%= radio_button_tag "reminder", "minutes_20", false, data: { message_actions_target: "saveOption" } %>
+          <span>In 20 minutes</span>
+        </label>
+        <label class="message-save-dialog__option">
+          <%= radio_button_tag "reminder", "hour_1", false, data: { message_actions_target: "saveOption" } %>
+          <span>In 1 hour</span>
+        </label>
+        <label class="message-save-dialog__option">
+          <%= radio_button_tag "reminder", "hours_3", false, data: { message_actions_target: "saveOption" } %>
+          <span>In 3 hours</span>
+        </label>
+        <label class="message-save-dialog__option">
+          <%= radio_button_tag "reminder", "tomorrow_9am", false, data: { message_actions_target: "saveOption" } %>
+          <span>Tomorrow at 9am (your time)</span>
+        </label>
+        <label class="message-save-dialog__option">
+          <%= radio_button_tag "reminder", "custom", false, data: { message_actions_target: "saveOption" } %>
+          <span>Custom time</span>
+        </label>
+        <label class="message-save-dialog__custom" data-message-actions-target="saveCustomWrap" hidden>
+          <span>Reminder time</span>
+          <%= datetime_local_field_tag "reminder_custom", nil, data: { message_actions_target: "saveCustom" } %>
+        </label>
+      </fieldset>
+
+      <p class="message-save-dialog__status" role="status" aria-live="polite" data-message-actions-target="saveStatus"></p>
+
+      <footer class="message-save-dialog__footer">
+        <button type="button" class="btn" data-action="message-actions#closeSave">Cancel</button>
+        <button type="submit" class="btn btn--reversed" data-message-actions-target="saveSubmit">Save</button>
+      </footer>
+    </form>
+  </dialog>
 
   <dialog class="message-forward-dialog" aria-labelledby="message-forward-title"
           data-message-actions-target="forwardDialog">

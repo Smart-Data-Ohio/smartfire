@@ -79,6 +79,7 @@ class Message < ApplicationRecord
     with_creator
       .with_attachment_details
       .with_boosts
+      .preload(:message_pins)
       .preload(:room, :github_pull_requests, :twitter_posts, :drive_attachments, events: [ :room, :organizer, :venue ],
         reply_to_message: [ :room, :rich_text_body, { creator: :avatar_attachment } ])
   }

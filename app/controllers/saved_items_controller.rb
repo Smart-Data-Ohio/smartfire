@@ -9,7 +9,6 @@ class SavedItemsController < ApplicationController
       .includes(message: [ :room, :rich_text_body, { creator: :avatar_attachment } ])
       .ordered
     @saved_items = @saved_items.where(status: @status_filter) if @status_filter != "all"
-    @counts = accessible_saved_items.group(:status).count
   end
 
   # Saving is idempotent per user per message: re-saving updates the
@@ -108,7 +107,8 @@ class SavedItemsController < ApplicationController
         message_id: saved_item.message_id,
         status: saved_item.status,
         remind_at: saved_item.remind_at&.utc,
-        reminded_at: saved_item.reminded_at&.utc
+        reminded_at: saved_item.reminded_at&.utc,
+        url: saved_item_url(saved_item, format: :json)
       }
     end
 

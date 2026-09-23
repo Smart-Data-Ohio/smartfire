@@ -101,6 +101,16 @@ module MessagesHelper
     local_datetime_tag message.created_at, **attributes
   end
 
+  # Reads the preloaded association on message pages; single-message
+  # renders (broadcasts, permalinks) answer with one query instead.
+  def message_pinned?(message)
+    if message.association(:message_pins).loaded?
+      message.message_pins.any?
+    else
+      MessagePin.exists?(message_id: message.id)
+    end
+  end
+
   # Data attributes for pages that render messages without the room shell
   # (the standalone thread and message pages): message-format applies the
   # list styling the messages controller would, and message-list attaches
