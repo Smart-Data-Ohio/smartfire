@@ -1,0 +1,25 @@
+<%# Replaced over the room messages stream on every pin and unpin. %>
+<div id="<%= dom_id(room, :pins_list) %>" class="pins-panel__list">
+  <% pins = room.message_pins.ordered.includes(:pinner, message: [ :room, :rich_text_body, { creator: :avatar_attachment } ]) %>
+  <% if pins.any? %>
+    <ol class="pins-panel__items">
+      <% pins.each do |pin| %>
+        <li class="pins-panel__item">
+          <div class="pins-panel__meta">
+            <span>Pinned by <%= pin.pinner.name %></span>
+            <%= local_datetime_tag pin.created_at %>
+          </div>
+          <p class="pins-panel__author"><%= pin.message.creator.name %></p>
+          <p class="pins-panel__excerpt"><%= pin.message.plain_text_body.truncate(200) %></p>
+          <div class="pins-panel__actions">
+            <%= link_to "Jump to message", message_link_url(pin.message), class: "btn", data: { turbo_frame: "_top" } %>
+            <%= button_to "Unpin", message_pin_path(pin.message), method: :delete,
+                  class: "btn btn--plain", form: { data: { turbo_frame: dom_id(room, :pins_frame) } } %>
+          </div>
+        </li>
+      <% end %>
+    </ol>
+  <% else %>
+    <p class="pins-panel__empty">No pinned messages yet. Pin one from the message menu to keep it handy.</p>
+  <% end %>
+</div>

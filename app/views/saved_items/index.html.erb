@@ -1,0 +1,44 @@
+<% @page_title = "Saved for later" %>
+<% @body_class = "sidebar saved-items" %>
+<% content_for :head do %>
+  <%= turbo_exempts_page_from_cache %>
+<% end %>
+
+<% content_for :nav do %>
+  <div class="room-header__identity room--current min-width">
+    <span class="room-header__kind">Personal workspace</span>
+    <h1 id="saved-items-title" class="room__contents">
+      <span class="room-header__name">Saved</span>
+    </h1>
+  </div>
+<% end %>
+
+<% content_for :sidebar, sidebar_turbo_frame_tag(src: user_sidebar_path) %>
+
+<section class="saved-items__page" aria-labelledby="saved-items-title">
+  <header class="saved-items__header">
+    <div>
+      <p class="saved-items__kicker">Your saved messages</p>
+      <p class="saved-items__description">Messages you saved for later, with any reminders you set. Items disappear if you lose access to their channel.</p>
+    </div>
+  </header>
+
+  <nav class="saved-items__filters" aria-label="Saved filters">
+    <%= link_to "All", saved_items_path(status: "all"), class: [ "btn", "saved-items__filter", ("is-active" if @status_filter == "all") ], aria: { current: ("page" if @status_filter == "all") } %>
+    <%= link_to "In progress", saved_items_path(status: "in_progress"), class: [ "btn", "saved-items__filter", ("is-active" if @status_filter == "in_progress") ], aria: { current: ("page" if @status_filter == "in_progress") } %>
+    <%= link_to "Done", saved_items_path(status: "done"), class: [ "btn", "saved-items__filter", ("is-active" if @status_filter == "done") ], aria: { current: ("page" if @status_filter == "done") } %>
+  </nav>
+
+  <div id="saved-items-list" class="saved-items__list">
+    <% if @saved_items.any? %>
+      <% @saved_items.each do |saved_item| %>
+        <%= render "saved_items/item", saved_item: saved_item, status_filter: @status_filter %>
+      <% end %>
+    <% else %>
+      <p class="saved-items__empty">
+        <span class="saved-items__empty-title">Nothing saved here yet.</span>
+        Save a message from its menu to find it again here.
+      </p>
+    <% end %>
+  </div>
+</section>

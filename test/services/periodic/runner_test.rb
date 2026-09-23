@@ -8,6 +8,7 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
   test "a tick moves due delayed jobs onto their queues" do
     Periodic::DelayedJobDrain.expects(:drain_due!).once
     Event::ReminderDispatcher.stubs(:dispatch_due!)
+    SavedItem::ReminderDispatcher.stubs(:dispatch_due!)
 
     @runner.tick
   end
@@ -17,13 +18,14 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
     Event::ReminderDispatcher.expects(:dispatch_due!).once
 
     assert_enqueued_with(job: Retention::PruneJob) do
-      assert_equal [ "delayed jobs", "event reminders", "stuck rooms", "stranded agent webhooks", "stuck GitHub claims", "calendar push channels", "retention prune" ], @runner.tick
+      assert_equal [ "delayed jobs", "event reminders", "saved item reminders", "stuck rooms", "stranded agent webhooks", "stuck GitHub claims", "calendar push channels", "retention prune" ], @runner.tick
     end
   end
 
   test "a tick skips tasks whose interval has not elapsed" do
     Periodic::DelayedJobDrain.stubs(:drain_due!)
     Event::ReminderDispatcher.stubs(:dispatch_due!)
+    SavedItem::ReminderDispatcher.stubs(:dispatch_due!)
 
     travel_to Time.current do
       @runner.tick
@@ -34,6 +36,7 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
   test "a tick reruns tasks whose interval has elapsed but not the daily prune" do
     Periodic::DelayedJobDrain.stubs(:drain_due!)
     Event::ReminderDispatcher.stubs(:dispatch_due!)
+    SavedItem::ReminderDispatcher.stubs(:dispatch_due!)
 
     now = Time.current
     travel_to(now) { @runner.tick }
@@ -45,7 +48,7 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
       Event::ReminderDispatcher.expects(:dispatch_due!).once
 
       assert_no_enqueued_jobs do
-        assert_equal [ "delayed jobs", "event reminders", "stranded agent webhooks", "stuck GitHub claims" ], @runner.tick
+        assert_equal [ "delayed jobs", "event reminders", "saved item reminders", "stranded agent webhooks", "stuck GitHub claims" ], @runner.tick
       end
     end
   end
@@ -53,6 +56,7 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
   test "a tick re-enqueues destroys for rooms stuck as deleted once the sweep is due" do
     Periodic::DelayedJobDrain.stubs(:drain_due!)
     Event::ReminderDispatcher.stubs(:dispatch_due!)
+    SavedItem::ReminderDispatcher.stubs(:dispatch_due!)
 
     stuck = Rooms::Closed.create_for({ name: "Stuck", creator: users(:david) }, users: [ users(:david) ])
     stuck.begin_destroy!
@@ -86,6 +90,7 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
   test "a tick enqueues the retention prune once its interval has elapsed" do
     Periodic::DelayedJobDrain.stubs(:drain_due!)
     Event::ReminderDispatcher.stubs(:dispatch_due!)
+    SavedItem::ReminderDispatcher.stubs(:dispatch_due!)
 
     now = Time.current
     travel_to(now) { @runner.tick }
@@ -98,6 +103,7 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
   test "a failed prune is retried instead of skipped for a day" do
     Periodic::DelayedJobDrain.stubs(:drain_due!)
     Event::ReminderDispatcher.stubs(:dispatch_due!)
+    SavedItem::ReminderDispatcher.stubs(:dispatch_due!)
 
     now = Time.current
     Retention::PruneJob.stubs(:perform_later).raises(Redis::BaseConnectionError, "Redis down")

@@ -1,0 +1,34 @@
+<article id="<%= dom_id(saved_item) %>" class="saved-item saved-item--<%= saved_item.status.dasherize %>">
+  <div class="saved-item__meta">
+    <span class="saved-item__kind"><%= saved_item.done? ? "Done" : "In progress" %></span>
+    <%= local_datetime_tag saved_item.created_at, class: "saved-item__time" %>
+  </div>
+
+  <div class="saved-item__content">
+    <h2 class="saved-item__title"><%= room_display_name(saved_item.message.room) %></h2>
+    <p class="saved-item__author"><%= saved_item.message.creator.name %></p>
+    <p class="saved-item__body"><%= saved_item.message.plain_text_body.truncate(500) %></p>
+    <% if saved_item.remind_at.present? %>
+      <p class="saved-item__reminder">
+        <% if saved_item.reminder_fired? %>
+          Reminded <%= local_datetime_tag saved_item.reminded_at %>.
+        <% else %>
+          Reminds <%= local_datetime_tag saved_item.remind_at %>.
+        <% end %>
+      </p>
+    <% end %>
+  </div>
+
+  <div class="saved-item__actions">
+    <%= link_to "Open", message_link_url(saved_item.message), class: "btn btn--primary" %>
+    <% if saved_item.done? %>
+      <%= button_to "Reopen", saved_item_path(saved_item, status: status_filter), method: :patch,
+            params: { saved_item: { status: "in_progress" } }, class: "btn btn--plain", form: { class: "saved-item__action-form" } %>
+    <% else %>
+      <%= button_to "Mark done", saved_item_path(saved_item, status: status_filter), method: :patch,
+            params: { saved_item: { status: "done" } }, class: "btn btn--plain", form: { class: "saved-item__action-form" } %>
+    <% end %>
+    <%= button_to "Remove", saved_item_path(saved_item, status: status_filter), method: :delete,
+          class: "btn btn--plain", form: { class: "saved-item__action-form" } %>
+  </div>
+</article>

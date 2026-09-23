@@ -249,6 +249,30 @@ module Agents
           "required" => [ "user_id" ]
         },
         throttle: [ 60, "agents/dms", "create" ]
+      ),
+      Tool.new(
+        name: "pin_message",
+        description: "Pin a message in its room, posting the pin note as the agent. Idempotent: pinning an already-pinned message succeeds without duplicating. Requires post_messages.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "message_id" => { "type" => "integer", "description" => "Message to pin." }
+          },
+          "required" => [ "message_id" ]
+        },
+        throttle: [ 60, "agents/pins", "create" ]
+      ),
+      Tool.new(
+        name: "unpin_message",
+        description: "Unpin a message. Unpinning a message that is not pinned still succeeds. Requires post_messages.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "message_id" => { "type" => "integer", "description" => "Message to unpin." }
+          },
+          "required" => [ "message_id" ]
+        },
+        throttle: [ 60, "agents/pins", "destroy" ]
       )
     ].freeze
 
@@ -494,6 +518,18 @@ module Agents
           },
           status: :created
         )
+      end
+
+      def tool_pin_message(args)
+        message_id = args["message_id"].presence or raise InvalidParams, "Missing required argument: message_id"
+
+        Pins.pin(agent: @agent, message_id: message_id)
+      end
+
+      def tool_unpin_message(args)
+        message_id = args["message_id"].presence or raise InvalidParams, "Missing required argument: message_id"
+
+        Pins.unpin(agent: @agent, message_id: message_id)
       end
 
       # Reads an updatable work field, returning the unset sentinel when

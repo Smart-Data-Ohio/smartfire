@@ -99,7 +99,7 @@ class ChannelMembersTest < ApplicationSystemTestCase
     click_button "Show members"
     assert_button "Close members"
     assert_member users(:bender), online: false
-    assert_selector "button[aria-label='Close members']:focus"
+    assert_focused "button[aria-label='Close members']"
     page.send_keys [ :shift, :tab ]
     assert page.evaluate_script("document.querySelector('#channel-members').contains(document.activeElement)"), "focus should stay in the open member drawer"
     page.send_keys :escape
