@@ -544,6 +544,58 @@ class CallControlsTest < ApplicationSystemTestCase
     assert_equal [ 1.5, 1.5 ], volume_calls
   end
 
+  test "a suspended boost context resumes from the resume-audio control" do
+    room = rooms(:designers)
+    david = users(:david)
+    mapping = [ { id: david.id, name: "David", avatar_url: "", identities: [ "remote-1" ] } ]
+
+    visit room_path(room)
+    wait_for_cable_connection
+    pin_participant_mapping(room.id, mapping)
+    install_stub_room(room.id)
+    dispatch_participant_mapping(room.id, mapping)
+    page.execute_script(<<~JS)
+      window.__huddleController.room.canPlaybackAudio = true;
+      window.__huddleController.room.startAudio = () => Promise.resolve();
+    JS
+
+    slider = find("li[data-participant-identity='remote-1'] .huddle__participant-volume")
+    set_slider(slider, 150)
+    wait_for_condition("the boost never engaged") { audio_context_calls == [ "set" ] }
+
+    # A remembered boost engages outside any gesture, so its context may
+    # sit suspended: force that state, then re-apply with resume stubbed
+    # out, the way a gestureless Safari behaves.
+    page.execute_script("window.__huddleController.remoteAudioContext.suspend()")
+    wait_for_condition("the boost context never suspended") do
+      page.evaluate_script("window.__huddleController.remoteAudioContext.state") == "suspended"
+    end
+    page.execute_script(<<~JS)
+      window.__huddleController.remoteAudioContext.resume = () => Promise.resolve();
+    JS
+    set_slider(slider, 150)
+
+    assert_selector "[data-huddle-target='resumeAudio']:not([hidden])", text: "Play huddle audio"
+
+    page.execute_script(<<~JS)
+      window.__resumeCalls = 0;
+      const context = window.__huddleController.remoteAudioContext;
+      delete context.resume;
+      const resume = context.resume.bind(context);
+      context.resume = () => {
+        window.__resumeCalls += 1;
+        return resume();
+      };
+    JS
+    click_button "Play huddle audio"
+
+    wait_for_condition("the resume control never resumed the boost context") do
+      page.evaluate_script("window.__huddleController.remoteAudioContext.state") == "running"
+    end
+    assert_equal 1, page.evaluate_script("window.__resumeCalls")
+    assert_selector "[data-huddle-target='resumeAudio'][hidden]", visible: :all
+  end
+
   test "a resubscribed track re-engages the boost on the new track" do
     room = rooms(:designers)
     david = users(:david)

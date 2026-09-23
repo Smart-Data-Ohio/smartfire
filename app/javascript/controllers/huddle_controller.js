@@ -814,6 +814,13 @@ export default class extends Controller {
     try {
       await this.room.startAudio()
     } finally {
+      // A remembered boost engages outside any gesture, so its context may
+      // still be suspended: the same control resumes it.
+      try {
+        await this.remoteAudioContext?.resume()
+      } catch {
+        // The context stays suspended and the control stays up.
+      }
       this.#updateAudioPlaybackControl()
     }
   }
@@ -1719,7 +1726,7 @@ export default class extends Controller {
         if (publication.track) this.#detachTrack(publication.track)
       }
       this.participantQuality.delete(participant.identity)
-      this.boostedParticipants.delete(participant.identity)
+      if (this.boostedParticipants.delete(participant.identity)) this.#updateAudioPlaybackControl()
       this.#renderRoster()
     })
     on(RoomEvent.ParticipantNameChanged, () => this.#renderRoster())
@@ -1740,7 +1747,9 @@ export default class extends Controller {
       // A resubscribe may hand back a new track object without the gain, so
       // a boost the old track carried is forgotten here and re-engaged on
       // the next subscribe instead of silently dropping to element volume.
-      if (participant?.identity) this.boostedParticipants.delete(participant.identity)
+      if (participant?.identity && this.boostedParticipants.delete(participant.identity)) {
+        this.#updateAudioPlaybackControl()
+      }
       this.#detachTrack(track)
     })
     on(RoomEvent.LocalTrackPublished, (publication, participant) => {
@@ -2876,6 +2885,7 @@ export default class extends Controller {
       } catch (error) {
         participant.setVolume?.(1)
       }
+      this.#updateAudioPlaybackControl()
       return
     }
 
@@ -2887,6 +2897,7 @@ export default class extends Controller {
         // The element volume below still applies.
       }
       for (const element of track?.attachedElements || []) element.muted = false
+      this.#updateAudioPlaybackControl()
     }
     participant.setVolume?.(volume / 100)
   }
@@ -3040,7 +3051,11 @@ export default class extends Controller {
   }
 
   #updateAudioPlaybackControl() {
-    this.resumeAudioTarget.hidden = !this.room || this.room.canPlaybackAudio
+    // A boost engaged outside a gesture leaves its context suspended with
+    // the room audio fine: the resume control stays up for the boost too,
+    // so it never plays silence on Safari with nothing to press.
+    const boostSuspended = this.boostedParticipants.size > 0 && this.remoteAudioContext?.state === "suspended"
+    this.resumeAudioTarget.hidden = !this.room || (this.room.canPlaybackAudio && !boostSuspended)
   }
 
   #setState(state, message, isError = false, errorStatus = "Couldn’t join huddle") {

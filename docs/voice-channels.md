@@ -73,7 +73,9 @@ unsubscribes the person's microphone so the server stops sending it. Both are
 remembered per person in the browser. Nobody else hears a difference. The
 boost gain follows the speaker picker where the browser routes audio
 contexts to an output device; where it cannot, the boost caps at 100% while
-a non-default speaker is selected, and the slider tooltip says why.
+a non-default speaker is selected, and the slider tooltip says why. A
+remembered boost that engages while its audio context is still suspended
+surfaces the **Play huddle audio** control, which resumes it.
 
 ## Host moderation
 
