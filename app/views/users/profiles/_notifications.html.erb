@@ -6,7 +6,7 @@
     <div class="flex align-start gap pad-block-half">
       <label class="switch flex-item-no-shrink">
         <%= hidden_field_tag "user[dnd_enabled]", "0", id: nil %>
-        <%= check_box_tag "user[dnd_enabled]", "1", @user.dnd_enabled?, id: "user_dnd_enabled", class: "switch__input" %>
+        <%= check_box_tag "user[dnd_enabled]", "1", @user.manual_dnd_active?, id: "user_dnd_enabled", class: "switch__input" %>
         <span class="switch__btn round"></span>
         <span class="for-screen-reader">Do not disturb</span>
       </label>

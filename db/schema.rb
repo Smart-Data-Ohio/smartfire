@@ -164,6 +164,18 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_064819) do
     t.index ["agent_id", "room_id", "capability"], name: "index_agent_grants_on_agent_room_capability_active", unique: true, where: "revoked_at IS NULL AND room_id IS NOT NULL"
   end
 
+  create_table "agent_slash_commands", force: :cascade do |t|
+    t.integer "agent_id", null: false
+    t.datetime "created_at", null: false
+    t.string "description"
+    t.string "name", null: false
+    t.integer "room_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["agent_id"], name: "index_agent_slash_commands_on_agent_id"
+    t.index ["room_id", "name"], name: "index_agent_slash_commands_on_room_id_and_name", unique: true
+    t.index ["room_id"], name: "index_agent_slash_commands_on_room_id"
+  end
+
   create_table "agents", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "description"
@@ -623,6 +635,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_064819) do
   end
 
   create_table "messages", force: :cascade do |t|
+    t.boolean "action", default: false, null: false
     t.string "client_message_id", null: false
     t.datetime "created_at", null: false
     t.integer "creator_id", null: false
@@ -648,6 +661,40 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_064819) do
     t.index ["room_id"], name: "index_messages_on_room_id"
     t.index ["thread_id", "created_at"], name: "index_messages_on_thread_created"
     t.index ["thread_id"], name: "index_messages_on_thread_id"
+  end
+
+  create_table "poll_options", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "label", null: false
+    t.integer "poll_id", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["poll_id", "position"], name: "index_poll_options_on_poll_id_and_position"
+    t.index ["poll_id"], name: "index_poll_options_on_poll_id"
+  end
+
+  create_table "poll_votes", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "poll_id", null: false
+    t.integer "poll_option_id", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["poll_id", "user_id"], name: "index_poll_votes_on_poll_id_and_user_id"
+    t.index ["poll_id"], name: "index_poll_votes_on_poll_id"
+    t.index ["poll_option_id", "user_id"], name: "index_poll_votes_on_poll_option_id_and_user_id", unique: true
+    t.index ["poll_option_id"], name: "index_poll_votes_on_poll_option_id"
+    t.index ["user_id"], name: "index_poll_votes_on_user_id"
+  end
+
+  create_table "polls", force: :cascade do |t|
+    t.boolean "anonymous", default: false, null: false
+    t.datetime "closed_at"
+    t.datetime "closes_at"
+    t.datetime "created_at", null: false
+    t.integer "message_id", null: false
+    t.boolean "multiple", default: false, null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id"], name: "index_polls_on_message_id", unique: true
   end
 
   create_table "push_subscriptions", force: :cascade do |t|
@@ -691,6 +738,29 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_064819) do
     t.index ["user_id", "message_id"], name: "index_saved_items_on_user_id_and_message_id", unique: true
     t.index ["user_id", "status"], name: "index_saved_items_on_user_id_and_status"
     t.index ["user_id"], name: "index_saved_items_on_user_id"
+  end
+
+  create_table "scheduled_messages", force: :cascade do |t|
+    t.datetime "claimed_at"
+    t.datetime "created_at", null: false
+    t.text "drop_reason"
+    t.datetime "dropped_at"
+    t.text "markdown_source", null: false
+    t.integer "reply_to_message_id"
+    t.integer "room_id", null: false
+    t.datetime "send_at", null: false
+    t.datetime "sent_at"
+    t.integer "sent_message_id"
+    t.integer "thread_id"
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["reply_to_message_id"], name: "index_scheduled_messages_on_reply_to_message_id"
+    t.index ["room_id"], name: "index_scheduled_messages_on_room_id"
+    t.index ["send_at", "sent_at", "dropped_at"], name: "index_scheduled_messages_on_send_at_and_sent_at_and_dropped_at"
+    t.index ["sent_message_id"], name: "index_scheduled_messages_on_sent_message_id"
+    t.index ["thread_id"], name: "index_scheduled_messages_on_thread_id"
+    t.index ["user_id", "send_at"], name: "index_scheduled_messages_on_user_id_and_send_at"
+    t.index ["user_id"], name: "index_scheduled_messages_on_user_id"
   end
 
   create_table "searches", force: :cascade do |t|
@@ -790,6 +860,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_064819) do
     t.datetime "custom_status_expires_at"
     t.string "custom_status_text"
     t.boolean "dnd_enabled", default: false, null: false
+    t.datetime "dnd_until"
     t.string "email_address"
     t.datetime "email_self_changed_at"
     t.string "github_login"
@@ -890,6 +961,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_064819) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "activity_items", "users", on_delete: :cascade
+  add_foreign_key "agent_slash_commands", "agents"
+  add_foreign_key "agent_slash_commands", "rooms"
   add_foreign_key "bans", "users"
   add_foreign_key "boosts", "messages"
   add_foreign_key "calendar_push_channels", "users"
@@ -934,9 +1007,19 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_064819) do
   add_foreign_key "messages", "messages", column: "reply_to_message_id", on_delete: :nullify
   add_foreign_key "messages", "rooms"
   add_foreign_key "messages", "users", column: "creator_id"
+  add_foreign_key "poll_options", "polls"
+  add_foreign_key "poll_votes", "poll_options"
+  add_foreign_key "poll_votes", "polls"
+  add_foreign_key "poll_votes", "users"
+  add_foreign_key "polls", "messages"
   add_foreign_key "push_subscriptions", "users"
   add_foreign_key "saved_items", "messages"
   add_foreign_key "saved_items", "users"
+  add_foreign_key "scheduled_messages", "channel_threads", column: "thread_id", on_delete: :nullify
+  add_foreign_key "scheduled_messages", "messages", column: "reply_to_message_id", on_delete: :nullify
+  add_foreign_key "scheduled_messages", "messages", column: "sent_message_id", on_delete: :nullify
+  add_foreign_key "scheduled_messages", "rooms"
+  add_foreign_key "scheduled_messages", "users"
   add_foreign_key "searches", "users"
   add_foreign_key "sessions", "users"
   add_foreign_key "thread_memberships", "channel_threads", column: "thread_id", on_delete: :cascade
