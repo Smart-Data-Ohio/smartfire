@@ -71,6 +71,11 @@ export default class extends Controller {
     // to its trigger inside this panel. This runs before profile-card#close
     // (see the action order in the layout), so the card is still open here.
     if (event?.type === "keydown" && this.#profileCardOpen()) return
+    // An open row menu owns Esc next: the window-level handler closes it.
+    // This binding runs first (Stimulus binds actions before connect, so
+    // the window handler's stopPropagation can't save the selection), so
+    // yield without preventing default and let the event reach it.
+    if (event?.type === "keydown" && this.hasRowMenuTarget && !this.rowMenuTarget.hidden) return
     // Selection mode owns Esc next: leaving it keeps the panel open, on
     // desktop (which never closes on Esc) and in the mobile drawer.
     if (event?.type === "keydown" && this.#exitSelectionMode()) {
@@ -503,6 +508,7 @@ export default class extends Controller {
     if (event.key !== "Escape" || this.rowMenuTarget.contains(event.target)) return
 
     event.preventDefault()
+    event.stopPropagation()
     this.#closeRowMenu({ restoreFocus: true })
   }
 
@@ -563,10 +569,14 @@ export default class extends Controller {
   }
 
   // Esc with a live selection clears it instead of closing the panel.
+  // Keyed on the connected rows, like multi-select#update: a selected
+  // member who left lingers in selectedIds, but the mode is visibly over
+  // (bar hidden), so Esc must close the drawer or fall through to
+  // mark-read instead of swallowing on the hidden selection.
   #exitSelectionMode() {
     const surface = this.panelTarget?.querySelector("[data-controller~='multi-select']")
     const selection = surface && this.application.getControllerForElementAndIdentifier(surface, "multi-select")
-    if (!selection || selection.selectedIds.size === 0) return false
+    if (!selection || !selection.checkboxTargets.some((box) => box.checked)) return false
     selection.clear()
     return true
   }

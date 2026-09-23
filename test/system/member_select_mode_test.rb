@@ -181,6 +181,60 @@ class MemberSelectModeTest < ApplicationSystemTestCase
     assert_focused_row_name(users(:jason))
   end
 
+  test "esc closes the mobile drawer when only a departed member's hidden selection remains" do
+    page.current_window.resize_to(390, 844)
+    assert_no_selector "#channel-members", visible: true
+    click_button "Show members"
+    assert_selector "#channel-members .member-panel__member", minimum: 3, wait: 10
+    wait_for_member_panel_animation
+
+    ctrl_click(row_name_button(users(:jason)))
+    within_bar { assert_selector "button", text: "Message (1)" }
+
+    memberships(:jason_designers).destroy!
+    refresh_panel
+    assert_no_selector "#channel-members [data-member-id='#{users(:jason).id}']", visible: :all
+    assert_no_selector "#channel-members [data-multi-select-target='bar']"
+
+    page.send_keys :escape
+    assert_no_selector "#channel-members", visible: true
+  ensure
+    page.current_window.resize_to(1400, 1400)
+  end
+
+  test "esc on desktop leaves a departed member's hidden selection alone" do
+    ctrl_click(row_name_button(users(:jason)))
+    within_bar { assert_selector "button", text: "Message (1)" }
+
+    memberships(:jason_designers).destroy!
+    refresh_panel
+    assert_no_selector "#channel-members [data-multi-select-target='bar']"
+
+    page.send_keys :escape
+    assert_selector "#channel-members", visible: true
+
+    rooms(:designers).memberships.create!(user: users(:jason))
+    refresh_panel
+    within_bar { assert_selector "button", text: "Message (1)" }
+    assert_checked_field "select-member-#{users(:jason).id}"
+  end
+
+  test "esc with the row menu open closes only the menu" do
+    ctrl_click(row_name_button(users(:jason)))
+    within_bar { assert_selector "button", text: "Message (1)" }
+
+    member_row(users(:kevin)).right_click
+    assert_selector "#member-row-menu", visible: true
+
+    # Focus out of the menu: Esc reaches the window-level row-menu
+    # handler instead of the menu's own keydown handler.
+    page.execute_script("arguments[0].focus()", row_name_button(users(:kevin)))
+    page.send_keys :escape
+
+    assert_no_selector "#member-row-menu"
+    within_bar { assert_selector "button", text: "Message (1)" }
+  end
+
   test "space toggles the focused row without opening the profile card" do
     button = row_name_button(users(:jason))
     page.execute_script("arguments[0].focus()", button)
