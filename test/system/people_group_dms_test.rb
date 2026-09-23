@@ -95,8 +95,9 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
     click_button "Show members" if page.has_button?("Show members", wait: 5)
 
     assert_selector "#channel-members .member-panel__member", minimum: 3, wait: 10
-    check "select-member-#{users(:jason).id}"
-    check "select-member-#{users(:kevin).id}"
+    jason = find("#channel-members [data-member-id='#{users(:jason).id}'] button.profile-card-name")
+    kevin = find("#channel-members [data-member-id='#{users(:kevin).id}'] button.profile-card-name")
+    page.driver.browser.action.key_down(:control).click(jason.native).click(kevin.native).key_up(:control).perform
 
     within "#channel-members [data-multi-select-target='bar']" do
       assert_selector "button", text: "Start huddle (2)"
@@ -137,10 +138,17 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
       arguments[0].dispatchEvent(new TouchEvent("touchend", { bubbles: true, cancelable: true }))
     JS
 
+    # The touch release emits a compatibility click under the finger; it
+    # must not open the profile card on the shared multi-select path.
+    page.execute_script(<<~JS, row.find("button.profile-card-name"))
+      arguments[0].dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }))
+    JS
+
     assert_checked_field "select_user_#{users(:jason).id}", visible: :all
     within "[data-multi-select-target='bar']" do
       assert_selector "button", text: "Message (1)"
     end
+    assert_selector "#profile-card-popover[hidden]", visible: :all
   end
 
   test "agents are selectable for messages but excluded from huddles" do
