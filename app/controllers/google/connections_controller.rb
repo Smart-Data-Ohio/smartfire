@@ -4,6 +4,7 @@ module Google
   # every calendar entry the app created for the user.
   class ConnectionsController < ApplicationController
     before_action :ensure_configured
+    before_action :require_sudo_mode, only: %i[ connect destroy ]
 
     def connect
       raw_state = SecureRandom.hex(16)

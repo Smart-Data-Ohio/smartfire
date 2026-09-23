@@ -19,6 +19,8 @@ Rails.application.routes.draw do
 
   post "session/google", to: "sessions/google#create", as: :session_google
   get "session/google/callback", to: "sessions/google#callback", as: :session_google_callback
+  resource :sudo, only: %i[ new create ]
+  post "sudo/google", to: "sudos#google", as: :sudo_google
   post "user/profile/google_sign_in_link", to: "users/google_sign_in_links#create", as: :user_google_sign_in_link
 
   resource :account do
@@ -74,6 +76,9 @@ Rails.application.routes.draw do
       scope defaults: { user_id: "me" } do
         resource :sidebar, only: :show
         resource :profile
+        resources :sessions, only: %i[ index destroy ] do
+          delete :revoke_others, on: :collection
+        end
         resource :tour, only: :update
         resource :status, only: :update, controller: "statuses"
         resource :notification_settings, only: :update

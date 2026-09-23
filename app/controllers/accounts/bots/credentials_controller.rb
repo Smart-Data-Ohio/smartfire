@@ -5,6 +5,7 @@ class Accounts::Bots::CredentialsController < ApplicationController
   # have no owner, so only administrators reach them.
   before_action :ensure_can_manage_bot, only: %i[ index destroy ]
   before_action :ensure_can_administer, only: :create
+  before_action :require_sudo_mode, only: %i[ create destroy ]
   before_action :set_agent
 
   def index

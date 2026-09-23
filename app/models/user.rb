@@ -34,6 +34,7 @@ class User < ApplicationRecord
   has_many :room_categories, dependent: :destroy
 
   has_many :sessions, dependent: :destroy
+  has_many :user_devices, dependent: :delete_all
   has_many :workspace_presence_leases, dependent: :delete_all
   has_many :bans, dependent: :destroy
 
@@ -163,6 +164,7 @@ class User < ApplicationRecord
       push_subscriptions.delete_all
       searches.delete_all
       sessions.delete_all
+      user_devices.delete_all
       Calendar::DisconnectCleanupJob.perform_later([], google_account.cleanup_snapshot, google_account.id) if google_account&.usable?
       push_channel&.destroy!
       Calendar::MeetingCache.where(user_id: id).delete_all

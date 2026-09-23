@@ -5,6 +5,7 @@ class AuditLog::FizzyAuditTest < ActionDispatch::IntegrationTest
 
   setup do
     sign_in :david
+    grant_sudo_access
   end
 
   test "Fizzy connect and disconnect are recorded without the token" do

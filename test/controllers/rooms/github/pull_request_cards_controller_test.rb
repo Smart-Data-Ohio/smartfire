@@ -3,6 +3,7 @@ require "test_helper"
 class Rooms::Github::PullRequestCardsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in :david
+    grant_sudo_access
     @room = rooms(:designers)
     @message = @room.messages.create!(
       creator: users(:david),

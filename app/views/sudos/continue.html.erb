@@ -1,0 +1,14 @@
+<% @page_title = "Continuing" %>
+<% turbo_page_requires_reload %>
+
+<section class="txt-align-center">
+  <div class="panel">
+    <h1 class="txt-large">Confirmed — continuing</h1>
+
+    <%= form_with url: @sudo_replay_path, method: @sudo_replay_method,
+          class: "flex flex-column gap", data: { controller: "auto-submit" } do %>
+      <%= sudo_replay_fields(@sudo_replay_params) %>
+      <%= submit_tag "Continue", class: "btn btn--reversed center txt-large" %>
+    <% end %>
+  </div>
+</section>

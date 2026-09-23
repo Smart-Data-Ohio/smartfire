@@ -3,6 +3,7 @@ require "test_helper"
 class Accounts::Bots::GrantsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in :david
+    grant_sudo_access
     @bot = users(:bender)
     @agent = agents(:bender_agent)
   end
@@ -175,6 +176,7 @@ class Accounts::Bots::GrantsControllerTest < ActionDispatch::IntegrationTest
     grant = @agent.agent_grants.create!(capability: "post_messages", room: rooms(:watercooler), granted_by: users(:david))
     @agent.update!(owner: users(:kevin))
     sign_in users(:kevin)
+    grant_sudo_access
 
     get account_bot_grants_url(@bot)
     assert_response :ok

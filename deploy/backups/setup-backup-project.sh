@@ -15,10 +15,10 @@
 #      uniform access, versioning, 30-day soft delete, lifecycle from
 #      lifecycle.json, public access prevention);
 #   2. in the APP project: smartfire-backup-runner, the identity the nightly
-#      workflow impersonates. It holds roles/storage.objectCreator on the
-#      backup bucket (a cross-project binding on the bucket itself: create
-#      objects, but neither read, delete nor overwrite them) and the SAME
-#      project-level roles the deployer holds in the app project:
+#      workflow impersonates. It holds the custom backupUploader role on the
+#      backup bucket (a cross-project binding on the bucket itself: create,
+#      read and list objects, but neither delete nor overwrite them) and the
+#      SAME project-level roles the deployer holds in the app project:
 #      roles/iap.tunnelResourceAccessor, roles/compute.osAdminLogin and
 #      roles/compute.viewer. IAP tunnel access is not granted through
 #      instance IAM, so these are project bindings, not VM bindings.
@@ -68,6 +68,11 @@
 #                     subject is repo:<owner>@<owner-id>/<repo>@<repo-id>:
 #                     ref:<ref> (default refs/heads/main: scheduled runs always
 #                     use the default branch, so dispatch by hand from main).
+# BACKUP_BIND_RETRY_SECONDS  how long to keep retrying the runner's bucket
+#                     binding while the new custom role propagates (default
+#                     180). Only the "does not exist in the resource's
+#                     hierarchy" failure retries; anything else aborts.
+# BACKUP_BIND_RETRY_SLEEP    seconds between binding retries (default 10).
 # APP_PROJECT_ID      app project, holding the VM and the backup runner
 #                     (default smart-data-campfire).
 # APP_ZONE / APP_INSTANCE  app VM location (defaults us-central1-a/campfire).
@@ -112,6 +117,10 @@ command -v jq >/dev/null || die "jq is not installed"
 BUCKET_URL="gs://${BACKUP_BUCKET}"
 RUNNER_EMAIL="${BACKUP_RUNNER_SA}@${APP_PROJECT_ID}.iam.gserviceaccount.com"
 READER_EMAIL="${BACKUP_READER_SA}@${BACKUP_PROJECT_ID}.iam.gserviceaccount.com"
+BACKUP_UPLOADER_ROLE="projects/${BACKUP_PROJECT_ID}/roles/backupUploader"
+BACKUP_UPLOADER_PERMISSIONS="storage.objects.create,storage.objects.get,storage.objects.list"
+BACKUP_BIND_RETRY_SECONDS="${BACKUP_BIND_RETRY_SECONDS:-180}"
+BACKUP_BIND_RETRY_SLEEP="${BACKUP_BIND_RETRY_SLEEP:-10}"
 
 # --- 0. the projects must already exist -------------------------------------
 if ! gcloud projects describe "$BACKUP_PROJECT_ID" >/dev/null 2>&1; then
@@ -248,26 +257,79 @@ ensure_project_binding() {
   fi
 }
 
+# The custom uploader role. gcloud storage cp needs storage.objects.get and
+# storage.objects.list as well as storage.objects.create, and
+# roles/storage.objectCreator alone fails the upload with a 403, so the
+# runner holds this role instead: create, get and list, but never delete
+# or overwrite. Created once, converged on every re-run.
+ensure_backup_uploader_role() {
+  if gcloud iam roles describe backupUploader --project="$BACKUP_PROJECT_ID" >/dev/null 2>&1; then
+    log "custom role $BACKUP_UPLOADER_ROLE already exists; converging its permissions"
+    gcloud iam roles update backupUploader --project="$BACKUP_PROJECT_ID" \
+      --title="Smartfire backup uploader" \
+      --description="Upload nightly backup objects (and verify them); see docs/backups.md" \
+      --permissions="$BACKUP_UPLOADER_PERMISSIONS"
+  else
+    log "creating custom role $BACKUP_UPLOADER_ROLE"
+    gcloud iam roles create backupUploader --project="$BACKUP_PROJECT_ID" \
+      --title="Smartfire backup uploader" \
+      --description="Upload nightly backup objects (and verify them); see docs/backups.md" \
+      --permissions="$BACKUP_UPLOADER_PERMISSIONS"
+  fi
+}
+
+# A new custom role takes a few minutes to propagate: the first bind can
+# fail with "does not exist in the resource's hierarchy". Retry that one
+# failure for up to BACKUP_BIND_RETRY_SECONDS; anything else aborts.
+bind_runner_bucket_role() {
+  local deadline output
+  deadline=$((SECONDS + BACKUP_BIND_RETRY_SECONDS))
+  while true; do
+    if output="$(gcloud storage buckets add-iam-policy-binding "$BUCKET_URL" \
+        --project="$BACKUP_PROJECT_ID" \
+        --member="serviceAccount:$RUNNER_EMAIL" --role="$BACKUP_UPLOADER_ROLE" 2>&1)"; then
+      if [ -n "$output" ]; then
+        printf '%s\n' "$output"
+      fi
+      return 0
+    fi
+    case "$output" in
+      *"does not exist in the resource's hierarchy"*)
+        if [ "$SECONDS" -lt "$deadline" ]; then
+          log "custom role not yet propagated; retrying the binding"
+          sleep "$BACKUP_BIND_RETRY_SLEEP"
+          continue
+        fi
+        ;;
+    esac
+    printf '%s\n' "$output" >&2
+    die "could not bind $BACKUP_UPLOADER_ROLE on $BUCKET_URL"
+  done
+}
+
 # --- 2. the backup-runner identity (lives in the APP project) ----------------
 # The nightly workflow impersonates this account: it runs the backup script
 # on the VM over IAP SSH and uploads the encrypted archive. It deliberately
 # holds no snapshot, deploy or Artifact Registry rights.
 ensure_service_account "$BACKUP_RUNNER_SA" "$APP_PROJECT_ID" \
-  "Smartfire nightly backup runner (create-only upload, same VM access as the deployer); see docs/backups.md" \
+  "Smartfire nightly backup runner (backupUploader bucket grant, same VM access as the deployer); see docs/backups.md" \
   "Smartfire backup runner"
 
-# The runner holds ONLY roles/storage.objectCreator on this bucket: it can
-# create objects but can neither read, delete nor overwrite them. Even a
-# compromised workflow run therefore cannot harm existing backups.
+ensure_backup_uploader_role
+
+# The runner holds ONLY the custom backupUploader role on this bucket: it
+# can create, read and list objects but can neither delete nor overwrite
+# them. The read half exists because gcloud storage cp needs get and list
+# as well as create; the runner never holds the decryption key, so it can
+# never decrypt what it reads. Even a compromised workflow run therefore
+# cannot harm existing backups.
 if gcloud storage buckets get-iam-policy "$BUCKET_URL" --project="$BACKUP_PROJECT_ID" --format=json \
-    | jq -e --arg m "serviceAccount:$RUNNER_EMAIL" \
-      '.bindings[] | select(.role == "roles/storage.objectCreator") | .members[] | select(. == $m)' >/dev/null 2>&1; then
-  log "serviceAccount:$RUNNER_EMAIL already holds roles/storage.objectCreator on $BUCKET_URL"
+    | jq -e --arg m "serviceAccount:$RUNNER_EMAIL" --arg r "$BACKUP_UPLOADER_ROLE" \
+      '.bindings[] | select(.role == $r) | .members[] | select(. == $m)' >/dev/null 2>&1; then
+  log "serviceAccount:$RUNNER_EMAIL already holds $BACKUP_UPLOADER_ROLE on $BUCKET_URL"
 else
-  log "granting roles/storage.objectCreator on $BUCKET_URL to $RUNNER_EMAIL"
-  gcloud storage buckets add-iam-policy-binding "$BUCKET_URL" \
-    --project="$BACKUP_PROJECT_ID" \
-    --member="serviceAccount:$RUNNER_EMAIL" --role="roles/storage.objectCreator"
+  log "granting $BACKUP_UPLOADER_ROLE on $BUCKET_URL to $RUNNER_EMAIL"
+  bind_runner_bucket_role
 fi
 
 # IAP tunnel + SSH as project-level bindings: the same three roles the

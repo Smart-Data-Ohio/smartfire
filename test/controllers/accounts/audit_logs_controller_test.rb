@@ -122,6 +122,7 @@ class Accounts::AuditLogsControllerTest < ActionDispatch::IntegrationTest
 
   test "CSV export carries headers and the filtered rows" do
     sign_in :david
+    grant_sudo_access
 
     get account_audit_log_url(format: :csv, audit_action: "user.ban")
 
@@ -140,6 +141,7 @@ class Accounts::AuditLogsControllerTest < ActionDispatch::IntegrationTest
 
   test "CSV export neutralizes formula injection" do
     sign_in :david
+    grant_sudo_access
     # A hostile display name lands in the label snapshot at record time.
     @member.update!(name: "=cmd|'/c calc'!A0")
     AuditLog.record!(action: "user.ban", actor: @admin, target: @member)
@@ -153,6 +155,7 @@ class Accounts::AuditLogsControllerTest < ActionDispatch::IntegrationTest
 
   test "past the export cap the page warns and the CSV filename says truncated" do
     sign_in :david
+    grant_sudo_access
     with_csv_export_limit(2) do
       AuditLog.record!(action: "user.ban", actor: @admin, target: @member)
 
@@ -169,6 +172,7 @@ class Accounts::AuditLogsControllerTest < ActionDispatch::IntegrationTest
 
   test "within the export cap there is no truncation notice" do
     sign_in :david
+    grant_sudo_access
     with_csv_export_limit(5) do
       get account_audit_log_url
       assert_response :success
@@ -186,6 +190,7 @@ class Accounts::AuditLogsControllerTest < ActionDispatch::IntegrationTest
 
   test "CSV export neutralizes formula injection in request columns" do
     sign_in :david
+    grant_sudo_access
     # The user agent is fully attacker-controlled (any sign-in attempt
     # stores it); it must not reach the export as a live formula.
     AuditLog.record!(action: "session.sign_in.failure", actor_label: "mallory@evil.example",

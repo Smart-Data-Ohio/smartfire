@@ -5,6 +5,7 @@ class Google::ConnectionsControllerTest < ActionDispatch::IntegrationTest
 
   setup do
     sign_in :david
+    grant_sudo_access
     @david = users(:david)
   end
 

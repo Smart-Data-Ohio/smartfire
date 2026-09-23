@@ -54,6 +54,20 @@ class Google::SignInTest < ActiveSupport::TestCase
     assert_equal "nonce", query["nonce"]
     assert_equal "challenge", query["code_challenge"]
     assert_equal "S256", query["code_challenge_method"]
+    assert_not_includes query.keys, "prompt"
+    assert_not_includes query.keys, "max_age"
+  end
+
+  test "authorize_url sends prompt and max_age only when asked (sudo re-auth)" do
+    url = Google::SignIn.authorize_url(
+      redirect_uri: "http://test.host/session/google/callback",
+      state: "signed-state", nonce: "nonce", challenge: "challenge",
+      prompt: "login", max_age: 0
+    )
+    query = Rack::Utils.parse_query(URI(url).query)
+
+    assert_equal "login", query["prompt"]
+    assert_equal "0", query["max_age"]
   end
 
   test "pkce_pair produces a matching verifier and challenge" do

@@ -417,6 +417,9 @@ class ActivityItemsControllerTest < ActionDispatch::IntegrationTest
 
       travel_to(3.minutes.ago) { start_dm_huddle_for(user, rooms(:david_and_jason)) }.update!(event_type: "huddle_missed")
       start_dm_huddle_for(user, rooms(:david_and_kevin))
+
+      sign_in_session = user.sessions.create!(user_agent: "Filter/1.0", ip_address: "127.0.0.1")
+      ActivityItem.create!(user:, source: sign_in_session, event_type: "new_sign_in")
     end
 
     def with_page_size(size)

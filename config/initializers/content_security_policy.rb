@@ -1,13 +1,12 @@
 # Be sure to restart your server when you modify this file.
 
-# Application-wide Content Security Policy, in report-only mode: browsers
-# report violations to /csp_reports (ContentSecurityPolicyReportsController
-# logs them, rate-limited) without blocking anything. Switch
-# content_security_policy_report_only to false once the reports are quiet.
+# Application-wide Content Security Policy, enforced: browsers block
+# anything outside it and report violations to /csp_reports
+# (ContentSecurityPolicyReportsController logs them, rate-limited).
 #
 # Sources, and why each is allowed:
-# - script-src 'self' plus a per-session nonce (importmap tags and the few
-#   inline scripts carry it), 'wasm-unsafe-eval' for the huddle noise
+# - script-src 'self' plus a per-session nonce (only the importmap tags
+#   carry it; pages have no other inline scripts), 'wasm-unsafe-eval' for the huddle noise
 #   suppressor's RNNoise WebAssembly, and Google's Identity Services and
 #   API loaders for the Drive picker (accounts.google.com/gsi/,
 #   apis.google.com). No 'unsafe-inline' and no 'unsafe-eval'.
@@ -19,14 +18,23 @@
 #   preview images load through the same-origin /embeds/image proxy, so
 #   https: remains only for X media and avatars (pbs.twimg.com), GitHub
 #   avatars (avatars.githubusercontent.com), and Google avatars.
+#   *.googleusercontent.com is listed explicitly for the Drive picker's
+#   thumbnails (per Google's picker CSP guidance), so the picker keeps
+#   working if https: is ever scoped down.
+# - font-src 'self', data:, and fonts.gstatic.com for fonts the picker
+#   and Identity Services scripts inject.
 # - style-src 'self' 'unsafe-inline': views use inline style attributes and
 #   the account's custom styles; Google Identity Services adds its own
 #   stylesheet. Inline styles cannot run script.
-# - frame-src for the Google Picker and sign-in iframes, plus LinkedIn's
-#   official embed player (linkedin.com/embed/…), which a LinkedIn post
-#   card loads only after the reader clicks "Show embedded post".
-# - form-action 'self' plus accounts.google.com, where the Google sign-in and
-#   Calendar/Drive connect forms redirect.
+# - frame-src for the Google Picker (docs.google.com) and sign-in iframes,
+#   plus LinkedIn's official embed player (linkedin.com/embed/…), which a
+#   LinkedIn post card loads only after the reader clicks "Show embedded
+#   post".
+# - form-action 'self' plus every host a form submission can redirect to:
+#   accounts.google.com (Google sign-in, sudo re-auth, and Calendar/Drive
+#   connect) and github.com (GitHub App connect). Chromium checks the whole
+#   redirect chain of a form POST against form-action, so the sudo prompt's
+#   plain POST needs the final OAuth host too, not just the first hop.
 # - object-src 'none', base-uri 'self'.
 module ContentSecurityPolicySources
   GOOGLE_SCRIPTS = %w[ https://accounts.google.com/gsi/ https://apis.google.com ].freeze
@@ -35,6 +43,11 @@ module ContentSecurityPolicySources
   LINKEDIN_FRAMES = %w[ https://www.linkedin.com ].freeze
   GOOGLE_STYLES = %w[ https://accounts.google.com/gsi/style ].freeze
   GOOGLE_FORMS = %w[ https://accounts.google.com ].freeze
+  GITHUB_FORMS = %w[ https://github.com ].freeze
+  # The picker's thumbnails and injected fonts, per Google's picker CSP
+  # guidance (googleworkspace/drive-picker-element README).
+  GOOGLE_IMAGES = %w[ https://*.googleusercontent.com ].freeze
+  GOOGLE_FONTS = %w[ https://fonts.gstatic.com ].freeze
 
   SCHEME_PAIRS = { "wss" => "https", "ws" => "http", "https" => "wss", "http" => "ws" }.freeze
 
@@ -59,31 +72,33 @@ Rails.application.configure do
     policy.object_src   :none
     policy.script_src   :self, :wasm_unsafe_eval, *ContentSecurityPolicySources::GOOGLE_SCRIPTS
     policy.style_src    :self, :unsafe_inline, *ContentSecurityPolicySources::GOOGLE_STYLES
-    policy.img_src      :self, :data, :blob, :https
-    policy.font_src     :self, :data
+    policy.img_src      :self, :data, :blob, :https, *ContentSecurityPolicySources::GOOGLE_IMAGES
+    policy.font_src     :self, :data, *ContentSecurityPolicySources::GOOGLE_FONTS
     policy.media_src    :self, :data, :blob
     policy.connect_src  :self, *ContentSecurityPolicySources::GOOGLE_CONNECT, -> { ContentSecurityPolicySources.livekit }
     policy.frame_src    :self, *ContentSecurityPolicySources::GOOGLE_FRAMES, *ContentSecurityPolicySources::LINKEDIN_FRAMES
     policy.worker_src   :self, :blob
     policy.manifest_src :self
-    policy.form_action  :self, *ContentSecurityPolicySources::GOOGLE_FORMS
+    policy.form_action  :self, *ContentSecurityPolicySources::GOOGLE_FORMS, *ContentSecurityPolicySources::GITHUB_FORMS
     policy.report_uri   "/csp_reports"
   end
 
   # One nonce per session rather than per request: Turbo Drive swaps pages
   # without reloading the document, so the browser keeps enforcing the policy
   # (and nonce) from the first full page load, while Turbo gives each inline
-  # script it activates the nonce from the new page's csp-nonce meta tag. A
-  # per-request nonce therefore reports every inline script reached by a
-  # Turbo visit (the system test "a Turbo visit to a page with an inline
-  # script raises no violations" fails with SecureRandom.base64(16) here).
-  # The session id is hashed so it never appears in the page, and a session
-  # without an id yet gets a random nonce.
+  # script it activates the nonce from the new page's csp-nonce meta tag.
+  # With a per-request nonce, a Turbo-driven sign-out and sign-in leaves
+  # the document enforcing the old nonce against the new page's scripts.
+  # Pages currently carry no body inline scripts (the event form's
+  # time-zone script is a Stimulus controller instead), and the stable
+  # nonce keeps Turbo-cached pages violation-free. The session id is
+  # hashed so it never appears in the page, and a session without an id
+  # yet gets a random nonce.
   config.content_security_policy_nonce_generator = ->(request) do
     session_id = request.session.id.to_s
     session_id.present? ? Digest::SHA256.base64digest("csp-nonce:#{session_id}") : SecureRandom.base64(16)
   end
   config.content_security_policy_nonce_directives = %w[ script-src ]
 
-  config.content_security_policy_report_only = true
+  config.content_security_policy_report_only = false
 end

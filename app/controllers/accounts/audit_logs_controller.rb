@@ -3,6 +3,9 @@ require "csv"
 class Accounts::AuditLogsController < ApplicationController
   before_action :ensure_can_administer
   before_action :no_store_response!
+  # Browsing stays open; only the CSV export (bulk exfiltration of a
+  # year's security log) needs a fresh confirmation.
+  before_action :require_sudo_mode, only: :show, if: -> { request.format.csv? }
 
   PAGE_SIZE = 50
   CSV_EXPORT_LIMIT = 5000
