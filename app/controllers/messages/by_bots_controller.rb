@@ -21,8 +21,16 @@ class Messages::ByBotsController < MessagesController
     # the next slice on.
     return head :unprocessable_content if @room.board?
 
-    super
-    head :created, location: message_url(@message)
+    # Agent-backed bots post through the shared agent posting service, so
+    # the bot-key route hits the same daily message budget as the agent
+    # token API and MCP. Legacy bots without an agent row keep the frozen
+    # human-equivalent path.
+    if (agent = Current.user.agent)
+      post_as_agent(agent)
+    else
+      super
+      head :created, location: message_url(@message)
+    end
   end
 
   def destroy
@@ -31,6 +39,36 @@ class Messages::ByBotsController < MessagesController
   end
 
   private
+    def post_as_agent(agent)
+      result = Agents::Posting.post(
+        agent: agent, room: @room,
+        attributes: agent_posting_attributes,
+        drive_file_ids: :absent
+      )
+
+      if result.ok?
+        @message = result.payload
+        head :created, location: message_url(@message)
+      elsif result.status == :not_found
+        head :not_found
+      elsif result.payload
+        render json: result.payload, status: result.status
+      else
+        render json: result.failure_body, status: result.status
+      end
+    end
+
+    # The bot posting API takes a raw text body or an attachment file, never
+    # Drive ids or Markdown; client_message_id rides along when a caller
+    # sends the message object form, so a retried create returns the
+    # original without burning budget.
+    def agent_posting_attributes
+      attrs = message_params.to_h.symbolize_keys
+      attrs[:client_message_id] ||= params.dig(:message, :client_message_id)
+      attrs.delete(:client_message_id) if attrs[:client_message_id].nil?
+      attrs
+    end
+
     # The bot posting API takes no Drive attachments (docs/google-drive.md).
     def drive_file_ids_key_present?
       false
