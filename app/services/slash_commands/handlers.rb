@@ -6,6 +6,7 @@ module SlashCommands
   # index exactly like typed ones.
   module Handlers
     DND_DURATION_PATTERN = /\A(?<amount>\d+)\s*(?<unit>m(?:ins?)?|minutes?|h(?:rs?)?|hours?|d(?:ays?)?)\z/i
+    OOO_DURATION_PATTERN = /\A(?<amount>\d+)\s*(?<unit>w(?:eeks?)?|m(?:ins?)?|minutes?|h(?:rs?)?|hours?|d(?:ays?)?)\b(?<rest>.*)\z/im
 
     class << self
       def handle_huddle(context)
@@ -104,6 +105,44 @@ module SlashCommands
         end
       end
 
+      def handle_ooo(context)
+        user = context.user
+        normalized = context.args.to_s.strip
+
+        if normalized.casecmp("off").zero?
+          user.update!(ooo_until: nil, ooo_note: nil)
+          user.claim_ooo_broadcast!(user.out_of_office?)
+          Calendar::OooDispatcher.broadcast_ooo_for(user)
+
+          if user.calendar_ooo_active?
+            return Registry::Result.ephemeral(
+              "Manual out of office is off. Your calendar still shows you out until #{user.ooo_until_date}.")
+          end
+
+          return Registry::Result.ephemeral("Out of office is off.")
+        end
+
+        time, note = ooo_time_and_note(normalized, zone: user.time_zone_or_default)
+
+        if time.nil?
+          return Registry::Result.error(
+            "Usage: /ooo <duration or date> [note] — for example “/ooo tomorrow Back soon” or “/ooo 1 week”. “/ooo off” clears it.")
+        end
+        if time <= Time.current
+          return Registry::Result.error("“#{time.in_time_zone(user.time_zone_or_default).to_fs(:long)}” is in the past.")
+        end
+
+        user.update!(ooo_until: time, ooo_note: note.presence)
+        user.claim_ooo_broadcast!(true)
+        Calendar::OooDispatcher.broadcast_ooo_for(user)
+
+        message = "Out of office until #{user.ooo_until_date}."
+        message += " Note: “#{user.ooo_note}”." if user.ooo_note.present?
+        Registry::Result.ephemeral(message)
+      rescue ActiveRecord::RecordInvalid => error
+        Registry::Result.error(error.record.errors.full_messages.to_sentence)
+      end
+
       def handle_shrug(context)
         body = context.args.blank? ? Dispatcher::SHRUG : "#{context.args} #{Dispatcher::SHRUG}"
         Registry::Result.posted(post_message(context, body))
@@ -145,6 +184,27 @@ module SlashCommands
           message.broadcast_create
           Message::BotWebhookFanout.deliver_for(message) unless context.thread
           message
+        end
+
+        # Splits "/ooo <duration or date> [note]": a leading duration
+        # ("30m", "2h", "3d", "1 week") or time ("tomorrow", "friday 5pm",
+        # "2026-10-01 15:00"), plus the trailing note. Returns [ time, note ]
+        # or nil when no leading time parses.
+        def ooo_time_and_note(args, zone:)
+          if (match = args.match(OOO_DURATION_PATTERN))
+            amount = match[:amount].to_i
+            duration = case match[:unit].downcase
+            when /\Am/ then amount.minutes
+            when /\Ah/ then amount.hours
+            when /\Ad/ then amount.days
+            else amount.weeks
+            end
+            return nil unless duration&.positive?
+
+            [ Time.current + duration, match[:rest].to_s.strip.presence ]
+          else
+            TimeParser.split_leading_time(args, zone:)
+          end
         end
 
         # Returns [ :on|:off|:toggle, time-or-nil ], or nil when the
