@@ -177,6 +177,11 @@ Rails.application.routes.draw do
     # viewer while the surrounding message HTML is cached across viewers.
     get "github/pull_requests/:id/card", to: "rooms/github/pull_request_cards#show", as: :github_pull_request_card
 
+    # Per-viewer card frame for Fizzy cards referenced in the room. Every
+    # Fizzy card loads through here (there is no public fast path: card
+    # content always depends on the viewer's own Fizzy token).
+    get "fizzy/cards/:id/card", to: "rooms/fizzy/cards#show", as: :fizzy_card
+
     get "@:message_id", to: "rooms#show", as: :at_message
   end
 
@@ -220,6 +225,10 @@ Rails.application.routes.draw do
 
   namespace :github do
     post "webhooks", to: "webhooks#create"
+    resource :connection, only: %i[ create destroy ], controller: "connections"
+  end
+
+  namespace :fizzy do
     resource :connection, only: %i[ create destroy ], controller: "connections"
   end
 

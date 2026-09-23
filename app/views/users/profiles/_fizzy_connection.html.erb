@@ -1,0 +1,23 @@
+<section class="margin-block pad-inline pad-block fill-shade border-radius" aria-labelledby="fizzy-connection-title">
+  <h2 id="fizzy-connection-title" class="txt-large">Fizzy</h2>
+
+  <% account = user.fizzy_connected_account %>
+
+  <% if account&.usable? %>
+    <p>Connected as <%= account.fizzy_user_name %> (<%= account.fizzy_account_name %>)</p>
+    <p>Card links in messages preview with <strong>your</strong> Fizzy access, and cards you create from messages are created as <strong><%= account.fizzy_user_name %></strong> on Fizzy.</p>
+    <%= button_to "Disconnect Fizzy", fizzy_connection_path, method: :delete, class: "btn btn--negative",
+          form: { data: { turbo_confirm: "Disconnect Fizzy? Card previews will stop working and you will no longer be able to create cards from messages." } } %>
+  <% else %>
+    <% if account %>
+      <p>Fizzy rejected the connection<% if account.disconnected_reason.present? %> (<%= account.disconnected_reason %>)<% end %>. Paste a new token to reconnect.</p>
+    <% else %>
+      <p>Paste a personal access token to preview Fizzy cards in messages and create cards from them. Generate one in Fizzy under your profile → API → Personal access tokens; card creation needs <strong>Read + Write</strong>. The token is validated with Fizzy before it is stored and is never shown again.</p>
+    <% end %>
+    <%= form_with url: fizzy_connection_path, class: "flex align-center gap" do |form| %>
+      <%= form.password_field :access_token, class: "input flex-item-grow", placeholder: "Fizzy token…",
+            autocomplete: "off", required: true, aria: { label: "Fizzy personal access token" } %>
+      <%= form.submit account ? "Reconnect Fizzy" : "Connect Fizzy", class: "btn" %>
+    <% end %>
+  <% end %>
+</section>
