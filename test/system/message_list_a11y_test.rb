@@ -108,6 +108,28 @@ class MessageListA11yTest < ApplicationSystemTestCase
     assert_selector "##{dom_id(messages(:third))}:focus"
   end
 
+  test "a late composer autofocus does not steal focus from a message" do
+    # The composer autofocuses on connect via a deferred tick; under load
+    # that tick can fire after an early message focus. Reconnecting the
+    # composer with focus already on a message must leave it there.
+    message = find("##{dom_id(messages(:third))}")
+    page.execute_script("arguments[0].focus()", message)
+    assert_selector "##{dom_id(messages(:third))}:focus"
+
+    page.execute_script(<<~JS)
+      const composer = document.querySelector("[data-controller~='composer']");
+      const parent = composer.parentNode;
+      const next = composer.nextSibling;
+      parent.removeChild(composer);
+      parent.insertBefore(composer, next);
+    JS
+
+    # Let the Stimulus reconnect and its deferred autofocus tick fire.
+    sleep 0.5
+    assert_selector "##{dom_id(messages(:third))}:focus"
+    assert_no_selector "#message_markdown_source:focus"
+  end
+
   test "up arrow from an empty composer still edits my last message" do
     editor = find_field("Write a message")
     editor.click

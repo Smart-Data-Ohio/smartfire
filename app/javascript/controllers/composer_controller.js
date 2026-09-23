@@ -27,7 +27,13 @@ export default class extends Controller {
     this.#restoreDraft()
 
     if (!this.#usingTouchDevice) {
-      onNextEventLoopTick(() => this.markdownTarget?.focus())
+      // Page-load autofocus must not steal focus the user already moved:
+      // under load this tick can fire after an early Tab or script focus.
+      onNextEventLoopTick(() => {
+        if (document.activeElement === null || document.activeElement === document.body) {
+          this.markdownTarget?.focus()
+        }
+      })
     }
   }
 
