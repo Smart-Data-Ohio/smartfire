@@ -23,13 +23,15 @@ module TwoFactorEnforcement
     def require_two_factor_enrollment
       return unless two_factor_enforceable?
       return if two_factor_exempt_request?
+      # Verified sessions completed the second factor (or came from the
+      # test-only sign-in route): nothing to check, and no extra query on
+      # the hot path. Only unverified sessions look up the credential.
+      return if Current.session.two_factor_verified?
 
       if Current.user.two_factor_enabled?
-        unless Current.session.two_factor_verified?
-          terminate_current_session
-          reject_unverified_two_factor_session
-        end
-      elsif !Current.session.two_factor_verified?
+        terminate_current_session
+        reject_unverified_two_factor_session
+      else
         reject_unenrolled_two_factor_user
       end
     end
