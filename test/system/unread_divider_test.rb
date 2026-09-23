@@ -16,7 +16,7 @@ class UnreadDividerTest < ApplicationSystemTestCase
 
     join_room @designers
 
-    assert_selector "#unread-divider", text: "New messages", wait: 5
+    assert_selector "#unread-divider", text: /new messages/i, wait: 5
     assert_divider_above first_new
     assert_at_bottom
   end

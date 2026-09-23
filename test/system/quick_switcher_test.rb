@@ -55,8 +55,8 @@ class QuickSwitcherTest < ApplicationSystemTestCase
 
     open_switcher
     within "#quick-switcher-listbox" do
-      assert_text "Recent", wait: 5
-      assert_text "HQ"
+      assert_selector ".quick-switcher__group", text: /recent/i, wait: 5
+      assert_selector "[role='option']", text: "HQ"
     end
   end
 
@@ -67,10 +67,10 @@ class QuickSwitcherTest < ApplicationSystemTestCase
     fill_in "Jump to a room, person, or thread", with: "Kevin"
     assert_selector "#quick-switcher-listbox [role='option']", text: "Kevin", wait: 5
 
-    assert_difference -> { Room.count } do
-      find_field("Jump to a room, person, or thread").send_keys(:enter)
-    end
+    before = Room.count
+    find_field("Jump to a room, person, or thread").send_keys(:enter)
     assert_selector ".room-header__name", text: "Kevin", wait: 10
+    assert_equal before + 1, Room.count
   end
 
   private

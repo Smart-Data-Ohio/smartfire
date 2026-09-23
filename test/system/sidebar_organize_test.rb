@@ -87,7 +87,7 @@ class SidebarOrganizeTest < ApplicationSystemTestCase
       fill_in "New category name", with: "Team"
       click_on "Create"
     end
-    assert_text "Team", wait: 10
+    assert_selector ".sidebar-section--category h2", text: /team/i, wait: 10
 
     open_room_menu rooms(:designers)
     within("#room-menu") { click_on "Team" }
@@ -118,7 +118,7 @@ class SidebarOrganizeTest < ApplicationSystemTestCase
       fill_in "New name for Team", with: "Squad"
       click_on "Save"
     end
-    assert_text "Squad", wait: 10
+    assert_selector ".sidebar-section--category h2", text: /squad/i, wait: 10
 
     users(:jz).memberships.find_by!(room: rooms(:designers)).update!(room_category: category)
     visit room_path(rooms(:hq))
@@ -153,7 +153,7 @@ class SidebarOrganizeTest < ApplicationSystemTestCase
     end
 
     def within_category(name, &block)
-      section = find("#sidebar .sidebar-section--category", text: name)
+      section = find("#sidebar .sidebar-section--category", text: /#{name}/i)
       within(section, &block)
     end
 
