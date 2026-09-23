@@ -177,8 +177,10 @@ class Accounts::AuditLogsControllerTest < ActionDispatch::IntegrationTest
       get account_audit_log_url(format: :csv)
       assert_response :success
       assert_no_match "truncated", response.headers["Content-Disposition"]
-      # The two setup rows plus the sign-in success row, all exported.
-      assert_equal 3, CSV.parse(response.body, headers: true).length
+      # Under the cap every row is exported: the two setup rows plus the
+      # sign-in success row (and any rows another test committed in this
+      # worker's database). The export must match the table exactly.
+      assert_equal AuditLog.count, CSV.parse(response.body, headers: true).length
     end
   end
 
