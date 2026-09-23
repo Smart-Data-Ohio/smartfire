@@ -77,7 +77,7 @@ class Calendar::InboundSyncJobTest < ActiveSupport::TestCase
     other = events(:watercooler_sync)
     other_id = Calendar::EntrySync.google_event_id_for(other.id, @david.id)
     EventCalendarEntry.create!(event: other, user: @david, google_event_id: other_id, synced_at: Time.current)
-    gets = stub_request(:get, %r{#{GOOGLE_EVENTS_URL}/}).to_return(status: 401)
+    gets = stub_request(:get, %r{\A#{Regexp.escape(GOOGLE_EVENTS_URL)}/}).to_return(status: 401)
     stub_request(:post, GOOGLE_TOKEN_URL)
       .to_return(status: 400, body: { error: "invalid_grant" }.to_json)
 
@@ -94,7 +94,7 @@ class Calendar::InboundSyncJobTest < ActiveSupport::TestCase
     third = @room.events.create!(organizer: @david, title: "Third", starts_at: 4.days.from_now, time_zone: "UTC")
     third_id = Calendar::EntrySync.google_event_id_for(third.id, @david.id)
     EventCalendarEntry.create!(event: third, user: @david, google_event_id: third_id, synced_at: Time.current)
-    stub_request(:get, %r{#{GOOGLE_EVENTS_URL}/})
+    stub_request(:get, %r{\A#{Regexp.escape(GOOGLE_EVENTS_URL)}/})
       .to_return(status: 200, body: { status: "confirmed" }.to_json,
         headers: { "Content-Type" => "application/json" })
 

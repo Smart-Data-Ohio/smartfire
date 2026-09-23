@@ -216,11 +216,14 @@ class RoomMailbox < ApplicationMailbox
     end
 
     def html_to_text(html)
-      # Tag strippers keep script and style bodies as text, so remove
-      # those elements first; the sanitizer below handles the rest.
-      pruned = html.to_s.gsub(/<(script|style)\b.*?<\/\1>/mi, "")
-      sanitized = Rails::Html::SafeListSanitizer.new.sanitize(pruned)
-      ActionView::Base.full_sanitizer.sanitize(sanitized).gsub(/[ \t]+\n/, "\n").strip
+      # Parse rather than pattern-match: drop script/style/head nodes (whose
+      # bodies a tag stripper would keep as text), then take the text,
+      # keeping block and <br> boundaries as line breaks.
+      document = Nokogiri::HTML5.fragment(html.to_s)
+      document.css("script, style, head, template").each(&:remove)
+      document.css("br").each { |node| node.replace("\n") }
+      document.css("p, div, li, tr, h1, h2, h3, h4, h5, h6, blockquote, pre").each { |node| node.add_next_sibling("\n") }
+      document.text.gsub(/[ \t]+\n/, "\n").gsub(/\n{3,}/, "\n\n").strip
     end
 
     def attachable_files
