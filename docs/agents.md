@@ -229,11 +229,13 @@ transport failure, with no timeout message; legacy bots keep the
 The `room.path` in every delivery is the plain room path. No payload ever
 carries the bot key. Legacy bots (bot users without an `Agent` row)
 additionally receive `reply_url`: a signed path, fresh per delivery, that
-expires after 15 minutes and posts one reply through the bot posting
+expires after 15 minutes and posts replies through the bot posting
 endpoint (`POST` to it with the reply body, exactly like the old keyed
 `room.path`). The reply URL authenticates create only: reads, edits,
-deletes, and boosts through it answer 403, as do expired, tampered, or
-wrong-room tokens. Receivers with a stored bot key keep using it, and
+deletes, and boosts through a valid reply URL answer 403. Expired,
+tampered, or wrong-room tokens authenticate nobody, so those requests
+redirect to sign-in like any unauthenticated request. Receivers with a
+stored bot key keep using it, and
 agent-backed bots keep posting back with their own agent token; new
 integrations should prefer an agent token. Integrations that still
 `POST` to the old keyed `room.path` must switch: that path is now the
