@@ -100,7 +100,7 @@ class Github::PerformAgentActionJob < ApplicationJob
         message: "Approval summary does not match its payload")
     end
 
-    account = agent.user.github_connected_account
+    account = Github::AgentIdentity.resolve(agent)
     unless account&.usable?
       return record_outcome(approval, agent, room, status: "failed",
         message: "Agent has no usable GitHub account")
@@ -114,7 +114,12 @@ class Github::PerformAgentActionJob < ApplicationJob
     end
 
     begin
-      client = Github::WriteClient.new(token: account.access_token)
+      token = account.access_token_for_use
+      if token.nil?
+        return record_outcome(approval, agent, room, status: "failed",
+          message: "Agent has no usable GitHub account")
+      end
+      client = Github::WriteClient.new(token: token)
     rescue ActiveRecord::Encryption::Errors::Decryption
       account.mark_disconnected!(GithubConnectedAccount::UNREADABLE_TOKEN_REASON)
       return record_outcome(approval, agent, room, status: "failed",

@@ -1,0 +1,7 @@
+<p class="fizzy-chip">
+  <%= link_to "Fizzy card ##{card.number}", card.web_url,
+        class: "fizzy-chip__link", target: "_blank", rel: "noopener noreferrer" %>
+  <% if local_assigns[:connect_hint] %>
+    <span class="fizzy-chip__hint"><%= link_to "Connect Fizzy to preview", user_profile_path %></span>
+  <% end %>
+</p>

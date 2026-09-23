@@ -131,6 +131,18 @@ class Retention::PruneJobTest < ActiveJob::TestCase
     assert_empty HuddleCleanup.where("identity LIKE 'batch-grant-%'").where.not(huddle_grant_id: nil)
   end
 
+  test "prunes fizzy card caches older than a day and keeps recent ones" do
+    card = Fizzy::Card.for_reference(account_id: "897362094", number: 579)
+    old_cache = Fizzy::CardCache.for_viewer(card: card, user: users(:david))
+    old_cache.update_columns(updated_at: 2.days.ago)
+    new_cache = Fizzy::CardCache.for_viewer(card: card, user: users(:jz))
+
+    Retention::PruneJob.perform_now
+
+    assert_empty Fizzy::CardCache.where(id: old_cache.id)
+    assert Fizzy::CardCache.exists?(new_cache.id)
+  end
+
   test "re-enqueues destroys for rooms stuck as deleted" do
     stuck = Rooms::Closed.create_for({ name: "Stuck", creator: users(:david) }, users: [ users(:david) ])
     stuck.begin_destroy!

@@ -22,6 +22,15 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_055332) do
     t.index ["singleton_guard"], name: "index_accounts_on_singleton_guard", unique: true
   end
 
+  create_table "action_mailbox_inbound_emails", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "message_checksum", null: false
+    t.string "message_id", null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id", "message_checksum"], name: "index_action_mailbox_inbound_emails_uniqueness", unique: true
+  end
+
   create_table "action_text_rich_texts", force: :cascade do |t|
     t.text "body"
     t.datetime "created_at", null: false
@@ -86,6 +95,9 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_055332) do
     t.string "decision_note"
     t.datetime "expires_at", null: false
     t.string "external_id"
+    t.integer "fizzy_connected_account_id"
+    t.string "fizzy_user_id"
+    t.string "fizzy_user_name"
     t.integer "github_account_id"
     t.string "github_login"
     t.text "payload"
@@ -95,6 +107,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_055332) do
     t.datetime "updated_at", null: false
     t.index ["agent_id", "external_id"], name: "index_agent_approvals_on_agent_id_and_external_id", unique: true, where: "external_id IS NOT NULL"
     t.index ["agent_id", "status"], name: "index_agent_approvals_on_agent_id_and_status"
+    t.index ["fizzy_connected_account_id"], name: "index_agent_approvals_on_fizzy_connected_account_id"
   end
 
   create_table "agent_credentials", force: :cascade do |t|
@@ -131,6 +144,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_055332) do
     t.text "webhook_last_error"
     t.datetime "webhook_next_attempt_at"
     t.string "webhook_status", default: "none", null: false
+    t.index ["agent_id", "agent_approval_id"], name: "index_agent_events_on_agent_fizzy_approval", unique: true, where: "event_type = 'fizzy_action_completed' AND agent_approval_id IS NOT NULL"
     t.index ["agent_id", "agent_approval_id"], name: "index_agent_events_on_agent_github_approval", unique: true, where: "event_type = 'github_action_completed' AND agent_approval_id IS NOT NULL"
     t.index ["agent_id", "created_at"], name: "index_agent_events_on_agent_id_and_created_at"
     t.index ["agent_id", "outcome", "id"], name: "index_agent_events_on_agent_outcome_id"
@@ -204,6 +218,21 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_055332) do
     t.datetime "updated_at", null: false
     t.index ["booster_id"], name: "index_boosts_on_booster_id"
     t.index ["message_id"], name: "index_boosts_on_message_id"
+  end
+
+  create_table "calendar_push_channels", force: :cascade do |t|
+    t.string "channel_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "expires_at"
+    t.string "last_error"
+    t.bigint "last_message_number", default: 0, null: false
+    t.datetime "last_notification_at"
+    t.string "resource_id"
+    t.string "token_digest", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["channel_id"], name: "index_calendar_push_channels_on_channel_id", unique: true
+    t.index ["user_id"], name: "index_calendar_push_channels_on_user_id", unique: true
   end
 
   create_table "channel_threads", force: :cascade do |t|
@@ -286,6 +315,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_055332) do
     t.datetime "created_at", null: false
     t.text "description"
     t.datetime "ends_at"
+    t.string "meet_link"
+    t.boolean "meet_link_requested", default: false, null: false
     t.integer "organizer_id", null: false
     t.string "recurrence_rule"
     t.date "recurrence_until"
@@ -305,11 +336,60 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_055332) do
     t.index ["venue_room_id"], name: "index_events_on_venue_room_id"
   end
 
+  create_table "fizzy_card_caches", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "fetch_error"
+    t.datetime "fetch_requested_at"
+    t.datetime "fetched_at"
+    t.integer "fizzy_card_id", null: false
+    t.json "payload"
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["fizzy_card_id", "user_id"], name: "index_fizzy_card_caches_on_card_and_user", unique: true
+    t.index ["fizzy_card_id"], name: "index_fizzy_card_caches_on_fizzy_card_id"
+    t.index ["user_id"], name: "index_fizzy_card_caches_on_user_id"
+  end
+
+  create_table "fizzy_card_references", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "fizzy_card_id", null: false
+    t.integer "message_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["fizzy_card_id"], name: "index_fizzy_card_references_on_fizzy_card_id"
+    t.index ["message_id", "fizzy_card_id"], name: "index_fizzy_card_refs_on_message_and_card", unique: true
+    t.index ["message_id"], name: "index_fizzy_card_references_on_message_id"
+  end
+
+  create_table "fizzy_cards", force: :cascade do |t|
+    t.string "account_id", null: false
+    t.datetime "created_at", null: false
+    t.integer "number", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "number"], name: "index_fizzy_cards_on_account_id_and_number", unique: true
+  end
+
+  create_table "fizzy_connected_accounts", force: :cascade do |t|
+    t.string "access_token", null: false
+    t.datetime "created_at", null: false
+    t.string "disconnected_reason"
+    t.string "fizzy_account_id", null: false
+    t.string "fizzy_account_name"
+    t.string "fizzy_user_id"
+    t.string "fizzy_user_name"
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["user_id"], name: "index_fizzy_connected_accounts_on_user_id", unique: true
+  end
+
   create_table "github_connected_accounts", force: :cascade do |t|
     t.string "access_token", null: false
     t.datetime "created_at", null: false
     t.string "disconnected_reason"
     t.string "github_login", null: false
+    t.string "last_error"
+    t.string "refresh_token"
+    t.datetime "token_expires_at"
+    t.string "token_source", default: "pat", null: false
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
     t.index ["user_id"], name: "index_github_connected_accounts_on_user_id", unique: true
@@ -472,6 +552,33 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_055332) do
     t.index ["user_id"], name: "index_keyword_alerts_on_user_id"
   end
 
+  create_table "link_embed_references", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "link_embed_id", null: false
+    t.integer "message_id", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.string "url"
+    t.index ["link_embed_id"], name: "index_link_embed_references_on_link_embed_id"
+    t.index ["message_id", "link_embed_id"], name: "index_link_embed_references_on_message_and_embed", unique: true
+    t.index ["message_id"], name: "index_link_embed_references_on_message_id"
+  end
+
+  create_table "link_embeds", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.datetime "expires_at"
+    t.string "fetch_error"
+    t.datetime "fetch_requested_at"
+    t.datetime "fetched_at"
+    t.string "image_url"
+    t.string "normalized_url", null: false
+    t.string "site_name"
+    t.string "title"
+    t.datetime "updated_at", null: false
+    t.index ["normalized_url"], name: "index_link_embeds_on_normalized_url", unique: true
+  end
+
   create_table "memberships", force: :cascade do |t|
     t.datetime "connected_at"
     t.integer "connections", default: 0, null: false
@@ -507,6 +614,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_055332) do
     t.datetime "created_at", null: false
     t.integer "creator_id", null: false
     t.datetime "edited_at"
+    t.boolean "embeds_suppressed", default: false, null: false
     t.text "forward_note"
     t.datetime "forwarded_at"
     t.integer "forwarded_from_message_id"
@@ -547,10 +655,12 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_055332) do
     t.datetime "deleted_at"
     t.datetime "destroy_enqueued_at"
     t.string "icon_name"
+    t.string "inbound_email_token"
     t.string "name"
     t.datetime "pins_changed_at"
     t.string "type", null: false
     t.datetime "updated_at", null: false
+    t.index ["inbound_email_token"], name: "index_rooms_on_inbound_email_token", unique: true
   end
 
   create_table "saved_items", force: :cascade do |t|
@@ -765,6 +875,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_055332) do
   add_foreign_key "activity_items", "users", on_delete: :cascade
   add_foreign_key "bans", "users"
   add_foreign_key "boosts", "messages"
+  add_foreign_key "calendar_push_channels", "users"
   add_foreign_key "channel_threads", "messages", column: "parent_message_id", on_delete: :nullify
   add_foreign_key "channel_threads", "rooms"
   add_foreign_key "channel_threads", "users", column: "creator_id"
@@ -776,6 +887,11 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_055332) do
   add_foreign_key "event_calendar_entries", "users"
   add_foreign_key "event_references", "events"
   add_foreign_key "event_references", "messages"
+  add_foreign_key "fizzy_card_caches", "fizzy_cards"
+  add_foreign_key "fizzy_card_caches", "users"
+  add_foreign_key "fizzy_card_references", "fizzy_cards"
+  add_foreign_key "fizzy_card_references", "messages"
+  add_foreign_key "fizzy_connected_accounts", "users"
   add_foreign_key "github_connected_accounts", "users"
   add_foreign_key "github_notifications", "github_repository_subscriptions", column: "subscription_id", on_delete: :cascade
   add_foreign_key "github_notifications", "messages", on_delete: :nullify
@@ -789,6 +905,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_055332) do
   add_foreign_key "google_accounts", "users"
   add_foreign_key "google_identities", "users"
   add_foreign_key "keyword_alerts", "users"
+  add_foreign_key "link_embed_references", "link_embeds"
+  add_foreign_key "link_embed_references", "messages"
   add_foreign_key "message_pins", "messages"
   add_foreign_key "message_pins", "rooms"
   add_foreign_key "message_pins", "users", column: "pinner_id"
