@@ -44,12 +44,19 @@ module Agents
       ServiceResult.ok(thread.reload)
     end
 
-    def self.set_result(agent:, id:, markdown:)
+    # markdown_given distinguishes a missing key (422) from an explicit
+    # blank (which clears). It is checked after ownership and the
+    # manage_threads gate, so a missing key never overrides 404 or 403.
+    def self.set_result(agent:, id:, markdown:, markdown_given: true)
       thread = find_owned(agent, id)
       return ServiceResult.fail("Work not found", status: :not_found) unless thread
 
       unless agent.can?(:manage_threads, thread.room)
         return ServiceResult.fail("Forbidden: agent lacks manage_threads capability", status: :forbidden)
+      end
+
+      unless markdown_given
+        return ServiceResult.fail("Markdown can't be blank", status: :unprocessable_entity)
       end
 
       begin

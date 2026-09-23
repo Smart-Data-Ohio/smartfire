@@ -416,11 +416,11 @@ module Agents
 
       def tool_set_result(args)
         post_id = args["post_id"].presence or raise InvalidParams, "Missing required argument: post_id"
-        unless args.key?("markdown")
-          return ServiceResult.fail("Markdown can't be blank", status: :unprocessable_entity)
-        end
 
-        result = WorkThreads.set_result(agent: @agent, id: post_id, markdown: args["markdown"])
+        result = WorkThreads.set_result(
+          agent: @agent, id: post_id,
+          markdown: args["markdown"], markdown_given: args.key?("markdown")
+        )
         return result unless result.ok?
 
         ServiceResult.ok(Agents::WorkPayload.for(result.payload, agent: @agent))

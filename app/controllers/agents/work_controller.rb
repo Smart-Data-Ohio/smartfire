@@ -49,12 +49,10 @@ class Agents::WorkController < ApplicationController
   def result
     no_store_response!
 
-    unless params.key?(:markdown)
-      render json: { error: "Markdown can't be blank" }, status: :unprocessable_entity
-      return
-    end
-
-    render_work_result Agents::WorkThreads.set_result(agent: Current.agent, id: params[:id], markdown: params[:markdown])
+    render_work_result Agents::WorkThreads.set_result(
+      agent: Current.agent, id: params[:id],
+      markdown: params[:markdown], markdown_given: params.key?(:markdown)
+    )
   end
 
   private

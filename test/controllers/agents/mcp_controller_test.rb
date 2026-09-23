@@ -357,6 +357,18 @@ class Agents::McpControllerTest < ActionDispatch::IntegrationTest
     assert_equal "## Shipped", structured(body)["result"]
   end
 
+  test "set_result checks ownership before markdown presence" do
+    board = create_board!
+    grant!(capability: "read_messages", room: board)
+    grant!(capability: "post_messages", room: board)
+    grant!(capability: "manage_threads", room: board)
+    foreign = ChannelThread.create_board_post!(room: board, creator: users(:david), name: "Not mine", work_status: "planned", owner_id: users(:david).id)
+    owned = ChannelThread.create_board_post!(room: board, creator: @bot, name: "Mine", work_status: "planned", owner_id: @bot.id)
+
+    assert_tool_error call_tool("set_result", { "post_id" => foreign.id }), "Work not found"
+    assert_tool_error call_tool("set_result", { "post_id" => owned.id }), "Markdown can't be blank"
+  end
+
   test "list_work lists owned threads" do
     grant!(capability: "read_messages", room: @room)
     grant!(capability: "post_messages", room: @room)
