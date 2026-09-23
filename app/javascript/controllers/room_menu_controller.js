@@ -255,7 +255,7 @@ export default class extends Controller {
     if (this.menuTarget.id) this.#row.setAttribute("aria-controls", this.menuTarget.id)
 
     this.menuTarget.hidden = false
-    this.menuTarget.showPopover()
+    if (!this.menuTarget.matches(":popover-open")) this.menuTarget.showPopover()
     this.#positionMenu(x, y)
 
     const focus = () => {
@@ -291,7 +291,10 @@ export default class extends Controller {
 
   #menuItems() {
     return Array.from(this.menuTarget.querySelectorAll(FOCUSABLE_SELECTOR)).filter(item => {
-      return !item.hidden && !item.closest("[hidden]") && item.offsetParent !== null
+      if (item.hidden || item.closest("[hidden]")) return false
+      // offsetParent is null for fixed-position popovers, so rects decide.
+      if (item.getClientRects().length > 0) return true
+      return window.getComputedStyle(item).display !== "none"
     })
   }
 
