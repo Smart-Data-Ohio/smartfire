@@ -90,6 +90,20 @@ class GithubPullRequestsHelperTest < ActionView::TestCase
     assert_not_equal before, message_with_pr_cards_cache_key(message.reload)
   end
 
+  test "cache key changes when a referenced link embed is fetched" do
+    message = messages(:first)
+    embed = LinkEmbed.create!(normalized_url: "https://example.com/article")
+    LinkEmbedReference.create!(message:, link_embed: embed, url: "https://example.com/article#intro")
+    message.reload
+
+    before = message_with_pr_cards_cache_key(message)
+    travel 1.minute do
+      embed.update!(title: "An article", fetched_at: Time.current)
+    end
+
+    assert_not_equal before, message_with_pr_cards_cache_key(message.reload)
+  end
+
   test "cache key changes when a referenced event is updated" do
     message = messages(:first)
     event = events(:launch_party)
