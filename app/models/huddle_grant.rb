@@ -28,6 +28,7 @@ class HuddleGrant < ApplicationRecord
 
   after_update_commit :broadcast_voice_presence, if: :saved_change_to_revoked_at?
   after_update_commit :broadcast_call_ended_to_invitee, if: :revoked_while_in_call?
+  after_update_commit :broadcast_leave_notice, if: :revoked_while_in_call?
 
   class << self
     def issue!(session:, membership:)
@@ -206,6 +207,9 @@ class HuddleGrant < ApplicationRecord
     update_columns(last_seen_at: nil)
     broadcast_voice_presence
     broadcast_call_ended_to_invitee if was_in_call
+    # A revoked grant already notified its leave through the revocation
+    # callback; only a live grant leaving still has a toast to send.
+    Huddle::JoinNotifier.notify_leave(self) if was_in_call && !revoked?
     true
   end
 
@@ -218,7 +222,10 @@ class HuddleGrant < ApplicationRecord
 
     first_seen = !in_call?
     update_columns(last_seen_at: Time.current)
-    Huddle::BroadcastPresenceJob.perform_later(id) if first_seen
+    if first_seen
+      Huddle::BroadcastPresenceJob.perform_later(id)
+      Huddle::JoinNoticeJob.perform_later(id)
+    end
   end
 
   # Post-commit work for every issuance, created or reused: obtaining a grant
@@ -442,6 +449,12 @@ class HuddleGrant < ApplicationRecord
     # grant that was already quiet had no live banner to stop.
     def revoked_while_in_call?
       saved_change_to_revoked_at? && in_call?
+    end
+
+    # Tells the members still in the call that this grant's user left,
+    # and clears outsider banners when the last participant drops out.
+    def broadcast_leave_notice
+      Huddle::JoinNotifier.notify_leave(self)
     end
 
     # Tells each rung member's banner the call ended: the last participant
