@@ -1869,12 +1869,22 @@ export default class extends Controller {
   async #disconnectRoom(room) {
     this.#unbindRoom(room)
     this.#stopLocalTracks(room)
+    this.#closeRemoteAudioContext()
 
     try {
       await room.disconnect(true)
     } catch (error) {
       // The media tracks are already stopped; there is nothing else to recover here.
     }
+  }
+
+  // Boosted participants route through a private AudioContext; close it
+  // when the call ends so repeated calls don't accumulate contexts.
+  #closeRemoteAudioContext() {
+    const context = this.remoteAudioContext
+    this.remoteAudioContext = null
+    this.boostedParticipants?.clear?.()
+    context?.close?.().catch?.(() => {})
   }
 
   #stopLocalTracks(room) {
