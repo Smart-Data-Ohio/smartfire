@@ -49,9 +49,12 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
   test "alt+up and alt+down move between rooms" do
     join_room rooms(:hq)
 
+    # The composer autofocuses; Alt must fire from outside text inputs.
+    find(".room-header__name").click
     press_keys(:alt, :arrow_up)
     assert_selector ".room-header__name", text: "Designers", wait: 10
 
+    find(".room-header__name").click
     press_keys(:alt, :arrow_down)
     assert_selector ".room-header__name", text: "HQ", wait: 10
   end
@@ -64,6 +67,7 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
     message = designers.root_messages.create!(creator: users(:kevin), body: "Unread me", client_message_id: "unread-jump-1")
     broadcast_until_unread message, designers
 
+    find(".room-header__name").click
     press_keys(:alt, :shift, :arrow_down)
     assert_selector ".room-header__name", text: "Designers", wait: 10
   end
@@ -105,6 +109,58 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
     press_keys(:escape)
     assert_no_selector ".message[data-message-actions-open]", wait: 5
     assert_room_unread designers
+  end
+
+  test "alt+arrows while typing stay in the room" do
+    join_room rooms(:hq)
+
+    editor = find_field("message_markdown_source")
+    editor.click
+    editor.send_keys("hello")
+    press_keys(:alt, :arrow_up)
+
+    assert_selector ".room-header__name", text: "HQ", wait: 5
+    assert_equal "hello", find_field("message_markdown_source").value
+
+    press_keys(:alt, :shift, :arrow_down)
+    assert_selector ".room-header__name", text: "HQ", wait: 5
+  end
+
+  test "ctrl+k ignores IME composition" do
+    join_room rooms(:hq)
+
+    page.evaluate_script(<<~JS)
+      document.activeElement.dispatchEvent(new KeyboardEvent("keydown", {
+        key: "k", ctrlKey: true, isComposing: true, bubbles: true, cancelable: true
+      }))
+    JS
+
+    assert_no_selector "#quick-switcher[open]", wait: 2
+  end
+
+  test "ctrl+k does not open over an open modal dialog" do
+    join_room rooms(:hq)
+
+    row = find("#sidebar a[data-room-id='#{rooms(:hq).id}']")
+    row.send_keys("?")
+    assert_selector "#keyboard-shortcuts[open]", wait: 5
+
+    press_keys(:control, "k")
+    assert_no_selector "#quick-switcher[open]", wait: 2
+    assert_selector "#keyboard-shortcuts[open]"
+
+    press_keys(:escape)
+    assert_no_selector "#keyboard-shortcuts[open]", wait: 5
+  end
+
+  test "ctrl+k still toggles the switcher closed" do
+    join_room rooms(:hq)
+
+    press_keys(:control, "k")
+    assert_selector "#quick-switcher[open]", wait: 5
+
+    press_keys(:control, "k")
+    assert_no_selector "#quick-switcher[open]", wait: 5
   end
 
   private

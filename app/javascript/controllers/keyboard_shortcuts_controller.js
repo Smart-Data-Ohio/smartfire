@@ -1,10 +1,12 @@
 import { Controller } from "@hotwired/stimulus"
 
 // Global keyboard shortcuts, owned by the page body. Unchorded shortcuts
-// never fire while typing; chorded ones (Ctrl/Alt) fire anywhere except
-// the huddle device menus, which keep Ctrl+K for the browser. Escape is
-// last in line behind every dialog, menu and panel: it marks the current
-// room read only when nothing else is open.
+// never fire while typing; Alt+arrows don't either (macOS Option+arrows
+// move by paragraph in text). Ctrl/⌘+K fires from inputs so it works
+// from the composer, except while composing (IME), in the huddle
+// device menus (which keep Ctrl+K for the browser), or over another
+// open modal. Escape is last in line behind every dialog, menu and
+// panel: it marks the current room read only when nothing else is open.
 export default class extends Controller {
   static targets = [ "helpDialog" ]
 
@@ -18,27 +20,25 @@ export default class extends Controller {
   }
 
   // Ctrl/⌘+K runs in the capture phase so it preempts the composer's own
-  // Ctrl+K (insert link): the switcher wins everywhere by design.
+  // Ctrl+K (insert link): the switcher wins everywhere by design, except
+  // while composing, in huddle device menus, or over another modal.
+  // Toggling the switcher itself closed still works over a modal.
   #onCaptureKeydown(event) {
     if (!event.ctrlKey && !event.metaKey) return
     if (event.altKey || event.key.toLowerCase() !== "k") return
+    if (event.isComposing) return
     if (event.target.closest?.(".huddle__devices")) return
+    if (!document.getElementById("quick-switcher")?.open && document.querySelector("dialog[open]")) return
 
     event.preventDefault()
     event.stopPropagation()
-    if (this.hasHelpDialogTarget && this.helpDialogTarget.open) this.helpDialogTarget.close()
     window.dispatchEvent(new CustomEvent("switcher:toggle"))
   }
 
   handle(event) {
     if (event.defaultPrevented) return
 
-    if (this.#typing(event)) {
-      if (event.altKey && !event.ctrlKey && !event.metaKey && (event.key === "ArrowUp" || event.key === "ArrowDown")) {
-        this.#moveRoom(event)
-      }
-      return
-    }
+    if (this.#typing(event)) return
 
     if (this.#overlayOpen()) return
 

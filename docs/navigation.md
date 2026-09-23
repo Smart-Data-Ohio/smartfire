@@ -28,10 +28,12 @@ Press **?** (outside any input) for the full sheet. The globals:
 - **Esc** — mark the current room read
 - **?** — the shortcut sheet
 
-Unchorded shortcuts never fire while typing; chorded ones
-(Ctrl/⌘/Alt) do, which is why Ctrl+K works from the composer. Esc
-closes open dialogs, menus and panels first, and only marks the room
-read when nothing is open. The sheet also lists every existing
+Unchorded shortcuts never fire while typing, and neither do
+Alt+↑/↓ (macOS Option+↑/↓ moves by paragraph in text). Ctrl/⌘+K
+works from the composer, except while composing (IME) or over
+another open modal. Esc closes open dialogs, menus and panels
+first, and only marks the room read when nothing is open. The
+sheet also lists every existing
 shortcut: message-list movement and menus, composer sending and
 formatting, the emoji and Drive pickers, and panel closing.
 
