@@ -1,0 +1,140 @@
+name: Monthly backup restore check
+
+# Proves the nightly backups in the separate backup project actually restore:
+# downloads the latest daily backup into a scratch runner, decrypts it with
+# the CI-held key, verifies checksums and PRAGMA integrity_check, boots the
+# app against a copy read-only (Rails runner row counts), and fails loudly on
+# any error. See docs/backups.md.
+#
+# Authentication is Workload Identity Federation against the BACKUP project
+# (reader identity, no long-lived keys), mirroring deploy-gcp.yml.
+
+on:
+  schedule:
+    # 09:00 UTC on the 1st of every month.
+    - cron: '0 9 1 * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  restore-check:
+    name: Download, decrypt and verify the latest backup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    timeout-minutes: 90
+    env:
+      BACKUP_GCP_PROJECT_ID: ${{ vars.BACKUP_GCP_PROJECT_ID }}
+      BACKUP_GCP_BUCKET: ${{ vars.BACKUP_GCP_BUCKET }}
+      BACKUP_GCP_WIF_PROVIDER: ${{ vars.BACKUP_GCP_WIF_PROVIDER }}
+      BACKUP_GCP_READER_SA: ${{ vars.BACKUP_GCP_READER_SA }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 10
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b # v1.321.0
+        timeout-minutes: 15
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Authenticate to the backup project
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        timeout-minutes: 5
+        with:
+          workload_identity_provider: ${{ env.BACKUP_GCP_WIF_PROVIDER }}
+          service_account: ${{ env.BACKUP_GCP_READER_SA }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+        timeout-minutes: 10
+
+      - name: Verify the reader identity
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$BACKUP_GCP_READER_SA" || { echo "::error::BACKUP_GCP_READER_SA is not set"; exit 1; }
+          # As in deploy-gcp.yml, this is the first proof the Workload Identity
+          # binding can really impersonate the reader. The token is never printed.
+          err="$(mktemp)"
+          trap 'rm -f "$err"' EXIT
+          if ! gcloud auth print-access-token >/dev/null 2>"$err"; then
+            cat "$err"
+            echo "::error::could not obtain an access token as ${BACKUP_GCP_READER_SA}; check the Workload Identity binding"
+            exit 1
+          fi
+          echo "Obtained an access token as ${BACKUP_GCP_READER_SA}."
+
+      - name: Install age
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v age >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y age
+          fi
+          age --version
+
+      - name: Download and verify the latest daily backup
+        timeout-minutes: 60
+        shell: bash
+        env:
+          BACKUP_RESTORE_AGE_IDENTITY: ${{ secrets.BACKUP_RESTORE_AGE_IDENTITY }}
+          BACKUP_RESTORE_GPG_KEY: ${{ secrets.BACKUP_RESTORE_GPG_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$BACKUP_GCP_BUCKET" || { echo "::error::BACKUP_GCP_BUCKET is not set"; exit 1; }
+          latest="$(gcloud storage ls "gs://${BACKUP_GCP_BUCKET}/daily/" | sort | tail -n 1)"
+          [ -n "$latest" ] || { echo "::error::no daily backups found in gs://${BACKUP_GCP_BUCKET}/daily/"; exit 1; }
+          echo "Latest daily backup: ${latest}"
+
+          work="${RUNNER_TEMP}/restore-check"
+          mkdir -p "$work"
+          chmod 0700 "$work"
+          base="$(basename "$latest")"
+          gcloud storage cp "$latest" "$work/$base"
+
+          # The private key travels only from the secret into a 0600 file that
+          # lives for this step. Fill in whichever secret matches the backup's
+          # encryption; the other may stay empty.
+          args=( --backup "$work/$base" --work-dir "$work/extracted" )
+          case "$base" in
+            *.tar.gz.age)
+              [ -n "$BACKUP_RESTORE_AGE_IDENTITY" ] || { echo "::error::BACKUP_RESTORE_AGE_IDENTITY is not set"; exit 1; }
+              printf '%s' "$BACKUP_RESTORE_AGE_IDENTITY" > "$work/age-identity.txt"
+              chmod 0600 "$work/age-identity.txt"
+              args+=( --age-identity "$work/age-identity.txt" )
+              ;;
+            *.tar.gz.gpg)
+              [ -n "$BACKUP_RESTORE_GPG_KEY" ] || { echo "::error::BACKUP_RESTORE_GPG_KEY is not set"; exit 1; }
+              mkdir -p "$work/gnupg"
+              chmod 0700 "$work/gnupg"
+              printf '%s' "$BACKUP_RESTORE_GPG_KEY" | gpg --batch --homedir "$work/gnupg" --import
+              args+=( --gpg-home "$work/gnupg" )
+              ;;
+            *)
+              echo "::error::unexpected backup extension: ${base}"; exit 1 ;;
+          esac
+
+          # The minimums are the guard against an empty or wrong database: an
+          # empty file passes integrity_check, and missing tables only fail
+          # here. Tune them if the workspace ever legitimately shrinks.
+          bash deploy/backups/restore-check.sh "${args[@]}" \
+            --rails-root "$GITHUB_WORKSPACE" --min-users 1 --min-messages 1
+
+          {
+            echo "## Backup restore check passed"
+            echo
+            echo "Downloaded, decrypted and verified \`${latest}\`: checksums,"
+            echo "\`PRAGMA integrity_check\`, and a read-only Rails boot with row"
+            echo "counts all succeeded. See the step log for the counts."
+          } >> "$GITHUB_STEP_SUMMARY"
