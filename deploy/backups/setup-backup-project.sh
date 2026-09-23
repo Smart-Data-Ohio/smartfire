@@ -58,13 +58,13 @@
 #                     the deploy workflow uses; created only when missing,
 #                     never a second pool).
 # BACKUP_WIF_PROVIDER pool provider id (default github-oidc, likewise).
-# GITHUB_REPO         owner/repo allowed to impersonate the SAs
+# BACKUP_GITHUB_REPO         owner/repo allowed to impersonate the SAs
 #                     (default Smart-Data-Ohio/smartfire).
-# GITHUB_OWNER_ID     numeric GitHub id of the owner, for the ID-qualified
+# BACKUP_GITHUB_OWNER_ID     numeric GitHub id of the owner, for the ID-qualified
 #                     subject (default 262436228).
-# GITHUB_REPO_ID      numeric GitHub id of the repo, for the ID-qualified
+# BACKUP_GITHUB_REPO_ID      numeric GitHub id of the repo, for the ID-qualified
 #                     subject (default 1370426325).
-# GITHUB_REF          git ref whose runs may impersonate the SAs; the bound
+# BACKUP_GITHUB_REF          git ref whose runs may impersonate the SAs; the bound
 #                     subject is repo:<owner>@<owner-id>/<repo>@<repo-id>:
 #                     ref:<ref> (default refs/heads/main: scheduled runs always
 #                     use the default branch, so dispatch by hand from main).
@@ -87,10 +87,10 @@ BACKUP_RUNNER_SA="${BACKUP_RUNNER_SA:-smartfire-backup-runner}"
 BACKUP_READER_SA="${BACKUP_READER_SA:-smartfire-backup-reader}"
 BACKUP_WIF_POOL="${BACKUP_WIF_POOL:-github}"
 BACKUP_WIF_PROVIDER="${BACKUP_WIF_PROVIDER:-github-oidc}"
-GITHUB_REPO="${GITHUB_REPO:-Smart-Data-Ohio/smartfire}"
-GITHUB_OWNER_ID="${GITHUB_OWNER_ID:-262436228}"
-GITHUB_REPO_ID="${GITHUB_REPO_ID:-1370426325}"
-GITHUB_REF="${GITHUB_REF:-refs/heads/main}"
+BACKUP_GITHUB_REPO="${BACKUP_GITHUB_REPO:-Smart-Data-Ohio/smartfire}"
+BACKUP_GITHUB_OWNER_ID="${BACKUP_GITHUB_OWNER_ID:-262436228}"
+BACKUP_GITHUB_REPO_ID="${BACKUP_GITHUB_REPO_ID:-1370426325}"
+BACKUP_GITHUB_REF="${BACKUP_GITHUB_REF:-refs/heads/main}"
 APP_PROJECT_ID="${APP_PROJECT_ID:-smart-data-campfire}"
 APP_ZONE="${APP_ZONE:-us-central1-a}"
 APP_INSTANCE="${APP_INSTANCE:-campfire}"
@@ -196,12 +196,12 @@ ensure_wif_pool() {
       --workload-identity-pool="$BACKUP_WIF_POOL" \
       --issuer-uri="https://token.actions.githubusercontent.com" \
       --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.repository_owner=assertion.repository_owner" \
-      --attribute-condition="assertion.repository == '$GITHUB_REPO'"
+      --attribute-condition="assertion.repository == '$BACKUP_GITHUB_REPO'"
   fi
 }
 
 # The impersonation binding pins the exact ID-qualified subject GitHub mints
-# for runs of this repo on GITHUB_REF, the same form as the deployer's
+# for runs of this repo on BACKUP_GITHUB_REF, the same form as the deployer's
 # per-environment bindings. The provider-level attribute condition above is
 # the outer gate (assertion.repository is never ID-qualified); this subject
 # is the inner one. Dispatch the workflows by hand from main: a run from any
@@ -220,7 +220,7 @@ allow_github_subject() {
   local number provider principal subject
   number="$(gcloud projects describe "$wif_project" --format='value(projectNumber)')"
   provider="projects/${number}/locations/global/workloadIdentityPools/${BACKUP_WIF_POOL}/providers/${BACKUP_WIF_PROVIDER}"
-  subject="repo:${GITHUB_REPO%%/*}@${GITHUB_OWNER_ID}/${GITHUB_REPO##*/}@${GITHUB_REPO_ID}:ref:${GITHUB_REF}"
+  subject="repo:${BACKUP_GITHUB_REPO%%/*}@${BACKUP_GITHUB_OWNER_ID}/${BACKUP_GITHUB_REPO##*/}@${BACKUP_GITHUB_REPO_ID}:ref:${BACKUP_GITHUB_REF}"
   principal="principal://iam.googleapis.com/projects/${number}/locations/global/workloadIdentityPools/${BACKUP_WIF_POOL}/subject/${subject}"
   if gcloud iam service-accounts get-iam-policy "$email" --project="$sa_project" --format=json \
       | jq -e --arg m "$principal" \
@@ -306,7 +306,7 @@ fi
 allow_github_subject "$READER_EMAIL" "$BACKUP_PROJECT_ID" "$APP_PROJECT_ID"
 READER_WIF_PROVIDER="$WIF_PROVIDER_RESULT"
 
-GITHUB_SUBJECT="repo:${GITHUB_REPO%%/*}@${GITHUB_OWNER_ID}/${GITHUB_REPO##*/}@${GITHUB_REPO_ID}:ref:${GITHUB_REF}"
+GITHUB_SUBJECT="repo:${BACKUP_GITHUB_REPO%%/*}@${BACKUP_GITHUB_OWNER_ID}/${BACKUP_GITHUB_REPO##*/}@${BACKUP_GITHUB_REPO_ID}:ref:${BACKUP_GITHUB_REF}"
 
 # --- 4. the nightly snapshot schedule (lives in the app project) -------------
 log "checking the nightly snapshot schedule (delegated to snapshot-schedule.sh)"
