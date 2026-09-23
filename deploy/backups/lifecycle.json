@@ -1,0 +1,29 @@
+{
+  "lifecycle": {
+    "rule": [
+      {
+        "action": { "type": "Delete" },
+        "condition": { "age": 8, "matchesPrefix": ["daily/"] }
+      },
+      {
+        "action": { "type": "Delete" },
+        "condition": { "age": 29, "matchesPrefix": ["weekly/"] }
+      },
+      {
+        "action": { "type": "Delete" },
+        "condition": { "age": 366, "matchesPrefix": ["monthly/"] }
+      },
+      {
+        "action": { "type": "Delete" },
+        "condition": {
+          "daysSinceNoncurrentTime": 30,
+          "matchesPrefix": ["daily/", "weekly/", "monthly/"]
+        }
+      },
+      {
+        "action": { "type": "AbortIncompleteMultipartUpload" },
+        "condition": { "age": 1 }
+      }
+    ]
+  }
+}

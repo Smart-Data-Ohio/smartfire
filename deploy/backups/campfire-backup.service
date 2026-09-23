@@ -1,0 +1,13 @@
+[Unit]
+Description=Smartfire nightly off-machine backup
+Wants=network-online.target
+After=network-online.target docker.service
+Documentation=file:///opt/campfire-backups/README.md
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/campfire-backups/backup.env
+ExecStart=/opt/campfire-backups/campfire-backup.sh
+User=root
+NoNewPrivileges=yes
+SyslogIdentifier=campfire-backup

@@ -1,0 +1,15 @@
+[Unit]
+Description=Smartfire nightly off-machine backup timer
+Documentation=file:///opt/campfire-backups/README.md
+
+[Timer]
+# 09:00 host time every day. GCE VMs run on UTC, and the release pipeline
+# treats the host clock as UTC as well. This stays clear of the ONCE backup
+# window (17:05-17:30 UTC) that releases refuse to overlap.
+OnCalendar=*-*-* 09:00:00
+Persistent=true
+RandomizedDelaySec=120
+Unit=campfire-backup.service
+
+[Install]
+WantedBy=timers.target
