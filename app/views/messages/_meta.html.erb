@@ -14,5 +14,5 @@
       <%= room_icon %><%= link_to room_display_name(message.room, for_user: nil), message_link_url(message), target: "_top", data: { reply_target: "link" } %>
     </span>
   </h3>
-  <%= render "messages/actions", message: message, url: message_link_url(message) %>
+  <%# The shared message menu is rendered once per page from the layout, not per message. %>
 </div>

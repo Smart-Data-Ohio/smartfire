@@ -3,7 +3,7 @@
   <head>
     <%= page_title_tag %>
 
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, interactive-widget=resizes-content">
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
     <meta name="view-transition" content="same-origin">
     <meta name="color-scheme" content="<%= theme_color_scheme_meta_content %>">
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
@@ -70,6 +70,7 @@
             <%= image_tag "check.svg", aria: { hidden: true }, size: 24, class: "colorize--white" %></span>
           <% end %>
         </div>
+        <button type="button" class="flash__dismiss" data-action="element-removal#remove" aria-label="Dismiss notification">×</button>
         <span class="for-screen-reader" role="alert" aria-atomic="true"><%= notice %></span>
       </div>
     <% end %>
@@ -114,6 +115,9 @@
     <%= render "layouts/huddle_invitation" if Current.user && Huddle.configured? %>
 
     <%= render "layouts/lightbox" %>
+
+    <%= render "messages/actions" %>
+    <%= render "messages/emoji_picker" %>
 
     <a href="https://github.com/Smart-Data-Ohio/smartfire" id="app-logo" target="_blank" aria-label="Smartfire on GitHub">
       <%= image_tag "campfire-icon.png", alt: "Smartfire logo", width: 256, height: 216 %>

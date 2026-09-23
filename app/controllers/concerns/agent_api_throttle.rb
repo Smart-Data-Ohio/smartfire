@@ -14,8 +14,27 @@ module AgentApiThrottle
 
   private
     def check_agent_api_throttle(limit)
+      check_agent_api_throttle_as(limit, controller_path: controller_path, action_name: action_name)
+    end
+
+    # The same bucket check against another endpoint's bucket, so MCP tools
+    # share limits with the REST endpoints they map to (one busy credential
+    # cannot dodge the REST limit by switching surfaces).
+    def check_agent_api_throttle_as(limit, controller_path:, action_name:)
+      return if performed?
+
+      retry_after = agent_api_throttle_retry_after(limit, controller_path: controller_path, action_name: action_name)
+      return if retry_after.nil?
+
+      response.set_header("Retry-After", retry_after.to_s)
+      render json: { error: "rate_limited" }, status: :too_many_requests
+    end
+
+    # Non-rendering form: returns the seconds to wait when the bucket
+    # overflowed, nil when the call may proceed (or carries no credentials).
+    def agent_api_throttle_retry_after(limit, controller_path:, action_name:)
       key = agent_throttle_key
-      return if key.nil? || performed?
+      return if key.nil?
 
       window = 1.minute
       bucket = Time.current.to_i / window.to_i
@@ -25,8 +44,7 @@ module AgentApiThrottle
       ).to_i
       return if count <= limit
 
-      response.set_header("Retry-After", [ (bucket + 1) * window.to_i - Time.current.to_i, 1 ].max.to_s)
-      render json: { error: "rate_limited" }, status: :too_many_requests
+      [ (bucket + 1) * window.to_i - Time.current.to_i, 1 ].max
     end
 
     # The credential behind an agent-authenticated request, identified by

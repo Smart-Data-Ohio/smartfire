@@ -15,6 +15,15 @@ class Accounts::Bots::GrantsControllerTest < ActionDispatch::IntegrationTest
     assert_match "post_messages", response.body
   end
 
+  test "index renders grant timestamps for the local-time controller" do
+    AgentGrant.create!(agent: @agent, granted_by: users(:david), capability: "post_messages")
+
+    get account_bot_grants_url(@bot)
+
+    assert_response :ok
+    assert_select "time[data-local-time-target='datetime'][datetime]", minimum: 1
+  end
+
   test "index lists existing grants with scope and enforcement state" do
     AgentGrant.create!(agent: @agent, room: rooms(:watercooler), granted_by: users(:david), capability: "post_messages")
     AgentGrant.create!(agent: @agent, granted_by: users(:david), capability: "external_action")
@@ -105,6 +114,17 @@ class Accounts::Bots::GrantsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to account_bot_grants_url(@bot)
+  end
+
+  test "create rejects a room-scoped dm_anyone grant" do
+    assert_no_difference -> { AgentGrant.count } do
+      post account_bot_grants_url(@bot), params: {
+        agent_grant: { capability: "dm_anyone", room_id: rooms(:watercooler).id }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match "dm_anyone is granted workspace-wide only", response.body
   end
 
   test "create rejects unknown capabilities" do

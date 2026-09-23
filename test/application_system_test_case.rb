@@ -16,6 +16,13 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   # round trip exceeds the 20 s polling budget used elsewhere in the suite.
   LIVEKIT_REJOIN_WAIT = 30
 
+  # The code highlighter boots a worker and compiles Shiki grammars on
+  # first use; the c++ fence stalls ~1 s uncontended and ~1.8 s under a
+  # 4-browser load, past the 2 s default. The worker abandons a block
+  # after 15 s (see tokenize in code_highlighter.js), so a 20 s bound
+  # means a timeout is a genuine highlighting failure, not impatience.
+  HIGHLIGHT_WAIT = 20
+
   # Each worker drives its own headless Chrome; twenty of them starve each
   # other and fail at sign-in on a developer machine, while four stay green.
   # PARALLEL_WORKERS still overrides this, which is how CI runs a single worker.

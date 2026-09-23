@@ -5,7 +5,7 @@
       <div class="overflow-ellipsis txt-small">
         <%= grant.workspace_wide? ? "Workspace-wide" : (grant.room ? room_display_name(grant.room) : "Deleted room") %>
         · granted by <%= grant.granted_by.name %>
-        · <%= grant.created_at.to_fs(:short) %>
+        · <%= local_datetime_tag grant.created_at, style: :datetime %>
         · <%= AgentGrant::ENFORCED_CAPABILITIES.include?(grant.capability) ? "enforced" : "not yet enforced" %>
       </div>
     </div>
