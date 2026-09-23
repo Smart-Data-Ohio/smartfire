@@ -5,7 +5,7 @@
 # the member's own linked Fizzy token, then posts a reply carrying the
 # new card's URL so it unfurls in the conversation.
 class Rooms::Fizzy::MessageCardsController < ApplicationController
-  include RoomScoped, Messages::BotWebhooks
+  include RoomScoped
 
   TITLE_PREFILL_CHARS = 120
 
@@ -142,7 +142,7 @@ class Rooms::Fizzy::MessageCardsController < ApplicationController
         @room.root_messages.create!(creator: Current.user, markdown_source: source, reply_to_message: @message)
       end
       reply.broadcast_create
-      deliver_webhooks_to_bots(reply) unless @thread
+      Message::BotWebhookFanout.deliver_for(reply) unless @thread
       reply
     end
 end

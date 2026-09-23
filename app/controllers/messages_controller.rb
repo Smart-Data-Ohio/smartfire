@@ -1,5 +1,5 @@
 class MessagesController < ApplicationController
-  include ActiveStorage::SetCurrent, RoomScoped, Messages::DriveAttachable, Messages::BotWebhooks
+  include ActiveStorage::SetCurrent, RoomScoped, Messages::DriveAttachable
 
   before_action :set_room, except: :create
   before_action :set_message, only: %i[ show edit update destroy actions ]
@@ -40,7 +40,7 @@ class MessagesController < ApplicationController
       @message.process_attachment
 
       @message.broadcast_create
-      deliver_webhooks_to_bots(@message)
+      deliver_webhooks_to_bots
     end
   rescue ActiveRecord::RecordNotFound
     render action: :room_not_found
@@ -227,5 +227,9 @@ class MessagesController < ApplicationController
         format.json { render json: { errors: error.record.errors.to_hash }, status: :unprocessable_content }
         format.any { head :unprocessable_content }
       end
+    end
+
+    def deliver_webhooks_to_bots
+      Message::BotWebhookFanout.deliver_for(@message)
     end
 end

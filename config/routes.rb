@@ -94,6 +94,11 @@ Rails.application.routes.draw do
   delete "agents/approvals/:id", to: "agents/approvals#destroy", defaults: { format: :json }
   get "agents/:id/approvals", to: "agents/approvals#for_agent", as: :agent_approvals
   patch "agent_approvals/:id", to: "agent_approvals#update", as: :agent_approval
+  get "agents/context", to: "agents/contexts#show", defaults: { format: :json }
+  post "agents/dms", to: "agents/dms#create", defaults: { format: :json }
+  post "agents/mcp", to: "agents/mcp#create", defaults: { format: :json }
+  get "agents/mcp", to: "agents/mcp#method_not_allowed", defaults: { format: :json }
+  delete "agents/mcp", to: "agents/mcp#method_not_allowed", defaults: { format: :json }
   get "agents/work", to: "agents/work#index", defaults: { format: :json }, as: :agents_work
   get "agents/work/:id", to: "agents/work#show", defaults: { format: :json }, as: :agents_work_thread
   patch "agents/work/:id", to: "agents/work#update", defaults: { format: :json }
