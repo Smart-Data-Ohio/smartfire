@@ -17,7 +17,7 @@ class LinkEmbedsTest < ApplicationSystemTestCase
 
     join_room @room
 
-    within "##{dom_id(message, :link_embed_cards)}" do
+    within "##{card_dom_id(message, :link_embed_cards)}" do
       assert_selector ".link-embed-card__site", text: "Example News"
       assert_selector ".link-embed-card__title", text: "A System Article"
       assert_selector ".link-embed-card__description", text: "Rendered in the browser."
@@ -34,14 +34,13 @@ class LinkEmbedsTest < ApplicationSystemTestCase
 
     join_room @room
 
-    within "##{dom_id(message, :linkedin_cards)}" do
+    within "##{card_dom_id(message, :linkedin_cards)}" do
       assert_selector ".linkedin-post-card__source", text: "LinkedIn"
       assert_selector ".linkedin-post-card__title", text: "JZ on shipping"
       assert_no_selector "iframe"
 
       click_button "Show embedded post"
-      assert_selector "iframe.linkedin-post-card__player[src=?]",
-        "https://www.linkedin.com/embed/feed/update/urn:li:activity:600600600"
+      assert_selector 'iframe.linkedin-post-card__player[src="https://www.linkedin.com/embed/feed/update/urn:li:activity:600600600"]'
       assert_no_button "Show embedded post"
     end
   end
@@ -58,7 +57,7 @@ class LinkEmbedsTest < ApplicationSystemTestCase
 
     join_room @room
 
-    within "##{dom_id(message, :linkedin_cards)}" do
+    within "##{card_dom_id(message, :linkedin_cards)}" do
       assert_selector ".linkedin-post-chip a", text: "View post on LinkedIn"
       assert_no_selector ".linkedin-post-card"
     end
@@ -73,7 +72,7 @@ class LinkEmbedsTest < ApplicationSystemTestCase
       title: "Removable", description: "Going away.", site_name: "Example", image_url: nil)
 
     join_room @room
-    assert_selector "##{dom_id(message, :link_embed_cards)} .link-embed-card", wait: 10
+    assert_selector "##{card_dom_id(message, :link_embed_cards)} .link-embed-card", wait: 10
 
     within_message(message) do
       right_click_message
@@ -81,7 +80,7 @@ class LinkEmbedsTest < ApplicationSystemTestCase
     assert_message_menu_open
     click_button "Remove embeds"
 
-    assert_no_selector "##{dom_id(message, :link_embed_cards)} .link-embed-card", wait: 10
+    assert_no_selector "##{card_dom_id(message, :link_embed_cards)} .link-embed-card", wait: 10
     assert_predicate message.reload, :embeds_suppressed?
   end
 
@@ -94,7 +93,7 @@ class LinkEmbedsTest < ApplicationSystemTestCase
       title: "Not mine", description: "Stays.", site_name: "Example", image_url: nil)
 
     join_room @room
-    assert_selector "##{dom_id(message, :link_embed_cards)} .link-embed-card", wait: 10
+    assert_selector "##{card_dom_id(message, :link_embed_cards)} .link-embed-card", wait: 10
 
     within_message(message) do
       right_click_message
@@ -114,7 +113,7 @@ class LinkEmbedsTest < ApplicationSystemTestCase
       )
     end
 
-    def dom_id(record, prefix)
+    def card_dom_id(record, prefix)
       ActionView::RecordIdentifier.dom_id(record, prefix)
     end
 end
