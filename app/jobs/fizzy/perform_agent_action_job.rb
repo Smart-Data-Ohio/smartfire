@@ -39,6 +39,10 @@ class Fizzy::PerformAgentActionJob < ApplicationJob
           next unless written
 
           event.reload
+          if (approval = AgentApproval.find_by(id: event.agent_approval_id || event.metadata["approval_id"]))
+            AuditLog.record!(action: "agent.fizzy_action.execute", actor: event.actor,
+              target: approval, changes: { action: approval.action, status: "failed", message: message })
+          end
           if pending_webhook
             Agent::EventWebhookJob.perform_later(event.id, event.webhook_attempts.to_i)
           end
@@ -201,6 +205,7 @@ class Fizzy::PerformAgentActionJob < ApplicationJob
           "message" => message
         }.compact
       )
+      record_execution_audit(approval, status: status, message: message, url: url)
       enqueue_outcome_webhook(event)
       event
     rescue ActiveRecord::RecordNotUnique
@@ -252,8 +257,17 @@ class Fizzy::PerformAgentActionJob < ApplicationJob
           }.compact
         ) == 1
       event.reload
-      enqueue_outcome_webhook(event) if written
+      if written
+        record_execution_audit(approval, status: status, message: message, url: url)
+        enqueue_outcome_webhook(event)
+      end
       event
+    end
+
+    # The human who approved is the actor: the job executes with their authority.
+    def record_execution_audit(approval, status:, message: nil, url: nil)
+      AuditLog.record!(action: "agent.fizzy_action.execute", actor: approval.decided_by,
+        target: approval, changes: { action: approval.action, status: status, url: url, message: message }.compact)
     end
 
     def enqueue_outcome_webhook(event)

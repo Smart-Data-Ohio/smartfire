@@ -66,6 +66,27 @@ class AuditLog::GithubExecutionAuditTest < ActiveJob::TestCase
     end
   end
 
+  test "a stuck claim recovered by the sweep is recorded as failed" do
+    approval = approve!(build_approval(kind: "comment", body: "Nice work"))
+    event = @agent.agent_events.create!(
+      event_type: "github_action_completed",
+      outcome: "delivered",
+      agent_approval_id: approval.id,
+      webhook_status: "none",
+      metadata: { "approval_id" => approval.id, "action" => approval.action, "status" => "running" }
+    )
+    event.update_columns(created_at: 20.minutes.ago)
+
+    assert_difference -> { AuditLog.where(action: "agent.github_action.execute").count }, +1 do
+      Github::PerformAgentActionJob.recover_stuck_claims!
+    end
+
+    entry = AuditLog.where(action: "agent.github_action.execute").last
+    assert_equal approval.id, entry.target_id
+    assert_equal "failed", entry.details["status"]
+    assert_equal "GitHub action execution timed out", entry.details["message"]
+  end
+
   private
     def build_approval(kind:, body: nil, reviewers: nil)
       action = Github::AgentPullRequestAction.new(
