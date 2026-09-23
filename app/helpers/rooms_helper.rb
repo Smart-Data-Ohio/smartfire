@@ -27,6 +27,7 @@ module RoomsHelper
     rooms_list read_rooms badge_dot sorted_list activity_indicator
     board_list timezone dm_presence
     tour help_menu
+    profile_card multi_select
   ].freeze
 
   def first_paint_controller_preloads
