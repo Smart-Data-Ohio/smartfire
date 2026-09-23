@@ -966,6 +966,21 @@ summary.member-panel__group-heading {
     position: relative;
     transform: none;
   }
+
+  /* The open panel takes its own grid column and shrinks the header to
+     ~800px at 1400px viewports, where twelve labeled stage actions spill
+     past the column and slide under the panel surface (which paints above
+     the header), burying Show stage and the trailing buttons. Tighten the
+     stage header's padding and gap while the panel is open so the actions
+     clear the panel; labels stay visible throughout. */
+  body.member-panel-open .room-header__actions:has(.stage-panel-wrap) {
+    gap: 0.25rem;
+  }
+
+  body.member-panel-open .room-header__actions:has(.stage-panel-wrap) .btn,
+  body.member-panel-open .room-header__actions:has(.stage-panel-wrap) .room-header__action {
+    --btn-padding: 0.45rem 0.4rem;
+  }
 }
 
 /* The huddle stays above both the timeline and the mobile drawer. */
