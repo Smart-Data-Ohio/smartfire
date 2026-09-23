@@ -398,9 +398,39 @@ a.drive-attachment:hover {
   }
 }
 
+.drive-share__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
 .drive-share__status {
+  flex: 1 1 auto;
   margin: 0;
   font-size: 0.875rem;
+  min-inline-size: 0;
+}
+
+.drive-share__close {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: max(1.4rem, 24px);
+  block-size: max(1.4rem, 24px);
+  min-inline-size: 24px;
+  min-block-size: 24px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.875rem;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--color-border);
+  }
 }
 
 .drive-share__action {

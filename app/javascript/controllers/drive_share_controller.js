@@ -34,6 +34,14 @@ const GAPI_SCRIPT_URL = "https://apis.google.com/js/api.js"
 const FOLDER_MIME_TYPE = "application/vnd.google-apps.folder"
 const SHORTCUT_MIME_TYPE = "application/vnd.google-apps.shortcut"
 
+// User-dismissed authorization: closing the consent popup or denying
+// consent shares nothing and returns quietly to the composer, never a
+// retry dialog. GIS reports a closed or unopenable popup through
+// error_callback {type}, while denied consent arrives as a
+// TokenResponse {error}; both shapes are handled.
+// https://developers.google.com/identity/oauth2/web/reference/js-reference
+const TOKEN_CANCEL_CODES = new Set([ "popup_closed", "popup_failed_to_open", "access_denied" ])
+
 // Cross-instance script state: loading starts on first intent and is
 // shared so concurrent composers load the official scripts once.
 let scriptsPromise = null
@@ -108,6 +116,8 @@ export default class extends Controller {
     this.flowThreadId = null
     this.onTurboCache = this.#dispose.bind(this)
     this.onFormSubmitEnd = this.#clearAttachmentsOnSubmit.bind(this)
+    this.onDocumentClick = this.#closePanelOnClickOutside.bind(this)
+    this.outsideDismissArmed = false
     document.addEventListener("turbo:before-cache", this.onTurboCache)
     this.form?.addEventListener("turbo:submit-end", this.onFormSubmitEnd)
   }
@@ -184,6 +194,22 @@ export default class extends Controller {
     this.panelHandler?.(this.flowId)
   }
 
+  // Dismisses the inline panel from its Close button: an idle error
+  // panel simply hides, while an active flow (loading, continue,
+  // authorizing, picking) is cancelled quietly like a picker cancel.
+  closePanel(event) {
+    event.preventDefault()
+    this.#dismissPanel()
+  }
+
+  panelKey(event) {
+    if (event.key !== "Escape") return
+    // Stop here so a panel inside a thread composer does not also close the thread panel.
+    event.preventDefault()
+    event.stopPropagation()
+    this.#dismissPanel()
+  }
+
   #config() {
     const content = (name) => document.querySelector(`meta[name="${name}"]`)?.content?.trim() || ""
     const clientId = content("google-picker-client-id")
@@ -204,10 +230,7 @@ export default class extends Controller {
     this.phase = "authorizing"
     this.#showPanel("Waiting for Google authorization…", {
       action: "Cancel",
-      onAction: () => {
-        if (!this.#current(flowId)) return
-        this.#failToIdle(flowId, "Google authorization was cancelled. Nothing was shared.", { retry: "Try again" })
-      }
+      onAction: () => this.#cancelToIdle(flowId)
     })
 
     try {
@@ -229,8 +252,8 @@ export default class extends Controller {
 
     if (!response || response.error || !response.access_token) {
       const code = String(response?.error || "")
-      if (code === "popup_closed" || code === "access_denied") {
-        this.#failToIdle(flowId, "Google authorization was cancelled. Nothing was shared.", { retry: "Try again" })
+      if (TOKEN_CANCEL_CODES.has(code)) {
+        this.#cancelToIdle(flowId)
       } else if (code === "popup_blocked_by_browser") {
         this.#failToIdle(flowId, "Your browser blocked the Google window. Allow popups and try again.", { retry: "Try again" })
       } else {
@@ -258,9 +281,14 @@ export default class extends Controller {
     this.#openPicker(flowId)
   }
 
-  #onTokenError(_error, flowId) {
+  #onTokenError(error, flowId) {
     if (!this.#current(flowId) || this.phase !== "authorizing") return
-    this.#failToIdle(flowId, "Google authorization failed. Nothing was shared.", { retry: "Try again" })
+    const code = String(error?.type || error?.error || "")
+    if (TOKEN_CANCEL_CODES.has(code)) {
+      this.#cancelToIdle(flowId)
+    } else {
+      this.#failToIdle(flowId, "Google authorization failed. Nothing was shared.", { retry: "Try again" })
+    }
   }
 
   #openPicker(flowId) {
@@ -274,12 +302,7 @@ export default class extends Controller {
     this.phase = "picking"
     this.#showPanel("Choose a file in the Google Drive window…", {
       action: "Cancel",
-      onAction: () => {
-        if (!this.#current(flowId)) return
-        try { this.picker?.setVisible(false) } catch { /* picker already gone */ }
-        this.picker = null
-        this.#failToIdle(flowId, "No file chosen. Nothing was shared.", { retry: "Choose again" })
-      }
+      onAction: () => this.#cancelToIdle(flowId)
     })
 
     try {
@@ -315,7 +338,7 @@ export default class extends Controller {
   }
 
   #onPickerAction(data, flowId) {
-    if (!this.#current(flowId)) return
+    if (!this.#current(flowId) || this.phase !== "picking") return
 
     const Response = window.google.picker.Response
     const Action = window.google.picker.Action
@@ -343,8 +366,7 @@ export default class extends Controller {
     }
 
     if (data?.[Response.ACTION] === Action.CANCEL) {
-      this.picker = null
-      this.#failToIdle(flowId, "No file chosen. Nothing was shared.", { retry: "Choose again" })
+      this.#cancelToIdle(flowId)
     }
   }
 
@@ -1156,11 +1178,25 @@ export default class extends Controller {
     this.panelTarget.hidden = false
     this.buttonTarget.setAttribute("aria-expanded", "true")
 
+    const header = document.createElement("div")
+    header.className = "drive-share__header"
+
     const status = document.createElement("p")
     status.className = "drive-share__status"
     status.setAttribute("role", "status")
     status.textContent = message
-    this.panelTarget.append(status)
+    header.append(status)
+
+    const close = document.createElement("button")
+    close.type = "button"
+    close.className = "drive-share__close"
+    close.textContent = "✕"
+    close.setAttribute("aria-label", "Close")
+    close.title = "Close"
+    close.dataset.action = "drive-share#closePanel"
+    header.append(close)
+
+    this.panelTarget.append(header)
 
     this.panelHandler = null
     if (action) {
@@ -1172,10 +1208,25 @@ export default class extends Controller {
       this.panelTarget.append(button)
       this.panelHandler = onAction
     }
+
+    // Idle panels are settled error states: dismiss on outside click
+    // like the legacy picker popover. Active flows (loading, continue,
+    // authorizing, picking) need an explicit Cancel, Close, or Escape
+    // so a stray click never kills the Google window mid-flight.
+    if (this.phase === "idle") {
+      this.#armOutsideDismiss()
+      // Move focus into a settled error so keyboard users find the
+      // retry and Close actions; closing returns focus to Drive.
+      const focusTarget = this.panelTarget.querySelector(".drive-share__action") || close
+      focusTarget.focus({ preventScroll: true })
+    } else {
+      this.#disarmOutsideDismiss()
+    }
   }
 
   #hidePanel() {
     if (!this.hasPanelTarget || !this.hasButtonTarget) return
+    this.#disarmOutsideDismiss()
     this.panelTarget.hidden = true
     this.panelTarget.replaceChildren()
     this.buttonTarget.setAttribute("aria-expanded", "false")
@@ -1195,6 +1246,53 @@ export default class extends Controller {
     } else {
       this.#showPanel(message, { action: null })
     }
+  }
+
+  // Quiet cancel: picker CANCEL, closed consent popup, denied consent,
+  // or the panel's own Cancel/Close/Escape. No dialog, no message;
+  // focus returns to the Drive button and the next click starts fresh.
+  #cancelToIdle(flowId) {
+    if (!this.#current(flowId)) return
+    this.flowId++
+    this.afterAuth = null
+    this.phase = "idle"
+    try { this.picker?.setVisible(false) } catch { /* picker already gone */ }
+    this.picker = null
+    this.#hidePanel()
+    this.buttonTarget.focus({ preventScroll: true })
+  }
+
+  // Dismisses whatever the panel currently shows. Idle error panels
+  // simply hide; active flows are cancelled quietly with their
+  // generation invalidated so delayed Google callbacks stay dead.
+  // Never touches a review dialog; that has its own Cancel.
+  #dismissPanel() {
+    if (this.phase === "review" || this.phase === "granting") return
+    if (this.panelTarget.hidden) return
+    this.flowId++
+    this.afterAuth = null
+    this.phase = "idle"
+    try { this.picker?.setVisible(false) } catch { /* picker already gone */ }
+    this.picker = null
+    this.#hidePanel()
+    this.buttonTarget.focus({ preventScroll: true })
+  }
+
+  #armOutsideDismiss() {
+    if (this.outsideDismissArmed) return
+    this.outsideDismissArmed = true
+    document.addEventListener("click", this.onDocumentClick)
+  }
+
+  #disarmOutsideDismiss() {
+    if (!this.outsideDismissArmed) return
+    this.outsideDismissArmed = false
+    document.removeEventListener("click", this.onDocumentClick)
+  }
+
+  #closePanelOnClickOutside(event) {
+    if (this.panelTarget.hidden) return
+    if (!this.element.contains(event.target)) this.#dismissPanel()
   }
 
   // True while this flow is the live one: same generation, still in the
