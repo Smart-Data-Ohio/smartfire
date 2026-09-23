@@ -16,6 +16,15 @@ export default class extends Controller {
     frame.title = "Embedded LinkedIn post"
     frame.loading = "lazy"
     frame.allowFullscreen = true
+    // The minimum the official player needs, verified against the live
+    // player in headless Chrome: scripts run the player, same-origin
+    // keeps its storage and requests working, and popups let its links
+    // open new tabs. Notably absent: allow-forms, allow-top-navigation
+    // (the player can never navigate the Campfire page), and
+    // allow-downloads. The referrer policy keeps the room URL out of
+    // LinkedIn's logs: it sees only our origin.
+    frame.setAttribute("sandbox", "allow-scripts allow-same-origin allow-popups")
+    frame.referrerPolicy = "strict-origin-when-cross-origin"
     frame.classList.add("linkedin-post-card__player")
     this.element.replaceChildren(frame)
     frame.focus({ preventScroll: true })

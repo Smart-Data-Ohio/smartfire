@@ -4,15 +4,18 @@ module Linkedin
   # URNs, on linkedin.com with an optional www. subdomain, any scheme, and
   # any trailing path, query, or fragment.
   module PostUrl
-    # Slugs and URNs exclude angle brackets and quotes so a suppressed
-    # <https://…> link in a forward note still matches its suppression key
-    # instead of swallowing the closing bracket.
+    # Slugs exclude angle brackets and quotes so a suppressed <https://…>
+    # link in a forward note still matches its suppression key instead of
+    # swallowing the closing bracket. URN ids are strictly numeric: the
+    # lookahead rejects "12ab" outright instead of carding a wrong post
+    # 12, while still allowing trailing paths, queries, fragments, and
+    # sentence punctuation after the id.
     PATTERN = %r{
       https?://(?:www\.)?linkedin\.com/
       (?:
         posts/(?<slug>[^/?#\s<>"'()\]]+)
         |
-        feed/update/(?<urn>urn:li:(?:activity|share|ugcPost):[^/?#\s<>"'()\]]+)
+        feed/update/(?<urn>urn:li:(?:activity|share|ugcPost):\d+)(?=$|[/?#\s<>"'()\]\.,;:!?\}])
       )
     }x
 

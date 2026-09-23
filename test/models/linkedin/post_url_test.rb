@@ -13,8 +13,16 @@ class Linkedin::PostUrlTest < ActiveSupport::TestCase
   test "extracts share and ugcPost URNs with http and bare hosts" do
     assert_equal "urn:li:share:12345",
       Linkedin::PostUrl.extract("http://linkedin.com/feed/update/urn:li:share:12345").first.urn
-    assert_equal "urn:li:ugcPost:abcDEF123",
-      Linkedin::PostUrl.extract("https://www.linkedin.com/feed/update/urn:li:ugcPost:abcDEF123").first.urn
+    assert_equal "urn:li:ugcPost:7234567890",
+      Linkedin::PostUrl.extract("https://www.linkedin.com/feed/update/urn:li:ugcPost:7234567890").first.urn
+  end
+
+  test "ignores URNs with non-numeric ids" do
+    assert_empty Linkedin::PostUrl.extract("https://www.linkedin.com/feed/update/urn:li:activity:abcDEF123")
+    assert_empty Linkedin::PostUrl.extract("https://www.linkedin.com/feed/update/urn:li:ugcPost:12ab34")
+    assert_empty Linkedin::PostUrl.extract("https://www.linkedin.com/feed/update/urn:li:share:")
+    assert_not Linkedin::PostUrl.post_url?("https://www.linkedin.com/feed/update/urn:li:activity:xyz")
+    assert_nil Linkedin::PostUrl.embed_url_for("https://www.linkedin.com/feed/update/urn:li:activity:xyz")
   end
 
   test "extracts posts URLs without a URN" do

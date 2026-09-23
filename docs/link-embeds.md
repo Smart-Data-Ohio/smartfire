@@ -84,11 +84,25 @@ no usable OpenGraph data, the card degrades to a compact link chip ("in
 carry no URN, so only `/feed/update/urn:li:…` links offer the "Show
 embedded post" button, which loads
 `https://www.linkedin.com/embed/feed/update/<urn>` in an iframe on click
-— the player (and its tracking) never loads until the reader asks. The
+— the player (and its tracking) never loads until the reader asks. Only
+numeric URN ids are recognized (`urn:li:(activity|share|ugcPost):<digits>`,
+enforced in `Linkedin::PostUrl::PATTERN`), so a crafted link cannot smuggle
+an unexpected path into the player URL. The
 Content Security Policy allows that host in `frame-src` (report-only,
 like the rest of the policy; see the initializer comment). No LinkedIn
 brand icon ships with the workspace set, so the card uses a small CSS
 "in" badge in LinkedIn blue.
+
+The click-to-load iframe carries
+`sandbox="allow-scripts allow-same-origin allow-popups"` plus
+`referrerpolicy="strict-origin-when-cross-origin"`. That is the minimum
+the official player needs, verified against the live player in headless
+Chrome: scripts run the player, same-origin keeps its storage and
+requests working, and popups let its links open new tabs. Deliberately
+withheld: `allow-forms`, `allow-top-navigation` (the player can never
+navigate the Campfire page), and `allow-downloads`. The referrer policy
+keeps room URLs out of LinkedIn's logs: LinkedIn sees only the Campfire
+origin, never which room or message linked the post.
 
 ## Accessibility and layout
 

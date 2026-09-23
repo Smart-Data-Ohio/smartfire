@@ -40,7 +40,8 @@ class LinkEmbedsTest < ApplicationSystemTestCase
       assert_no_selector "iframe"
 
       click_button "Show embedded post"
-      assert_selector 'iframe.linkedin-post-card__player[src="https://www.linkedin.com/embed/feed/update/urn:li:activity:600600600"]'
+      assert_selector 'iframe.linkedin-post-card__player[src="https://www.linkedin.com/embed/feed/update/urn:li:activity:600600600"]' \
+        '[sandbox="allow-scripts allow-same-origin allow-popups"][referrerpolicy="strict-origin-when-cross-origin"]'
       assert_no_button "Show embedded post"
     end
   end
