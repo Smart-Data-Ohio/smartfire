@@ -19,23 +19,31 @@ class MessagePin < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc, id: :desc) }
 
   class << self
-    # Pins a message for a room member (or the member's agent). Raises
-    # CapReachedError past MAX_PER_ROOM and RecordInvalid when the message
-    # is already pinned. The pin and its note commit atomically; the count
-    # check runs under SQLite's immediate write lock, so two concurrent
-    # pins cannot both pass the cap. Every broadcast fires after commit:
-    # the note through the explicit call below, the badge, count, and
-    # panel through the commit callbacks (which also cover unpin, message
-    # deletion, and user deletion).
+    # Pins a message for a room member (or the member's agent). Returns
+    # the existing pin when the message is already pinned, checked before
+    # the cap so re-pinning in a full room still succeeds; raises
+    # CapReachedError past MAX_PER_ROOM. (A concurrent double-pin can
+    # still slip past the check and raise RecordInvalid from the
+    # uniqueness validation; callers treat that as success too.) The pin
+    # and its note commit atomically; the count check runs under SQLite's
+    # immediate write lock, so two concurrent pins cannot both pass the
+    # cap. Every broadcast fires after commit: the note through the
+    # explicit call below, the badge, count, and panel through the commit
+    # callbacks (which also cover unpin, message deletion, and user
+    # deletion).
     def pin!(message:, pinner:)
       pin = nil
       note = nil
       transaction do
         room = message.room
-        raise CapReachedError, "This channel already has #{MAX_PER_ROOM} pinned messages" if room.message_pins.count >= MAX_PER_ROOM
+        pin = find_by(message_id: message.id)
 
-        pin = create!(message:, room:, pinner:)
-        note = pin.post_pin_note!
+        unless pin
+          raise CapReachedError, "This channel already has #{MAX_PER_ROOM} pinned messages" if room.message_pins.count >= MAX_PER_ROOM
+
+          pin = create!(message:, room:, pinner:)
+          note = pin.post_pin_note!
+        end
       end
       note&.broadcast_create
       pin

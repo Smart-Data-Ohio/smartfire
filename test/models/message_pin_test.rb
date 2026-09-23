@@ -76,12 +76,29 @@ class MessagePinTest < ActiveSupport::TestCase
     end
   end
 
-  test "pinning the same message twice is invalid" do
-    MessagePin.pin!(message: @message, pinner: @pinner)
+  test "re-pinning returns the existing pin without posting another note" do
+    pin = MessagePin.pin!(message: @message, pinner: @pinner)
 
-    assert_raises ActiveRecord::RecordInvalid do
-      MessagePin.pin!(message: @message, pinner: users(:jason))
+    assert_no_difference -> { MessagePin.count } do
+      assert_no_difference -> { @room.messages.count } do
+        assert_equal pin, MessagePin.pin!(message: @message, pinner: users(:jason))
+      end
     end
+  end
+
+  test "re-pinning in a full room returns success" do
+    MessagePin::MAX_PER_ROOM.times do |n|
+      message = @room.root_messages.create!(creator: @pinner, markdown_source: "Pinnable #{n}", client_message_id: "repin-cap-#{n}")
+      MessagePin.pin!(message:, pinner: @pinner)
+    end
+    assert_equal MessagePin::MAX_PER_ROOM, @room.message_pins.count
+
+    repinned = @room.root_messages.find_by!(client_message_id: "repin-cap-0")
+
+    pin = MessagePin.pin!(message: repinned, pinner: @pinner)
+
+    assert_equal repinned, pin.message
+    assert_equal MessagePin::MAX_PER_ROOM, @room.message_pins.count
   end
 
   test "pins cap at 50 per room" do
