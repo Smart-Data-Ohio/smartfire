@@ -1,6 +1,9 @@
 require "test_helper"
 
 class TwoFactor::SetupsControllerTest < ActionDispatch::IntegrationTest
+  include GoogleSignInTestHelper
+  include GoogleCalendarTestHelper
+
   setup do
     @user = users(:david)
   end
@@ -185,7 +188,7 @@ class TwoFactor::SetupsControllerTest < ActionDispatch::IntegrationTest
     other_session = @user.sessions.create!(user_agent: "Other", ip_address: "9.9.9.9", two_factor_verified_at: Time.current)
     sign_in @user
 
-    delete two_factor_setup_url
+    delete two_factor_setup_url, params: { reauth: totp_code_for(credential) }
 
     assert_redirected_to two_factor_setup_url
     assert_not @user.reload.two_factor_enabled?
@@ -198,6 +201,58 @@ class TwoFactor::SetupsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to two_factor_setup_url
   end
 
+  test "destroy accepts the password" do
+    enroll_two_factor!(@user)
+    sign_in @user
+
+    delete two_factor_setup_url, params: { reauth: "secret123456" }
+
+    assert_redirected_to two_factor_setup_url
+    assert_not @user.reload.two_factor_enabled?
+  end
+
+  test "destroy refuses without re-authentication" do
+    credential = enroll_two_factor!(@user)
+    TwoFactorBackupCode.regenerate_set!(credential)
+    TwoFactorRememberedDevice.create_for!(@user, user_agent: "Browser", ip_address: "1.2.3.4")
+    sign_in @user
+
+    assert_no_difference -> { AuditLog.where(action: "two_factor.disable").count } do
+      delete two_factor_setup_url
+    end
+
+    assert_redirected_to user_profile_url
+    assert @user.reload.two_factor_enabled?
+    assert_equal 10, credential.backup_codes.unused.count
+    assert_equal 1, @user.two_factor_remembered_devices.count
+  end
+
+  test "destroy refuses a wrong code" do
+    enroll_two_factor!(@user)
+    sign_in @user
+
+    delete two_factor_setup_url, params: { reauth: "000000" }
+
+    assert_redirected_to user_profile_url
+    assert @user.reload.two_factor_enabled?
+    assert_not AuditLog.exists?(action: "two_factor.disable", target_id: @user.id)
+  end
+
+  test "destroy accepts a completed Google re-auth" do
+    enroll_two_factor!(@user)
+    identity = link_google_identity!(@user)
+    sign_in @user
+
+    state = start_google_reauth
+    complete_google_sign_in(state:, sub: identity.subject, email: identity.email)
+    assert_redirected_to user_profile_url
+
+    delete two_factor_setup_url
+
+    assert_redirected_to two_factor_setup_url
+    assert_not @user.reload.two_factor_enabled?
+  end
+
   test "destroy without enrollment redirects to setup and audits nothing" do
     sign_in @user
 
@@ -206,5 +261,20 @@ class TwoFactor::SetupsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to two_factor_setup_url
+  end
+
+  test "destroy is rate limited" do
+    enroll_two_factor!(@user)
+    sign_in @user
+
+    with_rate_limit_store do
+      10.times { delete two_factor_setup_url, params: { reauth: "000000" } }
+      assert_redirected_to user_profile_url
+
+      delete two_factor_setup_url, params: { reauth: "secret123456" }
+      assert_redirected_to user_profile_url
+      assert_equal "Too many attempts. Try again in a few minutes.", flash[:alert]
+      assert @user.reload.two_factor_enabled?
+    end
   end
 end

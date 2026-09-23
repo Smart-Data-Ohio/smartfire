@@ -33,6 +33,9 @@ module Sessions
       if valid_flow?(flow, verified_state) && flow["purpose"] == "link"
         return finish_link(flow)
       end
+      if valid_flow?(flow, verified_state) && flow["purpose"] == "reauth"
+        return finish_reauth(flow)
+      end
       return redirect_to root_url if signed_in?
 
       unless valid_flow?(flow, verified_state)
@@ -123,6 +126,40 @@ module Sessions
       rescue Google::SignIn::Rejected => error
         Rails.logger.warn "Google link rejected: #{error.reason}"
         redirect_to user_profile_url, alert: link_rejection_alert(error.reason)
+      end
+
+      # Finishes a signed-in member's "Confirm with Google" step-up: the
+      # verified subject must be the SAME Google account already linked to
+      # them, or any Google account could arm someone else's sensitive
+      # actions. Success arms a single-use re-authentication (see
+      # TwoFactorReauthentication) and lands back on the profile.
+      def finish_reauth(flow)
+        unless signed_in? && Current.user.id == flow["user_id"]
+          return redirect_to(signed_in? ? user_profile_url : new_session_url, alert: "Google confirmation expired. Try again.")
+        end
+
+        if params[:error].present? || params[:code].blank?
+          return redirect_to user_profile_url, alert: "Google confirmation was cancelled."
+        end
+
+        id_token = Google::SignIn.exchange_code(
+          code: params[:code].to_s, redirect_uri: session_google_callback_url, verifier: flow["verifier"]
+        )
+        claims = Google::SignIn::IdTokenVerifier.verify!(id_token, nonce: flow["nonce"])
+
+        unless claims["sub"].to_s.present? && claims["sub"].to_s == Current.user.google_identity&.subject
+          return redirect_to user_profile_url, alert: "That Google account is not linked here. Confirm with the Google account you sign in with."
+        end
+
+        session[TwoFactorReauthentication::REAUTH_SESSION_KEY] = Time.current.to_i
+        AuditLog.record!(action: "two_factor.reauthenticate", actor: Current.user, target: Current.user)
+
+        redirect_to user_profile_url, notice: "Confirmed with Google. Continue with what you were doing."
+      rescue Google::SignIn::Unavailable
+        redirect_to user_profile_url, alert: "Google is unavailable right now. Try again."
+      rescue Google::SignIn::Rejected => error
+        Rails.logger.warn "Google re-auth rejected: #{error.reason}"
+        redirect_to user_profile_url, alert: "Google confirmation failed. Try again."
       end
 
       def link_rejection_alert(reason)

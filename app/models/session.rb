@@ -5,6 +5,7 @@ class Session < ApplicationRecord
 
   belongs_to :user
   has_many :workspace_presence_leases, dependent: :delete_all
+  has_many :two_factor_setup_secrets, dependent: :delete_all
 
   before_destroy -> { HuddleGrant.revoke_for_session!(self) }
   before_create { self.last_active_at ||= Time.now }

@@ -25,6 +25,8 @@ Rails.application.routes.draw do
   resource :two_factor_challenge, only: %i[ show create ], controller: "two_factor/challenges"
   resources :two_factor_backup_codes, only: %i[ create ], controller: "two_factor/backup_codes"
   resources :two_factor_remembered_devices, only: %i[ destroy ], controller: "two_factor/remembered_devices"
+  delete "two_factor_remembered_devices", to: "two_factor/remembered_devices#destroy_all"
+  resource :two_factor_reauthentication, only: %i[ create ], controller: "two_factor/reauthentications"
 
   resource :account do
     scope module: "accounts" do

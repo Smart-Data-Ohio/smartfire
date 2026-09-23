@@ -21,6 +21,8 @@ class AuditLog < ApplicationRecord
     two_factor.disable
     two_factor.reset
     two_factor.backup_codes.regenerate
+    two_factor.reauthenticate
+    two_factor.devices.revoke_all
     user.create
     user.email.change
     user.password.change

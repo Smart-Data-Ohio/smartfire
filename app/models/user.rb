@@ -161,6 +161,7 @@ class User < ApplicationRecord
       memberships.without_direct_rooms.delete_all
       push_subscriptions.delete_all
       searches.delete_all
+      TwoFactorSetupSecret.where(session_id: sessions.select(:id)).delete_all
       sessions.delete_all
       Calendar::DisconnectCleanupJob.perform_later([], google_account.cleanup_snapshot, google_account.id) if google_account&.usable?
       push_channel&.destroy!

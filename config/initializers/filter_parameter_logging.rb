@@ -6,5 +6,8 @@
 Rails.application.config.filter_parameters += [
   :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc, :endpoint, "message.body",
   # Google sign-in authorization code; the single-use credential must never hit the logs.
-  :code
+  :code,
+  # Two-factor step-up for sensitive self-service; carries a TOTP code or
+  # the account password, so it must never hit the logs either.
+  :reauth
 ]

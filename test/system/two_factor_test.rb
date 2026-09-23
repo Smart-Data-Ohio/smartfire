@@ -92,7 +92,10 @@ class TwoFactorTest < ApplicationSystemTestCase
 
     visit user_profile_url
     assert_selector "h2", text: "Two-step sign-in"
-    click_on "Revoke", match: :first
+    within "menu li", match: :first do
+      fill_in "Code or password", with: "secret123456"
+      click_on "Revoke"
+    end
     click_on "Log out"
 
     visit new_session_url
@@ -109,12 +112,48 @@ class TwoFactorTest < ApplicationSystemTestCase
     sign_in "jz@37signals.com"
 
     visit user_profile_url
-    click_on "New backup codes"
+    within "#new_backup_codes" do
+      fill_in "Authenticator code or password", with: "secret123456"
+      click_on "New backup codes"
+    end
 
     assert_selector "h1", text: "Save your backup codes", wait: 10
     assert_selector "#two_factor_backup_codes li", count: 10
     shown = all("#two_factor_backup_codes li code").map(&:text)
     assert_empty shown & old_codes
+  end
+
+  test "disabling with the password drops back to setup and re-enrolling works" do
+    enroll_two_factor!(users(:jz))
+    sign_in "jz@37signals.com"
+
+    visit user_profile_url
+    within "#disable_two_factor" do
+      fill_in "Authenticator code or password", with: "secret123456"
+      click_on "Disable"
+    end
+
+    assert_selector "h1", text: "Set up two-step sign-in", wait: 10
+    assert_not users(:jz).reload.two_factor_enabled?
+
+    fill_in "Authenticator code", with: totp_from_setup_page
+    click_on "Verify and continue"
+
+    assert_selector "h1", text: "Save your backup codes", wait: 10
+    assert users(:jz).reload.two_factor_enabled?
+  end
+
+  test "disabling without confirming leaves two-step sign-in on" do
+    enroll_two_factor!(users(:jz))
+    sign_in "jz@37signals.com"
+
+    visit user_profile_url
+    within "#disable_two_factor" do
+      click_on "Disable"
+    end
+
+    assert_selector ".flash", text: "Enter your authenticator code", wait: 10
+    assert users(:jz).reload.two_factor_enabled?
   end
 
   test "an admin resets a user's two-factor and the user re-enrolls" do

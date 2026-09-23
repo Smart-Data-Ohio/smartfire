@@ -5,9 +5,14 @@ module TwoFactor
   # codes once. Destroy disables 2FA, which immediately re-triggers the
   # enrollment redirect.
   class SetupsController < ApplicationController
+    include TwoFactorReauthentication
+
     rate_limit to: 10, within: 3.minutes, only: :create, with: -> { render_rate_limited }
     rate_limit to: 10, within: 15.minutes, only: :create, name: "per-user",
       by: -> { Current.user&.id }, with: -> { render_rate_limited }
+    rate_limit to: 10, within: 3.minutes, only: :destroy, with: -> { render_destroy_rate_limited }
+    rate_limit to: 10, within: 15.minutes, only: :destroy, name: "per-user-destroy",
+      by: -> { Current.user&.id }, with: -> { render_destroy_rate_limited }
 
     before_action :ensure_human_user
 
@@ -42,8 +47,13 @@ module TwoFactor
       end
     end
 
+    # Disabling needs a fresh TOTP code, the password, or a completed
+    # Google re-auth in the same request: anyone holding the session
+    # could otherwise disable and re-enroll on their own authenticator.
     def destroy
       if Current.user.two_factor_enabled?
+        return refuse_without_reauthentication(Current.user) unless reauthenticated?(Current.user)
+
         Current.user.reset_two_factor!
         Current.session.clear_two_factor_verified!
         # Every session re-enrolls, not just this one: a live session must
@@ -94,6 +104,10 @@ module TwoFactor
         reuse_setup_presentation
         flash.now[:alert] = "Too many attempts. Try again in a few minutes."
         render :show, status: :too_many_requests
+      end
+
+      def render_destroy_rate_limited
+        redirect_to user_profile_url, alert: "Too many attempts. Try again in a few minutes."
       end
   end
 end
