@@ -118,6 +118,7 @@ module Authentication
       # this browser must not inherit the previous user's confirmation.
       session.delete(SudoMode::VERIFIED_SESSION_KEY)
       session.delete(SudoMode::PENDING_SESSION_KEY)
+      session.delete(TwoFactorReauthentication::REAUTH_SESSION_KEY)
 
       device_id = ensure_device_cookie
       user.sessions.start!(user_agent: request.user_agent, ip_address: request.remote_ip,
