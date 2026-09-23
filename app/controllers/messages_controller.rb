@@ -175,6 +175,7 @@ class MessagesController < ApplicationController
         Twitter::PostReference.where(message_id: message_ids).joins(:post).maximum("twitter_posts.updated_at"),
         LinkEmbedReference.where(message_id: message_ids).joins(:link_embed).maximum("link_embeds.updated_at"),
         EventReference.where(message_id: message_ids).joins(:event).maximum("events.updated_at"),
+        Poll.where(message_id: message_ids).maximum(:updated_at),
         Message.where(id: quoted_ids).maximum(:updated_at),
         Message.where(id: quoted_ids).maximum(:edited_at),
         User.where(id: messages.map(&:creator_id)).maximum(:updated_at)

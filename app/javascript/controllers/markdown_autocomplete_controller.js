@@ -2,9 +2,10 @@ import { Controller } from "@hotwired/stimulus"
 import { debounce } from "helpers/timing_helpers"
 import MarkdownMentionsAutocompleteHandler from "lib/autocomplete/markdown_mentions_autocomplete_handler"
 import MarkdownIconsAutocompleteHandler from "lib/autocomplete/markdown_icons_autocomplete_handler"
+import MarkdownSlashCommandsAutocompleteHandler from "lib/autocomplete/markdown_slash_commands_autocomplete_handler"
 
 export default class extends Controller {
-  static values = { url: String, iconsUrl: String }
+  static values = { url: String, iconsUrl: String, slashCommandsUrl: String }
 
   initialize() {
     this.search = debounce(this.search.bind(this), 250)
@@ -43,6 +44,10 @@ export default class extends Controller {
 
     if (this.hasIconsUrlValue) {
       this.handlers.push(new MarkdownIconsAutocompleteHandler(this.element, this.iconsUrlValue))
+    }
+
+    if (this.hasSlashCommandsUrlValue) {
+      this.handlers.push(new MarkdownSlashCommandsAutocompleteHandler(this.element, this.slashCommandsUrlValue))
     }
   }
 

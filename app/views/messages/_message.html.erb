@@ -18,6 +18,7 @@
           <%= render "messages/meta", message: message, show_room_icon: local_assigns[:show_room_icon] %>
           <%= render "messages/context", message: message %>
           <%= render "messages/presentation", message: message %>
+          <%= render "polls/poll", poll: message.poll if message.poll %>
           <%= render "messages/drive_attachments", message: message %>
           <%= render "github/pull_requests/cards", message: message %>
           <%= render "twitter/posts/cards", message: message %>

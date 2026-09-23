@@ -18,10 +18,13 @@ module Agents
         .find_by(id: id)
       return ServiceResult.fail("Event not found", status: :not_found) unless event
 
-      # Approval decisions, GitHub completions, and work assignments carry
-      # no message and are always ackable by their own agent, under the
-      # workspace-wide form of the capability check, matching polling.
-      if AgentEvent::ALWAYS_READABLE_TYPES.include?(event.event_type) || AgentEvent::WORK_DELIVERABLE_TYPES.include?(event.event_type)
+      # Approval decisions, GitHub completions, work assignments, and
+      # slash-command invocations carry no message and are always ackable
+      # by their own agent, under the workspace-wide form of the
+      # capability check, matching polling.
+      if AgentEvent::ALWAYS_READABLE_TYPES.include?(event.event_type) ||
+          AgentEvent::WORK_DELIVERABLE_TYPES.include?(event.event_type) ||
+          AgentEvent::SLASH_DELIVERABLE_TYPES.include?(event.event_type)
         unless agent.has_capability_anywhere?(:read_messages)
           return ServiceResult.fail("Forbidden: agent lacks read_messages capability", status: :forbidden)
         end
@@ -122,6 +125,10 @@ module Agents
           return work_poll_payload(event)
         end
 
+        if AgentEvent::SLASH_DELIVERABLE_TYPES.include?(event.event_type)
+          return slash_command_poll_payload(event)
+        end
+
         message = event.message
         room = event.room
         return if message.nil? || room.nil?
@@ -173,6 +180,27 @@ module Agents
           actor: event.actor ? { id: event.actor.id, name: event.actor.name } : nil,
           work: work,
           thread_deleted: (true if thread.nil?)
+        }.compact
+      end
+
+      def slash_command_poll_payload(event)
+        metadata = event.metadata.is_a?(Hash) ? event.metadata : {}
+        room = event.room
+        return if room.nil?
+        return unless poll_room_readable?(room)
+
+        {
+          id: event.id,
+          event_type: event.event_type,
+          outcome: event.outcome,
+          created_at: event.created_at&.utc,
+          room: { id: room.id, name: room.name },
+          actor: event.actor ? { id: event.actor.id, name: event.actor.name } : nil,
+          thread_id: metadata["thread_id"],
+          command: {
+            name: metadata["command"],
+            arguments: metadata["arguments"]
+          }
         }.compact
       end
 

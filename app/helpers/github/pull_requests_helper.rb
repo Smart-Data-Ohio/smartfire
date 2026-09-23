@@ -17,6 +17,10 @@ module Github::PullRequestsHelper
   # what busts the key when a reference row disappears. Renames touch
   # neither row, so the key also carries a digest of the author and room
   # names the cards show.
+  # Poll votes and closes touch the poll row without touching the
+  # message, so the key carries the poll's stamp as its own element for
+  # the same reason as pins (a vote retraction must bust the cache even
+  # when a newer card dominates).
   def message_with_pr_cards_cache_key(message)
     newest_card = (message.github_pull_requests.map(&:updated_at) + message.fizzy_cards.map(&:updated_at) + message.twitter_posts.map(&:updated_at) + message.events.map(&:updated_at)).compact.max
     # Link embeds are fetched after the message renders; their rows (and the
@@ -26,6 +30,7 @@ module Github::PullRequestsHelper
     key << embeds if embeds.any?
     key << github_pr_threads_stamp(message.room_id) if message.github_pull_requests.any?
     key << message.message_pins.map(&:updated_at).max
+    key << message.poll&.updated_at
     key << message.system_note?
     key << message_quote_stamp(message)
     key << message_quote_names_digest(message)

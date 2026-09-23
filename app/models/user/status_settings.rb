@@ -38,9 +38,14 @@ module User::StatusSettings
 
   # Manual Do Not Disturb, the DND presence, or the scheduled quiet-hours
   # window, whichever silences push and sounds right now. Inbox items
-  # are still recorded.
+  # are still recorded. A manual DND with an expiry in the past reads as
+  # off without a cleanup job, the same way custom statuses do.
   def dnd_active?(now: Time.current)
-    dnd_enabled? || presence_setting == "dnd" || quiet_hours_active?(now:)
+    manual_dnd_active?(now:) || presence_setting == "dnd" || quiet_hours_active?(now:)
+  end
+
+  def manual_dnd_active?(now: Time.current)
+    dnd_enabled? && (dnd_until.nil? || dnd_until > now)
   end
 
   def quiet_hours_active?(now: Time.current)

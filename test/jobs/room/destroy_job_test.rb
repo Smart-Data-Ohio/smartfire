@@ -136,6 +136,29 @@ class Room::DestroyJobTest < ActiveJob::TestCase
     end
   end
 
+  test "destroy removes scheduled messages and their inbox items" do
+    pending = ScheduledMessage.create!(user: @david, room: @room,
+      markdown_source: "Pending", send_at: 1.hour.from_now)
+    sent = ScheduledMessage.create!(user: @david, room: @room,
+      markdown_source: "Sent", send_at: 1.hour.from_now)
+    ScheduledMessage::Dispatcher.dispatch_now!(sent)
+    threaded = ScheduledMessage.create!(user: @david, room: @room, thread: @thread,
+      markdown_source: "Threaded", send_at: 1.hour.from_now)
+    dropped = ScheduledMessage.create!(user: @david, room: @room,
+      markdown_source: "Dropped", send_at: 1.hour.from_now)
+    dropped.drop!(reason: "test")
+    scheduled_ids = [ pending.id, sent.id, threaded.id, dropped.id ]
+    item_ids = ActivityItem.where(source_type: ScheduledMessage.polymorphic_name, source_id: scheduled_ids).ids
+    assert_not_empty item_ids
+
+    @room.begin_destroy!
+    Room::DestroyJob.perform_now(@room.id)
+
+    assert_empty Room.where(id: @room.id)
+    assert_empty ScheduledMessage.where(id: scheduled_ids)
+    assert_empty ActivityItem.where(id: item_ids)
+  end
+
   test "reenqueue_stuck! claims rooms so a second sweep enqueues nothing" do
     stuck = Rooms::Closed.create_for({ name: "Stuck", creator: @david }, users: [ @david ])
     stuck.begin_destroy!

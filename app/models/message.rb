@@ -21,6 +21,7 @@ class Message < ApplicationRecord
   belongs_to :forwarded_from_message, class_name: "Message", optional: true
 
   has_many :boosts, dependent: :destroy
+  has_one :poll, dependent: :destroy
   has_many :message_pins, dependent: :destroy
   has_many :saved_items, dependent: :destroy
   has_many :activity_items, as: :source, dependent: :destroy, inverse_of: :source
@@ -113,6 +114,7 @@ class Message < ApplicationRecord
       .with_attachment_details
       .with_boosts
       .preload(:message_pins)
+      .preload(poll: [ :poll_options, { poll_votes: :user } ])
       .preload(:room, :github_pull_requests, :fizzy_cards, :twitter_posts, :drive_attachments, link_embed_references: :link_embed,
         events: [ :room, :organizer, :venue ],
         message_references: { referenced_message: [ :room, :rich_text_body, { attachment_attachment: :blob }, { creator: :avatar_attachment } ] },

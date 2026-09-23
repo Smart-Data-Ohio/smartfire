@@ -397,6 +397,63 @@ module Agents
           "required" => [ "message_id" ]
         },
         throttle: [ 60, "agents/pins", "destroy" ]
+      ),
+      Tool.new(
+        name: "register_slash_command",
+        description: "Register a custom slash command for a room (name without the leading slash, lowercase). Invoking it delivers a slash_command event to this agent with the raw arguments. Re-registering the agent's own name updates its description. Names are unique per room. Requires post_messages.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "room_id" => { "type" => "integer", "description" => "Room to register the command in." },
+            "name" => { "type" => "string", "description" => "Command name without the leading slash." },
+            "description" => { "type" => "string", "description" => "Short description shown in the command picker." }
+          },
+          "required" => %w[ room_id name ]
+        },
+        throttle: [ 60, "agents/slash_commands", "create" ]
+      ),
+      Tool.new(
+        name: "unregister_slash_command",
+        description: "Unregister one of the agent's own custom slash commands in a room. Requires post_messages.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "room_id" => { "type" => "integer", "description" => "Room the command is registered in." },
+            "name" => { "type" => "string", "description" => "Command name without the leading slash." }
+          },
+          "required" => %w[ room_id name ]
+        },
+        throttle: [ 60, "agents/slash_commands", "destroy" ]
+      ),
+      Tool.new(
+        name: "create_poll",
+        description: "Post a message carrying a poll: question plus 2-10 options, single or multiple choice, optionally anonymous and with an ISO8601 close time. Requires post_messages.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "room_id" => { "type" => "integer", "description" => "Room to post the poll in." },
+            "question" => { "type" => "string", "description" => "Poll question (the message text)." },
+            "options" => { "type" => "array", "items" => { "type" => "string" }, "description" => "2-10 option labels." },
+            "multiple" => { "type" => "boolean", "description" => "Allow voting for several options." },
+            "anonymous" => { "type" => "boolean", "description" => "Show counts without voter names." },
+            "closes_at" => { "type" => "string", "description" => "ISO8601 close time." }
+          },
+          "required" => %w[ room_id question options ]
+        },
+        throttle: [ 60, "agents/polls", "create" ]
+      ),
+      Tool.new(
+        name: "get_poll",
+        description: "Read a poll with live counts (voter names unless anonymous). Requires post_messages.",
+        input_schema: {
+          "type" => "object",
+          "properties" => {
+            "room_id" => { "type" => "integer", "description" => "Room the poll was posted in." },
+            "poll_id" => { "type" => "integer", "description" => "Poll id." }
+          },
+          "required" => %w[ room_id poll_id ]
+        },
+        throttle: [ 120, "agents/polls", "show" ]
       )
     ].freeze
 
@@ -759,6 +816,39 @@ module Agents
         message_id = args["message_id"].presence or raise InvalidParams, "Missing required argument: message_id"
 
         Pins.unpin(agent: @agent, message_id: message_id)
+      end
+
+      def tool_register_slash_command(args)
+        room_id = args["room_id"].presence or raise InvalidParams, "Missing required argument: room_id"
+        name = args["name"].presence or raise InvalidParams, "Missing required argument: name"
+
+        SlashCommands.register(agent: @agent, room_id: room_id, name: name, description: args["description"])
+      end
+
+      def tool_unregister_slash_command(args)
+        room_id = args["room_id"].presence or raise InvalidParams, "Missing required argument: room_id"
+        name = args["name"].presence or raise InvalidParams, "Missing required argument: name"
+
+        SlashCommands.unregister(agent: @agent, room_id: room_id, name: name)
+      end
+
+      def tool_create_poll(args)
+        room_id = args["room_id"].presence or raise InvalidParams, "Missing required argument: room_id"
+        question = args["question"].presence or raise InvalidParams, "Missing required argument: question"
+        options = args["options"].presence or raise InvalidParams, "Missing required argument: options"
+        raise InvalidParams, "options must be an array" unless options.is_a?(Array)
+
+        Polls.create(
+          agent: @agent, room_id: room_id, question: question, options: options,
+          multiple: args["multiple"], anonymous: args["anonymous"], closes_at: args["closes_at"]
+        )
+      end
+
+      def tool_get_poll(args)
+        room_id = args["room_id"].presence or raise InvalidParams, "Missing required argument: room_id"
+        poll_id = args["poll_id"].presence or raise InvalidParams, "Missing required argument: poll_id"
+
+        Polls.show(agent: @agent, room_id: room_id, poll_id: poll_id)
       end
 
       # Reads an updatable work field, returning the unset sentinel when

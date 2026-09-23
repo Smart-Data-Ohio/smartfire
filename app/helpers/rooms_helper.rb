@@ -123,8 +123,19 @@ module RoomsHelper
         composer_messages_outlet: "##{message_area_id}",
         composer_room_id_value: room.id,
         composer_thread_id_value: thread&.id,
-        composer_thread_mode_value: thread.present?
+        composer_thread_mode_value: thread.present?,
+        composer_slash_commands_url_value: room_slash_commands_path(room),
+        composer_slash_commands_value: slash_command_names_for(room),
+        composer_slash_commands_list_url_value: autocompletable_slash_commands_path(room_id: room.id, thread_id: thread&.id)
       }
+    end
+
+    # Commands the composer intercepts: every built-in plus the room's
+    # registered agent commands. The list is rendered once per page
+    # load; the composer re-checks the live picker endpoint for words
+    # it doesn't know, so commands registered after load still run.
+    def slash_command_names_for(room)
+      SlashCommands::Registry.all.map(&:name) + room.agent_slash_commands.ordered.pluck(:name)
     end
 
     def composer_data_actions
