@@ -77,6 +77,19 @@ class MessageStreamingTest < ActiveSupport::TestCase
     end
   end
 
+  test "finalizing a thread stream fans out no legacy webhook" do
+    thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Thread webhooks")
+    ThreadMembership.join!(thread, users(:david))
+    message = thread.post_message!(creator: @bot, attributes: {
+      markdown_source: "Hey @[Legacy Stream]", client_message_id: "stream-thread-fanout", streaming: true })
+
+    assert_no_enqueued_jobs only: Bot::WebhookJob do
+      message.finalize_stream!
+    end
+
+    assert_not message.reload.streaming?
+  end
+
   test "finalizing a thread stream sends no unread-room broadcast" do
     thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Thread badges")
     ThreadMembership.join!(thread, users(:david))

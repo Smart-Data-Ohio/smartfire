@@ -338,7 +338,9 @@ class Message < ApplicationRecord
     record_activity_items
     enqueue_agent_deliveries
     sync_all_references
-    Message::BotWebhookFanout.deliver_for(self)
+    # Normal thread replies never fan out to legacy webhooks, and neither
+    # does a thread finalize.
+    Message::BotWebhookFanout.deliver_for(self) unless thread_message?
     # Like a normal root message, finalizing a root stream lights up
     # sidebar badges; thread finalizes stay on the thread channel.
     broadcast_unread_room unless thread_message? || system_note?
