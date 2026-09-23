@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_22_223000) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_005438) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -439,17 +439,23 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_223000) do
     t.datetime "connected_at"
     t.integer "connections", default: 0, null: false
     t.datetime "created_at", null: false
+    t.integer "favorite_position"
     t.datetime "hand_raised_at"
     t.string "involvement", default: "mentions"
+    t.bigint "last_read_message_id"
+    t.bigint "room_category_id"
     t.integer "room_id", null: false
     t.string "stage_role"
     t.datetime "unread_at"
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
+    t.index ["last_read_message_id"], name: "index_memberships_on_last_read_message_id"
     t.index ["room_id", "created_at"], name: "index_memberships_on_room_id_and_created_at"
     t.index ["room_id", "stage_role"], name: "index_memberships_on_room_id_and_stage_role"
     t.index ["room_id", "user_id"], name: "index_memberships_on_room_id_and_user_id", unique: true
     t.index ["room_id"], name: "index_memberships_on_room_id"
+    t.index ["user_id", "favorite_position"], name: "index_memberships_on_user_and_favorite"
+    t.index ["user_id", "room_category_id"], name: "index_memberships_on_user_and_category"
     t.index ["user_id"], name: "index_memberships_on_user_id"
   end
 
@@ -489,6 +495,17 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_223000) do
     t.integer "user_id", null: false
     t.index ["endpoint", "p256dh_key", "auth_key"], name: "idx_on_endpoint_p256dh_key_auth_key_7553014576"
     t.index ["user_id"], name: "index_push_subscriptions_on_user_id"
+  end
+
+  create_table "room_categories", force: :cascade do |t|
+    t.boolean "collapsed", default: false, null: false
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["user_id", "position"], name: "index_room_categories_on_user_and_position"
+    t.index ["user_id"], name: "index_room_categories_on_user_id"
   end
 
   create_table "rooms", force: :cascade do |t|

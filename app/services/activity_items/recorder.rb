@@ -104,7 +104,7 @@ module ActivityItems
           next unless mentionable_room_membership?(room_membership)
           next unless eligible_thread_membership?(thread_membership)
 
-          unless room_membership.involved_in_nothing?
+          unless room_membership.involved_in_nothing? || room_membership.involved_in_muted?
             if thread_membership.involved_in_everything?
               choose_candidate(candidates, thread_membership.user, "thread_activity")
             end
@@ -150,8 +150,8 @@ module ActivityItems
       end
 
       # Invisible members get nothing from the room. Members with
-      # notifications off still get direct mentions, but no replies or
-      # followed-thread activity.
+      # notifications off or the room muted still get direct mentions,
+      # but no replies or followed-thread activity.
       def mentionable_room_membership?(membership)
         membership.present? && !membership.involved_in_invisible? && ActivityItem.active_human?(membership.user)
       end

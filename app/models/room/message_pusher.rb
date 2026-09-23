@@ -47,7 +47,7 @@ class Room::MessagePusher
     end
 
     def push_subscriptions_for_mentionable_users(mentionees)
-      relevant_subscriptions.merge(Membership.involved_in_mentions).where(user_id: mentionees.ids)
+      relevant_subscriptions.merge(Membership.where(involvement: %w[ mentions muted ])).where(user_id: mentionees.ids)
     end
 
     # Reply authors should receive an opted-in direct notification even when
@@ -58,7 +58,7 @@ class Room::MessagePusher
       return if reply_author_id.blank? || reply_author_id == message.creator_id || !message.reply_notify_author?
 
       relevant_subscriptions
-        .merge(Membership.where.not(involvement: %w[ invisible nothing ]))
+        .merge(Membership.where.not(involvement: %w[ invisible nothing muted ]))
         .where(user_id: reply_author_id)
     end
 

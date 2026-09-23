@@ -160,6 +160,9 @@ Rails.application.routes.draw do
       resource :refresh, only: :show
       resource :settings, only: :show
       resource :involvement, only: %i[ show update ]
+      resource :read, only: %i[ create destroy ], controller: "reads"
+      resource :favorite, only: %i[ create destroy update ], controller: "favorites"
+      resource :category, only: :update, controller: "categories"
       resources :github_subscriptions, only: %i[ create update destroy ]
     end
 
@@ -202,6 +205,9 @@ Rails.application.routes.draw do
   resources :searches, only: %i[ index create ] do
     delete :clear, on: :collection
   end
+
+  resource :switcher, only: :show
+  resources :room_categories, only: %i[ create update destroy ]
 
   resources :activity_items, path: "activity", only: :index do
     get :unread_count, on: :collection

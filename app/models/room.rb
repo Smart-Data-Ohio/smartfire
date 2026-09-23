@@ -136,7 +136,16 @@ class Room < ApplicationRecord
     end
 
     def unread_memberships(message)
-      memberships.visible.disconnected.where.not(user: message.creator).update_all(unread_at: message.created_at, updated_at: Time.current)
+      recipients = memberships.visible.disconnected.where.not(user: message.creator)
+      recipients.where.not(involvement: :muted).update_all(unread_at: message.created_at, updated_at: Time.current)
+
+      # Muted rooms go unread only when the member is mentioned; the
+      # mentionee subselect keeps this to a single statement.
+      muted_recipients = recipients.where(involvement: :muted)
+      if muted_recipients.exists?
+        muted_recipients.where(user_id: message.mentionees.select(:id))
+          .update_all(unread_at: message.created_at, updated_at: Time.current)
+      end
     end
 
     def push_later(message)
