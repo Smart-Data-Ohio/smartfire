@@ -1,0 +1,116 @@
+/* First-run tour and help menu. */
+
+/* The highlighted step target floats above the scrim with a ring. */
+.tour__target {
+  border-radius: 0.5rem;
+  outline: 2px solid var(--workspace-accent, var(--color-accent, #0b57d0));
+  outline-offset: 3px;
+  position: relative;
+  z-index: 41;
+}
+
+.tour__scrim {
+  background: rgb(0 0 0 / 0.45);
+  inset: 0;
+  position: fixed;
+  z-index: 40;
+}
+
+.tour__card {
+  background: var(--workspace-surface, var(--color-bg));
+  border: 1px solid var(--workspace-border, var(--color-border));
+  border-radius: 0.75rem;
+  color: var(--workspace-text, var(--color-text));
+  inline-size: min(24rem, calc(100dvw - 1.5rem));
+  padding: 1.25rem;
+  position: fixed;
+  z-index: 42;
+}
+
+.tour__card--center {
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.tour__progress {
+  color: var(--workspace-text-muted, var(--color-text-muted, var(--color-text)));
+  font-size: 0.8rem;
+  margin: 0 0 0.25rem;
+}
+
+.tour__title {
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
+}
+
+.tour__body {
+  margin: 0 0 1rem;
+}
+
+.tour__actions {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tour__spacer {
+  flex: 1;
+}
+
+@media (max-width: 40rem) {
+  /* Bottom sheet. Important wins over the desktop coordinates the
+     controller sets inline when the viewport shrinks mid-tour. */
+  .tour__card {
+    inset-block-end: 0.75rem !important;
+    inset-block-start: auto !important;
+    inset-inline-end: 0.75rem !important;
+    inset-inline-start: 0.75rem !important;
+    inline-size: auto;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour__card,
+  .tour__target {
+    scroll-behavior: auto;
+    transition: none;
+  }
+}
+
+/* Help menu: the layout nav disables pointer events, so re-enable them. */
+.help-menu {
+  margin-inline-start: auto;
+  pointer-events: auto;
+}
+
+.help-menu summary {
+  list-style: none;
+
+  &::marker,
+  &::-webkit-details-marker {
+    display: none;
+  }
+}
+
+.help-menu__menu {
+  background-color: var(--workspace-surface, var(--color-bg));
+  border: 1px solid var(--workspace-border, var(--color-border-dark));
+  border-radius: 0.5em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  inline-size: max-content;
+  inset-block-start: calc(100% + 0.5rem);
+  inset-inline-end: 0;
+  padding: 0.5rem;
+  position: absolute;
+  z-index: 3;
+}
+
+.help-menu__item {
+  justify-content: flex-start;
+  text-align: start;
+  white-space: nowrap;
+}

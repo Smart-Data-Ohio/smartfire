@@ -26,6 +26,7 @@ module RoomsHelper
     drive_share drive_picker
     rooms_list read_rooms badge_dot sorted_list activity_indicator
     board_list
+    tour help_menu
   ].freeze
 
   def first_paint_controller_preloads

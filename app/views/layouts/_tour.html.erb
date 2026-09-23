@@ -1,0 +1,27 @@
+<%# First-run tour shell. Rendered for signed-in humans on every page;
+    the controller auto-starts it for members who never completed it, and
+    the help menu restarts it with a tour:start window event. %>
+<div id="tour" hidden
+     data-controller="tour"
+     data-action="tour:start@window->tour#start"
+     data-tour-auto-start-value="<%= Current.user.tour_completed_at.nil? %>"
+     data-tour-complete-url-value="<%= user_tour_path %>">
+  <div class="tour__scrim" aria-hidden="true"></div>
+  <div class="tour__card shadow"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="tour-title"
+       aria-describedby="tour-body"
+       data-tour-target="card"
+       data-action="keydown->tour#onKeydown">
+    <p class="tour__progress" data-tour-target="progress"></p>
+    <h2 id="tour-title" class="tour__title" data-tour-target="title"></h2>
+    <p id="tour-body" class="tour__body" data-tour-target="body"></p>
+    <div class="tour__actions">
+      <button type="button" class="btn btn--borderless" data-tour-target="back" data-action="tour#back">Back</button>
+      <span class="tour__spacer" aria-hidden="true"></span>
+      <button type="button" class="btn btn--borderless" data-tour-target="skip" data-action="tour#skip">Skip tour</button>
+      <button type="button" class="btn" data-tour-target="next" data-action="tour#next">Next</button>
+    </div>
+  </div>
+</div>

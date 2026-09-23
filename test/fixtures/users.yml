@@ -6,6 +6,7 @@ david:
   password_digest: <%= password_digest %>
   role: administrator
   google_email_link_allowed: true
+  tour_completed_at: 2026-01-01 00:00:00
 
 jason:
   name: Jason
@@ -13,6 +14,7 @@ jason:
   password_digest: <%= password_digest %>
   role: administrator
   google_email_link_allowed: true
+  tour_completed_at: 2026-01-01 00:00:00
 
 jz:
   name: JZ
@@ -20,6 +22,7 @@ jz:
   password_digest: <%= password_digest %>
   bio: Designer
   google_email_link_allowed: true
+  tour_completed_at: 2026-01-01 00:00:00
 
 kevin:
   name: Kevin
@@ -27,6 +30,7 @@ kevin:
   password_digest: <%= password_digest %>
   bio: Programmer
   google_email_link_allowed: true
+  tour_completed_at: 2026-01-01 00:00:00
 
 bender:
   name: Bender Bot
