@@ -147,6 +147,23 @@ class ScheduledMessage::DispatcherTest < ActiveSupport::TestCase
     assert scheduled.reload.dropped?
   end
 
+  test "a row dropped after the claim posts nothing" do
+    thread = ChannelThread.create!(room: @room, creator: @user, name: "Side chat")
+    scheduled = schedule_due!(markdown_source: "Thread hi", thread: thread)
+    # The claim landed, then the thread was destroyed before the post:
+    # the destroy callback dropped the row and nullified thread_id.
+    ScheduledMessage.where(id: scheduled.id).update_all(claimed_at: Time.current)
+    thread.destroy!
+    assert scheduled.reload.dropped?
+
+    posted = nil
+    assert_no_difference -> { Message.count } do
+      posted = ScheduledMessage::Dispatcher.send(:post!, scheduled, now: Time.current)
+    end
+
+    assert_nil posted
+  end
+
   test "dispatch_now sends immediately and reports drops" do
     scheduled = schedule!(markdown_source: "Now", send_at: 2.hours.from_now)
 

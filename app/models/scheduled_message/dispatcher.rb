@@ -60,7 +60,7 @@ class ScheduledMessage::Dispatcher
         end
 
         begin
-          post!(scheduled, now:)
+          posted = post!(scheduled, now:)
         rescue ActiveRecord::RecordInvalid => error
           # The row can never post (a root draft in a board room, a reply
           # the model rejects): drop it with the reason instead of
@@ -69,6 +69,8 @@ class ScheduledMessage::Dispatcher
           drop!(scheduled, now:, reason: error.record.errors.full_messages.to_sentence)
           return false
         end
+        return false if posted.nil?
+
         true
       rescue => error
         # A failed post must not strand the claim: clear it so the next
@@ -81,29 +83,39 @@ class ScheduledMessage::Dispatcher
         raise error
       end
 
+      # Posts the row and returns the message, or nil when the row was
+      # dropped after the claim (a thread destroyed mid-claim drops its
+      # rows and nullifies thread_id: posting would re-target the
+      # channel, so the drop wins and nothing posts).
       def post!(scheduled, now:)
         message = nil
+        thread_id = scheduled.thread_id
 
         ActiveRecord::Base.transaction do
-          reply_id = scheduled.reply_to_message_id if Message.exists?(id: scheduled.reply_to_message_id)
+          scheduled.lock!
+          if scheduled.pending? && scheduled.thread_id == thread_id
+            reply_id = scheduled.reply_to_message_id if Message.exists?(id: scheduled.reply_to_message_id)
 
-          if scheduled.thread
-            # post_message! already processes attachments.
-            message = scheduled.thread.post_message!(
-              creator: scheduled.user,
-              attributes: { markdown_source: scheduled.markdown_source, reply_to_message_id: reply_id }.compact
-            )
-          else
-            message = scheduled.room.root_messages.new(
-              creator: scheduled.user,
-              markdown_source: scheduled.markdown_source,
-              reply_to_message_id: reply_id
-            )
-            message.save!
-            message.process_attachment
+            if scheduled.thread
+              # post_message! already processes attachments.
+              message = scheduled.thread.post_message!(
+                creator: scheduled.user,
+                attributes: { markdown_source: scheduled.markdown_source, reply_to_message_id: reply_id }.compact
+              )
+            else
+              message = scheduled.room.root_messages.new(
+                creator: scheduled.user,
+                markdown_source: scheduled.markdown_source,
+                reply_to_message_id: reply_id
+              )
+              message.save!
+              message.process_attachment
+            end
+            scheduled.update!(sent_at: now, sent_message: message)
           end
-          scheduled.update!(sent_at: now, sent_message: message)
         end
+
+        return nil if message.nil?
 
         message.broadcast_create
         # The thread path never fans out to legacy webhooks (see
