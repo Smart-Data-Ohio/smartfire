@@ -117,6 +117,27 @@ module GoogleCalendarTestHelper
       stub_request(:delete, "#{GOOGLE_EVENTS_URL}/#{google_event_id}").to_return(status:)
     end
 
+    # Real-shaped events.list response for meeting-status refreshes. The
+    # stub requires the free/busy fields mask, so a request that forgot
+    # it never matches.
+    def stub_google_events_list(items:, status: 200)
+      stub_request(:get, GOOGLE_EVENTS_URL)
+        .with(query: hash_including({
+          "singleEvents" => "true",
+          "fields" => Google::Client::MEETING_STATUS_FIELDS
+        }))
+        .to_return(status:, body: { "items" => items }.to_json,
+          headers: { "Content-Type" => "application/json" })
+    end
+
+    def timed_calendar_item(start_at, end_at, **attrs)
+      {
+        "status" => "confirmed",
+        "start" => { "dateTime" => start_at.iso8601 },
+        "end" => { "dateTime" => end_at.iso8601 }
+      }.merge(attrs)
+    end
+
     def stub_google_drive_file(file_id, status: 200, body: drive_file_payload)
       stub_request(:get, "#{GOOGLE_DRIVE_FILES_URL}/#{file_id}")
         .with(query: hash_including({ "supportsAllDrives" => "true" }))

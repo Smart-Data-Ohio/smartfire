@@ -22,7 +22,7 @@ class ChannelThread::MessagePusher
     # DND, quiet hours). A replying follower gets the reply payload; an
     # unfollowed reply author gets nothing at all.
     def recipients
-      thread_memberships = thread.memberships.includes(:user).where.not(user_id: message.creator_id).to_a
+      thread_memberships = thread.memberships.includes(user: :meeting_cache).where.not(user_id: message.creator_id).to_a
       return [] if thread_memberships.empty?
 
       room_memberships = thread.room.memberships.where(user_id: thread_memberships.map(&:user_id)).index_by(&:user_id)

@@ -251,6 +251,56 @@ class Google::ConnectionsControllerTest < ActionDispatch::IntegrationTest
     assert_not GoogleAccount.exists?(user: @david)
   end
 
+  test "disconnect drops the meeting cache" do
+    connect_google!(@david)
+    @david.update!(meeting_status_enabled: true)
+    Calendar::MeetingCache.create!(user: @david, fetched_at: Time.current,
+      busy_intervals: [ [ 1.hour.ago.iso8601, 1.hour.from_now.iso8601 ] ])
+
+    delete google_connection_path
+
+    assert_redirected_to user_profile_path
+    assert_nil @david.reload.meeting_cache
+  end
+
+  test "disconnect while in a meeting broadcasts the cleared badge" do
+    connect_google!(@david)
+    @david.update!(meeting_status_enabled: true)
+    Calendar::MeetingCache.create!(user: @david, fetched_at: Time.current,
+      busy_intervals: [ [ 5.minutes.ago.iso8601, 55.minutes.from_now.iso8601 ] ])
+
+    streams = capture_turbo_stream_broadcasts([ @david, :status ]) do
+      delete google_connection_path
+    end
+
+    assert_redirected_to user_profile_path
+    assert_equal 1, streams.size
+    assert_not_includes streams.first.to_html, "In a meeting"
+  end
+
+  test "callback enqueues a meeting refresh for members who left meeting status on" do
+    @david.update!(meeting_status_enabled: true)
+    state = connect_state_from_redirect
+    stub_google_code_exchange
+
+    assert_enqueued_with(job: Calendar::MeetingRefreshJob, args: [ @david.id ]) do
+      get google_callback_path, params: { state:, code: "auth-code" }
+    end
+
+    assert_redirected_to user_profile_path
+  end
+
+  test "callback enqueues no meeting refresh without the opt-in" do
+    state = connect_state_from_redirect
+    stub_google_code_exchange
+
+    assert_no_enqueued_jobs only: Calendar::MeetingRefreshJob do
+      get google_callback_path, params: { state:, code: "auth-code" }
+    end
+
+    assert_redirected_to user_profile_path
+  end
+
   test "disconnect without a connection still redirects" do
     delete google_connection_path
 

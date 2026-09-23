@@ -38,6 +38,12 @@ controller from `GET /users/presence?ids[]=` so cached rows stay cached),
 on profile pages, and through the shared badge below. Agents keep their
 self-reported live status: bot rows in the member panel read from the
 agent (`status` plus `status_note`), never from presence leases.
+Members who opt into [meeting status](meeting-status.md) show "📅 In a
+meeting" in the status line while their Google Calendar says they are
+busy; a custom status or DND takes precedence over the automatic label.
+Members [out of office](out-of-office.md) show "🌴 Out of office until
+\<date\>" instead, which takes precedence over custom status, DND, and
+the meeting label alike.
 
 ### Profile card integration
 
@@ -63,7 +69,11 @@ no exception.
 
 Quiet hours schedule DND daily: an on/off switch plus a start and end
 time, evaluated in the member's time zone (overnight windows work).
-Quiet hours share the starred-people exception.
+Quiet hours share the starred-people exception. So does
+[quiet-during-meetings](meeting-status.md): while a busy interval
+covers an opted-in member, they read exactly as DND to the policy. So
+does [out of office](out-of-office.md), unless the member asked to keep
+being notified.
 
 Sounds (`/play` chat sounds, played by the `sound` Stimulus controller)
 re-evaluate muting on every play: the layout sends manual DND and the
@@ -71,8 +81,12 @@ DND presence as a muted marker plus the quiet-hours window and zone,
 and the controller computes the window live, so crossing a quiet-hours
 boundary silences or unsilences sounds without a reload. (A DND switch
 flipped in another tab still needs a navigation; only the time-based
-gate is live.) The policy's `sound?` (always equal to `push?`) gates
-any server-side sound decision the same way.
+gate is live.) Quiet-during-meetings sends the cached busy intervals
+as epoch windows for the same live treatment; a calendar edit that
+moves them needs a navigation. Out-of-office quiet sends its end the
+same way unless the member keeps notifications on. The policy's
+`sound?` (always equal to `push?`) gates any server-side sound
+decision the same way.
 
 ## Thread controls
 

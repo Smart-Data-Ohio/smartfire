@@ -1,0 +1,14 @@
+<%# One notice line per out-of-office member, rendered uncached: the set
+    of other members differs per viewer, so no fragment cache may hold
+    it. Each line subscribes to its member's OOO stream and updates live
+    when their OOO starts or ends. %>
+<% if room.direct? && ooo_members.any? %>
+  <div id="ooo-notices" class="ooo-notices">
+    <% ooo_members.each do |member| %>
+      <%= turbo_stream_from member, :ooo_notice %>
+      <div id="<%= dom_id(member, :ooo_notice) %>">
+        <%= render "rooms/show/ooo_notice_line", user: member %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

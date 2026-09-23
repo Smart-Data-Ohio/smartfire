@@ -38,6 +38,7 @@
   <%= button_to_jump_to_newest_message %>
 <% end %>
 
+<%= render "rooms/show/ooo_notices", room: @room, ooo_members: @ooo_notice_members || [] %>
 <%= render "rooms/show/composer", room: @room %>
 <%= render "polls/builder", room: @room %>
 <% end %>

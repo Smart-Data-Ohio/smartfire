@@ -44,6 +44,140 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?][method=post][data-turbo=false]", google_connect_path, count: 1
   end
 
+  test "profile links to connect for meeting status without an account" do
+    get user_profile_url
+
+    assert_response :success
+    assert_select "a[href='#google-calendar-title']", text: "Connect Google Calendar"
+    assert_select "input[name='user[meeting_status_enabled]'][type=checkbox]", count: 0
+  end
+
+  test "profile offers the meeting toggle for a connected account" do
+    connect_google!(users(:david), email: "david@gmail.test")
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "input[name='user[meeting_status_enabled]'][type=checkbox]", count: 1
+    assert_includes response.body, "never titles or attendees"
+  end
+
+  test "profile shows the meeting fetch notice when a refresh failed" do
+    connect_google!(users(:david), email: "david@gmail.test")
+    users(:david).update!(meeting_status_enabled: true)
+    Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current,
+      fetch_error: Calendar::MeetingRefresh::UNREACHABLE_MESSAGE)
+
+    get user_profile_url
+
+    assert_response :success
+    assert_includes response.body, CGI.escapeHTML(Calendar::MeetingRefresh::UNREACHABLE_MESSAGE)
+  end
+
+  test "profile asks to reconnect for meeting status left on after disconnect" do
+    users(:david).update!(meeting_status_enabled: true)
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "a[href='#google-calendar-title']", text: "Reconnect below"
+  end
+
+  test "profile lists the quiet-during-meetings switch" do
+    get user_profile_url
+
+    assert_response :success
+    assert_select "input[name='user[meeting_dnd_enabled]'][type=checkbox]", count: 1
+    assert_includes response.body, "Do not disturb during meetings"
+  end
+
+  test "the layout sends meeting windows for the live sound gate" do
+    users(:david).update!(meeting_status_enabled: true, meeting_dnd_enabled: true)
+    start_at = 5.minutes.ago
+    end_at = 55.minutes.from_now
+    Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current,
+      busy_intervals: [ [ start_at.iso8601, end_at.iso8601 ] ])
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=notification-dnd]", count: 0
+    assert_select "meta[name=meeting-quiet][content=?]", "#{start_at.to_i}-#{end_at.to_i}", count: 1
+  end
+
+  test "the layout sends future meeting windows before the meeting starts" do
+    users(:david).update!(meeting_status_enabled: true, meeting_dnd_enabled: true)
+    Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current,
+      busy_intervals: [ [ 1.hour.from_now.iso8601, 2.hours.from_now.iso8601 ] ])
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=meeting-quiet]", count: 1
+  end
+
+  test "the layout sends no meeting windows without cached intervals" do
+    users(:david).update!(meeting_status_enabled: true, meeting_dnd_enabled: true)
+    Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current, busy_intervals: [])
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=meeting-quiet]", count: 0
+  end
+
+  test "the layout sends no meeting windows when meeting status itself is off" do
+    users(:david).update!(meeting_dnd_enabled: true)
+    Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current,
+      busy_intervals: [ [ 5.minutes.ago.iso8601, 55.minutes.from_now.iso8601 ] ])
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=meeting-quiet]", count: 0
+  end
+
+  test "the layout sends OOO windows for the live sound gate" do
+    users(:david).update!(ooo_until: 1.day.from_now)
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=ooo-quiet][content=?]", "0-#{users(:david).ooo_until.to_i}", count: 1
+  end
+
+  test "the layout sends future calendar OOO windows before the OOO starts" do
+    users(:david).update!(ooo_calendar_enabled: true)
+    Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current,
+      ooo_intervals: [ [ 1.hour.from_now.iso8601, 2.hours.from_now.iso8601 ] ])
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=ooo-quiet]", count: 1
+  end
+
+  test "the layout sends no OOO windows when keeping notifications while out" do
+    users(:david).update!(ooo_until: 1.day.from_now, ooo_notify_enabled: true)
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=ooo-quiet]", count: 0
+  end
+
+  test "the layout leaves sounds alone for meetings when quiet-during-meetings is off" do
+    users(:david).update!(meeting_status_enabled: true)
+    Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current,
+      busy_intervals: [ [ 5.minutes.ago.iso8601, 55.minutes.from_now.iso8601 ] ])
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=notification-dnd]", count: 0
+    assert_select "meta[name=meeting-quiet]", count: 0
+  end
+
   test "profile shows the connected account with a disconnect button" do
     connect_google!(users(:david), email: "david@gmail.test")
 

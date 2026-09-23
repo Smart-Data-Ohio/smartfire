@@ -65,6 +65,15 @@ class UserTest < ActiveSupport::TestCase
     assert_not_predicate account, :usable?
   end
 
+  test "deactivating drops the meeting cache" do
+    users(:david).update!(meeting_status_enabled: true)
+    Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current)
+
+    users(:david).deactivate
+
+    assert_not Calendar::MeetingCache.exists?(user_id: users(:david).id)
+  end
+
   test "deactivating revokes the Google grant in the background" do
     account = GoogleAccount.create!(user: users(:david), email: "david@gmail.test",
       refresh_token: "refresh-token", access_token: "access-token", access_token_expires_at: 1.hour.from_now)

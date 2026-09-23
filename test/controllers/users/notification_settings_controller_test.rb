@@ -39,6 +39,27 @@ class Users::NotificationSettingsControllerTest < ActionDispatch::IntegrationTes
     assert_empty user.keyword_alerts
   end
 
+  test "enables quiet-during-meetings" do
+    patch user_notification_settings_url, params: { user: { meeting_dnd_enabled: "1" } }
+
+    assert_redirected_to user_profile_url
+    assert users(:david).reload.meeting_dnd_enabled?
+  end
+
+  test "toggles keep-notifying while out of office, defaulting to off" do
+    assert_not users(:david).ooo_notify_enabled?
+
+    patch user_notification_settings_url, params: { user: { ooo_notify_enabled: "1" } }
+
+    assert_redirected_to user_profile_url
+    assert users(:david).reload.ooo_notify_enabled?
+
+    patch user_notification_settings_url, params: { user: { ooo_notify_enabled: "0" } }
+
+    assert_redirected_to user_profile_url
+    assert_not users(:david).reload.ooo_notify_enabled?
+  end
+
   test "quiet hours without a window render errors" do
     patch user_notification_settings_url, params: {
       user: { quiet_hours_enabled: "1", quiet_hours_start: "", quiet_hours_end: "" }

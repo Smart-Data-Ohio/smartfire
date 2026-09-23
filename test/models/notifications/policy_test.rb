@@ -315,6 +315,102 @@ class Notifications::PolicyTest < ActiveSupport::TestCase
     assert huddle_policy.push?
   end
 
+  # Quiet-during-meetings: exactly like DND during busy intervals
+
+  test "quiet-during-meetings suppresses push and sound but still records the inbox item" do
+    opt_into_meeting_quiet
+
+    policy = room_policy(room_involvement: "mentions", mentioned: true)
+
+    assert_equal "mention", policy.inbox_event_type
+    assert_not policy.push?
+    assert_not policy.sound?
+  end
+
+  test "quiet-during-meetings pushes outside busy intervals" do
+    @recipient.update!(meeting_status_enabled: true, meeting_dnd_enabled: true)
+    Calendar::MeetingCache.create!(user: @recipient, fetched_at: Time.current,
+      busy_intervals: [ [ 2.hours.ago.iso8601, 1.hour.ago.iso8601 ] ])
+
+    assert room_policy(room_involvement: "mentions", mentioned: true).push?
+  end
+
+  test "quiet-during-meetings needs meeting status on" do
+    @recipient.update!(meeting_dnd_enabled: true)
+    Calendar::MeetingCache.create!(user: @recipient, fetched_at: Time.current,
+      busy_intervals: [ [ 5.minutes.ago.iso8601, 55.minutes.from_now.iso8601 ] ])
+
+    assert room_policy(room_involvement: "mentions", mentioned: true).push?
+  end
+
+  test "a starred sender still pushes through quiet-during-meetings" do
+    opt_into_meeting_quiet
+    DndAllowedUser.create!(user: @recipient, allowed_user: @sender)
+
+    assert room_policy(room_involvement: "mentions", mentioned: true).push?
+
+    stranger = room_policy(room_involvement: "mentions", mentioned: true, sender: users(:kevin))
+    assert_not stranger.push?
+  end
+
+  test "reminders and huddles stay silent during meetings with no sender exception" do
+    opt_into_meeting_quiet
+
+    assert_not reminder_policy.push?
+    assert_not huddle_policy.push?
+  end
+
+  # Out of office: exactly like DND unless the member keeps notifications on
+
+  test "out of office suppresses push and sound but still records the inbox item" do
+    @recipient.update!(ooo_until: 1.day.from_now)
+    policy = room_policy(room_involvement: "mentions", mentioned: true)
+
+    assert_equal "mention", policy.inbox_event_type
+    assert_not policy.push?
+    assert_not policy.sound?
+  end
+
+  test "out of office pushes when the member keeps notifications on" do
+    @recipient.update!(ooo_until: 1.day.from_now, ooo_notify_enabled: true)
+
+    assert room_policy(room_involvement: "mentions", mentioned: true).push?
+  end
+
+  test "a starred sender still pushes through out of office" do
+    @recipient.update!(ooo_until: 1.day.from_now)
+    DndAllowedUser.create!(user: @recipient, allowed_user: @sender)
+
+    assert room_policy(room_involvement: "mentions", mentioned: true).push?
+
+    stranger = room_policy(room_involvement: "mentions", mentioned: true, sender: users(:kevin))
+    assert_not stranger.push?
+  end
+
+  test "reminders and huddles stay silent during out of office" do
+    @recipient.update!(ooo_until: 1.day.from_now)
+
+    assert_not reminder_policy.push?
+    assert_not huddle_policy.push?
+  end
+
+  test "calendar out of office quiets like a manual one" do
+    @recipient.update!(ooo_calendar_enabled: true)
+    Calendar::MeetingCache.create!(user: @recipient, fetched_at: Time.current,
+      ooo_intervals: [ [ 5.minutes.ago.iso8601, 2.days.from_now.iso8601 ] ])
+    @recipient.reload
+
+    assert_not room_policy(room_involvement: "mentions", mentioned: true).push?
+  end
+
+  test "an expired out of office pushes again" do
+    @recipient.update!(ooo_until: 1.day.from_now)
+
+    travel_to 2.days.from_now do
+      assert room_policy(room_involvement: "mentions", mentioned: true).push?
+    end
+  end
+
   test "a missing recipient pushes nothing" do
     policy = Notifications::Policy.new(recipient: nil, kind: :reminder)
 
@@ -368,5 +464,12 @@ class Notifications::PolicyTest < ActiveSupport::TestCase
 
     def huddle_policy
       Notifications::Policy.new(recipient: @recipient, sender: @sender, kind: :huddle)
+    end
+
+    def opt_into_meeting_quiet
+      @recipient.update!(meeting_status_enabled: true, meeting_dnd_enabled: true)
+      Calendar::MeetingCache.create!(user: @recipient, fetched_at: Time.current,
+        busy_intervals: [ [ 5.minutes.ago.iso8601, 55.minutes.from_now.iso8601 ] ])
+      @recipient.reload
     end
 end

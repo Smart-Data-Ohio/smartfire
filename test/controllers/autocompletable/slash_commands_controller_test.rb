@@ -11,7 +11,7 @@ class Autocompletable::SlashCommandsControllerTest < ActionDispatch::Integration
 
     assert_response :success
     names = response.parsed_body.map { |command| command["name"] }
-    assert_equal %w[ huddle event poll remind status dnd shrug me play ], names
+    assert_equal %w[ huddle event poll remind status dnd ooo shrug me play ], names
 
     poll = response.parsed_body.find { |command| command["name"] == "poll" }
     assert_equal "poll", poll["value"]
