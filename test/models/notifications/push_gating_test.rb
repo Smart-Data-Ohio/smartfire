@@ -156,4 +156,39 @@ class Notifications::PushGatingTest < ActiveSupport::TestCase
   ensure
     ENV["LIVEKIT_API_SECRET"] = original_secret
   end
+
+  test "group huddle push skips DND and quiet-hours recipients but their missed calls are still recorded" do
+    original_secret = ENV["LIVEKIT_API_SECRET"]
+    ENV["LIVEKIT_API_SECRET"] = "test-api-secret"
+
+    travel_to Time.zone.parse("2026-09-23 12:00") do
+      users(:jason).update!(dnd_enabled: true)
+      users(:kevin).update!(quiet_hours_enabled: true, quiet_hours_start: "09:00", quiet_hours_end: "17:00")
+
+      group_room = Rooms::Direct.create_for({ creator: users(:david) },
+        users: [ users(:david), users(:jason), users(:kevin), users(:jz) ])
+      grant = HuddleGrant.issue!(session: sessions(:david_safari),
+        membership: group_room.memberships.find_by!(user: users(:david)))
+
+      items = [ users(:jason), users(:kevin), users(:jz) ].map do |recipient|
+        ActivityItem.find_by!(user: recipient, source: grant)
+      end
+      assert_equal %w[ huddle_started huddle_started huddle_started ], items.map(&:event_type)
+      assert items.all?(&:unread?)
+
+      # Only the reachable recipient's invitation pushes, addressed to them.
+      @pool.expects(:queue).once.with do |payload, subscriptions|
+        assert_equal [ users(:jz).id ], subscriptions.map(&:user_id)
+        assert_equal Rails.application.routes.url_helpers.room_path(group_room), payload[:path]
+        true
+      end
+      items.each { |item| Huddle::PushInvitationJob.perform_now(item.id) }
+
+      items.each { |item| item.update_column(:created_at, 46.seconds.ago) }
+      Huddle::InvitationResolver.resolve_overdue!
+      assert_equal %w[ huddle_missed huddle_missed huddle_missed ], items.map(&:reload).map(&:event_type)
+    end
+  ensure
+    ENV["LIVEKIT_API_SECRET"] = original_secret
+  end
 end

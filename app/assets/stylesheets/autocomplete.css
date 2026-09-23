@@ -7,7 +7,9 @@
   min-inline-size: 15ch;
   overflow-y: auto;
   position: absolute;
-  z-index: 3;
+  /* Above the sidebar and call theater, which the new-DM picker and the
+     theater composer render under; below the modal profile card. */
+  z-index: 35;
 }
 
 .autocomplete__item {

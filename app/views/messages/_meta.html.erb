@@ -1,7 +1,9 @@
 <div class="message__meta" id="<%= dom_id(message, :meta) %>">
   <h3 class="message__heading">
     <span class="message__author" title="<%= message.creator.title %>">
-      <strong data-reply-target="author"><%= message.creator.name %></strong>
+      <%= button_tag type: "button", class: "profile-card-name", data: profile_card_trigger(message.creator) do %>
+        <strong data-reply-target="author"><%= message.creator.name %></strong>
+      <% end %>
     </span>
     <%= link_to message_timestamp(message, class: "message__timestamp"), message_link_url(message), target: "_top",
           class: "message__permalink" %>

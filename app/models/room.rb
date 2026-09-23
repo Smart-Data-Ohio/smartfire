@@ -3,6 +3,9 @@ class Room < ApplicationRecord
     def grant_to(users)
       room = proxy_association.owner
       Membership.insert_all(Array(users).collect { |user| { room_id: room.id, user_id: user.id, involvement: room.default_involvement } })
+      # insert_all skips membership callbacks, so direct rooms refresh here;
+      # removals refresh through the membership destroy callback instead.
+      room.refresh_direct_member_key! if room.direct?
     end
 
     def revoke_from(users)
@@ -105,7 +108,7 @@ class Room < ApplicationRecord
   # Room::DestroyJob, which removes the remaining content in batches.
   def begin_destroy!
     transaction do
-      update!(deleted_at: Time.current)
+      update!(deleted_at: Time.current, direct_member_key: nil)
       memberships.delete_all
       HuddleGrant.revoke_for_room!(self)
       AgentGrant.revoke_for_room!(self)

@@ -1,0 +1,17 @@
+<%# One shared profile-card popover per page, loaded lazily: every avatar %>
+<%# and display name points its card URL at the frame inside. %>
+<div id="profile-card-popover" class="profile-card-popover" data-profile-card-target="popover" hidden>
+  <div class="profile-card-popover__backdrop" data-action="click->profile-card#close"></div>
+
+  <div class="profile-card-popover__panel" role="dialog" aria-modal="true" aria-label="Profile card"
+      tabindex="-1" data-profile-card-target="panel">
+    <button type="button" class="btn profile-card-popover__close" aria-label="Close profile card"
+        data-action="click->profile-card#close">
+      <%= image_tag "remove.svg", size: 16, aria: { hidden: "true" } %>
+    </button>
+
+    <%= turbo_frame_tag "user_card", data: { profile_card_target: "frame" } do %>
+      <div class="profile-card__loading" aria-live="polite">Loading…</div>
+    <% end %>
+  </div>
+</div>

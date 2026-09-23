@@ -57,7 +57,9 @@ Rails.application.routes.draw do
 
   resources :qr_code, only: :show
 
-  resources :users, only: :show do
+  get "users/:id/card", to: "users/cards#show", as: :user_card
+
+  resources :users, only: %i[ index show ] do
     get :huddle_presence, on: :collection, to: "users/huddle_presence#show"
     get :presence, on: :collection, to: "users/presences#show"
 
@@ -214,7 +216,10 @@ Rails.application.routes.draw do
   namespace :rooms do
     resources :opens
     resources :closeds
-    resources :directs
+    resources :directs do
+      post :add_members, on: :member
+      delete :leave, on: :member
+    end
     resources :voices
     resources :stages
     resources :boards

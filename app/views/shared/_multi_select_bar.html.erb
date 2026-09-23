@@ -1,0 +1,17 @@
+<%# Sticky multi-select bar, driven by the multi-select controller on an %>
+<%# ancestor: posts the checked user_ids to open (and optionally ring) %>
+<%# the DM with exactly that set. %>
+<div class="multi-select-bar" data-multi-select-target="bar" hidden>
+  <%= form_with url: rooms_directs_path, method: :post, class: "multi-select-bar__form",
+        data: { multi_select_target: "form" } do %>
+    <div data-multi-select-target="inputs"></div>
+    <input type="hidden" name="start_huddle" value="" data-multi-select-target="huddleInput">
+
+    <button type="submit" class="btn btn--reversed" data-multi-select-target="messageButton">Message (0)</button>
+    <button type="submit" class="btn" data-action="click->multi-select#submitHuddle"
+        data-multi-select-target="huddleButton">Start huddle (0)</button>
+    <button type="button" class="btn" data-action="click->multi-select#clear">Clear</button>
+  <% end %>
+
+  <p class="multi-select-bar__note" role="status" data-multi-select-target="note" hidden></p>
+</div>
