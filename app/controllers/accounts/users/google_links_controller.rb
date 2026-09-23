@@ -10,14 +10,20 @@ class Accounts::Users::GoogleLinksController < ApplicationController
 
   def create
     @user.update!(email_self_changed_at: nil, google_email_link_allowed: true)
-    AuditLog.record!(action: "google.sign_in.link_allow", target: @user,
-      changes: { email_address: @user.email_address })
+    # Re-allowing an already-allowed address changes nothing and writes no row.
+    if @user.previous_changes.slice("email_self_changed_at", "google_email_link_allowed").present?
+      AuditLog.record!(action: "google.sign_in.link_allow", target: @user,
+        changes: { email_address: @user.email_address })
+    end
     redirect_to edit_account_url, notice: "#{@user.name} can now link Google sign-in for #{@user.email_address}."
   end
 
   def destroy
-    @user.google_identity&.destroy!
-    AuditLog.record!(action: "google.sign_in.unlink", target: @user)
+    # Unlinking with no link destroys nothing and writes no row.
+    if (identity = @user.google_identity)
+      identity.destroy!
+      AuditLog.record!(action: "google.sign_in.unlink", target: @user)
+    end
     redirect_to edit_account_url, notice: "Google sign-in unlinked from #{@user.name}."
   end
 

@@ -132,6 +132,7 @@ class AuditLog::MembersAuditTest < ActionDispatch::IntegrationTest
   end
 
   test "Google sign-in link allow and unlink are recorded" do
+    users(:kevin).update!(google_email_link_allowed: false)
     post account_user_google_link_url(users(:kevin))
 
     allow = AuditLog.where(action: "google.sign_in.link_allow").last
@@ -144,6 +145,20 @@ class AuditLog::MembersAuditTest < ActionDispatch::IntegrationTest
     unlink = AuditLog.where(action: "google.sign_in.unlink").last
     assert_equal users(:david).id, unlink.actor_id
     assert_equal users(:kevin).id, unlink.target_id
+  end
+
+  test "replayed Google link allow and unlink write no rows" do
+    users(:kevin).update!(google_email_link_allowed: false)
+    post account_user_google_link_url(users(:kevin))
+    assert_equal 1, AuditLog.where(action: "google.sign_in.link_allow").count
+
+    assert_no_difference -> { AuditLog.where(action: "google.sign_in.link_allow").count } do
+      post account_user_google_link_url(users(:kevin))
+    end
+
+    assert_no_difference -> { AuditLog.where(action: "google.sign_in.unlink").count } do
+      delete account_user_google_link_url(users(:kevin))
+    end
   end
 
   test "GitHub connect and disconnect are recorded without the token" do
