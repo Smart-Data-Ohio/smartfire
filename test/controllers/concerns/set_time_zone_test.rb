@@ -42,4 +42,14 @@ class SetTimeZoneTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal Time.zone.name, response.body
   end
+
+  test "a member zone never leaks past its own request" do
+    users(:david).update!(time_zone: "Pacific Time (US & Canada)")
+
+    get "/time_zone_probe"
+
+    assert_response :success
+    assert_equal "Pacific Time (US & Canada)", response.body
+    assert_equal Time.zone_default.name, Time.zone.name
+  end
 end

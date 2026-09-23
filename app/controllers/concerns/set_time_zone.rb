@@ -2,13 +2,15 @@ module SetTimeZone
   extend ActiveSupport::Concern
 
   included do
-    # Registered after Authentication's own hook (see the include order in
-    # ApplicationController), so Current.user is set when this runs. The
-    # around hook wraps the whole request and restores the previous zone
-    # even when the action raises, so a zone never leaks across requests
-    # sharing a thread.
-    before_action :apply_user_time_zone
+    # Registration order is execution order, and an around hook only
+    # wraps what follows it, so the isolator registers first: it then
+    # wraps the applier and the action, restoring the previous zone even
+    # when the action raises, so a zone never leaks across requests
+    # sharing a thread. The applier still runs after Authentication's
+    # own hooks (see the separate include in ApplicationController), so
+    # Current.user is set when it runs.
     around_action :isolate_time_zone
+    before_action :apply_user_time_zone
   end
 
   private
