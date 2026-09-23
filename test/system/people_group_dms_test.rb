@@ -197,8 +197,8 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
     assert_selector ".room--current", text: "Weekend Plans"
     assert_selector ".message__system-note", text: "renamed the group to Weekend Plans"
     assert_selector ".message__system-note", text: "added JZ to the group"
-    assert_text "David renamed the group to Weekend Plans"
-    assert_text "David added JZ to the group"
+    assert_text(/David\s+renamed the group to Weekend Plans/)
+    assert_text(/David\s+added JZ to the group/)
 
     visit edit_rooms_direct_path(room)
     accept_confirm { click_button "Leave" }
