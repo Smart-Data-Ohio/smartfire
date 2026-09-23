@@ -25,7 +25,7 @@ The first activity inbox, human-owned work threads, one-to-one DM Huddles, and n
 
 The first DM Huddle slice uses a shared join control with audio, screen sharing, and camera video, and the invitation slice adds ringing through an incoming-huddle banner, push notifications, and missed-call inbox items. The inbox starts with new messaging and work events, plus native event invitations, updates, cancellations, and reminders; agent and GitHub sources follow their integrations.
 
-The first agent identity slice is live: agents 1:1 with bot users, Bearer credentials with a management UI, and room-scoped or workspace-wide capability grants (all five enforced: `read_messages`, `post_messages`, `react`, `manage_threads`, `external_action`) with immediate cascade revocation, and event delivery with an activity ledger, polling, rate limits, and loop prevention, plus agent profiles, an agent directory, and self-reported live status. See [AI agents](docs/agents.md). Approvals follow separately.
+The first agent identity slice is live: agents 1:1 with bot users, Bearer credentials with a management UI, and room-scoped or workspace-wide capability grants (all six enforced: `read_messages`, `post_messages`, `react`, `manage_threads`, `external_action`, `dm_anyone`) with immediate cascade revocation, and event delivery with an activity ledger, polling, rate limits, and loop prevention, plus agent profiles, an agent directory, and self-reported live status. See [AI agents](docs/agents.md). Approvals follow separately.
 
 GitHub's first read-only slice is live: messages linking a pull request URL render a PR card (repository, title, author, state, branches, review decision, checks, updated time) that refreshes via background fetch and webhook with redelivery deduplication, and subscribed rooms now receive selected PR events as GitHub bot messages with review requests in the linked reviewer's inbox. Cards use the workspace-level token and are visible to everyone in the room the link was posted in; per-user GitHub identity and write actions remain planned. See [GitHub pull request cards](docs/github.md).
 
@@ -71,6 +71,8 @@ Done for the first slice when two members can start and join a Huddle from their
 Done for the first slice when a personal agent and a workspace agent can independently join an allowed channel, receive an event, reply under their own identities, and lose access immediately when revoked. External actions use explicitly granted authority.
 
 Approval requests are live: an agent asks for human authority with `POST /agents/approvals`, the owner and administrators decide from the activity inbox, and the decision returns through event polling and webhooks. See [AI agents](docs/agents.md#approvals).
+
+Agent DMs, conversation context, and an MCP server are live: an agent opens 1:1 DMs with its owner, prior contacts, or anyone with the `dm_anyone` grant, loads trigger context with `GET /agents/context`, and serves sixteen tools over `POST /agents/mcp` for Claude, Cursor, Codex, and similar clients. See [AI agents](docs/agents.md#agent-dms) and [Smartfire MCP server](docs/agents-mcp.md).
 
 ### 4. GitHub work inside conversations
 
