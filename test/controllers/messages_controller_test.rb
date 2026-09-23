@@ -380,6 +380,22 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_select ".message__edited[title^='Edited ']"
   end
 
+  test "the edited marker renders the same UTC time in every time zone" do
+    message = @room.messages.create!(creator: users(:david), markdown_source: "original", client_message_id: "edited-tz")
+    message.update!(edited_at: Time.zone.parse("2026-09-22 12:00"))
+
+    titles = [ "Pacific Time (US & Canada)", "Tokyo" ].map do |zone|
+      users(:david).update!(time_zone: zone)
+
+      get room_message_url(@room, message)
+      assert_response :success
+      css_select("time.message__edited").first["title"]
+    end
+
+    assert_equal titles.first, titles.second
+    assert_equal "Edited #{message.reload.edited_at.utc.to_fs(:long)}", titles.first
+  end
+
   test "editing a message broadcasts its meta so other clients see the edited marker" do
     message = @room.messages.create!(creator: users(:david), markdown_source: "original", client_message_id: "edited-meta")
 
