@@ -38,6 +38,10 @@
           <%= image_tag "bot.svg", size: 20, aria: { hidden: "true" }, class: "colorize--black" %>
           <span class="sidebar-item__label">Agents</span>
         <% end %>
+        <%= link_to users_path, class: "sidebar-item btn", data: { workspace_destination: users_path } do %>
+          <%= image_tag "everyone.svg", size: 20, aria: { hidden: "true" }, class: "colorize--black" %>
+          <span class="sidebar-item__label">People</span>
+        <% end %>
       </nav>
 
       <section class="sidebar-section sidebar-section--channels rooms" aria-labelledby="channels-heading">

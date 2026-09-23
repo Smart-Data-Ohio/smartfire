@@ -3,6 +3,7 @@ class Rooms::DirectsController < RoomsController
 
   def new
     @room = Rooms::Direct.new
+    @users = User.active.includes(:agent).with_attached_avatar.ordered.where.not(id: Current.user.id)
   end
 
   def create

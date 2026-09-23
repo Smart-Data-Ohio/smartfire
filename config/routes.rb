@@ -58,7 +58,7 @@ Rails.application.routes.draw do
 
   get "users/:id/card", to: "users/cards#show", as: :user_card
 
-  resources :users, only: :show do
+  resources :users, only: %i[ index show ] do
     get :huddle_presence, on: :collection, to: "users/huddle_presence#show"
 
     scope module: "users" do

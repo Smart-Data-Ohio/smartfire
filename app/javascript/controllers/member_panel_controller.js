@@ -251,9 +251,22 @@ export default class extends Controller {
   #memberRow(member) {
     const online = member.online === true
     const item = document.createElement("li")
-    item.className = "member-panel__member"
+    item.className = "member-panel__member multi-select-row"
     item.dataset.memberId = String(member.id)
     item.dataset.online = String(online)
+    item.dataset.action = "touchstart->multi-select#pressStart touchmove->multi-select#pressMove touchend->multi-select#pressEnd contextmenu->multi-select#suppressMenu"
+
+    const isSelf = String(member.id) === document.querySelector("meta[name='current-user-id']")?.content
+    if (!isSelf) {
+      const select = document.createElement("input")
+      select.type = "checkbox"
+      select.dataset.multiSelectTarget = "checkbox"
+      select.dataset.action = "click->multi-select#toggle"
+      select.dataset.userId = String(member.id)
+      select.dataset.bot = String(member.bot === true)
+      select.setAttribute("aria-label", `Select ${member.name}`)
+      item.append(select)
+    }
 
     const cardUrl = this.#cardUrl(member.id)
     const avatar = document.createElement(cardUrl ? "button" : "span")

@@ -15,9 +15,19 @@ class Rooms::MembersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     members = response.parsed_body.fetch("members")
     assert_equal members.sort_by { |member| [ member.fetch("name").downcase, member.fetch("id") ] }, members
-    assert_equal %w[ avatar_url id name online ], members.first.keys.sort
+    assert_equal %w[ avatar_url bot id name online ], members.first.keys.sort
     assert members.find { |member| member["id"] == users(:jason).id }.fetch("online")
     assert_not members.find { |member| member["id"] == users(:kevin).id }.fetch("online")
+    assert_not members.find { |member| member["id"] == users(:jason).id }.fetch("bot")
+  end
+
+  test "flags bots so the picker can exclude them from huddles" do
+    get room_members_url(rooms(:watercooler), format: :json)
+
+    assert_response :success
+    members = response.parsed_body.fetch("members")
+    assert members.find { |member| member["id"] == users(:bender).id }.fetch("bot")
+    assert_not members.find { |member| member["id"] == users(:david).id }.fetch("bot")
   end
 
   test "does not return inactive users" do
