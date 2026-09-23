@@ -52,6 +52,18 @@ class Rooms::MembersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "📅 In a meeting", jason.fetch("status")
   end
 
+  test "returns the OOO label for members out of office" do
+    users(:jason).update!(time_zone: "UTC",
+      ooo_until: Time.zone.parse("2026-09-24T12:00:00Z"), ooo_note: "Back soon")
+
+    get room_members_url(rooms(:designers), format: :json)
+
+    assert_response :success
+    members = response.parsed_body.fetch("members")
+    jason = members.find { |member| member["id"] == users(:jason).id }
+    assert_equal "🌴 Out of office until September 24, 2026 — Back soon", jason.fetch("status")
+  end
+
   test "reports idle and do-not-disturb presence" do
     jason_session = users(:jason).sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
     lease = WorkspacePresenceLease.establish(user: users(:jason), session: jason_session)

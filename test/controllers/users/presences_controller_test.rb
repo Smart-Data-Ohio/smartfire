@@ -71,4 +71,14 @@ class Users::PresencesControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal "🚂 On a train", response.parsed_body["presences"].first["status"]
   end
+
+  test "returns the OOO label while out of office" do
+    users(:jason).update!(time_zone: "UTC",
+      ooo_until: Time.zone.parse("2026-09-24T12:00:00Z"), ooo_note: "Back soon")
+
+    get presence_users_url(ids: [ users(:jason).id ])
+
+    assert_equal "🌴 Out of office until September 24, 2026 — Back soon",
+      response.parsed_body["presences"].first["status"]
+  end
 end
