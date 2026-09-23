@@ -20,6 +20,8 @@ export default class extends Controller {
 
     this.handleHuddleJoin = ({ detail }) => this.#dismissNotice(Number(detail?.roomId))
     this.handleHuddleChange = this.#huddleChanged.bind(this)
+    this.handleNoticeJoin = this.#noticeJoin.bind(this)
+    this.handleNoticeDismiss = ({ detail }) => this.#dismissNotice(Number(detail?.roomId))
     this.handleParticipantsUpdated = this.#participantsUpdated.bind(this)
     this.handleParticipantsRemoved = this.#participantsRemoved.bind(this)
     this.handleNavigation = () => {
@@ -27,6 +29,8 @@ export default class extends Controller {
       this.#syncSidebarPills()
     }
     window.addEventListener("huddle:join", this.handleHuddleJoin)
+    window.addEventListener("huddle-join-notice:join", this.handleNoticeJoin)
+    window.addEventListener("huddle-join-notice:dismiss", this.handleNoticeDismiss)
     window.addEventListener("huddle:changed", this.handleHuddleChange)
     window.addEventListener("huddle-participants:updated", this.handleParticipantsUpdated)
     window.addEventListener("huddle-participants:removed", this.handleParticipantsRemoved)
@@ -63,6 +67,8 @@ export default class extends Controller {
     this.subscription?.unsubscribe()
     this.subscription = undefined
     window.removeEventListener("huddle:join", this.handleHuddleJoin)
+    window.removeEventListener("huddle-join-notice:join", this.handleNoticeJoin)
+    window.removeEventListener("huddle-join-notice:dismiss", this.handleNoticeDismiss)
     window.removeEventListener("huddle:changed", this.handleHuddleChange)
     window.removeEventListener("huddle-participants:updated", this.handleParticipantsUpdated)
     window.removeEventListener("huddle-participants:removed", this.handleParticipantsRemoved)
@@ -80,13 +86,10 @@ export default class extends Controller {
   // Join buttons rendered into banners and sidebar pills dispatch the
   // same huddle:join event the invitation banner uses, navigating to
   // the DM first when the viewer is elsewhere.
-  join(event) {
-    event?.preventDefault()
-
-    const notice = event?.currentTarget?.closest("[data-huddle-join-room-id]")
-    const roomId = Number(notice?.dataset.huddleJoinRoomId)
-    const roomName = notice?.dataset.huddleJoinRoomName || "Huddle"
-    const roomPath = notice?.dataset.huddleJoinRoomPath
+  #noticeJoin({ detail }) {
+    const roomId = Number(detail?.roomId)
+    const roomName = detail?.roomName || "Huddle"
+    const roomPath = detail?.roomPath
     if (!roomId) return
     this.#dismissNotice(roomId)
 
@@ -96,13 +99,6 @@ export default class extends Controller {
       window.addEventListener("turbo:load", () => this.#dispatchJoin(roomId, roomName), { once: true })
       Turbo.visit(roomPath)
     }
-  }
-
-  dismiss(event) {
-    event?.preventDefault()
-
-    const notice = event?.currentTarget?.closest("[data-huddle-join-room-id]")
-    this.#dismissNotice(Number(notice?.dataset.huddleJoinRoomId))
   }
 
   #noticeReceived(payload) {
@@ -194,13 +190,15 @@ export default class extends Controller {
 
   // Sidebar rows render from a shared fragment cache, so pills are never
   // rendered server-side: they are injected here, per viewer, and
-  // re-injected after every sidebar reload from the stored notices.
+  // re-injected after every sidebar reload from the stored notices. Rows
+  // match on their room id rather than their DOM id, which prefixes the
+  // room's STI name and differs per room kind.
   #syncSidebarPills() {
     document.querySelectorAll(".huddle-join-pill").forEach((pill) => pill.remove())
 
     for (const [ roomId, notice ] of this.notices) {
       if (this.#inCall(roomId)) continue
-      const rows = document.querySelectorAll(`#user_sidebar [id="room_${roomId}_list"]`)
+      const rows = document.querySelectorAll(`#user_sidebar .sidebar-item[data-room-id="${roomId}"]`)
       for (const row of rows) row.append(this.#buildPill(roomId, notice))
     }
   }
@@ -209,28 +207,23 @@ export default class extends Controller {
     const banner = document.createElement("div")
     banner.className = "huddle-join-banner"
     banner.setAttribute("role", "status")
-    banner.dataset.huddleJoinRoomId = String(roomId)
-    banner.dataset.huddleJoinRoomName = notice.roomName || "Huddle"
-    banner.dataset.huddleJoinRoomPath = notice.roomPath || ""
 
     const text = document.createElement("span")
     text.className = "huddle-join-banner__text overflow-ellipsis"
     text.textContent = bannerText(notice.joiners)
     banner.append(text)
 
-    const join = document.createElement("button")
-    join.type = "button"
-    join.className = "btn btn--primary"
-    join.dataset.action = "huddle-join-notice#join"
-    join.textContent = "Join"
-    banner.append(join)
+    banner.append(this.#buildJoinButton(roomId, notice))
 
     const dismiss = document.createElement("button")
     dismiss.type = "button"
     dismiss.className = "btn btn--plain"
-    dismiss.dataset.action = "huddle-join-notice#dismiss"
     dismiss.setAttribute("aria-label", "Dismiss")
     dismiss.textContent = "×"
+    dismiss.addEventListener("click", (event) => {
+      event.preventDefault()
+      window.dispatchEvent(new CustomEvent("huddle-join-notice:dismiss", { detail: { roomId } }))
+    })
     banner.append(dismiss)
 
     return banner
@@ -239,23 +232,32 @@ export default class extends Controller {
   #buildPill(roomId, notice) {
     const pill = document.createElement("div")
     pill.className = "huddle-join-pill"
-    pill.dataset.huddleJoinRoomId = String(roomId)
-    pill.dataset.huddleJoinRoomName = notice.roomName || "Huddle"
-    pill.dataset.huddleJoinRoomPath = notice.roomPath || ""
 
     const text = document.createElement("span")
     text.className = "huddle-join-pill__text overflow-ellipsis"
     text.textContent = bannerText(notice.joiners)
     pill.append(text)
 
+    pill.append(this.#buildJoinButton(roomId, notice))
+
+    return pill
+  }
+
+  // Banners and pills render outside this controller's element, where
+  // Stimulus actions cannot reach, so their buttons talk back over
+  // window events instead.
+  #buildJoinButton(roomId, notice) {
     const join = document.createElement("button")
     join.type = "button"
     join.className = "btn btn--primary"
-    join.dataset.action = "huddle-join-notice#join"
     join.textContent = "Join"
-    pill.append(join)
-
-    return pill
+    join.addEventListener("click", (event) => {
+      event.preventDefault()
+      window.dispatchEvent(new CustomEvent("huddle-join-notice:join", {
+        detail: { roomId, roomName: notice.roomName || "Huddle", roomPath: notice.roomPath || "" }
+      }))
+    })
+    return join
   }
 
   // Rapid joins into one room batch into a single toast ("Chris and Dean
