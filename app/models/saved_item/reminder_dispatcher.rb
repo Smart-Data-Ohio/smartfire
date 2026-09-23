@@ -23,8 +23,12 @@ class SavedItem::ReminderDispatcher
         claimed = saved_item.with_lock do
           if saved_item.reminded_at.present?
             false
+          elsif saved_item.remind_at.nil? || saved_item.remind_at > now
+            # The saver moved or cleared the reminder after this row was
+            # selected: leave it unclaimed, so the new time still fires.
+            false
           elsif saved_item.message.room.memberships.exists?(user_id: saved_item.user_id)
-            saved_item.transition_reminder_item!
+            saved_item.create_reminder_item!
             saved_item.update!(reminded_at: now)
             true
           else

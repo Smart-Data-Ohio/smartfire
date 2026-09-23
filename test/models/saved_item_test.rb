@@ -79,18 +79,49 @@ class SavedItemTest < ActiveSupport::TestCase
     end
   end
 
-  test "a firing reminder transitions the existing inbox item" do
+  test "a firing reminder creates a separate inbox item and leaves mentions alone" do
     mention = ActivityItem.create!(user: @user, source: @message, event_type: "mention")
     mention.mark_read!
     saved_item = SavedItem.create!(user: @user, message: @message, remind_at: 1.minute.from_now)
 
     item = nil
-    assert_no_difference -> { ActivityItem.where(user: @user, source: @message).count } do
-      item = saved_item.transition_reminder_item!
+    assert_difference -> { ActivityItem.where(user: @user).count }, 1 do
+      item = saved_item.create_reminder_item!
     end
 
     assert_equal "message_reminder", item.event_type
+    assert_equal saved_item, item.source
     assert_predicate item, :unread?
+
+    assert_equal "mention", mention.reload.event_type
+    assert_predicate mention, :read?
+  end
+
+  test "re-firing a reminder refreshes its own inbox item in place" do
+    saved_item = SavedItem.create!(user: @user, message: @message, remind_at: 1.minute.from_now)
+
+    first = saved_item.create_reminder_item!
+    first.mark_read!
+
+    second = nil
+    assert_no_difference -> { ActivityItem.where(user: @user).count } do
+      second = saved_item.create_reminder_item!
+    end
+
+    assert_equal first.id, second.id
+    assert_equal "message_reminder", second.event_type
+    assert_predicate second, :unread?
+  end
+
+  test "reminder items are visible while a member and hidden after losing access" do
+    saved_item = SavedItem.create!(user: @user, message: @message, remind_at: 1.minute.from_now)
+    item = saved_item.create_reminder_item!
+
+    assert_includes ActivityItem.accessible_to(@user), item
+
+    memberships(:david_designers).destroy!
+
+    assert_not_includes ActivityItem.accessible_to(@user), item
   end
 
   test "destroying the message destroys its saved items" do
@@ -98,6 +129,15 @@ class SavedItemTest < ActiveSupport::TestCase
 
     assert_difference -> { SavedItem.count }, -1 do
       @message.destroy!
+    end
+  end
+
+  test "destroying a saved item destroys its reminder item" do
+    saved_item = SavedItem.create!(user: @user, message: @message, remind_at: 1.minute.from_now)
+    saved_item.create_reminder_item!
+
+    assert_difference -> { ActivityItem.count }, -1 do
+      saved_item.destroy!
     end
   end
 

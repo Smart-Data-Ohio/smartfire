@@ -43,7 +43,7 @@ class ActivityItem < ApplicationRecord
     event_types ? where(event_type: event_types) : all
   }
   scope :message_sources, -> { where(source_type: Message.polymorphic_name) }
-  scope :supported_sources, -> { where(source_type: [ Message.polymorphic_name, "WorkThreadEvent", HuddleGrant.polymorphic_name, Event.polymorphic_name, AgentApproval.polymorphic_name ]) }
+  scope :supported_sources, -> { where(source_type: [ Message.polymorphic_name, SavedItem.polymorphic_name, "WorkThreadEvent", HuddleGrant.polymorphic_name, Event.polymorphic_name, AgentApproval.polymorphic_name ]) }
 
   class << self
     # Source data is deliberately resolved from the source row at query time.
@@ -63,6 +63,14 @@ class ActivityItem < ApplicationRecord
           LEFT JOIN memberships AS activity_message_memberships
             ON activity_message_memberships.room_id = activity_messages.room_id
             AND activity_message_memberships.user_id = activity_items.user_id
+          LEFT JOIN saved_items AS activity_saved_items
+            ON activity_saved_items.id = activity_items.source_id
+            AND activity_items.source_type = #{connection.quote(SavedItem.polymorphic_name)}
+          LEFT JOIN messages AS activity_saved_messages
+            ON activity_saved_messages.id = activity_saved_items.message_id
+          LEFT JOIN memberships AS activity_saved_memberships
+            ON activity_saved_memberships.room_id = activity_saved_messages.room_id
+            AND activity_saved_memberships.user_id = activity_items.user_id
           LEFT JOIN work_thread_events AS activity_work_events
             ON activity_work_events.id = activity_items.source_id
             AND activity_items.source_type = #{connection.quote("WorkThreadEvent")}
@@ -95,6 +103,7 @@ class ActivityItem < ApplicationRecord
         .where(activity_items: { user_id: user.id })
         .where(<<~SQL.squish)
           (activity_items.source_type = #{connection.quote(Message.polymorphic_name)} AND activity_message_memberships.id IS NOT NULL)
+          OR (activity_items.source_type = #{connection.quote(SavedItem.polymorphic_name)} AND activity_saved_memberships.id IS NOT NULL)
           OR (activity_items.source_type = #{connection.quote("WorkThreadEvent")} AND activity_work_memberships.id IS NOT NULL)
           OR (activity_items.source_type = #{connection.quote(HuddleGrant.polymorphic_name)} AND activity_huddle_memberships.id IS NOT NULL)
           OR (activity_items.source_type = #{connection.quote(Event.polymorphic_name)} AND activity_event_memberships.id IS NOT NULL)

@@ -50,12 +50,15 @@ browser and submit as UTC; the server rejects past or unparseable
 times.
 
 At the reminder time, the periodic runner (`bin/periodic`) fires the
-reminder: the saver's inbox item for the message transitions to a
-"Reminder" (`message_reminder`, under the Reminders inbox filter, kept
-read/unread/handled like any other item), and a push notification goes
-to the saver's devices. Reminders fire once: the dispatcher claims
-each due item through `reminded_at` before notifying, so a second run
-or runner cannot double-fire.
+reminder: a separate "Reminder" inbox item (`message_reminder`, under
+the Reminders inbox filter, kept read/unread/handled like any other
+item) is created for the saved item, leaving any mention or reply
+item for the message untouched, and a push notification goes to the
+saver's devices. Reminders fire once: the dispatcher claims each due
+item through `reminded_at` before notifying, so a second run or
+runner cannot double-fire, and re-checks the reminder time after
+taking the lock, so a reminder moved after selection fires at its new
+time instead.
 
 A reminder only fires while the saver can still see the room. If the
 saver lost room access, the item is claimed without notifying, so a

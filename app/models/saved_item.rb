@@ -2,6 +2,8 @@ class SavedItem < ApplicationRecord
   belongs_to :user
   belongs_to :message
 
+  has_many :activity_items, as: :source, dependent: :destroy
+
   enum :status, %w[ in_progress done ].index_by(&:itself), default: :in_progress, validate: true
 
   validates :message_id, uniqueness: { scope: :user_id }
@@ -39,14 +41,15 @@ class SavedItem < ApplicationRecord
     reminded_at.present?
   end
 
-  # One ActivityItem per user per message source (unique index), so a
-  # firing reminder transitions whatever item already exists for the
-  # message, the same way event reminders transition invitations.
-  def transition_reminder_item!
+  # The reminder's own inbox item, sourced on the saved item rather than
+  # the message: a firing reminder must never convert an existing mention
+  # or reply item for the message. Re-firing (a re-armed reminder whose
+  # time comes again) refreshes the same item in place, unread again.
+  def create_reminder_item!
     attempts = 0
     begin
       ActivityItem.transaction do
-        item = ActivityItem.lock.find_or_initialize_by(user:, source: message)
+        item = ActivityItem.lock.find_or_initialize_by(user:, source: self)
         item.event_type = "message_reminder"
         item.read_at = nil
         item.handled_at = nil
