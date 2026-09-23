@@ -36,6 +36,18 @@ class User::StatusSettingsTest < ActiveSupport::TestCase
     assert @user.dnd_active?
   end
 
+  test "the DND presence silences like the DND switch" do
+    @user.update!(presence_setting: "dnd")
+
+    assert @user.dnd_active?
+    assert @user.notifications_muted?
+    assert @user.notifications_muted?(sender: users(:jason))
+
+    DndAllowedUser.create!(user: @user, allowed_user: users(:jason))
+    assert_not @user.notifications_muted?(sender: users(:jason))
+    assert @user.notifications_muted?(sender: users(:kevin))
+  end
+
   test "quiet hours cover an overnight window in the user's time zone" do
     @user.update!(time_zone: "Pacific Time (US & Canada)",
       quiet_hours_enabled: true, quiet_hours_start: "22:00", quiet_hours_end: "07:00")

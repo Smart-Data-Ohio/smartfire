@@ -21,9 +21,9 @@ module Notifications
   # - Push mirrors the inbox winner, except keyword matches (inbox only)
   #   and room-level "everything" followers, who get push for every
   #   message without an inbox item.
-  # - DND (manual or quiet hours) suppresses push and sounds for
-  #   everything except messages from people the recipient starred with
-  #   "Allow during DND". Reminders carry no sender, so they stay silent.
+  # - DND (manual, presence, or quiet hours) suppresses push and sounds
+  #   for everything except messages from people the recipient starred
+  #   with "Allow during DND". Reminders carry no sender, so they stay silent.
   class Policy
     KINDS = %i[ room_message thread_message reminder huddle ].freeze
 

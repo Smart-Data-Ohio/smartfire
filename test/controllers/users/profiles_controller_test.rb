@@ -293,4 +293,13 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_select "meta[name=current-user-time-zone][content='Pacific Time (US & Canada)']", count: 1
     assert_select "meta[name=notification-sounds][content=muted]", count: 1
   end
+
+  test "the layout mutes sounds for the DND presence" do
+    users(:david).update!(presence_setting: "dnd")
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=notification-sounds][content=muted]", count: 1
+  end
 end

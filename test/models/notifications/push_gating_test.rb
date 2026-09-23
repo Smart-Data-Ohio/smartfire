@@ -21,6 +21,21 @@ class Notifications::PushGatingTest < ActiveSupport::TestCase
     assert_equal "mention", ActivityItem.find_by!(user: users(:jason), source: message).event_type
   end
 
+  test "room push skips a DND-presence recipient but the inbox item is still recorded" do
+    users(:jason).update!(presence_setting: "dnd")
+    message = @room.messages.create!(
+      creator: users(:david), body: "Hey #{mention_attachment_for(:jason)}", client_message_id: "gating-presence-dnd"
+    )
+
+    @pool.expects(:queue).once.with do |_payload, subscriptions|
+      assert_not_includes subscriptions.map(&:user_id), users(:jason).id
+      true
+    end
+
+    Room::MessagePusher.new(room: @room, message:).push
+    assert_equal "mention", ActivityItem.find_by!(user: users(:jason), source: message).event_type
+  end
+
   test "room push still reaches a starred sender's recipient during DND" do
     users(:jason).update!(dnd_enabled: true)
     DndAllowedUser.create!(user: users(:jason), allowed_user: users(:david))

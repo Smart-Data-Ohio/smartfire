@@ -32,10 +32,11 @@ module User::StatusSettings
     validate :quiet_hours_must_be_complete, if: :quiet_hours_enabled?
   end
 
-  # Manual Do Not Disturb, or the scheduled quiet-hours window, whichever
-  # silences push and sounds right now. Inbox items are still recorded.
+  # Manual Do Not Disturb, the DND presence, or the scheduled quiet-hours
+  # window, whichever silences push and sounds right now. Inbox items
+  # are still recorded.
   def dnd_active?(now: Time.current)
-    dnd_enabled? || quiet_hours_active?(now:)
+    dnd_enabled? || presence_setting == "dnd" || quiet_hours_active?(now:)
   end
 
   def quiet_hours_active?(now: Time.current)
