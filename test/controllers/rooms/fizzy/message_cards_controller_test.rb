@@ -175,7 +175,7 @@ class Rooms::Fizzy::MessageCardsControllerTest < ActionDispatch::IntegrationTest
       attributes: { markdown_source: "Locked problem", client_message_id: "fizzy-create-locked-1" })
     thread.update!(locked_at: Time.current)
     link_fizzy!(users(:david), token: "david-token")
-    stub_request(:post, "https://app.fizzy.do/897362094/boards/03board1/cards.json")
+    stub = stub_request(:post, "https://app.fizzy.do/897362094/boards/03board1/cards.json")
       .to_return(status: 201, body: fizzy_card_payload(number: 582).to_json)
     sign_in :david
 
@@ -184,6 +184,7 @@ class Rooms::Fizzy::MessageCardsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to room_thread_path(@room, thread)
     assert_includes flash[:alert], "locked"
+    assert_not_requested stub
   end
 
   test "a non-member cannot open the form" do

@@ -31,6 +31,12 @@ class Rooms::Fizzy::MessageCardsController < ApplicationController
       return redirect_to user_profile_path, alert: "Connect Fizzy on your profile first."
     end
 
+    # Check before any Fizzy call: creating the card first would leave an
+    # orphan in Fizzy when the reply cannot be posted.
+    if @thread&.locked?
+      return redirect_to conversation_path, alert: "This thread is locked"
+    end
+
     @board_id = params[:board_id].to_s
     @title = params[:title].to_s.strip
     @description = params[:description].to_s
