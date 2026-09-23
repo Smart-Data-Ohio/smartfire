@@ -108,3 +108,10 @@ curl https://smartfire.example.com/agents/mcp \
 `tools/list` always returns the full set; per-tool enforcement happens at
 call time, so a client can show every tool and let denials explain which
 grant is missing.
+
+"Prior contact" for `open_dm` means the agent's ledger holds a
+`mention`, `reply`, or `direct_message` row with the human as actor —
+written when the human mentions the agent, replies to the agent, or
+posts in a direct room with the agent. It counts whatever the row's
+outcome, and survives the human leaving or the room being deleted. See
+[Agent DMs](agents.md#agent-dms) for the exact rule.

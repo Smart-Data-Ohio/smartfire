@@ -728,14 +728,28 @@ top-level `body`/`markdown_source`). The target must be an active human,
 and the call needs two grants: the agent must hold `post_messages`
 somewhere (legacy agents keep their implicit access), and the target
 rule must also pass — the target is the agent's owner, has previously
-messaged the agent (a mention, reply, or DM in the agent's ledger), or
-the agent holds a workspace-wide `dm_anyone` grant, which an
-administrator grants from the bot's grant page. Anything else is 403.
-Posting into a DM room that already exists additionally requires
-`post_messages` in that room, so revoking the grant forbids the next
-post; a brand-new DM room cannot carry grants yet, so the
-workspace-wide form is enough to open it. Throttled at 60/minute per
-credential.
+messaged the agent (see below), or the agent holds a workspace-wide
+`dm_anyone` grant, which an administrator grants from the bot's grant
+page. Anything else is 403. Posting into a DM room that already exists
+additionally requires `post_messages` in that room, so revoking the
+grant forbids the next post; a brand-new DM room cannot carry grants
+yet, so the workspace-wide form is enough to open it. Throttled at
+60/minute per credential.
+
+"Previously messaged" means the agent's ledger holds at least one row
+with the human as actor and type `mention`, `reply`, or
+`direct_message`. Such a row is written when, in a room the agent
+belongs to, the human mentions the agent, replies to one of the
+agent's messages (a reply wins over a mention when both apply), or
+posts any message in a direct room with the agent. It counts whatever
+the row's outcome — pending, delivered, acknowledged, or suppressed —
+so deleting the message, revoking grants after the row was written, or
+suppressing the delivery does not remove the contact; and it keeps
+counting if the human later leaves the room or the room is deleted,
+since the ledger row persists. Messages that wrote no deliverable row
+— dropped by the rate or hop limit at enqueue time, the agent's own
+messages, or messages in rooms the agent never belonged to — do not
+count.
 
 ```sh
 curl -X POST https://smartfire.example.com/agents/dms \
