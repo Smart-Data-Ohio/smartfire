@@ -162,12 +162,8 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
     end
     assert_no_selector "body.member-panel-open", wait: 5
 
-    # The closed thread panel wrongly keeps aria-modal in mobile
-    # layout (its sync ignores the open state); strip it so this test
-    # exercises only the full-screen yield.
-    page.execute_script(<<~JS)
-      document.querySelector(".thread-panel__surface")?.removeAttribute("aria-modal")
-    JS
+    # A closed thread panel is not a modal, even in mobile layout.
+    assert_no_selector ".thread-panel__surface[aria-modal='true']", visible: :all
 
     # The probe binds after page load, like the huddle's own Escape
     # handler, and observes synchronously: unlike the badge below, it
