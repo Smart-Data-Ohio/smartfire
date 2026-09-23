@@ -6,45 +6,31 @@ class RoomControllerPreloadsTest < ActionDispatch::IntegrationTest
     @room = rooms(:designers)
   end
 
-  test "room page preloads every controller it renders" do
-    get room_url(@room)
-    assert_response :success
-    assert_preloads_cover_rendered_controllers(response.body)
-
-    Room.voices.first&.then do |voice|
-      get room_url(voice)
-      assert_response :success
-      assert_preloads_cover_rendered_controllers(response.body)
-    end
-
-    Room.boards.first&.then do |board|
-      get room_url(board)
-      assert_response :success
-      assert_preloads_cover_rendered_controllers(response.body)
-    end
-  end
-
-  test "sidebar frame preloads are covered by the room list" do
-    get user_sidebar_url
-    assert_response :success
-
-    rendered = rendered_controller_names(response.body)
-    assert_includes rendered, "rooms_list"
-
-    missing = rendered - RoomsHelper::FIRST_PAINT_CONTROLLERS
-    assert_empty missing, "sidebar renders controllers without preloads: #{missing.inspect}"
-  end
-
-  test "every listed controller is preloaded exactly once" do
+  test "room page preloads exactly its first-paint controllers" do
     get room_url(@room)
     assert_response :success
 
-    preloads = module_preloads(response.body)
-    assert_not_empty preloads
+    preloads = controller_preloads(response.body)
 
     RoomsHelper::FIRST_PAINT_CONTROLLERS.each do |name|
       assert_equal 1, preloads.grep(%r{controllers/#{name}_controller-}).size,
         "expected the #{name} controller to be preloaded exactly once"
+    end
+    assert_equal RoomsHelper::FIRST_PAINT_CONTROLLERS, preloads.map { |href| href[%r{controllers/(.+)_controller-}, 1] },
+      "expected no preloads beyond the first-paint list"
+  end
+
+  test "rendered controllers beyond first paint stay lazy" do
+    get room_url(@room)
+    assert_response :success
+
+    preloads = controller_preloads(response.body)
+    lazy = rendered_controller_names(response.body) - RoomsHelper::FIRST_PAINT_CONTROLLERS
+
+    assert_not_empty lazy, "expected the room to render lazily-loaded controllers"
+    lazy.each do |name|
+      assert_empty preloads.grep(%r{controllers/#{name}_controller-}),
+        "expected the #{name} controller to lazy-load instead of preloading"
     end
   end
 
@@ -63,14 +49,6 @@ class RoomControllerPreloadsTest < ActionDispatch::IntegrationTest
   end
 
   private
-    def assert_preloads_cover_rendered_controllers(html)
-      rendered = rendered_controller_names(html)
-      assert_not_empty rendered
-
-      missing = rendered - RoomsHelper::FIRST_PAINT_CONTROLLERS
-      assert_empty missing, "room page renders controllers without preloads: #{missing.inspect}"
-    end
-
     def rendered_controller_names(html)
       html.scan(/data-controller="([^"]+)"/).flatten.flat_map { |value| value.split }
         .map { |identifier| identifier.tr("-", "_") }.uniq
@@ -78,5 +56,9 @@ class RoomControllerPreloadsTest < ActionDispatch::IntegrationTest
 
     def module_preloads(html)
       html.scan(/<link rel="modulepreload" href="([^"]+)"/).flatten
+    end
+
+    def controller_preloads(html)
+      module_preloads(html).grep(%r{controllers/})
     end
 end

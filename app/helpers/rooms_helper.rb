@@ -1,33 +1,17 @@
 module RoomsHelper
-  # Every Stimulus controller the room page renders, preloaded so first
-  # paint never waits on a lazy-load waterfall. The list covers the layout
-  # shell, the message list, the composer, the sidebar frame, and the
-  # membership/config/room-type conditional controllers (huddle, stage,
-  # Drive, pins, sound, boosts, forwards, popups, boards), which all render
-  # without a user gesture in some room state. Gesture-opened frames (the
-  # boost dialog's form/scroll-into-view, the thread conversation's
-  # thread-messages) and other pages' controllers (activity-inbox,
-  # search-results, sessions, autocomplete, auto-submit, icon-field,
-  # copy-to-clipboard, filter, message-format, upload-preview) stay lazy.
-  # RoomControllerPreloadsTest pins the rendered set against this list.
+  # The Stimulus controllers the room page needs before first interaction,
+  # preloaded so first paint never waits on a lazy-load waterfall. Only the
+  # message list, the composer, and live presence qualify: everything the
+  # room renders beyond this (panels, toolbars, pickers, the sidebar frame,
+  # tour/help, and the huddle/stage/Drive conditionals) lazy-loads through
+  # stimulus-loading on element connect, exactly as it did before
+  # preloading existed. Keep this list small on purpose: every entry costs
+  # a high-priority request on every room load, and a long list crowds out
+  # real fetches (sidebar frame, emoji data) and starves the 250-entry
+  # resource-timing buffer. RoomControllerPreloadsTest pins this contract.
   FIRST_PAINT_CONTROLLERS = %w[
-    messages maintain_scroll message_list reply composer markdown_editor
-    markdown_autocomplete typing_notifications local_time presence
-    drop_target refresh_room
-    lightbox workspace_navigation member_panel thread_panel
-    workspace_presence web_share message_actions emoji_picker
-    element_removal
-    message_toolbar forward_source drive_link sound
-    boost_delete soft_keyboard reaction_chip
-    pins_panel notifications turbo_frame popup pwa_install
-    huddle huddle_invitation huddle_launcher huddle_participants
-    huddle_share_indicator huddle_presence
-    stage_panel stage_rejoin
-    drive_share drive_picker
-    rooms_list read_rooms badge_dot sorted_list activity_indicator
-    board_list timezone dm_presence
-    tour help_menu
-    profile_card multi_select
+    messages maintain_scroll reply composer markdown_editor
+    typing_notifications local_time presence
   ].freeze
 
   def first_paint_controller_preloads
