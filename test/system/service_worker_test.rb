@@ -1,6 +1,12 @@
 require "application_system_test_case"
 
 class ServiceWorkerTest < ApplicationSystemTestCase
+  # Pages skip automatic registration in tests unless this cookie is set.
+  setup do
+    visit "/offline.html"
+    page.driver.browser.manage.add_cookie(name: "enable_service_worker", value: "1")
+  end
+
   test "the worker caches static assets and never authenticated responses" do
     sign_in "jz@37signals.com"
     join_room rooms(:designers)
