@@ -96,6 +96,15 @@ module Authentication
     def start_new_session_for(user)
       user.sessions.start!(user_agent: request.user_agent, ip_address: request.remote_ip).tap do |session|
         authenticated_as session
+
+        # Establish the CSRF token before any page renders. Sign-ins that
+        # skip rendering a form (test helper, OAuth, first run, invites)
+        # would otherwise leave the session without one, and then the first
+        # concurrent page + sidebar renders each generate their own token;
+        # the sidebar's commit lands last and invalidates the page meta, so
+        # the next PATCH/POST 422s. Reading the token here commits it with
+        # the sign-in response, so every later request reuses it.
+        form_authenticity_token
       end
     end
 
