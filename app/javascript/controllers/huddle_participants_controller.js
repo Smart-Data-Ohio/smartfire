@@ -30,7 +30,7 @@ async function fetchParticipants(url) {
 
 export default class extends Controller {
   static targets = [ "avatars", "count" ]
-  static values = { url: String, max: Number, interval: Number, label: { type: String, default: "in voice" } }
+  static values = { url: String, max: Number, interval: Number, label: { type: String, default: "in voice" }, cardUrlTemplate: String }
 
   connect() {
     if (this.intervalValue > 0) {
@@ -120,7 +120,21 @@ export default class extends Controller {
         avatar.height = 20
         avatar.className = "voice-stack__avatar"
         avatar.dataset.userId = participant.id
-        return avatar
+
+        // Stacks sit inside room links, so triggers are labelled spans
+        // rather than nested buttons.
+        const cardUrl = this.#cardUrl(participant.id)
+        if (!cardUrl) return avatar
+
+        const trigger = document.createElement("span")
+        trigger.className = "voice-stack__trigger profile-card-trigger"
+        trigger.tabIndex = 0
+        trigger.setAttribute("role", "button")
+        trigger.setAttribute("aria-label", `View profile of ${participant.name}`)
+        trigger.dataset.action = "click->profile-card#open keydown->profile-card#open"
+        trigger.dataset.profileCardUrl = cardUrl
+        trigger.append(avatar)
+        return trigger
       })
     )
 
@@ -133,5 +147,11 @@ export default class extends Controller {
       : `Nobody ${this.labelValue}`
     this.element.setAttribute("aria-label", label)
     this.element.setAttribute("title", label)
+  }
+
+  #cardUrl(participantId) {
+    if (!this.hasCardUrlTemplateValue || participantId === undefined || participantId === null) return null
+
+    return this.cardUrlTemplateValue.replace("USER_ID", String(participantId))
   }
 }

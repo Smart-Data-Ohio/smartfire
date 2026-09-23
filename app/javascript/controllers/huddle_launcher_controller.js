@@ -12,6 +12,7 @@ export default class extends Controller {
 
   connect() {
     this.activeInRoom = false
+    this.autojoinAttempted = false
     this.handleChange = this.#handleChange.bind(this)
     window.addEventListener("huddle:changed", this.handleChange)
 
@@ -57,5 +58,24 @@ export default class extends Controller {
     this.element.setAttribute("aria-pressed", String(Boolean(isCurrentRoom && isActive)))
     this.element.setAttribute("aria-label", label)
     this.labelTarget.textContent = label
+
+    this.#autojoinIfRequested()
+  }
+
+  // Profile-card "Start call" and multi-select "Start huddle" land here
+  // with ?huddle=start: join once the panel answers the readiness query,
+  // then drop the parameter so a revisit never rejoins on its own. A
+  // first-time browser still stops at the device check; only the join
+  // itself is automatic.
+  #autojoinIfRequested() {
+    if (this.autojoinAttempted) return
+
+    const url = new URL(window.location.href)
+    if (url.searchParams.get("huddle") !== "start") return
+    this.autojoinAttempted = true
+
+    url.searchParams.delete("huddle")
+    window.history.replaceState(window.history.state, "", url)
+    this.join()
   }
 }

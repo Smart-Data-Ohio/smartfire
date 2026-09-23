@@ -58,15 +58,19 @@ class HuddlePresenceTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "group DM header shows neither a stack nor a launcher" do
+  test "group DM header shows the live stack immediately before the join button" do
     group = Rooms::Direct.create_for({ creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
     issue_in_call_grant!(user: users(:jason), room: group)
 
     get room_url(group)
 
     assert_response :success
-    assert_select ".room-header__actions .voice-stack", count: 0
-    assert_select ".room-header__actions button.huddle-launcher", count: 0
+    assert_select ".room-header__actions .voice-stack--live.voice-stack--huddle" +
+      "[aria-label='1 in huddle: Jason'][title='1 in huddle: Jason']" do
+      assert_select ".voice-stack__count", text: "1"
+      assert_select "img.voice-stack__avatar[data-user-id='#{users(:jason).id}'][title='Jason']"
+    end
+    assert_select ".room-header__actions .voice-stack--live + button.huddle-launcher", text: "Join huddle"
   end
 
   test "no header stack without huddle configuration" do

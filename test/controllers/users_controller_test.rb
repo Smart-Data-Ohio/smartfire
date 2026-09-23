@@ -179,4 +179,28 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to new_session_url(email_address: users(:david).email_address)
   end
+
+  test "index lists active members with presence and selection" do
+    sign_in :david
+    jason_session = users(:jason).sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
+    WorkspacePresenceLease.establish(user: users(:jason), session: jason_session)
+    users(:jz).deactivate
+
+    get users_url
+
+    assert_response :ok
+    assert_select ".people-directory__row", minimum: 2
+    assert_select "input[data-multi-select-target='checkbox'][data-user-id='#{users(:jason).id}']", 1
+    assert_select "input[data-multi-select-target='checkbox'][data-user-id='#{users(:david).id}']", 0
+    assert_select ".people-directory__presence", text: "Online", minimum: 1
+    assert_select ".profile-card__badge", text: "Agent", minimum: 1
+    assert_select "[data-multi-select-target='bar']", 1
+    assert_no_match(/JZ/, @response.body)
+  end
+
+  test "index requires sign-in" do
+    get users_url
+
+    assert_redirected_to new_session_url
+  end
 end

@@ -50,6 +50,13 @@ class RoomsController < ApplicationController
     end
 
     def ensure_can_administer
+      # Group DMs belong to all their members, so only administrators may
+      # delete one for everyone (members leave instead); the creator rule
+      # below still covers channels and 1:1 DMs.
+      if @room.direct? && @room.group_capable? && !Current.user.administrator?
+        return head :forbidden
+      end
+
       head :forbidden unless Current.user.can_administer?(@room)
     end
 

@@ -1,7 +1,7 @@
 class Message < ApplicationRecord
   include Attachment, AgentDelivery, Broadcasts, Mentionee, Pagination, Searchable
 
-  # Quiet timeline notes (pin notes, and any future note type): a message
+  # Quiet timeline notes (pin notes, group-DM membership notes): a message
   # with system_note still renders in the timeline and streams to it, but
   # skips every noisy side effect — Room/ChannelThread#receive (unread
   # marks and push), the unread badge broadcast, agent delivery, activity

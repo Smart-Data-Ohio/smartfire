@@ -654,12 +654,14 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_055332) do
     t.bigint "creator_id", null: false
     t.datetime "deleted_at"
     t.datetime "destroy_enqueued_at"
+    t.string "direct_member_key"
     t.string "icon_name"
     t.string "inbound_email_token"
     t.string "name"
     t.datetime "pins_changed_at"
     t.string "type", null: false
     t.datetime "updated_at", null: false
+    t.index ["direct_member_key"], name: "index_rooms_on_direct_member_key", unique: true, where: "direct_member_key IS NOT NULL AND deleted_at IS NULL"
     t.index ["inbound_email_token"], name: "index_rooms_on_inbound_email_token", unique: true
   end
 
