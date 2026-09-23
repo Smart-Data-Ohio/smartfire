@@ -107,6 +107,18 @@ class MessageListA11yTest < ApplicationSystemTestCase
     assert_focused "##{dom_id(messages(:first))}"
   end
 
+  test "deleting an older focused message hands focus to its neighbour, not the newest" do
+    page.execute_script("arguments[0].focus()", find("##{dom_id(messages(:first))}"))
+    assert_focused "##{dom_id(messages(:first))}"
+
+    page.execute_script <<~JS, dom_id(messages(:first))
+      Turbo.renderStreamMessage(`<turbo-stream action="remove" target="${arguments[0]}"></turbo-stream>`);
+    JS
+
+    assert_no_selector "##{dom_id(messages(:first))}"
+    assert_focused "##{dom_id(messages(:second))}", wait: 10
+  end
+
   test "a focus move during a stream render survives Turbo's focus restore" do
     find_field("Write a message").click
     assert_focused "#message_markdown_source"

@@ -76,6 +76,7 @@ export default class extends Controller {
     const addedMessages = []
     const removedIds = new Set()
     let tabbableRemoved = false
+    let tabbableNeighbour = null
 
     for (const record of records) {
       for (const node of record.addedNodes) {
@@ -93,7 +94,10 @@ export default class extends Controller {
         const removed = node.matches(MESSAGE_SELECTOR) ? [ node ] : Array.from(node.querySelectorAll(MESSAGE_SELECTOR))
         for (const message of removed) {
           removedIds.add(message.id)
-          if (message === this.#tabbable) tabbableRemoved = true
+          if (message === this.#tabbable) {
+            tabbableRemoved = true
+            tabbableNeighbour = this.#neighbourMessage(record.nextSibling, "next") || this.#neighbourMessage(record.previousSibling, "previous")
+          }
           changed = true
         }
       }
@@ -116,6 +120,13 @@ export default class extends Controller {
       }
     }
 
+    // A deleted tab stop hands off to the message beside it, not the newest,
+    // so someone reading history isn't yanked to the bottom.
+    if (tabbableRemoved && !refocused && tabbableNeighbour?.isConnected && this.element.contains(tabbableNeighbour)) {
+      tabbableNeighbour.tabIndex = 0
+      this.#tabbable = tabbableNeighbour
+    }
+
     if (changed) this.#ensureTabbable()
 
     // A removal without a same-id replacement is a delete: focus fell to
@@ -123,8 +134,20 @@ export default class extends Controller {
     // Follow the surviving tab stop when the deleted message had focus.
     if (!refocused && this.#focusInside && tabbableRemoved &&
         document.activeElement === document.body && this.#tabbable?.isConnected) {
-      this.#tabbable.focus()
+      this.#tabbable.focus({ preventScroll: true })
     }
+  }
+
+  #neighbourMessage(node, direction) {
+    const step = direction === "next" ? "nextElementSibling" : "previousElementSibling"
+    let current = node?.nodeType === Node.ELEMENT_NODE ? node : node?.[direction === "next" ? "nextSibling" : "previousSibling"]
+    while (current && current.nodeType !== Node.ELEMENT_NODE) current = current[direction === "next" ? "nextSibling" : "previousSibling"]
+    while (current) {
+      const message = current.matches(MESSAGE_SELECTOR) ? current : current.querySelector?.(MESSAGE_SELECTOR)
+      if (message) return message
+      current = current[step]
+    }
+    return null
   }
 
   #ensureTabbable() {
