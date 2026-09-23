@@ -316,7 +316,7 @@ class Notifications::PolicyTest < ActiveSupport::TestCase
   end
 
   test "huddle join notices push for live memberships and record no inbox item" do
-    %w[ mentions everything muted ].each do |involvement|
+    %w[ mentions everything ].each do |involvement|
       policy = huddle_join_policy(room_involvement: involvement)
 
       assert_nil policy.inbox_event_type, involvement
@@ -325,8 +325,8 @@ class Notifications::PolicyTest < ActiveSupport::TestCase
     end
   end
 
-  test "huddle join notices stay silent with notifications off, hidden, or no membership" do
-    %w[ nothing invisible ].each do |involvement|
+  test "huddle join notices stay silent when muted, off, hidden, or no membership" do
+    %w[ muted nothing invisible ].each do |involvement|
       policy = huddle_join_policy(room_involvement: involvement)
 
       assert_nil policy.inbox_event_type, involvement

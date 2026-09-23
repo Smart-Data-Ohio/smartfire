@@ -47,11 +47,12 @@ class Huddle::JoinPusher
 
     # Mirrors Huddle::InvitationPusher: only opted-in, disconnected
     # memberships get push. Connected sessions already see the in-app
-    # banner live.
+    # banner live. Unlike invitations, muted rooms are scoped out too,
+    # matching the policy gate above.
     def push_subscriptions_for_recipient
       Push::Subscription
         .joins(user: :memberships)
-        .merge(Membership.visible.disconnected.where(room:, user: recipient).where.not(involvement: "nothing"))
+        .merge(Membership.visible.disconnected.where(room:, user: recipient).where.not(involvement: %w[ nothing muted ]))
     end
 
     # Claims the throttle window with one conditional UPDATE, so two
