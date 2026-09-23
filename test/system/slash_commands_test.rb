@@ -46,13 +46,31 @@ class SlashCommandsTest < ApplicationSystemTestCase
     assert_field "Write a message", with: ""
   end
 
-  test "unknown commands show an error and keep the draft" do
-    fill_in_markdown "message_markdown_source", with: "/frobnicate now"
+  test "unknown slash words post as normal messages" do
+    fill_in_markdown "message_markdown_source", with: "/etc/hosts is not a command"
     click_on "Send Message"
 
-    assert_selector "#composer .composer__feedback", text: "Unknown command", visible: true
-    assert_field "Write a message", with: "/frobnicate now"
-    assert_no_selector ".message__body", text: "frobnicate"
+    assert_message_text "/etc/hosts is not a command", wait: 10
+    assert_field "Write a message", with: ""
+  end
+
+  test "double slash escapes a known command" do
+    fill_in_markdown "message_markdown_source", with: "//poll takes no vote"
+    click_on "Send Message"
+
+    assert_message_text "/poll takes no vote", wait: 10
+    assert_field "Write a message", with: ""
+  end
+
+  test "a command registered after page load still runs" do
+    fill_in_markdown "message_markdown_source", with: "/deploy staging"
+    @room.memberships.grant_to users(:bender)
+    AgentSlashCommand.create!(agent: agents(:bender_agent), room: @room, name: "deploy")
+    click_on "Send Message"
+
+    assert_selector "#composer .composer__feedback", text: "Sent to Bender Bot", visible: true
+    assert_field "Write a message", with: ""
+    assert_no_selector ".message__body", text: "deploy staging"
   end
 
   test "me renders as an action line" do

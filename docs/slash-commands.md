@@ -41,9 +41,14 @@ minutes`, `in 1 hour`, `tomorrow at 9am`, `today at 3pm`, `at 15:00`,
 `friday 5pm`, `next friday`, and explicit datetimes like
 `2026-10-01 15:00`. A bare weekday means its next occurrence at 9am.
 
-Unknown commands answer an ephemeral error listing the available
-commands, without posting anything. To post a literal line starting
-with `/`, escape it with `//`.
+A leading `/word` the composer doesn't recognize posts as a normal
+message, so "/etc/hosts" never errors — only known commands
+(built-ins and commands registered in the room) run. The composer
+re-checks the live list for words it doesn't know, so a command
+registered after the page loaded still runs. To post a literal line
+starting with a known command, escape it with `//`. Direct calls to
+the slash endpoint still answer unknown commands with an ephemeral
+error instead of posting.
 
 ## Agent commands
 

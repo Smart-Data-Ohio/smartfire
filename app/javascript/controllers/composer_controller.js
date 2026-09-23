@@ -9,7 +9,7 @@ export default class extends Controller {
     "clientid", "fields", "fileList", "markdown", "context", "contextLabel", "contextPreview",
     "notifyControl", "replyNotify", "replyTo", "send", "feedback"
   ]
-  static values = { roomId: Number, threadId: String, slashCommandsUrl: String }
+  static values = { roomId: Number, threadId: String, slashCommandsUrl: String, slashCommands: Array, slashCommandsListUrl: String }
   static outlets = [ "messages" ]
 
   #files = []
@@ -56,6 +56,12 @@ export default class extends Controller {
         this.#setMarkdownValue(this.markdownTarget.value.replace(/^\/\//, "/"))
       } else if (this.#slashCommandText()) {
         this.#slashSubmit()
+        return
+      } else if (this.#unknownSlashWord()) {
+        // Not a known command — but an agent may have registered it
+        // after this page loaded, so check the live list before
+        // sending it as a normal message.
+        this.#submitSlashOrMessage()
         return
       }
 
@@ -561,20 +567,80 @@ export default class extends Controller {
     }
   }
 
-  // Composer text for the slash dispatcher: starts with "/name", but
+  // Composer text for the slash dispatcher: starts with "/name" where
+  // name is a known command (built-in or registered in this room), but
   // never "//" (escaped literal) and never /play, which keeps the
-  // normal optimistic message path. Null otherwise.
+  // normal optimistic message path. Unknown words post as normal
+  // messages, so "/etc/hosts" never errors. Null otherwise.
   #slashCommandText() {
     if (!this.hasSlashCommandsUrlValue) return null
 
-    const text = this.markdownTarget.value.trim()
-    const match = text.match(/^\/(?!\/)([a-zA-Z][a-zA-Z0-9_-]*)/)
-    if (!match || match[1].toLowerCase() === "play") return null
-    return text
+    const word = this.#leadingSlashWord()
+    if (!word || word === "play") return null
+    if (!this.#knownSlashCommands().includes(word)) return null
+    return this.markdownTarget.value.trim()
   }
 
-  async #slashSubmit() {
-    const text = this.#slashCommandText()
+  // A leading "/word" the rendered list doesn't know. Separated from
+  // #slashCommandText so submit can re-check the live list for it.
+  #unknownSlashWord() {
+    if (!this.hasSlashCommandsUrlValue || !this.hasSlashCommandsListUrlValue) return null
+
+    const word = this.#leadingSlashWord()
+    if (!word || word === "play") return null
+    if (this.#knownSlashCommands().includes(word)) return null
+    return word
+  }
+
+  #leadingSlashWord() {
+    const match = this.markdownTarget.value.trim().match(/^\/(?!\/)([a-zA-Z][a-zA-Z0-9_-]*)/)
+    return match ? match[1].toLowerCase() : null
+  }
+
+  #knownSlashCommands() {
+    return (this.slashCommandsValue || []).map((name) => String(name).toLowerCase())
+  }
+
+  // Decides a locally-unknown "/word" against the live command list
+  // (the picker's endpoint): a command registered after page load
+  // still runs; anything else — and anything when the check fails —
+  // sends as a normal message.
+  async #submitSlashOrMessage() {
+    if (this.#submitting) return
+    const word = this.#unknownSlashWord()
+    if (!word) return
+
+    this.#submitting = true
+    this.#setBusy(true)
+    this.#clearFeedback()
+
+    let known = false
+    try {
+      const response = await fetch(this.slashCommandsListUrlValue, {
+        headers: { Accept: "application/json" },
+      })
+      if (!response.ok) throw new Error(`command list failed (${response.status})`)
+      const commands = await response.json()
+      known = commands.some((command) => String(command.name || "").toLowerCase() === word)
+    } catch {
+      known = false
+    } finally {
+      this.#submitting = false
+      this.#setBusy(false)
+    }
+
+    // The draft may have changed during the check: only a text that
+    // still opens with the known word runs as a command.
+    if (known && this.#leadingSlashWord() === word) {
+      this.#slashSubmit(this.markdownTarget.value.trim())
+    } else {
+      this.#submitFiles()
+      this.#submitMessage()
+      this.markdownTarget.focus()
+    }
+  }
+
+  async #slashSubmit(text = this.#slashCommandText()) {
     if (!text || this.#submitting) return
 
     this.#submitting = true
