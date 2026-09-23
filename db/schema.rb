@@ -988,6 +988,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_160100) do
     t.integer "user_id", null: false
     t.index ["token_digest"], name: "index_two_factor_remembered_devices_on_token_digest", unique: true
     t.index ["user_id"], name: "index_two_factor_remembered_devices_on_user_id"
+  end
+
   create_table "user_stars", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "starred_user_id", null: false
