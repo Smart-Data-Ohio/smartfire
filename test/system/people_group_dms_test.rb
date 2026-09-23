@@ -40,6 +40,16 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
     assert_includes page.evaluate_script("document.activeElement.textContent"), "Jason"
   end
 
+  test "the sidebar avatar trigger opens the profile card by keyboard" do
+    visit room_path(rooms(:designers))
+    wait_for_controller "profile-card"
+
+    find("#direct_rooms button.profile-card-avatar", match: :first).send_keys(:enter)
+
+    assert_selector "#profile-card-popover:not([hidden])", wait: 10
+    assert_selector "#user_card .profile-card__name"
+  end
+
   test "multi-selecting three people in the directory lands in their group DM" do
     visit users_path
     wait_for_controller "multi-select"

@@ -159,6 +159,26 @@ class Users::SidebarsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "direct rows keep avatar card triggers as siblings of the room link" do
+    group = Rooms::Direct.create_for({ creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
+
+    get user_sidebar_url
+
+    assert_response :success
+
+    [ rooms(:david_and_jason), group ].each do |room|
+      row = "##{dom_id(room, :list)}"
+      # No nested interactive content: the room link holds no control.
+      assert_select "#{row} a[href='#{room_path(room)}'] button", count: 0
+      assert_select "#{row} a[href='#{room_path(room)}'] [role='button']", count: 0
+    end
+
+    # ...while each other member keeps a keyboard-reachable trigger.
+    assert_select "##{dom_id(rooms(:david_and_jason), :list)} > button.profile-card-avatar" +
+      "[aria-label='View profile of Jason']", count: 1
+    assert_select "##{dom_id(group, :list)} .avatar__group > button.profile-card-avatar", count: 2
+  end
+
   test "no channel or DM stacks without huddle configuration" do
     ENV.delete("LIVEKIT_GATEWAY_SECRET")
     issue_in_call_grant!(user: users(:jason), room: rooms(:watercooler))

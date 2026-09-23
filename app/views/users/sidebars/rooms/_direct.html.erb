@@ -1,5 +1,10 @@
-<%= link_to_room membership.room, class: [ "sidebar-item direct", "unread": membership.unread? ], id: dom_id(membership.room, :list),
-      data: { sorted_list_number: membership.room.updated_at.to_fs(:epoch) } do %>
+<%# The row is a div, not a link: the avatar card triggers sit beside the
+    room link instead of nesting a control inside one. The room id is
+    mirrored onto the link so room navigation still finds a link to mark
+    current and focus. %>
+<%= tag.div class: [ "sidebar-item direct", "unread": membership.unread? ], id: dom_id(membership.room, :list),
+      data: { rooms_list_target: "room", room_id: membership.room_id, badge_dot_target: "unread",
+        sorted_list_target: "item", sorted_list_number: membership.room.updated_at.to_fs(:epoch) } do %>
   <%# Explicit locals let membership broadcasts render without request state; page renders fall back to the preloaded helpers. %>
   <%# Whoever renders, an empty member list falls back to yourself, so a room you sit in alone still shows your avatar and name. %>
   <% members = local_assigns[:members] || direct_room_members_by_room_id.fetch(membership.room_id, []).reject { |member| member.id == membership.user_id } %>
@@ -10,31 +15,33 @@
   <% if members.many? %>
     <div class="avatar__group">
       <% members.first(3).each do |member| %>
-        <%= tag.span class: "avatar profile-card-trigger", tabindex: 0, role: "button",
+        <%= button_tag type: "button", class: "avatar profile-card-avatar",
               aria: { label: "View profile of #{member.name}" },
-              data: profile_card_trigger(member, keyboard: true) do %>
+              data: profile_card_trigger(member) do %>
           <%= image_tag fresh_user_avatar_path(member), size: 20, aria: { hidden: "true" } %>
         <% end %>
       <% end %>
     </div>
   <% else %>
-    <%= tag.span class: "avatar profile-card-trigger", tabindex: 0, role: "button",
+    <%= button_tag type: "button", class: "avatar profile-card-avatar",
           aria: { label: "View profile of #{members.first.name}" },
-          data: profile_card_trigger(members.first, keyboard: true) do %>
+          data: profile_card_trigger(members.first) do %>
       <%= image_tag fresh_user_avatar_path(members.first), size: 48, aria: { hidden: "true" } %>
     <% end %>
   <% end %>
 
-  <span class="direct__author min-width">
-    <span class="overflow-ellipsis">
-      <span class="for-screen-reader">Ping with</span>
-      <% if members.many? || membership.room.name.present? %>
-        <%= direct_room_display_name(membership.room, members: members, for_user: membership.user) %>
-      <% else %>
-        <%= members.first.name.split(" ")[0] %>
-      <% end %>
+  <%= link_to room_path(membership.room), class: "direct__link", data: { room_id: membership.room_id } do %>
+    <span class="direct__author min-width">
+      <span class="overflow-ellipsis">
+        <span class="for-screen-reader">Ping with</span>
+        <% if members.many? || membership.room.name.present? %>
+          <%= direct_room_display_name(membership.room, members: members, for_user: membership.user) %>
+        <% else %>
+          <%= members.first.name.split(" ")[0] %>
+        <% end %>
+      </span>
     </span>
-  </span>
+  <% end %>
   <%# Every DM can huddle. The collection cache key already covers presence, %>
   <%# so the stack renders inline with the rest of the row. %>
   <% if huddleable %>
