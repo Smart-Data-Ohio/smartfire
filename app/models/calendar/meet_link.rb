@@ -26,17 +26,33 @@ module Calendar
       entry = EventCalendarEntry.find_by(event: @event, user_id: @event.organizer_id)
       return if entry.nil? || entry.synced_at.nil? || entry.last_error.present?
 
-      response = Google::Client.new(account).update_event(
+      response = Google::Client.new(account).patch_event(
         entry.google_event_id,
         { "conferenceData" => { "createRequest" => { "requestId" => "meet-#{@event.id}-#{entry.id}" } } },
         conference_data_version: true
       )
       link = response.is_a?(Hash) ? response["hangoutLink"].presence : nil
-      @event.update!(meet_link: link) if link
+      if link
+        @event.update!(meet_link: link)
+      elsif pending_conference?(response)
+        # Conference creation is async: Google answers at once with a
+        # pending createRequest and populates the link shortly after.
+        # Raising Unavailable retries the job with backoff; the retry
+        # re-sends the same requestId, which Google uses to dedupe
+        # creation requests, so no second conference is minted:
+        # https://developers.google.com/workspace/calendar/api/guides/create-events
+        raise Google::Client::Unavailable, "Google Calendar conference still pending"
+      end
     rescue Google::Client::Unavailable
       raise
     rescue Google::Client::Error => error
       Rails.logger.warn "Calendar::MeetLink failed for event #{@event.id}: #{error.class}"
     end
+
+    private
+      def pending_conference?(response)
+        response.is_a?(Hash) &&
+          response.dig("conferenceData", "createRequest", "status") == "pending"
+      end
   end
 end

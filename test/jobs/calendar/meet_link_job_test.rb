@@ -24,20 +24,22 @@ class Calendar::MeetLinkJobTest < ActiveSupport::TestCase
     connect_google!(@organizer)
     @event.update!(meet_link_requested: true)
     stub_google_event_insert
-    conference = stub_request(:put, "#{GOOGLE_EVENTS_URL}/#{@google_id}?conferenceDataVersion=1")
+    conference = stub_request(:patch, "#{GOOGLE_EVENTS_URL}/#{@google_id}?conferenceDataVersion=1")
       .with { |request| JSON.parse(request.body).dig("conferenceData", "createRequest", "requestId").present? }
       .to_return(status: 200, body: { hangoutLink: "https://meet.google.com/abc-defg-hij" }.to_json,
         headers: { "Content-Type" => "application/json" })
+    full_update = stub_request(:put, %r{www\.googleapis\.com/calendar})
 
     Calendar::MeetLinkJob.perform_now(@event.id)
 
     assert_requested conference, times: 1
+    assert_not_requested full_update
     assert_equal "https://meet.google.com/abc-defg-hij", @event.reload.meet_link
   end
 
   test "nothing happens without a request" do
     connect_google!(@organizer)
-    conference = stub_request(:put, %r{www\.googleapis\.com/calendar})
+    conference = stub_request(:patch, %r{www\.googleapis\.com/calendar})
 
     Calendar::MeetLinkJob.perform_now(@event.id)
 
@@ -47,7 +49,7 @@ class Calendar::MeetLinkJobTest < ActiveSupport::TestCase
 
   test "no Meet link unless the organizer has connected Google" do
     @event.update!(meet_link_requested: true)
-    conference = stub_request(:put, %r{www\.googleapis\.com/calendar})
+    conference = stub_request(:patch, %r{www\.googleapis\.com/calendar})
 
     Calendar::MeetLinkJob.perform_now(@event.id)
 
@@ -58,7 +60,7 @@ class Calendar::MeetLinkJobTest < ActiveSupport::TestCase
   test "a disconnected organizer account provisions nothing" do
     connect_google!(@organizer, disconnected_reason: "revoked")
     @event.update!(meet_link_requested: true)
-    conference = stub_request(:put, %r{www\.googleapis\.com/calendar})
+    conference = stub_request(:patch, %r{www\.googleapis\.com/calendar})
 
     Calendar::MeetLinkJob.perform_now(@event.id)
 
@@ -69,7 +71,7 @@ class Calendar::MeetLinkJobTest < ActiveSupport::TestCase
   test "a second run is a no-op once the link exists" do
     connect_google!(@organizer)
     @event.update!(meet_link_requested: true, meet_link: "https://meet.google.com/abc-defg-hij")
-    conference = stub_request(:put, %r{www\.googleapis\.com/calendar})
+    conference = stub_request(:patch, %r{www\.googleapis\.com/calendar})
 
     Calendar::MeetLinkJob.perform_now(@event.id)
 
@@ -80,7 +82,7 @@ class Calendar::MeetLinkJobTest < ActiveSupport::TestCase
     connect_google!(@organizer)
     @event.update!(meet_link_requested: true)
     stub_google_event_insert
-    stub_request(:put, "#{GOOGLE_EVENTS_URL}/#{@google_id}?conferenceDataVersion=1")
+    stub_request(:patch, "#{GOOGLE_EVENTS_URL}/#{@google_id}?conferenceDataVersion=1")
       .to_return(status: 403, body: google_forbidden_body("forbidden").to_json,
         headers: { "Content-Type" => "application/json" })
 
@@ -88,6 +90,43 @@ class Calendar::MeetLinkJobTest < ActiveSupport::TestCase
 
     assert_nil @event.reload.meet_link
     assert @event.meet_link_requested?
+  end
+
+  test "a pending conference without a link raises for the job to retry" do
+    connect_google!(@organizer)
+    @event.update!(meet_link_requested: true)
+    stub_google_event_insert
+    stub_request(:patch, "#{GOOGLE_EVENTS_URL}/#{@google_id}?conferenceDataVersion=1")
+      .to_return(status: 200, body: {
+        id: @google_id, status: "confirmed",
+        conferenceData: {
+          createRequest: { requestId: "meet-#{@event.id}-1", status: "pending" }
+        }
+      }.to_json, headers: { "Content-Type" => "application/json" })
+
+    assert_raises(Google::Client::Unavailable) { Calendar::MeetLink.provision!(@event) }
+
+    assert_nil @event.reload.meet_link
+    assert @event.meet_link_requested?
+  end
+
+  test "a pending conference schedules a job retry with backoff" do
+    connect_google!(@organizer)
+    @event.update!(meet_link_requested: true)
+    stub_google_event_insert
+    stub_request(:patch, "#{GOOGLE_EVENTS_URL}/#{@google_id}?conferenceDataVersion=1")
+      .to_return(status: 200, body: {
+        id: @google_id, status: "confirmed",
+        conferenceData: {
+          createRequest: { requestId: "meet-#{@event.id}-1", status: "pending" }
+        }
+      }.to_json, headers: { "Content-Type" => "application/json" })
+
+    assert_enqueued_with(job: Calendar::MeetLinkJob, args: [ @event.id ]) do
+      Calendar::MeetLinkJob.perform_now(@event.id)
+    end
+
+    assert_nil @event.reload.meet_link
   end
 
   test "creating an event with a request enqueues provisioning" do

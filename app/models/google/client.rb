@@ -197,6 +197,17 @@ module Google
       api_request(:put, "/calendar/v3/calendars/primary/events/#{google_event_id}", payload, query:)
     end
 
+    # Partial update: only the supplied fields change. Conference
+    # creation uses this: events.update replaces the whole resource and
+    # requires start/end, so a conferenceData-only update is rejected
+    # with 400, while events.patch accepts it:
+    # https://developers.google.com/workspace/calendar/api/v3/reference/events/patch
+    # https://developers.google.com/workspace/calendar/api/v3/reference/events/update
+    def patch_event(google_event_id, payload, conference_data_version: false)
+      query = URI.encode_www_form(conferenceDataVersion: 1) if conference_data_version
+      api_request(:patch, "/calendar/v3/calendars/primary/events/#{google_event_id}", payload, query:)
+    end
+
     def get_event(google_event_id)
       api_request(:get, "/calendar/v3/calendars/primary/events/#{google_event_id}")
     end

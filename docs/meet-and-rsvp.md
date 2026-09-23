@@ -20,8 +20,10 @@ or credentials.
   occurrence; **This and following** carries a new request to later
   occurrences.
 - Provisioning runs in `Calendar::MeetLinkJob` (idempotent, transient
-  failures retried with backoff). Permanent Google refusals are logged
-  and the next event edit retries.
+  failures retried with backoff). The conference is attached with
+  `events.patch`, since `events.update` rejects a conference-only body;
+  a `pending` conference without a link yet retries with backoff too.
+  Permanent Google refusals are logged and the next event edit retries.
 
 ## Two-way RSVP sync
 
