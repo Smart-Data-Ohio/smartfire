@@ -109,6 +109,7 @@ class User < ApplicationRecord
       searches.delete_all
       sessions.delete_all
       Calendar::DisconnectCleanupJob.perform_later([], google_account.cleanup_snapshot, google_account.id) if google_account&.usable?
+      Calendar::PushChannel.find_by(user_id: id)&.destroy!
       google_account&.mark_disconnected!("Account deactivated")
       github_connected_account&.mark_disconnected!("Account deactivated")
       # Agents this person owns stop with them: suspension revokes their

@@ -60,6 +60,10 @@ module Google
         snapshot = account.cleanup_snapshot
         account_id = account.id
         Current.user.event_calendar_entries.delete_all
+        if (channel = Calendar::PushChannel.find_by(user_id: Current.user.id))
+          channel.stop_remote!
+          channel.destroy!
+        end
         account.destroy!
         Calendar::DisconnectCleanupJob.perform_later(google_event_ids, snapshot, account_id) if snapshot
       end
@@ -95,6 +99,7 @@ module Google
         # before the organizer connected Google.
         Event.where(organizer: user, meet_link_requested: true, meet_link: [ nil, "" ])
           .find_each { |event| Calendar::MeetLinkJob.perform_later(event.id) }
+        Calendar::WatchChannelJob.perform_later(user.id)
       end
   end
 end

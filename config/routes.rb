@@ -234,6 +234,7 @@ Rails.application.routes.draw do
     post "connect", to: "connections#connect"
     get "callback", to: "connections#callback"
     delete "connection", to: "connections#destroy"
+    post "calendar/notifications", to: "calendar_notifications#create"
     get "drive/files", to: "drive_files#index", as: :drive_files
     get "drive/files/:id", to: "drive_files#show", as: :drive_file
   end

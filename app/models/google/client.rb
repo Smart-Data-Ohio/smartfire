@@ -201,6 +201,26 @@ module Google
       api_request(:get, "/calendar/v3/calendars/primary/events/#{google_event_id}")
     end
 
+    # Opens a push channel (events.watch) on the primary calendar. Google
+    # POSTs a sync handshake then one notification per change to address,
+    # echoing token back in X-Goog-Channel-Token. Returns the parsed
+    # watch response (resourceId, expiration in ms).
+    def watch_events(channel_id:, token:, address:)
+      api_request(:post, "/calendar/v3/calendars/primary/events/watch", {
+        "id" => channel_id, "type" => "web_hook", "address" => address, "token" => token
+      })
+    end
+
+    # Closes a push channel. A 404 means Google already dropped it, so it
+    # counts as stopped.
+    def stop_channel(channel_id:, resource_id:)
+      api_request(:post, "/calendar/v3/channels/stop", {
+        "id" => channel_id, "resourceId" => resource_id
+      })
+    rescue NotFound
+      true
+    end
+
     def delete_event(google_event_id)
       api_request(:delete, "/calendar/v3/calendars/primary/events/#{google_event_id}")
     end

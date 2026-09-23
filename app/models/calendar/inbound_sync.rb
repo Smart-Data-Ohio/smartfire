@@ -1,0 +1,76 @@
+module Calendar
+  # Applies one push notification: re-reads the member's synced Google
+  # copies and carries RSVP-shaped changes back into Smartfire
+  # attendance. A copy the member cancelled or deleted in Google declines
+  # the event locally; a restored (confirmed) copy re-accepts it. Other
+  # edits (time, title) stay one-way: Smartfire remains the source of
+  # truth for those, and the outbound sync already converges them.
+  #
+  # The mapping is convergent, not flapping: declining locally deletes
+  # the remote copy, which reads back as declined (no change), and
+  # going locally confirms it, which reads back as going.
+  class InboundSync
+    # One push covers the whole calendar; bound the re-read to the
+    # member's upcoming synced entries.
+    MAX_ENTRIES = 50
+
+    def self.sync(user_id)
+      user = User.find_by(id: user_id)
+      new(user).sync! if user
+    end
+
+    def initialize(user)
+      @user = user
+    end
+
+    def sync!
+      account = @user.google_account
+      return unless account&.usable? && account.calendar?
+
+      client = Google::Client.new(account)
+      entries.find_each do |entry|
+        sync_entry!(client, entry)
+      end
+    rescue Google::Client::Unavailable
+      raise
+    rescue Google::Client::Error => error
+      channel&.update_column(:last_error, "#{error.class.name.demodulize}: #{error.message}".truncate(250))
+      Rails.logger.warn "Calendar::InboundSync failed for user #{@user.id}: #{error.class}"
+    end
+
+    private
+      def entries
+        @user.event_calendar_entries.joins(:event).merge(Event.upcoming).order(:event_id).limit(MAX_ENTRIES)
+      end
+
+      def channel
+        @channel ||= Calendar::PushChannel.find_by(user_id: @user.id)
+      end
+
+      def sync_entry!(client, entry)
+        event = entry.event
+        return unless event.respondable_by?(@user)
+
+        local = event.response_for(@user)
+        remote = remote_status(client, entry.google_event_id)
+
+        case remote
+        when :cancelled, :deleted
+          event.respond!(@user, "declined") if local.in?(Event::NOTIFYING_RESPONSES)
+        when :confirmed
+          event.respond!(@user, "going") if local == "declined"
+        end
+      rescue Google::Client::Unavailable
+        raise
+      rescue Google::Client::Error => error
+        Rails.logger.warn "Calendar::InboundSync entry failed for event #{event.id}: #{error.class}"
+      end
+
+      def remote_status(client, google_event_id)
+        remote = client.get_event(google_event_id)
+        remote.is_a?(Hash) && remote["status"] == "cancelled" ? :cancelled : :confirmed
+      rescue Google::Client::NotFound
+        :deleted
+      end
+  end
+end

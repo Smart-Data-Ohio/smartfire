@@ -17,7 +17,7 @@ class Periodic::RunnerTest < ActiveSupport::TestCase
     Event::ReminderDispatcher.expects(:dispatch_due!).once
 
     assert_enqueued_with(job: Retention::PruneJob) do
-      assert_equal [ "delayed jobs", "event reminders", "stuck rooms", "stranded agent webhooks", "stuck GitHub claims", "retention prune" ], @runner.tick
+      assert_equal [ "delayed jobs", "event reminders", "stuck rooms", "stranded agent webhooks", "stuck GitHub claims", "calendar push channels", "retention prune" ], @runner.tick
     end
   end
 
