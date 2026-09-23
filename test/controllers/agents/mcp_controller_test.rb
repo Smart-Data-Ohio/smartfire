@@ -221,6 +221,42 @@ class Agents::McpControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes rooms.map { |room| room["id"] }, rooms(:designers).id
   end
 
+  test "list_rooms returns only rooms with a granted capability" do
+    grant!(capability: "read_messages", room: @room)
+
+    ids = structured(call_tool("list_rooms")).map { |room| room["id"] }
+
+    assert_includes ids, @room.id
+    assert_not_includes ids, rooms(:bender_and_kevin).id
+    assert_not_includes ids, rooms(:designers).id
+  end
+
+  test "list_rooms includes every member room with a workspace-wide grant" do
+    grant!(capability: "read_messages")
+
+    ids = structured(call_tool("list_rooms")).map { |room| room["id"] }
+
+    assert_includes ids, @room.id
+    assert_includes ids, rooms(:bender_and_kevin).id
+    assert_not_includes ids, rooms(:designers).id
+  end
+
+  test "list_rooms is empty when every grant is revoked" do
+    grant = AgentGrant.create!(agent: @agent, room: @room, granted_by: users(:david), capability: "read_messages")
+    grant.revoke!
+
+    assert_empty structured(call_tool("list_rooms"))
+  end
+
+  test "list_rooms omits soft-deleted rooms" do
+    rooms(:bender_and_kevin).update!(deleted_at: Time.current)
+
+    ids = structured(call_tool("list_rooms")).map { |room| room["id"] }
+
+    assert_includes ids, @room.id
+    assert_not_includes ids, rooms(:bender_and_kevin).id
+  end
+
   test "read_messages returns a chronological page with cursors" do
     first = @room.messages.create!(creator: users(:david), body: "Read one", client_message_id: "mcp-read-1")
     second = @room.messages.create!(creator: @bot, body: "Read two", client_message_id: "mcp-read-2")

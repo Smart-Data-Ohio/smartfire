@@ -32,7 +32,7 @@ module Agents
     TOOLS = [
       Tool.new(
         name: "list_rooms",
-        description: "List the rooms the agent belongs to, with kind flags (board, direct).",
+        description: "List the agent's rooms that carry at least one granted capability (legacy agents: every member room), with kind flags (board, direct).",
         input_schema: { "type" => "object", "properties" => {} },
         throttle: nil
       ),

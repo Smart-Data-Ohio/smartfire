@@ -81,7 +81,7 @@ curl https://smartfire.example.com/agents/mcp \
 
 | Tool | Capability | REST equivalent |
 | ---- | ---------- | --------------- |
-| `list_rooms` | — (own memberships) | — |
+| `list_rooms` | member rooms with a granted capability (legacy: all) | — |
 | `read_messages` | `read_messages` in the room | bot message listing |
 | `post_message` | `post_messages` in the room | `POST /rooms/:id/agents/messages` |
 | `react` | `react` in the room | bot boosts |
