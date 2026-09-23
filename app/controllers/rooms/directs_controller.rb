@@ -41,6 +41,8 @@ class Rooms::DirectsController < RoomsController
     added = @room.add_members(User.active.where(id: selected_users_ids), added_by: Current.user)
 
     if added.any?
+      AuditLog.record!(action: "room.membership.change", target: @room,
+        changes: { granted: added.map(&:name) })
       redirect_to edit_rooms_direct_path(@room), notice: "Added #{added.map(&:name).to_sentence} to the group."
     else
       redirect_to edit_rooms_direct_path(@room), alert: "Select at least one new member to add."
@@ -52,7 +54,11 @@ class Rooms::DirectsController < RoomsController
   end
 
   def leave
+    room_label = @room.name
+
     if @room.leave(Current.user) == :destroyed
+      AuditLog.record!(action: "room.destroy", target: @room, target_label: room_label,
+        changes: { name: room_label })
       enqueue_destroy
       broadcast_remove_room
     end

@@ -78,6 +78,53 @@ class AuditLog::RoomsAuditTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "adding group members is recorded with the added users" do
+    room = create_group_dm!([ users(:david), users(:jason), users(:kevin) ])
+
+    assert_difference -> { AuditLog.where(action: "room.membership.change").count }, +1 do
+      post add_members_rooms_direct_url(room), params: { user_ids: [ users(:jz).id ] }
+    end
+
+    entry = AuditLog.where(action: "room.membership.change").last
+    assert_equal users(:david).id, entry.actor_id
+    assert_equal room.id, entry.target_id
+    assert_equal [ "JZ" ], entry.details["granted"]
+  end
+
+  test "adding no new members writes no row" do
+    room = create_group_dm!([ users(:david), users(:jason), users(:kevin) ])
+
+    assert_no_difference -> { AuditLog.where(action: "room.membership.change").count } do
+      post add_members_rooms_direct_url(room), params: { user_ids: [ users(:jason).id ] }
+    end
+  end
+
+  test "the last member out destroys the group and records it" do
+    room = create_group_dm!([ users(:david), users(:jason), users(:kevin) ])
+    room.rename("Weekend Plans", renamed_by: users(:david))
+    delete leave_rooms_direct_url(room)
+    sign_in :jason
+    delete leave_rooms_direct_url(room)
+
+    sign_in :kevin
+    assert_difference -> { AuditLog.where(action: "room.destroy").count }, +1 do
+      delete leave_rooms_direct_url(room)
+    end
+
+    entry = AuditLog.where(action: "room.destroy").last
+    assert_equal users(:kevin).id, entry.actor_id
+    assert_equal room.id, entry.target_id
+    assert_equal "Weekend Plans", entry.target_label
+  end
+
+  test "leaving without destroying the group writes no row" do
+    room = create_group_dm!([ users(:david), users(:jason), users(:kevin) ])
+
+    assert_no_difference -> { AuditLog.where(action: "room.destroy").count } do
+      delete leave_rooms_direct_url(room)
+    end
+  end
+
   test "account settings changes are recorded" do
     assert_difference -> { AuditLog.where(action: "account.settings.change").count }, +1 do
       patch account_url, params: {
@@ -148,4 +195,10 @@ class AuditLog::RoomsAuditTest < ActionDispatch::IntegrationTest
     assert_equal icon.id, destroy.target_id
     assert_equal ":acme:", destroy.target_label
   end
+
+  private
+    def create_group_dm!(*members)
+      members = members.flatten
+      Current.set(user: members.first) { Rooms::Direct.find_or_create_for(members) }
+    end
 end
