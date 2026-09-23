@@ -168,6 +168,71 @@ class Notifications::PolicyTest < ActiveSupport::TestCase
     assert_nil room_policy(room_involvement: "mentions", mentioned: true).inbox_event_type
   end
 
+  # Muted rooms: mentions and keyword alerts only, never replies or
+  # thread activity
+
+  test "a muted room mention records and pushes" do
+    policy = room_policy(room_involvement: "muted", mentioned: true)
+
+    assert_equal "mention", policy.inbox_event_type
+    assert policy.push?
+    assert policy.sound?
+  end
+
+  test "a muted room keyword match records without pushing" do
+    room = room_policy(room_involvement: "muted", keyword_matched: true)
+    assert_equal "keyword_alert", room.inbox_event_type
+    assert_not room.push?
+
+    unfollowed = thread_policy(room_involvement: "muted", thread_involvement: "mentions", keyword_matched: true)
+    assert_equal "keyword_alert", unfollowed.inbox_event_type
+    assert_not unfollowed.push?
+
+    # The keyword still records where thread activity would not, and the
+    # muted room suppresses the follower broadcast push.
+    following = thread_policy(room_involvement: "muted", thread_involvement: "everything", keyword_matched: true)
+    assert_equal "keyword_alert", following.inbox_event_type
+    assert_not following.push?
+  end
+
+  test "a muted room reply stays silent" do
+    room = room_policy(room_involvement: "muted", reply_to_recipient: true)
+    assert_nil room.inbox_event_type
+    assert_not room.push?
+
+    thread = thread_policy(room_involvement: "muted", thread_involvement: "everything", reply_to_recipient: true)
+    assert_nil thread.inbox_event_type
+    assert_not thread.push?
+  end
+
+  test "muted room thread activity stays silent for followers" do
+    policy = thread_policy(room_involvement: "muted", thread_involvement: "everything")
+
+    assert_nil policy.inbox_event_type
+    assert_not policy.push?
+  end
+
+  test "a muted board post stays silent for members outside the thread" do
+    # Board followers are not thread members yet; the thread path gives
+    # them nothing through the policy, mentioned or not.
+    plain = thread_policy(room_involvement: "muted", thread_involvement: nil)
+    assert_nil plain.inbox_event_type
+    assert_not plain.push?
+
+    mentioned = thread_policy(room_involvement: "muted", thread_involvement: nil, mentioned: true)
+    assert_nil mentioned.inbox_event_type
+    assert_not mentioned.push?
+  end
+
+  test "DND silences a muted room mention push but keeps the inbox item" do
+    @recipient.update!(dnd_enabled: true)
+    policy = room_policy(room_involvement: "muted", mentioned: true)
+
+    assert_equal "mention", policy.inbox_event_type
+    assert_not policy.push?
+    assert_not policy.sound?
+  end
+
   # Do Not Disturb and quiet hours: push and sound only, never inbox
 
   test "manual DND suppresses push and sound but still records the inbox item" do

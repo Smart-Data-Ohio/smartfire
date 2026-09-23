@@ -1,0 +1,55 @@
+<%# User-defined channel categories: collapsible sections that channels can
+    be dragged into (or assigned from the room menu), each with rename and
+    delete controls. All forms answer inside the sidebar frame. %>
+<% memberships_by_category = memberships.group_by(&:room_category_id) %>
+<% categories.each do |category| %>
+  <% category_memberships = memberships_by_category.fetch(category.id, []) %>
+  <section class="sidebar-section sidebar-section--category rooms" aria-labelledby="room-category-<%= category.id %>-heading" data-category-drop="<%= category.id %>">
+    <header class="sidebar-section__header room-category__header">
+      <%= button_to room_category_path(category), method: :patch,
+            params: { room_category: { collapsed: !category.collapsed? } },
+            form: { data: { turbo_frame: "user_sidebar" } },
+            class: "btn sidebar-section__collapse",
+            aria: { label: "#{category.collapsed? ? "Expand" : "Collapse"} #{category.name}" },
+            title: category.collapsed? ? "Expand" : "Collapse" do %>
+        <%= image_tag "disclosure.svg", size: 16, aria: { hidden: "true" },
+              class: ("room-category__disclosure--collapsed" if category.collapsed?) %>
+      <% end %>
+      <h2 id="room-category-<%= category.id %>-heading" class="overflow-ellipsis"><%= category.name %></h2>
+      <details class="room-category__rename">
+        <summary class="btn sidebar-section__tool" aria-label="Rename <%= category.name %>" title="Rename">Rename</summary>
+        <%= form_with scope: :room_category, url: room_category_path(category), method: :patch,
+              data: { turbo_frame: "user_sidebar" }, class: "room-category__rename-form" do |form| %>
+          <%= form.text_field :name, value: category.name, required: true, maxlength: 50,
+                autocomplete: "off", aria: { label: "New name for #{category.name}" } %>
+          <%= form.submit "Save", class: "btn" %>
+        <% end %>
+      </details>
+      <%= button_to room_category_path(category), method: :delete,
+            form: { data: { turbo_frame: "user_sidebar" } },
+            class: "btn sidebar-section__tool",
+            aria: { label: "Delete #{category.name}" }, title: "Delete",
+            data: { turbo_confirm: "Delete “#{category.name}”? Its channels move back to Channels." } do %>
+        <%= image_tag "trash.svg", size: 16, aria: { hidden: "true" } %>
+      <% end %>
+    </header>
+
+    <div id="category_rooms_<%= category.id %>" class="sidebar-list<%= " sidebar-list--empty" if category_memberships.empty? %>"<% if category.collapsed? %> hidden<% end %>>
+      <% category_memberships.each do |membership| %>
+        <%= render "users/sidebars/rooms/shared", room: membership.room, unread: membership.unread?, membership: membership %>
+      <% end %>
+    </div>
+  </section>
+<% end %>
+
+<details class="room-category__new">
+  <summary class="btn room-category__new-toggle">
+    <%= image_tag "add.svg", size: 16, aria: { hidden: "true" } %>
+    <span>New category</span>
+  </summary>
+  <%= form_with scope: :room_category, url: room_categories_path, data: { turbo_frame: "user_sidebar" }, class: "room-category__new-form" do |form| %>
+    <%= form.text_field :name, required: true, maxlength: 50, autocomplete: "off",
+          placeholder: "Category name", aria: { label: "New category name" } %>
+    <%= form.submit "Create", class: "btn btn--reversed" %>
+  <% end %>
+</details>

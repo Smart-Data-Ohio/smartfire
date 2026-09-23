@@ -2,14 +2,23 @@ class Users::SidebarsController < ApplicationController
   DIRECT_PLACEHOLDERS = 20
 
   def show
-    all_memberships     = Current.user.memberships.visible.with_ordered_room
-    @direct_memberships = extract_direct_memberships(all_memberships)
-    @voice_memberships  = all_memberships.select { |m| m.room.voice? }
-    @other_memberships  = all_memberships.without(@direct_memberships + @voice_memberships)
+    all_memberships = Current.user.memberships.visible.with_ordered_room.to_a
+    # Favourites move out of their sections into Favourites; categorized
+    # channels move under their category. Both sort in Ruby over the
+    # already-loaded memberships, adding no queries.
+    @favorite_memberships = all_memberships.select(&:favorited?)
+      .sort_by { |membership| [ membership.favorite_position, membership.id ] }
+    rest = all_memberships - @favorite_memberships
+    @direct_memberships = extract_direct_memberships(rest)
+    @voice_memberships  = rest.select { |m| m.room.voice? }
+    @categorized_memberships = rest.select { |m| m.room_category_id.present? }
+    @other_memberships  = rest - @direct_memberships - @voice_memberships - @categorized_memberships
+
+    @room_categories = Current.user.room_categories.ordered.to_a
 
     @direct_placeholder_users = find_direct_placeholder_users
 
-    preload_stage_streams(@other_memberships)
+    preload_stage_streams(@other_memberships + @favorite_memberships)
   end
 
   private
