@@ -14,6 +14,7 @@ class TwoFactor::BackupCodesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "#two_factor_backup_codes li", count: 10
+    assert_select "a[href='#{user_profile_path}']", text: "Continue"
     assert_equal 10, credential.backup_codes.unused.count
     old_codes.each do |code|
       assert_not TwoFactorBackupCode.consume!(credential, code)

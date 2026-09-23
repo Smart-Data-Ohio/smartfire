@@ -28,6 +28,7 @@ module TwoFactor
         @backup_codes = TwoFactorBackupCode.regenerate_set!(credential)
         Current.session.mark_two_factor_verified!
         AuditLog.record!(action: "two_factor.enable", target: Current.user)
+        @continue_url = post_authenticating_url
         render "two_factor/backup_codes/show"
       else
         @credential = credential
@@ -41,6 +42,9 @@ module TwoFactor
       if Current.user.two_factor_enabled?
         Current.user.reset_two_factor!
         Current.session.clear_two_factor_verified!
+        # Every session re-enrolls, not just this one: a live session must
+        # never keep browsing after its second factor is gone.
+        Current.user.sessions.update_all(two_factor_verified_at: nil)
         cookies.delete(TWO_FACTOR_REMEMBER_COOKIE)
         AuditLog.record!(action: "two_factor.disable", target: Current.user)
         redirect_to two_factor_setup_url, notice: "Two-step sign-in is off. Set it up again to keep signing in."

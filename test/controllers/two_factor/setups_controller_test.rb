@@ -31,6 +31,8 @@ class TwoFactor::SetupsControllerTest < ActionDispatch::IntegrationTest
 
   test "create enables two-factor, shows backup codes once, and audits" do
     post session_url, params: { email_address: @user.email_address, password: "secret123456" }
+    get room_url(rooms(:pets))
+    assert_redirected_to two_factor_setup_url
     get two_factor_setup_url
     credential = @user.reload.two_factor_credential
 
@@ -42,6 +44,7 @@ class TwoFactor::SetupsControllerTest < ActionDispatch::IntegrationTest
     assert credential.reload.enabled?
     assert_select "#two_factor_backup_codes li", count: 10
     assert_select "a[download='smartfire-backup-codes.txt']", count: 1
+    assert_select "a[href='#{room_url(rooms(:pets))}']", text: "Continue"
 
     audit = AuditLog.find_by!(action: "two_factor.enable")
     assert_equal @user.id, audit.actor_id
@@ -106,6 +109,7 @@ class TwoFactor::SetupsControllerTest < ActionDispatch::IntegrationTest
     credential = enroll_two_factor!(@user)
     TwoFactorBackupCode.regenerate_set!(credential)
     TwoFactorRememberedDevice.create_for!(@user, user_agent: "Browser", ip_address: "1.2.3.4")
+    other_session = @user.sessions.create!(user_agent: "Other", ip_address: "9.9.9.9", two_factor_verified_at: Time.current)
     sign_in @user
 
     delete two_factor_setup_url
@@ -114,6 +118,7 @@ class TwoFactor::SetupsControllerTest < ActionDispatch::IntegrationTest
     assert_not @user.reload.two_factor_enabled?
     assert_equal 0, TwoFactorBackupCode.count
     assert_equal 0, @user.two_factor_remembered_devices.count
+    assert_nil other_session.reload.two_factor_verified_at
     assert AuditLog.exists?(action: "two_factor.disable", target_id: @user.id)
 
     get root_url
