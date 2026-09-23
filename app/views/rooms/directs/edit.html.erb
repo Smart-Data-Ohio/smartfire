@@ -20,9 +20,52 @@
     <% end %>
   </section>
 
-  <%= button_to rooms_direct_url(@room), method: :delete, class: "btn btn--negative center", aria: { label: "Delete Ping" },
-      data: { turbo_confirm: "Are you sure you want to delete this ping and all messages in it? This can’t be undone." } do %>
-    <%= image_tag "trash.svg", aria: { hidden: "true" } %>
-    Ping
+  <% if @room.group_capable? %>
+    <section class="margin-block-end">
+      <h2 class="txt-large">Group name</h2>
+      <%= form_with model: @room, url: rooms_direct_path(@room), method: :patch, class: "flex gap center" do |form| %>
+        <%= form.text_field :name, value: @room.name, maxlength: 100, autocomplete: "off",
+              placeholder: @room.direct_display_name(for_user: Current.user),
+              aria: { label: "Group name" }, class: "input flex-item-grow" %>
+        <%= form.submit "Save", class: "btn btn--reversed" %>
+      <% end %>
+      <p class="txt-small translucent">Blank restores the default member list.</p>
+    </section>
+
+    <section class="margin-block-end">
+      <h2 class="txt-large">Add people</h2>
+      <% candidates = User.active.ordered.where.not(id: @room.user_ids) %>
+      <% if candidates.any? %>
+        <%= form_with url: add_members_rooms_direct_path(@room), method: :post do %>
+          <div class="flex flex-column gap txt-align-start">
+            <% candidates.each do |user| %>
+              <label class="flex align-center gap">
+                <%= check_box_tag "user_ids[]", user.id, false, id: "add_member_#{user.id}" %>
+                <span class="avatar"><%= avatar_image_tag user, size: 24 %></span>
+                <%= user.name %>
+              </label>
+            <% end %>
+          </div>
+          <%= submit_tag "Add to group", class: "btn btn--reversed margin-block-start" %>
+        <% end %>
+      <% else %>
+        <p class="txt-small translucent">Everyone is already in this group.</p>
+      <% end %>
+    </section>
   <% end %>
+
+  <div class="flex gap center">
+    <%= button_to leave_rooms_direct_path(@room), method: :delete, class: "btn center",
+        aria: { label: "Leave #{@room.group_capable? ? "group" : "ping"}" },
+        data: { turbo_confirm: "Leave this conversation? You can be added back later." } do %>
+      <%= image_tag "logout.svg", aria: { hidden: "true" } %>
+      Leave
+    <% end %>
+
+    <%= button_to rooms_direct_url(@room), method: :delete, class: "btn btn--negative center", aria: { label: "Delete Ping" },
+        data: { turbo_confirm: "Are you sure you want to delete this ping and all messages in it? This can’t be undone." } do %>
+      <%= image_tag "trash.svg", aria: { hidden: "true" } %>
+      Ping
+    <% end %>
+  </div>
 </div>

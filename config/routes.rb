@@ -183,7 +183,10 @@ Rails.application.routes.draw do
   namespace :rooms do
     resources :opens
     resources :closeds
-    resources :directs
+    resources :directs do
+      post :add_members, on: :member
+      delete :leave, on: :member
+    end
     resources :voices
     resources :stages
     resources :boards

@@ -20,6 +20,7 @@ module MessagePayloadHelper
       }.compact,
       creator: user_payload(message.creator),
       room: room_payload(message),
+      system: (true if message.system?),
       thread_context: message.thread_message? ? thread_payload(message.thread) : nil,
       thread_summary: include_thread_summary ? thread_summary_payload(message) : nil,
       reply_to: reply_payload(message),

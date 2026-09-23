@@ -236,6 +236,8 @@ class Message < ApplicationRecord
 
   private
     def record_activity_items
+      return if system?
+
       ActivityItems::Recorder.record_message!(self)
     end
 

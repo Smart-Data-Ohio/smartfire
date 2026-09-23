@@ -1,5 +1,8 @@
 <%# Be sure to check/update messages/_template.html.erb when changing this file %>
 
+<% if message.system? %>
+<%= render "messages/system_message", message: message %>
+<% else %>
 <%= message_tag message do %>
   <h2 class="message__day-separator"><%= local_datetime_tag message.created_at, style: :date %></h2>
 
@@ -22,3 +25,4 @@
       </div>
     </turbo-frame>
   <% end %>
+<% end %>
