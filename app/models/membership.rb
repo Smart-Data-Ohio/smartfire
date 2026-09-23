@@ -73,11 +73,17 @@ class Membership < ApplicationRecord
     server_muted_at.present?
   end
 
+  # Both report whether the mute state changed, so callers can skip the
+  # rejoin broadcasts when a repeated request changed nothing.
   def server_mute!
+    return false if server_muted?
+
     update!(server_muted_at: Time.current)
   end
 
   def server_unmute!
+    return false unless server_muted?
+
     update!(server_muted_at: nil)
   end
 

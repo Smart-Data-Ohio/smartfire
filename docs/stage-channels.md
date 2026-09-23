@@ -125,8 +125,10 @@ sole host of a stage promotes a replacement in the same transaction that
 deletes the memberships — an active administrator member when one remains,
 otherwise the earliest-joined remaining member — so the stage stays
 manageable; a stage left with no members at all is left empty. Role changes
-are joined by two call-moderation tools: server-mute and disconnect, both
-under `POST /rooms/:room_id/call_moderation/:membership_id/...`, for hosts
+are joined by two call-moderation tools: server-mute and disconnect, under
+`POST /rooms/:room_id/call_moderation/:membership_id/mute`,
+`DELETE /rooms/:room_id/call_moderation/:membership_id/mute`, and
+`POST /rooms/:room_id/call_moderation/:membership_id/disconnect`, for hosts
 and administrators only. There is no ban: removing a member from the stage
 still uses the members UI.
 

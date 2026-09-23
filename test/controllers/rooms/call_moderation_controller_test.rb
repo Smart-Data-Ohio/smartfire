@@ -84,6 +84,33 @@ class Rooms::CallModerationControllerTest < ActionDispatch::IntegrationTest
     assert_not_predicate @speaker.reload, :server_muted?
   end
 
+  test "a repeated mute keeps the member's fresh grant and sends no rejoin" do
+    sign_in :jz
+    post room_call_moderation_mute_url(@room, @speaker)
+    assert_redirected_to room_url(@room)
+
+    rejoined = HuddleGrant.issue!(
+      session: users(:kevin).sessions.create!(user_agent: "Test"), membership: @speaker.reload)
+    assert_predicate rejoined, :server_muted?
+
+    assert_no_difference -> { capture_turbo_stream_broadcasts([ users(:kevin), :rooms ]).count } do
+      post room_call_moderation_mute_url(@room, @speaker)
+    end
+
+    assert_redirected_to room_url(@room)
+    assert_not rejoined.reload.revoked?
+  end
+
+  test "unmuting a member who was never muted sends no rejoin" do
+    sign_in :jz
+
+    assert_no_difference -> { capture_turbo_stream_broadcasts([ users(:kevin), :rooms ]).count } do
+      delete room_call_moderation_unmute_url(@room, @speaker)
+    end
+
+    assert_redirected_to room_url(@room)
+  end
+
   test "a publish grant that survived a mute fails authorization" do
     session = users(:kevin).sessions.create!(user_agent: "Test")
     grant = HuddleGrant.issue!(session: session, membership: @speaker)

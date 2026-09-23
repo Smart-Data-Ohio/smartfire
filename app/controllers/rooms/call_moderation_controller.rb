@@ -17,27 +17,35 @@ class Rooms::CallModerationController < ApplicationController
     target = find_target
     return if performed?
 
-    ActiveRecord::Base.transaction do
-      target.server_mute!
+    changed = ActiveRecord::Base.transaction do
+      muted = target.server_mute!
       Stream.end_live_for_membership!(target)
+      muted
     end
 
-    broadcast_roster if @room.stage?
-    broadcast_role_event_to_member(target)
+    # A repeated mute changes nothing — and revoking the member's fresh
+    # subscribe-only grant again would only make them rejoin twice.
+    if changed
+      broadcast_roster if @room.stage?
+      broadcast_role_event_to_member(target)
+    end
     respond_with_roster_or_done
   end
 
-  # Clearing a mute that was never set succeeds without doing anything.
+  # Clearing a mute that was never set succeeds without doing anything: no
+  # revocation, no roster, and no rejoin event for the unaffected member.
   def unmute
     target = find_target
     return if performed?
 
-    ActiveRecord::Base.transaction do
+    changed = ActiveRecord::Base.transaction do
       target.server_unmute!
     end
 
-    broadcast_roster if @room.stage?
-    broadcast_role_event_to_member(target)
+    if changed
+      broadcast_roster if @room.stage?
+      broadcast_role_event_to_member(target)
+    end
     respond_with_roster_or_done
   end
 
