@@ -48,6 +48,7 @@ endpoints, per credential per minute:
 | `pin_message`, `unpin_message` | pinning / unpinning | 60 |
 | `register_slash_command`, `unregister_slash_command` | command registration | 60 |
 | `create_poll` | poll creation | 60 |
+| `handoff_work` | work handoffs | 60 |
 | `start_stream`, `finalize_stream` | streaming messages | 60 |
 | `append_stream` | streaming updates | 240 |
 | `add_step`, `update_step` | agent steps | 60 |
@@ -121,6 +122,7 @@ curl https://smartfire.example.com/agents/mcp \
 | `pin_message`, `unpin_message` | `post_messages` in the room | `POST`/`DELETE /agents/messages/:id/pin` |
 | `register_slash_command`, `unregister_slash_command` | `post_messages` in the room | `POST`/`DELETE /rooms/:id/agents/slash_commands` |
 | `create_poll`, `get_poll` | `post_messages` in the room | `POST`/`GET /rooms/:id/agents/polls` |
+| `handoff_work` | ownership + `manage_threads` | `POST /agents/work/:id/handoff` |
 | `start_stream`, `append_stream`, `finalize_stream` | `post_messages` in the room | streaming messages endpoints |
 | `set_presence` | the agent itself | `PATCH /agents/me` (`working_presence`) |
 | `add_step`, `update_step` | `post_messages` (message steps) / `manage_threads` (thread steps) | `POST`/`PATCH /agents/steps` |

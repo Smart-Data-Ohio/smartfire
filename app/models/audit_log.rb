@@ -54,6 +54,8 @@ class AuditLog < ApplicationRecord
     room.create
     room.destroy
     room.membership.change
+    board.automation.change
+    work.handoff
     workspace_icon.create
     workspace_icon.destroy
   ].freeze

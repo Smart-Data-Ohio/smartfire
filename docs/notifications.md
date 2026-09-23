@@ -103,12 +103,13 @@ memberships, root messages match only members holding an alert (a join
 from `keyword_alerts` into the room's memberships, so the roster size
 never matters), and every distinct phrase compiles into its own pattern
 checked independently (`Notifications::KeywordMatcher`), so overlapping
-phrases held by different users all match. Muted and invisible members
-match nothing; members with room notifications off still match, since a
-keyword is an explicit opt-in like a mention. A keyword never overrides
-a mention, reply, or thread item for the same message. The query-count
-tests in `test/services/activity_items/recorder_keyword_test.rb` pin the
-constant query cost as followers and the roster grow.
+phrases held by different users all match. Thread-muted and invisible
+members match nothing; members with room notifications off or the room
+muted still match, since a keyword is an explicit opt-in like a
+mention. A keyword never overrides a mention, reply, or thread item for
+the same message. The query-count tests in
+`test/services/activity_items/recorder_keyword_test.rb` pin the constant
+query cost as followers and the roster grow.
 
 ## Time zone
 

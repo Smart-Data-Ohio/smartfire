@@ -21,6 +21,9 @@
       <% if event.event_type == "fizzy_action_completed" && event.metadata.is_a?(Hash) %>
         <div class="txt-small">Fizzy <%= event.metadata["action"] %>: <%= event.metadata["status"] %><% if event.metadata["message"].present? %> — <%= event.metadata["message"] %><% end %></div>
       <% end %>
+      <% if event.event_type == "work_handed_off" && event.metadata.is_a?(Hash) && event.metadata["handoff"].is_a?(Hash) %>
+        <div class="txt-small">Handoff: <%= truncate(event.metadata["handoff"]["summary"].to_s, length: 140) %></div>
+      <% end %>
       <% if agent_event_content_visible?(@agent, event, Current.user) %>
         <div class="txt-small overflow-ellipsis"><%= truncate(event.message.plain_text_body, length: 140) %></div>
       <% else %>

@@ -72,6 +72,22 @@ class Agents::PollsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "creation in a board fails without posting" do
+    board = Rooms::Board.create_for({ name: "Launch", creator: users(:david) },
+      users: [ users(:david), @bot ])
+    grant!(capability: "post_messages", room: board)
+
+    assert_no_difference -> { Message.count } do
+      assert_no_difference -> { Poll.count } do
+        post "/rooms/#{board.id}/agents/polls", params: {
+          question: "Lunch?", options: [ "Tacos", "Pizza" ]
+        }.to_json, headers: bearer_headers
+      end
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   test "creation broadcasts the message with its poll card" do
     grant!(capability: "post_messages", room: @room)
 

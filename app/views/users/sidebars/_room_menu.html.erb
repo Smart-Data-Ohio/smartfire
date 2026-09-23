@@ -1,0 +1,36 @@
+<%# Shared room context menu, opened from any sidebar row with right-click
+    or Shift+F10 (see room_menu_controller.js). One menu per sidebar; the
+    controller configures it for the row that opened it. %>
+<div id="room-menu"
+     class="room-menu border shadow"
+     popover="manual"
+     role="menu"
+     aria-label="Room actions"
+     hidden
+     data-room-menu-target="menu">
+  <button type="button" class="btn room-menu__item" role="menuitem" data-room-menu-target="favoriteAction" data-action="room-menu#toggleFavorite">
+    <span aria-hidden="true" data-room-menu-target="favoriteGlyph">☆</span>
+    <span data-room-menu-target="favoriteLabel">Add to favourites</span>
+  </button>
+  <button type="button" class="btn room-menu__item" role="menuitem" data-room-menu-target="moveUp" data-action="room-menu#moveUp" hidden>
+    <span aria-hidden="true">↑</span>
+    <span>Move up</span>
+  </button>
+  <button type="button" class="btn room-menu__item" role="menuitem" data-room-menu-target="moveDown" data-action="room-menu#moveDown" hidden>
+    <span aria-hidden="true">↓</span>
+    <span>Move down</span>
+  </button>
+  <button type="button" class="btn room-menu__item" role="menuitem" data-room-menu-target="muteAction" data-action="room-menu#toggleMute">
+    <%= image_tag "notification-bell-muted.svg", size: 20, aria: { hidden: "true" } %>
+    <span data-room-menu-target="muteLabel">Mute</span>
+  </button>
+  <div class="room-menu__group" role="group" aria-label="Move to category" data-room-menu-target="categoryGroup" hidden>
+    <span class="room-menu__group-label" aria-hidden="true">Move to category</span>
+    <div data-room-menu-target="categoryList"></div>
+    <button type="button" class="btn room-menu__item" role="menuitem" data-room-menu-target="removeFromCategory" data-action="room-menu#removeFromCategory" hidden>
+      <span>Remove from category</span>
+    </button>
+  </div>
+
+  <span class="for-screen-reader" role="status" aria-live="polite" data-room-menu-target="status"></span>
+</div>
