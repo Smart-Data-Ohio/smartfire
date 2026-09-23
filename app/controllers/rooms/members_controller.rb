@@ -10,6 +10,7 @@ class Rooms::MembersController < ApplicationController
     # cached or etagged across viewers, so one viewer's stars cannot
     # leak into another's panel.
     starred_ids = Current.user.starred_ids_among(members.map(&:id))
+    no_store_response!
 
     render json: {
       members: members.map { |member| member_json(member, lease_states:, starred_ids:) }

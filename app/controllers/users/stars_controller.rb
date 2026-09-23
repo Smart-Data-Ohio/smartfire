@@ -13,9 +13,9 @@ class Users::StarsController < ApplicationController
   def create
     Current.user.user_stars.find_or_create_by!(starred_user: @starred_user)
     respond_with_star(starred: true)
-  rescue ActiveRecord::RecordNotUnique
-    # A concurrent star won the unique index first; the star the member
-    # wanted already exists.
+  rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
+    # A concurrent star won first (at the unique index or the uniqueness
+    # validation); the star the member wanted already exists.
     respond_with_star(starred: true)
   end
 
