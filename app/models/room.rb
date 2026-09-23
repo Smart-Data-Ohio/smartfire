@@ -65,6 +65,14 @@ class Room < ApplicationRecord
       inbound_email_domain.present?
     end
 
+    # The authserv-id the inbound relay stamps on its own
+    # Authentication-Results header. Sender verification trusts only
+    # headers carrying it; while unset, nothing verifies. See
+    # docs/email-to-room.md.
+    def inbound_email_authserv_id
+      ENV["INBOUND_EMAIL_AUTHSERV_ID"].presence
+    end
+
     def create_for(attributes, users:)
       transaction do
         create!(attributes).tap do |room|

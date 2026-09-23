@@ -6,12 +6,15 @@ class RoomMailboxTest < ActionMailbox::TestCase
   setup do
     @domain_before = ENV["INBOUND_EMAIL_DOMAIN"]
     ENV["INBOUND_EMAIL_DOMAIN"] = "mail.test"
+    @authserv_before = ENV["INBOUND_EMAIL_AUTHSERV_ID"]
+    ENV["INBOUND_EMAIL_AUTHSERV_ID"] = "mx.mail.test"
     @room = rooms(:designers)
     @token = @room.regenerate_inbound_email_token!
   end
 
   teardown do
     ENV["INBOUND_EMAIL_DOMAIN"] = @domain_before
+    ENV["INBOUND_EMAIL_AUTHSERV_ID"] = @authserv_before
   end
 
   test "mail from a member posts as that member" do
@@ -68,14 +71,61 @@ class RoomMailboxTest < ActionMailbox::TestCase
     assert_includes message.markdown_source, "david@37signals.com"
   end
 
-  test "multiple authentication results post as the Email bot" do
-    mail = Mail.new(from: "david@37signals.com", to: room_address, body: "Hello")
-    mail.header["Authentication-Results"] = "mx.mail.test; dkim=pass header.d=37signals.com"
-    mail.header["Authentication-Results"] = "attacker.test; dkim=pass header.d=37signals.com"
-    receive_inbound_email_from_source(mail.to_s)
+  test "an unconfigured authserv id posts as the Email bot" do
+    ENV.delete("INBOUND_EMAIL_AUTHSERV_ID")
+    deliver_room_mail(
+      from: "david@37signals.com", body: "Hello",
+      authentication_results: "mx.mail.test; dkim=pass header.d=37signals.com"
+    )
 
-    assert_equal 2, mail.header.fields.count { |field| field.name.casecmp?("Authentication-Results") }
     assert_equal "Email", @room.messages.order(:created_at).last.creator.name
+  end
+
+  test "a forged header with the wrong authserv-id posts as the Email bot" do
+    deliver_room_mail(
+      from: "david@37signals.com", body: "Hello",
+      authentication_results: "attacker.test; dkim=pass header.d=37signals.com"
+    )
+
+    message = @room.messages.order(:created_at).last
+    assert_equal "Email", message.creator.name
+    assert_includes message.markdown_source, "david@37signals.com"
+  end
+
+  test "an SPF pass on helo alone posts as the Email bot" do
+    deliver_room_mail(
+      from: "david@37signals.com", body: "Hello",
+      authentication_results: "mx.mail.test; spf=pass smtp.helo=37signals.com"
+    )
+
+    assert_equal "Email", @room.messages.order(:created_at).last.creator.name
+  end
+
+  test "an SPF pass on mailfrom posts as the member" do
+    deliver_room_mail(
+      from: "david@37signals.com", body: "Hello",
+      authentication_results: "mx.mail.test; spf=pass smtp.mailfrom=david@37signals.com"
+    )
+
+    assert_equal users(:david), @room.messages.order(:created_at).last.creator
+  end
+
+  test "a forged passing header above the relay's failing one posts as the Email bot" do
+    receive_inbound_email_from_source(raw_mail_with_results(
+      "attacker.test; dkim=pass header.d=37signals.com",
+      "mx.mail.test; dkim=fail header.d=37signals.com"
+    ))
+
+    assert_equal "Email", @room.messages.order(:created_at).last.creator.name
+  end
+
+  test "the relay's passing header below a forged one posts as the member" do
+    receive_inbound_email_from_source(raw_mail_with_results(
+      "attacker.test; dkim=fail header.d=37signals.com",
+      "mx.mail.test; dkim=pass header.d=37signals.com"
+    ))
+
+    assert_equal users(:david), @room.messages.order(:created_at).last.creator
   end
 
   test "mail from a non-member posts as the Email bot with the sender shown" do
@@ -272,6 +322,19 @@ class RoomMailboxTest < ActionMailbox::TestCase
       mail = Mail.new({ from:, to: room_address, body:, **options })
       mail.header["Authentication-Results"] = authentication_results if authentication_results
       receive_inbound_email_from_source(mail.to_s)
+    end
+
+    # Raw source with the given Authentication-Results fields in order,
+    # first argument topmost, so multi-header tests control placement.
+    def raw_mail_with_results(*results)
+      [
+        "From: david@37signals.com",
+        "To: #{room_address}",
+        "Subject: Hello",
+        *results.map { |value| "Authentication-Results: #{value}" },
+        "",
+        "Hello"
+      ].join("\r\n")
     end
 
     def with_memory_cache

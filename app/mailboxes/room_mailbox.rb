@@ -74,7 +74,7 @@ class RoomMailbox < ApplicationMailbox
     end
 
     # A sender whose address belongs to an active member of the room
-    # posts as themselves, but only when the relay's
+    # posts as themselves, but only when the configured relay's own
     # Authentication-Results show SPF, DKIM or DMARC passing for the
     # From domain; everyone else — including a spoofed member From with
     # no pass — posts as the workspace Email bot with the sender named
@@ -100,19 +100,33 @@ class RoomMailbox < ApplicationMailbox
     # relay at receive time):
     # https://www.rfc-editor.org/rfc/rfc8601.html
     #
-    # The relay must strip any incoming Authentication-Results before
-    # stamping its own (see docs/email-to-room.md); more than one
-    # header field means it did not, so nothing verifies. A pass only
-    # counts when the method's domain property (header.d, header.from,
-    # header.i, smtp.mailfrom, smtp.helo) matches the From domain.
+    # Only the topmost header field whose authserv-id matches the
+    # configured relay (INBOUND_EMAIL_AUTHSERV_ID) is trusted; a
+    # sender-forged field carries another id and is ignored. While
+    # the id is unconfigured, or no field matches, nothing verifies.
+    # The relay must stamp its own header (see
+    # docs/email-to-room.md). A pass only counts when the method's
+    # own domain property matches the From domain: header.d for
+    # DKIM, header.from for DMARC, smtp.mailfrom for SPF. An SPF
+    # pass on smtp.helo alone never verifies: the HELO name is not
+    # the sender.
     def authenticated_sender?(address)
       domain = address.to_s.split("@").last.to_s.downcase
       return false if domain.blank?
 
-      results = authentication_results
-      return false unless results.one?
+      results = trusted_authentication_results
+      return false if results.nil?
 
-      authentication_passed_for?(results.first, domain)
+      authentication_passed_for?(results, domain)
+    end
+
+    def trusted_authentication_results
+      authserv_id = Room.inbound_email_authserv_id
+      return nil if authserv_id.nil?
+
+      authentication_results.find do |results|
+        results.split(";").first.to_s.strip.casecmp?(authserv_id)
+      end
     end
 
     def authentication_results
@@ -126,15 +140,24 @@ class RoomMailbox < ApplicationMailbox
       clauses.shift # leading authserv-id carries no result
       clauses.any? do |clause|
         method, rest = clause.split("=", 2).map { |part| part.to_s.strip.downcase }
-        next false unless method.in?(%w[ spf dkim dmarc ])
         next false unless rest.to_s.split(/[\s(]/, 2).first == "pass"
 
-        clause_domains(clause).include?(domain)
+        case method
+        when "dkim"
+          clause_domains(clause, %w[ header.d ]).include?(domain)
+        when "dmarc"
+          clause_domains(clause, %w[ header.from ]).include?(domain)
+        when "spf"
+          clause_domains(clause, %w[ smtp.mailfrom ]).include?(domain)
+        else
+          false
+        end
       end
     end
 
-    def clause_domains(clause)
-      clause.scan(/(?:header\.d|header\.from|header\.i|smtp\.mailfrom|smtp\.helo)=([^\s;()]+)/i)
+    def clause_domains(clause, properties)
+      pattern = properties.map { |property| Regexp.escape(property) }.join("|")
+      clause.scan(/(?:#{pattern})=([^\s;()]+)/i)
         .flatten.map { |value| value.downcase.sub(/\A@/, "").split("@").last }
     end
 
