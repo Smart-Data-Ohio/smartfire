@@ -336,6 +336,56 @@ class HuddleInvitationTest < ActiveSupport::TestCase
     end
   end
 
+  test "the starter leaving a group call while others remain sends no call-ended" do
+    group, starter, joiner_grant, kevin_item = start_group_call
+
+    assert_broadcasts ActivityChannel.stream_name_for(users(:jason).id), 0 do
+      assert_broadcasts ActivityChannel.stream_name_for(users(:kevin).id), 0 do
+        assert starter.mark_out_of_call!
+      end
+    end
+
+    assert_equal "huddle_started", kevin_item.reload.event_type
+    assert_not_predicate kevin_item, :handled?
+  end
+
+  test "revoking the starter's grant while others remain in a group call sends no call-ended" do
+    group, starter, joiner_grant, kevin_item = start_group_call
+
+    assert_broadcasts ActivityChannel.stream_name_for(users(:kevin).id), 0 do
+      starter.revoke!
+    end
+
+    assert_predicate starter.reload, :revoked?
+    assert_equal "huddle_started", kevin_item.reload.event_type
+  end
+
+  test "call-ended fires when the last participant leaves a group call" do
+    group, starter, joiner_grant, kevin_item = start_group_call
+    starter.mark_out_of_call!
+
+    assert_broadcasts ActivityChannel.stream_name_for(users(:kevin).id), 1 do
+      assert joiner_grant.mark_out_of_call!
+    end
+
+    assert_call_ended_broadcast(kevin_item, room: group, room_name: "David, Jason", caller_name: "Jason")
+  end
+
+  test "a group ring continues for remaining invitees until their ring timeout" do
+    group, starter, joiner_grant, kevin_item = start_group_call
+
+    assert_broadcasts ActivityChannel.stream_name_for(users(:kevin).id), 0 do
+      assert starter.mark_out_of_call!
+    end
+    assert_equal "huddle_started", kevin_item.reload.event_type
+
+    travel 46.seconds do
+      Huddle::InvitationResolver.resolve_overdue!
+    end
+
+    assert_equal "huddle_missed", kevin_item.reload.event_type
+  end
+
   test "retrying after the window with a new grant reuses the unhandled item" do
     HuddleGrant.issue!(session: @starter_session, membership: @starter_membership)
     item = ActivityItem.find_by!(user: users(:jason))
@@ -526,7 +576,7 @@ class HuddleInvitationTest < ActiveSupport::TestCase
       Session.create!(user: user, user_agent: "second device", ip_address: "127.0.0.2")
     end
 
-    def assert_call_ended_broadcast(item)
+    def assert_call_ended_broadcast(item, room: @room, room_name: "David", caller_name: "David")
       routes = Rails.application.routes.url_helpers
       assert_broadcast_on(ActivityChannel.stream_name_for(item.user_id), {
         activityItemId: item.id,
@@ -534,13 +584,24 @@ class HuddleInvitationTest < ActiveSupport::TestCase
           activityItemId: item.id,
           eventType: "huddle_ended",
           state: "unread",
-          roomId: @room.id,
-          roomName: "David",
-          roomPath: routes.room_path(@room),
-          callerName: "David",
+          roomId: room.id,
+          roomName: room_name,
+          roomPath: routes.room_path(room),
+          callerName: caller_name,
           readPath: routes.read_activity_item_path(item, state: "read"),
           handledPath: routes.handled_activity_item_path(item, state: "handled")
         }
       })
+    end
+
+    # A group call david started and jason joined; kevin is still ringing.
+    def start_group_call
+      group = Rooms::Direct.create_for({ creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
+      starter = HuddleGrant.issue!(session: @starter_session, membership: group.memberships.find_by!(user: users(:david)))
+      starter.update_columns(last_seen_at: Time.current)
+      joiner = HuddleGrant.issue!(session: second_session_for(users(:jason)), membership: group.memberships.find_by!(user: users(:jason)))
+      joiner.update_columns(last_seen_at: Time.current)
+
+      [ group, starter, joiner, ActivityItem.find_by!(user: users(:kevin), event_type: "huddle_started") ]
     end
 end

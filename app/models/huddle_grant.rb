@@ -427,17 +427,22 @@ class HuddleGrant < ApplicationRecord
       saved_change_to_revoked_at? && in_call?
     end
 
-    # Tells each rung member's banner the call ended: the starter hung up,
-    # was removed, or joined another room. Open invitations for this grant
-    # flip the banner to a "caller left" state instead of ringing until the
-    # missed-call resolution; a banner-only ring (items switched off) gets
-    # the same payload with a zero id. The items themselves still resolve
-    # to missed calls on their own schedule.
+    # Tells each rung member's banner the call ended: the last participant
+    # hung up, was removed, or joined another room. In a group call the ring
+    # belongs to the call, not the starter, so while anyone else is still in
+    # the call the remaining invitees keep ringing until they join or their
+    # ring times out; only the last one out flips the banners to a "caller
+    # left" state — including rings another grant started. A banner-only
+    # ring (items switched off) gets the same payload with a zero id. The
+    # items themselves still resolve to missed calls on their own schedule.
     def broadcast_call_ended_to_invitee
       return unless room && user
+      return if others_in_call?
 
       delivered_user_ids = Set.new
       open_call_items.find_each do |item|
+        next if item.user_id == user_id
+
         ActionCable.server.broadcast ActivityChannel.stream_name_for(item.user_id), call_ended_payload(item)
         delivered_user_ids << item.user_id
       end
@@ -449,11 +454,21 @@ class HuddleGrant < ApplicationRecord
       end
     end
 
+    # Any other live participant keeps the call — and every remaining ring
+    # — going. The leaving grant itself never counts: a revocation already
+    # left the active scope, and mark_out_of_call! cleared liveness first.
+    def others_in_call?
+      self.class.active.in_call.where(room_id: room_id).where.not(id: id).exists?
+    end
+
+    # Every unhandled ring for this room, whatever grant started it: the
+    # last one out ends the rings they didn't start too.
     def open_call_items
       ActivityItem.where(
-        source_type: HuddleGrant.polymorphic_name, source_id: id,
+        source_type: HuddleGrant.polymorphic_name,
         event_type: "huddle_started", handled_at: nil
-      )
+      ).joins("INNER JOIN huddle_grants AS ended_grants ON ended_grants.id = activity_items.source_id")
+       .where(ended_grants: { room_id: room_id })
     end
 
     def call_ended_payload(item)
