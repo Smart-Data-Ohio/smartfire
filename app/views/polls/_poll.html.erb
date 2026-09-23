@@ -1,21 +1,25 @@
 <%# Poll card rendered inside the message fragment. The fragment is cached
     across viewers, so this partial renders viewer-agnostic HTML only:
     counts, bars, and (unless anonymous) voter names, with per-option
-    voter ids as data. The poll Stimulus controller checks the viewer's
-    own inputs, marks voted options, and reveals the retract control
-    from the current-user meta, the same way reaction chips mark
-    themselves. %>
+    voter ids as data for regular polls. Anonymous polls omit the voter
+    ids — they would deanonymize every ballot from view source — and the
+    poll Stimulus controller fetches the viewer's own ballot from the
+    poll endpoint instead. The controller checks the viewer's own inputs,
+    marks voted options, and reveals the retract control from the
+    current-user meta, the same way reaction chips mark themselves. %>
 <% votes = poll.poll_votes.to_a %>
 <% total = votes.size %>
 <% closed = poll.closed? %>
 
-<section id="<%= dom_id(poll, :card) %>" class="poll" aria-label="Poll" data-controller="poll">
+<section id="<%= dom_id(poll, :card) %>" class="poll" aria-label="Poll" data-controller="poll"
+    data-poll-anonymous-value="<%= poll.anonymous? %>"
+    data-poll-results-url-value="<%= room_poll_path(poll.message.room, poll) %>">
   <ol class="poll__options">
     <% poll.poll_options.each do |option| %>
       <% option_votes = votes.select { |vote| vote.poll_option_id == option.id } %>
       <% percent = total.positive? ? (option_votes.size * 100.0 / total).round : 0 %>
       <li class="poll__option" data-poll-target="option" data-poll-option-id="<%= option.id %>"
-          data-voter-ids="<%= option_votes.map(&:user_id).join(",") %>">
+          data-voter-ids="<%= poll.anonymous? ? "" : option_votes.map(&:user_id).join(",") %>">
         <div class="poll__option-row">
           <span class="poll__label"><%= option.label %></span>
           <span class="poll__count" aria-label="<%= pluralize(option_votes.size, "vote") %>">

@@ -116,7 +116,80 @@ class Rooms::PollsControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "show returns the viewer's ballot state" do
+    poll = create_poll
+    poll.cast_vote!(users(:david), [ poll.poll_options.first.id ])
+    poll.cast_vote!(users(:jason), [ poll.poll_options.first.id ])
+
+    get room_poll_url(@room, poll), as: :json
+
+    assert_response :success
+    assert_equal 2, response.parsed_body["total_votes"]
+    assert_equal [ "David", "Jason" ].sort, response.parsed_body["options"].first["voters"].sort
+    assert response.parsed_body["options"].first["voted"]
+    assert_not response.parsed_body["options"].last["voted"]
+  end
+
+  test "show hides voters for anonymous polls but keeps the viewer's flags" do
+    poll = create_poll(anonymous: true)
+    poll.cast_vote!(users(:david), [ poll.poll_options.first.id ])
+
+    get room_poll_url(@room, poll), as: :json
+
+    assert_response :success
+    assert_equal 1, response.parsed_body["total_votes"]
+    assert_nil response.parsed_body["options"].first["voters"]
+    assert response.parsed_body["options"].first["voted"]
+  end
+
+  test "show is 404 outside the room" do
+    private_room = Rooms::Closed.create!(name: "Private", creator: users(:jason))
+    private_room.memberships.grant_to users(:jason)
+    message = private_room.root_messages.create!(creator: users(:jason), markdown_source: "Secret?")
+    poll = Poll.create_for_message!(message: message, labels: [ "Yes", "No" ])
+
+    get room_poll_url(private_room, poll), as: :json
+    assert_response :not_found
+
+    get room_poll_url(@room, poll), as: :json
+    assert_response :not_found
+  end
+
+  test "show forbids bots" do
+    poll = create_poll
+    delete session_url
+    bot = users(:bender)
+    bot.update!(email_address: "bender@example.test", password: "secret123456")
+    sign_in bot
+
+    get room_poll_url(@room, poll), as: :json
+    assert_response :forbidden
+  end
+
+  test "anonymous cards carry no voter ids" do
+    poll = create_poll(anonymous: true)
+    poll.cast_vote!(users(:david), [ poll.poll_options.first.id ])
+
+    get room_url(@room)
+
+    assert_response :success
+    assert_not_includes card_voter_ids, users(:david).id.to_s
+  end
+
+  test "regular cards carry voter ids for client-side marking" do
+    poll = create_poll
+    poll.cast_vote!(users(:david), [ poll.poll_options.first.id ])
+
+    get room_url(@room)
+
+    assert_response :success
+    assert_includes card_voter_ids, users(:david).id.to_s
+  end
+
   private
+    def card_voter_ids
+      response.body.scan(/data-voter-ids="([^"]*)"/).flatten.flat_map { |value| value.split(",") }.reject(&:blank?)
+    end
     def create_poll(question: "Lunch?", **options)
       message = @room.root_messages.create!(creator: users(:david), markdown_source: question)
       Poll.create_for_message!(message: message, labels: [ "Tacos", "Pizza" ], **options)

@@ -4,7 +4,7 @@ class Rooms::PollsController < ApplicationController
   rescue_from ActiveRecord::RecordNotFound, with: -> { head :not_found }
 
   before_action :ensure_active_human
-  before_action :set_poll, only: :vote
+  before_action :set_poll, only: %i[ show vote ]
 
   # POST /rooms/:room_id/polls. Posts a root message carrying a poll:
   # the question is the message text, with 2-10 options, single or
@@ -42,6 +42,16 @@ class Rooms::PollsController < ApplicationController
       format.html { redirect_to room_path(@room), alert: error.message }
       format.json { render json: { error: error.message }, status: :unprocessable_entity }
     end
+  end
+
+  # GET /rooms/:room_id/polls/:id (JSON). The viewer's ballot state:
+  # counts plus per-option voted flags, with voter names unless the
+  # poll is anonymous. Anonymous cards carry no voter ids in their
+  # HTML (they would deanonymize every ballot from view source), so
+  # the poll controller fetches this to mark the viewer's own state.
+  def show
+    ActiveRecord::Associations::Preloader.new(records: [ @poll ], associations: [ :poll_options, { poll_votes: :user } ]).call
+    render json: @poll.results_payload(viewer: Current.user)
   end
 
   # POST /rooms/:room_id/polls/:id/vote. Replaces the voter's ballot

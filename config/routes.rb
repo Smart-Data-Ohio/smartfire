@@ -172,7 +172,7 @@ Rails.application.routes.draw do
       resources :members, only: :index
       resources :pins, only: :index
       resources :slash_commands, only: :create
-      resources :polls, only: :create do
+      resources :polls, only: %i[ create show ] do
         post :vote, on: :member
       end
       resources :drive_recipients, only: :index do

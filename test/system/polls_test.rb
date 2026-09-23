@@ -66,6 +66,13 @@ class PollsTest < ApplicationSystemTestCase
     end
 
     assert_selector "#{card} .poll__meta", text: "Anonymous"
+
+    # Anonymous cards carry no voter ids, so the viewer's own markers
+    # come from the poll endpoint and must survive a reload.
+    visit room_url(@room)
+    wait_for_cable_connection
+    assert_selector "#{card} .poll__option--voted .poll__label", text: "Chips"
+    assert_selector "#{card} .poll__option--voted .poll__label", text: "Fruit"
   end
 
   test "results update live in another session" do

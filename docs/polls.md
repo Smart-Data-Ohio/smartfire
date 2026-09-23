@@ -30,9 +30,13 @@ across viewers in production. Counts, bars, and voter names are
 viewer-agnostic and render server-side; the viewer's own checks, voted
 markers, and the retract control are marked client-side by the `poll`
 Stimulus controller from the card's voter-id data, the same way
-reaction chips mark themselves. Votes and closes touch the poll row,
-and its stamp rides in the message cache key and the page etag, so
-cached fragments and conditional GETs converge on every ballot.
+reaction chips mark themselves. Anonymous cards omit the voter ids —
+they would deanonymize every ballot from view source — and the
+controller fetches the viewer's own ballot from the poll endpoint
+(`GET /rooms/:room_id/polls/:id`, counts plus per-option voted flags)
+instead. Votes and closes touch the poll row, and its stamp rides in
+the message cache key and the page etag, so cached fragments and
+conditional GETs converge on every ballot.
 
 ## Agent API
 
