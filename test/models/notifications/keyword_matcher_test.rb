@@ -29,6 +29,33 @@ class Notifications::KeywordMatcherTest < ActiveSupport::TestCase
     assert_equal [ 1, 2 ], matched.sort
   end
 
+  test "overlapping phrases across users all match" do
+    matched = Notifications::KeywordMatcher.matching_user_ids(
+      { 1 => [ "deploy failed" ], 2 => [ "deploy" ] },
+      "deploy failed again"
+    )
+
+    assert_equal [ 1, 2 ], matched.sort
+  end
+
+  test "nested phrases match the same user once" do
+    assert_equal [ 1 ], Notifications::KeywordMatcher.matching_user_ids(
+      { 1 => [ "deploy", "deploy failed" ] }, "deploy failed again"
+    )
+    assert_equal [ 1 ], Notifications::KeywordMatcher.matching_user_ids(
+      { 1 => [ "deploy failed again", "deploy" ] }, "deploy failed again"
+    )
+  end
+
+  test "repeated phrases match every holder once" do
+    matched = Notifications::KeywordMatcher.matching_user_ids(
+      { 1 => [ "deploy" ], 2 => [ "deploy", "again" ] },
+      "deploy, deploy, deploy again"
+    )
+
+    assert_equal [ 1, 2 ], matched.sort
+  end
+
   test "ignores blank phrases and blank text" do
     assert_equal [], Notifications::KeywordMatcher.matching_user_ids({ 1 => [ "  " ] }, "Deploy now")
     assert_equal [], Notifications::KeywordMatcher.matching_user_ids({ 1 => [ "deploy" ] }, "   ")

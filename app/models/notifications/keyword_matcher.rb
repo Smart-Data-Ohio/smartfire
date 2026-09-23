@@ -1,7 +1,10 @@
 module Notifications
-  # Matches keyword alert phrases against one message body in a single
-  # pass: every distinct phrase across all candidate recipients compiles
-  # into one case-insensitive word-boundary pattern, scanned once.
+  # Matches keyword alert phrases against one message body: every
+  # distinct phrase across all candidate recipients compiles into its
+  # own case-insensitive word-boundary pattern, checked independently.
+  # A single alternation scanned once would let a longer phrase consume
+  # a shorter overlapping one ("deploy failed" swallowing "deploy" for
+  # another user), so each phrase gets its own match pass instead.
   module KeywordMatcher
     class << self
       # phrases_by_user_id maps user ids to phrase arrays. Returns the
@@ -20,9 +23,11 @@ module Notifications
         end
         return [] if users_by_phrase.empty?
 
-        pattern = compile(users_by_phrase.keys)
+        patterns = users_by_phrase.keys.index_with { |phrase| compile(phrase) }
         matched = Set.new
-        text.scan(pattern) { |match| users_by_phrase[match.downcase]&.each { |id| matched << id } }
+        users_by_phrase.each do |phrase, user_ids|
+          matched.merge(user_ids) if patterns.fetch(phrase).match?(text)
+        end
         matched.to_a
       end
 
@@ -30,9 +35,8 @@ module Notifications
         # Lookarounds instead of \b so phrases ending in punctuation
         # ("v1.2 (rc)") still match at a space; for plain words the two
         # are equivalent.
-        def compile(phrases)
-          alternation = phrases.sort_by(&:length).reverse.map { |phrase| Regexp.escape(phrase) }.join("|")
-          Regexp.new("(?<!\\w)(?:#{alternation})(?!\\w)", Regexp::IGNORECASE)
+        def compile(phrase)
+          Regexp.new("(?<!\\w)#{Regexp.escape(phrase)}(?!\\w)", Regexp::IGNORECASE)
         end
     end
   end

@@ -94,8 +94,9 @@ the message itself, keyword or not).
 
 Matching runs once per message: thread messages reuse the already-loaded
 memberships, root messages load the roster in a fixed set of queries,
-and every distinct phrase compiles into one pattern scanned a single
-time (`Notifications::KeywordMatcher`). Muted and invisible members
+and every distinct phrase compiles into its own pattern checked
+independently (`Notifications::KeywordMatcher`), so overlapping phrases
+held by different users all match. Muted and invisible members
 match nothing; members with room notifications off still match, since a
 keyword is an explicit opt-in like a mention. A keyword never overrides
 a mention, reply, or thread item for the same message. The query-count
