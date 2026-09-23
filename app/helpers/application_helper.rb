@@ -23,18 +23,24 @@ module ApplicationHelper
   # Manual DND and the DND presence mute sounds outright; quiet hours send
   # their window and zone so the sound controller re-evaluates the
   # time-based gate on every play without a reload. Quiet-during-meetings
-  # mutes sounds the same way while a busy interval covers the render.
+  # sends the cached busy intervals as epoch windows for the same live
+  # treatment: a render-time marker would stick either way, since meeting
+  # boundaries cross without a navigation.
   def notification_sound_meta_tags
     return unless Current.user
 
     tags = []
-    if Current.user.manual_dnd_active? || Current.user.presence_setting == "dnd" || Current.user.meeting_dnd_active?
+    if Current.user.manual_dnd_active? || Current.user.presence_setting == "dnd"
       tags << tag.meta(name: "notification-dnd", content: "muted")
     end
     if Current.user.quiet_hours_enabled? && Current.user.quiet_hours_start_minute && Current.user.quiet_hours_end_minute
       tags << tag.meta(name: "quiet-hours",
         content: "#{Current.user.quiet_hours_start_minute}-#{Current.user.quiet_hours_end_minute}")
       tags << tag.meta(name: "quiet-hours-zone", content: Current.user.time_zone_or_default)
+    end
+    if Current.user.meeting_dnd_enabled? && Current.user.meeting_status_enabled?
+      epochs = Current.user.meeting_cache&.quiet_window_epochs.to_a
+      tags << tag.meta(name: "meeting-quiet", content: epochs.map { |start, finish| "#{start}-#{finish}" }.join(",")) if epochs.any?
     end
     safe_join(tags)
   end

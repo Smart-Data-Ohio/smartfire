@@ -18,6 +18,14 @@ module Calendar
       parsed_intervals.any? { |start_at, end_at| start_at <= now && now < end_at }
     end
 
+    # Busy intervals as epoch-second [start, end] pairs for the layout's
+    # meeting-quiet marker, so the sound controller re-evaluates the
+    # gate on every play without a reload. Malformed pairs are skipped
+    # with the same parsing as in_meeting?.
+    def quiet_window_epochs
+      parsed_intervals.map { |start_at, end_at| [ start_at.to_i, end_at.to_i ] }
+    end
+
     # Claims a boundary flip: the conditional UPDATE wins only when the
     # stored broadcast state differs, so concurrent dispatchers (or a
     # re-run) announce each flip exactly once. Returns true when this

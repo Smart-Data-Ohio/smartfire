@@ -91,15 +91,50 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "Do not disturb during meetings"
   end
 
-  test "the layout mutes sounds for quiet-during-meetings" do
+  test "the layout sends meeting windows for the live sound gate" do
     users(:david).update!(meeting_status_enabled: true, meeting_dnd_enabled: true)
+    start_at = 5.minutes.ago
+    end_at = 55.minutes.from_now
+    Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current,
+      busy_intervals: [ [ start_at.iso8601, end_at.iso8601 ] ])
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=notification-dnd]", count: 0
+    assert_select "meta[name=meeting-quiet][content=?]", "#{start_at.to_i}-#{end_at.to_i}", count: 1
+  end
+
+  test "the layout sends future meeting windows before the meeting starts" do
+    users(:david).update!(meeting_status_enabled: true, meeting_dnd_enabled: true)
+    Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current,
+      busy_intervals: [ [ 1.hour.from_now.iso8601, 2.hours.from_now.iso8601 ] ])
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=meeting-quiet]", count: 1
+  end
+
+  test "the layout sends no meeting windows without cached intervals" do
+    users(:david).update!(meeting_status_enabled: true, meeting_dnd_enabled: true)
+    Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current, busy_intervals: [])
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "meta[name=meeting-quiet]", count: 0
+  end
+
+  test "the layout sends no meeting windows when meeting status itself is off" do
+    users(:david).update!(meeting_dnd_enabled: true)
     Calendar::MeetingCache.create!(user: users(:david), fetched_at: Time.current,
       busy_intervals: [ [ 5.minutes.ago.iso8601, 55.minutes.from_now.iso8601 ] ])
 
     get user_profile_url
 
     assert_response :success
-    assert_select "meta[name=notification-dnd][content=muted]", count: 1
+    assert_select "meta[name=meeting-quiet]", count: 0
   end
 
   test "the layout leaves sounds alone for meetings when quiet-during-meetings is off" do
@@ -111,6 +146,7 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "meta[name=notification-dnd]", count: 0
+    assert_select "meta[name=meeting-quiet]", count: 0
   end
 
   test "profile shows the connected account with a disconnect button" do

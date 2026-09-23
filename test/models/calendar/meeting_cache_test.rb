@@ -28,6 +28,18 @@ class Calendar::MeetingCacheTest < ActiveSupport::TestCase
     assert_not cache.in_meeting?(now: Time.zone.parse("2026-09-23T10:30:00Z"))
   end
 
+  test "quiet_window_epochs returns epoch windows and skips malformed pairs" do
+    cache = Calendar::MeetingCache.create!(user: @user,
+      busy_intervals: [
+        [ "2026-09-23T10:00:00Z", "2026-09-23T11:00:00Z" ],
+        nil, "nope", [ "not-a-time", "2026-09-23T11:00:00Z" ]
+      ])
+
+    assert_equal [
+      [ Time.zone.parse("2026-09-23T10:00:00Z").to_i, Time.zone.parse("2026-09-23T11:00:00Z").to_i ]
+    ], cache.quiet_window_epochs
+  end
+
   test "claim_broadcast! wins the first claim and each flip, and loses re-runs" do
     cache = Calendar::MeetingCache.create!(user: @user)
 

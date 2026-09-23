@@ -76,8 +76,10 @@ DND presence as a muted marker plus the quiet-hours window and zone,
 and the controller computes the window live, so crossing a quiet-hours
 boundary silences or unsilences sounds without a reload. (A DND switch
 flipped in another tab still needs a navigation; only the time-based
-gate is live.) The policy's `sound?` (always equal to `push?`) gates
-any server-side sound decision the same way.
+gate is live.) Quiet-during-meetings sends the cached busy intervals
+as epoch windows for the same live treatment; a calendar edit that
+moves them needs a navigation. The policy's `sound?` (always equal to
+`push?`) gates any server-side sound decision the same way.
 
 ## Thread controls
 

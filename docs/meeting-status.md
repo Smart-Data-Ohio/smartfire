@@ -87,11 +87,16 @@ label is the same string for every viewer.
 "Do not disturb during meetings" is a per-member on/off switch on the
 notification settings. It only works while meeting status itself is
 on. During a busy interval the member reads exactly as DND through
-`Notifications::Policy`: push and sounds (including `/play` chat
-sounds and huddle rings via `Huddle::RingPolicy`) stay silent, inbox
-items are still recorded, and people starred with "Allow during DND"
-still get through. Unlike the label, quiet applies through a custom
-status: the label may be hidden, but the interval still silences.
+`Notifications::Policy`: push and huddle rings (via
+`Huddle::RingPolicy`) stay silent, inbox items are still recorded,
+and people starred with "Allow during DND" still get through.
+`/play` chat sounds mute the same way: the layout sends the cached
+busy intervals as epoch windows and the sound controller
+re-evaluates the gate on every play, so a boundary crossed mid-page
+silences (or unsilences) without a reload — but a calendar edit that
+moves the intervals needs a navigation, the same as a quiet-hours
+edit. Unlike the label, quiet applies through a custom status: the
+label may be hidden, but the interval still silences.
 
 ## Failure behavior
 
