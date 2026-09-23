@@ -7,7 +7,9 @@ Smartfire to Google: edits made in Google are never read back for
 publishing, and the app never reads event titles, descriptions, or
 attendee lists. Members who opt into [meeting status](meeting-status.md)
 additionally let the app read event times (free/busy only) from their
-primary calendar; that is the only calendar read in the app.
+primary calendar, and members who opt into [calendar
+out-of-office](out-of-office.md) let it read out-of-office event types
+and spans the same way; those are the only calendar reads in the app.
 
 A later time change (or title/description edit) updates that same calendar
 entry; declining, cancelling, or leaving the room removes it. The event page

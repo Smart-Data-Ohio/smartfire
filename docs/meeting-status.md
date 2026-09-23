@@ -15,16 +15,17 @@ The read uses `events.list` on the primary calendar under the existing
 
 - `singleEvents=true` (recurring events expand to instances),
   `timeMin` one hour ago, `timeMax` 24 hours ahead.
-- A `fields` mask (`items(start,end,status,transparency,...)`,
+- A `fields` mask (`items(eventType,start,end,status,transparency,...)`,
   see `Google::Client::MEETING_STATUS_FIELDS`) keeps titles,
   descriptions, locations, and attendee identities out of the response
-  entirely. Only start/end times, the status, the transparency, and each
-  attendee's self/declined flags arrive.
+  entirely. Only the event type, start/end times, the status, the
+  transparency, and each attendee's self/declined flags arrive.
 - Busy intervals are derived in `Calendar::MeetingIntervals`: cancelled,
-  declined-by-self, "Show as: Free" (transparent), and all-day
-  (date-only start) events never count. Tentative and needs-action
-  events count, matching Google's own free/busy. Malformed items are
-  skipped, never raised.
+  out-of-office (`eventType: "outOfOffice"` — those feed [calendar
+  OOO](out-of-office.md) instead), declined-by-self, "Show as: Free"
+  (transparent), and all-day (date-only start) events never count.
+  Tentative and needs-action events count, matching Google's own
+  free/busy. Malformed items are skipped, never raised.
 
 The `freeBusy` endpoint was considered and rejected: it requires a
 scope the app does not request (`calendar.events` is not accepted —
@@ -34,8 +35,10 @@ and it returns bare busy blocks, so all-day events could not be
 excluded and a single all-day event would show "In a meeting" all day.
 
 Only `[start, end]` timestamp pairs are ever stored
-(`calendar_meeting_caches`), and only the boolean "in a meeting" leaves
-the server: other members see the label, never any meeting detail.
+(`calendar_meeting_caches`, which also holds the calendar-OOO intervals
+beside the busy ones — each set only for its own opt-in), and only the
+boolean "in a meeting" leaves the server: other members see the label,
+never any meeting detail.
 
 ## Display and precedence
 
@@ -46,14 +49,16 @@ tooltip). The badge partial, the member list, and the presence lookup
 all read through `User#status_text_display`. The presence dot and label
 are unaffected; only the status line changes.
 
-Precedence, top wins (see `User#meeting_status_visible?`):
+Precedence, top wins (see `User#meeting_status_visible?`; the full order
+lives in [out of office](out-of-office.md#display-and-precedence)):
 
 1. **Invisible** hides everything inferred: an invisible member never
    shows the automatic label.
-2. **A manually set custom status** wins over the automatic label.
-3. **Manual DND** (the toggle, DND presence, quiet hours) wins too,
+2. **Out of office** wins over the automatic label.
+3. **A manually set custom status** wins over the automatic label.
+4. **Manual DND** (the toggle, DND presence, quiet hours) wins too,
    since DND already signals unavailability.
-4. Otherwise the meeting label shows.
+5. Otherwise the meeting label shows.
 
 Quiet-during-meetings itself never suppresses the label, or the two
 features would cancel each other.
@@ -61,7 +66,9 @@ features would cancel each other.
 ## Refreshing and broadcasting
 
 Busy intervals are cached per member in `calendar_meeting_caches` and
-refreshed by `Calendar::MeetingRefreshJob`:
+refreshed by `Calendar::MeetingRefreshJob` — the same fetch and row as
+[calendar OOO](out-of-office.md), which widens the window to 30 days for
+its own opt-in:
 
 - immediately on opt-in, on reconnect, and on calendar push
   notifications (throttled to one fetch per minute per member, so push
@@ -105,5 +112,6 @@ the refresh clears the cached intervals (the status silently turns
 off), stores a gentle notice for the settings page, and stamps the
 fetch time so the failure backs off to the 15-minute cadence instead
 of hot-looping. The next successful refresh clears the notice.
-Disconnecting Google, opting out, deactivating, or destroying the
-member deletes the cached intervals immediately.
+Disconnecting Google, deactivating, or destroying the member deletes
+the cached intervals immediately; opting out clears the busy intervals
+(the row survives while calendar OOO still wants it).
