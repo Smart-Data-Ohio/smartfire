@@ -32,7 +32,32 @@ class GithubPullRequestsHelperTest < ActionView::TestCase
   end
 
   test "cache key for a message without pull requests is just the message" do
-    assert_equal [ messages(:first), nil, nil, false ], message_with_pr_cards_cache_key(messages(:first))
+    assert_equal [ messages(:first), nil, nil, false, false, nil ], message_with_pr_cards_cache_key(messages(:first))
+  end
+
+  test "cache key carries the streaming flag" do
+    message = messages(:first)
+
+    before = message_with_pr_cards_cache_key(message)
+    # update_column leaves updated_at alone, so only the flag element
+    # can bust the key.
+    message.update_column(:streaming, true)
+
+    assert_not_equal before, message_with_pr_cards_cache_key(message.reload)
+  end
+
+  test "cache key changes when a step is added to the message" do
+    agent = agents(:bender_agent)
+    message = rooms(:watercooler).root_messages.create!(creator: agent.user,
+      markdown_source: "Working on it", client_message_id: "steps-cache-key")
+
+    before = message_with_pr_cards_cache_key(message)
+
+    travel 1.minute do
+      AgentStep.create!(agent: agent, message: message, name: "Run tests")
+    end
+
+    assert_not_equal before, message_with_pr_cards_cache_key(message.reload)
   end
 
   test "cache key carries the system note flag" do

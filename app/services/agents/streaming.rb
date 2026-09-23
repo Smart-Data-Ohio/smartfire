@@ -24,7 +24,7 @@ module Agents
       attrs = normalize_root_attributes(room, attributes)
 
       if (duplicate = Message.find_duplicate(room: room, creator: agent.user, client_message_id: attrs[:client_message_id]))
-        return ServiceResult.ok(duplicate)
+        return ServiceResult.ok(duplicate, status: :created)
       end
 
       if (denial = Budgets.check(agent, :messages))
@@ -50,7 +50,7 @@ module Agents
       end
 
       if (duplicate = Message.find_duplicate(room: room, creator: agent.user, client_message_id: attributes[:client_message_id] || attributes["client_message_id"]))
-        return ServiceResult.ok(duplicate)
+        return ServiceResult.ok(duplicate, status: :created)
       end
 
       if (denial = Budgets.check(agent, :messages))

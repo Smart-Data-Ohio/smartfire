@@ -14,7 +14,10 @@ class AgentBudgetNotice < ApplicationRecord
 
   validates :cap, inclusion: { in: CAPS }
   validates :day, presence: true
-  validates :agent_id, uniqueness: { scope: %i[ cap day ] }
+  # Uniqueness (agent, cap, day) is enforced by the database index, not a
+  # validation, so .record_for! can claim through create_or_find_by! the
+  # way ActivityItem does: a duplicate insert raises RecordNotUnique and
+  # reads back the winner instead of failing validation.
 
   # Records today's hit for the cap, fanning out the inbox item only when
   # this call created the row. The unique index admits exactly one row per

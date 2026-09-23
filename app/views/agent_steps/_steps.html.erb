@@ -16,10 +16,10 @@
             <% end %>
           </div>
           <% if step.input_summary.present? %>
-            <p class="agent-steps__io"><span class="agent-steps__io-label">In:</span> <%= simple_format(step.input_summary, {}, wrapper_tag: "span") %></p>
+            <p class="agent-steps__io"><span class="agent-steps__io-label">In:</span> <span class="agent-steps__io-text"><%= step.input_summary %></span></p>
           <% end %>
           <% if step.output_summary.present? %>
-            <p class="agent-steps__io"><span class="agent-steps__io-label">Out:</span> <%= simple_format(step.output_summary, {}, wrapper_tag: "span") %></p>
+            <p class="agent-steps__io"><span class="agent-steps__io-label">Out:</span> <span class="agent-steps__io-text"><%= step.output_summary %></span></p>
           <% end %>
         </li>
       <% end %>

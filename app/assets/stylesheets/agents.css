@@ -115,3 +115,7 @@
   font-weight: 600;
   opacity: 0.7;
 }
+
+.agent-steps__io-text {
+  white-space: pre-line;
+}
