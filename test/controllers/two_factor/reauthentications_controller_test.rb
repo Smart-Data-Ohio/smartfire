@@ -141,6 +141,34 @@ class TwoFactor::ReauthenticationsControllerTest < ActionDispatch::IntegrationTe
     assert_nil Session.find_by(token: token)
   end
 
+  test "create is rate limited per IP" do
+    sign_in @user
+
+    with_rate_limit_store do
+      10.times { post two_factor_reauthentication_path }
+      assert_equal "accounts.google.com", URI(response.location).host
+
+      post two_factor_reauthentication_path
+      assert_redirected_to user_profile_url
+      assert_equal "Too many attempts. Try again in a few minutes.", flash[:alert]
+    end
+  end
+
+  test "create is rate limited per user across IPs" do
+    sign_in @user
+
+    with_rate_limit_store do
+      10.times.each do |index|
+        post two_factor_reauthentication_path, env: { "REMOTE_ADDR" => "10.1.0.#{index}" }
+      end
+      assert_equal "accounts.google.com", URI(response.location).host
+
+      post two_factor_reauthentication_path, env: { "REMOTE_ADDR" => "10.9.9.9" }
+      assert_redirected_to user_profile_url
+      assert_equal "Too many attempts. Try again in a few minutes.", flash[:alert]
+    end
+  end
+
   test "create redirects visitors to sign in" do
     post two_factor_reauthentication_path
 

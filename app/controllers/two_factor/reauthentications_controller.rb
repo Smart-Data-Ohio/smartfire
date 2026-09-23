@@ -8,6 +8,10 @@ module TwoFactor
   class ReauthenticationsController < ApplicationController
     include GoogleSignInFlow
 
+    rate_limit to: 10, within: 3.minutes, only: :create, with: -> { render_rate_limited }
+    rate_limit to: 10, within: 15.minutes, only: :create, name: "per-user",
+      by: -> { Current.user&.id }, with: -> { render_rate_limited }
+
     before_action :ensure_google_reauth_available
 
     def create
@@ -15,6 +19,10 @@ module TwoFactor
     end
 
     private
+      def render_rate_limited
+        redirect_to user_profile_url, alert: "Too many attempts. Try again in a few minutes."
+      end
+
       def ensure_google_reauth_available
         unless Google::SignIn.configured? && Current.user.google_identity.present?
           redirect_to user_profile_url, alert: "Google confirmation needs a linked Google account."
