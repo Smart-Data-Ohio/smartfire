@@ -35,6 +35,19 @@ class TwoFactor::BackupCodesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 10, credential.backup_codes.unused.count
   end
 
+  test "regenerate drops the user's live connections" do
+    credential = enroll_two_factor!(@user)
+    sign_in @user
+
+    remote_connections = mock
+    remote_connections.expects(:disconnect).with(reconnect: true)
+    ActionCable.server.stubs(:remote_connections).returns(mock.tap { |m| m.expects(:where).with(current_user: @user).returns(remote_connections) })
+
+    post two_factor_backup_codes_url, params: { reauth: totp_code_for(credential) }
+
+    assert_response :success
+  end
+
   test "regenerate refuses without re-authentication" do
     credential = enroll_two_factor!(@user)
     old_codes = TwoFactorBackupCode.regenerate_set!(credential)

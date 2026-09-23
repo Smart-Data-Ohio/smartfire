@@ -206,10 +206,13 @@ module Authentication
       }
     end
 
-    def disconnect_remote_connections
-      Current.user&.reset_remote_connections
+    # Drops the member's live ActionCable connections; sockets reconnect
+    # as verified sessions or not at all. Best-effort: a realtime outage
+    # must never block the request that triggered it.
+    def disconnect_remote_connections(user = Current.user)
+      user&.reset_remote_connections
     rescue => error
-      Rails.logger.warn "Could not disconnect remote connections on sign out: #{error.class}"
+      Rails.logger.warn "Could not disconnect remote connections: #{error.class}"
     end
 
     def authenticated_as(session)

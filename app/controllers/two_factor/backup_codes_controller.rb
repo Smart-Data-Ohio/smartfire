@@ -18,6 +18,7 @@ module TwoFactor
       return refuse_without_reauthentication(Current.user) unless reauthenticated?(Current.user)
 
       @backup_codes = TwoFactorBackupCode.regenerate_set!(credential)
+      disconnect_remote_connections
       AuditLog.record!(action: "two_factor.backup_codes.regenerate", target: Current.user)
       @continue_url = user_profile_url
       render :show

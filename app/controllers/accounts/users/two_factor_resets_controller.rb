@@ -16,6 +16,7 @@ class Accounts::Users::TwoFactorResetsController < ApplicationController
 
     @user.reset_two_factor!
     @user.sessions.destroy_all
+    disconnect_remote_connections(@user)
     AuditLog.record!(action: "two_factor.reset", target: @user)
     redirect_to edit_account_url, notice: "Two-step sign-in reset for #{@user.name}. They will set it up again at next sign-in."
   end

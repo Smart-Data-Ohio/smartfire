@@ -59,6 +59,7 @@ module TwoFactor
         # Every session re-enrolls, not just this one: a live session must
         # never keep browsing after its second factor is gone.
         Current.user.sessions.update_all(two_factor_verified_at: nil)
+        disconnect_remote_connections
         cookies.delete(TWO_FACTOR_REMEMBER_COOKIE)
         AuditLog.record!(action: "two_factor.disable", target: Current.user)
         redirect_to two_factor_setup_url, notice: "Two-step sign-in is off. Set it up again to keep signing in."

@@ -211,6 +211,19 @@ class TwoFactor::SetupsControllerTest < ActionDispatch::IntegrationTest
     assert_not @user.reload.two_factor_enabled?
   end
 
+  test "destroy drops the user's live connections" do
+    credential = enroll_two_factor!(@user)
+    sign_in @user
+
+    remote_connections = mock
+    remote_connections.expects(:disconnect).with(reconnect: true)
+    ActionCable.server.stubs(:remote_connections).returns(mock.tap { |m| m.expects(:where).with(current_user: @user).returns(remote_connections) })
+
+    delete two_factor_setup_url, params: { reauth: totp_code_for(credential) }
+
+    assert_redirected_to two_factor_setup_url
+  end
+
   test "destroy refuses without re-authentication" do
     credential = enroll_two_factor!(@user)
     TwoFactorBackupCode.regenerate_set!(credential)

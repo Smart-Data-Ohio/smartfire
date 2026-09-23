@@ -39,6 +39,30 @@ class Accounts::Users::TwoFactorResetsControllerTest < ActionDispatch::Integrati
     assert_redirected_to two_factor_setup_url
   end
 
+  test "reset drops the member's live connections" do
+    enroll_two_factor!(@user)
+    sign_in @admin
+
+    remote_connections = mock
+    remote_connections.expects(:disconnect).with(reconnect: true)
+    ActionCable.server.stubs(:remote_connections).returns(mock.tap { |m| m.expects(:where).with(current_user: @user).returns(remote_connections) })
+
+    post account_user_two_factor_reset_url(@user)
+
+    assert_redirected_to edit_account_url
+  end
+
+  test "reset still lands when the realtime service is unreachable" do
+    enroll_two_factor!(@user)
+    sign_in @admin
+    ActionCable.server.stubs(:remote_connections).raises(RuntimeError.new("cable down"))
+
+    post account_user_two_factor_reset_url(@user)
+
+    assert_redirected_to edit_account_url
+    assert_not @user.reload.two_factor_enabled?
+  end
+
   test "admin cannot reset their own 2FA this way" do
     credential = enroll_two_factor!(@admin)
     sign_in @admin
