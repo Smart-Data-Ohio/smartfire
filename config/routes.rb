@@ -30,6 +30,7 @@ Rails.application.routes.draw do
       end
 
       resources :bots do
+        post :kill_switch, on: :member
         scope module: "bots" do
           resource :key, only: :update
           resources :credentials, only: %i[ index create destroy ]
@@ -115,6 +116,11 @@ Rails.application.routes.draw do
   put "agents/work/:id/result", to: "agents/work#result", defaults: { format: :json }
   post "agents/work/:id/handoff", to: "agents/work#handoff", defaults: { format: :json }
   post "rooms/:room_id/agents/messages", to: "agents/messages#create", defaults: { format: :json }, as: :room_agent_messages
+  post "rooms/:room_id/agents/streaming_messages", to: "agents/streaming_messages#create", defaults: { format: :json }, as: :room_agent_streaming_messages
+  patch "agents/streaming_messages/:id", to: "agents/streaming_messages#update", defaults: { format: :json }, as: :agents_streaming_message
+  post "agents/streaming_messages/:id/finalize", to: "agents/streaming_messages#finalize", defaults: { format: :json }, as: :finalize_agents_streaming_message
+  post "agents/steps", to: "agents/steps#create", defaults: { format: :json }, as: :agents_steps
+  patch "agents/steps/:id", to: "agents/steps#update", defaults: { format: :json }, as: :agents_step
   post "agents/messages/:id/pin", to: "agents/pins#create", defaults: { format: :json }, as: :agents_message_pin
   delete "agents/messages/:id/pin", to: "agents/pins#destroy", defaults: { format: :json }
   post "rooms/:room_id/agents/slash_commands", to: "agents/slash_commands#create", defaults: { format: :json }

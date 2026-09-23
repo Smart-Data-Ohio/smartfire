@@ -19,6 +19,18 @@ class PollTest < ActiveSupport::TestCase
     assert poll.open?
   end
 
+  test "a streaming message cannot carry a poll" do
+    message = @room.root_messages.create!(creator: @david,
+      markdown_source: "Drafting…", streaming: true)
+
+    error = assert_raises(ActiveRecord::RecordInvalid) do
+      Poll.create_for_message!(message: message, labels: [ "Tacos", "Pizza" ])
+    end
+
+    assert_match "cannot carry a poll", error.record.errors.full_messages.to_sentence
+    assert_nil message.reload.poll
+  end
+
   test "requires between two and ten options" do
     message = @room.root_messages.create!(creator: @david, markdown_source: "Lunch?")
 

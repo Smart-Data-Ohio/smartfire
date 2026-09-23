@@ -34,6 +34,7 @@ class ChannelThread < ApplicationRecord
   has_many :work_thread_links, foreign_key: :channel_thread_id, inverse_of: :channel_thread, dependent: :destroy
   has_many :work_handoffs, foreign_key: :channel_thread_id, inverse_of: :channel_thread, dependent: :destroy
   has_many :board_sla_nudges, foreign_key: :channel_thread_id, dependent: :destroy
+  has_many :agent_steps, -> { ordered }, foreign_key: :channel_thread_id, inverse_of: :channel_thread, dependent: :destroy
   # No dependent option: the foreign key nullifies thread_id on delete.
   # Pending rows are dropped with an inbox item first (see below); sent
   # history rows keep their past with the thread link cleared.
@@ -211,7 +212,7 @@ class ChannelThread < ApplicationRecord
         ThreadMembership.join!(thread, creator)
 
         message = if first_message.to_s.strip.present?
-          thread.post_message!(creator: creator, attributes: { markdown_source: first_message })
+          thread.post_message!(creator: creator, attributes: { markdown_source: first_message, board_post_opener: true })
         end
         thread.write_creation_assignment!(actor: creator) if thread.work_owner_id.present?
         notify_board_post_created!(thread, message) if message

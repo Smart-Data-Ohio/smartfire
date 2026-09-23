@@ -259,9 +259,18 @@ class Agents::McpController < ApplicationController
           isError: false
         }, modern))
       else
+        # Budget denials carry the same cap, limit, and retry_after fields
+        # as the REST 429 body; every other failure keeps its shape.
+        structured = { error: result.error, status: result.status.to_s }
+        if result.payload.is_a?(Hash)
+          %i[ cap limit retry_after ].each do |key|
+            structured[key.to_s] = result.payload[key] if result.payload.key?(key)
+          end
+        end
+
         render json: rpc_result(id, modern_result({
           content: [ { type: "text", text: result.error } ],
-          structuredContent: { error: result.error, status: result.status.to_s },
+          structuredContent: structured,
           isError: true
         }, modern))
       end

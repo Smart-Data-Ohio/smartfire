@@ -21,9 +21,11 @@ Tool results carry both `structuredContent` (the machine-readable payload)
 and a `text` part with the same payload serialized as JSON. A denied or
 failed tool call is still HTTP 200 with a JSON-RPC result: `isError: true`,
 the reason as text (the same message the REST endpoint renders), and
-`{ error, status }` structured. Malformed calls answer JSON-RPC errors
-instead (`-32602` for an unknown tool or missing argument, `-32020` for a
-header mismatch, `-32022` for an unsupported protocol version).
+`{ error, status }` structured. Budget denials add the REST 429's
+`cap`, `limit`, and `retry_after` fields. Malformed calls answer
+JSON-RPC errors instead (`-32602` for an unknown tool or missing
+argument, `-32020` for a header mismatch, `-32022` for an unsupported
+protocol version).
 
 Unparseable bodies answer HTTP 400 with `-32700`, and malformed
 envelopes — including batch arrays, which the spec forbids — answer HTTP
@@ -47,6 +49,10 @@ endpoints, per credential per minute:
 | `register_slash_command`, `unregister_slash_command` | command registration | 60 |
 | `create_poll` | poll creation | 60 |
 | `handoff_work` | work handoffs | 60 |
+| `start_stream`, `finalize_stream` | streaming messages | 60 |
+| `append_stream` | streaming updates | 240 |
+| `add_step`, `update_step` | agent steps | 60 |
+| `set_presence` | working presence | none (like `PATCH /agents/me`) |
 | `create_board_post` | board post creation | 30 |
 
 The remaining tools have no throttle, like their REST counterparts.
@@ -117,6 +123,9 @@ curl https://smartfire.example.com/agents/mcp \
 | `register_slash_command`, `unregister_slash_command` | `post_messages` in the room | `POST`/`DELETE /rooms/:id/agents/slash_commands` |
 | `create_poll`, `get_poll` | `post_messages` in the room | `POST`/`GET /rooms/:id/agents/polls` |
 | `handoff_work` | ownership + `manage_threads` | `POST /agents/work/:id/handoff` |
+| `start_stream`, `append_stream`, `finalize_stream` | `post_messages` in the room | streaming messages endpoints |
+| `set_presence` | the agent itself | `PATCH /agents/me` (`working_presence`) |
+| `add_step`, `update_step` | `post_messages` (message steps) / `manage_threads` (thread steps) | `POST`/`PATCH /agents/steps` |
 
 `tools/list` always returns the full set; per-tool enforcement happens at
 call time, so a client can show every tool and let denials explain which

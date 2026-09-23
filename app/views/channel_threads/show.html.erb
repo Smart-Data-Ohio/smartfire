@@ -14,6 +14,7 @@
         Work: <%= @thread.work_status_label %> · <%= owner_label %><% if owner&.bot? %><span class="agent-badge">agent</span><% end %>
       </p>
       <%= render "threads/work/links/box", thread: @thread, links: @work_links, linkable_events: @linkable_events, context: :header %>
+      <%= render "agent_steps/thread_steps", thread: @thread %>
       <% if @thread.work_manageable_by?(Current.user) %>
         <p><%= link_to "Hand off to an agent", new_thread_work_handoff_path(@thread), class: "btn" %></p>
       <% end %>

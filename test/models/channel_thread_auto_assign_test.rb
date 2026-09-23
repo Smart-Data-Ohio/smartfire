@@ -85,6 +85,16 @@ class ChannelThreadAutoAssignTest < ActiveSupport::TestCase
     assert_nil post.reload.work_owner_id
   end
 
+  test "auto-assign skips a suspended agent" do
+    BoardTagAssignment.create!(room: @board, tag: "bug", assignee: users(:bender), created_by: users(:david))
+    agents(:bender_agent).suspend!
+
+    post = ChannelThread.create_board_post!(room: @board, creator: users(:david),
+      name: "Broken", work_status: "planned", tags: "bug")
+
+    assert_nil post.reload.work_owner_id
+  end
+
   test "auto-assign ignores channel threads" do
     BoardTagAssignment.create!(room: @board, tag: "bug", assignee: users(:jz), created_by: users(:david))
     thread = ChannelThread.create!(room: rooms(:designers), creator: users(:david), name: "Chat", work_status: "planned")

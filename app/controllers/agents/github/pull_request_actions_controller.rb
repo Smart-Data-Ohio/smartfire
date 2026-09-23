@@ -43,6 +43,11 @@ class Agents::Github::PullRequestActionsController < ApplicationController
       return
     end
 
+    if (denial = Agents::Budgets.check(agent, :external_actions))
+      render json: denial.failure_body, status: denial.status
+      return
+    end
+
     approval = AgentApproval.new(
       agent: agent,
       room: @room,

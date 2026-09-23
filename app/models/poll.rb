@@ -21,7 +21,14 @@ class Poll < ApplicationRecord
     # Attaches a poll to an already-saved message with the given option
     # labels. Shared by the human and agent creation paths so both
     # validate identically. Raises ActiveRecord::RecordInvalid.
+    # Streaming messages never carry polls: the card renders the final
+    # question, which does not exist until the stream finalizes.
     def create_for_message!(message:, labels:, multiple: false, anonymous: false, closes_at: nil)
+      if message.streaming?
+        message.errors.add :base, "A streaming message cannot carry a poll"
+        raise ActiveRecord::RecordInvalid.new(message)
+      end
+
       labels = normalize_labels(labels)
       unless labels.size.between?(MIN_OPTIONS, MAX_OPTIONS)
         message.errors.add :base, "Poll needs between #{MIN_OPTIONS} and #{MAX_OPTIONS} options"

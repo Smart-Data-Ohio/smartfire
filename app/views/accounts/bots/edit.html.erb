@@ -30,6 +30,9 @@
   </div>
 
   <% if @bot.agent %>
+    <div class="margin-block-end txt-small">
+      Today's usage: <%= agent_budget_usage_line(@bot.agent) %>
+    </div>
     <div class="flex align-center gap justify-space-between margin-block-end">
       <%= link_to agent_events_path(@bot.agent), class: "btn full-width txt--small" do %>
         <%= image_tag "messages-outlined.svg", aria: { hidden: "true" }, size: 20 %>
@@ -42,6 +45,15 @@
         View approval requests
       <% end %>
     </div>
+    <% unless @bot.agent.suspended? %>
+      <div class="flex align-center gap justify-space-between margin-block-end">
+        <%= button_to kill_switch_account_bot_path(@bot), class: "btn full-width txt--small btn--negative",
+              form: { data: { turbo_confirm: "Suspend this agent and cancel its pending approvals? This cannot be undone from here." } } do %>
+          <%= image_tag "remove.svg", aria: { hidden: "true" }, size: 20 %>
+          Kill switch: suspend agent
+        <% end %>
+      </div>
+    <% end %>
   <% end %>
 
   <hr class="separator full-width margin-block-double">

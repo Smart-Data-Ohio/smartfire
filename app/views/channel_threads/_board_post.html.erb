@@ -116,6 +116,8 @@
     <% end %>
 
     <%= render "threads/work/links/box", thread: @thread, links: @work_links, linkable_events: @linkable_events, context: :header %>
+
+    <%= render "agent_steps/thread_steps", thread: @thread %>
   </section>
 
   <section class="board-post__result" aria-labelledby="post-result-title">

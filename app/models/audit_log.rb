@@ -50,6 +50,7 @@ class AuditLog < ApplicationRecord
     agent.approval.decide
     agent.github_action.execute
     agent.fizzy_action.execute
+    agent.kill_switch
     room.create
     room.destroy
     room.membership.change

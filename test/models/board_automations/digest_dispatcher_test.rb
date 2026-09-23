@@ -124,6 +124,22 @@ class BoardAutomations::DigestDispatcherTest < ActiveSupport::TestCase
     assert_nil membership.reload.unread_at
   end
 
+  test "the digest note never streams" do
+    stale_post!(name: "Old work", owner: users(:jz), entered_ago: 2.hours)
+
+    BoardAutomations::DigestDispatcher.dispatch_due!
+
+    note = BoardStaleDigest.order(:id).last.message
+    assert_not_predicate note, :streaming?
+    assert_empty Message.where(streaming: true)
+
+    travel_to 1.hour.from_now do
+      assert_no_changes -> { note.reload.updated_at } do
+        Message.finalize_overdue_streams!
+      end
+    end
+  end
+
   private
     def stale_post!(name:, owner:, entered_ago:)
       post = ChannelThread.create_board_post!(room: @board, creator: users(:david),

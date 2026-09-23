@@ -244,6 +244,17 @@ class ActivityItemsController < ApplicationController
           path: activity_item_source_path(item),
           status: source.effective_status
         }
+      when AgentBudgetNotice
+        {
+          type: item.source_type,
+          id: source.id,
+          room_id: nil,
+          thread_id: nil,
+          creator_id: source.agent.user_id,
+          body: activity_item_source_body(item).truncate(500),
+          path: activity_item_source_path(item),
+          status: source.cap
+        }
       end
     end
 

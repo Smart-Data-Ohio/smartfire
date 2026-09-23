@@ -2,8 +2,8 @@ module Message::Searchable
   extend ActiveSupport::Concern
 
   included do
-    after_create_commit  :create_in_index
-    after_update_commit  :update_in_index
+    after_create_commit  :create_in_index, unless: :streaming?
+    after_update_commit  :update_in_index, unless: :streaming?
     after_destroy_commit :remove_from_index
 
     scope :search, ->(query) { joins("join message_search_index idx on messages.id = idx.rowid").where("idx.body match ?", query).ordered }
