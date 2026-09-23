@@ -1128,9 +1128,9 @@ summary.member-panel__group-heading {
     margin: 0;
   }
 
-  /* Seven icon-only actions (members, search, threads, events, huddle,
-     settings, notifications) have to fit beside the sidebar toggle on a
-     320px phone, so the actions sit flush and each is a 2rem square. */
+  /* Eight icon-only actions (members, search, threads, events, pins,
+     huddle, settings, notifications) have to fit beside the sidebar toggle
+     on a 320px phone, so the actions sit flush and each is a 2rem square. */
   .room-header__actions {
     gap: 0;
   }

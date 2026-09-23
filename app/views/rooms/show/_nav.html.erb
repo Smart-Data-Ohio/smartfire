@@ -33,6 +33,8 @@
       <span class="room-header__action-label">Events</span>
     <% end %>
 
+    <%= render "rooms/pins/panel", room: room %>
+
     <% stage_membership = room.stage? ? room.memberships.find_by(user: Current.user) : nil %>
     <% if Huddle.configured? %>
       <%= render "rooms/stage/live_badge", room: room if room.stage? %>

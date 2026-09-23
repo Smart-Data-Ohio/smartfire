@@ -13,9 +13,10 @@ class MessageInteractionsTest < ApplicationSystemTestCase
 
   test "opens message actions from context menu and keyboard, and cancels a moving long press" do
     within_message(messages(:third)) do
-      open_message_actions
-      assert_selector ".message__quick-reaction", count: EmojiHelper::REACTIONS.length
+      right_click_message
     end
+    assert_message_menu_open
+    assert_selector "#message-actions-menu .message__quick-reaction", count: EmojiHelper::REACTIONS.length, visible: true
 
     page.send_keys :escape
     assert_no_selector ".message[data-message-actions-open]"
@@ -30,21 +31,21 @@ class MessageInteractionsTest < ApplicationSystemTestCase
         shiftKey: true
       }))
     JS
-    assert_selector ".message[data-message-actions-open] .message__quick-reaction", visible: true
+    assert_message_menu_open
     page.send_keys :escape
-    assert_selector "##{dom_id(messages(:third))}:focus"
+    assert_focused "##{dom_id(messages(:third))}"
 
     page.current_window.resize_to(390, 844)
     message = find("##{dom_id(messages(:third))}")
-    perform_touch_gesture(message, move_by: [ 25, 0 ])
+    long_press(message, move_by: [ 25, 0 ])
     assert_no_selector ".message[data-message-actions-open]"
 
-    perform_touch_gesture(message)
-    assert_selector ".message[data-message-actions-open] .message__quick-reaction", visible: true
+    long_press(message)
+    assert_message_menu_open
     assert_menu_within_viewport
     page.execute_script "window.confirm = () => false"
     click_button "Delete message"
-    assert_selector ".message[data-message-actions-open] .message__delete-action", visible: true
+    assert_selector "#message-actions-menu .message__delete-action", visible: true
     assert_selector "##{dom_id(messages(:third))}"
     save_screenshot "mobile-long-press.png"
   ensure
@@ -54,8 +55,9 @@ class MessageInteractionsTest < ApplicationSystemTestCase
   test "shows the message action menu as a bottom sheet on phones" do
     page.current_window.resize_to(390, 844)
     within_message(messages(:third)) do
-      open_message_actions
+      right_click_message
     end
+    assert_message_menu_open
     assert_bottom_sheet_action_menu
 
     page.send_keys :escape
@@ -63,8 +65,9 @@ class MessageInteractionsTest < ApplicationSystemTestCase
 
     page.current_window.resize_to(320, 740)
     within_message(messages(:third)) do
-      open_message_actions
+      right_click_message
     end
+    assert_message_menu_open
     assert_bottom_sheet_action_menu
 
     page.send_keys :escape
@@ -77,9 +80,10 @@ class MessageInteractionsTest < ApplicationSystemTestCase
     fill_in "Write a message", with: "A draft that must survive editing"
 
     within_message(messages(:third)) do
-      open_message_actions
-      click_button "Edit message"
+      right_click_message
     end
+    assert_message_menu_open
+    click_button "Edit message"
 
     assert_selector "[data-composer-target='contextLabel']", text: "Editing Message", wait: 10
     assert_field "Write a message", with: "Third time's a charm."
@@ -88,9 +92,10 @@ class MessageInteractionsTest < ApplicationSystemTestCase
     assert_field "Write a message", with: "A draft that must survive editing"
 
     within_message(messages(:third)) do
-      open_message_actions
-      click_button "Edit message"
+      right_click_message
     end
+    assert_message_menu_open
+    click_button "Edit message"
     fill_in "Write a message", with: "Saved through the main composer"
     click_button "Send Message"
 
@@ -103,9 +108,10 @@ class MessageInteractionsTest < ApplicationSystemTestCase
   test "a duplicate delivery does not replace the message while its actions are open" do
     message = messages(:third)
     within_message(message) do
-      open_message_actions
-      assert_button "Edit message", wait: 10
+      right_click_message
     end
+    assert_message_menu_open
+    assert_button "Edit message", wait: 10
 
     page.execute_script <<~JS, dom_id(message), dom_id(@room, :messages)
       const [messageId, targetId] = arguments;
@@ -126,15 +132,16 @@ class MessageInteractionsTest < ApplicationSystemTestCase
     message.broadcast_create
     assert_selector "html[data-duplicate-delivery-rendered]", wait: 10
     assert page.evaluate_script("window.originalDeliveredMessage.isConnected"), "redelivery must preserve the existing message and its active controls"
-    within_message(message) { click_button "Edit message" }
+    click_button "Edit message"
     assert_field "Write a message", with: "Third time's a charm."
   end
 
   test "keeps newer typing through an asynchronous edit and leaves failures in edit mode" do
     within_message(messages(:third)) do
-      open_message_actions
-      click_button "Edit message"
+      right_click_message
     end
+    assert_message_menu_open
+    click_button "Edit message"
     assert_selector "[data-composer-target='contextLabel']", text: "Editing Message", wait: 10
     fill_in "Write a message", with: "First edit request"
 
@@ -170,9 +177,10 @@ class MessageInteractionsTest < ApplicationSystemTestCase
     JS
 
     within_message(messages(:third)) do
-      open_message_actions
-      click_button "Edit message"
+      right_click_message
     end
+    assert_message_menu_open
+    click_button "Edit message"
     fill_in "Write a message", with: "Failed edit"
     click_button "Send Message"
     assert_selector "[data-composer-target='feedback']", text: "The message could not be saved", visible: true, wait: 10
@@ -184,9 +192,10 @@ class MessageInteractionsTest < ApplicationSystemTestCase
 
   test "replies with notify off and renders a tombstone when the target is deleted" do
     within_message(messages(:third)) do
-      open_message_actions
-      click_button "Reply"
+      right_click_message
     end
+    assert_message_menu_open
+    click_button "Reply"
 
     assert_selector "[data-composer-target='contextLabel']", text: /Replying to JZ/, wait: 10
     assert_field "Notify author", checked: true
@@ -215,21 +224,24 @@ class MessageInteractionsTest < ApplicationSystemTestCase
     JS
 
     within_message(messages(:third)) do
-      open_message_actions
-      click_button "Copy text"
+      right_click_message
     end
+    assert_message_menu_open
+    click_button "Copy text"
     assert_equal "Third time's a charm.", page.evaluate_script("window.__messageInteractionsCopied")
 
     within_message(messages(:third)) do
-      open_message_actions
-      click_button "Copy message link"
+      right_click_message
     end
+    assert_message_menu_open
+    click_button "Copy message link"
     assert_includes page.evaluate_script("window.__messageInteractionsCopied"), "/rooms/#{@room.id}/@#{messages(:third).to_param}"
 
     within_message(messages(:third)) do
-      open_message_actions
-      click_button "Forward"
+      right_click_message
     end
+    assert_message_menu_open
+    click_button "Forward"
     assert_selector "dialog[open]", visible: true, wait: 10
     find(".message-forward-dialog__destination", text: "Forward destination", wait: 10).click
     fill_in "Add a note", with: "Forwarded from the interaction test"
@@ -242,15 +254,35 @@ class MessageInteractionsTest < ApplicationSystemTestCase
     save_screenshot "forward-dialog.png"
   end
 
+  test "forwarding twice in a row submits only once" do
+    within_message(messages(:third)) do
+      right_click_message
+    end
+    assert_message_menu_open
+    click_button "Forward"
+    assert_selector "dialog[open]", visible: true, wait: 10
+
+    find(".message-forward-dialog__destination input", match: :first, wait: 10).check
+    submit = find("[data-message-actions-target='forwardSubmit']")
+
+    assert_difference -> { messages(:third).forwards.count }, 1 do
+      submit.click
+      assert_selector "[data-message-actions-target='forwardStatus']", text: /Forwarded to 1 destination/, wait: 10
+      assert_selector "[data-message-actions-target='forwardSubmit']:disabled"
+    end
+    assert_no_selector "dialog[open]", wait: 10
+  end
+
   test "groups emoji reactions, updates the live count, and highlights the current user" do
     using_session("David") do
       sign_in "david@37signals.com"
       join_room @room
 
       within_message(messages(:third)) do
-        open_message_actions
-        find(".message__quick-reaction[title='Thumbs up']").click
+        right_click_message
       end
+      assert_message_menu_open
+      find(".message__quick-reaction[title='Thumbs up']").click
 
       assert_selector ".reaction-chip[data-reaction='👍'] .reaction-chip__count", text: "1", wait: 10
       assert_selector ".reaction-chip[data-reaction='👍'].reaction-chip--active"
@@ -260,9 +292,10 @@ class MessageInteractionsTest < ApplicationSystemTestCase
     assert_no_selector ".reaction-chip[data-reaction='👍'].reaction-chip--active"
 
     within_message(messages(:third)) do
-      open_message_actions
-      find(".message__quick-reaction[title='Thumbs up']").click
+      right_click_message
     end
+    assert_message_menu_open
+    find(".message__quick-reaction[title='Thumbs up']").click
 
     assert_selector ".reaction-chip[data-reaction='👍'] .reaction-chip__count", text: "2", wait: 10
     assert_selector ".reaction-chip[data-reaction='👍'].reaction-chip--active"
@@ -283,22 +316,6 @@ class MessageInteractionsTest < ApplicationSystemTestCase
   end
 
   private
-    def open_message_actions
-      find("[data-message-edit-format], [data-reply-target='body']", match: :first).right_click
-      assert_selector "[data-message-actions-target='menu']", visible: true, wait: 10
-    end
-
-    def perform_touch_gesture(node, move_by: nil, hold: 0.7)
-      action = page.driver.browser.action
-      touch = action.add_pointer_input(:touch, "message-touch")
-      action.move_to(node.native, device: "message-touch")
-      action.pointer_down(:left, device: "message-touch")
-      action.move_by(*move_by, device: "message-touch") if move_by
-      action.pause(device: touch, duration: hold)
-      action.pointer_up(:left, device: "message-touch")
-      action.perform
-    end
-
     def save_screenshot(name)
       page.save_screenshot SCREENSHOT_DIR.join(name)
     end
@@ -309,7 +326,7 @@ class MessageInteractionsTest < ApplicationSystemTestCase
       assert_selector ".message__edit-action", visible: true, wait: 10
       geometry = page.evaluate_script(<<~JS)
         (() => {
-          const menu = document.querySelector(".message[data-message-actions-open] .message__actions-menu")
+          const menu = document.querySelector("#message-actions-menu:not([hidden])")
           const bounds = element => {
             const rect = element.getBoundingClientRect()
             return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height }
@@ -352,7 +369,7 @@ class MessageInteractionsTest < ApplicationSystemTestCase
     def assert_menu_within_viewport
       bounds = page.evaluate_script(<<~JS)
         (() => {
-          const menu = document.querySelector(".message[data-message-actions-open] .message__actions-menu")
+          const menu = document.querySelector("#message-actions-menu:not([hidden])")
           if (!menu) return null
           const rect = menu.getBoundingClientRect()
           return {

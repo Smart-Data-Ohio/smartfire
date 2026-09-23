@@ -191,6 +191,17 @@ class ActivityItemsController < ApplicationController
           body: source.plain_text_body.truncate(500),
           path: activity_item_source_path(item)
         }
+      when SavedItem
+        message = source.message
+        {
+          type: item.source_type,
+          id: source.id,
+          room_id: message&.room_id,
+          thread_id: message&.thread_id,
+          creator_id: message&.creator_id,
+          body: activity_item_source_body(item).truncate(500),
+          path: activity_item_source_path(item)
+        }
       when WorkThreadEvent
         thread = source.thread
         {

@@ -6,6 +6,9 @@
 <%= message_tag message do %>
   <h2 class="message__day-separator"><%= local_datetime_tag message.created_at, style: :date %></h2>
 
+  <% if message.system_note? %>
+    <%= render "messages/system_note", message: message %>
+  <% else %>
     <figure class="avatar message__avatar">
       <%= avatar_tag message.creator %>
     </figure>
@@ -13,6 +16,8 @@
     <turbo-frame id="<%= dom_id(message, :edit) %>">
       <div class="message__body">
         <div class="message__body-content">
+          <%= render "messages/toolbar" %>
+          <%= render "messages/pin_badge", message: message %>
           <%= render "messages/meta", message: message, show_room_icon: local_assigns[:show_room_icon] %>
           <%= render "messages/context", message: message %>
           <%= render "messages/presentation", message: message %>

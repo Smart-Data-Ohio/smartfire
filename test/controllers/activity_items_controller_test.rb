@@ -384,6 +384,8 @@ class ActivityItemsControllerTest < ActionDispatch::IntegrationTest
 
       ActivityItem.create!(user:, source: new_message.call("hello"), event_type: "mention")
       ActivityItem.create!(user:, source: new_message.call("reply"), event_type: "reply")
+      reminder_saved_item = SavedItem.create!(user:, message: new_message.call("reminder"))
+      ActivityItem.create!(user:, source: reminder_saved_item, event_type: "message_reminder")
 
       thread = ChannelThread.create!(room: @room, creator: users(:jz), name: "Filter thread")
       thread_message = thread.post_message!(creator: users(:jz), attributes: { body: "thread", client_message_id: "filter-thread-#{SecureRandom.hex(4)}" })

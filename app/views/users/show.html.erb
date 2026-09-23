@@ -104,8 +104,9 @@
 
         <% if @user.active? %>
           <div class="pad-inline-double margin-inline margin-block-start">
-            <%= button_to rooms_directs_path(user_ids: [ @user.id ]), class: "btn btn--reversed full-width txt-large" do %>
-              <%= image_tag "messages.svg", aria: { hidden: "true", label: "Ping #{@user.name}" } %>
+            <%= button_to rooms_directs_path(user_ids: [ @user.id ]), class: "btn btn--reversed full-width txt-large",
+                  aria: { label: "Message #{@user.name}" } do %>
+              <%= image_tag "messages.svg", aria: { hidden: "true" } %>
             <% end %>
           </div>
 

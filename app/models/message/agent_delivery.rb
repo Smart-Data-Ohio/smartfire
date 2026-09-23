@@ -7,6 +7,6 @@ module Message::AgentDelivery
 
   private
     def enqueue_agent_deliveries
-      Agent::Delivery.enqueue_for_message(self)
+      Agent::Delivery.enqueue_for_message(self) unless system_note?
     end
 end

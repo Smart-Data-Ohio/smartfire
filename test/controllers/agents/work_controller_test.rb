@@ -519,6 +519,27 @@ class Agents::WorkControllerTest < ActionDispatch::IntegrationTest
     assert_equal "x" * 20_000, thread.reload.result_markdown
   end
 
+  test "put result checks ownership and grants before markdown presence" do
+    grant!(capability: "read_messages", room: @room)
+    grant!(capability: "post_messages", room: @room)
+    grant!(capability: "manage_threads", room: @room)
+    human_thread = create_human_thread!(name: "Not mine, no markdown")
+
+    put agents_work_thread_url(human_thread) + "/result",
+      params: {}.to_json,
+      headers: bearer_headers
+    assert_response :not_found
+
+    AgentGrant.where(agent: @agent, capability: "manage_threads").sole.revoke!
+    owned_thread = create_owned_thread!(name: "Ungoverned, no markdown")
+
+    put agents_work_thread_url(owned_thread) + "/result",
+      params: {}.to_json,
+      headers: bearer_headers
+    assert_response :forbidden
+    assert_equal "Forbidden: agent lacks manage_threads capability", response.parsed_body["error"]
+  end
+
   test "put result with blank markdown clears" do
     grant!(capability: "read_messages", room: @room)
     grant!(capability: "post_messages", room: @room)

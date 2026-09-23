@@ -108,12 +108,50 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "index etag changes when the older of two pins is removed" do
+    older = @room.messages.create!(creator: users(:david), markdown_source: "etag pinned older", client_message_id: "etag-pin-older")
+    newer = @room.messages.create!(creator: users(:david), markdown_source: "etag pinned newer", client_message_id: "etag-pin-newer")
+
+    MessagePin.pin!(message: older, pinner: users(:david))
+    MessagePin.pin!(message: newer, pinner: users(:david))
+
+    get room_messages_url(@room)
+    assert_response :success
+    etag = response.headers["ETag"]
+
+    get room_messages_url(@room), headers: { "If-None-Match" => etag }
+    assert_response :not_modified
+
+    MessagePin.find_by!(message: older).unpin!
+
+    get room_messages_url(@room), headers: { "If-None-Match" => etag }
+    assert_response :success
+  end
+
   test "get renders a single message belonging to the user" do
     message = @room.messages.where(creator: users(:david)).first
 
     get room_message_url(@room, message)
 
     assert_response :success
+  end
+
+  test "room message list announces live appends" do
+    get room_url(@room)
+
+    assert_response :success
+    assert_select "##{dom_id(@room, :messages)}[role='log'][aria-live='polite'][aria-relevant='additions']", 1
+  end
+
+  test "image attachments use the filename as alt text" do
+    post room_messages_url(@room, format: :turbo_stream), params: {
+      message: { attachment: fixture_file_upload("moon.jpg", "image/jpeg"), client_message_id: "alt-text-1" }
+    }
+    assert_response :success
+
+    get room_url(@room)
+    assert_response :success
+    assert_select "img.message__attachment[alt='moon']", 1
   end
 
   test "creating a message broadcasts the message to the room" do
@@ -132,7 +170,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_rendered_turbo_stream_broadcast @room, :messages, action: "append", target: [ @room, :messages ] do
-      assert_select "[data-message-actions-metadata-url-value='#{origin}#{actions_room_message_path(@room, Message.last)}']"
+      assert_select "[data-actions-url='#{origin}#{actions_room_message_path(@room, Message.last)}']"
       assert_copy_link_button "#{origin}#{room_at_message_path(@room, Message.last)}"
     end
   end
@@ -593,6 +631,61 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "retry-root-post", @room.messages.order(:id).last.client_message_id
   end
 
+  test "system notes render as a compact note without message chrome" do
+    note = @room.root_messages.create!(creator: users(:david), markdown_source: "pinned a message", system_note: true, client_message_id: "note-chrome")
+
+    get room_messages_url(@room)
+    assert_response :success
+
+    assert_select "##{dom_id(note)}[role='note'].message--system-note", 1 do
+      assert_select ".message__system-note-author", text: users(:david).name
+      assert_select ".message__system-note-text", text: /pinned a message/
+      assert_select ".message__system-note time", 1
+      assert_select ".message__avatar", 0
+      assert_select ".message__toolbar", 0
+      assert_select "[data-message-edit-format]", 0
+    end
+    assert_select "##{dom_id(note)}[data-actions-url]", 0
+    assert_select "##{dom_id(note)}[data-message-url]", 0
+    assert_select "##{dom_id(note)}[data-boost-url]", 0
+  end
+
+  test "system notes cannot be edited or deleted by their actor" do
+    note = @room.root_messages.create!(creator: users(:david), markdown_source: "pinned a message", system_note: true, client_message_id: "note-immutable")
+
+    get edit_room_message_url(@room, note)
+    assert_response :forbidden
+
+    assert_no_changes -> { note.reload.plain_text_body } do
+      patch room_message_url(@room, note, format: :json), params: { message: { markdown_source: "Edited" } }
+      assert_response :forbidden
+    end
+
+    assert_no_difference -> { Message.count } do
+      delete room_message_url(@room, note, format: :turbo_stream)
+      assert_response :forbidden
+    end
+  end
+
+  test "system notes cannot be deleted by an administrator" do
+    assert users(:david).administrator?
+    note = @room.root_messages.create!(creator: users(:jason), markdown_source: "pinned a message", system_note: true, client_message_id: "note-admin")
+
+    assert_no_difference -> { Message.count } do
+      delete room_message_url(@room, note, format: :turbo_stream)
+      assert_response :forbidden
+    end
+  end
+
+  test "system note actions report no edit or delete" do
+    note = @room.root_messages.create!(creator: users(:david), markdown_source: "pinned a message", system_note: true, client_message_id: "note-actions")
+
+    get actions_room_message_url(@room, note, format: :json)
+    assert_response :success
+    assert_not response.parsed_body.dig("actions", "can_edit")
+    assert_not response.parsed_body.dig("actions", "can_delete")
+  end
+
   private
     def thread_summary_refreshes_for(user, thread)
       ActionCable.server.pubsub.broadcasts(UnreadThreadsChannel.stream_name_for(user.id))
@@ -611,6 +704,6 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     end
 
     def assert_copy_link_button(url)
-      assert_select "[data-message-actions-permalink-url-value='#{url}']"
+      assert_select "a.message__permalink[href='#{url}']"
     end
 end

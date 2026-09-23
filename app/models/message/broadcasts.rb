@@ -1,9 +1,18 @@
 module Message::Broadcasts
   def broadcast_create
     broadcast_append_to message_stream_target, :messages, target: [ message_stream_target, :messages ]
-    # System notes appear in open timelines but never light up the room
-    # for anyone (see the quiet contract on Message).
-    broadcast_unread_room unless thread_message? || system?
+    broadcast_unread_room unless thread_message? || system_note?
+  end
+
+  def broadcast_reactions_replace
+    # The reactor tooltip reads every boost's booster. Reset first: the
+    # toggle above created or destroyed a row, and a preloaded collection
+    # would re-render it stale.
+    boosts.reset
+    ActiveRecord::Associations::Preloader.new(records: [ self ], associations: { boosts: :booster }).call
+    broadcast_replace_to conversation, :messages,
+      target: ActionView::RecordIdentifier.dom_id(self, :boosts),
+      partial: "messages/boosts/reactions", attributes: { maintain_scroll: true }
   end
 
   def broadcast_remove

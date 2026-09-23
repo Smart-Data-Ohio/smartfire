@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { silenceLiveRegion } from "helpers/live_region_helpers"
 import { nextEventLoopTick } from "helpers/timing_helpers"
 import ClientMessage from "models/client_message"
 import MessageFormatter, { ThreadStyle } from "models/message_formatter"
@@ -62,11 +63,11 @@ export default class extends Controller {
 
   async beforeStreamRender(event) {
     const target = event.detail.newStream.getAttribute("target")
+    const action = event.detail.newStream.getAttribute("action")
 
     if (target === this.messagesTarget.id) {
       const render = event.detail.render
       const upToDate = this.#paginator.upToDate
-      const action = event.detail.newStream.getAttribute("action")
       this.#syncAtLatestState()
 
       if (upToDate) {
@@ -78,12 +79,23 @@ export default class extends Controller {
             // have no server message ID and must still be replaced.
             if (action === "append" && this.#alreadyDelivered(streamElement)) return
 
-            await render(streamElement)
-            await nextEventLoopTick()
+            // A pending own message was already announced on insert; its
+            // delivered replacement renders quietly instead of announcing
+            // the same message a second time.
+            const restoreLiveRegion = action === "append" && this.#replacesPendingMessage(streamElement)
+              ? silenceLiveRegion(this.messagesTarget)
+              : null
 
-            this.#positionLastMessage()
-            this.#playSoundForLastMessage()
-            this.#paginator.trimExcessMessages(true)
+            try {
+              await render(streamElement)
+              await nextEventLoopTick()
+
+              this.#positionLastMessage()
+              this.#playSoundForLastMessage()
+              this.#paginator.trimExcessMessages(true)
+            } finally {
+              restoreLiveRegion?.()
+            }
           })
           if (!didScroll) {
             this.latestTarget.hidden = false
@@ -99,6 +111,8 @@ export default class extends Controller {
           event.detail.render = async () => {}
         }
       }
+    } else {
+      this.#silenceReplacementRender(event, action)
     }
   }
 
@@ -183,6 +197,40 @@ export default class extends Controller {
       const existing = document.getElementById(message.id)
       return existing?.parentElement === this.messagesTarget && existing.dataset.messageId === message.dataset.messageId
     })
+  }
+
+  // Turbo appends remove an existing child with the same id first, so the
+  // delivered copy of an own message replaces its pending node (same
+  // client-message id, but the pending node has no server message id yet).
+  #replacesPendingMessage(stream) {
+    const incomingIds = new Set(
+      Array.from(stream.templateContent?.children || [])
+        .filter(node => node.nodeType === Node.ELEMENT_NODE && node.id)
+        .map(node => node.id)
+    )
+    if (incomingIds.size === 0) return false
+    return Array.from(this.messagesTarget.children)
+      .some(child => incomingIds.has(child.id) && !child.dataset.messageId)
+  }
+
+  // Edits, deletes, and reaction updates replace nodes inside the log. They
+  // are not new messages, so they render quietly; only live appends reach
+  // the screen reader.
+  #silenceReplacementRender(event, action) {
+    if (action === "append" || action === "prepend") return
+    const target = event.detail.newStream.getAttribute("target")
+    const targetElement = target ? document.getElementById(target) : null
+    if (!targetElement || !this.messagesTarget.contains(targetElement)) return
+
+    const render = event.detail.render
+    event.detail.render = async streamElement => {
+      const restoreLiveRegion = silenceLiveRegion(this.messagesTarget)
+      try {
+        await render(streamElement)
+      } finally {
+        restoreLiveRegion()
+      }
+    }
   }
 
   async #ensureUpToDate() {

@@ -67,6 +67,17 @@ class Autocompletable::IconsControllerTest < ActionDispatch::IntegrationTest
     assert_not acme.key?("character")
   end
 
+  test "lists every workspace icon for the picker Custom tab" do
+    create_workspace_icon(name: "acme", title: "Acme Corp")
+    create_workspace_icon(name: "globex", title: "Globex")
+
+    get autocompletable_icons_url(format: :json), params: { custom: "1" }
+
+    assert_response :success
+    assert_equal [ "acme", "globex" ], response.parsed_body.map { _1["name"] }
+    assert_equal [ "/icons/acme", "/icons/globex" ], response.parsed_body.map { _1["image"] }
+  end
+
   private
     def sign_out
       delete session_url
