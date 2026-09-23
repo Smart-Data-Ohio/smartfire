@@ -450,7 +450,8 @@ class MessageListA11yTest < ApplicationSystemTestCase
 
     visit user_profile_url
     fill_in "user_bio", with: "Reduced motion flash check"
-    click_button "Save changes"
+    # The profile page has several forms; save the one holding the bio.
+    find_field("user_bio").ancestor("form").click_button "Save changes"
 
     assert_selector ".flash", wait: 10
     duration = page.evaluate_script("document.querySelector('.flash__inner').getAnimations().map(animation => animation.effect.getTiming().duration)")
@@ -474,7 +475,8 @@ class MessageListA11yTest < ApplicationSystemTestCase
 
     visit user_profile_url
     fill_in "user_bio", with: "Reduced motion dismiss check"
-    click_button "Save changes"
+    # The profile page has several forms; save the one holding the bio.
+    find_field("user_bio").ancestor("form").click_button "Save changes"
 
     assert_selector ".flash", wait: 10
     find(".flash__dismiss").click
