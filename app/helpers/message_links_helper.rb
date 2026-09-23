@@ -33,13 +33,28 @@ module MessageLinksHelper
   # legacy body edit rewrites only the rich-text row, leaving the source
   # row untouched. Reads the preloaded association on message pages.
   def message_quote_stamp(message)
-    references = if message.association(:message_references).loaded?
-      message.message_references
-    else
-      message.message_references.to_a
-    end
-
-    references.filter_map(&:referenced_message)
-      .flat_map { |source| [ source.updated_at, source.edited_at ] }.compact.max
+    quoted_sources(message).flat_map { |source| [ source.updated_at, source.edited_at ] }.compact.max
   end
+
+  # The names a message's quote cards show, for the fragment cache key.
+  # Renames touch neither the quoting message nor the quoted source, so
+  # without this a cached card would keep the old author or room label
+  # indefinitely. A digest rather than updated_at maxima: rooms touch
+  # on every post, which would bust every quoting fragment constantly.
+  # Reads the preloaded associations on message pages.
+  def message_quote_names_digest(message)
+    names = quoted_sources(message).map { |source| [ source.creator.name, source.room.name ] }
+    Digest::SHA256.hexdigest(names.sort.inspect) if names.any?
+  end
+
+  private
+    def quoted_sources(message)
+      references = if message.association(:message_references).loaded?
+        message.message_references
+      else
+        message.message_references.to_a
+      end
+
+      references.filter_map(&:referenced_message)
+    end
 end

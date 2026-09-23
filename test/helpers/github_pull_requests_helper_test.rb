@@ -33,7 +33,7 @@ class GithubPullRequestsHelperTest < ActionView::TestCase
   end
 
   test "cache key for a message without pull requests is just the message" do
-    assert_equal [ messages(:first), nil, nil, false, nil ], message_with_pr_cards_cache_key(messages(:first))
+    assert_equal [ messages(:first), nil, nil, false, nil, nil ], message_with_pr_cards_cache_key(messages(:first))
   end
 
   test "cache key changes when a quoted source is edited" do
@@ -48,6 +48,37 @@ class GithubPullRequestsHelperTest < ActionView::TestCase
     before = message_with_pr_cards_cache_key(quote)
     travel 1.minute do
       source.update!(body: "key source words, revised")
+    end
+
+    assert_not_equal before, message_with_pr_cards_cache_key(Message.with_rendering_details.find(quote.id))
+  end
+
+  test "cache key changes when a quoted source's author is renamed" do
+    room = rooms(:designers)
+    author = users(:david)
+    source = room.messages.create!(body: "rename source words", client_message_id: "key-rename-source", creator: author)
+    quote = room.messages.create!(
+      markdown_source: "quoting /rooms/#{room.id}/@#{source.id}",
+      client_message_id: "key-rename-quote", creator: users(:jz)
+    )
+    before = message_with_pr_cards_cache_key(Message.with_rendering_details.find(quote.id))
+
+    author.update!(name: "David Renamed")
+
+    assert_not_equal before, message_with_pr_cards_cache_key(Message.with_rendering_details.find(quote.id))
+  end
+
+  test "cache key changes when a quoted source's room is renamed" do
+    room = Rooms::Closed.create_for({ name: "Renameable", creator: users(:david) }, users: [ users(:david) ])
+    source = room.messages.create!(body: "room rename source words", client_message_id: "key-room-rename-source", creator: users(:david))
+    quote = room.messages.create!(
+      markdown_source: "quoting /rooms/#{room.id}/@#{source.id}",
+      client_message_id: "key-room-rename-quote", creator: users(:david)
+    )
+    before = message_with_pr_cards_cache_key(Message.with_rendering_details.find(quote.id))
+
+    travel 1.minute do
+      room.update!(name: "Renamed Room")
     end
 
     assert_not_equal before, message_with_pr_cards_cache_key(Message.with_rendering_details.find(quote.id))
