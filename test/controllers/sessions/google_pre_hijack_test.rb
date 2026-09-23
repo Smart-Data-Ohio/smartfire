@@ -73,6 +73,7 @@ class Sessions::GooglePreHijackTest < ActionDispatch::IntegrationTest
     state = start_google_sign_in
     complete_google_sign_in(state:, email: "alice@smartdata.net", hd: "smartdata.net", sub: "google-sub-alice")
     user = User.find_by!(email_address: "alice@smartdata.net")
+    satisfy_two_factor!(user)
 
     # No password to confirm: the change is allowed but recorded.
     put user_profile_url, params: { user: { email_address: "alice.new@smartdata.net" } }

@@ -1,7 +1,8 @@
 # The sudo prompt: confirms the signed-in member's identity before a
-# sensitive action continues. Password by default, Google re-auth for
-# members with a linked Google identity (Google-only members have no
-# password), and a TOTP hook the w4-two-factor branch fills in.
+# sensitive action continues. Password by default, a TOTP code as an
+# alternative for members with two-step sign-in enrolled, and Google
+# re-auth for members with a linked Google identity (Google-only
+# members have no password).
 class SudosController < ApplicationController
   include GoogleSignInFlow
 

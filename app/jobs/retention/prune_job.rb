@@ -14,6 +14,7 @@ class Retention::PruneJob < ApplicationJob
 
   def perform
     AgentEvent.where(created_at: ...AGENT_EVENTS_RETENTION.ago).in_batches.delete_all
+    prune_expired_two_factor_rows
     prune_activity_items
     Github::WebhookDelivery.where(created_at: ...WEBHOOK_DELIVERIES_RETENTION.ago).in_batches.delete_all
     HuddleCleanup.where.not(completed_at: nil).where(completed_at: ...CLEANUPS_RETENTION.ago).in_batches.delete_all
@@ -25,6 +26,14 @@ class Retention::PruneJob < ApplicationJob
   end
 
   private
+    # Expired remember-device cookies are already useless (find_valid
+    # rejects them) and expired setup secrets already unreadable
+    # (valid_for returns nil): the rows are just garbage to collect.
+    def prune_expired_two_factor_rows
+      TwoFactorRememberedDevice.where(expires_at: ..Time.current).in_batches.delete_all
+      TwoFactorSetupSecret.where(expires_at: ..Time.current).in_batches.delete_all
+    end
+
     # Only items the user has seen (read or handled — handling always marks
     # read too). Unread items are never pruned, however old: they are
     # notifications the user has not seen yet. updated_at — not created_at —

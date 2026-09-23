@@ -464,6 +464,30 @@ class Google::DriveFilesControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ "error" => "drive_unavailable" }, response.parsed_body)
   end
 
+  test "index rejects an unenrolled session instead of listing files" do
+    connect_google!(@david, scopes: DRIVE_SCOPES)
+    list_stub = stub_google_drive_list
+    delete session_url
+    post session_url, params: { email_address: @david.email_address, password: "secret123456" }
+
+    get google_drive_files_path, headers: { "Accept" => "application/json" }
+
+    assert_response :forbidden
+    assert_not_requested list_stub
+  end
+
+  test "index terminates a stale enrolled session" do
+    delete session_url
+    post session_url, params: { email_address: @david.email_address, password: "secret123456" }
+    token = parsed_cookies.signed[:session_token]
+    enroll_two_factor!(@david)
+
+    get google_drive_files_path, headers: { "Accept" => "application/json" }
+
+    assert_response :unauthorized
+    assert_nil Session.find_by(token: token)
+  end
+
   private
     # The test environment uses :null_store; swap in a memory store so cache
     # behavior is exercisable.

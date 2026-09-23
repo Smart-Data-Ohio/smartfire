@@ -33,6 +33,9 @@ module Sessions
       if valid_flow?(flow, verified_state) && flow["purpose"] == "link"
         return finish_link(flow)
       end
+      if valid_flow?(flow, verified_state) && flow["purpose"] == "reauth"
+        return finish_reauth(flow)
+      end
       if valid_flow?(flow, verified_state) && flow["purpose"] == "sudo"
         return finish_sudo(flow)
       end
@@ -61,18 +64,18 @@ module Sessions
       # Keep eligibility, identity linking, and session insertion together:
       # deactivation/ban must either win before this check or revoke the new
       # session afterwards. All network verification stays outside the lock.
+      # Enrolled users get no session here: begin_session_for leaves them
+      # pending for the challenge instead.
       User.transaction do
         user = Google::SignIn::AccountLinker.resolve!(claims)
-        start_new_session_for user
-        AuditLog.record!(action: "session.sign_in.success", actor: user, changes: { method: "google" })
         if user.previously_new_record?
           AuditLog.record!(action: "user.create", actor: user, target: user, changes: { method: "google" })
         elsif user.google_identity&.previously_new_record?
           AuditLog.record!(action: "google.sign_in.link", actor: user, target: user,
             changes: { email: claims["email"] })
         end
+        begin_session_for user, method: "google", return_url: safe_post_authenticating_url
       end
-      redirect_to safe_post_authenticating_url
     rescue Google::SignIn::Unavailable
       redirect_to new_session_url, alert: "Google sign-in is unavailable right now. Try again or sign in with email and password."
     rescue Google::SignIn::Rejected => error
@@ -128,13 +131,43 @@ module Sessions
         redirect_to user_profile_url, alert: link_rejection_alert(error.reason)
       end
 
+      # Finishes a signed-in member's "Confirm with Google" step-up: the
+      # verified subject must be the SAME Google account already linked to
+      # them, or any Google account could arm someone else's sensitive
+      # actions. Success arms a single-use re-authentication (see
+      # TwoFactorReauthentication) and lands back on the profile.
+      def finish_reauth(flow)
+        unless signed_in? && Current.user.id == flow["user_id"]
+          return redirect_to(signed_in? ? user_profile_url : new_session_url, alert: "Google confirmation expired. Try again.")
+        end
+
+        if params[:error].present? || params[:code].blank?
+          return redirect_to user_profile_url, alert: "Google confirmation was cancelled."
+        end
+
+        claims = verify_fresh_google_login!(flow)
+
+        unless claims["sub"].to_s.present? && claims["sub"].to_s == Current.user.google_identity&.subject
+          return redirect_to user_profile_url, alert: "That Google account is not linked here. Confirm with the Google account you sign in with."
+        end
+
+        session[TwoFactorReauthentication::REAUTH_SESSION_KEY] = Time.current.to_i
+        AuditLog.record!(action: "two_factor.reauthenticate", actor: Current.user, target: Current.user)
+
+        redirect_to user_profile_url, notice: "Confirmed with Google. Continue with what you were doing."
+      rescue Google::SignIn::Unavailable
+        redirect_to user_profile_url, alert: "Google is unavailable right now. Try again."
+      rescue Google::SignIn::Rejected => error
+        Rails.logger.warn "Google re-auth rejected: #{error.reason}"
+        redirect_to user_profile_url, alert: "Google confirmation failed. Try again."
+      end
+
       # Finishes a sudo-mode Google re-auth started from SudosController:
       # the member who started the flow proves the linked Google account
-      # is theirs with a fresh Google login (auth_time within
-      # SUDO_REAUTH_MAX_AGE; an older login or a missing auth_time is
-      # refused), the verified subject must match their linked identity
-      # (any other Google account is rejected), and then the stashed sudo
-      # request continues. Nobody is signed in or out.
+      # is theirs with a fresh Google login, the verified subject must
+      # match their linked identity (any other Google account is
+      # rejected), and then the stashed sudo request continues. Nobody is
+      # signed in or out.
       def finish_sudo(flow)
         unless signed_in? && Current.user.id == flow["user_id"]
           return redirect_to(signed_in? ? user_profile_url : new_session_url, alert: "Confirmation expired. Try again.")
@@ -144,12 +177,7 @@ module Sessions
           return redirect_to new_sudo_url, alert: "Google confirmation was cancelled."
         end
 
-        id_token = Google::SignIn.exchange_code(
-          code: params[:code].to_s, redirect_uri: session_google_callback_url, verifier: flow["verifier"]
-        )
-        claims = Google::SignIn::IdTokenVerifier.verify!(
-          id_token, nonce: flow["nonce"], max_auth_age: Google::SignIn::SUDO_REAUTH_MAX_AGE
-        )
+        claims = verify_fresh_google_login!(flow)
 
         unless claims["sub"].present? && claims["sub"] == Current.user.google_identity&.subject
           AuditLog.record!(action: "sudo.confirm.failure", changes: { verifier: "google", reason: "subject_mismatch" })
@@ -164,6 +192,19 @@ module Sessions
       rescue Google::SignIn::Rejected => error
         Rails.logger.warn "Google sudo confirmation rejected: #{error.reason}"
         redirect_to new_sudo_url, alert: "Google confirmation failed. Try again."
+      end
+
+      # Shared step-up verification for the "reauth" and "sudo" flows:
+      # trades the callback code for an id_token and requires a fresh
+      # Google login (auth_time within FRESH_LOGIN_MAX_AUTH_AGE; an
+      # older login or a missing auth_time is refused).
+      def verify_fresh_google_login!(flow)
+        id_token = Google::SignIn.exchange_code(
+          code: params[:code].to_s, redirect_uri: session_google_callback_url, verifier: flow["verifier"]
+        )
+        Google::SignIn::IdTokenVerifier.verify!(
+          id_token, nonce: flow["nonce"], max_auth_age: Google::SignIn::FRESH_LOGIN_MAX_AUTH_AGE
+        )
       end
 
       def link_rejection_alert(reason)

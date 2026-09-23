@@ -26,6 +26,8 @@ module ActivityItemsHelper
       source.agent&.user ? edit_account_bot_path(source.agent.user) : activity_items_path
     when ScheduledMessage
       scheduled_messages_path
+    when TwoFactorCredential
+      user_profile_path
     when Session
       user_sessions_path
     else
@@ -71,6 +73,8 @@ module ActivityItemsHelper
       "Reminder"
     when "scheduled_message_dropped"
       "Scheduled message not sent"
+    when "two_factor_lockout"
+      "Sign-in lockout"
     when "new_sign_in"
       "New sign-in"
     else
@@ -109,6 +113,8 @@ module ActivityItemsHelper
     when ScheduledMessage
       room = source.room
       room ? room_display_name(room) : "Unavailable room"
+    when TwoFactorCredential
+      "Two-step sign-in"
     when Session
       "Account security"
     else
@@ -165,6 +171,8 @@ module ActivityItemsHelper
       else
         "You no longer have access to this room, so your scheduled message was not sent: #{source.markdown_source}"
       end
+    when TwoFactorCredential
+      "Several wrong sign-in codes were entered for your account."
     when Session
       # Absolute time, like event items: this helper also runs in the
       # controller for the JSON payload, where view date helpers are

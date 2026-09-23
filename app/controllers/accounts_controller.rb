@@ -3,7 +3,7 @@ class AccountsController < ApplicationController
   before_action :set_account
 
   def edit
-    users = account_users.ordered.without_bots.includes(:google_identity)
+    users = account_users.ordered.without_bots.includes(:google_identity, :two_factor_credential)
     @administrators, @members = users.partition(&:administrator?)
     set_page_and_extract_portion_from users, per_page: 500
   end

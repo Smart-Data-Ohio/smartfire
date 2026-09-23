@@ -1,0 +1,35 @@
+<% @page_title = "Set up two-step sign-in" %>
+
+<section class="txt-align-center">
+  <div class="panel <%= "shake" if flash[:alert] %> flex flex-column gap">
+    <h1 class="margin-none">Set up two-step sign-in</h1>
+    <p class="margin-none">Everyone signs in with an authenticator app, on top of their password or Google sign-in.</p>
+
+    <ol class="txt-align-start flex flex-column gap">
+      <li>Open your authenticator app (Google Authenticator, 1Password, or Authy) and add an account.</li>
+      <li>
+        Scan this code:
+        <div class="center pad-block" style="max-width: 240px;"><%= two_factor_qr_code(@provisioning_uri) %></div>
+        <span class="txt-small">Can't scan? Enter this key manually:</span>
+        <div><code class="txt-medium" id="two_factor_manual_key"><%= @credential.formatted_secret %></code></div>
+      </li>
+      <li>Enter the 6-digit code from the app:</li>
+    </ol>
+
+    <%# A full-page post: the success response renders the one-time backup codes
+        with a plain 200, which Turbo Drive fetch submissions never apply. %>
+    <%= form_with url: two_factor_setup_path, class: "flex flex-column gap center", data: { turbo: false } do |form| %>
+      <label class="flex align-center gap input input--actor txt-large">
+        <%= form.text_field :code, required: true, class: "input center", autofocus: true, autocomplete: "one-time-code",
+              inputmode: "numeric", pattern: "[0-9 ]*", maxlength: 10, placeholder: "123 456", aria: { label: "Authenticator code" } %>
+      </label>
+
+      <%= form.button class: "btn btn--reversed center txt-large", type: "submit" do %>
+        <%= image_tag "arrow-right.svg", aria: { hidden: "true" } %>
+        <span>Verify and continue</span>
+      <% end %>
+    <% end %>
+
+    <%= button_to "Sign out", session_path, method: :delete, class: "btn center", form_class: "center" %>
+  </div>
+</section>

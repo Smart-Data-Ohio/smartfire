@@ -1,0 +1,6 @@
+<%# Step-up credential for sensitive two-factor self-service: the current
+    TOTP code or the account password. %>
+<% compact = local_assigns.fetch(:compact, false) %>
+<%= form.password_field :reauth, class: "input txt-small", autocomplete: "off",
+      placeholder: (compact ? "Code or password" : "Authenticator code or password"),
+      aria: { label: (compact ? "Code or password" : "Authenticator code or password") } %>

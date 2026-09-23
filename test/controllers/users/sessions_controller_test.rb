@@ -41,6 +41,7 @@ class Users::SessionsControllerTest < ActionDispatch::IntegrationTest
   test "destroy signs out another session immediately and audit-logs it" do
     other_browser = open_session
     other_browser.post session_url, params: { email_address: "kevin@37signals.com", password: "secret123456" }
+    satisfy_two_factor!(users(:kevin))
     other_browser.get user_profile_url
     other_browser.assert_response :success
     other_session = users(:kevin).sessions.order(:id).last

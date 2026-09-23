@@ -1,0 +1,10 @@
+/* The base reset strips every input to appearance: none, so the
+   remember-device checkbox opts back into a native, theme-tinted box. */
+.two-factor-remember input[type="checkbox"] {
+  accent-color: var(--color-text);
+  appearance: auto;
+  block-size: 1.1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  inline-size: 1.1rem;
+}

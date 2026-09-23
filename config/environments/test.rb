@@ -61,4 +61,12 @@ Rails.application.configure do
 
   # Load test helpers
   config.autoload_paths += %w[ test/test_helpers ]
+
+  # Rails drops Secure cookies on plain-http responses, which would make
+  # the two-factor remember cookie untestable: the suite serves http.
+  # Write them anyway here so server and browser tests exercise the real
+  # cookie (production serves https, where it is always written).
+  config.after_initialize do
+    ActionDispatch::Cookies::CookieJar.always_write_cookie = true
+  end
 end

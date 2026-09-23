@@ -1,0 +1,63 @@
+<fieldset>
+  <legend class="gap">
+    <%= image_tag "key.svg", aria: { hidden: "true" }, size: 36, class: "colorize--black" %>
+  </legend>
+
+  <div class="flex flex-column gap">
+    <h2 class="margin-none txt-large">Two-step sign-in</h2>
+
+    <% if (credential = user.two_factor_credential)&.enabled? %>
+      <p class="txt-medium margin-none">On since <%= credential.confirmed_at.to_date.to_fs(:long) %>. Signing in asks for your authenticator code.</p>
+
+      <p class="txt-small txt-subtle margin-none">New codes, disabling, and revoking ask for your authenticator code or password first.</p>
+
+      <div class="flex flex-column gap">
+        <%# Full-page post like setup: the response renders the one-time codes
+            with a plain 200. %>
+        <%= form_with url: two_factor_backup_codes_path, method: :post, data: { turbo: false },
+              html: { id: "new_backup_codes", class: "flex align-center gap" } do |form| %>
+          <%= render "two_factor/reauth_field", form: form %>
+          <%= form.submit "New backup codes", class: "btn txt-small" %>
+        <% end %>
+        <%= form_with url: two_factor_setup_path, method: :delete,
+              html: { id: "disable_two_factor", class: "flex align-center gap" } do |form| %>
+          <%= render "two_factor/reauth_field", form: form %>
+          <%= form.submit "Disable", class: "btn btn--negative txt-small" %>
+        <% end %>
+        <% if Google::SignIn.configured? && user.google_identity.present? %>
+          <%= button_to "Confirm with Google", two_factor_reauthentication_path, method: :post,
+                class: "btn txt-small", form: { data: { turbo: false } } %>
+        <% end %>
+      </div>
+
+      <h3 class="margin-none txt-medium">Remembered devices</h3>
+      <% if @two_factor_devices.any? %>
+        <menu id="two_factor_devices" class="flex flex-column gap margin-none pad-none">
+          <% @two_factor_devices.each do |device| %>
+            <li class="flex align-center gap margin-none" id="<%= dom_id(device) %>">
+              <div class="min-width flex-item-grow txt-small">
+                <div class="overflow-ellipsis"><strong><%= device.user_agent.presence || "Unknown browser" %></strong></div>
+                <div class="txt-subtle"><%= [ device.ip_address, ("last used #{time_ago_in_words(device.last_used_at)} ago" if device.last_used_at) ].compact.join(" · ") %></div>
+              </div>
+              <%= form_with url: two_factor_remembered_device_path(device), method: :delete,
+                    html: { class: "flex align-center gap flex-item-no-shrink" } do |form| %>
+                <%= render "two_factor/reauth_field", form: form, compact: true %>
+                <%= form.submit "Revoke", class: "btn btn--negative txt-small flex-item-no-shrink" %>
+              <% end %>
+            </li>
+          <% end %>
+        </menu>
+        <%= form_with url: two_factor_remembered_devices_path, method: :delete,
+              html: { id: "revoke_all_devices", class: "flex align-center gap" } do |form| %>
+          <%= render "two_factor/reauth_field", form: form %>
+          <%= form.submit "Revoke all", class: "btn btn--negative txt-small" %>
+        <% end %>
+      <% else %>
+        <p class="txt-small margin-none">No remembered devices. Tick "Remember this device" when signing in to skip the code on this browser for 30 days.</p>
+      <% end %>
+    <% else %>
+      <p class="txt-medium margin-none">Not set up yet.</p>
+      <%= link_to "Set up two-step sign-in", two_factor_setup_path, class: "btn btn--reversed" %>
+    <% end %>
+  </div>
+</fieldset>

@@ -23,4 +23,15 @@ class ActivityItemsHelperTest < ActionView::TestCase
 
     assert_equal "Starts in 15 minutes: Launch party planning.", activity_item_event_body(item)
   end
+
+  test "lockout item names the alert and links the profile" do
+    credential = TwoFactorCredential.create!(user: users(:david),
+      secret: TwoFactorCredential.generate_secret, confirmed_at: Time.current)
+    item = ActivityItem.new(user: users(:david), source: credential, event_type: "two_factor_lockout")
+
+    assert_equal "Sign-in lockout", activity_item_event_label(item)
+    assert_equal "Several wrong sign-in codes were entered for your account.", activity_item_source_body(item)
+    assert_equal "Two-step sign-in", activity_item_source_label(item)
+    assert_equal user_profile_path, activity_item_source_path(item)
+  end
 end

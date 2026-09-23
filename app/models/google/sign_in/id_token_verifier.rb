@@ -9,7 +9,7 @@ module Google
     # email_from_id_token, which must never serve as sign-in identity.
     class IdTokenVerifier
       class << self
-        # max_auth_age (a duration, sudo re-auth only) additionally
+        # max_auth_age (a duration, step-up re-auth only) additionally
         # requires the id_token's auth_time -- when Google last
         # authenticated the user -- to be that recent. Absent or stale,
         # the confirmation is refused.

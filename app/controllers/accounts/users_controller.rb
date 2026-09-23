@@ -3,7 +3,7 @@ class Accounts::UsersController < ApplicationController
   before_action :require_sudo_mode, only: %i[ update destroy ]
 
   def index
-    set_page_and_extract_portion_from User.active.ordered.without_bots.includes(:google_identity), per_page: 500
+    set_page_and_extract_portion_from User.active.ordered.without_bots.includes(:google_identity, :two_factor_credential), per_page: 500
   end
 
   def update

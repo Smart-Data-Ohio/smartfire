@@ -4,6 +4,9 @@ class ApplicationController < ActionController::Base
   # multi-module include registers callbacks in reverse include order,
   # which would run the zone hook before Current.user is set.
   include SetTimeZone
+  # Separate include for the same reason: enforcement must run after
+  # Authentication has restored the session and Current.user.
+  include TwoFactorEnforcement
   include Turbo::Streams::Broadcasts, Turbo::Streams::StreamName
   include MessagePayloadHelper
 

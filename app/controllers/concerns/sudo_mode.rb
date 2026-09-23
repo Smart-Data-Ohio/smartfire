@@ -16,11 +16,10 @@
 # - :password for members with a password;
 # - :google re-auth for members with a linked Google identity
 #   (Google-only members have no password to check);
-# - :totp once the w4-two-factor branch lands: it calls
-#   SudoMode.register_verifier(:totp) from an initializer, reopens
-#   SudoMode.verify_totp to check the code, reopens
-#   SudoMode.verifier_available? to gate on enrollment, and adds the
-#   form partial referenced from sudos/new.
+# - :totp for members with two-step sign-in enrolled (password OR
+#   code), wired by config/initializers/sudo_mode_totp.rb.
+# Extra verifiers register with SudoMode.register_verifier and
+# implement verify_<name> plus verifier_available?.
 module SudoMode
   extend ActiveSupport::Concern
 
@@ -60,14 +59,15 @@ module SudoMode
       user.password_digest.present? && user.authenticate(password.to_s).present?
     end
 
-    # Hook point for w4-two-factor (see above): reopens to check the
-    # TOTP code against the member's enrolled secret.
+    # Default before the two-step sign-in initializer overrides it
+    # (see config/initializers/sudo_mode_totp.rb): on its own the app
+    # has no TOTP secret to check the code against.
     def verify_totp(user, code)
       :unsupported
     end
 
-    # Hook point for w4-two-factor: reopens so :totp is offered only to
-    # members with two-step sign-in enrolled.
+    # Default before the two-step sign-in initializer overrides it:
+    # no extra verifier is offered to anyone.
     def verifier_available?(name, user)
       false
     end

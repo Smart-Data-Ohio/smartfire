@@ -16,6 +16,14 @@ class AuditLog < ApplicationRecord
   ACTIONS = %w[
     session.sign_in.success
     session.sign_in.failure
+    sign_in.two_factor.failure
+    sign_in.two_factor.lockout
+    two_factor.enable
+    two_factor.disable
+    two_factor.reset
+    two_factor.backup_codes.regenerate
+    two_factor.reauthenticate
+    two_factor.devices.revoke_all
     session.revoke
     session.revoke_others
     sudo.confirm.success

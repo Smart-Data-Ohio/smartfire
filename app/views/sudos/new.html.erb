@@ -25,12 +25,13 @@
       <% end %>
     <% end %>
 
+    <% if @verifiers.include?(:totp) %>
+      <%= render "totp_form" %>
+    <% end %>
+
     <% if @verifiers.include?(:google) %>
       <%= button_to "Confirm with Google", sudo_google_path, method: :post,
             form: { data: { turbo: false } }, class: "btn center margin-block-start" %>
     <% end %>
-
-    <%# w4-two-factor renders its TOTP form here when :totp is registered
-        (see SudoMode.register_verifier and docs/security.md#sudo-mode). %>
   </div>
 </section>
