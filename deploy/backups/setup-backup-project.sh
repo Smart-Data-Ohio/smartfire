@@ -17,18 +17,23 @@
 #   2. in the APP project: smartfire-backup-runner, the identity the nightly
 #      workflow impersonates. It holds roles/storage.objectCreator on the
 #      backup bucket (a cross-project binding on the bucket itself: create
-#      objects, but neither read, delete nor overwrite them) and, ON THE
-#      campfire VM ONLY, the IAP-tunnel and SSH roles it needs to run the
-#      backup script: roles/iap.tunnelResourceAccessor,
-#      roles/compute.osAdminLogin (OS Login with sudo, as root must run the
-#      backup) and roles/compute.viewer (so ssh/scp can resolve the VM;
-#      read-only metadata, no deploy rights). A Workload Identity pool/
-#      provider in the app project trusts the nightly workflow's
-#      ID-qualified subject for refs/heads/main, the same form the restore
-#      check uses;
-#   3. in the backup project: smartfire-backup-reader + a Workload Identity
-#      pool/provider so the monthly restore-check workflow can read (never
-#      write or delete). The impersonation binding pins the exact
+#      objects, but neither read, delete nor overwrite them) and the SAME
+#      project-level roles the deployer holds in the app project:
+#      roles/iap.tunnelResourceAccessor, roles/compute.osAdminLogin and
+#      roles/compute.viewer. IAP tunnel access is not granted through
+#      instance IAM, so these are project bindings, not VM bindings.
+#      osAdminLogin gives root on the VMs in the project, the same as the
+#      deployer; the runner needs it because prepare-backup runs via docker
+#      as root. Both workflows authenticate through the app project's
+#      existing Workload Identity pool/provider (github/github-oidc, the
+#      same one the deploy workflow uses), trusting the nightly workflow's
+#      ID-qualified subject for refs/heads/main;
+#   3. in the backup project: smartfire-backup-reader, so the monthly
+#      restore-check workflow can read (never write or delete). Its
+#      impersonation binding uses a principal from the APP project's pool:
+#      a principal from one project can be granted
+#      roles/iam.workloadIdentityUser on a service account in another, so
+#      no pool is needed in the backup project. The binding pins the exact
 #      ID-qualified subject GitHub mints for this repository's main branch,
 #      matching the deployer's bindings (see deploy/gcp/README.md#authentication);
 #   4. the nightly boot-disk snapshot schedule on the app VM (delegated to
@@ -48,9 +53,11 @@
 #                     project (default smartfire-backup-runner).
 # BACKUP_READER_SA    reader SA short name, created in the backup project
 #                     (default smartfire-backup-reader).
-# BACKUP_WIF_POOL     Workload Identity pool id, created in each project
-#                     (default smartfire-backup-pool).
-# BACKUP_WIF_PROVIDER pool provider id (default github-actions).
+# BACKUP_WIF_POOL     Workload Identity pool id in the APP project, reused
+#                     for both identities (default github: the existing pool
+#                     the deploy workflow uses; created only when missing,
+#                     never a second pool).
+# BACKUP_WIF_PROVIDER pool provider id (default github-oidc, likewise).
 # GITHUB_REPO         owner/repo allowed to impersonate the SAs
 #                     (default Smart-Data-Ohio/smartfire).
 # GITHUB_OWNER_ID     numeric GitHub id of the owner, for the ID-qualified
@@ -78,8 +85,8 @@ BACKUP_BUCKET="${BACKUP_BUCKET:-}"
 BACKUP_LOCATION="${BACKUP_LOCATION:-US}"
 BACKUP_RUNNER_SA="${BACKUP_RUNNER_SA:-smartfire-backup-runner}"
 BACKUP_READER_SA="${BACKUP_READER_SA:-smartfire-backup-reader}"
-BACKUP_WIF_POOL="${BACKUP_WIF_POOL:-smartfire-backup-pool}"
-BACKUP_WIF_PROVIDER="${BACKUP_WIF_PROVIDER:-github-actions}"
+BACKUP_WIF_POOL="${BACKUP_WIF_POOL:-github}"
+BACKUP_WIF_PROVIDER="${BACKUP_WIF_PROVIDER:-github-oidc}"
 GITHUB_REPO="${GITHUB_REPO:-Smart-Data-Ohio/smartfire}"
 GITHUB_OWNER_ID="${GITHUB_OWNER_ID:-262436228}"
 GITHUB_REPO_ID="${GITHUB_REPO_ID:-1370426325}"
@@ -200,40 +207,43 @@ ensure_wif_pool() {
 # is the inner one. Dispatch the workflows by hand from main: a run from any
 # other ref mints a different subject and is denied.
 #
+# The principal always comes from the APP project's pool, even for the
+# reader SA that lives in the backup project: a principal from one project
+# can be granted roles/iam.workloadIdentityUser on a service account in
+# another, so the backup project needs no pool of its own.
+#
 # Sets WIF_PROVIDER_RESULT to the full provider resource name (a global,
 # because log lines share stdout and cannot be captured apart).
 WIF_PROVIDER_RESULT=""
 allow_github_subject() {
-  local email="$1" project="$2"
+  local email="$1" sa_project="$2" wif_project="$3"
   local number provider principal subject
-  number="$(gcloud projects describe "$project" --format='value(projectNumber)')"
+  number="$(gcloud projects describe "$wif_project" --format='value(projectNumber)')"
   provider="projects/${number}/locations/global/workloadIdentityPools/${BACKUP_WIF_POOL}/providers/${BACKUP_WIF_PROVIDER}"
   subject="repo:${GITHUB_REPO%%/*}@${GITHUB_OWNER_ID}/${GITHUB_REPO##*/}@${GITHUB_REPO_ID}:ref:${GITHUB_REF}"
   principal="principal://iam.googleapis.com/projects/${number}/locations/global/workloadIdentityPools/${BACKUP_WIF_POOL}/subject/${subject}"
-  if gcloud iam service-accounts get-iam-policy "$email" --project="$project" --format=json \
+  if gcloud iam service-accounts get-iam-policy "$email" --project="$sa_project" --format=json \
       | jq -e --arg m "$principal" \
         '.bindings[] | select(.role == "roles/iam.workloadIdentityUser") | .members[] | select(. == $m)' >/dev/null 2>&1; then
     log "$subject may already impersonate $email"
   else
     log "allowing $subject to impersonate $email"
     gcloud iam service-accounts add-iam-policy-binding "$email" \
-      --project="$project" \
+      --project="$sa_project" \
       --member="$principal" --role="roles/iam.workloadIdentityUser"
   fi
   WIF_PROVIDER_RESULT="$provider"
 }
 
-ensure_instance_binding() {
-  local role="$1" member="$2"
-  if gcloud compute instances get-iam-policy "$APP_INSTANCE" \
-      --project="$APP_PROJECT_ID" --zone="$APP_ZONE" --format=json \
+ensure_project_binding() {
+  local project="$1" role="$2" member="$3"
+  if gcloud projects get-iam-policy "$project" --format=json \
       | jq -e --arg m "$member" --arg r "$role" \
         '.bindings[] | select(.role == $r) | .members[] | select(. == $m)' >/dev/null 2>&1; then
-    log "$member already holds $role on $APP_INSTANCE"
+    log "$member already holds $role on project $project"
   else
-    log "granting $role on $APP_INSTANCE to $member"
-    gcloud compute instances add-iam-policy-binding "$APP_INSTANCE" \
-      --project="$APP_PROJECT_ID" --zone="$APP_ZONE" \
+    log "granting $role on project $project to $member"
+    gcloud projects add-iam-policy-binding "$project" \
       --member="$member" --role="$role"
   fi
 }
@@ -243,7 +253,7 @@ ensure_instance_binding() {
 # on the VM over IAP SSH and uploads the encrypted archive. It deliberately
 # holds no snapshot, deploy or Artifact Registry rights.
 ensure_service_account "$BACKUP_RUNNER_SA" "$APP_PROJECT_ID" \
-  "Smartfire nightly backup runner (create-only upload, VM-scoped SSH); see docs/backups.md" \
+  "Smartfire nightly backup runner (create-only upload, same VM access as the deployer); see docs/backups.md" \
   "Smartfire backup runner"
 
 # The runner holds ONLY roles/storage.objectCreator on this bucket: it can
@@ -260,17 +270,24 @@ else
     --member="serviceAccount:$RUNNER_EMAIL" --role="roles/storage.objectCreator"
 fi
 
-# IAP tunnel + SSH, on the campfire VM only: the same shape the deployer
-# uses to reach the VM, and no deploy rights.
-ensure_instance_binding "roles/iap.tunnelResourceAccessor" "serviceAccount:$RUNNER_EMAIL"
-ensure_instance_binding "roles/compute.osAdminLogin" "serviceAccount:$RUNNER_EMAIL"
-ensure_instance_binding "roles/compute.viewer" "serviceAccount:$RUNNER_EMAIL"
+# IAP tunnel + SSH as project-level bindings: the same three roles the
+# deployer holds in the app project. IAP tunnel access is not granted
+# through instance IAM, so VM-scoped bindings would not work. osAdminLogin
+# gives root on the VMs in the project, the same as the deployer; the
+# runner needs it because prepare-backup runs via docker as root.
+ensure_project_binding "$APP_PROJECT_ID" "roles/iap.tunnelResourceAccessor" "serviceAccount:$RUNNER_EMAIL"
+ensure_project_binding "$APP_PROJECT_ID" "roles/compute.osAdminLogin" "serviceAccount:$RUNNER_EMAIL"
+ensure_project_binding "$APP_PROJECT_ID" "roles/compute.viewer" "serviceAccount:$RUNNER_EMAIL"
 
+# The app project's existing pool, shared with the deploy workflow; created
+# only when missing. Both identities below bind subjects from this pool.
 ensure_wif_pool "$APP_PROJECT_ID"
-allow_github_subject "$RUNNER_EMAIL" "$APP_PROJECT_ID"
+allow_github_subject "$RUNNER_EMAIL" "$APP_PROJECT_ID" "$APP_PROJECT_ID"
 RUNNER_WIF_PROVIDER="$WIF_PROVIDER_RESULT"
 
 # --- 3. the reader identity for the monthly restore check --------------------
+# Lives in the backup project, but its Workload Identity binding comes from
+# the app project's pool (see allow_github_subject): no pool is created here.
 ensure_service_account "$BACKUP_READER_SA" "$BACKUP_PROJECT_ID" \
   "Smartfire monthly restore check (read-only); see docs/backups.md" \
   "Smartfire backup reader"
@@ -286,8 +303,7 @@ else
     --member="serviceAccount:$READER_EMAIL" --role="roles/storage.objectViewer"
 fi
 
-ensure_wif_pool "$BACKUP_PROJECT_ID"
-allow_github_subject "$READER_EMAIL" "$BACKUP_PROJECT_ID"
+allow_github_subject "$READER_EMAIL" "$BACKUP_PROJECT_ID" "$APP_PROJECT_ID"
 READER_WIF_PROVIDER="$WIF_PROVIDER_RESULT"
 
 GITHUB_SUBJECT="repo:${GITHUB_REPO%%/*}@${GITHUB_OWNER_ID}/${GITHUB_REPO##*/}@${GITHUB_REPO_ID}:ref:${GITHUB_REF}"

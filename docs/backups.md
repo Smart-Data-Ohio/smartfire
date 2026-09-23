@@ -102,7 +102,7 @@ the US multi-region, so it survives the loss of the app region too.
 
 | Account | Granted | Used by |
 | --- | --- | --- |
-| `smartfire-backup-runner@smart-data-campfire` (in the app project) | `roles/storage.objectCreator` only on the backup bucket (cross-project, bucket-level), plus IAP-tunnel and SSH roles **on the campfire VM only** (`roles/iap.tunnelResourceAccessor`, `roles/compute.osAdminLogin`, `roles/compute.viewer`) | the nightly backup workflow via Workload Identity Federation |
+| `smartfire-backup-runner@smart-data-campfire` (in the app project) | `roles/storage.objectCreator` only on the backup bucket (cross-project, bucket-level), plus the same project-level roles the deployer holds in the app project (`roles/iap.tunnelResourceAccessor`, `roles/compute.osAdminLogin`, `roles/compute.viewer`) | the nightly backup workflow via Workload Identity Federation |
 | `smartfire-backup-reader@smart-data-campfire-backups` | `roles/storage.objectViewer` only | the monthly restore-check workflow via Workload Identity Federation |
 
 Neither bucket grant can delete or overwrite objects: the runner can only
@@ -112,8 +112,12 @@ backup-project admin's delete is recoverable: a deleted live object
 survives as a noncurrent version for 30 days, and soft-deleted objects are
 recoverable for 30 days. This is why the lifecycle keeps a
 `daysSinceNoncurrentTime` rule rather than letting versions accumulate
-forever. The runner deliberately holds no snapshot, deploy or Artifact
-Registry rights: it can reach the VM and create backup objects, nothing
+forever. `roles/compute.osAdminLogin` gives root on the VMs in the app
+project, the same as the deployer: IAP tunnel access is not granted
+through instance IAM, so the runner's three roles are project-level
+bindings. The runner needs root because `prepare-backup` runs via docker
+as root. It deliberately holds no snapshot, deploy or Artifact Registry
+rights: it can reach the project's VMs and create backup objects, nothing
 else.
 
 The VM itself has no service account and needs none, and it is never
@@ -122,10 +126,15 @@ workflow's identity does the downloading and uploading. No keys are ever
 copied onto the VM.
 
 Both workflows impersonate their identity through Workload Identity
-Federation with no long-lived keys. Each binding pins the exact
-ID-qualified subject GitHub mints for runs of `Smart-Data-Ohio/smartfire`
-on `refs/heads/main` (the same form as the deployer's bindings), so
-dispatch the workflows by hand from main.
+Federation with no long-lived keys, reusing the app project's existing
+`github` pool and `github-oidc` provider — the same ones the deploy
+workflow uses. The reader SA lives in the backup project, but its binding
+uses a principal from the app project's pool (a principal from one
+project can be granted `roles/iam.workloadIdentityUser` on a service
+account in another), so the backup project needs no pool of its own. Each
+binding pins the exact ID-qualified subject GitHub mints for runs of
+`Smart-Data-Ohio/smartfire` on `refs/heads/main` (the same form as the
+deployer's bindings), so dispatch the workflows by hand from main.
 
 ## Retention
 
@@ -152,11 +161,12 @@ anything.
 
 1. Pick the bucket name and run the setup script. The projects, app VM and
    repository default to the real values; only the bucket is required. It
-   creates the bucket, the backup-runner identity in the app project with
-   its Workload Identity pool, the reader identity with its pool, and the
-   snapshot schedule, and prints every value to configure next. Project
-   creation and billing linking stay manual: if the project does not
-   exist the script prints the commands and stops.
+   creates the bucket, the backup-runner identity in the app project, the
+   reader identity, and the snapshot schedule, reusing the app project's
+   existing Workload Identity pool (creating it only if missing), and
+   prints every value to configure next. Project creation and billing
+   linking stay manual: if the project does not exist the script prints
+   the commands and stops.
 
    ```sh
    BACKUP_BUCKET=smartfire-backups-xxx \
@@ -367,9 +377,10 @@ holds settings and keys) or from a manual reconfiguration.
 6. Make the new VM the nightly backup source: update the
    `BACKUP_APP_PROJECT`, `BACKUP_APP_ZONE` and `BACKUP_APP_INSTANCE`
    repository variables to the new VM, re-run `setup-backup-project.sh`
-   so the runner's VM-scoped bindings cover the new instance, and
-   dispatch the `Nightly backup` workflow once by hand. Nothing is
-   installed on the VM. Only then point traffic at the new VM.
+   so the snapshot schedule is attached to the new instance (the runner's
+   project-level roles already cover any VM in the project), and dispatch
+   the `Nightly backup` workflow once by hand. Nothing is installed on
+   the VM. Only then point traffic at the new VM.
 
 ## Roll back
 
@@ -498,7 +509,7 @@ public key (`BACKUP_GPG_HOME`), while the private key lives in the
 | `still has the example placeholder` | `BACKUP_AGE_RECIPIENT` was never set | set the variable to the age1... recipient |
 | `another backup holds ...lock` | a previous run is still going | wait for it; the workflow serializes runs, so this means a manual run overlaps |
 | upload denied (403) | the runner lost its bucket grant | re-run `setup-backup-project.sh`: it re-converges every grant |
-| ssh/scp denied | the runner lost its VM-scoped roles, or the VM was replaced | re-run `setup-backup-project.sh` (and update `BACKUP_APP_*` when the VM changed) |
+| ssh/scp denied | the runner lost its project-level roles in the app project | re-run `setup-backup-project.sh` (and update `BACKUP_APP_*` when the VM changed) |
 | checksum mismatch after download | a corrupt transfer (or a compromised path) | do not upload it: rerun; investigate when it repeats |
 | restore-check `integrity_check` fails | a corrupt or partial backup | stop: verify the previous daily (or newest weekly) instead |
 | restore-check below `--min-users`/`--min-messages` | an empty or wrong database | same: do not restore it; investigate which object was picked |

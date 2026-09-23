@@ -37,6 +37,13 @@ class SetupBackupProjectTest < ActiveSupport::TestCase
               echo "${STUB_APP_PROJECT_NUMBER:-112233445566}"
             fi
             ;;
+          *get-iam-policy*)
+            if [ -n "${STUB_PROJECT_POLICY_JSON:-}" ]; then
+              printf '%s\n' "$STUB_PROJECT_POLICY_JSON"
+            else
+              printf '%s\n' '{"bindings":[]}'
+            fi
+            ;;
         esac
         exit 0
         ;;
@@ -100,8 +107,9 @@ class SetupBackupProjectTest < ActiveSupport::TestCase
             esac
             ;;
           workload-identity-pools)
-            # Pool/provider existence is per project: the runner's pool
-            # lives in the app project, the reader's in the backup project.
+            # Pool/provider existence is per project. Both identities bind
+            # subjects from the app project's pool; the backup-project
+            # branch only exists to catch a regressed second pool.
             pool_var="STUB_POOL_EXISTS"
             provider_var="STUB_PROVIDER_EXISTS"
             if [[ "$*" != *"$BACKUP_PROJECT_ID"* ]]; then
@@ -135,21 +143,13 @@ class SetupBackupProjectTest < ActiveSupport::TestCase
             case "$3" in
               describe)
                 # One JSON body serves the snapshot schedule's boot-disk
-                # discovery. The setup itself never inspects the VM: it
-                # holds no service account and needs none.
+                # discovery. The setup itself grants nothing on the VM:
+                # IAP tunnel access is not granted through instance IAM,
+                # so the runner's roles are project-level bindings. Any
+                # instances IAM call below falls through to "unhandled"
+                # and fails the run loudly.
                 disk='{"boot": true, "source": "https://www.googleapis.com/compute/v1/projects/x/zones/y/disks/campfire"}'
                 printf '{"serviceAccounts": [], "disks": [%s]}\n' "$disk"
-                exit 0
-                ;;
-              get-iam-policy)
-                if [ -n "${STUB_INSTANCE_POLICY_JSON:-}" ]; then
-                  printf '%s\n' "$STUB_INSTANCE_POLICY_JSON"
-                else
-                  printf '%s\n' '{"bindings":[]}'
-                fi
-                exit 0
-                ;;
-              add-iam-policy-binding)
                 exit 0
                 ;;
               *)
@@ -221,7 +221,7 @@ class SetupBackupProjectTest < ActiveSupport::TestCase
     end
   end
 
-  test "grants the runner IAP and SSH roles on the VM only" do
+  test "grants the runner the deployer's project-level roles in the app project" do
     with_setup_env do |env, dirs|
       out, status = run_setup(env)
       assert status.success?, "setup failed: #{out}"
@@ -232,10 +232,12 @@ class SetupBackupProjectTest < ActiveSupport::TestCase
         roles/compute.viewer
       ].each do |role|
         assert log.any? { |line|
-          line.include?("compute instances add-iam-policy-binding campfire") &&
+          line.include?("projects add-iam-policy-binding #{APP_PROJECT}") &&
             line.include?("--role=#{role}") && line.include?("serviceAccount:#{RUNNER}")
-        }, "runner was not granted #{role} on the VM:\n#{log.join("\n")}"
+        }, "runner was not granted #{role} on the app project:\n#{log.join("\n")}"
       end
+      refute log.any? { |line| line.include?("compute instances add-iam-policy-binding") },
+        "IAP tunnel access is not granted through instance IAM:\n#{log.join("\n")}"
       refute log.any? { |line| line.include?("set-service-account") },
         "nothing may be attached to the VM:\n#{log.join("\n")}"
       refute log.any? { |line| line.include?("roles/compute.instanceAdmin") || line.include?("roles/compute.storageAdmin") },
@@ -243,22 +245,34 @@ class SetupBackupProjectTest < ActiveSupport::TestCase
     end
   end
 
-  test "binds the runner with the ID-qualified subject" do
+  test "binds the runner with the ID-qualified subject from the existing pool" do
     with_setup_env do |env, dirs|
       out, status = run_setup(env)
       assert status.success?, "setup failed: #{out}"
       log = gcloud_log(dirs)
       principal = "principal://iam.googleapis.com/projects/112233445566/locations/global" \
-        "/workloadIdentityPools/smartfire-backup-pool/subject/#{SUBJECT}"
+        "/workloadIdentityPools/github/subject/#{SUBJECT}"
       assert log.any? { |line|
                line.include?("service-accounts add-iam-policy-binding #{RUNNER}") &&
                  line.include?("roles/iam.workloadIdentityUser") && line.include?(principal)
              },
         "runner was not bound to the ID-qualified subject:\n#{log.join("\n")}"
-      assert log.any? { |line| line.include?("workload-identity-pools providers create-oidc") && line.include?("--project=#{APP_PROJECT}") },
+      assert log.any? { |line| line.include?("workload-identity-pools providers create-oidc github-oidc") && line.include?("--project=#{APP_PROJECT}") },
         "no WIF provider was created in the app project:\n#{log.join("\n")}"
       refute log.any? { |line| line.include?("principalSet") },
         "must not use attribute-based bindings:\n#{log.join("\n")}"
+    end
+  end
+
+  test "creates no pool in the backup project by default" do
+    with_setup_env do |env, dirs|
+      out, status = run_setup(env)
+      assert status.success?, "setup failed: #{out}"
+      log = gcloud_log(dirs)
+      assert log.any? { |line| line.include?("workload-identity-pools create github") && line.include?("--project=#{APP_PROJECT}") },
+        "missing pool was not created in the app project:\n#{log.join("\n")}"
+      refute log.any? { |line| line.include?("workload-identity-pools") && line.include?("--project=#{PROJECT}") },
+        "no second pool may be created in the backup project:\n#{log.join("\n")}"
     end
   end
 
@@ -271,10 +285,13 @@ class SetupBackupProjectTest < ActiveSupport::TestCase
         "reader SA was not created in the backup project:\n#{log.join("\n")}"
       assert log.any? { |line| line.include?("roles/storage.objectViewer") && line.include?("serviceAccount:#{READER}") },
         "reader was not granted objectViewer:\n#{log.join("\n")}"
-      principal = "principal://iam.googleapis.com/projects/922766272284/locations/global" \
-        "/workloadIdentityPools/smartfire-backup-pool/subject/#{SUBJECT}"
+      # The reader SA lives in the backup project, but its principal comes
+      # from the app project's pool (the app project number).
+      principal = "principal://iam.googleapis.com/projects/112233445566/locations/global" \
+        "/workloadIdentityPools/github/subject/#{SUBJECT}"
       assert log.any? { |line|
                line.include?("service-accounts add-iam-policy-binding #{READER}") &&
+                 line.include?("--project=#{PROJECT}") &&
                  line.include?("roles/iam.workloadIdentityUser") && line.include?(principal)
              },
         "reader was not bound to the ID-qualified subject:\n#{log.join("\n")}"
@@ -350,8 +367,10 @@ class SetupBackupProjectTest < ActiveSupport::TestCase
       log = gcloud_log(dirs)
       assert log.any? { |line| line.include?("projects describe #{PROJECT}") },
         "did not use the real backup project by default:\n#{log.join("\n")}"
-      assert log.any? { |line| line.include?("instances add-iam-policy-binding campfire") && line.include?("--project=#{APP_PROJECT}") && line.include?("--zone=us-central1-a") },
-        "did not bind the real app VM by default:\n#{log.join("\n")}"
+      assert log.any? { |line| line.include?("projects add-iam-policy-binding #{APP_PROJECT}") },
+        "did not bind the real app project by default:\n#{log.join("\n")}"
+      assert log.any? { |line| line.include?("instances describe campfire") && line.include?("--project=#{APP_PROJECT}") && line.include?("--zone=us-central1-a") },
+        "did not use the real app VM by default:\n#{log.join("\n")}"
     end
   end
 
@@ -378,15 +397,19 @@ class SetupBackupProjectTest < ActiveSupport::TestCase
         assert_includes out, name, "missing from the printed variables: #{name}"
       end
       assert_includes out, RUNNER
-      assert_includes out, "projects/112233445566/locations/global/workloadIdentityPools/smartfire-backup-pool/providers/github-actions"
+      # Both identities share the app project's existing provider.
+      provider = "projects/112233445566/locations/global/workloadIdentityPools/github/providers/github-oidc"
+      runner_line = out.lines.find { |line| line.include?("BACKUP_RUNNER_WIF_PROVIDER") }
+      reader_line = out.lines.find { |line| line.include?("BACKUP_GCP_WIF_PROVIDER") }
+      assert_includes runner_line, provider, "runner provider is not the app project's:\n#{out}"
+      assert_includes reader_line, provider, "reader provider is not the app project's:\n#{out}"
     end
   end
 
   test "re-running binds nothing when every grant already exists" do
-    runner_principal = "principal://iam.googleapis.com/projects/112233445566/locations/global" \
-      "/workloadIdentityPools/smartfire-backup-pool/subject/#{SUBJECT}"
-    reader_principal = "principal://iam.googleapis.com/projects/922766272284/locations/global" \
-      "/workloadIdentityPools/smartfire-backup-pool/subject/#{SUBJECT}"
+    # Both identities bind the same subject from the app project's pool.
+    principal = "principal://iam.googleapis.com/projects/112233445566/locations/global" \
+      "/workloadIdentityPools/github/subject/#{SUBJECT}"
     bucket_policy = {
       "bindings" => [
         { "role" => "roles/storage.objectCreator", "members" => [ "serviceAccount:#{RUNNER}" ] },
@@ -395,10 +418,10 @@ class SetupBackupProjectTest < ActiveSupport::TestCase
     }
     sa_policy = {
       "bindings" => [
-        { "role" => "roles/iam.workloadIdentityUser", "members" => [ runner_principal, reader_principal ] }
+        { "role" => "roles/iam.workloadIdentityUser", "members" => [ principal ] }
       ]
     }
-    instance_policy = {
+    project_policy = {
       "bindings" => [
         { "role" => "roles/iap.tunnelResourceAccessor", "members" => [ "serviceAccount:#{RUNNER}" ] },
         { "role" => "roles/compute.osAdminLogin", "members" => [ "serviceAccount:#{RUNNER}" ] },
@@ -412,11 +435,9 @@ class SetupBackupProjectTest < ActiveSupport::TestCase
       "STUB_BUCKET_EXISTS" => "1",
       "STUB_BUCKET_POLICY_JSON" => JSON.generate(bucket_policy),
       "STUB_SA_POLICY_JSON" => JSON.generate(sa_policy),
-      "STUB_INSTANCE_POLICY_JSON" => JSON.generate(instance_policy),
+      "STUB_PROJECT_POLICY_JSON" => JSON.generate(project_policy),
       "STUB_RUNNER_EXISTS" => "1",
       "STUB_READER_EXISTS" => "1",
-      "STUB_POOL_EXISTS" => "1",
-      "STUB_PROVIDER_EXISTS" => "1",
       "STUB_APP_POOL_EXISTS" => "1",
       "STUB_APP_PROVIDER_EXISTS" => "1",
       "STUB_POLICY_EXISTS" => "1",
