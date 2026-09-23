@@ -4,15 +4,14 @@ import { patch } from "@rails/request.js"
 // Reports the browser's time zone once, when the member has none saved.
 // A hand-picked zone always wins: the server ignores later detections.
 export default class extends Controller {
-  static values = { url: String }
-
   connect() {
-    if (!this.hasUrlValue || this.#savedZone() !== null) return
+    const url = document.querySelector("meta[name='time-zone-url']")?.getAttribute("content")
+    if (!url || this.#savedZone() !== null) return
 
     const detected = this.#detectedZone()
     if (!detected) return
 
-    patch(this.urlValue, {
+    patch(url, {
       body: { time_zone: detected },
       responseKind: "json"
     }).then((response) => {

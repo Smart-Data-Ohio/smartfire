@@ -174,10 +174,10 @@ module User::StatusSettings
     end
 
     def clock_time_to_minutes(value)
-      match = value.to_s.match(/\A(\d{1,2}):(\d{2})\z/)
+      match = value.to_s.match(/\A(\d{1,2}):(\d{2})(?::\d{2})?\z/)
       return nil if match.nil?
 
-      hour, minute = match.captures.map(&:to_i)
+      hour, minute = match.captures.first(2).map(&:to_i)
       return nil if hour > 23 || minute > 59
 
       hour * 60 + minute

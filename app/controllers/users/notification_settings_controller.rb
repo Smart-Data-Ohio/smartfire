@@ -3,12 +3,21 @@ class Users::NotificationSettingsController < ApplicationController
     @user = Current.user
     @user.assign_attributes(notification_params)
 
-    keywords_saved = true
-    if params[:user].key?(:keyword_alerts)
-      keywords_saved = @user.replace_keyword_alerts(params[:user][:keyword_alerts])
+    saved = User.transaction do
+      keywords_saved = if params[:user]&.key?(:keyword_alerts)
+        @user.replace_keyword_alerts(params[:user][:keyword_alerts])
+      else
+        true
+      end
+
+      if keywords_saved && @user.save
+        true
+      else
+        raise ActiveRecord::Rollback
+      end
     end
 
-    if keywords_saved && @user.save
+    if saved
       redirect_to user_profile_url, notice: "✓"
     else
       set_memberships

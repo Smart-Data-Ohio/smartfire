@@ -77,4 +77,43 @@ class WorkspacePresenceLeaseTest < ActiveSupport::TestCase
     end
     assert_equal 1, WorkspacePresenceLease.count
   end
+
+  test "a fresh lease reads online, then idle after ten quiet minutes" do
+    WorkspacePresenceLease.establish(user: @user, session: @session)
+
+    assert_equal({ @user.id => :online }, WorkspacePresenceLease.presence_by_user_id([ @user.id ]))
+
+    travel WorkspacePresenceLease::IDLE_AFTER + 1.second
+
+    # The lease itself expired too, so renew it without activity: still
+    # connected, but idle.
+    WorkspacePresenceLease.update_all(expires_at: 1.minute.from_now)
+    assert_equal({ @user.id => :idle }, WorkspacePresenceLease.presence_by_user_id([ @user.id ]))
+  end
+
+  test "an active heartbeat extends activity while a quiet one only extends the lease" do
+    lease = WorkspacePresenceLease.establish(user: @user, session: @session)
+
+    travel 11.minutes
+    lease.refresh(active: false)
+    assert_equal({ @user.id => :idle }, WorkspacePresenceLease.presence_by_user_id([ @user.id ]))
+
+    lease.refresh(active: true)
+    assert_equal({ @user.id => :online }, WorkspacePresenceLease.presence_by_user_id([ @user.id ]))
+  end
+
+  test "any active connection keeps the user online" do
+    active = WorkspacePresenceLease.establish(user: @user, session: @session)
+    quiet = WorkspacePresenceLease.establish(user: @user, session: @session)
+    quiet.update_column(:last_active_at, 11.minutes.ago)
+
+    assert_equal({ @user.id => :online }, WorkspacePresenceLease.presence_by_user_id([ @user.id ]))
+
+    active.delete
+    assert_equal({ @user.id => :idle }, WorkspacePresenceLease.presence_by_user_id([ @user.id ]))
+  end
+
+  test "users without a lease are absent from the presence map" do
+    assert_equal({}, WorkspacePresenceLease.presence_by_user_id([ @user.id, users(:jason).id ]))
+  end
 end

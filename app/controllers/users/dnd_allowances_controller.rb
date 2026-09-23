@@ -1,4 +1,6 @@
 class Users::DndAllowancesController < ApplicationController
+  rescue_from ActiveRecord::RecordNotFound, with: -> { head :not_found }
+
   before_action :set_allowed_user
 
   # Star someone so their messages still push while DND is on.

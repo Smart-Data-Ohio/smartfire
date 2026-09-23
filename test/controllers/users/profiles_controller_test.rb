@@ -262,4 +262,35 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
     get user_profile_url
     assert_select "input[name=?]", "user[current_password]", count: 0
   end
+
+  test "update saves the theme and time zone" do
+    put user_profile_url, params: { user: { theme: "dark", time_zone: "Pacific Time (US & Canada)" } }
+
+    assert_redirected_to user_profile_url
+    assert_equal "dark", users(:david).reload.theme
+    assert_equal "Pacific Time (US & Canada)", users(:david).time_zone
+  end
+
+  test "update rejects an unknown theme or time zone" do
+    put user_profile_url, params: { user: { theme: "neon" } }
+    assert_response :unprocessable_entity
+
+    put user_profile_url, params: { user: { time_zone: "Narnia" } }
+    assert_response :unprocessable_entity
+
+    assert_equal "system", users(:david).reload.theme
+    assert_nil users(:david).time_zone
+  end
+
+  test "the layout carries the theme, time zone, and sound state" do
+    users(:david).update!(theme: "light", time_zone: "Pacific Time (US & Canada)", dnd_enabled: true)
+
+    get user_profile_url
+
+    assert_response :success
+    assert_select "html[data-theme=light]"
+    assert_select "meta[name=color-scheme][content=light]", count: 1
+    assert_select "meta[name=current-user-time-zone][content='Pacific Time (US & Canada)']", count: 1
+    assert_select "meta[name=notification-sounds][content=muted]", count: 1
+  end
 end

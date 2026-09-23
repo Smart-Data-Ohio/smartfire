@@ -27,9 +27,12 @@ module Notifications
       end
 
       private
+        # Lookarounds instead of \b so phrases ending in punctuation
+        # ("v1.2 (rc)") still match at a space; for plain words the two
+        # are equivalent.
         def compile(phrases)
           alternation = phrases.sort_by(&:length).reverse.map { |phrase| Regexp.escape(phrase) }.join("|")
-          Regexp.new("\\b(?:#{alternation})\\b", Regexp::IGNORECASE)
+          Regexp.new("(?<!\\w)(?:#{alternation})(?!\\w)", Regexp::IGNORECASE)
         end
     end
   end
