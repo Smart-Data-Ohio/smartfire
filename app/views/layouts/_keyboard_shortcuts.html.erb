@@ -1,0 +1,69 @@
+<%# Keyboard shortcut sheet, opened with ? (see keyboard_shortcuts_controller.js).
+    Rendered once per page from the layout for signed-in users. %>
+<dialog id="keyboard-shortcuts" class="shortcuts-sheet" aria-labelledby="shortcuts-title"
+        data-keyboard-shortcuts-target="helpDialog"
+        data-action="click->keyboard-shortcuts#dismissBackdrop">
+  <div class="shortcuts-sheet__surface">
+    <header class="shortcuts-sheet__header">
+      <h2 id="shortcuts-title">Keyboard shortcuts</h2>
+      <form method="dialog">
+        <button class="btn shortcuts-sheet__close" aria-label="Close shortcuts">
+          <%= image_tag "remove.svg", size: 16, aria: { hidden: "true" } %>
+        </button>
+      </form>
+    </header>
+
+    <div class="shortcuts-sheet__groups">
+      <section aria-labelledby="shortcuts-navigate-title">
+        <h3 id="shortcuts-navigate-title">Navigate</h3>
+        <dl>
+          <div><dt><kbd>Ctrl</kbd> <kbd>K</kbd> / <kbd>⌘</kbd> <kbd>K</kbd></dt><dd>Quick switcher</dd></div>
+          <div><dt><kbd>Alt</kbd> <kbd>↑</kbd> / <kbd>↓</kbd></dt><dd>Previous / next room</dd></div>
+          <div><dt><kbd>Alt</kbd> <kbd>Shift</kbd> <kbd>↑</kbd> / <kbd>↓</kbd></dt><dd>Previous / next unread room</dd></div>
+          <div><dt><kbd>Esc</kbd></dt><dd>Mark current room read</dd></div>
+          <div><dt><kbd>?</kbd></dt><dd>This help</dd></div>
+        </dl>
+      </section>
+
+      <section aria-labelledby="shortcuts-sidebar-title">
+        <h3 id="shortcuts-sidebar-title">Sidebar rooms</h3>
+        <dl>
+          <div><dt>Right-click</dt><dd>Room menu (favourites, mute, categories)</dd></div>
+          <div><dt><kbd>Shift</kbd> <kbd>F10</kbd> or <kbd>☰</kbd></dt><dd>Room menu from the keyboard</dd></div>
+        </dl>
+      </section>
+
+      <section aria-labelledby="shortcuts-messages-title">
+        <h3 id="shortcuts-messages-title">Messages</h3>
+        <dl>
+          <div><dt><kbd>↑</kbd> / <kbd>↓</kbd></dt><dd>Move between messages</dd></div>
+          <div><dt><kbd>Home</kbd> / <kbd>End</kbd></dt><dd>First / last message</dd></div>
+          <div><dt><kbd>Shift</kbd> <kbd>F10</kbd> or <kbd>☰</kbd></dt><dd>Message menu</dd></div>
+          <div><dt><kbd>↑</kbd> / <kbd>↓</kbd> in a menu</dt><dd>Move between menu items</dd></div>
+          <div><dt><kbd>Esc</kbd> in a menu</dt><dd>Close the menu</dd></div>
+        </dl>
+      </section>
+
+      <section aria-labelledby="shortcuts-composer-title">
+        <h3 id="shortcuts-composer-title">Composer</h3>
+        <dl>
+          <div><dt><kbd>Enter</kbd></dt><dd>Send message</dd></div>
+          <div><dt><kbd>Shift</kbd> <kbd>Enter</kbd></dt><dd>New line</dd></div>
+          <div><dt><kbd>Ctrl</kbd> <kbd>Enter</kbd> / <kbd>⌘</kbd> <kbd>Enter</kbd></dt><dd>Send message</dd></div>
+          <div><dt><kbd>Ctrl</kbd> <kbd>B</kbd> / <kbd>I</kbd></dt><dd>Bold / italic</dd></div>
+        </dl>
+      </section>
+
+      <section aria-labelledby="shortcuts-pickers-title">
+        <h3 id="shortcuts-pickers-title">Pickers and panels</h3>
+        <dl>
+          <div><dt><kbd>←</kbd> <kbd>→</kbd> in the emoji picker</dt><dd>Switch emoji tabs</dd></div>
+          <div><dt><kbd>↑</kbd> <kbd>↓</kbd> <kbd>Enter</kbd> in the Drive picker</dt><dd>Choose and insert a file</dd></div>
+          <div><dt><kbd>Esc</kbd></dt><dd>Close members, threads and menus</dd></div>
+        </dl>
+      </section>
+    </div>
+
+    <p class="shortcuts-sheet__note">Shortcuts never fire while typing, unless chorded with <kbd>Ctrl</kbd>, <kbd>⌘</kbd> or <kbd>Alt</kbd>. <kbd>Esc</kbd> closes open dialogs, menus and panels first, and marks the current room read when nothing is open.</p>
+  </div>
+</dialog>
