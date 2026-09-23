@@ -46,6 +46,12 @@ The remaining tools have no throttle, like their REST counterparts.
 `ack_events` charges its bucket once per id — matching REST's one-id-per-ack
 accounting — and rejects batches over 100 ids with `-32602`.
 
+On top of the per-tool buckets, every POST counts against a coarse
+per-credential cap of 600 requests/minute across all methods
+(`initialize` and `tools/list` included, since they have no tool
+bucket). Past it the endpoint answers HTTP 429 with a `Retry-After`
+header and `{ "error": "rate_limited" }`, like the REST endpoints.
+
 ## Client setup
 
 Create an agent token on the bot page (shown once), grant the agent the

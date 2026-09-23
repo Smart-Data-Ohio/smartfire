@@ -38,6 +38,9 @@ credential cannot starve others sharing the agent:
 - posting messages, requesting approvals, cancelling approvals, opening
   DMs, and pull-request actions: 60/minute each
 - creating board posts: 30/minute
+- the whole MCP endpoint: 600/minute per credential across all methods,
+  on top of the per-tool buckets its tools share with the endpoints
+  above
 
 Overflowing a bucket returns 429 with a `Retry-After` header in
 seconds and a `{ "error": "rate_limited" }` body. Human session

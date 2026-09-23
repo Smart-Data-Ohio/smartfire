@@ -21,6 +21,10 @@ class Agents::McpController < ApplicationController
 
   BASE64_HEADER_SENTINEL = /\A=\?base64\?(.+)\?=\z/
 
+  # Coarse per-credential cap across every POST to the endpoint, on top of
+  # the per-tool buckets: protocol calls and unthrottled tools share it.
+  ENDPOINT_REQUESTS_PER_MINUTE = 600
+
   # GET/DELETE on the MCP endpoint: a modern server answers old clients
   # with 405 (spec 2026-07-28, backward compatibility). Real traffic is
   # POST-only; the server keeps no sessions and streams nothing, which
@@ -37,6 +41,15 @@ class Agents::McpController < ApplicationController
   # send unversioned requests, which read as 2025-03-26.
   def create
     no_store_response!
+
+    # Counted before parsing: every POST charges the endpoint bucket once,
+    # whatever method it carries. Uses only the Authorization header; the
+    # body below is parsed exactly once, from the raw JSON.
+    if (retry_after = agent_api_throttle_retry_after(ENDPOINT_REQUESTS_PER_MINUTE, controller_path: "agents/mcp", action_name: "create"))
+      response.set_header("Retry-After", retry_after.to_s)
+      render json: { error: "rate_limited" }, status: :too_many_requests
+      return
+    end
 
     if forged_origin?
       render json: rpc_error(nil, ERROR_INVALID_REQUEST, "Invalid origin"), status: :forbidden

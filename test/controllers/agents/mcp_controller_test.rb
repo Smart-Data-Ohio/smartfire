@@ -695,6 +695,33 @@ class Agents::McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the endpoint throttles past 600 requests a minute across all methods" do
+    _, second_secret = AgentCredential.create_with_secret!(agent: @agent, name: "second", created_by: users(:david))
+
+    with_memory_cache do
+      freeze_time do
+        200.times { |index| rpc("ping", {}, id: index) }
+        200.times { |index| rpc("tools/list", {}, id: index) }
+        200.times do |index|
+          rpc("initialize", { "protocolVersion" => "2025-11-25", "capabilities" => {}, "clientInfo" => { "name" => "c", "version" => "1" } }, id: index)
+        end
+        assert_response :success
+
+        rpc("ping", {})
+        assert_response :too_many_requests
+        assert_equal "rate_limited", response.parsed_body["error"]
+        retry_after = response.headers["Retry-After"].to_i
+        assert_operator retry_after, :>=, 1
+        assert_operator retry_after, :<=, 60
+
+        post agents_mcp_url,
+          params: { jsonrpc: "2.0", id: 1, method: "ping", params: {} }.to_json,
+          headers: { "Authorization" => "Bearer #{second_secret}", "Content-Type" => "application/json" }
+        assert_response :success
+      end
+    end
+  end
+
   test "get_context shares its bucket with the REST context endpoint" do
     trigger = @room.messages.create!(creator: users(:david), body: "Shared bucket", client_message_id: "mcp-ctx-share")
 
