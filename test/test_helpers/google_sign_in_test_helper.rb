@@ -47,11 +47,12 @@ module GoogleSignInTestHelper
   # nonce of the flow started most recently in this test.
   def sign_in_id_token(email: "alice@smartdata.net", hd: "smartdata.net", sub: "google-sub-alice",
       aud: "test-client-id", azp: :absent, iss: "https://accounts.google.com", nonce: :current,
-      exp: 1.hour.from_now.to_i, email_verified: true, key: sign_in_key, kid: SIGN_IN_KID, **extra_claims)
+      exp: 1.hour.from_now.to_i, email_verified: true, auth_time: Time.current.to_i,
+      key: sign_in_key, kid: SIGN_IN_KID, **extra_claims)
     nonce = @last_sign_in_nonce if nonce == :current
     raise "start the Google sign-in flow before building an id_token" if nonce == :current
 
-    payload = { iss:, aud:, sub:, email:, email_verified:, hd:, nonce:, exp:, iat: Time.current.to_i }
+    payload = { iss:, aud:, sub:, email:, email_verified:, hd:, nonce:, exp:, iat: Time.current.to_i, auth_time: }
     payload[:azp] = azp unless azp == :absent
     payload.merge!(extra_claims)
     payload.compact!

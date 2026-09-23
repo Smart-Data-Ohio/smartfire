@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_23_171812) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_162100) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -880,14 +880,15 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_171812) do
 
   create_table "sessions", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.string "device_id"
     t.string "ip_address"
     t.datetime "last_active_at", null: false
     t.string "token", null: false
-    t.datetime "two_factor_verified_at"
     t.datetime "updated_at", null: false
     t.string "user_agent"
     t.integer "user_id", null: false
     t.index ["token"], name: "index_sessions_on_token", unique: true
+    t.index ["user_id", "device_id"], name: "index_sessions_on_user_id_and_device_id"
     t.index ["user_id"], name: "index_sessions_on_user_id"
   end
 
@@ -957,49 +958,14 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_171812) do
     t.index ["post_id"], name: "index_twitter_posts_on_post_id", unique: true
   end
 
-  create_table "two_factor_backup_codes", force: :cascade do |t|
-    t.string "code_digest", null: false
+  create_table "user_devices", force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.integer "two_factor_credential_id", null: false
+    t.string "device_id", null: false
     t.datetime "updated_at", null: false
-    t.datetime "used_at"
-    t.index ["code_digest"], name: "index_two_factor_backup_codes_on_code_digest", unique: true
-    t.index ["two_factor_credential_id"], name: "index_two_factor_backup_codes_on_two_factor_credential_id"
-  end
-
-  create_table "two_factor_credentials", force: :cascade do |t|
-    t.datetime "confirmed_at"
-    t.integer "consecutive_failures", default: 0, null: false
-    t.datetime "created_at", null: false
-    t.bigint "last_totp_at"
-    t.datetime "locked_until"
-    t.integer "lockout_count", default: 0, null: false
-    t.string "secret"
-    t.datetime "updated_at", null: false
+    t.string "user_agent"
     t.integer "user_id", null: false
-    t.index ["user_id"], name: "index_two_factor_credentials_on_user_id", unique: true
-  end
-
-  create_table "two_factor_remembered_devices", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.datetime "expires_at", null: false
-    t.string "ip_address"
-    t.datetime "last_used_at"
-    t.string "token_digest", null: false
-    t.datetime "updated_at", null: false
-    t.string "user_agent", limit: 512
-    t.integer "user_id", null: false
-    t.index ["token_digest"], name: "index_two_factor_remembered_devices_on_token_digest", unique: true
-    t.index ["user_id"], name: "index_two_factor_remembered_devices_on_user_id"
-  end
-
-  create_table "two_factor_setup_secrets", force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.datetime "expires_at", null: false
-    t.string "secret"
-    t.integer "session_id", null: false
-    t.datetime "updated_at", null: false
-    t.index ["session_id"], name: "index_two_factor_setup_secrets_on_session_id", unique: true
+    t.index ["user_id", "device_id"], name: "index_user_devices_on_user_id_and_device_id", unique: true
+    t.index ["user_id"], name: "index_user_devices_on_user_id"
   end
 
   create_table "user_stars", force: :cascade do |t|
@@ -1212,10 +1178,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_171812) do
   add_foreign_key "thread_memberships", "users", on_delete: :cascade
   add_foreign_key "twitter_post_references", "messages"
   add_foreign_key "twitter_post_references", "twitter_posts"
-  add_foreign_key "two_factor_backup_codes", "two_factor_credentials"
-  add_foreign_key "two_factor_credentials", "users"
-  add_foreign_key "two_factor_remembered_devices", "users"
-  add_foreign_key "two_factor_setup_secrets", "sessions", on_delete: :cascade
+  add_foreign_key "user_devices", "users", on_delete: :cascade
   add_foreign_key "user_stars", "users", column: "starred_user_id", on_delete: :cascade
   add_foreign_key "user_stars", "users", on_delete: :cascade
   add_foreign_key "webhooks", "users"

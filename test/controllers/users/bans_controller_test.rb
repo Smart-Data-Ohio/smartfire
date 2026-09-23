@@ -3,6 +3,7 @@ require "test_helper"
 class Users::BansControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in :david
+    grant_sudo_access
   end
 
   test "create bans user and creates ban records from sessions" do

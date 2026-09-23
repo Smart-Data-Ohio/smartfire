@@ -20,16 +20,20 @@ module Google
     # Clock skew tolerated when checking token expiry.
     CLOCK_SKEW = 30.seconds
 
-    # Step-up re-authentication (TwoFactor::ReauthenticationsController)
-    # must prove a FRESH Google sign-in, not ride an existing Google
-    # session: prompt=login with max_age=0 forces Google to authenticate
-    # the user again, and the id_token's auth_time must be this recent
-    # (see IdTokenVerifier). Per OpenID Connect Core 1.0, when max_age is
+    # Step-up re-authentication -- "reauth" (TwoFactor::ReauthenticationsController)
+    # and "sudo" (SudosController) -- must prove a FRESH Google login,
+    # not ride an existing Google session: prompt=login with max_age=0
+    # forces Google to authenticate the user again, and the id_token's
+    # auth_time must be within FRESH_LOGIN_MAX_AUTH_AGE (see
+    # IdTokenVerifier). Per OpenID Connect Core 1.0, when max_age is
     # requested the OP must re-authenticate past it and the ID Token
     # carries auth_time (https://openid.net/specs/openid-connect-core-1_0.html).
-    REAUTH_PROMPT = "login"
-    REAUTH_MAX_AGE = 0
-    REAUTH_MAX_AUTH_AGE = 5.minutes
+    # Normal sign-in and linking send neither prompt nor max_age and
+    # never check auth_time.
+    FRESH_LOGIN_PURPOSES = %w[ reauth sudo ].freeze
+    FRESH_LOGIN_PROMPT = "login"
+    FRESH_LOGIN_MAX_AGE = 0
+    FRESH_LOGIN_MAX_AUTH_AGE = 5.minutes
 
     # Fail-closed errors. Messages are safe to log: they never carry
     # tokens, codes, or raw claim values.
@@ -64,6 +68,10 @@ module Google
           .select { |domain| valid_domain?(domain) }.uniq
       end
 
+      # prompt/max_age stay absent unless given: only step-up re-auth
+      # ("reauth" and "sudo" purposes) sends prompt=login and max_age=0
+      # (see GoogleSignInFlow), forcing a fresh Google login whose
+      # auth_time the callback then checks.
       def authorize_url(redirect_uri:, state:, nonce:, challenge:, prompt: nil, max_age: nil)
         uri = URI::HTTPS.build(host: AUTHORIZE_HOST, path: "/o/oauth2/v2/auth")
         params = {

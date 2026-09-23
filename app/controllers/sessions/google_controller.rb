@@ -36,6 +36,9 @@ module Sessions
       if valid_flow?(flow, verified_state) && flow["purpose"] == "reauth"
         return finish_reauth(flow)
       end
+      if valid_flow?(flow, verified_state) && flow["purpose"] == "sudo"
+        return finish_sudo(flow)
+      end
       return redirect_to root_url if signed_in?
 
       unless valid_flow?(flow, verified_state)
@@ -142,11 +145,7 @@ module Sessions
           return redirect_to user_profile_url, alert: "Google confirmation was cancelled."
         end
 
-        id_token = Google::SignIn.exchange_code(
-          code: params[:code].to_s, redirect_uri: session_google_callback_url, verifier: flow["verifier"]
-        )
-        claims = Google::SignIn::IdTokenVerifier.verify!(id_token, nonce: flow["nonce"],
-          max_auth_age: Google::SignIn::REAUTH_MAX_AUTH_AGE)
+        claims = verify_fresh_google_login!(flow)
 
         unless claims["sub"].to_s.present? && claims["sub"].to_s == Current.user.google_identity&.subject
           return redirect_to user_profile_url, alert: "That Google account is not linked here. Confirm with the Google account you sign in with."
@@ -161,6 +160,51 @@ module Sessions
       rescue Google::SignIn::Rejected => error
         Rails.logger.warn "Google re-auth rejected: #{error.reason}"
         redirect_to user_profile_url, alert: "Google confirmation failed. Try again."
+      end
+
+      # Finishes a sudo-mode Google re-auth started from SudosController:
+      # the member who started the flow proves the linked Google account
+      # is theirs with a fresh Google login, the verified subject must
+      # match their linked identity (any other Google account is
+      # rejected), and then the stashed sudo request continues. Nobody is
+      # signed in or out.
+      def finish_sudo(flow)
+        unless signed_in? && Current.user.id == flow["user_id"]
+          return redirect_to(signed_in? ? user_profile_url : new_session_url, alert: "Confirmation expired. Try again.")
+        end
+
+        if params[:error].present? || params[:code].blank?
+          return redirect_to new_sudo_url, alert: "Google confirmation was cancelled."
+        end
+
+        claims = verify_fresh_google_login!(flow)
+
+        unless claims["sub"].present? && claims["sub"] == Current.user.google_identity&.subject
+          AuditLog.record!(action: "sudo.confirm.failure", changes: { verifier: "google", reason: "subject_mismatch" })
+          return redirect_to new_sudo_url, alert: "That Google account is not the one linked to your account."
+        end
+
+        mark_sudo_verified!
+        AuditLog.record!(action: "sudo.confirm.success", changes: { verifier: "google" })
+        continue_after_sudo!
+      rescue Google::SignIn::Unavailable
+        redirect_to new_sudo_url, alert: "Google is unavailable right now. Try again."
+      rescue Google::SignIn::Rejected => error
+        Rails.logger.warn "Google sudo confirmation rejected: #{error.reason}"
+        redirect_to new_sudo_url, alert: "Google confirmation failed. Try again."
+      end
+
+      # Shared step-up verification for the "reauth" and "sudo" flows:
+      # trades the callback code for an id_token and requires a fresh
+      # Google login (auth_time within FRESH_LOGIN_MAX_AUTH_AGE; an
+      # older login or a missing auth_time is refused).
+      def verify_fresh_google_login!(flow)
+        id_token = Google::SignIn.exchange_code(
+          code: params[:code].to_s, redirect_uri: session_google_callback_url, verifier: flow["verifier"]
+        )
+        Google::SignIn::IdTokenVerifier.verify!(
+          id_token, nonce: flow["nonce"], max_auth_age: Google::SignIn::FRESH_LOGIN_MAX_AUTH_AGE
+        )
       end
 
       def link_rejection_alert(reason)

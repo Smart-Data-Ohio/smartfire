@@ -14,6 +14,11 @@ module ApplicationCable
         verified_session = find_session_by_cookie
         reject_unauthorized_connection unless verified_session
 
+        if verified_session.expired?
+          verified_session.destroy!
+          reject_unauthorized_connection
+        end
+
         @current_session = verified_session
         user = verified_session.user
         # Mirror the HTTP enforcement (TwoFactorEnforcement): a human

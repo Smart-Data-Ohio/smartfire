@@ -5,6 +5,7 @@ class Fizzy::ConnectionsControllerTest < ActionDispatch::IntegrationTest
 
   setup do
     sign_in :david
+    grant_sudo_access
   end
 
   test "linking validates the token with GET /my/identity and stores the account" do

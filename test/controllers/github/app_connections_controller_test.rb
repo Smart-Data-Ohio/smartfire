@@ -3,6 +3,7 @@ require "test_helper"
 class Github::AppConnectionsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in :david
+    grant_sudo_access
     @env_before = [ ENV["GITHUB_APP_CLIENT_ID"], ENV["GITHUB_APP_CLIENT_SECRET"] ]
     ENV["GITHUB_APP_CLIENT_ID"] = "app-client-id"
     ENV["GITHUB_APP_CLIENT_SECRET"] = "app-client-secret"

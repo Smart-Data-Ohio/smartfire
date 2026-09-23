@@ -3,6 +3,7 @@ require "test_helper"
 class AuditLog::AgentsAuditTest < ActionDispatch::IntegrationTest
   setup do
     sign_in :david
+    grant_sudo_access
     @bot = users(:bender)
     @agent = agents(:bender_agent)
   end

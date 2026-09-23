@@ -1,6 +1,7 @@
 class Accounts::Bots::WebhookSecretsController < ApplicationController
   before_action :set_bot
   before_action :ensure_can_manage_bot
+  before_action :require_sudo_mode
 
   # Regenerates the secret signing this bot's webhook deliveries: the
   # agent secret for agent-backed bots, the webhook secret for legacy

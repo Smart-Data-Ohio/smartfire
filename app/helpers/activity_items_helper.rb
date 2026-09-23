@@ -28,6 +28,8 @@ module ActivityItemsHelper
       scheduled_messages_path
     when TwoFactorCredential
       user_profile_path
+    when Session
+      user_sessions_path
     else
       activity_items_path
     end
@@ -73,6 +75,8 @@ module ActivityItemsHelper
       "Scheduled message not sent"
     when "two_factor_lockout"
       "Sign-in lockout"
+    when "new_sign_in"
+      "New sign-in"
     else
       item.event_type.humanize
     end
@@ -111,6 +115,8 @@ module ActivityItemsHelper
       room ? room_display_name(room) : "Unavailable room"
     when TwoFactorCredential
       "Two-step sign-in"
+    when Session
+      "Account security"
     else
       source.class.name.humanize
     end
@@ -167,6 +173,12 @@ module ActivityItemsHelper
       end
     when TwoFactorCredential
       "Several wrong sign-in codes were entered for your account."
+    when Session
+      # Absolute time, like event items: this helper also runs in the
+      # controller for the JSON payload, where view date helpers are
+      # unavailable.
+      at = item.created_at.strftime("%B %-d, %Y at %-I:%M %p %Z")
+      "New sign-in to your account from #{source.device_description}, #{at}. Wasn't you? Review your sessions."
     else
       "Source updated"
     end

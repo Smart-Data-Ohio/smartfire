@@ -5,6 +5,7 @@ class Accounts::Bots::GrantsController < ApplicationController
   # do needs a current administrator, so a demoted owner cannot keep
   # granting capabilities (workspace-wide or external_action included).
   before_action :ensure_can_administer, only: :create
+  before_action :require_sudo_mode, only: %i[ create destroy ]
   before_action :set_agent
 
   def index

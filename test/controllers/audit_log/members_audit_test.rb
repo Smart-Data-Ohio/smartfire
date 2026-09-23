@@ -5,6 +5,7 @@ class AuditLog::MembersAuditTest < ActionDispatch::IntegrationTest
 
   setup do
     sign_in :david
+    grant_sudo_access
   end
 
   test "email change is recorded with before and after" do

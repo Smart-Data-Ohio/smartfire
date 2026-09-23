@@ -33,6 +33,7 @@ class User < ApplicationRecord
   has_many :room_categories, dependent: :destroy
 
   has_many :sessions, dependent: :destroy
+  has_many :user_devices, dependent: :delete_all
   has_many :workspace_presence_leases, dependent: :delete_all
   has_many :bans, dependent: :destroy
 
@@ -163,6 +164,7 @@ class User < ApplicationRecord
       searches.delete_all
       TwoFactorSetupSecret.where(session_id: sessions.select(:id)).delete_all
       sessions.delete_all
+      user_devices.delete_all
       Calendar::DisconnectCleanupJob.perform_later([], google_account.cleanup_snapshot, google_account.id) if google_account&.usable?
       push_channel&.destroy!
       google_account&.mark_disconnected!("Account deactivated")

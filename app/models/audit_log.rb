@@ -24,6 +24,10 @@ class AuditLog < ApplicationRecord
     two_factor.backup_codes.regenerate
     two_factor.reauthenticate
     two_factor.devices.revoke_all
+    session.revoke
+    session.revoke_others
+    sudo.confirm.success
+    sudo.confirm.failure
     user.create
     user.email.change
     user.password.change

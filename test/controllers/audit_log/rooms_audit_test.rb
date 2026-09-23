@@ -3,6 +3,7 @@ require "test_helper"
 class AuditLog::RoomsAuditTest < ActionDispatch::IntegrationTest
   setup do
     sign_in :david
+    grant_sudo_access
   end
 
   test "room create is recorded" do

@@ -745,6 +745,10 @@ class Sessions::GoogleControllerTest < ActionDispatch::IntegrationTest
     user = User.find_by!(email_address: "alice@smartdata.net")
     satisfy_two_factor!(user)
     connect_google!(user, email: "alice@gmail.test")
+    # Disconnecting needs sudo; the password is irrelevant to the
+    # identity-retention assertion below.
+    user.update!(password: "secret123456")
+    grant_sudo_access
 
     delete google_connection_path
 

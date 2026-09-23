@@ -201,6 +201,8 @@
 
   <%= render "users/profiles/two_factor", user: @user unless @user.bot? %>
 
+  <%= render "users/profiles/sessions" %>
+
   <%= render "users/profiles/transfer", user: @user %>
 
   <% if Rails.env.development? %>

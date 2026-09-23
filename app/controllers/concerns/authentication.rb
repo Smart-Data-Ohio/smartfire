@@ -47,7 +47,13 @@ module Authentication
 
     def restore_authentication
       if session = find_session_by_cookie
-        resume_session session
+        if session.expired?
+          session.destroy!
+          remove_authentication_cookie
+          nil
+        else
+          resume_session session
+        end
       end
     end
 
@@ -103,8 +109,19 @@ module Authentication
       redirect_to root_url if signed_in?
     end
 
+    # Creates a REAL session row: the pending two-factor state (see
+    # begin_session_for) never reaches here, so the new-device alert
+    # below fires only for verified-or-unenrolled sign-ins -- never for
+    # a pending, unverified first factor.
     def start_new_session_for(user, two_factor_verified: false)
-      user.sessions.start!(user_agent: request.user_agent, ip_address: request.remote_ip, two_factor_verified: two_factor_verified).tap do |session|
+      # A new session starts unverified: a different member signing in on
+      # this browser must not inherit the previous user's confirmation.
+      session.delete(SudoMode::VERIFIED_SESSION_KEY)
+      session.delete(SudoMode::PENDING_SESSION_KEY)
+
+      device_id = ensure_device_cookie
+      user.sessions.start!(user_agent: request.user_agent, ip_address: request.remote_ip,
+        device_id: device_id, two_factor_verified: two_factor_verified).tap do |session|
         authenticated_as session
 
         # Establish the CSRF token before any page renders. Sign-ins that
@@ -115,6 +132,25 @@ module Authentication
         # the next PATCH/POST 422s. Reading the token here commits it with
         # the sign-in response, so every later request reuses it.
         form_authenticity_token
+
+        NewSignInAlert.deliver_if_new_device(user, session)
+      end
+    end
+
+    # The stable device identifier new-device sign-in alerts are keyed on:
+    # a long-lived signed cookie, not the IP alone. Every sign-in either
+    # reuses the browser's id or mints one, so a sign-in from a browser the
+    # account has never used is recognizable. The two-step sign-in
+    # remember-device cookie is a separate concern; keep the names apart.
+    # HttpOnly and SameSite=Lax, like the session token: only sign-in
+    # reads it, so scripts never need it and it must not ride
+    # cross-site requests (a stolen id would let an attacker reuse a
+    # known device and skip the new-device alert).
+    def ensure_device_cookie
+      cookies.signed[:device_id] || begin
+        device_id = SecureRandom.hex(16)
+        cookies.signed.permanent[:device_id] = { value: device_id, httponly: true, same_site: :lax }
+        device_id
       end
     end
 

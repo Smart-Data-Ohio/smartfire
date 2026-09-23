@@ -1,5 +1,6 @@
 class Accounts::Bots::KeysController < ApplicationController
   before_action :ensure_can_administer
+  before_action :require_sudo_mode
 
   # Issues a new key and shows it once: only its digest is stored.
   def update

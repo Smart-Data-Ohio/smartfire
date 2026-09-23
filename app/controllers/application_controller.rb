@@ -1,5 +1,5 @@
 class ApplicationController < ActionController::Base
-  include AllowBrowser, Authentication, Authorization, BlockBannedRequests, SetCurrentRequest, SetPlatform, TrackedRoomVisit, VersionHeaders
+  include AllowBrowser, Authentication, Authorization, BlockBannedRequests, SetCurrentRequest, SetPlatform, SudoMode, TrackedRoomVisit, VersionHeaders
   # Separate include, so its hooks register after Authentication's: one
   # multi-module include registers callbacks in reverse include order,
   # which would run the zone hook before Current.user is set.

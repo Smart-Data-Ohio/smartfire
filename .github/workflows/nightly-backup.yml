@@ -1,0 +1,337 @@
+name: Nightly backup
+
+# Drives the off-machine backup: runs deploy/backups/campfire-backup.sh on
+# the app VM over an IAP SSH tunnel (encryption happens on the VM, so
+# plaintext never leaves it), downloads the encrypted archive, verifies its
+# checksum, and uploads it to the backup bucket. See docs/backups.md.
+#
+# Authentication is Workload Identity Federation against the APP project as
+# the backup-runner identity (IAP tunnel and SSH to the campfire VM only,
+# plus create-only access to the backup bucket), mirroring deploy-gcp.yml.
+
+on:
+  schedule:
+    # 09:00 UTC every day.
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  backup:
+    name: Back up the app VM to Cloud Storage
+    runs-on: ubuntu-latest
+    concurrency:
+      group: nightly-backup
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    timeout-minutes: 90
+    env:
+      BACKUP_GCP_BUCKET: ${{ vars.BACKUP_GCP_BUCKET }}
+      BACKUP_RUNNER_WIF_PROVIDER: ${{ vars.BACKUP_RUNNER_WIF_PROVIDER }}
+      BACKUP_RUNNER_SA: ${{ vars.BACKUP_RUNNER_SA }}
+      BACKUP_APP_PROJECT: ${{ vars.BACKUP_APP_PROJECT }}
+      BACKUP_APP_ZONE: ${{ vars.BACKUP_APP_ZONE }}
+      BACKUP_APP_INSTANCE: ${{ vars.BACKUP_APP_INSTANCE }}
+      BACKUP_AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 10
+        with:
+          persist-credentials: false
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        timeout-minutes: 5
+        with:
+          workload_identity_provider: ${{ env.BACKUP_RUNNER_WIF_PROVIDER }}
+          service_account: ${{ env.BACKUP_RUNNER_SA }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+        timeout-minutes: 10
+
+      - name: Verify the backup-runner identity
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$BACKUP_RUNNER_SA" || { echo "::error::BACKUP_RUNNER_SA is not set"; exit 1; }
+          # As in deploy-gcp.yml, this is the first proof the Workload Identity
+          # binding can really impersonate the runner. The token is never printed.
+          err="$(mktemp)"
+          trap 'rm -f "$err"' EXIT
+          if ! gcloud auth print-access-token >/dev/null 2>"$err"; then
+            cat "$err"
+            echo "::error::could not obtain an access token as ${BACKUP_RUNNER_SA}; check the Workload Identity binding"
+            exit 1
+          fi
+          echo "Obtained an access token as ${BACKUP_RUNNER_SA}."
+
+      - name: Check the backup inputs
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$BACKUP_GCP_BUCKET" || { echo "::error::BACKUP_GCP_BUCKET is not set"; exit 1; }
+          case "$BACKUP_GCP_BUCKET" in
+            gs://*|*/*) echo "::error::BACKUP_GCP_BUCKET must be a bare bucket name"; exit 1 ;;
+          esac
+          test -n "$BACKUP_APP_PROJECT" || { echo "::error::BACKUP_APP_PROJECT is not set"; exit 1; }
+          test -n "$BACKUP_APP_ZONE" || { echo "::error::BACKUP_APP_ZONE is not set"; exit 1; }
+          test -n "$BACKUP_APP_INSTANCE" || { echo "::error::BACKUP_APP_INSTANCE is not set"; exit 1; }
+          # The recipient is a PUBLIC key, safe to log and to interpolate into
+          # the remote command once its shape is proven: never interpolate an
+          # unvalidated variable into a remote command.
+          if ! printf '%s' "$BACKUP_AGE_RECIPIENT" | grep -Eq '^age1[0-9a-z]+$'; then
+            echo "::error::BACKUP_AGE_RECIPIENT is not a well-formed age recipient"
+            exit 1
+          fi
+          echo "Inputs look good; backing up ${BACKUP_APP_INSTANCE} to gs://${BACKUP_GCP_BUCKET}/daily/."
+
+      - name: Ensure age is installed on the VM
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          set -euo pipefail
+          gcloud compute ssh "$BACKUP_APP_INSTANCE" \
+            --project="$BACKUP_APP_PROJECT" --zone="$BACKUP_APP_ZONE" \
+            --tunnel-through-iap --quiet \
+            --command "command -v age >/dev/null || { sudo apt-get update && sudo apt-get install -y age; }"
+          gcloud compute ssh "$BACKUP_APP_INSTANCE" \
+            --project="$BACKUP_APP_PROJECT" --zone="$BACKUP_APP_ZONE" \
+            --tunnel-through-iap --quiet \
+            --command "command -v age >/dev/null && age --version"
+
+      - name: Stage the backup directories on the VM
+        id: stage
+        timeout-minutes: 5
+        shell: bash
+        env:
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          case "$RUN_ID" in
+            *[!0-9]*|'') echo "::error::unexpected run id"; exit 1 ;;
+          esac
+          home_dir="campfire-backup-${RUN_ID}"
+          # The script copy lives in the login user's home; the encrypted
+          # output lands in a fresh /tmp directory the script runs as root.
+          out="$(gcloud compute ssh "$BACKUP_APP_INSTANCE" \
+            --project="$BACKUP_APP_PROJECT" --zone="$BACKUP_APP_ZONE" \
+            --tunnel-through-iap --quiet \
+            --command "rm -rf \"\$HOME/${home_dir}\" && mkdir -p \"\$HOME/${home_dir}\" && mktemp -d /tmp/campfire-backup-output.XXXXXX" \
+            | tr -d '\r')"
+          if ! printf '%s' "$out" | grep -Eq '^/tmp/campfire-backup-output\.[A-Za-z0-9]+$'; then
+            echo "::error::unexpected remote output directory: ${out}"
+            exit 1
+          fi
+          {
+            echo "home_dir=${home_dir}"
+            echo "output_dir=${out}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Staged ${home_dir} and ${out} on ${BACKUP_APP_INSTANCE}."
+
+      - name: Copy the backup script to the VM
+        timeout-minutes: 5
+        shell: bash
+        env:
+          HOME_DIR: ${{ steps.stage.outputs.home_dir }}
+        run: |
+          set -euo pipefail
+          case "$HOME_DIR" in
+            campfire-backup-[0-9]*) : ;;
+            *) echo "::error::unexpected staging directory: ${HOME_DIR}"; exit 1 ;;
+          esac
+          gcloud compute scp --quiet \
+            --project="$BACKUP_APP_PROJECT" --zone="$BACKUP_APP_ZONE" \
+            --tunnel-through-iap \
+            deploy/backups/campfire-backup.sh "${BACKUP_APP_INSTANCE}:${HOME_DIR}/campfire-backup.sh"
+
+      - name: Run the backup on the VM
+        id: run_backup
+        timeout-minutes: 60
+        shell: bash
+        env:
+          HOME_DIR: ${{ steps.stage.outputs.home_dir }}
+          OUTPUT_DIR: ${{ steps.stage.outputs.output_dir }}
+        run: |
+          set -euo pipefail
+          case "$OUTPUT_DIR" in
+            /tmp/campfire-backup-output.*) : ;;
+            *) echo "::error::unexpected output directory: ${OUTPUT_DIR}"; exit 1 ;;
+          esac
+          log="$(mktemp)"
+          trap 'rm -f "$log"' EXIT
+          # Encryption happens on the VM, to the public recipient: only the
+          # encrypted archive ever crosses the tunnel back to this runner.
+          # The recipient's shape was proven above; the directories are ours.
+          rc=0
+          gcloud compute ssh "$BACKUP_APP_INSTANCE" \
+            --project="$BACKUP_APP_PROJECT" --zone="$BACKUP_APP_ZONE" \
+            --tunnel-through-iap --quiet \
+            --command "sudo env BACKUP_ENCRYPTION=age BACKUP_AGE_RECIPIENT='${BACKUP_AGE_RECIPIENT}' bash \"\$HOME/${HOME_DIR}/campfire-backup.sh\" --output-dir '${OUTPUT_DIR}'" \
+            2>&1 | tee "$log" | tr -d '\r' || rc="${PIPESTATUS[0]}"
+          if [ "$rc" -eq 75 ]; then
+            echo "::error::a release holds the VM's release lock; rerun this workflow after the release finishes"
+            exit 75
+          fi
+          if [ "$rc" -ne 0 ]; then
+            echo "::error::the backup script failed on the VM (exit ${rc}); see the log above"
+            exit "$rc"
+          fi
+          # Never interpolate unvalidated script output into a later remote
+          # command: the file must be exactly one archive directly inside the
+          # directory this run staged.
+          file="$(grep -E '^BACKUP_FILE=' "$log" | tail -n 1 | cut -d= -f2- | tr -d '\r')"
+          sha="$(grep -E '^BACKUP_SHA256=' "$log" | tail -n 1 | cut -d= -f2- | tr -d '\r')"
+          case "$file" in
+            "${OUTPUT_DIR}"/smartfire-backup-[0-9]*-[0-9]*.tar.gz.age) : ;;
+            *) echo "::error::unexpected backup path from the VM: ${file}"; exit 1 ;;
+          esac
+          if ! printf '%s' "$sha" | grep -Eq '^[0-9a-f]{64}$'; then
+            echo "::error::the VM did not report a well-formed SHA-256"; exit 1
+          fi
+          base="$(basename "$file")"
+          case "$base" in
+            smartfire-backup-????????-??????.tar.gz.age) : ;;
+            *) echo "::error::unexpected backup file name: ${base}"; exit 1 ;;
+          esac
+          {
+            echo "remote_file=${file}"
+            echo "remote_sha256=${sha}"
+            echo "base=${base}"
+          } >> "$GITHUB_OUTPUT"
+          echo "The VM produced ${base} (sha256 ${sha})."
+
+      - name: Download the backup and verify its checksum
+        id: download
+        timeout-minutes: 20
+        shell: bash
+        env:
+          REMOTE_FILE: ${{ steps.run_backup.outputs.remote_file }}
+          REMOTE_SHA256: ${{ steps.run_backup.outputs.remote_sha256 }}
+          BASE: ${{ steps.run_backup.outputs.base }}
+          OUTPUT_DIR: ${{ steps.stage.outputs.output_dir }}
+        run: |
+          set -euo pipefail
+          # Re-validate: step outputs cross as plain strings, and the remote
+          # file lands in a root-executed command below.
+          case "$REMOTE_FILE" in
+            "${OUTPUT_DIR}"/smartfire-backup-[0-9]*-[0-9]*.tar.gz.age) : ;;
+            *) echo "::error::unexpected backup path: ${REMOTE_FILE}"; exit 1 ;;
+          esac
+          if ! printf '%s' "$REMOTE_SHA256" | grep -Eq '^[0-9a-f]{64}$'; then
+            echo "::error::unexpected checksum: ${REMOTE_SHA256}"; exit 1
+          fi
+          # The archive is root-owned (the script ran under sudo); hand it to
+          # the login user so scp can read it.
+          gcloud compute ssh "$BACKUP_APP_INSTANCE" \
+            --project="$BACKUP_APP_PROJECT" --zone="$BACKUP_APP_ZONE" \
+            --tunnel-through-iap --quiet \
+            --command "sudo chown \"\$(whoami)\" '${REMOTE_FILE}'"
+          mkdir -p "${RUNNER_TEMP}/backup"
+          local_file="${RUNNER_TEMP}/backup/${BASE}"
+          gcloud compute scp --quiet \
+            --project="$BACKUP_APP_PROJECT" --zone="$BACKUP_APP_ZONE" \
+            --tunnel-through-iap \
+            "${BACKUP_APP_INSTANCE}:${REMOTE_FILE}" "$local_file"
+          actual="$(sha256sum "$local_file" | awk '{print $1}')"
+          if [ "$actual" != "$REMOTE_SHA256" ]; then
+            echo "::error::checksum mismatch after download: expected ${REMOTE_SHA256}, got ${actual}"
+            exit 1
+          fi
+          echo "local_file=${local_file}" >> "$GITHUB_OUTPUT"
+          echo "Downloaded ${BASE} ($(stat -c%s "$local_file") bytes); checksum matches."
+
+      - name: Upload to Cloud Storage
+        id: upload
+        timeout-minutes: 20
+        shell: bash
+        env:
+          LOCAL_FILE: ${{ steps.download.outputs.local_file }}
+          BASE: ${{ steps.run_backup.outputs.base }}
+        run: |
+          set -euo pipefail
+          case "$BASE" in
+            smartfire-backup-????????-??????.tar.gz.age) : ;;
+            *) echo "::error::unexpected backup file name: ${BASE}"; exit 1 ;;
+          esac
+          stamp="$(printf '%s' "$BASE" | sed -n 's/^smartfire-backup-\([0-9]\{8\}-[0-9]\{6\}\)\.tar\.gz\.age$/\1/p')"
+          [ -n "$stamp" ] || { echo "::error::could not parse the stamp from ${BASE}"; exit 1; }
+          datestr="${stamp%%-*}"
+          # One upload per prefix: a create-only credential cannot read an
+          # object back for a server-side copy. GNU date parses YYYYMMDD.
+          objects="daily/${BASE}"
+          [ "$(date -u -d "$datestr" +%u)" = "7" ] && objects="$objects weekly/${BASE}"
+          [ "$(date -u -d "$datestr" +%-d)" = "1" ] && objects="$objects monthly/${BASE}"
+          # shellcheck disable=SC2086
+          for object in $objects; do
+            gcloud storage cp "$LOCAL_FILE" "gs://${BACKUP_GCP_BUCKET}/${object}"
+            echo "Uploaded gs://${BACKUP_GCP_BUCKET}/${object}"
+          done
+          {
+            echo "stamp=${stamp}"
+            echo "objects=${objects}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Clean the backup files off the VM
+        if: always()
+        timeout-minutes: 5
+        shell: bash
+        env:
+          HOME_DIR: ${{ steps.stage.outputs.home_dir }}
+          OUTPUT_DIR: ${{ steps.stage.outputs.output_dir }}
+        run: |
+          set -euo pipefail
+          # Always-run cleanup: remove the staging the run created, whether it
+          # succeeded or failed. Both paths are validated before they reach
+          # rm, and an early failure stages nothing to clean.
+          case "${HOME_DIR:-}" in
+            campfire-backup-[0-9]*) : ;;
+            '')
+              echo "Nothing was staged on the VM; skipping cleanup."
+              exit 0
+              ;;
+            *) echo "::warning::unexpected staging directory, leaving it alone: ${HOME_DIR}"; exit 0 ;;
+          esac
+          case "${OUTPUT_DIR:-}" in
+            /tmp/campfire-backup-output.*) : ;;
+            *) echo "::warning::unexpected output directory, leaving it alone: ${OUTPUT_DIR}"; exit 0 ;;
+          esac
+          gcloud compute ssh "$BACKUP_APP_INSTANCE" \
+            --project="$BACKUP_APP_PROJECT" --zone="$BACKUP_APP_ZONE" \
+            --tunnel-through-iap --quiet \
+            --command "sudo rm -rf \"\$HOME/${HOME_DIR}\" '${OUTPUT_DIR}'" || {
+            echo "::warning::VM cleanup failed; remove \$HOME/${HOME_DIR} and ${OUTPUT_DIR} from ${BACKUP_APP_INSTANCE} by hand"
+            exit 0
+          }
+          echo "Removed the staging from ${BACKUP_APP_INSTANCE}."
+
+      - name: Summarize the backup
+        if: success()
+        timeout-minutes: 2
+        shell: bash
+        env:
+          BASE: ${{ steps.run_backup.outputs.base }}
+          SHA256: ${{ steps.run_backup.outputs.remote_sha256 }}
+          OBJECTS: ${{ steps.upload.outputs.objects }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## Nightly backup complete"
+            echo
+            echo "Produced \`${BASE}\` on \`${BACKUP_APP_INSTANCE}\`, verified its"
+            echo "checksum after download, and uploaded it:"
+            echo
+            # shellcheck disable=SC2086
+            for object in $OBJECTS; do
+              echo "- \`gs://${BACKUP_GCP_BUCKET}/${object}\`"
+            done
+            echo
+            echo "SHA-256: \`${SHA256}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

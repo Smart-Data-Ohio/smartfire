@@ -3,6 +3,10 @@ class Accounts::BotsController < ApplicationController
   before_action :set_bot, only: %i[ edit update destroy kill_switch ]
   before_action :ensure_can_manage_bot, only: %i[ edit update kill_switch ]
   before_action :ensure_can_change_webhook, only: :update
+  before_action :require_sudo_mode, only: :create
+  # Only a changed webhook URL prompts: the edit form always submits the
+  # field, so key presence alone would gate every name edit.
+  before_action :require_sudo_mode, only: :update, if: :webhook_url_changing?
   before_action :set_agent, only: %i[ edit update kill_switch ]
 
   def index
@@ -88,6 +92,11 @@ class Accounts::BotsController < ApplicationController
       return unless params[:user].respond_to?(:key?) && params[:user].key?(:webhook_url)
 
       head :forbidden if params[:user][:webhook_url].to_s.strip != @bot.webhook_url.to_s
+    end
+
+    def webhook_url_changing?
+      params[:user].respond_to?(:key?) && params[:user].key?(:webhook_url) &&
+        params[:user][:webhook_url].to_s.strip != @bot.webhook_url.to_s
     end
 
     # A legacy bot without an agent row stays that way: reading or editing

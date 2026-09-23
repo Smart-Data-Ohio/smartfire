@@ -30,7 +30,8 @@ class WorkspaceIconsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "image/png", response.media_type
     assert_equal "max-age=3600, private", response.headers["Cache-Control"]
     assert_equal "nosniff", response.headers["X-Content-Type-Options"]
-    assert_nil response.headers["Content-Security-Policy"]
+    # PNGs keep the app-wide policy rather than the SVG override.
+    assert_includes response.headers["Content-Security-Policy"].to_s, "script-src 'self'"
   end
 
   test "supports conditional GETs with the blob checksum" do
