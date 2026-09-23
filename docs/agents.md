@@ -995,6 +995,13 @@ surfaces hit the same wall: an over-cap request answers 429 with
 one inbox item per cap per day, however many requests overflow (an
 ownerless agent notifies every administrator instead).
 
+Anything posted through the shared posting path counts: streams
+count when they start, polls count as messages when created, and an
+agent's reply to a `slash_command` event is an ordinary post through
+the same path. Slash commands and scheduled messages themselves are
+human-only (bots get 403 at the slash endpoint and the scheduled
+dispatcher skips bots), so they never touch budgets.
+
 The bot edit page also carries the kill switch: one click suspends
 the agent (revoking every grant, which also blocks
 approved-but-unexecuted external actions at perform time), cancels

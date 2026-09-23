@@ -159,6 +159,38 @@ class Room::DestroyJobTest < ActiveJob::TestCase
     assert_empty ActivityItem.where(id: item_ids)
   end
 
+  test "destroy removes streams, steps, polls, and scheduled messages" do
+    agent = agents(:bender_agent)
+    stream = @room.root_messages.create!(creator: agent.user,
+      markdown_source: "Drafting…", streaming: true, client_message_id: "destroy-stream")
+    stepped = @room.root_messages.create!(creator: agent.user,
+      markdown_source: "Working on it", client_message_id: "destroy-stepped")
+    AgentStep.create!(agent: agent, message: stepped, name: "Run tests")
+    @room.memberships.grant_to(agent.user)
+    AgentGrant.create!(agent: agent, room: @room, granted_by: @david, capability: "post_messages")
+    @thread.update_work!(actor: @david, work_status: "planned", work_owner_id: agent.user_id)
+    AgentStep.create!(agent: agent, channel_thread: @thread, name: "Reproduce")
+    polled = @room.root_messages.create!(creator: @david,
+      markdown_source: "Lunch?", client_message_id: "destroy-polled")
+    poll = Poll.create_for_message!(message: polled, labels: [ "Tacos", "Pizza" ])
+    poll.cast_vote!(@david, [ poll.poll_options.first.id ])
+    scheduled = ScheduledMessage.create!(user: @david, room: @room,
+      markdown_source: "Pending", send_at: 1.hour.from_now)
+    step_ids = AgentStep.where(message_id: [ stream.id, stepped.id ])
+      .or(AgentStep.where(channel_thread_id: @thread.id)).ids
+    assert_not_empty step_ids
+
+    @room.begin_destroy!
+    Room::DestroyJob.perform_now(@room.id)
+
+    assert_empty Room.where(id: @room.id)
+    assert_empty Message.where(id: [ stream.id, stepped.id, polled.id ])
+    assert_empty AgentStep.where(id: step_ids)
+    assert_empty Poll.where(id: poll.id)
+    assert_empty PollVote.joins(:poll).where(polls: { id: poll.id })
+    assert_empty ScheduledMessage.where(id: scheduled.id)
+  end
+
   test "reenqueue_stuck! claims rooms so a second sweep enqueues nothing" do
     stuck = Rooms::Closed.create_for({ name: "Stuck", creator: @david }, users: [ @david ])
     stuck.begin_destroy!

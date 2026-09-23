@@ -1,6 +1,6 @@
 module Agents
   # Per-agent daily budgets, enforced inside the shared services REST and
-  # MCP both use (Posting, Streaming, BoardPosts, Approvals,
+  # MCP both use (Posting, Streaming, Polls, BoardPosts, Approvals,
   # FizzyCardActions, and the GitHub pull-request actions endpoint), so
   # switching surfaces cannot dodge a cap. Owners and administrators set
   # the caps on the bot edit page; nil means unlimited.

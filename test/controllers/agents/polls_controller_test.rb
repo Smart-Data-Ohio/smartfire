@@ -44,6 +44,22 @@ class Agents::PollsControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "creation counts against the message budget" do
+    grant!(capability: "post_messages", room: @room)
+    @agent.update!(daily_message_cap: 1)
+    @room.root_messages.create!(creator: @bot,
+      markdown_source: "Spent", client_message_id: "poll-budget-spent")
+
+    assert_no_difference -> { Message.count } do
+      post "/rooms/#{@room.id}/agents/polls", params: {
+        question: "Lunch?", options: [ "Tacos", "Pizza" ]
+      }.to_json, headers: bearer_headers
+    end
+
+    assert_response :too_many_requests
+    assert_equal "Daily message budget exceeded (1/day)", response.parsed_body["error"]
+  end
+
   test "creation validates without posting" do
     grant!(capability: "post_messages", room: @room)
 

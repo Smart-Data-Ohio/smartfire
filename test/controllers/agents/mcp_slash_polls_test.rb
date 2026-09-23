@@ -73,6 +73,19 @@ class Agents::McpSlashPollsTest < ActionDispatch::IntegrationTest
     assert_tool_error body, "Forbidden: agent lacks post_messages capability"
   end
 
+  test "create_poll hits the same message budget wall as REST" do
+    grant!(capability: "post_messages", room: @room)
+    @agent.update!(daily_message_cap: 1)
+    @room.root_messages.create!(creator: users(:bender),
+      markdown_source: "Spent", client_message_id: "mcp-poll-budget-spent")
+
+    body = call_tool("create_poll",
+      { "room_id" => @room.id, "question" => "Lunch?", "options" => [ "Tacos", "Pizza" ] })
+
+    assert_tool_error body, "Daily message budget exceeded (1/day)"
+    assert_equal "too_many_requests", body.dig("result", "structuredContent", "status")
+  end
+
   test "get_poll reads live results" do
     grant!(capability: "post_messages", room: @room)
     poll = create_poll
