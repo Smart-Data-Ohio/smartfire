@@ -25,17 +25,24 @@ class Huddle::JoinNotifier
       return unless grant_still_in_call?(grant)
 
       in_call_ids = in_call_user_ids(room)
-      memberships = room.memberships.includes(:user).where.not(user_id: joiner.id)
+      memberships = room.memberships.includes(:user).where.not(user_id: joiner.id).to_a
       return if memberships.empty?
 
-      memberships.find_each do |membership|
+      # Direct-room display names are per-viewer but computed from one
+      # member list, and the recent-ring check runs once for the room:
+      # the fan-out below stays flat in queries as the group grows.
+      direct = room.direct?
+      members = room.users.ordered.to_a if direct
+      rung_ids = recently_rung_ids(room, memberships.map(&:user_id)) if direct
+
+      memberships.each do |membership|
         viewer = membership.user
         next unless active_human?(viewer)
 
         if in_call_ids.include?(viewer.id)
-          broadcast_join(room:, joiner:, viewer:, in_call: true)
-        elsif room.direct? && noticeable_outside_call?(room, membership)
-          broadcast_join(room:, joiner:, viewer:, in_call: false)
+          broadcast_join(room:, joiner:, viewer:, in_call: true, members:)
+        elsif direct && noticeable_outside_call?(membership, rung_ids)
+          broadcast_join(room:, joiner:, viewer:, in_call: false, members:)
           Huddle::JoinPusher.new(grant:, recipient: viewer, room_membership: membership).push
         end
       end
@@ -55,8 +62,9 @@ class Huddle::JoinNotifier
 
       in_call_ids = in_call_user_ids(room) - [ leaver.id ]
       if in_call_ids.any?
+        members = room.users.ordered.to_a if room.direct?
         User.active.without_bots.where(id: in_call_ids).find_each do |viewer|
-          broadcast_leave(room:, leaver:, viewer:)
+          broadcast_leave(room:, leaver:, viewer:, members:)
         end
       elsif room.direct?
         dismiss_outside_call(room:, leaver:)
@@ -83,27 +91,27 @@ class Huddle::JoinNotifier
       # Outside-call notices mirror invitation scoping — switched-off and
       # hidden rooms stay silent — and skip a viewer whose ring for this
       # room is still live: ringing is already the notice.
-      def noticeable_outside_call?(room, membership)
+      def noticeable_outside_call?(membership, rung_ids)
         return false if membership.involved_in_invisible? || membership.involved_in_nothing?
 
-        !recently_rung?(room, membership.user_id)
+        !rung_ids.include?(membership.user_id)
       end
 
-      def recently_rung?(room, user_id)
+      def recently_rung_ids(room, user_ids)
         ActivityItem
-          .where(user_id:, source_type: HuddleGrant.polymorphic_name, event_type: "huddle_started", handled_at: nil)
+          .where(user_id: user_ids, source_type: HuddleGrant.polymorphic_name, event_type: "huddle_started", handled_at: nil)
           .where(created_at: RECENT_RING_WINDOW.ago..)
           .joins("INNER JOIN huddle_grants AS rung_grants ON rung_grants.id = activity_items.source_id")
           .where(rung_grants: { room_id: room.id })
-          .exists?
+          .pluck(:user_id).to_set
       end
 
-      def broadcast_join(room:, joiner:, viewer:, in_call:)
+      def broadcast_join(room:, joiner:, viewer:, in_call:, members:)
         ActionCable.server.broadcast HuddleNoticeChannel.stream_name_for(viewer.id), {
           huddleJoinNotice: {
             eventType: "huddle_joined",
             roomId: room.id,
-            roomName: room_name_for(room, viewer),
+            roomName: room_name_for(room, viewer, members),
             roomPath: room_path(room),
             joinerId: joiner.id,
             joinerName: joiner.name,
@@ -112,12 +120,12 @@ class Huddle::JoinNotifier
         }
       end
 
-      def broadcast_leave(room:, leaver:, viewer:)
+      def broadcast_leave(room:, leaver:, viewer:, members:)
         ActionCable.server.broadcast HuddleNoticeChannel.stream_name_for(viewer.id), {
           huddleJoinNotice: {
             eventType: "huddle_left",
             roomId: room.id,
-            roomName: room_name_for(room, viewer),
+            roomName: room_name_for(room, viewer, members),
             joinerId: leaver.id,
             joinerName: leaver.name
           }
@@ -137,9 +145,9 @@ class Huddle::JoinNotifier
         end
       end
 
-      def room_name_for(room, viewer)
+      def room_name_for(room, viewer, members)
         if room.direct?
-          room.direct_display_name(for_user: viewer)
+          room.direct_display_name(for_user: viewer, members: members)
         else
           room.name
         end

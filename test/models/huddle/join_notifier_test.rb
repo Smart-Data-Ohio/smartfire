@@ -107,6 +107,24 @@ class Huddle::JoinNotifierTest < ActiveSupport::TestCase
     })
   end
 
+  test "join fan-out loads members and rings once no matter the group size" do
+    group = Rooms::Direct.create_for({ creator: users(:david) },
+      users: [ users(:david), users(:jason), users(:kevin), users(:jz) ])
+    david_grant = issue_seen(group, users(:david), group.memberships.find_by!(user: users(:david)))
+    issue_seen(group, users(:jason), group.memberships.find_by!(user: users(:jason)))
+    resolve_ring(users(:kevin))
+    resolve_ring(users(:jz))
+    david_grant.user # warm the joiner outside the counted block
+
+    @pool.stubs(:queue)
+    user_selects, ring_queries = count_join_queries { Huddle::JoinNotifier.notify_join(david_grant) }
+
+    # The member preload plus one shared member list (not one member list
+    # per viewer), and one ring lookup for the room (not one per outsider).
+    assert_equal 2, user_selects.size
+    assert_equal 1, ring_queries.size
+  end
+
   test "a channel join toasts the insider and tells the outsider nothing" do
     room = rooms(:watercooler)
     david_grant = issue_seen(room, users(:david), memberships(:david_watercooler))
@@ -429,5 +447,27 @@ class Huddle::JoinNotifierTest < ActiveSupport::TestCase
     # notice is no longer shadowed by a live ring.
     def resolve_ring(user)
       ActivityItem.where(user: user, event_type: "huddle_started").update_all(event_type: "huddle_missed")
+    end
+
+    # Same shape as the count_queries in ChannelThreadsControllerTest:
+    # every uncached users SELECT and every activity_items query in the
+    # block, so the fan-out can prove it preloads instead of querying
+    # per viewer.
+    def count_join_queries
+      user_selects = []
+      ring_queries = []
+      subscription = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        next if payload[:cached]
+
+        sql = payload[:sql].to_s
+        user_selects << sql if sql.match?(/FROM "users"/)
+        ring_queries << sql if sql.match?(/FROM "activity_items"/)
+      end
+
+      ActiveRecord::Base.connection.clear_query_cache
+      yield
+      [ user_selects, ring_queries ]
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscription)
     end
 end
