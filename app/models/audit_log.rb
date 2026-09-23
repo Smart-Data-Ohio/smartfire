@@ -18,6 +18,8 @@ class AuditLog < ApplicationRecord
     session.sign_in.failure
     session.revoke
     session.revoke_others
+    sudo.confirm.success
+    sudo.confirm.failure
     user.create
     user.email.change
     user.password.change

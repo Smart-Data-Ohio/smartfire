@@ -3,6 +3,7 @@ class Accounts::Bots::GithubConnectionsController < ApplicationController
   # GitHub identity: it decides whom approved write actions act as.
   before_action :ensure_can_administer
   before_action :set_bot
+  before_action :require_sudo_mode, only: %i[ create destroy ]
 
   # Links the agent's own fine-grained personal access token (for a GitHub
   # machine user dedicated to the agent) so approved write actions run as

@@ -50,6 +50,16 @@ class NewSignInAlertTest < ActionDispatch::IntegrationTest
     assert_select ".activity-item__body", text: /New sign-in to your account from Chrome on macOS/
   end
 
+  test "signing out everywhere does not reset first-ever" do
+    post session_url, params: { email_address: "kevin@37signals.com", password: "secret123456" }
+    users(:kevin).sessions.destroy_all
+    expire_device_cookie
+
+    assert_difference -> { ActivityItem.where(event_type: "new_sign_in").count }, +1 do
+      post session_url, params: { email_address: "kevin@37signals.com", password: "secret123456" }
+    end
+  end
+
   test "the alert links to the sessions page" do
     post session_url, params: { email_address: "kevin@37signals.com", password: "secret123456" }
     expire_device_cookie

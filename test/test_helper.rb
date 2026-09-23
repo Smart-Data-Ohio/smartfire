@@ -32,6 +32,7 @@ class ActiveSupport::TestCase
     end
 
     WebMock.disable_net_connect!
+    SudosController::RATE_LIMIT_STORE.clear
 
     # Webhook and unfurl deliveries resolve through the SSRF guard; answer
     # every hostname with a public address so no test depends on real DNS.

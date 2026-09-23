@@ -6,6 +6,7 @@ module Github
   # (best effort) before deleting the row.
   class AppConnectionsController < ApplicationController
     before_action :ensure_configured
+    before_action :require_sudo_mode, only: :connect
 
     def connect
       raw_state = SecureRandom.hex(16)

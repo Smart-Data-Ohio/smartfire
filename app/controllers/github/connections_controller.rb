@@ -4,6 +4,8 @@ module Github
   # GET /user before anything is stored; it is never logged (filtered as
   # :token) or rendered back.
   class ConnectionsController < ApplicationController
+    before_action :require_sudo_mode, only: %i[ create destroy ]
+
     def create
       token = params[:access_token].to_s.strip
       if token.blank?

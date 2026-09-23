@@ -1,0 +1,34 @@
+<% @page_title = "Confirm it's you" %>
+<% turbo_page_requires_reload %>
+
+<section class="txt-align-center">
+  <div class="panel <%= "shake" if flash[:alert] %>">
+    <%= account_logo_tag style: "center margin-block-end txt-xx-large" %>
+
+    <h1 class="txt-large">Confirm it's you</h1>
+    <p class="txt-subtle">This action needs a fresh confirmation. Confirm once and it continues.</p>
+
+    <% if @verifiers.include?(:password) %>
+      <%= form_with url: sudo_url, class: "flex flex-column gap" do |form| %>
+        <%= hidden_field_tag :verifier, "password" %>
+        <div class="flex align-center gap">
+          <label class="flex align-center gap input input--actor txt-large">
+            <%= form.password_field :password, required: true, class: "input", autofocus: true,
+                  autocomplete: "current-password", placeholder: "Enter your password", maxlength: 72 %>
+            <%= image_tag "password.svg", aria: { hidden: "true" }, size: 24, class: "colorize--black" %>
+          </label>
+        </div>
+
+        <%= form.button "Confirm", class: "btn btn--reversed center txt-large", type: "submit", name: "confirm" %>
+      <% end %>
+    <% end %>
+
+    <% if @verifiers.include?(:google) %>
+      <%= button_to "Confirm with Google", sudo_google_path, method: :post,
+            form: { data: { turbo: false } }, class: "btn center margin-block-start" %>
+    <% end %>
+
+    <%# w4-two-factor renders its TOTP form here when :totp is registered
+        (see SudoMode.register_verifier and docs/security.md#sudo-mode). %>
+  </div>
+</section>

@@ -100,8 +100,12 @@ module Authentication
     end
 
     def start_new_session_for(user)
+      # A new session starts unverified: a different member signing in on
+      # this browser must not inherit the previous user's confirmation.
+      session.delete(SudoMode::VERIFIED_SESSION_KEY)
+      session.delete(SudoMode::PENDING_SESSION_KEY)
+
       device_id = ensure_device_cookie
-      first_sign_in = !user.sessions.exists?
       user.sessions.start!(user_agent: request.user_agent, ip_address: request.remote_ip, device_id: device_id).tap do |session|
         authenticated_as session
 
@@ -114,7 +118,7 @@ module Authentication
         # the sign-in response, so every later request reuses it.
         form_authenticity_token
 
-        NewSignInAlert.deliver_if_new_device(user, session, first_sign_in: first_sign_in)
+        NewSignInAlert.deliver_if_new_device(user, session)
       end
     end
 

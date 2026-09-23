@@ -166,8 +166,11 @@ module ActivityItemsHelper
         "You no longer have access to this room, so your scheduled message was not sent: #{source.markdown_source}"
       end
     when Session
-      "New sign-in to your account from #{source.device_description}, " \
-        "#{time_ago_in_words(item.created_at)} ago. Wasn't you? Review your sessions."
+      # Absolute time, like event items: this helper also runs in the
+      # controller for the JSON payload, where view date helpers are
+      # unavailable.
+      at = item.created_at.strftime("%B %-d, %Y at %-I:%M %p %Z")
+      "New sign-in to your account from #{source.device_description}, #{at}. Wasn't you? Review your sessions."
     else
       "Source updated"
     end
