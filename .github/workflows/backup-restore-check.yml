@@ -31,6 +31,13 @@ jobs:
       BACKUP_GCP_WIF_PROVIDER: ${{ vars.BACKUP_GCP_WIF_PROVIDER }}
       BACKUP_GCP_READER_SA: ${{ vars.BACKUP_GCP_READER_SA }}
     steps:
+      # Same packages as the CI test job: restore-check.sh boots the Rails
+      # app against the restored database, and the boot needs libvips
+      # (config/initializers/vips.rb) and the sqlite client library.
+      - name: Install packages
+        timeout-minutes: 10
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y libsqlite3-0 libvips curl ffmpeg
+
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         timeout-minutes: 10

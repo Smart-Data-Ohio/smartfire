@@ -68,8 +68,7 @@ encrypted archive ever crosses the tunnel back to the runner. The runner
 verifies its SHA-256 against what the script reported, then uploads it to
 `daily/`. On Sundays the same file is additionally uploaded under `weekly/`,
 and on the 1st of the month under `monthly/`. Each prefix is a separate
-upload of the same local bytes, not a server-side copy: the uploader
-credential is create-only and cannot read anything back to copy it. The
+upload of the same local bytes, not a server-side copy. The
 workflow removes the staging from the VM afterwards, whether the run
 succeeded or failed.
 
@@ -102,11 +101,19 @@ the US multi-region, so it survives the loss of the app region too.
 
 | Account | Granted | Used by |
 | --- | --- | --- |
-| `smartfire-backup-runner@smart-data-campfire` (in the app project) | `roles/storage.objectCreator` only on the backup bucket (cross-project, bucket-level), plus the same project-level roles the deployer holds in the app project (`roles/iap.tunnelResourceAccessor`, `roles/compute.osAdminLogin`, `roles/compute.viewer`) | the nightly backup workflow via Workload Identity Federation |
+| `smartfire-backup-runner@smart-data-campfire` (in the app project) | the custom `projects/smart-data-campfire-backups/roles/backupUploader` role only on the backup bucket (cross-project, bucket-level: `storage.objects.create`, `storage.objects.get` and `storage.objects.list`), plus the same project-level roles the deployer holds in the app project (`roles/iap.tunnelResourceAccessor`, `roles/compute.osAdminLogin`, `roles/compute.viewer`) | the nightly backup workflow via Workload Identity Federation |
 | `smartfire-backup-reader@smart-data-campfire-backups` | `roles/storage.objectViewer` only | the monthly restore-check workflow via Workload Identity Federation |
 
-Neither bucket grant can delete or overwrite objects: the runner can only
-create new objects, and the reader can only read them. The bucket
+Neither bucket grant can delete or overwrite objects: the runner can
+create, read and list objects, and the reader can only read them. The
+runner's read half exists because `gcloud storage cp` needs
+`storage.objects.get` and `storage.objects.list` as well as
+`storage.objects.create`: `roles/storage.objectCreator` alone fails the
+upload with a 403, which is why the setup script manages the custom
+`backupUploader` role instead. Read access does not weaken the
+encryption: the runner can download the encrypted objects but can never
+decrypt them — it never holds the private key — and it cannot delete or
+overwrite them. The bucket
 additionally has Object Versioning and 30-day soft delete, so even a
 backup-project admin's delete is recoverable: a deleted live object
 survives as a noncurrent version for 30 days, and soft-deleted objects are
@@ -193,7 +200,7 @@ UTC every day, and on manual dispatch from `main`. Each run:
    SHA-256 against what the script reported, and fails loudly on any
    mismatch;
 4. uploads it to `daily/` (plus `weekly/` on Sundays and `monthly/` on
-   the 1st) with the workflow's own create-only credential;
+   the 1st) with the workflow's own `backupUploader` credential;
 5. removes the staging from the VM, whether the run succeeded or failed,
    and writes a summary naming the uploaded objects and the checksum.
 
