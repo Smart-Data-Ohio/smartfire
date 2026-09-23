@@ -23,7 +23,7 @@ const SUPPRESS_CLICK_RADIUS = 20
 let noteIdCounter = 0
 
 export default class extends Controller {
-  static targets = [ "checkbox", "bar", "form", "inputs", "huddleInput", "messageButton", "huddleButton", "note" ]
+  static targets = [ "checkbox", "bar", "form", "inputs", "huddleInput", "messageButton", "huddleButton", "note", "status" ]
   static values = { selectionMode: Boolean }
 
   // Survives list re-renders (the member panel refreshes every 12
@@ -190,6 +190,14 @@ export default class extends Controller {
 
     this.messageButtonTarget.textContent = `Message (${selected.length})`
     this.huddleButtonTarget.textContent = `Start huddle (${humans.length})`
+
+    // The live region announces only the count, and only when it changes:
+    // rewriting the same text would repeat the announcement on every
+    // presence re-render.
+    if (this.hasStatusTarget) {
+      const label = `${selected.length} selected`
+      if (this.statusTarget.textContent !== label) this.statusTarget.textContent = label
+    }
 
     this.messageButtonTarget.disabled = overCap
     this.huddleButtonTarget.disabled = overCap || humans.length === 0

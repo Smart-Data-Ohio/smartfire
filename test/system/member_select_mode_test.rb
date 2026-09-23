@@ -20,7 +20,8 @@ class MemberSelectModeTest < ApplicationSystemTestCase
     assert_selector "#channel-members input[type='checkbox']", visible: :all, count: 3
     assert_no_selector "#channel-members [data-member-id='#{users(:david).id}'] input[type='checkbox']", visible: :all
     assert_no_selector "#channel-members [data-multi-select-target='bar']"
-    assert_selector "#channel-members [data-multi-select-target='bar'][aria-live='polite']", visible: :all
+    assert_selector "#channel-members [data-multi-select-target='bar']:not([aria-live])", visible: :all
+    assert_selector "#channel-members [data-multi-select-target='status']", text: "0 selected"
     assert_member_rows_inline
 
     page.current_window.resize_to(390, 844)
@@ -233,6 +234,22 @@ class MemberSelectModeTest < ApplicationSystemTestCase
 
     assert_no_selector "#member-row-menu"
     within_bar { assert_selector "button", text: "Message (1)" }
+  end
+
+  test "the selection count is announced through a dedicated status element" do
+    assert_selector "#channel-members [data-multi-select-target='status']", text: "0 selected"
+
+    ctrl_click(row_name_button(users(:jason)))
+    within_bar { assert_selector "button", text: "Message (1)" }
+    assert_selector "#channel-members [data-multi-select-target='status']", text: "1 selected"
+
+    ctrl_click(row_name_button(users(:kevin)))
+    within_bar { assert_selector "button", text: "Message (2)" }
+    assert_selector "#channel-members [data-multi-select-target='status']", text: "2 selected"
+
+    within_bar { click_button "Exit selection mode" }
+    assert_no_selector "#channel-members [data-multi-select-target='bar']"
+    assert_selector "#channel-members [data-multi-select-target='status']", text: "0 selected"
   end
 
   test "space toggles the focused row without opening the profile card" do

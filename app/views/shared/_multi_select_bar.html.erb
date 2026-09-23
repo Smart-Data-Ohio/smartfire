@@ -2,8 +2,9 @@
 <%# ancestor: posts the checked user_ids to open (and optionally ring) %>
 <%# the DM with exactly that set. The member panel passes exit_button: %>
 <%# true for an ✕ that leaves selection mode; the directory and picker %>
-<%# keep their Clear button. %>
-<div class="multi-select-bar" data-multi-select-target="bar" aria-live="polite" hidden>
+<%# keep their Clear button. The count lives in a separate live region %>
+<%# outside the bar, so it stays in the DOM while the bar is hidden. %>
+<div class="multi-select-bar" data-multi-select-target="bar" hidden>
   <%= form_with url: rooms_directs_path, method: :post, class: "multi-select-bar__form",
         data: { multi_select_target: "form", action: "turbo:submit-end->multi-select#submitted" } do %>
     <div data-multi-select-target="inputs"></div>
@@ -22,3 +23,4 @@
 
   <p class="multi-select-bar__note" role="status" data-multi-select-target="note" hidden></p>
 </div>
+<span class="for-screen-reader" role="status" data-multi-select-target="status">0 selected</span>
