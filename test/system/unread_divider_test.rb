@@ -71,6 +71,30 @@ class UnreadDividerTest < ApplicationSystemTestCase
     assert_selector "#unread-divider"
   end
 
+  test "unread older than the last page keeps the last page and the pill links to the first unread" do
+    join_room @designers
+    expire_connection
+    join_room rooms(:hq)
+
+    first_new = @designers.root_messages.create!(creator: users(:kevin), body: "First unread off page", client_message_id: "divider-offpage-first")
+    (Message::PAGE_SIZE + 1).times do |i|
+      @designers.root_messages.create!(creator: users(:kevin), body: "Later #{i}", client_message_id: "divider-offpage-#{i}")
+    end
+
+    join_room @designers
+
+    assert_no_selector ".message", text: "First unread off page"
+    pill = find_link "Jump to unread", visible: true
+    assert_includes pill[:href], "message_id=#{first_new.id}"
+
+    # Joining above re-subscribed presence, which reads the room behind
+    # the rendered page; re-mark so the pill's target still has a divider.
+    users(:jz).memberships.find_by!(room: @designers).mark_unread_before(first_new)
+    pill.click
+    assert_selector "#unread-divider", wait: 5
+    assert_divider_above first_new
+  end
+
   test "mark unread from the message menu points the divider at that message" do
     join_room @designers
 

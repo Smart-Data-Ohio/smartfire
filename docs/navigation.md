@@ -45,10 +45,11 @@ Each membership remembers its last-read message (`last_read_message_id`,
 set whenever the room is read: opening it, the reads endpoint, muting,
 or presence). Opening a room renders a **New messages** divider above
 the first unread message. With more than five unread the room scrolls
-to the divider; with fewer it scrolls to the bottom as before, and
-when the first unread fell off the last page the room re-pages around
-it. Scrolling the divider off-screen reveals a **Jump to unread**
-pill, which scrolls back to it.
+to the divider; with fewer it scrolls to the bottom as before. The
+room always opens on its usual page: when the first unread fell off
+it, no divider renders and the **Jump to unread** pill links to an
+anchored page that shows it. Otherwise scrolling the divider
+off-screen reveals the pill, which scrolls back to it.
 
 **Mark unread** in a message's menu moves the pointer to just before
 that message, so the divider lands above it on the next visit. It

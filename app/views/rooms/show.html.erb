@@ -31,7 +31,7 @@
   <% end %>
 
   <%= turbo_stream_from @room, :messages, channel: "RoomMessagesChannel" %>
-  <%= button_to_jump_to_unread if @unread_divider_message_id %>
+  <%= button_to_jump_to_unread(url: @jump_to_unread_url) if @unread_divider_message_id || @jump_to_unread_url %>
   <%= button_to_jump_to_newest_message %>
 <% end %>
 
