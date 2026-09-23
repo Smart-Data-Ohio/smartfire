@@ -226,6 +226,8 @@ Rails.application.routes.draw do
   namespace :github do
     post "webhooks", to: "webhooks#create"
     resource :connection, only: %i[ create destroy ], controller: "connections"
+    get "app/connect", to: "app_connections#connect", as: :app_connect
+    get "app/callback", to: "app_connections#callback", as: :app_callback
   end
 
   namespace :google do

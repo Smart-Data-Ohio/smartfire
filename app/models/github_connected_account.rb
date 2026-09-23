@@ -8,12 +8,20 @@ class GithubConnectedAccount < ApplicationRecord
 
   belongs_to :user
 
-  encrypts :access_token
+  encrypts :access_token, :refresh_token
 
   validates :user_id, uniqueness: true
   validates :github_login, presence: true
+  validates :token_source, inclusion: { in: %w[ pat app ] }
 
   after_save :claim_verified_login, if: :connected?
+
+  # True for tokens issued through the workspace GitHub App (short-lived
+  # with refresh); false for pasted personal access tokens, which stay as
+  # the migration fallback.
+  def app_token?
+    token_source == "app"
+  end
 
   # False once GitHub refuses the token with 401; the row stays so the
   # profile can offer a reconnect instead of a first-time connect.
@@ -45,12 +53,15 @@ class GithubConnectedAccount < ApplicationRecord
   def can_read_repository?(owner, repo)
     return false unless usable?
 
+    token = access_token_for_use
+    return false if token.nil?
+
     owner = owner.to_s.downcase
     repo = repo.to_s.downcase
     # updated_at at float precision: a relink in the same second as a cached
     # denial must still retire it.
     Rails.cache.fetch([ "github_repo_access", user_id, updated_at.to_f, owner, repo ], expires_in: REPOSITORY_ACCESS_TTL) do
-      Github::WriteClient.new(token: access_token).repository_readable?(owner, repo)
+      Github::WriteClient.new(token: token).repository_readable?(owner, repo)
     rescue Github::WriteClient::Unauthorized
       mark_disconnected!("GitHub rejected the linked token (401)")
       false
@@ -62,11 +73,64 @@ class GithubConnectedAccount < ApplicationRecord
     false
   end
 
+  # The access token to use for a GitHub call, refreshing an expired App
+  # token first. Nil when the account is not usable or the refresh
+  # failed; a failed refresh marks the account disconnected (401-like)
+  # or records last_error (transient), never raising.
+  def access_token_for_use
+    return nil unless usable?
+    return nil unless refresh_app_token_if_expired!
+
+    access_token
+  rescue ActiveRecord::Encryption::Errors::Decryption
+    mark_disconnected!(UNREADABLE_TOKEN_REASON)
+    nil
+  end
+
+  # Best-effort remote revocation of an App token for disconnect. PATs
+  # have no revocation endpoint, so nothing is sent for them. Never
+  # raises; disconnect proceeds however revocation goes.
+  def revoke_remote_token!
+    return unless app_token?
+
+    token = access_token
+    Github::App.revoke_token(token) if token.present?
+  rescue ActiveRecord::Encryption::Errors::Decryption
+    nil
+  end
+
+  def app_token_expired?
+    app_token? && token_expires_at.present? && token_expires_at <= 60.seconds.from_now
+  end
+
   def mark_disconnected!(reason)
     update!(disconnected_reason: reason)
   end
 
   private
+    # Refreshes an expired App token in place, rotating the stored
+    # refresh token. A rejected refresh disconnects the account so the
+    # profile offers a reconnect; a transport failure records last_error
+    # and keeps the old token, so the next call retries.
+    def refresh_app_token_if_expired!
+      return true unless app_token_expired?
+      return false if refresh_token.blank?
+
+      tokens = Github::App.refresh_access_token(refresh_token: refresh_token)
+      update!(
+        access_token: tokens["access_token"],
+        refresh_token: tokens["refresh_token"].presence || refresh_token,
+        token_expires_at: Time.current + tokens["expires_in"].to_i.seconds,
+        last_error: nil
+      )
+      true
+    rescue Github::App::Unauthorized
+      mark_disconnected!("GitHub rejected the linked token (401)")
+      false
+    rescue Github::App::Error => error
+      update_column(:last_error, error.message.truncate(250))
+      false
+    end
     # GitHub confirmed this login when the token was linked, so it becomes
     # the member's profile login (review requests route by it). Anyone else
     # who merely typed the same login into their profile loses it; a second
