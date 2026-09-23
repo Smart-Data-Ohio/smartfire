@@ -25,10 +25,12 @@ class WorkHandoff < ApplicationRecord
   # the metadata snapshot written at handoff time.
   # The receiver rule, shared by the human handoff controller and the
   # agent handoff service: an active agent member of the thread's room
-  # holding post_messages (work-owner eligibility) and manage_threads
-  # (needed to work the thread through the agent API), and not the
-  # current owner. Returns nil when the receiver may take the thread,
-  # otherwise the validation message the caller renders as 422.
+  # holding post_messages (work-owner eligibility), manage_threads
+  # (needed to work the thread through the agent API), and
+  # read_messages (needed to poll the handoff event and read the
+  # thread), and not the current owner. Returns nil when the receiver
+  # may take the thread, otherwise the validation message the caller
+  # renders as 422.
   def self.receiver_error(thread, agent)
     unless agent.is_a?(Agent) && agent.active? &&
         thread.room.memberships.exists?(user_id: agent.user_id) &&
@@ -38,6 +40,10 @@ class WorkHandoff < ApplicationRecord
 
     unless agent.can?(:manage_threads, thread.room)
       return "Receiver must hold the manage_threads capability in this room"
+    end
+
+    unless agent.can?(:read_messages, thread.room)
+      return "Receiver must hold the read_messages capability in this room"
     end
 
     if thread.work_owner_id == agent.user_id

@@ -68,6 +68,17 @@ class Agents::McpHandoffTest < ActionDispatch::IntegrationTest
     assert_tool_error body, "Receiver must be an active agent member of this room with permission to post"
   end
 
+  test "handoff_work denies a receiver missing read_messages" do
+    AgentGrant.where(agent: @receiver, capability: "read_messages").update_all(revoked_at: Time.current)
+
+    body = call_tool("handoff_work", {
+      "work_id" => @thread.id, "receiver_agent_id" => @receiver.id, "summary" => "Nope"
+    })
+
+    assert_tool_error body, "Receiver must hold the read_messages capability in this room"
+    assert_equal @bot.id, @thread.reload.work_owner_id
+  end
+
   test "handoff_work rejects missing arguments" do
     body = call_tool("handoff_work", { "work_id" => @thread.id })
 

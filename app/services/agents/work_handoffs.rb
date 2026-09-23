@@ -3,8 +3,9 @@ module Agents
   # handoff_work tool. Owns the ownership rule (the agent owns the thread,
   # still belongs to its room, and still holds read_messages there), the
   # manage_threads gate for the sender, and the receiver checks (an
-  # active agent member holding post_messages and manage_threads), so
-  # both surfaces enforce the same access. The human handoff controller
+  # active agent member holding post_messages, manage_threads, and
+  # read_messages), so both surfaces enforce the same access. The human
+  # handoff controller
   # authorizes its sender itself and shares WorkHandoff.receiver_error
   # for the receiver.
   class WorkHandoffs

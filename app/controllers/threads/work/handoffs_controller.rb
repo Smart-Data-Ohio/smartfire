@@ -71,8 +71,9 @@ class Threads::Work::HandoffsController < ApplicationController
     end
 
     # Agents that may receive this thread right now: active agent
-    # members holding post_messages and manage_threads, other than the
-    # current owner. The receiver rule is re-checked on create.
+    # members holding post_messages, manage_threads, and read_messages,
+    # other than the current owner. The receiver rule is re-checked on
+    # create.
     def set_form_assigns
       member_agent_ids = @room.memberships.where(user_id: Agent.select(:user_id)).select(:user_id)
       @receivers = Agent.includes(:user, :owner).where(user_id: member_agent_ids).select do |agent|

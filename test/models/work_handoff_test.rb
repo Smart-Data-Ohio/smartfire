@@ -5,6 +5,7 @@ class WorkHandoffTest < ActiveSupport::TestCase
     @board = Rooms::Board.create_for({ name: "Launch", creator: users(:david) },
       users: [ users(:david), users(:jz), users(:bender) ])
     @agent = agents(:bender_agent)
+    grant!(@agent, "read_messages")
     grant!(@agent, "post_messages")
     grant!(@agent, "manage_threads")
     @thread = ChannelThread.create_board_post!(room: @board, creator: users(:david),
@@ -99,6 +100,13 @@ class WorkHandoffTest < ActiveSupport::TestCase
     AgentGrant.where(agent: @agent, capability: "manage_threads").update_all(revoked_at: Time.current)
 
     assert_equal "Receiver must hold the manage_threads capability in this room",
+      WorkHandoff.receiver_error(@thread, @agent)
+  end
+
+  test "receiver_error rejects an agent missing read_messages" do
+    AgentGrant.where(agent: @agent, capability: "read_messages").update_all(revoked_at: Time.current)
+
+    assert_equal "Receiver must hold the read_messages capability in this room",
       WorkHandoff.receiver_error(@thread, @agent)
   end
 

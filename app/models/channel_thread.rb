@@ -923,7 +923,7 @@ class ChannelThread < ApplicationRecord
       return true unless assignee.bot?
 
       agent = assignee.agent || Agent.find_by(user_id: assignee.id)
-      agent&.active? && agent.can?(:post_messages, room)
+      agent&.active? && agent.can?(:post_messages, room) && agent.can?(:read_messages, room)
     end
 
     # A new post prepends into the board list and its status column and,

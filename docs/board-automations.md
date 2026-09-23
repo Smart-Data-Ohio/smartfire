@@ -19,9 +19,9 @@ writes the agent's `work_assigned` ledger event when the target is an
 agent.
 
 The target must be an active board member able to own posts (an agent
-additionally needs an active `Agent` row and `post_messages` in the
-board). Grants are re-checked when the rule fires, so a target that
-lost access is silently skipped.
+additionally needs an active `Agent` row and `post_messages` plus
+`read_messages` in the board). Grants are re-checked when the rule
+fires, so a target that lost access is silently skipped.
 
 ## SLA timers
 

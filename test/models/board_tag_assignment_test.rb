@@ -83,9 +83,20 @@ class BoardTagAssignmentTest < ActiveSupport::TestCase
     assert_includes assignment.errors[:assignee], "must be an active board member able to own posts"
   end
 
+  test "rejects an agent assignee without read_messages" do
+    @board.memberships.grant_to(users(:bender))
+    AgentGrant.create!(agent: agents(:bender_agent), room: @board, granted_by: users(:david), capability: "post_messages")
+
+    assignment = BoardTagAssignment.new(room: @board, tag: "bug", assignee: users(:bender), created_by: users(:david))
+
+    assert_not assignment.valid?
+    assert_includes assignment.errors[:assignee], "must be an active board member able to own posts"
+  end
+
   private
     def make_board_agent!(user)
       @board.memberships.grant_to(user)
+      AgentGrant.create!(agent: user.agent, room: @board, granted_by: users(:david), capability: "read_messages")
       AgentGrant.create!(agent: user.agent, room: @board, granted_by: users(:david), capability: "post_messages")
       user.agent
     end

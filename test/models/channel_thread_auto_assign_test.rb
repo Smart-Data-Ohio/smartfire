@@ -4,6 +4,7 @@ class ChannelThreadAutoAssignTest < ActiveSupport::TestCase
   setup do
     @board = Rooms::Board.create_for({ name: "Launch", creator: users(:david) },
       users: [ users(:david), users(:jz), users(:kevin), users(:bender) ])
+    grant!("read_messages")
     grant!("post_messages")
   end
 
@@ -67,6 +68,16 @@ class ChannelThreadAutoAssignTest < ActiveSupport::TestCase
   test "auto-assign skips a rule whose assignee left the board" do
     BoardTagAssignment.create!(room: @board, tag: "bug", assignee: users(:jz), created_by: users(:david))
     @board.memberships.revoke_from(users(:jz))
+
+    post = ChannelThread.create_board_post!(room: @board, creator: users(:david),
+      name: "Broken", work_status: "planned", tags: "bug")
+
+    assert_nil post.reload.work_owner_id
+  end
+
+  test "auto-assign skips an agent that lost read_messages" do
+    BoardTagAssignment.create!(room: @board, tag: "bug", assignee: users(:bender), created_by: users(:david))
+    AgentGrant.where(agent: agents(:bender_agent), capability: "read_messages").update_all(revoked_at: Time.current)
 
     post = ChannelThread.create_board_post!(room: @board, creator: users(:david),
       name: "Broken", work_status: "planned", tags: "bug")

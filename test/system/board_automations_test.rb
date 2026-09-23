@@ -7,6 +7,7 @@ class BoardAutomationsTest < ApplicationSystemTestCase
     @agent_user = User.create_bot!(name: "Board Agent")
     @agent = @agent_user.create_agent!(kind: :workspace, owner: users(:david))
     @board.memberships.grant_to(@agent_user)
+    AgentGrant.create!(agent: @agent, room: @board, granted_by: users(:david), capability: "read_messages")
     AgentGrant.create!(agent: @agent, room: @board, granted_by: users(:david), capability: "post_messages")
     AgentGrant.create!(agent: @agent, room: @board, granted_by: users(:david), capability: "manage_threads")
 

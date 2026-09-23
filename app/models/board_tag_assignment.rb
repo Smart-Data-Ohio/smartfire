@@ -25,15 +25,16 @@ class BoardTagAssignment < ApplicationRecord
     end
 
     # The assignee is whoever may own a board post: an active member, or
-    # an active agent member allowed to post there. Grants are re-checked
-    # when the rule fires, so a later revocation silently skips the rule.
+    # an active agent member allowed to read and post there. Grants are
+    # re-checked when the rule fires, so a later revocation silently
+    # skips the rule.
     def assignee_must_be_eligible
       return if assignee.blank? || room.blank?
 
       eligible = if assignee.bot?
         agent = assignee.agent || Agent.find_by(user_id: assignee.id)
         assignee.active? && room.memberships.exists?(user_id: assignee.id) &&
-          agent&.active? && agent.can?(:post_messages, room)
+          agent&.active? && agent.can?(:post_messages, room) && agent.can?(:read_messages, room)
       else
         assignee.active? && room.memberships.exists?(user_id: assignee.id)
       end

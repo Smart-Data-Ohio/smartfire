@@ -143,6 +143,18 @@ class Agents::WorkHandoffTest < ActionDispatch::IntegrationTest
     assert_match "manage_threads", response.parsed_body["error"]
   end
 
+  test "a receiver missing read_messages is 422" do
+    AgentGrant.where(agent: @receiver, capability: "read_messages").update_all(revoked_at: Time.current)
+
+    post agents_work_thread_url(@thread) + "/handoff",
+      params: { receiver_agent_id: @receiver.id, summary: "Nope" }.to_json,
+      headers: bearer_headers(@secret)
+
+    assert_response :unprocessable_entity
+    assert_match "read_messages", response.parsed_body["error"]
+    assert_equal @bot.id, @thread.reload.work_owner_id
+  end
+
   test "handing off to the current owner is 422" do
     post agents_work_thread_url(@thread) + "/handoff",
       params: { receiver_agent_id: @agent.id, summary: "Again" }.to_json,
