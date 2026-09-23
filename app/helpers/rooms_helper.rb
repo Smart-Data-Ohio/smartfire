@@ -4,7 +4,7 @@ module RoomsHelper
   # Every other controller lazy-loads on demand when its element appears.
   FIRST_PAINT_CONTROLLERS = %w[
     messages maintain_scroll reply composer markdown_editor
-    typing_notifications local_time presence
+    typing_notifications local_time presence message_list
   ].freeze
 
   def first_paint_controller_preloads
