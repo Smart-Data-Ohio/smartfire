@@ -6,6 +6,15 @@ const PARTICIPANTS_URL_ROOM_ID = /\/rooms\/(\d+)\/huddle\/participants/
 const MAX_LEAVE_TOASTS = 3
 const LEAVE_TOAST_TIMEOUT = 4000
 
+// Stimulus disconnects and reconnects the permanent host on every Turbo
+// navigation, so navigation-spanning state lives outside the instance: a
+// mute cycle during a room switch stays silent, and a join started from
+// another room survives the trip over. Entries clean themselves up when
+// they fire, cancel, or land; a full page unload drops the module with
+// the page.
+const pendingLeaves = new Map()
+let pendingJoinNavigation = null
+
 export default class extends Controller {
   static targets = [ "sound", "toasts" ]
   static values = {
@@ -25,9 +34,10 @@ export default class extends Controller {
     this.handleNoticeDismiss = ({ detail }) => this.#dismissNotice(Number(detail?.roomId))
     this.handleParticipantsUpdated = this.#participantsUpdated.bind(this)
     this.handleParticipantsRemoved = this.#participantsRemoved.bind(this)
-    this.handleNavigation = () => {
+    this.handleNavigation = (event) => {
       this.#renderRoomBanner()
       this.#syncSidebarPills()
+      if (event?.type === "turbo:load") this.#dispatchPendingJoin()
     }
     window.addEventListener("huddle:join", this.handleHuddleJoin)
     window.addEventListener("huddle-join-notice:join", this.handleNoticeJoin)
@@ -80,9 +90,10 @@ export default class extends Controller {
     this.leaveToastTimers = []
     this.joinBatch = null
     this.joinToastNode = null
-    for (const timer of this.pendingLeaves?.values() || []) clearTimeout(timer)
-    this.pendingLeaves = new Map()
     // Toasts are transient; banners re-render from the stored notices.
+    // Pending leaves stay untouched: the disconnect is usually a Turbo
+    // navigation, and clearing them would break a mute cycle spanning a
+    // room switch.
     if (this.hasToastsTarget) this.toastsTarget.replaceChildren()
   }
 
@@ -99,9 +110,23 @@ export default class extends Controller {
     if (window.location.pathname === roomPath) {
       this.#dispatchJoin(roomId, roomName)
     } else if (roomPath) {
-      window.addEventListener("turbo:load", () => this.#dispatchJoin(roomId, roomName), { once: true })
+      // No once-listener: the navigation disconnects this controller
+      // before turbo:load fires, so the pending join waits in the module
+      // store and the navigation handler dispatches it on arrival.
+      pendingJoinNavigation = { roomId, roomName, roomPath }
       Turbo.visit(roomPath)
     }
+  }
+
+  // A join started from another room lands with the navigation: dispatch
+  // it when the viewer arrived where the join pointed, and drop it when
+  // they went elsewhere instead, so a stale join never fires into the
+  // wrong room.
+  #dispatchPendingJoin() {
+    if (!pendingJoinNavigation) return
+    const pending = pendingJoinNavigation
+    pendingJoinNavigation = null
+    if (window.location.pathname === pending.roomPath) this.#dispatchJoin(pending.roomId, pending.roomName)
   }
 
   #noticeReceived(payload) {
@@ -353,19 +378,18 @@ export default class extends Controller {
 
     const key = leaveKey(roomId, joinerId)
     const timer = setTimeout(() => {
-      this.pendingLeaves?.delete(key)
+      pendingLeaves.delete(key)
       if (this.#inCall(roomId)) this.#showLeaveToast(name)
     }, this.leaveDelayValue)
-    this.pendingLeaves ||= new Map()
-    this.pendingLeaves.set(key, timer)
+    pendingLeaves.set(key, timer)
   }
 
   #cancelPendingLeave(roomId, joinerId) {
-    const timer = this.pendingLeaves?.get(leaveKey(roomId, joinerId))
+    const timer = pendingLeaves.get(leaveKey(roomId, joinerId))
     if (timer === undefined) return false
 
     clearTimeout(timer)
-    this.pendingLeaves.delete(leaveKey(roomId, joinerId))
+    pendingLeaves.delete(leaveKey(roomId, joinerId))
     return true
   }
 

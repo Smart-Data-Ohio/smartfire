@@ -167,6 +167,84 @@ class HuddleJoinNoticesTest < ApplicationSystemTestCase
     assert_empty played_sounds
   end
 
+  test "a server mute cycle across a room switch stays silent" do
+    group = Rooms::Direct.create_for({ creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
+    visit room_path(group)
+    wait_for_cable_connection
+    wait_for_join_notice_controller
+    hold_toasts_open(leave_delay: 30_000)
+    record_played_sounds
+
+    jason_grant = HuddleGrant.issue!(session: second_session_for(users(:jason)),
+      membership: group.memberships.find_by!(user: users(:jason)))
+    jason_grant.update_columns(last_seen_at: Time.current)
+    mark_in_call(group)
+
+    david_grant = HuddleGrant.issue!(session: sessions(:david_safari),
+      membership: group.memberships.find_by!(user: users(:david)))
+    david_grant.update_columns(last_seen_at: Time.current)
+
+    # The leave lands, then the viewer switches rooms mid-delay through a
+    # Turbo navigation: the pending leave must survive the Stimulus
+    # reconnect and still swallow the rejoin.
+    david_grant.revoke!
+    sleep 1 # let the leave broadcast arrive before navigating away
+    page.execute_script("Turbo.visit(arguments[0])", room_path(rooms(:watercooler)))
+    wait_for_condition("navigation never reached the channel") do
+      page.evaluate_script("window.location.pathname") == room_path(rooms(:watercooler))
+    end
+    wait_for_cable_connection
+    wait_for_join_notice_controller
+    wait_for_join_notice_subscription
+    sleep 1 # let the resubscribe confirm before notifying
+    # The reconnect re-queries the panel, which reports idle without
+    # LiveKit; the viewer is still in the group call, so say so again.
+    mark_in_call(group)
+
+    rejoined = HuddleGrant.issue!(session: sessions(:david_safari),
+      membership: group.memberships.find_by!(user: users(:david)))
+    notify_join_and_deliver(rejoined)
+
+    # A fresh join still toasts: notices are flowing, the mute cycle
+    # alone stayed silent.
+    kevin_grant = HuddleGrant.issue!(session: second_session_for(users(:kevin)),
+      membership: group.memberships.find_by!(user: users(:kevin)))
+    notify_join_and_deliver(kevin_grant)
+
+    assert_selector ".huddle-join-toast", exact_text: "Kevin joined", wait: 10
+    assert_no_selector ".huddle-join-toast", text: "David"
+    assert_equal 1, played_sounds.size
+  end
+
+  test "joining a sidebar pill from another room navigates then joins" do
+    room = rooms(:david_and_jason)
+    grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_david_and_jason))
+    ActivityItem.where(user: users(:jason), event_type: "huddle_started").update_all(event_type: "huddle_missed")
+
+    visit room_path(rooms(:watercooler))
+    wait_for_cable_connection
+    wait_for_join_notice_controller
+    page.execute_script("window.huddleJoinEvents = []; window.addEventListener('huddle:join', event => window.huddleJoinEvents.push(event.detail))")
+    assert_selector "##{dom_id(room, :list)}", wait: 10
+
+    notify_join_and_deliver(grant)
+
+    within "##{dom_id(room, :list)}" do
+      assert_selector ".huddle-join-pill", text: "David is in your huddle", wait: 10
+      click_button "Join"
+    end
+
+    wait_for_condition("navigation never reached the DM") do
+      page.evaluate_script("window.location.pathname") == room_path(room)
+    end
+    wait_for_condition("join was never dispatched") do
+      page.evaluate_script("window.huddleJoinEvents.length") > 0
+    end
+    assert_equal [ { "roomId" => room.id, "roomName" => "David" } ], page.evaluate_script("window.huddleJoinEvents")
+    assert_no_selector "#huddle-join-banner-slot .huddle-join-banner", wait: 10
+    assert_no_selector ".huddle-join-pill", wait: 10
+  end
+
   test "an out-of-call member sees the banner and sidebar pill and joins from the banner" do
     room = rooms(:david_and_jason)
     grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_david_and_jason))
@@ -308,6 +386,22 @@ class HuddleJoinNoticesTest < ApplicationSystemTestCase
             const element = document.getElementById("huddle-join-notices")
             return !!(element && window.Stimulus &&
               window.Stimulus.getControllerForElementAndIdentifier(element, "huddle-join-notice"))
+          })()
+        JS
+      end
+    end
+
+    # The controller resubscribes on every Turbo navigation; a join
+    # broadcast sent before the new subscription exists is lost, so a
+    # room-switch test waits for it explicitly.
+    def wait_for_join_notice_subscription
+      Timeout.timeout(10) do
+        sleep 0.05 until page.evaluate_script(<<~JS)
+          (() => {
+            const element = document.getElementById("huddle-join-notices")
+            const controller = element && window.Stimulus &&
+              window.Stimulus.getControllerForElementAndIdentifier(element, "huddle-join-notice")
+            return !!(controller && controller.subscription)
           })()
         JS
       end
