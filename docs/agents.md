@@ -35,8 +35,9 @@ credential cannot starve others sharing the agent:
 
 - event polling and acks: 120/minute each
 - approval reads: 120/minute
-- posting messages, requesting approvals, cancelling approvals, and
-  pull-request actions: 60/minute each
+- Fizzy board and card reads: 120/minute each
+- posting messages, requesting approvals, cancelling approvals,
+  pull-request actions, and Fizzy card actions: 60/minute each
 - creating board posts: 30/minute
 
 Overflowing a bucket returns 429 with a `Retry-After` header in
@@ -51,15 +52,16 @@ These limits are separate from the
 `agent_grants` rows scope what an agent may do: `agent_id`, nullable `room_id`
 (`NULL` means workspace-wide), `capability`, `granted_by_id`, `revoked_at`, and
 a partial unique index over active rows. Capabilities are `read_messages`,
-`post_messages`, `react`, `manage_threads`, and `external_action`.
+`post_messages`, `react`, `manage_threads`, `external_action`, and `fizzy`.
 
 `read_messages`, `post_messages`, and `react` are enforced through
 the `AgentAuthorization` concern (`require_agent_capability`) on the bot
 message endpoints, the bot boost endpoints,
 `POST /rooms/:room_id/agents/messages` (JSON, Bearer-only), and the event
 polling endpoints below; `external_action` is enforced on the approval
-endpoints (see Approvals), and `manage_threads` is enforced on the agent
-work endpoints (see Work threads). Enforcement reads the database on every
+endpoints (see Approvals), `manage_threads` is enforced on the agent
+work endpoints (see Work threads), and `fizzy` is enforced on the agent
+Fizzy read endpoints (see Fizzy reads). Enforcement reads the database on every
 request; nothing is cached.
 
 Room membership still applies on top of grants: every endpoint returns 404 for
@@ -98,7 +100,7 @@ messages) with `agent_id`, `event_type`, optional `room_id`, `message_id`,
 `agent_credential_id`, `actor_id`, `outcome`, `detail`, JSON `metadata`, and
 `created_at`, indexed on `[agent_id, created_at]`. Deliverable types are
 `mention`, `direct_message`, `reply`, `approval_decided`,
-`github_action_completed`, `work_assigned`, and `work_unassigned`;
+`github_action_completed`, `fizzy_action_completed`, `work_assigned`, and `work_unassigned`;
 ledger-only types are `posted`
 (written whenever the agent posts through any endpoint) and the suppression
 rows `delivery_suppressed_rate_limit`, `delivery_suppressed_hop_limit`, and
@@ -425,11 +427,12 @@ the inbox never shows them the item.
 Each decider gets one `agent_approval_request` activity item on create.
 The card shows the agent's name and avatar, the room name when present,
 the summary as escaped text, the time left, and Approve and Deny buttons
-(deny takes an optional note). A `github.*` request can be approved only
-by a current administrator: an owner who is not one sees no Approve
-button and gets 403 from `PATCH /agent_approvals/:id?decision=approved`,
-but may still deny. Deciding marks every decider's item
-handled. Marking an inbox item read or handled never decides the request.
+(deny takes an optional note). A `github.*` or `fizzy.*` request can be
+approved only by a current administrator: an owner who is not one sees
+no Approve button and gets 403 from `PATCH
+/agent_approvals/:id?decision=approved`, but may still deny. Deciding
+marks every decider's item handled. Marking an inbox item read or
+handled never decides the request.
 
 ### Delivery of decisions
 
@@ -463,6 +466,67 @@ instead of `message`, `ack` works on it, the completion enqueues a
 webhook POST with the same additive `agent` key plus `github_action`,
 and the ledger page lists it with its status. Rate limits and the hop
 guard do not apply, like approval rows.
+
+### Fizzy reads
+
+An agent with the workspace-wide `fizzy` capability reads Fizzy
+through its owner's linked account: `GET /agents/fizzy/boards`
+(boards), `GET /agents/fizzy/boards/:id` (board with columns), `GET
+/agents/fizzy/cards/search?q=` (card search), and `GET
+/agents/fizzy/cards/:account_id/:number` (one card with steps). The
+reads default to the owner's stored Fizzy account and accept an
+`account_id` override where the token can access more than one. A
+missing grant is 403; a missing owner or unusable owner account is
+422. See [Fizzy cards](fizzy.md) for the identity model.
+
+### Fizzy write actions
+
+An agent requests a Fizzy write action — create a card, comment, move
+a card to a column, close, or reopen — through `POST
+/agents/fizzy/card_actions`, which creates a `fizzy.*` approval for
+the usual deciders instead of calling Fizzy. The gates, in order:
+agent authentication (401 for a bad or revoked token, 403 for a legacy
+bot key or a human session), the workspace-wide `external_action`
+capability (403), a usable linked Fizzy account on the agent's owner
+(422), and the input rules per kind — create needs a board and a
+title, comment needs a card and a body, move needs a card and a
+column, close and reopen need a card (422 with field errors). The
+endpoint never calls Fizzy: it returns 202 with the approval's `id`,
+`status`, and `expires_at`, and a repeated `external_id` returns the
+existing row with 200. Only this endpoint may create `fizzy.*`
+approvals (`POST /agents/approvals` refuses the prefix with 422), and
+at execution time the payload must rebuild to exactly the action name
+and summary the decider saw.
+
+```sh
+curl -X POST https://smartfire.example.com/agents/fizzy/card_actions \
+  -H "Authorization: Bearer $AGENT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"kind":"comment","account_id":"897362094","number":579,"body":"Nice work","external_id":"fizzy-123"}'
+```
+
+The request records the owner's linked account and Fizzy user
+(`fizzy_connected_account_id`, `fizzy_user_id`, `fizzy_user_name`),
+and the card shows "Acts on Fizzy as NAME". Approving is refused
+(422) if the connection changed since the request, and only a current
+administrator may approve (the owner may deny). When a `fizzy.*`
+request is approved, the server re-checks everything (still approved,
+agent active, grant still held, account still usable and still the
+recorded one, no earlier outcome recorded for the approval) and
+performs the action with the owner's token. A read-only owner token
+fails the action without disconnecting the account, since Fizzy
+rejects writes from read tokens with 401; only a truly rejected token
+disconnects it.
+
+Every outcome appends a `fizzy_action_completed` event to the agent's
+ledger: non-message, `outcome: delivered`, always readable by its own
+agent, with `metadata` carrying `approval_id`, `action`, `status`
+(`completed` or `failed`), the Fizzy `url` when completed, or a
+`message` when failed. `GET /agents/events` returns it with a
+`fizzy_action` key instead of `message`, `ack` works on it, the
+completion enqueues a webhook POST with the same additive `agent` key
+plus `fizzy_action`, and the ledger page lists it with its status.
+Rate limits and the hop guard do not apply, like approval rows.
 
 ## Work threads
 
