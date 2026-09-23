@@ -48,8 +48,10 @@ one the stage stays unclaimed and retries on a later sweep.
 A nudge is an `SLA breach` activity inbox item sourced on the claim,
 plus a push notification through the standard
 [notification policy](notifications.md) (DND and quiet hours apply; the
-push carries no sender, like a reminder). The inbox item links to the
-post and reads "Sitting in \<status> for \<age\>", prefixed with
+push carries no sender, like a reminder). Pushes dedupe per recipient
+per sweep: when both stages reach the same person in one sweep, both
+inbox items land but only one push goes out. The inbox item links to
+the post and reads "Sitting in \<status> for \<age\>", prefixed with
 "Escalated:" for escalations. Losing board membership hides the item,
 like other work items.
 

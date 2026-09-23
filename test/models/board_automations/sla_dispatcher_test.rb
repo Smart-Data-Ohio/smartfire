@@ -57,6 +57,36 @@ class BoardAutomations::SlaDispatcherTest < ActiveSupport::TestCase
     assert_equal 1, ActivityItem.where(user: users(:david), event_type: "work_sla").count
   end
 
+  test "an unassigned post past both thresholds claims twice but pushes once" do
+    stale_post!(owner: nil, status: "in_progress", entered_ago: 5.hours)
+
+    assert_enqueued_jobs 1, only: BoardAutomations::NudgePushJob do
+      BoardAutomations::SlaDispatcher.dispatch_due!
+    end
+
+    assert_equal 2, BoardSlaNudge.count
+    assert_equal 2, ActivityItem.where(event_type: "work_sla").count
+    assert_equal [ users(:david).id ], BoardSlaNudge.pluck(:recipient_id).uniq
+  end
+
+  test "a post owned by the board creator pushes once when both stages fire" do
+    stale_post!(owner: users(:david), status: "in_progress", entered_ago: 5.hours)
+
+    assert_enqueued_jobs 1, only: BoardAutomations::NudgePushJob do
+      BoardAutomations::SlaDispatcher.dispatch_due!
+    end
+
+    assert_equal 2, BoardSlaNudge.count
+  end
+
+  test "distinct recipients each get their own push in one sweep" do
+    stale_post!(owner: users(:jz), status: "in_progress", entered_ago: 5.hours)
+
+    assert_enqueued_jobs 2, only: BoardAutomations::NudgePushJob do
+      BoardAutomations::SlaDispatcher.dispatch_due!
+    end
+  end
+
   test "the escalation fires on a later sweep when only the nudge was due" do
     post = stale_post!(owner: users(:jz), status: "in_progress", entered_ago: 2.hours)
 
