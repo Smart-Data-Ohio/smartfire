@@ -57,6 +57,7 @@ class MemberSelectModeTest < ApplicationSystemTestCase
     ctrl_click(row_name_button(users(:jason)))
     within_bar { assert_selector "button", text: "Message (1)" }
     assert_selector "#channel-members input[type='checkbox']", count: 3
+    assert_member_rows_inline
     assert_selector "#channel-members input[aria-label='Select Jason']"
     assert_selector "#profile-card-popover[hidden]", visible: :all
 
@@ -235,6 +236,7 @@ class MemberSelectModeTest < ApplicationSystemTestCase
     within_bar { assert_selector "button", text: "Message (1)" }
     assert_selector "#profile-card-popover[hidden]", visible: :all
     assert_no_selector "#member-row-menu"
+    assert_member_rows_inline
 
     row_name_button(users(:kevin)).click
     within_bar { assert_selector "button", text: "Message (2)" }
