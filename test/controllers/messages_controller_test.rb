@@ -238,7 +238,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
   test "update updates a message belonging to the user" do
     message = @room.messages.where(creator: users(:david)).first
 
-    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(4)  # presentation plus meta plus both card containers
+    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(6)  # presentation plus meta plus all four card containers
     put room_message_url(@room, message), params: { message: { body: "Updated body" } }
 
     assert_redirected_to room_message_url(@room, message)
@@ -249,7 +249,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     message = @room.messages.create!(creator: users(:david), markdown_source: "**Before**", client_message_id: "markdown-update")
     source = "## After\n\n`code`"
 
-    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(4)  # presentation plus meta plus both card containers
+    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(6)  # presentation plus meta plus all four card containers
     put room_message_url(@room, message), params: { message: { markdown_source: source } }
 
     assert_redirected_to room_message_url(@room, message)
@@ -260,7 +260,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
   test "a legacy body update clears stale Markdown mode" do
     message = @room.messages.create!(creator: users(:david), markdown_source: "**Before**", client_message_id: "markdown-to-rich")
 
-    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(4)  # presentation plus meta plus both card containers
+    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(6)  # presentation plus meta plus all four card containers
     put room_message_url(@room, message), params: { message: { body: "Legacy again" } }
 
     assert_redirected_to room_message_url(@room, message)
