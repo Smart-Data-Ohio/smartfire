@@ -36,6 +36,10 @@ class Message < ApplicationRecord
   has_many :github_pull_requests, through: :github_pull_request_references,
     source: :pull_request, class_name: "Github::PullRequest"
 
+  has_many :fizzy_card_references, class_name: "Fizzy::CardReference", dependent: :destroy
+  has_many :fizzy_cards, through: :fizzy_card_references,
+    source: :card, class_name: "Fizzy::Card"
+
   has_many :twitter_post_references, class_name: "Twitter::PostReference", dependent: :destroy
   has_many :twitter_posts, through: :twitter_post_references,
     source: :post, class_name: "Twitter::Post"
@@ -71,6 +75,8 @@ class Message < ApplicationRecord
   # method twice on the commit chain keeps only one registration.
   after_create_commit :sync_github_pull_request_references
   after_update_commit :resync_github_pull_request_references
+  after_create_commit :sync_fizzy_card_references
+  after_update_commit :resync_fizzy_card_references
   after_create_commit :sync_twitter_post_references
   after_update_commit :resync_twitter_post_references
   after_create_commit :sync_event_references
@@ -107,7 +113,7 @@ class Message < ApplicationRecord
       .with_attachment_details
       .with_boosts
       .preload(:message_pins)
-      .preload(:room, :github_pull_requests, :twitter_posts, :drive_attachments, link_embed_references: :link_embed,
+      .preload(:room, :github_pull_requests, :fizzy_cards, :twitter_posts, :drive_attachments, link_embed_references: :link_embed,
         events: [ :room, :organizer, :venue ],
         message_references: { referenced_message: [ :room, :rich_text_body, { attachment_attachment: :blob }, { creator: :avatar_attachment } ] },
         reply_to_message: [ :room, :rich_text_body, { creator: :avatar_attachment } ])
@@ -287,6 +293,14 @@ class Message < ApplicationRecord
 
     def resync_github_pull_request_references
       Github::PullRequestReferenceSync.call(self) if references_source_changed?
+    end
+
+    def sync_fizzy_card_references
+      Fizzy::CardReferenceSync.call(self)
+    end
+
+    def resync_fizzy_card_references
+      Fizzy::CardReferenceSync.call(self) if references_source_changed?
     end
 
     def sync_twitter_post_references

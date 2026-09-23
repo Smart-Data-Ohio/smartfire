@@ -1,8 +1,8 @@
 module Github::PullRequestsHelper
-  # Cache key for a message rendered with its PR, X post, and event cards.
+  # Cache key for a message rendered with its PR, Fizzy, X post, and event cards.
   # Neither update ever touches the message, so the key folds in the newest
   # card row of any kind; otherwise a collection cache would keep serving
-  # "Loading pull request" (or a stale X post or event card) indefinitely.
+  # "Loading pull request" (or a stale Fizzy, X post, or event card) indefinitely.
   # Cards with a PR link also fold in the room's discussion-thread stamp, so
   # a cached Discuss control flips to its thread link once one is created.
   # Pinning never touches the message either, so the key carries the pin
@@ -18,7 +18,7 @@ module Github::PullRequestsHelper
   # neither row, so the key also carries a digest of the author and room
   # names the cards show.
   def message_with_pr_cards_cache_key(message)
-    newest_card = (message.github_pull_requests.map(&:updated_at) + message.twitter_posts.map(&:updated_at) + message.events.map(&:updated_at)).compact.max
+    newest_card = (message.github_pull_requests.map(&:updated_at) + message.fizzy_cards.map(&:updated_at) + message.twitter_posts.map(&:updated_at) + message.events.map(&:updated_at)).compact.max
     # Link embeds are fetched after the message renders; their rows (and the
     # reference set) must bust the fragment like the other cards.
     embeds = message.link_embed_references.map { |reference| [ reference.id, reference.link_embed&.updated_at ] }

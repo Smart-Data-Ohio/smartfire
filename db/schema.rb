@@ -95,6 +95,9 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
     t.string "decision_note"
     t.datetime "expires_at", null: false
     t.string "external_id"
+    t.integer "fizzy_connected_account_id"
+    t.string "fizzy_user_id"
+    t.string "fizzy_user_name"
     t.integer "github_account_id"
     t.string "github_login"
     t.text "payload"
@@ -104,6 +107,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
     t.datetime "updated_at", null: false
     t.index ["agent_id", "external_id"], name: "index_agent_approvals_on_agent_id_and_external_id", unique: true, where: "external_id IS NOT NULL"
     t.index ["agent_id", "status"], name: "index_agent_approvals_on_agent_id_and_status"
+    t.index ["fizzy_connected_account_id"], name: "index_agent_approvals_on_fizzy_connected_account_id"
   end
 
   create_table "agent_credentials", force: :cascade do |t|
@@ -140,6 +144,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
     t.text "webhook_last_error"
     t.datetime "webhook_next_attempt_at"
     t.string "webhook_status", default: "none", null: false
+    t.index ["agent_id", "agent_approval_id"], name: "index_agent_events_on_agent_fizzy_approval", unique: true, where: "event_type = 'fizzy_action_completed' AND agent_approval_id IS NOT NULL"
     t.index ["agent_id", "agent_approval_id"], name: "index_agent_events_on_agent_github_approval", unique: true, where: "event_type = 'github_action_completed' AND agent_approval_id IS NOT NULL"
     t.index ["agent_id", "created_at"], name: "index_agent_events_on_agent_id_and_created_at"
     t.index ["agent_id", "outcome", "id"], name: "index_agent_events_on_agent_outcome_id"
@@ -311,6 +316,51 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
     t.index ["series_id", "starts_at"], name: "index_events_on_series_slot", unique: true, where: "series_id IS NOT NULL AND cancelled_at IS NULL"
     t.index ["series_id"], name: "index_events_on_series_id"
     t.index ["venue_room_id"], name: "index_events_on_venue_room_id"
+  end
+
+  create_table "fizzy_card_caches", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "fetch_error"
+    t.datetime "fetch_requested_at"
+    t.datetime "fetched_at"
+    t.integer "fizzy_card_id", null: false
+    t.json "payload"
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["fizzy_card_id", "user_id"], name: "index_fizzy_card_caches_on_card_and_user", unique: true
+    t.index ["fizzy_card_id"], name: "index_fizzy_card_caches_on_fizzy_card_id"
+    t.index ["user_id"], name: "index_fizzy_card_caches_on_user_id"
+  end
+
+  create_table "fizzy_card_references", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "fizzy_card_id", null: false
+    t.integer "message_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["fizzy_card_id"], name: "index_fizzy_card_references_on_fizzy_card_id"
+    t.index ["message_id", "fizzy_card_id"], name: "index_fizzy_card_refs_on_message_and_card", unique: true
+    t.index ["message_id"], name: "index_fizzy_card_references_on_message_id"
+  end
+
+  create_table "fizzy_cards", force: :cascade do |t|
+    t.string "account_id", null: false
+    t.datetime "created_at", null: false
+    t.integer "number", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "number"], name: "index_fizzy_cards_on_account_id_and_number", unique: true
+  end
+
+  create_table "fizzy_connected_accounts", force: :cascade do |t|
+    t.string "access_token", null: false
+    t.datetime "created_at", null: false
+    t.string "disconnected_reason"
+    t.string "fizzy_account_id", null: false
+    t.string "fizzy_account_name"
+    t.string "fizzy_user_id"
+    t.string "fizzy_user_name"
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["user_id"], name: "index_fizzy_connected_accounts_on_user_id", unique: true
   end
 
   create_table "github_connected_accounts", force: :cascade do |t|
@@ -829,6 +879,11 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
   add_foreign_key "event_calendar_entries", "users"
   add_foreign_key "event_references", "events"
   add_foreign_key "event_references", "messages"
+  add_foreign_key "fizzy_card_caches", "fizzy_cards"
+  add_foreign_key "fizzy_card_caches", "users"
+  add_foreign_key "fizzy_card_references", "fizzy_cards"
+  add_foreign_key "fizzy_card_references", "messages"
+  add_foreign_key "fizzy_connected_accounts", "users"
   add_foreign_key "github_connected_accounts", "users"
   add_foreign_key "github_notifications", "github_repository_subscriptions", column: "subscription_id", on_delete: :cascade
   add_foreign_key "github_notifications", "messages", on_delete: :nullify

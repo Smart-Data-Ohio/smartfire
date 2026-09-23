@@ -90,6 +90,8 @@ class ChannelThreadMessagesController < ApplicationController
     @message.broadcast_replace_to @thread, :messages,
       target: [ @message, :message_link_cards ], partial: "messages/message_links/cards", attributes: { maintain_scroll: true }
     @message.broadcast_replace_to @thread, :messages,
+      target: [ @message, :fizzy_cards ], partial: "fizzy/cards/cards", attributes: { maintain_scroll: true }
+    @message.broadcast_replace_to @thread, :messages,
       target: [ @message, :linkedin_cards ], partial: "linkedin/posts/cards", attributes: { maintain_scroll: true }
     @message.broadcast_replace_to @thread, :messages,
       target: [ @message, :link_embed_cards ], partial: "link_embeds/cards", attributes: { maintain_scroll: true }
