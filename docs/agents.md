@@ -484,7 +484,10 @@ reads default to the owner's stored Fizzy account and accept an
 `account_id` override where the token can access more than one. A
 missing grant is 403; a missing owner or unusable owner account is
 422. A board or card the owner's token cannot access (Fizzy answers
-404 or 403) reads as 404. See [Fizzy cards](fizzy.md) for the identity model.
+404 or 403) reads as 404. The MCP `list_fizzy_boards`,
+`get_fizzy_board`, `search_fizzy_cards`, and `get_fizzy_card` tools
+read through the same service, grants, and rate limits. See
+[Fizzy cards](fizzy.md) for the identity model.
 
 ### Fizzy write actions
 
@@ -533,7 +536,10 @@ agent, with `metadata` carrying `approval_id`, `action`, `status`
 `fizzy_action` key instead of `message`, `ack` works on it, the
 completion enqueues a webhook POST with the same additive `agent` key
 plus `fizzy_action`, and the ledger page lists it with its status.
-Rate limits and the hop guard do not apply, like approval rows.
+Rate limits and the hop guard do not apply, like approval rows. The
+MCP `create_fizzy_card`, `comment_on_fizzy_card`, `move_fizzy_card`,
+`close_fizzy_card`, and `reopen_fizzy_card` tools request through the
+same service, grants, and rate limits.
 
 ## Work threads
 
@@ -826,8 +832,8 @@ curl -X POST https://smartfire.example.com/agents/dms \
 
 The same agent API is exposed as a Model Context Protocol server at
 `POST /agents/mcp` (stateless Streamable HTTP, spec revision 2026-07-28,
-with the legacy `initialize` handshake kept): sixteen tools from
+with the legacy `initialize` handshake kept): twenty-five tools from
 `list_rooms` and `read_messages` to `request_approval`, `get_context`,
-and `open_dm`, each delegating to the same service code, grants, and
-rate-limit buckets as its REST counterpart. See
+`open_dm`, and the nine Fizzy tools, each delegating to the same
+service code, grants, and rate-limit buckets as its REST counterpart. See
 [Smartfire MCP server](agents-mcp.md) for client setup and the tool list.
