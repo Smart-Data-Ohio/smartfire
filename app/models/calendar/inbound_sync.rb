@@ -41,6 +41,7 @@ module Calendar
     private
       def entries
         @user.event_calendar_entries.joins(:event).merge(Event.upcoming).order(:event_id).limit(MAX_ENTRIES)
+          .includes(event: :room)
       end
 
       def channel

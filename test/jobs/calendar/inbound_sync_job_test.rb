@@ -86,4 +86,30 @@ class Calendar::InboundSyncJobTest < ActiveSupport::TestCase
     assert_requested gets, times: 1
     assert_not_predicate @david.google_account.reload, :connected?
   end
+
+  test "the sweep preloads events instead of querying per entry" do
+    watercooler_id = Calendar::EntrySync.google_event_id_for(events(:watercooler_sync).id, @david.id)
+    EventCalendarEntry.create!(event: events(:watercooler_sync), user: @david,
+      google_event_id: watercooler_id, synced_at: Time.current)
+    third = @room.events.create!(organizer: @david, title: "Third", starts_at: 4.days.from_now, time_zone: "UTC")
+    third_id = Calendar::EntrySync.google_event_id_for(third.id, @david.id)
+    EventCalendarEntry.create!(event: third, user: @david, google_event_id: third_id, synced_at: Time.current)
+    stub_request(:get, %r{#{GOOGLE_EVENTS_URL}/})
+      .to_return(status: 200, body: { status: "confirmed" }.to_json,
+        headers: { "Content-Type" => "application/json" })
+
+    event_reads = count_sql_queries('FROM "events"') do
+      Calendar::InboundSyncJob.perform_now(@david.id)
+    end
+
+    assert_equal 1, event_reads
+  end
+
+  private
+    def count_sql_queries(fragment)
+      queries = []
+      callback = ->(*, payload) { queries << payload[:sql] if payload[:sql].include?(fragment) }
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { yield }
+      queries.size
+    end
 end
