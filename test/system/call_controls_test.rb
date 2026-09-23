@@ -310,6 +310,130 @@ class CallControlsTest < ApplicationSystemTestCase
     assert_equal [ "set" ], audio_context_calls
   end
 
+  test "volumes at or below 100 stay on the audio element" do
+    room = rooms(:designers)
+    david = users(:david)
+    mapping = [ { id: david.id, name: "David", avatar_url: "", identities: [ "remote-1" ] } ]
+
+    visit room_path(room)
+    wait_for_cable_connection
+    pin_participant_mapping(room.id, mapping)
+    install_stub_room(room.id)
+    dispatch_participant_mapping(room.id, mapping)
+
+    slider = find("li[data-participant-identity='remote-1'] .huddle__participant-volume")
+
+    set_slider(slider, 0)
+    wait_for_condition("muting the slider never applied") { volume_calls == [ 0 ] }
+    assert_empty audio_context_calls
+
+    set_slider(slider, 50)
+    wait_for_condition("the lowered volume never applied") { volume_calls == [ 0, 0.5 ] }
+    assert_empty audio_context_calls
+  end
+
+  test "boosting one participant mutes their element until the slider returns" do
+    room = rooms(:designers)
+    david = users(:david)
+    mapping = [ { id: david.id, name: "David", avatar_url: "", identities: [ "remote-1" ] } ]
+
+    visit room_path(room)
+    wait_for_cable_connection
+    pin_participant_mapping(room.id, mapping)
+    install_stub_room(room.id)
+    page.execute_script(<<~JS)
+      window.__remoteMic.track.attachedElements = [ window.__boostElement = document.createElement("audio") ];
+    JS
+    dispatch_participant_mapping(room.id, mapping)
+
+    # The gain carries boosted audio, so the element goes quiet while the
+    # boost stands; otherwise it would play twice, and 0% would not silence.
+    slider = find("li[data-participant-identity='remote-1'] .huddle__participant-volume")
+    set_slider(slider, 150)
+
+    wait_for_condition("the boost never engaged") { audio_context_calls == [ "set" ] }
+    assert_equal true, page.evaluate_script("window.__boostElement.muted")
+    assert_equal 0, page.evaluate_script("window.__boostElement.volume")
+
+    set_slider(slider, 100)
+    wait_for_condition("the boost never disengaged") { audio_context_calls == [ "set", "unset" ] }
+    assert_equal false, page.evaluate_script("window.__boostElement.muted")
+  end
+
+  test "a boost applied before the track arrives still engages on subscribe" do
+    room = rooms(:designers)
+    david = users(:david)
+    mapping = [ { id: david.id, name: "David", avatar_url: "", identities: [ "remote-1" ] } ]
+
+    visit room_path(room)
+    wait_for_cable_connection
+    pin_participant_mapping(room.id, mapping)
+    join_with_hanging_connect(room)
+    page.execute_script("window.localStorage.setItem('campfire.huddle.volume.#{david.id}', '150')")
+    dispatch_participant_mapping(room.id, mapping)
+
+    page.execute_script(<<~JS)
+      const controller = window.__huddleController;
+      window.__volumeCalls = [];
+      window.__audioContextCalls = [];
+      let publication = { isSubscribed: true, track: null };
+      const remote = {
+        identity: "remote-1", name: "David", isSpeaking: false,
+        trackPublications: new Map(), setVolume: (volume) => window.__volumeCalls.push(volume),
+        getTrackPublication: () => publication
+      };
+      controller.room.remoteParticipants.set("remote-1", remote);
+      const audioStub = () => ({ kind: "audio", attach: () => document.createElement("audio") });
+      controller.room.emit(window.__livekit.RoomEvent.TrackSubscribed, audioStub(), publication, remote);
+      publication = {
+        isSubscribed: true,
+        track: { setAudioContext: (context) => window.__audioContextCalls.push(context ? "set" : "unset") }
+      };
+      controller.room.emit(window.__livekit.RoomEvent.TrackSubscribed, audioStub(), publication, remote);
+    JS
+
+    wait_for_condition("the late track never engaged the gain") { audio_context_calls == [ "set" ] }
+    assert_equal [ 1.5, 1.5 ], volume_calls
+  end
+
+  test "a resubscribed track re-engages the boost on the new track" do
+    room = rooms(:designers)
+    david = users(:david)
+    mapping = [ { id: david.id, name: "David", avatar_url: "", identities: [ "remote-1" ] } ]
+
+    visit room_path(room)
+    wait_for_cable_connection
+    pin_participant_mapping(room.id, mapping)
+    join_with_hanging_connect(room)
+    page.execute_script("window.localStorage.setItem('campfire.huddle.volume.#{david.id}', '150')")
+    dispatch_participant_mapping(room.id, mapping)
+
+    page.execute_script(<<~JS)
+      const controller = window.__huddleController;
+      window.__volumeCalls = [];
+      window.__audioContextCalls = [];
+      const publication = {
+        isSubscribed: true,
+        track: { setAudioContext: (context) => window.__audioContextCalls.push(context ? "set" : "unset") }
+      };
+      const remote = {
+        identity: "remote-1", name: "David", isSpeaking: false,
+        trackPublications: new Map(), setVolume: (volume) => window.__volumeCalls.push(volume),
+        getTrackPublication: () => publication
+      };
+      controller.room.remoteParticipants.set("remote-1", remote);
+      const audioStub = () => ({ kind: "audio", attach: () => document.createElement("audio") });
+      const first = audioStub();
+      controller.room.emit(window.__livekit.RoomEvent.TrackSubscribed, first, publication, remote);
+      controller.room.emit(window.__livekit.RoomEvent.TrackUnsubscribed, first, publication, remote);
+      controller.room.emit(window.__livekit.RoomEvent.TrackSubscribed, audioStub(), publication, remote);
+    JS
+
+    wait_for_condition("the resubscribed track never re-engaged the gain") do
+      audio_context_calls == [ "set", "set" ]
+    end
+  end
+
   test "a failing microphone restart retries, falls back, then says so" do
     room = rooms(:designers)
     visit room_path(room)

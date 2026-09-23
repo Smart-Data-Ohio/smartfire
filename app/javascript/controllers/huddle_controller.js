@@ -1701,7 +1701,13 @@ export default class extends Controller {
       this.#applyStoredParticipantAudio(participant)
       this.#renderRoster()
     })
-    on(RoomEvent.TrackUnsubscribed, (track) => this.#detachTrack(track))
+    on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+      // A resubscribe may hand back a new track object without the gain, so
+      // a boost the old track carried is forgotten here and re-engaged on
+      // the next subscribe instead of silently dropping to element volume.
+      if (participant?.identity) this.boostedParticipants.delete(participant.identity)
+      this.#detachTrack(track)
+    })
     on(RoomEvent.LocalTrackPublished, (publication, participant) => {
       if (publication.track) this.#attachTrack(publication.track, publication, participant)
       this.#renderRoster()
@@ -2794,39 +2800,50 @@ export default class extends Controller {
 
   // Volumes up to 100% ride the audio element; anything above needs a Web
   // Audio gain node, which the SDK wires when a context is set on the track.
-  // The context engages only for customized participants and detaches when
-  // the slider returns to 100%, so untouched audio never reroutes.
+  // The context engages only for boosted participants and detaches when the
+  // slider returns to 100% or below, so untouched audio never reroutes. The
+  // elements are muted while the gain carries them: the SDK only quiets
+  // elements attached after the context is set, so a context engaged later
+  // would otherwise play twice — once through the element at its old volume,
+  // once through the gain — and a 0% slider would leave full-volume audio
+  // behind. Only a track that actually exists counts as boosted, so a volume
+  // remembered before the track arrives still engages on subscribe.
   #applyParticipantVolume(participant, publication, volume) {
     const track = publication?.track || publication?.audioTrack
 
-    if (volume === 100) {
-      if (this.boostedParticipants.has(participant.identity)) {
-        this.boostedParticipants.delete(participant.identity)
-        try {
-          track?.setAudioContext?.(null)
-        } catch (error) {
-          // The element volume below still applies.
+    if (volume > 100) {
+      const context = this.#remoteVolumeAudioContext()
+      if (!context) {
+        participant.setVolume?.(1)
+        return
+      }
+
+      try {
+        if (track && !this.boostedParticipants.has(participant.identity)) {
+          track.setAudioContext?.(context)
+          for (const element of track.attachedElements || []) {
+            element.volume = 0
+            element.muted = true
+          }
+          this.boostedParticipants.add(participant.identity)
         }
+        participant.setVolume?.(volume / 100)
+      } catch (error) {
+        participant.setVolume?.(1)
       }
-      participant.setVolume?.(1)
       return
     }
 
-    const context = this.#remoteVolumeAudioContext()
-    if (!context) {
-      participant.setVolume?.(Math.min(1, volume / 100))
-      return
-    }
-
-    try {
-      if (!this.boostedParticipants.has(participant.identity)) {
-        track?.setAudioContext?.(context)
-        this.boostedParticipants.add(participant.identity)
+    if (this.boostedParticipants.has(participant.identity)) {
+      this.boostedParticipants.delete(participant.identity)
+      try {
+        track?.setAudioContext?.(null)
+      } catch (error) {
+        // The element volume below still applies.
       }
-      participant.setVolume?.(volume / 100)
-    } catch (error) {
-      participant.setVolume?.(Math.min(1, volume / 100))
+      for (const element of track?.attachedElements || []) element.muted = false
     }
+    participant.setVolume?.(volume / 100)
   }
 
   #remoteVolumeAudioContext() {
