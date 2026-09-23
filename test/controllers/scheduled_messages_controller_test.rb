@@ -139,6 +139,19 @@ class ScheduledMessagesControllerTest < ActionDispatch::IntegrationTest
     assert scheduled.reload.dropped?
   end
 
+  test "send_now drops rows the model rejects with the reason" do
+    board = Rooms::Board.create_for({ name: "Launch", creator: @user }, users: [ @user ])
+    scheduled = ScheduledMessage.create!(user: @user, room: board, markdown_source: "Root post", send_at: 2.hours.from_now)
+
+    assert_no_difference -> { Message.count } do
+      post send_now_scheduled_message_url(scheduled), as: :json
+    end
+
+    assert_response :unprocessable_entity
+    assert scheduled.reload.dropped?
+    assert_match "board", response.parsed_body["error"]
+  end
+
   test "bots are forbidden" do
     delete session_url
     bot = users(:bender)

@@ -109,6 +109,30 @@ class ScheduledMessage::DispatcherTest < ActiveSupport::TestCase
     assert_not scheduled.dropped?
   end
 
+  test "a send-time validation failure drops the row with the reason" do
+    board = Rooms::Board.create_for({ name: "Launch", creator: @user }, users: [ @user ])
+    scheduled = ScheduledMessage.create!(user: @user, room: board, markdown_source: "Root post", send_at: 1.hour.from_now)
+    scheduled.update_columns(send_at: 1.minute.ago)
+
+    assert_no_difference -> { Message.count } do
+      assert_difference -> { ActivityItem.where(user: @user, source: scheduled).count }, 1 do
+        ScheduledMessage::Dispatcher.dispatch_due!
+      end
+    end
+
+    scheduled.reload
+    assert scheduled.dropped?
+    assert_match "board", scheduled.drop_reason
+
+    # Never retries: a later tick posts nothing and changes nothing.
+    assert_no_difference -> { Message.count } do
+      assert_no_difference -> { ActivityItem.where(user: @user, source: scheduled).count } do
+        ScheduledMessage::Dispatcher.dispatch_due!
+      end
+    end
+    assert scheduled.reload.dropped?
+  end
+
   test "dispatch_now sends immediately and reports drops" do
     scheduled = schedule!(markdown_source: "Now", send_at: 2.hours.from_now)
 

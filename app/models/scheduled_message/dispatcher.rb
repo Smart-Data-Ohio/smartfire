@@ -14,8 +14,8 @@ class ScheduledMessage::Dispatcher
     end
 
     # Sends one row immediately (the view's "Send now"). Returns true
-    # when posted, false when dropped for lost access. Raises on
-    # validation failures.
+    # when posted, false when dropped (lost access, a deleted room, or
+    # a message the model rejects).
     def dispatch_now!(scheduled, now: Time.current)
       dispatch_item!(scheduled, now:, immediate: true)
     end
@@ -59,7 +59,16 @@ class ScheduledMessage::Dispatcher
           return false
         end
 
-        post!(scheduled, now:)
+        begin
+          post!(scheduled, now:)
+        rescue ActiveRecord::RecordInvalid => error
+          # The row can never post (a root draft in a board room, a reply
+          # the model rejects): drop it with the reason instead of
+          # retry-looping on every tick. Anything else (a lock race, a
+          # broadcast failure) keeps the retry path below.
+          drop!(scheduled, now:, reason: error.record.errors.full_messages.to_sentence)
+          return false
+        end
         true
       rescue => error
         # A failed post must not strand the claim: clear it so the next

@@ -92,9 +92,10 @@ class ScheduledMessagesController < ApplicationController
         format.json { render json: scheduled_payload(scheduled.reload) }
       end
     elsif scheduled.reload.dropped?
+      alert = drop_alert_for(scheduled)
       respond_to do |format|
-        format.html { redirect_to scheduled_messages_path, alert: "You no longer have access to that room, so the message was not sent." }
-        format.json { render json: { error: "Room access lost; the scheduled message was dropped." }, status: :unprocessable_entity }
+        format.html { redirect_to scheduled_messages_path, alert: alert }
+        format.json { render json: { error: alert }, status: :unprocessable_entity }
       end
     else
       # Still pending: the periodic runner holds its claim and will send
@@ -131,6 +132,14 @@ class ScheduledMessagesController < ApplicationController
       raise ArgumentError, "Send time is invalid" if parsed.nil?
 
       parsed
+    end
+
+    def drop_alert_for(scheduled)
+      if scheduled.drop_reason.present?
+        "The scheduled message was not sent (#{scheduled.drop_reason})."
+      else
+        "You no longer have access to that room, so the message was not sent."
+      end
     end
 
     def scheduled_payload(scheduled)
