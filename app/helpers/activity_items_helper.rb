@@ -26,6 +26,8 @@ module ActivityItemsHelper
       source.agent&.user ? edit_account_bot_path(source.agent.user) : activity_items_path
     when ScheduledMessage
       scheduled_messages_path
+    when Session
+      user_sessions_path
     else
       activity_items_path
     end
@@ -69,6 +71,8 @@ module ActivityItemsHelper
       "Reminder"
     when "scheduled_message_dropped"
       "Scheduled message not sent"
+    when "new_sign_in"
+      "New sign-in"
     else
       item.event_type.humanize
     end
@@ -105,6 +109,8 @@ module ActivityItemsHelper
     when ScheduledMessage
       room = source.room
       room ? room_display_name(room) : "Unavailable room"
+    when Session
+      "Account security"
     else
       source.class.name.humanize
     end
@@ -159,6 +165,9 @@ module ActivityItemsHelper
       else
         "You no longer have access to this room, so your scheduled message was not sent: #{source.markdown_source}"
       end
+    when Session
+      "New sign-in to your account from #{source.device_description}, " \
+        "#{time_ago_in_words(item.created_at)} ago. Wasn't you? Review your sessions."
     else
       "Source updated"
     end

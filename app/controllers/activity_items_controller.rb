@@ -255,6 +255,16 @@ class ActivityItemsController < ApplicationController
           path: activity_item_source_path(item),
           status: source.cap
         }
+      when Session
+        {
+          type: item.source_type,
+          id: source.id,
+          room_id: nil,
+          thread_id: nil,
+          creator_id: nil,
+          body: activity_item_source_body(item).truncate(500),
+          path: activity_item_source_path(item)
+        }
       end
     end
 

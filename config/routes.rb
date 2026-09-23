@@ -73,6 +73,9 @@ Rails.application.routes.draw do
       scope defaults: { user_id: "me" } do
         resource :sidebar, only: :show
         resource :profile
+        resources :sessions, only: %i[ index destroy ] do
+          delete :revoke_others, on: :collection
+        end
         resource :tour, only: :update
         resource :status, only: :update, controller: "statuses"
         resource :notification_settings, only: :update

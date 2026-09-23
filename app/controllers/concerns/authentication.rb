@@ -41,7 +41,13 @@ module Authentication
 
     def restore_authentication
       if session = find_session_by_cookie
-        resume_session session
+        if session.expired?
+          session.destroy!
+          remove_authentication_cookie
+          nil
+        else
+          resume_session session
+        end
       end
     end
 
@@ -94,7 +100,9 @@ module Authentication
     end
 
     def start_new_session_for(user)
-      user.sessions.start!(user_agent: request.user_agent, ip_address: request.remote_ip).tap do |session|
+      device_id = ensure_device_cookie
+      first_sign_in = !user.sessions.exists?
+      user.sessions.start!(user_agent: request.user_agent, ip_address: request.remote_ip, device_id: device_id).tap do |session|
         authenticated_as session
 
         # Establish the CSRF token before any page renders. Sign-ins that
@@ -105,7 +113,18 @@ module Authentication
         # the next PATCH/POST 422s. Reading the token here commits it with
         # the sign-in response, so every later request reuses it.
         form_authenticity_token
+
+        NewSignInAlert.deliver_if_new_device(user, session, first_sign_in: first_sign_in)
       end
+    end
+
+    # The stable device identifier new-device sign-in alerts are keyed on:
+    # a long-lived signed cookie, not the IP alone. Every sign-in either
+    # reuses the browser's id or mints one, so a sign-in from a browser the
+    # account has never used is recognizable. The w4-two-factor branch's
+    # remember-device cookie is a separate concern; keep the names apart.
+    def ensure_device_cookie
+      cookies.signed.permanent[:device_id] ||= SecureRandom.hex(16)
     end
 
     def resume_session(session)
