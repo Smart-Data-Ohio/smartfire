@@ -12,6 +12,10 @@ class DriveAttachmentsTest < ApplicationSystemTestCase
   end
 
   teardown do
+    # Leave the page first: a rendered Drive chip or link preview can still
+    # be fetching metadata through the app, and that request must not land
+    # after the stubs below are reset.
+    visit "about:blank"
     WebMock.reset!
     WebMock.disable!
   end
