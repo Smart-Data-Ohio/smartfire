@@ -47,8 +47,11 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
     assert_selector "#profile-card-popover[hidden]", visible: :all
     prevented = page.evaluate_script(<<~JS)
       (() => {
+        // Only the card's own handler is under test: the global Esc
+        // shortcut marks the room read and yields to theater itself.
         const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true })
-        window.dispatchEvent(event)
+        const card = window.Stimulus.getControllerForElementAndIdentifier(document.body, "profile-card")
+        card.close(event)
         return event.defaultPrevented
       })()
     JS
