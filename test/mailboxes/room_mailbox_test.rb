@@ -158,6 +158,20 @@ class RoomMailboxTest < ActionMailbox::TestCase
     end
   end
 
+  test "a mentioned legacy bot receives its webhook" do
+    bot = User.create_bot!(name: "Legacy Bot", skip_open_room_grant: true, webhook_url: "http://example.com/legacy")
+    @room.memberships.create!(user: bot)
+    delivery = stub_request(:post, "http://example.com/legacy").to_return(status: 200)
+
+    perform_enqueued_jobs only: Bot::WebhookJob do
+      receive_inbound_email_from_mail(
+        from: "david@37signals.com", to: room_address, body: "Hey @[Legacy Bot], look at this."
+      )
+    end
+
+    assert_requested delivery, times: 1
+  end
+
   private
     def room_address
       "room-#{@token}@mail.test"

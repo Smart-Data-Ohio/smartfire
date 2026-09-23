@@ -22,6 +22,7 @@ class RoomMailbox < ApplicationMailbox
     message.save!
     message.process_attachment
     message.broadcast_create
+    Message::BotWebhookFanout.deliver_for(message)
   end
 
   private
