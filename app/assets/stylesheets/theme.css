@@ -1,9 +1,10 @@
 /* Manual theme override, set server-side as data-theme on <html> so the
    first paint already matches. "system" (the default) has no rules here:
-   the prefers-color-scheme blocks in colors.css and workspace.css apply.
-   Light and dark re-declare the same tokens with higher specificity, so
-   they win over the media query whichever way the OS is set.
-   Component-level dark rules outside the tokens still follow the OS. */
+   the prefers-color-scheme blocks in colors.css, workspace.css, and
+   code.css apply. Light and dark re-declare the same tokens with higher
+   specificity, so they win over the media query whichever way the OS is
+   set. Component rules follow the manual theme through these tokens
+   (--icon-filter) or through their own data-theme counterparts. */
 :root[data-theme="light"] {
   color-scheme: light;
 
@@ -19,6 +20,9 @@
   --lch-red: 51% 0.2 31;
   --lch-green: 65.59% 0.234 142.49;
   --icon-filter: none;
+  --icon-filter-inverse: invert(1);
+  --code-background: #ffffff;
+  --code-foreground: #000000;
 
   --workspace-accent: #5d6870;
   --workspace-accent-strong: #3e484e;
@@ -57,6 +61,9 @@
   --lch-red: 73.8% 0.184 29.18;
   --lch-green: 75% 0.21 141.89;
   --icon-filter: invert(1);
+  --icon-filter-inverse: none;
+  --code-background: #1e1e1e;
+  --code-foreground: #d4d4d4;
 
   --workspace-accent: #67747b;
   --workspace-accent-strong: #d1d8db;

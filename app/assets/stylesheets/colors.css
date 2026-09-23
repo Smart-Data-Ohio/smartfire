@@ -30,8 +30,11 @@
   --color-selected-dark: oklch(var(--lch-blue-dark));
   --color-alert: oklch(var(--lch-orange));
 
-  /* Brand icons ship black; the dark theme inverts them to white. */
+  /* Icons ship black; the dark theme inverts them to white. The inverse
+     covers white icons on reversed buttons, which turn black in the dark
+     theme. theme.css re-declares both for the manual theme. */
   --icon-filter: none;
+  --icon-filter-inverse: invert(1);
 
   /* Redefine named color values for dark mode */
   @media (prefers-color-scheme: dark) {
@@ -46,5 +49,6 @@
     --lch-red: 73.8% 0.184 29.18;
     --lch-green: 75% 0.21 141.89;
     --icon-filter: invert(1);
+    --icon-filter-inverse: none;
   }
 }

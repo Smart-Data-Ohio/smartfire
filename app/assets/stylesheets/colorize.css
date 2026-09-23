@@ -1,15 +1,7 @@
 .colorize--white {
-  filter: invert(100%);
-
-  @media (prefers-color-scheme: dark) {
-    filter: invert(0%);
-  }
+  filter: var(--icon-filter-inverse, invert(100%));
 }
 
 .colorize--black {
-  filter: invert(0%);
-
-  @media (prefers-color-scheme: dark) {
-    filter: invert(100%);
-  }
+  filter: var(--icon-filter, none);
 }

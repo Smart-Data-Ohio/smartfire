@@ -117,11 +117,14 @@ status expiries evaluate in it.
 
 Light, Dark, or System (default), picked on the profile page and applied
 server-side as `data-theme` on `<html>`, so the first paint already
-matches with no flash. `theme.css` re-declares the `colors.css` and
-`workspace.css` tokens under `:root[data-theme="light"]` and
-`:root[data-theme="dark"]`; the `color-scheme` meta tag follows the
-choice. Component-level dark rules outside the tokens still follow the
-OS setting.
+matches with no flash. `theme.css` re-declares the `colors.css`,
+`workspace.css`, and `code.css` tokens under
+`:root[data-theme="light"]` and `:root[data-theme="dark"]`; the
+`color-scheme` meta tag follows the choice. Component rules follow the
+manual theme through those tokens (icon inversion uses
+`--icon-filter`) or through their own `data-theme` counterparts, so
+only the `system` setting reads the OS. The standalone public pages
+have no theme picker and keep following the OS.
 
 ## The policy object
 
