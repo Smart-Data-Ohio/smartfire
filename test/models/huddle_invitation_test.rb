@@ -506,7 +506,8 @@ class HuddleInvitationTest < ActiveSupport::TestCase
   end
 
   test "a removed group member gets no invitation and loses their grant" do
-    group_room = Rooms::Direct.create_for({ creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
+    group_room = Rooms::Direct.create_for({ creator: users(:david) },
+      users: [ users(:david), users(:jason), users(:kevin), users(:jz) ])
     grant = HuddleGrant.issue!(session: second_session_for(users(:kevin)),
       membership: group_room.memberships.find_by(user: users(:kevin)))
 
@@ -516,6 +517,7 @@ class HuddleInvitationTest < ActiveSupport::TestCase
     HuddleGrant.issue!(session: @starter_session, membership: group_room.memberships.find_by(user: users(:david)))
 
     assert ActivityItem.exists?(user: users(:jason), event_type: "huddle_started")
+    assert ActivityItem.exists?(user: users(:jz), event_type: "huddle_started")
     assert_not ActivityItem.exists?(user: users(:kevin), event_type: "huddle_started")
   end
 
