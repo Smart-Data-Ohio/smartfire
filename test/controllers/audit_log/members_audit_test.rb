@@ -61,6 +61,18 @@ class AuditLog::MembersAuditTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "role change that fails validation writes no row" do
+    # Corrupt an unrelated column so the update fails: the in-memory
+    # role still differs, but nothing persisted and nothing is logged.
+    users(:kevin).update_column(:inbox_preferences, "garbage")
+
+    assert_no_difference -> { AuditLog.where(action: "user.role.change").count } do
+      put account_user_url(users(:kevin)), params: { user: { role: "administrator" } }
+    end
+
+    assert_equal "member", users(:kevin).reload.role
+  end
+
   test "ban and unban are recorded" do
     post user_ban_url(users(:kevin))
     assert_redirected_to users(:kevin)

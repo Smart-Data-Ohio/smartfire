@@ -6,11 +6,12 @@ class Accounts::UsersController < ApplicationController
   end
 
   def update
-    previous_role = @user.role
     @user.update(role_params)
-    if previous_role != @user.role
+    # previous_changes is only populated by a successful save: comparing
+    # against the in-memory role would log a row for a failed update.
+    if (role_change = @user.previous_changes["role"])
       AuditLog.record!(action: "user.role.change", target: @user,
-        changes: { role: [ previous_role, @user.role ] })
+        changes: { role: role_change })
     end
     redirect_to edit_account_url
   end
