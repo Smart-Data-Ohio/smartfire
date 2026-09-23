@@ -526,7 +526,8 @@ class HuddleGrant < ApplicationRecord
           roomPath: routes.room_path(room),
           callerName: user&.name || "Someone",
           readPath: "",
-          handledPath: ""
+          handledPath: "",
+          silent: !Huddle::RingPolicy.ring?(recipient)
         }
       }
     end

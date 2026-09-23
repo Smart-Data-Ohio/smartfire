@@ -150,6 +150,25 @@
         <% end %>
       </fieldset>
 
+      <fieldset class="margin-none">
+        <legend class="txt-large">Calls</legend>
+        <p class="txt-small margin-none">With voice activity your microphone is live whenever you are unmuted. With push-to-talk it opens only while you hold the key — never while you are typing.</p>
+        <div class="flex align-center gap pad-block-half">
+          <%= form.label :voice_mode, "Microphone mode", class: "txt-medium" %>
+          <%= form.select :voice_mode, options_for_select([ [ "Voice activity", "voice_activity" ], [ "Push to talk", "push_to_talk" ] ], @user.voice_mode), {}, class: "input" %>
+        </div>
+        <div class="flex align-center gap pad-block-half">
+          <%= form.label :push_to_talk_key, "Push-to-talk key", class: "txt-medium" %>
+          <%= form.text_field :push_to_talk_key, class: "input", value: @user.push_to_talk_key,
+                maxlength: 20, autocomplete: "off", placeholder: "`" %>
+        </div>
+        <% %i[ voice_mode push_to_talk_key ].each do |attribute| %>
+          <% if @user.errors[attribute].any? %>
+            <p class="txt-small margin-none" style="color: var(--color-negative)"><%= @user.errors.full_messages_for(attribute).to_sentence %></p>
+          <% end %>
+        <% end %>
+      </fieldset>
+
       <%= profile_form_submit_button %>
     </div>
   <% end %>

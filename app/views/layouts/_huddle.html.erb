@@ -3,6 +3,8 @@
          data-turbo-permanent
          data-controller="huddle"
          data-huddle-current-user-id-value="<%= Current.user.id %>"
+         data-huddle-voice-mode-value="<%= Current.user.voice_mode %>"
+         data-huddle-push-to-talk-key-value="<%= Current.user.push_to_talk_key %>"
          data-huddle-noise-worklet-url-value="<%= asset_path("noise-suppressor-worklet.js") %>"
          data-huddle-noise-wasm-url-value="<%= asset_path("rnnoise.wasm") %>"
          data-huddle-noise-simd-wasm-url-value="<%= asset_path("rnnoise-simd.wasm") %>"

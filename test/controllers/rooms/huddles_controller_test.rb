@@ -162,8 +162,10 @@ class Rooms::HuddlesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "no-store", response.headers["Cache-Control"]
     assert_equal [
-      { "id" => users(:david).id, "name" => users(:david).name, "avatar_url" => fresh_user_avatar_url(users(:david)) },
-      { "id" => users(:jason).id, "name" => users(:jason).name, "avatar_url" => fresh_user_avatar_url(users(:jason)) }
+      { "id" => users(:david).id, "name" => users(:david).name, "avatar_url" => fresh_user_avatar_url(users(:david)),
+        "identities" => [ david_grant.identity ] },
+      { "id" => users(:jason).id, "name" => users(:jason).name, "avatar_url" => fresh_user_avatar_url(users(:jason)),
+        "identities" => [ jason_grant.identity ] }
     ], response.parsed_body
   end
 

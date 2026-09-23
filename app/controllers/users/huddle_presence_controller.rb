@@ -16,10 +16,13 @@ class Users::HuddlePresenceController < ApplicationController
       participants = room_grants.filter_map(&:user).uniq.sort_by { |user| user.name.downcase }
       next if participants.empty?
 
+      identities = room_grants.group_by(&:user_id).transform_values { |user_grants| user_grants.map(&:identity) }
+
       {
         room_id: room_id,
         participants: participants.map { |user|
-          { id: user.id, name: user.name, avatar_url: helpers.fresh_user_avatar_url(user) }
+          { id: user.id, name: user.name, avatar_url: helpers.fresh_user_avatar_url(user),
+            identities: identities.fetch(user.id, []) }
         }
       }
     }

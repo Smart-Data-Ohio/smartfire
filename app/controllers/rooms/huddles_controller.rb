@@ -13,8 +13,10 @@ class Rooms::HuddlesController < ApplicationController
   # Who is currently in the room's huddle. Presence is a member-only liveness
   # signal, so unlike joining it is reported for every room type.
   def participants
+    identities = HuddleGrant.participant_identities_for(@room)
     render json: HuddleGrant.participants_for(@room).map { |user|
-      { id: user.id, name: user.name, avatar_url: helpers.fresh_user_avatar_url(user) }
+      { id: user.id, name: user.name, avatar_url: helpers.fresh_user_avatar_url(user),
+        identities: identities.fetch(user.id, []) }
     }
   end
 
