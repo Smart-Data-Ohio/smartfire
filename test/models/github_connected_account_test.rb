@@ -93,6 +93,22 @@ class GithubConnectedAccountTest < ActiveSupport::TestCase
     assert_not_predicate account.reload, :connected?
   end
 
+  test "a rejected refresh keeps a token another process already rotated" do
+    account = connect_github!(users(:david), token_source: "app",
+      refresh_token: "old-refresh", token_expires_at: 1.minute.ago)
+    stub_request(:post, "https://github.com/login/oauth/access_token")
+      .to_return(status: 200, body: { error: "invalid_grant" }.to_json)
+
+    # Another process refreshes first with the same grant; this instance
+    # still holds the stale, rotated-out refresh token.
+    GithubConnectedAccount.find(account.id).update!(
+      access_token: "rotated-token", refresh_token: "rotated-refresh",
+      token_expires_at: 1.hour.from_now)
+
+    assert_equal "rotated-token", account.access_token_for_use
+    assert_predicate account.reload, :connected?
+  end
+
   test "a failed refresh transport records last_error and keeps the old token" do
     account = connect_github!(users(:david), token_source: "app",
       refresh_token: "old-refresh", token_expires_at: 1.minute.ago)

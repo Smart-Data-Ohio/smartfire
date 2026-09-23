@@ -125,10 +125,25 @@ class GithubConnectedAccount < ApplicationRecord
       )
       true
     rescue Github::App::Unauthorized
-      mark_disconnected!("GitHub rejected the linked token (401)")
-      false
+      concurrent_refresh_won? || disconnect_rejected!
     rescue Github::App::Error => error
       update_column(:last_error, error.message.truncate(250))
+      false
+    end
+
+    # True when a concurrent refresh already rotated this row to a fresh
+    # token: GitHub rejects the loser's rotated-out refresh token, so a
+    # rejection against a now-fresh row means another process won, and
+    # this process must use its token instead of disconnecting.
+    def concurrent_refresh_won?
+      reload
+      connected? && !app_token_expired?
+    rescue ActiveRecord::RecordNotFound
+      false
+    end
+
+    def disconnect_rejected!
+      mark_disconnected!("GitHub rejected the linked token (401)") if persisted?
       false
     end
     # GitHub confirmed this login when the token was linked, so it becomes
