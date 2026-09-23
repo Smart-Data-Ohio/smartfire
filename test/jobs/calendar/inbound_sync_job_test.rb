@@ -32,7 +32,7 @@ class Calendar::InboundSyncJobTest < ActiveSupport::TestCase
     assert_equal "declined", @event.reload.response_for(@david)
   end
 
-  test "a restored copy re-accepts a declined event" do
+  test "a confirmed copy never flips a local decline back to going" do
     @event.respond!(@david, "declined")
     stub_request(:get, "#{GOOGLE_EVENTS_URL}/#{@google_id}")
       .to_return(status: 200, body: { id: @google_id, status: "confirmed" }.to_json,
@@ -40,7 +40,7 @@ class Calendar::InboundSyncJobTest < ActiveSupport::TestCase
 
     Calendar::InboundSyncJob.perform_now(@david.id)
 
-    assert_equal "going", @event.reload.response_for(@david)
+    assert_equal "declined", @event.reload.response_for(@david)
   end
 
   test "a confirmed copy leaves a going response alone" do

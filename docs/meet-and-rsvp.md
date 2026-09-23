@@ -34,11 +34,12 @@ each connected member gets a Google Calendar push channel
 make in Google update their Smartfire response:
 
 - Cancelling or deleting their calendar copy declines the event locally.
-- Restoring a deleted copy (confirmed) re-accepts a declined event.
+- A confirmed copy — including a restored one — never overrides a local
+  response. Local declines win; the member re-accepts in Smartfire.
 - Anything else reads back as no change.
 
 The mapping converges rather than flaps: declining locally deletes the
-remote copy, which reads back as declined, and going locally confirms it.
+remote copy, which reads back as declined (no change).
 Only upcoming events with synced copies are re-read (at most 50 per
 notification), only when the member can still respond, and cancelled
 events are never touched.

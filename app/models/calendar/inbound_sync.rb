@@ -2,13 +2,15 @@ module Calendar
   # Applies one push notification: re-reads the member's synced Google
   # copies and carries RSVP-shaped changes back into Smartfire
   # attendance. A copy the member cancelled or deleted in Google declines
-  # the event locally; a restored (confirmed) copy re-accepts it. Other
-  # edits (time, title) stay one-way: Smartfire remains the source of
-  # truth for those, and the outbound sync already converges them.
+  # the event locally; a confirmed copy never overrides a local
+  # response. Other edits (time, title) stay one-way: Smartfire remains
+  # the source of truth for those, and the outbound sync already
+  # converges them.
   #
   # The mapping is convergent, not flapping: declining locally deletes
-  # the remote copy, which reads back as declined (no change), and
-  # going locally confirms it, which reads back as going.
+  # the remote copy, which reads back as declined (no change), and a
+  # local decline always wins over a confirmed remote copy — the member
+  # re-accepts in Smartfire if they change their mind.
   class InboundSync
     # One push covers the whole calendar; bound the re-read to the
     # member's upcoming synced entries.
@@ -55,11 +57,11 @@ module Calendar
         local = event.response_for(@user)
         remote = remote_status(client, entry.google_event_id)
 
-        case remote
-        when :cancelled, :deleted
+        # Inbound sync only ever declines. A confirmed remote copy —
+        # including a restored one — never flips a local decline back to
+        # going: local declines win.
+        if remote.in?([ :cancelled, :deleted ])
           event.respond!(@user, "declined") if local.in?(Event::NOTIFYING_RESPONSES)
-        when :confirmed
-          event.respond!(@user, "going") if local == "declined"
         end
       rescue Google::Client::Unavailable, Google::Client::Unauthorized
         # A revoked grant fails every entry identically, so abort the
