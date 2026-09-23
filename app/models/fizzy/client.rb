@@ -19,6 +19,10 @@ module Fizzy
     class NotFound < Error; end
     class Refused < Error; end
 
+    # Ids interpolated into API paths (account, board, column): Fizzy
+    # issues alphanumerics, and anything else would be a path traversal.
+    ID_FORMAT = /\A[A-Za-z0-9_-]+\z/
+
     # The identity behind a token: { "accounts" => [...] }, each with
     # "id", "name", "slug", and the token owner's "user" in it. Raises
     # Unauthorized when Fizzy rejects the token. Used to validate a
@@ -39,62 +43,76 @@ module Fizzy
 
     # GET /{account}/boards.json
     def boards(account_id)
-      get("/#{account_id}/boards.json")
+      get("/#{checked_id(account_id)}/boards.json")
     end
 
     # GET /{account}/boards/{board}.json
     def board(account_id, board_id)
-      get("/#{account_id}/boards/#{board_id}.json")
+      get("/#{checked_id(account_id)}/boards/#{checked_id(board_id)}.json")
     end
 
     # GET /{account}/boards/{board}/columns.json
     def columns(account_id, board_id)
-      get("/#{account_id}/boards/#{board_id}/columns.json")
+      get("/#{checked_id(account_id)}/boards/#{checked_id(board_id)}/columns.json")
     end
 
     # GET /{account}/cards/{number}.json, including steps.
     def card(account_id, number)
-      get("/#{account_id}/cards/#{number}.json")
+      get("/#{checked_id(account_id)}/cards/#{checked_number(number)}.json")
     end
 
     # GET /{account}/search.json?q=
     def search(account_id, query)
-      get("/#{account_id}/search.json?q=#{CGI.escape(query.to_s)}")
+      get("/#{checked_id(account_id)}/search.json?q=#{CGI.escape(query.to_s)}")
     end
 
     # POST /{account}/boards/{board}/cards.json. Returns the created
     # card (Fizzy renders it with 201 and a Location header).
     def create_card(account_id, board_id, title:, description: nil)
       payload = { card: { title: title }.tap { |card| card[:description] = description if description.present? } }
-      post("/#{account_id}/boards/#{board_id}/cards.json", payload)
+      post("/#{checked_id(account_id)}/boards/#{checked_id(board_id)}/cards.json", payload)
     end
 
     # POST /{account}/cards/{number}/comments.json. Returns the created
     # comment.
     def create_comment(account_id, number, body:)
-      post("/#{account_id}/cards/#{number}/comments.json", { comment: { body: body } })
+      post("/#{checked_id(account_id)}/cards/#{checked_number(number)}/comments.json", { comment: { body: body } })
     end
 
     # POST /{account}/cards/{number}/triage.json. Moves the card into
     # a column. Returns true.
     def move_to_column(account_id, number, column_id:)
-      post("/#{account_id}/cards/#{number}/triage.json", { column_id: column_id })
+      post("/#{checked_id(account_id)}/cards/#{checked_number(number)}/triage.json", { column_id: column_id })
       true
     end
 
     # POST /{account}/cards/{number}/closure.json. Returns true.
     def close_card(account_id, number)
-      post("/#{account_id}/cards/#{number}/closure.json", {})
+      post("/#{checked_id(account_id)}/cards/#{checked_number(number)}/closure.json", {})
       true
     end
 
     # DELETE /{account}/cards/{number}/closure.json. Returns true.
     def reopen_card(account_id, number)
-      delete("/#{account_id}/cards/#{number}/closure.json")
+      delete("/#{checked_id(account_id)}/cards/#{checked_number(number)}/closure.json")
       true
     end
 
     private
+      def checked_id(value)
+        value = value.to_s
+        raise Error, "Invalid Fizzy id" unless value.match?(ID_FORMAT)
+
+        value
+      end
+
+      def checked_number(value)
+        value = value.to_s
+        raise Error, "Invalid Fizzy card number" unless value.match?(/\A\d+\z/)
+
+        value
+      end
+
       def get(path)
         request(Net::HTTP::Get.new(path, headers))
       end

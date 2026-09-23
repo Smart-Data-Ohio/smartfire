@@ -103,6 +103,11 @@ Rails.application.routes.draw do
   post "rooms/:room_id/agents/posts", to: "agents/posts#create", defaults: { format: :json }
   post "rooms/:room_id/agents/github/pull_request_actions", to: "agents/github/pull_request_actions#create",
     defaults: { format: :json }, as: :room_agent_github_pull_request_actions
+  get "agents/fizzy/boards", to: "agents/fizzy/boards#index", defaults: { format: :json }
+  get "agents/fizzy/boards/:id", to: "agents/fizzy/boards#show", defaults: { format: :json }
+  get "agents/fizzy/cards/search", to: "agents/fizzy/cards#search", defaults: { format: :json }
+  get "agents/fizzy/cards/:account_id/:number", to: "agents/fizzy/cards#show", defaults: { format: :json }
+  post "agents/fizzy/card_actions", to: "agents/fizzy/card_actions#create", defaults: { format: :json }
 
   direct :fresh_user_avatar do |user, options|
     route_for :user_avatar, user.avatar_token, v: user.updated_at.to_fs(:number)

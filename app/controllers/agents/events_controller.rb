@@ -25,7 +25,8 @@ class Agents::EventsController < ApplicationController
   # filters in SQL before the limit applies, so revoked rows can never
   # hide newer readable rows. Approval decision rows carry no message
   # and render an approval payload instead; GitHub completion rows
-  # render a github_action payload instead, and work rows render a work
+  # render a github_action payload instead, Fizzy completion rows a
+  # fizzy_action payload instead, and work rows render a work
   # payload instead. A deleted thread's work_unassigned row renders its
   # pre-destroy snapshot marked thread_deleted.
   def index
@@ -162,6 +163,10 @@ class Agents::EventsController < ApplicationController
         return github_action_poll_payload(event)
       end
 
+      if event.event_type == "fizzy_action_completed"
+        return fizzy_action_poll_payload(event)
+      end
+
       if event.event_type == "approval_decided" || event.message_id.nil? && event.metadata.is_a?(Hash) && event.metadata["approval_id"]
         return approval_poll_payload(event)
       end
@@ -235,6 +240,26 @@ class Agents::EventsController < ApplicationController
         room: room ? { id: room.id, name: room.name } : nil,
         actor: event.actor ? { id: event.actor.id, name: event.actor.name } : nil,
         github_action: {
+          approval_id: metadata["approval_id"],
+          action: metadata["action"],
+          status: metadata["status"],
+          url: metadata["url"],
+          message: metadata["message"]
+        }.compact
+      }.compact
+    end
+
+    def fizzy_action_poll_payload(event)
+      metadata = event.metadata.is_a?(Hash) ? event.metadata : {}
+      room = event.room
+      {
+        id: event.id,
+        event_type: event.event_type,
+        outcome: event.outcome,
+        created_at: event.created_at&.utc,
+        room: room ? { id: room.id, name: room.name } : nil,
+        actor: event.actor ? { id: event.actor.id, name: event.actor.name } : nil,
+        fizzy_action: {
           approval_id: metadata["approval_id"],
           action: metadata["action"],
           status: metadata["status"],

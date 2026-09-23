@@ -3,7 +3,7 @@ module Periodic
   # Each tick runs every task whose interval has elapsed; a failing task is
   # logged without stopping the other tasks or the loop. Delayed ActiveJob
   # retries, event reminders, stuck room-destroy recovery, stranded agent
-  # webhook and stuck GitHub-claim recovery, and the daily
+  # webhook and stuck GitHub/Fizzy-claim recovery, and the daily
   # retention prune all live here so production needs no extra long-running
   # process for any of them. Add a sweeper by appending to the task list
   # below: a name, an interval in seconds, and an idempotent callable.
@@ -21,6 +21,7 @@ module Periodic
         Task.new("stuck rooms", STUCK_ROOM_SWEEP_INTERVAL, -> { Room::DestroyJob.reenqueue_stuck! }),
         Task.new("stranded agent webhooks", AGENT_SWEEP_INTERVAL, -> { Agent::Delivery.recover_stranded_webhooks! }),
         Task.new("stuck GitHub claims", AGENT_SWEEP_INTERVAL, -> { Github::PerformAgentActionJob.recover_stuck_claims! }),
+        Task.new("stuck Fizzy claims", AGENT_SWEEP_INTERVAL, -> { Fizzy::PerformAgentActionJob.recover_stuck_claims! }),
         Task.new("retention prune", retention_interval, -> { Retention::PruneJob.perform_later })
       ]
       @last_run = {}
