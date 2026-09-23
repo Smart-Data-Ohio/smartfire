@@ -75,7 +75,7 @@ class Message < ApplicationRecord
   after_update_commit :resync_event_references
   after_create_commit :sync_message_references
   after_update_commit :resync_message_references
-  after_update_commit :broadcast_quote_card_updates, if: :references_source_changed?
+  after_update_commit :enqueue_quote_cards_refresh, if: :references_source_changed?
   after_destroy_commit :broadcast_quote_cards_removal
 
   # Tie-broken by id so the page windows agree with the (created_at, id)
@@ -298,15 +298,11 @@ class Message < ApplicationRecord
       Message::ReferenceSync.call(self) if references_source_changed?
     end
 
-    # An edit to a quoted message refreshes every quote card pointing at
-    # it, in whatever room or thread the quoting message lives. Each card
-    # re-renders from its quoting message, so per-viewer access still
-    # applies: cross-room quotes broadcast as frame placeholders that
-    # reload through the quote endpoint.
-    def broadcast_quote_card_updates
-      incoming_message_references.includes(:message).each do |reference|
-        reference.message.broadcast_quote_cards_replace
-      end
+    # An edit to a quoted message refreshes every quote card pointing
+    # at it through a background job (batched and capped), so the edit
+    # request never pays for the re-render itself.
+    def enqueue_quote_cards_refresh
+      Message::QuoteCardsRefreshJob.perform_later(id)
     end
 
     # Deleting a quoted message destroys its reference rows, which alone

@@ -78,12 +78,17 @@ class Rooms::MessageLinksControllerTest < ActionDispatch::IntegrationTest
     assert_select "turbo-frame.message-link-frame[src=?]", room_message_link_path(@room, @reference)
   end
 
-  test "editing the source refreshes quoting cards over the stream" do
+  test "editing the source enqueues a job that refreshes quoting cards over the stream" do
     sign_in :jason
-    patch room_message_url(@other_room, @source),
-      params: { message: { body: "cross-room quoted words, revised" } }
+    assert_enqueued_with(job: Message::QuoteCardsRefreshJob, args: [ @source.id ]) do
+      patch room_message_url(@other_room, @source),
+        params: { message: { body: "cross-room quoted words, revised" } }
+    end
 
     assert_response :redirect
+
+    perform_enqueued_jobs only: Message::QuoteCardsRefreshJob
+
     assert_rendered_turbo_stream_broadcast @room, :messages,
       action: "replace", target: [ @quote, :message_link_cards ] do |stream|
       assert_select stream, "turbo-frame.message-link-frame"

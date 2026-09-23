@@ -59,13 +59,15 @@ room see only a plain "Message in a private room" chip with no author,
 excerpt, or time.
 
 A quote follows its source: editing the source refreshes quoting cards
-over the room stream, and deleting it clears them. Quote state rides in
-the message fragment cache key (the sources' newest edit stamp) and in
-the message list etag, so cached pages and conditional GETs stay
-correct. Each message quotes at most ten permalinks, taken from text
-outside code spans and fenced blocks. The sync ignores missing
-messages, self-links, and system notes. Thread permalinks
-(`?thread=&message_id=`) do not quote yet; only the `/@` form does.
+over the room stream through a background job (batched and capped;
+quotes past the cap refresh on the next load through the cache key),
+and deleting it clears them. Quote state rides in the message fragment
+cache key (the sources' newest edit stamp) and in the message list
+etag, so cached pages and conditional GETs stay correct. Each message
+quotes at most ten permalinks, taken from text outside code spans and
+fenced blocks. The sync ignores missing messages, self-links, and
+system notes. Thread permalinks (`?thread=&message_id=`) do not quote
+yet; only the `/@` form does.
 
 ## Files tab
 
