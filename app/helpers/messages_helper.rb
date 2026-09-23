@@ -72,7 +72,12 @@ module MessagesHelper
       )
     end
 
+    # Every message is programmatically focusable from first paint; the
+    # message-list controller then promotes the tab stop to 0 on connect.
+    # A uniform -1 (rather than a positional 0) keeps the fragment cache
+    # safe: the value never depends on where the message renders.
     tag.div id: dom_id(message),
+      tabindex: -1,
       class: [ "message", ("message--emoji" if !message.system_note? && message.plain_text_body.all_emoji?), ("message--system-note" if message.system_note?), ("message--action" if !message.system_note? && message.action?) ].compact.join(" "),
       role: ("note" if message.system_note?),
       data: data, &

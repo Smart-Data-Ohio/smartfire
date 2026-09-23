@@ -11,7 +11,7 @@ module RoomsHelper
   # resource-timing buffer. RoomControllerPreloadsTest pins this contract.
   FIRST_PAINT_CONTROLLERS = %w[
     messages maintain_scroll reply composer markdown_editor
-    typing_notifications local_time presence
+    typing_notifications local_time presence message_list
   ].freeze
 
   def first_paint_controller_preloads

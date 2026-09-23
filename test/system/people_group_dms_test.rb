@@ -198,6 +198,53 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
     assert_current_path room_path(room)
   end
 
+  test "typing the next query during a pick commit still searches once the commit lands" do
+    join_room rooms(:designers)
+    click_link "New direct message"
+
+    within "#direct_rooms_control" do
+      find("[data-autocomplete-target='input']").fill_in(with: "Kev")
+    end
+    assert_selector "suggestion-option", text: "Kevin"
+
+    # The pick commit runs a multi-frame flash animation; under CI load those
+    # frames stretch past the next query's debounce and the search used to be
+    # dropped, leaving the second pick with no suggestions. Stall the frames
+    # so the "Jas" search deterministically lands inside the commit window.
+    page.execute_script(<<~JS)
+      window.__rafQueue = [];
+      window.__origRaf = window.requestAnimationFrame;
+      window.requestAnimationFrame = (callback) => { window.__rafQueue.push(callback); return 1; };
+    JS
+
+    find("suggestion-option", text: "Kevin").click
+
+    # The pill proves the commit started (its flash is held open by the
+    # stalled frames); typing now lands the search inside the commit window.
+    within "#direct_rooms_control" do
+      assert_selector ".autocomplete__pill", text: "Kevin"
+      find("[data-autocomplete-target='input']").fill_in(with: "Jas")
+    end
+    # The search debounce is 300 ms; this is scenario timing (the query must
+    # fire while the commit is held open), not a readiness wait.
+    sleep 0.5
+
+    page.execute_script(<<~JS)
+      window.requestAnimationFrame = window.__origRaf;
+      window.__rafQueue.splice(0).forEach((callback) => callback(performance.now()));
+    JS
+
+    assert_selector "suggestion-option", text: "Jason", wait: 10
+    find("suggestion-option", text: "Jason").click
+
+    within "#direct_rooms_control" do
+      assert_selector ".autocomplete__pill", text: "Kevin"
+      assert_selector ".autocomplete__pill", text: "Jason"
+    end
+  ensure
+    page.execute_script("window.requestAnimationFrame = window.__origRaf") if page
+  end
+
   test "group members rename, add, and leave with system notes in the timeline" do
     room = Current.set(user: users(:david)) do
       Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:kevin) ])
@@ -257,6 +304,7 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
 
     click_button "Show members" if page.has_button?("Show members", wait: 5)
     assert_selector "#channel-members .member-panel__member", minimum: 3, wait: 10
+    wait_for_member_panel_animation
 
     trigger = "#channel-members [data-member-id='#{users(:kevin).id}'] button.profile-card-name"
     find(trigger).click
@@ -280,6 +328,7 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
 
     click_button "Show members" if page.has_button?("Show members", wait: 5)
     assert_selector "#channel-members .member-panel__member", minimum: 3, wait: 10
+    wait_for_member_panel_animation
 
     find("#channel-members [data-member-id='#{users(:kevin).id}'] button.profile-card-name").click
     assert_selector "#profile-card-popover:not([hidden])", wait: 10
@@ -298,6 +347,29 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
   end
 
   private
+    # The member panel slides in over a 220 ms transform transition while
+    # the members fetch resolves in ~20 ms, so the rows render mid-slide
+    # and a WebDriver click computed from a stale rect lands on the row
+    # instead of the 32 px name button (real taps hit-test at touch time
+    # and cannot miss this way). Wait for the slide to settle before
+    # clicking row controls.
+    def wait_for_member_panel_animation
+      page.document.synchronize(Capybara.default_max_wait_time) do
+        settled = page.evaluate_script(<<~JS)
+          (() => {
+            const surface = document.querySelector(".member-panel__surface");
+            if (!surface) return true;
+            return surface.getAnimations().every((animation) => {
+              const timing = animation.effect?.getComputedTiming?.();
+              return !(timing && Number.isFinite(timing.endTime) &&
+                (animation.playState === "running" || animation.playState === "pending"));
+            });
+          })()
+        JS
+        raise Capybara::ExpectationNotMet, "member panel slide-in never settled" unless settled
+      end
+    end
+
     # Controllers lazy-load when their element appears; under load the
     # module can lag behind the first interaction, so wait for it.
     def wait_for_controller(identifier)
