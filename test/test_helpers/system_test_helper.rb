@@ -74,6 +74,15 @@ module SystemTestHelper
     assert_message_menu_open
   end
 
+  # Opens the shared per-page message menu for one message: right-clicks
+  # the message body, then asserts on the menu outside the message scope.
+  def open_message_menu(message)
+    within_message(message) do
+      right_click_message
+    end
+    assert_message_menu_open
+  end
+
   def dismiss_pwa_install_prompt
     if page.has_css?("[data-pwa-install-target~='dialog']", visible: :visible, wait: 5)
       click_on("Close")

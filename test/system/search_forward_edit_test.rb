@@ -45,10 +45,8 @@ class SearchForwardEditTest < ApplicationSystemTestCase
     visit room_url(@room)
     assert_text "puts :forwarded", wait: 10
 
-    within_message(source) do
-      open_message_actions
-      click_button "Forward"
-    end
+    open_message_menu(source)
+    click_button "Forward"
     assert_selector "dialog[open]", visible: true, wait: 10
     find(".message-forward-dialog__destination:not(.message-forward-dialog__destination--thread)", text: "Designers", wait: 10).click
     within "dialog[open]" do
@@ -70,10 +68,8 @@ class SearchForwardEditTest < ApplicationSystemTestCase
     visit room_url(@room)
     assert_text "nothing linked yet", wait: 10
 
-    within_message(message) do
-      open_message_actions
-      click_button "Edit message"
-    end
+    open_message_menu(message)
+    click_button "Edit message"
     assert_selector "[data-composer-target='contextLabel']", text: "Editing Message", wait: 10
     fill_in "Write a message", with: "now with https://x.com/jack/status/424242"
     click_button "Send Message"
@@ -88,10 +84,4 @@ class SearchForwardEditTest < ApplicationSystemTestCase
       assert_selector ".message__edited", text: "(edited)"
     end
   end
-
-  private
-    def open_message_actions
-      find("[data-message-edit-format], [data-reply-target='body']", match: :first).right_click
-      assert_selector "[data-message-actions-target='menu']", visible: true, wait: 10
-    end
 end

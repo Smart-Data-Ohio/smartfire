@@ -165,11 +165,8 @@ class ComposerTest < ApplicationSystemTestCase
     target = messages(:third)
     reply = send_reply(target, "A reply whose source goes away")
 
-    within_message(target) do
-      find("[data-message-edit-format], [data-reply-target='body']", match: :first).right_click
-      assert_selector "[data-message-actions-target='menu']", visible: true, wait: 10
-      accept_confirm { click_on "Delete message", exact: true }
-    end
+    open_message_menu(target)
+    accept_confirm { click_on "Delete message", exact: true }
     assert_no_selector "##{dom_id(target)}", wait: 10
 
     within_message(reply) do
@@ -289,11 +286,8 @@ class ComposerTest < ApplicationSystemTestCase
 
   private
     def send_reply(target, source)
-      within_message(target) do
-        find("[data-message-edit-format], [data-reply-target='body']", match: :first).right_click
-        assert_selector "[data-message-actions-target='menu']", visible: true, wait: 10
-        click_on "Reply", exact: true
-      end
+      open_message_menu(target)
+      click_on "Reply", exact: true
       assert_selector "[data-composer-target='contextLabel']", text: /Replying to/, wait: 10
       fill_in_markdown "Write a message", with: source
       click_on "Send Message"
