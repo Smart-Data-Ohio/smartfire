@@ -34,10 +34,13 @@ Agent endpoints throttle per credential per minute, so one busy
 credential cannot starve others sharing the agent:
 
 - event polling and acks: 120/minute each
-- approval reads: 120/minute
-- posting messages, requesting approvals, cancelling approvals, and
-  pull-request actions: 60/minute each
+- approval reads and context reads: 120/minute each
+- posting messages, requesting approvals, cancelling approvals, opening
+  DMs, and pull-request actions: 60/minute each
 - creating board posts: 30/minute
+- the whole MCP endpoint: 600/minute per credential across all methods,
+  on top of the per-tool buckets its tools share with the endpoints
+  above
 
 Overflowing a bucket returns 429 with a `Retry-After` header in
 seconds and a `{ "error": "rate_limited" }` body. Human session
@@ -51,15 +54,19 @@ These limits are separate from the
 `agent_grants` rows scope what an agent may do: `agent_id`, nullable `room_id`
 (`NULL` means workspace-wide), `capability`, `granted_by_id`, `revoked_at`, and
 a partial unique index over active rows. Capabilities are `read_messages`,
-`post_messages`, `react`, `manage_threads`, and `external_action`.
+`post_messages`, `react`, `manage_threads`, `external_action`, and `dm_anyone`.
+`dm_anyone` is granted workspace-wide only: the grant form rejects a room
+scope, and the DM check counts only active workspace-wide grants (a
+room-scoped row, if one predates the validation, grants nothing).
 
 `read_messages`, `post_messages`, and `react` are enforced through
 the `AgentAuthorization` concern (`require_agent_capability`) on the bot
 message endpoints, the bot boost endpoints,
 `POST /rooms/:room_id/agents/messages` (JSON, Bearer-only), and the event
 polling endpoints below; `external_action` is enforced on the approval
-endpoints (see Approvals), and `manage_threads` is enforced on the agent
-work endpoints (see Work threads). Enforcement reads the database on every
+endpoints (see Approvals), `manage_threads` is enforced on the agent
+work endpoints (see Work threads), and `dm_anyone` is enforced on the
+agent DM endpoints (see Agent DMs). Enforcement reads the database on every
 request; nothing is cached.
 
 Room membership still applies on top of grants: every endpoint returns 404 for
@@ -694,6 +701,63 @@ curl -X PUT https://campfire.example.com/agents/work/7/result \
 when the thread has no owner. The `links` array keeps the shape
 documented under Link payloads.
 
+## Conversation context
+
+`GET /agents/context?message_id=` (or `?thread_id=`) loads what an agent
+needs to answer a trigger: the triggering message, its thread summary and
+root message (null for room messages), the last N messages of the same
+conversation ending at the trigger, and the room. `limit` defaults to 30
+and caps at 100. Window messages carry the standard message shape with
+`agent`/`human` flags on each creator, plus an `authors` rollup; `room`
+carries `id`, `name`, and `purpose` (null — rooms have no purpose field
+yet). One of `message_id` or `thread_id` is required, and when both are
+given the message must be in the thread. Requires `read_messages` in the
+room (403 without it, 404 outside the agent's memberships).
+
+```sh
+curl "https://smartfire.example.com/agents/context?message_id=42&limit=10" \
+  -H "Authorization: Bearer $AGENT_TOKEN"
+```
+
+## Agent DMs
+
+`POST /agents/dms` with `user_id` opens (or reuses) the 1:1 DM between
+the agent's bot user and a human, then posts the agent's message through
+the standard posting flow (same `message` object as the messages API, or
+top-level `body`/`markdown_source`). The target must be an active human,
+and the call needs two grants: the agent must hold `post_messages`
+somewhere (legacy agents keep their implicit access), and the target
+rule must also pass — the target is the agent's owner, has previously
+messaged the agent (see below), or the agent holds a workspace-wide
+`dm_anyone` grant, which an administrator grants from the bot's grant
+page. Anything else is 403. Posting into a DM room that already exists
+additionally requires `post_messages` in that room, so revoking the
+grant forbids the next post; a brand-new DM room cannot carry grants
+yet, so the workspace-wide form is enough to open it. Throttled at
+60/minute per credential.
+
+"Previously messaged" means the agent's ledger holds at least one row
+with the human as actor and type `mention`, `reply`, or
+`direct_message`. Such a row is written when, in a room the agent
+belongs to, the human mentions the agent, replies to one of the
+agent's messages (a reply wins over a mention when both apply), or
+posts any message in a direct room with the agent. It counts whatever
+the row's outcome — pending, delivered, acknowledged, or suppressed —
+so deleting the message, revoking grants after the row was written, or
+suppressing the delivery does not remove the contact; and it keeps
+counting if the human later leaves the room or the room is deleted,
+since the ledger row persists. Messages that wrote no deliverable row
+— dropped by the rate or hop limit at enqueue time, the agent's own
+messages, or messages in rooms the agent never belonged to — do not
+count.
+
+```sh
+curl -X POST https://smartfire.example.com/agents/dms \
+  -H "Authorization: Bearer $AGENT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"user_id":7,"message":{"markdown_source":"The deploy finished."}}'
+```
+
 ## Pins
 
 Agents with `post_messages` pin and unpin through a Bearer-only JSON
@@ -723,3 +787,14 @@ pin count:
 ```json
 { "pinned": true, "message_id": 42, "pin_count": 3 }
 ```
+
+## MCP server
+
+The same agent API is exposed as a Model Context Protocol server at
+`POST /agents/mcp` (stateless Streamable HTTP, spec revision 2026-07-28,
+with the legacy `initialize` handshake kept): eighteen tools from
+`list_rooms` and `read_messages` to `request_approval`, `get_context`,
+`open_dm`, and `pin_message`/`unpin_message`, each delegating to the
+same service code, grants, and rate-limit buckets as its REST
+counterpart. See [Smartfire MCP server](agents-mcp.md) for client setup
+and the tool list.

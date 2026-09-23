@@ -116,6 +116,17 @@ class Accounts::Bots::GrantsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_bot_grants_url(@bot)
   end
 
+  test "create rejects a room-scoped dm_anyone grant" do
+    assert_no_difference -> { AgentGrant.count } do
+      post account_bot_grants_url(@bot), params: {
+        agent_grant: { capability: "dm_anyone", room_id: rooms(:watercooler).id }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match "dm_anyone is granted workspace-wide only", response.body
+  end
+
   test "create rejects unknown capabilities" do
     assert_no_difference -> { AgentGrant.count } do
       post account_bot_grants_url(@bot), params: {
