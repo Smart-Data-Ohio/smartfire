@@ -1,4 +1,9 @@
 class Rooms::Boards::AutomationsController < RoomsController
+  # The room lookup uses :board_id, not the parent's :id/:room_id, and the
+  # automations page is not a room visit to remember.
+  skip_before_action :set_room, only: :show
+  skip_before_action :remember_last_room_visited, only: :show
+
   before_action :set_board, only: %i[ show create_tag_assignment destroy_tag_assignment update_sla_rules ]
   before_action :ensure_can_administer, only: %i[ show create_tag_assignment destroy_tag_assignment update_sla_rules ]
 
