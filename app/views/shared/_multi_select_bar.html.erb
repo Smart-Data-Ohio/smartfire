@@ -1,16 +1,23 @@
 <%# Sticky multi-select bar, driven by the multi-select controller on an %>
 <%# ancestor: posts the checked user_ids to open (and optionally ring) %>
-<%# the DM with exactly that set. %>
-<div class="multi-select-bar" data-multi-select-target="bar" hidden>
+<%# the DM with exactly that set. The member panel passes exit_button: %>
+<%# true for an ✕ that leaves selection mode; the directory and picker %>
+<%# keep their Clear button. %>
+<div class="multi-select-bar" data-multi-select-target="bar" aria-live="polite" hidden>
   <%= form_with url: rooms_directs_path, method: :post, class: "multi-select-bar__form",
-        data: { multi_select_target: "form" } do %>
+        data: { multi_select_target: "form", action: "turbo:submit-end->multi-select#submitted" } do %>
     <div data-multi-select-target="inputs"></div>
     <input type="hidden" name="start_huddle" value="" data-multi-select-target="huddleInput">
 
     <button type="submit" class="btn btn--reversed" data-multi-select-target="messageButton">Message (0)</button>
     <button type="submit" class="btn" data-action="click->multi-select#submitHuddle"
         data-multi-select-target="huddleButton">Start huddle (0)</button>
-    <button type="button" class="btn" data-action="click->multi-select#clear">Clear</button>
+    <% if local_assigns[:exit_button] %>
+      <button type="button" class="btn" data-action="click->multi-select#clear"
+          aria-label="Exit selection mode" title="Exit selection mode">✕</button>
+    <% else %>
+      <button type="button" class="btn" data-action="click->multi-select#clear">Clear</button>
+    <% end %>
   <% end %>
 
   <p class="multi-select-bar__note" role="status" data-multi-select-target="note" hidden></p>

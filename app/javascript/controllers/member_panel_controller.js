@@ -67,11 +67,17 @@ export default class extends Controller {
 
   close(event) {
     if (!this.isOpen) return
-    if (event?.type === "keydown" && this.desktopQuery.matches) return
     // An open profile card owns Esc: it closes the card and returns focus
     // to its trigger inside this panel. This runs before profile-card#close
     // (see the action order in the layout), so the card is still open here.
     if (event?.type === "keydown" && this.#profileCardOpen()) return
+    // Selection mode owns Esc next: leaving it keeps the panel open, on
+    // desktop (which never closes on Esc) and in the mobile drawer.
+    if (event?.type === "keydown" && this.#exitSelectionMode()) {
+      event.preventDefault()
+      return
+    }
+    if (event?.type === "keydown" && this.desktopQuery.matches) return
 
     event?.preventDefault()
     this.#close({ restoreFocus: true })
@@ -554,6 +560,15 @@ export default class extends Controller {
   #profileCardOpen() {
     const popover = document.getElementById("profile-card-popover")
     return !!popover && !popover.hidden
+  }
+
+  // Esc with a live selection clears it instead of closing the panel.
+  #exitSelectionMode() {
+    const surface = this.panelTarget?.querySelector("[data-controller~='multi-select']")
+    const selection = surface && this.application.getControllerForElementAndIdentifier(surface, "multi-select")
+    if (!selection || selection.selectedIds.size === 0) return false
+    selection.clear()
+    return true
   }
 
   #restoreFocus() {

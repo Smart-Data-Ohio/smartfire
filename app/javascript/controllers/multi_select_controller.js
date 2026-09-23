@@ -4,16 +4,27 @@ import { Controller } from "@hotwired/stimulus"
 // and the new-DM picker. One sticky bar posts the selection: Message opens
 // the 1:1 or group DM, Start huddle opens it and rings the humans in it.
 //
-// Desktop range selection works inbox-style: Shift-click a checkbox to
-// extend from the last one touched. Ctrl/Cmd-click needs no handling —
-// each checkbox already toggles independently. On touch, long-pressing a
-// row selects it and reveals the bar.
+// The directory and picker show their checkboxes always: Shift-click a
+// checkbox to extend from the last one touched, and Ctrl/Cmd-click needs
+// no handling since each checkbox toggles independently. The member panel
+// opts into selection mode (selection-mode-value="true") instead: rows
+// render as avatar + identity, and the checkbox column appears only while
+// something is selected. There a long-press, Ctrl/Cmd-click, or Space on
+// a row selects it; plain clicks toggle while selecting instead of opening
+// the profile card; Ctrl/Cmd-Shift-click adds the range from the anchor
+// (the last Ctrl/Cmd-clicked or long-pressed row).
 const MAX_OTHERS = 9
 const LONG_PRESS_MS = 500
+// A touch release is followed by compatibility mouse events at the same
+// point, which would open the profile card under the finger, so clicks
+// near the press point are swallowed briefly. Mirrors the message list.
+const SUPPRESS_CLICK_MS = 500
+const SUPPRESS_CLICK_RADIUS = 20
 let noteIdCounter = 0
 
 export default class extends Controller {
   static targets = [ "checkbox", "bar", "form", "inputs", "huddleInput", "messageButton", "huddleButton", "note" ]
+  static values = { selectionMode: Boolean }
 
   // Survives list re-renders (the member panel refreshes every 12
   // seconds): reconnected checkboxes restore from here, so removal only
@@ -26,7 +37,26 @@ export default class extends Controller {
 
   connect() {
     if (!this.noteTarget.id) this.noteTarget.id = `multi-select-note-${++noteIdCounter}`
+    this.suppressClick = this.#suppressClick.bind(this)
+    document.addEventListener("click", this.suppressClick, true)
+    if (this.selectionModeValue) {
+      this.rowClick = this.#rowClick.bind(this)
+      this.rowKeydown = this.#rowKeydown.bind(this)
+      // Capture: row clicks are claimed before the profile-card
+      // triggers inside them fire.
+      this.element.addEventListener("click", this.rowClick, true)
+      this.element.addEventListener("keydown", this.rowKeydown)
+    }
     this.update()
+  }
+
+  disconnect() {
+    document.removeEventListener("click", this.suppressClick, true)
+    if (this.selectionModeValue) {
+      this.element.removeEventListener("click", this.rowClick, true)
+      this.element.removeEventListener("keydown", this.rowKeydown)
+    }
+    this.#cancelPress()
   }
 
   checkboxTargetConnected(checkbox) {
@@ -54,7 +84,13 @@ export default class extends Controller {
       this.#track(checkbox)
     }
 
-    this.lastId = checkbox.dataset.userId
+    if (this.selectionModeValue) {
+      // The range anchor is the last Ctrl/Cmd-clicked or long-pressed
+      // row: plain and Shift checkbox clicks leave it alone.
+      if (event.ctrlKey || event.metaKey) this.lastId = checkbox.dataset.userId
+    } else {
+      this.lastId = checkbox.dataset.userId
+    }
     this.update()
   }
 
@@ -69,6 +105,13 @@ export default class extends Controller {
     this.huddleInputTarget.value = "1"
   }
 
+  // The bar posted and Turbo leaves for the DM: a success exits the
+  // mode, while a failure keeps the selection for a retry.
+  submitted(event) {
+    if (event.detail?.success === false) return
+    this.clear()
+  }
+
   pressStart(event) {
     const row = event.currentTarget
     this.#cancelPress()
@@ -81,6 +124,12 @@ export default class extends Controller {
         this.#track(checkbox)
         this.lastId = checkbox.dataset.userId
         this.update()
+      } else if (checkbox && this.selectionModeValue) {
+        this.lastId = checkbox.dataset.userId
+      }
+      if (this.pressTouch) {
+        this.suppressClickAt = { ...this.pressTouch }
+        this.suppressClickUntil = Date.now() + SUPPRESS_CLICK_MS
       }
       this.pressJustFired = true
       window.setTimeout(() => { this.pressJustFired = false }, 100)
@@ -102,7 +151,7 @@ export default class extends Controller {
   }
 
   suppressMenu(event) {
-    if (this.pressJustFired) event.preventDefault()
+    if (this.pressJustFired || Date.now() <= this.suppressClickUntil) event.preventDefault()
   }
 
   update() {
@@ -114,6 +163,7 @@ export default class extends Controller {
     const overCap = selected.length > MAX_OTHERS
 
     this.barTarget.hidden = selected.length === 0
+    this.element.classList.toggle("is-selecting", this.selectionModeValue && selected.length > 0)
     this.#renderInputs(selected)
     this.huddleInputTarget.value = ""
 
@@ -141,6 +191,93 @@ export default class extends Controller {
     }
     this.messageButtonTarget.title = overCap ? reasons[0] : ""
     this.huddleButtonTarget.title = reasons.join(" ")
+  }
+
+  // Selection-mode row clicks, before the profile-card triggers inside
+  // the row. Ctrl/Cmd-click toggles (Ctrl/Cmd-Shift-click ranges from
+  // the anchor); a plain click toggles while selecting and opens the
+  // profile card otherwise. Your own row has no checkbox: Ctrl/Cmd-click
+  // is swallowed, plain clicks behave as before.
+  #rowClick(event) {
+    const row = event.target.closest?.(".member-panel__member")
+    if (!row || !this.element.contains(row)) return
+    if (event.target.closest?.("input[data-multi-select-target='checkbox']")) return
+
+    const checkbox = row.querySelector("[data-multi-select-target='checkbox']")
+
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (!checkbox) return
+      if (event.shiftKey) {
+        this.#selectRange(checkbox)
+      } else {
+        this.#setChecked(checkbox, !checkbox.checked)
+        this.lastId = checkbox.dataset.userId
+        this.update()
+      }
+      return
+    }
+
+    if (this.selectedIds.size === 0 || !checkbox) return
+    event.preventDefault()
+    event.stopPropagation()
+    this.#setChecked(checkbox, !checkbox.checked)
+    this.update()
+  }
+
+  // Space selects the focused row where Enter opens its profile card.
+  // Checkboxes keep their native Space handling.
+  #rowKeydown(event) {
+    if (event.key !== " " && event.key !== "Spacebar") return
+    const row = event.target.closest?.(".member-panel__member")
+    if (!row || !this.element.contains(row)) return
+    if (event.target.closest?.("input[data-multi-select-target='checkbox']")) return
+    const checkbox = row.querySelector("[data-multi-select-target='checkbox']")
+    if (!checkbox) return
+
+    event.preventDefault()
+    this.#setChecked(checkbox, !checkbox.checked)
+    this.update()
+  }
+
+  // Ctrl/Cmd-Shift-click adds the visual range between the anchor and
+  // the clicked row, in rendered order across the Starred, Online and
+  // Offline groups. Only checkbox rows take part, so your own row is
+  // skipped; the clicked row becomes the new anchor. Without an anchor
+  // the click just selects its own row.
+  #selectRange(checkbox) {
+    const boxes = this.checkboxTargets
+    const index = boxes.indexOf(checkbox)
+    const anchor = boxes.findIndex((box) => box.dataset.userId === this.lastId)
+
+    if (anchor === -1) {
+      this.#setChecked(checkbox, true)
+    } else {
+      const [ from, to ] = [ anchor, index ].sort((a, b) => a - b)
+      boxes.slice(from, to + 1).forEach((box) => this.#setChecked(box, true))
+    }
+    this.lastId = checkbox.dataset.userId
+    this.update()
+  }
+
+  // Swallows the compatibility click from a long-press release: any click
+  // within a short window near the press point. Anything later or farther
+  // away is a genuine tap and passes through.
+  #suppressClick(event) {
+    if (!this.suppressClickAt || Date.now() > this.suppressClickUntil) {
+      this.suppressClickAt = null
+      return
+    }
+    const distance = Math.hypot(event.clientX - this.suppressClickAt.x, event.clientY - this.suppressClickAt.y)
+    if (distance > SUPPRESS_CLICK_RADIUS) return
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
+  #setChecked(checkbox, checked) {
+    checkbox.checked = checked
+    this.#track(checkbox)
   }
 
   #track(checkbox) {

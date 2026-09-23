@@ -95,8 +95,9 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
     click_button "Show members" if page.has_button?("Show members", wait: 5)
 
     assert_selector "#channel-members .member-panel__member", minimum: 3, wait: 10
-    check "select-member-#{users(:jason).id}"
-    check "select-member-#{users(:kevin).id}"
+    jason = find("#channel-members [data-member-id='#{users(:jason).id}'] button.profile-card-name")
+    kevin = find("#channel-members [data-member-id='#{users(:kevin).id}'] button.profile-card-name")
+    page.driver.browser.action.key_down(:control).click(jason.native).click(kevin.native).key_up(:control).perform
 
     within "#channel-members [data-multi-select-target='bar']" do
       assert_selector "button", text: "Start huddle (2)"

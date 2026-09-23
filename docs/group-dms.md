@@ -22,16 +22,26 @@ focus, closes on Esc or outside click, and returns focus to the trigger.
 
 ## Multi-select
 
-The member panel, the people directory (`/users`), and the new-DM picker
-offer checkbox multi-select with a sticky bar: Message (n), Start huddle
-(n), and Clear. Shift-click extends a checkbox range; Ctrl/Cmd-click
-toggles; long-press selects on touch. One person opens the 1:1 DM; two to
-nine others open the group DM with exactly that set plus you, reusing it
-when it exists; more than nine disables the bar with the reason. Agents
-can be messaged but never join calls: Start huddle counts humans only and
-says how many agents stay in the DM without being rung. Start huddle
-lands in the DM with `?huddle=start`, which the join control consumes
-exactly once.
+The people directory (`/users`) and the new-DM picker offer checkbox
+multi-select with a sticky bar: Message (n), Start huddle (n), and Clear.
+Shift-click extends a checkbox range; Ctrl/Cmd-click toggles; long-press
+selects on touch. One person opens the 1:1 DM; two to nine others open
+the group DM with exactly that set plus you, reusing it when it exists;
+more than nine disables the bar with the reason. Agents can be messaged
+but never join calls: Start huddle counts humans only and says how many
+agents stay in the DM without being rung. Start huddle lands in the DM
+with `?huddle=start`, which the join control consumes exactly once.
+
+The channel member panel hides its checkboxes until selection mode.
+Enter it with a long-press on a row (touch), Ctrl-click or Cmd-click on
+a row (desktop), or Space with a row focused: the checkbox column appears
+on every row but your own, and the bar offers Message (n), Start huddle
+(n), and an ✕ exit button. While selecting, a plain click or tap on a row
+toggles it instead of opening the profile card; Ctrl/Cmd-Shift-click adds
+the contiguous range from the last Ctrl/Cmd-clicked or long-pressed row,
+in Starred/Online/Offline order and skipping your own row. Esc, ✕,
+deselecting the last member, or submitting the bar leaves the mode. The
+row menu (right-click or Shift+F10) works whether selecting or not.
 
 ## Group DMs
 
