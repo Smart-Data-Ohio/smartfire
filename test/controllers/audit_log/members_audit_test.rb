@@ -86,6 +86,9 @@ class AuditLog::MembersAuditTest < ActionDispatch::IntegrationTest
     assert_equal users(:david).id, entry.actor_id
     assert_equal users(:kevin).id, entry.target_id
     assert_equal [ "active", "deactivated" ], entry.details["status"]
+    # Deactivation rewrites the email; the label must snapshot the
+    # address the member actually used, not the mangled replacement.
+    assert_equal "Kevin <kevin@37signals.com>", entry.target_label
   end
 
   test "join code reset is recorded without the code" do

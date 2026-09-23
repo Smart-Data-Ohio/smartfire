@@ -17,8 +17,11 @@ class Accounts::UsersController < ApplicationController
 
   def destroy
     previous_status = @user.status
+    # Deactivation rewrites the email in place: snapshot the label first
+    # so the row keeps the address the member actually used.
+    user_label = AuditLog.label_for(@user)
     @user.deactivate
-    AuditLog.record!(action: "user.deactivate", target: @user,
+    AuditLog.record!(action: "user.deactivate", target: @user, target_label: user_label,
       changes: { status: [ previous_status, "deactivated" ] })
     redirect_to edit_account_url
   end
