@@ -52,6 +52,9 @@ These limits are separate from the
 (`NULL` means workspace-wide), `capability`, `granted_by_id`, `revoked_at`, and
 a partial unique index over active rows. Capabilities are `read_messages`,
 `post_messages`, `react`, `manage_threads`, `external_action`, and `dm_anyone`.
+`dm_anyone` is granted workspace-wide only: the grant form rejects a room
+scope, and the DM check counts only active workspace-wide grants (a
+room-scoped row, if one predates the validation, grants nothing).
 
 `read_messages`, `post_messages`, and `react` are enforced through
 the `AgentAuthorization` concern (`require_agent_capability`) on the bot
@@ -723,7 +726,7 @@ and the call needs two grants: the agent must hold `post_messages`
 somewhere (legacy agents keep their implicit access), and the target
 rule must also pass — the target is the agent's owner, has previously
 messaged the agent (a mention, reply, or DM in the agent's ledger), or
-the agent holds the `dm_anyone` capability anywhere, which an
+the agent holds a workspace-wide `dm_anyone` grant, which an
 administrator grants from the bot's grant page. Anything else is 403.
 Posting into a DM room that already exists additionally requires
 `post_messages` in that room, so revoking the grant forbids the next

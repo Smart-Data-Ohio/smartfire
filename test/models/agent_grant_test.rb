@@ -14,11 +14,20 @@ class AgentGrantTest < ActiveSupport::TestCase
   end
 
   test "accepts every documented capability" do
-    AgentGrant::CAPABILITIES.each do |capability|
+    (AgentGrant::CAPABILITIES - %w[ dm_anyone ]).each do |capability|
       grant = AgentGrant.new(agent: @agent, room: @room, granted_by: users(:david), capability: capability)
 
       assert grant.valid?, "#{capability} should be valid: #{grant.errors.full_messages}"
     end
+
+    assert AgentGrant.new(agent: @agent, granted_by: users(:david), capability: "dm_anyone").valid?
+  end
+
+  test "dm_anyone must be workspace-wide" do
+    grant = AgentGrant.new(agent: @agent, room: @room, granted_by: users(:david), capability: "dm_anyone")
+
+    assert_not grant.valid?
+    assert_includes grant.errors[:room], "must be blank: dm_anyone is granted workspace-wide only"
   end
 
   test "read, post, react, manage_threads, external_action, and dm_anyone are enforced" do

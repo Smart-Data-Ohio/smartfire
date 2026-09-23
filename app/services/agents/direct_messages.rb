@@ -5,8 +5,8 @@ module Agents
   # flow. Allowed when the agent holds post_messages somewhere (legacy
   # agents keep their implicit access) and the target is the agent's
   # owner, has previously messaged the agent (a mention, reply, or DM
-  # delivery in the agent's ledger), or the agent holds the dm_anyone
-  # capability anywhere. The target rule is an additional gate on top of
+  # delivery in the agent's ledger), or the agent holds a workspace-wide
+  # dm_anyone grant. The target rule is an additional gate on top of
   # the grant check, not a replacement. A DM room cannot carry grants
   # before it exists, so a new DM checks the workspace-wide form only;
   # posting into an already-existing DM also requires post_messages in
@@ -53,7 +53,7 @@ module Agents
 
     def self.allowed?(agent, target)
       return true if agent.owner_id.present? && agent.owner_id == target.id
-      return true if agent.has_capability_anywhere?(:dm_anyone)
+      return true if agent.can?(:dm_anyone)
 
       agent.agent_events.where(actor_id: target.id, event_type: AgentEvent::MESSAGE_DELIVERABLE_TYPES).exists?
     end

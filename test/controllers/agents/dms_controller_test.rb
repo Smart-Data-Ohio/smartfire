@@ -122,6 +122,33 @@ class Agents::DmsControllerTest < ActionDispatch::IntegrationTest
     assert_equal first_room_id, response.parsed_body.dig("room", "id")
   end
 
+  test "a room-scoped dm_anyone grant does not allow DMing strangers" do
+    AgentGrant.new(agent: @agent, room: rooms(:watercooler), granted_by: users(:david), capability: "dm_anyone")
+      .save!(validate: false)
+    AgentGrant.create!(agent: @agent, granted_by: users(:david), capability: "post_messages")
+
+    post agents_dms_url,
+      params: { user_id: users(:jason).id, message: { markdown_source: "Cold hello" } }.to_json,
+      headers: bearer_headers
+
+    assert_response :forbidden
+    assert_equal "Forbidden: agent may only DM its owner or humans who messaged it without the dm_anyone capability",
+      response.parsed_body["error"]
+  end
+
+  test "a revoked dm_anyone grant does not allow DMing strangers" do
+    AgentGrant.create!(agent: @agent, granted_by: users(:david), capability: "dm_anyone").revoke!
+    AgentGrant.create!(agent: @agent, granted_by: users(:david), capability: "post_messages")
+
+    post agents_dms_url,
+      params: { user_id: users(:jason).id, message: { markdown_source: "Cold hello" } }.to_json,
+      headers: bearer_headers
+
+    assert_response :forbidden
+    assert_equal "Forbidden: agent may only DM its owner or humans who messaged it without the dm_anyone capability",
+      response.parsed_body["error"]
+  end
+
   test "strangers are denied without dm_anyone" do
     post agents_dms_url,
       params: { user_id: users(:jason).id, message: { markdown_source: "Cold hello" } }.to_json,

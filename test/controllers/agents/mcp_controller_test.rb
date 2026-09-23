@@ -534,6 +534,15 @@ class Agents::McpControllerTest < ActionDispatch::IntegrationTest
       "Forbidden: agent may only DM its owner or humans who messaged it without the dm_anyone capability"
   end
 
+  test "open_dm ignores a room-scoped dm_anyone grant" do
+    AgentGrant.new(agent: @agent, room: @room, granted_by: users(:david), capability: "dm_anyone")
+      .save!(validate: false)
+    grant!(capability: "post_messages")
+
+    assert_tool_error call_tool("open_dm", { "user_id" => users(:jason).id, "markdown_source" => "Denied" }),
+      "Forbidden: agent may only DM its owner or humans who messaged it without the dm_anyone capability"
+  end
+
   test "open_dm denies its owner when all grants are revoked" do
     grant = AgentGrant.create!(agent: @agent, granted_by: users(:david), capability: "post_messages")
     grant.revoke!
