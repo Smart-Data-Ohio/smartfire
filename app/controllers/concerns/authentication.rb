@@ -8,7 +8,7 @@ module Authentication
     before_action :deny_agent_tokens
     helper_method :signed_in?
 
-    protect_from_forgery with: :exception, unless: -> { authenticated_by.bot_key? || authenticated_by.agent_token? }
+    protect_from_forgery with: :exception, unless: -> { authenticated_by.bot_key? || authenticated_by.bot_reply? || authenticated_by.agent_token? }
   end
 
   class_methods do
@@ -46,9 +46,15 @@ module Authentication
     end
 
     def bot_authentication
-      if params[:bot_key].present? && bot = User.authenticate_bot(params[:bot_key].strip)
+      return if params[:bot_key].blank?
+
+      key = params[:bot_key].strip
+      if (bot = User.authenticate_bot(key))
         Current.user = bot
         set_authenticated_by(:bot_key)
+      elsif (bot = User.authenticate_bot_reply_token(key, room_id: params[:room_id]))
+        Current.user = bot
+        set_authenticated_by(:bot_reply)
       end
     end
 
@@ -130,7 +136,7 @@ module Authentication
     end
 
     def deny_bots
-      head :forbidden if authenticated_by.bot_key?
+      head :forbidden if authenticated_by.bot_key? || authenticated_by.bot_reply?
     end
 
     def deny_agent_tokens

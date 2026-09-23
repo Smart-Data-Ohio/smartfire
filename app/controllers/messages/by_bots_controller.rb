@@ -4,6 +4,10 @@ class Messages::ByBotsController < MessagesController
   allow_bot_access only: %i[ index create update destroy ]
   skip_before_action :ensure_can_edit, :ensure_can_delete
 
+  # A signed webhook reply token posts one reply and nothing else: reads,
+  # edits, and deletes still need the long-lived bot key or an agent token.
+  before_action :deny_bot_reply_token, except: :create
+
   before_action :set_room
   before_action :set_message, only: %i[ update destroy ]
   before_action :ensure_can_manage_bot_message, only: %i[ update destroy ]
@@ -31,6 +35,10 @@ class Messages::ByBotsController < MessagesController
   end
 
   private
+    def deny_bot_reply_token
+      head :forbidden if authenticated_by.bot_reply?
+    end
+
     # The bot posting API takes no Drive attachments (docs/google-drive.md).
     def drive_file_ids_key_present?
       false

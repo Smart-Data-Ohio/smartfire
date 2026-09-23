@@ -94,9 +94,13 @@ class Webhook < ApplicationRecord
     def payload(message, agent: nil, delivery_id: nil)
       hash = {
         user:    { id: message.creator.id, name: message.creator.name },
-        room:    { id: message.room.id, name: message.room.name, path: room_payload_path(message.room, agent: agent) },
+        room:    { id: message.room.id, name: message.room.name, path: room_payload_path(message.room) },
         message: { id: message.id, body: { html: message.body.body, plain: without_recipient_mentions(message.plain_text_body) }, path: message_path(message) }
       }
+      if legacy_bot?
+        hash[:reply_url] = Rails.application.routes.url_helpers
+          .room_bot_messages_path(message.room, user.reply_token_for(message.room))
+      end
       if agent
         hash[:agent] = { id: agent.id, name: agent.user.name, owner: agent.owner&.name, delivery_id: delivery_id }
         hash[:pull_request] = Github::PullRequestThread.payload_for_message(message, agent: agent)
@@ -111,18 +115,18 @@ class Webhook < ApplicationRecord
       Rails.application.routes.url_helpers.room_at_message_path(message.room, message)
     end
 
-    # Agent deliveries carry the plain room path: receivers post back
-    # with their own agent token, never a key from the payload.
-    # Agent-backed bots get the plain path on every delivery. Legacy bots
-    # (no Agent row) keep the bot-key path this release so existing
-    # integrations can still reply through it; that path is slated for
-    # removal (see docs/agents.md).
-    def room_payload_path(room, agent:)
-      if agent.nil? && !Agent.exists?(user_id: user.id)
-        Rails.application.routes.url_helpers.room_bot_messages_path(room, user.bot_key)
-      else
-        Rails.application.routes.url_helpers.room_path(room)
-      end
+    # Every delivery carries the plain room path: no payload ever embeds
+    # the bot key. Legacy bots (no Agent row) additionally get reply_url, a
+    # signed path that expires after User::Bot::REPLY_URL_EXPIRY and posts
+    # one reply through the bot posting endpoint (create only); receivers
+    # with a stored bot key or an agent token keep using those instead
+    # (see docs/agents.md).
+    def room_payload_path(room)
+      Rails.application.routes.url_helpers.room_path(room)
+    end
+
+    def legacy_bot?
+      !Agent.exists?(user_id: user.id)
     end
 
     def extract_text_from(response)

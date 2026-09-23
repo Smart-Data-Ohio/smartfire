@@ -15,14 +15,16 @@ class WebhookAgentKeyTest < ActiveSupport::TestCase
     assert_requested :post, webhooks(:bender).url, body: hash_including(
       "room" => hash_including("path" => room_path)
     ), times: 1
-    assert_not_includes captured, users(:bender).bot_key
+    assert_not_includes captured, bot_key_for(users(:bender))
     assert_not_includes JSON.parse(captured).keys, "agent"
   end
 
-  test "deliver for a legacy bot without an agent row keeps the bot-key room path" do
+  test "deliver for a legacy bot without an agent row sends a plain path plus a signed reply url" do
     legacy = User.create_bot!(name: "Legacy Path Bot", webhook_url: "https://example.test/legacy-path")
+    key = legacy.plain_bot_key
     message = messages(:first)
-    key_path = Rails.application.routes.url_helpers.room_bot_messages_path(message.room, legacy.bot_key)
+    message.room.memberships.grant_to(legacy)
+    room_path = Rails.application.routes.url_helpers.room_path(message.room)
 
     captured = nil
     WebMock.stub_request(:post, legacy.webhook.url)
@@ -31,11 +33,26 @@ class WebhookAgentKeyTest < ActiveSupport::TestCase
 
     legacy.webhook.deliver(message)
 
-    assert_requested :post, legacy.webhook.url, body: hash_including(
-      "room" => hash_including("path" => key_path)
-    ), times: 1
-    assert_includes captured, legacy.bot_key
-    assert_not_includes JSON.parse(captured).keys, "agent"
+    payload = JSON.parse(captured)
+    assert_equal room_path, payload.dig("room", "path")
+    assert_not_includes captured, key
+    reply_url = payload["reply_url"]
+    assert reply_url.start_with?("#{room_path}/"),
+      "expected the reply url under the room path, got #{reply_url.inspect}"
+    token = CGI.unescape(reply_url.split("/").fetch(-2))
+    assert_equal legacy, User.authenticate_bot_reply_token(token, room_id: message.room.id)
+    assert_not_includes payload.keys, "agent"
+  end
+
+  test "deliver for an agent-backed bot sends no reply url" do
+    captured = nil
+    WebMock.stub_request(:post, webhooks(:bender).url)
+      .with { |request| captured = request.body; true }
+      .to_return(status: 200)
+
+    webhooks(:bender).deliver(messages(:first))
+
+    assert_not_includes JSON.parse(captured).keys, "reply_url"
   end
 
   test "deliver with agent context adds the agent key alongside existing keys" do

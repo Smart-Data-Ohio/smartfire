@@ -12,6 +12,54 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "create with a signed reply url posts as the bot" do
+    bot = users(:bender)
+    reply_url = Rails.application.routes.url_helpers
+      .room_bot_messages_path(@room, bot.reply_token_for(@room))
+
+    assert_difference -> { Message.count }, +1 do
+      post reply_url, params: +"Replying through the webhook url!"
+      assert_response :created
+    end
+
+    assert_equal bot, Message.last.creator
+  end
+
+  test "reply url is refused for reads, edits, and deletes" do
+    bot = users(:bender)
+    message = @room.messages.create!(
+      creator: bot, markdown_source: "bot here", client_message_id: "reply-url-denied"
+    )
+    token = bot.reply_token_for(@room)
+
+    get room_bot_messages_url(@room, token)
+    assert_response :forbidden
+
+    patch room_bot_message_url(@room, token, message), params: "edited"
+    assert_response :forbidden
+
+    delete room_bot_message_url(@room, token, message)
+    assert_response :forbidden
+  end
+
+  test "stale, tampered, and wrong-room reply urls authenticate nobody" do
+    bot = users(:bender)
+    token = bot.reply_token_for(@room, expires_in: 1.minute)
+
+    travel_to 2.minutes.from_now do
+      post room_bot_messages_url(@room, token), params: +"too late"
+      assert_response :redirect
+    end
+
+    post room_bot_messages_url(@room, "#{token}x"), params: +"tampered"
+    assert_response :redirect
+
+    other = rooms(:designers)
+    other.memberships.grant_to(bot)
+    post room_bot_messages_url(other, token), params: +"wrong room"
+    assert_response :redirect
+  end
+
   test "create ignores drive_file_ids" do
     assert_difference -> { Message.count }, +1 do
       post room_bot_messages_url(@room, bot_key_for(users(:bender))),
@@ -68,7 +116,7 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2, agents(:bender_agent).agent_events.deliverable.last.hop
 
     assert_no_enqueued_jobs only: Bot::WebhookJob do
-      post room_bot_messages_url(@room, users(:bender).bot_key),
+      post room_bot_messages_url(@room, bot_key_for(users(:bender))),
         params: "<div>Hey #{mention_attachment_for_user(legacy)}</div>"
       assert_response :created
     end
@@ -82,7 +130,7 @@ class Messages::ByBotsControllerTest < ActionDispatch::IntegrationTest
     WebMock.stub_request(:post, legacy.webhook.url).to_return(status: 200)
 
     assert_enqueued_jobs 1, only: Bot::WebhookJob do
-      post room_bot_messages_url(@room, users(:bender).bot_key),
+      post room_bot_messages_url(@room, bot_key_for(users(:bender))),
         params: "<div>Hey #{mention_attachment_for_user(legacy)}</div>"
       assert_response :created
     end

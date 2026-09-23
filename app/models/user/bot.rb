@@ -2,17 +2,23 @@
 # digest (bot_token_digest), as agent credentials do, and the UI shows a key
 # only once: right after creation or a reset.
 #
-# TRANSITIONAL: the plaintext bot_token column is still written and kept
-# this release, so a rolled-back previous container still authenticates and
-# legacy webhook payloads (Webhook#room_bot_messages_path) keep a working
-# room.path. A follow-up release drops bot_token; after that bot_key falls
-# back to BOT_KEY_PLACEHOLDER for stored bots.
+# The plaintext bot_token column is retired: it is never read and never
+# written. It cannot be dropped because production migrations must stay
+# strictly additive, so a runtime task (Bots::ClearPlaintextTokens, via
+# `bin/rails bots:clear_plaintext_tokens` and a one-time Periodic::Runner
+# task) nulls leftover values where a digest exists. New and reset bots
+# store the digest alone, and stored bots answer bot_key with
+# BOT_KEY_PLACEHOLDER.
 module User::Bot
   extend ActiveSupport::Concern
 
   # Stands in for the key wherever it has to appear but is not shown, such
   # as the curl examples on the bots page.
   BOT_KEY_PLACEHOLDER = "BOT_KEY"
+
+  # How long a webhook reply URL stays usable. Each delivery mints a fresh
+  # one, so the window only needs to cover the receiver's prompt POST back.
+  REPLY_URL_EXPIRY = 15.minutes
 
   included do
     scope :active_bots, -> { active.where(role: :bot) }
@@ -26,35 +32,38 @@ module User::Bot
       bot_token = generate_bot_token
       webhook_url = attributes.delete(:webhook_url)
 
-      User.create!(**attributes, bot_token: bot_token, bot_token_digest: digest_bot_token(bot_token), role: :bot).tap do |user|
+      User.create!(**attributes, bot_token: nil, bot_token_digest: digest_bot_token(bot_token), role: :bot).tap do |user|
         user.plain_bot_token = bot_token
         user.create_webhook!(url: webhook_url) if webhook_url
       end
     end
 
-    # Looks the bot up by id and compares in constant time.
-    #
-    # TRANSITIONAL: while the plaintext bot_token column exists it is
-    # authoritative, because a rolled-back previous release writes only the
-    # plaintext (a key reset there leaves the digest describing the old,
-    # possibly leaked key). A digest that no longer matches the plaintext is
-    # re-backfilled. Once bot_token is dropped, the digest alone decides.
+    # Looks the bot up by id and compares digests in constant time. The
+    # plaintext column is never consulted: a row without a digest (written
+    # by a release before digests) cannot authenticate until its key is
+    # reset.
     def authenticate_bot(bot_key)
       bot_id, bot_token = bot_key.to_s.split("-", 2)
       return if bot_id.blank? || bot_token.blank? || !bot_id.match?(/\A\d+\z/)
 
       bot = active_bots.find_by(id: bot_id)
+      return if bot.nil? || bot.bot_token_digest.blank?
+
+      bot if ActiveSupport::SecurityUtils.secure_compare(bot.bot_token_digest, digest_bot_token(bot_token))
+    end
+
+    # Verifies a signed webhook reply token minted by #reply_token_for.
+    # The token binds the bot to one room and expires; the bot must still
+    # be active and a member of that room.
+    def authenticate_bot_reply_token(token, room_id:)
+      data = reply_verifier.verified(token.to_s.strip)
+      return unless data.is_a?(Hash) && data["room_id"].to_s == room_id.to_s
+
+      bot = active_bots.find_by(id: data["bot_id"])
       return if bot.nil?
+      return unless bot.rooms.exists?(room_id)
 
-      if bot.has_attribute?(:bot_token) && bot.bot_token.present?
-        return unless ActiveSupport::SecurityUtils.secure_compare(bot.bot_token, bot_token)
-
-        digest = digest_bot_token(bot_token)
-        bot.update_columns(bot_token_digest: digest) unless bot.bot_token_digest == digest
-        bot
-      elsif bot.bot_token_digest.present?
-        bot if ActiveSupport::SecurityUtils.secure_compare(bot.bot_token_digest, digest_bot_token(bot_token))
-      end
+      bot
     end
 
     def generate_bot_token
@@ -63,6 +72,10 @@ module User::Bot
 
     def digest_bot_token(token)
       Digest::SHA256.hexdigest(token.to_s)
+    end
+
+    def reply_verifier
+      Rails.application.message_verifier("bot_reply")
     end
   end
 
@@ -94,20 +107,27 @@ module User::Bot
     "#{id}-#{plain_bot_token}" if plain_bot_token.present?
   end
 
-  # The full key. TRANSITIONAL: read from the plaintext column while it
-  # exists; once it is dropped, only a just-created or just-reset bot knows
-  # its key and stored bots answer BOT_KEY_PLACEHOLDER.
+  # The full key while it is still known (just created or reset),
+  # otherwise the placeholder. Stored bots never reveal their key: the
+  # plaintext column is retired and unread.
   def bot_key
-    plain_bot_key || (has_attribute?(:bot_token) && bot_token.present? ? "#{id}-#{bot_token}" : BOT_KEY_PLACEHOLDER)
+    plain_bot_key || BOT_KEY_PLACEHOLDER
   end
 
   # Issues a new token, invalidating the old key, and returns the new key.
-  # TRANSITIONAL: writes the plaintext alongside the digest (see above).
+  # Stores the digest alone; any retired plaintext is cleared with it.
   def reset_bot_key
     token = self.class.generate_bot_token
-    update! bot_token: token, bot_token_digest: self.class.digest_bot_token(token)
+    update! bot_token: nil, bot_token_digest: self.class.digest_bot_token(token)
     self.plain_bot_token = token
     plain_bot_key
+  end
+
+  # A signed, expiring token authenticating this bot for one room's bot
+  # posting endpoint (create only). Carried in legacy webhook payloads as
+  # reply_url so receivers can post back without a long-lived key.
+  def reply_token_for(room, expires_in: REPLY_URL_EXPIRY)
+    self.class.reply_verifier.generate({ bot_id: id, room_id: room.id }, expires_in: expires_in)
   end
 
 

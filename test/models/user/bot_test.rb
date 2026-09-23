@@ -31,63 +31,104 @@ class User::BotTest < ActiveSupport::TestCase
     assert User.authenticate_bot(bot.bot_key)
   end
 
-  test "creation writes the digest and, for this release, the plaintext" do
+  test "creation writes the digest alone and stored bots hide their key" do
     token = "5M0aLYwQyBXOXa5Wsz6NZb11EE4tW2"
     SecureRandom.stubs(:alphanumeric).returns(token)
     bot = User.create_bot!(name: "Bender")
 
     stored = User.find(bot.id)
     assert_equal Digest::SHA256.hexdigest(token), stored.bot_token_digest
-    assert_equal token, stored.bot_token, "a rolled-back container still needs the plaintext"
+    assert_nil stored.read_attribute(:bot_token)
     assert_nil stored.plain_bot_key
-    assert_equal "#{bot.id}-#{token}", stored.bot_key
+    assert_equal User::Bot::BOT_KEY_PLACEHOLDER, stored.bot_key
     assert_equal bot, User.authenticate_bot("#{bot.id}-#{token}")
   end
 
-  test "a key reset by a rolled-back release retires the old key despite the stale digest" do
-    bot = User.create_bot!(name: "Bender")
-    leaked_key = bot.plain_bot_key
-
-    # origin/main's reset_bot_key writes only bot_token.
-    bot.update_columns(bot_token: "ResetDuring1")
-    assert_equal Digest::SHA256.hexdigest(leaked_key.split("-", 2).last), bot.reload.bot_token_digest, "digest is stale"
-
-    assert_nil User.authenticate_bot(leaked_key)
-    assert_equal bot, User.authenticate_bot("#{bot.id}-ResetDuring1")
-    assert_equal Digest::SHA256.hexdigest("ResetDuring1"), bot.reload.bot_token_digest, "digest re-backfilled"
-    assert_nil User.authenticate_bot(leaked_key)
-  end
-
-  test "once the plaintext column is gone the digest alone decides" do
+  test "leftover plaintext is never consulted" do
     bot = User.create_bot!(name: "Bender")
     key = bot.plain_bot_key
-    bot.update_columns(bot_token: nil)
+    bot.update_columns(bot_token: "DecoyToken12")
+
+    assert_equal bot, User.authenticate_bot(key)
+    assert_nil User.authenticate_bot("#{bot.id}-DecoyToken12")
+    assert_equal "DecoyToken12", bot.reload.read_attribute(:bot_token), "no re-backfill runs"
+  end
+
+  test "bot auth keeps working after plaintext clearing" do
+    bot = User.create_bot!(name: "Bender")
+    key = bot.plain_bot_key
+    bot.update_columns(bot_token: "PreRetire123")
+
+    Bots::ClearPlaintextTokens.run!
+    assert_nil bot.reload.read_attribute(:bot_token)
 
     assert_equal bot, User.authenticate_bot(key)
     assert_nil User.authenticate_bot("#{bot.id}-WrongToken12")
   end
 
-  test "a bot written without a digest by the previous release authenticates once and is backfilled" do
+  test "a bot without a digest cannot authenticate until its key is reset" do
     bot = User.create_bot!(name: "Legacy")
     bot.update_columns(bot_token: "OldRelease12", bot_token_digest: nil)
 
+    assert_nil User.authenticate_bot("#{bot.id}-OldRelease12")
     assert_nil User.authenticate_bot("#{bot.id}-WrongToken12")
-    assert_nil bot.reload.bot_token_digest
 
-    assert_equal bot, User.authenticate_bot("#{bot.id}-OldRelease12")
-    assert_equal Digest::SHA256.hexdigest("OldRelease12"), bot.reload.bot_token_digest
+    new_key = User.find(bot.id).reset_bot_key
+    assert_equal bot, User.authenticate_bot(new_key)
   end
 
-  test "reset writes both forms and retires the old key" do
+  test "reset stores the digest alone, clears leftover plaintext, and retires the old key" do
     bot = User.create_bot!(name: "Bender")
+    bot.update_columns(bot_token: "PreRetire123")
     old_key = bot.plain_bot_key
     new_key = User.find(bot.id).reset_bot_key
 
     stored = User.find(bot.id)
-    assert_equal new_key, "#{bot.id}-#{stored.bot_token}"
-    assert_equal Digest::SHA256.hexdigest(stored.bot_token), stored.bot_token_digest
+    assert_nil stored.read_attribute(:bot_token)
+    assert_equal Digest::SHA256.hexdigest(new_key.split("-", 2).last), stored.bot_token_digest
     assert_nil User.authenticate_bot(old_key)
     assert_equal bot, User.authenticate_bot(new_key)
+  end
+
+  test "reply token authenticates its bot for its room only" do
+    bot = User.create_bot!(name: "Bender")
+    room = rooms(:pets)
+    assert_includes bot.rooms, room
+
+    token = bot.reply_token_for(room)
+    assert_equal bot, User.authenticate_bot_reply_token(token, room_id: room.id)
+    assert_nil User.authenticate_bot_reply_token(token, room_id: rooms(:hq).id)
+    assert_nil User.authenticate_bot_reply_token("#{token}x", room_id: room.id)
+    assert_nil User.authenticate_bot_reply_token("bogus", room_id: room.id)
+    assert_nil User.authenticate_bot_reply_token("", room_id: room.id)
+    assert_nil User.authenticate_bot(token), "a reply token is not a bot key"
+  end
+
+  test "reply token expires" do
+    bot = User.create_bot!(name: "Bender")
+    room = rooms(:pets)
+    token = bot.reply_token_for(room, expires_in: 1.minute)
+
+    assert_equal bot, User.authenticate_bot_reply_token(token, room_id: room.id)
+
+    travel_to 2.minutes.from_now do
+      assert_nil User.authenticate_bot_reply_token(token, room_id: room.id)
+    end
+  end
+
+  test "reply token is refused once the bot leaves or deactivates" do
+    bot = User.create_bot!(name: "Bender")
+    room = rooms(:pets)
+    token = bot.reply_token_for(room)
+
+    room.memberships.find_by!(user: bot).destroy!
+    assert_nil User.authenticate_bot_reply_token(token, room_id: room.id)
+
+    room.memberships.grant_to(bot)
+    assert_equal bot, User.authenticate_bot_reply_token(token, room_id: room.id)
+
+    bot.deactivate
+    assert_nil User.authenticate_bot_reply_token(token, room_id: room.id)
   end
 
   test "authenticate refuses wrong, empty, and malformed keys" do
