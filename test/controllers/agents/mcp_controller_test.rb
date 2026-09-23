@@ -528,6 +528,47 @@ class Agents::McpControllerTest < ActionDispatch::IntegrationTest
       "Forbidden: agent lacks post_messages capability"
   end
 
+  test "ack_events rejects more than 100 ids" do
+    body = call_tool("ack_events", { "event_ids" => (1..101).to_a })
+
+    assert_response :success
+    assert_equal(-32602, body.dig("error", "code"))
+    assert_equal "event_ids must contain at most 100 ids", body.dig("error", "message")
+  end
+
+  test "ack_events charges the ack bucket once per id" do
+    with_memory_cache do
+      freeze_time do
+        first = call_tool("ack_events", { "event_ids" => (1..100).to_a })
+        assert_equal false, first.dig("result", "isError")
+
+        second = call_tool("ack_events", { "event_ids" => (101..120).to_a })
+        assert_equal false, second.dig("result", "isError")
+
+        body = call_tool("ack_events", { "event_ids" => [ 999_999 ] })
+
+        assert_response :success
+        assert_equal true, body.dig("result", "isError")
+        assert_equal "rate_limited", body.dig("result", "structuredContent", "error")
+        assert response.headers["Retry-After"].present?
+      end
+    end
+  end
+
+  test "ack_events per-id charges drain the shared REST ack bucket" do
+    with_memory_cache do
+      freeze_time do
+        call_tool("ack_events", { "event_ids" => (1..100).to_a })
+        call_tool("ack_events", { "event_ids" => (101..120).to_a })
+
+        post ack_agents_event_url(999_999), headers: mcp_headers
+
+        assert_response :too_many_requests
+        assert_equal "rate_limited", response.parsed_body["error"]
+      end
+    end
+  end
+
   test "poll_events throttles past 120 calls a minute" do
     with_memory_cache do
       freeze_time do

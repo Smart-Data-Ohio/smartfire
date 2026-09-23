@@ -18,6 +18,7 @@ module Agents
     MODERN_VERSION = "2026-07-28"
     SERVER_NAME = "smartfire"
     SERVER_VERSION = "1.0.0"
+    ACK_EVENTS_MAX_IDS = 100
     INSTRUCTIONS = "Smartfire workspace tools for an AI agent acting as itself. " \
       "Read rooms and threads before posting, keep replies in the thread that mentioned the agent, " \
       "request human approval before external actions, and prefer get_context over guessing at history."
@@ -96,7 +97,7 @@ module Agents
       ),
       Tool.new(
         name: "ack_events",
-        description: "Acknowledge event rows by id (idempotent). Returns a per-id outcome or error. Requires read_messages.",
+        description: "Acknowledge event rows by id (idempotent, max 100 ids per call). Returns a per-id outcome or error. Requires read_messages.",
         input_schema: {
           "type" => "object",
           "properties" => {
@@ -346,6 +347,9 @@ module Agents
         ids = args["event_ids"]
         unless ids.is_a?(Array) && ids.any?
           raise InvalidParams, "event_ids must be a non-empty array"
+        end
+        if ids.size > ACK_EVENTS_MAX_IDS
+          raise InvalidParams, "event_ids must contain at most #{ACK_EVENTS_MAX_IDS} ids"
         end
         unless @agent.has_capability_anywhere?(:read_messages)
           return ServiceResult.fail("Forbidden: agent lacks read_messages capability", status: :forbidden)

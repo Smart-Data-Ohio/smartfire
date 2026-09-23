@@ -217,7 +217,11 @@ class Agents::McpController < ApplicationController
 
       if tool.throttle
         limit, controller_path, action_name = tool.throttle
-        retry_after = agent_api_throttle_retry_after(limit, controller_path: controller_path, action_name: action_name)
+        retry_after = nil
+        tool_throttle_charges(tool, params).times do
+          retry_after = agent_api_throttle_retry_after(limit, controller_path: controller_path, action_name: action_name)
+          break if retry_after
+        end
         if retry_after
           response.set_header("Retry-After", retry_after.to_s)
           render json: rpc_result(id, modern_result({
@@ -251,6 +255,21 @@ class Agents::McpController < ApplicationController
     rescue StandardError => error
       Rails.logger.error("MCP tools/call failed: #{error.class}: #{error.message}")
       render json: rpc_error(id, ERROR_INTERNAL, "Internal error")
+    end
+
+    # How many units of the shared REST bucket one tools/call consumes.
+    # ack_events charges once per id, so MCP matches REST's one-id-per-request
+    # accounting; a batch over the cap is rejected as invalid params before
+    # charging anything. Anything else charges once.
+    def tool_throttle_charges(tool, params)
+      return 1 unless tool.name == "ack_events"
+
+      ids = params["arguments"].is_a?(Hash) ? params["arguments"]["event_ids"] : nil
+      if ids.is_a?(Array) && ids.size > Agents::McpServer::ACK_EVENTS_MAX_IDS
+        raise Agents::McpServer::InvalidParams, "event_ids must contain at most #{Agents::McpServer::ACK_EVENTS_MAX_IDS} ids"
+      end
+
+      ids.is_a?(Array) ? [ ids.size, 1 ].max : 1
     end
 
     def current_credential

@@ -38,6 +38,8 @@ endpoints, per credential per minute:
 | `create_board_post` | board post creation | 30 |
 
 The remaining tools have no throttle, like their REST counterparts.
+`ack_events` charges its bucket once per id — matching REST's one-id-per-ack
+accounting — and rejects batches over 100 ids with `-32602`.
 
 ## Client setup
 
