@@ -60,9 +60,12 @@ one-to-one DM.
 an indexed `direct_member_key`: `dm:` plus the SHA-256 of the sorted
 member ids, under a partial unique index (NULL keys and deleted rooms
 stay outside it). Adding or removing a member recomputes the key. A
-mutated group whose new set collides with another room's key keeps its
-own history under a room-suffixed key — only the create/open-from-selection
-path ever reuses a room; membership changes never merge two rooms.
+named group that shrank to two members (or one) keeps a room-suffixed
+key instead of taking the plain pair key, so Message opens a fresh
+one-to-one DM rather than the group. A mutated group whose new set
+collides with another room's key keeps its own history under a
+room-suffixed key — only the create/open-from-selection path ever reuses
+a room; membership changes never merge two rooms.
 
 ## Group calls
 

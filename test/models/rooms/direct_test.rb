@@ -136,6 +136,22 @@ class Rooms::DirectTest < ActiveSupport::TestCase
     assert_equal "Still Plans", group.reload.name
   end
 
+  test "a named group that shrank to two keeps a suffixed key, so Message opens a fresh one-to-one" do
+    group = Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:kevin) ])
+    group.rename("Weekend Plans", renamed_by: users(:david))
+    group.leave(users(:david))
+
+    assert_equal [ users(:jason).id, users(:kevin).id ].sort, group.reload.user_ids.sort
+    assert_not_equal Rooms::Direct.member_key_for(group.user_ids), group.direct_member_key
+
+    fresh = nil
+    assert_difference -> { Rooms::Direct.count }, +1 do
+      fresh = Rooms::Direct.find_or_create_for([ users(:jason), users(:kevin) ])
+    end
+    assert_not_equal group.id, fresh.id
+    assert_not_predicate fresh, :group_capable?
+  end
+
   test "rename validates length and clearing restores the default name" do
     group = Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:kevin) ])
 

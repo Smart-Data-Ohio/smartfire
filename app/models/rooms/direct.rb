@@ -152,21 +152,34 @@ class Rooms::Direct < Room
     outcome
   end
 
-  # Recomputes the member-set key after members change. A mutated group
-  # whose new set collides with another room's key keeps its own history
-  # under a room-suffixed key: only the create/open-from-selection path
-  # ever reuses a room, membership changes never merge two rooms.
+  # Recomputes the member-set key after members change. A group-capable
+  # room that shrank to a pair (or solo) set keeps a room-suffixed key
+  # instead of taking the plain pair key: otherwise "Message" would open
+  # the group instead of a fresh one-to-one DM, and members added later
+  # would see group history from before they joined. Larger groups keep
+  # plain keys so the same selection reuses them. A mutated group whose
+  # new set collides with another room's key keeps its own history under
+  # a room-suffixed key: only the create/open-from-selection path ever
+  # reuses a room, membership changes never merge two rooms.
   def refresh_direct_member_key!
     return if destroyed? || deleted?
 
-    candidate = self.class.member_key_for(memberships.pluck(:user_id))
-    candidate = "#{candidate}##{id}" if self.class.alive.directs.where.not(id: id).exists?(direct_member_key: candidate)
+    user_ids = memberships.pluck(:user_id)
+    candidate = self.class.member_key_for(user_ids)
+    candidate = "#{candidate}##{id}" if squats_pair_key?(user_ids) || self.class.alive.directs.where.not(id: id).exists?(direct_member_key: candidate)
     update_column(:direct_member_key, candidate) unless direct_member_key == candidate
   rescue ActiveRecord::RecordNotUnique
     update_column(:direct_member_key, "#{candidate}##{id}")
   end
 
   private
+    # Whether the room would take a one-to-one (or solo) lookup key while
+    # still group-capable. Only the name half of group_capable? can overlap
+    # that size — a live group is bigger by definition — so this is exactly
+    # the named rooms that shrank.
+    def squats_pair_key?(user_ids)
+      user_ids.size <= 2 && group_capable?
+    end
     def recent_system_note?
       messages.where(system_note: true).where(created_at: RENAME_NOTE_WINDOW.ago..).exists?
     end
