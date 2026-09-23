@@ -7,7 +7,11 @@ module Github::PullRequestsHelper
   # a cached Discuss control flips to its thread link once one is created.
   def message_with_pr_cards_cache_key(message)
     newest_card = (message.github_pull_requests.map(&:updated_at) + message.twitter_posts.map(&:updated_at) + message.events.map(&:updated_at)).compact.max
+    # Link embeds are fetched after the message renders; their rows (and the
+    # reference set) must bust the fragment like the other cards.
+    embeds = message.link_embed_references.map { |reference| [ reference.id, reference.link_embed&.updated_at ] }
     key = [ message, newest_card ]
+    key << embeds if embeds.any?
     key << github_pr_threads_stamp(message.room_id) if message.github_pull_requests.any?
     key
   end
