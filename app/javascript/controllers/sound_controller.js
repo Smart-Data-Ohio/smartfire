@@ -7,6 +7,7 @@ export default class extends Controller {
     if (mutedByDnd()) return
     if (quietHoursActive()) return
     if (meetingQuietActive()) return
+    if (oooQuietActive()) return
 
     const sound = new Audio(this.urlValue)
     sound.play()
@@ -43,14 +44,22 @@ function quietHoursActive(now = new Date()) {
     : minute >= start || minute < end
 }
 
-// Quiet-during-meetings sends the cached busy intervals as epoch-second
-// windows, re-evaluated on every play like quiet hours, so a meeting
+// Quiet-during-meetings and out-of-office quiet send their spans as
+// epoch-second windows, re-evaluated on every play like quiet hours, so a
 // boundary crossed mid-page silences (or unsilences) sounds without a
-// reload. Mirrors MeetingCache#in_meeting?: the start is inclusive and
-// the end exclusive. A calendar edit that moves the intervals needs a
-// navigation, the same as a quiet-hours edit.
+// reload. Mirrors the cache readers: the start is inclusive and the end
+// exclusive. A calendar edit that moves the intervals needs a navigation,
+// the same as a quiet-hours edit.
 function meetingQuietActive(now = new Date()) {
-  const windows = document.querySelector("meta[name='meeting-quiet']")?.getAttribute("content")
+  return epochWindowsActive("meta[name='meeting-quiet']", now)
+}
+
+function oooQuietActive(now = new Date()) {
+  return epochWindowsActive("meta[name='ooo-quiet']", now)
+}
+
+function epochWindowsActive(selector, now = new Date()) {
+  const windows = document.querySelector(selector)?.getAttribute("content")
   if (!windows) return false
 
   const second = Math.floor(now.getTime() / 1000)

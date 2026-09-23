@@ -335,3 +335,20 @@
     padding: 0.4rem 0.55rem max(0.4rem, env(safe-area-inset-bottom));
   }
 }
+
+/* Out-of-office notice above the DM composer: one small centered line per
+   out member, updated live by their OOO stream. */
+.ooo-notices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0 1rem;
+
+  &:empty { display: none; }
+}
+
+.ooo-notice {
+  margin: 0;
+  text-align: center;
+  color: var(--color-subtle);
+}

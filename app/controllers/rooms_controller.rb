@@ -15,6 +15,10 @@ class RoomsController < ApplicationController
   def show
     @messages = Message::MentionPreloader.preload_for(find_messages)
     set_unread_divider unless @room.board?
+    # The other DM members for the out-of-office notice above the
+    # composer, rendered per viewer and never fragment-cached.
+    @ooo_notice_members = @room.direct? ?
+      @room.users.active.without_bots.where.not(id: Current.user.id).includes(:meeting_cache).ordered.to_a : []
   end
 
   def destroy

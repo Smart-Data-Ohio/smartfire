@@ -25,7 +25,9 @@ module ApplicationHelper
   # time-based gate on every play without a reload. Quiet-during-meetings
   # sends the cached busy intervals as epoch windows for the same live
   # treatment: a render-time marker would stick either way, since meeting
-  # boundaries cross without a navigation.
+  # boundaries cross without a navigation. Out-of-office quiet (unless the
+  # member keeps notifications on) sends its end the same way: a manual
+  # OOO runs from the epoch to its end, calendar OOO as cached windows.
   def notification_sound_meta_tags
     return unless Current.user
 
@@ -41,6 +43,12 @@ module ApplicationHelper
     if Current.user.meeting_dnd_enabled? && Current.user.meeting_status_enabled?
       epochs = Current.user.meeting_cache&.quiet_window_epochs.to_a
       tags << tag.meta(name: "meeting-quiet", content: epochs.map { |start, finish| "#{start}-#{finish}" }.join(",")) if epochs.any?
+    end
+    if !Current.user.ooo_notify_enabled? && Current.user.out_of_office?
+      epochs = []
+      epochs << [ 0, Current.user.ooo_until.to_i ] if Current.user.manual_ooo_active?
+      epochs.concat(Current.user.meeting_cache&.ooo_window_epochs.to_a) if Current.user.ooo_calendar_enabled?
+      tags << tag.meta(name: "ooo-quiet", content: epochs.map { |start, finish| "#{start}-#{finish}" }.join(",")) if epochs.any?
     end
     safe_join(tags)
   end
