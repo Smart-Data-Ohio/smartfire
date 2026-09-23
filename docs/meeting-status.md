@@ -14,7 +14,9 @@ The read uses `events.list` on the primary calendar under the existing
 `calendar.events` grant — no new OAuth scope, no re-consent:
 
 - `singleEvents=true` (recurring events expand to instances),
-  `timeMin` one hour ago, `timeMax` 24 hours ahead.
+  `timeMin` one hour ago, `timeMax` 24 hours ahead. Pages follow
+  `nextPageToken` up to 4 pages (1000 events), so the 30-day calendar-OOO
+  lookahead is never truncated at 250 events on a busy calendar.
 - A `fields` mask (`items(eventType,start,end,status,transparency,...)`,
   see `Google::Client::MEETING_STATUS_FIELDS`) keeps titles,
   descriptions, locations, and attendee identities out of the response

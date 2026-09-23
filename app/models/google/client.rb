@@ -224,17 +224,34 @@ module Google
     # locations, and attendee identities out of the response entirely: only
     # each event's type, start/end, status, transparency, and every
     # attendee's self/declined flags arrive, and only the busy and OOO
-    # intervals derived from them are kept.
+    # intervals derived from them are kept. Pages follow nextPageToken up
+    # to LIST_MAX_PAGES, so the 30-day OOO lookahead is never truncated
+    # at 250 events on a busy calendar; the merged items come back under
+    # the usual "items" key.
     # https://developers.google.com/workspace/calendar/api/v3/reference/events/list
-    MEETING_STATUS_FIELDS = "items(eventType,start,end,status,transparency,attendees(self,responseStatus))"
+    MEETING_STATUS_FIELDS = "items(eventType,start,end,status,transparency,attendees(self,responseStatus)),nextPageToken"
+    LIST_MAX_PAGES = 4
 
     def list_events(time_min:, time_max:)
-      api_request(:get, "/calendar/v3/calendars/primary/events", nil,
-        query: URI.encode_www_form(
+      items = []
+      page_token = nil
+
+      LIST_MAX_PAGES.times do
+        params = {
           singleEvents: true, orderBy: "startTime", maxResults: 250,
           timeMin: time_min.iso8601, timeMax: time_max.iso8601,
           fields: MEETING_STATUS_FIELDS
-        ))
+        }
+        params[:pageToken] = page_token if page_token
+        response = api_request(:get, "/calendar/v3/calendars/primary/events", nil,
+          query: URI.encode_www_form(params))
+
+        items.concat(Array(response.is_a?(Hash) ? response["items"] : nil))
+        page_token = response.is_a?(Hash) ? response["nextPageToken"] : nil
+        break if page_token.blank?
+      end
+
+      { "items" => items }
     end
 
     # Opens a push channel (events.watch) on the primary calendar. Google
