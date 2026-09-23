@@ -625,6 +625,14 @@ class CallControlsTest < ApplicationSystemTestCase
     wait_for_cable_connection
     find("button[aria-label='Show stage']").click
 
+    # Your own row keeps the role controls but no moderation forms: the
+    # server rejects moderating your own session.
+    david_row = "##{dom_id(room.memberships.find_by!(user: users(:david)), :stage_row)}"
+    within david_row do
+      assert_selector "form[action*='stage/roles']"
+      assert_no_selector "form[action*='call_moderation']"
+    end
+
     jason_row = "##{dom_id(speaker, :stage_row)}"
     within jason_row do
       click_button "Mute"
