@@ -25,7 +25,7 @@ module RoomsHelper
     stage_panel stage_rejoin
     drive_share drive_picker
     rooms_list read_rooms badge_dot sorted_list activity_indicator
-    board_list
+    board_list timezone dm_presence
     tour help_menu
   ].freeze
 
