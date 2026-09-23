@@ -77,9 +77,12 @@ Rails.application.configure do
   # the I18n.default_locale when a translation cannot be found).
   config.i18n.fallbacks = true
 
-  # Always be SSL'ing (unless told not to)
+  # Always be SSL'ing (unless told not to). force_ssl also emits
+  # Strict-Transport-Security; the options below pin the required HSTS
+  # value explicitly rather than inheriting the middleware default.
   config.assume_ssl = ENV["DISABLE_SSL"].blank?
   config.force_ssl  = ENV["DISABLE_SSL"].blank?
+  config.ssl_options = { hsts: { expires: 1.year, subdomains: true } }
 
   # Don't log any deprecations.
   config.active_support.report_deprecations = false
