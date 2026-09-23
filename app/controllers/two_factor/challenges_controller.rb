@@ -23,9 +23,9 @@ module TwoFactor
       verified_as = verify_challenge_code
       if verified_as
         method = two_factor_pending_method
-        remember_two_factor_device!(@pending_user) if params[:remember_device] == "1"
         clear_two_factor_pending!
         start_new_session_for @pending_user, two_factor_verified: true
+        remember_two_factor_device!(@pending_user) if params[:remember_device] == "1"
         AuditLog.record!(action: "session.sign_in.success", actor: @pending_user,
           changes: { method: method, two_factor: verified_as })
         redirect_to post_authenticating_url

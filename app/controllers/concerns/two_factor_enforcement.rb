@@ -44,6 +44,9 @@ module TwoFactorEnforcement
         (controller_path == "sessions" && action_name == "destroy")
     end
 
+    # Redirects HTML and Turbo Stream requests to setup (Turbo follows
+    # the redirect, so stream requests land on setup instead of bypassing
+    # it); other formats get a bare rejection.
     def reject_unenrolled_two_factor_user
       if request.format.html?
         session[:return_to_after_authenticating] = request.url if request.get?
