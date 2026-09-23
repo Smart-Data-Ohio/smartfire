@@ -32,6 +32,7 @@ module Github
       login = WriteClient.authenticated_login(tokens["access_token"])
 
       account = Current.user.github_connected_account || Current.user.build_github_connected_account
+      old_app_token = account.app_token_for_revoke
       account.assign_attributes(
         github_login: login,
         access_token: tokens["access_token"],
@@ -43,6 +44,11 @@ module Github
       )
       account.save!
       account.touch
+      # A replaced App grant is revoked remotely (best effort, after the
+      # save) so no orphaned grant survives the relink.
+      if old_app_token.present? && old_app_token != tokens["access_token"]
+        Github::App.revoke_token(old_app_token)
+      end
 
       redirect_to user_profile_path, notice: "GitHub connected as #{login}."
     rescue Github::App::Unauthorized, WriteClient::Unauthorized

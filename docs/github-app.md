@@ -58,7 +58,8 @@ logged or shown again; unlinking deletes it.
   decider's approval can never run as a different GitHub user.
 - Tokens are encrypted at rest, never passed as job arguments (jobs take
   account and approval ids), and App grants are revoked remotely on
-  disconnect (best effort; disconnect proceeds however revocation goes).
+  disconnect and when a relink replaces them (best effort; the save
+  proceeds however revocation goes).
 
 ## Integration health page
 

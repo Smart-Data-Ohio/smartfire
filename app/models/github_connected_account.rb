@@ -99,6 +99,17 @@ class GithubConnectedAccount < ApplicationRecord
     nil
   end
 
+  # The stored App access token for best-effort revocation when the
+  # connection is replaced by a relink; nil for PATs and unreadable
+  # tokens. Never raises.
+  def app_token_for_revoke
+    return nil unless app_token?
+
+    access_token.presence
+  rescue ActiveRecord::Encryption::Errors::Decryption
+    nil
+  end
+
   def app_token_expired?
     app_token? && token_expires_at.present? && token_expires_at <= 60.seconds.from_now
   end

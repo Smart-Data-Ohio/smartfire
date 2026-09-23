@@ -12,6 +12,7 @@ module Github
 
       login = WriteClient.authenticated_login(token)
       account = Current.user.github_connected_account || Current.user.build_github_connected_account
+      old_app_token = account.app_token_for_revoke
       account.assign_attributes(
         github_login: login, access_token: token, disconnected_reason: nil,
         token_source: "pat", refresh_token: nil, token_expires_at: nil, last_error: nil
@@ -20,6 +21,9 @@ module Github
       # The repo-access cache key carries updated_at: bump it even when the
       # token is unchanged so a cached denial never survives a relink.
       account.touch
+      # A replaced App grant is revoked remotely (best effort, after the
+      # save) so no orphaned grant survives the relink.
+      Github::App.revoke_token(old_app_token) if old_app_token.present? && old_app_token != token
 
       redirect_to user_profile_path, notice: link_notice(login)
     rescue WriteClient::Unauthorized

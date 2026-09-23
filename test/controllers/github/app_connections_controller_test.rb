@@ -133,6 +133,9 @@ class Github::AppConnectionsControllerTest < ActionDispatch::IntegrationTest
     )
     stub_request(:get, "https://api.github.com/user")
       .to_return(status: 200, body: { login: "octocat" }.to_json)
+    revoke = stub_request(:delete, "https://api.github.com/applications/app-client-id/grant")
+      .with(body: hash_including("access_token" => "app-token"))
+      .to_return(status: 204)
 
     post github_connection_url, params: { access_token: "github_pat_new" }
 
@@ -140,5 +143,36 @@ class Github::AppConnectionsControllerTest < ActionDispatch::IntegrationTest
     assert_not account.app_token?
     assert_nil account.refresh_token
     assert_nil account.token_expires_at
+    assert_requested revoke
+  end
+
+  test "reconnecting through the app revokes the previous app grant" do
+    GithubConnectedAccount.create!(
+      user: users(:david), github_login: "octocat", access_token: "old-app-token",
+      token_source: "app", refresh_token: "old-refresh",
+      token_expires_at: 1.minute.ago
+    )
+    get github_app_connect_url
+    state = Rails.application.message_verifier("github_app_oauth_state")
+      .verified(CGI.parse(URI.parse(response.location).query)["state"].first)
+
+    stub_request(:post, "https://github.com/login/oauth/access_token")
+      .to_return(status: 200, body: {
+        access_token: "app-token", refresh_token: "refresh-token", expires_in: 28_800
+      }.to_json)
+    stub_request(:get, "https://api.github.com/user")
+      .to_return(status: 200, body: { login: "octocat" }.to_json)
+    revoke = stub_request(:delete, "https://api.github.com/applications/app-client-id/grant")
+      .with(body: hash_including("access_token" => "old-app-token"))
+      .to_return(status: 204)
+
+    get github_app_callback_url, params: {
+      code: "code",
+      state: Rails.application.message_verifier("github_app_oauth_state").generate(state)
+    }
+
+    assert_redirected_to user_profile_path
+    assert_requested revoke
+    assert_equal "app-token", users(:david).reload.github_connected_account.access_token
   end
 end
