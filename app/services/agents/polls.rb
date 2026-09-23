@@ -29,23 +29,28 @@ module Agents
         return ServiceResult.fail("Question can't be blank")
       end
 
-      # Everything is pre-validated above, so the poll creation below
-      # cannot fail validation: the message post (which broadcasts and
-      # delivers) never needs retracting.
-      posted = Posting.post(
-        agent: agent, room: room,
-        attributes: { markdown_source: question.to_s.strip, client_message_id: SecureRandom.uuid },
-        drive_file_ids: :absent
-      )
-      return posted unless posted.ok?
-
+      # Both rows are created in one transaction before anything
+      # broadcasts, the way the human endpoint orders it: the message
+      # broadcast renders the poll card, so the poll must exist first.
+      # A validation failure rolls everything back with nothing posted.
+      message = nil
+      poll = nil
       boolean = ActiveModel::Type::Boolean.new
-      poll = Poll.create_for_message!(
-        message: posted.payload, labels: labels,
-        multiple: boolean.cast(multiple) || false,
-        anonymous: boolean.cast(anonymous) || false,
-        closes_at: closes_at
-      )
+      ActiveRecord::Base.transaction do
+        message = room.root_messages.create!(
+          creator: agent.user, markdown_source: question.to_s.strip, client_message_id: SecureRandom.uuid
+        )
+        poll = Poll.create_for_message!(
+          message: message, labels: labels,
+          multiple: boolean.cast(multiple) || false,
+          anonymous: boolean.cast(anonymous) || false,
+          closes_at: closes_at
+        )
+      end
+
+      message.process_attachment
+      message.broadcast_create
+      Message::BotWebhookFanout.deliver_for(message)
 
       ServiceResult.ok(poll.results_payload(viewer: agent.user), status: :created)
     rescue ActiveRecord::RecordInvalid => error

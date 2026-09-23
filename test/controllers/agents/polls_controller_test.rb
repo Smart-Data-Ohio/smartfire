@@ -56,6 +56,21 @@ class Agents::PollsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "creation broadcasts the message with its poll card" do
+    grant!(capability: "post_messages", room: @room)
+
+    post "/rooms/#{@room.id}/agents/polls", params: {
+      question: "Lunch?", options: [ "Tacos", "Pizza" ]
+    }.to_json, headers: bearer_headers
+
+    assert_response :created
+    poll = Poll.order(:id).last
+    streams = capture_turbo_stream_broadcasts([ @room, :messages ])
+    append = streams.find { |stream| stream["action"] == "append" }
+    assert append, "expected an append broadcast, got: #{streams.map { |stream| stream["action"] }.inspect}"
+    assert_includes append.to_html, ActionView::RecordIdentifier.dom_id(poll, :card)
+  end
+
   test "reads results with post_messages" do
     grant!(capability: "post_messages", room: @room)
     poll = create_poll
