@@ -6,15 +6,17 @@ module Bots
   # row. Rows without a plaintext are untouched. Idempotent.
   class ClearPlaintextTokens
     def self.run!
-      cleared = 0
-      User.where.not(bot_token: nil).find_each do |user|
-        user.update_columns(
-          bot_token_digest: User.digest_bot_token(user.read_attribute(:bot_token)),
-          bot_token: nil
-        )
-        cleared += 1
+      User.where.not(bot_token: nil).pluck(:id, :bot_token).count do |id, plaintext|
+        heal(id, plaintext)
       end
-      cleared
+    end
+
+    # Conditional on the plaintext still being the one read: a key reset
+    # between the read and this write nulls the plaintext and sets a new
+    # digest, which must win over the stale key.
+    def self.heal(id, plaintext)
+      User.where(id: id, bot_token: plaintext)
+        .update_all(bot_token_digest: User.digest_bot_token(plaintext), bot_token: nil) == 1
     end
   end
 end

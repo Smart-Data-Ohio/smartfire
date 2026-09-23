@@ -238,6 +238,8 @@ reply body, exactly like the old keyed `room.path`). The reply path
 authenticates create only: reads, edits, deletes, and boosts through it
 answer 403. Expired, tampered, or wrong-room tokens authenticate nobody,
 so those requests redirect to sign-in like any unauthenticated request.
+An integration that replies more than 15 minutes after a delivery should
+post with its stored bot key instead.
 Receivers with a stored bot key keep using it, and new integrations
 should prefer an agent token.
 

@@ -32,6 +32,20 @@ class Bots::ClearPlaintextTokensTest < ActiveSupport::TestCase
     assert_equal clean, User.authenticate_bot(clean_key)
   end
 
+  test "a key reset between the read and the write wins over the stale plaintext" do
+    Bots::ClearPlaintextTokens.run!
+
+    bot = User.create_bot!(name: "Racing Reset")
+    bot.update_columns(bot_token: "LeakedKey123", bot_token_digest: nil)
+    bot.reload.reset_bot_key
+    new_key = bot.plain_bot_key
+
+    assert_not Bots::ClearPlaintextTokens.heal(bot.id, "LeakedKey123")
+
+    assert_equal bot, User.authenticate_bot(new_key)
+    assert_nil User.authenticate_bot("#{bot.id}-LeakedKey123")
+  end
+
   test "repeat runs are no-ops" do
     Bots::ClearPlaintextTokens.run!
 
