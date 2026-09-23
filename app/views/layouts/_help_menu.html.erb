@@ -4,7 +4,7 @@
         data-controller="popup help-menu"
         data-action="keydown.esc->popup#close toggle->popup#toggle click@document->popup#closeOnClickOutside"
         data-popup-orientation-top-class="popup-orientation-top">
-  <summary id="help-menu-button" class="btn btn--borderless room-header__action" aria-label="Help" title="Help">
+  <summary id="<%= local_assigns.fetch(:button_id, "help-menu-button") %>" class="<%= local_assigns.fetch(:summary_class, "btn btn--borderless room-header__action") %>" aria-label="Help" title="Help">
     <%= image_tag "help.svg", size: 20, aria: { hidden: "true" } %>
   </summary>
   <div class="help-menu__menu shadow" data-popup-target="menu" role="menu" aria-label="Help">
