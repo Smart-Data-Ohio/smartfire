@@ -233,19 +233,6 @@ class MessagesController < ApplicationController
 
 
     def deliver_webhooks_to_bots
-      # Agent-backed bots are delivered only through Agent::DeliveryJob (see
-      # Message::AgentDelivery); the legacy webhook bypasses grant and rate
-      # checks, so it serves bots without an Agent row only. The hop limit
-      # still applies: a chain that reached it stops here instead of
-      # looping through a legacy bot.
-      bots = bots_eligible_for_webhook.excluding(@message.creator).where.missing(:agent)
-      return if bots.empty?
-      return if Agent::Delivery.hop_for_message(@message) >= Agent::Delivery::HOP_LIMIT
-
-      bots.each { |bot| bot.deliver_webhook_later(@message) }
-    end
-
-    def bots_eligible_for_webhook
-      @room.direct? ? @room.users.active_bots : @message.mentionees.active_bots
+      Message::BotWebhookFanout.deliver_for(@message)
     end
 end

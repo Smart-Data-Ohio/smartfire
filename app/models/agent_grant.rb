@@ -1,12 +1,13 @@
 class AgentGrant < ApplicationRecord
-  CAPABILITIES = %w[ read_messages post_messages react manage_threads external_action ].freeze
+  CAPABILITIES = %w[ read_messages post_messages react manage_threads external_action dm_anyone ].freeze
 
   # Every documented capability is enforced: posting and boosting
   # through the bot/agent endpoints, reading through event polling and
-  # delivery, external actions through the approval endpoints, and work
-  # status updates through the agent work endpoints. See
+  # delivery, external actions through the approval endpoints, work
+  # status updates through the agent work endpoints, and agent-initiated
+  # DMs to strangers through the agent DM endpoints. See
   # AgentAuthorization.
-  ENFORCED_CAPABILITIES = %w[ read_messages post_messages react manage_threads external_action ].freeze
+  ENFORCED_CAPABILITIES = %w[ read_messages post_messages react manage_threads external_action dm_anyone ].freeze
 
   belongs_to :agent
   belongs_to :room, optional: true
@@ -18,6 +19,7 @@ class AgentGrant < ApplicationRecord
   validates :capability, presence: true, inclusion: { in: CAPABILITIES }
   validates :room, presence: { message: "must be an existing room" }, if: :room_id?
   validate :no_duplicate_active_grant
+  validate :dm_anyone_must_be_workspace_wide
 
   class << self
     def revoke_for_membership!(membership)
@@ -64,6 +66,16 @@ class AgentGrant < ApplicationRecord
   end
 
   private
+    # dm_anyone gates DMing strangers, who share no room with the agent by
+    # definition, so a room scope would be meaningless. Only active
+    # workspace-wide grants count; room-scoped rows are rejected here and
+    # ignored by the DM check.
+    def dm_anyone_must_be_workspace_wide
+      if capability == "dm_anyone" && room_id.present?
+        errors.add(:room, "must be blank: dm_anyone is granted workspace-wide only")
+      end
+    end
+
     def no_duplicate_active_grant
       return if revoked? || capability.blank?
 

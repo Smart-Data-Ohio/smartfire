@@ -4,6 +4,12 @@ module Message::Broadcasts
     broadcast_unread_room unless thread_message?
   end
 
+  def broadcast_reactions_replace
+    broadcast_replace_to conversation, :messages,
+      target: ActionView::RecordIdentifier.dom_id(self, :boosts),
+      partial: "messages/boosts/reactions", attributes: { maintain_scroll: true }
+  end
+
   def broadcast_remove
     broadcast_remove_to message_stream_target, :messages
   end

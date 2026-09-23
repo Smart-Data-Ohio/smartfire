@@ -2,23 +2,15 @@ class Agents::WorkController < ApplicationController
   allow_agent_access only: %i[ index show update result ]
 
   before_action :ensure_agent_token, only: %i[ index show update result ]
-  before_action :set_owned_thread, only: %i[ show update result ]
-
-  LIST_MAX_LIMIT = 100
 
   # GET /agents/work (Bearer-only, JSON). Lists the threads the agent
   # currently owns, newest first, max 100, filtered to rooms the agent's
-  # user still belongs to and where the agent holds read_messages.
+  # user still belongs to and where the agent holds read_messages. The
+  # lookup lives in Agents::WorkThreads, shared with the MCP tools.
   def index
     no_store_response!
 
-    agent = Current.agent
-    threads = ChannelThread.work.where(work_owner_id: agent.user_id)
-      .where(room_id: Membership.where(user_id: agent.user_id).select(:room_id))
-      .includes(:room, :work_owner, :tags, work_thread_links: %i[ github_pull_request event ]).order(updated_at: :desc, id: :desc).to_a
-    threads.select! { |thread| agent.can?(:read_messages, thread.room) }
-
-    render json: threads.first(LIST_MAX_LIMIT).map { |thread| work_thread_payload(thread) }
+    render_work_result Agents::WorkThreads.list(agent: Current.agent)
   end
 
   # GET /agents/work/:id (Bearer-only, JSON). Returns one owned thread.
@@ -26,7 +18,7 @@ class Agents::WorkController < ApplicationController
   def show
     no_store_response!
 
-    render json: work_thread_payload(@thread)
+    render_work_result Agents::WorkThreads.show(agent: Current.agent, id: params[:id])
   end
 
   # PATCH /agents/work/:id (Bearer-only, JSON). Updates the status, tags,
@@ -39,25 +31,13 @@ class Agents::WorkController < ApplicationController
   def update
     no_store_response!
 
-    unless Current.agent.can?(:manage_threads, @thread.room)
-      render json: { error: "Forbidden: agent lacks manage_threads capability" }, status: :forbidden
-      return
-    end
-
-    begin
-      @thread.update_work_by_agent!(
-        agent: Current.agent,
-        work_status: agent_work_field(:work_status),
-        note: params[:note].presence || params.dig(:work, :note),
-        tags: agent_work_field(:tags),
-        run_url: agent_work_field(:run_url)
-      )
-    rescue ActiveRecord::RecordInvalid => error
-      render json: { error: error.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
-      return
-    end
-
-    render json: work_thread_payload(@thread.reload)
+    render_work_result Agents::WorkThreads.update(
+      agent: Current.agent, id: params[:id],
+      work_status: agent_work_field(:work_status),
+      note: params[:note].presence || params.dig(:work, :note),
+      tags: agent_work_field(:tags),
+      run_url: agent_work_field(:run_url)
+    )
   end
 
   # PUT /agents/work/:id/result (Bearer-only, JSON). Replaces the pinned
@@ -69,24 +49,10 @@ class Agents::WorkController < ApplicationController
   def result
     no_store_response!
 
-    unless Current.agent.can?(:manage_threads, @thread.room)
-      render json: { error: "Forbidden: agent lacks manage_threads capability" }, status: :forbidden
-      return
-    end
-
-    unless params.key?(:markdown)
-      render json: { error: "Markdown can't be blank" }, status: :unprocessable_entity
-      return
-    end
-
-    begin
-      @thread.update_result_by_agent!(agent: Current.agent, markdown: params[:markdown])
-    rescue ActiveRecord::RecordInvalid => error
-      render json: { error: error.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
-      return
-    end
-
-    render json: work_thread_payload(@thread.reload)
+    render_work_result Agents::WorkThreads.set_result(
+      agent: Current.agent, id: params[:id],
+      markdown: params[:markdown], markdown_given: params.key?(:markdown)
+    )
   end
 
   private
@@ -96,17 +62,14 @@ class Agents::WorkController < ApplicationController
       end
     end
 
-    # Ownership, current room membership, and read_messages in the room:
-    # like every other agent endpoint, a room the agent's user no longer
-    # belongs to, or can no longer read, answers 404 (index filters the
-    # same rows out), so a revoked read grant cannot still read or write
-    # work by id.
-    def set_owned_thread
-      @thread = ChannelThread.work.where(work_owner_id: Current.agent.user_id)
-        .includes(:room, :work_owner, :tags, work_thread_links: %i[ github_pull_request event ]).find_by(id: params[:id])
-
-      unless @thread && @thread.room.memberships.exists?(user_id: Current.agent.user_id) && Current.agent.can?(:read_messages, @thread.room)
+    def render_work_result(result)
+      if result.ok?
+        payload = result.payload.is_a?(Array) ? result.payload.map { |thread| work_thread_payload(thread) } : work_thread_payload(result.payload)
+        render json: payload, status: result.status
+      elsif result.status == :not_found
         head :not_found
+      else
+        render json: result.failure_body, status: result.status
       end
     end
 
