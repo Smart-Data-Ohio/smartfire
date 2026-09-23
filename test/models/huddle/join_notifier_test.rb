@@ -236,6 +236,17 @@ class Huddle::JoinNotifierTest < ActiveSupport::TestCase
     end
   end
 
+  test "an outsider with huddle invitations switched off still banners but gets no push" do
+    david_grant = issue_seen(@room, users(:david), memberships(:david_david_and_jason))
+    resolve_ring(users(:jason))
+    users(:jason).update!(inbox_preferences: { "huddle_invitations" => false })
+
+    @pool.expects(:queue).never
+    assert_broadcasts(notice_stream(users(:jason)), 1) do
+      Huddle::JoinNotifier.notify_join(david_grant)
+    end
+  end
+
   test "a muted room still banners and pushes the outsider" do
     david_grant = issue_seen(@room, users(:david), memberships(:david_david_and_jason))
     resolve_ring(users(:jason))

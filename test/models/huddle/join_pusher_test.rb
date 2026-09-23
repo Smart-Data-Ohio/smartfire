@@ -115,6 +115,15 @@ class Huddle::JoinPusherTest < ActiveSupport::TestCase
     push!
   end
 
+  test "a recipient with huddle invitations switched off gets no push and burns no throttle window" do
+    users(:jason).update!(inbox_preferences: { "huddle_invitations" => false })
+
+    @pool.expects(:queue).never
+    push!
+
+    assert_nil @membership.reload.last_huddle_join_push_at
+  end
+
   test "a recipient with no subscriptions burns no throttle window" do
     Push::Subscription.where(user: users(:jason)).destroy_all
 

@@ -13,6 +13,9 @@ class Huddle::JoinPusher
 
   def push
     return unless grant && room && recipient && joiner
+    # Members who switched huddle inbox items off also skip join pushes;
+    # the in-app banner still shows (broadcast separately by the notifier).
+    return unless recipient.inbox_preferences.huddle_invitations
     return unless policy.push?
 
     subscriptions = push_subscriptions_for_recipient
