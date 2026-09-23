@@ -1,5 +1,4 @@
 class Agents::PinsController < ApplicationController
-  include AgentAuthorization
   include AgentApiThrottle
 
   allow_agent_access only: %i[ create destroy ]
@@ -9,45 +8,40 @@ class Agents::PinsController < ApplicationController
   # gets the same 403 JSON that ensure_agent_token would return.
   rescue_from ActionController::InvalidAuthenticityToken, with: :reject_session_request
 
-  before_action :set_message, only: %i[ create destroy ]
   before_action :ensure_agent_token, only: %i[ create destroy ]
-  require_agent_capability :post_messages, only: %i[ create destroy ]
   throttle_agent_api limit: 60, only: %i[ create destroy ]
 
   # POST /agents/messages/:id/pin (Bearer-only, JSON). Pins the message
   # in its room, posting the pin note as the agent. Idempotent: pinning
-  # an already-pinned message succeeds without duplicating.
+  # an already-pinned message succeeds without duplicating. The flow
+  # lives in Agents::Pins, shared with the MCP pin_message tool.
   def create
-    pin = MessagePin.pin!(message: @message, pinner: Current.user)
-    render json: { pinned: true, message_id: pin.message_id, pin_count: pin.room.message_pins.count }, status: :created
-  rescue ActiveRecord::RecordInvalid
-    render json: { pinned: true, message_id: @message.id, pin_count: @message.room.message_pins.count }, status: :ok
-  rescue MessagePin::CapReachedError => error
-    render json: { error: error.message }, status: :unprocessable_entity
+    render_pin_result Agents::Pins.pin(agent: Current.agent, message_id: params[:id])
   end
 
   # DELETE /agents/messages/:id/pin (Bearer-only, JSON). Unpinning a
-  # message that is not pinned still succeeds.
+  # message that is not pinned still succeeds. Shared with the MCP
+  # unpin_message tool through Agents::Pins.
   def destroy
-    if (pin = @message.message_pins.first)
-      pin.unpin!
-    end
-
-    render json: { pinned: false, message_id: @message.id, pin_count: @message.room.message_pins.count }
+    render_pin_result Agents::Pins.unpin(agent: Current.agent, message_id: params[:id])
   end
 
   private
-    def set_message
-      @message = Current.user.reachable_messages.find(params[:id])
-    rescue ActiveRecord::RecordNotFound
-      head :not_found
-    end
-
     def ensure_agent_token
       reject_session_request unless authenticated_by.agent_token?
     end
 
     def reject_session_request
-      render json: { error: "Forbidden: Bearer agent token required" }, status: :forbidden
+      render json: { error: "Forbidden: #{"Bearer"} agent token required" }, status: :forbidden
+    end
+
+    def render_pin_result(result)
+      if result.ok?
+        render json: result.payload, status: result.status
+      elsif result.status == :not_found
+        head :not_found
+      else
+        render json: result.failure_body, status: result.status
+      end
     end
 end
