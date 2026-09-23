@@ -1,7 +1,7 @@
 module SearchesHelper
   def search_results_tag(&)
     tag.div id: "search-results", class: "messages searches__results", data: {
-      controller: "search-results",
+      controller: "search-results message-list",
       search_results_target: "messages",
       search_results_me_class: "message--me",
       search_results_threaded_class: "message--threaded",

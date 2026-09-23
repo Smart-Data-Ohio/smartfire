@@ -33,9 +33,10 @@ class SendingMessagesTest < ApplicationSystemTestCase
     end
 
     within_message messages(:third) do
-      reveal_message_actions
-      click_on "Edit message", exact: true
+      right_click_message
     end
+    assert_message_menu_open
+    click_on "Edit message", exact: true
     assert_selector "#composer", text: "Editing Message"
     fill_in_markdown "Write a message", with: "Redacted!"
     click_on "Send Message"
@@ -57,10 +58,11 @@ class SendingMessagesTest < ApplicationSystemTestCase
     end
 
     within_message messages(:third) do
-      reveal_message_actions
-      accept_confirm do
-        click_on "Delete message"
-      end
+      right_click_message
+    end
+    assert_message_menu_open
+    accept_confirm do
+      click_on "Delete message"
     end
 
     using_session("Kevin") do

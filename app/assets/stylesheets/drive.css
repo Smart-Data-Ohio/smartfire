@@ -279,8 +279,11 @@ a:hover .drive-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  inline-size: 1.4rem;
-  block-size: 1.4rem;
+  /* WCAG 2.5.8: pointer targets are at least 24x24 CSS px. */
+  inline-size: max(1.4rem, 24px);
+  block-size: max(1.4rem, 24px);
+  min-inline-size: 24px;
+  min-block-size: 24px;
   border: 0;
   border-radius: 999px;
   background: transparent;

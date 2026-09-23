@@ -60,9 +60,10 @@ class WorkspaceMarkdownTest < ApplicationSystemTestCase
     end
 
     within_message(message) do
-      reveal_message_actions
-      click_on "Edit message", exact: true
+      right_click_message
     end
+    assert_message_menu_open
+    click_on "Edit message", exact: true
     assert_selector "#composer", text: "Editing Message"
     assert_field "Write a message", with: MARKDOWN
     fill_in_markdown "Write a message", with: MARKDOWN.sub("Design review", "Review complete")
@@ -80,9 +81,10 @@ class WorkspaceMarkdownTest < ApplicationSystemTestCase
     end
     join_room rooms(:designers)
     within_message(message) do
-      reveal_message_actions
-      click_on "Edit message", exact: true
+      right_click_message
     end
+    assert_message_menu_open
+    click_on "Edit message", exact: true
     assert_field "Write a message", with: MARKDOWN.sub("Design review", "Review complete")
   end
 
@@ -143,9 +145,10 @@ class WorkspaceMarkdownTest < ApplicationSystemTestCase
     assert_message_text "A useful point"
     message = Message.find_by!(markdown_source: "**A useful point** with `inline code`.")
     within_message(message) do
-      reveal_message_actions
-      click_on "Reply", exact: true
+      right_click_message
     end
+    assert_message_menu_open
+    click_on "Reply", exact: true
     assert_selector "#composer [data-composer-target='contextLabel']", text: "Replying to JZ"
     assert_selector "#composer [data-composer-target='contextPreview']", text: "A useful point"
     assert_field "Write a message", with: ""

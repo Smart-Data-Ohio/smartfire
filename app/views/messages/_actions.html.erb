@@ -1,20 +1,11 @@
-<%# The message action menu is opened by right-click, keyboard context-menu, or a mobile long-press. %>
-<%# Keep this partial in sync with messages/_template.html.erb when the message shell changes. %>
-
-<% message_url = message_action_url(message) %>
-<% permalink_url = message_link_url(message) %>
-<% actions_url = if message.thread_message?
-  actions_room_thread_message_url(message.room, message.thread, message)
-else
-  actions_room_message_url(message.room, message)
-end %>
+<%# The shared message action menu, rendered once per page from the layout. %>
+<%# A message-list controller opens it for one message at a time through the %>
+<%# message-actions:open window event; the quick-reaction forms get their %>
+<%# action and Turbo frame from the message element when it opens. %>
 
 <div class="message__actions"
-     data-controller="message-actions"
-     data-message-actions-message-url-value="<%= message_url %>"
-     data-message-actions-permalink-url-value="<%= permalink_url %>"
-     data-message-actions-metadata-url-value="<%= actions_url %>">
-  <div id="<%= dom_id(message, :actions) %>"
+     data-controller="message-actions">
+  <div id="message-actions-menu"
        class="message__actions-menu border shadow"
        popover="manual"
        role="menu"
@@ -23,13 +14,14 @@ end %>
        data-message-actions-target="menu">
     <div class="message__quick-reactions" role="group" aria-label="Reactions">
       <% EmojiHelper::REACTIONS.each do |character, title| %>
-        <%= form_with model: [ message, Boost.new ], class: "message__reaction-form",
-              data: { turbo_frame: dom_id(message, :boosting), action: "submit->message-actions#close" } do |form| %>
+        <%= form_with url: "#", method: :post, class: "message__reaction-form",
+              data: { action: "submit->message-actions#close" } do %>
           <%= hidden_field_tag "boost[content]", character %>
-          <%= form.button type: "submit", title: title, class: "btn message__quick-reaction", role: "menuitem", data: { reaction: character, message_actions_target: "item" } do %>
+          <button type="submit" title="<%= title %>" class="btn message__quick-reaction" role="menuitem"
+                  data-reaction="<%= character %>" data-message-actions-target="item">
             <span aria-hidden="true"><%= character %></span>
             <span class="for-screen-reader"><%= title %></span>
-          <% end %>
+          </button>
         <% end %>
       <% end %>
     </div>
@@ -49,7 +41,7 @@ end %>
 
       <%= tag.button type: "button", class: "btn message__menu-action", role: "menuitem",
             title: "Copy link", aria: { label: "Copy link" },
-            data: { action: "message-actions#copyLink", message_actions_target: "item", copy_to_clipboard_content_value: message_url } do %>
+            data: { action: "message-actions#copyLink", message_actions_target: "item" } do %>
         <%= image_tag "link.svg", class: "colorize--black", size: 20, aria: { hidden: "true" } %>
         <span>Copy message link</span>
       <% end %>
@@ -66,13 +58,10 @@ end %>
         <span data-message-actions-target="threadLabel">Create thread</span>
       <% end %>
 
-      <% if message.content_type.attachment? %>
-        <%= link_to rails_blob_path(message.attachment, disposition: "attachment", only_path: true),
-              class: "btn message__menu-action hide-in-ios-pwa",
-              role: "menuitem", data: { message_actions_target: "item" } do %>
-          <%= image_tag "download.svg", class: "colorize--black", size: 20, aria: { hidden: "true" } %>
-          <span>Download attachment</span>
-        <% end %>
+      <%= tag.a class: "btn message__menu-action hide-in-ios-pwa", role: "menuitem", hidden: true,
+            data: { message_actions_target: "item downloadLink" } do %>
+        <%= image_tag "download.svg", class: "colorize--black", size: 20, aria: { hidden: "true" } %>
+        <span>Download attachment</span>
       <% end %>
 
       <%= tag.button type: "button", class: "btn message__menu-action message__edit-action", role: "menuitem", hidden: true,
@@ -91,13 +80,13 @@ end %>
     <span class="for-screen-reader" role="status" aria-live="polite" data-message-actions-target="status"></span>
   </div>
 
-  <dialog class="message-forward-dialog" aria-labelledby="<%= dom_id(message, :forward_title) %>"
+  <dialog class="message-forward-dialog" aria-labelledby="message-forward-title"
           data-message-actions-target="forwardDialog">
     <form class="message-forward-dialog__form" data-action="submit->message-actions#submitForward">
       <header class="message-forward-dialog__header">
         <div>
           <span class="message-forward-dialog__eyebrow">Forward message</span>
-          <h2 id="<%= dom_id(message, :forward_title) %>">Choose destinations</h2>
+          <h2 id="message-forward-title">Choose destinations</h2>
         </div>
         <button type="button" class="btn btn--borderless message-forward-dialog__close"
                 aria-label="Close forward dialog" data-action="message-actions#closeForward">×</button>

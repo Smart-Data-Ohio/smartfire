@@ -57,9 +57,29 @@ module SystemTestHelper
     assert_selector ".rooms a", class: "unread", text: "#{room.name}", wait: 5
   end
 
-  def reveal_message_actions
+  # Right-clicks the message body in the current scope. Call it inside
+  # within_message, then assert on the shared menu outside the scope.
+  def right_click_message
     find("[data-message-edit-format], [data-reply-target='body']", match: :first).right_click
-    assert_selector ".message[data-message-actions-open] .message__quick-reaction", visible: true
+  end
+
+  def assert_message_menu_open
+    assert_selector "[data-message-actions-target='menu']", visible: true, wait: 10
+    assert_selector ".message[data-message-actions-open]"
+  end
+
+  def reveal_message_actions
+    right_click_message
+    assert_message_menu_open
+  end
+
+  # Opens the shared per-page message menu for one message: right-clicks
+  # the message body, then asserts on the menu outside the message scope.
+  def open_message_menu(message)
+    within_message(message) do
+      right_click_message
+    end
+    assert_message_menu_open
   end
 
   def dismiss_pwa_install_prompt
@@ -71,5 +91,18 @@ module SystemTestHelper
     if page.has_css?("[data-pwa-install-target~='dialog']", visible: :visible, wait: 0)
       click_on("Close")
     end
+  end
+
+  # Simulates a touch long-press on a node. Pass move_by to drag during the
+  # hold, which must cancel the press instead of opening the menu.
+  def long_press(node, move_by: nil, hold: 0.7)
+    action = page.driver.browser.action
+    touch = action.add_pointer_input(:touch, "message-touch")
+    action.move_to(node.native, device: "message-touch")
+    action.pointer_down(:left, device: "message-touch")
+    action.move_by(*move_by, device: "message-touch") if move_by
+    action.pause(device: touch, duration: hold)
+    action.pointer_up(:left, device: "message-touch")
+    action.perform
   end
 end

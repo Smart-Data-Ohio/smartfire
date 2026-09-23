@@ -5,6 +5,7 @@ import {
   keepScroll,
   trimChildren,
 } from "helpers/dom_helpers"
+import { silenceLiveRegion } from "helpers/live_region_helpers"
 import { ThreadStyle } from "models/message_formatter"
 
 const MAX_MESSAGES = 300
@@ -145,7 +146,9 @@ export default class MessagePaginator {
     const resp = await this.#fetchPage()
     if (resp.statusCode === 200) {
       const page = await this.#formatPage(resp)
+      const restoreLiveRegion = silenceLiveRegion(this.#container)
       this.#container.replaceChildren(page)
+      restoreLiveRegion()
     }
   }
 
@@ -160,6 +163,7 @@ export default class MessagePaginator {
     if (resp.statusCode === 200) {
       const page = await this.#formatPage(resp)
       const lastNewElement = page.lastElementChild
+      const restoreLiveRegion = silenceLiveRegion(this.#container)
 
       keepScroll(this.#container, top, () => {
         insertHTMLFragment(page, this.#container, top)
@@ -169,6 +173,7 @@ export default class MessagePaginator {
           this.#messageFormatter.format(lastNewElement.nextElementSibling, ThreadStyle.thread)
         }
       })
+      restoreLiveRegion()
 
       this.trimExcessMessages(!top)
     }

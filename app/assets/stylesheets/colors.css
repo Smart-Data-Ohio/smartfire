@@ -22,6 +22,9 @@
   --color-message-bg: oklch(var(--lch-gray));
   --color-text: oklch(var(--lch-black));
   --color-text-reversed: oklch(var(--lch-white));
+  /* Muted text aliases the workspace token (>= 4.5:1 in both themes); the
+     border token it replaced is only ~2:1 and stays for borders. */
+  --color-text-subtle: var(--workspace-text-muted);
   --color-link: oklch(var(--lch-blue));
   --color-border: oklch(var(--lch-gray));
   --color-border-dark: oklch(var(--lch-gray-dark));
