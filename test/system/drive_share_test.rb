@@ -42,6 +42,11 @@ class DriveShareTest < ApplicationSystemTestCase
         return {
           requestAccessToken(override) {
             mock.requestTokenCalls.push(override || {});
+            if (mock.scenario.tokenErrorCallback) {
+              const err = JSON.parse(JSON.stringify(mock.scenario.tokenErrorCallback));
+              setTimeout(() => config.error_callback && config.error_callback(err), 0);
+              return;
+            }
             const response = JSON.parse(JSON.stringify(mock.scenario.token));
             setTimeout(() => config.callback(response), 0);
           }
@@ -427,17 +432,15 @@ class DriveShareTest < ApplicationSystemTestCase
     inject_drive_share_mocks(drive_scenario("picker" => "cancel"))
 
     find("button.composer__drive-btn").click
+    wait_for_drive_mock("pickerVisible", 1)
 
-    within(".drive-share__panel") do
-      assert_text "No file chosen. Nothing was shared."
-      assert_button "Choose again"
-    end
+    assert_drive_panel_hidden
     assert_empty mock_calls("driveCalls")
 
     page.execute_script("window.__driveShareMock.scenario.picker = #{drive_scenario['picker'].to_json}")
-    within(".drive-share__panel") { click_on "Choose again" }
+    find("button.composer__drive-btn").click
 
-    assert_selector ".drive-share-dialog", visible: true
+    assert_selector ".drive-share-dialog", visible: true, wait: 10
     within(".drive-share-dialog") { click_on "Attach only" }
     assert_selector ".composer__drive-attachments .drive-attachment-chip", text: "Q3 Planning"
   end
@@ -446,18 +449,123 @@ class DriveShareTest < ApplicationSystemTestCase
     inject_drive_share_mocks(drive_scenario("token" => { "error" => "access_denied" }))
 
     find("button.composer__drive-btn").click
+    wait_for_drive_mock("requestTokenCalls", 1)
 
-    within(".drive-share__panel") do
-      assert_text "Google authorization was cancelled. Nothing was shared."
-      assert_button "Try again"
-    end
+    assert_drive_panel_hidden
     assert_empty mock_calls("driveCalls")
     assert_empty mock_calls("pickerBuilds")
 
     page.execute_script("window.__driveShareMock.scenario.token = #{drive_scenario['token'].to_json}")
+    find("button.composer__drive-btn").click
+
+    assert_selector ".drive-share-dialog", visible: true, wait: 10
+  end
+
+  test "picker cancel returns quietly and the drive button works again" do
+    inject_drive_share_mocks(drive_scenario("picker" => "cancel"))
+
+    find("button.composer__drive-btn").click
+    wait_for_drive_mock("pickerVisible", 1)
+
+    assert_drive_panel_hidden
+    assert_drive_button_focused
+    assert_empty mock_calls("driveCalls")
+
+    page.execute_script("window.__driveShareMock.scenario.picker = #{drive_scenario['picker'].to_json}")
+    find("button.composer__drive-btn").click
+
+    assert_selector ".drive-share-dialog", visible: true, wait: 10
+    within(".drive-share-dialog") { click_on "Attach only" }
+    assert_selector ".composer__drive-attachments .drive-attachment-chip", text: "Q3 Planning"
+  end
+
+  test "closed consent popup returns quietly to the composer" do
+    inject_drive_share_mocks(drive_scenario("token" => { "error" => "popup_closed" }))
+
+    find("button.composer__drive-btn").click
+    wait_for_drive_mock("requestTokenCalls", 1)
+
+    assert_drive_panel_hidden
+    assert_drive_button_focused
+    assert_empty mock_calls("pickerBuilds")
+    assert_empty mock_calls("driveCalls")
+
+    page.execute_script("window.__driveShareMock.scenario.token = #{drive_scenario['token'].to_json}")
+    find("button.composer__drive-btn").click
+
+    assert_selector ".drive-share-dialog", visible: true, wait: 10
+  end
+
+  test "consent popup closed via GIS error callback returns quietly" do
+    inject_drive_share_mocks(drive_scenario.merge("tokenErrorCallback" => { "type" => "popup_closed" }))
+
+    find("button.composer__drive-btn").click
+    wait_for_drive_mock("requestTokenCalls", 1)
+
+    assert_drive_panel_hidden
+    assert_drive_button_focused
+    assert_empty mock_calls("pickerBuilds")
+
+    page.execute_script("window.__driveShareMock.scenario.tokenErrorCallback = null")
+    find("button.composer__drive-btn").click
+
+    assert_selector ".drive-share-dialog", visible: true, wait: 10
+  end
+
+  test "real error dialog closes with the Close button and the drive button works again" do
+    inject_drive_share_mocks(drive_scenario("token" => { "error" => "server_error" }))
+
+    find("button.composer__drive-btn").click
+
+    within(".drive-share__panel") do
+      assert_text "Google authorization failed. Nothing was shared.", wait: 10
+      assert_button "Try again"
+      assert_button "Close"
+    end
+
+    within(".drive-share__panel") { click_on "Close" }
+
+    assert_drive_panel_hidden
+    assert_drive_button_focused
+
+    page.execute_script("window.__driveShareMock.scenario.token = #{drive_scenario['token'].to_json}")
+    find("button.composer__drive-btn").click
+
+    assert_selector ".drive-share-dialog", visible: true, wait: 10
+  end
+
+  test "real error dialog closes with Esc" do
+    inject_drive_share_mocks(drive_scenario("token" => { "error" => "server_error" }))
+
+    find("button.composer__drive-btn").click
+
+    within(".drive-share__panel") do
+      assert_text "Google authorization failed. Nothing was shared.", wait: 10
+    end
+
+    find(".drive-share__panel .drive-share__action").send_keys(:escape)
+
+    assert_drive_panel_hidden
+    assert_drive_button_focused
+  end
+
+  test "try again re-opens the picker after a real error" do
+    inject_drive_share_mocks(drive_scenario("token" => { "error" => "server_error" }))
+
+    find("button.composer__drive-btn").click
+
+    within(".drive-share__panel") do
+      assert_text "Google authorization failed. Nothing was shared.", wait: 10
+      assert_button "Close"
+      assert_button "Try again"
+    end
+    builds_before = mock_calls("pickerBuilds").length
+
+    page.execute_script("window.__driveShareMock.scenario.token = #{drive_scenario['token'].to_json}")
     within(".drive-share__panel") { click_on "Try again" }
 
-    assert_selector ".drive-share-dialog", visible: true
+    assert_selector ".drive-share-dialog", visible: true, wait: 10
+    assert_operator mock_calls("pickerBuilds").length, :>, builds_before
   end
 
   test "script load failure offers retry without hanging the composer" do
@@ -768,8 +876,9 @@ class DriveShareTest < ApplicationSystemTestCase
     within(".drive-share__panel") do
       assert_text "Waiting for Google authorization"
       click_on "Cancel"
-      assert_text "Google authorization was cancelled. Nothing was shared."
     end
+    assert_drive_panel_hidden
+    assert_drive_button_focused
 
     page.execute_script("window.__driveShareMock.lastTokenConfig.callback({access_token: 'delayed-token'})")
 
@@ -785,8 +894,9 @@ class DriveShareTest < ApplicationSystemTestCase
     within(".drive-share__panel") do
       assert_text "Choose a file in the Google Drive window", wait: 10
       click_on "Cancel"
-      assert_text "No file chosen. Nothing was shared."
     end
+    assert_drive_panel_hidden
+    assert_drive_button_focused
 
     page.execute_script(
       "window.__driveShareMock.lastPickerCallback({action: 'picked', docs: [#{drive_scenario['picker'].to_json}]})"
@@ -1121,5 +1231,29 @@ class DriveShareTest < ApplicationSystemTestCase
       assert_not_includes page.evaluate_script("document.documentElement.outerHTML"), token
       storage = page.evaluate_script("[JSON.stringify({...localStorage}), JSON.stringify({...sessionStorage})].join(' ')")
       assert_not_includes storage, token
+    end
+
+    def assert_drive_panel_hidden
+      assert_selector ".drive-share__panel[hidden]", visible: false
+      assert_no_selector ".drive-share__panel:not([hidden])"
+    end
+
+    # Focus assertions use document.activeElement inside a synchronize
+    # block: :focus selectors stop matching when parallel headless
+    # windows lose window focus.
+    def assert_drive_button_focused
+      page.document.synchronize do
+        focused = page.evaluate_script(
+          "document.activeElement === document.querySelector('button.composer__drive-btn')"
+        )
+        assert focused, "expected focus to return to the Drive button"
+      end
+    end
+
+    def wait_for_drive_mock(name, count, timeout: 10)
+      page.document.synchronize(timeout, errors: [ Capybara::ExpectationNotMet ]) do
+        actual = page.evaluate_script("window.__driveShareMock.#{name}.length")
+        raise Capybara::ExpectationNotMet, "expected #{count} #{name}, got #{actual}" unless actual >= count
+      end
     end
 end
