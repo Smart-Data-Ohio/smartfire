@@ -22,6 +22,7 @@ class Huddle::JoinNotifier
       room = Room.alive.find_by(id: grant.room_id)
       joiner = grant.user
       return unless room && active_human?(joiner)
+      return unless grant_still_in_call?(grant)
 
       in_call_ids = in_call_user_ids(room)
       memberships = room.memberships.includes(:user).where.not(user_id: joiner.id)
@@ -63,6 +64,14 @@ class Huddle::JoinNotifier
     end
 
     private
+      # The job runs after the sighting, so a joiner who already left or
+      # was revoked reads the live row, not the sighting: without this a
+      # quick join-then-leave toasts "joined" for someone already gone,
+      # after the "left" the leave path already sent inline.
+      def grant_still_in_call?(grant)
+        HuddleGrant.active.in_call.where(id: grant.id).exists?
+      end
+
       def in_call_user_ids(room)
         HuddleGrant.active.in_call.where(room_id: room.id).distinct.pluck(:user_id).to_set
       end

@@ -218,6 +218,19 @@ class Huddle::JoinNotifierTest < ActiveSupport::TestCase
     end
   end
 
+  test "a join job running after the joiner left notifies nobody" do
+    grant = HuddleGrant.issue!(session: sessions(:david_safari),
+      membership: memberships(:david_david_and_jason))
+    grant.record_seen!
+    resolve_ring(users(:jason))
+    assert grant.mark_out_of_call!
+
+    @pool.expects(:queue).never
+    assert_broadcasts(notice_stream(users(:jason)), 0) do
+      perform_enqueued_jobs only: Huddle::JoinNoticeJob
+    end
+  end
+
   test "a viewer whose ring is still live gets no join notice" do
     david_grant = issue_seen(@room, users(:david), memberships(:david_david_and_jason))
 
@@ -231,6 +244,7 @@ class Huddle::JoinNotifierTest < ActiveSupport::TestCase
     david_grant = issue_seen(@room, users(:david), memberships(:david_david_and_jason))
 
     travel 61.seconds do
+      david_grant.update_columns(last_seen_at: Time.current) # still connected
       @pool.expects(:queue).once
       assert_broadcasts(notice_stream(users(:jason)), 1) do
         Huddle::JoinNotifier.notify_join(david_grant)
