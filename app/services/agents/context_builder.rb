@@ -26,9 +26,6 @@ module Agents
         return ServiceResult.fail("Message not found", status: :not_found) unless message
 
         thread = message.thread
-        if thread_id.present? && thread_id.to_i != message.thread_id.to_i
-          return ServiceResult.fail("Message is not in the given thread")
-        end
       else
         thread = ChannelThread.find_by(id: thread_id)
         return ServiceResult.fail("Thread not found", status: :not_found) unless thread
@@ -41,6 +38,12 @@ module Agents
       end
       unless agent.can?(:read_messages, room)
         return ServiceResult.fail("Forbidden: agent lacks read_messages capability", status: :forbidden)
+      end
+
+      # After authorization: an unauthorized caller gets the same 404 or
+      # 403 whatever thread_id it passes, never a mismatch oracle.
+      if message_id.present? && thread_id.present? && thread_id.to_i != message.thread_id.to_i
+        return ServiceResult.fail("Message is not in the given thread")
       end
 
       scope = thread ? thread.messages : room.root_messages

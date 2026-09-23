@@ -127,6 +127,30 @@ class Agents::ContextsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "a mismatched thread_id in a foreign room is still 404" do
+    foreign = rooms(:designers).messages.create!(
+      creator: users(:david), body: "Stranger", client_message_id: "ctx-foreign-mismatch"
+    )
+    thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Decoy thread")
+    ThreadMembership.join!(thread, users(:david))
+
+    get agents_context_url(message_id: foreign.id, thread_id: thread.id), headers: bearer_headers
+
+    assert_response :not_found
+  end
+
+  test "a mismatched thread_id without a read grant is still 403" do
+    AgentGrant.create!(agent: @agent, room: rooms(:bender_and_kevin), granted_by: users(:david), capability: "read_messages")
+    trigger = @room.messages.create!(creator: users(:david), body: "Unreadable", client_message_id: "ctx-unreadable-mismatch")
+    thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Decoy thread")
+    ThreadMembership.join!(thread, users(:david))
+
+    get agents_context_url(message_id: trigger.id, thread_id: thread.id), headers: bearer_headers
+
+    assert_response :forbidden
+    assert_equal "Forbidden: agent lacks read_messages capability", response.parsed_body["error"]
+  end
+
   test "requires read_messages" do
     AgentGrant.create!(agent: @agent, room: @room, granted_by: users(:david), capability: "post_messages")
     trigger = @room.messages.create!(creator: users(:david), body: "Gated", client_message_id: "ctx-gated")

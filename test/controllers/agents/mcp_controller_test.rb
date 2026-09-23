@@ -426,6 +426,40 @@ class Agents::McpControllerTest < ActionDispatch::IntegrationTest
     assert payload["authors"].any? { |author| author["human"] }
   end
 
+  test "get_context answers the same 404 whatever thread_id a foreign room passes" do
+    foreign = rooms(:designers).messages.create!(
+      creator: users(:david), body: "Stranger", client_message_id: "mcp-ctx-foreign"
+    )
+    thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Decoy thread")
+    ThreadMembership.join!(thread, users(:david))
+
+    assert_tool_error call_tool("get_context", { "message_id" => foreign.id }),
+      "Message not found"
+    assert_tool_error call_tool("get_context", { "message_id" => foreign.id, "thread_id" => thread.id }),
+      "Message not found"
+  end
+
+  test "get_context answers the same 403 whatever thread_id an unreadable room passes" do
+    grant!(capability: "read_messages", room: rooms(:bender_and_kevin))
+    trigger = @room.messages.create!(creator: users(:david), body: "Unreadable", client_message_id: "mcp-ctx-unreadable")
+    thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Decoy thread")
+    ThreadMembership.join!(thread, users(:david))
+
+    assert_tool_error call_tool("get_context", { "message_id" => trigger.id }),
+      "Forbidden: agent lacks read_messages capability"
+    assert_tool_error call_tool("get_context", { "message_id" => trigger.id, "thread_id" => thread.id }),
+      "Forbidden: agent lacks read_messages capability"
+  end
+
+  test "get_context still rejects mismatched threads for authorized callers" do
+    thread = ChannelThread.create!(room: @room, creator: users(:david), name: "Other thread")
+    ThreadMembership.join!(thread, users(:david))
+    trigger = @room.messages.create!(creator: users(:david), body: "Root trigger", client_message_id: "mcp-ctx-mismatch")
+
+    assert_tool_error call_tool("get_context", { "message_id" => trigger.id, "thread_id" => thread.id }),
+      "Message is not in the given thread"
+  end
+
   test "open_dm opens the owner DM and posts" do
     body = call_tool("open_dm", { "user_id" => users(:david).id, "markdown_source" => "MCP DM hello" })
     payload = structured(body)
