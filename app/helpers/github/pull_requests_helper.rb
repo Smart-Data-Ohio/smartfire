@@ -10,12 +10,16 @@ module Github::PullRequestsHelper
   # blind to an unpin whenever a newer card row dominates the maximum.
   # Like the card rows, the pins are read in memory off the preloaded
   # with_rendering_details association. The partial branches on the system
-  # note flag, so the key carries that too.
+  # note flag, so the key carries that too. Poll votes and closes touch
+  # the poll row without touching the message, so the key carries the
+  # poll's stamp as its own element for the same reason as pins (a vote
+  # retraction must bust the cache even when a newer card dominates).
   def message_with_pr_cards_cache_key(message)
     newest_card = (message.github_pull_requests.map(&:updated_at) + message.twitter_posts.map(&:updated_at) + message.events.map(&:updated_at)).compact.max
     key = [ message, newest_card ]
     key << github_pr_threads_stamp(message.room_id) if message.github_pull_requests.any?
     key << message.message_pins.map(&:updated_at).max
+    key << message.poll&.updated_at
     key << message.system_note?
     key
   end

@@ -120,6 +120,42 @@ class Agent::Delivery
       )
     end
 
+    # Delivers a slash_command invocation row to the agent's webhook.
+    # Mirrors the work-assignment delivery: the row is already committed
+    # as delivered (polling reads it), and this owes the webhook POST.
+    # Re-checks membership and the post_messages grant, since invoking a
+    # command requires them.
+    def deliver_command_webhook(event)
+      return unless AgentEvent::SLASH_DELIVERABLE_TYPES.include?(event.event_type)
+
+      agent = event.agent
+      room = Room.alive.find_by(id: event.room_id)
+      return unless room
+      return unless Membership.exists?(user_id: agent.user_id, room_id: room.id) && agent.can?(:post_messages, room)
+      return unless agent.user.webhook
+      return unless event.webhook_status == "none"
+
+      event.update!(webhook_status: "pending", webhook_next_attempt_at: Time.current)
+      Agent::EventWebhookJob.perform_later(event.id, event.webhook_attempts.to_i)
+    end
+
+    # Posts a slash-command invocation to the agent's webhook. The payload
+    # carries the same additive agent key as other deliveries plus the
+    # event type, the invoking user, the room, and the command name with
+    # its raw arguments. Response bodies are ignored.
+    def post_slash_command_webhook!(webhook, event, agent:)
+      metadata = event.metadata.is_a?(Hash) ? event.metadata : {}
+      payload = {
+        agent: { id: agent.id, name: agent.user.name, owner: agent.owner&.name, delivery_id: event.id },
+        event_type: event.event_type,
+        user: event.actor ? { id: event.actor.id, name: event.actor.name } : nil,
+        room: event.room ? { id: event.room.id, name: event.room.name } : nil,
+        command: { name: metadata["command"], arguments: metadata["arguments"] }
+      }.compact.to_json
+
+      webhook.post_payload(payload, secret: agent.ensure_webhook_signing_secret!)
+    end
+
     # Posts a work assignment change to the agent's webhook. The payload
     # carries the same additive agent key as other deliveries plus the
     # event type (work_assigned or work_unassigned) and a work key with
@@ -196,6 +232,8 @@ class Agent::Delivery
         post_approval_webhook!(webhook, approval, agent: agent, delivery_id: event.id)
       when "github_action_completed"
         post_github_action_webhook!(webhook, event, agent: agent)
+      when *AgentEvent::SLASH_DELIVERABLE_TYPES
+        post_slash_command_webhook!(webhook, event, agent: agent)
       when *AgentEvent::WORK_DELIVERABLE_TYPES
         metadata = event.metadata.is_a?(Hash) ? event.metadata : {}
         thread = ChannelThread.find_by(id: metadata["thread_id"])

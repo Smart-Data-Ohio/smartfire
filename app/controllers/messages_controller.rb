@@ -168,6 +168,7 @@ class MessagesController < ApplicationController
         Github::PullRequestReference.where(message_id: message_ids).joins(:pull_request).maximum("github_pull_requests.updated_at"),
         Twitter::PostReference.where(message_id: message_ids).joins(:post).maximum("twitter_posts.updated_at"),
         EventReference.where(message_id: message_ids).joins(:event).maximum("events.updated_at"),
+        Poll.where(message_id: message_ids).maximum(:updated_at),
         User.where(id: messages.map(&:creator_id)).maximum(:updated_at)
       ].compact.max&.utc&.to_fs(:usec)
     end
