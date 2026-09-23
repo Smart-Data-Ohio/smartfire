@@ -106,6 +106,11 @@ class MessageToolbarTest < ApplicationSystemTestCase
     assert_not before.any? { |name| name.end_with?(".json") && name.include?("emoji") },
       "expected no emoji data fetch before the picker opens"
 
+    # The room page fills Chrome's 250-entry resource-timing buffer, which
+    # would silently drop the fetch below. Clearing first keeps measuring
+    # exactly this open instead of buffer headroom.
+    page.evaluate_script("performance.clearResourceTimings()")
+
     hover_toolbar(messages(:third))
     within_message(messages(:third)) { click_button "Add reaction" }
     assert_selector "#emoji-picker-panel .emoji-picker__option[aria-label='Grinning face']", visible: true, wait: 10
