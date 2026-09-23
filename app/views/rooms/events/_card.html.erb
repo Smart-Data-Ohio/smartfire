@@ -19,6 +19,10 @@
     <p class="event-card__venue">Where: <%= event.venue.name %></p>
   <% end %>
 
+  <% if (meet_link = safe_meet_link(event)) %>
+    <p class="event-card__meet"><%= link_to "Join Google Meet", meet_link %></p>
+  <% end %>
+
   <p class="event-card__organizer">Organized by <%= event.organizer.name %></p>
 
   <%# The frame needs its own box: base.css renders bare turbo-frames as display:contents, which never intersects the viewport, so a lazy frame without this class would never load. %>

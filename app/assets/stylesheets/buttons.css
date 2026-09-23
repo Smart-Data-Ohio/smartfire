@@ -32,11 +32,7 @@
     }
 
     img:not([class]) {
-      filter: invert(0);
-
-      @media (prefers-color-scheme: dark) {
-        filter: invert(100%);
-      }
+      filter: var(--icon-filter, none);
     }
   }
 
@@ -117,13 +113,7 @@
     --btn-color: var(--color-text-reversed);
 
     img {
-      filter: invert(100%);
-    }
-
-    @media (prefers-color-scheme: dark) {
-      img {
-        filter: invert(0);
-      }
+      filter: var(--icon-filter-inverse, invert(100%));
     }
   }
 
@@ -161,11 +151,7 @@
   --hover-filter: brightness(0.7);
 
   img:not(.avatar) {
-    filter: invert(100%);
-
-    @media (prefers-color-scheme: dark) {
-      filter: invert(0%);
-    }
+    filter: var(--icon-filter-inverse, invert(100%));
   }
 }
 

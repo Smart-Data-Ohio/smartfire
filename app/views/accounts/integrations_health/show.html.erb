@@ -1,0 +1,109 @@
+<% @page_title = "Integration health" %>
+
+<% content_for :nav do %>
+  <div class="flex-item-justify-start">
+    <%= link_back_to_last_room_visited %>
+  </div>
+<% end %>
+
+<div class="panel flex flex-column gap">
+  <h1 class="margin-none">Integration health</h1>
+
+  <section aria-labelledby="health-github">
+    <h2 id="health-github">GitHub</h2>
+    <dl class="flex flex-column gap-half">
+      <div><dt>Workspace token</dt><dd><%= @github[:workspace_token] ? "Set" : "Not set — private cards need per-user accounts" %></dd></div>
+      <div><dt>GitHub App</dt><dd><%= @github[:app_configured] ? "Configured" : "Not configured — set GITHUB_APP_CLIENT_ID and GITHUB_APP_CLIENT_SECRET (see docs/github-app.md)" %></dd></div>
+      <div><dt>Webhook secret</dt><dd><%= @github[:webhook_secret] ? "Set" : "Not set — cards refresh on render only" %></dd></div>
+      <div><dt>Connected accounts</dt><dd><%= @github[:connected] %> (<%= @github[:app_tokens] %> App, <%= @github[:connected] - @github[:app_tokens] %> PAT)</dd></div>
+      <div><dt>Webhook deliveries (24h)</dt><dd><%= @github[:deliveries_24h] %></dd></div>
+    </dl>
+    <% if @github[:disconnected].any? %>
+      <h3>Disconnected accounts</h3>
+      <ul>
+        <% @github[:disconnected].each do |login, reason| %>
+          <li><strong>@<%= login %></strong> — <%= reason %></li>
+        <% end %>
+      </ul>
+    <% end %>
+    <% if @github[:last_errors].any? %>
+      <h3>Recent account errors</h3>
+      <ul>
+        <% @github[:last_errors].each do |login, error| %>
+          <li><strong>@<%= login %></strong> — <%= error %></li>
+        <% end %>
+      </ul>
+    <% end %>
+    <% if @github[:fetch_errors].any? %>
+      <h3>PR fetch errors</h3>
+      <ul>
+        <% @github[:fetch_errors].each do |owner, repo, number, error| %>
+          <li><strong><%= owner %>/<%= repo %>#<%= number %></strong> — <%= error %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+
+  <section aria-labelledby="health-google">
+    <h2 id="health-google">Google Calendar</h2>
+    <dl class="flex flex-column gap-half">
+      <div><dt>OAuth client</dt><dd><%= @google[:configured] ? "Configured" : "Not configured — set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET" %></dd></div>
+      <div><dt>Connected accounts</dt><dd><%= @google[:connected] %></dd></div>
+      <div><dt>Push channels</dt><dd><%= @google[:push][:enabled] ? "#{@google[:push][:count]} watching" : "Disabled — set GOOGLE_CALENDAR_WEBHOOK_URL for two-way RSVP sync (see docs/meet-and-rsvp.md)" %></dd></div>
+    </dl>
+    <% if @google[:disconnected].any? %>
+      <h3>Disconnected accounts</h3>
+      <ul>
+        <% @google[:disconnected].each do |email, reason| %>
+          <li><strong><%= email %></strong> — <%= reason %></li>
+        <% end %>
+      </ul>
+    <% end %>
+    <% if @google[:entry_errors].any? %>
+      <h3>Calendar entry errors</h3>
+      <ul>
+        <% @google[:entry_errors].each do |event_id, user_id, error| %>
+          <li><strong>event <%= event_id %> / user <%= user_id %></strong> — <%= error %></li>
+        <% end %>
+      </ul>
+    <% end %>
+    <% if @google[:push][:expiring].any? %>
+      <h3>Push channels expiring within 24 hours</h3>
+      <ul>
+        <% @google[:push][:expiring].each do |user_id, expires_at, error| %>
+          <li><strong>user <%= user_id %></strong> — expires <%= expires_at || "unknown" %><% if error.present? %> — <%= error %><% end %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+
+  <section aria-labelledby="health-fizzy">
+    <h2 id="health-fizzy">Fizzy</h2>
+    <p><%= @fizzy[:configured] ? "Configured" : @fizzy[:note] %></p>
+  </section>
+
+  <section aria-labelledby="health-delivery">
+    <h2 id="health-delivery">Webhook and agent delivery</h2>
+    <dl class="flex flex-column gap-half">
+      <div><dt>Agent webhooks pending</dt><dd><%= @agent_delivery[:pending] %></dd></div>
+      <div><dt>Agent webhooks failed (24h)</dt><dd><%= @agent_delivery[:failed] %></dd></div>
+    </dl>
+    <% if @agent_delivery[:recent_errors].any? %>
+      <h3>Recent delivery errors</h3>
+      <ul>
+        <% @agent_delivery[:recent_errors].each do |agent_id, event_type, error| %>
+          <li><strong>agent <%= agent_id %> / <%= event_type %></strong> — <%= error %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+
+  <section aria-labelledby="health-email">
+    <h2 id="health-email">Email to room</h2>
+    <% if @email[:enabled] %>
+      <p><%= pluralize(@email[:rooms_with_addresses], "room") %> with a forward-to address.</p>
+    <% else %>
+      <p>Inbound email is not configured. Set <code>INBOUND_EMAIL_DOMAIN</code> and the relay ingress password (see docs/email-to-room.md).</p>
+    <% end %>
+  </section>
+</div>

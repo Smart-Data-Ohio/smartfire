@@ -133,7 +133,7 @@ class AgentApproval < ApplicationRecord
   # The agent's current GitHub connection, if it still is the one recorded
   # on this request.
   def github_identity_current?
-    github_identity_matches?(agent&.user&.github_connected_account)
+    github_identity_matches?(Github::AgentIdentity.resolve(agent))
   end
 
   def decidable_by?(user)

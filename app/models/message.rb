@@ -47,6 +47,8 @@ class Message < ApplicationRecord
   has_many :referenced_messages, through: :message_references, source: :referenced_message
   has_many :incoming_message_references, class_name: "MessageReference",
     foreign_key: :referenced_message_id, dependent: :destroy, inverse_of: :referenced_message
+  has_many :link_embed_references, dependent: :destroy
+  has_many :link_embeds, through: :link_embed_references
 
   # autosave so records marked for destruction (an edit replacing the set)
   # are destroyed in the same transaction as the message save.
@@ -77,6 +79,8 @@ class Message < ApplicationRecord
   after_update_commit :resync_message_references
   after_update_commit :enqueue_quote_cards_refresh, if: :references_source_changed?
   after_destroy_commit :broadcast_quote_cards_removal
+  after_create_commit :sync_link_embed_references
+  after_update_commit :resync_link_embed_references
 
   # Tie-broken by id so the page windows agree with the (created_at, id)
   # tuple cursors in Pagination: ordering by created_at alone lets the
@@ -103,7 +107,8 @@ class Message < ApplicationRecord
       .with_attachment_details
       .with_boosts
       .preload(:message_pins)
-      .preload(:room, :github_pull_requests, :twitter_posts, :drive_attachments, events: [ :room, :organizer, :venue ],
+      .preload(:room, :github_pull_requests, :twitter_posts, :drive_attachments, link_embed_references: :link_embed,
+        events: [ :room, :organizer, :venue ],
         message_references: { referenced_message: [ :room, :rich_text_body, { attachment_attachment: :blob }, { creator: :avatar_attachment } ] },
         reply_to_message: [ :room, :rich_text_body, { creator: :avatar_attachment } ])
   }
@@ -183,6 +188,16 @@ class Message < ApplicationRecord
 
   def markdown?
     !markdown_source.nil?
+  end
+
+  # True when at least one embed card would render for this message: a
+  # generic embed with fetched text, or any LinkedIn embed (login-gated
+  # pages still render a link chip). The Remove embeds menu action shows
+  # only then. Uses the same predicates the card helpers filter on.
+  def renderable_embeds?
+    link_embed_references.includes(:link_embed).any? do |reference|
+      reference.link_embed.usable? || reference.link_embed.linkedin?
+    end
   end
 
   # True when the pending changes alter the message text itself, as opposed
@@ -319,6 +334,14 @@ class Message < ApplicationRecord
 
       Message.where(id: ids).update_all(updated_at: Time.current)
       Message.where(id: ids).find_each(&:broadcast_quote_cards_replace)
+    end
+
+    def sync_link_embed_references
+      LinkEmbed::ReferenceSync.call(self)
+    end
+
+    def resync_link_embed_references
+      LinkEmbed::ReferenceSync.call(self) if references_source_changed?
     end
 
     # Markdown edits rewrite the body through the renderer; legacy edits

@@ -974,6 +974,14 @@ img.message__attachment {
   }
 }
 
+:root[data-theme="light"] .message--mentioned .message__body-content {
+  --message-background: oklch(var(--lch-red) / 0.1);
+}
+
+:root[data-theme="dark"] .message--mentioned .message__body-content {
+  --message-background: oklch(var(--lch-red) / 0.2);
+}
+
 .message--threaded {
   .message__author,
   .message__avatar {

@@ -258,7 +258,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
   test "update updates a message belonging to the user" do
     message = @room.messages.where(creator: users(:david)).first
 
-    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(5)  # presentation plus meta plus all three card containers
+    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(7)  # presentation plus meta plus all five card containers
     put room_message_url(@room, message), params: { message: { body: "Updated body" } }
 
     assert_redirected_to room_message_url(@room, message)
@@ -269,7 +269,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     message = @room.messages.create!(creator: users(:david), markdown_source: "**Before**", client_message_id: "markdown-update")
     source = "## After\n\n`code`"
 
-    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(5)  # presentation plus meta plus all three card containers
+    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(7)  # presentation plus meta plus all five card containers
     put room_message_url(@room, message), params: { message: { markdown_source: source } }
 
     assert_redirected_to room_message_url(@room, message)
@@ -280,7 +280,7 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
   test "a legacy body update clears stale Markdown mode" do
     message = @room.messages.create!(creator: users(:david), markdown_source: "**Before**", client_message_id: "markdown-to-rich")
 
-    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(5)  # presentation plus meta plus all three card containers
+    Turbo::StreamsChannel.expects(:broadcast_replace_to).times(7)  # presentation plus meta plus all five card containers
     put room_message_url(@room, message), params: { message: { body: "Legacy again" } }
 
     assert_redirected_to room_message_url(@room, message)
@@ -416,6 +416,22 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "time.message__edited[data-local-time-target='title'][datetime]", text: "(edited)"
     assert_select ".message__edited[title^='Edited ']"
+  end
+
+  test "the edited marker renders the same UTC time in every time zone" do
+    message = @room.messages.create!(creator: users(:david), markdown_source: "original", client_message_id: "edited-tz")
+    message.update!(edited_at: Time.zone.parse("2026-09-22 12:00"))
+
+    titles = [ "Pacific Time (US & Canada)", "Tokyo" ].map do |zone|
+      users(:david).update!(time_zone: zone)
+
+      get room_message_url(@room, message)
+      assert_response :success
+      css_select("time.message__edited").first["title"]
+    end
+
+    assert_equal titles.first, titles.second
+    assert_equal "Edited #{message.reload.edited_at.utc.to_fs(:long)}", titles.first
   end
 
   test "editing a message broadcasts its meta so other clients see the edited marker" do

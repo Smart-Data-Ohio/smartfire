@@ -1,19 +1,21 @@
 /* VS Code's built-in Light+ and Dark+ colors come from the Shiki tokens. */
-pre.code-highlighted,
-.markdown-body pre.code-highlighted,
-.markdown-preview pre.code-highlighted {
+:root {
   --code-background: #ffffff;
   --code-foreground: #000000;
-
-  background-color: var(--code-background);
-  color: var(--code-foreground);
-
-  > code { color: inherit; }
 
   @media (prefers-color-scheme: dark) {
     --code-background: #1e1e1e;
     --code-foreground: #d4d4d4;
   }
+}
+
+pre.code-highlighted,
+.markdown-body pre.code-highlighted,
+.markdown-preview pre.code-highlighted {
+  background-color: var(--code-background);
+  color: var(--code-foreground);
+
+  > code { color: inherit; }
 }
 
 .trix-content pre.code-highlighted {
@@ -32,4 +34,20 @@ pre.code-highlighted,
     font-weight: var(--code-dark-font-weight);
     text-decoration: var(--code-dark-decoration);
   }
+}
+
+/* The per-token colors live inline, so the manual theme picks its side
+   here; the higher specificity wins over the media query above. */
+:root[data-theme="light"] .code-token {
+  color: var(--code-light);
+  font-style: var(--code-light-font-style);
+  font-weight: var(--code-light-font-weight);
+  text-decoration: var(--code-light-decoration);
+}
+
+:root[data-theme="dark"] .code-token {
+  color: var(--code-dark);
+  font-style: var(--code-dark-font-style);
+  font-weight: var(--code-dark-font-weight);
+  text-decoration: var(--code-dark-decoration);
 }

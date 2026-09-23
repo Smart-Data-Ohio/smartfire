@@ -44,6 +44,7 @@ Rails.application.routes.draw do
       resource :join_code, only: :create
       resource :logo, only: %i[ show destroy ]
       resource :custom_styles, only: %i[ edit update ]
+      resource :integrations_health, only: :show, controller: "integrations_health"
     end
   end
 
@@ -58,14 +59,19 @@ Rails.application.routes.draw do
 
   resources :users, only: :show do
     get :huddle_presence, on: :collection, to: "users/huddle_presence#show"
+    get :presence, on: :collection, to: "users/presences#show"
 
     scope module: "users" do
       resource :avatar, only: %i[ show destroy ]
       resource :ban, only: %i[ create destroy ]
+      resource :dnd_allowance, only: %i[ create destroy ]
 
       scope defaults: { user_id: "me" } do
         resource :sidebar, only: :show
         resource :profile
+        resource :status, only: :update, controller: "statuses"
+        resource :notification_settings, only: :update
+        resource :time_zone, only: :update, controller: "time_zones"
         resources :push_subscriptions do
           scope module: "push_subscriptions" do
             resources :test_notifications, only: :create
@@ -120,6 +126,7 @@ Rails.application.routes.draw do
       post :preview, on: :collection
       get :actions, on: :member
       get :forward_source, on: :member, controller: "message_forward_sources"
+      resource :embed_suppression, controller: "message_embed_suppressions", only: :create
       resources :forwards, controller: "message_forwards", only: :create
       get "forwards/destinations", to: "message_forwards#destinations", as: :forward_destinations
     end
@@ -129,6 +136,7 @@ Rails.application.routes.draw do
       resources :messages, controller: "channel_thread_messages", only: %i[ index show create update destroy ] do
         get :actions, on: :member
         get :forward_source, on: :member, controller: "message_forward_sources"
+        resource :embed_suppression, controller: "message_embed_suppressions", only: :create
         resources :forwards, controller: "message_forwards", only: :create
         get "forwards/destinations", to: "message_forwards#destinations", as: :forward_destinations
       end
@@ -171,6 +179,7 @@ Rails.application.routes.draw do
       resource :settings, only: :show
       resource :involvement, only: %i[ show update ]
       resources :github_subscriptions, only: %i[ create update destroy ]
+      resource :inbound_email_address, only: :create, controller: "inbound_email_addresses"
     end
 
     namespace :github do
@@ -201,6 +210,7 @@ Rails.application.routes.draw do
 
   resources :messages do
     resources :forwards, controller: "message_forwards", only: :create
+    resource :embed_suppression, controller: "message_embed_suppressions", only: :create
     get :forward_source, on: :member, controller: "message_forward_sources"
     get "forwards/destinations", to: "message_forwards#destinations", as: :forward_destinations
     resource :pin, controller: "messages/pins", only: %i[ create destroy ]
@@ -234,12 +244,15 @@ Rails.application.routes.draw do
   namespace :github do
     post "webhooks", to: "webhooks#create"
     resource :connection, only: %i[ create destroy ], controller: "connections"
+    get "app/connect", to: "app_connections#connect", as: :app_connect
+    get "app/callback", to: "app_connections#callback", as: :app_callback
   end
 
   namespace :google do
     post "connect", to: "connections#connect"
     get "callback", to: "connections#callback"
     delete "connection", to: "connections#destroy"
+    post "calendar/notifications", to: "calendar_notifications#create"
     get "drive/files", to: "drive_files#index", as: :drive_files
     get "drive/files/:id", to: "drive_files#show", as: :drive_file
   end
