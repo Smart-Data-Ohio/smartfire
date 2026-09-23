@@ -21,9 +21,11 @@ Tool results carry both `structuredContent` (the machine-readable payload)
 and a `text` part with the same payload serialized as JSON. A denied or
 failed tool call is still HTTP 200 with a JSON-RPC result: `isError: true`,
 the reason as text (the same message the REST endpoint renders), and
-`{ error, status }` structured. Malformed calls answer JSON-RPC errors
-instead (`-32602` for an unknown tool or missing argument, `-32020` for a
-header mismatch, `-32022` for an unsupported protocol version).
+`{ error, status }` structured. Budget denials add the REST 429's
+`cap`, `limit`, and `retry_after` fields. Malformed calls answer
+JSON-RPC errors instead (`-32602` for an unknown tool or missing
+argument, `-32020` for a header mismatch, `-32022` for an unsupported
+protocol version).
 
 Unparseable bodies answer HTTP 400 with `-32700`, and malformed
 envelopes — including batch arrays, which the spec forbids — answer HTTP

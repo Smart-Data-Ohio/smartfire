@@ -920,8 +920,8 @@ message renders with a working indicator and updates live in the room:
   Markdown-only and may start blank. Answers 201 with the message
   shape plus `thread_id` and `streaming: true`.
 - `PATCH /agents/streaming_messages/:id` appends `append` to the
-  stream, or replaces the whole body with `markdown_source` when no
-  append is given.
+  stream (whitespace-only appends land as written), or replaces the
+  whole body with `markdown_source` when no append is given.
 - `POST /agents/streaming_messages/:id/finalize` ends the stream.
   Finalizing an already-final message succeeds without repeating
   side effects.
@@ -930,15 +930,20 @@ Updates and finalizes only touch the agent's own streaming messages
 in its rooms (anything else is the same 404); all three need
 `post_messages` in the room. Starting and finalizing throttle at
 60/minute per credential, appends at 240/minute, and incremental
-broadcasts coalesce to about 4 per second per message.
+broadcasts coalesce to about 4 per second per message, with a trailing
+broadcast sending the final coalesced text within the window.
 
 Notifications, push, mention recording, agent delivery, bot webhooks,
 and search indexing all fire exactly once, at finalize — nothing
-fires while streaming. Streams that are never finalized auto-finalize
-after 10 minutes from the periodic runner. A locked thread freezes
-in-flight streams too: appends and finalizes wait with 422 until it
-unlocks (finalizing an already-final message still succeeds). The MCP
-mirrors are `start_stream`, `append_stream`, and `finalize_stream`.
+fires while streaming. Streams idle for 10 minutes — no append or
+replace — auto-finalize from the periodic runner; every append
+restarts the clock. An append racing a finalize loses with 422 and
+never edits the final message. A locked thread freezes in-flight
+streams too: appends and finalizes wait with 422 until it unlocks
+(finalizing an already-final message still succeeds). A suspended or
+deactivated agent's streams finalize quietly instead: marked final
+with no push, mentions, inbox, delivery, webhooks, or indexing. The
+MCP mirrors are `start_stream`, `append_stream`, and `finalize_stream`.
 
 ```sh
 curl -X POST https://smartfire.example.com/rooms/3/agents/streaming_messages \
@@ -988,25 +993,31 @@ page: messages, board posts, and external actions (approval requests,
 including GitHub and Fizzy card actions). Blank means unlimited. The
 bot page and the agent profile show today's usage next to the caps.
 
-Budgets count through the same services REST and MCP share, so both
-surfaces hit the same wall: an over-cap request answers 429 with
+Budgets count through the same services REST, MCP, and the bot-key
+posting API share, so every agent posting path hits the same wall: an
+over-cap request answers 429 with
 `{ "error": "Daily message budget exceeded (50/day)", "cap":
-"messages", "limit": 50, "retry_after": 3600 }`, and the owner gets
-one inbox item per cap per day, however many requests overflow (an
-ownerless agent notifies every administrator instead).
+"messages", "limit": 50, "retry_after": 3600 }` (MCP carries the same
+`cap`, `limit`, and `retry_after` in its `structuredContent`), and the
+owner gets one inbox item per cap per day, however many requests
+overflow (an ownerless agent notifies every administrator instead).
 
 Anything posted through the shared posting path counts: streams
-count when they start, polls count as messages when created, and an
-agent's reply to a `slash_command` event is an ordinary post through
-the same path. Slash commands and scheduled messages themselves are
-human-only (bots get 403 at the slash endpoint and the scheduled
-dispatcher skips bots), so they never touch budgets.
+count when they start, polls count as messages when created, a board
+post's opening message counts only toward the board-post cap while
+replies inside the post count as messages, and an agent's reply to a
+`slash_command` event is an ordinary post through the same path.
+Slash commands and scheduled messages themselves are human-only (bots
+get 403 at the slash endpoint and the scheduled dispatcher skips
+bots), so they never touch budgets.
 
 The bot edit page also carries the kill switch: one click suspends
 the agent (revoking every grant, which also blocks
-approved-but-unexecuted external actions at perform time), cancels
-every still-pending approval request, clears working presence, and
-records `agent.kill_switch` in the audit log.
+approved-but-unexecuted external actions at perform time), quietly
+finalizes the agent's open streams (marked final with no push,
+mentions, inbox, delivery, or webhooks), cancels every still-pending
+approval request, clears working presence, and records
+`agent.kill_switch` in the audit log.
 
 ## MCP server
 
