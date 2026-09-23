@@ -236,7 +236,7 @@ class Agents::DmsControllerTest < ActionDispatch::IntegrationTest
     assert_response :created
     room = Room.find(response.parsed_body.dig("room", "id"))
     entry = AuditLog.where(action: "room.create").last
-    assert_equal @agent.id, entry.actor_id
+    assert_equal @agent.user.id, entry.actor_id
     assert_equal "Agent Bender Bot", entry.actor_label
     assert_equal room.id, entry.target_id
   end
