@@ -77,7 +77,7 @@ module Agents
       message, denial = find_own_stream(agent, id)
       return denial if denial
 
-      if append.present?
+      if !append.nil?
         message.markdown_source = message.markdown_source.to_s + append.to_s
       elsif !markdown_source.nil?
         message.markdown_source = markdown_source.to_s

@@ -58,6 +58,23 @@ class Agents::StreamingMessagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Final", Message.find(id).plain_text_body
   end
 
+  test "whitespace-only appends land instead of 422" do
+    post room_agent_streaming_messages_url(@room),
+      params: { message: { markdown_source: "Title", client_message_id: "stream-ws" } }.to_json,
+      headers: bearer_headers
+    id = response.parsed_body["id"]
+
+    patch agents_streaming_message_url(id),
+      params: { append: "\n\n" }.to_json, headers: bearer_headers
+    assert_response :success
+
+    patch agents_streaming_message_url(id),
+      params: { append: " " }.to_json, headers: bearer_headers
+    assert_response :success
+
+    assert_equal "Title\n\n ", Message.find(id).markdown_source
+  end
+
   test "update requires append or markdown_source" do
     post room_agent_streaming_messages_url(@room),
       params: { message: { markdown_source: "Draft", client_message_id: "stream-nothing" } }.to_json,
