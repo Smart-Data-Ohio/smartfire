@@ -201,6 +201,44 @@ class AuditLog::MembersAuditTest < ActionDispatch::IntegrationTest
     assert AuditLog.where(action: "google.account.disconnect").last
   end
 
+  test "GitHub App connect is recorded without tokens" do
+    begin
+      env_before = [ ENV["GITHUB_APP_CLIENT_ID"], ENV["GITHUB_APP_CLIENT_SECRET"] ]
+      ENV["GITHUB_APP_CLIENT_ID"] = "app-client-id"
+      ENV["GITHUB_APP_CLIENT_SECRET"] = "app-client-secret"
+
+      get github_app_connect_url
+      state = Rails.application.message_verifier("github_app_oauth_state")
+        .verified(CGI.parse(URI.parse(response.location).query)["state"].first)
+      stub_request(:post, "https://github.com/login/oauth/access_token")
+        .to_return(status: 200, body: {
+          access_token: "app-access-token", refresh_token: "app-refresh-token", expires_in: 28_800
+        }.to_json)
+      stub_github_user("octocat")
+
+      assert_difference -> { AuditLog.where(action: "github.account.connect").count }, +1 do
+        get github_app_callback_url, params: {
+          code: "code",
+          state: Rails.application.message_verifier("github_app_oauth_state").generate(state)
+        }
+      end
+
+      assert_redirected_to user_profile_path
+      connect = AuditLog.where(action: "github.account.connect").last
+      assert_equal users(:david).id, connect.actor_id
+      assert_equal users(:david).id, connect.target_id
+      assert_equal({ "github_login" => "octocat" }, connect.details)
+      assert_no_match "app-access-token", connect.details.to_json
+      assert_no_match "app-refresh-token", connect.details.to_json
+
+      assert_no_difference -> { AuditLog.where(action: "github.account.connect").count } do
+        get github_app_callback_url, params: { code: "code", state: "bogus" }
+      end
+    ensure
+      ENV["GITHUB_APP_CLIENT_ID"], ENV["GITHUB_APP_CLIENT_SECRET"] = env_before
+    end
+  end
+
   private
     def stub_github_user(login)
       stub_request(:get, "https://api.github.com/user")
