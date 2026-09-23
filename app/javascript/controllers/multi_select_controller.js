@@ -159,8 +159,12 @@ export default class extends Controller {
     this.#cancelPress()
   }
 
+  // Blocked while a touch press is in progress, not just after it
+  // fired: Android fires its native contextmenu while the finger is
+  // still down, with the long-press timer pending. Mirrors the message
+  // list.
   suppressMenu(event) {
-    if (this.pressJustFired || Date.now() <= this.suppressClickUntil) event.preventDefault()
+    if (this.pressTimer || this.pressJustFired || Date.now() <= this.suppressClickUntil) event.preventDefault()
   }
 
   update() {

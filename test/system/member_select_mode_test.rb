@@ -218,18 +218,24 @@ class MemberSelectModeTest < ApplicationSystemTestCase
       const touch = new Touch({ identifier: 1, target: row, clientX: 10, clientY: 10 })
       row.dispatchEvent(new TouchEvent("touchstart", { touches: [ touch ], bubbles: true, cancelable: true }))
     JS
-    sleep 0.7
+    # Android fires its native contextmenu while the finger is still down
+    # (~400ms), before the 500ms long-press timer: the row menu must not
+    # open, even though the press has not fired yet. The menu opens
+    # synchronously if at all, so no wait; the release below must still
+    # land inside the suppression window the timer starts.
+    sleep 0.2
+    page.execute_script(<<~JS, row)
+      arguments[0].dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }))
+    JS
+    assert_no_selector "#member-row-menu", wait: 0
+    sleep 0.5
     page.execute_script(<<~JS, row)
       arguments[0].dispatchEvent(new TouchEvent("touchend", { bubbles: true, cancelable: true }))
     JS
 
-    # The release click and the long-press menu must both die: neither the
-    # profile card nor the row menu may open.
+    # The release click must die too: the profile card may not open.
     page.execute_script(<<~JS, row_name_button(users(:jason)))
       arguments[0].dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 10, clientY: 10 }))
-    JS
-    page.execute_script(<<~JS, row)
-      arguments[0].dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }))
     JS
 
     assert_checked_field "select-member-#{users(:jason).id}"
