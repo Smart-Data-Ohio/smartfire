@@ -234,6 +234,51 @@ class Rooms::DirectTest < ActiveSupport::TestCase
     assert_equal 2, group.messages.where(system: true).count
   end
 
+  test "adding members broadcasts a sidebar row to newcomers and refreshes the rest" do
+    group = Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:kevin) ])
+
+    member_broadcasts = capture_broadcasts(user_rooms_stream_name(users(:jason))) do
+      newcomer_broadcasts = capture_broadcasts(user_rooms_stream_name(users(:jz))) do
+        # Explicit locals, not request state: bender is outside the room,
+        # so the row must still render each recipient's own view.
+        Current.set(user: users(:bender)) do
+          group.add_members([ users(:jz) ], added_by: users(:david))
+        end
+      end
+
+      # The newcomer gets a prepended row plus a header.
+      assert_equal 2, newcomer_broadcasts.size
+      assert_includes newcomer_broadcasts.map(&:to_s).join, "David, Jason, Kevin"
+    end
+
+    # Existing members get a replaced row plus a header.
+    assert_equal 2, member_broadcasts.size
+  end
+
+  test "renaming broadcasts every member's sidebar row and room header" do
+    group = Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:kevin) ])
+
+    member_broadcasts = capture_broadcasts(user_rooms_stream_name(users(:jason))) do
+      group.rename("Weekend Plans", renamed_by: users(:david))
+    end
+
+    assert_equal 2, member_broadcasts.size
+    assert_includes member_broadcasts.map(&:to_s).join, "Weekend Plans"
+  end
+
+  test "header broadcasts render each member's own default name" do
+    group = Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:kevin) ])
+    group.rename("Weekend Plans", renamed_by: users(:david))
+
+    member_broadcasts = capture_broadcasts(user_rooms_stream_name(users(:jason))) do
+      group.rename("", renamed_by: users(:david))
+    end
+
+    header = member_broadcasts.map(&:to_s).find { |html| html.include?(ActionView::RecordIdentifier.dom_id(group, :header)) }
+    assert header, "expected a header replace"
+    assert_includes header, "David, Kevin"
+  end
+
   test "leaving keeps the group working for everyone left" do
     group = Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:kevin) ])
 
@@ -257,6 +302,11 @@ class Rooms::DirectTest < ActiveSupport::TestCase
   private
     def room_messages_stream_name(room)
       signed = Turbo::StreamsChannel.signed_stream_name([ room, :messages ])
+      Turbo::StreamsChannel.verified_stream_name(signed)
+    end
+
+    def user_rooms_stream_name(user)
+      signed = Turbo::StreamsChannel.signed_stream_name([ user, :rooms ])
       Turbo::StreamsChannel.verified_stream_name(signed)
     end
 end

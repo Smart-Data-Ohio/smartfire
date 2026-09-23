@@ -104,6 +104,7 @@ class Rooms::Direct < Room
       memberships.grant_to(fresh)
       post_system_message("#{added_by.name} added #{fresh.map(&:name).to_sentence} to the group", creator: added_by)
     end
+    broadcast_directory_updates!(newcomers: fresh)
 
     fresh
   end
@@ -128,13 +129,14 @@ class Rooms::Direct < Room
         end
       end
     end
+    broadcast_directory_updates!
   end
 
   # Removes a member. The group keeps working for everyone left; the last
   # member out destroys the room instead of leaving an empty one behind.
   # Returns :left or :destroyed so the controller can finish the destroy.
   def leave(user)
-    transaction do
+    outcome = transaction do
       memberships.find_by!(user_id: user.id).destroy!
 
       if memberships.exists?
@@ -145,6 +147,9 @@ class Rooms::Direct < Room
         :destroyed
       end
     end
+    broadcast_directory_updates! if outcome == :left
+
+    outcome
   end
 
   # Recomputes the member-set key after members change. A mutated group
@@ -164,6 +169,33 @@ class Rooms::Direct < Room
   private
     def recent_system_note?
       messages.where(system: true).where(created_at: RENAME_NOTE_WINDOW.ago..).exists?
+    end
+
+    # Re-renders every remaining member's sidebar row and room header with
+    # explicit locals, so the broadcast never depends on request state. New
+    # members get a prepended row instead; the leaver's row was already
+    # removed by their membership destroy.
+    def broadcast_directory_updates!(newcomers: [])
+      participants = Huddle.configured? ? HuddleGrant.participants_for(self) : []
+      fresh_memberships = Membership.where(room_id: id).includes(:user).to_a
+      newcomer_ids = newcomers.map(&:id).to_set
+
+      fresh_memberships.each do |membership|
+        member = membership.user
+        row_members = fresh_memberships.map(&:user).reject { |user| user.id == member.id }
+        row_locals = { membership:, members: row_members, participants:, huddleable: Huddle.configured? }
+
+        if newcomer_ids.include?(member.id)
+          broadcast_prepend_to member, :rooms, target: :direct_rooms,
+            partial: "users/sidebars/rooms/direct", locals: row_locals
+        else
+          broadcast_replace_to member, :rooms, target: [ self, :list ],
+            partial: "users/sidebars/rooms/direct", locals: row_locals
+        end
+
+        broadcast_replace_to member, :rooms, target: [ self, :header ],
+          partial: "rooms/show/header_identity", locals: { room: self, for_user: member }
+      end
     end
 
     # System messages are plain Action Text, never Markdown: member names

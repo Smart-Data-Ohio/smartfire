@@ -41,7 +41,10 @@ working. Renames, adds, and leaves post centered system messages in the
 timeline (`messages.system`), which broadcast live but stay quiet: no
 unread, push, agent or bot delivery, inbox items, or search indexing (see
 the quiet contract on Message). Rename notes are rate-limited to one per
-room per minute; repeated renames still land the latest name.
+room per minute; repeated renames still land the latest name. Adds,
+renames, and leaves also re-render every member's sidebar row and room
+header live, so newcomers see the group and everyone sees the new name
+without reloading.
 
 One-to-one history stays private: adding members to a one-to-one DM is
 rejected, so groups are always born from the selection path, never by

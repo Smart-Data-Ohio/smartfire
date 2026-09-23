@@ -1,6 +1,11 @@
 <%= link_to_room membership.room, class: [ "sidebar-item direct", "unread": membership.unread? ], id: dom_id(membership.room, :list),
       data: { sorted_list_number: membership.room.updated_at.to_fs(:epoch) } do %>
-  <% members = direct_room_members_by_room_id.fetch(membership.room_id, []).reject { |member| member.id == membership.user_id }.presence || [ membership.user ] %>
+  <%# Explicit locals let membership broadcasts render without request state; page renders fall back to the preloaded helpers. %>
+  <%# Whoever renders, an empty member list falls back to yourself, so a room you sit in alone still shows your avatar and name. %>
+  <% members = local_assigns[:members] || direct_room_members_by_room_id.fetch(membership.room_id, []).reject { |member| member.id == membership.user_id } %>
+  <% members = [ membership.user ] if members.empty? %>
+  <% participants = local_assigns[:participants] || (huddle_participants_by_room_id[membership.room_id] || []) %>
+  <% huddleable = local_assigns.fetch(:huddleable, Huddle.configured?) %>
 
   <% if members.many? %>
     <div class="avatar__group">
@@ -32,9 +37,9 @@
   </span>
   <%# Every DM can huddle. The collection cache key already covers presence, %>
   <%# so the stack renders inline with the rest of the row. %>
-  <% if Huddle.configured? %>
+  <% if huddleable %>
     <span class="voice-room__trailing">
-      <%= render "rooms/huddles/participants", room: membership.room, placement: :sidebar, participants: huddle_participants_by_room_id[membership.room_id] || [] %>
+      <%= render "rooms/huddles/participants", room: membership.room, placement: :sidebar, participants: participants %>
     </span>
   <% end %>
   <%# The badge stays a direct child of the row: workspace-navigation only looks one level down. %>
