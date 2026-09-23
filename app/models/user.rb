@@ -20,6 +20,8 @@ class User < ApplicationRecord
   has_many :event_calendar_entries, dependent: :destroy
 
   has_many :boosts, dependent: :destroy, foreign_key: :booster_id
+  has_many :message_pins, dependent: :delete_all, foreign_key: :pinner_id
+  has_many :saved_items, dependent: :delete_all
   has_many :searches, dependent: :delete_all
 
   has_many :sessions, dependent: :destroy

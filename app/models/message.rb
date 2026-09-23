@@ -8,6 +8,8 @@ class Message < ApplicationRecord
   belongs_to :forwarded_from_message, class_name: "Message", optional: true
 
   has_many :boosts, dependent: :destroy
+  has_many :message_pins, dependent: :destroy
+  has_many :saved_items, dependent: :destroy
   has_many :activity_items, as: :source, dependent: :destroy, inverse_of: :source
   # This callback must run before Active Record's dependent:nullify callback. It
   # leaves a small tombstone on each reply so the UI can still explain why its

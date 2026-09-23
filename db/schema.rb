@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_22_223000) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_005015) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -453,6 +453,18 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_223000) do
     t.index ["user_id"], name: "index_memberships_on_user_id"
   end
 
+  create_table "message_pins", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "message_id", null: false
+    t.integer "pinner_id", null: false
+    t.integer "room_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id"], name: "index_message_pins_on_message_id", unique: true
+    t.index ["pinner_id"], name: "index_message_pins_on_pinner_id"
+    t.index ["room_id", "created_at"], name: "index_message_pins_on_room_id_and_created_at"
+    t.index ["room_id"], name: "index_message_pins_on_room_id"
+  end
+
   create_table "messages", force: :cascade do |t|
     t.string "client_message_id", null: false
     t.datetime "created_at", null: false
@@ -500,6 +512,21 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_223000) do
     t.string "name"
     t.string "type", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "saved_items", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "message_id", null: false
+    t.datetime "remind_at"
+    t.datetime "reminded_at"
+    t.integer "status", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["message_id"], name: "index_saved_items_on_message_id"
+    t.index ["remind_at"], name: "index_saved_items_on_remind_at", where: "remind_at IS NOT NULL AND reminded_at IS NULL"
+    t.index ["user_id", "message_id"], name: "index_saved_items_on_user_id_and_message_id", unique: true
+    t.index ["user_id", "status"], name: "index_saved_items_on_user_id_and_status"
+    t.index ["user_id"], name: "index_saved_items_on_user_id"
   end
 
   create_table "searches", force: :cascade do |t|
@@ -708,12 +735,17 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_22_223000) do
   add_foreign_key "github_repository_subscriptions", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "google_accounts", "users"
   add_foreign_key "google_identities", "users"
+  add_foreign_key "message_pins", "messages"
+  add_foreign_key "message_pins", "rooms"
+  add_foreign_key "message_pins", "users", column: "pinner_id"
   add_foreign_key "messages", "channel_threads", column: "thread_id", on_delete: :cascade
   add_foreign_key "messages", "messages", column: "forwarded_from_message_id", on_delete: :nullify
   add_foreign_key "messages", "messages", column: "reply_to_message_id", on_delete: :nullify
   add_foreign_key "messages", "rooms"
   add_foreign_key "messages", "users", column: "creator_id"
   add_foreign_key "push_subscriptions", "users"
+  add_foreign_key "saved_items", "messages"
+  add_foreign_key "saved_items", "users"
   add_foreign_key "searches", "users"
   add_foreign_key "sessions", "users"
   add_foreign_key "thread_memberships", "channel_threads", column: "thread_id", on_delete: :cascade

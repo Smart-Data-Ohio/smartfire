@@ -52,6 +52,8 @@ module ActivityItemsHelper
       "Review requested"
     when "agent_approval_request"
       "Approval request"
+    when "message_reminder"
+      "Reminder"
     else
       item.event_type.humanize
     end
@@ -90,7 +92,11 @@ module ActivityItemsHelper
 
     case source
     when Message
-      source.plain_text_body
+      if item.event_type == "message_reminder"
+        "You asked to be reminded about this message: #{source.plain_text_body}"
+      else
+        source.plain_text_body
+      end
     when WorkThreadEvent
       changes = []
       if source.status_changed?
