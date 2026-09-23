@@ -45,6 +45,14 @@ class MembershipNavigationTest < ActiveSupport::TestCase
     assert_predicate @membership, :unread?
   end
 
+  test "first unread is nil when read even with a stale pointer" do
+    first = @room.root_messages.ordered.first
+    @membership.update!(unread_at: nil, last_read_message_id: first.id)
+
+    assert_nil @membership.first_unread_message
+    assert_equal 0, @membership.unread_count
+  end
+
   test "favourite appends positions and move compacts them" do
     hq = users(:david).memberships.find_by!(room: rooms(:hq))
     pets = users(:david).memberships.find_by!(room: rooms(:pets))

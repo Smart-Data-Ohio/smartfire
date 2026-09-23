@@ -146,6 +146,16 @@ class Room < ApplicationRecord
         muted_recipients.where(user_id: message.mentionees.select(:id))
           .update_all(unread_at: message.created_at, updated_at: Time.current)
       end
+
+      # Members watching live already saw this message, and the author's
+      # own post never counts: advance their read pointer to it so a
+      # later unread starts after what was seen, not before. Unread
+      # members keep their boundary intact. One statement like the
+      # presence mark-read path.
+      memberships.visible.where(unread_at: nil)
+        .where("memberships.connected_at >= ? OR memberships.user_id = ?",
+          Membership::Connectable::CONNECTION_TTL.ago, message.creator_id)
+        .update_all(last_read_message_id: message.id, updated_at: Time.current)
     end
 
     def push_later(message)

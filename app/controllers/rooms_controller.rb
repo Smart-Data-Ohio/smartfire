@@ -81,7 +81,9 @@ class RoomsController < ApplicationController
     # under the last-page contract other pages rely on.
     def set_unread_divider
       membership = Current.user.memberships.find_by(room_id: @room.id)
-      first_unread = membership&.first_unread_message
+      return unless membership&.unread?
+
+      first_unread = membership.first_unread_message
       return if first_unread.nil?
 
       @unread_count = membership.unread_count_from(first_unread)

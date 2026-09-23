@@ -46,10 +46,14 @@ class Membership < ApplicationRecord
     unread_at.present?
   end
 
-  # The first root message after the unread pointer, if any. Rows that
+  # The first root message after the unread pointer, if any. Read rooms
+  # have no divider even with a stale pointer: messages watched live
+  # (including the viewer's own) must never appear under it. Rows that
   # predate the pointer (unread_at set, no pointer) fall back to the
   # first message at or after the unread stamp.
   def first_unread_message
+    return nil unless unread?
+
     if last_read_message_id.present? && (reference = room.root_messages.find_by(id: last_read_message_id))
       room.root_messages.after(reference).ordered.first
     elsif unread_at.present?
