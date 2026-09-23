@@ -198,15 +198,109 @@ class TwoFactor::ChallengesControllerTest < ActionDispatch::IntegrationTest
     assert cookies[:session_token].blank?
   end
 
+  test "five wrong codes lock the challenge, audit it, and notify the inbox" do
+    post session_url, params: { email_address: @user.email_address, password: "secret123456" }
+
+    4.times { post two_factor_challenge_url, params: { code: "000000" } }
+    assert_response :unprocessable_entity
+
+    assert_difference -> { AuditLog.where(action: "sign_in.two_factor.lockout").count }, 1 do
+      assert_difference -> { ActivityItem.where(user: @user, event_type: "two_factor_lockout").count }, 1 do
+        post two_factor_challenge_url, params: { code: "000000" }
+      end
+    end
+
+    assert_response :too_many_requests
+    assert_includes response.body, "Too many wrong codes"
+
+    lockout = AuditLog.find_by!(action: "sign_in.two_factor.lockout")
+    assert_equal @user.id, lockout.actor_id
+    assert_equal "password", lockout.details["method"]
+  end
+
+  test "a correct code is refused while locked and spends nothing" do
+    codes = TwoFactorBackupCode.regenerate_set!(@credential)
+    post session_url, params: { email_address: @user.email_address, password: "secret123456" }
+    5.times { post two_factor_challenge_url, params: { code: "000000" } }
+
+    post two_factor_challenge_url, params: { code: totp_code_for(@credential) }
+    assert_response :too_many_requests
+    assert cookies[:session_token].blank?
+
+    post two_factor_challenge_url, params: { code: codes.first }
+    assert_response :too_many_requests
+    assert cookies[:session_token].blank?
+    assert_equal 10, @credential.backup_codes.unused.count
+  end
+
+  test "lockouts escalate across windows and a success resets them" do
+    post session_url, params: { email_address: @user.email_address, password: "secret123456" }
+
+    now = Time.current
+    travel_to(now) { 5.times { post two_factor_challenge_url, params: { code: "000000" } } }
+    assert_response :too_many_requests
+    assert_in_delta now + 1.minute, @credential.reload.locked_until, 5.seconds
+    lockout_items = ActivityItem.where(user: @user, event_type: "two_factor_lockout")
+    assert_equal 1, lockout_items.count
+
+    # A repeat lockout resurfaces the same item instead of stacking.
+    lockout_items.first.mark_read!
+    travel_to(now + 2.minutes) { 5.times { post two_factor_challenge_url, params: { code: "000000" } } }
+    assert_in_delta now + 7.minutes, @credential.reload.locked_until, 5.seconds
+    assert_equal 1, lockout_items.count
+    assert_predicate lockout_items.first.reload, :unread?
+
+    travel_to(now + 8.minutes) do
+      post two_factor_challenge_url, params: { code: totp_code_for(@credential.reload) }
+    end
+    assert_redirected_to root_url
+    assert_equal 0, @credential.reload.lockout_count
+    assert_equal 0, @credential.consecutive_failures
+    assert_nil @credential.locked_until
+  end
+
+  test "lockout does not email unless mail is configured" do
+    post session_url, params: { email_address: @user.email_address, password: "secret123456" }
+
+    assert_no_enqueued_jobs only: ActionMailer::MailDeliveryJob do
+      5.times { post two_factor_challenge_url, params: { code: "000000" } }
+    end
+
+    assert_response :too_many_requests
+  end
+
+  test "lockout emails when mail is configured" do
+    previous_settings = Rails.application.config.action_mailer.smtp_settings
+    Rails.application.config.action_mailer.smtp_settings = { address: "smtp.example.com" }
+    post session_url, params: { email_address: @user.email_address, password: "secret123456" }
+
+    assert_enqueued_with(job: ActionMailer::MailDeliveryJob) do
+      5.times { post two_factor_challenge_url, params: { code: "000000" } }
+    end
+
+    assert_response :too_many_requests
+  ensure
+    Rails.application.config.action_mailer.smtp_settings = previous_settings
+  end
+
   test "create is rate limited per IP" do
     post session_url, params: { email_address: @user.email_address, password: "secret123456" }
 
     with_rate_limit_store do
-      10.times { post two_factor_challenge_url, params: { code: "000000" } }
+      4.times { post two_factor_challenge_url, params: { code: "000000" } }
       assert_response :unprocessable_entity
 
+      # The 5th failure locks the challenge; locked posts answer 429 with
+      # the lockout message instead of the wrong-code one.
+      6.times { post two_factor_challenge_url, params: { code: "000000" } }
+      assert_response :too_many_requests
+      assert_includes response.body, "Too many wrong codes"
+
+      # The 11th attempt never reaches the controller: the IP limiter
+      # answers first, with its own message.
       post two_factor_challenge_url, params: { code: "000000" }
       assert_response :too_many_requests
+      assert_includes response.body, "Too many attempts"
     end
   end
 
@@ -214,13 +308,20 @@ class TwoFactor::ChallengesControllerTest < ActionDispatch::IntegrationTest
     post session_url, params: { email_address: @user.email_address, password: "secret123456" }
 
     with_rate_limit_store do
-      10.times.each do |index|
+      4.times.each do |index|
         post two_factor_challenge_url, params: { code: "000000" }, env: { "REMOTE_ADDR" => "10.2.0.#{index}" }
       end
       assert_response :unprocessable_entity
 
+      6.times.each do |index|
+        post two_factor_challenge_url, params: { code: "000000" }, env: { "REMOTE_ADDR" => "10.3.0.#{index}" }
+      end
+      assert_response :too_many_requests
+      assert_includes response.body, "Too many wrong codes"
+
       post two_factor_challenge_url, params: { code: "000000" }, env: { "REMOTE_ADDR" => "10.9.9.9" }
       assert_response :too_many_requests
+      assert_includes response.body, "Too many attempts"
     end
   end
 end

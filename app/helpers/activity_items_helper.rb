@@ -26,6 +26,8 @@ module ActivityItemsHelper
       source.agent&.user ? edit_account_bot_path(source.agent.user) : activity_items_path
     when ScheduledMessage
       scheduled_messages_path
+    when TwoFactorCredential
+      user_profile_path
     else
       activity_items_path
     end
@@ -69,6 +71,8 @@ module ActivityItemsHelper
       "Reminder"
     when "scheduled_message_dropped"
       "Scheduled message not sent"
+    when "two_factor_lockout"
+      "Sign-in lockout"
     else
       item.event_type.humanize
     end
@@ -105,6 +109,8 @@ module ActivityItemsHelper
     when ScheduledMessage
       room = source.room
       room ? room_display_name(room) : "Unavailable room"
+    when TwoFactorCredential
+      "Two-step sign-in"
     else
       source.class.name.humanize
     end
@@ -159,6 +165,8 @@ module ActivityItemsHelper
       else
         "You no longer have access to this room, so your scheduled message was not sent: #{source.markdown_source}"
       end
+    when TwoFactorCredential
+      "Several wrong sign-in codes were entered for your account."
     else
       "Source updated"
     end

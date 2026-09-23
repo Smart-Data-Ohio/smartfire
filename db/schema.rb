@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_23_170639) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_171812) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -969,8 +969,11 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_170639) do
 
   create_table "two_factor_credentials", force: :cascade do |t|
     t.datetime "confirmed_at"
+    t.integer "consecutive_failures", default: 0, null: false
     t.datetime "created_at", null: false
     t.bigint "last_totp_at"
+    t.datetime "locked_until"
+    t.integer "lockout_count", default: 0, null: false
     t.string "secret"
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false

@@ -1,5 +1,5 @@
 class ActivityItem < ApplicationRecord
-  EVENT_TYPES = %w[ mention reply thread_activity keyword_alert work_update work_assignment work_sla huddle_started huddle_missed event_invitation event_update event_cancelled event_reminder pr_review_request agent_approval_request agent_budget_exceeded message_reminder scheduled_message_dropped ].freeze
+  EVENT_TYPES = %w[ mention reply thread_activity keyword_alert work_update work_assignment work_sla huddle_started huddle_missed event_invitation event_update event_cancelled event_reminder pr_review_request agent_approval_request agent_budget_exceeded message_reminder scheduled_message_dropped two_factor_lockout ].freeze
   HUDDLE_EVENT_TYPES = %w[ huddle_started huddle_missed ].freeze
   FILTERS = %w[ unread read handled ].freeze
   TYPE_FILTERS = {
@@ -43,7 +43,7 @@ class ActivityItem < ApplicationRecord
     event_types ? where(event_type: event_types) : all
   }
   scope :message_sources, -> { where(source_type: Message.polymorphic_name) }
-  scope :supported_sources, -> { where(source_type: [ Message.polymorphic_name, SavedItem.polymorphic_name, "WorkThreadEvent", "BoardSlaNudge", HuddleGrant.polymorphic_name, Event.polymorphic_name, AgentApproval.polymorphic_name, AgentBudgetNotice.polymorphic_name, ScheduledMessage.polymorphic_name ]) }
+  scope :supported_sources, -> { where(source_type: [ Message.polymorphic_name, SavedItem.polymorphic_name, "WorkThreadEvent", "BoardSlaNudge", HuddleGrant.polymorphic_name, Event.polymorphic_name, AgentApproval.polymorphic_name, AgentBudgetNotice.polymorphic_name, ScheduledMessage.polymorphic_name, TwoFactorCredential.polymorphic_name ]) }
 
   class << self
     # Source data is deliberately resolved from the source row at query time.
@@ -112,6 +112,9 @@ class ActivityItem < ApplicationRecord
           LEFT JOIN scheduled_messages AS activity_scheduled_messages
             ON activity_scheduled_messages.id = activity_items.source_id
             AND activity_items.source_type = #{connection.quote(ScheduledMessage.polymorphic_name)}
+          LEFT JOIN two_factor_credentials AS activity_two_factor_credentials
+            ON activity_two_factor_credentials.id = activity_items.source_id
+            AND activity_items.source_type = #{connection.quote(TwoFactorCredential.polymorphic_name)}
         SQL
         .merge(User.active.without_bots)
         .where(activity_items: { user_id: user.id })
@@ -134,6 +137,9 @@ class ActivityItem < ApplicationRecord
           OR (activity_items.source_type = #{connection.quote(ScheduledMessage.polymorphic_name)}
             AND activity_scheduled_messages.id IS NOT NULL
             AND activity_scheduled_messages.user_id = activity_items.user_id)
+          OR (activity_items.source_type = #{connection.quote(TwoFactorCredential.polymorphic_name)}
+            AND activity_two_factor_credentials.id IS NOT NULL
+            AND activity_two_factor_credentials.user_id = activity_items.user_id)
         SQL
     end
 

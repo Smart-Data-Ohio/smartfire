@@ -133,4 +133,13 @@ class ActivityItemTest < ActiveSupport::TestCase
       item.update!(event_type: "huddle_missed")
     end
   end
+
+  test "lockout items are visible to their owner only" do
+    credential = TwoFactorCredential.create!(user: users(:david),
+      secret: TwoFactorCredential.generate_secret, confirmed_at: Time.current)
+    item = ActivityItem.create!(user: users(:david), source: credential, event_type: "two_factor_lockout")
+
+    assert_includes ActivityItem.accessible_to(users(:david)), item
+    assert_not ActivityItem.accessible_to(users(:jason)).exists?(item.id)
+  end
 end

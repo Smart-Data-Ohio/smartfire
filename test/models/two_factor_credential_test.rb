@@ -78,6 +78,62 @@ class TwoFactorCredentialTest < ActiveSupport::TestCase
     assert_not @credential.verify_code("   ")
   end
 
+  test "register_challenge_failure! locks after five consecutive failures" do
+    4.times { assert_equal :failed, @credential.register_challenge_failure! }
+    assert_not @credential.reload.locked_out?
+
+    assert_equal :locked, @credential.register_challenge_failure!
+
+    assert @credential.reload.locked_out?
+    assert_equal 0, @credential.consecutive_failures
+    assert_equal 1, @credential.lockout_count
+  end
+
+  test "lockouts escalate from one to five to fifteen minutes" do
+    now = Time.current
+
+    travel_to(now) { 5.times { @credential.register_challenge_failure! } }
+    assert_equal 1, @credential.reload.lockout_count
+    assert_in_delta now + 1.minute, @credential.locked_until, 1.second
+
+    travel_to(now + 2.minutes) { 5.times { @credential.register_challenge_failure! } }
+    assert_equal 2, @credential.reload.lockout_count
+    assert_in_delta now + 7.minutes, @credential.locked_until, 1.second
+
+    travel_to(now + 8.minutes) { 5.times { @credential.register_challenge_failure! } }
+    assert_equal 3, @credential.reload.lockout_count
+    assert_in_delta now + 23.minutes, @credential.locked_until, 1.second
+
+    travel_to(now + 24.minutes) { 5.times { @credential.register_challenge_failure! } }
+    assert_equal 4, @credential.reload.lockout_count
+    assert_in_delta now + 39.minutes, @credential.locked_until, 1.second
+  end
+
+  test "failures while locked change nothing" do
+    5.times { @credential.register_challenge_failure! }
+    locked_until = @credential.reload.locked_until
+
+    assert_equal :failed, @credential.register_challenge_failure!
+
+    assert_equal locked_until, @credential.reload.locked_until
+    assert_equal 0, @credential.consecutive_failures
+    assert_equal 1, @credential.lockout_count
+  end
+
+  test "register_challenge_success! resets failures, lockout, and escalation" do
+    5.times { @credential.register_challenge_failure! }
+    travel_to(2.minutes.from_now) { 5.times { @credential.register_challenge_failure! } }
+    assert_equal 2, @credential.reload.lockout_count
+    assert @credential.locked_out?
+
+    @credential.register_challenge_success!
+
+    assert_equal 0, @credential.consecutive_failures
+    assert_equal 0, @credential.lockout_count
+    assert_nil @credential.locked_until
+    assert_not @credential.locked_out?
+  end
+
   test "secret is encrypted at rest" do
     stored = TwoFactorCredential.connection.select_value(
       "SELECT secret FROM two_factor_credentials WHERE id = #{@credential.id}")

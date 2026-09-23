@@ -17,6 +17,7 @@ class AuditLog < ApplicationRecord
     session.sign_in.success
     session.sign_in.failure
     sign_in.two_factor.failure
+    sign_in.two_factor.lockout
     two_factor.enable
     two_factor.disable
     two_factor.reset

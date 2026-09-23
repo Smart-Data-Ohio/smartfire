@@ -7,6 +7,11 @@ class TwoFactorCredential < ApplicationRecord
   # ±1 TOTP step (30 seconds each way) of clock drift.
   DRIFT_SECONDS = 30
   BACKUP_CODE_COUNT = 10
+  # After this many consecutive failed challenge codes the challenge
+  # locks, for the 1st, 2nd, then 3rd-and-later durations below. Any
+  # success resets both the run and the escalation.
+  FAILURES_BEFORE_LOCKOUT = 5
+  LOCKOUT_DURATIONS = [ 1.minute, 5.minutes, 15.minutes ].freeze
 
   belongs_to :user
   has_many :backup_codes, class_name: "TwoFactorBackupCode", dependent: :delete_all
@@ -77,5 +82,41 @@ class TwoFactorCredential < ApplicationRecord
     end
   rescue ArgumentError
     false
+  end
+
+  def locked_out?
+    locked_until.present? && locked_until > Time.current
+  end
+
+  # Records a failed challenge code. The 5th consecutive failure starts a
+  # lockout at the next escalation level and resets the run, so each
+  # lockout takes 5 fresh failures. Returns :locked when a lockout just
+  # started, :failed otherwise. Runs under the row lock so concurrent
+  # failures count exactly once each.
+  def register_challenge_failure!
+    with_lock do
+      return :failed if locked_out?
+
+      failures = consecutive_failures + 1
+      if failures >= FAILURES_BEFORE_LOCKOUT
+        level = lockout_count + 1
+        update!(consecutive_failures: 0, lockout_count: level,
+          locked_until: lockout_duration_for(level).from_now)
+        :locked
+      else
+        update!(consecutive_failures: failures)
+        :failed
+      end
+    end
+  end
+
+  # A verified code clears the failure run, any live lockout, and the
+  # escalation level.
+  def register_challenge_success!
+    update!(consecutive_failures: 0, lockout_count: 0, locked_until: nil)
+  end
+
+  def lockout_duration_for(level)
+    LOCKOUT_DURATIONS.fetch(level - 1, LOCKOUT_DURATIONS.last)
   end
 end

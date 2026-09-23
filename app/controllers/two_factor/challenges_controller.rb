@@ -19,9 +19,12 @@ module TwoFactor
 
     def create
       no_store_response!
+      credential = @pending_user.two_factor_credential
 
-      verified_as = verify_challenge_code
-      if verified_as
+      if credential&.locked_out?
+        render_locked_out credential
+      elsif verified_as = verify_challenge_code
+        credential.register_challenge_success!
         method = two_factor_pending_method
         clear_two_factor_pending!
         start_new_session_for @pending_user, two_factor_verified: true
@@ -30,10 +33,7 @@ module TwoFactor
           changes: { method: method, two_factor: verified_as })
         redirect_to post_authenticating_url
       else
-        AuditLog.record!(action: "sign_in.two_factor.failure", actor: @pending_user,
-          changes: { method: two_factor_pending_method })
-        flash.now[:alert] = "That code didn't work. Check your authenticator app or try a backup code."
-        render :show, status: :unprocessable_entity
+        register_failure_and_render credential
       end
     end
 
@@ -61,6 +61,48 @@ module TwoFactor
           "totp"
         elsif TwoFactorBackupCode.consume!(credential, code)
           "backup_code"
+        end
+      end
+
+      def register_failure_and_render(credential)
+        locked = credential&.register_challenge_failure! == :locked
+        AuditLog.record!(action: "sign_in.two_factor.failure", actor: @pending_user,
+          changes: { method: two_factor_pending_method })
+
+        if locked
+          credential.reload
+          AuditLog.record!(action: "sign_in.two_factor.lockout", actor: @pending_user,
+            changes: { method: two_factor_pending_method })
+          notify_two_factor_lockout!
+          render_locked_out credential
+        else
+          flash.now[:alert] = "That code didn't work. Check your authenticator app or try a backup code."
+          render :show, status: :unprocessable_entity
+        end
+      end
+
+      # Locked attempts (even correct ones) change nothing: no code is
+      # spent, no backup code burns, and the failure run does not grow.
+      def render_locked_out(credential)
+        minutes = ((credential.locked_until - Time.current) / 60.0).ceil
+        flash.now[:alert] = "Too many wrong codes. Try again in #{minutes} #{'minute'.pluralize(minutes)}."
+        render :show, status: :too_many_requests
+      end
+
+      def notify_two_factor_lockout!
+        # One row per recipient + source: a repeat lockout resurfaces the
+        # same item (back at the top, unread again) instead of stacking.
+        item = ActivityItem.find_or_initialize_by(user: @pending_user,
+          source: @pending_user.two_factor_credential, event_type: "two_factor_lockout")
+        if item.persisted?
+          item.mark_unread!
+          item.touch
+        else
+          item.save!
+        end
+
+        if TwoFactorMailer.mail_configured?
+          TwoFactorMailer.lockout_notice(@pending_user).deliver_later
         end
       end
 
