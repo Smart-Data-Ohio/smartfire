@@ -53,6 +53,7 @@
             Copy mention
           <% end %>
         <% end %>
+        <%= render "users/stars/toggle", user: @user, starred: @starred %>
       <% else %>
         <%= link_to "View profile", user_path(@user), class: "btn full-width", data: { turbo_frame: "_top" } %>
       <% end %>
