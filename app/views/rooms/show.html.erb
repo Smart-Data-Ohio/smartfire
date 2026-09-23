@@ -19,6 +19,11 @@
   <%= render "rooms/show/thread_panel", room: @room %>
 <% end %>
 
+<%# Mount point for the join-notice banner ("Chris is in your huddle").
+    Always rendered empty: the per-viewer banner is injected client-side,
+    so no personal state ever sits in a shared fragment. %>
+<div id="huddle-join-banner-slot"></div>
+
 <%= message_area_tag(@room, scroll_to_divider: @scroll_to_unread_divider) do %>
   <%= render "messages/template" %>
 

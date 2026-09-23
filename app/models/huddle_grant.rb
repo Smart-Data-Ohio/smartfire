@@ -28,6 +28,7 @@ class HuddleGrant < ApplicationRecord
 
   after_update_commit :broadcast_voice_presence, if: :saved_change_to_revoked_at?
   after_update_commit :broadcast_call_ended_to_invitee, if: :revoked_while_in_call?
+  after_update_commit :broadcast_leave_notice, if: :revoked_while_in_call?
 
   class << self
     def issue!(session:, membership:)
@@ -206,6 +207,9 @@ class HuddleGrant < ApplicationRecord
     update_columns(last_seen_at: nil)
     broadcast_voice_presence
     broadcast_call_ended_to_invitee if was_in_call
+    # A revoked grant already notified its leave through the revocation
+    # callback; only a live grant leaving still has a toast to send.
+    Huddle::JoinNotifier.notify_leave(self) if was_in_call && !revoked?
     true
   end
 
@@ -218,7 +222,10 @@ class HuddleGrant < ApplicationRecord
 
     first_seen = !in_call?
     update_columns(last_seen_at: Time.current)
-    Huddle::BroadcastPresenceJob.perform_later(id) if first_seen
+    if first_seen
+      Huddle::BroadcastPresenceJob.perform_later(id)
+      Huddle::JoinNoticeJob.perform_later(id) unless other_grants_in_call?
+    end
   end
 
   # Post-commit work for every issuance, created or reused: obtaining a grant
@@ -444,6 +451,12 @@ class HuddleGrant < ApplicationRecord
       saved_change_to_revoked_at? && in_call?
     end
 
+    # Tells the members still in the call that this grant's user left,
+    # and clears outsider banners when the last participant drops out.
+    def broadcast_leave_notice
+      Huddle::JoinNotifier.notify_leave(self)
+    end
+
     # Tells each rung member's banner the call ended: the last participant
     # hung up, was removed, or joined another room. In a group call the ring
     # belongs to the call, not the starter, so while anyone else is still in
@@ -476,6 +489,15 @@ class HuddleGrant < ApplicationRecord
     # left the active scope, and mark_out_of_call! cleared liveness first.
     def others_in_call?
       self.class.active.in_call.where(room_id: room_id).where.not(id: id).exists?
+    end
+
+    # Another grant of the same user already listed in the room's call
+    # means the sighting changes no roster (a second device), so it notifies
+    # nobody. Decided at sighting time, not in the job: by the time the
+    # job runs, a near-simultaneous second sighting would look identical
+    # and wrongly silence a real join.
+    def other_grants_in_call?
+      self.class.active.in_call.where(room_id: room_id, user_id: user_id).where.not(id: id).exists?
     end
 
     # Every unhandled ring for this room, whatever grant started it: the

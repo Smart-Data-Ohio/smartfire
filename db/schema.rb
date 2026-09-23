@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_23_171812) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_211403) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -695,6 +695,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_171812) do
     t.integer "favorite_position"
     t.datetime "hand_raised_at"
     t.string "involvement", default: "mentions"
+    t.datetime "last_huddle_join_push_at"
     t.bigint "last_read_message_id"
     t.bigint "room_category_id"
     t.integer "room_id", null: false

@@ -1,0 +1,9 @@
+<div id="huddle-join-notices" data-controller="huddle-join-notice" data-turbo-permanent>
+  <%# The container is the live region: toasts arrive with text already in
+      them, so they carry no live-region roles of their own. %>
+  <div class="huddle-join-toasts" data-huddle-join-notice-target="toasts" aria-live="polite"></div>
+  <div data-controller="sound"
+       data-huddle-join-notice-target="sound"
+       data-sound-url-value="<%= asset_path("incoming.mp3") %>"
+       hidden></div>
+</div>

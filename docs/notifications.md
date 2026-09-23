@@ -163,7 +163,7 @@ have no theme picker and keep following the OS.
 
 Every push path calls `push?` (`Room::MessagePusher`,
 `ChannelThread::MessagePusher`, `Event::ReminderPusher`,
-`Huddle::InvitationPusher`); sounds follow through the DND marker and
+`Huddle::InvitationPusher`, `Huddle::JoinPusher`); sounds follow through the DND marker and
 quiet-hours window the layout renders for the `sound` controller. The
 inbox recorder calls `inbox_event_type` for each candidate:
 `ActivityItems::Recorder` batches keyword matching once per message
