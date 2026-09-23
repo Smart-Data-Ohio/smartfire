@@ -89,8 +89,9 @@ class BoardAutomations::DigestDispatcherTest < ActiveSupport::TestCase
     end
   end
 
-  test "done posts never appear even with a done rule" do
-    BoardSlaRule.create!(room: @board, work_status: "done", nudge_after_minutes: 60, escalate_after_minutes: 240)
+  test "done posts never appear even with a legacy done rule" do
+    BoardSlaRule.new(room: @board, work_status: "done", nudge_after_minutes: 60, escalate_after_minutes: 240)
+      .save!(validate: false)
     post = ChannelThread.create_board_post!(room: @board, creator: users(:david),
       name: "Finished", work_status: "done", owner_id: users(:jz).id)
     post.update_columns(work_status_changed_at: 3.days.ago)

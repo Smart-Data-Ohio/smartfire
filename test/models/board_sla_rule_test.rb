@@ -18,6 +18,13 @@ class BoardSlaRuleTest < ActiveSupport::TestCase
     assert rule.valid?
   end
 
+  test "rejects the done status" do
+    rule = BoardSlaRule.new(room: @board, work_status: "done", nudge_after_minutes: 60, escalate_after_minutes: 240)
+
+    assert_not rule.valid?
+    assert_includes rule.errors[:work_status], "takes no SLA timer: done posts never breach"
+  end
+
   test "rejects an unknown status" do
     rule = BoardSlaRule.new(room: @board, work_status: "shipped", nudge_after_minutes: 60, escalate_after_minutes: 240)
 

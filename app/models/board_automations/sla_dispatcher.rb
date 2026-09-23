@@ -21,6 +21,7 @@ module BoardAutomations
         def dispatch_rule!(rule, now:)
           room = rule.room
           return unless room&.board? && room.deleted_at.nil?
+          return if rule.work_status == "done" # Legacy rows: done takes no rule.
 
           due_threads(rule, now: now).find_each do |thread|
             dispatch_thread!(rule, thread, now: now)

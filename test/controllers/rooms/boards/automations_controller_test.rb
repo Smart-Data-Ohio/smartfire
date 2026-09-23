@@ -122,6 +122,29 @@ class Rooms::Boards::AutomationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 2, AuditLog.where(action: "board.automation.change").count
   end
 
+  test "the automations page offers no done row" do
+    sign_in :david
+
+    get board_automations_path(@board)
+
+    assert_response :success
+    assert_select 'input[name="sla_rules[done][nudge_after_minutes]"]', count: 0
+    assert_select 'input[name="sla_rules[blocked][nudge_after_minutes]"]', count: 1
+  end
+
+  test "saving sla timers refuses a done rule" do
+    sign_in :david
+
+    assert_no_difference -> { @board.board_sla_rules.count } do
+      patch board_automation_sla_rules_path(@board), params: {
+        sla_rules: { "done" => { nudge_after_minutes: "60", escalate_after_minutes: "240" } }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_match "takes no SLA timer", response.body
+  end
+
   test "saving sla timers with an invalid threshold saves nothing" do
     sign_in :david
 

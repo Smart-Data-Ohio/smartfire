@@ -128,6 +128,16 @@ class BoardAutomations::SlaDispatcherTest < ActiveSupport::TestCase
     end
   end
 
+  test "a legacy done rule fires nothing for done posts" do
+    BoardSlaRule.new(room: @board, work_status: "done", nudge_after_minutes: 60, escalate_after_minutes: 240)
+      .save!(validate: false)
+    stale_post!(owner: users(:jz), status: "done", entered_ago: 3.days)
+
+    assert_no_difference -> { BoardSlaNudge.count } do
+      BoardAutomations::SlaDispatcher.dispatch_due!
+    end
+  end
+
   test "a post in an unruled status fires nothing" do
     stale_post!(owner: users(:jz), status: "planned", entered_ago: 3.days)
 

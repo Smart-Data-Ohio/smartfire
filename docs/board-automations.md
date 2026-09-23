@@ -25,13 +25,15 @@ fires, so a target that lost access is silently skipped.
 
 ## SLA timers
 
-Each work status (`Planned`, `In progress`, `Blocked`, `Done`) may carry
-one rule: a nudge threshold and a later escalation threshold, in minutes
-(up to 30 days). A post sitting in the status past the nudge time
-notifies its owner; past the escalation time it escalates to the board's
-creator. `Blocked` is handled the same way as every other status. Each
-stage fires once per status crossing: changing the status restarts both
-timers.
+Each unfinished work status (`Planned`, `In progress`, `Blocked`) may
+carry one rule: a nudge threshold and a later escalation threshold, in
+minutes (up to 30 days). A post sitting in the status past the nudge
+time notifies its owner; past the escalation time it escalates to the
+board's creator. `Blocked` is handled the same way as every other
+ruled status. `Done` takes no rule — finished posts never breach — and
+the sweep skips `Done` posts even when a legacy `Done` rule row exists.
+Each stage fires once per status crossing: changing the status restarts
+both timers.
 
 Recipients:
 

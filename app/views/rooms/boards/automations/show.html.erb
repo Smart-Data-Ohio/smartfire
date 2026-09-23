@@ -59,7 +59,7 @@
         </tr>
       </thead>
       <tbody>
-        <% ChannelThread::WORK_STATUSES.each do |status| %>
+        <% BoardSlaRule::RULED_STATUSES.each do |status| %>
           <% rule = @sla_rules[status] %>
           <tr>
             <th scope="row"><%= ChannelThread::WORK_STATUS_LABELS.fetch(status) %></th>
