@@ -1,29 +1,39 @@
 #!/usr/bin/env bash
 #
 # One-time setup for rolling daily backups. The LEAD runs this from a machine
-# with gcloud authenticated as an admin of the backup project (and a viewer of
-# the app project, for the VM lookup). It is idempotent: every resource is
-# described first and created only when missing, so re-running it converges
-# without duplicating anything. It never touches the live app, never changes
-# the VM, and never changes access scopes.
+# with gcloud authenticated as an admin of the backup project (and enough
+# access in the app project to manage service accounts, IAM bindings and
+# Workload Identity Federation). It is idempotent: every resource is described
+# first and created only when missing, so re-running it converges without
+# duplicating anything. It never touches the live app, never changes the VM,
+# and never attaches anything to the VM: the VM has no service account and
+# needs none, because the nightly GitHub Actions workflow (not the VM) is what
+# uploads to Cloud Storage.
 #
-# What it creates, all in the SEPARATE backup project:
-#   1. the backup bucket (uniform access, versioning, 30-day soft delete,
-#      lifecycle from lifecycle.json, public access prevention);
-#   2. a bucket-level roles/storage.objectCreator grant for the VM's EXISTING
-#      service account (a cross-project binding on the bucket itself, so no
-#      new identity is attached to the VM and the VM is never stopped).
-#      Only when the VM has no service account, or its scopes cannot write to
-#      Cloud Storage, the script instead creates smartfire-backup-writer in
-#      the backup project, grants THAT, prints the one-time attach steps, and
-#      exits 1: re-run it after attaching and it converges to exit 0.
-#   3. smartfire-backup-reader + a Workload Identity pool/provider so the
-#      monthly restore-check workflow can read (never write or delete). The
-#      impersonation binding pins the exact ID-qualified subject GitHub mints
-#      for this repository's main branch, matching the deployer's bindings
-#      (see deploy/gcp/README.md#authentication).
+# What it creates:
+#   1. in the SEPARATE backup project: the backup bucket (US multi-region,
+#      uniform access, versioning, 30-day soft delete, lifecycle from
+#      lifecycle.json, public access prevention);
+#   2. in the APP project: smartfire-backup-runner, the identity the nightly
+#      workflow impersonates. It holds roles/storage.objectCreator on the
+#      backup bucket (a cross-project binding on the bucket itself: create
+#      objects, but neither read, delete nor overwrite them) and, ON THE
+#      campfire VM ONLY, the IAP-tunnel and SSH roles it needs to run the
+#      backup script: roles/iap.tunnelResourceAccessor,
+#      roles/compute.osAdminLogin (OS Login with sudo, as root must run the
+#      backup) and roles/compute.viewer (so ssh/scp can resolve the VM;
+#      read-only metadata, no deploy rights). A Workload Identity pool/
+#      provider in the app project trusts the nightly workflow's
+#      ID-qualified subject for refs/heads/main, the same form the restore
+#      check uses;
+#   3. in the backup project: smartfire-backup-reader + a Workload Identity
+#      pool/provider so the monthly restore-check workflow can read (never
+#      write or delete). The impersonation binding pins the exact
+#      ID-qualified subject GitHub mints for this repository's main branch,
+#      matching the deployer's bindings (see deploy/gcp/README.md#authentication);
 #   4. the nightly boot-disk snapshot schedule on the app VM (delegated to
-#      snapshot-schedule.sh, which lives in the app project by necessity).
+#      snapshot-schedule.sh, which lives in the app project by necessity and
+#      skips cleanly when the disk already has a schedule).
 #
 # Project creation and billing linking are NOT done here: when BACKUP_PROJECT_ID
 # does not exist the script prints the manual commands and stops.
@@ -32,38 +42,41 @@
 # BACKUP_PROJECT_ID   the separate backup project (default
 #                     smart-data-campfire-backups; must already exist).
 # BACKUP_BUCKET       required. Bare bucket name, without gs://.
-# BACKUP_LOCATION     bucket location (default US-CENTRAL1).
-# BACKUP_WRITER_SA    fallback writer SA short name, only created when the VM
-#                     cannot upload as it stands (default
-#                     smartfire-backup-writer).
-# BACKUP_READER_SA    reader SA short name (default smartfire-backup-reader).
-# BACKUP_WIF_POOL     Workload Identity pool id (default smartfire-backup-pool).
+# BACKUP_LOCATION     bucket location (default US, the US multi-region: the
+#                     backups must survive the loss of the app region).
+# BACKUP_RUNNER_SA    backup-runner SA short name, created in the APP
+#                     project (default smartfire-backup-runner).
+# BACKUP_READER_SA    reader SA short name, created in the backup project
+#                     (default smartfire-backup-reader).
+# BACKUP_WIF_POOL     Workload Identity pool id, created in each project
+#                     (default smartfire-backup-pool).
 # BACKUP_WIF_PROVIDER pool provider id (default github-actions).
-# GITHUB_REPO         owner/repo allowed to impersonate the reader
+# GITHUB_REPO         owner/repo allowed to impersonate the SAs
 #                     (default Smart-Data-Ohio/smartfire).
 # GITHUB_OWNER_ID     numeric GitHub id of the owner, for the ID-qualified
 #                     subject (default 262436228).
 # GITHUB_REPO_ID      numeric GitHub id of the repo, for the ID-qualified
 #                     subject (default 1370426325).
-# GITHUB_REF          git ref whose runs may impersonate the reader; the bound
+# GITHUB_REF          git ref whose runs may impersonate the SAs; the bound
 #                     subject is repo:<owner>@<owner-id>/<repo>@<repo-id>:
 #                     ref:<ref> (default refs/heads/main: scheduled runs always
 #                     use the default branch, so dispatch by hand from main).
-# APP_PROJECT_ID      app project, for the VM lookup and snapshot schedule
+# APP_PROJECT_ID      app project, holding the VM and the backup runner
 #                     (default smart-data-campfire).
 # APP_ZONE / APP_INSTANCE  app VM location (defaults us-central1-a/campfire).
 # LIFECYCLE_FILE      lifecycle JSON (default: lifecycle.json next to this
 #                     script).
 #
 # At the end it prints the values the lead must put in GitHub variables/
-# secrets and in /etc/campfire-backups/backup.env on the VM.
+# secrets. Nothing is installed on the VM: the nightly workflow copies the
+# backup script to the VM on every run.
 
 set -euo pipefail
 
 BACKUP_PROJECT_ID="${BACKUP_PROJECT_ID:-smart-data-campfire-backups}"
 BACKUP_BUCKET="${BACKUP_BUCKET:-}"
-BACKUP_LOCATION="${BACKUP_LOCATION:-US-CENTRAL1}"
-BACKUP_WRITER_SA="${BACKUP_WRITER_SA:-smartfire-backup-writer}"
+BACKUP_LOCATION="${BACKUP_LOCATION:-US}"
+BACKUP_RUNNER_SA="${BACKUP_RUNNER_SA:-smartfire-backup-runner}"
 BACKUP_READER_SA="${BACKUP_READER_SA:-smartfire-backup-reader}"
 BACKUP_WIF_POOL="${BACKUP_WIF_POOL:-smartfire-backup-pool}"
 BACKUP_WIF_PROVIDER="${BACKUP_WIF_PROVIDER:-github-actions}"
@@ -90,10 +103,10 @@ command -v jq >/dev/null || die "jq is not installed"
 [ -f "$LIFECYCLE_FILE" ] || die "lifecycle file not found: $LIFECYCLE_FILE"
 
 BUCKET_URL="gs://${BACKUP_BUCKET}"
-WRITER_EMAIL="${BACKUP_WRITER_SA}@${BACKUP_PROJECT_ID}.iam.gserviceaccount.com"
+RUNNER_EMAIL="${BACKUP_RUNNER_SA}@${APP_PROJECT_ID}.iam.gserviceaccount.com"
 READER_EMAIL="${BACKUP_READER_SA}@${BACKUP_PROJECT_ID}.iam.gserviceaccount.com"
 
-# --- 0. the project must already exist --------------------------------------
+# --- 0. the projects must already exist -------------------------------------
 if ! gcloud projects describe "$BACKUP_PROJECT_ID" >/dev/null 2>&1; then
   cat >&2 <<EOF
 [setup-backup-project] ERROR: project $BACKUP_PROJECT_ID does not exist or is not visible.
@@ -102,7 +115,7 @@ Create it and link billing by hand first; this script never does that silently:
   gcloud projects create $BACKUP_PROJECT_ID --name="Smartfire backups"
   # link billing in the Cloud console (Billing > Link a billing account),
   # or: gcloud billing projects link $BACKUP_PROJECT_ID --billing-account=BILLING_ACCOUNT_ID
-  gcloud services enable storage.googleapis.com compute.googleapis.com \\
+  gcloud services enable storage.googleapis.com \\
     iam.googleapis.com iamcredentials.googleapis.com sts.googleapis.com \\
     --project=$BACKUP_PROJECT_ID
 
@@ -112,10 +125,16 @@ EOF
 fi
 log "project $BACKUP_PROJECT_ID exists"
 
+gcloud projects describe "$APP_PROJECT_ID" >/dev/null 2>&1 \
+  || die "project $APP_PROJECT_ID does not exist or is not visible; the backup runner lives there"
+log "project $APP_PROJECT_ID exists"
+
 log "enabling the required APIs (idempotent)"
-gcloud services enable storage.googleapis.com compute.googleapis.com \
+gcloud services enable storage.googleapis.com \
   iam.googleapis.com iamcredentials.googleapis.com sts.googleapis.com \
   --project="$BACKUP_PROJECT_ID" --quiet
+gcloud services enable iam.googleapis.com iamcredentials.googleapis.com sts.googleapis.com \
+  --project="$APP_PROJECT_ID" --quiet
 
 # --- 1. the bucket -----------------------------------------------------------
 if gcloud storage buckets describe "$BUCKET_URL" --project="$BACKUP_PROJECT_ID" >/dev/null 2>&1; then
@@ -131,72 +150,130 @@ log "applying bucket settings: versioning, 30-day soft delete, lifecycle"
 gcloud storage buckets update "$BUCKET_URL" --project="$BACKUP_PROJECT_ID" \
   --versioning --soft-delete-duration=30d --lifecycle-file="$LIFECYCLE_FILE"
 
-# --- 2. the uploader identity: the VM's own service account ------------------
-# No new identity is attached to the VM and the VM is never stopped: IAM
-# allows a cross-project grant on the bucket itself. Two preconditions, both
-# only ever READ here, never changed: the VM must HAVE a service account, and
-# its access scopes must allow Cloud Storage writes. When either is missing,
-# the fallback below stages a dedicated writer SA and this script exits 1
-# with the one-time attach steps; attaching any service account (or widening
-# scopes) needs a VM stop, and that stays a manual, visible decision.
-vm_json="$(gcloud compute instances describe "$APP_INSTANCE" \
-  --project="$APP_PROJECT_ID" --zone="$APP_ZONE" --format=json)"
-VM_SA_EMAIL="$(printf '%s' "$vm_json" | jq -r '.serviceAccounts[0].email // empty')"
-vm_scopes="$(printf '%s' "$vm_json" | jq -r '[.serviceAccounts[0].scopes[]? | split("/") | last] | join(" ")')"
-vm_scopes_ok=0
-case " $vm_scopes " in
-  *" cloud-platform "*|*" devstorage.read_write "*|*" devstorage.full_control "*) vm_scopes_ok=1 ;;
-esac
-
-VM_NEEDS_ATTACH=0
-VM_SHORTFALL=""
-if [ -n "$VM_SA_EMAIL" ] && [ "$vm_scopes_ok" = "1" ]; then
-  UPLOAD_MEMBER="serviceAccount:$VM_SA_EMAIL"
-  log "the VM already runs as $VM_SA_EMAIL with Cloud Storage write scopes; no VM change is needed"
-else
-  if [ -z "$VM_SA_EMAIL" ]; then
-    VM_SHORTFALL="it has no service account"
+# --- helpers -----------------------------------------------------------------
+ensure_service_account() {
+  local name="$1" project="$2" description="$3" display="$4"
+  local email="${name}@${project}.iam.gserviceaccount.com"
+  if gcloud iam service-accounts describe "$email" --project="$project" >/dev/null 2>&1; then
+    log "service account $email already exists"
   else
-    VM_SHORTFALL="its service account $VM_SA_EMAIL has scopes ($vm_scopes) that cannot write to Cloud Storage"
+    log "creating service account $email"
+    gcloud iam service-accounts create "$name" \
+      --project="$project" \
+      --description="$description" \
+      --display-name="$display"
   fi
-  log "the VM cannot upload as it stands ($VM_SHORTFALL); staging the attach-once fallback"
-  if gcloud iam service-accounts describe "$WRITER_EMAIL" --project="$BACKUP_PROJECT_ID" >/dev/null 2>&1; then
-    log "service account $WRITER_EMAIL already exists"
-  else
-    log "creating service account $WRITER_EMAIL"
-    gcloud iam service-accounts create "$BACKUP_WRITER_SA" \
-      --project="$BACKUP_PROJECT_ID" \
-      --description="Smartfire nightly backup uploader (create-only); see docs/backups.md" \
-      --display-name="Smartfire backup writer"
-  fi
-  UPLOAD_MEMBER="serviceAccount:$WRITER_EMAIL"
-  VM_NEEDS_ATTACH=1
-fi
+}
 
-# Whoever uploads holds ONLY roles/storage.objectCreator on this bucket: it
-# can create objects but can neither read, delete nor overwrite them. Even a
-# fully compromised app VM therefore cannot harm existing backups.
+ensure_wif_pool() {
+  local project="$1"
+  if gcloud iam workload-identity-pools describe "$BACKUP_WIF_POOL" \
+      --project="$project" --location=global >/dev/null 2>&1; then
+    log "Workload Identity pool $BACKUP_WIF_POOL already exists in $project"
+  else
+    log "creating Workload Identity pool $BACKUP_WIF_POOL in $project"
+    gcloud iam workload-identity-pools create "$BACKUP_WIF_POOL" \
+      --project="$project" --location=global \
+      --display-name="Smartfire backups" \
+      --description="GitHub Actions access to backup identities only"
+  fi
+
+  if gcloud iam workload-identity-pools providers describe "$BACKUP_WIF_PROVIDER" \
+      --project="$project" --location=global \
+      --workload-identity-pool="$BACKUP_WIF_POOL" >/dev/null 2>&1; then
+    log "Workload Identity provider $BACKUP_WIF_PROVIDER already exists in $project"
+  else
+    log "creating Workload Identity provider $BACKUP_WIF_PROVIDER in $project"
+    gcloud iam workload-identity-pools providers create-oidc "$BACKUP_WIF_PROVIDER" \
+      --project="$project" --location=global \
+      --workload-identity-pool="$BACKUP_WIF_POOL" \
+      --issuer-uri="https://token.actions.githubusercontent.com" \
+      --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.repository_owner=assertion.repository_owner" \
+      --attribute-condition="assertion.repository == '$GITHUB_REPO'"
+  fi
+}
+
+# The impersonation binding pins the exact ID-qualified subject GitHub mints
+# for runs of this repo on GITHUB_REF, the same form as the deployer's
+# per-environment bindings. The provider-level attribute condition above is
+# the outer gate (assertion.repository is never ID-qualified); this subject
+# is the inner one. Dispatch the workflows by hand from main: a run from any
+# other ref mints a different subject and is denied.
+#
+# Sets WIF_PROVIDER_RESULT to the full provider resource name (a global,
+# because log lines share stdout and cannot be captured apart).
+WIF_PROVIDER_RESULT=""
+allow_github_subject() {
+  local email="$1" project="$2"
+  local number provider principal subject
+  number="$(gcloud projects describe "$project" --format='value(projectNumber)')"
+  provider="projects/${number}/locations/global/workloadIdentityPools/${BACKUP_WIF_POOL}/providers/${BACKUP_WIF_PROVIDER}"
+  subject="repo:${GITHUB_REPO%%/*}@${GITHUB_OWNER_ID}/${GITHUB_REPO##*/}@${GITHUB_REPO_ID}:ref:${GITHUB_REF}"
+  principal="principal://iam.googleapis.com/projects/${number}/locations/global/workloadIdentityPools/${BACKUP_WIF_POOL}/subject/${subject}"
+  if gcloud iam service-accounts get-iam-policy "$email" --project="$project" --format=json \
+      | jq -e --arg m "$principal" \
+        '.bindings[] | select(.role == "roles/iam.workloadIdentityUser") | .members[] | select(. == $m)' >/dev/null 2>&1; then
+    log "$subject may already impersonate $email"
+  else
+    log "allowing $subject to impersonate $email"
+    gcloud iam service-accounts add-iam-policy-binding "$email" \
+      --project="$project" \
+      --member="$principal" --role="roles/iam.workloadIdentityUser"
+  fi
+  WIF_PROVIDER_RESULT="$provider"
+}
+
+ensure_instance_binding() {
+  local role="$1" member="$2"
+  if gcloud compute instances get-iam-policy "$APP_INSTANCE" \
+      --project="$APP_PROJECT_ID" --zone="$APP_ZONE" --format=json \
+      | jq -e --arg m "$member" --arg r "$role" \
+        '.bindings[] | select(.role == $r) | .members[] | select(. == $m)' >/dev/null 2>&1; then
+    log "$member already holds $role on $APP_INSTANCE"
+  else
+    log "granting $role on $APP_INSTANCE to $member"
+    gcloud compute instances add-iam-policy-binding "$APP_INSTANCE" \
+      --project="$APP_PROJECT_ID" --zone="$APP_ZONE" \
+      --member="$member" --role="$role"
+  fi
+}
+
+# --- 2. the backup-runner identity (lives in the APP project) ----------------
+# The nightly workflow impersonates this account: it runs the backup script
+# on the VM over IAP SSH and uploads the encrypted archive. It deliberately
+# holds no snapshot, deploy or Artifact Registry rights.
+ensure_service_account "$BACKUP_RUNNER_SA" "$APP_PROJECT_ID" \
+  "Smartfire nightly backup runner (create-only upload, VM-scoped SSH); see docs/backups.md" \
+  "Smartfire backup runner"
+
+# The runner holds ONLY roles/storage.objectCreator on this bucket: it can
+# create objects but can neither read, delete nor overwrite them. Even a
+# compromised workflow run therefore cannot harm existing backups.
 if gcloud storage buckets get-iam-policy "$BUCKET_URL" --project="$BACKUP_PROJECT_ID" --format=json \
-    | jq -e --arg m "$UPLOAD_MEMBER" \
+    | jq -e --arg m "serviceAccount:$RUNNER_EMAIL" \
       '.bindings[] | select(.role == "roles/storage.objectCreator") | .members[] | select(. == $m)' >/dev/null 2>&1; then
-  log "$UPLOAD_MEMBER already holds roles/storage.objectCreator on $BUCKET_URL"
+  log "serviceAccount:$RUNNER_EMAIL already holds roles/storage.objectCreator on $BUCKET_URL"
 else
-  log "granting roles/storage.objectCreator on $BUCKET_URL to $UPLOAD_MEMBER"
+  log "granting roles/storage.objectCreator on $BUCKET_URL to $RUNNER_EMAIL"
   gcloud storage buckets add-iam-policy-binding "$BUCKET_URL" \
     --project="$BACKUP_PROJECT_ID" \
-    --member="$UPLOAD_MEMBER" --role="roles/storage.objectCreator"
+    --member="serviceAccount:$RUNNER_EMAIL" --role="roles/storage.objectCreator"
 fi
 
+# IAP tunnel + SSH, on the campfire VM only: the same shape the deployer
+# uses to reach the VM, and no deploy rights.
+ensure_instance_binding "roles/iap.tunnelResourceAccessor" "serviceAccount:$RUNNER_EMAIL"
+ensure_instance_binding "roles/compute.osAdminLogin" "serviceAccount:$RUNNER_EMAIL"
+ensure_instance_binding "roles/compute.viewer" "serviceAccount:$RUNNER_EMAIL"
+
+ensure_wif_pool "$APP_PROJECT_ID"
+allow_github_subject "$RUNNER_EMAIL" "$APP_PROJECT_ID"
+RUNNER_WIF_PROVIDER="$WIF_PROVIDER_RESULT"
+
 # --- 3. the reader identity for the monthly restore check --------------------
-if gcloud iam service-accounts describe "$READER_EMAIL" --project="$BACKUP_PROJECT_ID" >/dev/null 2>&1; then
-  log "service account $READER_EMAIL already exists"
-else
-  log "creating service account $READER_EMAIL"
-  gcloud iam service-accounts create "$BACKUP_READER_SA" \
-    --project="$BACKUP_PROJECT_ID" \
-    --description="Smartfire monthly restore check (read-only); see docs/backups.md" \
-    --display-name="Smartfire backup reader"
-fi
+ensure_service_account "$BACKUP_READER_SA" "$BACKUP_PROJECT_ID" \
+  "Smartfire monthly restore check (read-only); see docs/backups.md" \
+  "Smartfire backup reader"
 
 if gcloud storage buckets get-iam-policy "$BUCKET_URL" --project="$BACKUP_PROJECT_ID" --format=json \
     | jq -e --arg m "serviceAccount:$READER_EMAIL" \
@@ -209,118 +286,52 @@ else
     --member="serviceAccount:$READER_EMAIL" --role="roles/storage.objectViewer"
 fi
 
-if gcloud iam workload-identity-pools describe "$BACKUP_WIF_POOL" \
-    --project="$BACKUP_PROJECT_ID" --location=global >/dev/null 2>&1; then
-  log "Workload Identity pool $BACKUP_WIF_POOL already exists"
-else
-  log "creating Workload Identity pool $BACKUP_WIF_POOL"
-  gcloud iam workload-identity-pools create "$BACKUP_WIF_POOL" \
-    --project="$BACKUP_PROJECT_ID" --location=global \
-    --display-name="Smartfire backups" \
-    --description="GitHub Actions access to backup-project readers only"
-fi
+ensure_wif_pool "$BACKUP_PROJECT_ID"
+allow_github_subject "$READER_EMAIL" "$BACKUP_PROJECT_ID"
+READER_WIF_PROVIDER="$WIF_PROVIDER_RESULT"
 
-if gcloud iam workload-identity-pools providers describe "$BACKUP_WIF_PROVIDER" \
-    --project="$BACKUP_PROJECT_ID" --location=global \
-    --workload-identity-pool="$BACKUP_WIF_POOL" >/dev/null 2>&1; then
-  log "Workload Identity provider $BACKUP_WIF_PROVIDER already exists"
-else
-  log "creating Workload Identity provider $BACKUP_WIF_PROVIDER"
-  gcloud iam workload-identity-pools providers create-oidc "$BACKUP_WIF_PROVIDER" \
-    --project="$BACKUP_PROJECT_ID" --location=global \
-    --workload-identity-pool="$BACKUP_WIF_POOL" \
-    --issuer-uri="https://token.actions.githubusercontent.com" \
-    --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.repository_owner=assertion.repository_owner" \
-    --attribute-condition="assertion.repository == '$GITHUB_REPO'"
-fi
-
-# The impersonation binding pins the exact ID-qualified subject GitHub mints
-# for runs of this repo on GITHUB_REF, the same form as the deployer's
-# per-environment bindings. The provider-level attribute condition above is
-# the outer gate (assertion.repository is never ID-qualified); this subject
-# is the inner one. Dispatch the workflow by hand from main: a run from any
-# other ref mints a different subject and is denied.
-PROJECT_NUMBER="$(gcloud projects describe "$BACKUP_PROJECT_ID" --format='value(projectNumber)')"
-WIF_PROVIDER="projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${BACKUP_WIF_POOL}/providers/${BACKUP_WIF_PROVIDER}"
 GITHUB_SUBJECT="repo:${GITHUB_REPO%%/*}@${GITHUB_OWNER_ID}/${GITHUB_REPO##*/}@${GITHUB_REPO_ID}:ref:${GITHUB_REF}"
-PRINCIPAL="principal://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${BACKUP_WIF_POOL}/subject/${GITHUB_SUBJECT}"
-if gcloud iam service-accounts get-iam-policy "$READER_EMAIL" --project="$BACKUP_PROJECT_ID" --format=json \
-    | jq -e --arg m "$PRINCIPAL" \
-      '.bindings[] | select(.role == "roles/iam.workloadIdentityUser") | .members[] | select(. == $m)' >/dev/null 2>&1; then
-  log "$GITHUB_SUBJECT may already impersonate $READER_EMAIL"
-else
-  log "allowing $GITHUB_SUBJECT to impersonate $READER_EMAIL"
-  gcloud iam service-accounts add-iam-policy-binding "$READER_EMAIL" \
-    --project="$BACKUP_PROJECT_ID" \
-    --member="$PRINCIPAL" --role="roles/iam.workloadIdentityUser"
-fi
 
 # --- 4. the nightly snapshot schedule (lives in the app project) -------------
-log "creating the nightly snapshot schedule (delegated to snapshot-schedule.sh)"
+log "checking the nightly snapshot schedule (delegated to snapshot-schedule.sh)"
 APP_PROJECT_ID="$APP_PROJECT_ID" APP_ZONE="$APP_ZONE" APP_INSTANCE="$APP_INSTANCE" \
   "$SCRIPT_DIR/snapshot-schedule.sh"
 
 # --- 5. what the lead must still do by hand -----------------------------------
-if [ "$VM_NEEDS_ATTACH" = "1" ]; then
-  cat <<EOF
-
-=====================================================================
-Backup infrastructure is ALMOST ready: the VM cannot upload yet.
-$APP_INSTANCE ($APP_PROJECT_ID/$APP_ZONE): $VM_SHORTFALL.
-Attach the uploader below, then re-run this script: it converges to exit 0.
-=====================================================================
-
---- attach the uploader to the app VM (one brief stop) ---
-
-Attaching a service account (like widening scopes) needs the VM stopped;
-that stays a manual step, never something this script does silently:
-
-  gcloud compute instances stop $APP_INSTANCE --zone=$APP_ZONE \\
-    --project=$APP_PROJECT_ID
-  gcloud compute instances set-service-account $APP_INSTANCE \\
-    --zone=$APP_ZONE --project=$APP_PROJECT_ID \\
-    --service-account=$WRITER_EMAIL --scopes=cloud-platform
-  gcloud compute instances start $APP_INSTANCE --zone=$APP_ZONE \\
-    --project=$APP_PROJECT_ID
-
-The cloud-platform scope is the coarse gate; the IAM binding above is what
-actually limits the VM to creating objects in $BUCKET_URL. After the
-attach, re-run this script before continuing below.
-EOF
-else
-  cat <<EOF
-
-=====================================================================
-Backup infrastructure is ready. No VM identity change was needed.
-=====================================================================
-EOF
-fi
-
 cat <<EOF
+
+=====================================================================
+Backup infrastructure is ready. No VM change was needed: the VM has no
+service account and needs none, and nothing is installed on it. The
+nightly workflow copies the backup script to the VM on every run.
+=====================================================================
 
 --- age keypair (generate OFF the VM and OFF any shared machine) ---
 
   age-keygen -o smartfire-backup-key.txt   # keep this file sealed
 
-The public recipient (the age1... line) goes in /etc/campfire-backups/
-backup.env on the VM as BACKUP_AGE_RECIPIENT. The PRIVATE key goes ONLY
-in the GitHub secret BACKUP_RESTORE_AGE_IDENTITY (below) and in the
-sealed ops store. Never copy it to the VM.
-
---- install the timer on the VM (idempotent) ---
-
-  sudo deploy/backups/install-backup.sh
-  sudoedit /etc/campfire-backups/backup.env   # BACKUP_BUCKET=$BACKUP_BUCKET
-  sudo systemctl start campfire-backup.service
-  sudo journalctl -u campfire-backup.service --since '10 min ago'
-
-The installer installs age itself when the configured encryption needs it.
+The public recipient (the age1... line) goes in the GitHub variable
+BACKUP_AGE_RECIPIENT below. The PRIVATE key goes ONLY in the GitHub
+secret BACKUP_RESTORE_AGE_IDENTITY (below) and in the sealed ops store.
+Never copy it to the VM.
 
 --- GitHub repository variables (Settings > Secrets and variables > Actions) ---
 
+Nightly backup (Actions > Nightly backup):
+
+  BACKUP_GCP_BUCKET           $BACKUP_BUCKET
+  BACKUP_APP_PROJECT          $APP_PROJECT_ID
+  BACKUP_APP_ZONE             $APP_ZONE
+  BACKUP_APP_INSTANCE         $APP_INSTANCE
+  BACKUP_RUNNER_WIF_PROVIDER  $RUNNER_WIF_PROVIDER
+  BACKUP_RUNNER_SA            $RUNNER_EMAIL
+  BACKUP_AGE_RECIPIENT        <the age1... public recipient from above>
+
+Monthly restore check (Actions > Monthly backup restore check):
+
   BACKUP_GCP_PROJECT_ID       $BACKUP_PROJECT_ID
   BACKUP_GCP_BUCKET           $BACKUP_BUCKET
-  BACKUP_GCP_WIF_PROVIDER     $WIF_PROVIDER
+  BACKUP_GCP_WIF_PROVIDER     $READER_WIF_PROVIDER
   BACKUP_GCP_READER_SA        $READER_EMAIL
 
 GitHub repository secret:
@@ -329,12 +340,9 @@ GitHub repository secret:
 
 --- prove the whole chain once by hand ---
 
-Run the "Monthly backup restore check" workflow once (Actions > Monthly
-backup restore check > Run workflow) from the main branch: the Workload
-Identity binding only trusts $GITHUB_SUBJECT.
+Run the "Nightly backup" workflow once (Actions > Nightly backup > Run
+workflow) from the main branch, then the "Monthly backup restore check"
+the same way: the Workload Identity bindings only trust
+$GITHUB_SUBJECT.
 =====================================================================
 EOF
-
-if [ "$VM_NEEDS_ATTACH" = "1" ]; then
-  die "stopping here: attach $WRITER_EMAIL to $APP_INSTANCE and re-run this script"
-fi
