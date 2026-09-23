@@ -93,7 +93,8 @@
   /* The phone header caps the stack at three overlapping avatars plus the
      count. The stack keeps its natural width like every other action
      child (see workspace.css): the room name yields before the stack ever
-     squeezes, so a capped avatar is never clipped. */
+     squeezes, so a capped avatar is never clipped. The overflow menu
+     freed the room for it to stay even at 320px. */
   .room-header__actions .voice-stack {
     margin-inline-end: 0;
   }
@@ -103,16 +104,6 @@
   }
 
   .room-header__actions .voice-stack__avatars > :nth-child(n+4) {
-    display: none;
-  }
-}
-
-/* Below 352px nothing is left for the stack once the actions and the room
-   name take their share, so it steps aside entirely instead of leaving a
-   clipped sliver. Presence stays one tap away in the sidebar. At 360px
-   and up the stack stays: three avatars plus the count. */
-@media (max-width: 22rem) {
-  .room-header__actions .voice-stack {
     display: none;
   }
 }

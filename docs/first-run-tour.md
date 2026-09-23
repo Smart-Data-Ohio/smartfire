@@ -18,10 +18,13 @@ branch lands.
 - The help menu (`app/views/layouts/_help_menu.html.erb`,
   `help_menu_controller.js`) restarts the tour on demand with a
   `tour:start` window event, without clearing the stamp. It sits in the
-  top bar at 40rem and up, and in the sidebar footer on phones, where
-  the crowded room header has no room for it. Its Keyboard shortcuts
-  item only appears once the navigation branch's `#keyboard-shortcuts`
-  dialog exists in the page.
+  top bar on desktop (80rem and up); below that its shortcuts and
+  restart items live in the header overflow menu instead. Its Keyboard
+  shortcuts item only appears once the navigation branch's
+  `#keyboard-shortcuts` dialog exists in the page.
+- Below 80rem the switcher and shortcuts tour steps highlight the
+  overflow button itself, since their header buttons live inside its
+  menu there.
 - Bots never see the tour or the help menu.
 - Keyboard: the card is a labelled dialog. Escape skips, Left/Right move
   between steps, Tab cycles within the card, and focus returns to the
