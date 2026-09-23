@@ -151,6 +151,37 @@ class Accounts::AuditLogsControllerTest < ActionDispatch::IntegrationTest
     assert targets.any? { |target| target.start_with?("'=") }, "expected a quoted formula cell in #{targets.inspect}"
   end
 
+  test "past the export cap the page warns and the CSV filename says truncated" do
+    sign_in :david
+    with_csv_export_limit(2) do
+      AuditLog.record!(action: "user.ban", actor: @admin, target: @member)
+
+      get account_audit_log_url
+      assert_response :success
+      assert_match "newest 2", response.body
+
+      get account_audit_log_url(format: :csv)
+      assert_response :success
+      assert_match "truncated-to-2", response.headers["Content-Disposition"]
+      assert_equal 2, CSV.parse(response.body, headers: true).length
+    end
+  end
+
+  test "within the export cap there is no truncation notice" do
+    sign_in :david
+    with_csv_export_limit(5) do
+      get account_audit_log_url
+      assert_response :success
+      assert_no_match "newest 5", response.body
+
+      get account_audit_log_url(format: :csv)
+      assert_response :success
+      assert_no_match "truncated", response.headers["Content-Disposition"]
+      # The two setup rows plus the sign-in success row, all exported.
+      assert_equal 3, CSV.parse(response.body, headers: true).length
+    end
+  end
+
   test "CSV export neutralizes formula injection in request columns" do
     sign_in :david
     # The user agent is fully attacker-controlled (any sign-in attempt
@@ -164,4 +195,16 @@ class Accounts::AuditLogsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, rows.length
     assert_equal "'=cmd|'/c calc'!A0", rows[0]["user_agent"]
   end
+
+  private
+    def with_csv_export_limit(limit)
+      controller = Accounts::AuditLogsController
+      original = controller::CSV_EXPORT_LIMIT
+      controller.send(:remove_const, :CSV_EXPORT_LIMIT)
+      controller.const_set(:CSV_EXPORT_LIMIT, limit)
+      yield
+    ensure
+      controller.send(:remove_const, :CSV_EXPORT_LIMIT)
+      controller.const_set(:CSV_EXPORT_LIMIT, original)
+    end
 end

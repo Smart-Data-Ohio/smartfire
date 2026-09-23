@@ -11,6 +11,7 @@ class Accounts::AuditLogsController < ApplicationController
   def show
     @filters = audit_filters
     entries = filtered_entries.order(id: :desc)
+    @export_truncated = filtered_entries.offset(CSV_EXPORT_LIMIT).exists?
 
     respond_to do |format|
       format.html do
@@ -18,8 +19,10 @@ class Accounts::AuditLogsController < ApplicationController
         @entries = @page.records
       end
       format.csv do
+        filename = "audit-log-#{Time.current.strftime("%Y%m%d-%H%M%S")}"
+        filename += "-truncated-to-#{CSV_EXPORT_LIMIT}" if @export_truncated
         send_data audit_csv(entries.limit(CSV_EXPORT_LIMIT)),
-          filename: "audit-log-#{Time.current.strftime("%Y%m%d-%H%M%S")}.csv",
+          filename: "#{filename}.csv",
           type: "text/csv", disposition: "attachment"
       end
     end

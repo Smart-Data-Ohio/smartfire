@@ -54,6 +54,9 @@
   </div>
 
   <div class="pad-inline pad-block-start">
+    <% if @export_truncated %>
+      <p class="txt-subtle">The CSV export covers only the newest <%= number_with_delimiter(Accounts::AuditLogsController::CSV_EXPORT_LIMIT) %> matching rows.</p>
+    <% end %>
     <% if @entries.any? %>
       <div class="audit-log__table-wrap border-radius" tabindex="0" role="region" aria-label="Audit log entries">
         <table class="audit-log__table">
