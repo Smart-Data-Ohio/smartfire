@@ -39,6 +39,27 @@ class PinsSavedTest < ApplicationSystemTestCase
     assert_text "Third time's a charm."
   end
 
+  test "pin notes render as compact notes with no message menu" do
+    MessagePin.pin!(message: messages(:third), pinner: users(:david))
+    note = Message.order(:id).last
+
+    visit room_url(rooms(:designers))
+
+    assert_selector "##{dom_id(note)}.message--system-note[role='note']",
+      text: "David", wait: 10
+    within_message note do
+      assert_text "pinned a message"
+      assert_selector ".message__system-note-icon"
+      assert_no_selector ".message__avatar"
+      assert_no_selector ".message__toolbar"
+    end
+
+    within_message note do
+      find(".message__system-note-author").right_click
+    end
+    assert_no_selector "[data-message-actions-target='menu']", visible: true
+  end
+
   test "unpinning from the panel clears the badge everywhere" do
     MessagePin.pin!(message: messages(:third), pinner: users(:david))
 

@@ -64,8 +64,8 @@ module MessagePayloadHelper
     saved_item = Current.user.saved_items.find_by(message_id: message.id)
 
     {
-      can_edit: Current.user == message.creator && !(message.thread_message? && message.thread.locked?),
-      can_delete: Current.user == message.creator || Current.user.administrator?,
+      can_edit: !message.system_note? && Current.user == message.creator && !(message.thread_message? && message.thread.locked?),
+      can_delete: !message.system_note? && (Current.user == message.creator || Current.user.administrator?),
       edit_source: message.editable_markdown_source,
       edit_format: message.markdown? ? "markdown" : "rich_text",
       copy_text: message.plain_text_body,

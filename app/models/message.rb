@@ -7,6 +7,12 @@ class Message < ApplicationRecord
   # marks and push), the unread badge broadcast, agent delivery, activity
   # inbox items, and the search index. Reuse this flag for new note types
   # instead of inventing another quiet path.
+  #
+  # Rendering is shared too: messages/_message branches on the flag into
+  # messages/_system_note, one muted centered line (icon, actor name, note
+  # text, timestamp) with role="note" and no avatar, toolbar, or menu
+  # hooks. The flag rides in the fragment cache key, and notes are
+  # immutable — every edit/delete path answers 403 for them.
 
   belongs_to :room, touch: true
   belongs_to :creator, class_name: "User", default: -> { Current.user }

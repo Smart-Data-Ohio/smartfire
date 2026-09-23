@@ -74,12 +74,13 @@ class MessagePin < ApplicationRecord
     )
   end
 
-  # A quiet one-line system note in the channel: rendered in the timeline
-  # like event announcements, but never marking the room unread, pushing,
-  # delivering, recording inbox items, or indexing for search. The note
-  # source is deterministic per message, so a pin/unpin toggle storm posts
-  # at most one note per message per window. Returns the note, or nil when
-  # the window already holds one; the caller broadcasts after commit.
+  # A quiet one-line system note in the channel: rendered as a compact
+  # centered note (see messages/_system_note), but never marking the room
+  # unread, pushing, delivering, recording inbox items, or indexing for
+  # search. The note source is deterministic per message, so a pin/unpin
+  # toggle storm posts at most one note per message per window. Returns
+  # the note, or nil when the window already holds one; the caller
+  # broadcasts after commit.
   def post_pin_note!
     source = pin_note_source
     return if room.root_messages.where(system_note: true, markdown_source: source)
@@ -91,8 +92,10 @@ class MessagePin < ApplicationRecord
   end
 
   private
+    # The note text only; the system note presentation owns the icon, the
+    # actor's name, and the timestamp.
     def pin_note_source
-      "📌 pinned a message: [jump to message](#{pin_permalink})"
+      "pinned a message: [jump to message](#{pin_permalink})"
     end
 
     def message_must_belong_to_room

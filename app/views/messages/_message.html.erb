@@ -3,6 +3,9 @@
 <%= message_tag message do %>
   <h2 class="message__day-separator"><%= local_datetime_tag message.created_at, style: :date %></h2>
 
+  <% if message.system_note? %>
+    <%= render "messages/system_note", message: message %>
+  <% else %>
     <figure class="avatar message__avatar">
       <%= avatar_tag message.creator %>
     </figure>
@@ -24,3 +27,4 @@
       </div>
     </turbo-frame>
   <% end %>
+<% end %>

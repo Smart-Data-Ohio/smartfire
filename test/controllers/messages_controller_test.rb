@@ -631,6 +631,61 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "retry-root-post", @room.messages.order(:id).last.client_message_id
   end
 
+  test "system notes render as a compact note without message chrome" do
+    note = @room.root_messages.create!(creator: users(:david), markdown_source: "pinned a message", system_note: true, client_message_id: "note-chrome")
+
+    get room_messages_url(@room)
+    assert_response :success
+
+    assert_select "##{dom_id(note)}[role='note'].message--system-note", 1 do
+      assert_select ".message__system-note-author", text: users(:david).name
+      assert_select ".message__system-note-text", text: /pinned a message/
+      assert_select ".message__system-note time", 1
+      assert_select ".message__avatar", 0
+      assert_select ".message__toolbar", 0
+      assert_select "[data-message-edit-format]", 0
+    end
+    assert_select "##{dom_id(note)}[data-actions-url]", 0
+    assert_select "##{dom_id(note)}[data-message-url]", 0
+    assert_select "##{dom_id(note)}[data-boost-url]", 0
+  end
+
+  test "system notes cannot be edited or deleted by their actor" do
+    note = @room.root_messages.create!(creator: users(:david), markdown_source: "pinned a message", system_note: true, client_message_id: "note-immutable")
+
+    get edit_room_message_url(@room, note)
+    assert_response :forbidden
+
+    assert_no_changes -> { note.reload.plain_text_body } do
+      patch room_message_url(@room, note, format: :json), params: { message: { markdown_source: "Edited" } }
+      assert_response :forbidden
+    end
+
+    assert_no_difference -> { Message.count } do
+      delete room_message_url(@room, note, format: :turbo_stream)
+      assert_response :forbidden
+    end
+  end
+
+  test "system notes cannot be deleted by an administrator" do
+    assert users(:david).administrator?
+    note = @room.root_messages.create!(creator: users(:jason), markdown_source: "pinned a message", system_note: true, client_message_id: "note-admin")
+
+    assert_no_difference -> { Message.count } do
+      delete room_message_url(@room, note, format: :turbo_stream)
+      assert_response :forbidden
+    end
+  end
+
+  test "system note actions report no edit or delete" do
+    note = @room.root_messages.create!(creator: users(:david), markdown_source: "pinned a message", system_note: true, client_message_id: "note-actions")
+
+    get actions_room_message_url(@room, note, format: :json)
+    assert_response :success
+    assert_not response.parsed_body.dig("actions", "can_edit")
+    assert_not response.parsed_body.dig("actions", "can_delete")
+  end
+
   private
     def thread_summary_refreshes_for(user, thread)
       ActionCable.server.pubsub.broadcasts(UnreadThreadsChannel.stream_name_for(user.id))

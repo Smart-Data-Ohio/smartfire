@@ -32,7 +32,15 @@ class GithubPullRequestsHelperTest < ActionView::TestCase
   end
 
   test "cache key for a message without pull requests is just the message" do
-    assert_equal [ messages(:first), nil, nil ], message_with_pr_cards_cache_key(messages(:first))
+    assert_equal [ messages(:first), nil, nil, false ], message_with_pr_cards_cache_key(messages(:first))
+  end
+
+  test "cache key carries the system note flag" do
+    note = rooms(:designers).root_messages.create!(creator: users(:david),
+      markdown_source: "pinned a message", system_note: true, client_message_id: "note-cache-key")
+
+    assert_includes message_with_pr_cards_cache_key(note), true
+    assert_includes message_with_pr_cards_cache_key(messages(:first)), false
   end
 
   test "cache key changes when the message is pinned and unpinned" do

@@ -9,12 +9,14 @@ module Github::PullRequestsHelper
   # stamp as its own element: folding it into the card maximum would go
   # blind to an unpin whenever a newer card row dominates the maximum.
   # Like the card rows, the pins are read in memory off the preloaded
-  # with_rendering_details association.
+  # with_rendering_details association. The partial branches on the system
+  # note flag, so the key carries that too.
   def message_with_pr_cards_cache_key(message)
     newest_card = (message.github_pull_requests.map(&:updated_at) + message.twitter_posts.map(&:updated_at) + message.events.map(&:updated_at)).compact.max
     key = [ message, newest_card ]
     key << github_pr_threads_stamp(message.room_id) if message.github_pull_requests.any?
     key << message.message_pins.map(&:updated_at).max
+    key << message.system_note?
     key
   end
 

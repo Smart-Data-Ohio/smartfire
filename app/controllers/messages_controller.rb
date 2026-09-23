@@ -118,12 +118,14 @@ class MessagesController < ApplicationController
       @message = @room.root_messages.find(params[:id])
     end
 
+    # System notes are immutable timeline entries: nobody edits or deletes
+    # them, not even their actor or an administrator.
     def ensure_can_edit
-      head :forbidden unless Current.user == @message.creator
+      head :forbidden if @message.system_note? || Current.user != @message.creator
     end
 
     def ensure_can_delete
-      head :forbidden unless Current.user == @message.creator || Current.user.administrator?
+      head :forbidden if @message.system_note? || (Current.user != @message.creator && !Current.user.administrator?)
     end
 
 
