@@ -6,6 +6,10 @@ class AuditLogTest < ApplicationSystemTestCase
     sign_in "david@37signals.com"
   end
 
+  teardown do
+    page.current_window.resize_to(1400, 1400)
+  end
+
   test "admin browses filters and exports the audit log" do
     AuditLog.record!(action: "user.ban", actor: users(:david), target: users(:kevin),
       changes: { status: %w[ active banned ] })
