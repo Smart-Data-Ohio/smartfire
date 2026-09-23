@@ -31,8 +31,13 @@
   object-fit: cover;
 }
 
-.voice-stack__avatar + .voice-stack__avatar {
+.voice-stack__avatars > * + * {
   margin-inline-start: -7px;
+}
+
+.voice-stack__trigger {
+  display: inline-flex;
+  line-height: 0;
 }
 
 .voice-stack__count {

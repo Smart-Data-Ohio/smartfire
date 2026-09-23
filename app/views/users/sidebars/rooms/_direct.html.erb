@@ -5,15 +5,19 @@
   <% if members.many? %>
     <div class="avatar__group">
       <% members.first(3).each do |member| %>
-        <span class="avatar">
+        <%= tag.span class: "avatar profile-card-trigger", tabindex: 0, role: "button",
+              aria: { label: "View profile of #{member.name}" },
+              data: profile_card_trigger(member, keyboard: true) do %>
           <%= image_tag fresh_user_avatar_path(member), size: 20, aria: { hidden: "true" } %>
-        </span>
+        <% end %>
       <% end %>
     </div>
   <% else %>
-    <span class="avatar">
+    <%= tag.span class: "avatar profile-card-trigger", tabindex: 0, role: "button",
+          aria: { label: "View profile of #{members.first.name}" },
+          data: profile_card_trigger(members.first, keyboard: true) do %>
       <%= image_tag fresh_user_avatar_path(members.first), size: 48, aria: { hidden: "true" } %>
-    </span>
+    <% end %>
   <% end %>
 
   <span class="direct__author min-width">

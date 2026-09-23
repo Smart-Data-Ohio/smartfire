@@ -38,7 +38,7 @@ class Messages::BoostsController < ApplicationController
 
   private
     def set_message
-      @message = Current.user.reachable_messages.find(params[:message_id])
+      @message = Current.user.reachable_messages.includes(boosts: :booster).find(params[:message_id])
     end
 
     def set_boost
@@ -60,6 +60,9 @@ class Messages::BoostsController < ApplicationController
     end
 
     def broadcast_reactions
+      # The reactor tooltip reads every boost's booster; the toggle above
+      # reloaded the message, so preload again instead of querying per row.
+      ActiveRecord::Associations::Preloader.new(records: [ @message ], associations: { boosts: :booster }).call
       @message.broadcast_replace_to @message.conversation, :messages,
         target: ActionView::RecordIdentifier.dom_id(@message, :boosts),
         partial: "messages/boosts/reactions", attributes: { maintain_scroll: true }

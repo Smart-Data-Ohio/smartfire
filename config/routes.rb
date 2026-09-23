@@ -56,6 +56,8 @@ Rails.application.routes.draw do
 
   resources :qr_code, only: :show
 
+  get "users/:id/card", to: "users/cards#show", as: :user_card
+
   resources :users, only: :show do
     get :huddle_presence, on: :collection, to: "users/huddle_presence#show"
 

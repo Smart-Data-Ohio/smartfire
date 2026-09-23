@@ -5,7 +5,8 @@
        inert
        data-member-panel-target="panel"
        data-members-url="<%= room_members_path(room, format: :json) %>"
-       data-default-avatar-url="<%= asset_path("default-avatar.svg") %>">
+       data-default-avatar-url="<%= asset_path("default-avatar.svg") %>"
+       data-card-url-template="<%= profile_card_url_template %>">
   <button type="button"
           class="member-panel__backdrop"
           aria-hidden="true"

@@ -255,8 +255,15 @@ export default class extends Controller {
     item.dataset.memberId = String(member.id)
     item.dataset.online = String(online)
 
-    const avatar = document.createElement("span")
-    avatar.className = "avatar member-panel__avatar"
+    const cardUrl = this.#cardUrl(member.id)
+    const avatar = document.createElement(cardUrl ? "button" : "span")
+    if (cardUrl) {
+      avatar.type = "button"
+      avatar.setAttribute("aria-label", `View profile of ${member.name}`)
+      avatar.dataset.action = "click->profile-card#open"
+      avatar.dataset.profileCardUrl = cardUrl
+    }
+    avatar.className = "avatar member-panel__avatar profile-card-avatar"
     const image = document.createElement("img")
     image.src = member.avatar_url || this.panelTarget.dataset.defaultAvatarUrl
     image.alt = ""
@@ -270,9 +277,16 @@ export default class extends Controller {
 
     const identity = document.createElement("span")
     identity.className = "member-panel__identity"
-    const name = document.createElement("strong")
-    name.className = "overflow-ellipsis"
-    name.textContent = member.name
+    const name = document.createElement(cardUrl ? "button" : "strong")
+    if (cardUrl) {
+      name.type = "button"
+      name.dataset.action = "click->profile-card#open"
+      name.dataset.profileCardUrl = cardUrl
+    }
+    name.className = cardUrl ? "profile-card-name overflow-ellipsis" : "overflow-ellipsis"
+    const nameText = document.createElement("strong")
+    nameText.textContent = member.name
+    name.append(nameText)
     const status = document.createElement("span")
     status.className = "member-panel__status-label"
     status.textContent = online ? "Online" : "Offline"
@@ -280,6 +294,13 @@ export default class extends Controller {
 
     item.append(avatar, identity)
     return item
+  }
+
+  #cardUrl(memberId) {
+    const template = this.panelTarget.dataset.cardUrlTemplate
+    if (!template || memberId === undefined || memberId === null) return null
+
+    return template.replace("USER_ID", String(memberId))
   }
 
   #clearMembers(message) {

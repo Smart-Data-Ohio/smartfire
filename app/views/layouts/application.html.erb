@@ -38,8 +38,8 @@
   </head>
 
   <body class="<%= body_classes %>"
-        data-controller="local-time lightbox workspace-navigation member-panel thread-panel"
-        data-action="keydown.esc@window->workspace-navigation#close keydown.esc@window->member-panel#close keydown.esc@window->thread-panel#close keydown@window->member-panel#trapFocus keydown@window->thread-panel#trapFocus member-panel:opening@window->workspace-navigation#close member-panel:opening@window->thread-panel#close workspace-navigation:opening@window->member-panel#close workspace-navigation:opening@window->thread-panel#close thread-messages:changed->thread-panel#messagesChanged thread-panel:opening@window->member-panel#close thread-panel:opening@window->workspace-navigation#close workspace-presence:connected@window->member-panel#refreshPresence turbo:before-cache@document->member-panel#prepareForCache turbo:before-cache@document->thread-panel#prepareForCache turbo:frame-load@document->workspace-navigation#syncCurrentRoom turbo:load@document->workspace-navigation#syncCurrentRoom turbo:load@document->member-panel#roomChanged rooms-list:unread@window->workspace-navigation#updateUnreadStatus rooms-list:read@window->workspace-navigation#updateUnreadStatus">
+        data-controller="local-time lightbox workspace-navigation member-panel thread-panel profile-card"
+        data-action="keydown.esc@window->workspace-navigation#close keydown.esc@window->member-panel#close keydown.esc@window->thread-panel#close keydown.esc@window->profile-card#close keydown@window->member-panel#trapFocus keydown@window->thread-panel#trapFocus keydown@window->profile-card#trapFocus member-panel:opening@window->workspace-navigation#close member-panel:opening@window->thread-panel#close workspace-navigation:opening@window->member-panel#close workspace-navigation:opening@window->thread-panel#close thread-messages:changed->thread-panel#messagesChanged thread-panel:opening@window->member-panel#close thread-panel:opening@window->workspace-navigation#close workspace-presence:connected@window->member-panel#refreshPresence turbo:before-cache@document->member-panel#prepareForCache turbo:before-cache@document->thread-panel#prepareForCache turbo:frame-load@document->workspace-navigation#syncCurrentRoom turbo:load@document->workspace-navigation#syncCurrentRoom turbo:load@document->member-panel#roomChanged rooms-list:unread@window->workspace-navigation#updateUnreadStatus rooms-list:read@window->workspace-navigation#updateUnreadStatus">
     <a href="#main-content" class="skip-navigation btn">Skip to main content</a>
 
     <nav id="nav">
@@ -109,6 +109,8 @@
     <%= render "layouts/huddle_invitation" if Current.user && Huddle.configured? %>
 
     <%= render "layouts/lightbox" %>
+
+    <%= render "users/cards/popover" if Current.user %>
 
     <a href="https://github.com/Smart-Data-Ohio/smartfire" id="app-logo" target="_blank" aria-label="Smartfire on GitHub">
       <%= image_tag "campfire-icon.png", alt: "Smartfire logo", width: 256, height: 216 %>

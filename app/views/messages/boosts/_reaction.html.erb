@@ -1,20 +1,32 @@
 <% content = local_assigns.fetch(:content) %>
 <% boosts = local_assigns.fetch(:boosts) %>
+<% index = local_assigns.fetch(:index, 0) %>
 <% reactor_ids = boosts.map(&:booster_id).compact.uniq %>
+<% reactors = boosts.filter_map(&:booster).uniq %>
 <% title = reaction_title(content) %>
+<% tooltip_id = dom_id(message, "reactors_#{index}") %>
 
 <%= form_with model: [ message, Boost.new ], class: "reaction-chip__form",
       data: { turbo_frame: dom_id(message, :boosting) } do %>
   <%= hidden_field_tag "boost[content]", content %>
-  <%= button_tag type: "submit", class: "reaction-chip", title: title,
-        aria: { label: "#{title}: #{reactor_ids.length}", pressed: false },
-        data: {
-          controller: "reaction-chip",
-          reaction_chip_booster_ids_value: reactor_ids.join(","),
-          reaction: content
-        } do %>
-    <span class="reaction-chip__emoji" aria-hidden="true"><%= reaction_chip_body(content) %></span>
-    <span class="reaction-chip__count"><%= reactor_ids.length %></span>
-    <span class="for-screen-reader"><%= title %></span>
-  <% end %>
+  <span class="reaction-chip__wrap">
+    <%= button_tag type: "submit", class: "reaction-chip", title: title,
+          aria: { label: "#{title}: #{reactor_ids.length}", pressed: false, describedby: (tooltip_id if reactors.any?) },
+          data: {
+            controller: "reaction-chip",
+            reaction_chip_booster_ids_value: reactor_ids.join(","),
+            reaction: content
+          } do %>
+      <span class="reaction-chip__emoji" aria-hidden="true"><%= reaction_chip_body(content) %></span>
+      <span class="reaction-chip__count"><%= reactor_ids.length %></span>
+      <span class="for-screen-reader"><%= title %></span>
+    <% end %>
+    <% if reactors.any? %>
+      <span class="reaction-chip__tooltip" role="tooltip" id="<%= tooltip_id %>">
+        <% reactors.each do |reactor| %>
+          <%= button_tag reactor.name, type: "button", class: "reaction-chip__reactor profile-card-name", data: profile_card_trigger(reactor) %>
+        <% end %>
+      </span>
+    <% end %>
+  </span>
 <% end %>
