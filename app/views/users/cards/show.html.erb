@@ -9,9 +9,8 @@
         <strong class="profile-card__name overflow-ellipsis"><%= @user.name %></strong>
 
         <span class="profile-card__presence">
-          <span class="profile-card__dot <%= @online ? "profile-card__dot--online" : "" %>" aria-hidden="true"></span>
           <% if @user.active? %>
-            <%= @online ? "Online" : "Offline" %>
+            <%= render_user_status_badge(@user) %>
           <% elsif @user.deactivated? %>
             Deactivated
           <% else %>

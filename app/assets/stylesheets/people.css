@@ -62,18 +62,6 @@
   gap: 0.35rem;
 }
 
-.profile-card__dot {
-  background: var(--workspace-text-muted, var(--color-text));
-  border-radius: 50%;
-  display: inline-block;
-  block-size: 0.55rem;
-  inline-size: 0.55rem;
-}
-
-.profile-card__dot--online {
-  background: #2f9e44;
-}
-
 .profile-card__badges {
   display: flex;
   gap: 0.35rem;

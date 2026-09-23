@@ -11,9 +11,10 @@ which cannot hold interactive content.) The in-call huddle roster is the
 one exception: LiveKit participant identities are deliberately opaque, so
 those rows carry no user id to load a card from.
 
-The card shows avatar, name, presence (bots with an agent read live from
-the agent), an Admin/Agent/Bot badge, and "Agent owned by X" for bots with
-an agent. Actions: Message (opens or creates the 1:1 DM), Start call
+The card shows avatar, name, and the shared status badge (presence dot
+plus custom status, via `render_user_status_badge`; bots with an agent
+read live from the agent), an Admin/Agent/Bot badge, and "Agent owned by
+X" for bots with an agent. Actions: Message (opens or creates the 1:1 DM), Start call
 (opens the 1:1 DM and auto-joins its huddle, ringing them; hidden for
 bots), View profile, and Copy mention (copies `@[Name]` for the
 composer). Your own card shows Edit profile instead. The popover traps

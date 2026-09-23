@@ -30,6 +30,19 @@ class Users::CardsControllerTest < ActionDispatch::IntegrationTest
     assert_select ".profile-card__presence", text: /Offline/
   end
 
+  test "card shows the presence dot and custom status badge" do
+    jason_session = users(:jason).sessions.create!(user_agent: "test", ip_address: "127.0.0.1")
+    WorkspacePresenceLease.establish(user: users(:jason), session: jason_session)
+    users(:jason).update!(custom_status_emoji: "🚂", custom_status_text: "On a train")
+
+    get user_card_url(users(:jason))
+
+    assert_response :success
+    assert_select ".user-status-badge .avatar__presence[data-presence='online']", 1
+    assert_select ".user-status-badge__label", text: "Online"
+    assert_select ".user-status-badge__custom", text: "🚂 On a train"
+  end
+
   test "your own card offers editing your profile instead" do
     get user_card_url(users(:david))
 
