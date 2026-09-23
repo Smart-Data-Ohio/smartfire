@@ -96,7 +96,7 @@ class Agents::McpControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_equal "complete", body.dig("result", "resultType")
-    assert_equal 27, body.dig("result", "tools").size
+    assert_equal 33, body.dig("result", "tools").size
   end
 
   test "header and body versions must match" do

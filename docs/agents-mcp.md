@@ -43,6 +43,10 @@ endpoints, per credential per minute:
 | `post_message`, `request_approval`, `open_dm` | posting / approvals / DMs | 60 |
 | `create_fizzy_card`, `comment_on_fizzy_card`, `move_fizzy_card`, `close_fizzy_card`, `reopen_fizzy_card` | Fizzy card actions | 60 |
 | `pin_message`, `unpin_message` | pinning / unpinning | 60 |
+| `start_stream`, `finalize_stream` | streaming messages | 60 |
+| `append_stream` | streaming updates | 240 |
+| `add_step`, `update_step` | agent steps | 60 |
+| `set_presence` | working presence | none (like `PATCH /agents/me`) |
 | `create_board_post` | board post creation | 30 |
 
 The remaining tools have no throttle, like their REST counterparts.
@@ -110,6 +114,9 @@ curl https://smartfire.example.com/agents/mcp \
 | `list_fizzy_boards`, `get_fizzy_board`, `search_fizzy_cards`, `get_fizzy_card` | workspace-wide `fizzy` | `GET /agents/fizzy/...` |
 | `create_fizzy_card`, `comment_on_fizzy_card`, `move_fizzy_card`, `close_fizzy_card`, `reopen_fizzy_card` | workspace-wide `external_action` | `POST /agents/fizzy/card_actions` |
 | `pin_message`, `unpin_message` | `post_messages` in the room | `POST`/`DELETE /agents/messages/:id/pin` |
+| `start_stream`, `append_stream`, `finalize_stream` | `post_messages` in the room | streaming messages endpoints |
+| `set_presence` | the agent itself | `PATCH /agents/me` (`working_presence`) |
+| `add_step`, `update_step` | `post_messages` (message steps) / `manage_threads` (thread steps) | `POST`/`PATCH /agents/steps` |
 
 `tools/list` always returns the full set; per-tool enforcement happens at
 call time, so a client can show every tool and let denials explain which

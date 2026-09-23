@@ -858,6 +858,97 @@ pin count:
 { "pinned": true, "message_id": 42, "pin_count": 3 }
 ```
 
+## Streaming messages
+
+An agent can post a message in a `streaming` state, append to it or
+replace its body while it works, then finalize it. The streaming
+message renders with a working indicator and updates live in the room:
+
+- `POST /rooms/:room_id/agents/streaming_messages` starts a stream
+  (top-level `thread_id` streams a thread reply). The body takes the
+  same `message` object as the messages endpoint, except streams are
+  Markdown-only and may start blank. Answers 201 with the message
+  shape plus `thread_id` and `streaming: true`.
+- `PATCH /agents/streaming_messages/:id` appends `append` to the
+  stream, or replaces the whole body with `markdown_source` when no
+  append is given.
+- `POST /agents/streaming_messages/:id/finalize` ends the stream.
+  Finalizing an already-final message succeeds without repeating
+  side effects.
+
+Updates and finalizes only touch the agent's own streaming messages
+in its rooms (anything else is the same 404); all three need
+`post_messages` in the room. Starting and finalizing throttle at
+60/minute per credential, appends at 240/minute, and incremental
+broadcasts coalesce to about 4 per second per message.
+
+Notifications, push, mention recording, agent delivery, bot webhooks,
+and search indexing all fire exactly once, at finalize — nothing
+fires while streaming. Streams that are never finalized auto-finalize
+after 10 minutes from the periodic runner. The MCP mirrors are
+`start_stream`, `append_stream`, and `finalize_stream`.
+
+```sh
+curl -X POST https://smartfire.example.com/rooms/3/agents/streaming_messages \
+  -H "Authorization: Bearer $AGENT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"message":{"markdown_source":""}}'
+```
+
+### Working presence
+
+`PATCH /agents/me` also accepts `working_presence` ("Thinking…",
+"Running tests…"), shown next to the agent's name in the room member
+list. Blank clears it; otherwise it expires after 5 minutes unless
+refreshed, and clears when one of the agent's streams finalizes. The
+MCP mirror is `set_presence`.
+
+## Steps
+
+Agents attach structured progress entries to their own message or to
+a work thread they own — name, status, short input/output summaries,
+duration — rendered as a collapsible step list, like a CI log.
+Message steps need `post_messages`, thread steps need
+`manage_threads`; both throttle at 60/minute per credential.
+
+- `POST /agents/steps` with exactly one of `message_id` or
+  `thread_id`, plus `name` (required), `status` (`pending`,
+  `running`, `done`, `failed`; default `running`), `input_summary`,
+  `output_summary`, and `duration_ms`. Answers 201.
+- `PATCH /agents/steps/:id` updates whichever fields are given.
+  Steps never move between parents.
+
+Steps cap at 50 per message or thread, names at 120 characters, and
+each summary at 1000 characters; every field renders escaped. The
+MCP mirrors are `add_step` and `update_step`.
+
+```sh
+curl -X POST https://smartfire.example.com/agents/steps \
+  -H "Authorization: Bearer $AGENT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"message_id":42,"name":"Run tests","output_summary":"All green","duration_ms":1500}'
+```
+
+## Budgets and kill switch
+
+Owners and administrators set per-agent daily caps on the bot edit
+page: messages, board posts, and external actions (approval requests,
+including GitHub and Fizzy card actions). Blank means unlimited. The
+bot page and the agent profile show today's usage next to the caps.
+
+Budgets count through the same services REST and MCP share, so both
+surfaces hit the same wall: an over-cap request answers 429 with
+`{ "error": "Daily message budget exceeded (50/day)", "cap":
+"messages", "limit": 50, "retry_after": 3600 }`, and the owner gets
+one inbox item per cap per day, however many requests overflow (an
+ownerless agent notifies every administrator instead).
+
+The bot edit page also carries the kill switch: one click suspends
+the agent (revoking every grant, which also blocks
+approved-but-unexecuted external actions at perform time), cancels
+every still-pending approval request, clears working presence, and
+records `agent.kill_switch` in the audit log.
+
 ## MCP server
 
 The same agent API is exposed as a Model Context Protocol server at
