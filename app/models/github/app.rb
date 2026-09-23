@@ -110,10 +110,14 @@ module Github
             })
           end
 
+          # GitHub answers token failures with HTTP 200 carrying an
+          # "error" field (bad_refresh_token, bad_verification_code, ...),
+          # not a 4xx: any error in the body means the grant is dead:
+          # https://docs.github.com/en/apps/oauth-apps/maintaining-oauth-apps/troubleshooting-oauth-app-access-token-request-errors
           body = JSON.parse(response.body.to_s)
           if response.is_a?(Net::HTTPSuccess) && body["access_token"].present?
             body
-          elsif response.code == "401" || body["error"] == "invalid_grant"
+          elsif response.code == "401" || body["error"].present?
             raise Unauthorized, "GitHub rejected the GitHub App grant (401)"
           else
             raise Error, "GitHub App token request failed (#{response.code})"

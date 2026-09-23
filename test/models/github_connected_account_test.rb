@@ -93,6 +93,31 @@ class GithubConnectedAccountTest < ActiveSupport::TestCase
     assert_not_predicate account.reload, :connected?
   end
 
+  test "a bad_refresh_token response disconnects the account" do
+    account = connect_github!(users(:david), token_source: "app",
+      refresh_token: "dead-refresh", token_expires_at: 1.minute.ago)
+    stub_request(:post, "https://github.com/login/oauth/access_token")
+      .to_return(status: 200, body: { error: "bad_refresh_token" }.to_json)
+
+    assert_nil account.access_token_for_use
+    assert_not_predicate account.reload, :connected?
+  end
+
+  test "a stale instance reuses the rotated token without refreshing again" do
+    account = connect_github!(users(:david), token_source: "app",
+      refresh_token: "old-refresh", token_expires_at: 1.minute.ago)
+    refresh = stub_request(:post, "https://github.com/login/oauth/access_token")
+
+    # Another process rotates the row first; this instance is now stale
+    # but has no unpersisted changes, so the row lock reloads it.
+    GithubConnectedAccount.find(account.id).update!(
+      access_token: "rotated-token", refresh_token: "rotated-refresh",
+      token_expires_at: 1.hour.from_now)
+
+    assert_equal "rotated-token", account.access_token_for_use
+    assert_not_requested refresh
+  end
+
   test "a rejected refresh keeps a token another process already rotated" do
     account = connect_github!(users(:david), token_source: "app",
       refresh_token: "old-refresh", token_expires_at: 1.minute.ago)
@@ -162,6 +187,19 @@ class GithubConnectedAccountTest < ActiveSupport::TestCase
     agent_account = GithubConnectedAccount.create!(user: agent.user, github_login: "bender-machine", access_token: "agent-pat")
     GithubConnectedAccount.create!(user: agent.owner, github_login: "owner-login", access_token: "owner-pat")
 
+    assert_equal agent_account, Github::AgentIdentity.resolve(agent)
+  end
+
+  test "agent identity falls back to the agent PAT after a bad_refresh_token" do
+    agent = agents(:bender_agent)
+    agent_account = GithubConnectedAccount.create!(user: agent.user, github_login: "bender-machine", access_token: "agent-pat")
+    owner_account = GithubConnectedAccount.create!(user: agent.owner, github_login: "owner-login",
+      access_token: "owner-app-token", token_source: "app",
+      refresh_token: "dead-refresh", token_expires_at: 1.minute.ago)
+    stub_request(:post, "https://github.com/login/oauth/access_token")
+      .to_return(status: 200, body: { error: "bad_refresh_token" }.to_json)
+
+    assert_nil owner_account.access_token_for_use
     assert_equal agent_account, Github::AgentIdentity.resolve(agent)
   end
 

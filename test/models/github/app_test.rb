@@ -42,6 +42,30 @@ class Github::AppTest < ActiveSupport::TestCase
     end
   end
 
+  test "exchange_code raises Unauthorized on a 200 body carrying bad_verification_code" do
+    stub_request(:post, "https://github.com/login/oauth/access_token")
+      .to_return(status: 200, body: {
+        error: "bad_verification_code",
+        error_description: "The code passed is incorrect or expired."
+      }.to_json)
+
+    assert_raises(Github::App::Unauthorized) do
+      Github::App.exchange_code(code: "bad", redirect_uri: "https://app.test/callback")
+    end
+  end
+
+  test "refresh_access_token raises Unauthorized on a 200 body carrying bad_refresh_token" do
+    stub_request(:post, "https://github.com/login/oauth/access_token")
+      .to_return(status: 200, body: {
+        error: "bad_refresh_token",
+        error_description: "The refresh token passed is incorrect or expired."
+      }.to_json)
+
+    assert_raises(Github::App::Unauthorized) do
+      Github::App.refresh_access_token(refresh_token: "dead-refresh")
+    end
+  end
+
   test "exchange_code raises Error on transport failure" do
     stub_request(:post, "https://github.com/login/oauth/access_token").to_timeout
 

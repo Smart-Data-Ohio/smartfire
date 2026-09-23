@@ -124,10 +124,31 @@ class GithubConnectedAccount < ApplicationRecord
 
   private
     # Refreshes an expired App token in place, rotating the stored
-    # refresh token. A rejected refresh disconnects the account so the
-    # profile offers a reconnect; a transport failure records last_error
-    # and keeps the old token, so the next call retries.
+    # refresh token. One refresh happens per rotation: the row lock
+    # serializes concurrent refreshers, and the expiry is rechecked
+    # inside the lock, so losers reuse the winner's freshly rotated
+    # token instead of burning their own rotated-out refresh token
+    # (which GitHub would reject). Refreshes run at most every few
+    # hours per account, so the short lock hold is safe. A rejected
+    # refresh disconnects the account so the profile offers a
+    # reconnect; a transport failure records last_error and keeps the
+    # old token, so the next call retries.
     def refresh_app_token_if_expired!
+      return true unless app_token_expired?
+      return false if refresh_token.blank?
+
+      refresh = -> { refresh_expired_app_token! }
+      persisted? ? with_lock(&refresh) : refresh.call
+    rescue Github::App::Unauthorized
+      concurrent_refresh_won? || disconnect_rejected!
+    rescue Github::App::Error => error
+      update_column(:last_error, error.message.truncate(250))
+      false
+    end
+
+    # Runs inside the row lock (which reloads first): recheck the
+    # expiry against the locked row before refreshing.
+    def refresh_expired_app_token!
       return true unless app_token_expired?
       return false if refresh_token.blank?
 
@@ -139,11 +160,6 @@ class GithubConnectedAccount < ApplicationRecord
         last_error: nil
       )
       true
-    rescue Github::App::Unauthorized
-      concurrent_refresh_won? || disconnect_rejected!
-    rescue Github::App::Error => error
-      update_column(:last_error, error.message.truncate(250))
-      false
     end
 
     # True when a concurrent refresh already rotated this row to a fresh
