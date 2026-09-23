@@ -519,7 +519,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_005015) do
     t.integer "message_id", null: false
     t.datetime "remind_at"
     t.datetime "reminded_at"
-    t.integer "status", default: 0, null: false
+    t.string "status", default: "in_progress", null: false
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
     t.index ["message_id"], name: "index_saved_items_on_message_id"

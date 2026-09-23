@@ -3,7 +3,7 @@ class CreateSavedItems < ActiveRecord::Migration[8.2]
     create_table :saved_items do |t|
       t.references :user, null: false, foreign_key: true
       t.references :message, null: false, foreign_key: true
-      t.integer :status, null: false, default: 0
+      t.string :status, null: false, default: "in_progress"
       t.datetime :remind_at
       t.datetime :reminded_at
 

@@ -1,6 +1,8 @@
 class SavedItemsController < ApplicationController
   STATUSES = %w[ in_progress done ].freeze
 
+  rescue_from ActiveRecord::RecordNotFound, with: -> { head :not_found }
+
   before_action :set_status_filter, only: :index
   before_action :no_store_response!
 

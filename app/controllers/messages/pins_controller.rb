@@ -1,4 +1,6 @@
 class Messages::PinsController < ApplicationController
+  rescue_from ActiveRecord::RecordNotFound, with: -> { head :not_found }
+
   before_action :set_message
 
   def create
