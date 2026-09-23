@@ -41,6 +41,10 @@ class Room::DestroyJob < ApplicationJob
     room.update_columns(destroy_enqueued_at: Time.current)
 
     destroy_huddle_grants(room)
+    # Scheduled rows go before messages and threads (whose foreign keys
+    # would otherwise just nullify): destroying them here also clears
+    # their "not sent" inbox items through dependent destroys.
+    room.scheduled_messages.find_each(batch_size: BATCH_SIZE, &:destroy!)
     room.messages.find_each(batch_size: BATCH_SIZE, &:destroy!)
     room.channel_threads.find_each(batch_size: BATCH_SIZE, &:destroy!)
     room.events.find_each(batch_size: BATCH_SIZE, &:destroy!)

@@ -1,0 +1,35 @@
+<article id="<%= dom_id(scheduled) %>" class="scheduled-message">
+  <div class="scheduled-message__meta">
+    <span class="scheduled-message__room"><%= room_display_name(scheduled.room) %></span>
+    <% if scheduled.thread %>
+      <span class="scheduled-message__thread">· <%= scheduled.thread.name %></span>
+    <% end %>
+    <% if local_assigns[:stranded] %>
+      <span class="scheduled-message__time">· No longer sendable (channel access lost)</span>
+    <% else %>
+      <span class="scheduled-message__time">· Sends <%= local_datetime_tag scheduled.send_at, style: :datetime %></span>
+    <% end %>
+  </div>
+
+  <%= form_with model: scheduled, url: scheduled_message_path(scheduled), method: :patch, class: "scheduled-message__form" do |form| %>
+    <div>
+      <%= form.label :markdown_source, "Message", class: "for-screen-reader" %>
+      <%= form.text_area :markdown_source, rows: 2, class: "input", maxlength: 50_000 %>
+    </div>
+    <div class="scheduled-message__row">
+      <div>
+        <%= form.label :send_at, "Send at" %>
+        <%= form.datetime_local_field :send_at, class: "input",
+              value: scheduled.send_at.in_time_zone(Current.user.time_zone_or_default).strftime("%Y-%m-%dT%H:%M") %>
+      </div>
+      <%= form.submit "Save", class: "btn btn--primary btn--small" %>
+    </div>
+  <% end %>
+
+  <div class="scheduled-message__actions">
+    <%= button_to "Send now", send_now_scheduled_message_path(scheduled), method: :post,
+          class: "btn btn--plain btn--small", form: { class: "scheduled-message__action-form" } %>
+    <%= button_to "Cancel", scheduled_message_path(scheduled), method: :delete,
+          class: "btn btn--plain btn--small", form: { class: "scheduled-message__action-form" } %>
+  </div>
+</article>

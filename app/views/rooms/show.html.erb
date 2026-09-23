@@ -19,17 +19,25 @@
   <%= render "rooms/show/thread_panel", room: @room %>
 <% end %>
 
-<%= message_area_tag(@room) do %>
+<%= message_area_tag(@room, scroll_to_divider: @scroll_to_unread_divider) do %>
   <%= render "messages/template" %>
 
   <%= messages_tag(@room) do %>
     <%= render "rooms/show/invitation", room: @room %>
-    <%= render partial: "messages/message", collection: @messages %>
+    <% if @unread_divider_message_id && (divider_index = @messages.index { |message| message.id == @unread_divider_message_id }) %>
+      <%= render partial: "messages/message", collection: @messages.first(divider_index) %>
+      <%= render "messages/unread_divider", unread_count: @unread_count %>
+      <%= render partial: "messages/message", collection: @messages[divider_index..] %>
+    <% else %>
+      <%= render partial: "messages/message", collection: @messages %>
+    <% end %>
   <% end %>
 
   <%= turbo_stream_from @room, :messages, channel: "RoomMessagesChannel" %>
+  <%= button_to_jump_to_unread(url: @jump_to_unread_url) if @unread_divider_message_id || @jump_to_unread_url %>
   <%= button_to_jump_to_newest_message %>
 <% end %>
 
 <%= render "rooms/show/composer", room: @room %>
+<%= render "polls/builder", room: @room %>
 <% end %>

@@ -54,6 +54,22 @@ module RoomsHelper
     end
   end
 
+  # The jump pill scrolls to the divider when it is on the page; when the
+  # first unread message fell off the page, the pill links to it instead
+  # and stays visible, since there is no divider to observe.
+  def button_to_jump_to_unread(url: nil)
+    label = image_tag("arrow-up.svg", aria: { hidden: "true" }, size: 20) + tag.span("Jump to unread")
+
+    if url
+      link_to label, url, id: "jump-to-unread", class: "message-area__jump-to-unread btn"
+    else
+      tag.button id: "jump-to-unread", class: "message-area__jump-to-unread btn",
+          data: { action: "messages#jumpToUnread" }, hidden: true do
+        label
+      end
+    end
+  end
+
   def submit_room_button_tag
     button_tag class: "btn btn--reversed txt-large center", type: "submit" do
       image_tag("check.svg", aria: { hidden: "true" }, size: 20) +
@@ -123,8 +139,19 @@ module RoomsHelper
         composer_messages_outlet: "##{message_area_id}",
         composer_room_id_value: room.id,
         composer_thread_id_value: thread&.id,
-        composer_thread_mode_value: thread.present?
+        composer_thread_mode_value: thread.present?,
+        composer_slash_commands_url_value: room_slash_commands_path(room),
+        composer_slash_commands_value: slash_command_names_for(room),
+        composer_slash_commands_list_url_value: autocompletable_slash_commands_path(room_id: room.id, thread_id: thread&.id)
       }
+    end
+
+    # Commands the composer intercepts: every built-in plus the room's
+    # registered agent commands. The list is rendered once per page
+    # load; the composer re-checks the live picker endpoint for words
+    # it doesn't know, so commands registered after load still run.
+    def slash_command_names_for(room)
+      SlashCommands::Registry.all.map(&:name) + room.agent_slash_commands.ordered.pluck(:name)
     end
 
     def composer_data_actions

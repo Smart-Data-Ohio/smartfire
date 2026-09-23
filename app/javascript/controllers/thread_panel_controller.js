@@ -462,8 +462,10 @@ export default class extends Controller {
     this.browserToggleTargets.forEach(target => target.setAttribute("aria-expanded", String(this.hasBrowserTarget && !this.browserTarget.hidden)))
     if (this.#mobileQuery?.matches) {
       this.backdropTarget.hidden = !open
-      this.panelTarget.querySelector(".thread-panel__surface")?.setAttribute("role", "dialog")
-      this.panelTarget.querySelector(".thread-panel__surface")?.setAttribute("aria-modal", "true")
+      const surface = this.panelTarget.querySelector(".thread-panel__surface")
+      surface?.setAttribute("role", "dialog")
+      surface?.toggleAttribute("aria-modal", false)
+      if (open) surface?.setAttribute("aria-modal", "true")
     } else {
       this.backdropTarget.hidden = true
       const surface = this.panelTarget.querySelector(".thread-panel__surface")

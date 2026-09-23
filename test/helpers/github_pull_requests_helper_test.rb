@@ -33,7 +33,7 @@ class GithubPullRequestsHelperTest < ActionView::TestCase
   end
 
   test "cache key for a message without pull requests is just the message" do
-    assert_equal [ messages(:first), nil, nil, false, nil, nil ], message_with_pr_cards_cache_key(messages(:first))
+    assert_equal [ messages(:first), nil, nil, nil, false, nil, nil ], message_with_pr_cards_cache_key(messages(:first))
   end
 
   test "cache key changes when a quoted source is edited" do
@@ -98,6 +98,25 @@ class GithubPullRequestsHelperTest < ActionView::TestCase
     end
 
     assert_not_equal before, message_with_pr_cards_cache_key(Message.with_rendering_details.find(quote.id))
+  end
+
+  test "cache key changes when a poll is voted and retracted" do
+    message = rooms(:watercooler).root_messages.create!(creator: users(:david),
+      markdown_source: "Lunch?", client_message_id: "poll-cache-key")
+    poll = Poll.create_for_message!(message: message, labels: [ "Tacos", "Pizza" ])
+
+    before = message_with_pr_cards_cache_key(message.reload)
+
+    travel 1.minute do
+      poll.cast_vote!(users(:david), [ poll.poll_options.first.id ])
+    end
+    voted_key = message_with_pr_cards_cache_key(message.reload)
+    assert_not_equal before, voted_key
+
+    travel 2.minutes do
+      poll.cast_vote!(users(:david), [])
+    end
+    assert_not_equal voted_key, message_with_pr_cards_cache_key(message.reload)
   end
 
   test "cache key carries the system note flag" do

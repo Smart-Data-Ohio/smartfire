@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_074200) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -164,6 +164,18 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
     t.index ["agent_id", "room_id", "capability"], name: "index_agent_grants_on_agent_room_capability_active", unique: true, where: "revoked_at IS NULL AND room_id IS NOT NULL"
   end
 
+  create_table "agent_slash_commands", force: :cascade do |t|
+    t.integer "agent_id", null: false
+    t.datetime "created_at", null: false
+    t.string "description"
+    t.string "name", null: false
+    t.integer "room_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["agent_id"], name: "index_agent_slash_commands_on_agent_id"
+    t.index ["room_id", "name"], name: "index_agent_slash_commands_on_room_id_and_name", unique: true
+    t.index ["room_id"], name: "index_agent_slash_commands_on_room_id"
+  end
+
   create_table "agents", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "description"
@@ -183,6 +195,25 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
     t.index ["user_id"], name: "index_agents_on_user_id", unique: true
   end
 
+  create_table "audit_logs", force: :cascade do |t|
+    t.string "action", null: false
+    t.bigint "actor_id"
+    t.string "actor_label"
+    t.datetime "created_at", null: false
+    t.json "details"
+    t.string "ip_address"
+    t.bigint "target_id"
+    t.string "target_label"
+    t.string "target_type"
+    t.datetime "updated_at", null: false
+    t.string "user_agent"
+    t.index ["action", "ip_address", "created_at"], name: "index_audit_logs_on_action_and_ip_address_and_created_at"
+    t.index ["action"], name: "index_audit_logs_on_action"
+    t.index ["actor_id"], name: "index_audit_logs_on_actor_id"
+    t.index ["created_at"], name: "index_audit_logs_on_created_at"
+    t.index ["target_type", "target_id"], name: "index_audit_logs_on_target_type_and_target_id"
+  end
+
   create_table "bans", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "ip_address", null: false
@@ -190,6 +221,56 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
     t.integer "user_id", null: false
     t.index ["ip_address"], name: "index_bans_on_ip_address"
     t.index ["user_id"], name: "index_bans_on_user_id"
+  end
+
+  create_table "board_sla_nudges", force: :cascade do |t|
+    t.integer "channel_thread_id", null: false
+    t.datetime "created_at", null: false
+    t.integer "recipient_id", null: false
+    t.integer "room_id", null: false
+    t.string "stage", null: false
+    t.datetime "status_entered_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "work_status", null: false
+    t.index ["channel_thread_id", "work_status", "stage", "status_entered_at"], name: "index_board_sla_nudges_on_claim", unique: true
+    t.index ["channel_thread_id"], name: "index_board_sla_nudges_on_channel_thread_id"
+    t.index ["recipient_id"], name: "index_board_sla_nudges_on_recipient_id"
+    t.index ["room_id"], name: "index_board_sla_nudges_on_room_id"
+  end
+
+  create_table "board_sla_rules", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "escalate_after_minutes", null: false
+    t.integer "nudge_after_minutes", null: false
+    t.integer "room_id", null: false
+    t.datetime "updated_at", null: false
+    t.string "work_status", null: false
+    t.index ["room_id", "work_status"], name: "index_board_sla_rules_on_room_id_and_work_status", unique: true
+    t.index ["room_id"], name: "index_board_sla_rules_on_room_id"
+  end
+
+  create_table "board_stale_digests", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.date "digest_on", null: false
+    t.integer "message_id"
+    t.integer "room_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id"], name: "index_board_stale_digests_on_message_id"
+    t.index ["room_id", "digest_on"], name: "index_board_stale_digests_on_room_id_and_digest_on", unique: true
+    t.index ["room_id"], name: "index_board_stale_digests_on_room_id"
+  end
+
+  create_table "board_tag_assignments", force: :cascade do |t|
+    t.integer "assignee_id", null: false
+    t.datetime "created_at", null: false
+    t.integer "created_by_id", null: false
+    t.integer "room_id", null: false
+    t.string "tag", null: false
+    t.datetime "updated_at", null: false
+    t.index ["assignee_id"], name: "index_board_tag_assignments_on_assignee_id"
+    t.index ["created_by_id"], name: "index_board_tag_assignments_on_created_by_id"
+    t.index ["room_id", "tag"], name: "index_board_tag_assignments_on_room_id_and_tag", unique: true
+    t.index ["room_id"], name: "index_board_tag_assignments_on_room_id"
   end
 
   create_table "boosts", force: :cascade do |t|
@@ -234,6 +315,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
     t.datetime "updated_at", null: false
     t.integer "work_owner_id"
     t.string "work_status"
+    t.datetime "work_status_changed_at"
     t.index ["creator_id"], name: "index_channel_threads_on_creator_id"
     t.index ["parent_message_id"], name: "index_channel_threads_on_parent_message_id", unique: true, where: "parent_message_id IS NOT NULL"
     t.index ["room_id", "closed_at", "locked_at"], name: "index_channel_threads_on_room_id_and_closed_at_and_locked_at"
@@ -566,18 +648,24 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
     t.datetime "connected_at"
     t.integer "connections", default: 0, null: false
     t.datetime "created_at", null: false
+    t.integer "favorite_position"
     t.datetime "hand_raised_at"
     t.string "involvement", default: "mentions"
+    t.bigint "last_read_message_id"
+    t.bigint "room_category_id"
     t.integer "room_id", null: false
     t.datetime "server_muted_at"
     t.string "stage_role"
     t.datetime "unread_at"
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
+    t.index ["last_read_message_id"], name: "index_memberships_on_last_read_message_id"
     t.index ["room_id", "created_at"], name: "index_memberships_on_room_id_and_created_at"
     t.index ["room_id", "stage_role"], name: "index_memberships_on_room_id_and_stage_role"
     t.index ["room_id", "user_id"], name: "index_memberships_on_room_id_and_user_id", unique: true
     t.index ["room_id"], name: "index_memberships_on_room_id"
+    t.index ["user_id", "favorite_position"], name: "index_memberships_on_user_and_favorite"
+    t.index ["user_id", "room_category_id"], name: "index_memberships_on_user_and_category"
     t.index ["user_id"], name: "index_memberships_on_user_id"
   end
 
@@ -604,6 +692,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
   end
 
   create_table "messages", force: :cascade do |t|
+    t.boolean "action", default: false, null: false
     t.string "client_message_id", null: false
     t.datetime "created_at", null: false
     t.integer "creator_id", null: false
@@ -631,6 +720,40 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
     t.index ["thread_id"], name: "index_messages_on_thread_id"
   end
 
+  create_table "poll_options", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "label", null: false
+    t.integer "poll_id", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["poll_id", "position"], name: "index_poll_options_on_poll_id_and_position"
+    t.index ["poll_id"], name: "index_poll_options_on_poll_id"
+  end
+
+  create_table "poll_votes", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "poll_id", null: false
+    t.integer "poll_option_id", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["poll_id", "user_id"], name: "index_poll_votes_on_poll_id_and_user_id"
+    t.index ["poll_id"], name: "index_poll_votes_on_poll_id"
+    t.index ["poll_option_id", "user_id"], name: "index_poll_votes_on_poll_option_id_and_user_id", unique: true
+    t.index ["poll_option_id"], name: "index_poll_votes_on_poll_option_id"
+    t.index ["user_id"], name: "index_poll_votes_on_user_id"
+  end
+
+  create_table "polls", force: :cascade do |t|
+    t.boolean "anonymous", default: false, null: false
+    t.datetime "closed_at"
+    t.datetime "closes_at"
+    t.datetime "created_at", null: false
+    t.integer "message_id", null: false
+    t.boolean "multiple", default: false, null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id"], name: "index_polls_on_message_id", unique: true
+  end
+
   create_table "push_subscriptions", force: :cascade do |t|
     t.string "auth_key"
     t.datetime "created_at", null: false
@@ -641,6 +764,17 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
     t.integer "user_id", null: false
     t.index ["endpoint", "p256dh_key", "auth_key"], name: "idx_on_endpoint_p256dh_key_auth_key_7553014576"
     t.index ["user_id"], name: "index_push_subscriptions_on_user_id"
+  end
+
+  create_table "room_categories", force: :cascade do |t|
+    t.boolean "collapsed", default: false, null: false
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["user_id", "position"], name: "index_room_categories_on_user_and_position"
+    t.index ["user_id"], name: "index_room_categories_on_user_id"
   end
 
   create_table "rooms", force: :cascade do |t|
@@ -672,6 +806,29 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
     t.index ["user_id", "message_id"], name: "index_saved_items_on_user_id_and_message_id", unique: true
     t.index ["user_id", "status"], name: "index_saved_items_on_user_id_and_status"
     t.index ["user_id"], name: "index_saved_items_on_user_id"
+  end
+
+  create_table "scheduled_messages", force: :cascade do |t|
+    t.datetime "claimed_at"
+    t.datetime "created_at", null: false
+    t.text "drop_reason"
+    t.datetime "dropped_at"
+    t.text "markdown_source", null: false
+    t.integer "reply_to_message_id"
+    t.integer "room_id", null: false
+    t.datetime "send_at", null: false
+    t.datetime "sent_at"
+    t.integer "sent_message_id"
+    t.integer "thread_id"
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["reply_to_message_id"], name: "index_scheduled_messages_on_reply_to_message_id"
+    t.index ["room_id"], name: "index_scheduled_messages_on_room_id"
+    t.index ["send_at", "sent_at", "dropped_at"], name: "index_scheduled_messages_on_send_at_and_sent_at_and_dropped_at"
+    t.index ["sent_message_id"], name: "index_scheduled_messages_on_sent_message_id"
+    t.index ["thread_id"], name: "index_scheduled_messages_on_thread_id"
+    t.index ["user_id", "send_at"], name: "index_scheduled_messages_on_user_id_and_send_at"
+    t.index ["user_id"], name: "index_scheduled_messages_on_user_id"
   end
 
   create_table "searches", force: :cascade do |t|
@@ -771,6 +928,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
     t.datetime "custom_status_expires_at"
     t.string "custom_status_text"
     t.boolean "dnd_enabled", default: false, null: false
+    t.datetime "dnd_until"
     t.string "email_address"
     t.datetime "email_self_changed_at"
     t.string "github_login"
@@ -779,8 +937,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
     t.json "inbox_preferences", default: {}
     t.string "name", null: false
     t.string "password_digest"
-    t.string "push_to_talk_key"
     t.string "presence_setting", default: "auto", null: false
+    t.string "push_to_talk_key"
     t.boolean "quiet_hours_enabled", default: false, null: false
     t.integer "quiet_hours_end_minute"
     t.integer "quiet_hours_start_minute"
@@ -804,6 +962,21 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
     t.string "url"
     t.integer "user_id", null: false
     t.index ["user_id"], name: "index_webhooks_on_user_id"
+  end
+
+  create_table "work_handoffs", force: :cascade do |t|
+    t.integer "channel_thread_id", null: false
+    t.datetime "created_at", null: false
+    t.json "links", default: [], null: false
+    t.json "open_questions", default: [], null: false
+    t.integer "receiver_agent_id", null: false
+    t.integer "sender_id", null: false
+    t.text "summary", null: false
+    t.datetime "updated_at", null: false
+    t.index ["channel_thread_id", "created_at"], name: "index_work_handoffs_on_channel_thread_id_and_created_at"
+    t.index ["channel_thread_id"], name: "index_work_handoffs_on_channel_thread_id"
+    t.index ["receiver_agent_id"], name: "index_work_handoffs_on_receiver_agent_id"
+    t.index ["sender_id"], name: "index_work_handoffs_on_sender_id"
   end
 
   create_table "work_thread_events", force: :cascade do |t|
@@ -871,7 +1044,18 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "activity_items", "users", on_delete: :cascade
+  add_foreign_key "agent_slash_commands", "agents"
+  add_foreign_key "agent_slash_commands", "rooms"
   add_foreign_key "bans", "users"
+  add_foreign_key "board_sla_nudges", "channel_threads"
+  add_foreign_key "board_sla_nudges", "rooms"
+  add_foreign_key "board_sla_nudges", "users", column: "recipient_id"
+  add_foreign_key "board_sla_rules", "rooms"
+  add_foreign_key "board_stale_digests", "messages"
+  add_foreign_key "board_stale_digests", "rooms"
+  add_foreign_key "board_tag_assignments", "rooms"
+  add_foreign_key "board_tag_assignments", "users", column: "assignee_id"
+  add_foreign_key "board_tag_assignments", "users", column: "created_by_id"
   add_foreign_key "boosts", "messages"
   add_foreign_key "calendar_push_channels", "users"
   add_foreign_key "channel_threads", "messages", column: "parent_message_id", on_delete: :nullify
@@ -915,9 +1099,19 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
   add_foreign_key "messages", "messages", column: "reply_to_message_id", on_delete: :nullify
   add_foreign_key "messages", "rooms"
   add_foreign_key "messages", "users", column: "creator_id"
+  add_foreign_key "poll_options", "polls"
+  add_foreign_key "poll_votes", "poll_options"
+  add_foreign_key "poll_votes", "polls"
+  add_foreign_key "poll_votes", "users"
+  add_foreign_key "polls", "messages"
   add_foreign_key "push_subscriptions", "users"
   add_foreign_key "saved_items", "messages"
   add_foreign_key "saved_items", "users"
+  add_foreign_key "scheduled_messages", "channel_threads", column: "thread_id", on_delete: :nullify
+  add_foreign_key "scheduled_messages", "messages", column: "reply_to_message_id", on_delete: :nullify
+  add_foreign_key "scheduled_messages", "messages", column: "sent_message_id", on_delete: :nullify
+  add_foreign_key "scheduled_messages", "rooms"
+  add_foreign_key "scheduled_messages", "users"
   add_foreign_key "searches", "users"
   add_foreign_key "sessions", "users"
   add_foreign_key "thread_memberships", "channel_threads", column: "thread_id", on_delete: :cascade
@@ -925,6 +1119,9 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_050456) do
   add_foreign_key "twitter_post_references", "messages"
   add_foreign_key "twitter_post_references", "twitter_posts"
   add_foreign_key "webhooks", "users"
+  add_foreign_key "work_handoffs", "agents", column: "receiver_agent_id"
+  add_foreign_key "work_handoffs", "channel_threads"
+  add_foreign_key "work_handoffs", "users", column: "sender_id"
   add_foreign_key "work_thread_events", "channel_threads", on_delete: :cascade
   add_foreign_key "work_thread_events", "users", column: "actor_id", on_delete: :nullify
   add_foreign_key "work_thread_links", "channel_threads", on_delete: :cascade

@@ -277,6 +277,13 @@ export default class SuggestionController {
 
   #didPressReturnKey() {
     if (this.#active) {
+      // A delegate may yield Enter to the form: the slash picker does
+      // once "/command " is chosen, so a stale active state never
+      // swallows the submit while the debounced update is still pending.
+      if (this.delegate.shouldSubmitOnReturnKey?.() === true) {
+        this.#deactivateSuggestion()
+        return
+      }
       this.commitSuggestion()
       return false
     }
@@ -315,6 +322,10 @@ export default class SuggestionController {
 
   #didPressKeyWithValue(value) {
     if (this.#active && (value != null) && !this.hidden) {
+      // Retyping the trigger character cancels mentions and emoji, but a
+      // delegate may opt out (the slash picker: "/" starts an escape or
+      // a fresh command, and swallowing it would corrupt the composer).
+      if (typeof this.delegate.shouldCancelOnKey === "function" && !this.delegate.shouldCancelOnKey(value)) return
       const result = this.matchQueryAndTerminatorForWord(value)
       if (result?.query === "") {
         this.#cancelSuggestion()

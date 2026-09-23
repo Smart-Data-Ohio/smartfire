@@ -13,12 +13,17 @@ module ActivityItemsHelper
     when WorkThreadEvent
       thread = source.thread
       thread ? room_path(thread.room, thread: thread.id) : activity_items_path
+    when BoardSlaNudge
+      thread = source.channel_thread
+      thread ? room_path(thread.room, thread: thread.id) : activity_items_path
     when HuddleGrant
       source.room ? room_path(source.room) : activity_items_path
     when Event
       source.room ? room_event_path(source.room, source) : activity_items_path
     when AgentApproval
       agent_approvals_path(source.agent)
+    when ScheduledMessage
+      scheduled_messages_path
     else
       activity_items_path
     end
@@ -38,6 +43,8 @@ module ActivityItemsHelper
       "Work assignment"
     when "work_update"
       "Work update"
+    when "work_sla"
+      "SLA breach"
     when "huddle_started"
       "Incoming huddle"
     when "huddle_missed"
@@ -56,6 +63,8 @@ module ActivityItemsHelper
       "Approval request"
     when "message_reminder"
       "Reminder"
+    when "scheduled_message_dropped"
+      "Scheduled message not sent"
     else
       item.event_type.humanize
     end
@@ -74,6 +83,9 @@ module ActivityItemsHelper
       end
     when WorkThreadEvent
       source.thread ? "#{room_display_name(source.thread.room)} · #{source.thread.name}" : "Unavailable thread"
+    when BoardSlaNudge
+      thread = source.channel_thread
+      thread ? "#{room_display_name(thread.room)} · #{thread.name}" : "Unavailable thread"
     when HuddleGrant
       source.room ? room_display_name(source.room) : "Unavailable room"
     when Event
@@ -83,6 +95,9 @@ module ActivityItemsHelper
       room = source.room
       base = agent ? agent.user.name : "Agent"
       room ? "#{base} · #{room_display_name(room)}" : base
+    when ScheduledMessage
+      room = source.room
+      room ? room_display_name(room) : "Unavailable room"
     else
       source.class.name.humanize
     end
@@ -108,6 +123,15 @@ module ActivityItemsHelper
         changes << "Owner: #{source.from_owner_name.presence || "unassigned"} → #{source.to_owner_name.presence || "unassigned"}"
       end
       changes.presence&.to_sentence || "Work thread updated"
+    when BoardSlaNudge
+      status = ChannelThread::WORK_STATUS_LABELS.fetch(source.work_status, source.work_status.to_s.humanize)
+      waited = source.waited_minutes
+      age = waited >= 60 ? "#{(waited / 60.0).round(1)} hours" : "#{waited} minutes"
+      if source.stage == "escalation"
+        "Escalated: sitting in #{status} for #{age}"
+      else
+        "Sitting in #{status} for #{age}"
+      end
     when HuddleGrant
       caller = source.user&.name || "Someone"
       if item.event_type == "huddle_missed"
@@ -119,6 +143,12 @@ module ActivityItemsHelper
       activity_item_event_body(item)
     when AgentApproval
       source.summary.to_s
+    when ScheduledMessage
+      if source.drop_reason.present?
+        "Your scheduled message was not sent (#{source.drop_reason}): #{source.markdown_source}"
+      else
+        "You no longer have access to this room, so your scheduled message was not sent: #{source.markdown_source}"
+      end
     else
       "Source updated"
     end
@@ -137,6 +167,8 @@ module ActivityItemsHelper
       source.organizer&.name
     when AgentApproval
       source.agent&.user&.name
+    when ScheduledMessage
+      source.user&.name
     end
   end
 

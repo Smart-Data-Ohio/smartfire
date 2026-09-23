@@ -31,6 +31,14 @@ class Room < ApplicationRecord
   # The agent ledger outlives the room; only the room link is cleared.
   has_many :agent_events, dependent: :nullify
   has_many :agent_approvals, dependent: :nullify
+  # Board automations are small per room, so the room destroy removes them
+  # directly instead of batching them like messages and threads.
+  has_many :board_tag_assignments, dependent: :delete_all
+  has_many :board_sla_rules, dependent: :delete_all
+  has_many :board_sla_nudges, dependent: :delete_all
+  has_many :board_stale_digests, dependent: :delete_all
+  has_many :agent_slash_commands, dependent: :delete_all
+  has_many :scheduled_messages, dependent: :delete_all
 
   belongs_to :creator, class_name: "User", default: -> { Current.user }
 
@@ -186,7 +194,26 @@ class Room < ApplicationRecord
     end
 
     def unread_memberships(message)
-      memberships.visible.disconnected.where.not(user: message.creator).update_all(unread_at: message.created_at, updated_at: Time.current)
+      recipients = memberships.visible.disconnected.where.not(user: message.creator)
+      recipients.where.not(involvement: :muted).update_all(unread_at: message.created_at, updated_at: Time.current)
+
+      # Muted rooms go unread only when the member is mentioned; the
+      # mentionee subselect keeps this to a single statement.
+      muted_recipients = recipients.where(involvement: :muted)
+      if muted_recipients.exists?
+        muted_recipients.where(user_id: message.mentionees.select(:id))
+          .update_all(unread_at: message.created_at, updated_at: Time.current)
+      end
+
+      # Members watching live already saw this message, and the author's
+      # own post never counts: advance their read pointer to it so a
+      # later unread starts after what was seen, not before. Unread
+      # members keep their boundary intact. One statement like the
+      # presence mark-read path.
+      memberships.visible.where(unread_at: nil)
+        .where("memberships.connected_at >= ? OR memberships.user_id = ?",
+          Membership::Connectable::CONNECTION_TTL.ago, message.creator_id)
+        .update_all(last_read_message_id: message.id, updated_at: Time.current)
     end
 
     def push_later(message)

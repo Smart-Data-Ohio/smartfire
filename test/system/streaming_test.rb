@@ -454,6 +454,7 @@ class StreamingTest < ApplicationSystemTestCase
     using_session("Viewer") do
       assert_selector ".stage-live__badge", text: "Live: David", wait: BROADCAST_WAIT
       assert_selector "#stage_rooms .stage-room .stage-live-dot__pip", wait: BROADCAST_WAIT
+      wait_for_member_panel
 
       assert_show_stage_clear_of_member_panel
       find("button[aria-label='Show stage']").click
@@ -461,6 +462,7 @@ class StreamingTest < ApplicationSystemTestCase
       assert_no_selector "button", text: "Stop stream", visible: :visible
     end
 
+    wait_for_member_panel
     assert_show_stage_clear_of_member_panel
     find("button[aria-label='Show stage']").click
     click_button "Stop stream"
@@ -529,6 +531,14 @@ class StreamingTest < ApplicationSystemTestCase
   end
 
   private
+    # The member panel opens on Stimulus connect and reflows the header
+    # grid as it does; the broadcast waits above don't cover Stimulus,
+    # so wait for it before clicking header buttons, or the click can
+    # race the reflow and land under the panel.
+    def wait_for_member_panel
+      assert_selector "body.member-panel-open", wait: 10
+    end
+
     def add_script_to_evaluate_on_new_document(source)
       page.driver.browser.execute_cdp("Page.addScriptToEvaluateOnNewDocument", source: source)["identifier"]
     end
