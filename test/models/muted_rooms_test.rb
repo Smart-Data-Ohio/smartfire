@@ -38,6 +38,22 @@ class MutedRoomsTest < ActiveSupport::TestCase
     wait_for_web_push_delivery_pool_tasks(5)
   end
 
+  test "muted members get no unread broadcast without a mention" do
+    memberships(:kevin_designers).update!(involvement: "muted")
+    stream = UnreadRoomsChannel.stream_name_for(users(:kevin).id)
+    before = ActionCable.server.pubsub.broadcasts(stream).size
+
+    rooms(:designers).messages.create!(
+      body: "Hello all", client_message_id: "mute-broadcast-plain", creator: users(:david)
+    ).broadcast_create
+    assert_equal before, ActionCable.server.pubsub.broadcasts(stream).size
+
+    rooms(:designers).messages.create!(
+      body: "Hey #{mention_attachment_for(:kevin)}", client_message_id: "mute-broadcast-mention", creator: users(:david)
+    ).broadcast_create
+    assert_equal before + 1, ActionCable.server.pubsub.broadcasts(stream).size
+  end
+
   test "muted members get no reply-author push" do
     room = rooms(:designers)
     memberships(:jason_designers).update!(involvement: "muted")
