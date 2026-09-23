@@ -15,12 +15,13 @@
   </div>
 
   <div class="pad-inline txt-align-start">
-    <%= form_with url: agent_approvals_path(@agent), method: :get, class: "flex align-center gap" do %>
+    <%= form_with url: agent_approvals_path(@agent), method: :get, class: "flex align-center gap",
+          data: { controller: "form", action: "change->form#submit" } do %>
       <label class="flex align-center gap flex-item-grow txt-large input input--actor">
         <%= select_tag :status,
               options_for_select([ [ "All statuses", "" ] ] + AgentApproval::STATUSES.map { |status| [ status, status ] },
                 @status_filter),
-              class: "input", onchange: "this.form.requestSubmit()" %>
+              class: "input" %>
       </label>
       <noscript><%= submit_tag "Filter", class: "btn" %></noscript>
     <% end %>

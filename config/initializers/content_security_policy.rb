@@ -1,9 +1,8 @@
 # Be sure to restart your server when you modify this file.
 
-# Application-wide Content Security Policy, in report-only mode: browsers
-# report violations to /csp_reports (ContentSecurityPolicyReportsController
-# logs them, rate-limited) without blocking anything. Switch
-# content_security_policy_report_only to false once the reports are quiet.
+# Application-wide Content Security Policy, enforced: browsers block
+# anything outside it and report violations to /csp_reports
+# (ContentSecurityPolicyReportsController logs them, rate-limited).
 #
 # Sources, and why each is allowed:
 # - script-src 'self' plus a per-session nonce (importmap tags and the few
@@ -85,5 +84,5 @@ Rails.application.configure do
   end
   config.content_security_policy_nonce_directives = %w[ script-src ]
 
-  config.content_security_policy_report_only = true
+  config.content_security_policy_report_only = false
 end
