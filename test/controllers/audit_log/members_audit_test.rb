@@ -89,6 +89,20 @@ class AuditLog::MembersAuditTest < ActionDispatch::IntegrationTest
     assert_equal [ "banned", "active" ], unban.details["status"]
   end
 
+  test "re-banning and re-unbanning write no rows" do
+    post user_ban_url(users(:kevin))
+
+    assert_no_difference -> { AuditLog.where(action: "user.ban").count } do
+      post user_ban_url(users(:kevin))
+    end
+
+    delete user_ban_url(users(:kevin))
+
+    assert_no_difference -> { AuditLog.where(action: "user.unban").count } do
+      delete user_ban_url(users(:kevin))
+    end
+  end
+
   test "deactivation is recorded" do
     assert_difference -> { AuditLog.where(action: "user.deactivate").count }, +1 do
       delete account_user_url(users(:kevin))
