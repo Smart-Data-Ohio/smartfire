@@ -58,7 +58,12 @@ class ContentSecurityPolicyTest < ApplicationSystemTestCase
     fill_in "email_address", with: "jz@37signals.com"
     fill_in "password", with: "secret123456"
     click_on "log_in"
-    assert_selector "a.btn", text: "Designers"
+    # The login POST plus the first room render (with the huddle panel this
+    # file enables) exceeds the default wait under parallel load, and a
+    # specific room row is not the point: wait for the signed-in sidebar
+    # and the workspace user instead.
+    assert_selector "aside#sidebar nav[aria-label='Your workspace']", wait: 10
+    assert_selector "aside#sidebar a.workspace-user", text: "JZ", wait: 10
     assert_no_violations
   end
 

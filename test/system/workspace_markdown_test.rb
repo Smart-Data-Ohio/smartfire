@@ -263,7 +263,7 @@ class WorkspaceMarkdownTest < ApplicationSystemTestCase
     opener = find_button("Open workspace navigation")
     opener.click
     assert_no_button "Close workspace navigation", visible: :all
-    assert_selector "#sidebar a[aria-current='page']:focus"
+    assert_focused "#sidebar a[aria-current='page']"
     find("#sidebar a[href]", match: :first).send_keys [ :shift, :tab ]
     assert page.evaluate_script("document.querySelector('#sidebar').contains(document.activeElement)"), "focus should stay in the open navigation drawer"
     settle_visual_transitions
