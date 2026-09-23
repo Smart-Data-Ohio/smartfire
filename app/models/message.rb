@@ -316,24 +316,38 @@ class Message < ApplicationRecord
   # Ends a stream, firing every deferred side effect exactly once:
   # unread marks and push, inbox items, agent delivery (including the
   # sender's `posted` ledger row), legacy bot webhooks, search indexing,
-  # and card reference syncs. The streaming flag flips with a conditional
-  # claim, so an agent finalize racing the overdue sweep (or a retry)
-  # finalizes once; the loser gets false. The claim commits before any
-  # broadcast or job enqueue, so no SQLite lock is held across them.
-  # Also clears the streaming agent's working presence.
+  # and card reference syncs. A suspended or deactivated agent's streams
+  # end quietly instead — marked final with none of those — so a kill
+  # switch or suspension never fans a half-written draft out. Suspension
+  # finalizes open streams up front (see Agent#suspend!); this branch
+  # covers anything it misses, like the overdue sweep or an orphaned
+  # stream. Also clears the streaming agent's working presence.
   def finalize_stream!
-    now = Time.current
-    claimed = self.class.where(id: id, streaming: true)
-      .update_all(streaming: false, updated_at: now) == 1
-    return false unless claimed
+    return false unless claim_stream_finalized!
 
-    reload
+    unless creator.agent&.active?
+      creator.agent&.clear_working_presence!
+      broadcast_stream_final
+      return true
+    end
+
     create_in_index
     receive_in_conversation
     record_activity_items
     enqueue_agent_deliveries
     sync_all_references
     Message::BotWebhookFanout.deliver_for(self)
+    creator.agent&.clear_working_presence!
+    broadcast_stream_final
+    true
+  end
+
+  # Marks the stream final without any deferred side effect: no unread,
+  # push, mentions, inbox, delivery, webhooks, or indexing. The final
+  # rendering still broadcasts so clients drop the working indicator.
+  def finalize_stream_quietly!
+    return false unless claim_stream_finalized!
+
     creator.agent&.clear_working_presence!
     broadcast_stream_final
     true
@@ -359,6 +373,18 @@ class Message < ApplicationRecord
 
 
   private
+    # Flips the streaming flag with a conditional claim, so an agent
+    # finalize racing the overdue sweep (or a retry) finalizes once; the
+    # loser gets false. The claim commits before any broadcast or job
+    # enqueue, so no SQLite lock is held across them.
+    def claim_stream_finalized!
+      now = Time.current
+      claimed = self.class.where(id: id, streaming: true)
+        .update_all(streaming: false, updated_at: now) == 1
+      reload if claimed
+      claimed
+    end
+
     def record_activity_items
       ActivityItems::Recorder.record_message!(self) unless system_note?
     end

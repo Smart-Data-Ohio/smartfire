@@ -213,6 +213,52 @@ class MessageStreamingTest < ActiveSupport::TestCase
     assert_equal 1, @agent.agent_events.where(event_type: "posted", message_id: message.id).count
   end
 
+  test "finalize skips side effects for a suspended agent" do
+    @agent.suspend!
+    message = @room.root_messages.create!(creator: @bot, streaming: true,
+      markdown_source: "Hey @[David] hovercraft", client_message_id: "stream-suspended")
+
+    assert_no_enqueued_jobs do
+      assert message.finalize_stream!
+    end
+
+    assert_not message.reload.streaming?
+    assert_empty ActivityItem.where(source: message)
+    assert_empty @agent.agent_events.where(message_id: message.id)
+    assert_equal [], @room.messages.search("hovercraft")
+    assert_nil @david_membership.reload.unread_at
+  end
+
+  test "the sweep finalizes a suspended agent's streams quietly" do
+    @agent.suspend!
+    message = @room.root_messages.create!(creator: @bot, streaming: true,
+      markdown_source: "Gone quiet hovercraft", client_message_id: "stream-sweep-quiet")
+    message.update_columns(created_at: 11.minutes.ago, streaming_updated_at: 11.minutes.ago)
+
+    assert_no_enqueued_jobs do
+      Message.finalize_overdue_streams!
+    end
+
+    assert_not message.reload.streaming?
+    assert_empty @agent.agent_events.where(message_id: message.id)
+    assert_equal [], @room.messages.search("hovercraft")
+  end
+
+  test "finalize skips side effects for a deactivated agent" do
+    @bot.update!(status: :deactivated)
+    message = @room.root_messages.create!(creator: @bot, streaming: true,
+      markdown_source: "Hey @[David] hovercraft", client_message_id: "stream-deactivated")
+
+    assert_no_enqueued_jobs do
+      assert message.finalize_stream!
+    end
+
+    assert_not message.reload.streaming?
+    assert_empty ActivityItem.where(source: message)
+    assert_empty @agent.agent_events.where(message_id: message.id)
+    assert_equal [], @room.messages.search("hovercraft")
+  end
+
   test "finalize clears the streaming agent's working presence" do
     @agent.set_working_presence!("Thinking…")
     message = @room.root_messages.create!(creator: @bot, streaming: true,

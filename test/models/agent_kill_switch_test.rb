@@ -61,4 +61,40 @@ class AgentKillSwitchTest < ActiveSupport::TestCase
       @agent.kill_switch!
     end
   end
+
+  test "kill switch quietly finalizes the agent's open streams" do
+    room = rooms(:watercooler)
+    message = room.root_messages.create!(creator: @agent.user, streaming: true,
+      markdown_source: "Hey @[David] hovercraft", client_message_id: "kill-stream")
+    membership = Membership.find_by!(room: room, user: users(:david))
+
+    assert_no_enqueued_jobs do
+      @agent.kill_switch!
+    end
+
+    assert_not message.reload.streaming?
+    assert_empty ActivityItem.where(source: message)
+    assert_empty @agent.agent_events.where(message_id: message.id)
+    assert_equal [], room.messages.search("hovercraft")
+    assert_nil membership.reload.unread_at
+    assert_empty ActionCable.server.pubsub.broadcasts(UnreadRoomsChannel.stream_name_for(users(:david).id))
+
+    stream = [ room.to_gid_param, :messages ].join(":")
+    assert_equal 1, ActionCable.server.pubsub.broadcasts(stream).size
+  end
+
+  test "suspend quietly finalizes the agent's open streams" do
+    room = rooms(:watercooler)
+    message = room.root_messages.create!(creator: @agent.user, streaming: true,
+      markdown_source: "Hey @[David] hovercraft", client_message_id: "suspend-stream")
+
+    assert_no_enqueued_jobs do
+      @agent.suspend!
+    end
+
+    assert_not message.reload.streaming?
+    assert_empty ActivityItem.where(source: message)
+    assert_empty @agent.agent_events.where(message_id: message.id)
+    assert_equal [], room.messages.search("hovercraft")
+  end
 end

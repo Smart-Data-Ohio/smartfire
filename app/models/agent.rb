@@ -66,19 +66,28 @@ class Agent < ApplicationRecord
 
   # Suspension fans out from deactivation, bans, and bot removal, so the
   # audit row lives here rather than at each call site. The actor defaults
-  # to whoever triggered the suspension through the current request.
+  # to whoever triggered the suspension through the current request. Open
+  # streams finalize quietly up front, so no half-written draft fans out
+  # later; the kill switch inherits this through suspend!.
   def suspend!
     return if suspended?
 
     update!(suspended_at: Time.current)
+    Message.where(creator_id: user_id, streaming: true).find_each do |message|
+      begin
+        message.finalize_stream_quietly!
+      rescue => error
+        Rails.logger.error "Quiet stream finalize failed for message #{message.id}: #{error.class}: #{error.message}"
+      end
+    end
     AuditLog.record!(action: "agent.suspend", target: self)
   end
 
   # The kill switch: suspends the agent (revoking every grant, which also
   # blocks approved-but-unexecuted external actions at perform time),
-  # cancels every still-pending approval request, clears working
-  # presence, and records `agent.kill_switch`. Returns the number of
-  # approvals cancelled.
+  # quietly finalizes open streams, cancels every still-pending approval
+  # request, clears working presence, and records `agent.kill_switch`.
+  # Returns the number of approvals cancelled.
   def kill_switch!
     suspend!
 
