@@ -1,6 +1,7 @@
 module ActivityItems
   class Recorder
     EVENT_PRIORITY = {
+      "keyword_alert" => 0,
       "thread_activity" => 1,
       "work_update" => 1,
       "work_assignment" => 1,
@@ -74,10 +75,10 @@ module ActivityItems
       # memberships once per recipient.
       def message_candidates
         @message_candidates ||=
-          if @source.thread
-            thread_message_candidates
-          else
-            room_message_candidates
+          begin
+            candidates = @source.thread ? thread_message_candidates : room_message_candidates
+            merge_keyword_candidates(candidates)
+            candidates
           end
       end
 
@@ -109,7 +110,10 @@ module ActivityItems
               choose_candidate(candidates, thread_membership.user, "thread_activity")
             end
 
-            if reply_author_id == thread_membership.user_id && @source.reply_notify_author?
+            # Replies are a follower benefit: unfollowed threads ("mentions")
+            # stay silent unless the member is mentioned outright.
+            if reply_author_id == thread_membership.user_id && @source.reply_notify_author? &&
+                thread_membership.involved_in_everything?
               choose_candidate(candidates, thread_membership.user, "reply")
             end
           end
@@ -166,6 +170,67 @@ module ActivityItems
 
       def thread_mentions_enabled?(membership)
         membership.involved_in_mentions? || membership.involved_in_everything?
+      end
+
+      # Keyword alerts match once per message over the candidate
+      # recipients: thread members reuse the already-loaded memberships,
+      # root messages load the room roster in a fixed set of queries, and
+      # the phrases compile into one pattern scanned a single time. A
+      # keyword never overrides a mention, reply, or thread item for the
+      # same message (priority 0), and muted or invisible members match
+      # nothing. Members with room notifications off still match: a
+      # keyword is an explicit opt-in, like a mention.
+      def merge_keyword_candidates(candidates)
+        text = @source.plain_text_body
+        return if text.blank?
+        return unless KeywordAlert.exists?
+
+        if @source.thread
+          merge_thread_keyword_candidates(candidates, text)
+        else
+          merge_room_keyword_candidates(candidates, text)
+        end
+      end
+
+      def merge_thread_keyword_candidates(candidates, text)
+        eligible = thread_memberships.filter_map do |membership|
+          room_membership = room_memberships[membership.user_id]
+          next unless mentionable_room_membership?(room_membership)
+          next if membership.involved_in_nothing?
+
+          membership
+        end
+        return if eligible.empty?
+
+        phrases = KeywordAlert.where(user_id: eligible.map(&:user_id)).pluck(:user_id, :phrase)
+        matched = Notifications::KeywordMatcher.matching_user_ids(phrases_by_user(phrases), text).to_set
+        return if matched.empty?
+
+        eligible.each do |membership|
+          choose_candidate(candidates, membership.user, "keyword_alert") if matched.include?(membership.user_id)
+        end
+      end
+
+      def merge_room_keyword_candidates(candidates, text)
+        roster = @source.room.memberships.includes(:user).to_a
+        eligible_ids = roster.filter_map do |membership|
+          membership.user_id if mentionable_room_membership?(membership)
+        end
+        return if eligible_ids.empty?
+
+        phrases = KeywordAlert.where(user_id: eligible_ids).pluck(:user_id, :phrase)
+        return if phrases.empty?
+
+        matched = Notifications::KeywordMatcher.matching_user_ids(phrases_by_user(phrases), text).to_set
+        return if matched.empty?
+
+        roster.each do |membership|
+          choose_candidate(candidates, membership.user, "keyword_alert") if matched.include?(membership.user_id)
+        end
+      end
+
+      def phrases_by_user(rows)
+        rows.group_by(&:first).transform_values { |pairs| pairs.map(&:last) }
       end
 
       def choose_candidate(candidates, recipient, event_type)
