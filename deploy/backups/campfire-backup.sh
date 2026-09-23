@@ -198,8 +198,19 @@ main() {
   case "$BACKUP_BUCKET" in
     gs://*|*/*) die "BACKUP_BUCKET must be a bare bucket name, not '$BACKUP_BUCKET'" ;;
   esac
+  # The installer enables the timer before the lead edits the config, so an
+  # unedited example would otherwise burn a full snapshot+encrypt cycle and
+  # then fail in gcloud's words. Fail fast, in ours.
+  case "$BACKUP_BUCKET" in
+    REPLACE-*) die "BACKUP_BUCKET still has the example placeholder; edit /etc/campfire-backups/backup.env" ;;
+  esac
   case "$BACKUP_ENCRYPTION" in
-    age) [ -n "$BACKUP_AGE_RECIPIENT" ] || die "BACKUP_AGE_RECIPIENT is required for BACKUP_ENCRYPTION=age" ;;
+    age)
+      [ -n "$BACKUP_AGE_RECIPIENT" ] || die "BACKUP_AGE_RECIPIENT is required for BACKUP_ENCRYPTION=age"
+      case "$BACKUP_AGE_RECIPIENT" in
+        REPLACE-*) die "BACKUP_AGE_RECIPIENT still has the example placeholder; edit /etc/campfire-backups/backup.env" ;;
+      esac
+      ;;
     gpg) [ -n "$BACKUP_GPG_RECIPIENT" ] || die "BACKUP_GPG_RECIPIENT is required for BACKUP_ENCRYPTION=gpg" ;;
   esac
   require_tools

@@ -182,6 +182,31 @@ class CampfireBackupTest < ActiveSupport::TestCase
     end
   end
 
+  test "example placeholder bucket exits non-zero without snapshotting" do
+    with_backup_env do |env, dirs|
+      seed_volume(dirs[:volume], messages: 1)
+      out, status = run_backup(env, dirs,
+        "BACKUP_DATETIME" => "20260923-090000",
+        "BACKUP_BUCKET" => "REPLACE-backup-bucket")
+      refute status.success?
+      assert_includes out, "placeholder"
+      refute_includes out, "snapshotting the database", "must fail before doing any work"
+    end
+  end
+
+  test "example placeholder age recipient exits non-zero" do
+    skip "age is not on PATH" unless age_available?
+
+    with_backup_env(encryption: :age) do |env, dirs|
+      seed_volume(dirs[:volume], messages: 1)
+      out, status = run_backup(env, dirs,
+        "BACKUP_DATETIME" => "20260923-090000",
+        "BACKUP_AGE_RECIPIENT" => "REPLACE-age1-public-recipient")
+      refute status.success?
+      assert_includes out, "placeholder"
+    end
+  end
+
   private
 
     def with_backup_env(encryption: :gpg)
