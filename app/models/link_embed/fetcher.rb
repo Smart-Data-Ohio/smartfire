@@ -16,7 +16,7 @@ class LinkEmbed::Fetcher
   end
 
   def fetch
-    location = Opengraph::Location.new(@embed.display_url)
+    location = Opengraph::Location.new(@embed.normalized_url)
 
     unless location.valid?
       return record_negative(location.errors[:url].first || "Could not load this link")
@@ -25,7 +25,7 @@ class LinkEmbed::Fetcher
     html = location.read_html
     return record_negative("Could not load this link") if html.blank?
 
-    metadata = LinkEmbed::MetadataParser.parse(html, base_url: @embed.display_url)
+    metadata = LinkEmbed::MetadataParser.parse(html, base_url: @embed.normalized_url)
     image_url = valid_image_url(metadata.image_url)
 
     if metadata.title.blank? && metadata.description.blank?

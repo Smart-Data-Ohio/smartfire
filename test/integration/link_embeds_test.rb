@@ -150,6 +150,55 @@ class LinkEmbedsTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(message, :link_embed_cards)}"
   end
 
+  test "cards in different rooms link to each message's own URL, never the first poster's" do
+    first = @room.messages.create!(
+      creator: users(:jason), client_message_id: "embed-leak-first",
+      markdown_source: "diagram https://excalidraw.com/#json=ROOMONE,KEYONE"
+    )
+    other_room = rooms(:hq)
+    second = other_room.messages.create!(
+      creator: users(:jason), client_message_id: "embed-leak-second",
+      markdown_source: "diagram https://excalidraw.com/#json=ROOMTWO,KEYTWO"
+    )
+    assert_equal first.link_embeds.first.id, second.link_embeds.first.id
+    fresh_embed("https://excalidraw.com/", title: "Excalidraw")
+
+    get room_url(@room)
+    assert_response :success
+    assert_select "##{dom_id(first, :link_embed_cards)} .link-embed-card__title a[href=?]",
+      "https://excalidraw.com/#json=ROOMONE,KEYONE"
+
+    get room_url(other_room)
+    assert_response :success
+    assert_select "##{dom_id(second, :link_embed_cards)} .link-embed-card__title a[href=?]",
+      "https://excalidraw.com/#json=ROOMTWO,KEYTWO"
+    assert_not_includes response.body, "ROOMONE"
+  end
+
+  test "LinkedIn cards in different rooms link to each message's own URL" do
+    first = @room.messages.create!(
+      creator: users(:jason), client_message_id: "embed-leak-li-first",
+      markdown_source: "see https://www.linkedin.com/feed/update/urn:li:activity:424242#room-one"
+    )
+    other_room = rooms(:hq)
+    second = other_room.messages.create!(
+      creator: users(:jason), client_message_id: "embed-leak-li-second",
+      markdown_source: "see https://www.linkedin.com/feed/update/urn:li:activity:424242#room-two"
+    )
+    assert_equal first.link_embeds.first.id, second.link_embeds.first.id
+
+    get room_url(@room)
+    assert_response :success
+    assert_select "##{dom_id(first, :linkedin_cards)} .linkedin-post-chip a[href=?]",
+      "https://www.linkedin.com/feed/update/urn:li:activity:424242#room-one"
+
+    get room_url(other_room)
+    assert_response :success
+    assert_select "##{dom_id(second, :linkedin_cards)} .linkedin-post-chip a[href=?]",
+      "https://www.linkedin.com/feed/update/urn:li:activity:424242#room-two"
+    assert_not_includes response.body, "room-one"
+  end
+
   test "room view query count does not grow with embedded messages" do
     2.times { |index| create_embedded_message("embed-query-small-#{index}", "https://example.com/small-#{index}") }
     get room_url(@room) # warm process-level caches before counting

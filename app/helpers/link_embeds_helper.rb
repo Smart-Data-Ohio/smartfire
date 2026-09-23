@@ -1,27 +1,29 @@
 module LinkEmbedsHelper
-  # Generic embeds referenced by a message, in link order. Sorting in Ruby
+  # Generic embed references on a message, in link order. Sorting in Ruby
   # rather than with an `order` scope, because applying a scope to an
   # association builds a fresh relation and so ignores already loaded rows —
   # one extra query per message rendered. (Same reason `ordered_boosts`
   # exists.) Rendering a stale card re-enqueues its fetch, so an expired
   # result refreshes on view.
+  #
+  # References, not embeds: each card links to its own message's raw URL
+  # (reference.display_url), never to anything on the room-shared row.
   def link_embed_cards_for(message)
     return [] if message.embeds_suppressed?
 
-    embeds = ordered_link_embeds(message).reject(&:linkedin?)
-    embeds.each { |embed| request_link_embed_fetch(embed) }
+    references = ordered_link_embed_references(message).reject { |reference| reference.link_embed.linkedin? }
+    references.each { |reference| request_link_embed_fetch(reference.link_embed) }
     # Unusable fetches render nothing (the author's link is the fallback),
     # so they are left out: an iteration that rendered an empty string
     # would leave whitespace text nodes behind and defeat the container's
     # :empty rule.
-    embeds.select(&:usable?)
+    references.select { |reference| reference.link_embed.usable? }
   end
 
   private
-    def ordered_link_embeds(message)
+    def ordered_link_embed_references(message)
       message.link_embed_references
         .sort_by { |reference| [ reference.position, reference.id ] }
-        .map(&:link_embed)
     end
 
     # Enqueue a fetch for a missing or expired card, bounded two ways: once

@@ -1,7 +1,10 @@
 <%# A Discord-style generic link embed: site name, linked title,
     description, and the page's OpenGraph image. Unusable fetches (a
     login gate, a missing page, a network failure) render nothing: the
-    author's link in the message body is the fallback. %>
+    author's link in the message body is the fallback. Links use the
+    message's own reference URL, never the room-shared row: another
+    message's raw link (fragments included) must not leak into this card. %>
+<% embed = reference.link_embed %>
 <% if embed.usable? %>
   <article class="link-embed-card">
     <div class="link-embed-card__body">
@@ -10,7 +13,7 @@
       <% end %>
       <% if embed.title.present? %>
         <p class="link-embed-card__title">
-          <%= link_to embed.title, embed.display_url, target: "_blank", rel: "nofollow noopener noreferrer" %>
+          <%= link_to embed.title, reference.display_url, target: "_blank", rel: "nofollow noopener noreferrer" %>
         </p>
       <% end %>
       <% if embed.description.present? %>
@@ -18,7 +21,7 @@
       <% end %>
     </div>
     <% if embed.image_url.present? %>
-      <%= link_to embed.display_url, target: "_blank", rel: "nofollow noopener noreferrer",
+      <%= link_to reference.display_url, target: "_blank", rel: "nofollow noopener noreferrer",
             class: "link-embed-card__image-link", tabindex: "-1", aria: { hidden: "true" } do %>
         <%= image_tag embed.image_url, alt: "", loading: "lazy", class: "link-embed-card__image" %>
       <% end %>

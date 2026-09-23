@@ -117,6 +117,35 @@ class LinkEmbed::ReferenceSyncTest < ActiveSupport::TestCase
     assert_equal [ "https://example.com/suppressed" ], message.reload.link_embeds.map(&:normalized_url)
   end
 
+  test "references keep each message's own raw URL while sharing one embed row" do
+    first = @room.messages.create!(
+      creator: @creator, client_message_id: "embed-sync-own-url-1",
+      markdown_source: "diagram https://excalidraw.com/#json=AAA,111"
+    )
+    second = rooms(:hq).messages.create!(
+      creator: @creator, client_message_id: "embed-sync-own-url-2",
+      markdown_source: "diagram https://excalidraw.com/#json=BBB,222"
+    )
+
+    assert_equal first.link_embeds.first.id, second.link_embeds.first.id
+    assert_equal "https://excalidraw.com/#json=AAA,111", first.link_embed_references.first.url
+    assert_equal "https://excalidraw.com/#json=BBB,222", second.link_embed_references.first.url
+  end
+
+  test "editing a fragment updates the reference URL without a new fetch" do
+    message = @room.messages.create!(
+      creator: @creator, client_message_id: "embed-sync-fragment-edit",
+      markdown_source: "diagram https://excalidraw.com/#json=AAA,111"
+    )
+    clear_enqueued_jobs
+
+    assert_no_enqueued_jobs only: LinkEmbed::FetchJob do
+      message.update!(markdown_source: "diagram https://excalidraw.com/#json=BBB,222")
+    end
+
+    assert_equal "https://excalidraw.com/#json=BBB,222", message.reload.link_embed_references.first.url
+  end
+
   test "expired embeds refetch on the next sync" do
     message = @room.messages.create!(
       creator: @creator, client_message_id: "embed-sync-expired",

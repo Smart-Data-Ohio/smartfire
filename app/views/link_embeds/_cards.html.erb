@@ -6,7 +6,7 @@
     the div so the empty container has no text nodes and the :empty rule
     hides it. %>
 <% if (message = local_assigns[:message]) %>
-  <% embeds = link_embed_cards_for(message) %><div id="<%= dom_id(message, :link_embed_cards) %>" class="link-embed-cards"><% embeds.each do |embed| %>
-    <%= render "link_embeds/card", embed: embed %>
+  <% references = link_embed_cards_for(message) %><div id="<%= dom_id(message, :link_embed_cards) %>" class="link-embed-cards"><% references.each do |reference| %>
+    <%= render "link_embeds/card", reference: reference %>
   <% end %></div>
 <% end %>

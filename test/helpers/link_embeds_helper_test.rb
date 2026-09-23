@@ -4,7 +4,7 @@ class LinkEmbedsHelperTest < ActionView::TestCase
   include LinkEmbedsHelper
   include Linkedin::PostsHelper
 
-  test "link_embed_cards_for returns usable generic embeds in link order" do
+  test "link_embed_cards_for returns usable generic references in link order" do
     message = rooms(:designers).messages.create!(
       creator: users(:david), client_message_id: "embed-helper-order",
       markdown_source: "https://example.com/b https://example.com/a"
@@ -12,7 +12,7 @@ class LinkEmbedsHelperTest < ActionView::TestCase
     fresh_embed("https://example.com/a", title: "A")
     fresh_embed("https://example.com/b", title: "B")
 
-    assert_equal %w[ B A ], link_embed_cards_for(message.reload).map(&:title)
+    assert_equal %w[ B A ], link_embed_cards_for(message.reload).map { |reference| reference.link_embed.title }
   end
 
   test "generic and LinkedIn cards split by URL" do
@@ -23,9 +23,27 @@ class LinkEmbedsHelperTest < ActionView::TestCase
     fresh_embed("https://example.com/page", title: "Page")
     fresh_embed("https://www.linkedin.com/feed/update/urn:li:activity:7", title: "Post")
 
-    assert_equal [ "https://example.com/page" ], link_embed_cards_for(message.reload).map(&:normalized_url)
+    assert_equal [ "https://example.com/page" ],
+      link_embed_cards_for(message.reload).map { |reference| reference.link_embed.normalized_url }
     assert_equal [ "https://www.linkedin.com/feed/update/urn:li:activity:7" ],
-      linkedin_post_cards_for(message.reload).map(&:normalized_url)
+      linkedin_post_cards_for(message.reload).map { |reference| reference.link_embed.normalized_url }
+  end
+
+  test "cards carry each message's own raw URL, not the shared row's" do
+    rooms(:hq).messages.create!(
+      creator: users(:david), client_message_id: "embed-helper-own-url-first",
+      markdown_source: "diagram https://excalidraw.com/#json=FIRST,1"
+    )
+    message = rooms(:designers).messages.create!(
+      creator: users(:david), client_message_id: "embed-helper-own-url-second",
+      markdown_source: "diagram https://excalidraw.com/#json=SECOND,2"
+    )
+    fresh_embed("https://excalidraw.com/", title: "Excalidraw")
+
+    references = link_embed_cards_for(message.reload)
+
+    assert_equal 1, references.size
+    assert_equal "https://excalidraw.com/#json=SECOND,2", references.first.display_url
   end
 
   test "unusable generic embeds are left out but LinkedIn falls back to a chip" do
@@ -83,12 +101,16 @@ class LinkEmbedsHelperTest < ActionView::TestCase
     end
   end
 
-  test "linkedin_embed_player_url follows the URN" do
-    urn = LinkEmbed.new(url: "https://www.linkedin.com/feed/update/urn:li:share:9")
-    slug = LinkEmbed.new(url: "https://www.linkedin.com/posts/slug-9")
+  test "linkedin_embed_player_url follows the reference's own URN" do
+    message = rooms(:designers).messages.create!(
+      creator: users(:david), client_message_id: "embed-helper-player",
+      markdown_source: "https://www.linkedin.com/feed/update/urn:li:share:9 https://www.linkedin.com/posts/slug-9"
+    )
+    references = linkedin_post_cards_for(message.reload).index_by { |reference| reference.link_embed.normalized_url }
 
-    assert_equal "https://www.linkedin.com/embed/feed/update/urn:li:share:9", linkedin_embed_player_url(urn)
-    assert_nil linkedin_embed_player_url(slug)
+    assert_equal "https://www.linkedin.com/embed/feed/update/urn:li:share:9",
+      linkedin_embed_player_url(references.fetch("https://www.linkedin.com/feed/update/urn:li:share:9"))
+    assert_nil linkedin_embed_player_url(references.fetch("https://www.linkedin.com/posts/slug-9"))
   end
 
   private

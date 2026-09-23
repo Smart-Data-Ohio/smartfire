@@ -37,8 +37,11 @@ class LinkEmbed < ApplicationRecord
 
   # Find or create the cached row for a referenced URL. Safe to call
   # concurrently: a lost insert race falls back to finding the winner.
-  def self.for_reference(normalized_url, url: nil)
-    create_with(url: url).find_or_create_by!(normalized_url: normalized_url)
+  # The row holds only the normalized key and fetched metadata: each
+  # message's raw URL lives on its own reference, so one room's link
+  # (fragments included) never leaks into another room's cards.
+  def self.for_reference(normalized_url)
+    find_or_create_by!(normalized_url: normalized_url)
   rescue ActiveRecord::RecordNotUnique
     find_by!(normalized_url: normalized_url)
   end
@@ -78,12 +81,7 @@ class LinkEmbed < ApplicationRecord
   end
 
   def linkedin?
-    Linkedin::PostUrl.post_url?(url.presence || normalized_url)
-  end
-
-  # The first-seen URL for display, falling back to the cache key.
-  def display_url
-    url.presence || normalized_url
+    Linkedin::PostUrl.post_url?(normalized_url)
   end
 
   def broadcast_card_updates

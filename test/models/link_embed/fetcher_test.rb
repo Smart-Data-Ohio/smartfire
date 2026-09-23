@@ -13,7 +13,7 @@ class LinkEmbed::FetcherTest < ActiveSupport::TestCase
     WebMock.stub_request(:head, "https://example.com/image.png")
       .to_return(status: 200, headers: { content_type: "image/png" })
 
-    embed = LinkEmbed.create!(normalized_url: "https://example.com/page", url: "https://example.com/page")
+    embed = LinkEmbed.create!(normalized_url: "https://example.com/page")
     LinkEmbed::Fetcher.new(embed).fetch
     embed.reload
 
@@ -36,7 +36,7 @@ class LinkEmbed::FetcherTest < ActiveSupport::TestCase
     WebMock.stub_request(:head, "https://example.com/not-an-image")
       .to_return(status: 200, headers: { content_type: "text/html" })
 
-    embed = LinkEmbed.create!(normalized_url: "https://example.com/noimg", url: "https://example.com/noimg")
+    embed = LinkEmbed.create!(normalized_url: "https://example.com/noimg")
     LinkEmbed::Fetcher.new(embed).fetch
     embed.reload
 
@@ -54,7 +54,7 @@ class LinkEmbed::FetcherTest < ActiveSupport::TestCase
       </head></html>
     HTML
 
-    embed = LinkEmbed.create!(normalized_url: "https://example.com/plainimg", url: "https://example.com/plainimg")
+    embed = LinkEmbed.create!(normalized_url: "https://example.com/plainimg")
     LinkEmbed::Fetcher.new(embed).fetch
 
     assert_equal "Plain Image", embed.reload.title
@@ -64,7 +64,7 @@ class LinkEmbed::FetcherTest < ActiveSupport::TestCase
   test "records a short negative TTL when the page has no usable metadata" do
     stub_page("https://example.com/empty", "<html><head></head><body>login wall</body></html>")
 
-    embed = LinkEmbed.create!(normalized_url: "https://example.com/empty", url: "https://example.com/empty")
+    embed = LinkEmbed.create!(normalized_url: "https://example.com/empty")
     LinkEmbed::Fetcher.new(embed).fetch
     embed.reload
 
@@ -75,7 +75,7 @@ class LinkEmbed::FetcherTest < ActiveSupport::TestCase
   test "refuses private-network hosts without fetching" do
     stub_dns_resolution("10.0.0.5")
 
-    embed = LinkEmbed.create!(normalized_url: "https://intranet.example/page", url: "https://intranet.example/page")
+    embed = LinkEmbed.create!(normalized_url: "https://intranet.example/page")
     LinkEmbed::Fetcher.new(embed).fetch
     embed.reload
 
@@ -89,7 +89,7 @@ class LinkEmbed::FetcherTest < ActiveSupport::TestCase
       .to_return(status: 302, headers: { location: "https://intranet.example/secret" })
     Resolv.stubs(:getaddresses).with("intranet.example").returns([ "10.0.0.5" ])
 
-    embed = LinkEmbed.create!(normalized_url: "https://example.com/redirect", url: "https://example.com/redirect")
+    embed = LinkEmbed.create!(normalized_url: "https://example.com/redirect")
     LinkEmbed::Fetcher.new(embed).fetch
 
     assert_equal "Could not load this link", embed.reload.fetch_error
@@ -99,7 +99,7 @@ class LinkEmbed::FetcherTest < ActiveSupport::TestCase
   test "records network failures instead of raising" do
     WebMock.stub_request(:get, "https://example.com/down").to_raise(Errno::ECONNREFUSED)
 
-    embed = LinkEmbed.create!(normalized_url: "https://example.com/down", url: "https://example.com/down")
+    embed = LinkEmbed.create!(normalized_url: "https://example.com/down")
     LinkEmbed::Fetcher.new(embed).fetch
     embed.reload
 
@@ -110,7 +110,7 @@ class LinkEmbed::FetcherTest < ActiveSupport::TestCase
   test "sends no cookies" do
     stub_page("https://example.com/page", "<html><head></head></html>")
 
-    embed = LinkEmbed.create!(normalized_url: "https://example.com/page", url: "https://example.com/page")
+    embed = LinkEmbed.create!(normalized_url: "https://example.com/page")
     LinkEmbed::Fetcher.new(embed).fetch
 
     signatures = WebMock::RequestRegistry.instance.requested_signatures.hash.keys

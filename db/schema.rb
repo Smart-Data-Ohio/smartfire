@@ -441,6 +441,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_005133) do
     t.integer "message_id", null: false
     t.integer "position", default: 0, null: false
     t.datetime "updated_at", null: false
+    t.string "url"
     t.index ["link_embed_id"], name: "index_link_embed_references_on_link_embed_id"
     t.index ["message_id", "link_embed_id"], name: "index_link_embed_references_on_message_and_embed", unique: true
     t.index ["message_id"], name: "index_link_embed_references_on_message_id"
@@ -458,7 +459,6 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_005133) do
     t.string "site_name"
     t.string "title"
     t.datetime "updated_at", null: false
-    t.string "url"
     t.index ["normalized_url"], name: "index_link_embeds_on_normalized_url", unique: true
   end
 

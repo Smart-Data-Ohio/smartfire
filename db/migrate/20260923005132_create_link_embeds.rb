@@ -2,7 +2,6 @@ class CreateLinkEmbeds < ActiveRecord::Migration[8.2]
   def change
     create_table :link_embeds do |t|
       t.string :normalized_url, null: false
-      t.string :url
       t.string :site_name
       t.string :title
       t.text :description
@@ -19,6 +18,7 @@ class CreateLinkEmbeds < ActiveRecord::Migration[8.2]
     create_table :link_embed_references do |t|
       t.references :message, null: false, foreign_key: true
       t.references :link_embed, null: false, foreign_key: true
+      t.string :url
       t.integer :position, null: false, default: 0
 
       t.timestamps

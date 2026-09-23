@@ -24,8 +24,8 @@ class LinkEmbedTest < ActiveSupport::TestCase
   end
 
   test "for_reference resolves repeats to the same row" do
-    first = LinkEmbed.for_reference("https://example.com/shared", url: "https://example.com/shared")
-    second = LinkEmbed.for_reference("https://example.com/shared", url: "https://example.com/shared?utm=x")
+    first = LinkEmbed.for_reference("https://example.com/shared")
+    second = LinkEmbed.for_reference("https://example.com/shared")
 
     assert_equal first.id, second.id
     assert_equal 1, LinkEmbed.where(normalized_url: "https://example.com/shared").count
