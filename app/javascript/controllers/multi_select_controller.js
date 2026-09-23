@@ -228,7 +228,10 @@ export default class extends Controller {
       return
     }
 
-    if (this.selectedIds.size === 0 || !checkbox) return
+    // Keyed on the connected rows, like update(): a selected member who
+    // left the channel lingers in selectedIds until Clear, but the mode is
+    // visibly over (bar hidden), so plain clicks must open cards again.
+    if (!this.checkboxTargets.some((box) => box.checked) || !checkbox) return
     event.preventDefault()
     event.stopPropagation()
     this.#setChecked(checkbox, !checkbox.checked)

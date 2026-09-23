@@ -117,6 +117,20 @@ class MemberSelectModeTest < ApplicationSystemTestCase
     assert_checked_field "select-member-#{users(:kevin).id}"
   end
 
+  test "a plain click opens the profile card again after the selected member leaves" do
+    ctrl_click(row_name_button(users(:jason)))
+    within_bar { assert_selector "button", text: "Message (1)" }
+
+    memberships(:jason_designers).destroy!
+    refresh_panel
+    assert_no_selector "#channel-members [data-member-id='#{users(:jason).id}']", visible: :all
+    assert_no_selector "#channel-members [data-multi-select-target='bar']"
+
+    row_name_button(users(:kevin)).click
+    assert_selector "#profile-card-popover:not([hidden])", wait: 10
+    assert_selector "#user_card .profile-card__name", text: "Kevin"
+  end
+
   test "esc and the exit button leave selection mode with the panel open" do
     ctrl_click(row_name_button(users(:jason)))
     within_bar { assert_selector "button", text: "Message (1)" }
