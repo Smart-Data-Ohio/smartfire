@@ -250,6 +250,12 @@ class Agents::McpControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes ids, rooms(:designers).id
   end
 
+  test "list_rooms lists nothing for an agent whose only grant is dm_anyone" do
+    grant!(capability: "dm_anyone")
+
+    assert_empty structured(call_tool("list_rooms"))
+  end
+
   test "list_rooms is empty when every grant is revoked" do
     grant = AgentGrant.create!(agent: @agent, room: @room, granted_by: users(:david), capability: "read_messages")
     grant.revoke!

@@ -26,7 +26,8 @@ module Agents
     def self.with_grants(agent, rooms)
       return [] unless agent.active?
 
-      granted = agent.agent_grants.active.pluck(:room_id)
+      # dm_anyone governs opening DMs, not reading rooms, so it lists nothing.
+      granted = agent.agent_grants.active.where.not(capability: "dm_anyone").pluck(:room_id)
       return rooms if granted.include?(nil)
 
       ids = granted.to_set
