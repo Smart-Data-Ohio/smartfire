@@ -65,7 +65,7 @@ module MessagePayloadHelper
       can_edit: Current.user == message.creator && !(message.thread_message? && message.thread.locked?),
       can_delete: Current.user == message.creator || Current.user.administrator?,
       can_remove_embeds: Current.user == message.creator && !message.embeds_suppressed? &&
-        !(message.thread_message? && message.thread.locked?) && message.link_embed_references.exists?,
+        !(message.thread_message? && message.thread.locked?) && message.renderable_embeds?,
       suppress_embeds_url: if message.thread_message?
         room_thread_message_embed_suppression_url(message.room, message.thread, message)
                            else

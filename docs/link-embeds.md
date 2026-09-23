@@ -41,7 +41,9 @@ render every old unfurl twice.
   embeds** menu action. It sets `messages.embeds_suppressed` and clears
   both card containers via Turbo Stream; the references stay so a later
   edit still re-syncs them. Only the author sees the action, and only
-  while the message still has references.
+  while the message has at least one renderable embed (a generic card
+  with fetched text, or any LinkedIn card — login-gated pages still
+  render a link chip).
 
 ## Where the data comes from
 

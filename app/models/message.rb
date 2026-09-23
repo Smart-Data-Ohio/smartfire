@@ -164,6 +164,16 @@ class Message < ApplicationRecord
     !markdown_source.nil?
   end
 
+  # True when at least one embed card would render for this message: a
+  # generic embed with fetched text, or any LinkedIn embed (login-gated
+  # pages still render a link chip). The Remove embeds menu action shows
+  # only then. Uses the same predicates the card helpers filter on.
+  def renderable_embeds?
+    link_embed_references.includes(:link_embed).any? do |reference|
+      reference.link_embed.usable? || reference.link_embed.linkedin?
+    end
+  end
+
   # True when the pending changes alter the message text itself, as opposed
   # to an attachment-only or identical save. The edit endpoints stamp
   # edited_at only then, so "(edited)" means the words changed. A blank

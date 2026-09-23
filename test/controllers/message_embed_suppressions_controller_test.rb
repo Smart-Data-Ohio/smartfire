@@ -83,7 +83,11 @@ class MessageEmbedSuppressionsControllerTest < ActionDispatch::IntegrationTest
     assert_predicate reply.reload, :embeds_suppressed?
   end
 
-  test "actions payload offers removal to the author while references exist" do
+  test "actions payload offers removal to the author while a renderable embed exists" do
+    LinkEmbed.find_by!(normalized_url: "https://example.com/suppress-me").update!(
+      title: "Suppress me", fetched_at: Time.current, fetch_error: nil,
+      expires_at: 1.hour.from_now
+    )
     sign_in :david
     get actions_room_message_url(@room, @message)
 
@@ -91,6 +95,36 @@ class MessageEmbedSuppressionsControllerTest < ActionDispatch::IntegrationTest
     actions = JSON.parse(response.body)["actions"]
     assert_equal true, actions["can_remove_embeds"]
     assert_equal room_message_embed_suppression_url(@room, @message), actions["suppress_embeds_url"]
+  end
+
+  test "actions payload withholds removal when no embed would render" do
+    gated = @room.messages.create!(
+      creator: users(:david), client_message_id: "embed-suppress-gated",
+      markdown_source: "read https://example.com/gated-page"
+    )
+    LinkEmbed.find_by!(normalized_url: "https://example.com/gated-page").update!(
+      fetched_at: Time.current, fetch_error: "No preview available for this link",
+      expires_at: 1.hour.from_now
+    )
+    sign_in :david
+
+    get actions_room_message_url(@room, gated)
+
+    assert_response :success
+    assert_equal false, JSON.parse(response.body)["actions"]["can_remove_embeds"]
+  end
+
+  test "actions payload offers removal for a LinkedIn chip with no fetched text" do
+    chip = @room.messages.create!(
+      creator: users(:david), client_message_id: "embed-suppress-chip",
+      markdown_source: "see https://www.linkedin.com/posts/gated-chip-1"
+    )
+    sign_in :david
+
+    get actions_room_message_url(@room, chip)
+
+    assert_response :success
+    assert_equal true, JSON.parse(response.body)["actions"]["can_remove_embeds"]
   end
 
   test "actions payload withholds removal from others and once removed" do
