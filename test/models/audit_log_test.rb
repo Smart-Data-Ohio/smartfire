@@ -132,19 +132,47 @@ class AuditLogTest < ActiveSupport::TestCase
     assert AuditLog.exists?(entry.id)
   end
 
-  test "record_sign_in_failure! throttles repeat failures from one IP" do
+  test "record_sign_in_failure! collapses on IP and email label" do
     request = ActionDispatch::TestRequest.create
     request.remote_addr = "198.51.100.9"
 
     first = AuditLog.record_sign_in_failure!(email: "victim@example.com", method: "password", request: request)
-    second = AuditLog.record_sign_in_failure!(email: "other@example.com", method: "password", request: request)
+    repeat = AuditLog.record_sign_in_failure!(email: "Victim@Example.com", method: "password", request: request)
+    other = AuditLog.record_sign_in_failure!(email: "other@example.com", method: "password", request: request)
 
     assert first.persisted?
     assert_equal "victim@example.com", first.actor_label
     assert_nil first.actor_id
     assert_equal({ "method" => "password" }, first.details)
-    assert_nil second
-    assert_equal 1, AuditLog.where(action: "session.sign_in.failure").count
+    assert_nil repeat
+    assert other.persisted?
+    assert_equal 2, AuditLog.where(action: "session.sign_in.failure").count
+  end
+
+  test "record_sign_in_failure! caps rows per IP and counts suppressed failures" do
+    request = ActionDispatch::TestRequest.create
+    request.remote_addr = "198.51.100.9"
+
+    20.times do |index|
+      AuditLog.record_sign_in_failure!(email: "target#{index}@example.com", method: "password", request: request)
+    end
+    assert_equal 20, AuditLog.where(action: "session.sign_in.failure").count
+
+    capped = AuditLog.record_sign_in_failure!(email: "target20@example.com", method: "password", request: request)
+    assert_equal 20, AuditLog.where(action: "session.sign_in.failure").count
+    assert_equal "target19@example.com", capped.actor_label
+    assert_equal "password", capped.details["method"]
+    assert_equal 1, capped.details["suppressed_count"]
+
+    capped = AuditLog.record_sign_in_failure!(email: "target21@example.com", method: "password", request: request)
+    assert_equal 20, AuditLog.where(action: "session.sign_in.failure").count
+    assert_equal 2, capped.details["suppressed_count"]
+
+    travel 6.minutes do
+      fresh = AuditLog.record_sign_in_failure!(email: "target22@example.com", method: "password", request: request)
+      assert_equal 21, AuditLog.where(action: "session.sign_in.failure").count
+      assert_nil fresh.details["suppressed_count"]
+    end
   end
 
   test "record_sign_in_failure! stores emails but never a mistyped password" do

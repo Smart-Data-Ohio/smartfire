@@ -57,9 +57,13 @@ class AuditLog < ApplicationRecord
     workspace_icon.destroy
   ].freeze
 
-  # Sign-in failures are recorded at most once per IP per window, so a
-  # credential-stuffing flood leaves one row instead of thousands.
+  # Sign-in failures collapse per (IP, email label) inside the window,
+  # so retrying one address leaves one row while a spray across
+  # addresses still shows each target. Past SIGN_IN_FAILURES_PER_IP_WINDOW
+  # rows from one IP inside the window, further failures only bump the
+  # latest row's suppressed_count instead of inserting.
   SIGN_IN_FAILURE_THROTTLE_WINDOW = 5.minutes
+  SIGN_IN_FAILURES_PER_IP_WINDOW = 20
 
   # A failed sign-in stores the typed email only when it matches a real
   # account or has an email shape; anything else is likely a password
@@ -104,20 +108,38 @@ class AuditLog < ApplicationRecord
     )
   end
 
-  # A sign-in failure, throttled per IP so floods do not spam the log.
-  # Returns the row, or nil when a row for this IP already exists inside
-  # the window. Successes are never throttled: each one proves credentials.
+  # A sign-in failure, collapsed per (IP, email label) so floods do not
+  # spam the log. Returns the row, or nil when this IP already failed for
+  # this label inside the window. Past the per-IP cap the latest row's
+  # suppressed_count is bumped and that row returned. Successes are never
+  # throttled: each one proves credentials.
   def self.record_sign_in_failure!(email:, method:, request: nil)
     request ||= Current.request
     ip = request&.remote_ip
+    label = failure_actor_label(email)
 
-    if ip.present? && where(action: "session.sign_in.failure", ip_address: ip)
-        .where(created_at: SIGN_IN_FAILURE_THROTTLE_WINDOW.ago..).exists?
-      return nil
+    if ip.present?
+      window = where(action: "session.sign_in.failure", ip_address: ip)
+        .where(created_at: SIGN_IN_FAILURE_THROTTLE_WINDOW.ago..)
+      return nil if window.where("LOWER(actor_label) = ?", label.downcase).exists?
+      return increment_suppressed_failures!(window) if window.count >= SIGN_IN_FAILURES_PER_IP_WINDOW
     end
 
-    record!(action: "session.sign_in.failure", actor_label: failure_actor_label(email),
+    record!(action: "session.sign_in.failure", actor_label: label,
       changes: { method: method }, request: request)
+  end
+
+  # The IP already filled its window: fold this failure into the latest
+  # row's suppressed_count with a direct update (rows are otherwise
+  # append-only) and return that row.
+  def self.increment_suppressed_failures!(window)
+    latest = window.order(id: :desc).first
+    return nil if latest.nil?
+
+    details = latest.details || {}
+    count = details["suppressed_count"].to_i + 1
+    where(id: latest.id).update_all(details: details.merge("suppressed_count" => count))
+    latest.reload
   end
 
   # The actor label for a failed sign-in: the typed value, truncated,

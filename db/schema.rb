@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_23_055332) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_064819) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -195,6 +195,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_055332) do
     t.string "target_type"
     t.datetime "updated_at", null: false
     t.string "user_agent"
+    t.index ["action", "ip_address", "created_at"], name: "index_audit_logs_on_action_and_ip_address_and_created_at"
     t.index ["action"], name: "index_audit_logs_on_action"
     t.index ["actor_id"], name: "index_audit_logs_on_actor_id"
     t.index ["created_at"], name: "index_audit_logs_on_created_at"

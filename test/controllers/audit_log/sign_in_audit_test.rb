@@ -1,4 +1,5 @@
 require "test_helper"
+require "minitest/mock"
 
 class AuditLog::SignInAuditTest < ActionDispatch::IntegrationTest
   include GoogleSignInTestHelper
@@ -49,6 +50,26 @@ class AuditLog::SignInAuditTest < ActionDispatch::IntegrationTest
     end
 
     assert_equal 2, AuditLog.where(action: "session.sign_in.failure").count
+  end
+
+  test "rate-limited sign-in attempts render 429 and collapse into the failure row" do
+    counting = ActiveSupport::Cache::MemoryStore.new
+    # The limiter captured Rails.cache (the null store in tests) at boot,
+    # so swapping Rails.cache cannot reach it; forward increments instead.
+    forwarder = proc { |*args, **kwargs| counting.increment(*args, **kwargs) }
+
+    Rails.cache.stub(:increment, forwarder) do
+      10.times do
+        post session_url, params: { email_address: "david@37signals.com", password: "wrong" }
+        assert_response :unauthorized
+      end
+
+      post session_url, params: { email_address: "david@37signals.com", password: "wrong" }
+      assert_response :too_many_requests
+    end
+
+    assert_equal 1, AuditLog.where(action: "session.sign_in.failure").count
+    assert_equal({ "method" => "password" }, AuditLog.where(action: "session.sign_in.failure").last.details)
   end
 
   test "transfer sign-in success and failure are recorded" do
