@@ -91,7 +91,45 @@ class MutedRoomsTest < ActiveSupport::TestCase
     end
   end
 
+  test "unread broadcast ids cost one membership query without muted members" do
+    message = rooms(:designers).messages.create!(
+      body: "Hello all", client_message_id: "mute-query-plain", creator: users(:david)
+    )
+
+    assert_equal 1, count_queries { message.send(:unread_user_ids) }
+    assert_equal rooms(:designers).memberships.pluck(:user_id).sort, message.send(:unread_user_ids).sort
+  end
+
+  test "unread broadcast ids filter muted members with one extra mention lookup" do
+    memberships(:kevin_designers).update!(involvement: "muted")
+
+    plain = rooms(:designers).messages.create!(
+      body: "Hello all", client_message_id: "mute-query-plain-2", creator: users(:david)
+    )
+    # No mentions, so the empty mention lookup costs no query.
+    assert_equal 1, count_queries { plain.send(:unread_user_ids) }
+    assert_not_includes plain.send(:unread_user_ids), users(:kevin).id
+
+    mentioned = rooms(:designers).messages.create!(
+      body: "Hey #{mention_attachment_for(:kevin)}", client_message_id: "mute-query-mention", creator: users(:david)
+    )
+    assert_equal 2, count_queries { mentioned.send(:unread_user_ids) }
+    assert_includes mentioned.send(:unread_user_ids), users(:kevin).id
+  end
+
   private
+    def count_queries
+      count = 0
+      subscription = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        count += 1 unless payload[:name] == "SCHEMA" || payload[:cached]
+      end
+
+      ActiveRecord::Base.connection_pool.clear_query_cache
+      yield
+      count
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscription)
+    end
     def wait_for_web_push_delivery_pool_tasks(count)
       wait_for_pool_tasks(Rails.configuration.x.web_push_pool.delivery_pool, count)
     end

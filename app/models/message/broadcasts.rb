@@ -21,9 +21,12 @@ module Message::Broadcasts
     end
 
     def unread_user_ids
-      ids = room.memberships.pluck(:user_id)
-      return ids unless room.memberships.where(involvement: :muted).exists?
+      user_involvements = room.memberships.pluck(:user_id, :involvement)
+      return user_involvements.map(&:first) unless user_involvements.any? { |_, involvement| involvement == "muted" }
 
-      ids - room.memberships.where(involvement: :muted).where.not(user_id: mentionees.select(:id)).pluck(:user_id)
+      mentioned_ids = mentionees.ids
+      user_involvements.filter_map do |user_id, involvement|
+        user_id unless involvement == "muted" && !mentioned_ids.include?(user_id)
+      end
     end
 end
