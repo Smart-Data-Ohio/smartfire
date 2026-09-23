@@ -9,7 +9,7 @@ const VIEWPORT_PADDING = 8
 // per-message URLs come from the message element's own data attributes.
 export default class extends Controller {
   static targets = [
-    "menu", "item", "downloadLink", "threadLabel", "status", "forwardDialog", "forwardPreview", "forwardNote",
+    "menu", "item", "downloadLink", "fizzyCardLink", "threadLabel", "status", "forwardDialog", "forwardPreview", "forwardNote",
     "forwardDestinations", "forwardStatus", "forwardSubmit"
   ]
 
@@ -388,6 +388,12 @@ export default class extends Controller {
       form.action = this.#boostUrl
       form.setAttribute("data-turbo-frame", frame)
     })
+
+    // The create-card form lives under the message resource for both room
+    // and thread messages, so the per-message href needs no metadata fetch.
+    if (this.hasFizzyCardLinkTarget && this.#messageUrl) {
+      this.fizzyCardLinkTarget.href = `${this.#messageUrl.replace(/\/$/, "")}/fizzy_cards/new`
+    }
 
     if (this.hasDownloadLinkTarget) {
       const source = this.#message.querySelector(".message__body-content a.message__action-btn[href], .message__body-content a[data-lightbox-target='image'][href]")

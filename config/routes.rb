@@ -115,6 +115,7 @@ Rails.application.routes.draw do
       get :forward_source, on: :member, controller: "message_forward_sources"
       resources :forwards, controller: "message_forwards", only: :create
       get "forwards/destinations", to: "message_forwards#destinations", as: :forward_destinations
+      resources :fizzy_cards, only: %i[ new create ], controller: "rooms/fizzy/message_cards"
     end
 
     resources :threads, controller: "channel_threads", only: %i[ index show new create update destroy ] do
@@ -124,6 +125,7 @@ Rails.application.routes.draw do
         get :forward_source, on: :member, controller: "message_forward_sources"
         resources :forwards, controller: "message_forwards", only: :create
         get "forwards/destinations", to: "message_forwards#destinations", as: :forward_destinations
+        resources :fizzy_cards, only: %i[ new create ], controller: "rooms/fizzy/message_cards"
       end
       post :join, on: :member
       delete :leave, on: :member
