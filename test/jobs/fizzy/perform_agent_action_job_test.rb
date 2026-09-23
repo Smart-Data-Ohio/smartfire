@@ -126,6 +126,20 @@ class Fizzy::PerformAgentActionJobTest < ActiveJob::TestCase
     assert_not @account.reload.connected?
   end
 
+  test "an unverifiable owner token fails without disconnecting" do
+    stub_request(:post, "https://app.fizzy.do/897362094/cards/579/comments.json")
+      .to_return(status: 401, body: {}.to_json)
+    stub_request(:get, "https://app.fizzy.do/my/identity.json").to_timeout
+    approval = approve!(build_approval(kind: "comment", number: 579, body: "Nice work"))
+
+    Fizzy::PerformAgentActionJob.perform_now(approval.id)
+
+    event = completion_event_for(approval)
+    assert_equal "failed", event.metadata["status"]
+    assert_equal "Could not verify the agent owner's Fizzy token; try again", event.metadata["message"]
+    assert_predicate @account.reload, :connected?
+  end
+
   test "a second run finds the earlier outcome and makes no request" do
     stub = stub_request(:post, "https://app.fizzy.do/897362094/cards/579/comments.json")
       .to_return(status: 201, body: fizzy_comment_payload.to_json)

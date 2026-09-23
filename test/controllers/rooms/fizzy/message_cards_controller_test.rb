@@ -151,6 +151,23 @@ class Rooms::Fizzy::MessageCardsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, @room.messages.where("markdown_source LIKE ?", "%fizzy.do%").count
   end
 
+  test "create when the permission probe fails stays connected without a reply" do
+    account = link_fizzy!(users(:david), token: "david-token")
+    stub_request(:post, "https://app.fizzy.do/897362094/boards/03board1/cards.json")
+      .to_return(status: 401, body: {}.to_json)
+    stub_request(:get, "https://app.fizzy.do/my/identity.json").to_return(status: 500, body: "boom")
+    sign_in :david
+
+    assert_no_difference -> { @room.messages.count } do
+      post room_message_fizzy_cards_url(@room, @message),
+        params: { board_id: "03board1", title: "Title", description: "Body" }
+    end
+
+    assert_redirected_to room_path(@room)
+    assert_includes flash[:alert], "Could not reach Fizzy"
+    assert_predicate account.reload, :connected?
+  end
+
   test "create in a locked thread is refused" do
     thread = ChannelThread.create!(room: @room, creator: users(:david), parent_message: @message)
     ThreadMembership.join!(thread, users(:david))

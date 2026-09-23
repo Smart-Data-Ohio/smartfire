@@ -160,14 +160,19 @@ class Fizzy::PerformAgentActionJob < ApplicationJob
     # A 401 on a write is ambiguous: the token may be revoked, or it may
     # be a read-only token (Fizzy's read permission rejects writes with
     # 401). A cheap identity read tells them apart so a valid read-only
-    # token is never marked disconnected.
+    # token is never marked disconnected. Only a rejected probe
+    # disconnects: when the probe itself errors (a 500, a timeout), the
+    # action fails without disconnecting, since the token may be fine.
     def finish_unauthorized_claim(event, approval, agent, account, client)
       begin
         client.identity
-      rescue Fizzy::Client::Error
+      rescue Fizzy::Client::Unauthorized
         account.mark_disconnected!("Fizzy rejected the linked token (401)")
         return finish_claim(event, approval, agent, status: "failed",
           message: "Fizzy rejected the agent owner's linked token (401)")
+      rescue Fizzy::Client::Error
+        return finish_claim(event, approval, agent, status: "failed",
+          message: "Could not verify the agent owner's Fizzy token; try again")
       end
 
       finish_claim(event, approval, agent, status: "failed",

@@ -105,14 +105,19 @@ class Rooms::Fizzy::MessageCardsController < ApplicationController
     # be a read-only token (Fizzy's read permission rejects writes with
     # 401). A cheap identity read tells them apart: when it succeeds the
     # token is valid but lacks write permission, so the account stays
-    # connected and the member learns what to fix.
+    # connected and the member learns what to fix. Only a rejected probe
+    # disconnects: when the probe itself errors (a 500, a timeout), the
+    # token may be fine, so the account stays connected and the member
+    # retries. A genuinely dead token disconnects on the next read's 401.
     def handle_create_unauthorized(account)
       account.access_token # raise decryption now if unreadable
       client(account).identity
       redirect_to conversation_path, alert: "That Fizzy token is read-only. Generate a Read + Write token to create cards."
-    rescue Fizzy::Client::Unauthorized, Fizzy::Client::Error
+    rescue Fizzy::Client::Unauthorized
       account.mark_disconnected!("Fizzy rejected the linked token (401)")
       redirect_to user_profile_path, alert: "Fizzy rejected the linked token. Reconnect on your profile."
+    rescue Fizzy::Client::Error
+      redirect_to conversation_path, alert: "Could not reach Fizzy to verify the token. Try again."
     rescue ActiveRecord::Encryption::Errors::Decryption
       account.mark_disconnected!(FizzyConnectedAccount::UNREADABLE_TOKEN_REASON)
       redirect_to user_profile_path, alert: FizzyConnectedAccount::UNREADABLE_TOKEN_REASON
