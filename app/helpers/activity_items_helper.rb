@@ -30,6 +30,8 @@ module ActivityItemsHelper
       "Mention"
     when "reply"
       "Reply"
+    when "keyword_alert"
+      "Keyword alert"
     when "thread_activity"
       "Followed thread"
     when "work_assignment"
