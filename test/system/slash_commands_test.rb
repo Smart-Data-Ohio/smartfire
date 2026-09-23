@@ -46,6 +46,83 @@ class SlashCommandsTest < ApplicationSystemTestCase
     assert_field "Write a message", with: ""
   end
 
+  test "arguments close the slash picker and Enter posts" do
+    record_slash_command_fetches
+
+    editor = find_field("Write a message")
+    editor.set("/shrug")
+    assert_selector "suggestion-option", text: "/shrug"
+
+    # Replace the query with a command plus arguments without committing.
+    # Either the debounced update runs and closes the picker (fixed), or
+    # it re-queries for the whole line and stays active but hidden
+    # (buggy) — wait for whichever proves the update ran.
+    editor.set("/shrug ship it")
+    page.document.synchronize(Capybara.default_max_wait_time) do
+      fetched = page.evaluate_script("window.__slashCommandFetchUrls.some(url => url.includes('ship'))")
+      closed = page.evaluate_script("document.querySelectorAll('suggestion-select').length === 0")
+      raise Capybara::ElementNotFound unless fetched || closed
+    end
+
+    assert_no_selector "suggestion-option"
+    editor.send_keys(:enter)
+
+    assert_message_text "ship it", wait: 10
+    assert_field "Write a message", with: ""
+  end
+
+  test "Enter submits while the picker's deactivating update is still pending" do
+    editor = find_field("Write a message")
+    editor.set("/shrug")
+    assert_selector "suggestion-option", text: "/shrug"
+
+    # Enter lands before the debounced update can run, while the stale
+    # "shrug" suggestion is still showing: it must submit "/shrug ship
+    # it", not commit the stale suggestion again. On the fixed code the
+    # submit wins however the timing falls, so this stays green.
+    editor.set("/shrug ship it")
+    editor.send_keys(:enter)
+
+    assert_message_text "ship it", wait: 10
+    assert_field "Write a message", with: ""
+  end
+
+  test "a submit queued during the live command check still runs the command" do
+    # Hold the live-list check open so the switch below lands while it is
+    # pending; the completion must route the current draft, not the stale
+    # word and not a literal post.
+    page.execute_script <<~JS
+      window.__slashCommandFetchUrls = [];
+      const originalFetch = window.fetch;
+      window.fetch = (input, init) => {
+        const url = typeof input === "string" ? input : input.url;
+        if (url.includes("/autocompletable/slash_commands")) {
+          window.__slashCommandFetchUrls.push(url);
+          return new Promise(resolve => setTimeout(() => resolve(originalFetch(input, init)), 2000));
+        }
+        return originalFetch(input, init);
+      };
+    JS
+
+    fill_in_markdown "message_markdown_source", with: "/etc/hosts is not a command"
+    click_on "Send Message"
+
+    # The live check fetches the list URL with no query; wait for it so
+    # the switch provably lands while the check is pending.
+    page.document.synchronize(Capybara.default_max_wait_time) do
+      urls = page.evaluate_script("window.__slashCommandFetchUrls")
+      raise Capybara::ElementNotFound unless urls.any? { |url| !url.include?("query=") }
+    end
+
+    editor = find_field("Write a message")
+    fill_in_markdown "message_markdown_source", with: "/shrug late switch"
+    editor.send_keys(:enter)
+
+    assert_message_text "(ツ)", wait: 10
+    assert_no_selector ".message__body", text: "/shrug late switch"
+    assert_field "Write a message", with: ""
+  end
+
   test "unknown slash words post as normal messages" do
     fill_in_markdown "message_markdown_source", with: "/etc/hosts is not a command"
     click_on "Send Message"
@@ -125,4 +202,17 @@ class SlashCommandsTest < ApplicationSystemTestCase
     assert_selector "#composer .composer__feedback", text: "Status set", visible: true
     assert_equal "🚂", users(:jz).reload.custom_status_emoji
   end
+
+  private
+    def record_slash_command_fetches
+      page.execute_script <<~JS
+        window.__slashCommandFetchUrls = [];
+        const originalFetch = window.fetch;
+        window.fetch = (input, init) => {
+          const url = typeof input === "string" ? input : input.url;
+          if (url.includes("/autocompletable/slash_commands")) window.__slashCommandFetchUrls.push(url);
+          return originalFetch(input, init);
+        };
+      JS
+    end
 end
