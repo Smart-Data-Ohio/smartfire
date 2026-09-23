@@ -53,6 +53,20 @@ class MembershipNavigationTest < ActiveSupport::TestCase
     assert_equal 0, @membership.unread_count
   end
 
+  test "deleting the pointer falls back to the stored stamp with id ordering" do
+    first = @room.root_messages.create!(creator: users(:jason), body: "Same time one", client_message_id: "del-ptr-1")
+    second = @room.root_messages.create!(creator: users(:jason), body: "Same time two", client_message_id: "del-ptr-2")
+    third = @room.root_messages.create!(creator: users(:jason), body: "Same time three", client_message_id: "del-ptr-3")
+    stamp = Time.current
+    Message.where(id: [ first.id, second.id, third.id ]).update_all(created_at: stamp, updated_at: stamp)
+
+    @membership.mark_unread_before(third.reload)
+
+    second.destroy!
+
+    assert_equal third.id, @membership.reload.first_unread_message.id
+  end
+
   test "favourite appends positions and move compacts them" do
     hq = users(:david).memberships.find_by!(room: rooms(:hq))
     pets = users(:david).memberships.find_by!(room: rooms(:pets))

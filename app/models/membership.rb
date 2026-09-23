@@ -50,12 +50,18 @@ class Membership < ApplicationRecord
   # have no divider even with a stale pointer: messages watched live
   # (including the viewer's own) must never appear under it. Rows that
   # predate the pointer (unread_at set, no pointer) fall back to the
-  # first message at or after the unread stamp.
+  # first message at or after the unread stamp. A deleted pointer falls
+  # back to the stored stamp with id ordering, so same-timestamp
+  # siblings still sort after what was read.
   def first_unread_message
     return nil unless unread?
 
-    if last_read_message_id.present? && (reference = room.root_messages.find_by(id: last_read_message_id))
-      room.root_messages.after(reference).ordered.first
+    if last_read_message_id.present?
+      if reference = room.root_messages.find_by(id: last_read_message_id)
+        room.root_messages.after(reference).ordered.first
+      elsif unread_at.present?
+        room.root_messages.where("(messages.created_at, messages.id) > (?, ?)", unread_at, last_read_message_id).ordered.first
+      end
     elsif unread_at.present?
       room.root_messages.where("messages.created_at >= ?", unread_at).ordered.first
     end
