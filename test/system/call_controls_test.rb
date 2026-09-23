@@ -400,18 +400,35 @@ class CallControlsTest < ApplicationSystemTestCase
     assert_not_equal "stop", processor_calls.first
   end
 
-  test "an SDK device retarget refreshes the pickers without failing" do
+  test "an SDK device retarget restores suppression onto the new track" do
     room = rooms(:designers)
     visit room_path(room)
     wait_for_cable_connection
     join_with_hanging_connect(room)
-    click_button "Check devices"
 
+    # The retargeted microphone lost its processor; the sync re-attaches it
+    # while the stored constraints already match, so nothing re-acquires.
     page.execute_script(<<~JS)
-      window.__huddleController.room.emit(window.__livekit.RoomEvent.ActiveDeviceChanged, "audioinput");
+      const controller = window.__huddleController;
+      controller.noiseSuppressionAvailable = true;
+      controller.noiseSuppressionEnabled = true;
+      window.__processorCalls = [];
+      const audioTrack = {
+        _constraints: { noiseSuppression: false },
+        get constraints() { return this._constraints; },
+        setProcessor: (processor) => {
+          window.__processorCalls.push(processor);
+          return Promise.resolve();
+        },
+        getProcessor: () => null
+      };
+      controller.room.localParticipant.getTrackPublication = () => ({ audioTrack });
+      controller.room.emit(window.__livekit.RoomEvent.ActiveDeviceChanged, "audioinput");
     JS
 
-    assert_selector "[data-huddle-target='microphoneSelect'] option", wait: 10
+    wait_for_condition("suppression was never restored onto the retargeted track") do
+      processor_calls.length >= 1
+    end
     assert_selector "#channel-huddle[data-state='connected']"
   end
 
