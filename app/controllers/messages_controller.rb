@@ -16,7 +16,7 @@ class MessagesController < ApplicationController
     @messages = find_paged_messages
 
     if @messages.any?
-      fresh_when @messages, etag: [ @messages, rendered_related_stamp(@messages) ]
+      fresh_when @messages, etag: [ @messages, rendered_related_stamp(@messages), rendered_pin_stamp(@messages) ]
       unless performed?
         Message.preload_rendering_details(@messages)
         Message::MentionPreloader.preload_for(@messages)
@@ -161,7 +161,6 @@ class MessagesController < ApplicationController
       # the etag to same-second changes.
       [
         Message.where(id: message_ids).maximum(:edited_at),
-        MessagePin.where(message_id: message_ids).maximum(:updated_at),
         reply_ids.any? ? Message.where(id: reply_ids).maximum(:updated_at) : nil,
         reply_ids.any? ? Message.where(id: reply_ids).maximum(:edited_at) : nil,
         Github::PullRequestReference.where(message_id: message_ids).joins(:pull_request).maximum("github_pull_requests.updated_at"),
@@ -169,6 +168,17 @@ class MessagesController < ApplicationController
         EventReference.where(message_id: message_ids).joins(:event).maximum("events.updated_at"),
         User.where(id: messages.map(&:creator_id)).maximum(:updated_at)
       ].compact.max&.utc&.to_fs(:usec)
+    end
+
+    # Pin state rides as its own etag element because pin and unpin never
+    # touch the message rows. A maximum over the pin rows cannot see an
+    # unpin (removing an older pin leaves the maximum unchanged), so the
+    # stamp digests the sorted [message_id, pin_id] pairs instead: any
+    # pin or unpin of the page's messages changes it. An aggregate query
+    # only, so a conditional GET still never loads bodies.
+    def rendered_pin_stamp(messages)
+      pairs = MessagePin.where(message_id: messages.map(&:id)).order(:message_id, :id).pluck(:message_id, :id)
+      Digest::SHA256.hexdigest(pairs.inspect)
     end
 
 

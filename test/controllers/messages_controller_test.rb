@@ -108,6 +108,26 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "index etag changes when the older of two pins is removed" do
+    older = @room.messages.create!(creator: users(:david), markdown_source: "etag pinned older", client_message_id: "etag-pin-older")
+    newer = @room.messages.create!(creator: users(:david), markdown_source: "etag pinned newer", client_message_id: "etag-pin-newer")
+
+    MessagePin.pin!(message: older, pinner: users(:david))
+    MessagePin.pin!(message: newer, pinner: users(:david))
+
+    get room_messages_url(@room)
+    assert_response :success
+    etag = response.headers["ETag"]
+
+    get room_messages_url(@room), headers: { "If-None-Match" => etag }
+    assert_response :not_modified
+
+    MessagePin.find_by!(message: older).unpin!
+
+    get room_messages_url(@room), headers: { "If-None-Match" => etag }
+    assert_response :success
+  end
+
   test "get renders a single message belonging to the user" do
     message = @room.messages.where(creator: users(:david)).first
 
