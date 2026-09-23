@@ -36,6 +36,14 @@ class AuditLog::MembersAuditTest < ActionDispatch::IntegrationTest
     assert_no_match "brand-new-secret", entry.details.to_json
   end
 
+  test "name-only profile edit writes no security rows" do
+    assert_no_difference -> { AuditLog.where(action: [ "user.email.change", "user.password.change" ]).count } do
+      put user_profile_url, params: { user: { name: "Dave", password: "" } }
+    end
+
+    assert_redirected_to user_profile_url
+  end
+
   test "admin role change is recorded with before and after" do
     assert_difference -> { AuditLog.where(action: "user.role.change").count }, +1 do
       put account_user_url(users(:kevin)), params: { user: { role: "administrator" } }
