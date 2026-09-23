@@ -11,11 +11,10 @@ const VIEWPORT_PADDING = 8
 // extra action.
 //
 // Items trigger exactly the same actions as the header buttons they stand
-// in for. Links navigate to the same paths; buttons that own a
-// body-level controller (threads, the quick switcher) share its action;
-// everything else scoped to a header wrapper (pins, stage, the help
-// items) forwards a click to the real, hidden control; notifications
-// names its level in an explicit chooser over the involvement endpoint.
+// in for. Links navigate to the same paths; the quick switcher shares
+// its body-level action; threads, pins, stage and the help items forward
+// a click to the real, hidden control; notifications names its level in
+// an explicit chooser over the involvement endpoint.
 export default class extends Controller {
   static targets = [ "button", "menu", "dot", "pinsCount", "notificationsLabel", "notificationsPanel", "notificationsStatus", "notificationsIcon" ]
 
@@ -70,9 +69,10 @@ export default class extends Controller {
     }
   }
 
-  // Shared-action items (threads, the switcher) run their own controller
-  // first; this closes the menu without stealing the panel or dialog focus
-  // that action just set.
+  // The shared-action switcher runs its own controller first; this
+  // closes the menu without stealing the dialog focus it just set.
+  // (Threads forwards to the header toggle instead, so the thread panel
+  // remembers the More button as its focus-return target.)
   closeAfterActivate() {
     this.#closeMenu({ restoreFocus: false })
   }

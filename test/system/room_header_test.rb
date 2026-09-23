@@ -272,6 +272,26 @@ class RoomHeaderTest < ApplicationSystemTestCase
     end
   end
 
+  test "opening threads from the menu returns focus to More on close" do
+    sign_in "jz@37signals.com"
+    join_room rooms(:designers)
+
+    begin
+      page.current_window.resize_to(390, 844)
+      click_button "More actions"
+      within "#header-overflow-menu" do
+        find("[role='menuitem']", text: "Threads").click
+      end
+      assert_selector "body.thread-panel-open", wait: 5
+
+      find(".thread-panel__close").click
+      assert_no_selector "body.thread-panel-open", wait: 5
+      assert_focused "#header-overflow-button"
+    ensure
+      page.current_window.resize_to(1400, 1400)
+    end
+  end
+
   test "the overflow menu is keyboard accessible and closes on outside tap" do
     sign_in "jz@37signals.com"
     join_room rooms(:designers)

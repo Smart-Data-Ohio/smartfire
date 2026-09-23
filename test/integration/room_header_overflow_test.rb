@@ -32,9 +32,11 @@ class RoomHeaderOverflowTest < ActionDispatch::IntegrationTest
     assert_select ".room-header__actions .room-header__action--settings", count: 1
     assert_select ".room-header__actions .button_to_change_notifying", count: 1
 
-    # Threads shares its body-level toggle so badges update in place; pins
-    # forwards to the scoped panel button.
-    assert_select "#header-overflow-menu [data-action~='thread-panel#toggle'][data-thread-panel-target='browserToggle']", count: 1
+    # Threads forwards to the header toggle (keeping its browser-toggle
+    # target so its badge updates in place) so the panel returns focus to
+    # the More button; pins forwards to the scoped panel button.
+    assert_select "#header-overflow-menu [data-header-overflow-forward-value=\".room-header__actions .room-header__action--threads\"][data-thread-panel-target='browserToggle']", count: 1
+    assert_select "#header-overflow-menu [data-action~='thread-panel#toggle']", count: 0
     assert_select "#header-overflow-menu [data-header-overflow-forward-value=\".room-header__actions [aria-label='Show pinned messages']\"]", count: 1
   end
 

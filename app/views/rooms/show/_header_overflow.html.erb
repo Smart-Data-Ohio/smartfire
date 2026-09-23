@@ -2,10 +2,10 @@
     instead of being silently hidden. Tablets keep notifications and settings
     in the bar; phones move those (and the stage toggle) here too, leaving
     only members, search, call and this button. Items reuse the header
-    controls: links navigate to the same paths, threads and the switcher
-    share their body-level actions, scoped controls forward a click to
-    the real, hidden button, and notifications names its level in an
-    explicit chooser instead of cycling the bell blind. %>
+    controls: links navigate to the same paths, the switcher shares its
+    body-level action, threads, pins, stage and the help items forward a
+    click to the real, hidden control, and notifications names its level
+    in an explicit chooser instead of cycling the bell blind. %>
 <% membership = room.memberships.find_by(user: Current.user) %>
 <% stage_membership = room.stage? ? membership : nil %>
 <% involvement = membership&.involvement || room.default_involvement %>
@@ -34,8 +34,13 @@
        hidden
        data-header-overflow-target="menu">
     <% unless room.board? || room.direct? %>
+      <%# Forwards to the header toggle instead of sharing its action: the
+          menu closes back onto the More button first, so the thread panel
+          remembers More (not this hidden item) as its focus-return target.
+          The browser-toggle target stays so the unread badge updates. %>
       <button type="button" class="btn room-menu__item header-overflow__item" role="menuitem"
-              data-action="thread-panel#toggle header-overflow#closeAfterActivate"
+              data-action="header-overflow#forward"
+              data-header-overflow-forward-value=".room-header__actions .room-header__action--threads"
               data-thread-panel-target="browserToggle">
         <%= image_tag "messages-outlined.svg", size: 20, aria: { hidden: "true" } %>
         <span>Threads</span>
