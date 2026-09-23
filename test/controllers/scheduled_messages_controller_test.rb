@@ -91,6 +91,44 @@ class ScheduledMessagesControllerTest < ActionDispatch::IntegrationTest
     assert_in_delta 2.hours.from_now.to_f, scheduled.send_at.to_f, 61
   end
 
+  test "update during an active claim is refused" do
+    scheduled = ScheduledMessage.create!(user: @user, room: @room, markdown_source: "Soon", send_at: 1.hour.from_now)
+    scheduled.update_columns(claimed_at: Time.current)
+
+    patch scheduled_message_url(scheduled), params: {
+      scheduled_message: { markdown_source: "Edited!" }
+    }, as: :json
+
+    assert_response :conflict
+    assert_match "sending right now", response.parsed_body["error"]
+    assert_equal "Soon", scheduled.reload.markdown_source
+  end
+
+  test "update during an active claim redirects with a notice in HTML" do
+    scheduled = ScheduledMessage.create!(user: @user, room: @room, markdown_source: "Soon", send_at: 1.hour.from_now)
+    scheduled.update_columns(claimed_at: Time.current)
+
+    patch scheduled_message_url(scheduled), params: {
+      scheduled_message: { markdown_source: "Edited!" }
+    }
+
+    assert_redirected_to scheduled_messages_url
+    assert_match "sending right now", flash[:alert]
+    assert_equal "Soon", scheduled.reload.markdown_source
+  end
+
+  test "update after the claim goes stale is allowed" do
+    scheduled = ScheduledMessage.create!(user: @user, room: @room, markdown_source: "Soon", send_at: 1.hour.from_now)
+    scheduled.update_columns(claimed_at: 6.minutes.ago)
+
+    patch scheduled_message_url(scheduled), params: {
+      scheduled_message: { markdown_source: "Edited!" }
+    }, as: :json
+
+    assert_response :success
+    assert_equal "Edited!", scheduled.reload.markdown_source
+  end
+
   test "update is 404 for sent rows and other people's rows" do
     sent = ScheduledMessage.create!(user: @user, room: @room, markdown_source: "Gone", send_at: 2.hours.from_now)
     sent.update_columns(sent_at: 1.hour.ago)
@@ -114,6 +152,18 @@ class ScheduledMessagesControllerTest < ActionDispatch::IntegrationTest
 
     delete scheduled_message_url(other), as: :json
     assert_response :not_found
+  end
+
+  test "destroy during an active claim is refused" do
+    scheduled = ScheduledMessage.create!(user: @user, room: @room, markdown_source: "Soon", send_at: 1.hour.from_now)
+    scheduled.update_columns(claimed_at: Time.current)
+
+    assert_no_difference -> { ScheduledMessage.count } do
+      delete scheduled_message_url(scheduled), as: :json
+    end
+
+    assert_response :conflict
+    assert_match "sending right now", response.parsed_body["error"]
   end
 
   test "send_now posts immediately" do

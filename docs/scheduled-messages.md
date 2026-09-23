@@ -8,7 +8,9 @@ UTC. Scheduling consumes the draft like sending does.
 
 The Scheduled view (sidebar) lists upcoming drafts with their channel,
 thread, and send time, and past ones (sent or dropped). Upcoming drafts
-can be edited (text and time), sent immediately, or cancelled.
+can be edited (text and time), sent immediately, or cancelled. While
+a draft is being sent, edits and cancels are refused with a notice
+instead of racing the send.
 Cancelling deletes the draft; sent and dropped rows stay as history,
 with sent rows linking to the posted message. Drafts stranded by lost
 channel access list separately as no longer sendable so they can still

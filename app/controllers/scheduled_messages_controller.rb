@@ -51,6 +51,8 @@ class ScheduledMessagesController < ApplicationController
   # PATCH /scheduled_messages/:id. Edits a pending row's text or time.
   def update
     scheduled = Current.user.scheduled_messages.pending.find(params[:id])
+    return if refuse_when_claimed(scheduled)
+
     scheduled.assign_attributes(update_attributes)
 
     if scheduled.save
@@ -73,7 +75,10 @@ class ScheduledMessagesController < ApplicationController
 
   # DELETE /scheduled_messages/:id. Cancels a pending row.
   def destroy
-    Current.user.scheduled_messages.pending.find(params[:id]).destroy!
+    scheduled = Current.user.scheduled_messages.pending.find(params[:id])
+    return if refuse_when_claimed(scheduled)
+
+    scheduled.destroy!
 
     respond_to do |format|
       format.html { redirect_to scheduled_messages_path, notice: "Scheduled message cancelled." }
@@ -132,6 +137,20 @@ class ScheduledMessagesController < ApplicationController
       raise ArgumentError, "Send time is invalid" if parsed.nil?
 
       parsed
+    end
+
+    # The dispatcher is about to post a claimed row: an edit would be
+    # silently lost and a cancel would race the send, so refuse with a
+    # clear notice instead. Renders and returns true when refused.
+    def refuse_when_claimed(scheduled)
+      return false unless scheduled.claimed?
+
+      alert = "That message is sending right now; try again in a moment."
+      respond_to do |format|
+        format.html { redirect_to scheduled_messages_path, alert: alert }
+        format.json { render json: { error: alert }, status: :conflict }
+      end
+      true
     end
 
     def drop_alert_for(scheduled)

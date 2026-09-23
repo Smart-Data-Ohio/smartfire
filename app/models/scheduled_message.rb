@@ -45,6 +45,13 @@ class ScheduledMessage < ApplicationRecord
     dropped_at.present?
   end
 
+  # True while the dispatcher holds a live claim on the row: a runner is
+  # about to post it, so edits and cancels must wait. Stale claims
+  # don't count — their runner is gone and the row is claimable again.
+  def claimed?(now = Time.current)
+    pending? && claimed_at.present? && claimed_at >= now - STALE_CLAIM_AFTER
+  end
+
   # Drops the row with a "not sent" inbox item for the author. reason is
   # a short clause naming the cause (nil renders the default access-loss
   # text). The row stays as history in the Scheduled view.
