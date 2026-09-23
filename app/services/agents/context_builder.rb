@@ -45,7 +45,7 @@ module Agents
 
       scope = thread ? thread.messages : room.root_messages
       scope = scope.where("messages.id <= ?", message.id) if message
-      window = scope.with_payload_details.order(id: :desc).limit(parsed_limit).to_a.reverse
+      window = scope.with_payload_details.reorder(id: :desc).limit(parsed_limit).to_a.reverse
 
       root_message = thread&.parent_message
       creators = (window.map(&:creator) + [ message&.creator, root_message&.creator ]).compact.uniq(&:id)

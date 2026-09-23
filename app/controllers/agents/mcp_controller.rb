@@ -7,6 +7,7 @@ class Agents::McpController < ApplicationController
   # request that trips forgery protection gets the 403 its missing token
   # deserves.
   rescue_from ActionController::InvalidAuthenticityToken, with: :reject_session_request
+  rescue_from ActionDispatch::Http::Parameters::ParseError, with: :render_parse_error
 
   before_action :ensure_agent_token, only: %i[ create method_not_allowed ]
 
@@ -74,7 +75,7 @@ class Agents::McpController < ApplicationController
       return
     end
 
-    dispatch(id, method, params, version, modern)
+    dispatch_method(id, method, params, version, modern)
   end
 
   private
@@ -84,6 +85,13 @@ class Agents::McpController < ApplicationController
 
     def reject_session_request
       render json: { error: "Forbidden: #{"Bearer"} agent token required" }, status: :forbidden
+    end
+
+    # Rails parses JSON params before the action runs, so garbage with a
+    # JSON content type never reaches the envelope parser below; answer it
+    # the same way.
+    def render_parse_error
+      render json: rpc_error(nil, ERROR_PARSE, "Parse error"), status: :bad_request
     end
 
     # The Origin header, when present, must match this host; anything else
@@ -167,7 +175,7 @@ class Agents::McpController < ApplicationController
       nil
     end
 
-    def dispatch(id, method, params, version, modern)
+    def dispatch_method(id, method, params, version, modern)
       case method
       when "initialize"
         render json: rpc_result(id, {

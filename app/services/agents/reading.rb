@@ -55,12 +55,15 @@ module Agents
         scope = scope.where("messages.id > ?", anchor.id)
       end
 
-      messages = scope.with_payload_details.order(id: :desc).limit(limit).to_a.reverse
+      messages = scope.with_payload_details.reorder(id: :desc).limit(limit).to_a.reverse
 
+      # Relative to the whole conversation, not the cursor window, so a
+      # client paging forward from `after` still learns older history
+      # exists behind the cursor.
       if messages.any?
         page_ids = messages.map(&:id)
-        has_more_before = scope.where("messages.id < ?", page_ids.first).exists?
-        has_more_after = scope.where("messages.id > ?", page_ids.last).exists?
+        has_more_before = conversation.where("messages.id < ?", page_ids.first).exists?
+        has_more_after = conversation.where("messages.id > ?", page_ids.last).exists?
       else
         has_more_before = has_more_after = false
       end

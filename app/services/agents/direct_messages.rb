@@ -26,7 +26,7 @@ module Agents
         )
       end
 
-      room = Rooms::Direct.find_or_create_for(User.where(id: [ agent.user_id, target.id ]))
+      room = ::Rooms::Direct.find_or_create_for(User.where(id: [ agent.user_id, target.id ]))
       broadcast_new_room(room) if room.previously_new_record?
 
       result = Posting.post(agent: agent, room: room, attributes: attributes, drive_file_ids: drive_file_ids)
