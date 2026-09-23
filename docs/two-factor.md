@@ -9,6 +9,11 @@ and agents authenticate with keys and tokens and are exempt.
 The codes follow TOTP (RFC 6238) and work with Google Authenticator,
 1Password, Authy, and any compatible app.
 
+Enforcement runs inside every session restore, not just the normal
+sign-in flow: API and Turbo Stream requests, Drive listings, workspace
+icons, and uploads all require a session that completed the second
+factor. There is no partially signed-in state to exploit.
+
 ## Setting it up
 
 The first time you sign in, you land on the setup page before anything
@@ -18,6 +23,12 @@ rejected until setup is done.
 1. Open your authenticator app and add an account.
 2. Scan the QR code, or enter the manual key if you cannot scan.
 3. Enter the 6-digit code from the app.
+
+Every visit to the setup page issues a fresh secret bound to your
+current session, and confirming only ever uses that session's pending
+secret — a secret displayed in one browser cannot be confirmed from
+another. Pending secrets expire after 15 minutes. A mistyped code does
+not rotate the secret, so you can retry without re-scanning.
 
 Next you get **10 backup codes**. Each one signs you in once if you
 lose your authenticator. Copy or download them now: they are shown only
@@ -39,12 +50,18 @@ revokes every remembered device.
 
 Codes tolerate about 30 seconds of clock skew either way, and a code
 cannot be used twice. After a few wrong guesses the challenge slows you
-down with rate limiting, so type carefully rather than hammering it.
+down with rate limiting. After 5 wrong codes in a row the challenge
+locks: first for 1 minute, then 5, then 15, with each lockout taking 5
+fresh failures. Any successful sign-in clears the count. Every lockout
+is recorded in the audit log and lands in your inbox ("Several wrong
+sign-in codes were entered for your account."), plus an email once
+outbound mail is configured (see below).
 
 ## Your profile
 
 The profile page shows whether two-step sign-in is on, your remembered
-devices (each with a **Revoke** button), and two actions:
+devices (each with a **Revoke** button, plus **Revoke all**), and two
+actions:
 
 - **New backup codes** replaces your backup codes. The old set stops
   working immediately.
@@ -52,6 +69,17 @@ devices (each with a **Revoke** button), and two actions:
   you land straight back on the setup page to set it up again. Use this
   to move to a new phone: sign in with a backup code, disable, and
   re-enroll.
+
+Each of these — new codes, disabling, revoking one device, revoking
+all — asks for your current authenticator code or your password in the
+same request, so anyone holding your signed-in browser cannot take over
+the account through them. Members without a password (provisioned
+through Google) can instead **Confirm with Google**, which proves the
+same linked Google account again and arms exactly one action for the
+next 10 minutes. Backup codes never count as confirmation. These
+actions are rate limited, and disabling, regenerating, and admin resets
+drop every live connection, so open tabs and sockets reconnect as
+verified sessions or not at all.
 
 ## Lost phone or codes (recovery)
 
@@ -71,17 +99,23 @@ two-step sign-in this way — use Disable on your profile instead.
 
 Every sensitive step is recorded in the [audit log](audit-log.md):
 `two_factor.enable`, `two_factor.disable`, `two_factor.reset`,
-`two_factor.backup_codes.regenerate`, and `sign_in.two_factor.failure`
-for wrong codes. Codes and secrets never reach the log.
+`two_factor.backup_codes.regenerate`, `two_factor.reauthenticate`,
+`two_factor.devices.revoke_all`, `sign_in.two_factor.failure` for wrong
+codes, and `sign_in.two_factor.lockout` for challenge lockouts. Codes
+and secrets never reach the log.
 
 ## How it is stored
 
 - Authenticator secrets are encrypted at rest with Active Record
   encryption, like the other OAuth tokens.
+- Unconfirmed setup secrets live in their own table, one row per
+  session at most, encrypted at rest, and are spent at confirm time.
 - Backup codes exist as SHA-256 digests only; a database read cannot
   turn them back into codes.
 - Remember cookies carry a random token whose digest alone is stored,
   so a database read cannot mint remember cookies.
+- Expired remembered devices and expired setup secrets are pruned by
+  the daily retention job.
 
 ## Local development
 
@@ -91,3 +125,11 @@ development server, ticking "Remember this device" has no effect and
 every sign-in asks for a code. Production serves HTTPS, where it works
 normally. The test suite enables cookie write-through so integration
 and browser tests exercise the real cookie.
+
+## Lockout email
+
+Lockout notices always land in the member's inbox. They are also
+emailed (via `TwoFactorMailer`) once outbound mail is configured, which
+currently means `action_mailer.smtp_settings` is present. The sender
+defaults to `Smartfire <noreply@smartdata.net>`; confirm it with your
+mail provider when enabling SMTP.
