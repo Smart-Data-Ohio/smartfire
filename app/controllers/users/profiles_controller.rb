@@ -18,6 +18,9 @@ class Users::ProfilesController < ApplicationController
     end
 
     @user.assign_attributes(user_params)
+    # A submitted zone (even a blank "Not set") is a choice the member made:
+    # browser auto-detect must never overwrite it afterwards.
+    @user.time_zone_explicit = true if params[:user]&.key?(:time_zone)
     # A self-chosen email is unverified: Google sign-in will not link a new
     # Google subject to this account by email until an administrator allows it.
     @user.email_self_changed_at = Time.current if email_changing
@@ -41,7 +44,7 @@ class Users::ProfilesController < ApplicationController
     end
 
     def user_params
-      permitted = %i[ name avatar email_address password bio ]
+      permitted = %i[ name avatar email_address password bio time_zone theme ]
       # A verified GitHub link owns the login; manual edits are ignored.
       permitted << :github_login unless @user.github_login_verified?
       params.require(:user).permit(*permitted, inbox_preferences: User::InboxPreferences::KEYS).compact

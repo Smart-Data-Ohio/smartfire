@@ -1,5 +1,9 @@
 class ApplicationController < ActionController::Base
   include AllowBrowser, Authentication, Authorization, BlockBannedRequests, SetCurrentRequest, SetPlatform, TrackedRoomVisit, VersionHeaders
+  # Separate include, so its hooks register after Authentication's: one
+  # multi-module include registers callbacks in reverse include order,
+  # which would run the zone hook before Current.user is set.
+  include SetTimeZone
   include Turbo::Streams::Broadcasts, Turbo::Streams::StreamName
   include MessagePayloadHelper
 
