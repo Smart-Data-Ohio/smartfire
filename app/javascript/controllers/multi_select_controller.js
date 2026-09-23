@@ -15,12 +15,15 @@ let noteIdCounter = 0
 export default class extends Controller {
   static targets = [ "checkbox", "bar", "form", "inputs", "huddleInput", "messageButton", "huddleButton", "note" ]
 
+  // Survives list re-renders (the member panel refreshes every 12
+  // seconds): reconnected checkboxes restore from here, so removal only
+  // ever happens through an explicit toggle or Clear. Class fields, not
+  // connect(): target callbacks fire before connect for elements already
+  // in the DOM.
+  selectedIds = new Set()
+  lastIndex = null
+
   connect() {
-    // Survives list re-renders (the member panel refreshes every 12
-    // seconds): reconnected checkboxes restore from here, so removal only
-    // ever happens through an explicit toggle or Clear.
-    this.selectedIds = new Set()
-    this.lastIndex = null
     if (!this.noteTarget.id) this.noteTarget.id = `multi-select-note-${++noteIdCounter}`
     this.update()
   }

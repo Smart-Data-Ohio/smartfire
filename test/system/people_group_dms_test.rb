@@ -8,7 +8,7 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
   test "clicking a message author opens their profile card and Message lands in the DM" do
     visit room_path(rooms(:designers))
 
-    within "#message_#{messages(:first).id}" do
+    within "#message_#{messages(:first).client_message_id}" do
       find(".message__avatar a").click
     end
 
@@ -26,56 +26,59 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
   test "the profile card opens by keyboard, traps focus, and returns it on Esc" do
     visit room_path(rooms(:designers))
 
-    author_button = find("#message_#{messages(:first).id} .message__author button")
+    author_button = find("#message_#{messages(:first).client_message_id} .message__author button")
     author_button.send_keys(:enter)
 
     assert_selector "#profile-card-popover:not([hidden])", wait: 10
     assert_selector "#user_card .profile-card__name", text: "Jason"
 
-    find("#profile-card-popover").send_keys(:escape)
+    find(".profile-card-popover__panel").send_keys(:escape)
     assert_selector "#profile-card-popover[hidden]", visible: :all, wait: 10
-    assert_equal "Jason", page.evaluate_script("document.activeElement.textContent.trim()")
+    assert_equal "BUTTON", page.evaluate_script("document.activeElement.tagName")
+    assert_includes page.evaluate_script("document.activeElement.textContent"), "Jason"
   end
 
   test "multi-selecting three people in the directory lands in their group DM" do
     visit users_path
 
-    check "Select Jason"
-    check "Select Kevin"
-    check "Select JZ"
+    check "select_user_#{users(:jason).id}"
+    check "select_user_#{users(:kevin).id}"
+    check "select_user_#{users(:jz).id}"
 
     within "[data-multi-select-target='bar']" do
       assert_selector "button", text: "Message (3)"
       click_button "Message (3)"
     end
 
+    assert_selector ".room--current", text: "Jason, JZ, Kevin", wait: 10
     room = Rooms::Direct.find_for([ users(:david), users(:jason), users(:kevin), users(:jz) ])
-    assert_current_path room_path(room), wait: 10
-    assert_selector ".room--current", text: "Jason, JZ, Kevin"
+    assert_current_path room_path(room)
   end
 
   test "the member panel multi-select starts a huddle with exactly that set" do
     visit room_path(rooms(:designers))
-    click_button "Show members"
+
+    # Wide screens open the panel on load (flipping the toggle to Hide).
+    click_button "Show members" if page.has_button?("Show members", wait: 5)
 
     assert_selector "#channel-members .member-panel__member", minimum: 3, wait: 10
-    check "Select Jason"
-    check "Select Kevin"
+    check "select-member-#{users(:jason).id}"
+    check "select-member-#{users(:kevin).id}"
 
     within "#channel-members [data-multi-select-target='bar']" do
       assert_selector "button", text: "Start huddle (2)"
       click_button "Start huddle (2)"
     end
 
+    assert_selector ".room--current", text: "Jason, Kevin", wait: 10
     room = Rooms::Direct.find_for([ users(:david), users(:jason), users(:kevin) ])
-    assert_current_path room_path(room), wait: 10
-    assert_match(/huddle=start/, current_url)
+    assert_current_path room_path(room, huddle: "start")
   end
 
   test "agents are selectable for messages but excluded from huddles" do
     visit users_path
 
-    check "Select Bender Bot"
+    check "select_user_#{users(:bender).id}"
 
     within "[data-multi-select-target='bar']" do
       assert_selector "button", text: "Message (1)"
@@ -107,7 +110,9 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
     visit edit_rooms_direct_path(room)
     accept_confirm { click_button "Leave" }
 
-    assert_current_path root_path, wait: 10
+    # Root forwards to the last accessible room; the point is the leaver
+    # is out of the group.
+    assert_no_current_path room_path(room), wait: 10
     assert_not room.reload.user_ids.include?(users(:david).id)
   end
 

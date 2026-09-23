@@ -35,7 +35,7 @@
         <% @users.each do |user| %>
           <li class="dm-picker__row multi-select-row"
               data-action="touchstart->multi-select#pressStart touchmove->multi-select#pressMove touchend->multi-select#pressEnd contextmenu->multi-select#suppressMenu">
-            <input type="checkbox" data-multi-select-target="checkbox" data-action="click->multi-select#toggle"
+            <input type="checkbox" id="pick_user_<%= user.id %>" data-multi-select-target="checkbox" data-action="click->multi-select#toggle"
                 data-user-id="<%= user.id %>" data-bot="<%= user.bot? %>" aria-label="Select <%= user.name %>">
             <%= avatar_tag user, size: 24 %>
             <%= button_tag type: "button", class: "profile-card-name overflow-ellipsis", data: profile_card_trigger(user) do %>

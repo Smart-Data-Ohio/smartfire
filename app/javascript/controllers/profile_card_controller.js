@@ -51,10 +51,9 @@ export default class extends Controller {
   close(event) {
     event?.preventDefault?.()
     if (!this.hasPopoverTarget || this.popoverTarget.hidden) return
-    this.hide()
 
     const trigger = this.trigger
-    this.trigger = null
+    this.hide()
     if (trigger?.isConnected) trigger.focus({ preventScroll: true })
   }
 

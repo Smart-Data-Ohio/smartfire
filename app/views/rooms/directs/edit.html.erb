@@ -23,7 +23,7 @@
   <% if @room.group_capable? %>
     <section class="margin-block-end">
       <h2 class="txt-large">Group name</h2>
-      <%= form_with model: @room, url: rooms_direct_path(@room), method: :patch, class: "flex gap center" do |form| %>
+      <%= form_with model: @room, scope: :room, url: rooms_direct_path(@room), method: :patch, class: "flex gap center" do |form| %>
         <%= form.text_field :name, value: @room.name, maxlength: 100, autocomplete: "off",
               placeholder: @room.direct_display_name(for_user: Current.user),
               aria: { label: "Group name" }, class: "input flex-item-grow" %>
@@ -37,7 +37,7 @@
       <% candidates = User.active.ordered.with_attached_avatar.where.not(id: @room.user_ids) %>
       <% if candidates.any? %>
         <%= form_with url: add_members_rooms_direct_path(@room), method: :post do %>
-          <div class="flex flex-column gap txt-align-start">
+          <div class="directs-add-members flex flex-column gap txt-align-start">
             <% candidates.each do |user| %>
               <label class="flex align-center gap">
                 <%= check_box_tag "user_ids[]", user.id, false, id: "add_member_#{user.id}" %>

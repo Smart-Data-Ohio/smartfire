@@ -260,6 +260,7 @@ export default class extends Controller {
     if (!isSelf) {
       const select = document.createElement("input")
       select.type = "checkbox"
+      select.id = `select-member-${member.id}`
       select.dataset.multiSelectTarget = "checkbox"
       select.dataset.action = "click->multi-select#toggle"
       select.dataset.userId = String(member.id)

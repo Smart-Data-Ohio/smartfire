@@ -184,6 +184,18 @@ button.profile-card-avatar {
   -webkit-touch-callout: none;
 }
 
+/* The base reset strips every input to appearance: none, so selection
+   checkboxes opt back into a native, theme-tinted box. */
+input[data-multi-select-target="checkbox"],
+.directs-add-members input[type="checkbox"] {
+  accent-color: var(--workspace-accent-fill-strong, var(--color-text));
+  appearance: auto;
+  block-size: 1.1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  inline-size: 1.1rem;
+}
+
 /* People directory. */
 .people-directory {
   display: flex;
