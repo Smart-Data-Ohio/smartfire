@@ -51,11 +51,17 @@ class ScheduledMessagesController < ApplicationController
   # PATCH /scheduled_messages/:id. Edits a pending row's text or time.
   def update
     scheduled = Current.user.scheduled_messages.pending.find(params[:id])
-    return if refuse_when_claimed(scheduled)
+    # Under the row lock so the dispatcher cannot claim and send between
+    # the check and the write.
+    saved = scheduled.with_lock do
+      next :refused if busy?(scheduled)
 
-    scheduled.assign_attributes(update_attributes)
+      scheduled.assign_attributes(update_attributes)
+      scheduled.save
+    end
+    return refuse_busy if saved == :refused
 
-    if scheduled.save
+    if saved
       respond_to do |format|
         format.html { redirect_to scheduled_messages_path, notice: "Scheduled message updated." }
         format.json { render json: scheduled_payload(scheduled) }
@@ -76,9 +82,14 @@ class ScheduledMessagesController < ApplicationController
   # DELETE /scheduled_messages/:id. Cancels a pending row.
   def destroy
     scheduled = Current.user.scheduled_messages.pending.find(params[:id])
-    return if refuse_when_claimed(scheduled)
+    cancelled = false
+    scheduled.with_lock do
+      next if busy?(scheduled)
 
-    scheduled.destroy!
+      scheduled.destroy!
+      cancelled = true
+    end
+    return refuse_busy unless cancelled
 
     respond_to do |format|
       format.html { redirect_to scheduled_messages_path, notice: "Scheduled message cancelled." }
@@ -142,15 +153,18 @@ class ScheduledMessagesController < ApplicationController
     # The dispatcher is about to post a claimed row: an edit would be
     # silently lost and a cancel would race the send, so refuse with a
     # clear notice instead. Renders and returns true when refused.
-    def refuse_when_claimed(scheduled)
-      return false unless scheduled.claimed?
+    # Called inside the row lock, after with_lock reloaded the row: a
+    # claim or a send that landed since the lookup refuses the change.
+    def busy?(scheduled)
+      !scheduled.pending? || scheduled.claimed?
+    end
 
+    def refuse_busy
       alert = "That message is sending right now; try again in a moment."
       respond_to do |format|
         format.html { redirect_to scheduled_messages_path, alert: alert }
         format.json { render json: { error: alert }, status: :conflict }
       end
-      true
     end
 
     def drop_alert_for(scheduled)

@@ -1,5 +1,24 @@
 require "test_helper"
 
+# Simulates the dispatcher sending a row after the controller looked it
+# up but before the controller takes the row lock.
+module SendsBeforeLock
+  def self.racing(scheduled)
+    Thread.current[:sends_before_lock] = scheduled.id
+    yield
+  ensure
+    Thread.current[:sends_before_lock] = nil
+  end
+
+  def lock!(*)
+    if Thread.current[:sends_before_lock] == id
+      ScheduledMessage.where(id: id).update_all(sent_at: Time.current)
+    end
+    super
+  end
+end
+ScheduledMessage.prepend(SendsBeforeLock)
+
 class ScheduledMessagesControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in :david
@@ -152,6 +171,29 @@ class ScheduledMessagesControllerTest < ActionDispatch::IntegrationTest
 
     delete scheduled_message_url(other), as: :json
     assert_response :not_found
+  end
+
+  test "a send that lands between the lookup and the lock refuses the cancel" do
+    scheduled = ScheduledMessage.create!(user: @user, room: @room, markdown_source: "Soon", send_at: 1.hour.from_now)
+
+    SendsBeforeLock.racing(scheduled) do
+      assert_no_difference -> { ScheduledMessage.count } do
+        delete scheduled_message_url(scheduled), as: :json
+      end
+    end
+
+    assert_response :conflict
+  end
+
+  test "a send that lands between the lookup and the lock refuses the edit" do
+    scheduled = ScheduledMessage.create!(user: @user, room: @room, markdown_source: "Soon", send_at: 1.hour.from_now)
+
+    SendsBeforeLock.racing(scheduled) do
+      patch scheduled_message_url(scheduled), params: { scheduled_message: { markdown_source: "Edited!" } }, as: :json
+    end
+
+    assert_response :conflict
+    assert_equal "Soon", scheduled.reload.markdown_source
   end
 
   test "destroy during an active claim is refused" do
