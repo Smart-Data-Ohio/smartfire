@@ -8,7 +8,10 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
   test "? opens the shortcut sheet everywhere except while typing" do
     join_room rooms(:hq)
 
-    press_keys(:shift, "/")
+    # Printable characters only reach global handlers from a focusable
+    # element under WebDriver, so ask from a sidebar row.
+    row = find("#sidebar a[data-room-id='#{rooms(:hq).id}']")
+    row.send_keys("?")
     assert_selector "#keyboard-shortcuts[open]", wait: 5
     within "#keyboard-shortcuts" do
       assert_text "Quick switcher"
@@ -56,10 +59,10 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
   test "alt+shift+arrows jump between unread rooms" do
     designers = rooms(:designers)
     join_room rooms(:hq)
+    expire_connection users(:jz), designers
 
-    # Direct creates skip the controller broadcast, so fan it out by hand.
-    designers.root_messages.create!(creator: users(:kevin), body: "Unread me", client_message_id: "unread-jump-1").broadcast_create
-    assert_room_unread designers
+    message = designers.root_messages.create!(creator: users(:kevin), body: "Unread me", client_message_id: "unread-jump-1")
+    broadcast_until_unread message, designers
 
     press_keys(:alt, :shift, :arrow_down)
     assert_selector ".room-header__name", text: "Designers", wait: 10
@@ -90,4 +93,12 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
     assert_no_selector ".message[data-message-actions-open]", wait: 5
     assert_room_unread designers
   end
+
+  private
+    # The sign-in landing connects its room for 60 seconds, during which
+    # the server skips it when marking unread. Expire that grace period
+    # so the setup message below persists server-side.
+    def expire_connection(user, room)
+      user.memberships.find_by!(room: room).update_columns(connected_at: nil, connections: 0)
+    end
 end

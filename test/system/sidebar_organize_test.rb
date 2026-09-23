@@ -61,23 +61,25 @@ class SidebarOrganizeTest < ApplicationSystemTestCase
     sign_in "david@37signals.com"
     designers = rooms(:designers)
     join_room rooms(:pets)
+    # David lands on Designers at sign-in, which connects it; expire
+    # that grace period so the mention below can mark it unread.
+    users(:david).memberships.find_by!(room: designers).update_columns(connected_at: nil, connections: 0)
 
     open_room_menu designers
     within("#room-menu") { click_on "Mute" }
     assert_selector "#sidebar a.muted[data-room-id='#{designers.id}']", wait: 10
 
     # The watercooler badge proves delivery is flowing while the muted
-    # room stays quiet for the same plain message. Direct creates skip
-    # the controller broadcast, so fan it out by hand.
+    # room stays quiet for the same plain message.
     designers.root_messages.create!(creator: users(:kevin), body: "Muted noise", client_message_id: "mute-quiet-1").broadcast_create
-    rooms(:watercooler).root_messages.create!(creator: users(:kevin), body: "Loud hello", client_message_id: "mute-quiet-2").broadcast_create
-    assert_room_unread rooms(:watercooler)
+    loud = rooms(:watercooler).root_messages.create!(creator: users(:kevin), body: "Loud hello", client_message_id: "mute-quiet-2")
+    broadcast_until_unread loud, rooms(:watercooler)
     assert_room_read designers
 
-    designers.root_messages.create!(
+    mention = designers.root_messages.create!(
       creator: users(:kevin), body: "Hey #{mention_attachment_for(:david)}", client_message_id: "mute-quiet-3"
-    ).broadcast_create
-    assert_room_unread designers
+    )
+    broadcast_until_unread mention, designers
   end
 
   test "channel categories organize, collapse and persist" do

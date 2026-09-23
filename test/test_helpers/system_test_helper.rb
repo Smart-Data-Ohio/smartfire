@@ -82,6 +82,24 @@ module SystemTestHelper
     assert_message_menu_open
   end
 
+  # Re-emits a message's broadcasts until its room shows unread (or the
+  # timeout lapses). Direct model creates fan out by hand in tests, and a
+  # broadcast emitted before the browser's unread subscription confirms
+  # is lost; re-emitting only repaints the same badge, so this merely
+  # compensates that race.
+  def broadcast_until_unread(message, room, timeout: 10)
+    deadline = Time.now + timeout
+    loop do
+      message.broadcast_create
+      begin
+        Capybara.using_wait_time(1) { assert_room_unread room }
+        return
+      rescue Minitest::Assertion, Capybara::ElementNotFound
+        raise if Time.now > deadline
+      end
+    end
+  end
+
   # Sends keys at the browser level (Selenium actions), landing on
   # whatever holds focus. Unlike element send_keys, chords and plain
   # keys reach global handlers even when focus sits on the body.
