@@ -1,7 +1,17 @@
 require "test_helper"
+require_relative "support/system_test_chrome_profile"
 
 WebMock.disable!
 Capybara.enable_aria_label = true
+
+# Headless Chrome's temporary profile goes to the repo's tmp/ (one
+# directory per worker PID) instead of the shared /tmp tmpfs, which
+# parallel workers filled to quota. Stale entries are removed here; each
+# worker removes its own directory after the suite (below). PID liveness
+# is checked per entry so concurrently booting workers never remove a
+# live sibling's profile.
+SystemTestChromeProfile.cleanup_stale!
+Minitest.after_run { FileUtils.rm_rf(SystemTestChromeProfile.dir) }
 
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   # Cross-session Turbo Stream broadcasts (stage roles, voice presence,
@@ -29,9 +39,12 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   parallelize(workers: [ Etc.nprocessors, 4 ].min)
 
   # --mute-audio keeps chat sounds (/play, notifications) off the host
-  # speakers while tests run.
+  # speakers while tests run. --user-data-dir keeps the temporary Chrome
+  # profile under the repo's tmp/ (see SystemTestChromeProfile); the block
+  # runs lazily so forked parallel workers each resolve their own PID.
   driven_by :selenium, using: :headless_chrome, screen_size: [ 1400, 1400 ] do |options|
     options.add_argument "--mute-audio"
+    options.add_argument "--user-data-dir=#{SystemTestChromeProfile.dir}"
   end
 
   include SystemTestHelper
