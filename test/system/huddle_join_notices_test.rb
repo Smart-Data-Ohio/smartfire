@@ -92,6 +92,31 @@ class HuddleJoinNoticesTest < ApplicationSystemTestCase
     assert_empty played_sounds
   end
 
+  test "join and leave toasts announce through the container live region" do
+    room = rooms(:david_and_jason)
+    visit room_path(room)
+    wait_for_cable_connection
+    wait_for_join_notice_controller
+    hold_toasts_open(leave_delay: 200)
+
+    assert_selector '.huddle-join-toasts[aria-live="polite"]', visible: :all
+
+    jason_grant = HuddleGrant.issue!(session: second_session_for(users(:jason)),
+      membership: memberships(:jason_david_and_jason))
+    jason_grant.update_columns(last_seen_at: Time.current)
+    mark_in_call(room)
+
+    grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_david_and_jason))
+    notify_join_and_deliver(grant)
+    assert_selector ".huddle-join-toast:not(.huddle-join-toast--leave)", text: "David joined", wait: 10
+
+    assert grant.mark_out_of_call!
+    assert_selector ".huddle-join-toast--leave", text: "David left", wait: 10
+
+    assert_no_selector ".huddle-join-toast[role]"
+    assert_no_selector ".huddle-join-toast[aria-live]"
+  end
+
   test "a leave toasts quietly in the call without the join sound" do
     room = rooms(:david_and_jason)
     visit room_path(room)

@@ -329,7 +329,6 @@ export default class extends Controller {
 
     this.joinToastNode ||= document.createElement("div")
     this.joinToastNode.className = "huddle-join-toast shadow"
-    this.joinToastNode.setAttribute("role", "status")
     this.joinToastNode.textContent = `${sentence(this.joinBatch.names)} joined`
     this.toastsTarget.append(this.joinToastNode)
 
@@ -373,7 +372,6 @@ export default class extends Controller {
   #showLeaveToast(name) {
     const toast = document.createElement("div")
     toast.className = "huddle-join-toast huddle-join-toast--leave shadow"
-    toast.setAttribute("role", "status")
     toast.textContent = `${name} left`
     this.toastsTarget.append(toast)
 
