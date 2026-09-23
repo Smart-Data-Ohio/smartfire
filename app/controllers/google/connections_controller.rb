@@ -60,6 +60,11 @@ module Google
         snapshot = account.cleanup_snapshot
         account_id = account.id
         Current.user.event_calendar_entries.delete_all
+        # Meet links were minted through this connection: clear them so
+        # event cards stop advertising links the app no longer manages.
+        # The request flag stays set (and update_all fires no callbacks),
+        # so reconnecting re-provisions each pending event.
+        Event.where(organizer: Current.user).where.not(meet_link: [ nil, "" ]).update_all(meet_link: nil)
         if (channel = Calendar::PushChannel.find_by(user_id: Current.user.id))
           channel.stop_remote!
           channel.destroy!

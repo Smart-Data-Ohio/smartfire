@@ -24,6 +24,9 @@ or credentials.
   `events.patch`, since `events.update` rejects a conference-only body;
   a `pending` conference without a link yet retries with backoff too.
   Permanent Google refusals are logged and the next event edit retries.
+- Disconnecting Google clears the organizer's stored Meet links (the
+  request flag stays, so reconnecting re-provisions). Event cards never
+  advertise links the app no longer manages.
 
 ## Two-way RSVP sync
 
