@@ -34,6 +34,20 @@ class Retention::PruneJobTest < ActiveJob::TestCase
     assert ActivityItem.exists?(new_read.id)
   end
 
+  test "prunes audit rows older than a year and keeps recent ones" do
+    old_entry = travel_to(366.days.ago) do
+      AuditLog.record!(action: "user.ban", target: users(:kevin))
+    end
+    new_entry = travel_to(364.days.ago) do
+      AuditLog.record!(action: "user.ban", target: users(:kevin))
+    end
+
+    Retention::PruneJob.perform_now
+
+    assert_empty AuditLog.where(id: old_entry.id)
+    assert AuditLog.exists?(new_entry.id)
+  end
+
   test "prunes old webhook deliveries and keeps recent ones" do
     old_delivery = travel_to(15.days.ago) do
       Github::WebhookDelivery.create!(delivery_guid: "old-guid", event: "pull_request")
