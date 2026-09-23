@@ -431,13 +431,13 @@ class VoiceChannelsTest < ApplicationSystemTestCase
     renders = header_voice_renders
     david_grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: @room.memberships.find_by!(user: users(:david)))
     wait_for_issuance_broadcast(after: renders)
-    david_grant.record_seen!
+    record_seen_and_deliver(david_grant)
     within(".room-header__actions") { assert_selector ".voice-stack--live .voice-stack__count", text: "1", wait: BROADCAST_WAIT }
 
     renders = header_voice_renders
     jason_grant = HuddleGrant.issue!(session: users(:jason).sessions.create!(user_agent: "Test"), membership: @room.memberships.find_by!(user: users(:jason)))
     wait_for_issuance_broadcast(after: renders)
-    jason_grant.record_seen!
+    record_seen_and_deliver(jason_grant)
     within(".room-header__actions") { assert_selector ".voice-stack--live .voice-stack__count", text: "2", wait: 10 }
 
     begin
@@ -499,7 +499,7 @@ class VoiceChannelsTest < ApplicationSystemTestCase
     renders = header_voice_renders
     david_grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: @room.memberships.find_by!(user: users(:david)))
     wait_for_issuance_broadcast(after: renders)
-    david_grant.record_seen!
+    record_seen_and_deliver(david_grant)
 
     # The sighting render must land before the refresh block below runs: a
     # stream replace mid-refresh would swap the measured controllers out
