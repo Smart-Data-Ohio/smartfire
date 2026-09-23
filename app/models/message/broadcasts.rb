@@ -11,9 +11,9 @@ module Message::Broadcasts
   private
     # Fanned out to the room's members rather than published on one global stream, so
     # that the timing of activity in a room only reaches people who are in it.
-    # The recipients mirror Room#unread_memberships exactly: members who are
-    # connected, invisible, or muted without a mention keep no server-side
-    # unread, so telling their sidebar otherwise would paint a lie.
+    # Muted members without a mention are left out, matching
+    # Room#unread_memberships: their sidebar must not go unread, and the
+    # client paints the badge straight from this broadcast.
     def broadcast_unread_room
       unread_user_ids.each do |user_id|
         ActionCable.server.broadcast UnreadRoomsChannel.stream_name_for(user_id), { roomId: room.id }
@@ -21,13 +21,9 @@ module Message::Broadcasts
     end
 
     def unread_user_ids
-      recipients = room.memberships.visible.disconnected.where.not(user: creator)
-      ids = recipients.where.not(involvement: :muted).pluck(:user_id)
+      ids = room.memberships.pluck(:user_id)
+      return ids unless room.memberships.where(involvement: :muted).exists?
 
-      muted_recipients = recipients.where(involvement: :muted)
-      if muted_recipients.exists?
-        ids.concat(muted_recipients.where(user_id: mentionees.select(:id)).pluck(:user_id))
-      end
-      ids
+      ids - room.memberships.where(involvement: :muted).where.not(user_id: mentionees.select(:id)).pluck(:user_id)
     end
 end
