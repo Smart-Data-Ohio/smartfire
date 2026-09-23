@@ -132,6 +132,19 @@ class AuditLog < ApplicationRecord
     known ? typed.truncate(FAILURE_LABEL_MAX) : UNRECOGNIZED_ACTOR_LABEL
   end
 
+  # Webhook URLs often carry secrets in the path or query, so the log
+  # keeps only the origin (scheme + host + non-default port) plus a
+  # digest prefix of the full URL: a change stays visible without the
+  # secret. Nil in, nil out, so clearing a URL still logs.
+  WEBHOOK_DIGEST_LENGTH = 12
+
+  def self.webhook_origin_summary(url)
+    return nil if url.blank?
+
+    origin = parse_webhook_origin(url.to_s)
+    { origin: origin, digest: Digest::SHA256.hexdigest(url.to_s)[0, WEBHOOK_DIGEST_LENGTH] }
+  end
+
   def self.label_for(record)
     case record
     when nil then nil
@@ -183,6 +196,18 @@ class AuditLog < ApplicationRecord
 
     User.find_by(id: actor_id)
   end
+
+  def self.parse_webhook_origin(url)
+    uri = URI.parse(url.strip)
+    return "[invalid]" unless uri.scheme.present? && uri.host.present?
+
+    origin = "#{uri.scheme}://#{uri.host}"
+    origin += ":#{uri.port}" if uri.port && uri.port != uri.default_port
+    origin
+  rescue URI::InvalidURIError
+    "[invalid]"
+  end
+  private_class_method :parse_webhook_origin
 
   def self.deep_filter(value)
     case value

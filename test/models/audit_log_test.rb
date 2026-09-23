@@ -165,6 +165,22 @@ class AuditLogTest < ActiveSupport::TestCase
     assert_equal 254, AuditLog.record_sign_in_failure!(email: long, method: "password").actor_label.length
   end
 
+  test "webhook_origin_summary keeps the origin and a digest, not the URL" do
+    assert_nil AuditLog.webhook_origin_summary(nil)
+
+    summary = AuditLog.webhook_origin_summary("https://example.com/hook?token=s3cret")
+    assert_equal "https://example.com", summary[:origin]
+    assert_equal Digest::SHA256.hexdigest("https://example.com/hook?token=s3cret")[0, 12], summary[:digest]
+
+    assert_equal "http://example.com:3000",
+      AuditLog.webhook_origin_summary("http://example.com:3000/hook")[:origin]
+    assert_equal "https://example.com",
+      AuditLog.webhook_origin_summary("https://example.com:443/hook")[:origin]
+    assert_equal "[invalid]", AuditLog.webhook_origin_summary("::::")[:origin]
+    assert_not_equal AuditLog.webhook_origin_summary("https://example.com/a")[:digest],
+      AuditLog.webhook_origin_summary("https://example.com/b")[:digest]
+  end
+
   test "record_sign_in_failure! records again from another IP or after the window" do
     first_request = ActionDispatch::TestRequest.create
     first_request.remote_addr = "198.51.100.9"

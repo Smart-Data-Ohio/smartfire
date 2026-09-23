@@ -89,8 +89,10 @@ class Accounts::BotsController < ApplicationController
       @bot.association(:webhook).reload
 
       if @bot.webhook_url != previous_webhook_url
+        before = AuditLog.webhook_origin_summary(previous_webhook_url)
+        after = AuditLog.webhook_origin_summary(@bot.webhook_url)
         AuditLog.record!(action: "agent.webhook_url.change", target: @agent || @bot,
-          changes: { webhook_url: [ previous_webhook_url, @bot.webhook_url ] })
+          changes: { webhook_url: [ before, after ] })
       end
 
       bot_changes = @bot.previous_changes.slice("name", "icon_name")

@@ -46,11 +46,17 @@ class AuditLog::AgentsAuditTest < ActionDispatch::IntegrationTest
 
   test "webhook URL change gets its own row" do
     assert_difference -> { AuditLog.where(action: "agent.webhook_url.change").count }, +1 do
-      patch account_bot_url(@bot), params: { user: { webhook_url: "https://example.com/hooked" } }
+      patch account_bot_url(@bot), params: { user: { webhook_url: "https://example.com/hooked?token=s3cret" } }
     end
 
     entry = AuditLog.where(action: "agent.webhook_url.change").last
-    assert_equal [ "http://example.com/bender", "https://example.com/hooked" ], entry.details["webhook_url"]
+    before, after = entry.details["webhook_url"]
+    assert_equal "http://example.com", before["origin"]
+    assert_equal "https://example.com", after["origin"]
+    assert_equal 12, after["digest"].length
+    assert_not_equal before["digest"], after["digest"]
+    assert_no_match "hooked", entry.details.to_json
+    assert_no_match "s3cret", entry.details.to_json
   end
 
   test "removing a bot records the suspension" do
