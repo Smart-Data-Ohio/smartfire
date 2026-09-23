@@ -69,6 +69,15 @@ class Linkedin::PostUrlTest < ActiveSupport::TestCase
     assert_includes text, "ddd444"
   end
 
+  test "matches stop before brackets, quotes, and parens" do
+    reference = Linkedin::PostUrl.extract("<https://www.linkedin.com/posts/slug-55>").first
+
+    assert_equal "https://www.linkedin.com/posts/slug-55", reference.url
+
+    urn = Linkedin::PostUrl.extract("(see https://www.linkedin.com/feed/update/urn:li:activity:66)").first
+    assert_equal "urn:li:activity:66", urn.urn
+  end
+
   test "embed_url_for builds the official player URL only for URN links" do
     assert_equal "https://www.linkedin.com/embed/feed/update/urn:li:share:12345",
       Linkedin::PostUrl.embed_url_for("https://www.linkedin.com/feed/update/urn:li:share:12345")

@@ -47,7 +47,8 @@ class LinkEmbed::ReferenceSyncTest < ActiveSupport::TestCase
       creator: @creator, client_message_id: "embed-sync-skips",
       markdown_source: <<~MD
         PR https://github.com/rails/rails/pull/1 and post https://x.com/jack/status/20
-        <https://example.com/hidden> and `https://example.com/code`
+        <https://example.com/hidden> and <https://www.linkedin.com/posts/bracketed-1>
+        `https://example.com/code`
         ```text
         https://example.com/fenced
         ```
