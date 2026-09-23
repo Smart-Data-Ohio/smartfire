@@ -61,4 +61,9 @@ class Notifications::KeywordMatcherTest < ActiveSupport::TestCase
     assert_equal [], Notifications::KeywordMatcher.matching_user_ids({ 1 => [ "deploy" ] }, "   ")
     assert_equal [], Notifications::KeywordMatcher.matching_user_ids({}, "Deploy now")
   end
+  test "a phrase matches across a line break and not inside a longer Unicode word" do
+    assert_equal [ 1 ], Notifications::KeywordMatcher.matching_user_ids({ 1 => [ "deploy failed" ] }, "the deploy\nfailed again")
+    assert_equal [], Notifications::KeywordMatcher.matching_user_ids({ 1 => [ "caf" ] }, "meet at the café")
+    assert_equal [ 1 ], Notifications::KeywordMatcher.matching_user_ids({ 1 => [ "café" ] }, "meet at the Café today")
+  end
 end

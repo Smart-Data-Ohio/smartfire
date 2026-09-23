@@ -35,8 +35,12 @@ module Notifications
         # Lookarounds instead of \b so phrases ending in punctuation
         # ("v1.2 (rc)") still match at a space; for plain words the two
         # are equivalent.
+        # Word characters are Unicode-aware, so "caf" does not match inside
+        # "café", and any run of whitespace (including a line break) matches
+        # the single space a saved phrase is normalized to.
         def compile(phrase)
-          Regexp.new("(?<!\\w)#{Regexp.escape(phrase)}(?!\\w)", Regexp::IGNORECASE)
+          body = Regexp.escape(phrase).gsub("\\ ", "\\s+")
+          Regexp.new("(?<![\\p{L}\\p{N}_])#{body}(?![\\p{L}\\p{N}_])", Regexp::IGNORECASE)
         end
     end
   end
