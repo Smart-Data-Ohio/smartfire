@@ -58,6 +58,27 @@ class BoardAutomations::DigestDispatcherTest < ActiveSupport::TestCase
     end
   end
 
+  test "a repeat sweep is a silent no-op that logs no error" do
+    stale_post!(name: "Old work", owner: users(:jz), entered_ago: 2.hours)
+    BoardAutomations::DigestDispatcher.dispatch_due!
+    assert_equal 1, BoardStaleDigest.count
+
+    log = StringIO.new
+    original_logger = Rails.logger
+    Rails.logger = ActiveSupport::Logger.new(log)
+    begin
+      assert_no_difference -> { BoardStaleDigest.count } do
+        assert_no_difference -> { @board.messages.count } do
+          BoardAutomations::DigestDispatcher.dispatch_due!
+        end
+      end
+    ensure
+      Rails.logger = original_logger
+    end
+
+    assert_no_match "Board stale digest failed", log.string
+  end
+
   test "no stale posts posts nothing and claims nothing" do
     fresh_post!
 
