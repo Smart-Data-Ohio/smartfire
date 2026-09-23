@@ -285,8 +285,10 @@ body.member-panel-open .room-header__action--switcher .quick-switcher-key {
   inline-size: max-content;
   inset: auto;
   margin: 0;
+  max-block-size: calc(100dvh - 1rem);
   max-inline-size: min(18rem, calc(100vw - 1rem));
   min-inline-size: 13rem;
+  overflow-y: auto;
   padding: 0.4rem;
   position: fixed;
 }

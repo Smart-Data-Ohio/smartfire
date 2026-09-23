@@ -171,6 +171,9 @@ export default class extends Controller {
 
     event.preventDefault()
     items[nextIndex].focus({ preventScroll: true })
+    // The menu scrolls on short viewports: bring the focused item into
+    // view inside the menu without moving the page behind it.
+    items[nextIndex].scrollIntoView({ block: "nearest" })
   }
 
   #onMenuClick(event) {

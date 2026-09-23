@@ -230,6 +230,48 @@ class RoomHeaderTest < ApplicationSystemTestCase
     end
   end
 
+  test "the overflow menu scrolls within a landscape phone viewport" do
+    room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david), users(:jz) ])
+    sign_in "jz@37signals.com"
+    join_room room
+
+    begin
+      page.current_window.resize_to(640, 360)
+      click_button "More actions"
+      assert_selector "#header-overflow-menu", visible: true
+
+      # A stage room on a phone holds the most items, including the
+      # phone-only stage, notifications and settings entries.
+      within "#header-overflow-menu" do
+        assert_selector "[role='menuitem']", text: "Stage", visible: true
+      end
+
+      menu_bottom, viewport_height = page.evaluate_script(<<~JS)
+        [ document.getElementById("header-overflow-menu").getBoundingClientRect().bottom, window.innerHeight ]
+      JS
+      assert_operator menu_bottom, :<=, viewport_height, "the menu runs past the viewport bottom"
+
+      # Arrow keys reach the last item and scroll it into view.
+      press_keys :end
+      assert_focused "#header-overflow-menu [aria-label='Quick switcher']"
+      assert page.evaluate_script(<<~JS), "the last menu item is not scrolled into view"
+        (() => {
+          const menu = document.getElementById("header-overflow-menu").getBoundingClientRect()
+          const item = document.querySelector("#header-overflow-menu [aria-label='Quick switcher']").getBoundingClientRect()
+          return item.top >= menu.top && item.bottom <= menu.bottom
+        })()
+      JS
+
+      # The last item is clickable despite the short viewport.
+      within "#header-overflow-menu" do
+        find("[role='menuitem']", text: "Quick switcher").click
+      end
+      assert_selector "#quick-switcher[open]", wait: 5
+    ensure
+      page.current_window.resize_to(1400, 1400)
+    end
+  end
+
   test "the overflow menu is keyboard accessible and closes on outside tap" do
     sign_in "jz@37signals.com"
     join_room rooms(:designers)
