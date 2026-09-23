@@ -211,6 +211,8 @@ class Membership < ApplicationRecord
       if room_category.present? && room_category.user_id != user_id
         errors.add(:room_category, "must belong to the member")
       end
+    end
+
     # Muting or unmuting revokes the member's active grants in the same
     # transaction, like a publish-boundary role change: the muted member
     # rejoins subscribe-only, and the unmuted member rejoins with publish.
