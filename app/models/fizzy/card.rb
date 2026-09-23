@@ -12,7 +12,7 @@ class Fizzy::Card < ApplicationRecord
   validates :number, uniqueness: { scope: :account_id }
 
   def web_url
-    "https://app.fizzy.do/#{account_id}/cards/#{number}"
+    "#{Fizzy::Client.api_base_url}/#{account_id}/cards/#{number}"
   end
 
   # Find or create the record for a referenced card. Safe to call

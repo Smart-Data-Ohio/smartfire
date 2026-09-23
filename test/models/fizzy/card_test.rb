@@ -16,6 +16,21 @@ class Fizzy::CardTest < ActiveSupport::TestCase
     assert_equal "https://app.fizzy.do/897362094/cards/579", card.web_url
   end
 
+  test "web_url follows the configured Fizzy host" do
+    original = ENV["FIZZY_API_BASE_URL"]
+    ENV["FIZZY_API_BASE_URL"] = "https://fizzy.example.com"
+    begin
+      card = Fizzy::Card.for_reference(account_id: "897362094", number: 579)
+
+      assert_equal "https://fizzy.example.com/897362094/cards/579", card.web_url
+
+      ENV["FIZZY_API_BASE_URL"] = "https://fizzy.example.com/"
+      assert_equal "https://fizzy.example.com/897362094/cards/579", card.web_url
+    ensure
+      ENV["FIZZY_API_BASE_URL"] = original
+    end
+  end
+
   test "card cache is per viewer and reports staleness" do
     card = Fizzy::Card.for_reference(account_id: "897362094", number: 579)
     cache = Fizzy::CardCache.for_viewer(card: card, user: users(:david))

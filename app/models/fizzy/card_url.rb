@@ -5,6 +5,10 @@ module Fizzy
   # accepted too so custom slugs keep matching. Any trailing path, query,
   # or fragment matches (e.g. a comment anchor), so comment links unfurl
   # their card like GitHub /files links do.
+  #
+  # The host comes from the configured Fizzy origin
+  # (FIZZY_API_BASE_URL): only card URLs on that host are extracted, so
+  # a self-hosted Fizzy works end to end.
   module CardUrl
     PATTERN = %r{
       https://app\.fizzy\.do/
@@ -24,7 +28,7 @@ module Fizzy
         return [] if text.blank?
 
         references = []
-        text.to_s.scan(PATTERN) do
+        text.to_s.scan(pattern) do
           match = Regexp.last_match
           reference = Reference.new(match[:account_id], match[:number].to_i)
           next if references.include?(reference)
@@ -43,7 +47,24 @@ module Fizzy
       end
 
       def card_url?(url)
-        url.to_s.match?(PATTERN)
+        url.to_s.match?(pattern)
+      end
+
+      # Extraction pattern for the configured Fizzy host. An optional
+      # port is accepted so hosts with a non-default port match; an
+      # unparseable base URL falls back to the default pattern.
+      def pattern
+        uri = URI.parse(Client.api_base_url)
+        host = uri.host.presence or raise URI::InvalidURIError
+        scheme = uri.scheme == "http" ? "http" : "https"
+        %r{
+          #{scheme}://#{Regexp.escape(host)}(?::\d+)?/
+          (?<account_id>[A-Za-z0-9_-]+)/
+          cards/
+          (?<number>\d+)\b
+        }x
+      rescue URI::InvalidURIError
+        PATTERN
       end
     end
   end

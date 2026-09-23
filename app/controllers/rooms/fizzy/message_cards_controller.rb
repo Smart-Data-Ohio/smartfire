@@ -133,7 +133,7 @@ class Rooms::Fizzy::MessageCardsController < ApplicationController
     end
 
     def post_created_reply(card)
-      url = card["url"].presence || "https://app.fizzy.do/#{@account.fizzy_account_id}/cards/#{card["number"]}"
+      url = card["url"].presence || "#{Fizzy::Client.api_base_url}/#{@account.fizzy_account_id}/cards/#{card["number"]}"
       source = "Created from #{helpers.message_link_url(@message)}:\n#{url}"
 
       reply = if @thread

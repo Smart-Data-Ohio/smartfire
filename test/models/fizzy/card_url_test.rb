@@ -63,4 +63,18 @@ class Fizzy::CardUrlTest < ActiveSupport::TestCase
     assert_not Fizzy::CardUrl.card_url?("https://app.fizzy.do/897362094/boards/1")
     assert_not Fizzy::CardUrl.card_url?("https://example.com/x")
   end
+
+  test "extracts only card URLs on the configured host" do
+    original = ENV["FIZZY_API_BASE_URL"]
+    ENV["FIZZY_API_BASE_URL"] = "https://fizzy.example.com"
+    begin
+      assert_equal [ Fizzy::CardUrl::Reference.new("897362094", 579) ],
+        Fizzy::CardUrl.extract("see https://fizzy.example.com/897362094/cards/579 please")
+      assert_empty Fizzy::CardUrl.extract("see https://app.fizzy.do/897362094/cards/579 please")
+      assert Fizzy::CardUrl.card_url?("https://fizzy.example.com/897362094/cards/579")
+      assert_not Fizzy::CardUrl.card_url?("https://app.fizzy.do/897362094/cards/579")
+    ensure
+      ENV["FIZZY_API_BASE_URL"] = original
+    end
+  end
 end

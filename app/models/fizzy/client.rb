@@ -35,7 +35,13 @@ module Fizzy
       new(token: token).identity
     end
 
-    def initialize(token:, base_url: ENV.fetch("FIZZY_API_BASE_URL", API_BASE_URL))
+    # The configured Fizzy origin. Card URL extraction and Card#web_url
+    # build from this too, so a self-hosted Fizzy works end to end.
+    def self.api_base_url
+      ENV.fetch("FIZZY_API_BASE_URL", API_BASE_URL).chomp("/")
+    end
+
+    def initialize(token:, base_url: self.class.api_base_url)
       @token = token
       @base_url = base_url.chomp("/")
     end

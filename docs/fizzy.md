@@ -98,7 +98,10 @@ approval, and completion event.
 
 No environment variables are required. All Fizzy calls use per-user
 tokens against `https://app.fizzy.do`; set `FIZZY_API_BASE_URL` only
-to point the client at a self-hosted Fizzy installation.
+to point the client at a self-hosted Fizzy installation. The same
+setting drives card URL extraction and card links: only card URLs on
+the configured host unfurl into cards, and link fallbacks point at
+that host, so a self-hosted Fizzy works end to end.
 
 ```sh
 curl -H "Authorization: Bearer $FIZZY_TOKEN" -H "Accept: application/json" \
