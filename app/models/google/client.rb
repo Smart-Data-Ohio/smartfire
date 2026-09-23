@@ -219,14 +219,14 @@ module Google
     end
 
     # Timed event windows overlapping [time_min, time_max] for meeting
-    # status, under the existing calendar.events grant (no new scope).
-    # The fields mask keeps titles, descriptions, locations, and
-    # attendee identities out of the response entirely: only each
-    # event's start/end, status, transparency, and every attendee's
-    # self/declined flags arrive, and only the busy intervals derived
-    # from them are kept.
+    # status and calendar out-of-office, under the existing calendar.events
+    # grant (no new scope). The fields mask keeps titles, descriptions,
+    # locations, and attendee identities out of the response entirely: only
+    # each event's type, start/end, status, transparency, and every
+    # attendee's self/declined flags arrive, and only the busy and OOO
+    # intervals derived from them are kept.
     # https://developers.google.com/workspace/calendar/api/v3/reference/events/list
-    MEETING_STATUS_FIELDS = "items(start,end,status,transparency,attendees(self,responseStatus))"
+    MEETING_STATUS_FIELDS = "items(eventType,start,end,status,transparency,attendees(self,responseStatus))"
 
     def list_events(time_min:, time_max:)
       api_request(:get, "/calendar/v3/calendars/primary/events", nil,

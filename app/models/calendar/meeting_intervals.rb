@@ -20,6 +20,7 @@ module Calendar
     def self.busy?(item)
       return false unless item.is_a?(Hash)
       return false if item["status"] == "cancelled"
+      return false if item["eventType"] == "outOfOffice"
       return false if item["transparency"] == "transparent"
       return false if item.dig("start", "dateTime").blank?
       return false if declined_by_self?(item)

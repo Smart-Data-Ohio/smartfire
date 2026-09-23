@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_23_161100) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_164100) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -320,6 +320,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_161100) do
     t.string "fetch_error"
     t.datetime "fetched_at"
     t.boolean "in_meeting_broadcast"
+    t.json "ooo_intervals", default: [], null: false
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
     t.index ["user_id"], name: "index_calendar_meeting_caches_on_user_id", unique: true
@@ -986,6 +987,11 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_161100) do
     t.boolean "meeting_dnd_enabled", default: false, null: false
     t.boolean "meeting_status_enabled", default: false, null: false
     t.string "name", null: false
+    t.boolean "ooo_broadcast"
+    t.boolean "ooo_calendar_enabled", default: false, null: false
+    t.string "ooo_note", limit: 140
+    t.boolean "ooo_notify_enabled", default: false, null: false
+    t.datetime "ooo_until"
     t.string "password_digest"
     t.string "presence_setting", default: "auto", null: false
     t.string "push_to_talk_key"

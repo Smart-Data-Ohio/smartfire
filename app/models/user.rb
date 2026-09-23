@@ -174,7 +174,8 @@ class User < ApplicationRecord
       # bot keys fail every capability check (403).
       Agent.where(owner_id: id).find_each(&:suspend!)
 
-      update! status: :deactivated, email_address: deactived_email_address
+      update! status: :deactivated, email_address: deactived_email_address,
+        ooo_until: nil, ooo_note: nil, ooo_broadcast: nil
     end
 
     calendar_event_ids.each { |event_id| Calendar::SyncEntryJob.perform_later(event_id, id) }

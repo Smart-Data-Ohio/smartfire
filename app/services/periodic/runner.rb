@@ -5,7 +5,8 @@ module Periodic
   # retries, event and saved-item reminders, scheduled-message dispatch,
   # poll closing, stuck room-destroy recovery, stranded agent webhook and
   # stuck GitHub/Fizzy-claim recovery, the expired presence-lease sweep,
-  # meeting-status boundary checks, board SLA nudges and stale digests,
+  # meeting-status and out-of-office boundary checks, board SLA nudges and
+  # stale digests,
   # the one-time plaintext bot-token clearing, and the daily retention
   # prune all
   # live here so production needs no extra long-running process for any
@@ -22,6 +23,7 @@ module Periodic
     BOT_TOKEN_CLEAR_INTERVAL = 24.hours.to_i
     PRESENCE_SWEEP_INTERVAL = 1.minute
     MEETING_SWEEP_INTERVAL = 1.minute
+    OOO_SWEEP_INTERVAL = 1.minute
     BOARD_SLA_SWEEP_INTERVAL = 5.minutes
     BOARD_DIGEST_SWEEP_INTERVAL = 1.hour
     STREAM_SWEEP_INTERVAL = 30.seconds
@@ -50,6 +52,7 @@ module Periodic
         Task.new("retention prune", retention_interval, -> { Retention::PruneJob.perform_later }),
         Task.new("presence leases", PRESENCE_SWEEP_INTERVAL, -> { WorkspacePresenceLease.prune }),
         Task.new("meeting status", MEETING_SWEEP_INTERVAL, -> { Calendar::MeetingDispatcher.dispatch_due! }),
+        Task.new("out of office", OOO_SWEEP_INTERVAL, -> { Calendar::OooDispatcher.dispatch_due! }),
         Task.new("board sla nudges", BOARD_SLA_SWEEP_INTERVAL, -> { BoardAutomations::SlaDispatcher.dispatch_due! }),
         Task.new("board stale digests", BOARD_DIGEST_SWEEP_INTERVAL, -> { BoardAutomations::DigestDispatcher.dispatch_due! }),
         Task.new("streaming messages", STREAM_SWEEP_INTERVAL, -> { Message.finalize_overdue_streams! })
