@@ -72,8 +72,10 @@ remembered per person in the browser. Nobody else hears a difference.
 ## Host moderation
 
 Voice rooms have no host role, so only administrators moderate: they can
-server-mute any member, which revokes publish until the member is unmuted, or
-disconnect a member from the call without touching their membership. Muting
+server-mute any member, including another administrator, which revokes
+publish until the member is unmuted, or disconnect a member from the call
+without touching their membership. A server-muted administrator can unmute
+themselves. Muting
 and unmuting rejoin the affected browser with a fresh token, exactly like a
 stage publish-boundary change; disconnecting sends no rejoin, so the member
 stays out until they join again. Enforcement is server-side through grants —

@@ -76,7 +76,10 @@ still loses publish on the next check. Hosts can also disconnect someone from
 the call, which revokes their grants without sending a rejoin, so they stay
 out until they join again. Neither action touches the membership; both end the
 member's live stream, which cannot outlive the call. A host cannot moderate
-their own session.
+their own session, and hosts cannot moderate administrators at all —
+muting, unmuting, or disconnecting one answers 403. Administrators
+moderate anyone, including each other, and a server-muted administrator
+unmutes themselves from their own roster row.
 
 ## Hand raising
 

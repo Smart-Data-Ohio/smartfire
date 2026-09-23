@@ -153,6 +153,62 @@ class Rooms::CallModerationControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to room_url(@room)
   end
 
+  test "a host cannot mute, unmute, or disconnect an administrator" do
+    admin = @room.memberships.find_by!(user: users(:david))
+    admin.change_stage_role!("speaker")
+    sign_in :jz
+
+    post room_call_moderation_mute_url(@room, admin)
+    assert_response :forbidden
+    assert_not_predicate admin.reload, :server_muted?
+
+    admin.update!(server_muted_at: Time.current)
+
+    delete room_call_moderation_unmute_url(@room, admin)
+    assert_response :forbidden
+    assert_predicate admin.reload, :server_muted?
+
+    post room_call_moderation_disconnect_url(@room, admin)
+    assert_response :forbidden
+  end
+
+  test "an administrator moderates another administrator" do
+    users(:kevin).update!(role: :administrator)
+    sign_in :david
+
+    post room_call_moderation_mute_url(@room, @speaker)
+    assert_redirected_to room_url(@room)
+    assert_predicate @speaker.reload, :server_muted?
+
+    delete room_call_moderation_unmute_url(@room, @speaker)
+    assert_redirected_to room_url(@room)
+    assert_not_predicate @speaker.reload, :server_muted?
+
+    post room_call_moderation_disconnect_url(@room, @speaker)
+    assert_redirected_to room_url(@room)
+  end
+
+  test "a server-muted administrator unmutes themselves" do
+    admin = @room.memberships.find_by!(user: users(:david))
+    admin.update!(server_muted_at: Time.current)
+    sign_in :david
+
+    delete room_call_moderation_unmute_url(@room, admin)
+
+    assert_redirected_to room_url(@room)
+    assert_not_predicate admin.reload, :server_muted?
+  end
+
+  test "a server-muted host cannot unmute themselves" do
+    @host.update!(server_muted_at: Time.current)
+    sign_in :jz
+
+    delete room_call_moderation_unmute_url(@room, @host)
+
+    assert_response :unprocessable_entity
+    assert_predicate @host.reload, :server_muted?
+  end
+
   test "speakers and listeners cannot moderate" do
     sign_in :kevin
     post room_call_moderation_mute_url(@room, @host)

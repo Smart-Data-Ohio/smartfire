@@ -6,8 +6,9 @@ class Rooms::CallModerationController < ApplicationController
   before_action :ensure_call_room
   before_action :ensure_can_moderate
 
-  # Hosts and administrators server-mute any member of a stage or voice room.
-  # The mute revokes the member's grants in the same transaction (see
+  # Hosts and administrators server-mute members of a stage or voice room,
+  # except that hosts cannot moderate administrators. The mute revokes the
+  # member's grants in the same transaction (see
   # Membership), so the gateway removes them and their client rejoins
   # subscribe-only until they are unmuted; the token is the enforcement, and
   # the gateway's per-second grant check is the backstop for a grant that
@@ -80,11 +81,19 @@ class Rooms::CallModerationController < ApplicationController
       head :not_found unless @room.stage? || @room.voice?
     end
 
+    # Moderation rank: hosts cannot touch administrators, while
+    # administrators moderate anyone. A server-muted administrator can
+    # always unmute themselves; every other self-moderation is rejected.
     def find_target
       target = @room.memberships.find_by(id: params[:membership_id])
       return head :not_found unless target
 
-      if target.id == @membership.id
+      if target.user.administrator? && !Current.user.administrator?
+        render plain: "Only administrators can moderate an administrator", status: :forbidden
+        return nil
+      end
+
+      if target.id == @membership.id && !(action_name == "unmute" && Current.user.administrator?)
         render plain: "You cannot moderate your own call session", status: :unprocessable_entity
         return nil
       end

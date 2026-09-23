@@ -25,8 +25,9 @@
               <%= button_to "Move to audience", room_stage_role_path(room, member.id), method: :patch,
                     params: { stage_role: "listener" }, class: "btn btn--plain stage-panel__action",
                     disabled: sole_host, title: ("The stage needs at least one host" if sole_host) %>
-              <%# Moderating your own session is a 422, so your own row keeps only the role controls. %>
-              <% if member != viewer %>
+              <%# Hosts cannot moderate administrators; a muted administrator %>
+              <%# still unmutes themselves from their own row. %>
+              <% if member != viewer && (viewer.user.administrator? || !member.user.administrator?) %>
                 <% if member.server_muted? %>
                   <%= button_to "Unmute", room_call_moderation_unmute_path(room, member.id), method: :delete,
                         class: "btn btn--plain stage-panel__action" %>
@@ -35,6 +36,9 @@
                         class: "btn btn--plain stage-panel__action" %>
                 <% end %>
                 <%= button_to "Disconnect", room_call_moderation_disconnect_path(room, member.id), method: :post,
+                      class: "btn btn--plain stage-panel__action" %>
+              <% elsif member == viewer && viewer.user.administrator? && member.server_muted? %>
+                <%= button_to "Unmute", room_call_moderation_unmute_path(room, member.id), method: :delete,
                       class: "btn btn--plain stage-panel__action" %>
               <% end %>
             </span>
@@ -63,7 +67,7 @@
                       params: { stage_role: "listener" }, class: "btn btn--plain stage-panel__action" %>
                 <%= button_to "Make host", room_stage_role_path(room, member.id), method: :patch,
                       params: { stage_role: "host" }, class: "btn btn--plain stage-panel__action" %>
-                <% if member != viewer %>
+                <% if member != viewer && (viewer.user.administrator? || !member.user.administrator?) %>
                   <% if member.server_muted? %>
                     <%= button_to "Unmute", room_call_moderation_unmute_path(room, member.id), method: :delete,
                           class: "btn btn--plain stage-panel__action" %>
@@ -72,6 +76,9 @@
                           class: "btn btn--plain stage-panel__action" %>
                   <% end %>
                   <%= button_to "Disconnect", room_call_moderation_disconnect_path(room, member.id), method: :post,
+                        class: "btn btn--plain stage-panel__action" %>
+                <% elsif member == viewer && viewer.user.administrator? && member.server_muted? %>
+                  <%= button_to "Unmute", room_call_moderation_unmute_path(room, member.id), method: :delete,
                         class: "btn btn--plain stage-panel__action" %>
                 <% end %>
               </span>
@@ -114,8 +121,11 @@
                 <% end %>
                 <%= button_to "Make host", room_stage_role_path(room, member.id), method: :patch,
                       params: { stage_role: "host" }, class: "btn btn--plain stage-panel__action" %>
-                <% if member != viewer %>
+                <% if member != viewer && (viewer.user.administrator? || !member.user.administrator?) %>
                   <%= button_to "Disconnect", room_call_moderation_disconnect_path(room, member.id), method: :post,
+                        class: "btn btn--plain stage-panel__action" %>
+                <% elsif member == viewer && viewer.user.administrator? && member.server_muted? %>
+                  <%= button_to "Unmute", room_call_moderation_unmute_path(room, member.id), method: :delete,
                         class: "btn btn--plain stage-panel__action" %>
                 <% end %>
               </span>
