@@ -78,19 +78,39 @@ class Rooms::DirectsControllerTest < ActionDispatch::IntegrationTest
     assert_capped_id_lists queries
   end
 
-  test "a member can rename the group and everyone sees the system message" do
+  test "a member can rename the group and everyone sees the compact system note" do
     room = create_group_dm!([ users(:david), users(:jason), users(:kevin) ])
 
     patch rooms_direct_url(room), params: { room: { name: "Weekend Plans" } }
 
     assert_redirected_to edit_rooms_direct_path(room)
     assert_equal "Weekend Plans", room.reload.name
-    assert_equal "David renamed the group to Weekend Plans", room.messages.where(system: true).last.plain_text_body
+    note = room.messages.where(system_note: true).last
+    assert_equal "renamed the group to Weekend Plans", note.plain_text_body
 
     sign_in :jason
     get room_url(room)
     assert_response :success
-    assert_match(/David renamed the group to Weekend Plans/, @response.body)
+    assert_select "##{dom_id(note)}[role='note'].message--system-note", 1 do
+      assert_select ".message__system-note-author", text: users(:david).name
+      assert_select ".message__system-note-text", text: /renamed the group to Weekend Plans/
+    end
+  end
+
+  test "group DM notes cannot be edited or deleted" do
+    room = create_group_dm!([ users(:david), users(:jason), users(:kevin) ])
+    room.rename("Weekend Plans", renamed_by: users(:david))
+    note = room.messages.where(system_note: true).last
+
+    assert_no_changes -> { note.reload.plain_text_body } do
+      patch room_message_url(room, note, format: :json), params: { message: { markdown_source: "Edited" } }
+      assert_response :forbidden
+    end
+
+    assert_no_difference -> { Message.count } do
+      delete room_message_url(room, note, format: :turbo_stream)
+      assert_response :forbidden
+    end
   end
 
   test "rename is rejected for one-to-one DMs and by non-members" do
@@ -112,7 +132,7 @@ class Rooms::DirectsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to edit_rooms_direct_path(room)
     assert room.reload.user_ids.include?(users(:jz).id)
-    assert_equal "David added JZ to the group", room.messages.where(system: true).last.plain_text_body
+    assert_equal "added JZ to the group", room.messages.where(system_note: true).last.plain_text_body
   end
 
   test "adding members rejects one-to-one DMs, the overflow, and non-members" do
@@ -155,7 +175,7 @@ class Rooms::DirectsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to root_url
     assert_not room.reload.user_ids.include?(users(:david).id)
-    assert_equal "David left the group", room.messages.where(system: true).last.plain_text_body
+    assert_equal "left the group", room.messages.where(system_note: true).last.plain_text_body
 
     # The leaver lost access while the others keep the room.
     get room_url(room)

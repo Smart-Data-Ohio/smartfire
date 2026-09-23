@@ -160,21 +160,21 @@ class Rooms::DirectTest < ActiveSupport::TestCase
     assert_not group.user_ids.include?(overflow.id)
   end
 
-  test "membership changes post system messages without activity items" do
+  test "membership changes post system notes without activity items" do
     group = Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:kevin) ])
 
-    assert_difference -> { group.messages.where(system: true).count }, +1 do
+    assert_difference -> { group.messages.where(system_note: true).count }, +1 do
       assert_no_difference -> { ActivityItem.count } do
         group.rename("Weekend Plans", renamed_by: users(:david))
       end
     end
-    assert_equal "David renamed the group to Weekend Plans", group.messages.where(system: true).last.plain_text_body
+    assert_equal "renamed the group to Weekend Plans", group.messages.where(system_note: true).last.plain_text_body
 
     group.add_members([ users(:jz) ], added_by: users(:david))
-    assert_equal "David added JZ to the group", group.messages.where(system: true).last.plain_text_body
+    assert_equal "added JZ to the group", group.messages.where(system_note: true).last.plain_text_body
 
     group.leave(users(:jz))
-    assert_equal "JZ left the group", group.messages.where(system: true).last.plain_text_body
+    assert_equal "left the group", group.messages.where(system_note: true).last.plain_text_body
   end
 
   test "rename notes mark nobody unread and enqueue no push" do
@@ -203,7 +203,7 @@ class Rooms::DirectTest < ActiveSupport::TestCase
 
     group.rename("Zymurgy Plans", renamed_by: users(:david))
 
-    assert_predicate group.messages.where(system: true).last, :present?
+    assert_predicate group.messages.where(system_note: true).last, :present?
     assert_empty Message.search("Zymurgy")
   end
 
@@ -224,14 +224,14 @@ class Rooms::DirectTest < ActiveSupport::TestCase
     group.rename("Second Name", renamed_by: users(:david))
 
     assert_equal "Second Name", group.reload.name
-    assert_equal 1, group.messages.where(system: true).count
+    assert_equal 1, group.messages.where(system_note: true).count
 
     travel 61.seconds do
       group.rename("Third Name", renamed_by: users(:david))
     end
 
     assert_equal "Third Name", group.reload.name
-    assert_equal 2, group.messages.where(system: true).count
+    assert_equal 2, group.messages.where(system_note: true).count
   end
 
   test "adding members broadcasts a sidebar row to newcomers and refreshes the rest" do

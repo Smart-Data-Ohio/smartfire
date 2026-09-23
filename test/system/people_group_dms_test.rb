@@ -178,7 +178,7 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
     assert_current_path room_path(room)
   end
 
-  test "group members rename, add, and leave with system messages in the timeline" do
+  test "group members rename, add, and leave with system notes in the timeline" do
     room = Current.set(user: users(:david)) do
       Rooms::Direct.find_or_create_for([ users(:david), users(:jason), users(:kevin) ])
     end
@@ -195,6 +195,8 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
 
     visit room_path(room)
     assert_selector ".room--current", text: "Weekend Plans"
+    assert_selector ".message__system-note", text: "renamed the group to Weekend Plans"
+    assert_selector ".message__system-note", text: "added JZ to the group"
     assert_text "David renamed the group to Weekend Plans"
     assert_text "David added JZ to the group"
 

@@ -1,8 +1,0 @@
-<%= message_tag message do %>
-  <h2 class="message__day-separator"><%= local_datetime_tag message.created_at, style: :date %></h2>
-
-  <div class="message__system center txt-align-center">
-    <span><%= message.plain_text_body %></span>
-    <span class="message__system-time"><%= message_timestamp(message, class: "message__timestamp") %></span>
-  </div>
-<% end %>

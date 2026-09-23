@@ -479,7 +479,6 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_025153) do
     t.datetime "reply_target_deleted_at"
     t.integer "reply_to_message_id"
     t.integer "room_id", null: false
-    t.boolean "system", default: false, null: false
     t.boolean "system_note", default: false, null: false
     t.integer "thread_id"
     t.datetime "updated_at", null: false

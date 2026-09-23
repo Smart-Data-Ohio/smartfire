@@ -102,7 +102,7 @@ class Rooms::Direct < Room
 
     transaction do
       memberships.grant_to(fresh)
-      post_system_message("#{added_by.name} added #{fresh.map(&:name).to_sentence} to the group", creator: added_by)
+      post_system_note("added #{fresh.map(&:name).to_sentence} to the group", creator: added_by)
     end
     broadcast_directory_updates!(newcomers: fresh)
 
@@ -123,9 +123,9 @@ class Rooms::Direct < Room
       update!(name: clean.presence)
       unless recent_system_note?
         if clean.present?
-          post_system_message("#{renamed_by.name} renamed the group to #{clean}", creator: renamed_by)
+          post_system_note("renamed the group to #{clean}", creator: renamed_by)
         else
-          post_system_message("#{renamed_by.name} cleared the group name", creator: renamed_by)
+          post_system_note("cleared the group name", creator: renamed_by)
         end
       end
     end
@@ -140,7 +140,7 @@ class Rooms::Direct < Room
       memberships.find_by!(user_id: user.id).destroy!
 
       if memberships.exists?
-        post_system_message("#{user.name} left the group", creator: user)
+        post_system_note("left the group", creator: user)
         :left
       else
         begin_destroy!
@@ -168,7 +168,7 @@ class Rooms::Direct < Room
 
   private
     def recent_system_note?
-      messages.where(system: true).where(created_at: RENAME_NOTE_WINDOW.ago..).exists?
+      messages.where(system_note: true).where(created_at: RENAME_NOTE_WINDOW.ago..).exists?
     end
 
     # Re-renders every remaining member's sidebar row and room header with
@@ -198,11 +198,13 @@ class Rooms::Direct < Room
       end
     end
 
-    # System messages are plain Action Text, never Markdown: member names
-    # render literally instead of being parsed as formatting. The broadcast
-    # appends the note to open timelines; the quiet contract on Message
-    # keeps it out of unread, push, agents, inbox, and search.
-    def post_system_message(text, creator:)
-      messages.create!(creator: creator, system: true, body: text).tap(&:broadcast_create)
+    # Notes are quiet system notes (see the contract on Message): they
+    # render as one compact centered line with the actor's name, broadcast
+    # into open timelines, and skip unread, push, agents, inbox, and
+    # search. The note text only — the presentation owns the actor name.
+    # Plain Action Text, never Markdown: member and group names render
+    # literally instead of being parsed as formatting.
+    def post_system_note(text, creator:)
+      messages.create!(creator: creator, system_note: true, body: text).tap(&:broadcast_create)
     end
 end
