@@ -57,7 +57,14 @@ class Accounts::Bots::GrantsController < ApplicationController
     end
 
     def set_agent
-      @agent = @bot.agent || @bot.create_agent!(kind: :workspace, owner: Current.user)
+      @agent = @bot.agent
+      return if @agent
+
+      # A legacy bot gains its agent row on first visit; that creation is
+      # audited like one from the bots page.
+      @agent = @bot.create_agent!(kind: :workspace, owner: Current.user)
+      AuditLog.record!(action: "agent.create", target: @agent,
+        changes: { name: @bot.name, kind: "workspace" })
     end
 
     def ordered_grants

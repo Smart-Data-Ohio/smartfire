@@ -23,6 +23,32 @@ class AuditLog::AgentsAuditTest < ActionDispatch::IntegrationTest
     assert_no_match key, entry.details.to_json
   end
 
+  test "visiting credentials for a legacy bot records its agent creation" do
+    legacy = User.create_bot!(name: "Legacy Bot")
+    assert_nil legacy.agent
+
+    assert_difference -> { AuditLog.where(action: "agent.create").count }, +1 do
+      get account_bot_credentials_url(legacy)
+    end
+
+    assert_response :success
+    entry = AuditLog.where(action: "agent.create").last
+    assert_equal users(:david).id, entry.actor_id
+    assert_equal legacy.reload.agent.id, entry.target_id
+  end
+
+  test "visiting grants for a legacy bot records its agent creation" do
+    legacy = User.create_bot!(name: "Legacy Bot")
+    assert_nil legacy.agent
+
+    assert_difference -> { AuditLog.where(action: "agent.create").count }, +1 do
+      get account_bot_grants_url(legacy)
+    end
+
+    assert_response :success
+    assert_equal legacy.reload.agent.id, AuditLog.where(action: "agent.create").last.target_id
+  end
+
   test "agent edit is recorded with bot and agent changes" do
     assert_difference -> { AuditLog.where(action: "agent.update").count }, +1 do
       patch account_bot_url(@bot), params: {

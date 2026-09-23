@@ -226,6 +226,34 @@ class Agents::DmsControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
+  test "creating a DM room is recorded with the agent as actor" do
+    assert_difference -> { AuditLog.where(action: "room.create").count }, +1 do
+      post agents_dms_url,
+        params: { user_id: users(:david).id, message: { markdown_source: "Hello owner" } }.to_json,
+        headers: bearer_headers
+    end
+
+    assert_response :created
+    room = Room.find(response.parsed_body.dig("room", "id"))
+    entry = AuditLog.where(action: "room.create").last
+    assert_equal @agent.id, entry.actor_id
+    assert_equal "Agent Bender Bot", entry.actor_label
+    assert_equal room.id, entry.target_id
+  end
+
+  test "posting into an existing DM writes no room row" do
+    dm = rooms(:bender_and_kevin)
+    dm.messages.create!(creator: users(:kevin), body: "Hey bot", client_message_id: "dm-audit-prior-kevin")
+
+    assert_no_difference -> { AuditLog.where(action: "room.create").count } do
+      post agents_dms_url,
+        params: { user_id: users(:kevin).id, message: { markdown_source: "Right back at you" } }.to_json,
+        headers: bearer_headers
+    end
+
+    assert_response :created
+  end
+
   private
     def bearer_headers
       { "Authorization" => "Bearer #{@secret}", "Content-Type" => "application/json" }
