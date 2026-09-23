@@ -15,7 +15,7 @@
       </div>
       <% if opengraph_embed.url %>
         <div class="og-embed__image">
-          <%= tag.img src: opengraph_embed.url, class: "image center", alt: "" %>
+          <%= tag.img src: Embeds::ImageProxy.signed_path(opengraph_embed.url), class: "image center", alt: "" %>
         </div>
       <% end %>
     </div>

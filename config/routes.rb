@@ -229,6 +229,8 @@ Rails.application.routes.draw do
 
   resource :unfurl_link, only: :create
 
+  get "embeds/image/:signed", to: "embeds/images#show", as: :embed_image
+
   namespace :github do
     post "webhooks", to: "webhooks#create"
     resource :connection, only: %i[ create destroy ], controller: "connections"
