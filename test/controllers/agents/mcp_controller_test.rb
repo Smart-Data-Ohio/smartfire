@@ -39,6 +39,7 @@ class Agents::McpControllerTest < ActionDispatch::IntegrationTest
       list_board_posts create_board_post update_board_post set_result
       list_work update_work request_approval get_approval get_context open_dm
       pin_message unpin_message
+      register_slash_command unregister_slash_command create_poll get_poll
     ], names
 
     first.dig("result", "tools").each do |tool|

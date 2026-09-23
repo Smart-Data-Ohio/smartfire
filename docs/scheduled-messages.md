@@ -1,0 +1,33 @@
+# Scheduled messages
+
+"Schedule send" next to the composer's send button schedules the
+current draft — in channels and in threads, including replies — for a
+preset (in 1 hour, tomorrow 9am, next Monday 9am) or a custom time.
+Times resolve in the author's time zone in the browser and submit as
+UTC. Scheduling consumes the draft like sending does.
+
+The Scheduled view (sidebar) lists upcoming drafts with their channel,
+thread, and send time, and past ones (sent or dropped). Upcoming drafts
+can be edited (text and time), sent immediately, or cancelled.
+Cancelling deletes the draft; sent and dropped rows stay as history,
+with sent rows linking to the posted message.
+
+## Sending
+
+The periodic runner sends due rows as the author: channel drafts post
+as channel messages, thread drafts as thread replies, with the same
+broadcasts, unread marks, and agent deliveries as typed messages.
+Attachments cannot be scheduled — only text (and a reply target).
+
+Each row sends exactly once: the dispatcher claims it through a
+conditional timestamp update before posting, so a second run or runner
+cannot double-send, and re-checks the send time after claiming, so a
+draft moved after selection fires at its new time instead. A claim left
+behind by a crashed runner goes stale after five minutes and becomes
+sendable again.
+
+Access is re-checked at send time. If the author lost access to the
+room, the draft is dropped — never leaked to non-members — and the
+author gets a "Scheduled message not sent" inbox item pointing at the
+Scheduled view. A locked thread is transient, so its drafts wait for
+the next tick instead of dropping.

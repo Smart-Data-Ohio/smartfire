@@ -72,7 +72,7 @@ Done for the first slice when a personal agent and a workspace agent can indepen
 
 Approval requests are live: an agent asks for human authority with `POST /agents/approvals`, the owner and administrators decide from the activity inbox, and the decision returns through event polling and webhooks. See [AI agents](docs/agents.md#approvals).
 
-Agent DMs, conversation context, and an MCP server are live: an agent opens 1:1 DMs with its owner, prior contacts, or anyone with the `dm_anyone` grant, loads trigger context with `GET /agents/context`, and serves eighteen tools over `POST /agents/mcp` for Claude, Cursor, Codex, and similar clients. See [AI agents](docs/agents.md#agent-dms) and [Smartfire MCP server](docs/agents-mcp.md).
+Agent DMs, conversation context, and an MCP server are live: an agent opens 1:1 DMs with its owner, prior contacts, or anyone with the `dm_anyone` grant, loads trigger context with `GET /agents/context`, and serves twenty-two tools over `POST /agents/mcp` for Claude, Cursor, Codex, and similar clients. See [AI agents](docs/agents.md#agent-dms) and [Smartfire MCP server](docs/agents-mcp.md).
 
 ### 4. GitHub work inside conversations
 

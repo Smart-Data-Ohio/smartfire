@@ -39,8 +39,11 @@ endpoints, per credential per minute:
 | `poll_events`, `ack_events` | event polling | 120 |
 | `get_approval` | approval reads | 120 |
 | `get_context` | context reads | 120 |
+| `get_poll` | poll reads | 120 |
 | `post_message`, `request_approval`, `open_dm` | posting / approvals / DMs | 60 |
 | `pin_message`, `unpin_message` | pinning / unpinning | 60 |
+| `register_slash_command`, `unregister_slash_command` | command registration | 60 |
+| `create_poll` | poll creation | 60 |
 | `create_board_post` | board post creation | 30 |
 
 The remaining tools have no throttle, like their REST counterparts.
@@ -106,6 +109,8 @@ curl https://smartfire.example.com/agents/mcp \
 | `get_context` | `read_messages` | `GET /agents/context` |
 | `open_dm` | `post_messages` + owner, prior contact, or `dm_anyone` | `POST /agents/dms` |
 | `pin_message`, `unpin_message` | `post_messages` in the room | `POST`/`DELETE /agents/messages/:id/pin` |
+| `register_slash_command`, `unregister_slash_command` | `post_messages` in the room | `POST`/`DELETE /rooms/:id/agents/slash_commands` |
+| `create_poll`, `get_poll` | `post_messages` in the room | `POST`/`GET /rooms/:id/agents/polls` |
 
 `tools/list` always returns the full set; per-tool enforcement happens at
 call time, so a client can show every tool and let denials explain which

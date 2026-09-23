@@ -39,10 +39,11 @@ module Agents
       )
       return posted unless posted.ok?
 
+      boolean = ActiveModel::Type::Boolean.new
       poll = Poll.create_for_message!(
         message: posted.payload, labels: labels,
-        multiple: ActiveModel::Type::Boolean.new.cast(multiple),
-        anonymous: ActiveModel::Type::Boolean.new.cast(anonymous),
+        multiple: boolean.cast(multiple) || false,
+        anonymous: boolean.cast(anonymous) || false,
         closes_at: closes_at
       )
 

@@ -29,6 +29,7 @@ class Room < ApplicationRecord
   has_many :agent_events, dependent: :nullify
   has_many :agent_approvals, dependent: :nullify
   has_many :agent_slash_commands, dependent: :delete_all
+  has_many :scheduled_messages, dependent: :delete_all
 
   belongs_to :creator, class_name: "User", default: -> { Current.user }
 

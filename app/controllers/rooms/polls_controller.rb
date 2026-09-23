@@ -79,7 +79,7 @@ class Rooms::PollsController < ApplicationController
     end
 
     def boolean_param(value)
-      ActiveModel::Type::Boolean.new.cast(value)
+      ActiveModel::Type::Boolean.new.cast(value) || false
     end
 
     # The builder posts a zone-less datetime-local, interpreted in the
