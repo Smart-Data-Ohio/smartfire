@@ -184,7 +184,7 @@ jobs:
         run: |
           bin/rails db:setup
           shopt -s globstar
-          mapfile -t files < <(printf '%s\n' test/system/**/*_test.rb | grep -v -E "/(huddles_test|stage_test|streaming_test)\\.rb$")
+          mapfile -t files < <(printf '%s\n' test/system/**/*_test.rb | grep -v -E "/(huddles_test|stage_test|streaming_test|message_list_a11y_test)\\.rb$")
           PARALLEL_WORKERS=4 bin/rails test "${files[@]}"
 
       - name: Run LiveKit-backed browser tests
@@ -206,7 +206,7 @@ jobs:
               LIVEKIT_SYSTEM_TESTS=1 PARALLEL_WORKERS=1 bin/rails test test/system/huddles_test.rb
               ;;
             *)
-              LIVEKIT_SYSTEM_TESTS=1 PARALLEL_WORKERS=1 bin/rails test test/system/stage_test.rb test/system/streaming_test.rb
+              LIVEKIT_SYSTEM_TESTS=1 PARALLEL_WORKERS=1 bin/rails test test/system/stage_test.rb test/system/streaming_test.rb test/system/message_list_a11y_test.rb
               ;;
           esac
 
