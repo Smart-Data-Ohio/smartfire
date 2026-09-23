@@ -31,6 +31,18 @@
           class: "input" %>
   </div>
 
+  <% if (meet_link = safe_meet_link(event)) %>
+    <p class="room-events__hint">Google Meet: <%= link_to meet_link, meet_link %></p>
+  <% else %>
+    <div>
+      <label>
+        <%= form.check_box :meet_link_requested %>
+        Add a Google Meet link
+      </label>
+      <p class="room-events__hint">Needs the organizer's connected Google account. The link appears on the event once Google creates it.</p>
+    </div>
+  <% end %>
+
   <div class="room-events__time-fields">
     <div>
       <%= form.label :starts_at, "Starts" %>

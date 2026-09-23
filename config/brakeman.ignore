@@ -56,6 +56,29 @@
         601
       ],
       "note": "False positive: redirect target host is hard-coded to accounts.google.com in Google::Client.authorize_url; all query params are server-generated (drive_requested? only flips a boolean), so no user input can steer the destination."
+    },
+    {
+      "warning_type": "Redirect",
+      "warning_code": 18,
+      "fingerprint": "e51dbf408db2c7ed15a4e2e1fa899ba2316d1212dc0e3223ce9c36a19a955bca",
+      "check_name": "Redirect",
+      "message": "Possible unprotected redirect",
+      "file": "app/controllers/github/app_connections_controller.rb",
+      "line": 13,
+      "link": "https://brakemanscanner.org/docs/warning_types/redirect/",
+      "code": "redirect_to(Github::App.authorize_url(:redirect_uri => github_app_callback_url, :state => state_verifier.generate(SecureRandom.hex(16))), :allow_other_host => true)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Github::AppConnectionsController",
+        "method": "connect"
+      },
+      "user_input": "Github::App.authorize_url(:redirect_uri => github_app_callback_url, :state => state_verifier.generate(SecureRandom.hex(16)))",
+      "confidence": "Weak",
+      "cwe_id": [
+        601
+      ],
+      "note": "False positive: redirect target host is hard-coded to github.com in Github::App.authorize_url; all query params are server-generated, so no user input can steer the destination."
     }
   ],
   "brakeman_version": "7.1.0"

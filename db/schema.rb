@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_23_025153) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_034328) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -20,6 +20,15 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_025153) do
     t.integer "singleton_guard", default: 0, null: false
     t.datetime "updated_at", null: false
     t.index ["singleton_guard"], name: "index_accounts_on_singleton_guard", unique: true
+  end
+
+  create_table "action_mailbox_inbound_emails", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "message_checksum", null: false
+    t.string "message_id", null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id", "message_checksum"], name: "index_action_mailbox_inbound_emails_uniqueness", unique: true
   end
 
   create_table "action_text_rich_texts", force: :cascade do |t|
@@ -193,6 +202,21 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_025153) do
     t.index ["message_id"], name: "index_boosts_on_message_id"
   end
 
+  create_table "calendar_push_channels", force: :cascade do |t|
+    t.string "channel_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "expires_at"
+    t.string "last_error"
+    t.bigint "last_message_number", default: 0, null: false
+    t.datetime "last_notification_at"
+    t.string "resource_id"
+    t.string "token_digest", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["channel_id"], name: "index_calendar_push_channels_on_channel_id", unique: true
+    t.index ["user_id"], name: "index_calendar_push_channels_on_user_id", unique: true
+  end
+
   create_table "channel_threads", force: :cascade do |t|
     t.integer "auto_archive_after_minutes", default: 4320, null: false
     t.datetime "closed_at"
@@ -273,6 +297,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_025153) do
     t.datetime "created_at", null: false
     t.text "description"
     t.datetime "ends_at"
+    t.string "meet_link"
+    t.boolean "meet_link_requested", default: false, null: false
     t.integer "organizer_id", null: false
     t.string "recurrence_rule"
     t.date "recurrence_until"
@@ -342,6 +368,10 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_025153) do
     t.datetime "created_at", null: false
     t.string "disconnected_reason"
     t.string "github_login", null: false
+    t.string "last_error"
+    t.string "refresh_token"
+    t.datetime "token_expires_at"
+    t.string "token_source", default: "pat", null: false
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
     t.index ["user_id"], name: "index_github_connected_accounts_on_user_id", unique: true
@@ -607,10 +637,12 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_025153) do
     t.datetime "deleted_at"
     t.datetime "destroy_enqueued_at"
     t.string "icon_name"
+    t.string "inbound_email_token"
     t.string "name"
     t.datetime "pins_changed_at"
     t.string "type", null: false
     t.datetime "updated_at", null: false
+    t.index ["inbound_email_token"], name: "index_rooms_on_inbound_email_token", unique: true
   end
 
   create_table "saved_items", force: :cascade do |t|
@@ -825,6 +857,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_025153) do
   add_foreign_key "activity_items", "users", on_delete: :cascade
   add_foreign_key "bans", "users"
   add_foreign_key "boosts", "messages"
+  add_foreign_key "calendar_push_channels", "users"
   add_foreign_key "channel_threads", "messages", column: "parent_message_id", on_delete: :nullify
   add_foreign_key "channel_threads", "rooms"
   add_foreign_key "channel_threads", "users", column: "creator_id"
