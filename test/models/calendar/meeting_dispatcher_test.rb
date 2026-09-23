@@ -25,6 +25,14 @@ class Calendar::MeetingDispatcherTest < ActiveSupport::TestCase
     end
   end
 
+  test "a steady-state tick issues no claim write" do
+    Calendar::MeetingCache.create!(user: @user, fetched_at: Time.current,
+      busy_intervals: [ [ 5.minutes.ago.iso8601, 55.minutes.from_now.iso8601 ] ])
+    Calendar::MeetingDispatcher.dispatch_due!
+
+    assert_empty update_statements { Calendar::MeetingDispatcher.dispatch_due! }
+  end
+
   test "a meeting end broadcasts the badge" do
     cache = Calendar::MeetingCache.create!(user: @user, fetched_at: Time.current,
       busy_intervals: [ [ 55.minutes.ago.iso8601, 5.minutes.ago.iso8601 ] ])
@@ -101,4 +109,18 @@ class Calendar::MeetingDispatcherTest < ActiveSupport::TestCase
       Calendar::MeetingDispatcher.dispatch_due!
     end
   end
+
+  private
+    # Every UPDATE statement the block issues, even a no-op one: under the
+    # immediate transaction mode each still takes the database write lock.
+    def update_statements(&block)
+      statements = []
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        statements << payload[:sql] if payload[:sql].to_s.start_with?("UPDATE")
+      end
+      block.call
+      statements
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+    end
 end

@@ -22,7 +22,14 @@ module Calendar
 
           next if cache.nil?
 
-          flips << user if cache.claim_broadcast!(cache.in_meeting?(now:))
+          # The stored state already matches: skip the claim UPDATE, which
+          # would take the write lock for nothing. A racing tick that
+          # flips underneath still loses the conditional UPDATE below,
+          # so each boundary announces exactly once.
+          active = cache.in_meeting?(now:)
+          next if cache.in_meeting_broadcast == active
+
+          flips << user if cache.claim_broadcast!(active)
         rescue => error
           Rails.logger.error "Calendar::MeetingDispatcher failed for user #{user.id}: #{error.class}"
         end

@@ -33,7 +33,14 @@ module Calendar
           # seeded yet.
           next if user.ooo_until.nil? && cache.nil? && !user.ooo_broadcast?
 
-          flips << user if user.claim_ooo_broadcast!(user.out_of_office?(now:), now:)
+          # The stored state already matches: skip the claim UPDATE, which
+          # would take the write lock for nothing. Settling to false with
+          # an expired manual end still on the row runs the claim, since
+          # only it clears those columns.
+          active = user.out_of_office?(now:)
+          next if user.ooo_broadcast? == active && (active || user.ooo_until.nil?)
+
+          flips << user if user.claim_ooo_broadcast!(active, now:)
         rescue => error
           Rails.logger.error "Calendar::OooDispatcher failed for user #{user.id}: #{error.class}"
         end

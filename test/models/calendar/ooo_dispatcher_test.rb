@@ -26,6 +26,13 @@ class Calendar::OooDispatcherTest < ActiveSupport::TestCase
     end
   end
 
+  test "a steady-state tick issues no claim write" do
+    @user.update!(ooo_until: 1.hour.from_now)
+    Calendar::OooDispatcher.dispatch_due!
+
+    assert_empty update_statements { Calendar::OooDispatcher.dispatch_due! }
+  end
+
   test "an OOO end broadcasts and clears the manual columns" do
     @user.update!(ooo_until: 1.hour.from_now, ooo_note: "Back soon")
     @user.reload.claim_ooo_broadcast!(true)
@@ -138,4 +145,18 @@ class Calendar::OooDispatcherTest < ActiveSupport::TestCase
       end
     end
   end
+
+  private
+    # Every UPDATE statement the block issues, even a no-op one: under the
+    # immediate transaction mode each still takes the database write lock.
+    def update_statements(&block)
+      statements = []
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+        statements << payload[:sql] if payload[:sql].to_s.start_with?("UPDATE")
+      end
+      block.call
+      statements
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+    end
 end
