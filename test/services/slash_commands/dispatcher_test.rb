@@ -5,6 +5,8 @@ class SlashCommands::DispatcherTest < ActiveSupport::TestCase
     @user = users(:david)
     @user.update!(time_zone: "America/New_York")
     @room = rooms(:watercooler)
+    # Fixture messages are stamped relative to the real clock, so tests
+    # find the message they posted by id rather than by created_at.
     travel_to Time.zone.local(2026, 9, 23, 12, 0, 0)
   end
 
@@ -96,7 +98,7 @@ class SlashCommands::DispatcherTest < ActiveSupport::TestCase
     end
 
     assert_equal :posted, result.kind
-    message = @room.messages.ordered.last
+    message = @room.messages.order(:id).last
     assert_equal "review the deploy", message.plain_text_body
     assert_match "Reminder set", result.notice
 
@@ -160,7 +162,7 @@ class SlashCommands::DispatcherTest < ActiveSupport::TestCase
     result = dispatch("/shrug ship it")
 
     assert_equal :posted, result.kind
-    message = @room.messages.ordered.last
+    message = @room.messages.order(:id).last
     assert_equal "ship it #{SlashCommands::Dispatcher::SHRUG}", message.markdown_source
     assert_includes message.plain_text_body, "¯_(ツ)_/¯"
   end
@@ -222,7 +224,7 @@ class SlashCommands::DispatcherTest < ActiveSupport::TestCase
     result = dispatch("/me is reviewing the deploy")
 
     assert_equal :posted, result.kind
-    message = @room.messages.ordered.last
+    message = @room.messages.order(:id).last
     assert message.action?
     assert_equal "is reviewing the deploy", message.plain_text_body
   end
@@ -238,14 +240,14 @@ class SlashCommands::DispatcherTest < ActiveSupport::TestCase
     result = dispatch("/play tada")
 
     assert_equal :posted, result.kind
-    assert_equal "tada", @room.messages.ordered.last.sound.name
+    assert_equal "tada", @room.messages.order(:id).last.sound.name
   end
 
   test "slash posts never start a stream" do
     result = dispatch("/shrug ship it")
 
     assert_equal :posted, result.kind
-    assert_not_predicate @room.messages.ordered.last, :streaming?
+    assert_not_predicate @room.messages.order(:id).last, :streaming?
   end
 
   test "unknown commands error with the available list" do
