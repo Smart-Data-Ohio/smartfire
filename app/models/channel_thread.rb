@@ -928,16 +928,19 @@ class ChannelThread < ApplicationRecord
 
     # A new post prepends into the board list and its status column and,
     # having no root message to do it, marks the board unread for its
-    # members itself.
+    # members itself. Muted members stay read, and only marked members
+    # get the unread broadcast.
     def announce_board_post
       broadcast_prepend_to room, :messages, target: "board_posts",
         partial: "rooms/boards/row", locals: { thread: self }
       broadcast_board_column_row_prepend
 
       now = Time.current
-      room.memberships.visible.disconnected.where.not(user_id: creator_id)
-        .update_all(unread_at: now, updated_at: now)
-      room.memberships.pluck(:user_id).each do |user_id|
+      recipients = room.memberships.visible.disconnected
+        .where.not(user_id: creator_id).where.not(involvement: :muted)
+      user_ids = recipients.pluck(:user_id)
+      recipients.update_all(unread_at: now, updated_at: now) unless user_ids.empty?
+      user_ids.each do |user_id|
         ActionCable.server.broadcast UnreadRoomsChannel.stream_name_for(user_id), { roomId: room_id }
       end
     end

@@ -54,6 +54,22 @@ module RoomsHelper
     end
   end
 
+  # The jump pill scrolls to the divider when it is on the page; when the
+  # first unread message fell off the page, the pill links to it instead
+  # and stays visible, since there is no divider to observe.
+  def button_to_jump_to_unread(url: nil)
+    label = image_tag("arrow-up.svg", aria: { hidden: "true" }, size: 20) + tag.span("Jump to unread")
+
+    if url
+      link_to label, url, id: "jump-to-unread", class: "message-area__jump-to-unread btn"
+    else
+      tag.button id: "jump-to-unread", class: "message-area__jump-to-unread btn",
+          data: { action: "messages#jumpToUnread" }, hidden: true do
+        label
+      end
+    end
+  end
+
   def submit_room_button_tag
     button_tag class: "btn btn--reversed txt-large center", type: "submit" do
       image_tag("check.svg", aria: { hidden: "true" }, size: 20) +

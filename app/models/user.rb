@@ -30,6 +30,7 @@ class User < ApplicationRecord
   has_many :saved_items, dependent: :delete_all
   has_many :scheduled_messages, dependent: :delete_all
   has_many :searches, dependent: :delete_all
+  has_many :room_categories, dependent: :destroy
 
   has_many :sessions, dependent: :destroy
   has_many :workspace_presence_leases, dependent: :delete_all

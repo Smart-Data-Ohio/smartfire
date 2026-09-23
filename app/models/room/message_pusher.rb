@@ -76,8 +76,10 @@ class Room::MessagePusher
       relevant_subscriptions.merge(Membership.involved_in_everything)
     end
 
+    # Muted members stay candidates for mentions: the policy below lets
+    # their mention pushes through while dropping everything else.
     def push_subscriptions_for_mentionable_users(mentionees)
-      relevant_subscriptions.merge(Membership.involved_in_mentions).where(user_id: mentionees)
+      relevant_subscriptions.merge(Membership.where(involvement: %w[ mentions muted ])).where(user_id: mentionees)
     end
 
     # Reply authors should receive an opted-in direct notification even when

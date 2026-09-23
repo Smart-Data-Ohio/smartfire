@@ -65,6 +65,38 @@ class RoomsControllerTest < ActionDispatch::IntegrationTest
     assert_match %r{href="https://example\.com/page"}, response.body
   end
 
+  test "show renders the unread divider above the first unread message on the page" do
+    room = rooms(:designers)
+    membership = users(:david).memberships.find_by!(room: room)
+    first_new = room.root_messages.create!(creator: users(:kevin), body: "First new", client_message_id: "show-divider-first")
+    room.root_messages.create!(creator: users(:kevin), body: "Second new", client_message_id: "show-divider-second")
+    membership.mark_unread_before(first_new)
+
+    get room_url(room)
+
+    assert_response :success
+    assert_select "#unread-divider", text: /new messages/i
+    assert response.body.index("unread-divider") < response.body.index("First new")
+    assert_select "button#jump-to-unread", text: /jump to unread/i
+  end
+
+  test "show keeps the last page when the first unread fell off it and links the pill to it" do
+    room = rooms(:designers)
+    membership = users(:david).memberships.find_by!(room: room)
+    first_new = room.root_messages.create!(creator: users(:kevin), body: "First unread off page", client_message_id: "show-offpage-first")
+    (Message::PAGE_SIZE + 1).times do |index|
+      room.root_messages.create!(creator: users(:kevin), body: "Later #{index}", client_message_id: "show-offpage-#{index}")
+    end
+    membership.mark_unread_before(first_new)
+
+    get room_url(room)
+
+    assert_response :success
+    assert_select ".message", text: "First unread off page", count: 0
+    assert_select "#unread-divider", count: 0
+    assert_select "a#jump-to-unread[href=?]", room_path(room, message_id: first_new.id), text: /jump to unread/i
+  end
+
   test "destroy removes the room from everyone and enqueues its deletion" do
     room = rooms(:designers)
 

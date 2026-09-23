@@ -3,6 +3,7 @@ class Membership < ApplicationRecord
 
   belongs_to :room
   belongs_to :user
+  belongs_to :room_category, optional: true
 
   before_destroy -> { HuddleGrant.revoke_for_membership!(self) }
   before_destroy -> { AgentGrant.revoke_for_membership!(self) }
@@ -16,7 +17,7 @@ class Membership < ApplicationRecord
   after_create_commit :refresh_direct_member_key
   after_destroy_commit :refresh_direct_member_key
 
-  enum :involvement, %w[ invisible nothing mentions everything ].index_by(&:itself), prefix: :involved_in
+  enum :involvement, %w[ invisible nothing muted mentions everything ].index_by(&:itself), prefix: :involved_in
 
   # Stage roles only exist on stage-room memberships; every other room leaves
   # both stage columns nil. New stage members start as listeners.
@@ -30,19 +31,97 @@ class Membership < ApplicationRecord
   validate :raised_hands_only_for_listeners
   validate :server_mute_only_for_call_rooms
   validate :at_least_one_host_remains, on: :update, if: :stage_role_changed?
+  validate :room_category_belongs_to_user
 
   scope :with_ordered_room, -> { includes(:room).joins(:room).order("LOWER(rooms.name)") }
   scope :without_direct_rooms, -> { joins(:room).where.not(room: { type: "Rooms::Direct" }) }
 
   scope :visible, -> { where.not(involvement: :invisible) }
   scope :unread,  -> { where.not(unread_at: nil) }
+  scope :favorites, -> { where.not(favorite_position: nil).order(:favorite_position, :id) }
 
+  # Reading a room advances the unread pointer to its newest root
+  # message, so the next visit finds no "New messages" divider.
   def read
-    update!(unread_at: nil)
+    update!(unread_at: nil, last_read_message_id: latest_root_message_id)
   end
 
   def unread?
     unread_at.present?
+  end
+
+  # The first root message after the unread pointer, if any. Read rooms
+  # have no divider even with a stale pointer: messages watched live
+  # (including the viewer's own) must never appear under it. Rows that
+  # predate the pointer (unread_at set, no pointer) fall back to the
+  # first message at or after the unread stamp. A deleted pointer falls
+  # back to the stored stamp with id ordering, so same-timestamp
+  # siblings still sort after what was read.
+  def first_unread_message
+    return nil unless unread?
+
+    if last_read_message_id.present?
+      if reference = room.root_messages.find_by(id: last_read_message_id)
+        room.root_messages.after(reference).ordered.first
+      elsif unread_at.present?
+        room.root_messages.where("(messages.created_at, messages.id) > (?, ?)", unread_at, last_read_message_id).ordered.first
+      end
+    elsif unread_at.present?
+      room.root_messages.where("messages.created_at >= ?", unread_at).ordered.first
+    end
+  end
+
+  def unread_count
+    boundary = first_unread_message
+    return 0 if boundary.nil?
+
+    unread_count_from(boundary)
+  end
+
+  def unread_count_from(boundary)
+    room.root_messages.where("(messages.created_at, messages.id) >= (?, ?)", boundary.created_at, boundary.id).count
+  end
+
+  # Mark the room unread starting at the given root message: the
+  # pointer moves to just before it, so the divider lands above it.
+  def mark_unread_before(message)
+    previous_id = room.root_messages.before(message).order(created_at: :desc, id: :desc).pick(:id)
+    update!(unread_at: message.created_at, last_read_message_id: previous_id)
+  end
+
+  def favorited?
+    favorite_position.present?
+  end
+
+  def favorite!
+    return if favorited?
+
+    next_position = (self.class.where(user_id: user_id).where.not(favorite_position: nil).maximum(:favorite_position) || -1) + 1
+    update!(favorite_position: next_position)
+  end
+
+  def unfavorite!
+    update!(favorite_position: nil)
+  end
+
+  # Move this favourite to the given 0-based position, compacting the
+  # user's other favourites around it. Out-of-range positions clamp.
+  def move_favorite_to(position)
+    return unless favorited?
+
+    ordered_ids = self.class.where(user_id: user_id).where.not(favorite_position: nil)
+      .order(:favorite_position, :id).pluck(:id) - [ id ]
+    ordered_ids.insert(position.to_i.clamp(0, ordered_ids.size), id)
+
+    self.class.transaction do
+      ordered_ids.each_with_index do |membership_id, index|
+        self.class.where(id: membership_id).update_all(favorite_position: index, updated_at: Time.current)
+      end
+    end
+  end
+
+  def latest_root_message_id
+    Message.where(room_id: room_id, thread_id: nil).order(created_at: :desc, id: :desc).pick(:id)
   end
 
   # Idempotent: a double raise keeps the first timestamp, so the listener
@@ -125,6 +204,12 @@ class Membership < ApplicationRecord
     def raised_hands_only_for_listeners
       if hand_raised_at.present? && stage_role != "listener"
         errors.add(:hand_raised_at, "can only be raised by a listener")
+      end
+    end
+
+    def room_category_belongs_to_user
+      if room_category.present? && room_category.user_id != user_id
+        errors.add(:room_category, "must belong to the member")
       end
     end
 

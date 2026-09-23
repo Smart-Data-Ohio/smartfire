@@ -1,0 +1,22 @@
+<%# Ctrl/⌘+K quick switcher (see quick_switcher_controller.js). Rendered
+    once per page from the layout for signed-in users; one JSON endpoint
+    feeds rooms, people and recent threads. %>
+<dialog id="quick-switcher" class="quick-switcher" aria-labelledby="quick-switcher-title"
+        data-controller="quick-switcher"
+        data-quick-switcher-url-value="<%= switcher_path(format: :json) %>"
+        data-quick-switcher-user-id-value="<%= Current.user.id %>"
+        data-action="switcher:open@window->quick-switcher#open switcher:toggle@window->quick-switcher#toggle close->quick-switcher#wasClosed click->quick-switcher#dismissBackdrop">
+  <div class="quick-switcher__surface">
+    <h2 id="quick-switcher-title" class="for-screen-reader">Quick switcher</h2>
+    <input type="text" class="input quick-switcher__input"
+           role="combobox" aria-expanded="true" aria-controls="quick-switcher-listbox" aria-autocomplete="list"
+           aria-label="Jump to a room, person, or thread" placeholder="Jump to a room, person, or thread…"
+           autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+           data-quick-switcher-target="input"
+           data-action="input->quick-switcher#filter keydown->quick-switcher#key">
+    <div id="quick-switcher-listbox" class="quick-switcher__list" role="listbox" aria-label="Results"
+         data-quick-switcher-target="list"></div>
+    <p class="quick-switcher__hint" aria-hidden="true"><kbd>↑</kbd><kbd>↓</kbd> navigate <kbd>↵</kbd> open <kbd>esc</kbd> close</p>
+    <p class="for-screen-reader" role="status" data-quick-switcher-target="status"></p>
+  </div>
+</dialog>

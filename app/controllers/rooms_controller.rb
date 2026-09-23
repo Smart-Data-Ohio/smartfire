@@ -7,8 +7,14 @@ class RoomsController < ApplicationController
     redirect_to room_url(Current.user.rooms.last)
   end
 
+  # Messages beyond this many unread scroll the room to the "New
+  # messages" divider on open; fewer unread keep today's scroll to the
+  # bottom with the divider above them.
+  UNREAD_DIVIDER_SCROLL_THRESHOLD = 5
+
   def show
     @messages = Message::MentionPreloader.preload_for(find_messages)
+    set_unread_divider unless @room.board?
   end
 
   def destroy
@@ -99,6 +105,30 @@ class RoomsController < ApplicationController
         @messages = messages.page_around(show_first_message)
       else
         @messages = messages.last_page
+      end
+    end
+
+    # Locates the "New messages" divider for the current membership. The
+    # room always opens on its usual page (last, or anchored around the
+    # requested message); when the first unread message is on it, the
+    # view renders the divider above it and scrolls to it when the
+    # unread count is large. When the first unread fell off the page,
+    # the jump pill links to it instead of re-paging the room out from
+    # under the last-page contract other pages rely on.
+    def set_unread_divider
+      membership = Current.user.memberships.find_by(room_id: @room.id)
+      return unless membership&.unread?
+
+      first_unread = membership.first_unread_message
+      return if first_unread.nil?
+
+      @unread_count = membership.unread_count_from(first_unread)
+
+      if @messages.any? { |message| message.id == first_unread.id }
+        @unread_divider_message_id = first_unread.id
+        @scroll_to_unread_divider = true if @unread_count > UNREAD_DIVIDER_SCROLL_THRESHOLD
+      else
+        @jump_to_unread_url = room_path(@room, message_id: first_unread.id)
       end
     end
 

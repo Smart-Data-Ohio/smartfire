@@ -9,12 +9,13 @@ import ScrollManager from "models/scroll_manager"
 export default class extends Controller {
   static targets = [ "latest", "message", "body", "messages", "template" ]
   static classes = [ "firstOfDay", "formatted", "me", "mentioned", "threaded" ]
-  static values = { pageUrl: String, anchorMessageId: String }
+  static values = { pageUrl: String, anchorMessageId: String, scrollToDivider: Boolean }
 
   #clientMessage
   #paginator
   #formatter
   #scrollManager
+  #dividerObserver
 
   // Lifecycle
 
@@ -40,14 +41,19 @@ export default class extends Controller {
       this.#scrollToAnchor()
     } else if (this.#hasSearchResult) {
       this.#highlightSearchResult()
+    } else if (this.scrollToDividerValue && this.#unreadDivider) {
+      this.#scrollToUnreadDivider(true)
     } else {
       this.#scrollManager.autoscroll(true)
     }
 
+    this.#observeUnreadDivider()
     this.#paginator.monitor()
   }
 
   disconnect() {
+    this.#dividerObserver?.disconnect()
+    this.#dividerObserver = null
     this.#paginator.disconnect()
   }
 
@@ -122,6 +128,16 @@ export default class extends Controller {
     this.#syncAtLatestState()
     await this.#scrollManager.autoscroll(true)
     this.#dispatchThreadMessagesChanged()
+  }
+
+  jumpToUnread() {
+    // The paginator trims the divider away in very long sessions; the
+    // pill retires with it instead of scrolling nowhere.
+    if (!this.#unreadDivider) {
+      document.getElementById("jump-to-unread")?.setAttribute("hidden", "")
+      return
+    }
+    this.#scrollToUnreadDivider(false)
   }
 
   async editMyLastMessage(event) {
@@ -259,6 +275,37 @@ export default class extends Controller {
     anchor.scrollIntoView({ behavior: "instant", block: "center" })
     this.latestTarget.hidden = false
     this.#syncAtLatestState()
+  }
+
+  // The "New messages" divider lands at the top of the viewport with
+  // the unread messages below it. The initial scroll is instant; the
+  // pill glides unless reduced motion is preferred.
+  #scrollToUnreadDivider(initial) {
+    const divider = this.#unreadDivider
+    if (!divider) return
+
+    const smooth = !initial && !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    divider.scrollIntoView({ behavior: smooth ? "smooth" : "instant", block: "start" })
+    this.latestTarget.hidden = false
+    this.#syncAtLatestState()
+  }
+
+  // The "Jump to unread" pill shows only while the divider is
+  // off-screen. One room page carries at most one divider and pill.
+  #observeUnreadDivider() {
+    const divider = this.#unreadDivider
+    const pill = document.getElementById("jump-to-unread")
+    if (!divider || !pill || pill.closest("[data-controller~='messages']") !== this.element) return
+
+    this.#dividerObserver?.disconnect()
+    this.#dividerObserver = new IntersectionObserver(entries => {
+      pill.hidden = entries[0].isIntersecting
+    }, { root: this.messagesTarget })
+    this.#dividerObserver.observe(divider)
+  }
+
+  get #unreadDivider() {
+    return this.messagesTarget.querySelector("#unread-divider")
   }
 
   get #hasSearchResult() {
