@@ -10,7 +10,13 @@ module Github::PullRequestsHelper
   # blind to an unpin whenever a newer card row dominates the maximum.
   # Like the card rows, the pins are read in memory off the preloaded
   # with_rendering_details association. The partial branches on the system
-  # note flag, so the key carries that too.
+  # note flag, so the key carries that too. Quoted message sources never
+  # touch the quoting message either, so the key carries their newest
+  # edit stamp as its own element; a deleted source bumps the quoting
+  # message itself (see Message#broadcast_quote_cards_removal), which is
+  # what busts the key when a reference row disappears. Renames touch
+  # neither row, so the key also carries a digest of the author and room
+  # names the cards show.
   def message_with_pr_cards_cache_key(message)
     newest_card = (message.github_pull_requests.map(&:updated_at) + message.fizzy_cards.map(&:updated_at) + message.twitter_posts.map(&:updated_at) + message.events.map(&:updated_at)).compact.max
     # Link embeds are fetched after the message renders; their rows (and the
@@ -21,6 +27,8 @@ module Github::PullRequestsHelper
     key << github_pr_threads_stamp(message.room_id) if message.github_pull_requests.any?
     key << message.message_pins.map(&:updated_at).max
     key << message.system_note?
+    key << message_quote_stamp(message)
+    key << message_quote_names_digest(message)
     key
   end
 

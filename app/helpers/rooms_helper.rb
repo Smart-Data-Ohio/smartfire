@@ -103,6 +103,16 @@ module RoomsHelper
     end
   end
 
+  # Viewer-neutral room label for shared fragment caches: direct-room
+  # names are per-viewer (each member sees the other members' names),
+  # so rendering them inside a cached fragment serves one viewer's
+  # label to another — and computing them costs a query per room.
+  # Direct rooms collapse to a fixed label; named rooms read the
+  # preloaded name with no query.
+  def viewer_neutral_room_label(room)
+    room.direct? ? "a direct message" : room.name
+  end
+
   # Sidebar rows pass their preloaded members so group names never query.
   def direct_room_display_name(room, members:, for_user: Current.user)
     room.direct_display_name(for_user: for_user, members: members)
