@@ -10,6 +10,7 @@ class SessionsController < ApplicationController
   def create
     if user = User.active.authenticate_by(email_address: params[:email_address], password: params[:password])
       start_new_session_for user
+      AuditLog.record!(action: "session.sign_in.success", actor: user, changes: { method: "password" })
       redirect_to post_authenticating_url
     else
       render_rejection :unauthorized
@@ -27,7 +28,11 @@ class SessionsController < ApplicationController
       redirect_to first_run_url if User.none?
     end
 
+    # Both wrong-password (401) and rate-limited (429) attempts land here.
+    # Failures are throttled per IP inside the audit log so a
+    # credential-stuffing flood leaves one row instead of thousands.
     def render_rejection(status)
+      AuditLog.record_sign_in_failure!(email: params[:email_address].to_s, method: "password")
       flash.now[:alert] = "Too many requests or unauthorized."
       render :new, status: status
     end

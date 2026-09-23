@@ -19,6 +19,10 @@ class Accounts::Bots::CredentialsController < ApplicationController
       created_by: Current.user,
       expires_at: credential_params[:expires_at].presence
     )
+    # The secret itself never reaches the log: only its name and last four
+    # (a digest fragment, safe to show; keyed to dodge the secret filter).
+    AuditLog.record!(action: "agent.credential.create", target: @credential,
+      changes: { name: @credential.name, last_four: @credential.token_last_four })
 
     render :show, status: :created
   rescue ActiveRecord::RecordInvalid => error
@@ -28,7 +32,10 @@ class Accounts::Bots::CredentialsController < ApplicationController
   end
 
   def destroy
-    @agent.agent_credentials.find(params[:id]).revoke!
+    credential = @agent.agent_credentials.find(params[:id])
+    credential.revoke!
+    AuditLog.record!(action: "agent.credential.revoke", target: credential,
+      changes: { name: credential.name })
     redirect_to account_bot_credentials_url(@bot)
   end
 

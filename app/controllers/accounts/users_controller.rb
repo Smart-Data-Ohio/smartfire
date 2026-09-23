@@ -6,12 +6,20 @@ class Accounts::UsersController < ApplicationController
   end
 
   def update
+    previous_role = @user.role
     @user.update(role_params)
+    if previous_role != @user.role
+      AuditLog.record!(action: "user.role.change", target: @user,
+        changes: { role: [ previous_role, @user.role ] })
+    end
     redirect_to edit_account_url
   end
 
   def destroy
+    previous_status = @user.status
     @user.deactivate
+    AuditLog.record!(action: "user.deactivate", target: @user,
+      changes: { status: [ previous_status, "deactivated" ] })
     redirect_to edit_account_url
   end
 

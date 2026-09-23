@@ -61,12 +61,14 @@ module Sessions
       User.transaction do
         user = Google::SignIn::AccountLinker.resolve!(claims)
         start_new_session_for user
+        AuditLog.record!(action: "session.sign_in.success", actor: user, changes: { method: "google" })
       end
       redirect_to safe_post_authenticating_url
     rescue Google::SignIn::Unavailable
       redirect_to new_session_url, alert: "Google sign-in is unavailable right now. Try again or sign in with email and password."
     rescue Google::SignIn::Rejected => error
       Rails.logger.warn "Google sign-in rejected: #{error.reason}"
+      AuditLog.record_sign_in_failure!(email: "", method: "google")
       redirect_to new_session_url, alert: rejection_alert(error.reason)
     end
 
@@ -103,7 +105,11 @@ module Sessions
           code: params[:code].to_s, redirect_uri: session_google_callback_url, verifier: flow["verifier"]
         )
         claims = Google::SignIn::IdTokenVerifier.verify!(id_token, nonce: flow["nonce"])
-        User.transaction { Google::SignIn::AccountLinker.link_to_user!(claims, Current.user) }
+        User.transaction do
+          Google::SignIn::AccountLinker.link_to_user!(claims, Current.user)
+          AuditLog.record!(action: "google.sign_in.link", actor: Current.user, target: Current.user,
+            changes: { email: claims["email"] })
+        end
 
         redirect_to user_profile_url, notice: "Google sign-in linked to #{claims["email"]}."
       rescue Google::SignIn::Unavailable

@@ -23,6 +23,10 @@ class Accounts::Bots::GrantsController < ApplicationController
     end
 
     if @grant.persisted?
+      if @grant.previously_new_record?
+        AuditLog.record!(action: "agent.grant.create", target: @grant,
+          changes: { capability: @grant.capability, room: @grant.room&.name })
+      end
       redirect_to account_bot_grants_url(@bot)
     else
       @grants = ordered_grants
@@ -33,7 +37,10 @@ class Accounts::Bots::GrantsController < ApplicationController
   end
 
   def destroy
-    @agent.agent_grants.find(params[:id]).revoke!
+    grant = @agent.agent_grants.find(params[:id])
+    grant.revoke!
+    AuditLog.record!(action: "agent.grant.revoke", target: grant,
+      changes: { capability: grant.capability, room: grant.room&.name })
     redirect_to account_bot_grants_url(@bot)
   end
 

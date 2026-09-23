@@ -46,6 +46,8 @@ class AgentApprovalsController < ApplicationController
 
     begin
       @approval.decide!(decision: decision, by: Current.user, note: params[:decision_note].presence || params[:note].presence)
+      AuditLog.record!(action: "agent.approval.decide", target: @approval,
+        changes: { decision: [ "pending", decision ], note: @approval.decision_note }.compact)
     rescue ActiveRecord::RecordInvalid
       message = @approval.errors.full_messages.to_sentence.presence || "Request cannot be decided"
       respond_to do |format|

@@ -4,11 +4,13 @@ class Users::BansController < ApplicationController
 
   def create
     @user.ban
+    AuditLog.record!(action: "user.ban", target: @user, changes: { status: [ "active", "banned" ] })
     redirect_to @user
   end
 
   def destroy
     @user.unban
+    AuditLog.record!(action: "user.unban", target: @user, changes: { status: [ "banned", "active" ] })
     redirect_to @user
   end
 

@@ -17,6 +17,9 @@ module Github
       # The repo-access cache key carries updated_at: bump it even when the
       # token is unchanged so a cached denial never survives a relink.
       account.touch
+      # The pasted token never reaches the log: only the login GitHub confirmed.
+      AuditLog.record!(action: "github.account.connect", actor: Current.user, target: Current.user,
+        changes: { github_login: login })
 
       redirect_to user_profile_path, notice: link_notice(login)
     rescue WriteClient::Unauthorized
@@ -26,7 +29,10 @@ module Github
     end
 
     def destroy
+      login = Current.user.github_connected_account&.github_login
       Current.user.github_connected_account&.destroy!
+      AuditLog.record!(action: "github.account.disconnect", actor: Current.user, target: Current.user,
+        changes: { github_login: login })
       redirect_to user_profile_path, notice: "GitHub disconnected."
     end
 

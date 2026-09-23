@@ -20,6 +20,9 @@ class Accounts::Bots::GithubConnectionsController < ApplicationController
     account = @bot.github_connected_account || @bot.build_github_connected_account
     account.assign_attributes(github_login: login, access_token: token, disconnected_reason: nil)
     account.save!
+    # The pasted token never reaches the log: only the login GitHub confirmed.
+    AuditLog.record!(action: "agent.github.connect", target: @bot.agent || @bot,
+      changes: { github_login: login })
 
     redirect_to edit_account_bot_path(@bot), notice: "GitHub connected as #{login}."
   rescue Github::WriteClient::Unauthorized
@@ -29,7 +32,10 @@ class Accounts::Bots::GithubConnectionsController < ApplicationController
   end
 
   def destroy
+    login = @bot.github_connected_account&.github_login
     @bot.github_connected_account&.destroy!
+    AuditLog.record!(action: "agent.github.disconnect", target: @bot.agent || @bot,
+      changes: { github_login: login })
     redirect_to edit_account_bot_path(@bot), notice: "GitHub disconnected."
   end
 

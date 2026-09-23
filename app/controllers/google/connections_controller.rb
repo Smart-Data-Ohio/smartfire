@@ -47,6 +47,8 @@ module Google
         return redirect_to user_profile_path, alert: "Calendar permission was not granted. Reconnect to publish events."
       end
 
+      AuditLog.record!(action: "google.account.connect", actor: Current.user, target: Current.user,
+        changes: { email: account.email })
       enqueue_upcoming_syncs(Current.user)
       redirect_to user_profile_path, notice: "Google Calendar connected."
     rescue Google::Client::Error => error
@@ -56,11 +58,14 @@ module Google
 
     def destroy
       if (account = Current.user.google_account)
+        email = account.email
         google_event_ids = Current.user.event_calendar_entries.pluck(:google_event_id)
         snapshot = account.cleanup_snapshot
         account_id = account.id
         Current.user.event_calendar_entries.delete_all
         account.destroy!
+        AuditLog.record!(action: "google.account.disconnect", actor: Current.user, target: Current.user,
+          changes: { email: email })
         Calendar::DisconnectCleanupJob.perform_later(google_event_ids, snapshot, account_id) if snapshot
       end
 
