@@ -34,6 +34,9 @@ export default class extends Controller {
   // the same reason.
   selectedIds = new Set()
   lastId = null
+  // The last row the user touched, for focus on mode exit. Unlike the
+  // range anchor above, plain clicks and Space move it too.
+  lastInteractedId = null
 
   connect() {
     if (!this.noteTarget.id) this.noteTarget.id = `multi-select-note-${++noteIdCounter}`
@@ -79,6 +82,7 @@ export default class extends Controller {
       this.#selectRange(checkbox)
       return
     }
+    const wasSelecting = this.element.classList.contains("is-selecting")
     const boxes = this.checkboxTargets
     const index = boxes.indexOf(checkbox)
     const lastIndex = boxes.findIndex((box) => box.dataset.userId === this.lastId)
@@ -101,13 +105,16 @@ export default class extends Controller {
       this.lastId = checkbox.dataset.userId
     }
     this.update()
+    this.#restoreFocusIfExited(wasSelecting)
   }
 
   clear() {
+    const wasSelecting = this.element.classList.contains("is-selecting")
     this.selectedIds.clear()
     this.lastId = null
     this.checkboxTargets.forEach((box) => { box.checked = false })
     this.update()
+    this.#restoreFocusIfExited(wasSelecting)
   }
 
   submitHuddle() {
@@ -135,6 +142,7 @@ export default class extends Controller {
         this.update()
       } else if (checkbox && this.selectionModeValue) {
         this.lastId = checkbox.dataset.userId
+        this.lastInteractedId = checkbox.dataset.userId
       }
       if (this.pressTouch) {
         this.suppressClickAt = { ...this.pressTouch }
@@ -217,6 +225,7 @@ export default class extends Controller {
     if (event.target.closest?.("input[data-multi-select-target='checkbox']")) return
 
     const checkbox = row.querySelector("[data-multi-select-target='checkbox']")
+    const wasSelecting = this.element.classList.contains("is-selecting")
 
     if (event.ctrlKey || event.metaKey) {
       event.preventDefault()
@@ -228,6 +237,7 @@ export default class extends Controller {
         this.#setChecked(checkbox, !checkbox.checked)
         this.lastId = checkbox.dataset.userId
         this.update()
+        this.#restoreFocusIfExited(wasSelecting)
       }
       return
     }
@@ -240,6 +250,7 @@ export default class extends Controller {
     event.stopPropagation()
     this.#setChecked(checkbox, !checkbox.checked)
     this.update()
+    this.#restoreFocusIfExited(wasSelecting)
   }
 
   // Space selects the focused row where Enter opens its profile card.
@@ -252,9 +263,11 @@ export default class extends Controller {
     const checkbox = row.querySelector("[data-multi-select-target='checkbox']")
     if (!checkbox) return
 
+    const wasSelecting = this.element.classList.contains("is-selecting")
     event.preventDefault()
     this.#setChecked(checkbox, !checkbox.checked)
     this.update()
+    this.#restoreFocusIfExited(wasSelecting)
   }
 
   // Ctrl/Cmd-Shift-click adds the visual range between the anchor and
@@ -297,11 +310,26 @@ export default class extends Controller {
   }
 
   #track(checkbox) {
+    this.lastInteractedId = checkbox.dataset.userId
     if (checkbox.checked) {
       this.selectedIds.add(checkbox.dataset.userId)
     } else {
       this.selectedIds.delete(checkbox.dataset.userId)
     }
+  }
+
+  // Leaving selection mode hides the focused control (the ✕ button, the
+  // last checkbox), dropping focus to the page and out of the mobile
+  // drawer's focus trap. Land on the last-touched row's name button
+  // instead, or the first row's when that row is gone.
+  #restoreFocusIfExited(wasSelecting) {
+    if (!wasSelecting || !this.selectionModeValue) return
+    if (this.checkboxTargets.some((box) => box.checked)) return
+
+    const row = (this.lastInteractedId && this.element.querySelector(`[data-member-id="${this.lastInteractedId}"]`)) ||
+      this.element.querySelector(".member-panel__member")
+    const target = row?.querySelector("button.profile-card-name") || row?.querySelector("[data-action*='profile-card#open']")
+    target?.focus({ preventScroll: true })
   }
 
   #renderInputs(selected) {

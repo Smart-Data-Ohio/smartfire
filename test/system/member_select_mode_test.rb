@@ -149,6 +149,38 @@ class MemberSelectModeTest < ApplicationSystemTestCase
     assert_selector "#channel-members", visible: true
   end
 
+  test "the exit button returns focus to the last-touched row" do
+    ctrl_click(row_name_button(users(:jason)))
+    within_bar { assert_selector "button", text: "Message (1)" }
+
+    within_bar { click_button "Exit selection mode" }
+    assert_no_selector "#channel-members [data-multi-select-target='bar']"
+    assert_focused_row_name(users(:jason))
+  end
+
+  test "the exit button falls back to the first row when the last-touched row is gone" do
+    ctrl_click(row_name_button(users(:jason)))
+    ctrl_click(row_name_button(users(:kevin)))
+    within_bar { assert_selector "button", text: "Message (2)" }
+
+    memberships(:kevin_designers).destroy!
+    refresh_panel
+    within_bar { assert_selector "button", text: "Message (1)" }
+
+    within_bar { click_button "Exit selection mode" }
+    assert_no_selector "#channel-members [data-multi-select-target='bar']"
+    assert_focused_first_row_name
+  end
+
+  test "unchecking the last box returns focus to that row" do
+    ctrl_click(row_name_button(users(:jason)))
+    within_bar { assert_selector "button", text: "Message (1)" }
+
+    find("#channel-members #select-member-#{users(:jason).id}").click
+    assert_no_selector "#channel-members [data-multi-select-target='bar']"
+    assert_focused_row_name(users(:jason))
+  end
+
   test "space toggles the focused row without opening the profile card" do
     button = row_name_button(users(:jason))
     page.execute_script("arguments[0].focus()", button)
@@ -290,6 +322,26 @@ class MemberSelectModeTest < ApplicationSystemTestCase
         Array.from(document.querySelectorAll("#channel-members .member-panel__member"))
           .map((row) => Number(row.dataset.memberId))
       JS
+    end
+
+    # Focus assertions read document.activeElement: :focus selectors stop
+    # matching when parallel headless Chromes lose window focus.
+    def assert_focused_row_name(user)
+      page.document.synchronize do
+        focused = page.evaluate_script(<<~JS, user.id)
+          document.activeElement === document.querySelector("#channel-members [data-member-id='" + arguments[0] + "'] button.profile-card-name")
+        JS
+        raise Capybara::ExpectationNotMet, "expected focus on the member row" unless focused
+      end
+    end
+
+    def assert_focused_first_row_name
+      page.document.synchronize do
+        focused = page.evaluate_script(<<~JS)
+          document.activeElement === document.querySelector("#channel-members .member-panel__member button.profile-card-name")
+        JS
+        raise Capybara::ExpectationNotMet, "expected focus on the first member row" unless focused
+      end
     end
 
     # Refetch the members and wait until the rows are rebuilt, so the
