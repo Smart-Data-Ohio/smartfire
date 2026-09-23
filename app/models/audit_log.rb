@@ -29,6 +29,8 @@ class AuditLog < ApplicationRecord
     google.account.disconnect
     github.account.connect
     github.account.disconnect
+    fizzy.account.connect
+    fizzy.account.disconnect
     account.join_code.reset
     account.settings.change
     account.custom_styles.change

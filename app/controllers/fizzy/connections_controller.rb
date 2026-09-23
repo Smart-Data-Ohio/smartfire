@@ -26,6 +26,9 @@ module Fizzy
         disconnected_reason: nil
       )
       connected.save!
+      # The pasted token never reaches the log: only the identity Fizzy confirmed.
+      AuditLog.record!(action: "fizzy.account.connect", actor: Current.user, target: Current.user,
+        changes: { fizzy_user_name: connected.fizzy_user_name, fizzy_account_name: connected.fizzy_account_name })
 
       redirect_to user_profile_path, notice: "Fizzy connected as #{connected.fizzy_user_name} (#{connected.fizzy_account_name})."
     rescue Client::Unauthorized
@@ -35,8 +38,14 @@ module Fizzy
     end
 
     def destroy
+      account = Current.user.fizzy_connected_account
       Fizzy::CardCache.where(user_id: Current.user.id).delete_all
-      Current.user.fizzy_connected_account&.destroy!
+      # Disconnecting with no link clears caches only and writes no row.
+      if account
+        account.destroy!
+        AuditLog.record!(action: "fizzy.account.disconnect", actor: Current.user, target: Current.user,
+          changes: { fizzy_user_name: account.fizzy_user_name, fizzy_account_name: account.fizzy_account_name })
+      end
       redirect_to user_profile_path, notice: "Fizzy disconnected."
     end
   end
