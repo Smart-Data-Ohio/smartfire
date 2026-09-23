@@ -103,7 +103,9 @@ class ChannelThreadsController < ApplicationController
           # leaves the thread visibly closed.
           @thread.update!(last_activity_at: Time.current) if @thread.stale?
         when "closed"
-          @thread.update!(closed_at: Time.current) unless @thread.locked? || @thread.closed?
+          # Persist even when the thread already reads as closed from
+          # staleness (see ChannelThread#close!): closed? covers both.
+          @thread.update!(closed_at: Time.current) unless @thread.locked? || @thread.closed_at.present?
         when "locked"
           now = Time.current
           @thread.update!(closed_at: @thread.closed_at || now, locked_at: @thread.locked_at || now)

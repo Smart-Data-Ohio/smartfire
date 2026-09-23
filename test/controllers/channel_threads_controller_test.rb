@@ -103,6 +103,26 @@ class ChannelThreadsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "closed", response.parsed_body["threads"].find { |row| row["id"] == @thread.id }["status"]
   end
 
+  test "explicitly closing an already-stale thread persists closed_at" do
+    @thread.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+    assert_predicate @thread.reload, :closed?
+    assert_nil @thread.closed_at
+
+    sign_in :jz
+    patch room_thread_url(@room, @thread, format: :json), params: { thread: { status: "closed" } }
+    assert_response :success
+    assert_not_nil @thread.reload.closed_at
+    assert_equal "closed", response.parsed_body.dig("thread", "status")
+    assert_not_nil response.parsed_body.dig("thread", "closed_at")
+
+    stale = ChannelThread.create!(room: @room, creator: @creator, name: "Model close")
+    stale.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
+    assert_nil stale.reload.closed_at
+    stale.close!
+    assert_not_nil stale.reload.closed_at
+    assert_predicate stale, :closed?
+  end
+
   test "reopening a time-stale thread restarts its archive clock instead of leaving it closed" do
     @thread.update_columns(last_activity_at: 2.hours.ago, auto_archive_after_minutes: 60)
     assert_predicate @thread.reload, :closed?
