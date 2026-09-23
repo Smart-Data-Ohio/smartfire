@@ -220,6 +220,30 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_select "#user_dnd_enabled[checked]", count: 1
   end
 
+  test "profile lists the call settings with their defaults" do
+    get user_profile_url
+
+    assert_response :success
+    assert_select "select[name='user[voice_mode]'] option[selected]", text: "Voice activity"
+    assert_select "input[name='user[push_to_talk_key]'][value='`']"
+  end
+
+  test "profile saves the call settings" do
+    put user_profile_url, params: { user: { voice_mode: "push_to_talk", push_to_talk_key: "CapsLock" } }
+
+    assert_redirected_to user_profile_url
+    user = users(:david).reload
+    assert_equal "push_to_talk", user.voice_mode
+    assert_equal "CapsLock", user.push_to_talk_key
+  end
+
+  test "profile rejects an unknown microphone mode" do
+    put user_profile_url, params: { user: { voice_mode: "shout" } }
+
+    assert_response :unprocessable_entity
+    assert_equal "voice_activity", users(:david).reload.voice_mode
+  end
+
   test "clearing a github login unlinks it" do
     users(:david).update!(github_login: "david-gh")
 

@@ -17,7 +17,7 @@
           <% end %>
           <span class="stage-panel__identity">
             <%= button_tag type: "button", class: "profile-card-name overflow-ellipsis", data: profile_card_trigger(member.user) do %><strong><%= member.user.name %></strong><% end %>
-            <span class="stage-panel__role">Host</span>
+            <span class="stage-panel__role">Host<% if member.server_muted? %> · <span class="stage-panel__muted-badge">Muted</span><% end %></span>
           </span>
           <% if can_manage %>
             <span class="stage-panel__member-actions">
@@ -27,6 +27,22 @@
               <%= button_to "Move to audience", room_stage_role_path(room, member.id), method: :patch,
                     params: { stage_role: "listener" }, class: "btn btn--plain stage-panel__action",
                     disabled: sole_host, title: ("The stage needs at least one host" if sole_host) %>
+              <%# Hosts cannot moderate administrators; a muted administrator %>
+              <%# still unmutes themselves from their own row. %>
+              <% if member != viewer && (viewer.user.administrator? || !member.user.administrator?) %>
+                <% if member.server_muted? %>
+                  <%= button_to "Unmute", room_call_moderation_unmute_path(room, member.id), method: :delete,
+                        class: "btn btn--plain stage-panel__action" %>
+                <% else %>
+                  <%= button_to "Mute", room_call_moderation_mute_path(room, member.id), method: :post,
+                        class: "btn btn--plain stage-panel__action" %>
+                <% end %>
+                <%= button_to "Disconnect", room_call_moderation_disconnect_path(room, member.id), method: :post,
+                      class: "btn btn--plain stage-panel__action" %>
+              <% elsif member == viewer && viewer.user.administrator? && member.server_muted? %>
+                <%= button_to "Unmute", room_call_moderation_unmute_path(room, member.id), method: :delete,
+                      class: "btn btn--plain stage-panel__action" %>
+              <% end %>
             </span>
           <% end %>
         </li>
@@ -47,7 +63,7 @@
             <% end %>
             <span class="stage-panel__identity">
               <%= button_tag type: "button", class: "profile-card-name overflow-ellipsis", data: profile_card_trigger(member.user) do %><strong><%= member.user.name %></strong><% end %>
-              <span class="stage-panel__role">Speaker</span>
+              <span class="stage-panel__role">Speaker<% if member.server_muted? %> · <span class="stage-panel__muted-badge">Muted</span><% end %></span>
             </span>
             <% if can_manage %>
               <span class="stage-panel__member-actions">
@@ -55,6 +71,20 @@
                       params: { stage_role: "listener" }, class: "btn btn--plain stage-panel__action" %>
                 <%= button_to "Make host", room_stage_role_path(room, member.id), method: :patch,
                       params: { stage_role: "host" }, class: "btn btn--plain stage-panel__action" %>
+                <% if member != viewer && (viewer.user.administrator? || !member.user.administrator?) %>
+                  <% if member.server_muted? %>
+                    <%= button_to "Unmute", room_call_moderation_unmute_path(room, member.id), method: :delete,
+                          class: "btn btn--plain stage-panel__action" %>
+                  <% else %>
+                    <%= button_to "Mute", room_call_moderation_mute_path(room, member.id), method: :post,
+                          class: "btn btn--plain stage-panel__action" %>
+                  <% end %>
+                  <%= button_to "Disconnect", room_call_moderation_disconnect_path(room, member.id), method: :post,
+                        class: "btn btn--plain stage-panel__action" %>
+                <% elsif member == viewer && viewer.user.administrator? && member.server_muted? %>
+                  <%= button_to "Unmute", room_call_moderation_unmute_path(room, member.id), method: :delete,
+                        class: "btn btn--plain stage-panel__action" %>
+                <% end %>
               </span>
             <% end %>
           </li>
@@ -68,8 +98,10 @@
   <section class="stage-panel__group" aria-label="Listeners">
     <h3 class="stage-panel__group-heading">Listeners · <%= listeners.count %></h3>
     <% if listeners.any? %>
+      <% raised_position = 0 %>
       <ul class="stage-panel__list">
         <% listeners.each do |member| %>
+          <% raised_position += 1 if member.hand_raised? %>
           <li id="<%= dom_id(member, :stage_row) %>" class="stage-panel__member">
             <%= button_tag type: "button", class: "avatar stage-panel__avatar profile-card-avatar",
                   aria: { label: "View profile of #{member.user.name}" },
@@ -79,7 +111,7 @@
             <span class="stage-panel__identity">
               <%= button_tag type: "button", class: "profile-card-name overflow-ellipsis", data: profile_card_trigger(member.user) do %><strong><%= member.user.name %></strong><% end %>
               <span class="stage-panel__role">
-                Listener<% if member.hand_raised? %> · <span class="stage-panel__hand-badge">Hand raised</span><% end %>
+                Listener<% if member.hand_raised? %> · <span class="stage-panel__hand-badge">Hand raised · #<%= raised_position %> in queue</span><% end %>
               </span>
             </span>
             <% if can_manage %>
@@ -95,6 +127,13 @@
                 <% end %>
                 <%= button_to "Make host", room_stage_role_path(room, member.id), method: :patch,
                       params: { stage_role: "host" }, class: "btn btn--plain stage-panel__action" %>
+                <% if member != viewer && (viewer.user.administrator? || !member.user.administrator?) %>
+                  <%= button_to "Disconnect", room_call_moderation_disconnect_path(room, member.id), method: :post,
+                        class: "btn btn--plain stage-panel__action" %>
+                <% elsif member == viewer && viewer.user.administrator? && member.server_muted? %>
+                  <%= button_to "Unmute", room_call_moderation_unmute_path(room, member.id), method: :delete,
+                        class: "btn btn--plain stage-panel__action" %>
+                <% end %>
               </span>
             <% end %>
           </li>

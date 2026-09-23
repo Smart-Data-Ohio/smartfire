@@ -37,6 +37,63 @@ class Rooms::Stage::HandsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "Make host", listener_streams.first.to_html
   end
 
+  test "a double raise keeps the first timestamp and queue place" do
+    sign_in :jason
+    post room_stage_hand_url(@room)
+    first_raised_at = @listener.reload.hand_raised_at
+
+    sign_in :kevin
+    post room_stage_hand_url(@room)
+    kevin_raised_at = @room.memberships.find_by!(user: users(:kevin)).hand_raised_at
+    assert first_raised_at < kevin_raised_at
+
+    # Idempotent: the second raise succeeds without moving the listener
+    # to the back of the queue or rebroadcasting an unchanged roster.
+    sign_in :jason
+    travel 5.seconds do
+      assert_no_difference -> { capture_turbo_stream_broadcasts([ users(:david), :rooms ]).count } do
+        post room_stage_hand_url(@room)
+      end
+    end
+
+    assert_redirected_to room_url(@room)
+    assert_equal first_raised_at, @listener.reload.hand_raised_at
+    assert @listener.hand_raised_at < @room.memberships.find_by!(user: users(:kevin)).hand_raised_at
+  end
+
+  test "raising hands is rate limited per membership" do
+    sign_in :jason
+
+    with_memory_cache do
+      10.times do
+        post room_stage_hand_url(@room)
+        assert_redirected_to room_url(@room)
+      end
+
+      post room_stage_hand_url(@room)
+
+      assert_response :too_many_requests
+      assert_predicate @listener.reload, :hand_raised?
+    end
+  end
+
+  test "the hand-raise rate limit resets after a minute" do
+    sign_in :jason
+
+    with_memory_cache do
+      travel_to Time.current.beginning_of_minute + 5.seconds do
+        10.times { post room_stage_hand_url(@room) }
+        post room_stage_hand_url(@room)
+        assert_response :too_many_requests
+      end
+
+      travel_to Time.current.beginning_of_minute + 65.seconds do
+        post room_stage_hand_url(@room)
+        assert_redirected_to room_url(@room)
+      end
+    end
+  end
+
   test "a turbo-stream raise swaps the actor's own controls without navigating" do
     sign_in :jason
 
@@ -164,4 +221,16 @@ class Rooms::Stage::HandsControllerTest < ActionDispatch::IntegrationTest
     delete room_stage_hand_url(voice)
     assert_response :not_found
   end
+
+  private
+    # The test environment uses :null_store; swap in a memory store so
+    # throttle behavior is exercisable.
+    def with_memory_cache
+      store = ActiveSupport::Cache::MemoryStore.new
+      previous = Rails.cache
+      Rails.cache = store
+      yield store
+    ensure
+      Rails.cache = previous
+    end
 end

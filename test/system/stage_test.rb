@@ -505,6 +505,49 @@ class StageTest < ApplicationSystemTestCase
     assert_no_selector "#channel-huddle [data-huddle-target='mute']", visible: :visible
   end
 
+  test "a host server-mutes a speaker and they rejoin muted, then unmutes them" do
+    skip "Run with LIVEKIT_SYSTEM_TESTS=1 and a configured LiveKit server" unless livekit_enabled?
+    room = create_stage_room(name: "Town Hall", members: [ users(:david), users(:jason) ])
+    room.memberships.find_by!(user: users(:jason)).change_stage_role!("speaker")
+
+    sign_in "jason@37signals.com"
+    visit room_path(room)
+    wait_for_cable_connection
+    join_stage_and_confirm
+    assert_equal true, local_can_publish?
+
+    using_session("Host") do
+      @stage_sessions << "Host"
+      sign_in "david@37signals.com"
+      visit room_path(room)
+      wait_for_cable_connection
+      find("button[aria-label='Show stage']").click
+
+      jason_row = "##{dom_id(room.memberships.find_by!(user: users(:jason)), :stage_row)}"
+      within jason_row do
+        click_button "Mute"
+      end
+    end
+
+    wait_for_condition("the muted speaker kept publishing", timeout: LIVEKIT_REJOIN_WAIT) do
+      page.has_css?("#channel-huddle[data-state='connected']", wait: 0) && local_can_publish? == false
+    end
+    assert_selector "#channel-huddle [data-huddle-target='listeningNote']", text: "You are listening"
+    assert_no_selector "#channel-huddle [data-huddle-target='mute']", visible: :visible
+
+    using_session("Host") do
+      jason_row = "##{dom_id(room.memberships.find_by!(user: users(:jason)), :stage_row)}"
+      within jason_row, wait: 10 do
+        click_button "Unmute"
+      end
+    end
+
+    wait_for_condition("the unmuted speaker did not rejoin publishing", timeout: LIVEKIT_REJOIN_WAIT) do
+      page.has_css?("#channel-huddle[data-state='connected']", wait: 0) && local_can_publish? == true
+    end
+    assert_selector "#channel-huddle [data-huddle-target='mute']", text: "Mute microphone", visible: :visible
+  end
+
   test "a listener survives a full reconnect and stays subscribe-only" do
     skip "Run with LIVEKIT_SYSTEM_TESTS=1 and a configured LiveKit server" unless livekit_enabled?
     room = create_stage_room(name: "Town Hall", members: [ users(:david), users(:jason) ])
@@ -533,6 +576,91 @@ class StageTest < ApplicationSystemTestCase
     end
     assert_selector "#channel-huddle [data-huddle-target='listeningNote']", text: "You are listening"
     assert_no_selector "#channel-huddle [data-huddle-target='mute']", visible: :visible
+  end
+
+  test "a muted speaker is told and rejoins without microphone prejoin" do
+    room = create_stage_room(name: "Town Hall", members: [ users(:david), users(:kevin) ])
+    room.memberships.find_by!(user: users(:kevin)).change_stage_role!("speaker")
+    sign_in "kevin@37signals.com"
+    visit room_path(room)
+    wait_for_cable_connection
+
+    # Credentials hang, so every join sits in connecting: the mute notice
+    # has nowhere to be overwritten from while the test reads it.
+    page.execute_script(<<~JS)
+      const originalFetch = window.fetch
+      window.fetch = (url, options) =>
+        (typeof url === "string" && url.endsWith("/huddle") && options?.method === "POST")
+          ? new Promise(() => {})
+          : originalFetch(url, options)
+      navigator.permissions.query = () => Promise.resolve({ state: "denied" })
+      const csrfMeta = document.createElement("meta")
+      csrfMeta.name = "csrf-token"
+      csrfMeta.content = "test-csrf-token"
+      document.head.appendChild(csrfMeta)
+    JS
+
+    click_button "Join stage"
+    assert_selector "#channel-huddle[data-state='connecting']", visible: :all, wait: 20
+
+    page.execute_script(<<~JS, room.id)
+      const event = document.createElement("div")
+      event.dataset.huddleRejoinRoomId = arguments[0]
+      event.dataset.huddleRejoinStageRole = "speaker"
+      event.dataset.huddleRejoinServerMuted = "true"
+      document.getElementById("huddle_role_events").appendChild(event)
+    JS
+
+    assert_selector "[data-huddle-target='notice']:not([hidden])", text: "A host muted you", wait: 10
+    assert_selector ".huddle-launcher[data-huddle-can-publish-param='false']", wait: 10
+    assert_equal false, page.evaluate_script("window.Stimulus.getControllerForElementAndIdentifier(document.getElementById('channel-huddle'), 'huddle').canPublishHint")
+
+    # Leaving and rejoining muted skips the microphone prejoin, like a
+    # listener's hint does.
+    find("[data-action='huddle#leave']").click
+    assert_selector "#channel-huddle[data-state='idle']", visible: :all, wait: 10
+
+    page.execute_script(<<~JS)
+      window.__stageGumCalls = 0
+      window.__stageHuddleStates = []
+      new MutationObserver(() => {
+        window.__stageHuddleStates.push(document.getElementById("channel-huddle").dataset.state)
+      }).observe(document.getElementById("channel-huddle"), { attributes: true, attributeFilter: [ "data-state" ] })
+      navigator.permissions.query = () => Promise.resolve({ state: "prompt" })
+      navigator.mediaDevices.getUserMedia = () => {
+        window.__stageGumCalls += 1
+        return Promise.reject(new DOMException("No microphone", "NotFoundError"))
+      }
+    JS
+
+    click_button "Join stage"
+
+    assert_selector "#channel-huddle[data-state='connecting']", visible: :all, wait: 20
+    assert_not_includes page.evaluate_script("window.__stageHuddleStates"), "prejoin"
+    assert_equal 0, page.evaluate_script("window.__stageGumCalls")
+
+    # The mute notice returns with the next mute event and clears on unmute.
+    page.execute_script(<<~JS, room.id)
+      const event = document.createElement("div")
+      event.dataset.huddleRejoinRoomId = arguments[0]
+      event.dataset.huddleRejoinStageRole = "speaker"
+      event.dataset.huddleRejoinServerMuted = "true"
+      document.getElementById("huddle_role_events").appendChild(event)
+    JS
+
+    assert_selector "[data-huddle-target='notice']:not([hidden])", text: "A host muted you", wait: 10
+
+    page.execute_script(<<~JS, room.id)
+      const event = document.createElement("div")
+      event.dataset.huddleRejoinRoomId = arguments[0]
+      event.dataset.huddleRejoinStageRole = "speaker"
+      event.dataset.huddleRejoinServerMuted = "false"
+      document.getElementById("huddle_role_events").appendChild(event)
+    JS
+
+    assert_selector "[data-huddle-target='notice'][hidden]", visible: :all, wait: 10
+    assert_selector ".huddle-launcher[data-huddle-can-publish-param='true']", wait: 10
+    assert_equal true, page.evaluate_script("window.Stimulus.getControllerForElementAndIdentifier(document.getElementById('channel-huddle'), 'huddle').canPublishHint")
   end
 
   private
