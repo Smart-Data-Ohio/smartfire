@@ -72,6 +72,9 @@ class PollsTest < ApplicationSystemTestCase
     message = @room.root_messages.create!(creator: users(:jz), markdown_source: "Lunch?")
     poll = create_poll(message)
     card = "##{ActionView::RecordIdentifier.dom_id(poll, :card)}"
+    visit room_url(@room)
+    wait_for_cable_connection
+    assert_selector card
 
     using_session("Voter") do
       sign_in "jason@37signals.com"

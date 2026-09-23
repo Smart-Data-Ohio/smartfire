@@ -21,6 +21,19 @@ export default class MarkdownSlashCommandsAutocompleteHandler extends BaseAutoco
     return before.split(/\s/)[0]?.startsWith("/") === true
   }
 
+  // Retyping "/" (the "//" escape, or a fresh "/" after clearing) must
+  // never cancel the picker or swallow the keystroke: the context
+  // update hides results naturally when the query matches nothing.
+  shouldCancelOnKey(_value) {
+    return false
+  }
+
+  characterMatchesWordBoundary(character) {
+    // Space starts the command's arguments; it never commits the top
+    // match the way it finishes a mention or an emoji shortcode.
+    return character !== " " && /[\s\uFFFC]/.test(character)
+  }
+
   insertAutocompletable(autocompletable, range, terminator) {
     if (!autocompletable?.value) return
 

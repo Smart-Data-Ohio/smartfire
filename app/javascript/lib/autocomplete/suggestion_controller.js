@@ -295,6 +295,10 @@ export default class SuggestionController {
 
   #didPressKeyWithValue(value) {
     if (this.#active && (value != null) && !this.hidden) {
+      // Retyping the trigger character cancels mentions and emoji, but a
+      // delegate may opt out (the slash picker: "/" starts an escape or
+      // a fresh command, and swallowing it would corrupt the composer).
+      if (typeof this.delegate.shouldCancelOnKey === "function" && !this.delegate.shouldCancelOnKey(value)) return
       const result = this.matchQueryAndTerminatorForWord(value)
       if (result?.query === "") {
         this.#cancelSuggestion()

@@ -115,6 +115,16 @@
   padding-block: 0.15rem;
 }
 
+/* The base reset strips appearance from every input, collapsing native
+   controls to zero size; the poll inputs and builder flags keep them. */
+.poll__input,
+.poll-builder__flag input[type="checkbox"] {
+  appearance: auto;
+  block-size: 1rem;
+  flex: none;
+  inline-size: 1rem;
+}
+
 /* Poll builder and schedule-send dialogs, mirroring the save dialog. */
 .poll-builder,
 .schedule-send__dialog {
