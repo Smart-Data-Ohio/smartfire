@@ -51,6 +51,9 @@ module Github
       if old_app_token.present? && old_app_token != tokens["access_token"]
         Github::App.revoke_token(old_app_token)
       end
+      # The tokens never reach the log: only the login GitHub confirmed.
+      AuditLog.record!(action: "github.account.connect", actor: Current.user, target: Current.user,
+        changes: { github_login: login })
 
       redirect_to user_profile_path, notice: "GitHub connected as #{login}."
     rescue Github::App::Unauthorized, WriteClient::Unauthorized

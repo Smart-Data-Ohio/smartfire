@@ -26,6 +26,9 @@ module Github
       # revocation only: deleting the grant would take the new token
       # with it.
       Github::App.revoke_token(old_app_token) if old_app_token.present? && old_app_token != token
+      # The pasted token never reaches the log: only the login GitHub confirmed.
+      AuditLog.record!(action: "github.account.connect", actor: Current.user, target: Current.user,
+        changes: { github_login: login })
 
       redirect_to user_profile_path, notice: link_notice(login)
     rescue WriteClient::Unauthorized
@@ -38,6 +41,8 @@ module Github
       if (account = Current.user.github_connected_account)
         account.revoke_remote_token!
         account.destroy!
+        AuditLog.record!(action: "github.account.disconnect", actor: Current.user, target: Current.user,
+          changes: { github_login: account.github_login })
       end
       redirect_to user_profile_path, notice: "GitHub disconnected."
     end

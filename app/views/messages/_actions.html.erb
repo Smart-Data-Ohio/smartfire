@@ -64,6 +64,12 @@
         <span data-message-actions-target="threadLabel">Create thread</span>
       <% end %>
 
+      <%= tag.button type: "button", class: "btn message__menu-action message__mark-unread-action", role: "menuitem", hidden: true,
+            data: { action: "message-actions#markUnread", message_actions_target: "item" } do %>
+        <%= image_tag "mark-unread.svg", class: "colorize--black", size: 20, aria: { hidden: "true" } %>
+        <span>Mark unread</span>
+      <% end %>
+
       <%= tag.button type: "button", class: "btn message__menu-action", role: "menuitem",
             data: { action: "message-actions#pin", message_actions_target: "item" } do %>
         <%= image_tag "pin.svg", class: "colorize--black", size: 20, aria: { hidden: "true" } %>

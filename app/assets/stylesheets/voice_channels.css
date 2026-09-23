@@ -35,6 +35,12 @@
   margin-inline-start: -7px;
 }
 
+/* Who is speaking right now, from the call's speaker events. A static ring:
+   no pulse, so reduced-motion settings need no exception. */
+.voice-stack__avatar--speaking {
+  box-shadow: 0 0 0 2px var(--color-positive);
+}
+
 .voice-stack__trigger {
   display: inline-flex;
   line-height: 0;

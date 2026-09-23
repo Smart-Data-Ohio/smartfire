@@ -868,13 +868,65 @@ pin count:
 { "pinned": true, "message_id": 42, "pin_count": 3 }
 ```
 
+## Slash commands
+
+Agents with `post_messages` register custom slash commands per room
+through a Bearer-only JSON endpoint; see
+[slash commands](slash-commands.md) for the human behavior (picker,
+built-ins, ephemeral answers).
+
+- `POST /rooms/:room_id/agents/slash_commands` registers a command
+  (`name` without the leading slash, lowercase; optional
+  `description`). Re-registering the agent's own name updates its
+  description. Names are unique per room across agents, so a name held
+  by another agent answers 422, as does a name shadowing a built-in.
+- `DELETE /rooms/:room_id/agents/slash_commands/:name` unregisters
+  one of the agent's own commands. A name the agent does not own
+  answers 404.
+
+Both answer 404 for rooms outside the agent's membership and 403 when
+the agent lacks `post_messages` in the room, and throttle at
+60/minute per credential like message posting.
+
+Invoking a registered command delivers a `slash_command` event to the
+owning agent — readable through polling and webhooks like other
+events, with the command name and raw arguments — and the invoker sees
+"Sent to \<agent\>" until the agent replies. Invocation re-checks the
+`post_messages` grant and membership, and one room's invocations are
+rate-limited to 20/minute per agent. The event payload carries
+`command: { name, arguments }` alongside the room and the invoking
+actor, plus `thread_id` when invoked in a thread (absent in the
+channel), so the agent can reply in place; the webhook nests the same
+under `command` with the standard `agent` key.
+
+## Polls
+
+Agents with `post_messages` create polls and read live results through
+Bearer-only JSON endpoints; see [polls](polls.md) for the human
+behavior (builder, voting, live cards). Both creation and reads use
+the posting grant.
+
+- `POST /rooms/:room_id/agents/polls` posts a root message carrying a
+  poll: `question`, 2–10 `options`, optional `multiple`, `anonymous`,
+  and ISO8601 `closes_at`. Validation failures answer 422 without
+  posting anything.
+- `GET /rooms/:room_id/agents/polls/:id` reads the poll with live
+  counts (voter names unless the poll is anonymous).
+
+Creation answers 404 outside the agent's membership and 403 without
+`post_messages`, throttled at 60/minute; reads answer 404 for polls
+outside the room and 403 without `post_messages`, throttled at
+120/minute. Agents cannot vote.
+
 ## MCP server
 
 The same agent API is exposed as a Model Context Protocol server at
 `POST /agents/mcp` (stateless Streamable HTTP, spec revision 2026-07-28,
-with the legacy `initialize` handshake kept): twenty-seven tools from
+with the legacy `initialize` handshake kept): thirty-one tools from
 `list_rooms` and `read_messages` to `request_approval`, `get_context`,
-`open_dm`, the nine Fizzy tools, and `pin_message`/`unpin_message`, each
-delegating to the same service code, grants, and rate-limit buckets as
-its REST counterpart. See [Smartfire MCP server](agents-mcp.md) for client
-setup and the tool list.
+`open_dm`, the nine Fizzy tools, `pin_message`/`unpin_message`,
+`register_slash_command`/`unregister_slash_command`, and
+`create_poll`/`get_poll`, each delegating to the same service code,
+grants, and rate-limit buckets as its REST counterpart. See
+[Smartfire MCP server](agents-mcp.md) for client setup and the tool
+list.

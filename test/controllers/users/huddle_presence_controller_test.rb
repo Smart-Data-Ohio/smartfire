@@ -19,10 +19,10 @@ class Users::HuddlePresenceControllerTest < ActionDispatch::IntegrationTest
 
   test "returns only the current user's rooms with at least one participant" do
     channel = rooms(:hq)
-    issue_in_call_grant!(user: users(:david), room: channel)
-    issue_in_call_grant!(user: users(:jason), room: channel)
+    david_channel = issue_in_call_grant!(user: users(:david), room: channel)
+    jason_channel = issue_in_call_grant!(user: users(:jason), room: channel)
     # A second session for the same user still counts as one participant.
-    issue_in_call_grant!(user: users(:david), room: channel, session: users(:david).sessions.create!(user_agent: "Other"))
+    david_other = issue_in_call_grant!(user: users(:david), room: channel, session: users(:david).sessions.create!(user_agent: "Other"))
     # Seen, but outside the in-call window.
     expired = issue_in_call_grant!(user: users(:kevin), room: channel)
     expired.update_columns(last_seen_at: 21.seconds.ago)
@@ -33,7 +33,7 @@ class Users::HuddlePresenceControllerTest < ActionDispatch::IntegrationTest
     direct = rooms(:david_and_jason)
     # A second tab: one session carries at most one in-call grant, so each
     # room needs its own session to stay live.
-    issue_in_call_grant!(user: users(:jason), room: direct, session: users(:jason).sessions.create!(user_agent: "Direct"))
+    jason_direct = issue_in_call_grant!(user: users(:jason), room: direct, session: users(:jason).sessions.create!(user_agent: "Direct"))
 
     # Issued but never seen by the gateway: the room stays out.
     HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_watercooler))
@@ -51,14 +51,17 @@ class Users::HuddlePresenceControllerTest < ActionDispatch::IntegrationTest
       {
         "room_id" => channel.id,
         "participants" => [
-          { "id" => users(:david).id, "name" => users(:david).name, "avatar_url" => fresh_user_avatar_url(users(:david)) },
-          { "id" => users(:jason).id, "name" => users(:jason).name, "avatar_url" => fresh_user_avatar_url(users(:jason)) }
+          { "id" => users(:david).id, "name" => users(:david).name, "avatar_url" => fresh_user_avatar_url(users(:david)),
+            "identities" => [ david_channel.identity, david_other.identity ] },
+          { "id" => users(:jason).id, "name" => users(:jason).name, "avatar_url" => fresh_user_avatar_url(users(:jason)),
+            "identities" => [ jason_channel.identity ] }
         ]
       },
       {
         "room_id" => direct.id,
         "participants" => [
-          { "id" => users(:jason).id, "name" => users(:jason).name, "avatar_url" => fresh_user_avatar_url(users(:jason)) }
+          { "id" => users(:jason).id, "name" => users(:jason).name, "avatar_url" => fresh_user_avatar_url(users(:jason)),
+            "identities" => [ jason_direct.identity ] }
         ]
       }
     ], response.parsed_body.sort_by { |room| room["room_id"] == channel.id ? 0 : 1 }

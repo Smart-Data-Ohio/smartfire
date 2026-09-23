@@ -44,6 +44,7 @@ Rails.application.routes.draw do
       resource :join_code, only: :create
       resource :logo, only: %i[ show destroy ]
       resource :custom_styles, only: %i[ edit update ]
+      resource :audit_log, only: :show, controller: "audit_logs"
       resource :integrations_health, only: :show, controller: "integrations_health"
     end
   end
@@ -87,6 +88,7 @@ Rails.application.routes.draw do
   namespace :autocompletable do
     resources :users, only: :index
     resources :icons, only: :index
+    resources :slash_commands, only: :index
   end
 
   get "icons/:name", to: "workspace_icons#show", as: :workspace_icon
@@ -115,6 +117,10 @@ Rails.application.routes.draw do
   post "rooms/:room_id/agents/messages", to: "agents/messages#create", defaults: { format: :json }, as: :room_agent_messages
   post "agents/messages/:id/pin", to: "agents/pins#create", defaults: { format: :json }, as: :agents_message_pin
   delete "agents/messages/:id/pin", to: "agents/pins#destroy", defaults: { format: :json }
+  post "rooms/:room_id/agents/slash_commands", to: "agents/slash_commands#create", defaults: { format: :json }
+  delete "rooms/:room_id/agents/slash_commands/:name", to: "agents/slash_commands#destroy", defaults: { format: :json }
+  post "rooms/:room_id/agents/polls", to: "agents/polls#create", defaults: { format: :json }
+  get "rooms/:room_id/agents/polls/:id", to: "agents/polls#show", defaults: { format: :json }
   get "rooms/:room_id/agents/posts", to: "agents/posts#index", defaults: { format: :json }, as: :room_agent_posts
   post "rooms/:room_id/agents/posts", to: "agents/posts#create", defaults: { format: :json }
   post "rooms/:room_id/agents/github/pull_request_actions", to: "agents/github/pull_request_actions#create",
@@ -166,7 +172,13 @@ Rails.application.routes.draw do
 
     scope module: "rooms" do
       resources :members, only: :index
+      resources :message_links, only: :show
+      resources :files, only: :index
       resources :pins, only: :index
+      resources :slash_commands, only: :create
+      resources :polls, only: %i[ create show ] do
+        post :vote, on: :member
+      end
       resources :drive_recipients, only: :index do
         post :validate, on: :collection
       end
@@ -183,9 +195,15 @@ Rails.application.routes.draw do
         get :participants
         post :leave
       end
+      post "call_moderation/:membership_id/mute", to: "call_moderation#mute", as: :call_moderation_mute
+      delete "call_moderation/:membership_id/mute", to: "call_moderation#unmute", as: :call_moderation_unmute
+      post "call_moderation/:membership_id/disconnect", to: "call_moderation#disconnect", as: :call_moderation_disconnect
       resource :refresh, only: :show
       resource :settings, only: :show
       resource :involvement, only: %i[ show update ]
+      resource :read, only: %i[ create destroy ], controller: "reads"
+      resource :favorite, only: %i[ create destroy update ], controller: "favorites"
+      resource :category_assignment, only: :update, controller: "categories"
       resources :github_subscriptions, only: %i[ create update destroy ]
       resource :inbound_email_address, only: :create, controller: "inbound_email_addresses"
     end
@@ -238,9 +256,17 @@ Rails.application.routes.draw do
 
   resources :saved_items, path: "saved", only: %i[ index create update destroy ]
 
+  resources :scheduled_messages, only: %i[ index update destroy ] do
+    post :send_now, on: :member
+  end
+  post "rooms/:room_id/scheduled_messages", to: "scheduled_messages#create", as: :room_scheduled_messages
+
   resources :searches, only: %i[ index create ] do
     delete :clear, on: :collection
   end
+
+  resource :switcher, only: :show
+  resources :room_categories, only: %i[ index create update destroy ]
 
   resources :activity_items, path: "activity", only: :index do
     get :unread_count, on: :collection

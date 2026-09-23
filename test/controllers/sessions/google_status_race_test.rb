@@ -12,6 +12,10 @@ class Sessions::GoogleStatusRaceTest < ActionDispatch::IntegrationTest
   [ :deactivate, :ban ].each do |action|
     [ false, true ].each do |linked|
       test "#{action} racing #{linked ? 'linked' : 'first'} Google login leaves no usable session" do
+        # Non-transactional: the callback's audit rows commit for real and
+        # have no foreign key to cascade from user&.destroy!, so baseline
+        # and delete them to keep later tests in this worker deterministic.
+        audit_baseline = AuditLog.maximum(:id) || 0
         user = User.create!(name: "Member", email_address: "member@smartdata.net", password: "secret123456", google_email_link_allowed: true)
         if linked
           GoogleIdentity.create!(user:, subject: "race-member", email: user.email_address, domain: "smartdata.net")
@@ -56,6 +60,7 @@ class Sessions::GoogleStatusRaceTest < ActionDispatch::IntegrationTest
       ensure
         Google::SignIn::AccountLinker.define_singleton_method(:resolve!, original_resolve) if original_resolve
         intervention&.join(5)
+        AuditLog.where("id > ?", audit_baseline).delete_all if defined?(audit_baseline)
         user&.destroy!
       end
     end

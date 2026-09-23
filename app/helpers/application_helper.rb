@@ -27,7 +27,7 @@ module ApplicationHelper
     return unless Current.user
 
     tags = []
-    if Current.user.dnd_enabled? || Current.user.presence_setting == "dnd"
+    if Current.user.manual_dnd_active? || Current.user.presence_setting == "dnd"
       tags << tag.meta(name: "notification-dnd", content: "muted")
     end
     if Current.user.quiet_hours_enabled? && Current.user.quiet_hours_start_minute && Current.user.quiet_hours_end_minute

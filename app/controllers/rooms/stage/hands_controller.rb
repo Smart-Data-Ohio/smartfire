@@ -1,18 +1,27 @@
 class Rooms::Stage::HandsController < ApplicationController
   include RoomScoped
 
+  HAND_RAISE_LIMIT = 10
+  HAND_RAISE_WINDOW = 1.minute
+
   rescue_from ActiveRecord::RecordNotFound, with: -> { head :not_found }
 
   before_action :ensure_stage_room
 
   # Listeners raise their own hand. Speakers and hosts have no hand to raise.
+  # Raises are idempotent and throttled per membership: a double raise keeps
+  # the first timestamp and skips the roster broadcast, and hammering the
+  # endpoint answers 429.
   def create
     unless @membership.listener?
       return render plain: "Only listeners can raise a hand", status: :unprocessable_entity
     end
 
-    @membership.raise_hand!
-    broadcast_roster
+    if hand_raise_throttled?
+      return render plain: "Slow down and try again", status: :too_many_requests
+    end
+
+    broadcast_roster if @membership.raise_hand!
     respond_with_controls
   end
 
@@ -46,6 +55,13 @@ class Rooms::Stage::HandsController < ApplicationController
 
     def ensure_stage_room
       head :not_found unless @room.stage?
+    end
+
+    # Per-membership minute-bucketed counter. Null stores (test env default)
+    # answer nil from increment, which counts as unthrottled.
+    def hand_raise_throttled?
+      key = "stage_hand_raise/#{@room.id}/#{@membership.id}/#{Time.current.to_i / HAND_RAISE_WINDOW.to_i}"
+      Rails.cache.increment(key, 1, expires_in: HAND_RAISE_WINDOW).to_i > HAND_RAISE_LIMIT
     end
 
     # Host action forms render only for viewers who may use them, so each

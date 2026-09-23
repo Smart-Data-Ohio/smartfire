@@ -9,6 +9,11 @@ const CONNECTION_STATS_INTERVAL = 2_000
 const ACTIVE_STATES = [ "prejoin", "connecting", "connected", "reconnecting" ]
 const NOISE_SUPPRESSION_STORAGE_KEY = "campfire.huddle.noiseSuppression"
 const STREAM_QUALITY_STORAGE_KEY = "campfire.huddle.streamQuality"
+const PARTICIPANT_VOLUME_STORAGE_PREFIX = "campfire.huddle.volume."
+const PARTICIPANT_MUTE_STORAGE_PREFIX = "campfire.huddle.localMute."
+const RECONNECT_COUNTDOWN_SECONDS = 30
+const MICROPHONE_RESTART_ERROR = "The microphone couldn’t be restarted. Check that it is still connected and try again."
+const SERVER_MUTED_NOTICE = "A host muted you"
 let liveKitPromise
 
 const loadLiveKit = () => liveKitPromise ||= import("livekit-client").catch(error => {
@@ -32,7 +37,7 @@ export default class extends Controller {
     "checkError", "checkJoin", "checkRetry", "connection", "connectionDetails", "devicesBlock",
     "devicesDone", "leaveLabel", "listeningNote", "meter", "meterFill", "microphoneSelect", "mute", "muteLabel",
     "noise", "noiseLabel", "notice", "participantCount", "participantList", "people",
-    "prejoinMeter", "prejoinMeterFill", "preview", "previewWrap", "resumeAudio",
+    "prejoinMeter", "prejoinMeterFill", "preview", "previewWrap", "reconnect", "reconnectCountdown", "resumeAudio",
     "retry", "roleEvents", "roomName", "screens", "settings", "settingsRow", "share", "shareLabel",
     "sharing", "sharingExpand", "sharingName", "speakerRow", "speakerSelect",
     "statJitter", "statLoss", "statRtt", "statRx", "statSent", "statTransport", "status",
@@ -42,7 +47,9 @@ export default class extends Controller {
     currentUserId: Number,
     noiseWorkletUrl: String,
     noiseWasmUrl: String,
-    noiseSimdWasmUrl: String
+    noiseSimdWasmUrl: String,
+    voiceMode: { type: String, default: "voice_activity" },
+    pushToTalkKey: { type: String, default: "`" }
   }
 
   initialize() {
@@ -71,6 +78,18 @@ export default class extends Controller {
     this.connectionStatsTimer = null
     this.connectionStatsSampling = false
     this.connectionStatsSummary = null
+    this.captureRestartFailed = false
+    // LiveKit identity -> Smartfire user id, from the participants endpoint.
+    // Per-user client state (remembered volumes, speaking highlights) maps
+    // through here; the room only knows identities.
+    this.identityUserIds = new Map()
+    this.participantQuality = new Map()
+    this.boostedParticipants = new Set()
+    this.pushToTalkActive = false
+    this.pushToTalkOpenedMic = false
+    this.reconnectCountdownTimer = null
+    this.remoteAudioContext = null
+    this.suppressionRestoreTrack = null
   }
 
   connect() {
@@ -85,6 +104,10 @@ export default class extends Controller {
     window.addEventListener("huddle:stream-stop", this.streamStopped, options)
     window.addEventListener("huddle:query", this.broadcastState, options)
     window.addEventListener("huddle:expand-screen", this.viewSharedScreen, options)
+    window.addEventListener("huddle-participants:updated", this.participantsUpdated, options)
+    window.addEventListener("keydown", this.callKeyPressed, options)
+    window.addEventListener("keyup", this.callKeyReleased, options)
+    window.addEventListener("blur", this.windowBlurred, options)
     window.addEventListener("pagehide", this.pageHiding, options)
     document.addEventListener("fullscreenchange", this.fullscreenChanged, options)
     document.addEventListener("webkitfullscreenchange", this.fullscreenChanged, options)
@@ -144,6 +167,11 @@ export default class extends Controller {
     this.identity = null
     this.canPublish = true
     this.canPublishHint = canPublishHint
+    this.identityUserIds = new Map()
+    this.participantQuality = new Map()
+    this.boostedParticipants = new Set()
+    this.pushToTalkActive = false
+    this.pushToTalkOpenedMic = false
     // Storage is the preference; a transient processor failure only turned it off
     // in memory, so a fresh join gets a fresh attempt.
     this.noiseSuppressionEnabled = this.noiseSuppressionAvailable && this.#storedNoiseSuppression()
@@ -195,9 +223,10 @@ export default class extends Controller {
 
       await room.startAudio().catch(() => {})
       // A listener's token cannot publish, so LiveKit would reject the
-      // microphone outright. They join subscribe-only instead.
+      // microphone outright. They join subscribe-only instead. Push-to-talk
+      // joins with the microphone closed; holding the key opens it.
       if (this.canPublish) {
-        await room.localParticipant.setMicrophoneEnabled(true, this.#audioCaptureOptions())
+        await room.localParticipant.setMicrophoneEnabled(!this.#pushToTalkEnabled(), this.#audioCaptureOptions())
       }
       if (operation !== this.operation || room !== this.room) {
         await this.#disconnectRoom(room)
@@ -205,6 +234,7 @@ export default class extends Controller {
       }
 
       this.#syncSubscribedTracks(room)
+      this.#refreshIdentityMapping()
       this.#renderRoster()
       this.#setState("connected", "Huddle active")
       this.#updateMediaControls()
@@ -233,6 +263,47 @@ export default class extends Controller {
     if (!this.roomId) return
 
     this.join({ detail: { roomId: this.roomId, roomName: this.roomName, canPublishHint: this.canPublishHint } })
+  }
+
+  // A manual reconnect while the SDK is still retrying: drops the struggling
+  // connection and joins fresh, the same path a stage role change takes.
+  reconnectNow = async () => {
+    if (!this.roomId) return
+
+    this.#stopReconnectCountdown()
+    await this.roleChanged({ detail: { roomId: this.roomId } })
+  }
+
+  #startReconnectCountdown() {
+    this.#stopReconnectCountdown()
+    if (!this.hasReconnectTarget) return
+
+    let remaining = RECONNECT_COUNTDOWN_SECONDS
+    this.reconnectTarget.hidden = false
+    this.reconnectCountdownTarget.textContent = String(remaining)
+
+    this.reconnectCountdownTimer = setInterval(() => {
+      remaining -= 1
+
+      if (remaining <= 0 || this.state !== "reconnecting") {
+        this.#stopReconnectCountdown()
+        if (this.state === "reconnecting") {
+          // The SDK owns reconnection and may still recover, so the countdown
+          // expiring never forces a failure: the manual control stays up.
+          this.reconnectTarget.hidden = false
+          this.reconnectCountdownTarget.textContent = "…"
+        }
+        return
+      }
+
+      this.reconnectCountdownTarget.textContent = String(remaining)
+    }, 1000)
+  }
+
+  #stopReconnectCountdown() {
+    clearInterval(this.reconnectCountdownTimer)
+    this.reconnectCountdownTimer = null
+    if (this.hasReconnectTarget) this.reconnectTarget.hidden = true
   }
 
   // A stage role change revokes the old grant, so the affected browser leaves
@@ -288,21 +359,32 @@ export default class extends Controller {
 
     const roomId = Number(node.dataset.huddleRejoinRoomId)
     const stageRole = node.dataset.huddleRejoinStageRole
+    const serverMuted = node.dataset.huddleRejoinServerMuted === "true"
     node.remove()
-    this.#updatePublishHint(roomId, stageRole)
+    this.#updatePublishHint(roomId, stageRole, serverMuted)
     this.roleChanged({ detail: { roomId } })
   }
 
   // The persistent role event carries the member's new stage role. A demoted
   // speaker's stored retry hint and page launcher would otherwise stay true,
   // stranding them in microphone prejoin on retry or on leave-and-rejoin
-  // without navigating. Hosts and speakers publish; listeners do not. The
-  // token stays authoritative for actual publishing.
-  #updatePublishHint(roomId, stageRole) {
+  // without navigating. Hosts and speakers publish; listeners do not. A
+  // server-muted member publishes nothing, so a mute also flips the hint to
+  // skip the mic prejoin — and tells the muted member why. The token stays
+  // authoritative for actual publishing.
+  #updatePublishHint(roomId, stageRole, serverMuted = false) {
     if (stageRole !== "listener" && stageRole !== "speaker" && stageRole !== "host") return
 
-    const canPublish = stageRole !== "listener"
-    if (roomId === this.roomId) this.canPublishHint = canPublish
+    const canPublish = stageRole !== "listener" && !serverMuted
+    if (roomId === this.roomId) {
+      this.canPublishHint = canPublish
+
+      if (serverMuted) {
+        this.#showConnectedNotice(SERVER_MUTED_NOTICE)
+      } else if (this.noticeTarget.textContent === SERVER_MUTED_NOTICE) {
+        this.#clearConnectedNotice()
+      }
+    }
 
     const launcher = document.querySelector(
       `[data-controller="huddle-launcher"][data-huddle-launcher-room-id-value="${roomId}"]`
@@ -418,6 +500,11 @@ export default class extends Controller {
     this.roomId = null
     this.roomName = null
     this.identity = null
+    this.identityUserIds = new Map()
+    this.participantQuality = new Map()
+    this.boostedParticipants = new Set()
+    this.pushToTalkActive = false
+    this.pushToTalkOpenedMic = false
     this.#clearConnectedNotice()
     this.#setState("idle", "Not in a huddle")
   }
@@ -438,6 +525,143 @@ export default class extends Controller {
       },
       body: "{}"
     }).catch(() => {})
+  }
+
+  // Call shortcuts, active anywhere in the app while in a call:
+  // Ctrl/Cmd+Shift+M toggles the microphone, and in push-to-talk mode
+  // holding the configured key opens the microphone. The push-to-talk key
+  // never fires while typing, while composing text, or with Ctrl, Meta, or
+  // Alt held, so it stays out of the composer's and the shortcut system's
+  // way; the mute chord is global because it cannot be typed by accident.
+  callKeyPressed = (event) => {
+    if (event.repeat || event.defaultPrevented) return
+
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && !event.altKey && event.key?.toLowerCase() === "m") {
+      if (this.state !== "connected" || !this.room || !this.canPublish) return
+      event.preventDefault()
+      this.toggleMute()
+      return
+    }
+
+    if (!this.#pushToTalkKeyMatches(event)) return
+    if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return
+    if (!this.#pushToTalkEnabled() || this.pushToTalkActive) return
+    if (this.state !== "connected" || !this.room || !this.canPublish) return
+    if (this.#eventTargetIsTyping(event)) return
+
+    event.preventDefault()
+    this.pushToTalkActive = true
+    this.pushToTalkOpenedMic = !this.room.localParticipant.isMicrophoneEnabled
+
+    const room = this.room
+    room.localParticipant.setMicrophoneEnabled(true, this.#audioCaptureOptions()).then(() => {
+      if (this.room !== room) return
+      this.#updateMediaControls()
+      this.#renderRoster()
+      this.#startMicrophoneMeter()
+    }).catch(() => {
+      this.pushToTalkActive = false
+      this.pushToTalkOpenedMic = false
+    })
+  }
+
+  callKeyReleased = (event) => {
+    if (!this.#pushToTalkKeyMatches(event)) return
+    this.#releasePushToTalk()
+  }
+
+  // Losing the window releases a held key without its keyup: without this a
+  // tab switch mid-sentence would wedge the microphone open.
+  windowBlurred = () => {
+    this.#releasePushToTalk()
+  }
+
+  #releasePushToTalk() {
+    if (!this.pushToTalkActive) return
+    this.pushToTalkActive = false
+
+    // A microphone the user opened by hand stays open; only a hold that
+    // opened it closes it again.
+    const opened = this.pushToTalkOpenedMic
+    this.pushToTalkOpenedMic = false
+
+    const room = this.room
+    if (!room || !opened) return
+
+    room.localParticipant.setMicrophoneEnabled(false).then(() => {
+      if (this.room !== room) return
+      this.#updateMediaControls()
+      this.#renderRoster()
+      this.#stopMicrophoneMeter()
+    }).catch(() => {})
+  }
+
+  #pushToTalkEnabled() {
+    return this.voiceModeValue === "push_to_talk"
+  }
+
+  #pushToTalkKey() {
+    return this.pushToTalkKeyValue || "`"
+  }
+
+  // The default backtick is a dead key on international layouts, where the
+  // press reports key "Dead": match it by physical position instead, so the
+  // same key talks on every layout. Custom keys match the typed character.
+  #pushToTalkKeyMatches(event) {
+    const key = this.#pushToTalkKey()
+    return event.key === key || (key === "`" && event.code === "Backquote")
+  }
+
+  #eventTargetIsTyping(event) {
+    const target = event.target
+    if (!(target instanceof HTMLElement)) return false
+
+    return target.isContentEditable ||
+      Boolean(target.closest("input, textarea, select, [contenteditable='true'], [contenteditable='']"))
+  }
+
+  // The presence stacks report who is in the call with their LiveKit
+  // identities; the room reports speakers by identity only. This mapping
+  // joins the two so per-user client state follows the right person.
+  participantsUpdated = ({ detail }) => {
+    if (!this.roomId) return
+    if (detail?.url !== `/rooms/${this.roomId}/huddle/participants`) return
+
+    const mapping = new Map()
+    for (const participant of detail.participants || []) {
+      for (const identity of participant.identities || []) mapping.set(identity, participant.id)
+    }
+    this.identityUserIds = mapping
+    this.#renderRoster()
+    this.#highlightSpeakingStacks()
+  }
+
+  async #refreshIdentityMapping() {
+    if (!this.roomId) return
+
+    try {
+      const response = await fetch(`/rooms/${encodeURIComponent(this.roomId)}/huddle/participants`, {
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+        cache: "no-store"
+      })
+      if (!response.ok) return
+
+      const participants = await response.json()
+      const mapping = new Map()
+      for (const participant of participants || []) {
+        for (const identity of participant.identities || []) mapping.set(identity, participant.id)
+      }
+      this.identityUserIds = mapping
+      this.#renderRoster()
+      if (this.room) {
+        for (const participant of this.room.remoteParticipants.values()) this.#applyStoredParticipantAudio(participant)
+      }
+      this.#highlightSpeakingStacks()
+    } catch (error) {
+      // The roster and the stacks work without user ids; remembered volumes
+      // simply wait for the next presence update.
+    }
   }
 
   toggleMute = async () => {
@@ -590,6 +814,13 @@ export default class extends Controller {
     try {
       await this.room.startAudio()
     } finally {
+      // A remembered boost engages outside any gesture, so its context may
+      // still be suspended: the same control resumes it.
+      try {
+        await this.remoteAudioContext?.resume()
+      } catch {
+        // The context stays suspended and the control stays up.
+      }
       this.#updateAudioPlaybackControl()
     }
   }
@@ -824,6 +1055,9 @@ export default class extends Controller {
   }
 
   visibilityChanged = () => {
+    // Hiding the page drops the keyup like a blur does: release a held
+    // push-to-talk key instead of wedging the microphone open.
+    if (document.visibilityState === "hidden") this.#releasePushToTalk()
     if (document.visibilityState === "visible") this.#checkAuthentication()
   }
 
@@ -1000,6 +1234,26 @@ export default class extends Controller {
       (level) => this.#renderMeterLevel(level)
     )
     this.microphoneMeter.start(track)
+
+    // The SDK restarts the microphone internally when a device unplug ends
+    // its track; once the new track lands, the suppression setting is
+    // restored onto it. One listener per track object: the SDK reuses the
+    // LocalAudioTrack across its own restarts.
+    const endedEvent = this.liveKit.TrackEvent?.Ended || "ended"
+    if (track && typeof track.on === "function" && this.suppressionRestoreTrack !== track) {
+      this.suppressionRestoreTrack = track
+      track.on(endedEvent, this.handleMicTrackEnded)
+    }
+  }
+
+  handleMicTrackEnded = () => {
+    if (!this.room || this.state !== "connected") return
+
+    // Let the SDK's restart land first; the sync below then describes the
+    // live track truthfully instead of racing it.
+    setTimeout(() => {
+      if (this.room && this.state === "connected") this.#applyNoiseSuppression(this.room)
+    }, 0)
   }
 
   #stopMicrophoneMeter() {
@@ -1109,6 +1363,15 @@ export default class extends Controller {
         this.#startMicrophoneMeter()
         this.#applyNoiseSuppression(room)
       }
+
+      // The boost gain sits outside the SDK's path, so a speaker switch
+      // retargets it explicitly and re-applies every stored volume: a boost
+      // capped on the old speaker may engage on the new one, or cap anew.
+      if (kind === "audiooutput") {
+        this.#routeBoostedAudioToOutput()
+        for (const participant of room.remoteParticipants.values()) this.#applyStoredParticipantAudio(participant)
+        this.#renderRoster()
+      }
     } catch (error) {
       if (room !== this.room) return
       const names = { audioinput: "microphone", audiooutput: "speaker", videoinput: "camera" }
@@ -1148,6 +1411,7 @@ export default class extends Controller {
       const { audiooutput } = await listMediaDevices()
       if (!audiooutput.some((device) => device.deviceId === deviceId)) return
       await room.switchActiveDevice("audiooutput", deviceId)
+      this.#routeBoostedAudioToOutput()
     } catch (error) {
       // Output selection is a preference, never a reason to fail a join.
     }
@@ -1439,6 +1703,7 @@ export default class extends Controller {
     on(RoomEvent.Reconnecting, () => {
       if (room === this.room) {
         this.#setState("reconnecting", "Connection interrupted. Reconnecting…")
+        this.#startReconnectCountdown()
         this.#checkAuthentication()
       }
     })
@@ -1460,6 +1725,8 @@ export default class extends Controller {
       for (const publication of participant.trackPublications.values()) {
         if (publication.track) this.#detachTrack(publication.track)
       }
+      this.participantQuality.delete(participant.identity)
+      if (this.boostedParticipants.delete(participant.identity)) this.#updateAudioPlaybackControl()
       this.#renderRoster()
     })
     on(RoomEvent.ParticipantNameChanged, () => this.#renderRoster())
@@ -1473,9 +1740,18 @@ export default class extends Controller {
     })
     on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
       this.#attachTrack(track, publication, participant)
+      this.#applyStoredParticipantAudio(participant)
       this.#renderRoster()
     })
-    on(RoomEvent.TrackUnsubscribed, (track) => this.#detachTrack(track))
+    on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+      // A resubscribe may hand back a new track object without the gain, so
+      // a boost the old track carried is forgotten here and re-engaged on
+      // the next subscribe instead of silently dropping to element volume.
+      if (participant?.identity && this.boostedParticipants.delete(participant.identity)) {
+        this.#updateAudioPlaybackControl()
+      }
+      this.#detachTrack(track)
+    })
     on(RoomEvent.LocalTrackPublished, (publication, participant) => {
       if (publication.track) this.#attachTrack(publication.track, publication, participant)
       this.#renderRoster()
@@ -1489,8 +1765,16 @@ export default class extends Controller {
     })
     on(RoomEvent.AudioPlaybackStatusChanged, () => this.#updateAudioPlaybackControl())
     on(RoomEvent.ConnectionQualityChanged, (quality, participant) => {
-      if (room === this.room && (!participant || participant === room.localParticipant)) {
+      if (room !== this.room) return
+
+      if (!participant || participant === room.localParticipant) {
         this.#updateConnectionIndicator(quality)
+      } else if (participant.identity) {
+        // The server reports quality per participant; remotes get a badge on
+        // their roster row. The event fires on change only, so no throttle
+        // is needed beyond the in-place row patch.
+        this.participantQuality.set(participant.identity, quality)
+        this.#renderRoster()
       }
     })
     on(RoomEvent.ActiveDeviceChanged, (kind) => {
@@ -1500,9 +1784,15 @@ export default class extends Controller {
       // and the meter follow it. The stored preference keeps the user's own
       // choice, so a fallback never overwrites it: preferences are only
       // written from user selections (#switchDevice, #storeSelectedDevices,
-      // and the pre-join change handlers).
+      // and the pre-join change handlers). A retargeted microphone also gets
+      // the suppression setting restored onto its new track, and a
+      // retargeted speaker carries the boost gain with it.
       this.#refreshDeviceLists()
-      if (kind === "audioinput") this.#startMicrophoneMeter()
+      if (kind === "audioinput") {
+        this.#applyNoiseSuppression(room)
+        this.#startMicrophoneMeter()
+      }
+      if (kind === "audiooutput") this.#routeBoostedAudioToOutput()
     })
 
     this.roomListeners.set(room, listeners)
@@ -1518,6 +1808,11 @@ export default class extends Controller {
 
     ++this.operation
     this.room = null
+    this.identityUserIds = new Map()
+    this.participantQuality = new Map()
+    this.boostedParticipants = new Set()
+    this.pushToTalkActive = false
+    this.pushToTalkOpenedMic = false
     this.#unbindRoom(room)
     this.#stopLocalTracks(room)
     this.#clearMedia()
@@ -1555,6 +1850,10 @@ export default class extends Controller {
   async #disconnectCurrentRoom() {
     const room = this.room
     this.room = null
+    this.participantQuality = new Map()
+    this.boostedParticipants = new Set()
+    this.pushToTalkActive = false
+    this.pushToTalkOpenedMic = false
     this.#endStreamOnDisconnect()
     this.#stopAuthenticationChecks()
     this.#stopPreview()
@@ -1570,12 +1869,22 @@ export default class extends Controller {
   async #disconnectRoom(room) {
     this.#unbindRoom(room)
     this.#stopLocalTracks(room)
+    this.#closeRemoteAudioContext()
 
     try {
       await room.disconnect(true)
     } catch (error) {
       // The media tracks are already stopped; there is nothing else to recover here.
     }
+  }
+
+  // Boosted participants route through a private AudioContext; close it
+  // when the call ends so repeated calls don't accumulate contexts.
+  #closeRemoteAudioContext() {
+    const context = this.remoteAudioContext
+    this.remoteAudioContext = null
+    this.boostedParticipants?.clear?.()
+    context?.close?.().catch?.(() => {})
   }
 
   #stopLocalTracks(room) {
@@ -2132,6 +2441,11 @@ export default class extends Controller {
     const track = room.localParticipant.getTrackPublication?.(Track.Source.Microphone)?.audioTrack
     if (!track || typeof track.setProcessor !== "function") return
 
+    // Each sync judges fresh: a restart failure below blocks the healthy
+    // clear at the end, while a sync that needs no restart clears a stale
+    // error once the processor and constraints agree again.
+    this.captureRestartFailed = false
+
     // The processor stays attached across mute: the stopped mic track it
     // feeds goes silent, so nothing audible is filtered while muted, and
     // unmuting hands the live track back to the same worklet and
@@ -2152,6 +2466,12 @@ export default class extends Controller {
             simdWasmUrl: this.noiseSimdWasmUrlValue
           }))
         } else {
+          // Switching off re-acquires first with browser suppression on
+          // while the processor still filters, then stops the processor:
+          // the microphone is double-filtered for a moment, never
+          // unfiltered. The trailing sync below then finds the stored
+          // constraints already matching and restarts nothing further.
+          await this.#syncCaptureNoiseSuppression(track, false)
           await track.stopProcessor()
         }
       } catch (error) {
@@ -2182,6 +2502,17 @@ export default class extends Controller {
     // processor did not change: toggling the switch while muted refreshes the
     // stored constraints, and the unmute that follows re-acquires from them.
     await this.#syncCaptureNoiseSuppression(track, Boolean(track.getProcessor?.()))
+
+    // A sync that lands a healthy state — the wanted processor attached,
+    // the stored constraints agreeing with it, and no restart failing along
+    // the way — clears a stale restart error. A still-broken state keeps the
+    // notice up.
+    const settled = this.noiseSuppressionAvailable && this.noiseSuppressionEnabled
+    if (!this.captureRestartFailed &&
+        settled === Boolean(track.getProcessor?.()) &&
+        track.constraints?.noiseSuppression === !settled) {
+      this.#clearMicrophoneRestartError()
+    }
   }
 
   // The full capture set for a noise-suppression sync: the same processing the
@@ -2234,7 +2565,7 @@ export default class extends Controller {
 
     try {
       if (typeof track.restartTrack === "function") {
-        await track.restartTrack(constraints)
+        await this.#restartCaptureTrack(track, constraints)
         // The restart replaced the meter's track; the old one reads as ended.
         this.#startMicrophoneMeter()
       } else if (typeof track.applyConstraints === "function") {
@@ -2245,6 +2576,35 @@ export default class extends Controller {
     } catch (error) {
       // The next sync — after unmute, or after the next toggle — retries.
     }
+  }
+
+  // A failed re-acquire retries once, then falls back to the track's own
+  // stored constraints. A track that is still live keeps working with its
+  // old filtering and the next sync retries; a silent one shows a clear
+  // error instead of leaving a dead microphone unexplained. A later healthy
+  // sync clears the notice through #syncNoiseSuppression.
+  async #restartCaptureTrack(track, constraints) {
+    const attempts = [ constraints, constraints, track.constraints ]
+
+    for (const attempt of attempts) {
+      try {
+        await track.restartTrack(attempt)
+        this.captureRestartFailed = false
+        return
+      } catch (error) {
+        // Next attempt: one retry, then the stored constraints.
+      }
+    }
+
+    this.captureRestartFailed = true
+
+    if (track.isMuted === true || track.mediaStreamTrack?.readyState === "ended") {
+      this.#showConnectedNotice(MICROPHONE_RESTART_ERROR)
+    }
+  }
+
+  #clearMicrophoneRestartError() {
+    if (this.noticeTarget.textContent === MICROPHONE_RESTART_ERROR) this.#clearConnectedNotice()
   }
 
   // Only a browser that genuinely cannot run the filter latches it off for the
@@ -2288,6 +2648,7 @@ export default class extends Controller {
     if (!this.room) {
       this.participantListTarget.replaceChildren()
       this.participantCountTarget.textContent = "0 participants"
+      this.#highlightSpeakingStacks()
       return
     }
 
@@ -2320,6 +2681,7 @@ export default class extends Controller {
     const count = participants.length
     this.participantCountTarget.textContent = `${count} ${count === 1 ? "participant" : "participants"}`
     this.#renderStreamViewing()
+    this.#highlightSpeakingStacks()
   }
 
   #buildRosterRow(identity) {
@@ -2332,7 +2694,33 @@ export default class extends Controller {
     const activity = document.createElement("span")
     activity.className = "huddle__participant-activity"
 
-    item.append(name, activity)
+    // Local-only per-person controls: a volume slider and a mute that
+    // affects nobody else. They need the Smartfire user id behind the
+    // LiveKit identity, so they stay hidden until the mapping lands.
+    const controls = document.createElement("span")
+    controls.className = "huddle__participant-controls"
+    controls.hidden = true
+
+    const volume = document.createElement("input")
+    volume.type = "range"
+    volume.min = "0"
+    volume.max = "200"
+    volume.step = "5"
+    volume.value = "100"
+    volume.className = "huddle__participant-volume"
+    volume.dataset.action = "input->huddle#participantVolumeChanged"
+    volume.dataset.huddleIdentityParam = identity
+
+    const mute = document.createElement("button")
+    mute.type = "button"
+    mute.className = "btn btn--plain huddle__participant-mute"
+    mute.dataset.action = "huddle#toggleParticipantMute"
+    mute.dataset.huddleIdentityParam = identity
+    mute.setAttribute("aria-pressed", "false")
+    mute.textContent = "Mute for me"
+
+    controls.append(volume, mute)
+    item.append(name, activity, controls)
     return item
   }
 
@@ -2341,16 +2729,280 @@ export default class extends Controller {
     const speaking = participant.isSpeaking
     const microphone = participant.getTrackPublication?.(Track.Source.Microphone)
     const muted = isLocal ? !participant.isMicrophoneEnabled : microphone?.isMuted
-    const activityText = speaking ? "Speaking" : muted ? "Muted" : "Listening"
+    let activityText = speaking ? "Speaking" : muted ? "Muted" : "Listening"
+
+    const userId = isLocal ? null : this.identityUserIds.get(participant.identity)
+    const controls = item.children[2]
+    controls.hidden = isLocal || userId == null
+
+    if (userId != null) {
+      const displayName = this.#participantName(participant)
+      const volume = controls.children[0]
+      const mute = controls.children[1]
+
+      // Never rewrite the slider mid-drag: roster patches arrive on every
+      // utterance, and resetting the value under the pointer would fight it.
+      if (document.activeElement !== volume) volume.value = String(this.#storedParticipantVolume(userId))
+      volume.setAttribute("aria-label", `${displayName} volume`)
+      volume.title = this.#boostCappedToElement()
+        ? "Boost above 100% needs the default speaker: this browser can't route boosted audio to another speaker."
+        : ""
+
+      const locallyMuted = this.#participantLocallyMuted(userId)
+      mute.setAttribute("aria-pressed", String(locallyMuted))
+      mute.setAttribute("aria-label", locallyMuted ? `Unmute ${displayName} for yourself` : `Mute ${displayName} for yourself`)
+      if (locallyMuted) activityText = "Muted"
+    }
+
+    const quality = this.participantQuality.get(participant.identity)
+    const poorConnection = quality === "poor" || quality === "lost"
 
     item.className = "huddle__participant"
     item.classList.toggle("huddle__participant--speaking", speaking)
-    item.setAttribute("aria-label", `${this.#participantName(participant)}, ${activityText}`)
+    item.classList.toggle("huddle__participant--poor-connection", poorConnection)
+    item.setAttribute("aria-label",
+      `${this.#participantName(participant)}, ${activityText}${poorConnection ? ", poor connection" : ""}`)
 
     const [ name, activity ] = item.children
     name.textContent = this.#participantName(participant)
     if (isLocal) name.textContent += " (you)"
-    activity.textContent = activityText
+    activity.textContent = activityText + (poorConnection ? " · Poor connection" : "")
+  }
+
+  // Speaking rings on the sidebar and header avatar stacks. Only the stacks
+  // for the current call carry matching user ids; other rooms' stacks are
+  // untouched. Runs on the SDK's speaker-change flow through #renderRoster,
+  // so it needs no timer of its own.
+  #highlightSpeakingStacks() {
+    const speaking = new Set()
+    if (this.room) {
+      const participants = [ this.room.localParticipant, ...(this.room.remoteParticipants?.values() || []) ]
+      for (const participant of participants) {
+        if (!participant?.isSpeaking) continue
+        const userId = participant === this.room.localParticipant
+          ? this.currentUserIdValue
+          : this.identityUserIds.get(participant.identity)
+        if (userId != null) speaking.add(Number(userId))
+      }
+    }
+
+    for (const avatar of document.querySelectorAll(".voice-stack__avatar[data-user-id]")) {
+      avatar.classList.toggle("voice-stack__avatar--speaking", speaking.has(Number(avatar.dataset.userId)))
+    }
+  }
+
+  // A volume slider moved for one person: remembered per user, applied to
+  // their live audio only. Nobody else hears a difference.
+  participantVolumeChanged = (event) => {
+    const identity = event.params?.identity
+    const participant = this.#remoteParticipantByIdentity(identity)
+    const userId = this.identityUserIds.get(identity)
+    if (!participant || userId == null) return
+
+    const value = Math.max(0, Math.min(200, Number(event.target.value) || 0))
+    this.#storeParticipantVolume(userId, value)
+    this.remoteAudioContext?.resume?.().catch(() => {})
+    this.#applyParticipantAudio(participant, userId)
+  }
+
+  // A mute that stops one person's audio for this browser only: their
+  // microphone publication is unsubscribed, so the server stops sending it.
+  toggleParticipantMute = (event) => {
+    const identity = event.params?.identity
+    const participant = this.#remoteParticipantByIdentity(identity)
+    const userId = this.identityUserIds.get(identity)
+    if (!participant || userId == null) return
+
+    this.#storeParticipantLocalMute(userId, !this.#participantLocallyMuted(userId))
+    this.#applyParticipantAudio(participant, userId)
+    this.#renderRoster()
+  }
+
+  #remoteParticipantByIdentity(identity) {
+    if (!this.room || !identity) return null
+    if (this.room.localParticipant?.identity === identity) return null
+
+    return this.room.remoteParticipants?.get?.(identity) || null
+  }
+
+  // Applies the remembered volume and local mute for one participant. Only
+  // customized participants are touched: the defaults are exactly the SDK's
+  // own behavior, so their audio path stays untouched.
+  #applyStoredParticipantAudio(participant) {
+    if (!participant || participant === this.room?.localParticipant) return
+
+    const userId = this.identityUserIds.get(participant.identity)
+    if (userId == null) return
+    if (this.#storedParticipantVolume(userId) === 100 && !this.#participantLocallyMuted(userId)) return
+
+    this.#applyParticipantAudio(participant, userId)
+  }
+
+  #applyParticipantAudio(participant, userId) {
+    const { Track } = this.liveKit || {}
+    const publication = participant.getTrackPublication?.(Track?.Source?.Microphone)
+
+    if (this.#participantLocallyMuted(userId)) {
+      if (typeof publication?.setSubscribed === "function") {
+        publication.setSubscribed(false)
+      } else {
+        participant.setVolume?.(0)
+      }
+      return
+    }
+
+    if (typeof publication?.setSubscribed === "function" && publication.isSubscribed === false) {
+      publication.setSubscribed(true)
+    }
+    this.#applyParticipantVolume(participant, publication, this.#storedParticipantVolume(userId))
+  }
+
+  // Volumes up to 100% ride the audio element; anything above needs a Web
+  // Audio gain node, which the SDK wires when a context is set on the track.
+  // The context engages only for boosted participants and detaches when the
+  // slider returns to 100% or below, so untouched audio never reroutes. The
+  // elements are muted while the gain carries them: the SDK only quiets
+  // elements attached after the context is set, so a context engaged later
+  // would otherwise play twice — once through the element at its old volume,
+  // once through the gain — and a 0% slider would leave full-volume audio
+  // behind. Only a track that actually exists counts as boosted, so a volume
+  // remembered before the track arrives still engages on subscribe.
+  #applyParticipantVolume(participant, publication, volume) {
+    const track = publication?.track || publication?.audioTrack
+
+    // Where the boost cannot follow the speaker picker it caps at 100%
+    // instead of escaping to the default speaker; the slider tooltip says
+    // why, and the stored preference still applies on the default speaker.
+    if (volume > 100 && this.#boostCappedToElement()) volume = 100
+
+    if (volume > 100) {
+      const context = this.#remoteVolumeAudioContext()
+      if (!context) {
+        participant.setVolume?.(1)
+        return
+      }
+
+      try {
+        if (track && !this.boostedParticipants.has(participant.identity)) {
+          track.setAudioContext?.(context)
+          for (const element of track.attachedElements || []) {
+            element.volume = 0
+            element.muted = true
+          }
+          this.boostedParticipants.add(participant.identity)
+        }
+        participant.setVolume?.(volume / 100)
+      } catch (error) {
+        participant.setVolume?.(1)
+      }
+      this.#updateAudioPlaybackControl()
+      return
+    }
+
+    if (this.boostedParticipants.has(participant.identity)) {
+      this.boostedParticipants.delete(participant.identity)
+      try {
+        track?.setAudioContext?.(null)
+      } catch (error) {
+        // The element volume below still applies.
+      }
+      for (const element of track?.attachedElements || []) element.muted = false
+      this.#updateAudioPlaybackControl()
+    }
+    participant.setVolume?.(volume / 100)
+  }
+
+  #remoteVolumeAudioContext() {
+    if (this.remoteAudioContext) return this.remoteAudioContext
+
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext
+    if (!AudioContextClass) return null
+
+    try {
+      this.remoteAudioContext = new AudioContextClass()
+    } catch (error) {
+      return null
+    }
+
+    this.#routeBoostedAudioToOutput()
+    return this.remoteAudioContext
+  }
+
+  // The boost gain node lives outside the SDK's audio path, so it needs its
+  // own output routing: without this a boosted participant plays through the
+  // default speaker while everyone else follows the speaker picker.
+  #routeBoostedAudioToOutput() {
+    const context = this.remoteAudioContext
+    if (!context || typeof context.setSinkId !== "function") return
+
+    context.setSinkId(this.#selectedOutputDeviceId()).catch(() => {
+      // The default output stands in when the selected one rejects.
+    })
+  }
+
+  // The active output, the speaker picker's choice, or the stored preference
+  // before the pickers fill in; "" means the default output.
+  #selectedOutputDeviceId() {
+    if (!audioOutputSupported()) return ""
+
+    const selected = [ this.#activeDeviceId("audiooutput"), this.speakerSelectTarget.value,
+      loadDevicePreferences().audiooutput ].find((id) => id && id !== "default")
+    return selected || ""
+  }
+
+  // AudioContext.setSinkId is newer than the element version: where it is
+  // missing, boosted audio would escape to the default speaker, so the boost
+  // caps at 100% until the default speaker is selected again.
+  #boostCappedToElement() {
+    return !this.#audioContextSinkSupported() && this.#selectedOutputDeviceId() !== ""
+  }
+
+  #audioContextSinkSupported() {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext
+    return typeof AudioContextClass?.prototype?.setSinkId === "function"
+  }
+
+  #storedParticipantVolume(userId) {
+    try {
+      // Number(null) and Number("") are both 0, which would read a missing
+      // preference as silence; only a real stored value overrides the 100.
+      const raw = window.localStorage.getItem(`${PARTICIPANT_VOLUME_STORAGE_PREFIX}${userId}`)
+      if (raw == null || raw === "") return 100
+      const value = Number(raw)
+      if (Number.isFinite(value)) return Math.max(0, Math.min(200, value))
+    } catch (error) {
+      // Private browsing modes can refuse storage; the default stands in.
+    }
+
+    return 100
+  }
+
+  #storeParticipantVolume(userId, value) {
+    try {
+      window.localStorage.setItem(`${PARTICIPANT_VOLUME_STORAGE_PREFIX}${userId}`, String(value))
+    } catch (error) {
+      // The preference simply does not survive this session.
+    }
+  }
+
+  #participantLocallyMuted(userId) {
+    try {
+      return window.localStorage.getItem(`${PARTICIPANT_MUTE_STORAGE_PREFIX}${userId}`) === "1"
+    } catch (error) {
+      return false
+    }
+  }
+
+  #storeParticipantLocalMute(userId, muted) {
+    try {
+      if (muted) {
+        window.localStorage.setItem(`${PARTICIPANT_MUTE_STORAGE_PREFIX}${userId}`, "1")
+      } else {
+        window.localStorage.removeItem(`${PARTICIPANT_MUTE_STORAGE_PREFIX}${userId}`)
+      }
+    } catch (error) {
+      // The preference simply does not survive this session.
+    }
   }
 
   #participantName(participant) {
@@ -2394,7 +3046,9 @@ export default class extends Controller {
     // names it visibly, instead of the label flipping with every toggle.
     this.muteLabelTarget.textContent = "Mute microphone"
     this.muteTarget.setAttribute("aria-pressed", String(!microphoneEnabled))
-    this.muteTarget.title = microphoneEnabled ? "Microphone live" : "Microphone muted"
+    this.muteTarget.title = microphoneEnabled
+      ? "Microphone live"
+      : this.#pushToTalkEnabled() ? `Hold ${this.#pushToTalkKey()} to talk` : "Microphone muted"
     this.muteTarget.classList.toggle("huddle__mute--muted", !microphoneEnabled)
     this.element.classList.toggle("huddle--muted", !microphoneEnabled)
     // The meter only means something while the microphone is live.
@@ -2407,7 +3061,11 @@ export default class extends Controller {
   }
 
   #updateAudioPlaybackControl() {
-    this.resumeAudioTarget.hidden = !this.room || this.room.canPlaybackAudio
+    // A boost engaged outside a gesture leaves its context suspended with
+    // the room audio fine: the resume control stays up for the boost too,
+    // so it never plays silence on Safari with nothing to press.
+    const boostSuspended = this.boostedParticipants.size > 0 && this.remoteAudioContext?.state === "suspended"
+    this.resumeAudioTarget.hidden = !this.room || (this.room.canPlaybackAudio && !boostSuspended)
   }
 
   #setState(state, message, isError = false, errorStatus = "Couldn’t join huddle") {
@@ -2416,8 +3074,12 @@ export default class extends Controller {
     this.element.hidden = state === "idle"
     this.roomNameTarget.textContent = this.roomName || "Huddle"
     this.statusTarget.textContent = isError ? errorStatus : message
-    this.noticeTarget.textContent = isError ? message : ""
-    this.noticeTarget.hidden = !isError
+    // A mute notice survives the rejoin it triggers: without this the
+    // connecting transition would clear the explanation before it is read.
+    // Failures still replace it, and leaving or unmuting clears it.
+    const mutedNotice = !isError && this.noticeTarget.textContent === SERVER_MUTED_NOTICE
+    this.noticeTarget.textContent = isError ? message : mutedNotice ? SERVER_MUTED_NOTICE : ""
+    this.noticeTarget.hidden = !(isError || mutedNotice)
 
     const connected = state === "connected"
     const reconnecting = state === "reconnecting"
@@ -2429,6 +3091,7 @@ export default class extends Controller {
     // A fresh join or a failure closes the in-call device step; the pre-join
     // check shows it unconditionally as the step itself.
     if (!live && !prejoin) this.devicesOpen = false
+    if (!reconnecting) this.#stopReconnectCountdown()
 
     this.activeControlsTarget.hidden = !live
     this.settingsTarget.hidden = !(live || prejoin)
@@ -2610,6 +3273,11 @@ export default class extends Controller {
     this.roomId = null
     this.roomName = null
     this.identity = null
+    this.identityUserIds = new Map()
+    this.participantQuality = new Map()
+    this.boostedParticipants = new Set()
+    this.pushToTalkActive = false
+    this.pushToTalkOpenedMic = false
     this.state = "idle"
     this.element.hidden = true
     this.broadcastState()

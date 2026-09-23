@@ -19,6 +19,12 @@
       <span class="room-header__action-label">Search</span>
     <% end %>
 
+    <button type="button" class="btn room-header__action room-header__action--switcher" aria-label="Quick switcher (Control K)" title="Quick switcher (Ctrl+K)"
+            data-action="click->keyboard-shortcuts#openSwitcher">
+      <%= image_tag "transfer.svg", size: 20, aria: { hidden: "true" } %>
+      <span class="room-header__action-label quick-switcher-key" aria-hidden="true"><kbd>Ctrl</kbd> <kbd>K</kbd></span>
+    </button>
+
     <% unless room.direct? %>
       <%= tag.button type: "button", class: "btn room-header__action", aria: { label: "Show threads", controls: "thread-panel", expanded: "false" }, title: "Show threads",
             data: { action: "thread-panel#toggle", thread_panel_target: "browserToggle" } do %>
@@ -31,6 +37,11 @@
     <%= link_to room_events_path(room), class: "btn room-header__action", aria: { label: "Show events" }, title: "Show events" do %>
       <%= image_tag "calendar.svg", size: 20, aria: { hidden: "true" } %>
       <span class="room-header__action-label">Events</span>
+    <% end %>
+
+    <%= link_to room_files_path(room), class: "btn room-header__action room-header__action--files", aria: { label: "Show files" }, title: "Show files" do %>
+      <%= image_tag "attachment.svg", size: 20, aria: { hidden: "true" } %>
+      <span class="room-header__action-label">Files</span>
     <% end %>
 
     <%= render "rooms/pins/panel", room: room %>
@@ -69,6 +80,7 @@
 
     <% if stage_membership %>
       <div class="stage-panel-wrap" data-controller="stage-panel">
+        <p class="for-screen-reader" role="status" data-stage-panel-target="handAnnouncement"></p>
         <button type="button" class="btn room-header__action"
                 aria-controls="<%= dom_id(room, :stage_panel_dialog) %>"
                 aria-expanded="false"

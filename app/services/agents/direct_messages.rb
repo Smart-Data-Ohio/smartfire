@@ -40,6 +40,9 @@ module Agents
         return ServiceResult.fail("Forbidden: agent lacks post_messages capability", status: :forbidden)
       end
       broadcast_new_room(room) if new_room
+      if new_room
+        AuditLog.record!(action: "room.create", actor: agent.user, actor_label: AuditLog.label_for(agent), target: room, changes: { name: room.name })
+      end
 
       result = Posting.post(agent: agent, room: room, attributes: attributes, drive_file_ids: drive_file_ids)
       return result unless result.ok?

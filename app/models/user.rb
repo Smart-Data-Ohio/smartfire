@@ -21,13 +21,16 @@ class User < ApplicationRecord
   has_many :event_calendar_entries, dependent: :destroy
 
   has_many :boosts, dependent: :destroy, foreign_key: :booster_id
+  has_many :poll_votes, dependent: :delete_all
   # Destroyed (not deleted) so each removed pin broadcasts its badge,
   # count, and panel updates through the pin commit callbacks. The
   # message cascade above runs first, so pins on the user's own messages
   # are already gone when this association loads: no pin broadcasts twice.
   has_many :message_pins, dependent: :destroy, foreign_key: :pinner_id
   has_many :saved_items, dependent: :delete_all
+  has_many :scheduled_messages, dependent: :delete_all
   has_many :searches, dependent: :delete_all
+  has_many :room_categories, dependent: :destroy
 
   has_many :sessions, dependent: :destroy
   has_many :workspace_presence_leases, dependent: :delete_all
@@ -35,11 +38,17 @@ class User < ApplicationRecord
 
   enum :status, %i[ active deactivated banned ], default: :active
 
+  VOICE_MODES = %w[ voice_activity push_to_talk ].freeze
+  DEFAULT_PUSH_TO_TALK_KEY = "`".freeze
+
   normalizes :github_login, with: ->(login) { login.to_s.strip.downcase.presence }
 
   validates :github_login, uniqueness: { case_sensitive: false, message: "is already linked to another user" }, allow_nil: true
   validate :github_login_must_match_verified_account, if: :will_save_change_to_github_login?
   validate :inbox_preferences_must_be_boolean
+  validate :voice_settings_must_be_valid
+
+  normalizes :push_to_talk_key, with: ->(key) { key.to_s.strip.presence }
 
   normalizes :icon_name, with: ->(name) { Icons.normalize_name(name) }
   validate :icon_name_must_resolve, if: :icon_name_changed?
@@ -96,6 +105,23 @@ class User < ApplicationRecord
   # confirmed it when the token was linked, so the profile cannot edit it.
   def github_login_verified?
     github_connected_account&.connected? || false
+  end
+
+  # How the microphone opens in calls: always live, or only while the
+  # push-to-talk key is held. Nil reads as voice activity, so existing users
+  # keep today's behavior until they switch.
+  def voice_mode
+    self[:voice_mode].presence_in(VOICE_MODES) || "voice_activity"
+  end
+
+  def push_to_talk?
+    voice_mode == "push_to_talk"
+  end
+
+  # The KeyboardEvent.key held to talk in push-to-talk mode: a character key
+  # like "`" or a named key like "CapsLock". Nil reads as the backtick.
+  def push_to_talk_key
+    self[:push_to_talk_key].presence || DEFAULT_PUSH_TO_TALK_KEY
   end
 
   def initials
@@ -197,6 +223,19 @@ class User < ApplicationRecord
         unless User::InboxPreferences.boolean_value?(value)
           errors.add(:"inbox_preferences.#{key}", "must be true or false")
         end
+      end
+    end
+
+    # Reads the raw columns: the voice_mode and push_to_talk_key readers
+    # normalize nil to their defaults, which would mask invalid values from
+    # a plain inclusion check.
+    def voice_settings_must_be_valid
+      if self[:voice_mode].present? && !self[:voice_mode].in?(VOICE_MODES)
+        errors.add(:voice_mode, "is invalid")
+      end
+
+      if self[:push_to_talk_key].present? && self[:push_to_talk_key].length > 20
+        errors.add(:push_to_talk_key, "is too long")
       end
     end
 

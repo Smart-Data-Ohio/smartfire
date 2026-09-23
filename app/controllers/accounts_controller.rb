@@ -9,7 +9,11 @@ class AccountsController < ApplicationController
   end
 
   def update
+    previous_name = @account.name
+    previous_restrict = @account.settings.restrict_room_creation_to_administrators?
+    previous_logo = @account.logo.attached?
     @account.update!(account_params)
+    record_settings_changes(previous_name: previous_name, previous_restrict: previous_restrict, previous_logo: previous_logo)
     redirect_to edit_account_url, notice: "✓"
   end
 
@@ -28,5 +32,17 @@ class AccountsController < ApplicationController
       else
         User.active
       end
+    end
+
+    def record_settings_changes(previous_name:, previous_restrict:, previous_logo:)
+      changes = {}
+      changes[:name] = AuditLog.pair(previous_name, @account.name) if @account.name != previous_name
+      current_restrict = @account.settings.restrict_room_creation_to_administrators?
+      if current_restrict != previous_restrict
+        changes[:restrict_room_creation_to_administrators] = AuditLog.pair(previous_restrict, current_restrict)
+      end
+      changes[:logo] = AuditLog.pair(previous_logo, @account.logo.attached?) if @account.logo.attached? != previous_logo
+
+      AuditLog.record!(action: "account.settings.change", target: @account, changes: changes) if changes.present?
     end
 end

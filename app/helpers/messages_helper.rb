@@ -1,5 +1,5 @@
 module MessagesHelper
-  def message_area_tag(room, thread: nil, anchor_message_id: nil, &)
+  def message_area_tag(room, thread: nil, anchor_message_id: nil, scroll_to_divider: nil, &)
     area_id = thread ? dom_id(thread, :message_area) : "message-area"
     controller = thread ? "messages drop-target" : "messages presence drop-target"
     actions = [ messages_actions, drop_target_actions ]
@@ -14,7 +14,8 @@ module MessagesHelper
       messages_mentioned_class: "message--mentioned",
       messages_threaded_class: "message--threaded",
       messages_page_url_value: thread ? room_thread_messages_url(room, thread) : room_messages_url(room),
-      messages_anchor_message_id_value: anchor_message_id
+      messages_anchor_message_id_value: anchor_message_id,
+      messages_scroll_to_divider_value: scroll_to_divider
     }, &
   end
 
@@ -72,7 +73,7 @@ module MessagesHelper
     end
 
     tag.div id: dom_id(message),
-      class: [ "message", ("message--emoji" if !message.system_note? && message.plain_text_body.all_emoji?), ("message--system-note" if message.system_note?) ].compact.join(" "),
+      class: [ "message", ("message--emoji" if !message.system_note? && message.plain_text_body.all_emoji?), ("message--system-note" if message.system_note?), ("message--action" if !message.system_note? && message.action?) ].compact.join(" "),
       role: ("note" if message.system_note?),
       data: data, &
   rescue Exception => e

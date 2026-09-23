@@ -19,6 +19,7 @@ class Agent < ApplicationRecord
 
   has_many :agent_credentials, dependent: :destroy
   has_many :agent_grants, dependent: :destroy
+  has_many :agent_slash_commands, dependent: :destroy
   has_many :agent_events, dependent: :destroy
   has_many :agent_approvals, dependent: :destroy
 
@@ -54,8 +55,14 @@ class Agent < ApplicationRecord
     suspended_at.present?
   end
 
+  # Suspension fans out from deactivation, bans, and bot removal, so the
+  # audit row lives here rather than at each call site. The actor defaults
+  # to whoever triggered the suspension through the current request.
   def suspend!
-    update!(suspended_at: Time.current) unless suspended?
+    return if suspended?
+
+    update!(suspended_at: Time.current)
+    AuditLog.record!(action: "agent.suspend", target: self)
   end
 
   def kind_description
