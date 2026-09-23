@@ -7,7 +7,8 @@ name: Nightly backup
 #
 # Authentication is Workload Identity Federation against the APP project as
 # the backup-runner identity (IAP tunnel and SSH to the campfire VM only,
-# plus create-only access to the backup bucket), mirroring deploy-gcp.yml.
+# plus the backupUploader role on the backup bucket), mirroring
+# deploy-gcp.yml.
 
 on:
   schedule:
@@ -264,8 +265,7 @@ jobs:
           stamp="$(printf '%s' "$BASE" | sed -n 's/^smartfire-backup-\([0-9]\{8\}-[0-9]\{6\}\)\.tar\.gz\.age$/\1/p')"
           [ -n "$stamp" ] || { echo "::error::could not parse the stamp from ${BASE}"; exit 1; }
           datestr="${stamp%%-*}"
-          # One upload per prefix: a create-only credential cannot read an
-          # object back for a server-side copy. GNU date parses YYYYMMDD.
+          # One upload per prefix from the same local bytes. GNU date parses YYYYMMDD.
           objects="daily/${BASE}"
           [ "$(date -u -d "$datestr" +%u)" = "7" ] && objects="$objects weekly/${BASE}"
           [ "$(date -u -d "$datestr" +%-d)" = "1" ] && objects="$objects monthly/${BASE}"

@@ -16,6 +16,8 @@ class SetupBackupProjectTest < ActiveSupport::TestCase
   SUBJECT = "repo:Smart-Data-Ohio@262436228/smartfire@1370426325:ref:refs/heads/main"
   PROJECT = "smart-data-campfire-backups"
   APP_PROJECT = "smart-data-campfire"
+  UPLOADER_ROLE = "projects/smart-data-campfire-backups/roles/backupUploader"
+  UPLOADER_PERMISSIONS = "storage.objects.create,storage.objects.get,storage.objects.list"
 
   GCLOUD_STUB = <<~'SH'.freeze
     #!/usr/bin/env bash
@@ -69,6 +71,19 @@ class SetupBackupProjectTest < ActiveSupport::TestCase
             exit 0
             ;;
           add-iam-policy-binding)
+            if [ "${STUB_BIND_HARD_FAIL:-0}" = "1" ]; then
+              echo "ERROR: (gcloud.storage.buckets.add-iam-policy-binding) PERMISSION_DENIED: permission denied" >&2
+              exit 1
+            fi
+            if [ "${STUB_BIND_FAIL_ALWAYS:-0}" = "1" ]; then
+              echo "ERROR: (gcloud.storage.buckets.add-iam-policy-binding) FAILED_PRECONDITION: role does not exist in the resource's hierarchy." >&2
+              exit 1
+            fi
+            if [ "${STUB_BIND_FAIL_ONCE:-0}" = "1" ] && [ ! -f "${STUB_LOG}.bind_failed" ]; then
+              touch "${STUB_LOG}.bind_failed"
+              echo "ERROR: (gcloud.storage.buckets.add-iam-policy-binding) FAILED_PRECONDITION: role does not exist in the resource's hierarchy." >&2
+              exit 1
+            fi
             exit 0
             ;;
           *)
@@ -102,6 +117,16 @@ class SetupBackupProjectTest < ActiveSupport::TestCase
                 exit 0
                 ;;
               add-iam-policy-binding)
+                exit 0
+                ;;
+            esac
+            ;;
+          roles)
+            case "$3" in
+              describe)
+                [ "${STUB_ROLE_EXISTS:-0}" = "1" ] && exit 0 || { echo "not found" >&2; exit 1; }
+                ;;
+              create|update)
                 exit 0
                 ;;
             esac
@@ -195,19 +220,68 @@ class SetupBackupProjectTest < ActiveSupport::TestCase
     exit 9
   SH
 
-  test "creates the backup-runner in the app project with a create-only bucket grant" do
+  test "creates the backup-runner in the app project with the custom uploader grant" do
     with_setup_env do |env, dirs|
       out, status = run_setup(env)
       assert status.success?, "setup failed: #{out}"
       log = gcloud_log(dirs)
       assert log.any? { |line| line.include?("service-accounts create smartfire-backup-runner") && line.include?("--project=#{APP_PROJECT}") },
         "runner SA was not created in the app project:\n#{log.join("\n")}"
-      assert log.any? { |line| line.include?("add-iam-policy-binding") && line.include?("roles/storage.objectCreator") && line.include?("serviceAccount:#{RUNNER}") },
-        "runner was not granted objectCreator:\n#{log.join("\n")}"
+      assert log.any? { |line| line.include?("roles create backupUploader") && line.include?("--project=#{PROJECT}") && line.include?("--permissions=#{UPLOADER_PERMISSIONS}") },
+        "custom uploader role was not created with exactly create+get+list:\n#{log.join("\n")}"
+      assert log.any? { |line| line.include?("add-iam-policy-binding") && line.include?(UPLOADER_ROLE) && line.include?("serviceAccount:#{RUNNER}") },
+        "runner was not granted the custom uploader role:\n#{log.join("\n")}"
+      refute log.any? { |line| line.include?("roles/storage.objectCreator") },
+        "objectCreator alone fails the upload with a 403 and must not be granted:\n#{log.join("\n")}"
       refute log.any? { |line| line.include?("service-accounts create") && line.include?("smartfire-backup-writer") },
         "no writer service account must be created:\n#{log.join("\n")}"
       refute_includes out, "instances stop", "no VM stop may be prescribed:\n#{out}"
       assert_includes out, "No VM change was needed"
+    end
+  end
+
+  test "converges the custom uploader role when it already exists" do
+    with_setup_env("STUB_ROLE_EXISTS" => "1") do |env, dirs|
+      out, status = run_setup(env)
+      assert status.success?, "setup failed: #{out}"
+      log = gcloud_log(dirs)
+      assert log.any? { |line| line.include?("roles update backupUploader") && line.include?("--project=#{PROJECT}") && line.include?("--permissions=#{UPLOADER_PERMISSIONS}") },
+        "existing uploader role was not converged to exactly create+get+list:\n#{log.join("\n")}"
+      refute log.any? { |line| line.include?("roles create backupUploader") },
+        "an existing role must be updated, not recreated:\n#{log.join("\n")}"
+    end
+  end
+
+  test "retries the bucket binding while the custom role propagates" do
+    scenario = { "STUB_BIND_FAIL_ONCE" => "1", "BACKUP_BIND_RETRY_SLEEP" => "0" }
+    with_setup_env(scenario) do |env, dirs|
+      out, status = run_setup(env)
+      assert status.success?, "setup failed: #{out}"
+      assert_includes out, "not yet propagated"
+      log = gcloud_log(dirs)
+      binds = log.select { |line| line.include?("buckets add-iam-policy-binding") && line.include?(UPLOADER_ROLE) }
+      assert_equal 2, binds.length, "the binding was not retried after the propagation failure:\n#{log.join("\n")}"
+    end
+  end
+
+  test "gives up the bucket binding once the retry budget is spent" do
+    scenario = { "STUB_BIND_FAIL_ALWAYS" => "1", "BACKUP_BIND_RETRY_SECONDS" => "0", "BACKUP_BIND_RETRY_SLEEP" => "0" }
+    with_setup_env(scenario) do |env, _dirs|
+      out, status = run_setup(env)
+      refute status.success?, "setup should have failed: #{out}"
+      assert_includes out, "could not bind #{UPLOADER_ROLE}"
+    end
+  end
+
+  test "aborts the bucket binding on any other failure" do
+    scenario = { "STUB_BIND_HARD_FAIL" => "1", "BACKUP_BIND_RETRY_SECONDS" => "60" }
+    with_setup_env(scenario) do |env, dirs|
+      out, status = run_setup(env)
+      refute status.success?, "setup should have failed: #{out}"
+      assert_includes out, "could not bind #{UPLOADER_ROLE}"
+      log = gcloud_log(dirs)
+      binds = log.select { |line| line.include?("buckets add-iam-policy-binding") && line.include?(UPLOADER_ROLE) }
+      assert_equal 1, binds.length, "a hard failure must not be retried:\n#{log.join("\n")}"
     end
   end
 
@@ -412,7 +486,7 @@ class SetupBackupProjectTest < ActiveSupport::TestCase
       "/workloadIdentityPools/github/subject/#{SUBJECT}"
     bucket_policy = {
       "bindings" => [
-        { "role" => "roles/storage.objectCreator", "members" => [ "serviceAccount:#{RUNNER}" ] },
+        { "role" => UPLOADER_ROLE, "members" => [ "serviceAccount:#{RUNNER}" ] },
         { "role" => "roles/storage.objectViewer", "members" => [ "serviceAccount:#{READER}" ] }
       ]
     }
@@ -438,6 +512,7 @@ class SetupBackupProjectTest < ActiveSupport::TestCase
       "STUB_PROJECT_POLICY_JSON" => JSON.generate(project_policy),
       "STUB_RUNNER_EXISTS" => "1",
       "STUB_READER_EXISTS" => "1",
+      "STUB_ROLE_EXISTS" => "1",
       "STUB_APP_POOL_EXISTS" => "1",
       "STUB_APP_PROVIDER_EXISTS" => "1",
       "STUB_POLICY_EXISTS" => "1",
@@ -449,6 +524,8 @@ class SetupBackupProjectTest < ActiveSupport::TestCase
       log = gcloud_log(dirs)
       refute log.any? { |line| line.include?("add-iam-policy-binding") },
         "re-run must not duplicate grants:\n#{log.join("\n")}"
+      assert log.any? { |line| line.include?("roles update backupUploader") && line.include?("--permissions=#{UPLOADER_PERMISSIONS}") },
+        "re-run must converge the custom role:\n#{log.join("\n")}"
       refute log.any? { |line| line.include?("add-resource-policies") },
         "re-run must not re-attach the schedule:\n#{log.join("\n")}"
     end
