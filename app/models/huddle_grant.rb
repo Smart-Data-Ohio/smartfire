@@ -224,7 +224,7 @@ class HuddleGrant < ApplicationRecord
     update_columns(last_seen_at: Time.current)
     if first_seen
       Huddle::BroadcastPresenceJob.perform_later(id)
-      Huddle::JoinNoticeJob.perform_later(id)
+      Huddle::JoinNoticeJob.perform_later(id) unless other_grants_in_call?
     end
   end
 
@@ -489,6 +489,15 @@ class HuddleGrant < ApplicationRecord
     # left the active scope, and mark_out_of_call! cleared liveness first.
     def others_in_call?
       self.class.active.in_call.where(room_id: room_id).where.not(id: id).exists?
+    end
+
+    # Another grant of the same user already listed in the room's call
+    # means the sighting changes no roster (a second device), so it notifies
+    # nobody. Decided at sighting time, not in the job: by the time the
+    # job runs, a near-simultaneous second sighting would look identical
+    # and wrongly silence a real join.
+    def other_grants_in_call?
+      self.class.active.in_call.where(room_id: room_id, user_id: user_id).where.not(id: id).exists?
     end
 
     # Every unhandled ring for this room, whatever grant started it: the

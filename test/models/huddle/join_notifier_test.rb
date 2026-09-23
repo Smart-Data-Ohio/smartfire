@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Huddle::JoinNotifierTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @original_api_secret = ENV["LIVEKIT_API_SECRET"]
     ENV["LIVEKIT_API_SECRET"] = "test-api-secret"
@@ -187,14 +189,32 @@ class Huddle::JoinNotifierTest < ActiveSupport::TestCase
     end
   end
 
-  test "a second device joining changes no roster and notifies nobody" do
+  test "a second device sighted while the first is listed enqueues no join notice" do
     issue_seen(@room, users(:david), memberships(:david_david_and_jason))
-    resolve_ring(users(:jason))
-    second_grant = issue_seen(@room, users(:david), memberships(:david_david_and_jason), session: second_session_for(users(:david)))
+    second_grant = HuddleGrant.issue!(session: second_session_for(users(:david)),
+      membership: memberships(:david_david_and_jason))
 
-    @pool.expects(:queue).never
-    assert_broadcasts(notice_stream(users(:jason)), 0) do
-      Huddle::JoinNotifier.notify_join(second_grant)
+    assert_no_enqueued_jobs only: Huddle::JoinNoticeJob do
+      second_grant.record_seen!
+    end
+  end
+
+  test "sightings from two devices before the job runs still notify once" do
+    first_grant = HuddleGrant.issue!(session: sessions_for(users(:david)),
+      membership: memberships(:david_david_and_jason))
+    second_grant = HuddleGrant.issue!(session: second_session_for(users(:david)),
+      membership: memberships(:david_david_and_jason))
+    resolve_ring(users(:jason))
+
+    # Both devices connect before either job runs. The first sighting saw
+    # no other listing, so its job notifies; the second sighting saw the
+    # first listed, so it enqueues nothing.
+    first_grant.record_seen!
+    second_grant.record_seen!
+
+    @pool.expects(:queue).once
+    assert_broadcasts(notice_stream(users(:jason)), 1) do
+      perform_enqueued_jobs only: Huddle::JoinNoticeJob
     end
   end
 

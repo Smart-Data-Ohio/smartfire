@@ -10,6 +10,8 @@ class Huddle::JoinNotifier
     # from Huddle::JoinNoticeJob on the grant's first gateway sighting,
     # so it fires when the joiner actually connects, not when the token
     # is issued, and reconnects inside the liveness window stay silent.
+    # Sightings that change no roster (a second device while another of
+    # the joiner's grants is already listed) never enqueue the job.
     #
     # Members already in the call get an in-call toast payload in every
     # room kind. Members outside the call get the "in your huddle"
@@ -20,7 +22,6 @@ class Huddle::JoinNotifier
       room = Room.alive.find_by(id: grant.room_id)
       joiner = grant.user
       return unless room && active_human?(joiner)
-      return if joiner_still_listed?(grant)
 
       in_call_ids = in_call_user_ids(room)
       memberships = room.memberships.includes(:user).where.not(user_id: joiner.id)
@@ -62,14 +63,6 @@ class Huddle::JoinNotifier
     end
 
     private
-      # A second device joining while another of the joiner's grants is
-      # already listed in the call changes no roster, so it notifies
-      # nobody. The listing grant may be the joiner's own earlier sighting
-      # or a genuinely concurrent device.
-      def joiner_still_listed?(grant)
-        HuddleGrant.active.in_call.where(room_id: grant.room_id, user_id: grant.user_id).where.not(id: grant.id).exists?
-      end
-
       def in_call_user_ids(room)
         HuddleGrant.active.in_call.where(room_id: room.id).distinct.pluck(:user_id).to_set
       end
