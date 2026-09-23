@@ -18,9 +18,10 @@ history. There are no foreign keys from the log to users or targets.
 | Sign-in | `session.sign_in.success`, `session.sign_in.failure` (password, Google, transfer). Failures are throttled to one row per IP every 5 minutes so floods do not spam the log. |
 | Members | `user.email.change`, `user.password.change`, `user.role.change`, `user.ban`, `user.unban`, `user.deactivate` |
 | Google | `google.sign_in.link`, `google.sign_in.link_allow`, `google.sign_in.unlink`, `google.account.connect`, `google.account.disconnect` |
-| GitHub | `github.account.connect`, `github.account.disconnect` (members), `agent.github.connect`, `agent.github.disconnect` (agents) |
+| GitHub | `github.account.connect` (personal token and GitHub App OAuth), `github.account.disconnect` (members), `agent.github.connect`, `agent.github.disconnect` (agents) |
+| Fizzy | `fizzy.account.connect`, `fizzy.account.disconnect` (members) |
 | Account | `account.join_code.reset`, `account.settings.change`, `account.custom_styles.change` |
-| Agents | `agent.create`, `agent.update`, `agent.suspend`, `agent.credential.create`, `agent.credential.revoke`, `agent.credential.reset`, `agent.grant.create`, `agent.grant.revoke`, `agent.webhook_url.change`, `agent.webhook_secret.reset`, `agent.approval.decide`, `agent.github_action.execute` |
+| Agents | `agent.create`, `agent.update`, `agent.suspend`, `agent.credential.create`, `agent.credential.revoke`, `agent.credential.reset`, `agent.grant.create`, `agent.grant.revoke`, `agent.webhook_url.change`, `agent.webhook_secret.reset`, `agent.approval.decide`, `agent.github_action.execute`, `agent.fizzy_action.execute` |
 | Rooms | `room.create`, `room.destroy`, `room.membership.change` |
 | Icons | `workspace_icon.create`, `workspace_icon.destroy` |
 
@@ -46,10 +47,10 @@ AuditLog.record!(
 Conventions for new actions:
 
 - Name actions `resource.verb(.qualifier)`, e.g.
-  `agent.fizzy_action.execute` for the Fizzy integration's external actions
-  (mirroring `agent.github_action.execute`: the approving human is the
-  actor, the approval is the target, `changes` carries the action name,
-  status, and outcome URL or message).
+  `agent.github_action.execute` and `agent.fizzy_action.execute` for the
+  integrations' external actions: the approving human is the actor, the
+  approval is the target, `changes` carries the action name, status, and
+  outcome URL or message.
 - Add the name to `AuditLog::ACTIONS` so it appears in the admin filter
   dropdown. Rows store plain strings, so this needs no migration.
 - `changes` values SHOULD be `[ before, after ]` pairs; scalar context
