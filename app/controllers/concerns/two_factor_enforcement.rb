@@ -1,5 +1,7 @@
 # Enforces two-step sign-in for session-authenticated humans. Runs
-# after Authentication, so Current.user and Current.session are set.
+# after Authentication, so Current.user and Current.session are set,
+# and inside every session restore, so late restores (which run after
+# this callback has already passed) are gated too.
 #
 # - A human without 2FA lands on the setup page before anything else.
 # - A human with 2FA but a session that never completed the second
@@ -20,6 +22,14 @@ module TwoFactorEnforcement
   end
 
   private
+    # The Authentication hook: late restores run the same check the
+    # callback runs, with the same exemptions, so the setup and
+    # challenge pages keep working while every other restored session
+    # is gated at restore time.
+    def enforce_two_factor_for_restored_session
+      require_two_factor_enrollment
+    end
+
     def require_two_factor_enrollment
       return unless two_factor_enforceable?
       return if two_factor_exempt_request?

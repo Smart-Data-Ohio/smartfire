@@ -55,4 +55,23 @@ class WorkspaceIconsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :not_found
   end
+
+  test "unenrolled sessions are sent to setup instead of served the icon" do
+    post session_url, params: { email_address: users(:jz).email_address, password: "secret123456" }
+
+    get workspace_icon_url("acme")
+
+    assert_redirected_to two_factor_setup_url
+  end
+
+  test "stale enrolled sessions are signed out instead of served the icon" do
+    post session_url, params: { email_address: users(:jz).email_address, password: "secret123456" }
+    token = parsed_cookies.signed[:session_token]
+    enroll_two_factor!(users(:jz))
+
+    get workspace_icon_url("acme")
+
+    assert_redirected_to new_session_url
+    assert_nil Session.find_by(token: token)
+  end
 end

@@ -121,6 +121,18 @@ module Authentication
     def resume_session(session)
       session.resume user_agent: request.user_agent, ip_address: request.remote_ip
       authenticated_as session
+      enforce_two_factor_for_restored_session
+      # Truthy for require_authentication's || chain: the enforcement
+      # above either passed or performed its own rejection.
+      true
+    end
+
+    # Hook so every path that restores a session enforces two-step
+    # sign-in, not just the ApplicationController callback order: late
+    # restores (Drive listings, icons, the challenge page, the Google
+    # callback) run after require_two_factor_enrollment has already
+    # passed with a nil session. Overridden by TwoFactorEnforcement.
+    def enforce_two_factor_for_restored_session
     end
 
     def terminate_current_session

@@ -158,4 +158,44 @@ class TwoFactor::EnforcementTest < ActionDispatch::IntegrationTest
     get root_url
     assert_redirected_to two_factor_setup_url
   end
+
+  test "stale sessions reaching the challenge are signed out at the next app request" do
+    post session_url, params: { email_address: @user.email_address, password: "secret123456" }
+    enroll_two_factor!(@user)
+
+    get two_factor_challenge_url
+    assert_redirected_to root_url
+
+    follow_redirect!
+    assert_redirected_to new_session_url
+  end
+
+  test "Google callback terminates a stale session instead of sending it home" do
+    post session_url, params: { email_address: @user.email_address, password: "secret123456" }
+    token = parsed_cookies.signed[:session_token]
+    enroll_two_factor!(@user)
+
+    get session_google_callback_url, params: { state: "bogus", code: "bogus" }
+
+    assert_redirected_to new_session_url
+    assert_nil Session.find_by(token: token)
+  end
+
+  test "join page sends unenrolled signed-in users to setup instead of home" do
+    post session_url, params: { email_address: @user.email_address, password: "secret123456" }
+
+    get join_url(accounts(:signal).join_code)
+
+    assert_redirected_to two_factor_setup_url
+  end
+
+  test "verified sessions still bounce off the join and challenge pages to home" do
+    sign_in @user
+
+    get join_url(accounts(:signal).join_code)
+    assert_redirected_to root_url
+
+    get two_factor_challenge_url
+    assert_redirected_to root_url
+  end
 end
