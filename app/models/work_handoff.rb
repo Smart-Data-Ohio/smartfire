@@ -75,8 +75,8 @@ class WorkHandoff < ApplicationRecord
     end
 
     def normalize_list(value)
-      items = value.is_a?(Array) ? value : value.to_s.split(/[\r\n]+/)
-      items.map { |item| item.to_s.strip }.reject(&:blank?).uniq
+      Array(value).flat_map { |item| item.to_s.split(/[\r\n]+/) }
+        .map { |item| item.to_s.strip }.reject(&:blank?).uniq
     end
 
     def links_within_limits

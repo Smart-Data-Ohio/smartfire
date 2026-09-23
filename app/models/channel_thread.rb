@@ -58,8 +58,10 @@ class ChannelThread < ApplicationRecord
 
   after_create_commit :announce_board_post, if: :board_post?
   after_update_commit :broadcast_board_row_replace_on_change, if: :board_post?
-  after_create_commit :apply_board_tag_auto_assign
-  after_update_commit :apply_board_tag_auto_assign
+  # Create and update need distinct callback filters: registering the same
+  # method twice on the commit chain keeps only one registration.
+  after_create_commit :apply_board_tag_auto_assign_on_create
+  after_update_commit :apply_board_tag_auto_assign_on_update
   after_destroy_commit :broadcast_board_row_remove, if: :board_post?
   before_destroy :capture_deleted_work_snapshot
   after_destroy_commit :emit_deleted_work_unassigned
@@ -845,6 +847,14 @@ class ChannelThread < ApplicationRecord
     # rule never overrides a human (or any) assignment. Runs after commit
     # in its own transaction; a concurrent assignment winning the race
     # simply leaves nothing to do.
+    def apply_board_tag_auto_assign_on_create
+      apply_board_tag_auto_assign
+    end
+
+    def apply_board_tag_auto_assign_on_update
+      apply_board_tag_auto_assign
+    end
+
     def apply_board_tag_auto_assign
       added = @added_tag_names
       @added_tag_names = nil
