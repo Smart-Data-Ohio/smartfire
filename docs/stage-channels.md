@@ -65,9 +65,18 @@ not by hidden buttons.
   grants keep their identity and just record the new role, and the member
   stays in the call with no rejoin.
 
-To silence a speaker, a host moves them to the audience. There is no
-per-speaker mute: demotion revokes the speaker's grant within the same
-transaction, and the gateway removes them from the call.
+To silence a speaker without removing them from the stage, a host
+server-mutes them instead of demoting them: the mute revokes the speaker's
+grants within the same transaction, and their browser rejoins subscribe-only
+until a host unmutes them. Enforcement mirrors the role change — the muted
+token carries `canPublish: false`, each grant records whether it was issued
+muted, and the gateway's per-second check drops any grant that no longer
+matches the membership — so a speaker whose grant somehow survived the mute
+still loses publish on the next check. Hosts can also disconnect someone from
+the call, which revokes their grants without sending a rejoin, so they stay
+out until they join again. Neither action touches the membership; both end the
+member's live stream, which cannot outlive the call. A host cannot moderate
+their own session.
 
 ## Hand raising
 
@@ -82,6 +91,13 @@ promoting. Any role change clears the hand.
 accepts a `membership_id` parameter so a host or administrator can lower
 another member's hand. `PATCH /rooms/:room_id/stage/roles/:membership_id`
 changes a role; hosts and administrators only.
+
+Raised hands render as a numbered queue — oldest first, `#1 in queue` onward —
+and a newly raised hand notifies viewers who can act on it (hosts and
+administrators) with an announcement and a short chime; other listeners see
+the queue update without the fanfare. The queue numbers and the notification
+are presentation over the same `hand_raised_at` ordering the roster already
+used.
 
 After a role change, a per-viewer roster is broadcast to every member's own
 rooms stream — host action forms render only for hosts and administrators —
@@ -109,11 +125,14 @@ sole host of a stage promotes a replacement in the same transaction that
 deletes the memberships — an active administrator member when one remains,
 otherwise the earliest-joined remaining member — so the stage stays
 manageable; a stage left with no members at all is left empty. Role changes
-are the only stage moderation tool: there is no separate mute, kick, or ban.
+are joined by two call-moderation tools: server-mute and disconnect, both
+under `POST /rooms/:room_id/call_moderation/:membership_id/...`, for hosts
+and administrators only. There is no ban: removing a member from the stage
+still uses the members UI.
 
 ## Deliberately not included
 
-Recording, streaming to an external audience, and per-speaker mute are not
-part of stage channels. In-room streaming has shipped; see
-[streaming](streaming.md). A host who needs someone silent moves them to
-the audience.
+Recording and streaming to an external audience are not part of stage
+channels. In-room streaming has shipped; see [streaming](streaming.md).
+Per-speaker server mute has shipped as well (see above); what remains
+deliberately absent is a ban.
