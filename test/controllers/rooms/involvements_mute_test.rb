@@ -48,6 +48,12 @@ class Rooms::InvolvementsMuteTest < ActionDispatch::IntegrationTest
     assert_equal dom_id(dm, :list), streams.first["target"]
   end
 
+  test "json requests take no redirect" do
+    put room_involvement_url(@room, format: :json), params: { involvement: "muted" }
+    assert_response :success
+    assert_predicate @membership.reload, :involved_in_muted?
+  end
+
   test "repeating the current level neither crashes nor broadcasts" do
     @membership.update!(involvement: "muted")
 

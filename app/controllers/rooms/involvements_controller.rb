@@ -10,14 +10,21 @@ class Rooms::InvolvementsController < ApplicationController
     # second save, and a repeated level saves nothing at all, so dirty
     # tracking cannot be trusted after this point.
     previous_involvement = @membership.involvement
-    @membership.update! involvement: params[:involvement]
+    @membership.update! involvement: params.require(:involvement)
 
     # Muting clears the unread state: a muted room only goes unread on
     # mention, so anything unread from before the mute is stale.
     @membership.read if @membership.involved_in_muted?
 
     broadcast_visibility_changes(previous_involvement)
-    redirect_to room_involvement_url(@room)
+
+    # The room menu calls this with fetch: fetch replays a 302 after PUT
+    # with PUT (only POST rewrites to GET), looping the update until the
+    # browser aborts, so JSON takes no redirect.
+    respond_to do |format|
+      format.html { redirect_to room_involvement_url(@room) }
+      format.json { head :ok }
+    end
   end
 
   private

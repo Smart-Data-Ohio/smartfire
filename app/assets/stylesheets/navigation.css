@@ -254,7 +254,6 @@
   border: 1px solid var(--workspace-border);
   border-radius: 0.7rem;
   color: var(--workspace-text);
-  display: grid;
   gap: 0.1rem;
   inline-size: max-content;
   inset: auto;
@@ -263,6 +262,12 @@
   min-inline-size: 13rem;
   padding: 0.4rem;
   position: fixed;
+}
+
+/* Scoped so the hidden attribute always wins, even if hidePopover()
+   throws and leaves the popover state behind. */
+.room-menu:not([hidden]) {
+  display: grid;
 }
 
 .room-menu__item {

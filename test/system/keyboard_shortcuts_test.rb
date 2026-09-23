@@ -8,7 +8,7 @@ class KeyboardShortcutsTest < ApplicationSystemTestCase
   test "? opens the shortcut sheet everywhere except while typing" do
     join_room rooms(:hq)
 
-    press_keys("?")
+    press_keys(:shift, "/")
     assert_selector "#keyboard-shortcuts[open]", wait: 5
     within "#keyboard-shortcuts" do
       assert_text "Quick switcher"

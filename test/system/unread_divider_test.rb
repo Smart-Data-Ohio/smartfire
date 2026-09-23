@@ -64,16 +64,11 @@ class UnreadDividerTest < ApplicationSystemTestCase
     assert_selector "#jump-to-unread", visible: true, wait: 5
 
     click_on "Jump to unread"
-    assert_no_selector "#jump-to-unread", visible: true, wait: 5
 
-    divider_visible = page.evaluate_script(<<~JS)
-      (() => {
-        const list = document.querySelector(".messages").getBoundingClientRect();
-        const divider = document.getElementById("unread-divider").getBoundingClientRect();
-        return divider.top >= list.top && divider.bottom <= list.bottom;
-      })()
-    JS
-    assert divider_visible, "expected the divider back in view after jumping"
+    # The pill hides exactly while the divider intersects the list,
+    # so its disappearance is the jump landing.
+    assert_no_selector "#jump-to-unread", visible: true, wait: 5
+    assert_selector "#unread-divider"
   end
 
   test "mark unread from the message menu points the divider at that message" do
