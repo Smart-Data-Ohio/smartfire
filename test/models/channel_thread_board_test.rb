@@ -286,4 +286,23 @@ class ChannelThreadBoardTest < ActiveSupport::TestCase
     assert_includes humans.map(&:id), users(:kevin).id
     assert_includes agents.map(&:id), agent_user.id
   end
+
+  test "board posts skip muted members for unread and broadcast only to marked members" do
+    @room.memberships.find_by!(user: users(:kevin)).update!(involvement: "muted")
+
+    david_stream = UnreadRoomsChannel.stream_name_for(users(:david).id)
+    kevin_stream = UnreadRoomsChannel.stream_name_for(users(:kevin).id)
+    creator_stream = UnreadRoomsChannel.stream_name_for(@creator.id)
+    david_before = ActionCable.server.pubsub.broadcasts(david_stream).size
+    kevin_before = ActionCable.server.pubsub.broadcasts(kevin_stream).size
+    creator_before = ActionCable.server.pubsub.broadcasts(creator_stream).size
+
+    ChannelThread.create!(room: @room, creator: @creator, name: "Muted skip", work_status: "planned")
+
+    assert @room.memberships.find_by!(user: users(:david)).reload.unread?
+    assert_not @room.memberships.find_by!(user: users(:kevin)).reload.unread?
+    assert_equal david_before + 1, ActionCable.server.pubsub.broadcasts(david_stream).size
+    assert_equal kevin_before, ActionCable.server.pubsub.broadcasts(kevin_stream).size
+    assert_equal creator_before, ActionCable.server.pubsub.broadcasts(creator_stream).size
+  end
 end
