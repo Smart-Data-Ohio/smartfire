@@ -151,6 +151,15 @@
   padding-inline: 0.35rem;
 }
 
+/* Narrow phones keep header actions as 2rem icon-only squares; the pins
+   count would force its button wider, so it steps aside with the labels.
+   The button keeps its accessible name. */
+@media (max-width: 40rem) {
+  .room-header__pins-count {
+    display: none;
+  }
+}
+
 /* Pins panel dialog. */
 .pins-panel {
   background: var(--color-bg);
