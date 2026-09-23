@@ -35,6 +35,10 @@
           <%= image_tag "check.svg", size: 20, aria: { hidden: "true" }, class: "colorize--black" %>
           <span class="sidebar-item__label">Work threads</span>
         <% end %>
+        <%= link_to saved_items_path, class: "sidebar-item btn", data: { workspace_destination: saved_items_path } do %>
+          <%= image_tag "bookmark.svg", size: 20, aria: { hidden: "true" }, class: "colorize--black" %>
+          <span class="sidebar-item__label">Saved</span>
+        <% end %>
         <%= link_to agents_path, class: "sidebar-item btn", data: { workspace_destination: agents_path } do %>
           <%= image_tag "bot.svg", size: 20, aria: { hidden: "true" }, class: "colorize--black" %>
           <span class="sidebar-item__label">Agents</span>

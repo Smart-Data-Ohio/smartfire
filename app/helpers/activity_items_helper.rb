@@ -1,6 +1,6 @@
 module ActivityItemsHelper
   def activity_item_source_path(item)
-    source = item.source
+    source = reminder_message_source(item.source)
     return activity_items_path unless source
 
     case source
@@ -54,13 +54,15 @@ module ActivityItemsHelper
       "Review requested"
     when "agent_approval_request"
       "Approval request"
+    when "message_reminder"
+      "Reminder"
     else
       item.event_type.humanize
     end
   end
 
   def activity_item_source_label(item)
-    source = item.source
+    source = reminder_message_source(item.source)
     return "Unavailable source" unless source
 
     case source
@@ -87,12 +89,16 @@ module ActivityItemsHelper
   end
 
   def activity_item_source_body(item)
-    source = item.source
+    source = reminder_message_source(item.source)
     return "This source is no longer available." unless source
 
     case source
     when Message
-      source.plain_text_body
+      if item.event_type == "message_reminder"
+        "You asked to be reminded about this message: #{source.plain_text_body}"
+      else
+        source.plain_text_body
+      end
     when WorkThreadEvent
       changes = []
       if source.status_changed?
@@ -119,7 +125,7 @@ module ActivityItemsHelper
   end
 
   def activity_item_source_author(item)
-    source = item.source
+    source = reminder_message_source(item.source)
     case source
     when Message
       source.creator&.name
@@ -132,6 +138,13 @@ module ActivityItemsHelper
     when AgentApproval
       source.agent&.user&.name
     end
+  end
+
+  # Reminder items are sourced on the saved item (so firing never
+  # converts a mention or reply item for the message); they render
+  # through the saved message, like message-sourced items do.
+  def reminder_message_source(source)
+    source.is_a?(SavedItem) ? source.message : source
   end
 
   def activity_item_work_status_label(status)

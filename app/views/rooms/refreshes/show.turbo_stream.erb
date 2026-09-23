@@ -5,3 +5,8 @@
 <% @updated_messages.each do |message| %>
   <%= turbo_stream.replace dom_id(message), partial: "messages/message", locals: { message: message } %>
 <% end %>
+
+<% if @pins_changed %>
+  <%= turbo_stream.replace dom_id(@room, :pins_count), partial: "rooms/pins/count", locals: { room: @room } %>
+  <%= turbo_stream.replace dom_id(@room, :pins_list), partial: "rooms/pins/list", locals: { room: @room } %>
+<% end %>

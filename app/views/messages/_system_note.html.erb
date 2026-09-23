@@ -1,0 +1,10 @@
+<%# Compact Discord-style system note: one muted centered line with an icon, %>
+<%# the actor's name, the note text, and a timestamp. No avatar, toolbar, %>
+<%# reply/thread affordances, or menu hooks (see MessagesHelper#message_tag, %>
+<%# which omits the actions URLs that would attach the shared menu). %>
+<div class="message__system-note">
+  <%= image_tag "messages-outlined.svg", size: 14, class: "colorize--black message__system-note-icon", aria: { hidden: "true" } %>
+  <span class="message__system-note-author"><strong><%= message.creator.name %></strong></span>
+  <span class="message__system-note-text"><%= message_presentation(message) %></span>
+  <%= link_to message_timestamp(message, class: "message__timestamp"), message_link_url(message), target: "_top", class: "message__system-note-permalink" %>
+</div>

@@ -38,6 +38,7 @@ class Agents::McpControllerTest < ActionDispatch::IntegrationTest
       list_rooms read_messages post_message react poll_events ack_events
       list_board_posts create_board_post update_board_post set_result
       list_work update_work request_approval get_approval get_context open_dm
+      pin_message unpin_message
     ], names
 
     first.dig("result", "tools").each do |tool|
@@ -90,7 +91,7 @@ class Agents::McpControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_equal "complete", body.dig("result", "resultType")
-    assert_equal 16, body.dig("result", "tools").size
+    assert_equal 18, body.dig("result", "tools").size
   end
 
   test "header and body versions must match" do
@@ -323,6 +324,61 @@ class Agents::McpControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, message.boosts.count
   end
 
+  test "pin_message pins through the shared service" do
+    grant!(capability: "post_messages", room: @room)
+    message = @room.messages.create!(creator: users(:david), body: "Pin me", client_message_id: "mcp-pin-1")
+
+    body = call_tool("pin_message", { "message_id" => message.id })
+
+    assert_equal({ "pinned" => true, "message_id" => message.id, "pin_count" => 1 }, structured(body))
+    assert_equal @bot, @room.message_pins.sole.pinner
+    assert_equal @bot, @room.messages.ordered.last.creator
+  end
+
+  test "pin_message is idempotent" do
+    grant!(capability: "post_messages", room: @room)
+    message = @room.messages.create!(creator: users(:david), body: "Pin me twice", client_message_id: "mcp-pin-2")
+
+    call_tool("pin_message", { "message_id" => message.id })
+
+    assert_no_difference -> { MessagePin.count } do
+      body = call_tool("pin_message", { "message_id" => message.id })
+      assert_equal true, structured(body)["pinned"]
+    end
+  end
+
+  test "pin_message answers the room cap" do
+    grant!(capability: "post_messages", room: @room)
+    MessagePin::MAX_PER_ROOM.times do |n|
+      message = @room.root_messages.create!(creator: users(:david), markdown_source: "Pinnable #{n}", client_message_id: "mcp-pin-cap-#{n}")
+      MessagePin.pin!(message:, pinner: users(:david))
+    end
+    message = @room.messages.create!(creator: users(:david), body: "One too many", client_message_id: "mcp-pin-cap-last")
+
+    assert_tool_error call_tool("pin_message", { "message_id" => message.id }),
+      "This channel already has 50 pinned messages"
+  end
+
+  test "unpin_message unpins" do
+    grant!(capability: "post_messages", room: @room)
+    message = @room.messages.create!(creator: users(:david), body: "Unpin me", client_message_id: "mcp-unpin-1")
+    MessagePin.pin!(message:, pinner: users(:david))
+
+    body = call_tool("unpin_message", { "message_id" => message.id })
+
+    assert_equal({ "pinned" => false, "message_id" => message.id, "pin_count" => 0 }, structured(body))
+    assert_not MessagePin.pinned?(message)
+  end
+
+  test "unpin_message succeeds when the message is not pinned" do
+    grant!(capability: "post_messages", room: @room)
+    message = @room.messages.create!(creator: users(:david), body: "Never pinned", client_message_id: "mcp-unpin-2")
+
+    body = call_tool("unpin_message", { "message_id" => message.id })
+
+    assert_equal false, structured(body)["pinned"]
+  end
+
   test "poll_events returns rows with a cursor" do
     @room.messages.create!(
       creator: users(:david), body: "Hey #{mention_attachment_for(:bender)}",
@@ -551,6 +607,40 @@ class Agents::McpControllerTest < ActionDispatch::IntegrationTest
       "Forbidden: agent lacks react capability"
   end
 
+  test "pin tools deny without post_messages" do
+    grant!(capability: "read_messages", room: @room)
+    message = @room.messages.create!(creator: users(:david), body: "No pin", client_message_id: "mcp-gated-3")
+
+    assert_tool_error call_tool("pin_message", { "message_id" => message.id }),
+      "Forbidden: agent lacks post_messages capability"
+    assert_tool_error call_tool("unpin_message", { "message_id" => message.id }),
+      "Forbidden: agent lacks post_messages capability"
+  end
+
+  test "pin tools are not found outside the agent's memberships" do
+    grant!(capability: "post_messages")
+
+    pin_body = call_tool("pin_message", { "message_id" => messages(:first).id })
+    assert_tool_error pin_body, "Message not found"
+    assert_equal "not_found", pin_body.dig("result", "structuredContent", "status")
+
+    unpin_body = call_tool("unpin_message", { "message_id" => messages(:first).id })
+    assert_tool_error unpin_body, "Message not found"
+    assert_equal "not_found", unpin_body.dig("result", "structuredContent", "status")
+  end
+
+  test "pin tools require a message id" do
+    pin_body = call_tool("pin_message", {})
+
+    assert_response :success
+    assert_equal(-32602, pin_body.dig("error", "code"))
+    assert_equal "Missing required argument: message_id", pin_body.dig("error", "message")
+
+    unpin_body = call_tool("unpin_message", {})
+
+    assert_equal(-32602, unpin_body.dig("error", "code"))
+  end
+
   test "board and work writes deny without manage_threads" do
     board = create_board!
     grant!(capability: "read_messages", room: board)
@@ -694,6 +784,25 @@ class Agents::McpControllerTest < ActionDispatch::IntegrationTest
         end
 
         body = call_tool("create_board_post", { "room_id" => board.id, "title" => "Over the bucket" })
+
+        assert_equal true, body.dig("result", "isError")
+        assert_equal "rate_limited", body.dig("result", "structuredContent", "error")
+      end
+    end
+  end
+
+  test "pin_message shares its bucket with the REST pin endpoint" do
+    grant!(capability: "post_messages", room: @room)
+    message = @room.messages.create!(creator: users(:david), body: "Bucket pin", client_message_id: "mcp-pin-bucket-1")
+
+    with_memory_cache do
+      freeze_time do
+        60.times do
+          post agents_message_pin_url(message), headers: mcp_headers
+          assert_response :success
+        end
+
+        body = call_tool("pin_message", { "message_id" => message.id })
 
         assert_equal true, body.dig("result", "isError")
         assert_equal "rate_limited", body.dig("result", "structuredContent", "error")

@@ -109,6 +109,8 @@ Rails.application.routes.draw do
   patch "agents/work/:id", to: "agents/work#update", defaults: { format: :json }
   put "agents/work/:id/result", to: "agents/work#result", defaults: { format: :json }
   post "rooms/:room_id/agents/messages", to: "agents/messages#create", defaults: { format: :json }, as: :room_agent_messages
+  post "agents/messages/:id/pin", to: "agents/pins#create", defaults: { format: :json }, as: :agents_message_pin
+  delete "agents/messages/:id/pin", to: "agents/pins#destroy", defaults: { format: :json }
   get "rooms/:room_id/agents/posts", to: "agents/posts#index", defaults: { format: :json }, as: :room_agent_posts
   post "rooms/:room_id/agents/posts", to: "agents/posts#create", defaults: { format: :json }
   post "rooms/:room_id/agents/github/pull_request_actions", to: "agents/github/pull_request_actions#create",
@@ -151,6 +153,7 @@ Rails.application.routes.draw do
 
     scope module: "rooms" do
       resources :members, only: :index
+      resources :pins, only: :index
       resources :drive_recipients, only: :index do
         post :validate, on: :collection
       end
@@ -203,11 +206,14 @@ Rails.application.routes.draw do
     resources :forwards, controller: "message_forwards", only: :create
     get :forward_source, on: :member, controller: "message_forward_sources"
     get "forwards/destinations", to: "message_forwards#destinations", as: :forward_destinations
+    resource :pin, controller: "messages/pins", only: %i[ create destroy ]
 
     scope module: "messages" do
       resources :boosts
     end
   end
+
+  resources :saved_items, path: "saved", only: %i[ index create update destroy ]
 
   resources :searches, only: %i[ index create ] do
     delete :clear, on: :collection
