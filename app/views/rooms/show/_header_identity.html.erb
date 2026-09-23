@@ -9,6 +9,6 @@
       <span class="room-header__hash" aria-hidden="true">#</span>
     <% end %>
 
-    <span class="room-header__name overflow-ellipsis"><%= room_display_name(room) %></span>
+    <span class="room-header__name overflow-ellipsis"><%= room_display_name(room, for_user: local_assigns[:for_user] || Current.user) %></span>
   </h1>
 </div>

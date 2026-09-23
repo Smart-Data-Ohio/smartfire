@@ -1,0 +1,61 @@
+<%= turbo_frame_tag "user_card" do %>
+  <div class="profile-card">
+    <header class="profile-card__header">
+      <span class="avatar profile-card__avatar">
+        <%= avatar_image_tag @user, size: 64, alt: "" %>
+      </span>
+
+      <div class="profile-card__identity min-width">
+        <strong class="profile-card__name overflow-ellipsis"><%= @user.name %></strong>
+
+        <span class="profile-card__presence">
+          <% if @user.active? %>
+            <%= render_user_status_badge(@user) %>
+          <% elsif @user.deactivated? %>
+            Deactivated
+          <% else %>
+            Banned
+          <% end %>
+        </span>
+
+        <% if @user.administrator? || @user.agent || @user.bot? %>
+          <span class="profile-card__badges">
+            <% if @user.administrator? %>
+              <span class="profile-card__badge">Admin</span>
+            <% end %>
+            <% if @user.agent %>
+              <span class="profile-card__badge">Agent</span>
+            <% elsif @user.bot? %>
+              <span class="profile-card__badge">Bot</span>
+            <% end %>
+          </span>
+        <% end %>
+
+        <% if @user.agent&.owner %>
+          <span class="profile-card__owner">Agent owned by <%= @user.agent.owner.name %></span>
+        <% end %>
+      </div>
+    </header>
+
+    <div class="profile-card__actions">
+      <% if @user == Current.user %>
+        <%= link_to "Edit profile", user_profile_path, class: "btn btn--reversed full-width", data: { turbo_frame: "_top" } %>
+      <% elsif @user.active? %>
+        <%= button_to "Message", rooms_directs_path, params: { user_ids: [ @user.id ] },
+              class: "btn btn--reversed full-width", form: { data: { turbo_frame: "_top" } } %>
+        <% unless @user.bot? %>
+          <%= button_to "Start call", rooms_directs_path, params: { user_ids: [ @user.id ], start_huddle: "1" },
+                class: "btn full-width", form: { data: { turbo_frame: "_top" } } %>
+        <% end %>
+        <%= link_to "View profile", user_path(@user), class: "btn full-width", data: { turbo_frame: "_top" } %>
+        <% if (mention = Message::Markdown.mention_token(@user.name)) %>
+          <%= button_to_copy_to_clipboard(mention) do %>
+            Copy mention
+          <% end %>
+        <% end %>
+      <% else %>
+        <%= link_to "View profile", user_path(@user), class: "btn full-width", data: { turbo_frame: "_top" } %>
+      <% end %>
+    </div>
+  </div>
+<% end %>

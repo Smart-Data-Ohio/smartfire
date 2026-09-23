@@ -103,10 +103,15 @@ module RoomsHelper
 
   def room_display_name(room, for_user: Current.user)
     if room.direct?
-      room.users.without(for_user).pluck(:name).to_sentence.presence || for_user&.name
+      room.direct_display_name(for_user: for_user)
     else
       room.name
     end
+  end
+
+  # Sidebar rows pass their preloaded members so group names never query.
+  def direct_room_display_name(room, members:, for_user: Current.user)
+    room.direct_display_name(for_user: for_user, members: members)
   end
 
   def room_kind_label(room)

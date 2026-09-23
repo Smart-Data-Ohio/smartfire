@@ -26,6 +26,8 @@ Each grant binds a random, unique participant identity to a specific Smartfire s
 
 Revoked grants are never reactivated. If membership is later granted again, a new authorization receives a new participant identity. Previously captured tokens remain denied even though the user can join with the new authorization.
 
+Group direct messages use the same records: a grant is issued only to a current room member, so a non-member's join is denied the same way, and removing a member revokes their grants immediately, exactly as channel removal does. Ringing every other member is a notification fan-out on top of those records, not a separate authorization; see [group DMs](group-dms.md).
+
 Revocation and its pending cleanup request are persisted in the same database transaction. Queue delivery is an optimization; reconciliation must recover pending cleanup after an enqueue failure, worker restart, or LiveKit outage. Cleanup is idempotent and never targets an unrelated grant.
 
 ## Failures and guarantees
