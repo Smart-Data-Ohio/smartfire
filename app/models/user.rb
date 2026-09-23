@@ -94,6 +94,13 @@ class User < ApplicationRecord
   def deactivate
     calendar_event_ids = nil
 
+    # The push channel stops remotely before the transaction: the HTTP
+    # call must not hold the database write lock, and the Google account
+    # is still usable here. The row itself is destroyed inside, so a
+    # failed stop still removes the local channel.
+    push_channel = Calendar::PushChannel.find_by(user_id: id)
+    push_channel&.stop_remote!
+
     transaction do
       close_remote_connections
 
@@ -115,6 +122,7 @@ class User < ApplicationRecord
       searches.delete_all
       sessions.delete_all
       Calendar::DisconnectCleanupJob.perform_later([], google_account.cleanup_snapshot, google_account.id) if google_account&.usable?
+      push_channel&.destroy!
       google_account&.mark_disconnected!("Account deactivated")
       github_connected_account&.mark_disconnected!("Account deactivated")
       # Agents this person owns stop with them: suspension revokes their

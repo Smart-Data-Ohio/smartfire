@@ -1,4 +1,14 @@
 module Rooms::EventsHelper
+  # The stored Meet link, only when it parses as an https URL. The value
+  # is written solely from Google's hangoutLink, but the card and page
+  # render it as an href, so anything else renders as no link at all.
+  def safe_meet_link(event)
+    uri = URI.parse(event.meet_link.to_s)
+    uri.to_s if uri.is_a?(URI::HTTPS) && uri.host.present?
+  rescue URI::InvalidURIError
+    nil
+  end
+
   # The event's own wall-clock time and zone abbreviation, printed next to
   # the browser-localized <time> so the scheduled zone is always visible.
   def event_zone_label(event)

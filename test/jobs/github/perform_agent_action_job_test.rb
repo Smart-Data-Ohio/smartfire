@@ -545,4 +545,37 @@ class Github::PerformAgentActionJobTest < ActiveJob::TestCase
     def assert_nothing_raised_for_job(approval_id)
       Github::PerformAgentActionJob.perform_now(approval_id)
     end
+
+  test "an approved action posts with the owner's app token when available" do
+    owner_account = GithubConnectedAccount.create!(user: users(:david), github_login: "david-app",
+      access_token: "owner-app-token", token_source: "app",
+      refresh_token: "owner-refresh", token_expires_at: 1.hour.from_now)
+    action = Github::AgentPullRequestAction.new(pull_request: @pull_request, kind: "comment", body: "Nice work")
+    approval = AgentApproval.create!(
+      agent: @agent, room: @room, action: action.action_name,
+      summary: action.summary, payload: action.payload_json,
+      github_account_id: owner_account.id, github_login: owner_account.github_login
+    )
+    approve!(approval)
+    post = stub_request(:post, "https://api.github.com/repos/#{@pull_request.owner}/#{@pull_request.repo}/issues/#{@pull_request.number}/comments")
+      .with(headers: { "Authorization" => "Bearer owner-app-token" })
+      .to_return(status: 201, body: { html_url: "https://github.com/x/y/pull/12#issuecomment-1" }.to_json)
+
+    Github::PerformAgentActionJob.perform_now(approval.id)
+
+    assert_requested post
+    assert_equal "completed", completion_event_for(approval).metadata["status"]
+  end
+
+  test "an owner PAT never overrides the agent account" do
+    GithubConnectedAccount.create!(user: users(:david), github_login: "david-pat", access_token: "owner-pat")
+    approval = approve!(build_approval(kind: "comment", body: "Nice work"))
+    post = stub_request(:post, "https://api.github.com/repos/#{@pull_request.owner}/#{@pull_request.repo}/issues/#{@pull_request.number}/comments")
+      .with(headers: agent_bearer_header)
+      .to_return(status: 201, body: { html_url: "https://github.com/x/y/pull/12#issuecomment-1" }.to_json)
+
+    Github::PerformAgentActionJob.perform_now(approval.id)
+
+    assert_requested post
+  end
 end

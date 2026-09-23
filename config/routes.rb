@@ -44,6 +44,7 @@ Rails.application.routes.draw do
       resource :join_code, only: :create
       resource :logo, only: %i[ show destroy ]
       resource :custom_styles, only: %i[ edit update ]
+      resource :integrations_health, only: :show, controller: "integrations_health"
     end
   end
 
@@ -176,6 +177,7 @@ Rails.application.routes.draw do
       resource :settings, only: :show
       resource :involvement, only: %i[ show update ]
       resources :github_subscriptions, only: %i[ create update destroy ]
+      resource :inbound_email_address, only: :create, controller: "inbound_email_addresses"
     end
 
     namespace :github do
@@ -240,12 +242,15 @@ Rails.application.routes.draw do
   namespace :github do
     post "webhooks", to: "webhooks#create"
     resource :connection, only: %i[ create destroy ], controller: "connections"
+    get "app/connect", to: "app_connections#connect", as: :app_connect
+    get "app/callback", to: "app_connections#callback", as: :app_callback
   end
 
   namespace :google do
     post "connect", to: "connections#connect"
     get "callback", to: "connections#callback"
     delete "connection", to: "connections#destroy"
+    post "calendar/notifications", to: "calendar_notifications#create"
     get "drive/files", to: "drive_files#index", as: :drive_files
     get "drive/files/:id", to: "drive_files#show", as: :drive_file
   end

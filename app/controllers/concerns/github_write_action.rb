@@ -20,7 +20,10 @@ module GithubWriteAction
     end
 
     def write_client_for(account)
-      Github::WriteClient.new(token: account.access_token)
+      token = account.access_token_for_use
+      raise Github::WriteClient::Error, "GitHub account is not usable" if token.nil?
+
+      Github::WriteClient.new(token: token)
     rescue ActiveRecord::Encryption::Errors::Decryption
       account.mark_disconnected!(GithubConnectedAccount::UNREADABLE_TOKEN_REASON)
       raise Github::WriteClient::Error, GithubConnectedAccount::UNREADABLE_TOKEN_REASON

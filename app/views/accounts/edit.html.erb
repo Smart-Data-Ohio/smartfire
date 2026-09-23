@@ -118,6 +118,12 @@
   </div>
 </section>
 
+<% if Current.user.can_administer? %>
+  <section class="panel txt-align-center">
+    <%= link_to "Integration health", account_integrations_health_path, class: "btn" %>
+  </section>
+<% end %>
+
 <% content_for :footer do %>
   <div class="txt-align-center center margin-block-double txt-subtle">Smartfire&trade; version <%= version_badge %></div>
 <% end %>
