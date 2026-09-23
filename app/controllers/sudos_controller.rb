@@ -5,11 +5,10 @@
 class SudosController < ApplicationController
   include GoogleSignInFlow
 
-  # Per process, so a flood never touches the shared cache (and the
-  # limit stays testable: the test cache store is null).
-  RATE_LIMIT_STORE = ActiveSupport::Cache::MemoryStore.new
-
-  rate_limit to: 10, within: 3.minutes, only: %i[ create google ], store: RATE_LIMIT_STORE, with: -> { render_sudo_rejection }
+  # The default shared-cache store (like SessionsController), so the limit
+  # holds across Puma workers. Tests swap in a memory store, since the
+  # test cache store is null.
+  rate_limit to: 10, within: 3.minutes, only: %i[ create google ], with: -> { render_sudo_rejection }
 
   def new
     @verifiers = sudo_verifiers_for(Current.user)

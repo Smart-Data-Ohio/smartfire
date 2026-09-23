@@ -340,6 +340,18 @@ class SudosControllerTest < ActionDispatch::IntegrationTest
     assert_response :too_many_requests
   end
 
+  test "the confirmation limit lives in the shared rate-limit store, not per-process memory" do
+    sign_in users(:david)
+
+    10.times { post sudo_url, params: { password: "wrong" } }
+    # The count belongs to the shared store: clearing it resets the
+    # limit. A per-process store would still reject this attempt.
+    ActionController::Base.cache_store.clear
+    post sudo_url, params: { password: "wrong" }
+
+    assert_response :unauthorized
+  end
+
   private
     # Provisions Alice through the stubbed Google sign-in flow: no
     # password, linked identity for google-sub-alice, signed in.

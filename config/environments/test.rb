@@ -27,6 +27,10 @@ Rails.application.configure do
   config.consider_all_requests_local       = true
   config.action_controller.perform_caching = false
   config.cache_store = :null_store
+  # Controller rate limits (rate_limit's default store) still count in
+  # tests, against a store the suite clears between tests. The global
+  # cache stays null so hand-rolled Rails.cache throttles stay inert.
+  config.action_controller.cache_store = :memory_store
 
   # Raise exceptions instead of rendering exception templates.
   config.action_dispatch.show_exceptions = :none
