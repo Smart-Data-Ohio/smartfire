@@ -1,0 +1,102 @@
+/* Room header overflow menu: below 80rem the less-used actions live here
+   instead of being silently hidden. The menu reuses the room-menu popover
+   styling; this file holds the button, the unread dot, the menu badges,
+   and the phone-only items (stage, notifications, settings) that stay in
+   the bar on tablets. */
+
+.header-overflow {
+  display: none;
+}
+
+@media (max-width: 79.999rem) {
+  .header-overflow {
+    display: contents;
+  }
+}
+
+.header-overflow__button {
+  position: relative;
+}
+
+/* The dot lights when any menu item carries a badge or unread state: a
+   pins count above zero or threads with unread. */
+.header-overflow__dot {
+  background: var(--color-negative, #b3261e);
+  block-size: 0.5rem;
+  border-radius: 50%;
+  inline-size: 0.5rem;
+  inset-block-start: 0.3rem;
+  inset-inline-end: 0.3rem;
+  position: absolute;
+}
+
+.header-overflow__dot[hidden] {
+  display: none;
+}
+
+/* The menu reuses .room-menu for its popover frame; keep the same stacking
+   above the header without clipping the member-count badge. */
+.header-overflow__menu {
+  z-index: 20;
+}
+
+.header-overflow__menu .room-menu__item {
+  min-block-size: 2.5rem;
+}
+
+@media (pointer: coarse) {
+  .header-overflow__menu .room-menu__item {
+    min-block-size: 44px;
+  }
+}
+
+/* Menu badges mirror their header controls. The pins badge copies the
+   header count through the controller (the header count hides with its
+   button below 80rem); the threads badge is a second thread-panel toggle
+   so it updates in place. */
+.header-overflow__badge {
+  align-items: center;
+  background: color-mix(in srgb, var(--color-border) 55%, transparent);
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  justify-content: center;
+  margin-inline-start: auto;
+  min-inline-size: 1.4rem;
+  padding-inline: 0.35rem;
+}
+
+.header-overflow__badge:empty {
+  display: none;
+}
+
+.header-overflow__menu .room-header__thread-unread {
+  margin-inline-start: auto;
+}
+
+.header-overflow__menu .room-header__thread-unread[hidden] {
+  display: none;
+}
+
+/* Stage, notifications and settings stay in the bar on tablets (40rem to
+   80rem) and join the menu only on phones, where the bar keeps members,
+   search, call and this button alone. The menu scope outranks
+   .room-menu__item (same specificity, later file) so the hiding wins. */
+.header-overflow__menu .header-overflow__item--phone-only {
+  display: none;
+}
+
+@media (max-width: 40rem) {
+  .header-overflow__menu .header-overflow__item--phone-only {
+    display: flex;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header-overflow__menu,
+  .header-overflow__menu .room-menu__item {
+    transition: none;
+  }
+}

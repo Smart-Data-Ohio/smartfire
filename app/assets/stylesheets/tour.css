@@ -114,21 +114,3 @@
   text-align: start;
   white-space: nowrap;
 }
-
-/* Below 40rem the top-bar help menu steps aside for the crowded actions
-   row (see workspace.css); the same menu lives in the sidebar footer
-   instead, opening upward so it never leaves the drawer. */
-.sidebar__tools .help-menu {
-  display: none;
-}
-
-@media (max-width: 40rem) {
-  .sidebar__tools .help-menu {
-    display: block;
-  }
-}
-
-.sidebar__tools .help-menu__menu {
-  inset-block-end: calc(100% + 0.5rem);
-  inset-block-start: auto;
-}

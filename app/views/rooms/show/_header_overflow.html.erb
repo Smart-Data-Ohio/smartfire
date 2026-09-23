@@ -1,0 +1,104 @@
+<%# Room header overflow menu: below 80rem the less-used actions live here
+    instead of being silently hidden. Tablets keep notifications and settings
+    in the bar; phones move those (and the stage toggle) here too, leaving
+    only members, search, call and this button. Items reuse the header
+    controls: links navigate to the same paths, threads and the switcher
+    share their body-level actions, and scoped controls forward a click to
+    the real, hidden button. %>
+<% stage_membership = room.stage? ? room.memberships.find_by(user: Current.user) : nil %>
+<div class="header-overflow" data-controller="header-overflow">
+  <button type="button"
+          id="header-overflow-button"
+          class="btn room-header__action header-overflow__button"
+          aria-haspopup="menu"
+          aria-expanded="false"
+          aria-controls="header-overflow-menu"
+          aria-label="More actions"
+          title="More actions"
+          data-header-overflow-target="button"
+          data-action="click->header-overflow#toggle keydown->header-overflow#buttonKeydown">
+    <%= image_tag "menu-dots-horizontal.svg", size: 20, aria: { hidden: "true" } %>
+    <span class="header-overflow__dot" data-header-overflow-target="dot" hidden aria-hidden="true"></span>
+  </button>
+
+  <div id="header-overflow-menu"
+       class="room-menu header-overflow__menu"
+       popover="manual"
+       role="menu"
+       aria-label="More actions"
+       hidden
+       data-header-overflow-target="menu">
+    <% unless room.board? || room.direct? %>
+      <button type="button" class="btn room-menu__item header-overflow__item" role="menuitem"
+              data-action="thread-panel#toggle header-overflow#closeAfterActivate"
+              data-thread-panel-target="browserToggle">
+        <%= image_tag "messages-outlined.svg", size: 20, aria: { hidden: "true" } %>
+        <span>Threads</span>
+        <span class="room-header__thread-unread" data-thread-panel-unread hidden></span>
+      </button>
+    <% end %>
+
+    <%= link_to room_events_path(room), class: "btn room-menu__item header-overflow__item", role: "menuitem" do %>
+      <%= image_tag "calendar.svg", size: 20, aria: { hidden: "true" } %>
+      <span>Events</span>
+    <% end %>
+
+    <% unless room.board? %>
+      <button type="button" class="btn room-menu__item header-overflow__item" role="menuitem"
+              data-action="header-overflow#forward"
+              data-header-overflow-forward-value=".room-header__actions [aria-label='Show pinned messages']">
+        <%= image_tag "pin.svg", size: 20, aria: { hidden: "true" } %>
+        <span>Pins</span>
+        <span class="header-overflow__badge" data-header-overflow-target="pinsCount" data-header-overflow-badge></span>
+      </button>
+    <% end %>
+
+    <%= link_to room_files_path(room), class: "btn room-menu__item header-overflow__item", role: "menuitem" do %>
+      <%= image_tag "attachment.svg", size: 20, aria: { hidden: "true" } %>
+      <span>Files</span>
+    <% end %>
+
+    <% if stage_membership %>
+      <button type="button" class="btn room-menu__item header-overflow__item header-overflow__item--phone-only" role="menuitem"
+              data-action="header-overflow#forward"
+              data-header-overflow-forward-value=".room-header__actions [aria-label='Show stage']">
+        <span class="stage-panel__glyph" aria-hidden="true">◉</span>
+        <span>Stage</span>
+      </button>
+    <% end %>
+
+    <button type="button" class="btn room-menu__item header-overflow__item header-overflow__item--phone-only" role="menuitem"
+            data-action="header-overflow#forward"
+            data-header-overflow-forward-value=".room-header__actions .button_to_change_notifying button">
+      <%= image_tag "notification-bell-everything.svg", size: 20, aria: { hidden: "true" } %>
+      <span>Notifications</span>
+    </button>
+
+    <%= link_to [ :edit, room ], class: "btn room-menu__item header-overflow__item header-overflow__item--phone-only", role: "menuitem" do %>
+      <%= image_tag "settings.svg", size: 20, aria: { hidden: "true" } %>
+      <span>Room settings</span>
+    <% end %>
+
+    <% if Current.user && !Current.user.bot? %>
+      <button type="button" class="btn room-menu__item header-overflow__item" role="menuitem"
+              data-action="header-overflow#forward"
+              data-header-overflow-forward-value="[data-action='help-menu#openShortcuts']">
+        <%= image_tag "help-circle.svg", size: 20, aria: { hidden: "true" } %>
+        <span>Keyboard shortcuts</span>
+      </button>
+      <button type="button" class="btn room-menu__item header-overflow__item" role="menuitem"
+              data-action="header-overflow#forward"
+              data-header-overflow-forward-value="[data-action='help-menu#restartTour']">
+        <%= image_tag "refresh.svg", size: 20, aria: { hidden: "true" } %>
+        <span>Restart tour</span>
+      </button>
+    <% end %>
+
+    <button type="button" class="btn room-menu__item header-overflow__item" role="menuitem"
+            aria-label="Quick switcher"
+            data-action="click->keyboard-shortcuts#openSwitcher header-overflow#closeAfterActivate">
+      <%= image_tag "transfer.svg", size: 20, aria: { hidden: "true" } %>
+      <span>Quick switcher</span>
+    </button>
+  </div>
+</div>

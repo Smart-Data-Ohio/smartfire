@@ -148,8 +148,8 @@ body.member-panel-open .room-header__action--switcher .quick-switcher-key {
   /* Below desktop widths the header has no slack for an extra action:
      the member panel is a modal here precisely because a third column
      doesn't fit, and even the icon-only switcher pushes the bell
-     off-viewport in stage rooms at 64rem. The switcher steps aside like
-     Files does on the narrowest phones; Ctrl+K still opens it. */
+     off-viewport in stage rooms at 64rem. The switcher moves into the
+     header overflow menu; Ctrl+K still opens it everywhere. */
   .room-header__action--switcher {
     display: none;
   }
