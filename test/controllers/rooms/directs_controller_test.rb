@@ -283,6 +283,17 @@ class Rooms::DirectsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 3, room.memberships.count
   end
 
+  test "the non-admin creator cannot delete a group DM through the generic room route" do
+    room = create_group_dm!([ users(:kevin), users(:david), users(:jason) ])
+    assert_equal users(:kevin), room.creator
+
+    sign_in :kevin
+    delete room_url(room)
+
+    assert_response :forbidden
+    assert_not room.reload.deleted?
+  end
+
   test "an administrator can delete a group DM" do
     room = create_group_dm!([ users(:david), users(:jason), users(:kevin) ])
 
