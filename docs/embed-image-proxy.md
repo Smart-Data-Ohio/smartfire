@@ -34,9 +34,11 @@ Fetches follow the same rules as the unfurl fetcher
   in case the header lies. Timeouts, connection failures, and upstream
   errors answer 502. Every failure body is empty.
 
-Successful responses carry `Cache-Control: public, max-age=3600` and
-`Content-Disposition: inline`. The signature is deterministic per source
-URL, so cached message fragments keep stable `src` attributes.
+Successful responses carry `Cache-Control: private, max-age=3600` and
+`Content-Disposition: inline`. Private keeps shared caches (Thruster and
+the like) from serving one member's authenticated fetch to another; the
+signature is deterministic per source URL, so cached message fragments
+keep stable `src` attributes.
 
 ## Integration note
 

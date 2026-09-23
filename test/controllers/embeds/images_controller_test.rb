@@ -17,7 +17,8 @@ class Embeds::ImagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "PNG-BYTES", response.body
     assert_equal "inline", response.headers["Content-Disposition"].to_s.split(";").first
     assert_includes response.headers["Cache-Control"], "max-age=3600"
-    assert_includes response.headers["Cache-Control"], "public"
+    assert_includes response.headers["Cache-Control"], "private"
+    assert_not_includes response.headers["Cache-Control"], "public"
   end
 
   test "show requires sign-in" do

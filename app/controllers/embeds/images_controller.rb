@@ -11,7 +11,7 @@ class Embeds::ImagesController < ApplicationController
 
     image = Embeds::ImageProxy.new.fetch(url)
 
-    expires_in 1.hour, public: true
+    expires_in 1.hour, private: true
     send_data image.body, type: image.content_type, disposition: "inline"
   rescue Embeds::ImageProxy::Denied, RestrictedHTTP::Violation, Surfguard::Unresolvable
     head :not_found
