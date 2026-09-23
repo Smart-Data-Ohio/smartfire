@@ -85,6 +85,27 @@ class StarredPeopleTest < ApplicationSystemTestCase
     assert_member_rows_inline
   end
 
+  test "Escape still dismisses the row menu after the profile card takes focus" do
+    kevin = users(:kevin)
+    row = "#channel-members [data-member-id='#{kevin.id}']"
+
+    find(row).right_click
+    assert_selector "#member-row-menu", visible: true
+
+    # Opening the card from the same row moves focus into the card while
+    # the menu stays open behind it.
+    within row do
+      find("button.profile-card-avatar").click
+    end
+    assert_selector "#profile-card-popover:not([hidden])", wait: 10
+    assert_selector "#member-row-menu:not([hidden])", visible: :all
+
+    # One Escape closes the card; the menu must not be left orphaned.
+    find(".profile-card-popover__close").send_keys(:escape)
+    assert_selector "#profile-card-popover[hidden]", visible: :all, wait: 10
+    assert_no_selector "#member-row-menu", visible: true
+  end
+
   test "the Starred group works on a phone" do
     kevin = users(:kevin)
     page.current_window.resize_to(390, 844)

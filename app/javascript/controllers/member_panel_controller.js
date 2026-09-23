@@ -27,9 +27,11 @@ export default class extends Controller {
     this.handleViewportChange = this.#handleViewportChange.bind(this)
     this.handleVisibilityChange = this.#handleVisibilityChange.bind(this)
     this.handleRowMenuPointerDown = this.#handleRowMenuPointerDown.bind(this)
+    this.handleRowMenuWindowKeydown = this.#handleRowMenuWindowKeydown.bind(this)
     this.desktopQuery.addEventListener("change", this.handleViewportChange)
     document.addEventListener("visibilitychange", this.handleVisibilityChange)
     document.addEventListener("pointerdown", this.handleRowMenuPointerDown)
+    window.addEventListener("keydown", this.handleRowMenuWindowKeydown)
     this.desktopClosed = false
     this.isOpen = false
 
@@ -44,6 +46,7 @@ export default class extends Controller {
     this.desktopQuery?.removeEventListener("change", this.handleViewportChange)
     document.removeEventListener("visibilitychange", this.handleVisibilityChange)
     document.removeEventListener("pointerdown", this.handleRowMenuPointerDown)
+    window.removeEventListener("keydown", this.handleRowMenuWindowKeydown)
     this.#stopRefreshing()
     this.#abortRequest()
     this.#closeRowMenu({ restoreFocus: false })
@@ -483,6 +486,18 @@ export default class extends Controller {
     if (this.rowMenuTarget.contains(event.target)) return
     if (this.#menuRow()?.contains(event.target)) return
     this.#closeRowMenu({ restoreFocus: false })
+  }
+
+  // Escape still reaches the menu after focus moved elsewhere (the
+  // profile card opened from the same row, say): the menu's own keydown
+  // handler only sees keys pressed inside it. Mirrors the sidebar room
+  // menu; the contains check keeps the two handlers from double-closing.
+  #handleRowMenuWindowKeydown(event) {
+    if (!this.hasRowMenuTarget || this.rowMenuTarget.hidden) return
+    if (event.key !== "Escape" || this.rowMenuTarget.contains(event.target)) return
+
+    event.preventDefault()
+    this.#closeRowMenu({ restoreFocus: true })
   }
 
   #clearMembers(message) {
