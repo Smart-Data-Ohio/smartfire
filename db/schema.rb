@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_23_092324) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_23_092654) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -667,6 +667,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_092324) do
 
   create_table "messages", force: :cascade do |t|
     t.boolean "action", default: false, null: false
+    t.boolean "board_post_opener", default: false, null: false
     t.string "client_message_id", null: false
     t.datetime "created_at", null: false
     t.integer "creator_id", null: false

@@ -27,11 +27,12 @@ module Agents
     end
 
     # Today's usage for the agent page: { messages:, board_posts:,
-    # external_actions: }.
+    # external_actions: }. A board post's opening message counts only
+    # toward the board-post cap, never the message cap.
     def self.usage(agent)
       range = Date.current.all_day
       {
-        messages: Message.where(creator_id: agent.user_id, created_at: range).count,
+        messages: Message.where(creator_id: agent.user_id, created_at: range).where(board_post_opener: false).count,
         board_posts: ChannelThread.where(creator_id: agent.user_id, created_at: range)
           .where(room_id: Room.boards.select(:id)).count,
         external_actions: AgentApproval.where(agent_id: agent.id, created_at: range).count

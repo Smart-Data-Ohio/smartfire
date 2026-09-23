@@ -205,7 +205,7 @@ class ChannelThread < ApplicationRecord
         ThreadMembership.join!(thread, creator)
 
         message = if first_message.to_s.strip.present?
-          thread.post_message!(creator: creator, attributes: { markdown_source: first_message })
+          thread.post_message!(creator: creator, attributes: { markdown_source: first_message, board_post_opener: true })
         end
         thread.write_creation_assignment!(actor: creator) if thread.work_owner_id.present?
         notify_board_post_created!(thread, message) if message

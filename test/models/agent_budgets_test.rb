@@ -18,6 +18,33 @@ class AgentBudgetsTest < ActiveSupport::TestCase
     assert_equal({ messages: 1, board_posts: 1, external_actions: 1 }, Agents::Budgets.usage(@agent))
   end
 
+  test "a board post's first message counts only toward the board-post cap" do
+    board = Rooms::Board.create_for({ name: "Opener Board", creator: users(:david) },
+      users: [ users(:david), @agent.user ])
+    ChannelThread.create_board_post!(room: board, creator: @agent.user,
+      name: "Post", work_status: "planned", first_message: "Opening words")
+
+    assert_equal({ messages: 0, board_posts: 1, external_actions: 0 }, Agents::Budgets.usage(@agent))
+  end
+
+  test "an opener does not burn the message budget but replies do" do
+    @agent.update!(daily_message_cap: 1)
+    board = Rooms::Board.create_for({ name: "Cap Board", creator: users(:david) },
+      users: [ users(:david), @agent.user ])
+    thread = ChannelThread.create_board_post!(room: board, creator: @agent.user,
+      name: "Post", work_status: "planned", first_message: "Opening words")
+
+    assert_nil Agents::Budgets.check(@agent, :messages)
+
+    thread.post_message!(creator: @agent.user, attributes: {
+      markdown_source: "A reply", client_message_id: "budget-board-reply" })
+
+    denial = Agents::Budgets.check(@agent, :messages)
+
+    assert_not_nil denial
+    assert_equal :too_many_requests, denial.status
+  end
+
   test "usage ignores yesterday's rows" do
     message = @room.root_messages.create!(creator: @agent.user,
       markdown_source: "Old", client_message_id: "budget-old")
