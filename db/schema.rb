@@ -173,6 +173,18 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_073200) do
     t.index ["agent_id", "room_id", "capability"], name: "index_agent_grants_on_agent_room_capability_active", unique: true, where: "revoked_at IS NULL AND room_id IS NOT NULL"
   end
 
+  create_table "agent_slash_commands", force: :cascade do |t|
+    t.integer "agent_id", null: false
+    t.datetime "created_at", null: false
+    t.string "description"
+    t.string "name", null: false
+    t.integer "room_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["agent_id"], name: "index_agent_slash_commands_on_agent_id"
+    t.index ["room_id", "name"], name: "index_agent_slash_commands_on_room_id_and_name", unique: true
+    t.index ["room_id"], name: "index_agent_slash_commands_on_room_id"
+  end
+
   create_table "agent_steps", force: :cascade do |t|
     t.integer "agent_id", null: false
     t.integer "channel_thread_id"
@@ -188,16 +200,6 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_23_073200) do
     t.index ["agent_id"], name: "index_agent_steps_on_agent_id"
     t.index ["channel_thread_id"], name: "index_agent_steps_on_channel_thread_id"
     t.index ["message_id"], name: "index_agent_steps_on_message_id"
-  create_table "agent_slash_commands", force: :cascade do |t|
-    t.integer "agent_id", null: false
-    t.datetime "created_at", null: false
-    t.string "description"
-    t.string "name", null: false
-    t.integer "room_id", null: false
-    t.datetime "updated_at", null: false
-    t.index ["agent_id"], name: "index_agent_slash_commands_on_agent_id"
-    t.index ["room_id", "name"], name: "index_agent_slash_commands_on_room_id_and_name", unique: true
-    t.index ["room_id"], name: "index_agent_slash_commands_on_room_id"
   end
 
   create_table "agents", force: :cascade do |t|
