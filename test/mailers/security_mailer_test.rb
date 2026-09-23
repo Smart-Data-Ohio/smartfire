@@ -46,6 +46,23 @@ class SecurityMailerTest < ActionMailer::TestCase
     assert_match "New sign-in to your account from Chrome on macOS", mail.html_part.body.to_s
   end
 
+  test "new_sign_in_alert skips cleanly when the session was revoked before delivery" do
+    session = users(:kevin).sessions.create!(
+      user_agent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      ip_address: "127.0.0.1", device_id: "device-1")
+    item = ActivityItem.create!(user: users(:kevin), source: session, event_type: "new_sign_in")
+    session.destroy!
+
+    # The job deserializes a fresh item whose source row is gone.
+    with_env("SMTP_ADDRESS" => "smtp.example.com", "MAILER_FROM" => "Smartfire <alerts@example.com>") do
+      assert_nothing_raised do
+        SecurityMailer.new_sign_in_alert(item.reload).deliver_now
+      end
+    end
+
+    assert_empty ActionMailer::Base.deliveries
+  end
+
   private
     def with_env(overrides)
       previous = overrides.keys.index_with { |key| ENV[key] }

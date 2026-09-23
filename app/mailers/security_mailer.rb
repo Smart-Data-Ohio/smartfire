@@ -12,10 +12,15 @@ class SecurityMailer < ApplicationMailer
     ENV["MAILER_FROM"].presence || "Smartfire <noreply@example.com>"
   end
 
+  # The delivery job runs after the sign-in commits, so the session
+  # may already be revoked (signed out, expired, pruned) when this
+  # runs: skip without sending rather than failing on a nil session.
+  # Not calling mail makes delivery a no-op (NullMail).
   def new_sign_in_alert(activity_item)
     @item = activity_item
     @user = activity_item.user
     @session = activity_item.source
+    return if @session.nil?
 
     mail(
       from: SecurityMailer.from_address,
