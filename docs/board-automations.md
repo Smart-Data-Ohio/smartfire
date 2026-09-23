@@ -8,6 +8,9 @@ members see no link and get 403 on the page. Every configuration change
 is recorded in the [audit log](audit-log.md) as
 `board.automation.change`.
 
+Automation configuration is human-only: there are no MCP tools or agent
+API endpoints for reading or changing these rules, by lead decision.
+
 ## Auto-assign by tag
 
 A tag rule assigns new posts to one person or agent: when a post gains
@@ -59,12 +62,14 @@ like other work items.
 
 Once a day each board with SLA rules posts one digest of the open posts
 sitting in a ruled status past the rule's nudge time, stalest first
-(capped at 20 listed posts). `Done` posts never appear, and boards with
-no stale posts post nothing. The digest goes out as one quiet system
-note (`messages.system_note`) — never a normal message — so it renders
-without unread, push, agent delivery, inbox, or search noise. The
-latest digest also renders on the board page under the header. Titles
-and names are escaped as plain text.
+(capped at 20 listed posts). The digest runs once per UTC day: the
+hourly sweep posts it the first time after midnight UTC that it finds
+stale posts, and later sweeps that day are silent no-ops. `Done` posts
+never appear, and boards with no stale posts post nothing. The digest
+goes out as one quiet system note (`messages.system_note`) — never a
+normal message — so it renders without unread, push, agent delivery,
+inbox, or search noise. The latest digest also renders on the board
+page under the header. Titles and names are escaped as plain text.
 
 ## Running and idempotency
 
