@@ -150,4 +150,18 @@ class Accounts::AuditLogsControllerTest < ActionDispatch::IntegrationTest
     targets = rows.map { |row| row["target"] }
     assert targets.any? { |target| target.start_with?("'=") }, "expected a quoted formula cell in #{targets.inspect}"
   end
+
+  test "CSV export neutralizes formula injection in request columns" do
+    sign_in :david
+    # The user agent is fully attacker-controlled (any sign-in attempt
+    # stores it); it must not reach the export as a live formula.
+    AuditLog.record!(action: "session.sign_in.failure", actor_label: "mallory@evil.example",
+      ip_address: "198.51.100.9", user_agent: "=cmd|'/c calc'!A0")
+
+    get account_audit_log_url(format: :csv, audit_action: "session.sign_in.failure")
+
+    rows = CSV.parse(response.body, headers: true)
+    assert_equal 1, rows.length
+    assert_equal "'=cmd|'/c calc'!A0", rows[0]["user_agent"]
+  end
 end

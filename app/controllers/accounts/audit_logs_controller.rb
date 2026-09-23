@@ -66,8 +66,8 @@ class Accounts::AuditLogsController < ApplicationController
             entry.target_type,
             safe_csv_cell(entry.target_label),
             safe_csv_cell(entry.details.to_json),
-            entry.ip_address,
-            entry.user_agent
+            safe_csv_cell(entry.ip_address),
+            safe_csv_cell(entry.user_agent)
           ]
         end
       end
