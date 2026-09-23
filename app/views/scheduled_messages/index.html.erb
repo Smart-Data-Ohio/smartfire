@@ -1,0 +1,48 @@
+<% @page_title = "Scheduled messages" %>
+<% @body_class = "sidebar scheduled-messages" %>
+<% content_for :head do %>
+  <%= turbo_exempts_page_from_cache %>
+<% end %>
+
+<% content_for :nav do %>
+  <div class="room-header__identity room--current min-width">
+    <span class="room-header__kind">Personal workspace</span>
+    <h1 id="scheduled-messages-title" class="room__contents">
+      <span class="room-header__name">Scheduled</span>
+    </h1>
+  </div>
+<% end %>
+
+<% content_for :sidebar, sidebar_turbo_frame_tag(src: user_sidebar_path) %>
+
+<section class="scheduled-messages__page" aria-labelledby="scheduled-messages-title">
+  <header class="scheduled-messages__header">
+    <div>
+      <p class="scheduled-messages__kicker">Your scheduled messages</p>
+      <p class="scheduled-messages__description">Drafts waiting to send, in your time zone. Times are checked when they send: if you lose access to a channel, its drafts are dropped and you get an inbox item.</p>
+    </div>
+  </header>
+
+  <h2 class="scheduled-messages__group-title">Upcoming</h2>
+  <div id="scheduled-messages-upcoming" class="scheduled-messages__list">
+    <% if @upcoming.any? %>
+      <% @upcoming.each do |scheduled| %>
+        <%= render "scheduled_messages/item", scheduled: scheduled %>
+      <% end %>
+    <% else %>
+      <p class="scheduled-messages__empty">
+        <span class="scheduled-messages__empty-title">Nothing scheduled.</span>
+        Use “Schedule send” next to the composer's send button to write ahead.
+      </p>
+    <% end %>
+  </div>
+
+  <% if @past.any? %>
+    <h2 class="scheduled-messages__group-title">Past</h2>
+    <div id="scheduled-messages-past" class="scheduled-messages__list">
+      <% @past.each do |scheduled| %>
+        <%= render "scheduled_messages/past_item", scheduled: scheduled %>
+      <% end %>
+    </div>
+  <% end %>
+</section>

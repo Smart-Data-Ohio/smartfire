@@ -1,0 +1,58 @@
+<%# Poll builder dialog, opened by the /poll slash command. Posts a root
+    message carrying the poll. %>
+<dialog id="poll-builder" class="poll-builder" aria-labelledby="poll-builder-title" data-controller="poll-builder">
+  <div class="poll-builder__panel">
+    <div class="poll-builder__header">
+      <h2 id="poll-builder-title">Create a poll</h2>
+      <button type="button" class="btn btn--borderless" data-action="poll-builder#close" aria-label="Close poll builder">✕</button>
+    </div>
+
+    <%= form_with url: room_polls_path(room), method: :post, class: "poll-builder__form" do %>
+      <div>
+        <%= label_tag "poll[question]", "Question" %>
+        <%= text_field_tag "poll[question]", nil, class: "input", required: true, maxlength: 1000,
+              autocomplete: "off", data: { poll_builder_target: "question" } %>
+      </div>
+
+      <fieldset class="poll-builder__options">
+        <legend>Options (2–10)</legend>
+        <div data-poll-builder-target="options">
+          <div class="poll-builder__option">
+            <%= label_tag "poll_option_0", "Option 1", class: "for-screen-reader" %>
+            <%= text_field_tag "poll[options][]", nil, id: "poll_option_0", class: "input",
+                  required: true, maxlength: 200, autocomplete: "off" %>
+          </div>
+          <div class="poll-builder__option">
+            <%= label_tag "poll_option_1", "Option 2", class: "for-screen-reader" %>
+            <%= text_field_tag "poll[options][]", nil, id: "poll_option_1", class: "input",
+                  required: true, maxlength: 200, autocomplete: "off" %>
+          </div>
+        </div>
+        <p class="poll-builder__options-actions">
+          <button type="button" class="btn btn--plain btn--small" data-action="poll-builder#addOption"
+              data-poll-builder-target="addButton">Add option</button>
+        </p>
+      </fieldset>
+
+      <div class="poll-builder__flags">
+        <label class="poll-builder__flag">
+          <%= check_box_tag "poll[multiple]", "1", false %> Allow multiple choices
+        </label>
+        <label class="poll-builder__flag">
+          <%= check_box_tag "poll[anonymous]", "1", false %> Anonymous (counts only, no voter names)
+        </label>
+      </div>
+
+      <div>
+        <%= label_tag "poll[closes_at]", "Closes at (optional)" %>
+        <%= datetime_local_field_tag "poll[closes_at]", nil, class: "input" %>
+        <p class="txt-small poll-builder__hint">In your time zone. Votes lock when the poll closes.</p>
+      </div>
+
+      <div class="poll-builder__footer">
+        <button type="button" class="btn btn--plain" data-action="poll-builder#close">Cancel</button>
+        <%= submit_tag "Post poll", class: "btn btn--primary" %>
+      </div>
+    <% end %>
+  </div>
+</dialog>

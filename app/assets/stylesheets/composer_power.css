@@ -1,0 +1,367 @@
+/* Slash commands, polls, and scheduled messages. Follows the workspace
+   tokens, the message dialog patterns, and the activity inbox layout. */
+
+/* Action lines (/me): the author's name reads as part of the sentence,
+   with the body in italics. */
+.message--action .message__body-content .markdown-body {
+  font-style: italic;
+}
+
+/* Slash picker hint inside the autocomplete item. */
+.slash-command__hint {
+  color: var(--workspace-text-muted, var(--color-text));
+  font-weight: 400;
+}
+
+/* Poll card inside the message. */
+.poll {
+  background: var(--workspace-accent-highlight, transparent);
+  border: 1px solid var(--workspace-border, var(--color-border));
+  border-radius: 0.65rem;
+  margin-block-start: 0.6rem;
+  padding: 0.75rem 0.85rem;
+}
+
+.poll__options {
+  display: grid;
+  gap: 0.55rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.poll__option-row {
+  align-items: baseline;
+  display: flex;
+  gap: 0.6rem;
+  justify-content: space-between;
+}
+
+.poll__label {
+  overflow-wrap: anywhere;
+}
+
+.poll__option--voted .poll__label {
+  font-weight: 700;
+}
+
+.poll__option--voted .poll__label::after {
+  content: " ✓";
+  font-weight: 700;
+}
+
+.poll__count {
+  color: var(--workspace-text-muted, var(--color-text));
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.poll__bar {
+  background: var(--workspace-sidebar-active, var(--workspace-border, var(--color-border)));
+  border-radius: 999px;
+  block-size: 0.45rem;
+  margin-block-start: 0.25rem;
+  overflow: hidden;
+}
+
+.poll__bar-fill {
+  background: var(--workspace-accent-strong, var(--workspace-accent));
+  block-size: 100%;
+  display: block;
+}
+
+.poll__voters {
+  color: var(--workspace-text-muted, var(--color-text));
+  margin: 0.2rem 0 0;
+}
+
+.poll__meta {
+  color: var(--workspace-text-muted, var(--color-text));
+  margin: 0.65rem 0 0;
+}
+
+.poll__error {
+  color: var(--color-danger, #a4262c);
+  font-size: 0.85rem;
+  margin: 0.5rem 0 0;
+}
+
+.poll__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block-start: 0.6rem;
+}
+
+.poll__form {
+  display: contents;
+}
+
+.poll__fieldset {
+  border: 0;
+  display: grid;
+  flex-basis: 100%;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+}
+
+.poll__choice {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 0.5rem;
+  padding-block: 0.15rem;
+}
+
+/* Poll builder and schedule-send dialogs, mirroring the save dialog. */
+.poll-builder,
+.schedule-send__dialog {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-darker);
+  border-radius: 0.85rem;
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 30%);
+  color: var(--color-text);
+  inline-size: min(32rem, calc(100vw - 2rem));
+  max-block-size: min(85dvh, 44rem);
+  max-inline-size: none;
+  padding: 0;
+}
+
+.poll-builder::backdrop,
+.schedule-send__dialog::backdrop {
+  background: rgb(0 0 0 / 48%);
+}
+
+.poll-builder__panel,
+.schedule-send__panel {
+  display: grid;
+  gap: 1rem;
+  max-block-size: inherit;
+  overflow-y: auto;
+  padding: 1.1rem;
+}
+
+.poll-builder__header,
+.schedule-send__header {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.poll-builder__header h2,
+.schedule-send__header h2 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.poll-builder__form {
+  display: grid;
+  gap: 1rem;
+}
+
+.poll-builder__options {
+  border: 1px solid var(--workspace-border, var(--color-border));
+  border-radius: 0.6rem;
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.75rem;
+}
+
+.poll-builder__options legend {
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding-inline: 0.3rem;
+}
+
+.poll-builder__option {
+  align-items: center;
+  display: flex;
+  gap: 0.4rem;
+}
+
+.poll-builder__option .input {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.poll-builder__options-actions {
+  margin: 0;
+}
+
+.poll-builder__flags {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.poll-builder__flag {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.poll-builder__hint {
+  color: var(--workspace-text-muted, var(--color-text));
+  margin: 0.25rem 0 0;
+}
+
+.poll-builder__footer {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: flex-end;
+}
+
+.schedule-send {
+  display: inline-flex;
+}
+
+.schedule-send__hint,
+.schedule-send__status {
+  margin: 0;
+}
+
+.schedule-send__hint {
+  color: var(--workspace-text-muted, var(--color-text));
+}
+
+.schedule-send__status {
+  color: var(--color-danger, #a4262c);
+}
+
+.schedule-send__presets {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.schedule-send__preset {
+  justify-content: flex-start;
+}
+
+.schedule-send__custom-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-block-start: 0.35rem;
+}
+
+.schedule-send__custom-row .input {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.schedule-send__footer {
+  margin: 0;
+}
+
+/* Scheduled view, mirroring the Saved view and activity inbox. */
+.scheduled-messages__page {
+  inline-size: min(64rem, 100%);
+  margin: 0 auto;
+  overflow-y: auto;
+  padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 4vw, 3rem);
+}
+
+.scheduled-messages__header {
+  align-items: flex-start;
+  border-block-end: 1px solid var(--workspace-border, var(--color-border));
+  display: flex;
+  gap: 1.5rem;
+  justify-content: space-between;
+  padding-block-end: 1.25rem;
+}
+
+.scheduled-messages__kicker {
+  color: var(--workspace-text-muted, var(--color-text));
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.scheduled-messages__description {
+  color: var(--workspace-text-muted, var(--color-text));
+  font-size: 0.85rem;
+  margin: 0.45rem 0 0;
+  max-inline-size: 38rem;
+}
+
+.scheduled-messages__group-title {
+  font-size: 0.95rem;
+  margin: 1.4rem 0 0;
+}
+
+.scheduled-messages__list {
+  display: grid;
+  gap: 0.6rem;
+  margin-block-start: 0.8rem;
+}
+
+.scheduled-message {
+  background: var(--workspace-surface, var(--color-bg));
+  border: 1px solid var(--workspace-border, var(--color-border));
+  border-radius: 0.65rem;
+  color: var(--workspace-text, var(--color-text));
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.85rem 0.95rem;
+}
+
+.scheduled-message--past {
+  opacity: 0.8;
+}
+
+.scheduled-message__meta {
+  color: var(--workspace-text-muted, var(--color-text));
+  font-size: 0.78rem;
+}
+
+.scheduled-message__form {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.scheduled-message__row {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.scheduled-message__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.scheduled-message__action-form {
+  display: inline-flex;
+}
+
+.scheduled-message__body {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.scheduled-messages__empty {
+  color: var(--workspace-text-muted, var(--color-text));
+  margin-block-start: 1rem;
+}
+
+.scheduled-messages__empty-title {
+  color: var(--workspace-text, var(--color-text));
+  font-weight: 700;
+  margin-block-end: 0.3rem;
+}
+
+@media (max-width: 36rem) {
+  .scheduled-messages__header {
+    display: grid;
+  }
+
+  .schedule-send__custom-row {
+    flex-wrap: wrap;
+  }
+}

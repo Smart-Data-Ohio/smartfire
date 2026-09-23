@@ -1,0 +1,17 @@
+<article id="<%= dom_id(scheduled) %>" class="scheduled-message scheduled-message--past">
+  <div class="scheduled-message__meta">
+    <span class="scheduled-message__room"><%= room_display_name(scheduled.room) %></span>
+    <% if scheduled.thread %>
+      <span class="scheduled-message__thread">· <%= scheduled.thread.name %></span>
+    <% end %>
+    <% if scheduled.sent? %>
+      <span class="scheduled-message__time">· Sent <%= local_datetime_tag scheduled.sent_at, style: :datetime %></span>
+      <% if scheduled.sent_message %>
+        <span class="scheduled-message__link">· <%= link_to "View message", message_link_url(scheduled.sent_message), target: "_top" %></span>
+      <% end %>
+    <% else %>
+      <span class="scheduled-message__time">· Not sent (channel access lost)</span>
+    <% end %>
+  </div>
+  <p class="scheduled-message__body"><%= scheduled.markdown_source.truncate(500) %></p>
+</article>

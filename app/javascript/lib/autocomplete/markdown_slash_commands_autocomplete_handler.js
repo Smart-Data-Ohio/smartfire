@@ -1,0 +1,60 @@
+import BaseAutocompleteHandler from "lib/autocomplete/base_autocomplete_handler"
+import { escapeHTML } from "helpers/string_helpers"
+
+// Slash-command picker: active only when the word being typed starts at
+// the very beginning of the composer ("/" opens it, matching Discord and
+// Slack). Committing "/poll" inserts the command plus a trailing space
+// so the author can keep typing arguments.
+export default class MarkdownSlashCommandsAutocompleteHandler extends BaseAutocompleteHandler {
+  get pattern() {
+    return /^\/(.*?)$/
+  }
+
+  // The picker follows the first word while the caret stays on the first
+  // line: it opens on "/", filters as the word grows, and closes once the
+  // caret leaves the word (a space ends the word, so the context update
+  // deactivates it) or a later line. Later words starting with "/"
+  // never open it.
+  shouldAutocompleteWithContentAndPosition(content, position) {
+    const before = content.slice(0, position)
+    if (before.includes("\n")) return false
+    return before.split(/\s/)[0]?.startsWith("/") === true
+  }
+
+  insertAutocompletable(autocompletable, range, terminator) {
+    if (!autocompletable?.value) return
+
+    const replacement = `/${autocompletable.value} `
+    this.element.setRangeText(replacement, range[0], range[1], "end")
+    this.element.dispatchEvent(new Event("input", { bubbles: true }))
+  }
+
+  fetchResultsForQuery(query, callback) {
+    this.loadAutocompletables(query, () => {
+      const autocompletables = this.autocompletablesMatchingQuery(query)
+      callback(this.#renderSuggestions(autocompletables))
+    })
+  }
+
+  didShowResults(selectElement) {
+    selectElement.classList.add("markdown-autocomplete")
+  }
+
+  #renderSuggestions(autocompletables) {
+    return autocompletables.map(command => {
+      const name = escapeHTML(`/${command.name}`)
+      const description = escapeHTML(command.description || "")
+      const hint = command.arg_hint ? ` <span class="slash-command__hint">${escapeHTML(command.arg_hint)}</span>` : ""
+      const agent = command.agent ? ` <small>by ${escapeHTML(command.agent)}</small>` : ""
+
+      return `
+        <suggestion-option class="autocomplete__item flex align-center gap unpad" role="option" value="${escapeHTML(command.value)}">
+          <button type="button" class="autocomplete__btn btn btn--borderless btn--transparent min-width flex-item-grow justify-start">
+            <span class="autocompletable__name"><strong>${name}</strong>${hint}</span>
+            <small>${description}${agent}</small>
+          </button>
+        </suggestion-option>
+      `
+    }).join("")
+  }
+}

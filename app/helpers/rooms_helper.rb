@@ -108,7 +108,8 @@ module RoomsHelper
         composer_messages_outlet: "##{message_area_id}",
         composer_room_id_value: room.id,
         composer_thread_id_value: thread&.id,
-        composer_thread_mode_value: thread.present?
+        composer_thread_mode_value: thread.present?,
+        composer_slash_commands_url_value: room_slash_commands_path(room)
       }
     end
 

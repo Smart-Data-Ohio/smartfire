@@ -9,7 +9,7 @@ export default class extends Controller {
     "clientid", "fields", "fileList", "markdown", "context", "contextLabel", "contextPreview",
     "notifyControl", "replyNotify", "replyTo", "send", "feedback"
   ]
-  static values = { roomId: Number, threadId: String }
+  static values = { roomId: Number, threadId: String, slashCommandsUrl: String }
   static outlets = [ "messages" ]
 
   #files = []
@@ -50,6 +50,15 @@ export default class extends Controller {
     }
 
     if (!this.fieldsTarget.disabled) {
+      // A leading "//" escapes the slash dispatcher: the message posts
+      // literally with one slash.
+      if (this.markdownTarget.value.startsWith("//")) {
+        this.#setMarkdownValue(this.markdownTarget.value.replace(/^\/\//, "/"))
+      } else if (this.#slashCommandText()) {
+        this.#slashSubmit()
+        return
+      }
+
       this.#submitFiles()
       this.#submitMessage()
       this.markdownTarget.focus()
@@ -109,6 +118,14 @@ export default class extends Controller {
 
   replaceMessageContent({ markdown }) {
     this.#setMarkdownValue(markdown)
+  }
+
+  // Called by the schedule-send control after a draft is scheduled:
+  // the draft is consumed, so clear it and confirm.
+  scheduled(notice) {
+    this.#reset()
+    if (notice) this.#showFeedback(notice)
+    this.markdownTarget.focus()
   }
 
   startReply(detail = {}) {
@@ -222,6 +239,8 @@ export default class extends Controller {
     // Edit content belongs to the message being edited, not to the room.
     if (this.#mode?.type === "edit") return
     this.#writeDraft(this.markdownTarget.value)
+    // A slash error clears as soon as the author retypes.
+    if (!this.#mode) this.#clearFeedback()
   }
 
   submitByKeyboard(event) {
@@ -528,6 +547,9 @@ export default class extends Controller {
     if (this.hasFeedbackTarget) {
       this.feedbackTarget.textContent = message
       this.feedbackTarget.hidden = false
+      // The context row hides outside reply/edit mode; feedback must
+      // still be visible there.
+      if (this.hasContextTarget) this.contextTarget.hidden = false
     }
   }
 
@@ -535,7 +557,101 @@ export default class extends Controller {
     if (this.hasFeedbackTarget) {
       this.feedbackTarget.textContent = ""
       this.feedbackTarget.hidden = true
+      if (this.hasContextTarget && !this.#mode) this.contextTarget.hidden = true
     }
+  }
+
+  // Composer text for the slash dispatcher: starts with "/name", but
+  // never "//" (escaped literal) and never /play, which keeps the
+  // normal optimistic message path. Null otherwise.
+  #slashCommandText() {
+    if (!this.hasSlashCommandsUrlValue) return null
+
+    const text = this.markdownTarget.value.trim()
+    const match = text.match(/^\/(?!\/)([a-zA-Z][a-zA-Z0-9_-]*)/)
+    if (!match || match[1].toLowerCase() === "play") return null
+    return text
+  }
+
+  async #slashSubmit() {
+    const text = this.#slashCommandText()
+    if (!text || this.#submitting) return
+
+    this.#submitting = true
+    this.#setBusy(true)
+    this.#clearFeedback()
+
+    try {
+      const response = await fetch(this.slashCommandsUrlValue, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "X-CSRF-Token": document.querySelector("meta[name='csrf-token']")?.content || "",
+        },
+        body: JSON.stringify({ text, thread_id: this.threadIdValue || null }),
+      })
+
+      if (!response.ok) throw new Error(`Slash command failed (${response.status})`)
+      this.#handleSlashResult(await response.json(), text)
+    } catch {
+      this.#showFeedback("Couldn't run that command. Try again.")
+      this.markdownTarget.focus()
+    } finally {
+      this.#submitting = false
+      this.#setBusy(false)
+    }
+  }
+
+  #handleSlashResult(result, text) {
+    switch (result.status) {
+      case "posted":
+        // The message broadcasts live; keep a newer draft typed during
+        // the round trip, like a normal send does.
+        if (this.markdownTarget.value === text) this.#reset()
+        if (result.notice) this.#showFeedback(result.notice)
+        this.markdownTarget.focus()
+        break
+      case "ephemeral":
+        if (this.markdownTarget.value === text) this.#reset()
+        this.#showFeedback(result.message)
+        this.markdownTarget.focus()
+        break
+      case "error":
+        this.#showFeedback(result.message || "Couldn't run that command.")
+        this.markdownTarget.focus()
+        break
+      case "open_url":
+        if (this.markdownTarget.value === text) this.#reset()
+        Turbo.visit(result.url)
+        break
+      case "open_poll":
+        if (this.markdownTarget.value === text) this.#reset()
+        this.#openPollBuilder()
+        break
+      case "start_huddle":
+        if (this.markdownTarget.value === text) this.#reset()
+        window.dispatchEvent(new CustomEvent("huddle:join", {
+          detail: { roomId: result.room_id, roomName: result.room_name },
+        }))
+        this.markdownTarget.focus()
+        break
+      default:
+        this.#showFeedback("Couldn't run that command.")
+        this.markdownTarget.focus()
+    }
+  }
+
+  #openPollBuilder() {
+    const dialog = document.getElementById("poll-builder")
+    if (!dialog) {
+      this.#showFeedback("Polls can only be posted from the channel.")
+      return
+    }
+
+    const builder = this.application.getControllerForElementAndIdentifier(dialog, "poll-builder")
+    if (builder) builder.open()
+    else dialog.showModal()
   }
 
   #focusComposer() {

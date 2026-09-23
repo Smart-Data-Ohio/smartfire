@@ -1,0 +1,79 @@
+<%# Poll card rendered inside the message fragment. The fragment is cached
+    across viewers, so this partial renders viewer-agnostic HTML only:
+    counts, bars, and (unless anonymous) voter names, with per-option
+    voter ids as data. The poll Stimulus controller checks the viewer's
+    own inputs, marks voted options, and reveals the retract control
+    from the current-user meta, the same way reaction chips mark
+    themselves. %>
+<% votes = poll.poll_votes.to_a %>
+<% total = votes.size %>
+<% closed = poll.closed? %>
+
+<section id="<%= dom_id(poll, :card) %>" class="poll" aria-label="Poll" data-controller="poll">
+  <ol class="poll__options">
+    <% poll.poll_options.each do |option| %>
+      <% option_votes = votes.select { |vote| vote.poll_option_id == option.id } %>
+      <% percent = total.positive? ? (option_votes.size * 100.0 / total).round : 0 %>
+      <li class="poll__option" data-poll-target="option" data-poll-option-id="<%= option.id %>"
+          data-voter-ids="<%= option_votes.map(&:user_id).join(",") %>">
+        <div class="poll__option-row">
+          <span class="poll__label"><%= option.label %></span>
+          <span class="poll__count" aria-label="<%= pluralize(option_votes.size, "vote") %>">
+            <%= option_votes.size %> · <%= percent %>%
+          </span>
+        </div>
+        <div class="poll__bar" aria-hidden="true">
+          <span class="poll__bar-fill" style="width: <%= percent %>%"></span>
+        </div>
+        <% unless poll.anonymous? %>
+          <% if option_votes.any? %>
+            <p class="poll__voters txt-small"><%= option_votes.filter_map { |vote| vote.user&.name }.sort.to_sentence %></p>
+          <% end %>
+        <% end %>
+      </li>
+    <% end %>
+  </ol>
+
+  <p class="poll__meta txt-small">
+    <%= pluralize(total, "vote") %>
+    · <%= poll.multiple? ? "Multiple choice" : "Single choice" %>
+    · <%= poll.anonymous? ? "Anonymous" : "Voters visible" %>
+    <% if poll.closes_at %>
+      · <%= closed ? "Closed" : "Closes" %> <%= local_datetime_tag poll.closes_at, style: :datetime, class: "poll__close-time" %>
+    <% elsif closed %>
+      · Closed
+    <% end %>
+  </p>
+
+  <% if vote_error = local_assigns[:vote_error] %>
+    <p class="poll__error" role="alert"><%= vote_error %></p>
+  <% end %>
+
+  <% unless closed %>
+    <div class="poll__actions">
+      <%= form_with url: vote_room_poll_path(poll.message.room, poll), method: :post, class: "poll__form" do %>
+        <fieldset class="poll__fieldset">
+          <legend class="for-screen-reader">Cast your vote</legend>
+          <% poll.poll_options.each do |option| %>
+            <label class="poll__choice">
+              <% if poll.multiple? %>
+                <%= check_box_tag "option_ids[]", option.id, false,
+                      id: "poll_#{poll.id}_option_#{option.id}", class: "poll__input",
+                      data: { poll_target: "input" } %>
+              <% else %>
+                <%= radio_button_tag "option_ids[]", option.id, false,
+                      id: "poll_#{poll.id}_option_#{option.id}", class: "poll__input",
+                      data: { poll_target: "input" } %>
+              <% end %>
+              <span><%= option.label %></span>
+            </label>
+          <% end %>
+        </fieldset>
+        <%= submit_tag "Vote", class: "btn btn--primary btn--small", data: { poll_target: "submit" } %>
+      <% end %>
+      <%= form_with url: vote_room_poll_path(poll.message.room, poll), method: :post, class: "poll__retract-form" do %>
+        <%= submit_tag "Retract vote", class: "btn btn--plain btn--small", data: { poll_target: "retract" }, hidden: true %>
+      <% end %>
+    </div>
+  <% end %>
+</section>
