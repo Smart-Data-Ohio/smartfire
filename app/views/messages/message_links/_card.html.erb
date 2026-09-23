@@ -9,5 +9,9 @@
     <%= local_datetime_tag source.created_at, class: "message-quote__time" %>
   </div>
   <p class="message-quote__excerpt"><%= source.plain_text_body.truncate(200) %></p>
-  <%= link_to "Jump to message", message_link_url(source), class: "message-quote__jump" %>
+  <%# The card renders inside the message's edit frame (or its own quote
+      frame for cross-room sources); _top breaks the jump out to the page,
+      like the pins panel's jump links. %>
+  <%= link_to "Jump to message", message_link_url(source), class: "message-quote__jump",
+        data: { turbo_frame: "_top" } %>
 </blockquote>
