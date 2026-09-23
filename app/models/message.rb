@@ -47,6 +47,10 @@ class Message < ApplicationRecord
   has_many :event_references, dependent: :destroy
   has_many :events, through: :event_references
 
+  has_many :message_references, dependent: :destroy
+  has_many :referenced_messages, through: :message_references, source: :referenced_message
+  has_many :incoming_message_references, class_name: "MessageReference",
+    foreign_key: :referenced_message_id, dependent: :destroy, inverse_of: :referenced_message
   has_many :link_embed_references, dependent: :destroy
   has_many :link_embeds, through: :link_embed_references
 
@@ -63,6 +67,7 @@ class Message < ApplicationRecord
   before_validation :render_markdown_body, if: :will_save_change_to_markdown_source?
   before_create -> { self.client_message_id ||= Random.uuid } # Bots don't care
   before_destroy :preserve_reply_tombstones, prepend: true
+  before_destroy :capture_quote_referencing_ids, prepend: true
   after_create_commit :receive_in_conversation
   after_create_commit :close_stale_sibling_threads, if: :thread_message?
   after_create_commit :record_activity_items
@@ -76,6 +81,10 @@ class Message < ApplicationRecord
   after_update_commit :resync_twitter_post_references
   after_create_commit :sync_event_references
   after_update_commit :resync_event_references
+  after_create_commit :sync_message_references
+  after_update_commit :resync_message_references
+  after_update_commit :enqueue_quote_cards_refresh, if: :references_source_changed?
+  after_destroy_commit :broadcast_quote_cards_removal
   after_create_commit :sync_link_embed_references
   after_update_commit :resync_link_embed_references
 
@@ -106,6 +115,7 @@ class Message < ApplicationRecord
       .preload(:message_pins)
       .preload(:room, :github_pull_requests, :fizzy_cards, :twitter_posts, :drive_attachments, link_embed_references: :link_embed,
         events: [ :room, :organizer, :venue ],
+        message_references: { referenced_message: [ :room, :rich_text_body, { attachment_attachment: :blob }, { creator: :avatar_attachment } ] },
         reply_to_message: [ :room, :rich_text_body, { creator: :avatar_attachment } ])
   }
   # The JSON payload reads the creator, body, attachment filename, room, reply
@@ -307,6 +317,37 @@ class Message < ApplicationRecord
 
     def resync_event_references
       Event::ReferenceSync.call(self) if references_source_changed?
+    end
+
+    def sync_message_references
+      Message::ReferenceSync.call(self)
+    end
+
+    def resync_message_references
+      Message::ReferenceSync.call(self) if references_source_changed?
+    end
+
+    # An edit to a quoted message refreshes every quote card pointing
+    # at it through a background job (batched and capped), so the edit
+    # request never pays for the re-render itself.
+    def enqueue_quote_cards_refresh
+      Message::QuoteCardsRefreshJob.perform_later(id)
+    end
+
+    # Deleting a quoted message destroys its reference rows, which alone
+    # would leave stale quote cards in cached fragments and open clients:
+    # bump the quoting messages (without touching their rooms, like the
+    # pin stamp) and replace their card containers over the stream.
+    def capture_quote_referencing_ids
+      @quote_referencing_ids = incoming_message_references.pluck(:message_id)
+    end
+
+    def broadcast_quote_cards_removal
+      ids = @quote_referencing_ids || []
+      return if ids.empty?
+
+      Message.where(id: ids).update_all(updated_at: Time.current)
+      Message.where(id: ids).find_each(&:broadcast_quote_cards_replace)
     end
 
     def sync_link_embed_references
