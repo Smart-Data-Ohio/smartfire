@@ -29,7 +29,9 @@ class Rooms::EventsController < ApplicationController
   end
 
   def new
-    @event = @room.events.build(time_zone: "UTC")
+    # The /event slash command links here with a title, an absolute
+    # start time, and the invoker's time zone prefilled.
+    @event = @room.events.build(new_prefill)
   end
 
   def create
@@ -97,6 +99,26 @@ class Rooms::EventsController < ApplicationController
       permitted[:starts_at] = parse_event_time(permitted[:starts_at], zone)
       permitted[:ends_at] = parse_event_time(permitted[:ends_at], zone)
       permitted
+    end
+
+    def new_prefill
+      prefill = { time_zone: "UTC" }
+      return prefill unless params[:event].is_a?(ActionController::Parameters)
+
+      permitted = params.require(:event).permit(:title, :starts_at, :time_zone)
+      zone = permitted[:time_zone].presence
+      prefill[:time_zone] = zone if zone && ActiveSupport::TimeZone[zone].present?
+      prefill[:title] = permitted[:title].to_s.strip.first(255) if permitted[:title].present?
+
+      if permitted[:starts_at].present?
+        begin
+          prefill[:starts_at] = Time.zone.parse(permitted[:starts_at].to_s)
+        rescue ArgumentError, TypeError
+          nil
+        end
+      end
+
+      prefill
     end
 
     # The form posts zone-less datetime-local values, so interpret them in the

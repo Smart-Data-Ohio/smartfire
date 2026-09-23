@@ -25,6 +25,7 @@ class Agent < ApplicationRecord
 
   has_many :agent_credentials, dependent: :destroy
   has_many :agent_grants, dependent: :destroy
+  has_many :agent_slash_commands, dependent: :destroy
   has_many :agent_events, dependent: :destroy
   has_many :agent_approvals, dependent: :destroy
 

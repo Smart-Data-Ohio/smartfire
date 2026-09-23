@@ -33,6 +33,10 @@ class ChannelThread < ApplicationRecord
   has_many :work_thread_events, foreign_key: :channel_thread_id, inverse_of: :thread, dependent: :destroy
   has_many :work_thread_links, foreign_key: :channel_thread_id, inverse_of: :channel_thread, dependent: :destroy
   has_many :agent_steps, -> { ordered }, foreign_key: :channel_thread_id, inverse_of: :channel_thread, dependent: :destroy
+  # No dependent option: the foreign key nullifies thread_id on delete.
+  # Pending rows are dropped with an inbox item first (see below); sent
+  # history rows keep their past with the thread link cleared.
+  has_many :scheduled_messages, foreign_key: :thread_id, inverse_of: :thread
 
   class LockedError < StandardError; end
   class WorkUpdateForbidden < StandardError; end
@@ -59,6 +63,10 @@ class ChannelThread < ApplicationRecord
   after_destroy_commit :broadcast_board_row_remove, if: :board_post?
   before_destroy :capture_deleted_work_snapshot
   after_destroy_commit :emit_deleted_work_unassigned
+  # Runs first: pending scheduled rows drop with an inbox item while the
+  # thread still exists, then the foreign key nullifies thread_id on
+  # every referencing row (the dropped rows and sent history alike).
+  before_destroy :drop_pending_scheduled_messages, prepend: true
 
   # Set by the destroy endpoint so the work_unassigned row records who
   # deleted the thread. Cascade and merge destroys leave it nil.
@@ -991,6 +999,16 @@ class ChannelThread < ApplicationRecord
       return unless agent_for_work_owner(work_owner)
 
       @deleted_work_snapshot = Agent::Delivery.work_payload(self, assigned_by: deleted_by&.name)
+    end
+
+    # A deleted thread cannot receive its scheduled replies, so pending
+    # rows drop with an inbox item instead of silently re-targeting the
+    # channel once the foreign key nullifies thread_id. Sent history
+    # rows are untouched: they keep their past with the link cleared.
+    def drop_pending_scheduled_messages
+      scheduled_messages.pending.find_each do |scheduled|
+        scheduled.drop!(reason: "its thread was deleted")
+      end
     end
 
     # An agent-owned thread that is deleted unassigns its owner the same

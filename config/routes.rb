@@ -88,6 +88,7 @@ Rails.application.routes.draw do
   namespace :autocompletable do
     resources :users, only: :index
     resources :icons, only: :index
+    resources :slash_commands, only: :index
   end
 
   get "icons/:name", to: "workspace_icons#show", as: :workspace_icon
@@ -121,6 +122,10 @@ Rails.application.routes.draw do
   patch "agents/steps/:id", to: "agents/steps#update", defaults: { format: :json }, as: :agents_step
   post "agents/messages/:id/pin", to: "agents/pins#create", defaults: { format: :json }, as: :agents_message_pin
   delete "agents/messages/:id/pin", to: "agents/pins#destroy", defaults: { format: :json }
+  post "rooms/:room_id/agents/slash_commands", to: "agents/slash_commands#create", defaults: { format: :json }
+  delete "rooms/:room_id/agents/slash_commands/:name", to: "agents/slash_commands#destroy", defaults: { format: :json }
+  post "rooms/:room_id/agents/polls", to: "agents/polls#create", defaults: { format: :json }
+  get "rooms/:room_id/agents/polls/:id", to: "agents/polls#show", defaults: { format: :json }
   get "rooms/:room_id/agents/posts", to: "agents/posts#index", defaults: { format: :json }, as: :room_agent_posts
   post "rooms/:room_id/agents/posts", to: "agents/posts#create", defaults: { format: :json }
   post "rooms/:room_id/agents/github/pull_request_actions", to: "agents/github/pull_request_actions#create",
@@ -172,7 +177,13 @@ Rails.application.routes.draw do
 
     scope module: "rooms" do
       resources :members, only: :index
+      resources :message_links, only: :show
+      resources :files, only: :index
       resources :pins, only: :index
+      resources :slash_commands, only: :create
+      resources :polls, only: %i[ create show ] do
+        post :vote, on: :member
+      end
       resources :drive_recipients, only: :index do
         post :validate, on: :collection
       end
@@ -246,6 +257,11 @@ Rails.application.routes.draw do
   end
 
   resources :saved_items, path: "saved", only: %i[ index create update destroy ]
+
+  resources :scheduled_messages, only: %i[ index update destroy ] do
+    post :send_now, on: :member
+  end
+  post "rooms/:room_id/scheduled_messages", to: "scheduled_messages#create", as: :room_scheduled_messages
 
   resources :searches, only: %i[ index create ] do
     delete :clear, on: :collection

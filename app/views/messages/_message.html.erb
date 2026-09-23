@@ -20,10 +20,12 @@
           <%= render "messages/context", message: message %>
           <%= render "messages/presentation", message: message %>
           <%= render "agent_steps/steps", steps: message.agent_steps.to_a %>
+          <%= render "polls/poll", poll: message.poll if message.poll %>
           <%= render "messages/drive_attachments", message: message %>
           <%= render "github/pull_requests/cards", message: message %>
           <%= render "twitter/posts/cards", message: message %>
           <%= render "rooms/events/cards", message: message %>
+          <%= render "messages/message_links/cards", message: message %>
           <%= render "fizzy/cards/cards", message: message %>
           <%= render "linkedin/posts/cards", message: message %>
           <%= render "link_embeds/cards", message: message %>

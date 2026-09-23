@@ -42,6 +42,7 @@ class Agents::McpControllerTest < ActionDispatch::IntegrationTest
       create_fizzy_card comment_on_fizzy_card move_fizzy_card
       close_fizzy_card reopen_fizzy_card
       pin_message unpin_message
+      register_slash_command unregister_slash_command create_poll get_poll
       start_stream append_stream finalize_stream set_presence
       add_step update_step
     ], names
@@ -96,7 +97,7 @@ class Agents::McpControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_equal "complete", body.dig("result", "resultType")
-    assert_equal 33, body.dig("result", "tools").size
+    assert_equal 37, body.dig("result", "tools").size
   end
 
   test "header and body versions must match" do

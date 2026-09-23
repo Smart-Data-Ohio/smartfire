@@ -1,0 +1,47 @@
+<%# "Schedule send" control for the composer send row. Presets resolve in
+    the author's browser time zone and submit as UTC, like saved-item
+    reminders do. %>
+<% thread = local_assigns[:thread] %>
+<% dialog_id = thread ? "schedule-send-thread-#{thread.id}" : "schedule-send" %>
+<span class="schedule-send" data-controller="schedule-send"
+    data-schedule-send-url-value="<%= room_scheduled_messages_path(room) %>"
+    data-schedule-send-thread-id-value="<%= thread&.id %>"
+    data-schedule-send-dialog-id-value="<%= dialog_id %>">
+  <button type="button" class="btn btn--borderless composer__schedule-btn flex-item-no-shrink"
+      title="Schedule send" aria-label="Schedule send" aria-haspopup="dialog"
+      data-action="schedule-send#open">
+    <%= image_tag "calendar.svg", size: 17, aria: { hidden: "true" } %>
+  </button>
+
+  <dialog id="<%= dialog_id %>" class="schedule-send__dialog" aria-labelledby="<%= dialog_id %>-title">
+    <div class="schedule-send__panel">
+      <div class="schedule-send__header">
+        <h2 id="<%= dialog_id %>-title">Schedule send</h2>
+        <button type="button" class="btn btn--borderless" data-action="schedule-send#close" aria-label="Close schedule send">✕</button>
+      </div>
+
+      <p class="txt-small schedule-send__hint">Times are in your time zone.</p>
+      <p class="schedule-send__status txt-small" role="alert" hidden data-schedule-send-target="status"></p>
+
+      <div class="schedule-send__presets">
+        <button type="button" class="btn btn--plain schedule-send__preset" data-action="schedule-send#schedulePreset" data-preset="hour">In 1 hour</button>
+        <button type="button" class="btn btn--plain schedule-send__preset" data-action="schedule-send#schedulePreset" data-preset="tomorrow">Tomorrow at 9 AM</button>
+        <button type="button" class="btn btn--plain schedule-send__preset" data-action="schedule-send#schedulePreset" data-preset="monday">Next Monday at 9 AM</button>
+      </div>
+
+      <div class="schedule-send__custom">
+        <%= label_tag "#{dialog_id}-custom", "Custom time" %>
+        <div class="schedule-send__custom-row">
+          <input type="datetime-local" id="<%= dialog_id %>-custom" class="input"
+              data-schedule-send-target="custom"
+              data-action="keydown->schedule-send#customEnter">
+          <button type="button" class="btn btn--primary btn--small" data-action="schedule-send#scheduleCustom">Schedule</button>
+        </div>
+      </div>
+
+      <p class="schedule-send__footer txt-small">
+        <%= link_to "View scheduled messages", scheduled_messages_path, target: "_top" %>
+      </p>
+    </div>
+  </dialog>
+</span>

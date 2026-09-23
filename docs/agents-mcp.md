@@ -40,9 +40,12 @@ endpoints, per credential per minute:
 | `get_approval` | approval reads | 120 |
 | `get_context` | context reads | 120 |
 | `list_fizzy_boards`, `get_fizzy_board`, `search_fizzy_cards`, `get_fizzy_card` | Fizzy board and card reads | 120 |
+| `get_poll` | poll reads | 120 |
 | `post_message`, `request_approval`, `open_dm` | posting / approvals / DMs | 60 |
 | `create_fizzy_card`, `comment_on_fizzy_card`, `move_fizzy_card`, `close_fizzy_card`, `reopen_fizzy_card` | Fizzy card actions | 60 |
 | `pin_message`, `unpin_message` | pinning / unpinning | 60 |
+| `register_slash_command`, `unregister_slash_command` | command registration | 60 |
+| `create_poll` | poll creation | 60 |
 | `start_stream`, `finalize_stream` | streaming messages | 60 |
 | `append_stream` | streaming updates | 240 |
 | `add_step`, `update_step` | agent steps | 60 |
@@ -114,6 +117,8 @@ curl https://smartfire.example.com/agents/mcp \
 | `list_fizzy_boards`, `get_fizzy_board`, `search_fizzy_cards`, `get_fizzy_card` | workspace-wide `fizzy` | `GET /agents/fizzy/...` |
 | `create_fizzy_card`, `comment_on_fizzy_card`, `move_fizzy_card`, `close_fizzy_card`, `reopen_fizzy_card` | workspace-wide `external_action` | `POST /agents/fizzy/card_actions` |
 | `pin_message`, `unpin_message` | `post_messages` in the room | `POST`/`DELETE /agents/messages/:id/pin` |
+| `register_slash_command`, `unregister_slash_command` | `post_messages` in the room | `POST`/`DELETE /rooms/:id/agents/slash_commands` |
+| `create_poll`, `get_poll` | `post_messages` in the room | `POST`/`GET /rooms/:id/agents/polls` |
 | `start_stream`, `append_stream`, `finalize_stream` | `post_messages` in the room | streaming messages endpoints |
 | `set_presence` | the agent itself | `PATCH /agents/me` (`working_presence`) |
 | `add_step`, `update_step` | `post_messages` (message steps) / `manage_threads` (thread steps) | `POST`/`PATCH /agents/steps` |

@@ -66,4 +66,35 @@ class Users::NotificationSettingsControllerTest < ActionDispatch::IntegrationTes
 
     assert_redirected_to new_session_url
   end
+
+  test "enabling DND after a timed expiry starts it indefinitely" do
+    users(:david).update!(dnd_enabled: true, dnd_until: 1.hour.ago)
+
+    patch user_notification_settings_url, params: { user: { dnd_enabled: "1" } }
+
+    assert_redirected_to user_profile_url
+    user = users(:david).reload
+    assert_nil user.dnd_until
+    assert user.manual_dnd_active?
+  end
+
+  test "disabling DND clears a running timer" do
+    users(:david).update!(dnd_enabled: true, dnd_until: 1.hour.from_now)
+
+    patch user_notification_settings_url, params: { user: { dnd_enabled: "0" } }
+
+    assert_redirected_to user_profile_url
+    user = users(:david).reload
+    assert_nil user.dnd_until
+    assert_not user.manual_dnd_active?
+  end
+
+  test "saving settings preserves a running DND timer" do
+    users(:david).update!(dnd_enabled: true, dnd_until: 1.hour.from_now)
+
+    patch user_notification_settings_url, params: { user: { dnd_enabled: "1" } }
+
+    assert_redirected_to user_profile_url
+    assert_in_delta 1.hour.from_now.to_f, users(:david).reload.dnd_until.to_f, 5
+  end
 end

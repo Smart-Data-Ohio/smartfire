@@ -455,11 +455,13 @@ class StreamingTest < ApplicationSystemTestCase
       assert_selector ".stage-live__badge", text: "Live: David", wait: BROADCAST_WAIT
       assert_selector "#stage_rooms .stage-room .stage-live-dot__pip", wait: BROADCAST_WAIT
 
+      assert_show_stage_clear_of_member_panel
       find("button[aria-label='Show stage']").click
       assert_selector ".stage-panel__note--live", text: "Live: David", wait: BROADCAST_WAIT
       assert_no_selector "button", text: "Stop stream", visible: :visible
     end
 
+    assert_show_stage_clear_of_member_panel
     find("button[aria-label='Show stage']").click
     click_button "Stop stream"
 
@@ -533,6 +535,21 @@ class StreamingTest < ApplicationSystemTestCase
 
     def livekit_enabled?
       ENV["LIVEKIT_SYSTEM_TESTS"] == "1"
+    end
+
+    # The open member panel takes its own grid column at desktop widths
+    # and paints above the header, so the header actions must end before
+    # the panel surface starts or the trailing buttons slide underneath
+    # and stop receiving clicks.
+    def assert_show_stage_clear_of_member_panel
+      assert page.evaluate_script("document.body.classList.contains('member-panel-open')"),
+        "the member panel should be open for the header clearance check"
+      button, surface = page.evaluate_script(<<~JS)
+        [ document.querySelector("button[aria-label='Show stage']").getBoundingClientRect().toJSON(),
+          document.querySelector(".member-panel__surface").getBoundingClientRect().toJSON() ]
+      JS
+      assert_operator button["right"], :<=, surface["left"],
+        "the Show stage button slides under the open member panel"
     end
 
     def create_stage_room(name:, members:)

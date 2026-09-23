@@ -21,6 +21,8 @@ module ActivityItemsHelper
       agent_approvals_path(source.agent)
     when AgentBudgetNotice
       source.agent&.user ? edit_account_bot_path(source.agent.user) : activity_items_path
+    when ScheduledMessage
+      scheduled_messages_path
     else
       activity_items_path
     end
@@ -60,6 +62,8 @@ module ActivityItemsHelper
       "Budget exceeded"
     when "message_reminder"
       "Reminder"
+    when "scheduled_message_dropped"
+      "Scheduled message not sent"
     else
       item.event_type.humanize
     end
@@ -90,6 +94,9 @@ module ActivityItemsHelper
     when AgentBudgetNotice
       agent_name = source.agent&.user&.name || "Agent"
       "#{agent_name} · daily #{source.cap_label} budget"
+    when ScheduledMessage
+      room = source.room
+      room ? room_display_name(room) : "Unavailable room"
     else
       source.class.name.humanize
     end
@@ -129,6 +136,12 @@ module ActivityItemsHelper
     when AgentBudgetNotice
       agent_name = source.agent&.user&.name || "The agent"
       "#{agent_name} hit its daily #{source.cap_label} budget (#{source.budget_limit}/day)."
+    when ScheduledMessage
+      if source.drop_reason.present?
+        "Your scheduled message was not sent (#{source.drop_reason}): #{source.markdown_source}"
+      else
+        "You no longer have access to this room, so your scheduled message was not sent: #{source.markdown_source}"
+      end
     else
       "Source updated"
     end
@@ -149,6 +162,8 @@ module ActivityItemsHelper
       source.agent&.user&.name
     when AgentBudgetNotice
       source.agent&.user&.name
+    when ScheduledMessage
+      source.user&.name
     end
   end
 

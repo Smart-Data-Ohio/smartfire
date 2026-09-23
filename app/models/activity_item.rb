@@ -1,5 +1,5 @@
 class ActivityItem < ApplicationRecord
-  EVENT_TYPES = %w[ mention reply thread_activity keyword_alert work_update work_assignment huddle_started huddle_missed event_invitation event_update event_cancelled event_reminder pr_review_request agent_approval_request agent_budget_exceeded message_reminder ].freeze
+  EVENT_TYPES = %w[ mention reply thread_activity keyword_alert work_update work_assignment huddle_started huddle_missed event_invitation event_update event_cancelled event_reminder pr_review_request agent_approval_request agent_budget_exceeded message_reminder scheduled_message_dropped ].freeze
   HUDDLE_EVENT_TYPES = %w[ huddle_started huddle_missed ].freeze
   FILTERS = %w[ unread read handled ].freeze
   TYPE_FILTERS = {
@@ -43,7 +43,7 @@ class ActivityItem < ApplicationRecord
     event_types ? where(event_type: event_types) : all
   }
   scope :message_sources, -> { where(source_type: Message.polymorphic_name) }
-  scope :supported_sources, -> { where(source_type: [ Message.polymorphic_name, SavedItem.polymorphic_name, "WorkThreadEvent", HuddleGrant.polymorphic_name, Event.polymorphic_name, AgentApproval.polymorphic_name, AgentBudgetNotice.polymorphic_name ]) }
+  scope :supported_sources, -> { where(source_type: [ Message.polymorphic_name, SavedItem.polymorphic_name, "WorkThreadEvent", HuddleGrant.polymorphic_name, Event.polymorphic_name, AgentApproval.polymorphic_name, AgentBudgetNotice.polymorphic_name, ScheduledMessage.polymorphic_name ]) }
 
   class << self
     # Source data is deliberately resolved from the source row at query time.
@@ -103,6 +103,9 @@ class ActivityItem < ApplicationRecord
             AND activity_items.source_type = #{connection.quote(AgentBudgetNotice.polymorphic_name)}
           LEFT JOIN agents AS activity_budget_agents
             ON activity_budget_agents.id = activity_budget_notices.agent_id
+          LEFT JOIN scheduled_messages AS activity_scheduled_messages
+            ON activity_scheduled_messages.id = activity_items.source_id
+            AND activity_items.source_type = #{connection.quote(ScheduledMessage.polymorphic_name)}
         SQL
         .merge(User.active.without_bots)
         .where(activity_items: { user_id: user.id })
@@ -121,6 +124,9 @@ class ActivityItem < ApplicationRecord
             AND activity_budget_notices.id IS NOT NULL
             AND (activity_budget_agents.owner_id = activity_items.user_id
               OR users.role = #{connection.quote(User.roles.fetch("administrator"))}))
+          OR (activity_items.source_type = #{connection.quote(ScheduledMessage.polymorphic_name)}
+            AND activity_scheduled_messages.id IS NOT NULL
+            AND activity_scheduled_messages.user_id = activity_items.user_id)
         SQL
     end
 

@@ -1,0 +1,115 @@
+<% @page_title = "Files in #{room_display_name(@room)}" %>
+<% @body_class = "sidebar work-workspace" %>
+
+<% content_for :head do %>
+  <%= turbo_exempts_page_from_cache %>
+<% end %>
+
+<% content_for :nav do %>
+  <div class="room-header__identity room--current min-width">
+    <span class="room-header__kind">Files in <%= room_display_name(@room) %></span>
+    <h1 class="room__contents overflow-ellipsis">
+      <span class="room-header__name overflow-ellipsis">Files</span>
+    </h1>
+  </div>
+
+  <div class="room-header__actions">
+    <%= link_to room_path(@room), class: "btn room-header__action", aria: { label: "Back to #{room_display_name(@room)}" }, title: "Back to #{room_display_name(@room)}" do %>
+      <span class="room-header__action-label">Back to <%= room_display_name(@room) %></span>
+    <% end %>
+  </div>
+<% end %>
+
+<% content_for :sidebar, sidebar_turbo_frame_tag(src: user_sidebar_path) %>
+
+<section class="room-files" aria-labelledby="room-files-title">
+  <header class="room-files__header">
+    <div>
+      <span class="room-files__eyebrow">Channel files</span>
+      <h1 id="room-files-title">Files</h1>
+      <p>Uploads and Drive files shared in <%= room_display_name(@room) %>, newest first.</p>
+    </div>
+  </header>
+
+  <%= form_with url: room_files_path(@room), method: :get, class: "room-files__search" do |form| %>
+    <%= form.hidden_field :type, value: @type %>
+    <%= form.label :filename, "Search by filename", class: "for-screen-reader" %>
+    <%= form.search_field :filename, value: @filename_query, placeholder: "Search by filename",
+          class: "input", autocomplete: "off" %>
+    <%= form.submit "Search", class: "btn" %>
+    <% if @filename_query.present? || @type != "all" %>
+      <%= link_to "Clear", room_files_path(@room), class: "btn" %>
+    <% end %>
+  <% end %>
+
+  <nav class="room-files__types" aria-label="File type">
+    <% Rooms::FilesController::TYPES.each do |type| %>
+      <%= link_to type.titleize, room_files_path(@room, type:, filename: @filename_query.presence),
+            class: [ "btn", "room-files__type", "active": type == @type ],
+            aria: ({ current: "page" } if type == @type) %>
+    <% end %>
+  </nav>
+
+  <h2 class="room-files__heading" id="uploaded-files">Uploads</h2>
+  <% if @uploads.empty? %>
+    <p class="room-files__empty">No uploads match.</p>
+  <% else %>
+    <ul class="room-files__list" role="list" aria-labelledby="uploaded-files">
+      <% @uploads.each do |upload| %>
+        <% message = upload.record %>
+        <li class="room-files__item">
+          <%= image_tag "common-file-text.svg", size: 22, aria: { hidden: "true" }, class: "colorize--black room-files__icon" %>
+          <div class="room-files__details min-width">
+            <%= link_to upload.blob.filename.to_s,
+                  rails_blob_path(upload, disposition: "attachment"),
+                  class: "room-files__name" %>
+            <span class="room-files__meta">
+              <%= number_to_human_size(upload.blob.byte_size) %> ·
+              <%= upload.blob.content_type %> ·
+              <%= message.creator.name %> ·
+              <%= local_datetime_tag upload.created_at %>
+            </span>
+          </div>
+          <%= link_to "In message", message_link_url(message), class: "room-files__jump" %>
+        </li>
+      <% end %>
+    </ul>
+    <% if @has_more_uploads %>
+      <p class="room-files__more">
+        <%= link_to "Load more", room_files_path(@room, type: @type, filename: @filename_query.presence,
+              page: @upload_page + 1, drive_page: params[:drive_page]), class: "btn" %>
+      </p>
+    <% end %>
+  <% end %>
+
+  <h2 class="room-files__heading" id="drive-files">Drive files</h2>
+  <p class="room-files__hint">Drive file names resolve in your browser with your own Google account, so they are not searchable here.</p>
+  <% if @drive_files.empty? %>
+    <p class="room-files__empty">No Drive files attached yet.</p>
+  <% else %>
+    <ul class="room-files__list" role="list" aria-labelledby="drive-files" data-controller="drive-link">
+      <% @drive_files.each do |drive_attachment| %>
+        <li class="room-files__item">
+          <%= link_to drive_attachment.url, class: "drive-attachment room-files__drive-link", target: "_blank", rel: "noopener" do %>
+            <span class="drive-attachment__icon" aria-hidden="true"><svg viewBox="0 0 16 16" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 1.5h5.5L13 5v9.5H4z"/><path d="M9.5 1.5V5H13"/></svg></span>
+            <span class="drive-attachment__text">
+              <span class="drive-attachment__name">Google Drive file</span>
+              <span class="drive-attachment__meta">Open in Drive</span>
+            </span>
+          <% end %>
+          <span class="room-files__meta">
+            <%= drive_attachment.message.creator.name %> ·
+            <%= local_datetime_tag drive_attachment.created_at %>
+          </span>
+          <%= link_to "In message", message_link_url(drive_attachment.message), class: "room-files__jump" %>
+        </li>
+      <% end %>
+    </ul>
+    <% if @has_more_drive %>
+      <p class="room-files__more">
+        <%= link_to "Load more", room_files_path(@room, type: @type, filename: @filename_query.presence,
+              page: params[:page], drive_page: @drive_page + 1), class: "btn" %>
+      </p>
+    <% end %>
+  <% end %>
+</section>

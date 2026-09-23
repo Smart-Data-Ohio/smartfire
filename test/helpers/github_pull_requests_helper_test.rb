@@ -2,6 +2,7 @@ require "test_helper"
 
 class GithubPullRequestsHelperTest < ActionView::TestCase
   include Github::PullRequestsHelper
+  include MessageLinksHelper
 
   class FailingQueueAdapter
     def initialize(error)
@@ -32,7 +33,7 @@ class GithubPullRequestsHelperTest < ActionView::TestCase
   end
 
   test "cache key for a message without pull requests is just the message" do
-    assert_equal [ messages(:first), nil, nil, false, false, nil ], message_with_pr_cards_cache_key(messages(:first))
+    assert_equal [ messages(:first), nil, nil, nil, false, false, nil, nil, nil ], message_with_pr_cards_cache_key(messages(:first))
   end
 
   test "cache key carries the streaming flag" do
@@ -58,6 +59,89 @@ class GithubPullRequestsHelperTest < ActionView::TestCase
     end
 
     assert_not_equal before, message_with_pr_cards_cache_key(message.reload)
+  end
+
+  test "cache key changes when a quoted source is edited" do
+    room = rooms(:designers)
+    source = room.messages.create!(body: "key source words", client_message_id: "key-source", creator: users(:david))
+    quote = room.messages.create!(
+      markdown_source: "quoting /rooms/#{room.id}/@#{source.id}",
+      client_message_id: "key-quote", creator: users(:david)
+    )
+    quote = Message.with_rendering_details.find(quote.id)
+
+    before = message_with_pr_cards_cache_key(quote)
+    travel 1.minute do
+      source.update!(body: "key source words, revised")
+    end
+
+    assert_not_equal before, message_with_pr_cards_cache_key(Message.with_rendering_details.find(quote.id))
+  end
+
+  test "cache key changes when a quoted source's author is renamed" do
+    room = rooms(:designers)
+    author = users(:david)
+    source = room.messages.create!(body: "rename source words", client_message_id: "key-rename-source", creator: author)
+    quote = room.messages.create!(
+      markdown_source: "quoting /rooms/#{room.id}/@#{source.id}",
+      client_message_id: "key-rename-quote", creator: users(:jz)
+    )
+    before = message_with_pr_cards_cache_key(Message.with_rendering_details.find(quote.id))
+
+    author.update!(name: "David Renamed")
+
+    assert_not_equal before, message_with_pr_cards_cache_key(Message.with_rendering_details.find(quote.id))
+  end
+
+  test "cache key changes when a quoted source's room is renamed" do
+    room = Rooms::Closed.create_for({ name: "Renameable", creator: users(:david) }, users: [ users(:david) ])
+    source = room.messages.create!(body: "room rename source words", client_message_id: "key-room-rename-source", creator: users(:david))
+    quote = room.messages.create!(
+      markdown_source: "quoting /rooms/#{room.id}/@#{source.id}",
+      client_message_id: "key-room-rename-quote", creator: users(:david)
+    )
+    before = message_with_pr_cards_cache_key(Message.with_rendering_details.find(quote.id))
+
+    travel 1.minute do
+      room.update!(name: "Renamed Room")
+    end
+
+    assert_not_equal before, message_with_pr_cards_cache_key(Message.with_rendering_details.find(quote.id))
+  end
+
+  test "cache key changes when a quoted source is deleted" do
+    room = rooms(:designers)
+    source = room.messages.create!(body: "doomed source words", client_message_id: "key-doomed", creator: users(:david))
+    quote = room.messages.create!(
+      markdown_source: "quoting /rooms/#{room.id}/@#{source.id}",
+      client_message_id: "key-quoting", creator: users(:david)
+    )
+    before = message_with_pr_cards_cache_key(Message.with_rendering_details.find(quote.id))
+
+    travel 1.minute do
+      source.destroy!
+    end
+
+    assert_not_equal before, message_with_pr_cards_cache_key(Message.with_rendering_details.find(quote.id))
+  end
+
+  test "cache key changes when a poll is voted and retracted" do
+    message = rooms(:watercooler).root_messages.create!(creator: users(:david),
+      markdown_source: "Lunch?", client_message_id: "poll-cache-key")
+    poll = Poll.create_for_message!(message: message, labels: [ "Tacos", "Pizza" ])
+
+    before = message_with_pr_cards_cache_key(message.reload)
+
+    travel 1.minute do
+      poll.cast_vote!(users(:david), [ poll.poll_options.first.id ])
+    end
+    voted_key = message_with_pr_cards_cache_key(message.reload)
+    assert_not_equal before, voted_key
+
+    travel 2.minutes do
+      poll.cast_vote!(users(:david), [])
+    end
+    assert_not_equal voted_key, message_with_pr_cards_cache_key(message.reload)
   end
 
   test "cache key carries the system note flag" do
