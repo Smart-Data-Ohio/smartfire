@@ -15,6 +15,16 @@ class RoomsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show renders collapsed work-thread guidance in the new-thread panel" do
+    get room_url(users(:david).rooms.last)
+    assert_response :success
+    assert_select "#thread-panel [data-thread-panel-target='create'] details.thread-panel__guide:not([open])" do
+      assert_select "summary", text: "How to start a work thread"
+      assert_select "li", text: /Track as work/
+      assert_select "li", text: /Open a channel/, count: 0
+    end
+  end
+
   test "shows records the last room visited in a cookie" do
     get room_url(users(:david).rooms.last)
     assert response.cookies[:last_room] = users(:david).rooms.last.id
