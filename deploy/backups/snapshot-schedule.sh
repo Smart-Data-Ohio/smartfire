@@ -37,6 +37,7 @@ die() { printf '[snapshot-schedule] ERROR: %s\n' "$*" >&2; exit 1; }
 
 [ -n "$APP_PROJECT_ID" ] || die "APP_PROJECT_ID is required"
 command -v gcloud >/dev/null || die "gcloud is not installed"
+command -v jq >/dev/null || die "jq is not installed"
 [[ "$SNAPSHOT_START" =~ ^[0-9]{2}:[0-9]{2}$ ]] || die "SNAPSHOT_START must look like HH:MM, not '$SNAPSHOT_START'"
 [[ "$SNAPSHOT_RETENTION_DAYS" =~ ^[0-9]+$ ]] || die "SNAPSHOT_RETENTION_DAYS must be a number"
 
