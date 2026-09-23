@@ -5,7 +5,12 @@ class Accounts::CustomStylesController < ApplicationController
   end
 
   def update
+    previous_styles = @account.custom_styles
     @account.update!(account_params)
+    if @account.custom_styles != previous_styles
+      AuditLog.record!(action: "account.custom_styles.change", target: @account,
+        changes: { custom_styles: [ previous_styles, @account.custom_styles ] })
+    end
     redirect_to edit_account_custom_styles_url, notice: "✓"
   end
 

@@ -18,6 +18,7 @@ class Rooms::OpensController < RoomsController
 
   def create
     room = Rooms::Open.create_for(room_params, users: Current.user)
+    record_room_creation(room)
 
     broadcast_create_room(room)
     redirect_to room_url(room)

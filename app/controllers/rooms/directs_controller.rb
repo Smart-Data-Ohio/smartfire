@@ -6,6 +6,7 @@ class Rooms::DirectsController < RoomsController
 
   def create
     room = Rooms::Direct.find_or_create_for(selected_users)
+    record_room_creation(room) if room.previously_new_record?
 
     broadcast_create_room(room)
     redirect_to room_url(room)

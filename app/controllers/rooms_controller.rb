@@ -12,8 +12,11 @@ class RoomsController < ApplicationController
   end
 
   def destroy
+    room_label = @room.name
     Room.transaction { @room.begin_destroy! }
     enqueue_destroy
+    AuditLog.record!(action: "room.destroy", target: @room, target_label: room_label,
+      changes: { name: room_label })
 
     broadcast_remove_room
     redirect_to root_url
@@ -53,6 +56,32 @@ class RoomsController < ApplicationController
     def ensure_permission_to_create_rooms
       if Current.account.settings.restrict_room_creation_to_administrators? && !Current.user.administrator?
         head :forbidden
+      end
+    end
+
+    def record_room_creation(room)
+      AuditLog.record!(action: "room.create", target: room, changes: { name: room.name })
+    end
+
+    # Revises a room's membership like Memberships#revise and records who was
+    # added and removed. Only the actual diff is logged: re-saving an
+    # unchanged list writes no row.
+    def revise_memberships_with_audit(room, granted:, revoked:)
+      # Fresh plucks, not the cached associations: grant_to inserts with
+      # insert_all and revoke destroys through scopes, both bypassing them.
+      before_ids = room.memberships.pluck(:user_id)
+      room.memberships.revise(granted: granted, revoked: revoked)
+      after_ids = room.memberships.pluck(:user_id)
+
+      granted_ids = after_ids - before_ids
+      revoked_ids = before_ids - after_ids
+      if granted_ids.present? || revoked_ids.present?
+        names = User.where(id: granted_ids + revoked_ids).pluck(:id, :name).to_h
+        AuditLog.record!(action: "room.membership.change", target: room,
+          changes: {
+            granted: granted_ids.filter_map { |id| names[id] },
+            revoked: revoked_ids.filter_map { |id| names[id] }
+          })
       end
     end
 
