@@ -25,6 +25,11 @@ the reason as text (the same message the REST endpoint renders), and
 instead (`-32602` for an unknown tool or missing argument, `-32020` for a
 header mismatch, `-32022` for an unsupported protocol version).
 
+Unparseable bodies answer HTTP 400 with `-32700`, and malformed
+envelopes — including batch arrays, which the spec forbids — answer HTTP
+400 with `-32600`. Unknown RPC methods stay 404 with `-32601`, as the
+spec requires.
+
 Rate-limited tools answer `isError` with `rate_limited` and a `retry_after`
 in seconds (plus a `Retry-After` header). Buckets are shared with the REST
 endpoints, per credential per minute:

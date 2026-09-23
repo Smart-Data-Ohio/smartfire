@@ -149,7 +149,16 @@ class Agents::McpControllerTest < ActionDispatch::IntegrationTest
     assert_equal(-32700, response.parsed_body.dig("error", "code"))
 
     post agents_mcp_url, params: { hello: "world" }.to_json, headers: mcp_headers
-    assert_response :success
+    assert_response :bad_request
+    assert_equal(-32600, response.parsed_body.dig("error", "code"))
+  end
+
+  test "batch arrays are rejected as invalid requests with 400" do
+    post agents_mcp_url,
+      params: [ { jsonrpc: "2.0", id: 1, method: "ping", params: {} } ].to_json,
+      headers: mcp_headers
+
+    assert_response :bad_request
     assert_equal(-32600, response.parsed_body.dig("error", "code"))
   end
 

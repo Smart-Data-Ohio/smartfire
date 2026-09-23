@@ -50,9 +50,11 @@ class Agents::McpController < ApplicationController
       return
     end
 
+    # Bad shapes and batch arrays (the spec allows one request per POST)
+    # are invalid requests: HTTP 400, per the Streamable HTTP spec.
     unless envelope.is_a?(Hash) && envelope["jsonrpc"] == "2.0" && envelope["method"].is_a?(String)
       id = envelope.is_a?(Hash) ? envelope["id"] : nil
-      render json: rpc_error(id, ERROR_INVALID_REQUEST, "Invalid request")
+      render json: rpc_error(id, ERROR_INVALID_REQUEST, "Invalid request"), status: :bad_request
       return
     end
 
