@@ -65,6 +65,7 @@ class ApplicationCable::ConnectionTest < ActionCable::Connection::TestCase
 
   test "connects an idle member session of any age" do
     session = users(:kevin).sessions.create!(user_agent: "test", ip_address: "127.0.0.1", last_active_at: 365.days.ago)
+    session.mark_two_factor_verified!
     cookies.signed[:session_token] = session.token
 
     connect

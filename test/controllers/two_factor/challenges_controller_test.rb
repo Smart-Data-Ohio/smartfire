@@ -250,7 +250,13 @@ class TwoFactor::ChallengesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, lockout_items.count
     assert_predicate lockout_items.first.reload, :unread?
 
-    travel_to(now + 8.minutes) do
+    # The per-user rate window (10 attempts per 15 minutes) still
+    # holds the first batch at +8 minutes, so the success moves past
+    # it; the pending state (10 minutes) is refreshed with a fresh
+    # first factor first. Failure counters live on the credential, so
+    # the re-stashed pending state changes nothing under test.
+    travel_to(now + 16.minutes) do
+      post session_url, params: { email_address: @user.email_address, password: "secret123456" }
       post two_factor_challenge_url, params: { code: totp_code_for(@credential.reload) }
     end
     assert_redirected_to root_url

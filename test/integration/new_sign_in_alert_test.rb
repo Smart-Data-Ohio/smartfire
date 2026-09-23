@@ -56,6 +56,11 @@ class NewSignInAlertTest < ActionDispatch::IntegrationTest
     assert_equal users(:kevin), item.user
     assert_equal "Chrome on macOS", item.source.device_description
 
+    # Password sign-in leaves unenrolled members on an unverified
+    # session; satisfy the second factor so the inbox renders instead
+    # of enrollment.
+    satisfy_two_factor!(users(:kevin))
+
     get activity_items_url
     assert_response :success
     assert_select ".activity-item__body", text: /New sign-in to your account from Chrome on macOS/
@@ -75,6 +80,7 @@ class NewSignInAlertTest < ActionDispatch::IntegrationTest
     post session_url, params: { email_address: "kevin@37signals.com", password: "secret123456" }
     expire_device_cookie
     post session_url, params: { email_address: "kevin@37signals.com", password: "secret123456" }
+    satisfy_two_factor!(users(:kevin))
 
     item = ActivityItem.where(event_type: "new_sign_in").last
     post open_activity_item_url(item)

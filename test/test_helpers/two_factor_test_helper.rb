@@ -36,19 +36,12 @@ module TwoFactorTestHelper
     user.sessions.order(:id).last&.mark_two_factor_verified!
   end
 
-  # Rails rate_limit captures its store (Rails.cache, a null store in the
-  # test environment) when the controller class loads, so swapping
-  # Rails.cache cannot enable it afterwards. Delegate increments to a
-  # memory backend instead: the limiter, keys, and windows under test
-  # stay real, only the throwaway backend changes.
+  # Rate limits count against the suite-wide memory store (see
+  # test.rb), cleared between tests. Clear it again here so the
+  # block's limit assertions start from a fresh window even when the
+  # test already made requests.
   def with_rate_limit_store
-    backend = ActiveSupport::Cache::MemoryStore.new
-    cache = Rails.cache
-    cache.define_singleton_method(:increment) do |name, amount = 1, **options|
-      backend.increment(name, amount, **options)
-    end
+    ActionController::Base.cache_store.clear
     yield
-  ensure
-    cache.singleton_class.remove_method(:increment)
   end
 end
