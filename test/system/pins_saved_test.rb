@@ -73,6 +73,10 @@ class PinsSavedTest < ApplicationSystemTestCase
       click_on "Save"
     end
 
+    # The save posts asynchronously; the dialog closes on success, so
+    # waiting for it keeps the visit from cancelling the request.
+    assert_no_selector ".message-save-dialog[open]"
+
     visit saved_items_url
     assert_selector "#saved-items-title", text: "Saved"
     assert_text "Third time's a charm."
@@ -98,9 +102,13 @@ class PinsSavedTest < ApplicationSystemTestCase
 
     within ".message-save-dialog" do
       choose "Custom time"
-      fill_in "Reminder time", with: "2030-06-01T09:00"
+      # Chrome's locale date editing mangles ISO keystrokes, so the
+      # datetime-local value is set directly in canonical format.
+      page.execute_script("document.getElementById('reminder_custom_at').value = '2030-06-01T09:00'")
       click_on "Save"
     end
+
+    assert_no_selector ".message-save-dialog[open]"
 
     visit saved_items_url
     assert_text "Reminds"

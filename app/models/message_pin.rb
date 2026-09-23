@@ -70,7 +70,7 @@ class MessagePin < ApplicationRecord
   # use, so every client appends it over the room messages stream.
   def post_pin_note!
     room.root_messages.create_with_attachment!(
-      creator: pinner, markdown_source: "📌 pinned a message: #{pin_permalink}"
+      creator: pinner, markdown_source: "📌 pinned a message: [jump to message](#{pin_permalink})"
     ).tap(&:broadcast_create)
   end
 

@@ -23,7 +23,9 @@ class MessagePinTest < ActiveSupport::TestCase
     note = @room.messages.ordered.last
     assert_equal @pinner, note.creator
     assert_includes note.plain_text_body, "pinned a message"
-    assert_includes note.plain_text_body, Rails.application.routes.url_helpers.room_at_message_path(@room, @message)
+    link = Nokogiri::HTML5.fragment(note.body.body.to_html).at_css("a")
+    assert_equal "jump to message", link.text
+    assert_equal Rails.application.routes.url_helpers.room_at_message_path(@room, @message), link["href"]
   end
 
   test "pinning broadcasts the badge, count, and panel list" do
