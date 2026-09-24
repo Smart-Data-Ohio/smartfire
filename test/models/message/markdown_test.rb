@@ -86,6 +86,9 @@ class Message::MarkdownTest < ActiveSupport::TestCase
 
     assert_nil fragment.at_css("a[href='/rooms/1/@2']")["target"]
     assert_equal "_blank", fragment.at_css("a[href='//evil.example']")["target"]
+    download = create_markdown_message("[file](/rails/active_storage/blobs/x/y.pdf)").body.body.to_html
+    assert_match 'target="_blank"', download
+
     # The renderer percent-encodes the backslash, so the href stays a plain path.
     assert_equal "/%5Cevil.example", fragment.css("a").last["href"]
   end
@@ -99,6 +102,7 @@ class Message::MarkdownTest < ActiveSupport::TestCase
     internal = fragment.at_css("a[href='/rooms/1/@2']")
     assert_nil internal["target"]
     assert_equal "_top", internal["data-turbo-frame"]
+    assert_equal "false", internal["data-turbo-prefetch"]
     assert_equal "_blank", fragment.at_css("a[href='https://example.com']")["target"]
     assert_equal "_blank", fragment.css("a").last["target"]
   end

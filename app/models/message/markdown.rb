@@ -20,7 +20,10 @@ class Message::Markdown
   SKIPPED_MENTION_ANCESTORS = %w[ a code pre ].freeze
   SKIPPED_ICON_ANCESTORS = %w[ a action-text-attachment code pre ].freeze
   ALLOWED_CLASSES = %w[ contains-task-list markdown-body task-list-item ].freeze
-  IN_APP_HREF_PATTERN = %r{href="/(?![/\\])}
+  # Site-relative paths, but not "//host" or "/\host" (which browsers resolve
+  # off-site) and not file downloads under /rails/, which keep a new tab.
+  IN_APP_PATH = %r{/(?![/\\]|rails/)}
+  IN_APP_HREF_PATTERN = /href="#{IN_APP_PATH}/
   LANGUAGE_CLASS_PATTERN = /\Alanguage-[a-zA-Z0-9_+#.-]+\z/
   BLOCK_TAGS = %w[ blockquote h1 h2 h3 h4 h5 h6 li ol p pre table tr ul ].freeze
   CELL_TAGS = %w[ td th ].freeze
@@ -66,6 +69,8 @@ class Message::Markdown
 
         link.remove_attribute("target")
         link["data-turbo-frame"] = "_top"
+        # Hover prefetch would load any posted path with the reader's cookies.
+        link["data-turbo-prefetch"] = "false"
       end
       fragment.css("img").each do |img|
         if (icon = icon_from_alt(img["alt"])) && (url = Icons.image_url_for(icon))
@@ -79,10 +84,9 @@ class Message::Markdown
       fragment.to_html
     end
 
-    # A site-relative path such as "/rooms/1/@2", but not "//host" or
-    # "/\host", which browsers resolve off-site.
+    # A site-relative path such as "/rooms/1/@2"; see IN_APP_PATH.
     def in_app_href?(href)
-      href.to_s.match?(%r{\A/(?![/\\])})
+      href.to_s.match?(/\A#{IN_APP_PATH}/)
     end
 
     private
