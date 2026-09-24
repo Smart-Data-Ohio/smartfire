@@ -18,14 +18,27 @@ module Users::SidebarHelper
   # Data attributes behind the shared room context menu (see
   # room_menu_controller.js), read off the row when it opens. Broadcast
   # renders pass no membership and read the new-room defaults.
-  def room_menu_data(room, membership)
+  #
+  # The delete flag mirrors User#can_delete_room? for the membership's
+  # own viewer — never Current.user, which is the actor in broadcast
+  # renders — and fails closed without a membership. The server still
+  # authorizes every request; the flag only hides the menu item.
+  def room_menu_data(room, membership, label: nil)
+    viewer = membership&.user
+
     {
       menu_categorizable: room.open? || room.closed?,
       menu_favorited: membership&.favorited? || false,
       menu_favorite_position: membership&.favorite_position,
       menu_muted: membership&.involved_in_muted? || false,
       menu_default_involvement: room.default_involvement,
-      menu_category_id: membership&.room_category_id
+      menu_category_id: membership&.room_category_id,
+      menu_can_delete: viewer&.can_delete_room?(room) || false,
+      menu_can_leave: membership.present?,
+      menu_leave_url: leave_url_for(room),
+      menu_open_room: room.open?,
+      menu_direct_room: room.direct?,
+      menu_room_label: label || room.name
     }
   end
 
@@ -63,4 +76,11 @@ module Users::SidebarHelper
         .transform_values { |room_memberships| room_memberships.map(&:user) }
     end
   end
+
+  private
+    # Group DMs keep their own leave endpoint with last-member-destroys
+    # semantics; every other room kind leaves through RoomsController.
+    def leave_url_for(room)
+      room.direct? ? leave_rooms_direct_path(room) : leave_room_path(room)
+    end
 end
