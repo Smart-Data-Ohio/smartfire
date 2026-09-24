@@ -178,79 +178,133 @@ class PeopleGroupDmsTest < ApplicationSystemTestCase
     end
   end
 
-  test "the new-DM picker types, picks suggestions, and messages the picked set" do
+  test "the new-DM picker filters as you type with no suggestion bubble or submit button" do
+    User.create!(name: "Chad Puterbaugh", email_address: "chad@example.test")
+    User.create!(name: "Renée Dupont", email_address: "renee@example.test")
     join_room rooms(:designers)
     click_link "New direct message"
-    wait_for_controller "autocomplete"
+    wait_for_controller "dm-picker"
 
     within "#direct_rooms_control" do
-      find("[data-autocomplete-target='input']").fill_in(with: "Kev")
+      assert_no_selector "suggestion-option"
+      assert_no_text "Start Ping"
+      total = all(".dm-picker__row:not([hidden])").size
+      assert total > 2, "expected the full people list before filtering"
+
+      find("#dm_picker_filter").fill_in(with: "chad")
+      assert_selector ".dm-picker__row:not([hidden])", count: 1, text: "Chad Puterbaugh"
+
+      find("#dm_picker_filter").fill_in(with: "CHA")
+      assert_selector ".dm-picker__row:not([hidden])", count: 1, text: "Chad Puterbaugh"
+
+      find("#dm_picker_filter").fill_in(with: "renee")
+      assert_selector ".dm-picker__row:not([hidden])", count: 1, text: "Renée Dupont"
+
+      find("#dm_picker_filter").fill_in(with: "zzz-no-one")
+      assert_no_selector ".dm-picker__row:not([hidden])"
+      assert_selector "[data-dm-picker-target='empty']", text: "No one matches"
+
+      find("#dm_picker_filter").fill_in(with: "")
+      assert_selector ".dm-picker__row:not([hidden])", count: total
+      assert_no_selector "[data-dm-picker-target='empty']:not([hidden])"
     end
-    assert_selector "suggestion-option", text: "Kevin", wait: 10
-    find("suggestion-option", text: "Kevin").click
+  end
+
+  test "picker selections survive filtering and Message starts the DM" do
+    chad = User.create!(name: "Chad Puterbaugh", email_address: "chad@example.test")
+    join_room rooms(:designers)
+    click_link "New direct message"
+    wait_for_controller "dm-picker"
+
+    check "pick_user_#{chad.id}"
 
     within "#direct_rooms_control" do
-      assert_selector ".autocomplete__pill", text: "Kevin"
-      find("[data-autocomplete-target='input']").fill_in(with: "Jas")
+      find("#dm_picker_filter").fill_in(with: "kevin")
+      assert_no_selector ".dm-picker__row:not([hidden])", text: "Chad Puterbaugh"
     end
-    assert_selector "suggestion-option", text: "Jason", wait: 10
-    find("suggestion-option", text: "Jason").click
+    within "[data-multi-select-target='bar']" do
+      assert_selector "button", text: "Message (1)"
+    end
 
     within "#direct_rooms_control" do
-      assert_selector ".autocomplete__pill", text: "Jason"
-      find("[data-autocomplete-target='input']").ancestor("form").find("button[type='submit']").click
+      find("#dm_picker_filter").fill_in(with: "")
+    end
+    assert_checked_field "pick_user_#{chad.id}", visible: :all
+
+    within "[data-multi-select-target='bar']" do
+      click_button "Message (1)"
     end
 
-    assert_selector ".room--current", text: "Jason, Kevin", wait: 10
-    room = Rooms::Direct.find_for([ users(:david), users(:jason), users(:kevin) ])
+    assert_selector ".room--current", text: "Chad", wait: 10
+    room = Rooms::Direct.find_for([ users(:david), chad ])
     assert_current_path room_path(room)
   end
 
-  test "typing the next query during a pick commit still searches once the commit lands" do
+  test "Enter in the picker filter selects the single visible match" do
+    chad = User.create!(name: "Chad Puterbaugh", email_address: "chad@example.test")
     join_room rooms(:designers)
     click_link "New direct message"
+    wait_for_controller "dm-picker"
 
     within "#direct_rooms_control" do
-      find("[data-autocomplete-target='input']").fill_in(with: "Kev")
+      # Several matches: Enter leaves the selection alone.
+      find("#dm_picker_filter").fill_in(with: "j")
+      assert_selector ".dm-picker__row:not([hidden])", minimum: 2
+      find("#dm_picker_filter").send_keys(:enter)
+      assert_no_selector "[data-multi-select-target='bar']:not([hidden])"
+
+      # One match, nothing selected: Enter checks it.
+      find("#dm_picker_filter").fill_in(with: "chad")
+      find("#dm_picker_filter").send_keys(:enter)
     end
-    assert_selector "suggestion-option", text: "Kevin"
+    assert_checked_field "pick_user_#{chad.id}", visible: :all
 
-    # The pick commit runs a multi-frame flash animation; under CI load those
-    # frames stretch past the next query's debounce and the search used to be
-    # dropped, leaving the second pick with no suggestions. Stall the frames
-    # so the "Jas" search deterministically lands inside the commit window.
-    page.execute_script(<<~JS)
-      window.__rafQueue = [];
-      window.__origRaf = window.requestAnimationFrame;
-      window.requestAnimationFrame = (callback) => { window.__rafQueue.push(callback); return 1; };
-    JS
-
-    find("suggestion-option", text: "Kevin").click
-
-    # The pill proves the commit started (its flash is held open by the
-    # stalled frames); typing now lands the search inside the commit window.
+    # One match, something already selected: Enter changes nothing.
     within "#direct_rooms_control" do
-      assert_selector ".autocomplete__pill", text: "Kevin"
-      find("[data-autocomplete-target='input']").fill_in(with: "Jas")
+      find("#dm_picker_filter").fill_in(with: "kevin")
+      find("#dm_picker_filter").send_keys(:enter)
     end
-    # The search debounce is 300 ms; this is scenario timing (the query must
-    # fire while the commit is held open), not a readiness wait.
-    sleep 0.5
+    assert_checked_field "pick_user_#{chad.id}", visible: :all
+    assert_unchecked_field "pick_user_#{users(:kevin).id}", visible: :all
+    within "[data-multi-select-target='bar']" do
+      assert_selector "button", text: "Message (1)"
+    end
+  end
 
-    page.execute_script(<<~JS)
-      window.requestAnimationFrame = window.__origRaf;
-      window.__rafQueue.splice(0).forEach((callback) => callback(performance.now()));
-    JS
+  test "clicking a picker row toggles it while the name still opens the profile card" do
+    join_room rooms(:designers)
+    click_link "New direct message"
+    wait_for_controller "dm-picker"
 
-    assert_selector "suggestion-option", text: "Jason", wait: 10
-    find("suggestion-option", text: "Jason").click
+    row = find(".dm-picker__row", text: "Kevin")
+    page.execute_script("arguments[0].click()", row)
+    assert_checked_field "pick_user_#{users(:kevin).id}", visible: :all
+
+    find(".dm-picker__row", text: "Kevin").find("button.profile-card-name").click
+    assert_selector "#profile-card-popover:not([hidden])", wait: 10
+    assert_selector "#user_card .profile-card__name", text: "Kevin"
+  end
+
+  test "the new-DM picker does not overflow at phone width" do
+    page.current_window.resize_to(390, 844)
+    join_room rooms(:designers)
+    click_button "Open workspace navigation"
+    assert_selector "#sidebar.open"
+    click_link "New direct message"
+    wait_for_controller "dm-picker"
 
     within "#direct_rooms_control" do
-      assert_selector ".autocomplete__pill", text: "Kevin"
-      assert_selector ".autocomplete__pill", text: "Jason"
+      find("#dm_picker_filter").fill_in(with: "j")
     end
+    assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth + 1"),
+      "the picker overflows the viewport horizontally"
+
+    row_height = page.evaluate_script("document.querySelector('.dm-picker__row:not([hidden])').getBoundingClientRect().height")
+    assert_operator row_height, :>=, 44, "expected full touch-target rows at phone width"
+    avatar_width = page.evaluate_script("document.querySelector('.dm-picker__row:not([hidden]) .avatar').getBoundingClientRect().width")
+    assert_in_delta 32, avatar_width, 1, "expected 32px picker avatars"
   ensure
-    page.execute_script("window.requestAnimationFrame = window.__origRaf") if page
+    page.current_window.resize_to(1400, 1400)
   end
 
   test "group members rename, add, and leave with system notes in the timeline" do
