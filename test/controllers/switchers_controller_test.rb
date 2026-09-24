@@ -70,10 +70,15 @@ class SwitchersControllerTest < ActionDispatch::IntegrationTest
 
     get switcher_url(format: :json)
     assert_response :success
+    # Identical icon-cache state per leg: the custom-icon stamp query
+    # re-fires on a one-second monotonic TTL, which a slow gap between
+    # the legs would otherwise trip.
+    Icons.expire_custom_cache!
     small = count_queries { get switcher_url(format: :json) }
 
     seed_switcher_data(offset: 10)
 
+    Icons.expire_custom_cache!
     large = count_queries { get switcher_url(format: :json) }
     assert_response :success
 

@@ -224,10 +224,15 @@ class LinkEmbedsTest < ActionDispatch::IntegrationTest
     2.times { |index| create_embedded_message("embed-query-small-#{index}", "https://example.com/small-#{index}") }
     get room_url(@room) # warm process-level caches before counting
     assert_response :success
+    # Identical icon-cache state per leg: the custom-icon stamp query
+    # re-fires on a one-second monotonic TTL, which a slow gap between
+    # the legs would otherwise trip.
+    Icons.expire_custom_cache!
     small = count_queries { get room_url(@room) }
     assert_response :success
 
     4.times { |index| create_embedded_message("embed-query-large-#{index}", "https://example.com/large-#{index}") }
+    Icons.expire_custom_cache!
     large = count_queries { get room_url(@room) }
     assert_response :success
 

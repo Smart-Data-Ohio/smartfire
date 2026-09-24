@@ -365,6 +365,10 @@ class Rooms::EventsControllerTest < ActionDispatch::IntegrationTest
     get room_events_url(@room)
     assert_response :success
 
+    # Identical icon-cache state per leg: the custom-icon stamp query
+    # re-fires on a one-second monotonic TTL, which a slow gap between
+    # the legs would otherwise trip.
+    Icons.expire_custom_cache!
     small = count_sql_queries do
       get room_events_url(@room)
       assert_response :success
@@ -377,6 +381,7 @@ class Rooms::EventsControllerTest < ActionDispatch::IntegrationTest
     end
     assert_equal 8, heads.first.reload.series_events.count
 
+    Icons.expire_custom_cache!
     large = count_sql_queries do
       get room_events_url(@room)
       assert_response :success
@@ -795,6 +800,10 @@ class Rooms::EventsControllerTest < ActionDispatch::IntegrationTest
     get room_events_url(@room)
     assert_response :success
 
+    # Identical icon-cache state per leg: the custom-icon stamp query
+    # re-fires on a one-second monotonic TTL, which a slow gap between
+    # the legs would otherwise trip.
+    Icons.expire_custom_cache!
     small = count_sql_queries do
       get room_events_url(@room)
       assert_response :success
@@ -805,6 +814,7 @@ class Rooms::EventsControllerTest < ActionDispatch::IntegrationTest
         starts_at: (4 + n).days.from_now, time_zone: "UTC", venue_room_id: venue.id)
     end
 
+    Icons.expire_custom_cache!
     large = count_sql_queries do
       get room_events_url(@room)
       assert_response :success
