@@ -139,14 +139,22 @@ export default class extends Controller {
       return
     }
 
-    // The server broadcast removes the row: everywhere for a delete, for
-    // the leaver only for a leave. No frame reload needed either way.
+    // The server broadcast removes the row everywhere for a delete, and for
+    // the leaver's other tabs on a leave. Remove it here too: leaving resets
+    // this member's cable connections, so the broadcast can land while this
+    // tab is reconnecting and never arrive.
+    this.#removeRows(pending.roomId)
+
     if (this.#currentRoomId === pending.roomId) {
       if (pending.notice) this.#savePendingFlash(pending.notice)
       Turbo.visit("/")
     } else if (pending.notice) {
       this.#flashNotice(pending.notice)
     }
+  }
+
+  #removeRows(roomId) {
+    this.element.querySelectorAll(`a[data-room-id="${CSS.escape(String(roomId))}"]`).forEach((row) => row.remove())
   }
 
   // Events
