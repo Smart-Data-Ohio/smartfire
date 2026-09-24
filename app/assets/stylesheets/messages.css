@@ -422,15 +422,32 @@ img.message__attachment {
   overflow-y: auto;
   padding: 0.45rem;
   position: fixed;
+  /* The discrete transitions keep the popover rendered and top-layer while
+     it fades out. */
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard),
+    overlay var(--motion-fast) allow-discrete,
+    display var(--motion-fast) allow-discrete;
   z-index: 20;
 
   &[hidden] {
     display: none;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(4px) scale(0.97);
   }
 
   &:focus-visible {
     outline: 2px solid var(--color-selected-dark);
     outline-offset: 2px;
+  }
+}
+
+@starting-style {
+  .message__actions-menu:not([hidden]) {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
   }
 }
 
@@ -582,6 +599,20 @@ img.message__attachment {
   }
 }
 
+/* The phone sheet slides up instead of scaling: it is edge-anchored, so a
+   scale would read as a wobble. */
+@media (max-width: 100ch), (pointer: coarse) {
+  .message__actions-menu[hidden] {
+    transform: translateY(1rem);
+  }
+
+  @starting-style {
+    .message__actions-menu:not([hidden]) {
+      transform: translateY(1rem);
+    }
+  }
+}
+
 .message-forward-dialog {
   background: var(--color-bg);
   border: 1px solid var(--color-border-darker);
@@ -666,10 +697,27 @@ img.message__attachment {
   max-inline-size: calc(100vw - 1rem);
   padding: 0.5rem;
   position: fixed;
+  /* The discrete transitions keep the popover rendered and top-layer while
+     it fades out. */
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard),
+    overlay var(--motion-fast) allow-discrete,
+    display var(--motion-fast) allow-discrete;
   z-index: 30;
 
   &[hidden] {
     display: none;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(4px) scale(0.97);
+  }
+}
+
+@starting-style {
+  .emoji-picker__panel:not([hidden]) {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
   }
 }
 

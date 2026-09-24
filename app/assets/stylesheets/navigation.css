@@ -7,10 +7,49 @@
   inline-size: min(36rem, calc(100vw - 2rem));
   max-block-size: min(80dvh, 40rem);
   padding: 0;
+  /* The discrete transitions keep the dialog rendered and top-layer while
+     it fades out; without them close() would cut the exit. */
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    overlay var(--motion-fast) allow-discrete,
+    display var(--motion-fast) allow-discrete;
+}
+
+.quick-switcher:not([open]) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.quick-switcher:not([open]) .quick-switcher__surface {
+  transform: translateY(4px) scale(0.97);
+}
+
+@starting-style {
+  .quick-switcher[open] {
+    opacity: 0;
+  }
+
+  .quick-switcher[open] .quick-switcher__surface {
+    transform: translateY(4px) scale(0.97);
+  }
 }
 
 .quick-switcher::backdrop {
-  background: rgb(0 0 0 / 35%);
+  background-color: rgb(0 0 0 / 0);
+  transition:
+    background-color var(--motion-fast) var(--ease-standard),
+    overlay var(--motion-fast) allow-discrete,
+    display var(--motion-fast) allow-discrete;
+}
+
+.quick-switcher[open]::backdrop {
+  background-color: rgb(0 0 0 / 35%);
+}
+
+@starting-style {
+  .quick-switcher[open]::backdrop {
+    background-color: rgb(0 0 0 / 0);
+  }
 }
 
 .quick-switcher__surface {
@@ -23,6 +62,7 @@
   gap: 0.5rem;
   max-block-size: min(80dvh, 40rem);
   padding: 0.75rem;
+  transition: transform var(--motion-fast) var(--ease-standard);
 }
 
 .quick-switcher__input {
@@ -297,6 +337,29 @@ body.member-panel-open .room-header__action--switcher .quick-switcher-key {
    throws and leaves the popover state behind. */
 .room-menu:not([hidden]) {
   display: grid;
+}
+
+/* Menus pop in with a quick fade plus scale; the discrete transitions keep
+   the popover rendered and top-layer while it fades out. */
+.room-menu {
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard),
+    overlay var(--motion-fast) allow-discrete,
+    display var(--motion-fast) allow-discrete;
+}
+
+.room-menu[hidden] {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px) scale(0.97);
+}
+
+@starting-style {
+  .room-menu:not([hidden]) {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
+  }
 }
 
 .room-menu__item {

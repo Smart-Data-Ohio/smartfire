@@ -1,8 +1,32 @@
 /* Profile cards, people multi-select, and the people directory. */
 
 /* One shared popover per page; triggers point the frame at their card URL. */
+.profile-card-popover {
+  /* The display transition keeps the card rendered while the panel fades
+     out; without it the hidden flip would cut the exit. */
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    display var(--motion-fast) allow-discrete;
+}
+
 .profile-card-popover[hidden] {
   display: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.profile-card-popover[hidden] .profile-card-popover__panel {
+  transform: translateY(4px) scale(0.97);
+}
+
+@starting-style {
+  .profile-card-popover:not([hidden]) {
+    opacity: 0;
+  }
+
+  .profile-card-popover:not([hidden]) .profile-card-popover__panel {
+    transform: translateY(4px) scale(0.97);
+  }
 }
 
 .profile-card-popover__backdrop {
@@ -23,6 +47,7 @@
   overflow-y: auto;
   padding: 1rem;
   position: fixed;
+  transition: transform var(--motion-fast) var(--ease-standard);
   z-index: 61;
 }
 
@@ -154,6 +179,9 @@ button.profile-card-avatar {
 /* Shared member-row menu: one per member panel, Star/Unstar inside. */
 .member-row-menu[hidden] {
   display: none;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px) scale(0.97);
 }
 
 .member-row-menu {
@@ -166,7 +194,20 @@ button.profile-card-avatar {
   min-inline-size: 10rem;
   padding: 0.35rem;
   position: fixed;
+  /* The display transition keeps the menu rendered while it fades out;
+     without it the hidden flip would cut the exit. */
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard),
+    display var(--motion-fast) allow-discrete;
   z-index: 30;
+}
+
+@starting-style {
+  .member-row-menu:not([hidden]) {
+    opacity: 0;
+    transform: translateY(4px) scale(0.97);
+  }
 }
 
 .member-row-menu__item {
