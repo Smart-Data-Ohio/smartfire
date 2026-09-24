@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html data-theme="<%= user_theme %>" data-service-worker="<%= service_worker_auto_register? %>">
+<html data-theme="<%= user_theme %>" data-service-worker="<%= service_worker_auto_register? %>"<%= ' data-test-motion="off"' if Rails.env.test? %>>
   <head>
     <%= page_title_tag %>
 
