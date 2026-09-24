@@ -317,14 +317,21 @@ body.member-panel-open .room-header__action--switcher .quick-switcher-key {
 /* Room context menu */
 
 .room-menu {
+  /* Rows keep their content height: WebKit (iOS Safari) otherwise lets a
+     top-layer popover grow to max-block-size and stretches the rows to
+     fill it. On the base rule so the sizing stays applied while the menu
+     fades out with hidden set. */
+  align-content: start;
   background-color: var(--workspace-surface);
-  block-size: max-content;
+  block-size: auto;
   border: 1px solid var(--workspace-border);
   border-radius: 0.7rem;
   color: var(--workspace-text);
   gap: 0.1rem;
+  grid-auto-rows: max-content;
   inline-size: max-content;
   inset: auto;
+  inset-block-end: auto;
   margin: 0;
   max-block-size: calc(100dvh - 1rem);
   max-inline-size: min(18rem, calc(100vw - 1rem));
@@ -337,14 +344,7 @@ body.member-panel-open .room-header__action--switcher .quick-switcher-key {
 /* Scoped so the hidden attribute always wins, even if hidePopover()
    throws and leaves the popover state behind. */
 .room-menu:not([hidden]) {
-  /* Rows keep their content height: WebKit (iOS Safari) otherwise lets a
-     top-layer popover grow to max-block-size and stretches the rows to
-     fill it. */
-  align-content: start;
-  block-size: auto;
   display: grid;
-  grid-auto-rows: max-content;
-  inset-block-end: auto;
 }
 
 /* Menus pop in with a quick fade plus scale; the discrete transitions keep
