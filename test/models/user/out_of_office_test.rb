@@ -44,6 +44,10 @@ class User::OutOfOfficeTest < ActiveSupport::TestCase
   end
 
   test "the status line names the return date and the note" do
+    # The fixed return date keeps the rendered label stable; pin the clock
+    # before it so that date is always in the future.
+    travel_to Time.zone.parse("2026-09-20T12:00:00Z")
+
     travel_to Time.zone.parse("2026-09-23 12:00") do
       @user.update!(ooo_until: Time.zone.parse("2026-09-24").end_of_day, ooo_note: "Back soon")
 
@@ -53,6 +57,10 @@ class User::OutOfOfficeTest < ActiveSupport::TestCase
   end
 
   test "the return date renders in the OOO member's own zone" do
+    # The fixed return date keeps the rendered label stable; pin the clock
+    # before it so that date is always in the future.
+    travel_to Time.zone.parse("2026-09-20T12:00:00Z")
+
     @user.update!(time_zone: "Pacific Time (US & Canada)", ooo_until: Time.zone.parse("2026-09-24T02:00:00Z"))
 
     # 02:00 UTC is still September 23 in California.
@@ -114,6 +122,10 @@ class User::OutOfOfficeTest < ActiveSupport::TestCase
   end
 
   test "overlapping manual and calendar OOO show the later end" do
+    # The fixed return date keeps the rendered label stable; pin the clock
+    # before it so that date is always in the future.
+    travel_to Time.zone.parse("2026-09-20T12:00:00Z")
+
     travel_to Time.zone.parse("2026-09-23 12:00") do
       @user.update!(ooo_calendar_enabled: true, ooo_until: Time.zone.parse("2026-09-24T12:00:00Z"))
       Calendar::MeetingCache.create!(user: @user, fetched_at: Time.current,

@@ -337,7 +337,14 @@ body.member-panel-open .room-header__action--switcher .quick-switcher-key {
 /* Scoped so the hidden attribute always wins, even if hidePopover()
    throws and leaves the popover state behind. */
 .room-menu:not([hidden]) {
+  /* Rows keep their content height: WebKit (iOS Safari) otherwise lets a
+     top-layer popover grow to max-block-size and stretches the rows to
+     fill it. */
+  align-content: start;
+  block-size: auto;
   display: grid;
+  grid-auto-rows: max-content;
+  inset-block-end: auto;
 }
 
 /* Menus pop in with a quick fade plus scale; the discrete transitions keep

@@ -21,6 +21,17 @@ class Rooms::DirectsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "★", kevin_row.at_css("[aria-label='Starred by you']").text
   end
 
+  test "new renders a client-side filter instead of the autocomplete picker" do
+    get new_rooms_direct_url
+
+    assert_response :ok
+    assert_select "#direct_rooms_control input#dm_picker_filter"
+    assert_select "#direct_rooms_control [data-controller~=dm-picker]", 1
+    assert_select "#direct_rooms_control [data-controller~=autocomplete]", 0
+    assert_select "#direct_rooms_control .dm-picker__row[data-name]", minimum: 1
+    assert_no_match(/Start Ping/, response.body)
+  end
+
   test "create" do
     post rooms_directs_url, params: { user_ids: [ users(:jz).id ] }
 
