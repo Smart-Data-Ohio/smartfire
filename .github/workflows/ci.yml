@@ -136,7 +136,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [ browser, huddles, stage-streaming ]
+        shard: [ browser-1, browser-2, browser-3, huddles, stage-streaming ]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -169,26 +169,34 @@ jobs:
           bundler-cache: true
 
       - name: Set up Node
-        if: matrix.shard != 'browser' && steps.coverage.outputs.scope != 'google'
+        if: ${{ !startsWith(matrix.shard, 'browser') && steps.coverage.outputs.scope != 'google' }}
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           package-manager-cache: false
 
       - name: Install gateway dependencies
-        if: matrix.shard != 'browser' && steps.coverage.outputs.scope != 'google'
+        if: ${{ !startsWith(matrix.shard, 'browser') && steps.coverage.outputs.scope != 'google' }}
         run: npm ci --ignore-scripts --prefix script/livekit-gateway
 
       - name: Run browser tests
-        if: matrix.shard == 'browser' && steps.coverage.outputs.scope != 'google'
+        if: ${{ startsWith(matrix.shard, 'browser') && steps.coverage.outputs.scope != 'google' }}
+        env:
+          SHARD: ${{ matrix.shard }}
         run: |
           bin/rails db:setup
           shopt -s globstar
-          mapfile -t files < <(printf '%s\n' test/system/**/*_test.rb | grep -v -E "/(huddles_test|stage_test|streaming_test|message_list_a11y_test)\\.rb$")
+          # Deal files largest first, round robin, across the three browser
+          # shards so each gets a similar share of the suite.
+          index=$(( ${SHARD#browser-} - 1 ))
+          mapfile -t files < <(printf '%s\n' test/system/**/*_test.rb \
+            | grep -v -E "/(huddles_test|stage_test|streaming_test|message_list_a11y_test)\\.rb$" \
+            | xargs wc -c | grep -v " total$" | sort -k1,1nr -k2 | awk -v i="$index" '(NR - 1) % 3 == i { print $2 }')
+          echo "Running ${#files[@]} files in $SHARD"
           PARALLEL_WORKERS=4 bin/rails test "${files[@]}"
 
       - name: Run LiveKit-backed browser tests
-        if: matrix.shard != 'browser' && steps.coverage.outputs.scope != 'google'
+        if: ${{ !startsWith(matrix.shard, 'browser') && steps.coverage.outputs.scope != 'google' }}
         run: |
           bin/livekit-local setup
           source .bundle/livekit/env
@@ -211,14 +219,14 @@ jobs:
           esac
 
       - name: Run Google Calendar and Drive browser tests
-        if: matrix.shard == 'browser' && steps.coverage.outputs.scope == 'google'
+        if: ${{ matrix.shard == 'browser-1' && steps.coverage.outputs.scope == 'google' }}
         run: |
           bin/rails db:setup
           PARALLEL_WORKERS=1 bin/rails test test/system/events_test.rb test/system/drive_link_previews_test.rb test/system/drive_attachments_test.rb test/system/drive_share_test.rb
 
       - name: Nothing to run in Google-only scope
-        if: matrix.shard != 'browser' && steps.coverage.outputs.scope == 'google'
-        run: echo "Google-only scope runs in the browser shard."
+        if: ${{ matrix.shard != 'browser-1' && steps.coverage.outputs.scope == 'google' }}
+        run: echo "Google-only scope runs in the browser-1 shard."
 
   test_system:
     runs-on: ubuntu-latest
