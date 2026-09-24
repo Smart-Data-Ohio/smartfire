@@ -72,6 +72,45 @@ class Rooms::Stage::StreamsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Only hosts and speakers can go live", response.body
   end
 
+  test "a speaker cannot go live when the stage has no host" do
+    @listener.change_stage_role!("speaker")
+    @host.destroy!
+    assert_empty @room.memberships.where(stage_role: :host)
+
+    # Rejoining the call works, but the rejoined speaker still cannot start
+    # a new live stream until a host exists again.
+    issue_in_call_grant!(users(:jason), @listener.reload)
+    sign_in :jason
+
+    assert_no_difference -> { Stream.live.count } do
+      post room_stage_stream_url(@room), params: { quality: "1080p15" }
+    end
+
+    assert_response :forbidden
+    assert_equal "The stage needs a host to go live", response.body
+    assert_nil @room.live_stream
+  end
+
+  test "a speaker goes live again after an administrator promotes a new host" do
+    @listener.change_stage_role!("speaker")
+    @host.destroy!
+    users(:kevin).update!(role: :administrator)
+    sign_in :kevin
+
+    patch room_stage_role_url(@room, @room.memberships.find_by!(user: users(:kevin))), params: { stage_role: "host" }
+    assert_redirected_to room_url(@room)
+
+    issue_in_call_grant!(users(:jason), @listener.reload)
+    sign_in :jason
+
+    assert_difference -> { Stream.live.count }, 1 do
+      post room_stage_stream_url(@room), params: { quality: "1080p15" }
+    end
+
+    assert_redirected_to room_url(@room)
+    assert_equal users(:jason), @room.live_stream.user
+  end
+
   test "an administrator listener cannot go live" do
     users(:jason).update!(role: :administrator)
     sign_in :jason

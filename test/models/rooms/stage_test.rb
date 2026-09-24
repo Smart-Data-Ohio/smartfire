@@ -1,6 +1,15 @@
 require "test_helper"
 
 class Rooms::StageTest < ActiveSupport::TestCase
+  setup do
+    @original_api_secret = ENV["LIVEKIT_API_SECRET"]
+    ENV["LIVEKIT_API_SECRET"] = "test-api-secret"
+  end
+
+  teardown do
+    ENV["LIVEKIT_API_SECRET"] = @original_api_secret
+  end
+
   test "type predicate" do
     assert Rooms::Stage.new.stage?
     assert_not Rooms::Stage.new.voice?
@@ -159,18 +168,27 @@ class Rooms::StageTest < ActiveSupport::TestCase
     assert_not Membership.exists?(room: room, user: users(:david))
   end
 
-  test "deactivating the sole host promotes an administrator member" do
+  test "deactivating the sole host ends the stage instead of promoting a replacement" do
     users(:jason).update!(role: :member)
     users(:kevin).update!(role: :administrator)
     room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
+    room.memberships.find_by!(user: users(:jason)).change_stage_role!("speaker")
+    stream = Stream.create!(room: room, membership: room.memberships.find_by!(user: users(:jason)),
+      user: users(:jason), quality: "1080p15")
+    grant = HuddleGrant.issue!(session: users(:jason).sessions.create!(user_agent: "Test"),
+      membership: room.memberships.find_by!(user: users(:jason)))
 
     users(:david).deactivate
 
-    assert_equal "host", room.memberships.find_by!(user: users(:kevin)).stage_role
-    assert_equal "listener", room.memberships.find_by!(user: users(:jason)).stage_role
+    assert_not_predicate stream.reload, :live?
+    assert_predicate grant.reload, :revoked?
+    assert_equal "speaker", room.memberships.find_by!(user: users(:jason)).stage_role
+    assert_equal "listener", room.memberships.find_by!(user: users(:kevin)).stage_role
+    assert_empty room.memberships.where(stage_role: :host)
+    assert_equal "The stage ended because the last host left.", stage_ended_note(room).body.to_plain_text
   end
 
-  test "deactivating the sole host promotes the earliest remaining member without an administrator" do
+  test "deactivating the sole host ends the stage without an administrator present" do
     users(:jason).update!(role: :member)
     room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david) ])
     room.memberships.create!(user: users(:jason), created_at: 2.days.ago)
@@ -178,18 +196,26 @@ class Rooms::StageTest < ActiveSupport::TestCase
 
     users(:david).deactivate
 
-    assert_equal "host", room.memberships.find_by!(user: users(:jason)).stage_role
+    assert_equal "listener", room.memberships.find_by!(user: users(:jason)).stage_role
     assert_equal "listener", room.memberships.find_by!(user: users(:kevin)).stage_role
+    assert_equal "The stage ended because the last host left.", stage_ended_note(room).body.to_plain_text
   end
 
   test "deactivating a host promotes nobody when another host remains" do
     room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
     room.memberships.find_by!(user: users(:jason)).change_stage_role!("host")
+    stream = Stream.create!(room: room, membership: room.memberships.find_by!(user: users(:jason)),
+      user: users(:jason), quality: "1080p15")
+    grant = HuddleGrant.issue!(session: users(:jason).sessions.create!(user_agent: "Test"),
+      membership: room.memberships.find_by!(user: users(:jason)))
 
     users(:david).deactivate
 
     assert_equal "host", room.memberships.find_by!(user: users(:jason)).stage_role
     assert_equal "listener", room.memberships.find_by!(user: users(:kevin)).stage_role
+    assert_predicate stream.reload, :live?
+    assert_not grant.reload.revoked?
+    assert_nil room.messages.find_by(system_note: true)
   end
 
   test "deactivating the last member of a stage leaves the emptied room alone" do
@@ -198,6 +224,94 @@ class Rooms::StageTest < ActiveSupport::TestCase
     users(:david).deactivate
 
     assert_empty room.reload.users
+  end
+
+  test "destroying the last host membership ends the live stream and revokes every grant in the room" do
+    room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
+    room.memberships.find_by!(user: users(:jason)).change_stage_role!("speaker")
+    stream = Stream.create!(room: room, membership: room.memberships.find_by!(user: users(:jason)),
+      user: users(:jason), quality: "1080p15")
+    speaker_grant = HuddleGrant.issue!(session: users(:jason).sessions.create!(user_agent: "Test"),
+      membership: room.memberships.find_by!(user: users(:jason)))
+    listener_grant = HuddleGrant.issue!(session: users(:kevin).sessions.create!(user_agent: "Test"),
+      membership: room.memberships.find_by!(user: users(:kevin)))
+    chat = room.messages.create!(creator: users(:david), body: "Hello from stage")
+
+    room.memberships.find_by!(user: users(:david)).destroy!
+
+    assert_not_predicate stream.reload, :live?
+    assert_nil room.live_stream
+    assert_predicate speaker_grant.reload, :revoked?
+    assert_predicate listener_grant.reload, :revoked?
+    assert_empty room.memberships.where(stage_role: :host)
+    assert_equal "The stage ended because the last host left.", stage_ended_note(room).body.to_plain_text
+    assert_predicate stage_ended_note(room), :system_note?
+    assert_not_predicate room.reload, :deleted?
+    assert_equal [ users(:jason).id, users(:kevin).id ].sort, room.reload.user_ids.sort
+    assert_equal chat, room.messages.find(chat.id)
+  end
+
+  test "destroying a host while another host remains ends nothing" do
+    room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
+    room.memberships.find_by!(user: users(:jason)).change_stage_role!("host")
+    stream = Stream.create!(room: room, membership: room.memberships.find_by!(user: users(:jason)),
+      user: users(:jason), quality: "1080p15")
+    grant = HuddleGrant.issue!(session: users(:jason).sessions.create!(user_agent: "Test"),
+      membership: room.memberships.find_by!(user: users(:jason)))
+
+    room.memberships.find_by!(user: users(:david)).destroy!
+
+    assert_predicate stream.reload, :live?
+    assert_not grant.reload.revoked?
+    assert_nil room.messages.find_by(system_note: true)
+  end
+
+  test "destroying a speaker ends only their own stream and grants" do
+    room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
+    room.memberships.find_by!(user: users(:jason)).change_stage_role!("speaker")
+    stream = Stream.create!(room: room, membership: room.memberships.find_by!(user: users(:jason)),
+      user: users(:jason), quality: "1080p15")
+    speaker_grant = HuddleGrant.issue!(session: users(:jason).sessions.create!(user_agent: "Test"),
+      membership: room.memberships.find_by!(user: users(:jason)))
+    host_grant = HuddleGrant.issue!(session: sessions(:david_safari),
+      membership: room.memberships.find_by!(user: users(:david)))
+
+    room.memberships.find_by!(user: users(:jason)).destroy!
+
+    assert_not_predicate stream.reload, :live?
+    assert_predicate speaker_grant.reload, :revoked?
+    assert_not host_grant.reload.revoked?
+    assert_equal "host", room.memberships.find_by!(user: users(:david)).stage_role
+    assert_nil room.messages.find_by(system_note: true)
+  end
+
+  test "destroying the last host locks the room and checks for another host inside its transaction" do
+    room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david), users(:jason) ])
+    host = room.memberships.find_by!(user: users(:david))
+    events = []
+
+    lock_method = Room.instance_method(:lock!)
+    Room.define_method(:lock!) do |*arguments|
+      events << :lock
+      lock_method.bind_call(self, *arguments)
+    end
+
+    exists_method = ActiveRecord::Relation.instance_method(:exists?)
+    ActiveRecord::Relation.define_method(:exists?) do |*arguments|
+      if self.klass == Membership
+        events << (ActiveRecord::Base.connection.transaction_open? ? :check_in_transaction : :check_outside_transaction)
+      end
+      exists_method.bind_call(self, *arguments)
+    end
+
+    begin
+      host.destroy!
+    ensure
+      Room.define_method(:lock!, lock_method)
+      ActiveRecord::Relation.define_method(:exists?, exists_method)
+    end
+
+    assert_equal [ :lock, :check_in_transaction ], events
   end
 
   test "live_stream reads the preloaded live stream without querying" do
@@ -230,4 +344,9 @@ class Rooms::StageTest < ActiveSupport::TestCase
 
     assert_equal live, Rooms::Stage.find(room.id).live_stream
   end
+
+  private
+    def stage_ended_note(room)
+      room.messages.find_by!(system_note: true)
+    end
 end

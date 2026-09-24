@@ -214,6 +214,19 @@ class Rooms::Stage::RolesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "listener", @listener.reload.stage_role
   end
 
+  test "an administrator member promotes a new host when the stage has none" do
+    @room.memberships.find_by!(user: users(:david)).destroy!
+    assert_empty @room.memberships.where(stage_role: :host)
+
+    users(:kevin).update!(role: :administrator)
+    sign_in :kevin
+
+    patch room_stage_role_url(@room, @listener), params: { stage_role: "host" }
+
+    assert_redirected_to room_url(@room)
+    assert_equal "host", @listener.reload.stage_role
+  end
+
   test "non-members get not found" do
     sign_in :jz
 

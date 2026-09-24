@@ -272,6 +272,22 @@ class Rooms::StagesControllerTest < ActionDispatch::IntegrationTest
     assert_empty room.reload.users
   end
 
+  test "the room page and the members edit render with zero hosts" do
+    room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
+    room.memberships.find_by!(user: users(:david)).destroy!
+    assert_empty room.memberships.where(stage_role: :host)
+
+    users(:kevin).update!(role: :administrator)
+    sign_in :kevin
+
+    get room_url(room)
+    assert_response :success
+    assert_match "Hosts · 0", response.body
+
+    get edit_rooms_stage_url(room)
+    assert_response :success
+  end
+
   test "non-members cannot see the room page or its messages" do
     room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david) ])
     room.messages.create!(creator: users(:david), body: "Secret stage chat")
