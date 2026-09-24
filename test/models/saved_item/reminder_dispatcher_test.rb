@@ -76,7 +76,10 @@ class SavedItem::ReminderDispatcherTest < ActiveSupport::TestCase
     remind_at = Time.use_zone("America/New_York") { Time.zone.parse("2026-09-24 09:00") }
     assert_equal "2026-09-24T13:00:00.000Z", remind_at.utc.iso8601(3)
 
-    saved_item = SavedItem.create!(user: @user, message: @message, remind_at:)
+    # Create it while that instant is still ahead, however late the suite runs.
+    saved_item = travel_to(Time.utc(2026, 9, 24, 12, 0)) do
+      SavedItem.create!(user: @user, message: @message, remind_at:)
+    end
 
     travel_to Time.utc(2026, 9, 24, 12, 59) do
       SavedItem::ReminderDispatcher.dispatch_due!
