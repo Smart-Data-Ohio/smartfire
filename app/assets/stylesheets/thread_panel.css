@@ -33,14 +33,15 @@
 
 /* Thread browser and conversation drawer */
 .thread-panel {
+  /* display flips to none only at the end of the exit transition, so the
+     surface slides out first; on open it flips immediately, so focus can
+     move into the panel without waiting. */
+  display: none;
   inset: 0;
   opacity: 0;
   pointer-events: none;
   position: fixed;
-  /* visibility flips at the end of the transition, so the drawer slides
-     out instead of vanishing the moment .thread-panel-open is removed. */
-  transition: opacity var(--motion-medium) var(--ease-standard), visibility var(--motion-medium);
-  visibility: hidden;
+  transition: opacity var(--motion-medium) var(--ease-standard), display var(--motion-medium) allow-discrete;
   z-index: 11;
 }
 
@@ -73,9 +74,9 @@
 }
 
 .thread-panel-open .thread-panel {
+  display: block;
   opacity: 1;
   pointer-events: auto;
-  visibility: visible;
 }
 
 .thread-panel-open .thread-panel__surface {

@@ -27,7 +27,7 @@ class MotionTest < ApplicationSystemTestCase
     page.evaluate_script("document.documentElement.removeAttribute('data-test-motion')")
 
     # The exit animation keeps the drawer rendered while it slides out.
-    assert_includes sidebar_transition_properties, "visibility"
+    assert_includes sidebar_transition_properties, "display"
 
     click_button "Open workspace navigation"
     assert_selector "#sidebar.open"

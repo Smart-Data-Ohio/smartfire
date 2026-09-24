@@ -762,14 +762,15 @@ body.sidebar {
 
 /* Channel members */
 .member-panel {
+  /* display flips to none only at the end of the exit transition, so the
+     surface slides out first; on open it flips immediately, so focus can
+     move into the panel without waiting. */
+  display: none;
   inset: 0;
   opacity: 0;
   pointer-events: none;
   position: fixed;
-  /* visibility interpolates so the panel stays rendered while the surface
-     slides out, then flips at the end of the transition. */
-  transition: opacity var(--motion-medium) var(--ease-standard), visibility var(--motion-medium);
-  visibility: hidden;
+  transition: opacity var(--motion-medium) var(--ease-standard), display var(--motion-medium) allow-discrete;
   z-index: 10;
 }
 
@@ -802,9 +803,9 @@ body.sidebar {
 }
 
 .member-panel-open .member-panel {
+  display: block;
   opacity: 1;
   pointer-events: auto;
-  visibility: visible;
 }
 
 .member-panel-open .member-panel__surface {
@@ -921,7 +922,7 @@ summary.member-panel__group-heading {
 }
 
 .member-panel__member > input[type="checkbox"] {
-  display: block;
+  display: none;
   inset-block-start: 50%;
   inset-inline-start: 0.55rem;
   margin: 0;
@@ -935,8 +936,7 @@ summary.member-panel__group-heading {
   transition:
     max-inline-size var(--motion-fast) var(--ease-standard),
     opacity var(--motion-fast) var(--ease-standard),
-    visibility var(--motion-fast);
-  visibility: hidden;
+    display var(--motion-fast) allow-discrete;
 }
 
 .member-panel__member > .member-panel__avatar {
@@ -952,9 +952,9 @@ summary.member-panel__group-heading {
 }
 
 .member-panel__surface.is-selecting .member-panel__member > input[type="checkbox"] {
+  display: block;
   max-inline-size: 1.1rem;
   opacity: 1;
-  visibility: visible;
 }
 
 .member-panel__surface.is-selecting .member-panel__member:has(> input[type="checkbox"]:checked) {
@@ -1023,7 +1023,7 @@ summary.member-panel__group-heading {
 
   /* In-flow, the panel takes a grid column, so open/close snaps layout:
      sliding the column would animate layout. Fade the content in on open
-     instead, and keep the close instant: a delayed visibility flip would
+     instead, and keep the close instant: a delayed display flip would
      flash the detached panel as a fullscreen fixed box on the way out. */
   .member-panel {
     transition: none;
@@ -1100,6 +1100,10 @@ summary.member-panel__group-heading {
 
     background: transparent;
     border: 0;
+    /* display flips to none only at the end of the exit transition, so the
+       drawer slides out first; on open it flips immediately, so focus can
+       move into the drawer without waiting. */
+    display: none;
     inline-size: 100dvw;
     inset: 0;
     max-inline-size: none;
@@ -1107,17 +1111,14 @@ summary.member-panel__group-heading {
     pointer-events: none;
     position: fixed;
     transform: none;
-    /* visibility flips at the end of the transition, so the drawer and its
-       backdrop fade out instead of vanishing the moment .open is removed. */
-    transition: opacity var(--motion-medium) var(--ease-standard), visibility var(--motion-medium);
-    visibility: hidden;
+    transition: opacity var(--motion-medium) var(--ease-standard), display var(--motion-medium) allow-discrete;
     z-index: 10;
   }
 
   .sidebar #sidebar.open {
+    display: block;
     opacity: 1;
     pointer-events: auto;
-    visibility: visible;
   }
 
   .workspace-navigation__backdrop {
@@ -1128,6 +1129,18 @@ summary.member-panel__group-heading {
     inset: 0;
     padding: 0;
     position: absolute;
+    transition: opacity var(--motion-medium) var(--ease-standard), display var(--motion-medium) allow-discrete;
+  }
+
+  .workspace-navigation__backdrop[hidden] {
+    display: none;
+    opacity: 0;
+  }
+
+  @starting-style {
+    .workspace-navigation__backdrop:not([hidden]) {
+      opacity: 0;
+    }
   }
 
   .workspace-navigation__backdrop:hover {

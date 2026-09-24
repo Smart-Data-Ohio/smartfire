@@ -23,9 +23,12 @@ fill mode, so a later exit transition on the same element still wins.
 ## How exits work
 
 - Drawers (mobile sidebar, member panel, thread panel) toggle classes
-  over `visibility`. The container transitions `opacity` + `visibility`,
-  and `visibility` flips only at the end, so the surface slides out
-  before the drawer unpaints. Focus and `inert` still flip immediately.
+  over `display`. The container transitions `opacity` + `display` with
+  `allow-discrete`: `display` flips immediately on open (so focus can
+  move in without waiting) and only at the end on close, so the surface
+  slides out before the drawer unpaints. `inert` still flips immediately.
+  (`visibility` would flip at 50% in both directions — too late for
+  enter focus, too early for the exit.)
 - Popovers and dialogs (room menus, message menu, emoji picker, profile
   card, quick switcher, stage panel) transition `opacity`/`transform`
   plus `overlay`/`display` with `transition-behavior: allow-discrete`,
