@@ -38,6 +38,17 @@ class TestSessionControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_url
   end
 
+  test "an unauthenticated Turbo Stream poll or form post is not kept as the post-sign-in destination" do
+    get activity_items_url(format: :turbo_stream)
+    assert_redirected_to new_session_url
+
+    post room_messages_url(rooms(:hq)), params: { message: { body: "hi" } }
+    assert_redirected_to new_session_url
+
+    get sign_in_for_tests_path(email_address: users(:david).email_address, password: "secret123456")
+    assert_redirected_to root_url
+  end
+
   test "is unreachable outside the test environment" do
     Rails.stubs(:env).returns(ActiveSupport::StringInquirer.new("production"))
 
