@@ -516,6 +516,7 @@ class DriveShareTest < ApplicationSystemTestCase
     inject_drive_share_mocks(drive_scenario)
 
     within("#thread-panel") do
+      wait_for_thread_panel_settled
       choose_drive_from_attach_menu(wait: 10)
     end
 
@@ -1051,6 +1052,23 @@ class DriveShareTest < ApplicationSystemTestCase
         )
         assert focused, "expected focus to return to the attach button"
       end
+    end
+
+    # The thread drawer slides in over a 220ms transform transition while its
+    # content mounts from a deep link, so the Drive button can exist (and be
+    # found) while still translating. Clicking mid-slide can miss the moving
+    # target and silently no-op, leaving the picker closed. Poll the settled
+    # state the click depends on instead of racing the transition.
+    def wait_for_thread_panel_settled(timeout: 10)
+      page.document.synchronize(timeout, errors: [ Capybara::ExpectationNotMet ]) do
+        unless thread_panel_settled?
+          raise Capybara::ExpectationNotMet, "expected the thread panel slide transition to settle"
+        end
+      end
+    end
+
+    def thread_panel_settled?
+      page.evaluate_script("getComputedStyle(document.querySelector('#thread-panel .thread-panel__surface')).transform === 'none'")
     end
 
     # The + button owns the Drive flow now: open its menu, then choose
