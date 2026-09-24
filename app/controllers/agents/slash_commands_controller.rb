@@ -19,7 +19,8 @@ class Agents::SlashCommandsController < ApplicationController
   def create
     render_command_result Agents::SlashCommands.register(
       agent: Current.agent, room_id: params[:room_id],
-      name: params[:name], description: params[:description]
+      name: params[:name], description: params[:description],
+      takes_arguments: params[:takes_arguments]
     )
   end
 

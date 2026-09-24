@@ -17,9 +17,31 @@ class Agents::SlashCommandsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :created
     assert_equal(
-      { "name" => "deploy", "description" => "Ship it", "room_id" => @room.id, "agent_id" => @agent.id },
+      { "name" => "deploy", "description" => "Ship it", "room_id" => @room.id, "agent_id" => @agent.id, "takes_arguments" => true },
       response.parsed_body
     )
+  end
+
+  test "registers a command that takes no arguments" do
+    grant!(capability: "post_messages", room: @room)
+
+    post "/rooms/#{@room.id}/agents/slash_commands",
+      params: { name: "deploy", takes_arguments: false }.to_json, headers: bearer_headers
+
+    assert_response :created
+    assert_equal false, response.parsed_body["takes_arguments"]
+    assert_equal false, AgentSlashCommand.sole.takes_arguments
+  end
+
+  test "re-registering without the flag keeps the stored value" do
+    grant!(capability: "post_messages", room: @room)
+    AgentSlashCommand.create!(agent: @agent, room: @room, name: "deploy", takes_arguments: false)
+
+    post "/rooms/#{@room.id}/agents/slash_commands",
+      params: { name: "deploy", description: "New" }.to_json, headers: bearer_headers
+
+    assert_response :created
+    assert_equal false, AgentSlashCommand.sole.takes_arguments
   end
 
   test "a legacy agent without any grants can register" do

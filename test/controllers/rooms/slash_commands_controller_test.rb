@@ -44,6 +44,14 @@ class Rooms::SlashCommandsControllerTest < ActionDispatch::IntegrationTest
     assert_match "Launch", response.parsed_body["url"]
   end
 
+  test "bare event opens the blank form" do
+    post room_slash_commands_url(@room), params: { text: "/event" }, as: :json
+
+    assert_response :success
+    assert_equal "open_url", response.parsed_body["status"]
+    assert_equal new_room_event_path(@room), URI.parse(response.parsed_body["url"]).path
+  end
+
   test "poll answers open_poll" do
     post room_slash_commands_url(@room), params: { text: "/poll" }, as: :json
 

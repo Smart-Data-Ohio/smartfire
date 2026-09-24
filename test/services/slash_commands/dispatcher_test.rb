@@ -22,7 +22,11 @@ class SlashCommands::DispatcherTest < ActiveSupport::TestCase
       assert command.description.present?, "#{command.name} needs a description"
       assert_respond_to SlashCommands::Handlers, command.handler
       assert_includes [ true, false ], command.permission.call(@user, @room, nil)
+      assert_includes [ true, false ], command.takes_arguments, "#{command.name} needs a takes_arguments flag"
     end
+
+    immediate = SlashCommands::Registry.all.reject(&:takes_arguments).map(&:name)
+    assert_equal %w[ huddle event poll ], immediate
   end
 
   test "command_text? matches slash commands but not escapes or play passthrough" do
@@ -70,13 +74,21 @@ class SlashCommands::DispatcherTest < ActiveSupport::TestCase
     assert_not_includes result.url, "starts_at"
   end
 
-  test "event rejects past times and blank titles" do
+  test "event rejects past times" do
     result = dispatch("/event Retro yesterday")
     assert_equal :open_url, result.kind # "yesterday" is not a time, so it stays in the title
 
-    result = dispatch("/event")
+    result = dispatch("/event Retro 2026-09-01 15:00")
     assert_equal :error, result.kind
-    assert_match "Usage", result.message
+    assert_match "in the past", result.message
+  end
+
+  test "bare event opens the blank form" do
+    result = dispatch("/event")
+
+    assert_equal :open_url, result.kind
+    assert_equal "/rooms/#{@room.id}/events/new", URI.parse(result.url).path
+    assert_nil URI.parse(result.url).query
   end
 
   test "poll opens the builder in channels but not threads" do

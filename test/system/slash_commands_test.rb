@@ -15,12 +15,99 @@ class SlashCommandsTest < ApplicationSystemTestCase
     assert_selector "suggestion-option", text: "/huddle"
     assert_equal "list", editor["aria-autocomplete"]
 
-    editor.set("/po")
-    assert_selector "suggestion-option", text: "/poll"
+    editor.set("/shr")
+    assert_selector "suggestion-option", text: "/shrug"
     assert_no_selector "suggestion-option", text: "/huddle"
 
     editor.send_keys(:enter)
-    assert_field "Write a message", with: "/poll "
+    assert_field "Write a message", with: "/shrug "
+  end
+
+  test "picking poll by Enter runs it immediately" do
+    editor = find_field("Write a message")
+    editor.set("/poll")
+    assert_selector "suggestion-option", text: "/poll"
+    editor.send_keys(:enter)
+
+    assert_selector "#poll-builder[open]", visible: true
+    assert_field "Write a message", with: ""
+  end
+
+  test "picking poll by click runs it immediately" do
+    find_field("Write a message").set("/poll")
+    find("suggestion-option", text: "/poll").click
+
+    assert_selector "#poll-builder[open]", visible: true
+    assert_field "Write a message", with: ""
+  end
+
+  test "picking event by Enter opens the form immediately" do
+    editor = find_field("Write a message")
+    editor.set("/event")
+    assert_selector "suggestion-option", text: "/event"
+    editor.send_keys(:enter)
+
+    assert_selector "h1", text: "Schedule an event"
+  end
+
+  test "picking huddle by Enter runs it immediately" do
+    editor = find_field("Write a message")
+    editor.set("/huddle")
+    assert_selector "suggestion-option", text: "/huddle"
+    editor.send_keys(:enter)
+
+    # No LiveKit environment in this suite, so the command errors ephemerally.
+    assert_selector "#composer .composer__feedback", text: "not configured", visible: true
+  end
+
+  test "suggestion rows hint runs-now and argument placeholders" do
+    editor = find_field("Write a message")
+
+    editor.set("/poll")
+    assert_selector "suggestion-option", text: "runs now"
+
+    editor.set("/remind")
+    assert_selector "suggestion-option", text: "<when> <text>"
+  end
+
+  test "the close button dismisses the picker without sending" do
+    editor = find_field("Write a message")
+    editor.set("/po")
+    assert_selector "suggestion-option", text: "/poll"
+
+    find("[aria-label='Close suggestions']").click
+
+    assert_no_selector "suggestion-option"
+    assert_field "Write a message", with: "/po"
+    assert_no_selector "#poll-builder[open]"
+  end
+
+  test "Escape closes the picker without sending" do
+    editor = find_field("Write a message")
+    editor.set("/po")
+    assert_selector "suggestion-option", text: "/poll"
+
+    editor.send_keys(:escape)
+
+    assert_no_selector "suggestion-option"
+    assert_field "Write a message", with: "/po"
+    assert_no_selector "#poll-builder[open]"
+  end
+
+  test "mentions and emoji pickers have no close button and still commit" do
+    editor = find_field("Write a message")
+
+    editor.set(":open")
+    assert_selector "suggestion-option", text: "OpenAI"
+    assert_no_selector ".suggestion__close"
+    editor.send_keys(:enter)
+    assert_field "Write a message", with: ":openai: "
+
+    editor.set("@kev")
+    assert_selector "suggestion-option", text: "Kevin"
+    assert_no_selector ".suggestion__close"
+    editor.send_keys(:enter)
+    assert_field "Write a message", with: "@[Kevin] "
   end
 
   test "the picker lists registered agent commands" do
@@ -31,6 +118,32 @@ class SlashCommandsTest < ApplicationSystemTestCase
 
     assert_selector "suggestion-option", text: "/deploy"
     assert_selector "suggestion-option", text: "Bender Bot"
+  end
+
+  test "agent commands that take arguments insert and wait" do
+    @room.memberships.grant_to users(:bender)
+    AgentSlashCommand.create!(agent: agents(:bender_agent), room: @room, name: "deploy", description: "Ship it")
+
+    editor = find_field("Write a message")
+    editor.set("/dep")
+    assert_selector "suggestion-option", text: "/deploy"
+    editor.send_keys(:enter)
+
+    assert_field "Write a message", with: "/deploy "
+    assert_equal 0, agents(:bender_agent).agent_events.count
+  end
+
+  test "agent commands without arguments run immediately when picked" do
+    @room.memberships.grant_to users(:bender)
+    AgentSlashCommand.create!(agent: agents(:bender_agent), room: @room, name: "deploy", takes_arguments: false)
+
+    editor = find_field("Write a message")
+    editor.set("/dep")
+    assert_selector "suggestion-option", text: "runs now"
+    editor.send_keys(:enter)
+
+    assert_selector "#composer .composer__feedback", text: "Sent to Bender Bot", visible: true
+    assert_field "Write a message", with: ""
   end
 
   test "shrug posts through the picker" do

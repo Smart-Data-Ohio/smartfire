@@ -1,15 +1,23 @@
 # Slash commands
 
 Typing `/` at the start of the composer opens a command picker, Discord
-and Slack style. Picking a command inserts `/name ` so arguments can be
-typed after it; submitting runs it. Commands that post (shrug, me, play,
-remind) broadcast live like typed messages; the rest answer ephemerally
-— visible to the invoker only, never posted — or open UI.
+and Slack style. Picking a command that takes arguments inserts `/name `
+so arguments can be typed after it; submitting runs it. Picking a
+no-argument command — `/poll`, `/event`, `/huddle` — runs it
+immediately, by click, tap, or Enter on the suggestion, with no second
+Enter. Each row hints at what a pick does: "runs now" for immediate
+commands, the argument placeholder (for example `/remind <when> <text>`)
+for argument commands. The ✕ button and Escape both close the popup
+without inserting anything, and closing never sends the message.
+Commands that post (shrug, me, play, remind) broadcast live like typed
+messages; the rest answer ephemerally — visible to the invoker only,
+never posted — or open UI.
 
 Commands live in one registry
 (`SlashCommands::Registry`, handlers in `SlashCommands::Handlers`):
 each entry has a name, a description, an argument hint, a permission
-check, and a handler. Adding a command means adding one entry plus one
+check, a handler, and a `takes_arguments` flag that decides the picker
+behavior above. Adding a command means adding one entry plus one
 handler method. `/play` is a registry entry that posts through the
 normal message path, so sounds keep their optimistic preview and mute
 rules; see [status and notifications](notifications.md).
@@ -20,7 +28,7 @@ rules; see [status and notifications](notifications.md).
   otherwise it answers an ephemeral error.
 - `/event <title> <when>` opens the event form with the title (and the
   time, when one parses) prefilled. For example
-  `/event Launch party friday 5pm`.
+  `/event Launch party friday 5pm`. Bare `/event` opens the blank form.
 - `/poll` opens the poll builder. Channel only, not threads.
 - `/remind <when> <text>` posts the text and saves it for you with a
   reminder at `<when>`, using the saved-items feature; see

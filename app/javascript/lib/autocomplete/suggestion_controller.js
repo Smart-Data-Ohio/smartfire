@@ -48,6 +48,13 @@ export default class SuggestionController {
     return this.#resultsController.hide()
   }
 
+  // Dismisses the picker without committing anything, like Escape: the
+  // text stays and nothing sends. The slash picker's close button calls
+  // this; mentions and emoji have no close button and are unchanged.
+  cancel() {
+    this.#cancelSuggestion()
+  }
+
   destroy() {
     this.#pendingUpdate = null
     this.#uninstallResultsController()
