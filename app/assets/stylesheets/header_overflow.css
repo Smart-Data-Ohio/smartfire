@@ -30,8 +30,21 @@
   position: absolute;
 }
 
+.header-overflow__dot {
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    display var(--motion-fast) allow-discrete;
+}
+
 .header-overflow__dot[hidden] {
   display: none;
+  opacity: 0;
+}
+
+@starting-style {
+  .header-overflow__dot:not([hidden]) {
+    opacity: 0;
+  }
 }
 
 /* The menu reuses .room-menu for its popover frame; keep the same stacking

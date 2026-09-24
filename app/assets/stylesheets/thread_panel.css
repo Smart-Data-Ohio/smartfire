@@ -15,6 +15,20 @@
   min-block-size: 1rem;
   min-inline-size: 1rem;
   padding-inline: 0.25rem;
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    display var(--motion-fast) allow-discrete;
+}
+
+.room-header__thread-unread[hidden] {
+  display: none;
+  opacity: 0;
+}
+
+@starting-style {
+  .room-header__thread-unread:not([hidden]) {
+    opacity: 0;
+  }
 }
 
 /* Thread browser and conversation drawer */
@@ -296,6 +310,7 @@
   inline-size: 100%;
   padding: 0.65rem 0.7rem;
   text-align: start;
+  transition: background-color var(--motion-quick);
 }
 
 .thread-panel__thread-item:hover,

@@ -217,6 +217,7 @@ button.profile-card-avatar {
   inline-size: 100%;
   justify-content: flex-start;
   text-align: start;
+  transition: background-color var(--motion-quick);
 }
 
 .member-row-menu__item:hover,
@@ -297,6 +298,7 @@ input[data-multi-select-target="checkbox"],
   display: flex;
   gap: 0.6rem;
   padding: 0.4rem 0.5rem;
+  transition: background-color var(--motion-quick);
 }
 
 .people-directory__row:hover {

@@ -503,6 +503,7 @@ img.message__attachment {
   min-block-size: 2.15rem;
   min-inline-size: 0;
   text-align: start;
+  transition: background-color var(--motion-quick);
   width: 100%;
 
   @media (any-hover: hover) {

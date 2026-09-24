@@ -418,6 +418,7 @@ body.sidebar {
   position: relative;
   text-align: start;
   text-decoration: none;
+  transition: background-color var(--motion-quick), color var(--motion-quick);
 }
 
 .sidebar-item:hover,
@@ -471,6 +472,7 @@ body.sidebar {
 }
 
 .sidebar-item__status {
+  animation: motion-pop-in var(--motion-fast) var(--ease-standard);
   background: var(--workspace-accent-soft);
   border-radius: 999px;
   color: var(--workspace-accent-strong);
@@ -897,9 +899,12 @@ summary.member-panel__group-heading {
   padding: 0;
 }
 
-/* Avatar, identity. Selection mode adds a checkbox column on every row
-   but your own, which has no checkbox: the avatar and identity are
-   placed explicitly so all rows stay aligned in both layouts. */
+/* Avatar, identity. Selection mode reveals a checkbox on every row but
+   your own, which has none: the avatar and identity are placed explicitly
+   so all rows stay aligned in both layouts. The checkbox floats outside
+   the grid, so the resting layout never shifts; selecting grows the row's
+   leading padding by the checkbox width plus one gap (1.1rem + 0.65rem)
+   while the box wipes in. */
 .member-panel__member {
   align-items: center;
   border-radius: 0.45rem;
@@ -909,11 +914,29 @@ summary.member-panel__group-heading {
   grid-template-columns: 2rem minmax(0, 1fr);
   min-inline-size: 0;
   padding: 0.38rem 0.55rem;
+  position: relative;
+  transition:
+    background-color var(--motion-quick),
+    padding-inline-start var(--motion-fast) var(--ease-standard);
 }
 
 .member-panel__member > input[type="checkbox"] {
-  display: none;
-  grid-column: 1;
+  display: block;
+  inset-block-start: 50%;
+  inset-inline-start: 0.55rem;
+  margin: 0;
+  max-inline-size: 0;
+  min-inline-size: 0;
+  opacity: 0;
+  overflow: clip;
+  padding: 0;
+  position: absolute;
+  transform: translateY(-50%);
+  transition:
+    max-inline-size var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard),
+    visibility var(--motion-fast);
+  visibility: hidden;
 }
 
 .member-panel__member > .member-panel__avatar {
@@ -925,19 +948,13 @@ summary.member-panel__group-heading {
 }
 
 .member-panel__surface.is-selecting .member-panel__member {
-  grid-template-columns: 1.1rem 2rem minmax(0, 1fr);
+  padding-inline-start: calc(0.55rem + 1.1rem + 0.65rem);
 }
 
 .member-panel__surface.is-selecting .member-panel__member > input[type="checkbox"] {
-  display: block;
-}
-
-.member-panel__surface.is-selecting .member-panel__member > .member-panel__avatar {
-  grid-column: 2;
-}
-
-.member-panel__surface.is-selecting .member-panel__member > .member-panel__identity {
-  grid-column: 3;
+  max-inline-size: 1.1rem;
+  opacity: 1;
+  visibility: visible;
 }
 
 .member-panel__surface.is-selecting .member-panel__member:has(> input[type="checkbox"]:checked) {

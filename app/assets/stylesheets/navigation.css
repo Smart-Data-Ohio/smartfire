@@ -94,6 +94,7 @@
   gap: 0.55rem;
   min-block-size: 2.4rem;
   padding: 0.3rem 0.55rem;
+  transition: background-color var(--motion-quick);
 }
 
 .quick-switcher__option[aria-selected="true"] {
@@ -372,6 +373,7 @@ body.member-panel-open .room-header__action--switcher .quick-switcher-key {
   inline-size: 100%;
   justify-content: flex-start;
   text-align: start;
+  transition: background-color var(--motion-quick);
 }
 
 .room-menu__item:hover,
