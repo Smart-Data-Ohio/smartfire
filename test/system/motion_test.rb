@@ -70,6 +70,82 @@ class MotionTest < ApplicationSystemTestCase
     end
   end
 
+  test "member selection mode moves no rows and resizes nothing" do
+    click_button "Show members" if page.has_button?("Show members", wait: 5)
+    assert_selector "#channel-members .member-panel__member", minimum: 2, wait: 10
+
+    # The checkbox column is reserved up front: entering selection mode
+    # only fades and scales the boxes in, so avatar columns never shift.
+    assert_no_selector "#channel-members input[type='checkbox']"
+    lefts_before = member_avatar_lefts
+    content_height_before = member_content_height
+
+    ctrl_click(find("#channel-members [data-member-id='#{users(:jason).id}'] button.profile-card-name"))
+    assert_selector "#channel-members input[type='checkbox']"
+    assert_selector "#channel-members [data-multi-select-target='bar']"
+    assert_equal lefts_before, member_avatar_lefts, "expected selection mode to shift no rows"
+    assert_equal content_height_before, member_content_height, "expected the overlaid bar to resize nothing"
+
+    # The bottom rows stay clickable under the overlaid bar (clearance
+    # pads the content clear of it).
+    boxes = all("#channel-members input[type='checkbox']").reject { |box| box[:id] == "select-member-#{users(:jason).id}" }
+    boxes.last.click
+    assert_selector "#channel-members [data-multi-select-target='messageButton']", text: "Message (2)"
+    assert_equal lefts_before, member_avatar_lefts, "expected a second selection to shift no rows"
+    assert_equal content_height_before, member_content_height, "expected a second selection to resize nothing"
+
+    all("#channel-members input[type='checkbox']").each { |box| box.click if box.checked? }
+    assert_no_selector "#channel-members [data-multi-select-target='bar']"
+    assert_equal lefts_before, member_avatar_lefts, "expected leaving selection mode to shift no rows"
+    assert_equal content_height_before, member_content_height, "expected hiding the bar to resize nothing"
+  end
+
+  test "people directory bar shifts no rows when toggling" do
+    visit users_path
+    assert_selector ".people-directory__row", minimum: 2
+
+    # The bar is the last child, so toggling it only grows or shrinks
+    # trailing space; no row may move.
+    tops_before = directory_row_tops
+    first(".people-directory__row input[type='checkbox']").click
+    assert_selector ".multi-select-bar", visible: true
+    assert_equal tops_before, directory_row_tops, "expected showing the bar to move no rows"
+
+    all(".people-directory__row input[type='checkbox']").each { |box| box.click if box.checked? }
+    assert_no_selector ".multi-select-bar"
+    assert_equal tops_before, directory_row_tops, "expected hiding the bar to move no rows"
+  end
+
+  test "people directory bar stays stuck while scrolling" do
+    12.times { |index| User.create!(name: "Sticky User #{index}", email_address: "sticky#{index}@example.test") }
+    page.current_window.resize_to(1400, 400)
+    visit users_path
+    assert_selector ".people-directory__row", minimum: 10
+    assert page.evaluate_script("(() => { const main = document.querySelector('#main-content'); return main.scrollHeight > main.clientHeight + 100; })()"),
+      "expected the list to scroll so the sticky check is real"
+
+    first(".people-directory__row input[type='checkbox']").click
+    assert_selector ".multi-select-bar", visible: true
+
+    # Mid-list: the bar must stick to the viewport bottom instead of
+    # scrolling away with the list end. (At the very top the bar's
+    # containing block clamps it a few pixels lower; scrolled in, the
+    # scrollport edge alone decides.)
+    page.execute_script("document.querySelector('#main-content').scrollTop = 100")
+    wait_until("expected the list to scroll") do
+      page.evaluate_script("document.querySelector('#main-content').scrollTop") == 100
+    end
+    geometry = page.evaluate_script(<<~JS)
+      (() => {
+        const bar = document.querySelector(".multi-select-bar").getBoundingClientRect();
+        const main = document.querySelector("#main-content").getBoundingClientRect();
+        return { barBottom: bar.bottom, mainBottom: main.bottom };
+      })()
+    JS
+    assert_operator geometry["barBottom"], :<=, geometry["mainBottom"] + 1,
+      "expected the bar stuck in view, got #{geometry.inspect}"
+  end
+
   test "mobile drawer keeps the room list scroll position across close and reopen" do
     user = users(:jz)
     15.times { |index| Rooms::Closed.create!(name: "Scroll room #{index}", creator: user).memberships.create!(user: user) }
@@ -127,6 +203,27 @@ class MotionTest < ApplicationSystemTestCase
 
   def motion_token(name)
     page.evaluate_script("getComputedStyle(document.documentElement).getPropertyValue('#{name}').trim()")
+  end
+
+  def ctrl_click(element)
+    page.driver.browser.action.key_down(:control).click(element.native).key_up(:control).perform
+  end
+
+  def member_avatar_lefts
+    page.evaluate_script(<<~JS)
+      Array.from(document.querySelectorAll("#channel-members .member-panel__member .member-panel__avatar"))
+        .map((avatar) => avatar.getBoundingClientRect().left)
+    JS
+  end
+
+  def member_content_height
+    page.evaluate_script("document.querySelector('#channel-members .member-panel__content').clientHeight")
+  end
+
+  def directory_row_tops
+    page.evaluate_script(<<~JS)
+      Array.from(document.querySelectorAll(".people-directory__row")).map((row) => row.getBoundingClientRect().top)
+    JS
   end
 
   def drawer_surface_tx

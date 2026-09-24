@@ -229,6 +229,9 @@ button.profile-card-avatar {
 .multi-select-bar[hidden] {
   display: none;
   opacity: 0;
+  /* The exit keeps the bar rendered while it slides out; it must not
+     catch clicks on its way out. */
+  pointer-events: none;
   transform: translateY(8px);
 }
 
@@ -253,6 +256,29 @@ button.profile-card-avatar {
     transform: translateY(8px);
   }
 }
+
+/* In the member panel the bar overlays the list end instead of taking
+   flex space, so showing, hiding, or exiting it never resizes the list.
+   The surface is the positioned ancestor in both drawer and grid modes.
+   While selecting, the content pads clear of the overlay (measured
+   109px without the note, ~160px with a wrapped note; 11rem covers both
+   with room). */
+.member-panel__surface .multi-select-bar {
+  inset-block-end: 0;
+  inset-inline: 0;
+  position: absolute;
+}
+
+.member-panel__surface.is-selecting .member-panel__content {
+  padding-block-end: 11rem;
+}
+
+/* The directory and picker keep the bar in-flow and sticky: it is the
+   last child, so toggling it only grows or shrinks trailing space and
+   no row ever moves. An overlaid sticky bar is not achievable: sticky
+   positioning uses the static position, which ignores both grid
+   alignment and auto margins, so a bar sharing the list's row renders
+   at the row start instead of its end. */
 
 .multi-select-bar__form {
   display: flex;
