@@ -9,6 +9,15 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "new answers JSON requests without raising" do
+    # Background polls redirected to sign in keep their JSON Accept
+    # header; the login page answers 401 instead of raising
+    # UnknownFormat, so the fetch fails quietly like any signed-out
+    # request instead of erroring the page (or test) it lands in.
+    get new_session_url(format: :json)
+    assert_response :unauthorized
+  end
+
   test "new redirects to first run when no users exist" do
     User.destroy_all
 

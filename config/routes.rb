@@ -157,6 +157,9 @@ Rails.application.routes.draw do
   end
 
   resources :rooms do
+    post :join, on: :member
+    delete :leave, on: :member
+
     resources :messages do
       post :preview, on: :collection
       get :actions, on: :member

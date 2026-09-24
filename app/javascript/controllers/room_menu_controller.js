@@ -10,12 +10,16 @@ export default class extends Controller {
   static targets = [
     "menu", "favoriteAction", "favoriteGlyph", "favoriteLabel", "moveUp", "moveDown",
     "muteAction", "muteLabel", "categoryGroup", "categoryList", "removeFromCategory",
-    "status"
+    "dangerGroup", "leaveAction", "deleteAction",
+    "confirmDialog", "confirmMessage", "confirmButton", "status"
   ]
+
+  static values = { flashKey: { type: String, default: "room-menu-flash" } }
 
   #row
   #open = false
   #announceTimer
+  #pending
 
   connect() {
     this.onContextMenu = this.#onContextMenu.bind(this)
@@ -24,13 +28,18 @@ export default class extends Controller {
     this.onDocumentPointerDown = this.#onDocumentPointerDown.bind(this)
     this.onWindowKeydown = this.#onWindowKeydown.bind(this)
     this.onBeforeCache = this.#onBeforeCache.bind(this)
+    this.onDialogClose = this.#onDialogClose.bind(this)
+    this.onPageLoad = this.#onPageLoad.bind(this)
 
     this.element.addEventListener("contextmenu", this.onContextMenu)
     this.element.addEventListener("keydown", this.onKeydown)
     this.menuTarget.addEventListener("keydown", this.onMenuKeydown)
+    this.confirmDialogTarget.addEventListener("close", this.onDialogClose)
     document.addEventListener("pointerdown", this.onDocumentPointerDown)
+    document.addEventListener("turbo:load", this.onPageLoad)
     window.addEventListener("keydown", this.onWindowKeydown)
     document.addEventListener("turbo:before-cache", this.onBeforeCache)
+    this.#showPendingFlash()
   }
 
   disconnect() {
@@ -38,7 +47,9 @@ export default class extends Controller {
     this.element.removeEventListener("contextmenu", this.onContextMenu)
     this.element.removeEventListener("keydown", this.onKeydown)
     this.menuTarget?.removeEventListener("keydown", this.onMenuKeydown)
+    this.confirmDialogTarget?.removeEventListener("close", this.onDialogClose)
     document.removeEventListener("pointerdown", this.onDocumentPointerDown)
+    document.removeEventListener("turbo:load", this.onPageLoad)
     window.removeEventListener("keydown", this.onWindowKeydown)
     document.removeEventListener("turbo:before-cache", this.onBeforeCache)
   }
@@ -79,6 +90,71 @@ export default class extends Controller {
     const response = await this.#assignCategoryRequest(null)
     if (!response?.ok) return this.#announce("Couldn’t remove from category")
     this.#reloadSidebar()
+  }
+
+  askLeave() {
+    const label = this.#row.dataset.menuRoomLabel
+    let message = `Leave #${label}? You'll stop seeing it in your sidebar.`
+    if (this.#row.dataset.menuDirectRoom === "true") {
+      message += " You can be added back later."
+    } else if (this.#row.dataset.menuOpenRoom !== "true") {
+      message += " Someone will need to add you back."
+    }
+    this.#askConfirm({
+      type: "leave",
+      url: this.#row.dataset.menuLeaveUrl,
+      roomId: this.#roomId,
+      message,
+      confirmLabel: "Leave",
+      destructive: false,
+    })
+  }
+
+  askDelete() {
+    const label = this.#row.dataset.menuRoomLabel
+    this.#askConfirm({
+      type: "delete",
+      url: `/rooms/${this.#roomId}`,
+      roomId: this.#roomId,
+      message: `Delete #${label} and all its messages? This can't be undone.`,
+      confirmLabel: "Delete",
+      destructive: true,
+      notice: `Deleted #${label}`,
+    })
+  }
+
+  cancelPending() {
+    this.confirmDialogTarget.close()
+  }
+
+  async confirmPending() {
+    const pending = this.#pending
+    this.confirmDialogTarget.close()
+    if (!pending) return
+
+    const response = await this.#request(pending.url, "DELETE")
+    if (!response?.ok) {
+      const verb = pending.type === "delete" ? "delete" : "leave"
+      this.#flashError(`Couldn’t ${verb} this room.`)
+      return
+    }
+
+    // The server broadcast removes the row everywhere for a delete, and for
+    // the leaver's other tabs on a leave. Remove it here too: leaving resets
+    // this member's cable connections, so the broadcast can land while this
+    // tab is reconnecting and never arrive.
+    this.#removeRows(pending.roomId)
+
+    if (this.#currentRoomId === pending.roomId) {
+      if (pending.notice) this.#savePendingFlash(pending.notice)
+      Turbo.visit("/")
+    } else if (pending.notice) {
+      this.#flashNotice(pending.notice)
+    }
+  }
+
+  #removeRows(roomId) {
+    this.element.querySelectorAll(`a[data-room-id="${CSS.escape(String(roomId))}"]`).forEach((row) => row.remove())
   }
 
   // Events
@@ -153,7 +229,33 @@ export default class extends Controller {
   }
 
   #onBeforeCache() {
+    this.#pending = null
+    if (this.confirmDialogTarget.open) this.confirmDialogTarget.close()
     this.#closeMenu({ restoreFocus: false })
+  }
+
+  #onDialogClose() {
+    const row = this.#pending?.row
+    this.#pending = null
+    if (row?.isConnected) row.focus()
+  }
+
+  // The sidebar frame is permanent across Turbo visits, so a notice saved
+  // before navigating home would never render on connect: every page load
+  // picks it up instead.
+  #onPageLoad() {
+    this.#showPendingFlash()
+  }
+
+  #showPendingFlash() {
+    let notice
+    try {
+      notice = sessionStorage.getItem(this.flashKeyValue)
+      if (notice) sessionStorage.removeItem(this.flashKeyValue)
+    } catch {
+      return
+    }
+    if (notice) this.#flashNotice(notice)
   }
 
   // Internal
@@ -179,6 +281,12 @@ export default class extends Controller {
 
     const muted = this.#row.dataset.menuMuted === "true"
     this.muteLabelTarget.textContent = muted ? "Unmute" : "Mute"
+
+    const canLeave = this.#row.dataset.menuCanLeave === "true"
+    const canDelete = this.#row.dataset.menuCanDelete === "true"
+    this.leaveActionTarget.hidden = !canLeave
+    this.deleteActionTarget.hidden = !canDelete
+    this.dangerGroupTarget.hidden = !canLeave && !canDelete
 
     const categorizable = this.#row.dataset.menuCategorizable === "true"
     // Fetched on every open: the sidebar frame reloads around the menu,
@@ -233,6 +341,59 @@ export default class extends Controller {
   #assignCategoryRequest(categoryId) {
     const body = categoryId ? { room_category_id: categoryId } : { room_category_id: "" }
     return this.#request(`/rooms/${this.#roomId}/category_assignment`, "PATCH", body)
+  }
+
+  #askConfirm(pending) {
+    this.#pending = { ...pending, row: this.#row }
+    this.#closeMenu({ restoreFocus: false })
+    this.confirmMessageTarget.textContent = pending.message
+    this.confirmButtonTarget.textContent = pending.confirmLabel
+    this.confirmButtonTarget.classList.toggle("btn--negative", pending.destructive)
+    this.confirmButtonTarget.classList.toggle("btn--reversed", !pending.destructive)
+    this.confirmDialogTarget.showModal()
+  }
+
+  #savePendingFlash(notice) {
+    try {
+      sessionStorage.setItem(this.flashKeyValue, notice)
+    } catch {
+      // Private browsing: the notice is lost with the navigation.
+    }
+  }
+
+  #flashNotice(message) {
+    this.#flash(message, false)
+  }
+
+  #flashError(message) {
+    this.#flash(message, true)
+  }
+
+  // A client-side flash matching the server flash markup: it removes
+  // itself on animationend through element-removal and inherits the
+  // reduced-motion persistence. The menu is closed by now, so there is
+  // nothing to announce into.
+  #flash(message, error) {
+    const flash = document.createElement("div")
+    flash.className = "flash flash--client"
+    flash.dataset.controller = "element-removal"
+    flash.dataset.action = "animationend->element-removal#remove"
+    flash.setAttribute("role", "alert")
+
+    const inner = document.createElement("div")
+    inner.className = "flash__inner flash__inner--text shadow"
+    if (error) inner.style.setProperty("--flash-background", "var(--color-negative)")
+    inner.textContent = message
+
+    const dismiss = document.createElement("button")
+    dismiss.type = "button"
+    dismiss.className = "flash__dismiss"
+    dismiss.dataset.action = "element-removal#remove"
+    dismiss.setAttribute("aria-label", "Dismiss notification")
+    dismiss.textContent = "×"
+
+    flash.append(inner, dismiss)
+    document.body.append(flash)
   }
 
   async #request(url, method, body) {
@@ -312,5 +473,9 @@ export default class extends Controller {
 
   get #roomId() {
     return this.#row.dataset.roomId
+  }
+
+  get #currentRoomId() {
+    return document.querySelector("meta[name='current-room-id']")?.content
   }
 }

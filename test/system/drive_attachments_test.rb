@@ -61,6 +61,17 @@ class DriveAttachmentsTest < ApplicationSystemTestCase
     assert_no_selector ".drive-attachment-chip"
 
     click_on "Save changes"
+
+    # The edit frame swaps the form for the rendered message body
+    # without navigating, and the form page carries chips rather than
+    # attachment links — so the no-attachment assertion below passes
+    # vacuously until the PATCH lands. Wait for the saved text first
+    # (the frame holds the body without the list's .message wrapper):
+    # the removal saves synchronously with the message, so once the
+    # rendered body proves the save completed, the database assertion
+    # is deterministic.
+    assert_selector ".message__body", text: "the file moved elsewhere", wait: 10
+
     assert_no_selector "a.drive-attachment"
     assert_empty Message.last.drive_attachments
   end
