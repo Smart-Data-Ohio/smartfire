@@ -88,6 +88,13 @@ any live stream whose presenter has had no in-call grant for thirty
 seconds, so no live state dangles behind a share that is already gone.
 When a host stops someone else's stream, the presenter's browser is notified through the huddle panel and stops sharing, instead of the share continuing as an ordinary screen share.
 
+When the last host membership disappears — the host leaves or is removed,
+or their user is deactivated — the whole live session ends, not just one
+stream: every live stream in the room ends and every active huddle grant in
+the room is revoked, dropping the remaining members from the call. Nobody
+can go live again until a host exists; an administrator member promotes a
+new host from the stage panel's role controls.
+
 ## Deliberately not included
 
 Recording, an external or public audience, and RTMP are not part of
