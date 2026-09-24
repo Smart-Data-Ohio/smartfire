@@ -1,5 +1,6 @@
 require "test_helper"
 require_relative "support/system_test_chrome_profile"
+require_relative "support/stale_node_retry"
 
 WebMock.disable!
 Capybara.enable_aria_label = true
