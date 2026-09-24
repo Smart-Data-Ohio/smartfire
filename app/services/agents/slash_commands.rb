@@ -9,7 +9,11 @@ module Agents
   # by another agent answers 422, and unregistering a name the agent
   # does not own answers 404 either way.
   class SlashCommands
-    def self.register(agent:, room_id:, name:, description: nil)
+    # takes_arguments defaults to true (picking inserts "/name " and waits);
+    # pass false for a command that takes no arguments so the composer runs
+    # it immediately when picked. An omitted flag keeps the stored value on
+    # re-registration.
+    def self.register(agent:, room_id:, name:, description: nil, takes_arguments: nil)
       room, denial = find_authorized_room(agent, room_id)
       return denial if denial
 
@@ -23,13 +27,14 @@ module Agents
       command ||= agent.agent_slash_commands.build(room: room)
       command.name = normalized
       command.description = description.to_s.strip.presence
+      command.takes_arguments = ActiveModel::Type::Boolean.new.cast(takes_arguments) unless takes_arguments.nil?
 
       begin
         command.save!
       rescue ActiveRecord::RecordInvalid => error
         return ServiceResult.fail(error.record.errors.full_messages.to_sentence)
       rescue ActiveRecord::RecordNotUnique
-        return adopt_race_winner(agent, room, normalized, description)
+        return adopt_race_winner(agent, room, normalized, description, takes_arguments)
       end
 
       ServiceResult.ok(command_payload(command), status: :created)
@@ -60,7 +65,7 @@ module Agents
     private_class_method :find_authorized_room
 
     def self.command_payload(command)
-      { name: command.name, description: command.description, room_id: command.room_id, agent_id: command.agent_id }
+      { name: command.name, description: command.description, room_id: command.room_id, agent_id: command.agent_id, takes_arguments: command.takes_arguments }
     end
     private_class_method :command_payload
 
@@ -68,11 +73,13 @@ module Agents
     # lookup and the save. Adopt the outcome instead of erroring: a
     # name that landed on this agent completes the re-registration,
     # anything else held reports taken like the lookup path does.
-    def self.adopt_race_winner(agent, room, name, description)
+    def self.adopt_race_winner(agent, room, name, description, takes_arguments)
       winner = AgentSlashCommand.find_by(room_id: room.id, name: name)
 
       if winner&.agent_id == agent.id
-        if winner.update(description: description.to_s.strip.presence)
+        attributes = { description: description.to_s.strip.presence }
+        attributes[:takes_arguments] = ActiveModel::Type::Boolean.new.cast(takes_arguments) unless takes_arguments.nil?
+        if winner.update(attributes)
           ServiceResult.ok(command_payload(winner), status: :created)
         else
           ServiceResult.fail(winner.errors.full_messages.to_sentence)

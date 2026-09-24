@@ -3,8 +3,10 @@ import { escapeHTML } from "helpers/string_helpers"
 
 // Slash-command picker: active only when the word being typed starts at
 // the very beginning of the composer ("/" opens it, matching Discord and
-// Slack). Committing "/poll" inserts the command plus a trailing space
-// so the author can keep typing arguments.
+// Slack). Committing an argument command inserts "/command " so the author
+// can keep typing arguments; committing a no-argument command
+// (takes_arguments false) runs it immediately through the composer's Send
+// control, the same path as a manual submit.
 export default class MarkdownSlashCommandsAutocompleteHandler extends BaseAutocompleteHandler {
   get pattern() {
     return /^\/(.*?)$/
@@ -58,6 +60,16 @@ export default class MarkdownSlashCommandsAutocompleteHandler extends BaseAutoco
     const replacement = `/${autocompletable.value} `
     this.element.setRangeText(replacement, range[0], range[1], "end")
     this.element.dispatchEvent(new Event("input", { bubbles: true }))
+
+    // No-argument commands run at once. The trailing space still closes
+    // the picker through the normal deactivating update, and clicking
+    // Send routes through composer#submit exactly like a manual submit
+    // (a second Enter while the submit is in flight is a harmless
+    // no-op). An unknown flag defaults to inserting: never run
+    // something the server didn't mark immediate.
+    if (autocompletable.takes_arguments === false) {
+      this.element.closest("form")?.querySelector('[data-composer-target="send"]')?.click()
+    }
   }
 
   fetchResultsForQuery(query, callback) {
@@ -69,13 +81,33 @@ export default class MarkdownSlashCommandsAutocompleteHandler extends BaseAutoco
 
   didShowResults(selectElement) {
     selectElement.classList.add("markdown-autocomplete")
+
+    // The results HTML re-renders on every query, so delegate from the
+    // list itself: one listener survives innerHTML swaps. mousedown (with
+    // preventDefault, so the textarea never blurs and destroys the
+    // picker first) covers mouse; click covers tap.
+    if (!selectElement.dataset.slashCloseInstalled) {
+      selectElement.dataset.slashCloseInstalled = "true"
+      const close = (event) => {
+        if (!event.target.closest(".suggestion__close")) return
+        event.preventDefault()
+        event.stopPropagation()
+        this.suggestionController?.cancel()
+      }
+      selectElement.addEventListener("mousedown", close, true)
+      selectElement.addEventListener("click", close, true)
+    }
   }
 
   #renderSuggestions(autocompletables) {
-    return autocompletables.map(command => {
+    if (autocompletables.length === 0) return ""
+
+    const close = `<button type="button" class="suggestion__close" aria-label="Close suggestions">✕</button>`
+    return close + autocompletables.map(command => {
       const name = escapeHTML(`/${command.name}`)
       const description = escapeHTML(command.description || "")
-      const hint = command.arg_hint ? ` <span class="slash-command__hint">${escapeHTML(command.arg_hint)}</span>` : ""
+      const hintText = command.takes_arguments === false ? "runs now" : command.arg_hint
+      const hint = hintText ? ` <span class="slash-command__hint">${escapeHTML(hintText)}</span>` : ""
       const agent = command.agent ? ` <small>by ${escapeHTML(command.agent)}</small>` : ""
 
       return `

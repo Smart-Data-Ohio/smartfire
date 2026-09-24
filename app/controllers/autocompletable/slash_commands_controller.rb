@@ -9,13 +9,13 @@ class Autocompletable::SlashCommandsController < ApplicationController
     thread = room.channel_threads.find(params[:thread_id]) if params[:thread_id].present?
 
     commands = SlashCommands::Registry.available_for(Current.user, room, thread: thread).map do |command|
-      { name: command.name, value: command.name, description: command.description, arg_hint: command.arg_hint, agent: nil }
+      { name: command.name, value: command.name, description: command.description, arg_hint: command.arg_hint, takes_arguments: command.takes_arguments, agent: nil }
     end
     commands += room.agent_slash_commands.includes(:agent).ordered.map do |registration|
       {
         name: registration.name, value: registration.name,
         description: registration.description.presence || "Custom command",
-        arg_hint: "", agent: registration.agent.user.name
+        arg_hint: "", takes_arguments: registration.takes_arguments, agent: registration.agent.user.name
       }
     end
 

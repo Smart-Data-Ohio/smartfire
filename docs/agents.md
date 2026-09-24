@@ -915,9 +915,13 @@ built-ins, ephemeral answers).
 
 - `POST /rooms/:room_id/agents/slash_commands` registers a command
   (`name` without the leading slash, lowercase; optional
-  `description`). Re-registering the agent's own name updates its
-  description. Names are unique per room across agents, so a name held
-  by another agent answers 422, as does a name shadowing a built-in.
+  `description`; optional `takes_arguments`, default true). Pass
+  `takes_arguments: false` for a command that takes no arguments so the
+  composer runs it immediately when picked instead of inserting `/name `
+  and waiting. Re-registering the agent's own name updates its
+  description (an omitted flag keeps the stored value). Names are unique
+  per room across agents, so a name held by another agent answers 422,
+  as does a name shadowing a built-in.
 - `DELETE /rooms/:room_id/agents/slash_commands/:name` unregisters
   one of the agent's own commands. A name the agent does not own
   answers 404.
