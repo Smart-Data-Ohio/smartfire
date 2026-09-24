@@ -150,7 +150,7 @@ class ComposerAttachMenuTest < ApplicationSystemTestCase
         const items = Array.from(document.querySelectorAll(".attach-menu [role='menuitem']"))
           .map((item) => item.getBoundingClientRect().height);
         return {
-          menu: { left: menu.left, right: menu.right, top: menu.top, bottom: menu.bottom },
+          menu: { left: menu.left, right: menu.right, top: menu.top, bottom: menu.bottom, height: menu.height },
           buttonTop: button.top,
           items,
           overflow: document.documentElement.scrollWidth > window.innerWidth + 1,
@@ -167,7 +167,10 @@ class ComposerAttachMenuTest < ApplicationSystemTestCase
     assert_not_empty geometry["items"]
     geometry["items"].each do |height|
       assert_operator height, :>=, 44, "expected menu items at least 44px tall"
+      assert_operator height, :<=, 64, "menu items must not stretch to fill the viewport"
     end
+    assert_operator geometry["menu"]["height"], :<=, geometry["items"].sum + 40,
+      "the menu must size to its items, not grow toward the viewport height"
   ensure
     page.current_window.resize_to(1400, 1400)
   end
