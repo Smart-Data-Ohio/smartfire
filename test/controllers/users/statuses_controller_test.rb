@@ -119,13 +119,15 @@ class Users::StatusesControllerTest < ActionDispatch::IntegrationTest
   test "sets out of office with a custom date and time in the member's zone" do
     users(:david).update!(time_zone: "Pacific Time (US & Canada)")
 
+    # Relative so the suite never ages past it; mid-afternoon stays
+    # clear of daylight-saving transitions when parsed back.
+    custom = 7.days.from_now.in_time_zone("Pacific Time (US & Canada)").change(hour: 15, min: 30, sec: 0)
     patch user_status_url, params: {
-      user: { ooo_preset: "custom", ooo_until_custom: "2026-10-01T15:30" }
+      user: { ooo_preset: "custom", ooo_until_custom: custom.strftime("%Y-%m-%dT%H:%M") }
     }
 
     assert_redirected_to user_profile_url
-    assert_in_delta Time.zone.parse("2026-10-01T15:30:00-07:00").to_f,
-      users(:david).reload.ooo_until.to_f, 1
+    assert_in_delta custom.to_f, users(:david).reload.ooo_until.to_f, 1
   end
 
   test "rejects an unknown OOO preset without saving anything" do

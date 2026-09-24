@@ -57,6 +57,24 @@ And the browser-based system tests with:
 bin/rails test:system
 ```
 
+### Checking for date-dependent tests
+
+`TEST_CLOCK_OFFSET_DAYS` shifts the suite clock forward by that many days,
+so hard-coded dates and future-date validations get exercised as if the
+suite ran on that future date:
+
+```sh
+TEST_CLOCK_OFFSET_DAYS=30 bin/rails test
+```
+
+Fixture ERB (`1.hour.ago`, ...) evaluates under the shifted clock, and
+tests that pin their own clock with `travel_to` are unaffected. Two
+caveats: the clock is frozen within each test, so an assertion that needs
+time to pass must advance it explicitly with `travel`; and system tests
+only shift the server process — the browser keeps real time, so
+browser-computed dates (schedule-send and reminder presets) fail
+server-side future validations under an offset.
+
 Before pushing your changes, you can run the full CI suite locally - style checks, security audits, and all the tests - with a single command:
 
 ```sh

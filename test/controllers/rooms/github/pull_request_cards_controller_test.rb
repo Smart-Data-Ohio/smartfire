@@ -117,7 +117,12 @@ class Rooms::Github::PullRequestCardsControllerTest < ActionDispatch::Integratio
       assert_select ".github-pr-card", count: 0
 
       # Same token, same second: the relink alone must retire the denial.
-      post github_connection_url, params: { access_token: "alpha-link" }
+      # The tenth of a second keeps the relink's updated_at distinct from
+      # the link's even under a frozen test clock (see
+      # ClockOffsetTestHelper); with_usec keeps the sub-second travel.
+      travel 0.1.seconds, with_usec: true do
+        post github_connection_url, params: { access_token: "alpha-link" }
+      end
       assert_redirected_to user_profile_path
 
       stub_request(:get, "https://api.github.com/repos/acme/secret")

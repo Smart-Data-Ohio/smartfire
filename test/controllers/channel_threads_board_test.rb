@@ -471,12 +471,17 @@ class ChannelThreadsBoardTest < ActionDispatch::IntegrationTest
     get room_url(@room)
     assert_response :success
 
+    # Identical icon-cache state per leg: the custom-icon stamp query
+    # re-fires on a one-second monotonic TTL, which a slow gap between
+    # the legs would otherwise trip.
+    Icons.expire_custom_cache!
     small = count_board_queries { get room_url(@room) }
     assert_response :success
     assert_select "#board_posts .board-row", count: 3
 
     create_board_posts(4, offset: 10)
 
+    Icons.expire_custom_cache!
     large = count_board_queries { get room_url(@room) }
     assert_response :success
     assert_select "#board_posts .board-row", count: 7

@@ -66,7 +66,11 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     get room_messages_url(@room), headers: { "If-None-Match" => etag }
     assert_response :not_modified
 
-    put room_message_url(@room, source), params: { message: { markdown_source: "etag source edited" } }
+    # A second passes so the edit's stamp lands after the page load's
+    # even under a frozen test clock (see ClockOffsetTestHelper).
+    travel 1.second do
+      put room_message_url(@room, source), params: { message: { markdown_source: "etag source edited" } }
+    end
 
     get room_messages_url(@room), headers: { "If-None-Match" => etag }
     assert_response :success
@@ -86,7 +90,11 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     get room_messages_url(@room), headers: { "If-None-Match" => etag }
     assert_response :not_modified
 
-    pull_request.update!(title: "After fetch", fetched_at: Time.current)
+    # A second passes so the fetch's stamp lands after the page load's
+    # even under a frozen test clock (see ClockOffsetTestHelper).
+    travel 1.second do
+      pull_request.update!(title: "After fetch", fetched_at: Time.current)
+    end
 
     get room_messages_url(@room), headers: { "If-None-Match" => etag }
     assert_response :success
@@ -102,7 +110,11 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     get room_messages_url(@room), headers: { "If-None-Match" => etag }
     assert_response :not_modified
 
-    users(:jason).update!(name: "Jason Renamed")
+    # A second passes so the rename's stamp lands after the page load's
+    # even under a frozen test clock (see ClockOffsetTestHelper).
+    travel 1.second do
+      users(:jason).update!(name: "Jason Renamed")
+    end
 
     get room_messages_url(@room), headers: { "If-None-Match" => etag }
     assert_response :success

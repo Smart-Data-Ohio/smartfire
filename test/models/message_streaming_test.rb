@@ -155,7 +155,12 @@ class MessageStreamingTest < ActiveSupport::TestCase
     end
     assert_equal 1, ActionCable.server.pubsub.broadcasts(stream).size
 
-    perform_enqueued_jobs(only: Message::StreamTrailingBroadcastJob)
+    # Past the throttle window, so the trailing broadcast lands instead
+    # of coalescing again; with_usec keeps the sub-second travel (see
+    # ClockOffsetTestHelper).
+    travel (Message::STREAM_BROADCAST_INTERVAL + 0.1.seconds), with_usec: true do
+      perform_enqueued_jobs(only: Message::StreamTrailingBroadcastJob)
+    end
 
     broadcasts = ActionCable.server.pubsub.broadcasts(stream)
     assert_equal 2, broadcasts.size

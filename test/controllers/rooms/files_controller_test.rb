@@ -103,10 +103,15 @@ class Rooms::FilesControllerTest < ActionDispatch::IntegrationTest
     get room_files_url(@room)
     assert_response :success
 
+    # Identical icon-cache state per leg: the custom-icon stamp query
+    # re-fires on a one-second monotonic TTL, which a slow gap between
+    # the legs would otherwise trip.
+    Icons.expire_custom_cache!
     few = count_queries { get room_files_url(@room) }
 
     seed_files(6)
 
+    Icons.expire_custom_cache!
     many = count_queries { get room_files_url(@room) }
 
     assert_equal few, many

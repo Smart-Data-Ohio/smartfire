@@ -74,7 +74,7 @@ class EventsTest < ApplicationSystemTestCase
       assert_text "3 occurrences remaining"
     end
 
-    head = Event.where(title: "Weekly planning").order(:created_at).first
+    head = Event.where(title: "Weekly planning").order(:created_at, :id).first
     occurrences = head.series_events.to_a
     assert_equal 3, occurrences.size
     assert_equal 1, ActivityItem.where(user: users(:jason), source: occurrences).count

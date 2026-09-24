@@ -17,7 +17,7 @@ class Event::ChannelTimelineTest < ActiveSupport::TestCase
       )
     end
 
-    announcement = @room.root_messages.order(:created_at).last
+    announcement = @room.root_messages.order(:created_at, :id).last
     assert_equal @organizer, announcement.creator
     assert_equal "Scheduled an event: Planning session\n/rooms/#{@room.id}/events/#{event.id}",
       announcement.markdown_source
@@ -37,7 +37,7 @@ class Event::ChannelTimelineTest < ActiveSupport::TestCase
     occurrences = head.series_events.to_a
     assert_operator occurrences.size, :>, 1
 
-    announcement = @room.root_messages.order(:created_at).last
+    announcement = @room.root_messages.order(:created_at, :id).last
     assert_equal "Scheduled an event: Weekly planning\n/rooms/#{@room.id}/events/#{head.id}",
       announcement.markdown_source
     assert_equal [ head ], announcement.events
@@ -56,7 +56,7 @@ class Event::ChannelTimelineTest < ActiveSupport::TestCase
   test "the announcement creates no inbox items" do
     create_event!
 
-    announcement = @room.root_messages.order(:created_at).last
+    announcement = @room.root_messages.order(:created_at, :id).last
     assert_empty ActivityItem.where(source: announcement)
   end
 

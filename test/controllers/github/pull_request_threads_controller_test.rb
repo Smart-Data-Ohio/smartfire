@@ -22,7 +22,7 @@ class Github::PullRequestThreadsControllerTest < ActionDispatch::IntegrationTest
       end
     end
 
-    thread = @room.channel_threads.order(:created_at).last
+    thread = @room.channel_threads.order(:created_at, :id).last
     assert_redirected_to room_thread_path(@room, thread)
     assert_equal @message, thread.parent_message
     assert_equal users(:david), thread.creator
@@ -35,7 +35,7 @@ class Github::PullRequestThreadsControllerTest < ActionDispatch::IntegrationTest
   test "discuss reuses the room's existing thread for the PR" do
     post room_github_pull_request_threads_url(@room),
       params: { pull_request_id: @pull_request.id, message_id: @message.id }
-    thread = @room.channel_threads.order(:created_at).last
+    thread = @room.channel_threads.order(:created_at, :id).last
 
     other_message = @room.messages.create!(
       creator: users(:jz),

@@ -56,10 +56,15 @@ class Users::SidebarsNavigationTest < ActionDispatch::IntegrationTest
 
     get user_sidebar_url
     assert_response :success
+    # Identical icon-cache state per leg: the custom-icon stamp query
+    # re-fires on a one-second monotonic TTL, which a slow gap between
+    # the legs would otherwise trip.
+    Icons.expire_custom_cache!
     small = count_queries { get user_sidebar_url }
 
     seed_sidebar_rooms(offset: 10)
 
+    Icons.expire_custom_cache!
     large = count_queries { get user_sidebar_url }
     assert_response :success
 

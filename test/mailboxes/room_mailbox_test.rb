@@ -27,7 +27,7 @@ class RoomMailboxTest < ActionMailbox::TestCase
       )
     end
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_equal users(:david), message.creator
     assert_includes message.markdown_source, "We ship Friday."
     assert_includes message.markdown_source, "Launch update"
@@ -39,13 +39,13 @@ class RoomMailboxTest < ActionMailbox::TestCase
       authentication_results: "mx.mail.test; dkim=pass header.d=37signals.com"
     )
 
-    assert_equal users(:david), @room.messages.order(:created_at).last.creator
+    assert_equal users(:david), @room.messages.order(:created_at, :id).last.creator
   end
 
   test "a member From without an authentication pass posts as the Email bot" do
     deliver_room_mail(from: "david@37signals.com", body: "Totally from David.")
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_equal "Email", message.creator.name
     assert_predicate message.creator, :bot?
     assert_includes message.markdown_source, "david@37signals.com"
@@ -57,7 +57,7 @@ class RoomMailboxTest < ActionMailbox::TestCase
       authentication_results: "mx.mail.test; dmarc=pass (p=REJECT) header.from=37signals.com"
     )
 
-    assert_equal users(:david), @room.messages.order(:created_at).last.creator
+    assert_equal users(:david), @room.messages.order(:created_at, :id).last.creator
   end
 
   test "a pass for another domain posts as the Email bot" do
@@ -66,7 +66,7 @@ class RoomMailboxTest < ActionMailbox::TestCase
       authentication_results: "mx.mail.test; dkim=pass header.d=evil.test"
     )
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_equal "Email", message.creator.name
     assert_includes message.markdown_source, "david@37signals.com"
   end
@@ -78,7 +78,7 @@ class RoomMailboxTest < ActionMailbox::TestCase
       authentication_results: "mx.mail.test; dkim=pass header.d=37signals.com"
     )
 
-    assert_equal "Email", @room.messages.order(:created_at).last.creator.name
+    assert_equal "Email", @room.messages.order(:created_at, :id).last.creator.name
   end
 
   test "a forged header with the wrong authserv-id posts as the Email bot" do
@@ -87,7 +87,7 @@ class RoomMailboxTest < ActionMailbox::TestCase
       authentication_results: "attacker.test; dkim=pass header.d=37signals.com"
     )
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_equal "Email", message.creator.name
     assert_includes message.markdown_source, "david@37signals.com"
   end
@@ -98,7 +98,7 @@ class RoomMailboxTest < ActionMailbox::TestCase
       authentication_results: "mx.mail.test; spf=pass smtp.helo=37signals.com"
     )
 
-    assert_equal "Email", @room.messages.order(:created_at).last.creator.name
+    assert_equal "Email", @room.messages.order(:created_at, :id).last.creator.name
   end
 
   test "an SPF pass on mailfrom posts as the member" do
@@ -107,7 +107,7 @@ class RoomMailboxTest < ActionMailbox::TestCase
       authentication_results: "mx.mail.test; spf=pass smtp.mailfrom=david@37signals.com"
     )
 
-    assert_equal users(:david), @room.messages.order(:created_at).last.creator
+    assert_equal users(:david), @room.messages.order(:created_at, :id).last.creator
   end
 
   test "a forged passing header above the relay's failing one posts as the Email bot" do
@@ -116,7 +116,7 @@ class RoomMailboxTest < ActionMailbox::TestCase
       "mx.mail.test; dkim=fail header.d=37signals.com"
     ))
 
-    assert_equal "Email", @room.messages.order(:created_at).last.creator.name
+    assert_equal "Email", @room.messages.order(:created_at, :id).last.creator.name
   end
 
   test "the relay's passing header below a forged one posts as the member" do
@@ -125,7 +125,7 @@ class RoomMailboxTest < ActionMailbox::TestCase
       "mx.mail.test; dkim=pass header.d=37signals.com"
     ))
 
-    assert_equal users(:david), @room.messages.order(:created_at).last.creator
+    assert_equal users(:david), @room.messages.order(:created_at, :id).last.creator
   end
 
   test "mail from a non-member posts as the Email bot with the sender shown" do
@@ -134,7 +134,7 @@ class RoomMailboxTest < ActionMailbox::TestCase
       subject: "Tip", body: "Saw this."
     )
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_equal "Email", message.creator.name
     assert_predicate message.creator, :bot?
     assert_includes message.markdown_source, "outsider@example.com"
@@ -150,7 +150,7 @@ class RoomMailboxTest < ActionMailbox::TestCase
       from: other.email_address, to: room_address, body: "Hello"
     )
 
-    assert_equal "Email", @room.messages.order(:created_at).last.creator.name
+    assert_equal "Email", @room.messages.order(:created_at, :id).last.creator.name
   end
 
   test "an unknown token posts nothing" do
@@ -212,7 +212,7 @@ class RoomMailboxTest < ActionMailbox::TestCase
 
     receive_inbound_email_from_source(mail.to_s)
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_includes message.markdown_source, "Hello"
     assert_not_includes message.markdown_source, "<script>"
     assert_not_includes message.markdown_source, "alert("
@@ -225,7 +225,7 @@ class RoomMailboxTest < ActionMailbox::TestCase
 
     receive_inbound_email_from_source(mail.to_s)
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert message.attachment.attached?
     assert_equal "notes.txt", message.attachment.filename.to_s
     assert_includes message.markdown_source, "notes.txt"
@@ -240,7 +240,7 @@ class RoomMailboxTest < ActionMailbox::TestCase
 
     receive_inbound_email_from_source(mail.to_s)
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert message.attachment.attached?
     assert_equal "near.docx", message.attachment.filename.to_s
   end
@@ -251,7 +251,7 @@ class RoomMailboxTest < ActionMailbox::TestCase
 
     receive_inbound_email_from_source(mail.to_s)
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_not message.attachment.attached?
     assert_includes message.markdown_source, "big.bin (not attached: over the 10 MB limit)"
   end
@@ -262,7 +262,7 @@ class RoomMailboxTest < ActionMailbox::TestCase
 
     receive_inbound_email_from_source(mail.to_s)
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_not message.attachment.attached?
     assert_includes message.markdown_source, "tool.exe (not attached: file type not allowed)"
   end
@@ -273,7 +273,7 @@ class RoomMailboxTest < ActionMailbox::TestCase
 
     receive_inbound_email_from_source(mail.to_s)
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert message.attachment.attached?
     assert_equal "report.docx", message.attachment.filename.to_s
   end
@@ -284,7 +284,7 @@ class RoomMailboxTest < ActionMailbox::TestCase
 
     receive_inbound_email_from_source(mail.to_s)
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert message.attachment.attached?
     assert_equal "photo.png", message.attachment.filename.to_s
   end

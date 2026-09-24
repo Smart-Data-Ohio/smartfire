@@ -47,3 +47,14 @@ class ActiveSupport::TestCase
     WebMock.reset!
   end
 end
+
+# Suite-wide clock shifter for hunting date-dependent tests (see
+# test/test_helpers/clock_offset.rb). TEST_CLOCK_OFFSET_DAYS=0 or unset
+# runs the suite at the real time.
+TEST_CLOCK_OFFSET_DAYS = ENV.fetch("TEST_CLOCK_OFFSET_DAYS", "0").to_i
+TEST_CLOCK_OFFSET = TEST_CLOCK_OFFSET_DAYS.zero? ? nil : TEST_CLOCK_OFFSET_DAYS.days
+
+if TEST_CLOCK_OFFSET
+  require_relative "test_helpers/clock_offset"
+  ActiveSupport::TestCase.prepend(ClockOffsetTestHelper)
+end

@@ -102,7 +102,12 @@ class AgentCredentialTest < ActiveSupport::TestCase
     assert_equal "203.0.113.7", credential.reload.last_used_ip
 
     credential.update_columns(last_used_at: 61.seconds.ago)
-    credential.record_use!("198.51.100.9")
+
+    # A second passes so the new stamp lands after the first one even
+    # under a frozen test clock (see ClockOffsetTestHelper).
+    travel 1.second do
+      credential.record_use!("198.51.100.9")
+    end
     credential.reload
 
     assert credential.last_used_at > first_stamp

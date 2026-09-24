@@ -156,10 +156,15 @@ class EventCardsTest < ActionDispatch::IntegrationTest
     get room_url(@room)
     assert_response :success
 
+    # Identical icon-cache state per leg: the custom-icon stamp query
+    # re-fires on a one-second monotonic TTL, which a slow gap between
+    # the legs would otherwise trip.
+    Icons.expire_custom_cache!
     small = count_queries { get room_url(@room) }
     assert_response :success
 
     create_event_messages(4, offset: 10)
+    Icons.expire_custom_cache!
     large = count_queries { get room_url(@room) }
     assert_response :success
 
