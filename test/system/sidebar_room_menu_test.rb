@@ -144,6 +144,11 @@ class SidebarRoomMenuTest < ApplicationSystemTestCase
     row_for(rooms(:designers)).send_keys(:shift, :f10)
     assert_selector "#room-menu:not([hidden])", wait: 5
 
+    # The menu focuses its first item on the next animation frame, while
+    # page.send_keys dispatches to the element holding focus when the
+    # command is built — and refocuses it first. Sending End before the
+    # frame lands would yank focus back to the row and swallow the key.
+    assert_focused "#room-menu [data-room-menu-target='favoriteAction']"
     page.send_keys(:end)
     assert_focused "#room-menu [data-room-menu-target='deleteAction']"
 
@@ -187,10 +192,9 @@ class SidebarRoomMenuTest < ApplicationSystemTestCase
 
     within(".room-menu__confirm") do
       assert_text "Leave #HQ? You'll stop seeing it in your sidebar."
-      click_on "Leave"
     end
+    confirm_leave_and_wait_for_removal(room)
 
-    assert_no_selector "#sidebar a[data-room-id='#{room.id}']", wait: 10
     assert_not room.reload.user_ids.include?(users(:jz).id)
     assert_not_predicate room, :deleted?
 
@@ -212,10 +216,9 @@ class SidebarRoomMenuTest < ApplicationSystemTestCase
 
     within(".room-menu__confirm") do
       assert_text "Leave #Designers? You'll stop seeing it in your sidebar. Someone will need to add you back."
-      click_on "Leave"
     end
+    confirm_leave_and_wait_for_removal(room)
 
-    assert_no_selector "#sidebar a[data-room-id='#{room.id}']", wait: 10
     assert_not_predicate room.reload, :deleted?
 
     entry = AuditLog.where(action: "room.membership.change", target_id: room.id).last
@@ -245,9 +248,8 @@ class SidebarRoomMenuTest < ApplicationSystemTestCase
 
     open_room_menu room
     within("#room-menu") { click_on "Leave" }
-    within(".room-menu__confirm") { click_on "Leave" }
+    confirm_leave_and_wait_for_removal(room)
 
-    assert_no_selector "#sidebar a[data-room-id='#{room.id}']", wait: 10
     assert_not_predicate room.reload, :deleted?
     assert_empty room.memberships
   end
@@ -265,9 +267,22 @@ class SidebarRoomMenuTest < ApplicationSystemTestCase
     [ rooms(:hq), rooms(:designers), board, voice, stage ].each do |room|
       open_room_menu room
       within("#room-menu") { click_on "Leave" }
-      within(".room-menu__confirm") { click_on "Leave" }
+      leaving_current = current_path == room_path(room)
+      confirm_leave_and_wait_for_removal(room)
 
-      assert_no_selector "#sidebar a[data-room-id='#{room.id}']", wait: 10
+      if leaving_current
+        # Leaving the room you're in navigates home: the next
+        # right-click would be swallowed mid-navigation, and the next
+        # leave's removal broadcast would be lost before the new page
+        # resubscribes. The landing varies (a room, or the welcome page
+        # after the last room), so settle its own streams rather than
+        # the room-page minimum.
+        page.document.synchronize(10) do
+          raise Capybara::ExpectationNotMet if current_path == room_path(room)
+        end
+        wait_for_stream_resubscribe
+      end
+
       room.reload
       assert_not_predicate room, :deleted?
       assert_not room.user_ids.include?(jz.id)
@@ -284,9 +299,8 @@ class SidebarRoomMenuTest < ApplicationSystemTestCase
 
     open_room_menu group
     within("#room-menu") { click_on "Leave" }
-    within(".room-menu__confirm") { click_on "Leave" }
+    confirm_leave_and_wait_for_removal(group)
 
-    assert_no_selector "#sidebar a[data-room-id='#{group.id}']", wait: 10
     assert_not group.reload.user_ids.include?(users(:jz).id)
     assert_not_predicate group, :deleted?
   end
@@ -296,8 +310,55 @@ class SidebarRoomMenuTest < ApplicationSystemTestCase
       find("#sidebar a[data-room-id='#{room.id}']")
     end
 
-    def open_room_menu(room)
-      row_for(room).right_click
-      assert_selector "#room-menu:not([hidden])", wait: 5
+    def open_room_menu(room, attempts: 3)
+      # A right-click that lands while the sidebar frame reloads (every
+      # leave and delete reconnects the cable, which reloads the frame)
+      # or mid-navigation is swallowed: the room-menu controller is
+      # momentarily disconnected, so the menu never opens. Re-issue the
+      # gesture against a fresh row until the menu answers.
+      attempts.times do |attempt|
+        begin
+          row_for(room).right_click
+          assert_selector "#room-menu:not([hidden])", wait: 5
+          return
+        rescue Minitest::Assertion, Capybara::ElementNotFound, Selenium::WebDriver::Error::StaleElementReferenceError
+          raise if attempt + 1 >= attempts
+        end
+      end
+    end
+
+    # Confirms the open leave dialog, waits for the server side of the
+    # leave, then asserts the broadcast-driven row removal. The audit row
+    # is written before the DELETE responds, so its presence proves the
+    # request completed; the removal broadcast can overtake it, so any
+    # audit assertion after the row disappears would race the request.
+    def confirm_leave_and_wait_for_removal(room)
+      within(".room-menu__confirm") { click_on "Leave" }
+      wait_for_audit_log(action: "room.membership.change", target_id: room.id)
+      assert_no_selector "#sidebar a[data-room-id='#{room.id}']", wait: 10
+    end
+
+    def wait_for_audit_log(action:, target_id:, timeout: 10)
+      deadline = Time.now + timeout
+      until AuditLog.where(action: action, target_id: target_id).exists?
+        raise Minitest::Assertion, "expected an #{action} audit row for room ##{target_id} within #{timeout}s" if Time.now > deadline
+
+        sleep 0.05
+      end
+    end
+
+    # Waits until every Turbo stream source on the current page is
+    # connected, however many it renders. Unlike
+    # wait_for_cable_connection (which pins the room-page minimum of
+    # three), this also settles the welcome page, which renders only
+    # the layout's two.
+    def wait_for_stream_resubscribe(wait: 15)
+      page.document.synchronize(wait) do
+        total = all("turbo-cable-stream-source", visible: false, wait: 0).size
+        connected = all("turbo-cable-stream-source[connected]", visible: false, wait: 0).size
+        if total.zero? || connected != total
+          raise Capybara::ExpectationNotMet, "expected all #{total} turbo-cable-stream-sources connected, #{connected} connected"
+        end
+      end
     end
 end
