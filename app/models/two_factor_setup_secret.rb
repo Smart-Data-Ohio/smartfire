@@ -1,11 +1,12 @@
-# Unconfirmed TOTP secret for the setup page, bound to one session. Each
-# visit to setup issues a fresh secret for the current session, so someone
+# Unconfirmed TOTP secret for the setup page, bound to one session. Setup
+# reuses the session's live secret across reloads; a new session gets its
+# own secret, so someone
 # who opens setup with only the password cannot learn the secret another
 # session later confirms: confirming only ever uses this session's pending
 # secret. The secret is encrypted at rest; expired rows are pruned by the
 # retention job.
 class TwoFactorSetupSecret < ApplicationRecord
-  TTL = 15.minutes
+  TTL = 30.minutes
 
   belongs_to :session
 
@@ -34,6 +35,12 @@ class TwoFactorSetupSecret < ApplicationRecord
   def self.valid_for(session)
     record = find_by(session_id: session.id)
     record unless record.nil? || record.expired?
+  end
+
+  # Keeps a secret the member is still working with alive while they
+  # switch to their authenticator app and back.
+  def extend_expiry!
+    update!(expires_at: TTL.from_now)
   end
 
   def expired?

@@ -258,7 +258,12 @@ input[data-multi-select-target="checkbox"],
   font-size: 0.8rem;
 }
 
-/* New-DM picker list. */
+/* New-DM picker. The filter input shrinks inside the top bar instead of
+   pushing the sidebar wider than the phone. */
+.dm-picker__topbar {
+  min-inline-size: 0;
+}
+
 .dm-picker__list {
   display: flex;
   flex-direction: column;
@@ -268,14 +273,54 @@ input[data-multi-select-target="checkbox"],
   padding: 0;
 }
 
+/* Compact rows with 32px avatars; the whole row is the tap target (the
+   dm-picker controller toggles the checkbox for clicks outside the
+   avatar and name controls). Every child shrinks or holds its size so
+   long names ellipsize instead of overflowing at phone width. */
 .dm-picker__row {
   align-items: center;
   border-radius: 0.5rem;
+  cursor: pointer;
   display: flex;
-  gap: 0.6rem;
-  padding: 0.35rem 0.5rem;
+  gap: 0.5rem;
+  padding: 0.2rem 0.5rem;
 }
 
 .dm-picker__row:hover {
   background: var(--workspace-sidebar-hover, transparent);
+}
+
+.dm-picker__row[hidden] {
+  display: none;
+}
+
+.dm-picker__row .avatar {
+  --avatar-size: 32px;
+
+  flex-shrink: 0;
+}
+
+.dm-picker__row .profile-card-name {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.dm-picker__row .profile-card__badge {
+  flex-shrink: 0;
+}
+
+.dm-picker__empty {
+  margin: 0;
+  padding: 1rem 0.5rem;
+}
+
+.dm-picker__empty[hidden] {
+  display: none;
+}
+
+/* At phone width rows grow to full 44px touch targets. */
+@media (max-width: 40rem) {
+  .dm-picker__row {
+    min-block-size: 44px;
+  }
 }

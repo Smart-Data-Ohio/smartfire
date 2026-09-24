@@ -32,6 +32,17 @@ but never join calls: Start huddle counts humans only and says how many
 agents stay in the DM without being rung. Start huddle lands in the DM
 with `?huddle=start`, which the join control consumes exactly once.
 
+The new-DM picker adds a filter box above its list: typing narrows the
+rendered rows to people whose name contains the text (case-insensitive,
+accents folded, matched anywhere), entirely client-side with no server
+round-trip. Filtering never clears the selection — checked people stay
+checked while hidden, and the bar count stays correct. Enter with
+exactly one visible match and nothing selected selects that match;
+otherwise starting the DM always happens from the Message (n) /
+Start huddle (n) bar, never from the filter input itself. The whole row
+is the tap target (44px rows on phones); the avatar and name still open
+the profile card.
+
 The channel member panel hides its checkboxes until selection mode.
 Enter it with a long-press on a row (touch), Ctrl-click or Cmd-click on
 a row (desktop), or Space with a row focused: the checkbox column appears

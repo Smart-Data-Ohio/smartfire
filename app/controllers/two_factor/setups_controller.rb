@@ -20,9 +20,11 @@ module TwoFactor
       no_store_response!
       return redirect_to user_profile_url if Current.user.two_factor_enabled?
 
-      # A fresh secret on every visit: a secret displayed here is only
-      # ever confirmable from this session (see TwoFactorSetupSecret).
-      issue_setup_presentation
+      # Reloading setup keeps this session's live secret: phones often
+      # reload the tab when the member switches to their authenticator and
+      # back, and a rotated secret would break the account they just added.
+      # The secret stays bound to this session (see TwoFactorSetupSecret).
+      reuse_setup_presentation
     end
 
     def create
@@ -111,15 +113,10 @@ module TwoFactor
 
       # The page renders a transient credential carrying the session's
       # pending secret: the stored row is only written at confirm time.
-      def issue_setup_presentation
-        present_setup_secret TwoFactorSetupSecret.issue_for!(Current.session)
-      end
-
       def reuse_setup_presentation
-        present_setup_secret(
-          TwoFactorSetupSecret.valid_for(Current.session) ||
-            TwoFactorSetupSecret.issue_for!(Current.session)
-        )
+        live = TwoFactorSetupSecret.valid_for(Current.session)
+        live&.extend_expiry!
+        present_setup_secret(live || TwoFactorSetupSecret.issue_for!(Current.session))
       end
 
       def present_setup_secret(setup_secret)
