@@ -39,6 +39,21 @@ class PinsSavedTest < ApplicationSystemTestCase
     assert_text "Third time's a charm."
   end
 
+  test "the pin note's jump link stays in this tab" do
+    MessagePin.pin!(message: messages(:third), pinner: users(:david))
+    note = Message.order(:id).last
+
+    visit room_url(rooms(:designers))
+
+    within_message note do
+      assert_no_selector "a[target='_blank']", text: "jump to message", wait: 10
+      click_on "jump to message"
+    end
+
+    assert_equal 1, page.windows.size
+    assert_current_path %r{/rooms/\d+/@#{messages(:third).id}}, wait: 10
+  end
+
   test "pin notes render as compact notes with no message menu" do
     MessagePin.pin!(message: messages(:third), pinner: users(:david))
     note = Message.order(:id).last
