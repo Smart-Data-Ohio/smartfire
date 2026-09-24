@@ -29,7 +29,8 @@ class Huddle::JoinNotifierTest < ActiveSupport::TestCase
         roomPath: Rails.application.routes.url_helpers.room_path(@room),
         joinerId: users(:david).id,
         joinerName: "David",
-        inCall: true
+        inCall: true,
+        rejoin: false
       }
     })
     assert_broadcasts notice_stream(users(:david)), 0
@@ -66,7 +67,8 @@ class Huddle::JoinNotifierTest < ActiveSupport::TestCase
         roomPath: Rails.application.routes.url_helpers.room_path(@room),
         joinerId: users(:david).id,
         joinerName: "David",
-        inCall: false
+        inCall: false,
+        rejoin: false
       }
     })
   end
@@ -91,7 +93,8 @@ class Huddle::JoinNotifierTest < ActiveSupport::TestCase
         roomPath: Rails.application.routes.url_helpers.room_path(group),
         joinerId: users(:david).id,
         joinerName: "David",
-        inCall: true
+        inCall: true,
+        rejoin: false
       }
     })
     assert_broadcast_on(notice_stream(users(:kevin)), {
@@ -102,7 +105,8 @@ class Huddle::JoinNotifierTest < ActiveSupport::TestCase
         roomPath: Rails.application.routes.url_helpers.room_path(group),
         joinerId: users(:david).id,
         joinerName: "David",
-        inCall: false
+        inCall: false,
+        rejoin: false
       }
     })
   end
@@ -141,7 +145,8 @@ class Huddle::JoinNotifierTest < ActiveSupport::TestCase
         roomPath: Rails.application.routes.url_helpers.room_path(room),
         joinerId: users(:david).id,
         joinerName: "David",
-        inCall: true
+        inCall: true,
+        rejoin: false
       }
     })
     assert_broadcasts notice_stream(users(:bender)), 0
@@ -177,7 +182,8 @@ class Huddle::JoinNotifierTest < ActiveSupport::TestCase
         roomPath: Rails.application.routes.url_helpers.room_path(room),
         joinerId: users(:david).id,
         joinerName: "David",
-        inCall: true
+        inCall: true,
+        rejoin: false
       }
     })
   end
@@ -307,6 +313,112 @@ class Huddle::JoinNotifierTest < ActiveSupport::TestCase
     @pool.expects(:queue).never
     assert_broadcasts(notice_stream(users(:jason)), 1) do
       Huddle::JoinNotifier.notify_join(david_grant)
+    end
+  end
+
+  test "a join after a recent in-call revoke is marked as a rejoin" do
+    david_grant = issue_seen(@room, users(:david), memberships(:david_david_and_jason))
+    issue_seen(@room, users(:jason), memberships(:jason_david_and_jason))
+    david_grant.revoke!
+
+    rejoined = issue_seen(@room, users(:david), memberships(:david_david_and_jason))
+
+    @pool.expects(:queue).never
+    Huddle::JoinNotifier.notify_join(rejoined)
+
+    assert_broadcast_on(notice_stream(users(:jason)), {
+      huddleJoinNotice: {
+        eventType: "huddle_joined",
+        roomId: @room.id,
+        roomName: "David",
+        roomPath: Rails.application.routes.url_helpers.room_path(@room),
+        joinerId: users(:david).id,
+        joinerName: "David",
+        inCall: true,
+        rejoin: true
+      }
+    })
+  end
+
+  test "a rejoin after the disconnect report cleared liveness is not marked" do
+    david_grant = issue_seen(@room, users(:david), memberships(:david_david_and_jason))
+    issue_seen(@room, users(:jason), memberships(:jason_david_and_jason))
+    david_grant.revoke!
+    # The gateway's disconnect report only posts after the three-second
+    # reconnect grace, so a join sighted after it follows its leave by
+    # seconds: no delivery race can flip that order, and the client's
+    # pending leave swallows the join without any mark.
+    travel 1.second do
+      assert david_grant.mark_out_of_call!
+    end
+
+    rejoined = issue_seen(@room, users(:david), memberships(:david_david_and_jason))
+
+    @pool.expects(:queue).never
+    Huddle::JoinNotifier.notify_join(rejoined)
+
+    assert_broadcast_on(notice_stream(users(:jason)), {
+      huddleJoinNotice: {
+        eventType: "huddle_joined",
+        roomId: @room.id,
+        roomName: "David",
+        roomPath: Rails.application.routes.url_helpers.room_path(@room),
+        joinerId: users(:david).id,
+        joinerName: "David",
+        inCall: true,
+        rejoin: false
+      }
+    })
+  end
+
+  test "a join after a quiet revoke is not marked as a rejoin" do
+    david_grant = HuddleGrant.issue!(session: sessions_for(users(:david)),
+      membership: memberships(:david_david_and_jason))
+    issue_seen(@room, users(:jason), memberships(:jason_david_and_jason))
+    david_grant.revoke!
+
+    rejoined = issue_seen(@room, users(:david), memberships(:david_david_and_jason))
+
+    @pool.expects(:queue).never
+    Huddle::JoinNotifier.notify_join(rejoined)
+
+    assert_broadcast_on(notice_stream(users(:jason)), {
+      huddleJoinNotice: {
+        eventType: "huddle_joined",
+        roomId: @room.id,
+        roomName: "David",
+        roomPath: Rails.application.routes.url_helpers.room_path(@room),
+        joinerId: users(:david).id,
+        joinerName: "David",
+        inCall: true,
+        rejoin: false
+      }
+    })
+  end
+
+  test "a join after the rejoin window is not marked as a rejoin" do
+    david_grant = issue_seen(@room, users(:david), memberships(:david_david_and_jason))
+    david_grant.revoke!
+
+    travel(Huddle::JoinNotifier::REJOIN_WINDOW + 1.second) do
+      issue_seen(@room, users(:jason), memberships(:jason_david_and_jason))
+      rejoined = issue_seen(@room, users(:david), memberships(:david_david_and_jason))
+
+      @pool.expects(:queue).never
+      Huddle::JoinNotifier.notify_join(rejoined)
+
+      assert_broadcast_on(notice_stream(users(:jason)), {
+        huddleJoinNotice: {
+          eventType: "huddle_joined",
+          roomId: @room.id,
+          roomName: "David",
+          roomPath: Rails.application.routes.url_helpers.room_path(@room),
+          joinerId: users(:david).id,
+          joinerName: "David",
+          inCall: true,
+          rejoin: false
+        }
+      })
     end
   end
 
