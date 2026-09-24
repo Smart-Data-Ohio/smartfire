@@ -146,6 +146,34 @@ class MotionTest < ApplicationSystemTestCase
       "expected the bar stuck in view, got #{geometry.inspect}"
   end
 
+  test "room menu measures at full scale when clamping to the viewport edge" do
+    # The menu scales up from 0.97 on open; measuring while scaled would
+    # clamp it a few pixels past the edge. With motion on, the scale is
+    # live at measure time, so right-click at the far right with the clamp
+    # engaged (only the pointer coordinates are synthetic; the controller
+    # path from event to position is real), wait for the pop to land, and
+    # check the inside edge.
+    page.evaluate_script("document.documentElement.removeAttribute('data-test-motion')")
+    row = find("#sidebar a[data-room-id]", match: :first)
+    page.execute_script("((row) => { row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: window.innerWidth - 10, clientY: 400 })); })(arguments[0])", row)
+    assert_selector "#room-menu:not([hidden])"
+    wait_until("expected the menu pop to land") do
+      page.evaluate_script("getComputedStyle(document.querySelector('#room-menu')).transform") == "none"
+    end
+
+    geometry = page.evaluate_script(<<~JS)
+      (() => {
+        const rect = document.querySelector("#room-menu").getBoundingClientRect();
+        return { right: rect.right, limit: window.innerWidth - 8 };
+      })()
+    JS
+    assert_operator geometry["right"], :<=, geometry["limit"] + 1,
+      "expected the menu clamped inside the viewport, got #{geometry.inspect}"
+
+    page.send_keys :escape
+    assert_selector "#room-menu[hidden]", visible: :all
+  end
+
   test "mobile drawer keeps the room list scroll position across close and reopen" do
     user = users(:jz)
     15.times { |index| Rooms::Closed.create!(name: "Scroll room #{index}", creator: user).memberships.create!(user: user) }

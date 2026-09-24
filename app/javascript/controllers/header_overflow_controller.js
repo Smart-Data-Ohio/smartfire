@@ -251,13 +251,16 @@ export default class extends Controller {
     if (!this.#open || !this.menuTarget || this.menuTarget.hidden) return
 
     const buttonRect = this.buttonTarget.getBoundingClientRect()
-    const menuRect = this.menuTarget.getBoundingClientRect()
+    // offsetWidth/Height ignore the enter scale: getBoundingClientRect
+    // would measure the menu mid-pop at 0.97 and clamp it past the edge.
+    const menuWidth = this.menuTarget.offsetWidth
+    const menuHeight = this.menuTarget.offsetHeight
     const rtl = document.dir === "rtl" || getComputedStyle(document.documentElement).direction === "rtl"
 
     const top = buttonRect.bottom + VIEWPORT_PADDING
-    const maxTop = Math.max(VIEWPORT_PADDING, window.innerHeight - menuRect.height - VIEWPORT_PADDING)
-    const endAligned = rtl ? buttonRect.left : buttonRect.right - menuRect.width
-    const maxLeft = Math.max(VIEWPORT_PADDING, window.innerWidth - menuRect.width - VIEWPORT_PADDING)
+    const maxTop = Math.max(VIEWPORT_PADDING, window.innerHeight - menuHeight - VIEWPORT_PADDING)
+    const endAligned = rtl ? buttonRect.left : buttonRect.right - menuWidth
+    const maxLeft = Math.max(VIEWPORT_PADDING, window.innerWidth - menuWidth - VIEWPORT_PADDING)
 
     this.menuTarget.style.top = `${Math.min(Math.max(VIEWPORT_PADDING, top), maxTop)}px`
     this.menuTarget.style.left = `${Math.min(Math.max(VIEWPORT_PADDING, endAligned), maxLeft)}px`
