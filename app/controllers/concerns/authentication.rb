@@ -100,7 +100,11 @@ module Authentication
       if two_factor_pending_user.present?
         redirect_to two_factor_challenge_url
       else
-        session[:return_to_after_authenticating] = request.url
+        # Only navigations bounce back after sign in. Background polls
+        # (JSON activity, presence) firing without a session must not
+        # become the landing page: signing in would drop the member on a
+        # raw JSON document instead of the app.
+        session[:return_to_after_authenticating] = request.url if request.format.html?
         redirect_to new_session_url
       end
     end
