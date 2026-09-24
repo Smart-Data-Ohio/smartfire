@@ -116,7 +116,7 @@ export default class extends Controller {
       type: "delete",
       url: `/rooms/${this.#roomId}`,
       roomId: this.#roomId,
-      message: `Delete #${label} and all its messages? This can’t be undone.`,
+      message: `Delete #${label} and all its messages? This can't be undone.`,
       confirmLabel: "Delete",
       destructive: true,
       notice: `Deleted #${label}`,
