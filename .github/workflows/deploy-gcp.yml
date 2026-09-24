@@ -209,16 +209,25 @@ jobs:
           ENVIRONMENT: ${{ inputs.environment }}
         run: |
           set -euo pipefail
-          # A merge commit of a branch that was already up to date with main
-          # has exactly the parent branch's tree, so a green CI run on that
-          # parent tested the same code. Accept the revision itself, or any
-          # parent with an identical tree; nothing else.
+          # A merge of a branch that was already up to date with main has
+          # exactly that branch's tree, and a pull_request CI run on the
+          # branch head (which tests the head merged with main as it then
+          # stood) tested that same tree, because main was already inside the
+          # branch. So accept the revision itself, or a parent that has an
+          # identical tree AND contains every other parent; nothing else.
+          # The containment check rules out a main that moved and was
+          # reverted after the PR's CI ran.
           tree="$(git rev-parse "${SHA}^{tree}")"
+          read -r -a parents <<< "$(git rev-list --parents -n 1 "$SHA" | cut -s -d' ' -f2-)"
           candidates=("$SHA")
-          for parent in $(git rev-list --parents -n 1 "$SHA" | cut -d' ' -f2-); do
-            if [ "$(git rev-parse "${parent}^{tree}")" = "$tree" ]; then
-              candidates+=("$parent")
-            fi
+          for parent in "${parents[@]}"; do
+            [ "$(git rev-parse "${parent}^{tree}")" = "$tree" ] || continue
+            contains_others=true
+            for other in "${parents[@]}"; do
+              [ "$other" = "$parent" ] && continue
+              git merge-base --is-ancestor "$other" "$parent" || { contains_others=false; break; }
+            done
+            [ "$contains_others" = true ] && candidates+=("$parent")
           done
           url=""
           for candidate in "${candidates[@]}"; do
