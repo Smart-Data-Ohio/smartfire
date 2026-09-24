@@ -12,18 +12,20 @@ class Rooms::Stage::StreamsController < ApplicationController
   # host or speaker answers 403: their share would die with the mute anyway.
   # Going live also requires an in-call huddle grant for the room — one the
   # gateway has seen recently, not just an active one — so a stream never
-  # starts without a live call to publish over, and a host in the room, so
-  # a stage whose last host left stays dark until a new host is promoted.
-  # The Stream callbacks broadcast the header badge, sidebar dot, and
-  # per-viewer panel; the response only swaps the actor's own panel without
-  # navigating.
+  # starts without a live call to publish over, and a host in the room. A
+  # hostless stage stays dark: the last host's departure promotes a
+  # successor, so no host means an emptied room or data drift, and nobody
+  # goes live until a host exists again. The Stream callbacks broadcast the
+  # header badge, sidebar dot, and per-viewer panel; the response only
+  # swaps the actor's own panel without navigating.
   def create
     unless @membership.host? || @membership.speaker?
       return render plain: "Only hosts and speakers can go live", status: :forbidden
     end
 
-    # A stage whose last host left ended its live session: nobody goes live
-    # again until an administrator promotes a new host.
+    # Only an emptied room or data drift leaves a stage hostless — every
+    # last-host departure promotes a successor — and that stage stays dark
+    # until an administrator member promotes a host again.
     unless @room.memberships.where(stage_role: :host).exists?
       return render plain: "The stage needs a host to go live", status: :forbidden
     end

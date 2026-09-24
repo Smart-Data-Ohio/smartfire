@@ -149,7 +149,8 @@ class User < ApplicationRecord
 
       # delete_all below skips the membership destroy callback, so capture
       # the hosted stage rooms now: rooms left without a host end their
-      # live session once the memberships are gone (see further below).
+      # live session and promote a successor once the memberships are gone
+      # (see further below).
       hosted_stage_room_ids = memberships.joins(:room)
         .where(stage_role: :host, room: { type: "Rooms::Stage" }).pluck(:room_id)
 
@@ -163,7 +164,7 @@ class User < ApplicationRecord
       calendar_event_ids = event_calendar_entries.pluck(:event_id)
       memberships.without_direct_rooms.delete_all
       Rooms::Stage.where(id: hosted_stage_room_ids).find_each do |stage_room|
-        stage_room.end_live_session_if_hostless!(departed_host: self)
+        stage_room.end_live_session_and_promote_successor_if_hostless!(departed_host: self)
       end
       push_subscriptions.delete_all
       searches.delete_all

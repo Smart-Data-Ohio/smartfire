@@ -91,9 +91,12 @@ When a host stops someone else's stream, the presenter's browser is notified thr
 When the last host membership disappears — the host leaves or is removed,
 or their user is deactivated — the whole live session ends, not just one
 stream: every live stream in the room ends and every active huddle grant in
-the room is revoked, dropping the remaining members from the call. Nobody
-can go live again until a host exists; an administrator member promotes a
-new host from the stage panel's role controls.
+the room is revoked, dropping the remaining members from the call. Then a
+successor is promoted — an active administrator member first, otherwise the
+earliest-joined remaining member — so the room always has a host whenever
+it has members, and the next session can go live. A hostless room, only
+possible with zero members or data drift, stays dark until a host exists
+again.
 
 ## Deliberately not included
 

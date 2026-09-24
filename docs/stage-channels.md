@@ -131,14 +131,16 @@ transaction, and host demotions re-check after locking the room, so
 concurrent removals cannot strand the room without a host.
 
 When the last host membership disappears anyway — the host leaves or is
-removed, or their user is deactivated — the stage's live session ends:
-every live stream ends, every active huddle grant in the room is revoked so
-the remaining speakers and listeners drop from the call, and a quiet
-timeline note records the end. The room itself, its members, and its message
-history stay. Nobody can go live again until a host exists: an administrator
-member promotes a new host from the stage panel's role controls, which keep
-working with zero hosts. Role changes are joined by two call-moderation
-tools: server-mute and disconnect, under
+removed, or their user is deactivated — the stage's live session ends
+first: every live stream ends, every active huddle grant in the room is
+revoked so the remaining speakers and listeners drop from the call, and a
+quiet timeline note records the end. Then a successor is promoted so the
+room always has a host whenever it has members: an active administrator
+member is preferred, otherwise the earliest-joined remaining member. The
+room itself, its members, and its message history stay; a stage left with
+no members at all is left alone. A hostless room — only possible with zero
+members or data drift — stays dark until a host exists again. Role changes
+are joined by two call-moderation tools: server-mute and disconnect, under
 `POST /rooms/:room_id/call_moderation/:membership_id/mute`,
 `DELETE /rooms/:room_id/call_moderation/:membership_id/mute`, and
 `POST /rooms/:room_id/call_moderation/:membership_id/disconnect`, for hosts
