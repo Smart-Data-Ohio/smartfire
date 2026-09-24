@@ -5,6 +5,9 @@ const ACTIVE_HUDDLE_STATES = [ "connecting", "connected", "reconnecting" ]
 const PARTICIPANTS_URL_ROOM_ID = /\/rooms\/(\d+)\/huddle\/participants/
 const MAX_LEAVE_TOASTS = 3
 const LEAVE_TOAST_TIMEOUT = 4000
+// Covers the --motion-fast exit transition (140ms) plus a frame of margin;
+// the toast is already invisible by the time the node is removed.
+const TOAST_EXIT_MS = 160
 
 // Stimulus disconnects and reconnects the permanent host on every Turbo
 // navigation, so navigation-spanning state lives outside the instance: a
@@ -358,14 +361,27 @@ export default class extends Controller {
     this.toastsTarget.append(this.joinToastNode)
 
     clearTimeout(this.joinToastTimer)
+    clearTimeout(this.joinToastRemovalTimer)
     this.joinToastTimer = setTimeout(() => this.#hideJoinToast(), this.toastTimeoutValue)
   }
 
   #hideJoinToast() {
     clearTimeout(this.joinToastTimer)
     this.joinBatch = null
-    this.joinToastNode?.remove()
+    this.#dismissToast(this.joinToastNode, (timer) => { this.joinToastRemovalTimer = timer })
     this.joinToastNode = null
+  }
+
+  // Toasts fade out before their node is removed. With motion off in tests
+  // the transition is instant, so removal stays synchronous there.
+  #dismissToast(toast, trackTimer) {
+    if (!toast) return
+    if (document.documentElement?.dataset.testMotion === "off" || !toast.isConnected) {
+      toast.remove()
+      return
+    }
+    toast.classList.add("huddle-join-toast--leaving")
+    trackTimer?.(setTimeout(() => toast.remove(), TOAST_EXIT_MS))
   }
 
   // A leave waits out the mute-cycle delay before toasting: a join from
@@ -403,7 +419,7 @@ export default class extends Controller {
       this.toastsTarget.querySelector(".huddle-join-toast--leave")?.remove()
     }
 
-    const timer = setTimeout(() => toast.remove(), LEAVE_TOAST_TIMEOUT)
+    const timer = setTimeout(() => this.#dismissToast(toast), LEAVE_TOAST_TIMEOUT)
     this.leaveToastTimers ||= []
     this.leaveToastTimers.push(timer)
   }

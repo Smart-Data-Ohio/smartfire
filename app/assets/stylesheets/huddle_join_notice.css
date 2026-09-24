@@ -10,6 +10,7 @@
 }
 
 .huddle-join-toast {
+  animation: motion-rise-in var(--motion-fast) var(--ease-standard);
   background: var(--workspace-surface, var(--color-bg));
   border: 1px solid var(--workspace-border, var(--color-border-darker));
   border-radius: 0.8em;
@@ -19,6 +20,17 @@
   max-inline-size: min(24rem, calc(100dvw - var(--inline-space-double)));
   padding-block: var(--block-space-half);
   padding-inline: var(--inline-space);
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
+}
+
+/* The controller adds this before removing the node, so the toast fades
+   instead of vanishing; removal follows after the transition. */
+.huddle-join-toast--leaving {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px) scale(0.98);
 }
 
 .huddle-join-toast--leave {
@@ -32,6 +44,7 @@
 
 .huddle-join-banner {
   align-items: center;
+  animation: motion-rise-in var(--motion-fast) var(--ease-standard);
   background: var(--workspace-surface, var(--color-bg));
   border: 1px solid var(--workspace-border, var(--color-border-darker));
   border-radius: 0.8em;
@@ -61,6 +74,7 @@
 
 .huddle-join-pill {
   align-items: center;
+  animation: motion-fade-in var(--motion-fast) var(--ease-standard);
   color: var(--workspace-text-muted);
   display: flex;
   font-size: 0.78rem;

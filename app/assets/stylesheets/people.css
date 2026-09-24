@@ -227,6 +227,8 @@ button.profile-card-avatar {
 /* Sticky multi-select bar. */
 .multi-select-bar[hidden] {
   display: none;
+  opacity: 0;
+  transform: translateY(8px);
 }
 
 .multi-select-bar {
@@ -235,7 +237,20 @@ button.profile-card-avatar {
   inset-block-end: 0;
   padding: 0.6rem 0.75rem;
   position: sticky;
+  /* The display transition keeps the bar rendered while it slides out;
+     without it the hidden flip would cut the exit. */
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard),
+    display var(--motion-fast) allow-discrete;
   z-index: 5;
+}
+
+@starting-style {
+  .multi-select-bar:not([hidden]) {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }
 
 .multi-select-bar__form {
