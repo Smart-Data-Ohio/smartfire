@@ -764,6 +764,9 @@ body.sidebar {
   opacity: 0;
   pointer-events: none;
   position: fixed;
+  /* visibility interpolates so the panel stays rendered while the surface
+     slides out, then flips at the end of the transition. */
+  transition: opacity var(--motion-medium) var(--ease-standard), visibility var(--motion-medium);
   visibility: hidden;
   z-index: 10;
 }
@@ -793,7 +796,7 @@ body.sidebar {
   min-inline-size: 0;
   position: absolute;
   transform: translateX(102%);
-  transition: transform 220ms ease;
+  transition: transform var(--motion-medium) var(--ease-standard);
 }
 
 .member-panel-open .member-panel {
@@ -1001,6 +1004,18 @@ summary.member-panel__group-heading {
     z-index: 5;
   }
 
+  /* In-flow, the panel takes a grid column, so open/close snaps layout:
+     sliding the column would animate layout. Fade the content in on open
+     instead, and keep the close instant: a delayed visibility flip would
+     flash the detached panel as a fullscreen fixed box on the way out. */
+  .member-panel {
+    transition: none;
+  }
+
+  .member-panel-open .member-panel__surface {
+    animation: motion-panel-in var(--motion-medium) var(--ease-standard);
+  }
+
   .member-panel__backdrop {
     display: none;
   }
@@ -1075,7 +1090,9 @@ summary.member-panel__group-heading {
     pointer-events: none;
     position: fixed;
     transform: none;
-    transition: opacity 180ms ease;
+    /* visibility flips at the end of the transition, so the drawer and its
+       backdrop fade out instead of vanishing the moment .open is removed. */
+    transition: opacity var(--motion-medium) var(--ease-standard), visibility var(--motion-medium);
     visibility: hidden;
     z-index: 10;
   }
@@ -1110,7 +1127,7 @@ summary.member-panel__group-heading {
     background: var(--workspace-sidebar);
     position: relative;
     transform: translateX(-102%);
-    transition: transform 220ms ease;
+    transition: transform var(--motion-medium) var(--ease-standard);
     z-index: 1;
   }
 
@@ -1120,7 +1137,7 @@ summary.member-panel__group-heading {
 
   .sidebar .sidebar__tools {
     transform: translateX(-102%);
-    transition: transform 220ms ease;
+    transition: transform var(--motion-medium) var(--ease-standard);
     z-index: 2;
   }
 
@@ -1137,7 +1154,7 @@ summary.member-panel__group-heading {
     padding: 4.25rem 0.75rem 1rem;
     position: relative;
     transform: translateX(-102%);
-    transition: transform 220ms ease;
+    transition: transform var(--motion-medium) var(--ease-standard);
     z-index: 1;
   }
 

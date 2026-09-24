@@ -23,6 +23,9 @@
   opacity: 0;
   pointer-events: none;
   position: fixed;
+  /* visibility flips at the end of the transition, so the drawer slides
+     out instead of vanishing the moment .thread-panel-open is removed. */
+  transition: opacity var(--motion-medium) var(--ease-standard), visibility var(--motion-medium);
   visibility: hidden;
   z-index: 11;
 }
@@ -52,7 +55,7 @@
   min-inline-size: 0;
   position: absolute;
   transform: translateX(102%);
-  transition: transform 220ms ease;
+  transition: transform var(--motion-medium) var(--ease-standard);
 }
 
 .thread-panel-open .thread-panel {
