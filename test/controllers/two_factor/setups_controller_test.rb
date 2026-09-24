@@ -25,15 +25,48 @@ class TwoFactor::SetupsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action='#{two_factor_setup_path}'] input[name='code']", count: 1
   end
 
-  test "show issues a fresh secret on every visit" do
+  test "reloading setup keeps the same secret for the session" do
+    # Phones often reload the tab when the member switches to their
+    # authenticator and back; a rotated secret would break the account
+    # they just added.
+    post session_url, params: { email_address: @user.email_address, password: "secret123456" }
+    get two_factor_setup_url
+    first = TwoFactorSetupSecret.valid_for(@user.sessions.order(:id).last).secret
+    first_key = css_select("#two_factor_manual_key").text
+
+    travel 20.minutes do
+      get two_factor_setup_url
+    end
+    second = TwoFactorSetupSecret.valid_for(@user.sessions.order(:id).last).secret
+
+    assert_equal first, second
+    assert_equal first_key, css_select("#two_factor_manual_key").text
+  end
+
+  test "another session gets its own setup secret" do
     post session_url, params: { email_address: @user.email_address, password: "secret123456" }
     get two_factor_setup_url
     first = TwoFactorSetupSecret.valid_for(@user.sessions.order(:id).last).secret
 
+    reset!
+    post session_url, params: { email_address: @user.email_address, password: "secret123456" }
     get two_factor_setup_url
     second = TwoFactorSetupSecret.valid_for(@user.sessions.order(:id).last).secret
 
     assert_not_equal first, second
+  end
+
+  test "the QR code carries a white quiet zone" do
+    post session_url, params: { email_address: @user.email_address, password: "secret123456" }
+    get two_factor_setup_url
+
+    svg = css_select(".two-factor-qr svg").first
+    width = svg["viewBox"].split.last.to_i
+    background = css_select(".two-factor-qr svg rect").first
+    assert_equal "white", background["fill"]
+    assert_equal width, background["width"].to_i
+    assert_operator width % 6, :==, 0
+    assert_operator width, :>, 21 * 6 + 2 * 24 - 1, "expected at least a 4-module border on each side"
   end
 
   test "show redirects enrolled users to the profile" do
