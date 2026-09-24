@@ -422,6 +422,36 @@ class Huddle::JoinNotifierTest < ActiveSupport::TestCase
     end
   end
 
+  test "a join ten seconds after the revoke is not marked as a rejoin" do
+    david_grant = issue_seen(@room, users(:david), memberships(:david_david_and_jason))
+    david_grant.revoke!
+
+    # Past the five-second client leave delay but inside the old
+    # thirty-second window and the twenty-second sighting window: the
+    # revoked grant's liveness is still fresh, so only the narrowed
+    # revoke window keeps this a genuine join.
+    travel(10.seconds) do
+      issue_seen(@room, users(:jason), memberships(:jason_david_and_jason))
+      rejoined = issue_seen(@room, users(:david), memberships(:david_david_and_jason))
+
+      @pool.expects(:queue).never
+      Huddle::JoinNotifier.notify_join(rejoined)
+
+      assert_broadcast_on(notice_stream(users(:jason)), {
+        huddleJoinNotice: {
+          eventType: "huddle_joined",
+          roomId: @room.id,
+          roomName: "David",
+          roomPath: Rails.application.routes.url_helpers.room_path(@room),
+          joinerId: users(:david).id,
+          joinerName: "David",
+          inCall: true,
+          rejoin: false
+        }
+      })
+    end
+  end
+
   test "leaving toasts the members still in the call" do
     david_grant = issue_seen(@room, users(:david), memberships(:david_david_and_jason))
     issue_seen(@room, users(:jason), memberships(:jason_david_and_jason))

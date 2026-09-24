@@ -7,11 +7,13 @@ class Huddle::JoinNotifier
 
   # A join whose user had an in-call grant revoked inside this window is a
   # mute-cycle rejoin, not a genuine join: the revoke dropped them and the
-  # client came straight back with a fresh grant. The window covers the
-  # whole round trip — gateway removal, client rejoin, gateway sighting,
-  # job queue — with margin; a kicked member rejoining inside it stays
-  # silent too, which reads as one quiet cycle.
-  REJOIN_WINDOW = 30.seconds
+  # client came straight back with a fresh grant. The window matches the
+  # join-notice client's leave toast delay (leaveDelayValue, five seconds
+  # in huddle_join_notice_controller.js): the revoke's leave broadcasts
+  # inline and toasts once the delay passes, so a revoke older than that
+  # means the viewer already saw "left" and the join must toast as
+  # genuine. Keep the two in step.
+  REJOIN_WINDOW = 5.seconds
 
   class << self
     # Tells a room's members that the grant's user joined the call. Runs
