@@ -127,6 +127,31 @@ suggestion-option {
   }
 }
 
+/* Slash picker close button: a small ✕ overlaid at the top-right of the
+   popup. Only the slash picker renders one; mentions and emoji lists
+   never contain it. Keyboard users dismiss with Escape instead (moving
+   focus out of the composer would destroy the popup first). */
+.suggestion__close {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 0.7rem;
+  inset-block-start: 0.3rem;
+  inset-inline-end: 0.3rem;
+  line-height: 1;
+  padding: 0.25rem 0.4rem;
+  position: absolute;
+  z-index: 1;
+}
+
+.suggestion__close:hover,
+.suggestion__close:focus-visible {
+  background: var(--color-text);
+  color: var(--color-text-reversed);
+}
+
 .autocomplete__container {
   --input-padding: 0.3em 0;
 

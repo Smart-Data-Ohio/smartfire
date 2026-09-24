@@ -28,8 +28,10 @@ module SlashCommands
       end
 
       def handle_event(context)
+        # Bare /event opens the blank form: the picker runs the command
+        # immediately, so erroring here would punish a pick.
         if context.args.blank?
-          return Registry::Result.error("Usage: /event <title> <when> — for example “/event Launch party friday 5pm”.")
+          return Registry::Result.open_url(context.routes.new_room_event_path(context.room))
         end
 
         title, time = TimeParser.split_trailing_time(context.args, zone: context.user.time_zone_or_default)
