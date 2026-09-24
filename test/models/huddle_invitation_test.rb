@@ -518,7 +518,7 @@ class HuddleInvitationTest < ActiveSupport::TestCase
 
     assert_equal 2, ActivityItem.where(user: users(:jason)).count
     assert_equal "huddle_started", item.reload.event_type
-    fresh = ActivityItem.where(user: users(:jason)).order(created_at: :desc).first
+    fresh = ActivityItem.where(user: users(:jason)).order(created_at: :desc, id: :desc).first
     assert_not_equal item.id, fresh.id
     assert_equal "huddle_started", fresh.event_type
     assert_not_predicate fresh, :handled?

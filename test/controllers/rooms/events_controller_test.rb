@@ -41,7 +41,7 @@ class Rooms::EventsControllerTest < ActionDispatch::IntegrationTest
       }
     end
 
-    event = Event.order(:created_at).last
+    event = Event.order(:created_at, :id).last
     assert_redirected_to room_event_path(@room, event)
     assert_equal users(:david), event.organizer
     assert_equal ActiveSupport::TimeZone["America/New_York"].parse("2026-09-25T15:30"), event.starts_at
@@ -58,7 +58,7 @@ class Rooms::EventsControllerTest < ActionDispatch::IntegrationTest
       }
     end
 
-    head = Event.where(title: "Weekly planning").order(:created_at).first
+    head = Event.where(title: "Weekly planning").order(:created_at, :id).first
     assert_redirected_to room_event_path(@room, head)
     assert_equal head.id, head.series_id
     occurrences = head.series_events.to_a
@@ -540,7 +540,7 @@ class Rooms::EventsControllerTest < ActionDispatch::IntegrationTest
       event: { title: "Voice social", starts_at: "2026-09-25T15:30", time_zone: "UTC", venue_room_id: voice.id }
     }
 
-    event = Event.order(:created_at).last
+    event = Event.order(:created_at, :id).last
     assert_redirected_to room_event_path(@room, event)
     assert_equal voice.id, event.venue_room_id
   end
@@ -830,7 +830,7 @@ class Rooms::EventsControllerTest < ActionDispatch::IntegrationTest
       event: { title: "Demo day", starts_at: "2026-09-25T15:30", time_zone: "America/New_York", meet_link_requested: "1" }
     }
 
-    assert Event.order(:created_at).last.meet_link_requested?
+    assert Event.order(:created_at, :id).last.meet_link_requested?
   end
 
   test "show renders the Meet link when present" do
