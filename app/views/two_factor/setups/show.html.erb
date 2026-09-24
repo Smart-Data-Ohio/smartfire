@@ -9,7 +9,7 @@
       <li>Open your authenticator app (Google Authenticator, 1Password, or Authy) and add an account.</li>
       <li>
         Scan this code:
-        <div class="center pad-block" style="max-width: 240px;"><%= two_factor_qr_code(@provisioning_uri) %></div>
+        <div class="center pad-block two-factor-qr"><%= two_factor_qr_code(@provisioning_uri) %></div>
         <span class="txt-small">Can't scan? Enter this key manually:</span>
         <div><code class="txt-medium" id="two_factor_manual_key"><%= @credential.formatted_secret %></code></div>
       </li>
