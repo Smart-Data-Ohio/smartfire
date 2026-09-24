@@ -8,6 +8,7 @@ require_relative "../support/drive_share_mocks"
 class DriveShareTest < ApplicationSystemTestCase
   include GoogleCalendarTestHelper
   include DriveShareMocks
+  include WebMockSystemTestHelper
 
   # GIS-only mocks plus a gapi.load stub that installs the Picker mock
   # asynchronously, exercising the lazy-load path without any network.
@@ -99,9 +100,6 @@ class DriveShareTest < ApplicationSystemTestCase
   JS
 
   setup do
-    WebMock.enable!
-    WebMock.disable_net_connect!(allow_localhost: true)
-
     @picker_env_before_test = [ ENV["GOOGLE_PICKER_API_KEY"], ENV["GOOGLE_CLOUD_PROJECT_NUMBER"] ]
     ENV["GOOGLE_PICKER_API_KEY"] = "test-picker-key"
     ENV["GOOGLE_CLOUD_PROJECT_NUMBER"] = "123456789012"
@@ -112,15 +110,6 @@ class DriveShareTest < ApplicationSystemTestCase
 
   teardown do
     ENV["GOOGLE_PICKER_API_KEY"], ENV["GOOGLE_CLOUD_PROJECT_NUMBER"] = @picker_env_before_test
-    WebMock.reset!
-    WebMock.disable!
-  end
-
-  def after_teardown
-    super
-  ensure
-    WebMock.reset!
-    WebMock.disable!
   end
 
   test "review dialog offers attach-only and an explicit grant with names and emails" do

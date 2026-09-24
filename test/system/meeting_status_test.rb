@@ -2,29 +2,7 @@ require "application_system_test_case"
 
 class MeetingStatusTest < ApplicationSystemTestCase
   include GoogleCalendarTestHelper
-
-  setup do
-    WebMock.enable!
-    WebMock.disable_net_connect!(allow_localhost: true)
-  end
-
-  teardown do
-    # Leave the page first: a rendered Drive chip or link preview can still
-    # be fetching metadata through the app, and that request must not land
-    # after the stubs below are reset.
-    visit "about:blank"
-    WebMock.reset!
-    WebMock.disable!
-  end
-
-  # Belt and suspenders around the teardown above: WebMock must never leak
-  # out of this file (see DriveLinkPreviewsTest).
-  def after_teardown
-    super
-  ensure
-    WebMock.reset!
-    WebMock.disable!
-  end
+  include WebMockSystemTestHelper
 
   test "opting in shows In a meeting for a stubbed busy interval, then clears after it ends" do
     connect_google!(users(:david))

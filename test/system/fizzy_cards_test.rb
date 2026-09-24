@@ -2,20 +2,7 @@ require "application_system_test_case"
 
 class FizzyCardsTest < ApplicationSystemTestCase
   include FizzyTestHelper
-
-  setup do
-    WebMock.enable!
-    WebMock.disable_net_connect!(allow_localhost: true)
-  end
-
-  teardown do
-    # Leave the page first: a rendered Drive chip or link preview can still
-    # be fetching metadata through the app, and that request must not land
-    # after the stubs below are reset.
-    visit "about:blank"
-    WebMock.reset!
-    WebMock.disable!
-  end
+  include WebMockSystemTestHelper
 
   test "a linked card renders its content in the room" do
     room = rooms(:designers)

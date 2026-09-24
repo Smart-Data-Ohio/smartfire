@@ -4,30 +4,7 @@ require_relative "../support/drive_share_mocks"
 class ComposerAttachMenuTest < ApplicationSystemTestCase
   include GoogleCalendarTestHelper
   include DriveShareMocks
-
-  setup do
-    WebMock.enable!
-    WebMock.disable_net_connect!(allow_localhost: true)
-  end
-
-  teardown do
-    # Leave the page first: a rendered Drive chip or link preview can still
-    # be fetching metadata through the app, and that request must not land
-    # after the stubs below are reset.
-    visit "about:blank"
-    WebMock.reset!
-    WebMock.disable!
-  end
-
-  # Same belt-and-suspenders as the Drive system tests: WebMock must
-  # never leak out of this file, even when a test or an earlier
-  # teardown step errors, or later tests' chromedriver traffic breaks.
-  def after_teardown
-    super
-  ensure
-    WebMock.reset!
-    WebMock.disable!
-  end
+  include WebMockSystemTestHelper
 
   test "+ shows both attach options when Drive is available" do
     connect_google!(users(:jz), scopes: DRIVE_SCOPES)

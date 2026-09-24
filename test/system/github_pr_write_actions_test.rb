@@ -1,19 +1,7 @@
 require "application_system_test_case"
 
 class GithubPrWriteActionsTest < ApplicationSystemTestCase
-  setup do
-    WebMock.enable!
-    WebMock.disable_net_connect!(allow_localhost: true)
-  end
-
-  teardown do
-    # Leave the page first: a rendered Drive chip or link preview can still
-    # be fetching metadata through the app, and that request must not land
-    # after the stubs below are reset.
-    visit "about:blank"
-    WebMock.reset!
-    WebMock.disable!
-  end
+  include WebMockSystemTestHelper
 
   test "a linked member comments from a PR thread and sees the inline confirmation" do
     room = rooms(:designers)
