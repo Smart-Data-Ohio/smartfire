@@ -8,3 +8,17 @@
   flex-shrink: 0;
   inline-size: 1.1rem;
 }
+
+/* The QR code carries its own white quiet zone; keep it a scannable size
+   and white edge-to-edge on the dark theme too. */
+.two-factor-qr {
+  background: #fff;
+  border-radius: 0.5rem;
+  max-inline-size: 240px;
+}
+
+.two-factor-qr svg {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+}
