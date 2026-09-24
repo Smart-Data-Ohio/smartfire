@@ -14,7 +14,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
       Github::DeliverSubscriptionEventJob.perform_now("pull_request", pull_request_payload(action: "opened"))
     end
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     bot = User.active_bots.find_by!(name: "GitHub")
     assert_equal bot, message.creator
     assert_nil bot.agent
@@ -28,7 +28,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
 
     Github::DeliverSubscriptionEventJob.perform_now("pull_request", payload)
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_includes message.markdown_source, "https://github.com/rails/rails/pull/12"
     assert_not_includes message.markdown_source, "evil/other"
   end
@@ -39,7 +39,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
 
     Github::DeliverSubscriptionEventJob.perform_now("pull_request", payload)
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_no_match Message::Markdown::MENTION_TOKEN_PATTERN, message.markdown_source
     assert_includes message.markdown_source, "Everyone"
   end
@@ -58,19 +58,19 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
   test "reopened posts when the pr opened before the subscription" do
     Github::DeliverSubscriptionEventJob.perform_now("pull_request", pull_request_payload(action: "reopened"))
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_equal "**alice** reopened pull request #12: Fix login\nhttps://github.com/rails/rails/pull/12", message.markdown_source
   end
 
   test "closed with merged true posts merged, merged false posts closed" do
     Github::DeliverSubscriptionEventJob.perform_now("pull_request", pull_request_payload(action: "closed", merged: true))
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_equal "**alice** merged #12: Fix login\nhttps://github.com/rails/rails/pull/12", message.markdown_source
 
     Github::DeliverSubscriptionEventJob.perform_now("pull_request", pull_request_payload(action: "closed", merged: false, number: 13))
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_equal "**alice** closed #13: Fix login\nhttps://github.com/rails/rails/pull/13", message.markdown_source
   end
 
@@ -81,7 +81,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
       Github::DeliverSubscriptionEventJob.perform_now("pull_request", pull_request_payload(action: "review_requested", reviewer: "Kevin-GH"))
     end
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_equal "**bob** requested a review from **Kevin-GH** on #12: Fix login\nhttps://github.com/rails/rails/pull/12", message.markdown_source
 
     item = ActivityItem.find_by!(user: users(:kevin), event_type: "pr_review_request")
@@ -152,7 +152,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
   test "review_submitted posts each review once" do
     Github::DeliverSubscriptionEventJob.perform_now("pull_request_review", review_payload(state: "approved", id: 7))
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_equal "**carol** approved #12: Fix login\nhttps://github.com/rails/rails/pull/12", message.markdown_source
 
     assert_no_difference -> { @room.messages.count } do
@@ -161,11 +161,11 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
 
     Github::DeliverSubscriptionEventJob.perform_now("pull_request_review", review_payload(state: "changes_requested", id: 8))
     assert_equal "**carol** requested changes on #12: Fix login\nhttps://github.com/rails/rails/pull/12",
-      @room.messages.order(:created_at).last.markdown_source
+      @room.messages.order(:created_at, :id).last.markdown_source
 
     Github::DeliverSubscriptionEventJob.perform_now("pull_request_review", review_payload(state: "commented", id: 9))
     assert_equal "**carol** commented on #12: Fix login\nhttps://github.com/rails/rails/pull/12",
-      @room.messages.order(:created_at).last.markdown_source
+      @room.messages.order(:created_at, :id).last.markdown_source
   end
 
   test "three check failures on one sha post once, a new sha posts again" do
@@ -175,7 +175,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
       Github::DeliverSubscriptionEventJob.perform_now("check_suite", check_suite_payload)
     end
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_equal "Checks failed on #12 (`ci / test`)\nhttps://github.com/rails/rails/pull/12", message.markdown_source
 
     assert_difference -> { @room.messages.count }, 1 do
@@ -196,7 +196,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
 
     Github::DeliverSubscriptionEventJob.perform_now("status", status_payload(state: "failure"))
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_equal "Checks failed on #12: Fix login (`ci / test`)\nhttps://github.com/rails/rails/pull/12", message.markdown_source
   end
 
@@ -248,7 +248,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
     Github::DeliverSubscriptionEventJob.perform_now("pull_request", pull_request_payload(action: "opened"))
 
     notification = Github::Notification.find_by!(subscription: @subscription, dedupe_key: "opened:rails/rails#12")
-    assert_equal @room.messages.order(:created_at).last, notification.message
+    assert_equal @room.messages.order(:created_at, :id).last, notification.message
   end
 
   test "an event posts a thread reply where the PR has a thread and a room message elsewhere" do
@@ -263,12 +263,12 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
     Github::DeliverSubscriptionEventJob.perform_now("pull_request", pull_request_payload(action: "opened"))
 
     bot = User.active_bots.find_by!(name: "GitHub")
-    reply = thread.messages.order(:created_at).last
+    reply = thread.messages.order(:created_at, :id).last
     assert_equal bot, reply.creator
     assert_equal "**alice** opened pull request #12: Fix login\nhttps://github.com/rails/rails/pull/12", reply.markdown_source
     assert_empty @room.root_messages.where(creator: bot)
 
-    room_message = other_room.messages.order(:created_at).last
+    room_message = other_room.messages.order(:created_at, :id).last
     assert_equal bot, room_message.creator
     assert_nil room_message.thread_id
     assert_equal reply.markdown_source, room_message.markdown_source
@@ -292,7 +292,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
 
     Github::DeliverSubscriptionEventJob.perform_now("pull_request", pull_request_payload(action: "review_requested", reviewer: "Kevin-GH"))
 
-    reply = thread.messages.order(:created_at).last
+    reply = thread.messages.order(:created_at, :id).last
     assert_equal "**bob** requested a review from **Kevin-GH** on #12: Fix login\nhttps://github.com/rails/rails/pull/12", reply.markdown_source
 
     item = ActivityItem.find_by!(user: users(:kevin), event_type: "pr_review_request")
@@ -311,7 +311,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
     end
 
     bot = User.active_bots.find_by!(name: "GitHub")
-    message = @room.root_messages.order(:created_at).last
+    message = @room.root_messages.order(:created_at, :id).last
     assert_equal bot, message.creator
     assert_equal "**alice** opened pull request #12: Fix login\nhttps://github.com/rails/rails/pull/12", message.markdown_source
     assert_predicate thread.reload, :locked?
@@ -328,7 +328,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
     bot = User.active_bots.find_by!(name: "GitHub")
     assert_empty @room.root_messages.where(creator: bot)
     assert_predicate thread.reload, :active?
-    reply = thread.messages.order(:created_at).last
+    reply = thread.messages.order(:created_at, :id).last
     assert_equal "**alice** opened pull request #12: Fix login\nhttps://github.com/rails/rails/pull/12", reply.markdown_source
   end
 
@@ -354,7 +354,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
 
     Github::DeliverSubscriptionEventJob.perform_now("check_run", payload)
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_equal "Checks failed on #12: Fix login (`ci / test`)\nhttps://github.com/Rails/Rails/pull/12", message.markdown_source
   end
 
@@ -366,7 +366,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
 
     Github::DeliverSubscriptionEventJob.perform_now("status", payload)
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_equal "Checks failed on #12: Fix login (`ci / test`)\nhttps://github.com/rails/rails/pull/12", message.markdown_source
   end
 
@@ -406,7 +406,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
 
     Github::DeliverSubscriptionEventJob.perform_now("pull_request", payload)
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_equal "**alice** opened pull request #12\nhttps://github.com/rails/rails/pull/12", message.markdown_source
   end
 
@@ -416,7 +416,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
 
     Github::DeliverSubscriptionEventJob.perform_now("pull_request", payload)
 
-    assert_not_includes @room.messages.order(:created_at).last.markdown_source, "Secret acquisition"
+    assert_not_includes @room.messages.order(:created_at, :id).last.markdown_source, "Secret acquisition"
   end
 
   test "a private repository keeps the title for a verified reader's subscription" do
@@ -427,7 +427,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
     Github::DeliverSubscriptionEventJob.perform_now("pull_request", payload)
 
     assert_equal "**alice** opened pull request #12: Secret acquisition\nhttps://github.com/rails/rails/pull/12",
-      @room.messages.order(:created_at).last.markdown_source
+      @room.messages.order(:created_at, :id).last.markdown_source
   end
 
   test "failed checks on a private repository omit the stored title for an unverified subscription" do
@@ -440,7 +440,7 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
     Github::DeliverSubscriptionEventJob.perform_now("check_run", run)
     Github::DeliverSubscriptionEventJob.perform_now("status", status)
 
-    sources = @room.messages.order(:created_at).last(2).map(&:markdown_source)
+    sources = @room.messages.order(:created_at, :id).last(2).map(&:markdown_source)
     assert_equal 2, sources.size
     sources.each do |source|
       assert_not_includes source, "Secret acquisition"
@@ -457,8 +457,8 @@ class Github::DeliverSubscriptionEventJobTest < ActiveJob::TestCase
 
     Github::DeliverSubscriptionEventJob.perform_now("pull_request", payload)
 
-    assert_not_includes @room.messages.order(:created_at).last.markdown_source, "Secret acquisition"
-    assert_includes other_room.messages.order(:created_at).last.markdown_source, "Secret acquisition"
+    assert_not_includes @room.messages.order(:created_at, :id).last.markdown_source, "Secret acquisition"
+    assert_includes other_room.messages.order(:created_at, :id).last.markdown_source, "Secret acquisition"
   end
 
   private
