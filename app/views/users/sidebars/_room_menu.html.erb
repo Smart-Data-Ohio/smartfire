@@ -32,5 +32,26 @@
     </button>
   </div>
 
+  <div class="room-menu__group" role="group" aria-label="Leave or delete" data-room-menu-target="dangerGroup" hidden>
+    <button type="button" class="btn room-menu__item" role="menuitem" data-room-menu-target="leaveAction" data-action="room-menu#askLeave" hidden>
+      <%= image_tag "logout.svg", size: 20, aria: { hidden: "true" } %>
+      <span>Leave</span>
+    </button>
+    <button type="button" class="btn room-menu__item room-menu__item--destructive" role="menuitem" data-room-menu-target="deleteAction" data-action="room-menu#askDelete" hidden>
+      <%= image_tag "trash.svg", size: 20, aria: { hidden: "true" } %>
+      <span>Delete…</span>
+    </button>
+  </div>
+
   <span class="for-screen-reader" role="status" aria-live="polite" data-room-menu-target="status"></span>
 </div>
+
+<%# Shared leave/delete confirm, configured per row by the controller.
+    Native dialog: Esc cancels, focus starts on the safe choice. %>
+<dialog class="room-menu__confirm" aria-labelledby="room-menu-confirm-message" data-room-menu-target="confirmDialog">
+  <p id="room-menu-confirm-message" data-room-menu-target="confirmMessage"></p>
+  <div class="room-menu__confirm-actions">
+    <button type="button" class="btn" data-action="room-menu#cancelPending" autofocus>Cancel</button>
+    <button type="button" class="btn" data-room-menu-target="confirmButton" data-action="room-menu#confirmPending">Delete</button>
+  </div>
+</dialog>

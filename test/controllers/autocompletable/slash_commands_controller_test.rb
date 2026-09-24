@@ -19,6 +19,19 @@ class Autocompletable::SlashCommandsControllerTest < ActionDispatch::Integration
     assert_nil poll["agent"]
   end
 
+  test "exposes takes_arguments for immediate and argument commands" do
+    get autocompletable_slash_commands_url(room_id: @room.id), as: :json
+
+    assert_response :success
+    by_name = response.parsed_body.index_by { |command| command["name"] }
+    assert_equal false, by_name["poll"]["takes_arguments"]
+    assert_equal false, by_name["event"]["takes_arguments"]
+    assert_equal false, by_name["huddle"]["takes_arguments"]
+    assert_equal true, by_name["shrug"]["takes_arguments"]
+    assert_equal true, by_name["remind"]["takes_arguments"]
+    assert_equal "<when> <text>", by_name["remind"]["arg_hint"]
+  end
+
   test "includes the room's agent commands" do
     AgentSlashCommand.create!(agent: agents(:bender_agent), room: @room, name: "deploy", description: "Ship it")
 
@@ -28,6 +41,17 @@ class Autocompletable::SlashCommandsControllerTest < ActionDispatch::Integration
     deploy = response.parsed_body.find { |command| command["name"] == "deploy" }
     assert_equal "Ship it", deploy["description"]
     assert_equal "Bender Bot", deploy["agent"]
+    assert_equal true, deploy["takes_arguments"]
+  end
+
+  test "agent commands registered without arguments run immediately" do
+    AgentSlashCommand.create!(agent: agents(:bender_agent), room: @room, name: "deploy", takes_arguments: false)
+
+    get autocompletable_slash_commands_url(room_id: @room.id), as: :json
+
+    assert_response :success
+    deploy = response.parsed_body.find { |command| command["name"] == "deploy" }
+    assert_equal false, deploy["takes_arguments"]
   end
 
   test "thread conversations hide root-only commands" do

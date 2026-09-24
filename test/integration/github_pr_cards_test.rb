@@ -161,10 +161,15 @@ class GithubPrCardsTest < ActionDispatch::IntegrationTest
     get room_url(@room)
     assert_response :success
 
+    # Identical icon-cache state per leg: the custom-icon stamp query
+    # re-fires on a one-second monotonic TTL, which a slow gap between
+    # the legs would otherwise trip.
+    Icons.expire_custom_cache!
     small = count_queries { get room_url(@room) }
     assert_response :success
 
     create_pr_messages(4, offset: 300)
+    Icons.expire_custom_cache!
     large = count_queries { get room_url(@room) }
     assert_response :success
 
@@ -228,7 +233,7 @@ class GithubPrCardsTest < ActionDispatch::IntegrationTest
   end
 
   test "a non-member cannot see the card through the room" do
-    room = rooms(:pets) # kevin is not a member
+    room = rooms(:watercooler) # kevin is not a member
     message = room.messages.create!(
       creator: users(:david),
       markdown_source: "https://github.com/rails/rails/pull/128",
@@ -244,6 +249,25 @@ class GithubPrCardsTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_url
     follow_redirect!
     assert_select ".github-pr-card", count: 0
+  end
+
+  test "the open-room join page leaks no card content to non-members" do
+    room = rooms(:pets) # kevin is not a member
+    message = room.messages.create!(
+      creator: users(:david),
+      markdown_source: "https://github.com/rails/rails/pull/129",
+      client_message_id: "card-render-join-preview"
+    )
+    fill_card(message.github_pull_requests.first)
+
+    delete session_url
+    sign_in :kevin
+
+    get room_url(room)
+
+    assert_response :success
+    assert_select ".github-pr-card", count: 0
+    assert_select "button", text: "Join channel"
   end
 
   test "added routes never render card content to unauthorized callers" do

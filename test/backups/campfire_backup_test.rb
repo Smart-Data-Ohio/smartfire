@@ -195,7 +195,10 @@ class CampfireBackupTest < ActiveSupport::TestCase
         dir.mkpath
         dir.join("leftover").write("x")
       end
-      old = Time.now - (3 * 24 * 3600)
+      # The backup script runs as a subprocess on the real clock, so the
+      # stale mtimes must come from real time too, not the (possibly
+      # shifted) test clock.
+      old = travel_back { Time.now } - (3 * 24 * 3600)
       File.utime(old, old, stale, stale.join("leftover"), other, other.join("leftover"))
 
       _out, status = run_backup(env, dirs, "BACKUP_DATETIME" => "20260923-090000")

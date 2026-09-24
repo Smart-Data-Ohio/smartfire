@@ -230,7 +230,7 @@ class Github::WebhooksControllerTest < ActionDispatch::IntegrationTest
       perform_enqueued_jobs only: Github::DeliverSubscriptionEventJob
     end
 
-    message = @room.messages.order(:created_at).last
+    message = @room.messages.order(:created_at, :id).last
     assert_equal User.active_bots.find_by!(name: "GitHub"), message.creator
     assert_includes message.markdown_source, "https://github.com/rails/rails/pull/12"
     assert_equal [ 12 ], message.github_pull_requests.map(&:number)

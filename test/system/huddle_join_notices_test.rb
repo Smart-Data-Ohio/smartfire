@@ -148,7 +148,9 @@ class HuddleJoinNoticesTest < ApplicationSystemTestCase
     visit room_path(room)
     wait_for_cable_connection
     wait_for_join_notice_controller
-    hold_toasts_open(leave_delay: 300)
+    # Production waits 5s; 1.5s keeps the test quick while leaving CI room
+    # for the rejoin broadcast to land inside the window.
+    hold_toasts_open(leave_delay: 1500)
     record_played_sounds
 
     jason_grant = HuddleGrant.issue!(session: second_session_for(users(:jason)),
@@ -166,7 +168,7 @@ class HuddleJoinNoticesTest < ApplicationSystemTestCase
       membership: memberships(:david_david_and_jason))
     notify_join_and_deliver(rejoined)
 
-    sleep 1 # past the 300ms leave delay
+    sleep 2 # past the 1.5s leave delay
     assert_no_selector ".huddle-join-toast"
     assert_empty played_sounds
   end

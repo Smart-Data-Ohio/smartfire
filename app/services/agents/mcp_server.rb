@@ -400,13 +400,14 @@ module Agents
       ),
       Tool.new(
         name: "register_slash_command",
-        description: "Register a custom slash command for a room (name without the leading slash, lowercase). Invoking it delivers a slash_command event to this agent with the raw arguments. Re-registering the agent's own name updates its description. Names are unique per room. Requires post_messages.",
+        description: "Register a custom slash command for a room (name without the leading slash, lowercase). Invoking it delivers a slash_command event to this agent with the raw arguments. Re-registering the agent's own name updates its description. Pass takes_arguments false when the command takes no arguments so the composer runs it immediately when picked. Names are unique per room. Requires post_messages.",
         input_schema: {
           "type" => "object",
           "properties" => {
             "room_id" => { "type" => "integer", "description" => "Room to register the command in." },
             "name" => { "type" => "string", "description" => "Command name without the leading slash." },
-            "description" => { "type" => "string", "description" => "Short description shown in the command picker." }
+            "description" => { "type" => "string", "description" => "Short description shown in the command picker." },
+            "takes_arguments" => { "type" => "boolean", "description" => "False when the command takes no arguments, so picking it runs immediately (default true)." }
           },
           "required" => %w[ room_id name ]
         },
@@ -929,7 +930,7 @@ module Agents
         room_id = args["room_id"].presence or raise InvalidParams, "Missing required argument: room_id"
         name = args["name"].presence or raise InvalidParams, "Missing required argument: name"
 
-        SlashCommands.register(agent: @agent, room_id: room_id, name: name, description: args["description"])
+        SlashCommands.register(agent: @agent, room_id: room_id, name: name, description: args["description"], takes_arguments: args["takes_arguments"])
       end
 
       def tool_unregister_slash_command(args)

@@ -37,6 +37,11 @@ module Authentication
   TWO_FACTOR_REMEMBER_COOKIE = :two_factor_remember
 
   private
+    # Turbo Stream's MIME type contains "html", so html? alone lets it through.
+    def bounce_back_after_sign_in?
+      request.get? && request.format.html? && !request.format.turbo_stream?
+    end
+
     def signed_in?
       Current.user.present?
     end
@@ -100,7 +105,11 @@ module Authentication
       if two_factor_pending_user.present?
         redirect_to two_factor_challenge_url
       else
-        session[:return_to_after_authenticating] = request.url
+        # Only page navigations bounce back after sign in. Background polls
+        # (JSON activity, Turbo Stream refreshes) and form submissions firing
+        # without a session must not become the landing page: signing in
+        # would drop the member on a raw document instead of the app.
+        session[:return_to_after_authenticating] = request.url if bounce_back_after_sign_in?
         redirect_to new_session_url
       end
     end

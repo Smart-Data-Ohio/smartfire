@@ -18,6 +18,17 @@ class Agents::McpSlashPollsTest < ActionDispatch::IntegrationTest
     assert AgentSlashCommand.exists?(agent: @agent, room: @room, name: "deploy")
   end
 
+  test "register_slash_command takes a takes_arguments flag" do
+    grant!(capability: "post_messages", room: @room)
+
+    body = call_tool("register_slash_command",
+      { "room_id" => @room.id, "name" => "deploy", "takes_arguments" => false })
+
+    payload = structured(body)
+    assert_equal false, payload["takes_arguments"]
+    assert_equal false, AgentSlashCommand.sole.takes_arguments
+  end
+
   test "register_slash_command denies without post_messages" do
     grant!(capability: "read_messages", room: @room)
 

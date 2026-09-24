@@ -685,17 +685,21 @@ export default class extends Controller {
     }
   }
 
+  // text is the trimmed command that was submitted; the composer still
+  // holds the raw draft, which a picker insert leaves with a trailing
+  // space ("/poll "). Compare trimmed so an immediate pick resets like
+  // a typed submit does, while a genuinely newer draft is still kept.
   #handleSlashResult(result, text) {
     switch (result.status) {
       case "posted":
         // The message broadcasts live; keep a newer draft typed during
         // the round trip, like a normal send does.
-        if (this.markdownTarget.value === text) this.#reset()
+        if (this.markdownTarget.value.trim() === text) this.#reset()
         if (result.notice) this.#showFeedback(result.notice)
         this.markdownTarget.focus()
         break
       case "ephemeral":
-        if (this.markdownTarget.value === text) this.#reset()
+        if (this.markdownTarget.value.trim() === text) this.#reset()
         this.#showFeedback(result.message)
         this.markdownTarget.focus()
         break
@@ -704,15 +708,15 @@ export default class extends Controller {
         this.markdownTarget.focus()
         break
       case "open_url":
-        if (this.markdownTarget.value === text) this.#reset()
+        if (this.markdownTarget.value.trim() === text) this.#reset()
         Turbo.visit(result.url)
         break
       case "open_poll":
-        if (this.markdownTarget.value === text) this.#reset()
+        if (this.markdownTarget.value.trim() === text) this.#reset()
         this.#openPollBuilder()
         break
       case "start_huddle":
-        if (this.markdownTarget.value === text) this.#reset()
+        if (this.markdownTarget.value.trim() === text) this.#reset()
         window.dispatchEvent(new CustomEvent("huddle:join", {
           detail: { roomId: result.room_id, roomName: result.room_name },
         }))

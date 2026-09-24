@@ -84,8 +84,10 @@ class Event::ReminderPusherTest < ActiveSupport::TestCase
   end
 
   test "an event starting now says so" do
+    # Just inside the 30-second rounding boundary: exactly 30 seconds
+    # rounds up to "Starts in 1 minute" when no time passes in between.
     event = rooms(:designers).events.create!(
-      organizer: users(:david), title: "Quick sync", starts_at: 30.seconds.from_now, time_zone: "UTC"
+      organizer: users(:david), title: "Quick sync", starts_at: 29.seconds.from_now, time_zone: "UTC"
     )
 
     pool = Rails.configuration.x.web_push_pool

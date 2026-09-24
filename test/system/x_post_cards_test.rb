@@ -1,31 +1,7 @@
 require "application_system_test_case"
 
 class XPostCardsTest < ApplicationSystemTestCase
-  setup do
-    WebMock.enable!
-    WebMock.disable_net_connect!(allow_localhost: true)
-  end
-
-  teardown do
-    # Leave the page first: a rendered Drive chip or link preview can still
-    # be fetching metadata through the app, and that request must not land
-    # after the stubs below are reset.
-    visit "about:blank"
-    WebMock.reset!
-    WebMock.disable!
-  end
-
-  # Belt and suspenders around the teardown above: WebMock must never leak
-  # out of this file, even when a test or an earlier teardown step errors.
-  # The browser's HTTP client is shared across tests (see
-  # ApplicationSystemTestCase), so leaving WebMock enabled here breaks every
-  # later system test's chromedriver traffic.
-  def after_teardown
-    super
-  ensure
-    WebMock.reset!
-    WebMock.disable!
-  end
+  include WebMockSystemTestHelper
 
   test "a posted x.com link fills its card in without reloading" do
     stub_fxtwitter_post

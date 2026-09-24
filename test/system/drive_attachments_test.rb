@@ -2,33 +2,10 @@ require "application_system_test_case"
 
 class DriveAttachmentsTest < ApplicationSystemTestCase
   include GoogleCalendarTestHelper
+  include WebMockSystemTestHelper
 
   FILE_ID = "1AbcDefGhIjKlMnOpQrSt"
   FILE_TWO = "2BcdEfgHiJkLmNoPqRsTu"
-
-  setup do
-    WebMock.enable!
-    WebMock.disable_net_connect!(allow_localhost: true)
-  end
-
-  teardown do
-    # Leave the page first: a rendered Drive chip or link preview can still
-    # be fetching metadata through the app, and that request must not land
-    # after the stubs below are reset.
-    visit "about:blank"
-    WebMock.reset!
-    WebMock.disable!
-  end
-
-  # Same belt-and-suspenders as DriveLinkPreviewsTest: WebMock must never
-  # leak out of this file, even when a test or an earlier teardown step
-  # errors, or later system tests' chromedriver traffic breaks.
-  def after_teardown
-    super
-  ensure
-    WebMock.reset!
-    WebMock.disable!
-  end
 
   test "attach Drive files from the picker, send textless, and remove through edit" do
     connect_google!(users(:jz), scopes: DRIVE_SCOPES)
@@ -84,6 +61,17 @@ class DriveAttachmentsTest < ApplicationSystemTestCase
     assert_no_selector ".drive-attachment-chip"
 
     click_on "Save changes"
+
+    # The edit frame swaps the form for the rendered message body
+    # without navigating, and the form page carries chips rather than
+    # attachment links — so the no-attachment assertion below passes
+    # vacuously until the PATCH lands. Wait for the saved text first
+    # (the frame holds the body without the list's .message wrapper):
+    # the removal saves synchronously with the message, so once the
+    # rendered body proves the save completed, the database assertion
+    # is deterministic.
+    assert_selector ".message__body", text: "the file moved elsewhere", wait: 10
+
     assert_no_selector "a.drive-attachment"
     assert_empty Message.last.drive_attachments
   end

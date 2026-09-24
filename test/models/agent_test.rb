@@ -205,7 +205,12 @@ class AgentTest < ActiveSupport::TestCase
     assert_equal first_touch, agent.reload.last_seen_at
 
     agent.update_column(:last_seen_at, 61.seconds.ago)
-    agent.touch_last_seen!
+
+    # A second passes so the new stamp lands after the first one even
+    # under a frozen test clock (see ClockOffsetTestHelper).
+    travel 1.second do
+      agent.touch_last_seen!
+    end
     assert agent.reload.last_seen_at > first_touch
   end
 

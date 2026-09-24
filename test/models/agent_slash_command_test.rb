@@ -13,6 +13,12 @@ class AgentSlashCommandTest < ActiveSupport::TestCase
     assert_equal "Ship it", command.description
   end
 
+  test "new commands take arguments by default" do
+    command = AgentSlashCommand.create!(agent: @agent, room: @room, name: "deploy")
+
+    assert_equal true, command.takes_arguments
+  end
+
   test "names are unique per room across agents" do
     AgentSlashCommand.create!(agent: @agent, room: @room, name: "deploy")
 

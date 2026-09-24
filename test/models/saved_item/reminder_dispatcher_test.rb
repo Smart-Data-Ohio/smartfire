@@ -72,6 +72,11 @@ class SavedItem::ReminderDispatcherTest < ActiveSupport::TestCase
   end
 
   test "a reminder scheduled in another time zone fires at the same instant" do
+    # Pinned: the reminder is a fixed wall-clock instant whose UTC
+    # mapping depends on September daylight time, and the future-date
+    # validation would reject it once the real clock passes it.
+    travel_to Time.utc(2026, 9, 24, 12, 0)
+
     # 9am in New York is 1pm UTC (September daylight time).
     remind_at = Time.use_zone("America/New_York") { Time.zone.parse("2026-09-24 09:00") }
     assert_equal "2026-09-24T13:00:00.000Z", remind_at.utc.iso8601(3)
@@ -81,15 +86,13 @@ class SavedItem::ReminderDispatcherTest < ActiveSupport::TestCase
       SavedItem.create!(user: @user, message: @message, remind_at:)
     end
 
-    travel_to Time.utc(2026, 9, 24, 12, 59) do
-      SavedItem::ReminderDispatcher.dispatch_due!
-      assert_nil saved_item.reload.reminded_at
-    end
+    travel_to Time.utc(2026, 9, 24, 12, 59)
+    SavedItem::ReminderDispatcher.dispatch_due!
+    assert_nil saved_item.reload.reminded_at
 
-    travel_to Time.utc(2026, 9, 24, 13, 1) do
-      SavedItem::ReminderDispatcher.dispatch_due!
-      assert_not_nil saved_item.reload.reminded_at
-    end
+    travel_to Time.utc(2026, 9, 24, 13, 1)
+    SavedItem::ReminderDispatcher.dispatch_due!
+    assert_not_nil saved_item.reload.reminded_at
 
     assert_equal "message_reminder", ActivityItem.find_by!(user: @user, source: saved_item).event_type
   end

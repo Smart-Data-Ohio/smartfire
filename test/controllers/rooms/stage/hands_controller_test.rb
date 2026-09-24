@@ -43,7 +43,11 @@ class Rooms::Stage::HandsControllerTest < ActionDispatch::IntegrationTest
     first_raised_at = @listener.reload.hand_raised_at
 
     sign_in :kevin
-    post room_stage_hand_url(@room)
+    # A second passes so the queue order is unambiguous even under a
+    # frozen test clock (see ClockOffsetTestHelper).
+    travel 1.second do
+      post room_stage_hand_url(@room)
+    end
     kevin_raised_at = @room.memberships.find_by!(user: users(:kevin)).hand_raised_at
     assert first_raised_at < kevin_raised_at
 
