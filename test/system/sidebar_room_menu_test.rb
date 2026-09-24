@@ -95,6 +95,14 @@ class SidebarRoomMenuTest < ApplicationSystemTestCase
       page.send_keys :escape
       assert_no_selector "#room-menu:not([hidden])", wait: 5
     end
+
+    # The full flow works past channels too: delete the stage from its row.
+    open_room_menu stage
+    within("#room-menu") { click_on "Delete…" }
+    within(".room-menu__confirm") { click_on "Delete" }
+
+    assert_no_selector "#sidebar a[data-room-id='#{stage.id}']", wait: 10
+    assert_predicate stage.reload, :deleted?
   end
 
   test "a group dm shows Delete only for admins" do
@@ -213,6 +221,21 @@ class SidebarRoomMenuTest < ApplicationSystemTestCase
     entry = AuditLog.where(action: "room.membership.change", target_id: room.id).last
     assert_equal users(:jz).id, entry.actor_id
     assert_equal [ "JZ" ], entry.details["revoked"]
+  end
+
+  test "leaving the room you are in sends you home" do
+    sign_in "jz@37signals.com"
+    room = rooms(:hq)
+    join_room room
+
+    open_room_menu room
+    within("#room-menu") { click_on "Leave" }
+    within(".room-menu__confirm") { click_on "Leave" }
+
+    page.document.synchronize(10) do
+      raise Capybara::ExpectationNotMet if current_path == room_path(room)
+    end
+    assert_not room.reload.user_ids.include?(users(:jz).id)
   end
 
   test "the last member out leaves the room behind for no one to lose" do
