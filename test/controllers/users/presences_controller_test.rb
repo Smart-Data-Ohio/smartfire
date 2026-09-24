@@ -73,6 +73,10 @@ class Users::PresencesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "returns the OOO label while out of office" do
+    # The fixed return date keeps the rendered label stable; pin the clock
+    # before it so that date is always in the future.
+    travel_to Time.zone.parse("2026-09-20T12:00:00Z")
+
     users(:jason).update!(time_zone: "UTC",
       ooo_until: Time.zone.parse("2026-09-24T12:00:00Z"), ooo_note: "Back soon")
 
