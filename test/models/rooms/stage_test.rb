@@ -168,7 +168,7 @@ class Rooms::StageTest < ActiveSupport::TestCase
     assert_not Membership.exists?(room: room, user: users(:david))
   end
 
-  test "deactivating the sole host ends the stage instead of promoting a replacement" do
+  test "deactivating the sole host ends the live session and promotes an administrator member" do
     users(:jason).update!(role: :member)
     users(:kevin).update!(role: :administrator)
     room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
@@ -183,12 +183,11 @@ class Rooms::StageTest < ActiveSupport::TestCase
     assert_not_predicate stream.reload, :live?
     assert_predicate grant.reload, :revoked?
     assert_equal "speaker", room.memberships.find_by!(user: users(:jason)).stage_role
-    assert_equal "listener", room.memberships.find_by!(user: users(:kevin)).stage_role
-    assert_empty room.memberships.where(stage_role: :host)
+    assert_equal "host", room.memberships.find_by!(user: users(:kevin)).stage_role
     assert_equal "The stage ended because the last host left.", stage_ended_note(room).body.to_plain_text
   end
 
-  test "deactivating the sole host ends the stage without an administrator present" do
+  test "deactivating the sole host promotes the earliest remaining member without an administrator" do
     users(:jason).update!(role: :member)
     room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david) ])
     room.memberships.create!(user: users(:jason), created_at: 2.days.ago)
@@ -196,7 +195,7 @@ class Rooms::StageTest < ActiveSupport::TestCase
 
     users(:david).deactivate
 
-    assert_equal "listener", room.memberships.find_by!(user: users(:jason)).stage_role
+    assert_equal "host", room.memberships.find_by!(user: users(:jason)).stage_role
     assert_equal "listener", room.memberships.find_by!(user: users(:kevin)).stage_role
     assert_equal "The stage ended because the last host left.", stage_ended_note(room).body.to_plain_text
   end
@@ -224,9 +223,12 @@ class Rooms::StageTest < ActiveSupport::TestCase
     users(:david).deactivate
 
     assert_empty room.reload.users
+    assert_nil room.messages.find_by(system_note: true)
   end
 
-  test "destroying the last host membership ends the live stream and revokes every grant in the room" do
+  test "destroying the last host membership ends the live session and promotes an administrator successor" do
+    users(:jason).update!(role: :member)
+    users(:kevin).update!(role: :administrator)
     room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
     room.memberships.find_by!(user: users(:jason)).change_stage_role!("speaker")
     stream = Stream.create!(room: room, membership: room.memberships.find_by!(user: users(:jason)),
@@ -243,7 +245,8 @@ class Rooms::StageTest < ActiveSupport::TestCase
     assert_nil room.live_stream
     assert_predicate speaker_grant.reload, :revoked?
     assert_predicate listener_grant.reload, :revoked?
-    assert_empty room.memberships.where(stage_role: :host)
+    assert_equal "host", room.memberships.find_by!(user: users(:kevin)).stage_role
+    assert_equal "speaker", room.memberships.find_by!(user: users(:jason)).stage_role
     assert_equal "The stage ended because the last host left.", stage_ended_note(room).body.to_plain_text
     assert_predicate stage_ended_note(room), :system_note?
     assert_not_predicate room.reload, :deleted?
@@ -251,7 +254,20 @@ class Rooms::StageTest < ActiveSupport::TestCase
     assert_equal chat, room.messages.find(chat.id)
   end
 
-  test "destroying a host while another host remains ends nothing" do
+  test "destroying the last host promotes the earliest remaining member without an administrator" do
+    users(:jason).update!(role: :member)
+    room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david) ])
+    room.memberships.create!(user: users(:jason), created_at: 2.days.ago)
+    room.memberships.create!(user: users(:kevin), created_at: 1.day.ago)
+
+    room.memberships.find_by!(user: users(:david)).destroy!
+
+    assert_equal "host", room.memberships.find_by!(user: users(:jason)).stage_role
+    assert_equal "listener", room.memberships.find_by!(user: users(:kevin)).stage_role
+    assert_equal "The stage ended because the last host left.", stage_ended_note(room).body.to_plain_text
+  end
+
+  test "destroying a host while another host remains ends nothing and promotes nobody" do
     room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
     room.memberships.find_by!(user: users(:jason)).change_stage_role!("host")
     stream = Stream.create!(room: room, membership: room.memberships.find_by!(user: users(:jason)),
@@ -263,6 +279,8 @@ class Rooms::StageTest < ActiveSupport::TestCase
 
     assert_predicate stream.reload, :live?
     assert_not grant.reload.revoked?
+    assert_equal "host", room.memberships.find_by!(user: users(:jason)).stage_role
+    assert_equal "listener", room.memberships.find_by!(user: users(:kevin)).stage_role
     assert_nil room.messages.find_by(system_note: true)
   end
 

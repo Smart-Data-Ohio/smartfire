@@ -73,8 +73,11 @@ class Rooms::Stage::StreamsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a speaker cannot go live when the stage has no host" do
+    # Every last-host departure promotes a successor, so a room with
+    # members but no host only arises from data drift: simulate it
+    # directly, since destroying the host would promote this speaker.
     @listener.change_stage_role!("speaker")
-    @host.destroy!
+    @room.memberships.where(user: users(:david)).update_all(stage_role: "listener")
     assert_empty @room.memberships.where(stage_role: :host)
 
     # Rejoining the call works, but the rejoined speaker still cannot start
@@ -91,14 +94,12 @@ class Rooms::Stage::StreamsControllerTest < ActionDispatch::IntegrationTest
     assert_nil @room.live_stream
   end
 
-  test "a speaker goes live again after an administrator promotes a new host" do
+  test "a speaker goes live again after the last host leaves and a successor is promoted" do
+    users(:jason).update!(role: :member)
+    users(:kevin).update!(role: :administrator)
     @listener.change_stage_role!("speaker")
     @host.destroy!
-    users(:kevin).update!(role: :administrator)
-    sign_in :kevin
-
-    patch room_stage_role_url(@room, @room.memberships.find_by!(user: users(:kevin))), params: { stage_role: "host" }
-    assert_redirected_to room_url(@room)
+    assert_equal "host", @room.memberships.find_by!(user: users(:kevin)).stage_role
 
     issue_in_call_grant!(users(:jason), @listener.reload)
     sign_in :jason

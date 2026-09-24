@@ -215,7 +215,9 @@ class Rooms::Stage::RolesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "an administrator member promotes a new host when the stage has none" do
-    @room.memberships.find_by!(user: users(:david)).destroy!
+    # Departures auto-promote a successor, so a hostless room only arises
+    # from data drift: simulate it directly.
+    @room.memberships.update_all(stage_role: "listener")
     assert_empty @room.memberships.where(stage_role: :host)
 
     users(:kevin).update!(role: :administrator)
