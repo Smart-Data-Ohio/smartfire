@@ -2,33 +2,10 @@ require "application_system_test_case"
 
 class DriveAttachmentsTest < ApplicationSystemTestCase
   include GoogleCalendarTestHelper
+  include WebMockSystemTestHelper
 
   FILE_ID = "1AbcDefGhIjKlMnOpQrSt"
   FILE_TWO = "2BcdEfgHiJkLmNoPqRsTu"
-
-  setup do
-    WebMock.enable!
-    WebMock.disable_net_connect!(allow_localhost: true)
-  end
-
-  teardown do
-    # Leave the page first: a rendered Drive chip or link preview can still
-    # be fetching metadata through the app, and that request must not land
-    # after the stubs below are reset.
-    visit "about:blank"
-    WebMock.reset!
-    WebMock.disable!
-  end
-
-  # Same belt-and-suspenders as DriveLinkPreviewsTest: WebMock must never
-  # leak out of this file, even when a test or an earlier teardown step
-  # errors, or later system tests' chromedriver traffic breaks.
-  def after_teardown
-    super
-  ensure
-    WebMock.reset!
-    WebMock.disable!
-  end
 
   test "attach Drive files from the picker, send textless, and remove through edit" do
     connect_google!(users(:jz), scopes: DRIVE_SCOPES)
