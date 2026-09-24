@@ -146,7 +146,10 @@ export default class extends Controller {
       this.createParentTarget.hidden = true
     }
     this.#setView("create")
-    window.requestAnimationFrame(() => this.createMessageTarget.focus())
+    // Two frames like #openPanel: a first open still has the opening
+    // transition ahead of it, and focusing before the visibility flips
+    // silently fails.
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => this.createMessageTarget.focus()))
   }
 
   filterChanged() {
@@ -445,10 +448,13 @@ export default class extends Controller {
     this.element.classList.add("thread-panel-open")
     this.#syncAccessibility()
 
+    // Two frames: the panel's visibility flips at the first render after
+    // the class lands, and a single rAF callback runs before that render
+    // while the panel still counts as hidden, so focus() silently fails.
     if (focus) {
-      window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
         if (this.#mobileQuery.matches) this.closeTarget.focus()
-      })
+      }))
     }
   }
 

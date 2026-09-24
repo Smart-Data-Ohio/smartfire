@@ -34,7 +34,11 @@ export default class extends Controller {
     this.sidebarTarget.classList.add("open")
     this.element.classList.add("workspace-navigation-open")
     this.#updateAccessibility()
-    requestAnimationFrame(() => this.#focusNavigation())
+    // Two frames: the drawer's visibility flips at the first render after
+    // the class lands, and a single rAF callback runs before that render
+    // while the drawer still counts as hidden, so focus() silently fails.
+    // The second frame runs after that render, once the drawer is focusable.
+    requestAnimationFrame(() => requestAnimationFrame(() => this.#focusNavigation()))
   }
 
   close(event) {

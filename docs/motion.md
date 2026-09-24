@@ -23,11 +23,14 @@ fill mode, so a later exit transition on the same element still wins.
 ## How exits work
 
 - Drawers (mobile sidebar, member panel, thread panel) toggle classes
-  over `display`. The container transitions `opacity` + `display` with
-  `allow-discrete`: `display` flips immediately on open (so focus can
-  move in without waiting) and only at the end on close, so the surface
-  slides out before the drawer unpaints. `inert` still flips immediately.
-  (`visibility` would flip at 50% in both directions — too late for
+  over `visibility`. The container transitions `opacity` + `visibility`
+  with `allow-discrete`: `visibility` flips immediately on open (so
+  focus can move in without waiting, and the surface slides from a real
+  before-change style) and only at the end on close, so the surface
+  slides out before the drawer unpaints. `inert` still flips
+  immediately. Keeping boxes (instead of `display: none`) also preserves
+  scroll positions across close and reopen. (Without `allow-discrete`,
+  `visibility` would flip at 50% in both directions — too late for
   enter focus, too early for the exit.)
 - Popovers and dialogs (room menus, message menu, emoji picker, profile
   card, quick switcher, stage panel) transition `opacity`/`transform`
@@ -49,5 +52,8 @@ in `_reset.css` shrinks every transition and animation to 0.01ms), so
 everything becomes instant. The layout renders
 `data-test-motion="off"` on `<html>` in the test environment for the
 same effect, since system tests assert right after acting.
-`test/system/motion_test.rb` pins that switch and re-enables motion to
-prove the mobile drawer lands in place with focus inside it.
+`test/system/motion_test.rb` pins that switch, re-enables motion to
+prove the mobile drawer animates in (mid-travel sample plus
+`transitionrun` and `getAnimations()`) and lands with focus inside it,
+and proves the room list keeps its scroll position while closed and
+across reopen.

@@ -762,15 +762,17 @@ body.sidebar {
 
 /* Channel members */
 .member-panel {
-  /* display flips to none only at the end of the exit transition, so the
-     surface slides out first; on open it flips immediately, so focus can
-     move into the panel without waiting. */
-  display: none;
+  /* visibility flips to visible immediately on open (so focus can move in
+     without waiting and the surface slides from a real before-change
+     style) and only at the end on close, so the surface slides out first.
+     Unlike display:none, the boxes survive while closed, so the member
+     list keeps its scroll position. inert still flips immediately. */
   inset: 0;
   opacity: 0;
   pointer-events: none;
   position: fixed;
-  transition: opacity var(--motion-medium) var(--ease-standard), display var(--motion-medium) allow-discrete;
+  transition: opacity var(--motion-medium) var(--ease-standard), visibility var(--motion-medium) allow-discrete;
+  visibility: hidden;
   z-index: 10;
 }
 
@@ -803,9 +805,9 @@ body.sidebar {
 }
 
 .member-panel-open .member-panel {
-  display: block;
   opacity: 1;
   pointer-events: auto;
+  visibility: visible;
 }
 
 .member-panel-open .member-panel__surface {
@@ -1023,7 +1025,7 @@ summary.member-panel__group-heading {
 
   /* In-flow, the panel takes a grid column, so open/close snaps layout:
      sliding the column would animate layout. Fade the content in on open
-     instead, and keep the close instant: a delayed display flip would
+     instead, and keep the close instant: a delayed visibility flip would
      flash the detached panel as a fullscreen fixed box on the way out. */
   .member-panel {
     transition: none;
@@ -1100,10 +1102,11 @@ summary.member-panel__group-heading {
 
     background: transparent;
     border: 0;
-    /* display flips to none only at the end of the exit transition, so the
-       drawer slides out first; on open it flips immediately, so focus can
-       move into the drawer without waiting. */
-    display: none;
+    /* visibility flips to visible immediately on open (so focus can move
+       in without waiting and the drawer slides from a real before-change
+       style) and only at the end on close, so the drawer slides out first.
+       Unlike display:none, the boxes survive while closed, so the room
+       list keeps its scroll position. inert still flips immediately. */
     inline-size: 100dvw;
     inset: 0;
     max-inline-size: none;
@@ -1111,14 +1114,15 @@ summary.member-panel__group-heading {
     pointer-events: none;
     position: fixed;
     transform: none;
-    transition: opacity var(--motion-medium) var(--ease-standard), display var(--motion-medium) allow-discrete;
+    transition: opacity var(--motion-medium) var(--ease-standard), visibility var(--motion-medium) allow-discrete;
+    visibility: hidden;
     z-index: 10;
   }
 
   .sidebar #sidebar.open {
-    display: block;
     opacity: 1;
     pointer-events: auto;
+    visibility: visible;
   }
 
   .workspace-navigation__backdrop {
