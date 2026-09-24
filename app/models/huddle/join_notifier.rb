@@ -5,6 +5,16 @@ class Huddle::JoinNotifier
   # the 45-second ring timeout — and a join notice is welcome again.
   RECENT_RING_WINDOW = 60.seconds
 
+  # A join whose user had an in-call grant revoked inside this window is a
+  # mute-cycle rejoin, not a genuine join: the revoke dropped them and the
+  # client came straight back with a fresh grant. The window matches the
+  # join-notice client's leave toast delay (leaveDelayValue, five seconds
+  # in huddle_join_notice_controller.js): the revoke's leave broadcasts
+  # inline and toasts once the delay passes, so a revoke older than that
+  # means the viewer already saw "left" and the join must toast as
+  # genuine. Keep the two in step.
+  REJOIN_WINDOW = 5.seconds
+
   class << self
     # Tells a room's members that the grant's user joined the call. Runs
     # from Huddle::JoinNoticeJob on the grant's first gateway sighting,
@@ -34,15 +44,16 @@ class Huddle::JoinNotifier
       direct = room.direct?
       members = room.users.ordered.to_a if direct
       rung_ids = recently_rung_ids(room, memberships.map(&:user_id)) if direct
+      rejoin = rejoin_after_revoke?(room, joiner, grant)
 
       memberships.each do |membership|
         viewer = membership.user
         next unless active_human?(viewer)
 
         if in_call_ids.include?(viewer.id)
-          broadcast_join(room:, joiner:, viewer:, in_call: true, members:)
+          broadcast_join(room:, joiner:, viewer:, in_call: true, members:, rejoin:)
         elsif direct && noticeable_outside_call?(membership, rung_ids)
-          broadcast_join(room:, joiner:, viewer:, in_call: false, members:)
+          broadcast_join(room:, joiner:, viewer:, in_call: false, members:, rejoin:)
           Huddle::JoinPusher.new(grant:, recipient: viewer, room_membership: membership).push
         end
       end
@@ -83,6 +94,25 @@ class Huddle::JoinNotifier
         HuddleGrant.active.in_call.where(id: grant.id).exists?
       end
 
+      # True when the joiner's previous grant for the room was revoked out
+      # of a live call inside the rejoin window: a server mute, role
+      # change, or kick whose client came straight back with this grant.
+      # The revoked grant's liveness sighting is the proof it was in the
+      # call — nothing clears it on revoke, and the gateway's disconnect
+      # report only posts after the three-second reconnect grace, while a
+      # rejoined client sights its new grant sooner; by the time the
+      # report could clear the sighting, the leave it follows is seconds
+      # old and no delivery race can still flip the order. A revoke of a
+      # quiet grant — muted while away, then joining — marks nothing, and
+      # the genuine join toasts as usual.
+      def rejoin_after_revoke?(room, joiner, grant)
+        HuddleGrant.where(room_id: room.id, user_id: joiner.id)
+          .where.not(id: grant.id)
+          .where(revoked_at: REJOIN_WINDOW.ago..)
+          .where(last_seen_at: HuddleGrant::IN_CALL_WINDOW.ago..)
+          .exists?
+      end
+
       def in_call_user_ids(room)
         HuddleGrant.active.in_call.where(room_id: room.id).distinct.pluck(:user_id).to_set
       end
@@ -109,7 +139,7 @@ class Huddle::JoinNotifier
           .pluck(:user_id).to_set
       end
 
-      def broadcast_join(room:, joiner:, viewer:, in_call:, members:)
+      def broadcast_join(room:, joiner:, viewer:, in_call:, members:, rejoin:)
         ActionCable.server.broadcast HuddleNoticeChannel.stream_name_for(viewer.id), {
           huddleJoinNotice: {
             eventType: "huddle_joined",
@@ -118,7 +148,8 @@ class Huddle::JoinNotifier
             roomPath: room_path(room),
             joinerId: joiner.id,
             joinerName: joiner.name,
-            inCall: in_call
+            inCall: in_call,
+            rejoin: rejoin
           }
         }
       end
