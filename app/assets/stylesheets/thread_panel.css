@@ -15,14 +15,35 @@
   min-block-size: 1rem;
   min-inline-size: 1rem;
   padding-inline: 0.25rem;
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    display var(--motion-fast) allow-discrete;
+}
+
+.room-header__thread-unread[hidden] {
+  display: none;
+  opacity: 0;
+}
+
+@starting-style {
+  .room-header__thread-unread:not([hidden]) {
+    opacity: 0;
+  }
 }
 
 /* Thread browser and conversation drawer */
 .thread-panel {
+  /* Closing transitions visibility, so it flips to hidden only at the end
+     and the surface slides out first. Opening must not: an entering
+     visibility transition still reads hidden at progress 0, which keeps
+     the panel unfocusable for a frame or more (see the open rule). Unlike
+     display:none, the boxes survive while closed, so the thread lists
+     keep their scroll position. inert still flips immediately. */
   inset: 0;
   opacity: 0;
   pointer-events: none;
   position: fixed;
+  transition: opacity var(--motion-medium) var(--ease-standard), visibility var(--motion-medium) allow-discrete;
   visibility: hidden;
   z-index: 11;
 }
@@ -52,12 +73,15 @@
   min-inline-size: 0;
   position: absolute;
   transform: translateX(102%);
-  transition: transform 220ms ease;
+  transition: transform var(--motion-medium) var(--ease-standard);
 }
 
 .thread-panel-open .thread-panel {
   opacity: 1;
   pointer-events: auto;
+  /* No visibility transition on the way in: visible lands with the
+     class, so focus can move in synchronously. */
+  transition: opacity var(--motion-medium) var(--ease-standard);
   visibility: visible;
 }
 
@@ -293,6 +317,7 @@
   inline-size: 100%;
   padding: 0.65rem 0.7rem;
   text-align: start;
+  transition: background-color var(--motion-quick);
 }
 
 .thread-panel__thread-item:hover,

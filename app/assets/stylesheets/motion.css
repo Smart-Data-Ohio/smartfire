@@ -1,0 +1,33 @@
+/* Shared motion tokens. Every transition and enter animation in the app
+   takes its duration from these, so reduced-motion users and the test
+   environment keep one kill switch each instead of per-component resets.
+   See docs/motion.md. Per-component transitions live with their component;
+   this file holds only the tokens. */
+
+:root {
+  --motion-quick: 100ms;
+  --motion-fast: 140ms;
+  --motion-medium: 210ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* The global reset in _reset.css also shrinks every transition and
+   animation to 0.01ms here; zeroing the tokens keeps var()-driven JS
+   timeouts and computed durations consistent with that. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-quick: 0ms;
+    --motion-fast: 0ms;
+    --motion-medium: 0ms;
+  }
+}
+
+/* System tests assert visibility and positions right after acting, so the
+   layout renders data-test-motion="off" on <html> in the test environment
+   and every token-driven transition becomes instant. One or two tests in
+   test/system/motion_test.rb remove the attribute to cover motion itself. */
+html[data-test-motion="off"] {
+  --motion-quick: 0ms;
+  --motion-fast: 0ms;
+  --motion-medium: 0ms;
+}

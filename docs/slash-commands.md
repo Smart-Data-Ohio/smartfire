@@ -5,9 +5,10 @@ and Slack style. Picking a command that takes arguments inserts `/name `
 so arguments can be typed after it; submitting runs it. Picking a
 no-argument command — `/poll`, `/event`, `/huddle` — runs it
 immediately, by click, tap, or Enter on the suggestion, with no second
-Enter. Each row hints at what a pick does: "runs now" for immediate
-commands, the argument placeholder (for example `/remind <when> <text>`)
-for argument commands. The ✕ button and Escape both close the popup
+Enter. Argument commands show their placeholder after the name (for
+example `/remind <when> <text>`); no-argument commands show just the
+name and description. Rows reserve room at the end for the ✕ so text
+never runs under it. The ✕ button and Escape both close the popup
 without inserting anything, and closing never sends the message.
 Commands that post (shrug, me, play, remind) broadcast live like typed
 messages; the rest answer ephemerally — visible to the invoker only,

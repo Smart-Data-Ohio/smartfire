@@ -209,9 +209,49 @@ jobs:
           ENVIRONMENT: ${{ inputs.environment }}
         run: |
           set -euo pipefail
-          url="$(gh api --method GET "repos/${REPO}/actions/workflows/ci.yml/runs" \
-            -f head_sha="$SHA" -f status=completed \
-            --jq '[.workflow_runs[] | select(.conclusion == "success")] | first | .html_url // ""')"
+          # A merge of a branch that was already up to date with main has
+          # exactly that branch's tree, and a pull_request CI run on the
+          # branch head (which tests the head merged with main as it then
+          # stood) tested that same tree, because main was already inside the
+          # branch. So accept the revision itself, or a parent that has an
+          # identical tree AND contains every other parent; nothing else.
+          # The containment check rules out a main that moved and was
+          # reverted after the PR's CI ran.
+          #
+          # Both arguments assume the other parent is main's tip at merge
+          # time, so every main the PR's CI could have merged with is inside
+          # the branch. That only holds for merges on main's first-parent
+          # line; a --no-ff merge buried inside a branch's history can have a
+          # parent whose pull_request CI tested it merged with a main it never
+          # contained. Anything off that line must have CI of its own.
+          git fetch --quiet origin main
+          parents=()
+          # awk reads the whole list; `grep -q` would exit early and the
+          # SIGPIPE would fail the pipeline under pipefail.
+          if git rev-list --first-parent origin/main | awk -v sha="$SHA" '$0 == sha { found = 1 } END { exit !found }'; then
+            read -r -a parents <<< "$(git rev-list --parents -n 1 "$SHA" | cut -s -d' ' -f2-)"
+          fi
+          tree="$(git rev-parse "${SHA}^{tree}")"
+          candidates=("$SHA")
+          for parent in "${parents[@]}"; do
+            [ "$(git rev-parse "${parent}^{tree}")" = "$tree" ] || continue
+            contains_others=true
+            for other in "${parents[@]}"; do
+              [ "$other" = "$parent" ] && continue
+              git merge-base --is-ancestor "$other" "$parent" || { contains_others=false; break; }
+            done
+            [ "$contains_others" = true ] && candidates+=("$parent")
+          done
+          url=""
+          for candidate in "${candidates[@]}"; do
+            url="$(gh api --method GET "repos/${REPO}/actions/workflows/ci.yml/runs" \
+              -f head_sha="$candidate" -f status=completed \
+              --jq '[.workflow_runs[] | select(.conclusion == "success")] | first | .html_url // ""')"
+            if [ -n "$url" ]; then
+              [ "$candidate" = "$SHA" ] || echo "${SHA} has the same tree as ${candidate}, which passed CI."
+              break
+            fi
+          done
           if [ -n "$url" ]; then
             echo "Found a successful CI run for ${SHA}: ${url}"
           elif [ "$ENVIRONMENT" = "production" ]; then

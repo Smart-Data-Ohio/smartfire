@@ -418,6 +418,7 @@ body.sidebar {
   position: relative;
   text-align: start;
   text-decoration: none;
+  transition: background-color var(--motion-quick), color var(--motion-quick);
 }
 
 .sidebar-item:hover,
@@ -471,6 +472,7 @@ body.sidebar {
 }
 
 .sidebar-item__status {
+  animation: motion-pop-in var(--motion-fast) var(--ease-standard);
   background: var(--workspace-accent-soft);
   border-radius: 999px;
   color: var(--workspace-accent-strong);
@@ -760,10 +762,17 @@ body.sidebar {
 
 /* Channel members */
 .member-panel {
+  /* Closing transitions visibility, so it flips to hidden only at the end
+     and the surface slides out first. Opening must not: an entering
+     visibility transition still reads hidden at progress 0, which keeps
+     the panel unfocusable for a frame or more (see the open rule). Unlike
+     display:none, the boxes survive while closed, so the member list
+     keeps its scroll position. inert still flips immediately. */
   inset: 0;
   opacity: 0;
   pointer-events: none;
   position: fixed;
+  transition: opacity var(--motion-medium) var(--ease-standard), visibility var(--motion-medium) allow-discrete;
   visibility: hidden;
   z-index: 10;
 }
@@ -793,12 +802,15 @@ body.sidebar {
   min-inline-size: 0;
   position: absolute;
   transform: translateX(102%);
-  transition: transform 220ms ease;
+  transition: transform var(--motion-medium) var(--ease-standard);
 }
 
 .member-panel-open .member-panel {
   opacity: 1;
   pointer-events: auto;
+  /* No visibility transition on the way in: visible lands with the
+     class, so focus can move in synchronously. */
+  transition: opacity var(--motion-medium) var(--ease-standard);
   visibility: visible;
 }
 
@@ -894,47 +906,47 @@ summary.member-panel__group-heading {
   padding: 0;
 }
 
-/* Avatar, identity. Selection mode adds a checkbox column on every row
-   but your own, which has no checkbox: the avatar and identity are
-   placed explicitly so all rows stay aligned in both layouts. */
+/* Avatar, identity. The leading checkbox column is reserved up front on
+   every row, so entering selection mode shifts nothing: the boxes only
+   fade and scale in, animating opacity and transform without touching
+   layout. Your own row has no checkbox; its avatar and identity sit in
+   the same fixed columns so all rows stay aligned. */
 .member-panel__member {
   align-items: center;
   border-radius: 0.45rem;
   color: var(--workspace-text);
   display: grid;
   gap: 0.65rem;
-  grid-template-columns: 2rem minmax(0, 1fr);
+  grid-template-columns: 1.1rem 2rem minmax(0, 1fr);
   min-inline-size: 0;
   padding: 0.38rem 0.55rem;
+  transition: background-color var(--motion-quick);
 }
 
 .member-panel__member > input[type="checkbox"] {
-  display: none;
   grid-column: 1;
+  margin: 0;
+  opacity: 0;
+  transform: scale(0.6);
+  visibility: hidden;
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard),
+    visibility var(--motion-fast) allow-discrete;
 }
 
 .member-panel__member > .member-panel__avatar {
-  grid-column: 1;
+  grid-column: 2;
 }
 
 .member-panel__member > .member-panel__identity {
-  grid-column: 2;
-}
-
-.member-panel__surface.is-selecting .member-panel__member {
-  grid-template-columns: 1.1rem 2rem minmax(0, 1fr);
+  grid-column: 3;
 }
 
 .member-panel__surface.is-selecting .member-panel__member > input[type="checkbox"] {
-  display: block;
-}
-
-.member-panel__surface.is-selecting .member-panel__member > .member-panel__avatar {
-  grid-column: 2;
-}
-
-.member-panel__surface.is-selecting .member-panel__member > .member-panel__identity {
-  grid-column: 3;
+  opacity: 1;
+  transform: scale(1);
+  visibility: visible;
 }
 
 .member-panel__surface.is-selecting .member-panel__member:has(> input[type="checkbox"]:checked) {
@@ -998,7 +1010,20 @@ summary.member-panel__group-heading {
     inset: auto;
     min-inline-size: 0;
     position: relative;
+    transition: none;
     z-index: 5;
+  }
+
+  /* In-flow, the panel takes a grid column, so open/close snaps layout:
+     sliding the column would animate layout. Fade the content in on open
+     instead, and keep the close instant: a delayed visibility flip would
+     flash the detached panel as a fullscreen fixed box on the way out. */
+  .member-panel {
+    transition: none;
+  }
+
+  .member-panel-open .member-panel__surface {
+    animation: motion-panel-in var(--motion-medium) var(--ease-standard);
   }
 
   .member-panel__backdrop {
@@ -1068,6 +1093,12 @@ summary.member-panel__group-heading {
 
     background: transparent;
     border: 0;
+    /* Closing transitions visibility, so it flips to hidden only at the
+       end and the drawer slides out first. Opening must not: an entering
+       visibility transition still reads hidden at progress 0, which keeps
+       the drawer unfocusable for a frame or more (see the .open rule).
+       Unlike display:none, the boxes survive while closed, so the room
+       list keeps its scroll position. inert still flips immediately. */
     inline-size: 100dvw;
     inset: 0;
     max-inline-size: none;
@@ -1075,7 +1106,7 @@ summary.member-panel__group-heading {
     pointer-events: none;
     position: fixed;
     transform: none;
-    transition: opacity 180ms ease;
+    transition: opacity var(--motion-medium) var(--ease-standard), visibility var(--motion-medium) allow-discrete;
     visibility: hidden;
     z-index: 10;
   }
@@ -1083,6 +1114,9 @@ summary.member-panel__group-heading {
   .sidebar #sidebar.open {
     opacity: 1;
     pointer-events: auto;
+    /* No visibility transition on the way in: visible lands with the
+       class, so focus can move in synchronously. */
+    transition: opacity var(--motion-medium) var(--ease-standard);
     visibility: visible;
   }
 
@@ -1094,6 +1128,18 @@ summary.member-panel__group-heading {
     inset: 0;
     padding: 0;
     position: absolute;
+    transition: opacity var(--motion-medium) var(--ease-standard), display var(--motion-medium) allow-discrete;
+  }
+
+  .workspace-navigation__backdrop[hidden] {
+    display: none;
+    opacity: 0;
+  }
+
+  @starting-style {
+    .workspace-navigation__backdrop:not([hidden]) {
+      opacity: 0;
+    }
   }
 
   .workspace-navigation__backdrop:hover {
@@ -1110,7 +1156,7 @@ summary.member-panel__group-heading {
     background: var(--workspace-sidebar);
     position: relative;
     transform: translateX(-102%);
-    transition: transform 220ms ease;
+    transition: transform var(--motion-medium) var(--ease-standard);
     z-index: 1;
   }
 
@@ -1120,7 +1166,7 @@ summary.member-panel__group-heading {
 
   .sidebar .sidebar__tools {
     transform: translateX(-102%);
-    transition: transform 220ms ease;
+    transition: transform var(--motion-medium) var(--ease-standard);
     z-index: 2;
   }
 
@@ -1137,7 +1183,7 @@ summary.member-panel__group-heading {
     padding: 4.25rem 0.75rem 1rem;
     position: relative;
     transform: translateX(-102%);
-    transition: transform 220ms ease;
+    transition: transform var(--motion-medium) var(--ease-standard);
     z-index: 1;
   }
 

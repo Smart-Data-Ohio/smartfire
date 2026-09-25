@@ -20,6 +20,10 @@ class Message::Markdown
   SKIPPED_MENTION_ANCESTORS = %w[ a code pre ].freeze
   SKIPPED_ICON_ANCESTORS = %w[ a action-text-attachment code pre ].freeze
   ALLOWED_CLASSES = %w[ contains-task-list markdown-body task-list-item ].freeze
+  # Site-relative paths, but not "//host" or "/\host" (which browsers resolve
+  # off-site) and not file downloads under /rails/, which keep a new tab.
+  IN_APP_PATH = %r{/(?![/\\]|rails/)}
+  IN_APP_HREF_PATTERN = /href="#{IN_APP_PATH}/
   LANGUAGE_CLASS_PATTERN = /\Alanguage-[a-zA-Z0-9_+#.-]+\z/
   BLOCK_TAGS = %w[ blockquote h1 h2 h3 h4 h5 h6 li ol p pre table tr ul ].freeze
   CELL_TAGS = %w[ td th ].freeze
@@ -54,9 +58,20 @@ class Message::Markdown
     # anything else is dropped.
     def sanitize_presentation(html)
       safe = sanitize(html, tags: PRESENTATION_TAGS, attributes: PRESENTATION_ATTRIBUTES)
-      return safe unless safe.include?("<img")
+      return safe unless safe.include?("<img") || safe.match?(IN_APP_HREF_PATTERN)
 
       fragment = Nokogiri::HTML5.fragment(safe)
+      # In-app links (pin notes' "jump to message", pasted room paths) stay in
+      # this tab. Messages rendered before this stored target="_blank", so
+      # strip it here rather than only at render time.
+      fragment.css("a[href]").each do |link|
+        next unless in_app_href?(link["href"])
+
+        link.remove_attribute("target")
+        link["data-turbo-frame"] = "_top"
+        # Hover prefetch would load any posted path with the reader's cookies.
+        link["data-turbo-prefetch"] = "false"
+      end
       fragment.css("img").each do |img|
         if (icon = icon_from_alt(img["alt"])) && (url = Icons.image_url_for(icon))
           img["src"] = url
@@ -67,6 +82,13 @@ class Message::Markdown
         end
       end
       fragment.to_html
+    end
+
+    # A site-relative path such as "/rooms/1/@2"; see IN_APP_PATH. Browsers
+    # drop tabs and newlines from URLs, so "/<tab>/host" would resolve off-site.
+    def in_app_href?(href)
+      href = href.to_s
+      href.match?(/\A#{IN_APP_PATH}/) && !href.match?(/[\t\n\r]/)
     end
 
     private
@@ -200,7 +222,7 @@ class Message::Markdown
       fragment.css("a[href]").each do |link|
         if link["href"].blank?
           link.remove_attribute("href")
-        else
+        elsif !self.class.in_app_href?(link["href"])
           link["target"] = "_blank"
           link["rel"] = "nofollow noopener noreferrer"
         end

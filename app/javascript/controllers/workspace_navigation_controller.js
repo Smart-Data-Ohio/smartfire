@@ -34,6 +34,9 @@ export default class extends Controller {
     this.sidebarTarget.classList.add("open")
     this.element.classList.add("workspace-navigation-open")
     this.#updateAccessibility()
+    // The open state does not transition visibility (workspace.css), so
+    // the drawer is focusable as soon as the class lands; focus never
+    // waits on the slide.
     requestAnimationFrame(() => this.#focusNavigation())
   }
 

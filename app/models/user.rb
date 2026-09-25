@@ -147,10 +147,12 @@ class User < ApplicationRecord
     transaction do
       close_remote_connections
 
-      # A sole stage host would otherwise vanish with every other membership
-      # below, bypassing the sole-host check and leaving listeners with no
-      # manager. Promote a successor first, in this same transaction.
-      promote_replacement_stage_hosts
+      # delete_all below skips the membership destroy callback, so capture
+      # the hosted stage rooms now: rooms left without a host end their
+      # live session and promote a successor once the memberships are gone
+      # (see further below).
+      hosted_stage_room_ids = memberships.joins(:room)
+        .where(stage_role: :host, room: { type: "Rooms::Stage" }).pluck(:room_id)
 
       # Grant revocation below ends streams only when a grant exists; a
       # presenter who never joined still holds a live stream, so end those
@@ -161,6 +163,9 @@ class User < ApplicationRecord
       # for cleanup syncs after commit.
       calendar_event_ids = event_calendar_entries.pluck(:event_id)
       memberships.without_direct_rooms.delete_all
+      Rooms::Stage.where(id: hosted_stage_room_ids).find_each do |stage_room|
+        stage_room.end_live_session_and_promote_successor_if_hostless!(departed_host: self)
+      end
       push_subscriptions.delete_all
       searches.delete_all
       TwoFactorSetupSecret.where(session_id: sessions.select(:id)).delete_all
@@ -192,22 +197,6 @@ class User < ApplicationRecord
     def icon_name_must_resolve
       if icon_name.present? && Icons.find(icon_name).nil?
         errors.add :icon_name, "is not a known icon"
-      end
-    end
-
-    # For every stage room where this user is the only host and other members
-    # remain, promote one remaining member to host before the memberships are
-    # deleted: an active administrator member is preferred, otherwise the
-    # earliest-created remaining membership. Rooms with another host already,
-    # and rooms left empty by the deactivation, are left alone.
-    def promote_replacement_stage_hosts
-      memberships.includes(:room).where(stage_role: :host).select { |membership| membership.room.stage? }.each do |host_membership|
-        remaining = host_membership.room.memberships.includes(:user).where.not(user_id: id).order(:created_at).to_a
-        next if remaining.empty?
-        next if remaining.any?(&:host?)
-
-        successor = remaining.find { |membership| membership.user.active? && membership.user.administrator? } || remaining.first
-        successor.change_stage_role!("host")
       end
     end
 

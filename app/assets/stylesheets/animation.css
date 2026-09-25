@@ -1,6 +1,27 @@
 @keyframes appear-then-fade {
-  0%,100% { opacity: 0; }
-  5%,60%  { opacity: 1; }
+  0%     { opacity: 0; transform: translateY(-6px); }
+  5%,60% { opacity: 1; transform: none; }
+  100%   { opacity: 0; transform: translateY(-4px); }
+}
+
+/* Shared enter keyframes for motion tokens (see motion.css). Elements use
+   these with a token duration and no fill mode, so a later exit transition
+   on the same element still wins: a finished fill-forwards animation would
+   override it in the cascade. */
+@keyframes motion-fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes motion-rise-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
+
+@keyframes motion-pop-in {
+  from { opacity: 0; transform: scale(0.5); }
+}
+
+@keyframes motion-panel-in {
+  from { opacity: 0; transform: translateX(12px); }
 }
 
 @keyframes boost {

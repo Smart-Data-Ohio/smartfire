@@ -445,6 +445,9 @@ export default class extends Controller {
     this.element.classList.add("thread-panel-open")
     this.#syncAccessibility()
 
+    // The open state does not transition visibility (thread_panel.css), so
+    // the panel is focusable as soon as the class lands; focus never waits
+    // on the slide.
     if (focus) {
       window.requestAnimationFrame(() => {
         if (this.#mobileQuery.matches) this.closeTarget.focus()
