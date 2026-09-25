@@ -180,9 +180,6 @@ class RoomsController < ApplicationController
       else
         @messages = messages.last_page
       end
-
-      @thread_reply_counts = ChannelThread.board_reply_counts(@messages.filter_map(&:channel_thread))
-      @messages
     end
 
     # Locates the "New messages" divider for the current membership. The

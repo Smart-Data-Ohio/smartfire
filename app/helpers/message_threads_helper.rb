@@ -13,13 +13,16 @@ module MessageThreadsHelper
     room_thread_path(room, thread, format: :json)
   end
 
-  # Falls back to a single count query when no bulk `counts` hash was
-  # computed for the page (low-traffic render sites: search, a thread's
-  # own conversation, board posts).
-  def thread_reply_count(message, counts: nil)
-    thread = message.channel_thread
-    return 0 if thread.blank?
+  # Replies under a message that started a thread, read off the thread's
+  # counter (ChannelThread#messages_count), so a page of messages costs no
+  # query beyond the preloaded channel_thread. Zero without a thread.
+  def thread_reply_count(message)
+    message.channel_thread&.messages_count.to_i
+  end
 
-    counts ? counts.fetch(thread.id, 0) : thread.message_count
+  # The indicator's accessible name: what the button does, then the visible
+  # count, so the spoken name contains the visible label.
+  def thread_indicator_label(count)
+    "Open thread, #{pluralize(count, "reply")}"
   end
 end

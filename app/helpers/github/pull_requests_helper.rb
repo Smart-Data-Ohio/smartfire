@@ -22,13 +22,12 @@ module Github::PullRequestsHelper
   # message, so the key carries the poll's stamp as its own element for
   # the same reason as pins (a vote retraction must bust the cache even
   # when a newer card dominates).
-  # Starting, replying into, or deleting a thread doesn't touch the parent
-  # message either, so the key carries the thread's own latest-reply stamp
-  # for the same reason as pins: the thread indicator would otherwise go
-  # stale. This reads the thread's messages directly rather than the
-  # thread's own updated_at, which Agents::WorkPayload already publishes
-  # as "the work item itself changed" (status, title, ...) — bumping it on
-  # every reply would break that unrelated meaning.
+  # The thread indicator shows the thread's reply count, so the key carries
+  # that counter (ChannelThread#messages_count, read off the preloaded
+  # channel_thread with no query). Every counter refresh also bumps the
+  # parent message, but the count rides along explicitly for the same
+  # reason as pins: deleting an older reply leaves every other stamp
+  # untouched.
   def message_with_pr_cards_cache_key(message)
     newest_card = (message.github_pull_requests.map(&:updated_at) + message.fizzy_cards.map(&:updated_at) + message.twitter_posts.map(&:updated_at) + message.events.map(&:updated_at)).compact.max
     # Link embeds are fetched after the message renders; their rows (and the
@@ -38,7 +37,7 @@ module Github::PullRequestsHelper
     key << embeds if embeds.any?
     key << github_pr_threads_stamp(message.room_id) if message.github_pull_requests.any?
     key << message.message_pins.map(&:updated_at).max
-    key << message.channel_thread&.messages&.maximum(:updated_at)
+    key << message.channel_thread&.messages_count
     key << message.poll&.updated_at
     key << message.system_note?
     key << message.streaming?
