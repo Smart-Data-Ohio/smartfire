@@ -55,18 +55,9 @@ class Rooms::DirectsController < RoomsController
     redirect_to edit_rooms_direct_path(@room), alert: "Group direct messages hold at most #{Rooms::Direct::MAX_MEMBERS} people."
   end
 
-  def leave
-    room_label = @room.name
-
-    if @room.leave(Current.user) == :destroyed
-      AuditLog.record!(action: "room.destroy", target: @room, target_label: room_label,
-        changes: { name: room_label })
-      enqueue_destroy
-      broadcast_remove_room
-    end
-
-    redirect_to root_url
-  end
+  # Leave is inherited from RoomsController, which keeps the last-member-
+  # destroys-the-group semantics for direct rooms and now records plain
+  # leaves as room.membership.change like every other room kind.
 
   private
     def selected_users

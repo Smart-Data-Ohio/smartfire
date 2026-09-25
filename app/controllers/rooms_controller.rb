@@ -1,5 +1,5 @@
 class RoomsController < ApplicationController
-  before_action :set_room, only: %i[ show destroy ]
+  before_action :set_room, only: %i[ show destroy leave ]
   before_action :ensure_can_administer, only: %i[ destroy ]
   before_action :remember_last_room_visited, only: :show
 
@@ -13,6 +13,10 @@ class RoomsController < ApplicationController
   UNREAD_DIVIDER_SCROLL_THRESHOLD = 5
 
   def show
+    # A non-member opening an open room's URL sees the join page instead
+    # of the redirect: open rooms stay discoverable by link after leaving.
+    return render :join if @join_preview
+
     @messages = Message::MentionPreloader.preload_for(find_messages)
     set_unread_divider unless @room.board?
     # The other DM members for the out-of-office notice above the
@@ -29,7 +33,64 @@ class RoomsController < ApplicationController
       changes: { name: room_label })
 
     broadcast_remove_room
-    redirect_to root_url
+
+    # The sidebar menu deletes through fetch: like the involvement
+    # toggle, JSON takes no redirect.
+    respond_to do |format|
+      format.html { redirect_to root_url, notice: ("Deleted ##{room_label}" if room_label.present?) }
+      format.json { render json: { deleted: true, room_id: @room.id } }
+    end
+  end
+
+  # Leaves the room without deleting it, even when the last member
+  # leaves; only group DMs keep their destroy-the-empty-room semantics.
+  # Rooms::DirectsController inherits this for its own leave route.
+  def leave
+    room_label = @room.name
+
+    if @room.direct?
+      if @room.leave(Current.user) == :destroyed
+        AuditLog.record!(action: "room.destroy", target: @room, target_label: room_label,
+          changes: { name: room_label })
+        enqueue_destroy
+        broadcast_remove_room
+      else
+        record_self_leave
+      end
+    else
+      @room.memberships.find_by!(user_id: Current.user.id).destroy!
+      record_self_leave
+    end
+
+    respond_to do |format|
+      format.html { redirect_to root_url }
+      format.json { render json: { left: true, room_id: @room.id } }
+    end
+  rescue ActiveRecord::RecordNotDestroyed
+    respond_to do |format|
+      format.html { redirect_to room_url(@room), alert: "Couldn't leave #{room_label}." }
+      format.json { render json: { error: "Couldn't leave this room." }, status: :unprocessable_entity }
+    end
+  end
+
+  # Rejoins an open room after leaving it. Private rooms need someone to
+  # re-add the member, and every other room kind refuses.
+  def join
+    room = Room.alive.opens.find_by(id: params[:id])
+
+    if room.nil?
+      redirect_to root_url, alert: "Room not found or inaccessible"
+    elsif Current.user.memberships.exists?(room_id: room.id)
+      redirect_to room_url(room)
+    else
+      membership = room.memberships.create!(user: Current.user, involvement: room.default_involvement)
+      broadcast_prepend_to Current.user, :rooms, target: :shared_rooms,
+        partial: "users/sidebars/rooms/shared", locals: { room: room, membership: membership, unread: false }
+      redirect_to room_url(room)
+    end
+  rescue ActiveRecord::RecordNotUnique
+    # A double submit raced the first join: the membership exists now.
+    redirect_to room_url(room)
   end
 
   private
@@ -48,9 +109,18 @@ class RoomsController < ApplicationController
     def set_room
       if room = room_scope.find_by(id: params[:room_id] || params[:id])
         @room = room
+      elsif action_name == "show" && (joinable = joinable_open_room)
+        @room = joinable
+        @join_preview = true
       else
         redirect_to root_url, alert: "Room not found or inaccessible"
       end
+    end
+
+    # An alive open room the viewer is not a member of. Only show falls
+    # back to it; destroy and leave stay member-scoped above.
+    def joinable_open_room
+      Room.alive.opens.find_by(id: params[:room_id] || params[:id])
     end
 
     # Subclasses narrow this to the room types they're allowed to act on, so that one
@@ -60,14 +130,14 @@ class RoomsController < ApplicationController
     end
 
     def ensure_can_administer
-      # Group DMs belong to all their members, so only administrators may
-      # delete one for everyone (members leave instead); the creator rule
-      # below still covers channels and 1:1 DMs.
-      if @room.direct? && @room.group_capable? && !Current.user.administrator?
-        return head :forbidden
-      end
+      head :forbidden unless Current.user.can_delete_room?(@room)
+    end
 
-      head :forbidden unless Current.user.can_administer?(@room)
+    # A member leaving under their own power: the actor is the leaver,
+    # and the change shape matches the admin membership revision above.
+    def record_self_leave
+      AuditLog.record!(action: "room.membership.change", target: @room,
+        changes: { revoked: [ Current.user.name ] })
     end
 
     def ensure_permission_to_create_rooms
