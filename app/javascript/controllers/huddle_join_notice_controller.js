@@ -16,6 +16,8 @@ const TOAST_EXIT_MS = 160
 // they fire, cancel, or land; a full page unload drops the module with
 // the page.
 const pendingLeaves = new Map()
+const recentRejoins = new Map()
+const firedLeaves = new Map()
 let pendingJoinNavigation = null
 
 export default class extends Controller {
@@ -94,9 +96,9 @@ export default class extends Controller {
     this.joinBatch = null
     this.joinToastNode = null
     // Toasts are transient; banners re-render from the stored notices.
-    // Pending leaves stay untouched: the disconnect is usually a Turbo
-    // navigation, and clearing them would break a mute cycle spanning a
-    // room switch.
+    // Pending leaves, armed rejoins, and fired leaves stay untouched: the
+    // disconnect is usually a Turbo navigation, and clearing them would
+    // break a mute cycle spanning a room switch.
     if (this.hasToastsTarget) this.toastsTarget.replaceChildren()
   }
 
@@ -142,6 +144,12 @@ export default class extends Controller {
     if (notice.eventType === "huddle_joined") {
       this.#joined(notice, roomId)
     } else if (notice.eventType === "huddle_left") {
+      // A leave landing inside a rejoin's quiet window is the other half
+      // of a mute cycle whose join already stayed silent: consume the arm
+      // and skip both the pending toast and the banner removal — the
+      // joiner never left. One shot, so a genuine leave right after the
+      // cycle still toasts.
+      if (this.#consumeRejoin(roomId, notice.joinerId)) return
       if (this.#inCall(roomId)) this.#scheduleLeaveToast(roomId, notice.joinerId, notice.joinerName)
       this.#removeBannerJoiner(roomId, notice.joinerId, notice.joinerName)
     } else if (notice.eventType === "huddle_ended") {
@@ -155,15 +163,52 @@ export default class extends Controller {
     // automatic rejoin reads as one quiet cycle instead of "left" + "joined".
     if (this.#cancelPendingLeave(roomId, notice.joinerId)) return
 
+    // The same cycle in the other arrival order: the server marks the
+    // rejoin, so a marked join the viewer still shows as present arms a
+    // quiet window for the leave still in flight instead of toasting.
+    // When the leave was already seen — the pending leave above, or a
+    // banner that already dropped the joiner — there is nothing to arm.
+    // And when the leave already toasted, the join is genuine: the viewer
+    // saw "left", so silencing it would read as a disappearance, and the
+    // arm would swallow their next real leave.
+    let alreadyLeft = false
+    if (notice.rejoin && this.#rejoinLeaveInFlight(roomId, notice)) {
+      if (this.#consumeFiredLeave(roomId, notice.joinerId)) {
+        alreadyLeft = true
+      } else {
+        this.#armRejoin(roomId, notice.joinerId)
+      }
+    }
+
+    const silentRejoin = notice.rejoin && !alreadyLeft
     if (this.#inCall(roomId)) {
-      this.#toastJoin(roomId, notice.joinerName)
+      if (!silentRejoin) {
+        this.#clearFiredLeave(roomId, notice.joinerId)
+        this.#toastJoin(roomId, notice.joinerName)
+      }
     } else if (this.huddleKnown) {
       this.#addBannerNotice(notice, roomId)
     } else if (notice.inCall) {
-      this.#toastJoin(roomId, notice.joinerName)
+      if (!silentRejoin) {
+        this.#clearFiredLeave(roomId, notice.joinerId)
+        this.#toastJoin(roomId, notice.joinerName)
+      }
     } else {
       this.#addBannerNotice(notice, roomId)
     }
+  }
+
+  // A marked rejoin arms only while the viewer still shows the joiner as
+  // present: an in-call viewer with no pending leave has not seen it, and
+  // an outsider whose banner still lists the joiner neither. A banner
+  // that already dropped them saw the leave first.
+  #rejoinLeaveInFlight(roomId, notice) {
+    if (this.#inCall(roomId)) return true
+    if (!this.huddleKnown && notice.inCall) return true
+
+    const stored = this.notices.get(roomId)
+    const id = Number(notice.joinerId) || null
+    return !!stored?.joiners.some((joiner) => joinerMatches(joiner, id, notice.joinerName))
   }
 
   #huddleChanged({ detail }) {
@@ -393,11 +438,15 @@ export default class extends Controller {
   #scheduleLeaveToast(roomId, joinerId, name) {
     if (!name) return
     this.#cancelPendingLeave(roomId, joinerId)
+    this.#clearFiredLeave(roomId, joinerId)
 
     const key = leaveKey(roomId, joinerId)
     const timer = setTimeout(() => {
       pendingLeaves.delete(key)
-      if (this.#inCall(roomId)) this.#showLeaveToast(name)
+      if (this.#inCall(roomId)) {
+        this.#showLeaveToast(name)
+        this.#recordFiredLeave(roomId, joinerId)
+      }
     }, this.leaveDelayValue)
     pendingLeaves.set(key, timer)
   }
@@ -409,6 +458,62 @@ export default class extends Controller {
     clearTimeout(timer)
     pendingLeaves.delete(leaveKey(roomId, joinerId))
     return true
+  }
+
+  // The join-first half of mute-cycle suppression: a marked rejoin whose
+  // leave has not arrived yet holds a one-shot quiet window, so the leave
+  // landing inside it stays silent instead of toasting. Module-level like
+  // pendingLeaves, and reset when a second marked join lands first.
+  #armRejoin(roomId, joinerId) {
+    this.#consumeRejoin(roomId, joinerId)
+
+    const key = leaveKey(roomId, joinerId)
+    const timer = setTimeout(() => recentRejoins.delete(key), this.leaveDelayValue)
+    recentRejoins.set(key, timer)
+  }
+
+  #consumeRejoin(roomId, joinerId) {
+    const key = leaveKey(roomId, joinerId)
+    const timer = recentRejoins.get(key)
+    if (timer === undefined) return false
+
+    clearTimeout(timer)
+    recentRejoins.delete(key)
+    return true
+  }
+
+  // A pending leave that stood alone toasts and records its firing: a
+  // marked rejoin landing after it pairs with a leave the viewer already
+  // saw, so the join toasts as genuine instead of arming. The memory
+  // lasts one leave delay, pairing only the rejoin that follows the
+  // toast; a toasted join answers it and a newly arriving leave
+  // supersedes it, so either clears it. Module-level like pendingLeaves,
+  // so the pairing survives a room switch mid-delay.
+  #recordFiredLeave(roomId, joinerId) {
+    this.#clearFiredLeave(roomId, joinerId)
+
+    const key = leaveKey(roomId, joinerId)
+    const timer = setTimeout(() => firedLeaves.delete(key), this.leaveDelayValue)
+    firedLeaves.set(key, { firedAt: Date.now(), timer })
+  }
+
+  #consumeFiredLeave(roomId, joinerId) {
+    const key = leaveKey(roomId, joinerId)
+    const fired = firedLeaves.get(key)
+    if (!fired) return false
+
+    clearTimeout(fired.timer)
+    firedLeaves.delete(key)
+    return Date.now() - fired.firedAt <= this.leaveDelayValue
+  }
+
+  #clearFiredLeave(roomId, joinerId) {
+    const key = leaveKey(roomId, joinerId)
+    const fired = firedLeaves.get(key)
+    if (!fired) return
+
+    clearTimeout(fired.timer)
+    firedLeaves.delete(key)
   }
 
   #showLeaveToast(name) {
