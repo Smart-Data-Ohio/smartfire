@@ -9,6 +9,23 @@
   justify-content: flex-start;
 }
 
+/* Panel pages hosted in the workspace shell (People, Agents): the shell
+   clips #main-content for the chat timeline, so these scroll it instead
+   and start at the top. The panel's legacy top margin cleared the old
+   floating header; the shell header takes its own row. */
+.sidebar.workspace-page #main-content {
+  justify-content: flex-start;
+  overflow-y: auto;
+}
+
+.sidebar.workspace-page #main-content > .panel {
+  margin-block: clamp(1rem, 3vw, 2rem);
+}
+
+.sidebar.workspace-page #footer:not(:has(*)) {
+  display: none;
+}
+
 .workspace-activity-count {
   background: var(--workspace-text);
   border-radius: 999px;

@@ -48,15 +48,18 @@
     <a href="#main-content" class="skip-navigation btn">Skip to main content</a>
 
     <nav id="nav">
-      <button type="button"
-              class="btn workspace-navigation__open"
-              aria-controls="sidebar"
-              aria-expanded="false"
-              aria-label="Open workspace navigation"
-              data-workspace-navigation-target="opener"
-              data-action="workspace-navigation#open">
-        <%= image_tag "menu.svg", size: 20, aria: { hidden: "true" } %>
-      </button>
+      <%# Only pages in the workspace shell render the drawer; elsewhere the toggle would open nothing. %>
+      <% if content_for?(:sidebar) %>
+        <button type="button"
+                class="btn workspace-navigation__open"
+                aria-controls="sidebar"
+                aria-expanded="false"
+                aria-label="Open workspace navigation"
+                data-workspace-navigation-target="opener"
+                data-action="workspace-navigation#open">
+          <%= image_tag "menu.svg", size: 20, aria: { hidden: "true" } %>
+        </button>
+      <% end %>
 
       <%= yield :nav %>
 

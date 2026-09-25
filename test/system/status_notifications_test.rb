@@ -98,14 +98,14 @@ class StatusNotificationsTest < ApplicationSystemTestCase
     emulate_color_scheme "dark"
     visit user_profile_url
     assert_selector "html[data-theme='light']", visible: :all
-    assert_equal "none", icon_filter(".workspace-navigation__open img")
+    assert_equal "none", icon_filter("#nav > .flex-item-justify-start a.btn img")
     assert_equal "invert(1)", appearance_submit_icon_filter
 
     users(:david).update!(theme: "dark")
     emulate_color_scheme "light"
     visit user_profile_url
     assert_selector "html[data-theme='dark']", visible: :all
-    assert_equal "invert(1)", icon_filter(".workspace-navigation__open img")
+    assert_equal "invert(1)", icon_filter("#nav > .flex-item-justify-start a.btn img")
     assert_equal "none", appearance_submit_icon_filter
   ensure
     emulate_color_scheme nil

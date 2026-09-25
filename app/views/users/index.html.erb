@@ -1,15 +1,20 @@
 <% @page_title = "People" %>
+<% @body_class = "sidebar workspace-page" %>
 
 <% content_for :nav do %>
-  <div class="flex-item-justify-start">
-    <%= link_back %>
+  <div class="room-header__identity room--current min-width">
+    <span class="room-header__kind">Workspace</span>
+    <h1 id="people-title" class="room__contents">
+      <span class="room-header__name">People</span>
+    </h1>
   </div>
 <% end %>
 
-<section class="panel panel--wide txt-align-center flex flex-column gap">
+<% content_for :sidebar, sidebar_turbo_frame_tag(src: user_sidebar_path) %>
+
+<section class="panel panel--wide txt-align-center flex flex-column gap" aria-labelledby="people-title">
   <div class="pad-inline-double center">
-    <h1 class="margin-none">People</h1>
-    <p class="margin-none-block-start">
+    <p class="margin-none">
       Everyone in the workspace. Select people to message them or start a huddle.
     </p>
   </div>
