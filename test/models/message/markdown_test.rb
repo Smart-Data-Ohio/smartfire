@@ -93,6 +93,14 @@ class Message::MarkdownTest < ActiveSupport::TestCase
     assert_equal "/%5Cevil.example", fragment.css("a").last["href"]
   end
 
+  test "in-app hrefs exclude paths browsers resolve off-site" do
+    assert Message::Markdown.in_app_href?("/rooms/1/@2")
+    [ "//evil.example", "/\\evil.example", "/\t/evil.example", "/\n/evil.example", "/\r\\evil.example",
+      " /rooms/1", "https://example.com/", "javascript:alert(1)", "/rails/active_storage/blobs/x", "" ].each do |href|
+      assert_not Message::Markdown.in_app_href?(href), href.inspect
+    end
+  end
+
   test "presentation keeps stored in-app links in this tab and breaks out of frames" do
     stored = %(<a href="/rooms/1/@2" target="_blank" rel="nofollow noopener noreferrer">jump</a> ) +
       %(<a href="https://example.com" target="_blank" rel="nofollow noopener noreferrer">out</a> ) +

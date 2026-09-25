@@ -195,7 +195,10 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_select ".people-directory__presence", text: "Online", minimum: 1
     assert_select ".profile-card__badge", text: "Agent", minimum: 1
     assert_select "[data-multi-select-target='bar']", 1
-    assert_no_match(/JZ/, @response.body)
+    # Scoped to the directory: the page-wide CSP nonce is random base64 and
+    # can contain "JZ" by chance.
+    assert_select "input[data-user-id='#{users(:jz).id}']", 0
+    assert_select ".people-directory__row", text: /JZ/, count: 0
   end
 
   test "index lists starred people first with a star marker" do

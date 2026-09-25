@@ -84,9 +84,11 @@ class Message::Markdown
       fragment.to_html
     end
 
-    # A site-relative path such as "/rooms/1/@2"; see IN_APP_PATH.
+    # A site-relative path such as "/rooms/1/@2"; see IN_APP_PATH. Browsers
+    # drop tabs and newlines from URLs, so "/<tab>/host" would resolve off-site.
     def in_app_href?(href)
-      href.to_s.match?(/\A#{IN_APP_PATH}/)
+      href = href.to_s
+      href.match?(/\A#{IN_APP_PATH}/) && !href.match?(/[\t\n\r]/)
     end
 
     private
