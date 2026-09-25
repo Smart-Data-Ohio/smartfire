@@ -80,6 +80,72 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to searches_url
   end
 
+  test "clear answers Turbo with streams that empty the header and page recents in place" do
+    users(:david).searches.record("hello")
+
+    delete clear_searches_url, as: :turbo_stream
+
+    assert_response :success
+    assert_equal "text/vnd.turbo-stream.html", response.media_type
+    assert_select "turbo-stream[action='update'][target='global-search-recents']" do
+      assert_select "template", text: /No recent searches yet/
+    end
+    assert_select "turbo-stream[action='update'][target='search-recents']"
+    assert_empty users(:david).searches.reload
+  end
+
+  test "clear leaves recents alone when it can't answer the requested format" do
+    users(:david).searches.record("hello")
+
+    assert_raises(ActionController::UnknownFormat) { delete clear_searches_url, as: :json }
+    assert users(:david).searches.exists?(query: "hello")
+  end
+
+  test "the header renders at most ten recents even when older rows exceed the trim" do
+    Search.insert_all(12.times.map { |i| { user_id: users(:david).id, query: "old #{i}", dedup_key: "old #{i}" } })
+
+    get room_url(rooms(:designers))
+
+    assert_select "#global-search-listbox [role='option']", count: 10
+  end
+
+  test "clear without Turbo returns to the page it came from" do
+    delete clear_searches_url, headers: { "HTTP_REFERER" => room_url(rooms(:designers)) }
+
+    assert_redirected_to room_url(rooms(:designers))
+  end
+
+  # Turbo form submissions (the header search, clearing recents) send a
+  # Turbo Stream Accept header that the redirected GET inherits.
+  test "index renders the page for a Turbo Stream request without an older-results cursor" do
+    get searches_url(q: "hello"), headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+
+    assert_response :success
+    assert_equal "text/html", response.media_type
+    assert_select "#search-results .message", text: /Hello world!/
+    assert_select "#global-search-input[value='hello']"
+  end
+
+  test "the header search field renders on every signed-in page, empty outside search" do
+    users(:david).searches.record("hello")
+
+    get room_url(rooms(:designers))
+
+    assert_select "#global-search-input[role='combobox']:not([value])"
+    assert_select "#global-search-listbox [role='option']", text: /hello/
+    assert_select ".room-header__actions a[href='#{searches_path}']", count: 0
+  end
+
+  test "the search page without a query lists recents instead of a watermark" do
+    users(:david).searches.record("hello")
+
+    get searches_url
+
+    assert_select ".message-area--empty", count: 0
+    assert_select "#search-recents .searches__recents a[href='#{searches_path(q: "hello")}']"
+    assert_select "#footer form", count: 0
+  end
+
   test "a query with no results shows an empty state" do
     get searches_url, params: { q: "zebra stripes tuxedo" }
 

@@ -1,6 +1,6 @@
 <%# Active search operators as removable chips. Each chip links back to the
     same search without its operator; the query text itself stays editable
-    in the composer below. %>
+    in the header search field. %>
 <% if @search_query&.filters? %>
   <ul class="search-filters" aria-label="Active filters">
     <% @search_query.chips.each do |chip| %>

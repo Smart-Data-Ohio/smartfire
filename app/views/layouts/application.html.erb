@@ -60,6 +60,8 @@
 
       <%= yield :nav %>
 
+      <%= render "layouts/global_search" if Current.user && !Current.user.bot? %>
+
       <%= render "layouts/help_menu" if Current.user && !Current.user.bot? %>
     </nav>
 

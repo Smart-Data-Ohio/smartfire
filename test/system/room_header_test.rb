@@ -27,7 +27,8 @@ class RoomHeaderTest < ApplicationSystemTestCase
         assert_selector "#header-overflow-button", visible: true
         assert_selector ".workspace-navigation__open", visible: true
         assert_selector ".room-header__name", visible: true
-        assert_visible_nav_actions "Show members", "Search messages", "Join huddle"
+        assert_visible_nav_actions "Show members", "Join huddle"
+        assert_search_visible
         assert_hidden_nav_actions "Show threads", "Show events", "Show pinned messages", "Show files"
         assert_no_selector "#nav .help-menu", visible: true
         assert_no_selector ".room-header__actions [aria-label^='Quick switcher']", visible: true
@@ -58,7 +59,8 @@ class RoomHeaderTest < ApplicationSystemTestCase
       # At 320px the capped voice stack stays instead of stepping aside.
       page.current_window.resize_to(320, 740)
       assert_selector "#header-overflow-button", visible: true
-      assert_visible_nav_actions "Show members", "Search messages", "Join huddle"
+      assert_visible_nav_actions "Show members", "Join huddle"
+      assert_search_visible
       assert_no_horizontal_overflow
       assert_header_inside_viewport
     ensure
@@ -75,7 +77,8 @@ class RoomHeaderTest < ApplicationSystemTestCase
         page.current_window.resize_to(width, 800)
 
         assert_selector "#header-overflow-button", visible: true
-        assert_visible_nav_actions "Show members", "Search messages", "Join huddle"
+        assert_visible_nav_actions "Show members", "Join huddle"
+        assert_search_visible
         assert_hidden_nav_actions "Show threads", "Show events", "Show pinned messages", "Show files"
         assert_no_selector "#nav .help-menu", visible: true
         assert_no_selector ".room-header__actions [aria-label^='Quick switcher']", visible: true
@@ -119,7 +122,8 @@ class RoomHeaderTest < ApplicationSystemTestCase
         assert_selector "#help-menu-button", visible: true
         # The member panel auto-opens on desktop, so its toggle reads Hide.
         assert_selector "body.member-panel-open"
-        assert_visible_nav_actions "Hide members", "Search messages", "Join huddle"
+        assert_visible_nav_actions "Hide members", "Join huddle"
+        assert_search_visible
         assert_selector ".room-header__actions [data-thread-panel-target='browserToggle']", visible: true
         assert_visible_nav_actions "Show events", "Show pinned messages", "Show files"
         assert_selector ".room-header__actions [aria-label^='Quick switcher']", visible: true
@@ -403,6 +407,12 @@ class RoomHeaderTest < ApplicationSystemTestCase
   end
 
   private
+    # The global search sits beside the actions: a field where the header
+    # has room, an icon button that expands it where it does not.
+    def assert_search_visible
+      assert_selector "#global-search-input, #global-search .global-search__toggle", visible: true
+    end
+
     def assert_hidden_nav_actions(*labels)
       labels.each do |label|
         assert_no_selector ".room-header__actions [aria-label='#{label}']", visible: true
