@@ -43,8 +43,9 @@ export default class extends Controller {
     // The open state does not transition visibility (workspace.css), so
     // the drawer is focusable as soon as the class lands; focus never
     // waits on the slide.
-    const revealCurrentRoom = this.#firstOpenOfRoomList()
-    requestAnimationFrame(() => this.#focusNavigation({ revealCurrentRoom }))
+    requestAnimationFrame(() => {
+      if (this.sidebarTarget.classList.contains("open")) this.#focusNavigation({ allowReveal: true })
+    })
   }
 
   close(event) {
@@ -181,12 +182,17 @@ export default class extends Controller {
   // scroll position belongs to the user: focus lands on the current room only
   // when it is already fully in view, otherwise on the first control visible
   // in the drawer, and never scrolls anything.
-  #focusNavigation({ revealCurrentRoom = false } = {}) {
+  #focusNavigation({ allowReveal = false } = {}) {
     const currentRoom = this.sidebarTarget.querySelector("a[aria-current='page']")
+    const scroller = this.#scroller()
 
-    if (currentRoom && revealCurrentRoom) {
+    if (allowReveal && currentRoom && scroller && !revealedScrollers.has(scroller)) {
       currentRoom.focus()
-      return
+      // Only a reveal that actually happened spends the list's first open.
+      if (document.activeElement === currentRoom) {
+        revealedScrollers.add(scroller)
+        return
+      }
     }
 
     const focusable = this.#focusableElements()
@@ -197,17 +203,9 @@ export default class extends Controller {
     target?.focus({ preventScroll: true })
   }
 
-  #firstOpenOfRoomList() {
-    const scroller = this.#scroller()
-    if (!scroller || revealedScrollers.has(scroller)) return false
-
-    revealedScrollers.add(scroller)
-    return true
-  }
-
   #isVisibleInDrawer(element) {
     const rect = element.getBoundingClientRect()
-    if (rect.width === 0 && rect.height === 0) return false
+    if (rect.width === 0 || rect.height === 0) return false
 
     const scroller = this.#scroller()
     let top = 0

@@ -226,8 +226,10 @@ class MotionTest < ApplicationSystemTestCase
     click_button "Open workspace navigation"
     assert_selector "#sidebar.open"
 
-    # Sample only once the open focus has landed: a focus that scrolls has
-    # started moving the list by then, so this check is deterministic.
+    # Sample only once the open focus has landed. A focus that scrolled may
+    # not have moved the list yet, so the scroll check alone can miss it;
+    # the visibility check below is what discriminates: with the current
+    # room out of view, only a focus target visible in the drawer passes.
     wait_until("expected focus to move into the drawer on reopen") do
       page.evaluate_script("document.querySelector('#sidebar').contains(document.activeElement)")
     end
@@ -253,6 +255,38 @@ class MotionTest < ApplicationSystemTestCase
     assert_selector "#sidebar.open"
     assert_focused current_room
     wait_until("expected the current room scrolled into view") { visible_in_drawer?(current_room) }
+  end
+
+  test "mobile drawer reopens on the current room when it is already in view" do
+    user = users(:jz)
+    15.times { |index| Rooms::Closed.create!(name: "Scroll room #{index}", creator: user).memberships.create!(user: user) }
+    join_room rooms(:hq)
+
+    page.current_window.resize_to(390, 844)
+    current_room = "#sidebar a[aria-current='page']"
+    scroller = "#sidebar .sidebar__scroll"
+
+    click_button "Open workspace navigation"
+    assert_selector "#sidebar.open"
+    assert_focused current_room
+    # Let the first-open reveal settle so the list is at rest before closing.
+    last = nil
+    wait_until("expected the first-open reveal to settle") do
+      now = page.evaluate_script("document.querySelector('#{scroller}').scrollTop")
+      settled = now == last && visible_in_drawer?(current_room)
+      last = now
+      settled
+    end
+
+    page.send_keys :escape
+    assert_no_selector "#sidebar.open"
+    before = page.evaluate_script("document.querySelector('#{scroller}').scrollTop")
+
+    click_button "Open workspace navigation"
+    assert_selector "#sidebar.open"
+    assert_focused current_room
+    assert_equal before, page.evaluate_script("document.querySelector('#{scroller}').scrollTop"),
+      "expected the room list to keep its scroll position"
   end
 
   private
@@ -343,7 +377,7 @@ class MotionTest < ApplicationSystemTestCase
         const element = document.querySelector(selector);
         if (!element) return false;
         const rect = element.getBoundingClientRect();
-        if (rect.width === 0 && rect.height === 0) return false;
+        if (rect.width === 0 || rect.height === 0) return false;
         const scroller = document.querySelector("#sidebar .sidebar__scroll");
         let top = 0, bottom = window.innerHeight;
         if (scroller.contains(element)) {
