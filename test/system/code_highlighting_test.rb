@@ -92,7 +92,7 @@ class CodeHighlightingTest < ApplicationSystemTestCase
       assert_selector ".markdown-code-copy", count: 1
     end
 
-    click_link "Exit search"
+    click_link "Back to Designers"
     assert_current_path room_path(rooms(:designers))
     within_message(message) do
       assert_selector "pre code.language-javascript[data-highlighted='yes'] .code-token", text: "const", wait: HIGHLIGHT_WAIT

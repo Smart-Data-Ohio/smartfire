@@ -14,11 +14,6 @@
       <span class="member-panel-toggle__count" data-member-panel-target="toggleCount" aria-hidden="true"></span>
     </button>
 
-    <%= link_to searches_path, class: "btn room-header__action", aria: { label: "Search messages" }, title: "Search messages" do %>
-      <%= image_tag "search.svg", size: 20, aria: { hidden: "true" } %>
-      <span class="room-header__action-label">Search</span>
-    <% end %>
-
     <%= link_to room_events_path(room), class: "btn room-header__action room-header__action--events", aria: { label: "Show events" }, title: "Show events" do %>
       <%= image_tag "calendar.svg", size: 20, aria: { hidden: "true" } %>
       <span class="room-header__action-label">Events</span>

@@ -23,6 +23,7 @@ are this browser's visited rooms, kept in local storage per user.
 Press **?** (outside any input) for the full sheet. The globals:
 
 - **Ctrl/⌘+K** — quick switcher
+- **/** or **Ctrl/⌘+Shift+F** — focus the search field in the top bar
 - **Alt+↑/↓** — previous / next room in sidebar order
 - **Alt+Shift+↑/↓** — previous / next unread room
 - **Esc** — mark the current room read
@@ -30,8 +31,8 @@ Press **?** (outside any input) for the full sheet. The globals:
 
 Unchorded shortcuts never fire while typing, and neither do
 Alt+↑/↓ (macOS Option+↑/↓ moves by paragraph in text). Ctrl/⌘+K
-works from the composer, except while composing (IME) or over
-another open modal. Esc closes open dialogs, menus and panels
+and Ctrl/⌘+Shift+F work from the composer, except while composing
+(IME) or over another open modal. Esc closes open dialogs, menus and panels
 first, and only marks the room read when nothing is open. The
 sheet also lists every existing
 shortcut: message-list movement and menus, composer sending and

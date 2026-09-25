@@ -19,11 +19,11 @@ class SearchForwardEditTest < ApplicationSystemTestCase
       )
     end
 
-    click_link "Search messages"
-    assert_selector ".searches__input", wait: 10
-    fill_in "search", with: "nonsense zebra tuxedo xyzzy"
-    find("form[action='#{searches_path}'] button[type='submit']").click
+    visit room_url(@room)
+    find("#global-search-input").click
+    find("#global-search-input").send_keys "nonsense zebra tuxedo xyzzy", :enter
     assert_text "No messages match", wait: 10
+    assert_field "global-search-input", with: "nonsense zebra tuxedo xyzzy"
 
     visit searches_url(q: "NOT")
     assert_selector "#message-area", wait: 10

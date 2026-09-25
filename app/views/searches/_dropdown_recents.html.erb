@@ -1,0 +1,32 @@
+<%# Recent searches inside the header search panel. Options carry their
+    results URL; the global-search controller moves aria-activedescendant
+    over them and visits the chosen one. Replaced in place by
+    searches/clear.turbo_stream.erb. %>
+<% searches = searches.to_a %>
+<div class="global-search__panel-header">
+  <span id="global-search-recents-label" class="global-search__panel-title">Recent searches</span>
+  <% if searches.any? %>
+    <%= button_to clear_searches_path, method: :delete, class: "btn global-search__clear", aria: { label: "Clear recent searches" },
+          form: { class: "global-search__clear-form", data: { turbo_confirm: "Are you sure you want to clear your recent searches?" } } do %>
+      <%= image_tag "broom.svg", size: 16, aria: { hidden: "true" }, class: "colorize--black" %>
+      <span>Clear</span>
+    <% end %>
+  <% end %>
+</div>
+
+<ul id="global-search-listbox" class="global-search__options" role="listbox" aria-labelledby="global-search-recents-label"<% if searches.none? %> hidden<% end %>>
+  <% searches.each do |search| %>
+    <li id="<%= dom_id(search, :global_search_option) %>" class="global-search__option" role="option" aria-selected="false"
+        data-global-search-target="option"
+        data-url="<%= searches_path(q: search.query) %>"
+        data-query="<%= search.query %>"
+        data-action="mousedown->global-search#keepFocus click->global-search#choose">
+      <%= image_tag "search.svg", size: 14, aria: { hidden: "true" }, class: "colorize--black global-search__option-icon" %>
+      <span class="overflow-ellipsis"><%= search.query %></span>
+    </li>
+  <% end %>
+</ul>
+
+<p class="global-search__empty" data-global-search-target="empty"<% if searches.any? %> hidden<% end %>>
+  <%= searches.any? ? "No recent searches match." : "No recent searches yet." %>
+</p>

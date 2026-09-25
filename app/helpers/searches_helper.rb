@@ -9,4 +9,10 @@ module SearchesHelper
       search_results_formatted_class: "message--formatted"
     }, &
   end
+
+  # The header search field keeps the current query on the results page
+  # and starts empty everywhere else.
+  def global_search_query
+    params[:q].to_s.squish.presence if controller_name == "searches"
+  end
 end

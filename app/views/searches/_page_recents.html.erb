@@ -1,0 +1,26 @@
+<%# The no-query state of the results page: recent searches as plain
+    links (they work without JavaScript) with the clear action. Replaced
+    in place by searches/clear.turbo_stream.erb. %>
+<% searches = searches.to_a %>
+<% if searches.any? %>
+  <div class="searches__recents-header">
+    <h2 id="search-recents-title" class="searches__recents-title">Recent searches</h2>
+    <%= button_to clear_searches_path, method: :delete, class: "btn searches__clear", aria: { label: "Clear recent searches" },
+          form: { data: { turbo_confirm: "Are you sure you want to clear your recent searches?" } } do %>
+      <%= image_tag "broom.svg", size: 16, aria: { hidden: "true" }, class: "colorize--black" %>
+      <span>Clear</span>
+    <% end %>
+  </div>
+  <ul class="searches__recents" aria-labelledby="search-recents-title">
+    <% searches.each do |search| %>
+      <li>
+        <%= link_to searches_path(q: search.query), class: "searches__recent" do %>
+          <%= image_tag "search.svg", size: 14, aria: { hidden: "true" }, class: "colorize--black" %>
+          <span class="overflow-ellipsis"><%= search.query %></span>
+        <% end %>
+      </li>
+    <% end %>
+  </ul>
+<% else %>
+  <p class="searches__recents-empty">No recent searches yet.</p>
+<% end %>
