@@ -1,0 +1,16 @@
+<%# The "N replies" button under a message that started a thread. It renders
+    hidden at zero replies (no thread, or a thread with no finished reply
+    yet) so ChannelThread#broadcast_thread_indicator_change always has a
+    target to replace. Callers may pass reply_count; otherwise it reads the
+    thread's counter. Without a message (messages/_template) this renders
+    nothing: a pending message has no thread yet, and the server broadcast
+    replaces it with the real one. %>
+<% if (message = local_assigns[:message]) %>
+  <% count = local_assigns.fetch(:reply_count) { thread_reply_count(message) } %>
+  <button type="button" id="<%= dom_id(message, :thread_indicator) %>" class="message__thread-indicator"
+          data-controller="message-toolbar" data-action="message-toolbar#thread"
+          aria-label="<%= thread_indicator_label(count) %>"<%= " hidden" if count.zero? %>>
+    <%= image_tag "messages-outlined.svg", size: 14, class: "colorize--black", aria: { hidden: "true" } %>
+    <span><%= pluralize(count, "reply") %></span>
+  </button>
+<% end %>
