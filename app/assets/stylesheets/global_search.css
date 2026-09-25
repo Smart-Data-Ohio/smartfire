@@ -266,9 +266,10 @@
    thread panels are what squeeze the header. The switcher shows its icon
    in place of its Ctrl K hint. */
 @container topbar (max-width: 67.999rem) {
-  .room-header__action-label,
-  .room-header__actions .huddle-launcher span,
-  .room-header__actions .huddle-share-indicator span {
+  /* The huddle launcher keeps its "Join huddle" text here: it is the
+     primary header action, and workspace.css already drops it to an icon
+     on narrow viewports. */
+  .room-header__action-label {
     display: none;
   }
 

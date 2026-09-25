@@ -29,7 +29,7 @@ class Accounts::Bots::CredentialsControllerTest < ActionDispatch::IntegrationTes
     assert_equal "CI runner", credential.name
     assert_equal users(:david), credential.created_by
 
-    secret = response.body[/value="([^"]+)"/, 1]
+    secret = css_select("input[aria-label='New credential secret']").first["value"]
     assert secret.present?
     assert_equal Digest::SHA256.hexdigest(secret), credential.token_digest
     assert_equal Digest::SHA256.hexdigest(secret)[0, 4], credential.token_last_four
@@ -40,7 +40,7 @@ class Accounts::Bots::CredentialsControllerTest < ActionDispatch::IntegrationTes
       agent_credential: { name: "One-shot" }
     }
 
-    secret = response.body[/value="([^"]+)"/, 1]
+    secret = css_select("input[aria-label='New credential secret']").first["value"]
     delete session_url
 
     get agents_me_url, headers: { "Authorization" => "Bearer #{secret}" }
