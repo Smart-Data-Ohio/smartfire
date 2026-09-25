@@ -80,6 +80,16 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to searches_url
   end
 
+  # Turbo form submissions (the header search, clearing recents) send a
+  # Turbo Stream Accept header that the redirected GET inherits.
+  test "index renders the page for a Turbo Stream request without an older-results cursor" do
+    get searches_url(q: "hello"), headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
+
+    assert_response :success
+    assert_equal "text/html", response.media_type
+    assert_select "#search-results .message", text: /Hello world!/
+  end
+
   test "a query with no results shows an empty state" do
     get searches_url, params: { q: "zebra stripes tuxedo" }
 

@@ -5,6 +5,13 @@ class SearchesController < ApplicationController
     @query = display_query if display_query.present?
     @recent_searches = Current.user.searches.ordered
     @return_to_room = last_room_visited
+
+    # Only a "Load older results" window renders as a Turbo Stream.
+    # Turbo form submissions (the header search, clearing recents) send
+    # a Turbo Stream Accept header that the redirected GET inherits;
+    # answering those with the prepend stream would leave the page as it
+    # was, so everything else renders the page.
+    render formats: :html if params[:before].blank?
   end
 
   def create
