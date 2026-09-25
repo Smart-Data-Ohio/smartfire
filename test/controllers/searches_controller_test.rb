@@ -94,6 +94,21 @@ class SearchesControllerTest < ActionDispatch::IntegrationTest
     assert_empty users(:david).searches.reload
   end
 
+  test "clear leaves recents alone when it can't answer the requested format" do
+    users(:david).searches.record("hello")
+
+    assert_raises(ActionController::UnknownFormat) { delete clear_searches_url, as: :json }
+    assert users(:david).searches.exists?(query: "hello")
+  end
+
+  test "the header renders at most ten recents even when older rows exceed the trim" do
+    Search.insert_all(12.times.map { |i| { user_id: users(:david).id, query: "old #{i}", dedup_key: "old #{i}" } })
+
+    get room_url(rooms(:designers))
+
+    assert_select "#global-search-listbox [role='option']", count: 10
+  end
+
   test "clear without Turbo returns to the page it came from" do
     delete clear_searches_url, headers: { "HTTP_REFERER" => room_url(rooms(:designers)) }
 

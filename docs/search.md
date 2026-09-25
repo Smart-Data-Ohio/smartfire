@@ -2,8 +2,9 @@
 
 ## The search field
 
-Every signed-in page has a search field in the top bar, just before the
-page's header actions. Press **/** (outside a text field) or
+Every signed-in page has a search field at the trailing end of the top
+bar, after the page's own header actions and before the help menu, so
+it stays in one spot as you move between pages. Press **/** (outside a text field) or
 **Ctrl/⌘+Shift+F** (anywhere) to focus it. Focusing it opens your recent
 searches (the last ten, newest first) as a combobox: typing filters
 them, **↑**/**↓** move, **Enter** opens the highlighted one or, with
@@ -17,7 +18,9 @@ the page you are on.
 The header is a size container: once the member or thread panel (or a
 narrow viewport) leaves it under 68rem, the room's header actions drop
 their labels to keep the field; under 46rem the field folds into a
-search button that expands it over the whole header row.
+search button that expands it over the whole header row. The field
+gives up its own width (down to 9rem) before the page title does, so
+room names keep their full width at typical desktop sizes.
 
 The results page (`/searches?q=`) reads top down: a way back to your
 last room, the result count, operator chips, board/work-thread/event

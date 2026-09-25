@@ -1,50 +1,44 @@
 /* Global search in the top bar (layouts/_global_search.html.erb): a
-   compact field just before the page's header actions. The header is a
-   size container, so the field answers to the room the header actually
-   has, which the member and thread panels take from it as much as the
-   viewport does: below 68rem of header the room actions go icon-only,
-   and below 46rem the field folds into an icon button that expands it
-   over the whole header row. The recents panel drops below the field.
-   Motion uses the shared tokens (motion.css), which reduced motion
-   zeroes. */
+   field at the trailing edge of every header, after the page's own
+   controls and before the help menu, so it sits in the same spot on
+   every page. The header is a size container, so the field answers to
+   the room the header actually has, which the member and thread panels
+   take from it as much as the viewport does: below 68rem of header the
+   room actions go icon-only, and below 46rem the field folds into an
+   icon button that expands it over the whole header row. The recents
+   panel drops below the field. Motion uses the shared tokens
+   (motion.css), which reduced motion zeroes. */
 
 #nav {
   container: topbar / inline-size;
 }
 
-/* The page title yields first, then the field, and the actions last. */
+/* The field grows from its minimum into spare room rather than
+   shrinking from its maximum: flex shrinking is shared out by size, so
+   a shrinking field would take a sliver off the page title too and
+   ellipsize the room name at the first pixel of pressure. Growing, the
+   title keeps its full width and only yields once the field is at its
+   minimum. */
 .global-search {
-  flex: 0 50 17rem;
-  min-inline-size: 11rem;
+  flex: 1 1 9rem;
+  max-inline-size: 17rem;
+  min-inline-size: 9rem;
   order: 1;
   pointer-events: auto;
   position: relative;
 }
 
-/* The field sits between the page title and the actions: the title's
-   auto end margin pushes both to the trailing edge, and the help menu
-   follows the actions instead of splitting the free space. */
-#nav > .room-header__actions {
-  order: 2;
-}
-
-/* Other pages' trailing controls (profile log out, account admin links)
-   stay at the trailing edge after the field instead of being stranded
-   before it in the middle of the bar. */
-#nav:has(> .global-search) > .flex-item-justify-end {
-  margin-inline-start: 0;
-  order: 2;
-}
-
 #nav > .help-menu {
-  order: 3;
+  order: 2;
 }
 
 #nav > .global-search ~ .help-menu {
   margin-inline-start: 0;
 }
 
-#nav:not(:has(.room-header__identity)) > .global-search {
+/* The page title (or back link) already pushes the trailing controls
+   to the end; a header with nothing to push them needs the field to. */
+#nav:not(:has(> .room-header__identity, > .flex-item-justify-start, > .flex-item-justify-end)) > .global-search {
   margin-inline-start: auto;
 }
 
@@ -281,7 +275,9 @@
     display: none;
   }
 
-  .room-header__action--switcher img {
+  /* Scoped to the header so it outranks navigation.css, which loads
+     later and hides this icon while the Ctrl K hint shows. */
+  #nav .room-header__action--switcher img {
     display: block;
   }
 }
@@ -294,10 +290,6 @@
     flex: none;
     min-inline-size: 0;
     position: static;
-  }
-
-  #nav:not(:has(.room-header__identity)) > .global-search {
-    margin-inline-start: auto;
   }
 
   .global-search__toggle {

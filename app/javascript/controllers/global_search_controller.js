@@ -11,7 +11,7 @@ import { Controller } from "@hotwired/stimulus"
 // Ctrl/⌘+Shift+F focus it from anywhere (keyboard_shortcuts dispatches
 // global-search:focus).
 export default class extends Controller {
-  static targets = [ "toggle", "form", "input", "panel", "option" ]
+  static targets = [ "toggle", "form", "input", "panel", "option", "empty", "status" ]
   static classes = [ "expanded" ]
 
   connect() {
@@ -69,8 +69,9 @@ export default class extends Controller {
   }
 
   filter() {
-    this.#applyFilter()
+    const visible = this.#applyFilter()
     this.open()
+    this.#announce(visible)
   }
 
   keydown(event) {
@@ -133,15 +134,18 @@ export default class extends Controller {
     this.collapse({ restoreFocus: false })
   }
 
+  // Recording a search (the header form) or clearing them (the panel
+  // or the results page) changes the recents every page renders, so
+  // cached snapshots would bring back the old list on Back: drop them.
   // A clear from the panel swaps its recents out in place (searches/
-  // clear.turbo_stream.erb). Cached snapshots of other pages still hold
-  // the old recents, so drop them, and put focus back in the field.
-  recentsCleared(event) {
+  // clear.turbo_stream.erb) and puts focus back in the field.
+  searchesChanged(event) {
     if (!event.detail?.success) return
-    if (!event.target.closest?.(".global-search__clear-form")) return
+    const form = event.target.closest?.("form")
+    if (!form || !new URL(form.action, window.location.href).pathname.startsWith("/searches")) return
 
     window.Turbo?.cache?.clear()
-    this.inputTarget.focus()
+    if (form.classList.contains("global-search__clear-form")) this.inputTarget.focus()
   }
 
   reset() {
@@ -210,8 +214,27 @@ export default class extends Controller {
       if (matches) visible++
     })
 
-    if (listbox && this.optionTargets.length > 0) listbox.hidden = visible === 0
+    if (this.optionTargets.length > 0) {
+      if (listbox) listbox.hidden = visible === 0
+      if (this.hasEmptyTarget) this.emptyTarget.hidden = visible > 0
+    }
     this.#setActive(-1)
+    return visible
+  }
+
+  // Filtering changes the list silently for a screen reader, whose focus
+  // stays in the field; a polite status says what is left.
+  #announce(visible) {
+    if (!this.hasStatusTarget || this.optionTargets.length === 0) return
+
+    const term = this.inputTarget.value.trim()
+    if (!term) {
+      this.statusTarget.textContent = ""
+    } else if (visible === 0) {
+      this.statusTarget.textContent = "No recent searches match."
+    } else {
+      this.statusTarget.textContent = `${visible} recent ${visible === 1 ? "search matches" : "searches match"}.`
+    }
   }
 
   #visibleOptions() {

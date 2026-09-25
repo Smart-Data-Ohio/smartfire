@@ -28,7 +28,9 @@ export default class extends Controller {
   #onCaptureKeydown(event) {
     if (!event.ctrlKey && !event.metaKey) return
     if (event.altKey) return
-    if (event.shiftKey && event.key.toLowerCase() === "f") {
+    // The physical F key, so layouts whose F types another letter
+    // (Cyrillic, Greek, …) still get the chord.
+    if (event.shiftKey && event.code === "KeyF") {
       this.#focusSearchFromChord(event)
       return
     }

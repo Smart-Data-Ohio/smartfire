@@ -5,7 +5,9 @@
     prefilled here; this page shows what it found, top down. %>
 <% content_for :nav do %>
   <div class="room-header__identity room--current min-width">
-    <span class="room-header__kind">Search</span>
+    <% if @query %>
+      <span class="room-header__kind">Search</span>
+    <% end %>
     <h1 id="search-title" class="room__contents">
       <span class="room-header__name overflow-ellipsis"><%= @query ? "“#{@query}”" : "Search" %></span>
     </h1>

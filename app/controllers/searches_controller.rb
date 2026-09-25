@@ -3,7 +3,7 @@ class SearchesController < ApplicationController
 
   def index
     @query = display_query if display_query.present?
-    @recent_searches = Current.user.searches.ordered
+    @recent_searches = Current.user.searches.ordered.limit(10)
     @return_to_room = last_room_visited
 
     # Only a "Load older results" window renders as a Turbo Stream.
@@ -27,15 +27,22 @@ class SearchesController < ApplicationController
   # recents list in place, wherever the user is; without Turbo it lands
   # back on the page it came from.
   def clear
-    Current.user.searches.destroy_all
-
     respond_to do |format|
-      format.turbo_stream
-      format.html { redirect_back_or_to searches_url }
+      format.turbo_stream { clear_recent_searches }
+      format.html do
+        clear_recent_searches
+        redirect_back_or_to searches_url
+      end
     end
   end
 
   private
+    # Inside the format branches, so a request for a format this action
+    # can't answer gets its 406 before anything is deleted.
+    def clear_recent_searches
+      Current.user.searches.destroy_all
+    end
+
     # Results page newest-first in fixed windows, with a "Load older
     # results" cursor on (created_at, id): the id half keeps
     # same-timestamp messages from skipping or repeating at page edges.
