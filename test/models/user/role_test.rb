@@ -20,4 +20,24 @@ class User::RoleTest < ActiveSupport::TestCase
     assert another_member.can_administer?(Room.new(creator: member))
     assert_not another_member.can_administer?(rooms(:designers))
   end
+
+  test "can delete a room" do
+    admin = users(:david)
+    creator = users(:kevin)
+    member = users(:jz)
+
+    assert admin.can_delete_room?(rooms(:designers))
+    assert_not member.can_delete_room?(rooms(:designers))
+
+    own = Rooms::Closed.create_for({ name: "Own", creator: creator }, users: [ creator, member ])
+    assert creator.can_delete_room?(own)
+    assert_not member.can_delete_room?(own)
+
+    # Group DMs hold shared history: only administrators delete them,
+    # even when a member created the group.
+    group = Rooms::Direct.create_for({ name: "Group", creator: creator }, users: [ creator, member, admin ])
+    assert admin.can_delete_room?(group)
+    assert_not creator.can_delete_room?(group)
+    assert_not member.can_delete_room?(group)
+  end
 end

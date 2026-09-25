@@ -344,6 +344,40 @@ body.member-panel-open .room-header__action--switcher .quick-switcher-key {
   text-transform: uppercase;
 }
 
+.room-menu__item--destructive {
+  color: var(--color-negative);
+}
+
+.room-menu__item--destructive:hover,
+.room-menu__item--destructive:focus-visible {
+  background: var(--color-negative-dim, rgb(255 0 0 / 8%));
+}
+
+/* Leave/delete confirm dialog */
+
+.room-menu__confirm {
+  background: var(--workspace-surface);
+  border: 1px solid var(--workspace-border);
+  border-radius: 0.85rem;
+  color: var(--workspace-text);
+  inline-size: min(26rem, calc(100vw - 2rem));
+  padding: 1rem;
+}
+
+.room-menu__confirm::backdrop {
+  background: rgb(0 0 0 / 35%);
+}
+
+.room-menu__confirm p {
+  margin: 0 0 1rem;
+}
+
+.room-menu__confirm-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
 /* Muted rows stay visible but dimmed; the mention badge keeps full
    strength so it still reads as a callout. */
 

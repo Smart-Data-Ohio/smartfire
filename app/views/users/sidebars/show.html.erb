@@ -159,8 +159,9 @@
 
           <div id="direct_rooms" class="sidebar-list" data-controller="sorted-list" data-action="rooms-list:unread@window->sorted-list#updateItem">
             <%# The in-call participant ids join the collection key so a cached row never serves stale presence. %>
+            <%# The admin flag joins it too: the row carries a per-viewer delete flag. %>
             <%= render partial: "users/sidebars/rooms/direct", collection: @direct_memberships, as: :membership,
-                  cached: ->(membership) { [ membership, huddle_participants_by_room_id[membership.room_id]&.map(&:id) ] } %>
+                  cached: ->(membership) { [ membership, huddle_participants_by_room_id[membership.room_id]&.map(&:id), Current.user.administrator? ] } %>
           </div>
 
           <div class="sidebar-list sidebar-list--people" aria-label="Start a direct message">

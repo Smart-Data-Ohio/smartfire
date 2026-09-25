@@ -148,7 +148,9 @@ class HuddleJoinNoticesTest < ApplicationSystemTestCase
     visit room_path(room)
     wait_for_cable_connection
     wait_for_join_notice_controller
-    hold_toasts_open(leave_delay: 300)
+    # Production waits 5s; 1.5s keeps the test quick while leaving CI room
+    # for the rejoin broadcast to land inside the window.
+    hold_toasts_open(leave_delay: 1500)
     record_played_sounds
 
     jason_grant = HuddleGrant.issue!(session: second_session_for(users(:jason)),
@@ -166,9 +168,143 @@ class HuddleJoinNoticesTest < ApplicationSystemTestCase
       membership: memberships(:david_david_and_jason))
     notify_join_and_deliver(rejoined)
 
-    sleep 1 # past the 300ms leave delay
+    sleep 2 # past the 1.5s leave delay
     assert_no_selector ".huddle-join-toast"
     assert_empty played_sounds
+  end
+
+  test "a server mute cycle stays silent when the join arrives before the leave" do
+    room = rooms(:david_and_jason)
+    visit room_path(room)
+    wait_for_cable_connection
+    wait_for_join_notice_controller
+    hold_toasts_open(leave_delay: 1500)
+    record_played_sounds
+
+    jason_grant = HuddleGrant.issue!(session: second_session_for(users(:jason)),
+      membership: memberships(:jason_david_and_jason))
+    jason_grant.update_columns(last_seen_at: Time.current)
+    mark_in_call(room)
+
+    grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_david_and_jason))
+    grant.update_columns(last_seen_at: Time.current)
+
+    # Same mute cycle, opposite arrival order: ActionCable fans each
+    # broadcast out on its own event loop thread, so under load the join
+    # broadcast can land before the leave it follows. The revoke commits
+    # silently, the rejoin notifies first, and only then is the delayed
+    # leave delivered through the real notifier.
+    grant.update_columns(revoked_at: Time.current)
+    rejoined = HuddleGrant.issue!(session: sessions(:david_safari),
+      membership: memberships(:david_david_and_jason))
+    notify_join_and_deliver(rejoined)
+    sleep 1 # let the join arrive before the leave is broadcast
+    rejoined.update_columns(last_seen_at: nil)
+    Huddle::JoinNotifier.notify_leave(grant)
+    rejoined.update_columns(last_seen_at: Time.current)
+
+    sleep 2 # past the 1.5s leave delay
+    assert_no_selector ".huddle-join-toast"
+    assert_empty played_sounds
+  end
+
+  test "a rejoin after the leave toasted toasts joined again" do
+    room = rooms(:david_and_jason)
+    visit room_path(room)
+    wait_for_cable_connection
+    wait_for_join_notice_controller
+    hold_toasts_open(leave_delay: 1500)
+    record_played_sounds
+
+    jason_grant = HuddleGrant.issue!(session: second_session_for(users(:jason)),
+      membership: memberships(:jason_david_and_jason))
+    jason_grant.update_columns(last_seen_at: Time.current)
+    mark_in_call(room)
+
+    grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_david_and_jason))
+    grant.update_columns(last_seen_at: Time.current)
+
+    # A slow rejoin — kicked member coming back manually, second device —
+    # lands after the revoke's leave already toasted: the viewer saw
+    # "left", so the join reads as genuine and toasts with a sound.
+    grant.revoke!
+    assert_selector ".huddle-join-toast--leave", text: "David left", wait: 10
+
+    rejoined = HuddleGrant.issue!(session: sessions(:david_safari),
+      membership: memberships(:david_david_and_jason))
+    notify_join_and_deliver(rejoined)
+
+    assert_selector ".huddle-join-toast:not(.huddle-join-toast--leave)", text: "David joined", wait: 10
+    assert_selector ".huddle-join-toast--leave", text: "David left"
+    wait_for_condition("the join sound never played") { played_sounds.any? }
+    assert_equal 1, played_sounds.size
+  end
+
+  test "a genuine leave after a join-first mute cycle still toasts" do
+    room = rooms(:david_and_jason)
+    visit room_path(room)
+    wait_for_cable_connection
+    wait_for_join_notice_controller
+    hold_toasts_open(leave_delay: 1500)
+    record_played_sounds
+
+    jason_grant = HuddleGrant.issue!(session: second_session_for(users(:jason)),
+      membership: memberships(:jason_david_and_jason))
+    jason_grant.update_columns(last_seen_at: Time.current)
+    mark_in_call(room)
+
+    grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_david_and_jason))
+    grant.update_columns(last_seen_at: Time.current)
+
+    # Join-first mute cycle, as above: the revoke commits silently, the
+    # marked rejoin arms the quiet window, and the delayed leave lands
+    # inside it.
+    grant.update_columns(revoked_at: Time.current)
+    rejoined = HuddleGrant.issue!(session: sessions(:david_safari),
+      membership: memberships(:david_david_and_jason))
+    notify_join_and_deliver(rejoined)
+    sleep 1 # let the join arrive before the leave is broadcast
+    rejoined.update_columns(last_seen_at: nil)
+    Huddle::JoinNotifier.notify_leave(grant)
+    rejoined.update_columns(last_seen_at: Time.current)
+
+    sleep 2 # past the 1.5s leave delay
+    assert_no_selector ".huddle-join-toast"
+
+    # The armed window swallowed at most that one matching leave: a real
+    # hang-up afterwards still toasts.
+    assert rejoined.mark_out_of_call!
+    assert_selector ".huddle-join-toast--leave", text: "David left", wait: 10
+    assert_empty played_sounds
+  end
+
+  test "a genuine rejoin after the leave delay toasts joined again" do
+    room = rooms(:david_and_jason)
+    visit room_path(room)
+    wait_for_cable_connection
+    wait_for_join_notice_controller
+    hold_toasts_open(batch_window: 200, leave_delay: 200)
+    record_played_sounds
+
+    jason_grant = HuddleGrant.issue!(session: second_session_for(users(:jason)),
+      membership: memberships(:jason_david_and_jason))
+    jason_grant.update_columns(last_seen_at: Time.current)
+    mark_in_call(room)
+
+    grant = HuddleGrant.issue!(session: sessions(:david_safari), membership: memberships(:david_david_and_jason))
+    notify_join_and_deliver(grant)
+    assert_selector ".huddle-join-toast:not(.huddle-join-toast--leave)", text: "David joined", wait: 10
+
+    assert grant.mark_out_of_call!
+    assert_selector ".huddle-join-toast--leave", text: "David left", wait: 10
+
+    # A real hang-up leaves the grant unrevoked, so rejoining reads as a
+    # genuine join: the batch expired while the leave toasted, and the
+    # second join sounds again.
+    notify_join_and_deliver(grant)
+    wait_for_condition("the second join sound never played") { played_sounds.size == 2 }
+    assert_selector ".huddle-join-toast:not(.huddle-join-toast--leave)", text: "David joined"
+    assert_selector ".huddle-join-toast--leave", text: "David left"
   end
 
   test "a server mute cycle across a room switch stays silent" do

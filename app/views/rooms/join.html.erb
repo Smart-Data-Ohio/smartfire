@@ -1,0 +1,16 @@
+<% @page_title = "Join ##{@room.name}" %>
+<% @body_class = "sidebar room-workspace" %>
+
+<% content_for :nav do %>
+  <div class="flex-item-justify-start">
+    <%= link_back_to_last_room_visited %>
+  </div>
+<% end %>
+
+<% content_for :sidebar, sidebar_turbo_frame_tag(src: user_sidebar_path) %>
+
+<section class="panel txt-align-center">
+  <h2>#<%= @room.name %></h2>
+  <p class="translucent">You're not a member of this channel.</p>
+  <%= button_to "Join channel", join_room_path(@room), method: :post, class: "btn btn--reversed" %>
+</section>
