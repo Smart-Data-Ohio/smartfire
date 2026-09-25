@@ -23,11 +23,11 @@
    overflow. */
 .profile-settings .flex > span {
   min-inline-size: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .profile-settings :is(p, legend, label) {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 /* Rows that wrap ("Custom end [datetime] in your time zone", button

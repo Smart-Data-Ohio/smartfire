@@ -247,11 +247,22 @@ pre {
   position: absolute;
   z-index: 3;
 
-  /* The menu opens from a button near the leading edge; on a phone it
-     must stop short of the trailing edge rather than run past it. */
+  /* The menu's containing block is the translate button's row (below),
+     so 100% is the row's width, not the viewport's (which would count
+     the scrollbar): the menu stops a margin short of the row's end. */
   @media (max-width: 100ch) {
-    max-inline-size: min(calc(var(--max-width) - var(--inline-space)), calc(100vw - 4rem));
+    max-inline-size: min(calc(var(--max-width) - var(--inline-space)), calc(100% - var(--inline-space) * 2));
   }
+}
+
+/* The translate button's <details> stays in place, but the menu measures
+   against the whole row it sits in rather than the 40px button. */
+details.position-relative:has(> .language-list-menu) {
+  position: static;
+}
+
+:has(> details > .language-list-menu) {
+  position: relative;
 }
 
 .language-list {

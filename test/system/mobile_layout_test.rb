@@ -82,6 +82,35 @@ class MobileLayoutTest < ApplicationSystemTestCase
     end
   end
 
+  test "headers outside the workspace shell never cover the page or its scrollbar" do
+    pages = [ user_profile_path, edit_account_path, edit_rooms_open_path(rooms(:hq)) ]
+
+    [ [ 1400, 1000 ], [ 375, 812 ] ].each do |width, height|
+      page.current_window.resize_to(width, height)
+
+      pages.each do |path|
+        visit path
+        assert_selector "#main-content .panel"
+
+        layout = page.evaluate_script(<<~JS)
+          (() => {
+            const nav = document.querySelector("#nav").getBoundingClientRect();
+            const main = document.querySelector("#main-content");
+            const mainRect = main.getBoundingClientRect();
+            const panel = document.querySelector("#main-content .panel").getBoundingClientRect();
+            const probe = document.elementFromPoint(mainRect.right - 3, nav.bottom + 2);
+            return { navBottom: nav.bottom, mainTop: mainRect.top, panelTop: panel.top, scrollbarHit: Boolean(probe && main.contains(probe)) };
+          })()
+        JS
+
+        where = "#{path} at #{width}px: #{layout.inspect}"
+        assert_operator layout["panelTop"], :>=, layout["navBottom"] - 0.5, "expected the first panel below the header on #{where}"
+        assert_operator layout["mainTop"], :>=, layout["navBottom"] - 0.5, "expected the scroller (and its scrollbar) below the header on #{where}"
+        assert layout["scrollbarHit"], "expected the scroller's right edge just below the header to be reachable on #{where}"
+      end
+    end
+  end
+
   test "pages outside the workspace shell show no drawer toggle that opens nothing" do
     page.current_window.resize_to(375, 812)
 
@@ -96,14 +125,16 @@ class MobileLayoutTest < ApplicationSystemTestCase
     page.current_window.resize_to(375, 812)
     visit activity_items_path
 
-    { "People" => users_path, "Agents" => agents_path, "Work threads" => work_threads_path,
-      "Saved" => saved_items_path, "Scheduled" => scheduled_messages_path, "Activity inbox" => activity_items_path }.each do |destination, path|
+    # Drawer label => the page title, which lands only once Turbo has
+    # rendered the destination (the URL can change a beat earlier).
+    { "People" => "People", "Agents" => "Agents", "Work threads" => "Work", "Saved" => "Saved for later",
+      "Scheduled" => "Scheduled messages", "Activity inbox" => "Activity inbox" }.each do |destination, title|
       assert_selector "#main-content"
       click_button "Open workspace navigation"
       assert_selector "#sidebar.open"
       within("#sidebar") { click_link destination }
       assert_no_selector "#sidebar.open"
-      assert_current_path path, wait: 10
+      assert_title title, wait: 10
 
       visible_controls = page.evaluate_script(<<~JS)
         Array.from(document.querySelectorAll("#nav a, #nav button"))

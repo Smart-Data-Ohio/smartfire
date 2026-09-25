@@ -47,14 +47,23 @@
 }
 
 /* Pages outside the workspace shell (profile, a person's page, account
-   and room settings) keep the fixed header, but give it the shell
-   header's opaque surface and bottom border so scrolled content never
-   shows through it or takes taps meant for the header. A header with
-   nothing in it (sign-in) stays invisible. */
-body:not(.sidebar) #nav:has(> *) {
+   and room settings) get the shell header's behaviour: an opaque bar
+   with a bottom border in its own grid row, so #main-content (and its
+   scrollbar) starts below it and scrolled content never sits under it.
+   A header with nothing in it (sign-in) and the sign-up nametag, which
+   hangs from the top of the viewport, keep the old invisible overlay. */
+body:not(.sidebar, .signup) #nav:has(> *) {
   background: var(--color-bg);
   border-block-end: 1px solid var(--workspace-border, var(--color-border));
+  inset: auto;
   pointer-events: auto;
+  position: relative;
+}
+
+/* The panel's top margin cleared the old overlaid header; with the
+   header in its own row the panel only needs ordinary spacing. */
+body:not(.sidebar, .signup):has(> #nav > *) .panel {
+  margin-block-start: var(--block-space);
 }
 
 .skip-navigation {
