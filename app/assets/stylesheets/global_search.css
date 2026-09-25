@@ -28,6 +28,14 @@
   order: 2;
 }
 
+/* Other pages' trailing controls (profile log out, account admin links)
+   stay at the trailing edge after the field instead of being stranded
+   before it in the middle of the bar. */
+#nav:has(> .global-search) > .flex-item-justify-end {
+  margin-inline-start: 0;
+  order: 2;
+}
+
 #nav > .help-menu {
   order: 3;
 }

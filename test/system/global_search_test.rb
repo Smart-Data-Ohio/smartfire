@@ -173,6 +173,17 @@ class GlobalSearchTest < ApplicationSystemTestCase
     end
   end
 
+  test "pages with trailing nav controls keep them after the field" do
+    visit user_profile_url
+    assert_selector "#global-search-input", visible: true
+
+    field_right, logout_left = page.evaluate_script(<<~JS)
+      [ document.querySelector("#global-search-form").getBoundingClientRect().right,
+        document.querySelector("[data-action='sessions#logout:prevent']").getBoundingClientRect().left ]
+    JS
+    assert_operator logout_left, :>, field_right, "the log out button should sit after the search field"
+  end
+
   private
     def assert_no_horizontal_overflow
       assert page.evaluate_script("document.documentElement.scrollWidth <= window.innerWidth"),
