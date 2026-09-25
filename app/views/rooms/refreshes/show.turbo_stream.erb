@@ -1,9 +1,9 @@
 <%= turbo_stream.append dom_id(@room, :messages) do %>
-  <%= render partial: "messages/message", collection: @new_messages, cached: ->(message) { message_with_pr_cards_cache_key(message) } %>
+  <%= render partial: "messages/message", collection: @new_messages, locals: { thread_reply_counts: @thread_reply_counts }, cached: ->(message) { message_with_pr_cards_cache_key(message) } %>
 <% end if @new_messages.any? %>
 
 <% @updated_messages.each do |message| %>
-  <%= turbo_stream.replace dom_id(message), partial: "messages/message", locals: { message: message } %>
+  <%= turbo_stream.replace dom_id(message), partial: "messages/message", locals: { message: message, thread_reply_counts: @thread_reply_counts } %>
 <% end %>
 
 <% if @pins_changed %>

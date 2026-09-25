@@ -16,7 +16,7 @@ class Message < ApplicationRecord
 
   belongs_to :room, touch: true
   belongs_to :creator, class_name: "User", default: -> { Current.user }
-  belongs_to :thread, class_name: "ChannelThread", optional: true, inverse_of: :messages
+  belongs_to :thread, class_name: "ChannelThread", optional: true, inverse_of: :messages, touch: true
   belongs_to :reply_to_message, class_name: "Message", optional: true
   belongs_to :forwarded_from_message, class_name: "Message", optional: true
 
@@ -139,7 +139,7 @@ class Message < ApplicationRecord
       .preload(:message_pins)
       .preload(:agent_steps)
       .preload(poll: [ :poll_options, { poll_votes: :user } ])
-      .preload(:room, :github_pull_requests, :fizzy_cards, :twitter_posts, :drive_attachments, link_embed_references: :link_embed,
+      .preload(:room, :channel_thread, :github_pull_requests, :fizzy_cards, :twitter_posts, :drive_attachments, link_embed_references: :link_embed,
         events: [ :room, :organizer, :venue ],
         message_references: { referenced_message: [ :room, :rich_text_body, { attachment_attachment: :blob }, { creator: :avatar_attachment } ] },
         reply_to_message: [ :room, :rich_text_body, { creator: :avatar_attachment } ])

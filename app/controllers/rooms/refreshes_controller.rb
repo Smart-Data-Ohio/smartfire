@@ -17,6 +17,8 @@ class Rooms::RefreshesController < ApplicationController
     # Pins touch their message (badges arrive through @updated_messages),
     # but the header count and panel list render only when the stamp moved.
     @pins_changed = @room.pins_changed_at.present? && @room.pins_changed_at > @last_updated_at
+    @thread_reply_counts = ChannelThread.board_reply_counts(
+      (@new_messages + @updated_messages).filter_map(&:channel_thread))
 
     # An empty turbo-stream render still runs Turbo's animation-frame focus
     # restore: a focus move made inside that window is yanked back to the

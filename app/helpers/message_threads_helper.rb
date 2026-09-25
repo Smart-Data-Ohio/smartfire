@@ -12,4 +12,14 @@ module MessageThreadsHelper
   def thread_panel_url(room, thread)
     room_thread_path(room, thread, format: :json)
   end
+
+  # Falls back to a single count query when no bulk `counts` hash was
+  # computed for the page (low-traffic render sites: search, a thread's
+  # own conversation, board posts).
+  def thread_reply_count(message, counts: nil)
+    thread = message.channel_thread
+    return 0 if thread.blank?
+
+    counts ? counts.fetch(thread.id, 0) : thread.message_count
+  end
 end

@@ -30,11 +30,11 @@
   <%= messages_tag(@room) do %>
     <%= render "rooms/show/invitation", room: @room %>
     <% if @unread_divider_message_id && (divider_index = @messages.index { |message| message.id == @unread_divider_message_id }) %>
-      <%= render partial: "messages/message", collection: @messages.first(divider_index) %>
+      <%= render partial: "messages/message", collection: @messages.first(divider_index), locals: { thread_reply_counts: @thread_reply_counts } %>
       <%= render "messages/unread_divider", unread_count: @unread_count %>
-      <%= render partial: "messages/message", collection: @messages[divider_index..] %>
+      <%= render partial: "messages/message", collection: @messages[divider_index..], locals: { thread_reply_counts: @thread_reply_counts } %>
     <% else %>
-      <%= render partial: "messages/message", collection: @messages %>
+      <%= render partial: "messages/message", collection: @messages, locals: { thread_reply_counts: @thread_reply_counts } %>
     <% end %>
   <% end %>
 

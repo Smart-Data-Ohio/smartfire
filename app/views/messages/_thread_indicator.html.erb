@@ -1,0 +1,11 @@
+<%# Always rendered: thread creation, new replies, and thread deletion all
+    replace this container over the room messages stream (see
+    ChannelThread#broadcast_thread_indicator_change), so it needs a stable
+    target even while hidden. %>
+<% count = thread_reply_count(message, counts: local_assigns[:thread_reply_counts]) %>
+<button type="button" id="<%= dom_id(message, :thread_indicator) %>" class="message__thread-indicator"
+        data-controller="message-toolbar" data-action="message-toolbar#thread"
+        <%= "hidden" unless message.channel_thread %>>
+  <%= image_tag "messages-outlined.svg", size: 14, aria: { hidden: "true" } %>
+  <span><%= pluralize(count, "reply") %></span>
+</button>

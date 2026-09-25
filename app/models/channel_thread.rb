@@ -68,6 +68,7 @@ class ChannelThread < ApplicationRecord
   after_create_commit :apply_board_tag_auto_assign_on_create
   after_update_commit :apply_board_tag_auto_assign_on_update
   after_destroy_commit :broadcast_board_row_remove, if: :board_post?
+  after_destroy_commit :broadcast_thread_indicator_change
   before_destroy :capture_deleted_work_snapshot
   after_destroy_commit :emit_deleted_work_unassigned
   # Runs first: pending scheduled rows drop with an inbox item while the
@@ -824,7 +825,22 @@ class ChannelThread < ApplicationRecord
 
     unread_user_ids = mark_memberships_unread(message)
     broadcast_unread_threads(unread_user_ids)
+    broadcast_thread_indicator_change
     ChannelThread::PushMessageJob.perform_later(self, message)
+  end
+
+  # Replaces the "N replies" indicator on the message this thread started
+  # from. Fires on every message received (including the thread's first,
+  # which is when the indicator first becomes visible) and on thread
+  # deletion (when it hides again). A message being posted or a thread
+  # being deleted never touches the parent message row itself, so nothing
+  # else would otherwise tell an open room to update it.
+  def broadcast_thread_indicator_change
+    return unless parent_message
+
+    broadcast_replace_to parent_message.room, :messages,
+      target: ActionView::RecordIdentifier.dom_id(parent_message, :thread_indicator),
+      partial: "messages/thread_indicator", locals: { message: parent_message }
   end
 
   # Replace this post's rows on the board index over the room's existing
