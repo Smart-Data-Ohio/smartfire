@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_24_160959) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_25_174854) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -350,6 +350,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_24_160959) do
     t.integer "creator_id", null: false
     t.datetime "last_activity_at", null: false
     t.datetime "locked_at"
+    t.integer "messages_count", default: 0, null: false
     t.string "name", null: false
     t.integer "parent_message_id"
     t.text "result_markdown"

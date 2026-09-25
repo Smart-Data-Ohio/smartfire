@@ -67,6 +67,32 @@ class ThreadsTest < ApplicationSystemTestCase
     assert_selector "#thread-panel .boosts__reactions", text: "👍", wait: 10
   end
 
+  test "the thread root counts its replies live and hides the count when none remain" do
+    create_thread_from_message("Indicator thread", "The only reply.")
+    indicator = "##{dom_id(messages(:third), :thread_indicator)}"
+
+    assert_selector indicator, text: "1 reply", visible: true, wait: BROADCAST_WAIT
+    assert_selector "#{indicator}[aria-label='Open thread, 1 reply'] img.colorize--black", visible: true
+
+    within "#thread-panel" do
+      fill_in "Write a thread reply", with: "A second reply."
+      click_button "Send Reply"
+    end
+    assert_selector indicator, text: "2 replies", visible: true, wait: BROADCAST_WAIT
+
+    [ "A second reply.", "The only reply." ].each do |text|
+      within_thread_message(text) do
+        right_click_message
+      end
+      assert_message_menu_open
+      accept_confirm { click_on "Delete message", exact: true }
+      assert_no_selector "#thread-panel .message__body", text: text, wait: 10
+    end
+
+    assert_no_selector indicator, visible: true, wait: BROADCAST_WAIT
+    assert_selector "#{indicator}[hidden]", visible: false
+  end
+
   test "a stray create re-entry does not wipe the half-filled thread name" do
     thread_name = "Survives a stray reset"
     first_message = "The name survives the re-entry."

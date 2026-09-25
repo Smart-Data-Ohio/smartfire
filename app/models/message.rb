@@ -111,6 +111,17 @@ class Message < ApplicationRecord
   after_destroy_commit :broadcast_quote_cards_removal
   after_create_commit :sync_link_embed_references, unless: :streaming?
   after_update_commit :resync_link_embed_references
+  # The thread reply counter (ChannelThread#messages_count) is refreshed
+  # inside the write's transaction whenever a row joins or leaves the
+  # count, and the parent message's indicator is broadcast once that
+  # commits. A stream finalize bypasses callbacks (see
+  # #claim_stream_finalized!) and refreshes explicitly. Destroys cascading
+  # from the thread or the room skip it: the counter row goes with them.
+  after_create :refresh_thread_messages_count, if: :thread_reply?
+  after_update :refresh_thread_messages_count, if: :thread_reply_membership_changed?
+  after_destroy :refresh_thread_messages_count, if: :thread_reply?, unless: :destroyed_with_conversation?
+  after_commit :broadcast_thread_indicator, if: :thread_indicator_pending?
+  after_rollback -> { @thread_indicator_thread_ids = nil }
 
   # Tie-broken by id so the page windows agree with the (created_at, id)
   # tuple cursors in Pagination: ordering by created_at alone lets the
@@ -139,7 +150,7 @@ class Message < ApplicationRecord
       .preload(:message_pins)
       .preload(:agent_steps)
       .preload(poll: [ :poll_options, { poll_votes: :user } ])
-      .preload(:room, :github_pull_requests, :fizzy_cards, :twitter_posts, :drive_attachments, link_embed_references: :link_embed,
+      .preload(:room, :channel_thread, :github_pull_requests, :fizzy_cards, :twitter_posts, :drive_attachments, link_embed_references: :link_embed,
         events: [ :room, :organizer, :venue ],
         message_references: { referenced_message: [ :room, :rich_text_body, { attachment_attachment: :blob }, { creator: :avatar_attachment } ] },
         reply_to_message: [ :room, :rich_text_body, { creator: :avatar_attachment } ])
@@ -299,6 +310,12 @@ class Message < ApplicationRecord
     thread_id.present?
   end
 
+  # A message ChannelThread#messages_count counts (see REPLY_COUNT_SQL):
+  # in a thread, finished, and not a quiet system note.
+  def thread_reply?
+    thread_message? && !system_note? && !streaming?
+  end
+
   def reply?
     reply_to_message_id.present? || reply_target_deleted_at.present?
   end
@@ -333,6 +350,7 @@ class Message < ApplicationRecord
 
     unless creator.agent&.active?
       creator.agent&.clear_working_presence!
+      broadcast_finalized_thread_indicator
       broadcast_stream_final
       return true
     end
@@ -349,6 +367,7 @@ class Message < ApplicationRecord
     # sidebar badges; thread finalizes stay on the thread channel.
     broadcast_unread_room unless thread_message? || system_note?
     creator.agent&.clear_working_presence!
+    broadcast_finalized_thread_indicator
     broadcast_stream_final
     true
   end
@@ -360,6 +379,7 @@ class Message < ApplicationRecord
     return false unless claim_stream_finalized!
 
     creator.agent&.clear_working_presence!
+    broadcast_finalized_thread_indicator
     broadcast_stream_final
     true
   end
@@ -392,8 +412,60 @@ class Message < ApplicationRecord
       now = Time.current
       claimed = self.class.where(id: id, streaming: true)
         .update_all(streaming: false, updated_at: now) == 1
-      reload if claimed
+      if claimed
+        reload
+        # The claim skips callbacks, so a finished thread stream joins its
+        # thread's reply count here. The indicator broadcast waits for the
+        # end of the finalize (see #broadcast_finalized_thread_indicator).
+        refresh_thread_messages_count if thread_reply?
+      end
       claimed
+    end
+
+    def refresh_thread_messages_count
+      thread_ids = [ thread_id, thread_id_before_last_save ].compact.uniq
+      thread_ids.each { |id| ChannelThread.refresh_messages_count(id) }
+      @thread_indicator_thread_ids = thread_ids
+    end
+
+    # A thread move, or a streaming or system-note flip, changes which
+    # thread counts this row.
+    def thread_reply_membership_changed?
+      (saved_change_to_thread_id? || saved_change_to_streaming? || saved_change_to_system_note?) &&
+        (thread_message? || thread_id_before_last_save.present?)
+    end
+
+    # Only a thread's own cascade (its counter row goes too) or a room
+    # teardown skips the recount. Other cascades, like a user's hard
+    # destroy taking their messages, still recount the threads they leave.
+    def destroyed_with_conversation?
+      destroyed_by_association&.active_record == ChannelThread || room&.deleted?
+    end
+
+    def thread_indicator_pending?
+      @thread_indicator_thread_ids.present?
+    end
+
+    # Runs last in a finalize, after every deferred side effect, and never
+    # raises: the claim has already committed and the sweep will not retry,
+    # so a failing broadcast (the cable adapter down) must not skip the
+    # rest of the finalize. The committed count still reaches clients
+    # through the bumped parent message on their next refresh.
+    def broadcast_finalized_thread_indicator
+      broadcast_thread_indicator
+    rescue => error
+      @thread_indicator_thread_ids = nil
+      Rails.logger.error "Thread indicator broadcast failed for message #{id}: #{error.class}: #{error.message}"
+    end
+
+    # Loads the threads fresh so the broadcast renders the committed count
+    # rather than whatever copy this message had cached.
+    def broadcast_thread_indicator
+      thread_ids = @thread_indicator_thread_ids
+      @thread_indicator_thread_ids = nil
+      return if thread_ids.blank?
+
+      ChannelThread.where(id: thread_ids).includes(parent_message: :room).find_each(&:broadcast_thread_indicator_change)
     end
 
     def record_activity_items

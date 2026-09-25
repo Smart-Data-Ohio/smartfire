@@ -686,6 +686,46 @@ img.message__attachment {
   }
 }
 
+/* The "N replies" button under a message that started a thread. It always
+   renders so reply and thread-delete broadcasts have a target, hidden while
+   the thread has no replies. Colors come from theme tokens, and the icon
+   carries colorize--black, so both themes follow automatically. */
+.message__thread-indicator {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: var(--workspace-text-muted, var(--color-text));
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.76rem;
+  font-weight: 700;
+  gap: 0.35rem;
+  margin-block-start: 0.3rem;
+  padding: 0.15rem 0.5rem 0.15rem 0.35rem;
+
+  img {
+    block-size: 0.85rem;
+    inline-size: 0.85rem;
+  }
+
+  @media (any-hover: hover) {
+    &:where(:not(:active):hover) {
+      background-color: color-mix(in srgb, var(--color-border) 45%, transparent);
+      color: var(--workspace-text, var(--color-text));
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-selected-dark);
+    outline-offset: 2px;
+  }
+
+  &[hidden] {
+    display: none;
+  }
+}
+
 /* Shared emoji picker panel, anchored by JS near the toolbar button. */
 .emoji-picker__panel {
   background-color: var(--color-bg);

@@ -16,6 +16,20 @@ class ChannelThread < ApplicationRecord
     "done" => "Done"
   }.freeze
   UNSET_WORK_VALUE = Object.new.freeze
+  # What messages_count counts: the thread's finished, non-system messages
+  # (see Message#thread_reply?). A streaming agent message joins the count
+  # when it finalizes; quiet system notes never do. Recomputed from the rows
+  # rather than incremented, so any path that misses a refresh (old code
+  # mid-deploy, a crash between statements) heals on the next one. The
+  # migration that added the column backfills with the same expression.
+  REPLY_COUNT_SQL = <<~SQL.squish.freeze
+    messages_count = (
+      SELECT COUNT(*) FROM messages
+       WHERE messages.thread_id = channel_threads.id
+         AND messages.system_note = 0
+         AND messages.streaming = 0
+    )
+  SQL
 
   belongs_to :room
   belongs_to :creator, class_name: "User"
@@ -68,6 +82,10 @@ class ChannelThread < ApplicationRecord
   after_create_commit :apply_board_tag_auto_assign_on_create
   after_update_commit :apply_board_tag_auto_assign_on_update
   after_destroy_commit :broadcast_board_row_remove, if: :board_post?
+  # Deleting a thread hides its parent message's indicator: bump the parent
+  # so the reconnect refresh and fragment cache see it, then broadcast.
+  after_destroy :stamp_parent_message
+  after_destroy_commit :broadcast_thread_indicator_change
   before_destroy :capture_deleted_work_snapshot
   after_destroy_commit :emit_deleted_work_unassigned
   # Runs first: pending scheduled rows drop with an inbox item while the
@@ -167,6 +185,21 @@ class ChannelThread < ApplicationRecord
     def board_tag_counts(room)
       ThreadTag.where(channel_thread_id: room.channel_threads.select(:id))
         .group(:name).order(:name).count
+    end
+
+    # Recomputes messages_count for one thread from its rows in a single
+    # statement (atomic under SQLite's one writer, so two concurrent writers
+    # cannot interleave a stale count), and bumps the thread's parent
+    # message so a reconnect refresh re-renders it and its fragment cache
+    # key moves. Both writes skip callbacks and leave the thread's own
+    # updated_at alone: Agents::WorkPayload publishes that stamp as "the
+    # work item changed". A deleted thread is a no-op.
+    def refresh_messages_count(thread_id)
+      return if thread_id.nil?
+
+      where(id: thread_id).update_all(REPLY_COUNT_SQL)
+      Message.where(id: where(id: thread_id).where.not(parent_message_id: nil).select(:parent_message_id))
+        .update_all(updated_at: Time.current)
     end
 
     # Reply and linked-object counts for one board page in one grouped query
@@ -827,6 +860,23 @@ class ChannelThread < ApplicationRecord
     ChannelThread::PushMessageJob.perform_later(self, message)
   end
 
+  # Replaces the "N replies" indicator on the message this thread started
+  # from, over the room's message stream. Message fires it after every
+  # change to messages_count (a reply posted, deleted, or finalized from a
+  # stream); the thread fires it on deletion, when the indicator hides.
+  # The count is passed explicitly: after a destroy the parent's cached
+  # channel_thread can still point at this (deleted) record.
+  def broadcast_thread_indicator_change
+    message = parent_message
+    return if message.nil? || message.destroyed?
+
+    broadcast_replace_to message.room, :messages,
+      target: ActionView::RecordIdentifier.dom_id(message, :thread_indicator),
+      partial: "messages/thread_indicator",
+      locals: { message:, reply_count: destroyed? ? 0 : messages_count },
+      attributes: { maintain_scroll: true }
+  end
+
   # Replace this post's rows on the board index over the room's existing
   # message stream. The list and column renderings use distinct row ids, so
   # both are refreshed; viewers in the other rendering ignore the absent
@@ -839,6 +889,10 @@ class ChannelThread < ApplicationRecord
   end
 
   private
+    def stamp_parent_message
+      Message.where(id: parent_message_id).update_all(updated_at: Time.current) if parent_message_id
+    end
+
     def pending_tag_names?
       defined?(@pending_tag_names) && @pending_tag_names
     end

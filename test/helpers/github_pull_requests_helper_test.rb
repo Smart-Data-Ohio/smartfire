@@ -33,7 +33,46 @@ class GithubPullRequestsHelperTest < ActionView::TestCase
   end
 
   test "cache key for a message without pull requests is just the message" do
-    assert_equal [ messages(:first), nil, nil, nil, false, false, nil, nil, nil ], message_with_pr_cards_cache_key(messages(:first))
+    assert_equal [ messages(:first), nil, nil, nil, nil, false, false, nil, nil, nil ], message_with_pr_cards_cache_key(messages(:first))
+  end
+
+  # Frozen time keeps every stamp (the parent's own updated_at included)
+  # identical, so only the reply count element can move the key.
+  test "cache key changes when a thread reply is posted" do
+    freeze_time
+    parent = messages(:third)
+    thread = ChannelThread.create!(room: parent.room, creator: users(:jz), parent_message: parent, name: "Keyed")
+    thread.post_message!(creator: users(:jz), attributes: { markdown_source: "One" })
+
+    before = message_with_pr_cards_cache_key(Message.with_rendering_details.find(parent.id))
+    thread.post_message!(creator: users(:jz), attributes: { markdown_source: "Two" })
+
+    assert_not_equal before, message_with_pr_cards_cache_key(Message.with_rendering_details.find(parent.id))
+  end
+
+  test "cache key changes when an older thread reply is deleted" do
+    freeze_time
+    parent = messages(:third)
+    thread = ChannelThread.create!(room: parent.room, creator: users(:jz), parent_message: parent, name: "Keyed")
+    older = thread.post_message!(creator: users(:jz), attributes: { markdown_source: "Older" })
+    thread.post_message!(creator: users(:jz), attributes: { markdown_source: "Newer" })
+
+    before = message_with_pr_cards_cache_key(Message.with_rendering_details.find(parent.id))
+    older.destroy!
+
+    assert_not_equal before, message_with_pr_cards_cache_key(Message.with_rendering_details.find(parent.id))
+  end
+
+  test "cache key reads the reply count without a query" do
+    parent = messages(:third)
+    thread = ChannelThread.create!(room: parent.room, creator: users(:jz), parent_message: parent, name: "Keyed")
+    thread.post_message!(creator: users(:jz), attributes: { markdown_source: "One" })
+    loaded = Message.with_rendering_details.find(parent.id)
+    message_with_pr_cards_cache_key(loaded)
+
+    assert_no_queries(include_schema: false) do
+      assert_includes message_with_pr_cards_cache_key(loaded), 1
+    end
   end
 
   test "cache key carries the streaming flag" do
