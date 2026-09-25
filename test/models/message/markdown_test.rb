@@ -80,6 +80,41 @@ class Message::MarkdownTest < ActiveSupport::TestCase
     assert_match %r{<a href="https://example.com/docs" title="Read" target="_blank" rel="nofollow noopener noreferrer">Docs</a>}, html
   end
 
+  test "in-app links stay in this tab" do
+    html = create_markdown_message("[jump](/rooms/1/@2) [evil](//evil.example) [evil2](/\\evil.example)").body.body.to_html
+    fragment = Nokogiri::HTML5.fragment(html)
+
+    assert_nil fragment.at_css("a[href='/rooms/1/@2']")["target"]
+    assert_equal "_blank", fragment.at_css("a[href='//evil.example']")["target"]
+    download = create_markdown_message("[file](/rails/active_storage/blobs/x/y.pdf)").body.body.to_html
+    assert_match 'target="_blank"', download
+
+    # The renderer percent-encodes the backslash, so the href stays a plain path.
+    assert_equal "/%5Cevil.example", fragment.css("a").last["href"]
+  end
+
+  test "in-app hrefs exclude paths browsers resolve off-site" do
+    assert Message::Markdown.in_app_href?("/rooms/1/@2")
+    [ "//evil.example", "/\\evil.example", "/\t/evil.example", "/\n/evil.example", "/\r\\evil.example",
+      " /rooms/1", "https://example.com/", "javascript:alert(1)", "/rails/active_storage/blobs/x", "" ].each do |href|
+      assert_not Message::Markdown.in_app_href?(href), href.inspect
+    end
+  end
+
+  test "presentation keeps stored in-app links in this tab and breaks out of frames" do
+    stored = %(<a href="/rooms/1/@2" target="_blank" rel="nofollow noopener noreferrer">jump</a> ) +
+      %(<a href="https://example.com" target="_blank" rel="nofollow noopener noreferrer">out</a> ) +
+      %(<a href="/\\evil.example" target="_blank" rel="nofollow noopener noreferrer">evil</a>)
+    fragment = Nokogiri::HTML5.fragment(Message::Markdown.sanitize_presentation(stored))
+
+    internal = fragment.at_css("a[href='/rooms/1/@2']")
+    assert_nil internal["target"]
+    assert_equal "_top", internal["data-turbo-frame"]
+    assert_equal "false", internal["data-turbo-prefetch"]
+    assert_equal "_blank", fragment.at_css("a[href='https://example.com']")["target"]
+    assert_equal "_blank", fragment.css("a").last["target"]
+  end
+
   test "resolves a unique readable mention to a stored User attachment" do
     message = create_markdown_message("Hi @[David]")
 
