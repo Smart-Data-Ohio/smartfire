@@ -195,9 +195,9 @@ class MotionTest < ApplicationSystemTestCase
     assert page.evaluate_script("document.querySelector('#{scroller}').scrollHeight > document.querySelector('#{scroller}').clientHeight"),
       "expected the room list to overflow so the scroll check is real"
 
-    # Reopening focuses the current room, which scrolls it into view: probe
-    # far from that focus-determined landing (160px here) so a restore that
-    # merely focuses cannot masquerade as preservation.
+    # The first open revealed the current room (landing near 160px here).
+    # Probe far from that landing, with the current room scrolled out of
+    # view, so a reopen that focused it with a scroll would move the list.
     max_scroll = page.evaluate_script("document.querySelector('#{scroller}').scrollHeight - document.querySelector('#{scroller}').clientHeight")
     assert max_scroll >= 400, "expected room for a 400px scroll, got #{max_scroll}px"
     # The list smooth-scrolls programmatic sets, so wait until the scroll
@@ -209,6 +209,8 @@ class MotionTest < ApplicationSystemTestCase
     end
     before = page.evaluate_script("document.querySelector('#{scroller}').scrollTop")
     assert_equal 400, before
+    assert_not visible_in_drawer?("#sidebar a[aria-current='page']"),
+      "expected the current room scrolled out of view so the reopen focus is tested"
 
     page.send_keys :escape
     assert_no_selector "#sidebar.open"
@@ -223,8 +225,34 @@ class MotionTest < ApplicationSystemTestCase
 
     click_button "Open workspace navigation"
     assert_selector "#sidebar.open"
+
+    # Sample only once the open focus has landed: a focus that scrolls has
+    # started moving the list by then, so this check is deterministic.
+    wait_until("expected focus to move into the drawer on reopen") do
+      page.evaluate_script("document.querySelector('#sidebar').contains(document.activeElement)")
+    end
     after = page.evaluate_script("document.querySelector('#{scroller}').scrollTop")
     assert_equal before, after, "expected the room list to keep its scroll position"
+    assert visible_in_drawer?(":focus"), "expected focus on a control visible in the drawer"
+  end
+
+  test "mobile drawer reveals a current room far down the list on first open" do
+    user = users(:jz)
+    15.times { |index| Rooms::Closed.create!(name: "Scroll room #{index}", creator: user).memberships.create!(user: user) }
+    far_room = Rooms::Closed.create!(name: "Zz far room", creator: user)
+    far_room.memberships.create!(user: user)
+    join_room far_room
+
+    page.current_window.resize_to(390, 844)
+    current_room = "#sidebar a[aria-current='page']"
+    assert_selector current_room, visible: :all
+    assert_equal 0, page.evaluate_script("document.querySelector('#sidebar .sidebar__scroll').scrollTop")
+    assert_not visible_in_drawer?(current_room), "expected the current room to start out of view"
+
+    click_button "Open workspace navigation"
+    assert_selector "#sidebar.open"
+    assert_focused current_room
+    wait_until("expected the current room scrolled into view") { visible_in_drawer?(current_room) }
   end
 
   private
@@ -305,6 +333,26 @@ class MotionTest < ApplicationSystemTestCase
       transform = page.evaluate_script("getComputedStyle(document.querySelector('#sidebar .sidebar__container')).transform")
       transform == "none" || transform == "matrix(1, 0, 0, 1, 0, 0)"
     end
+  end
+
+  # Whether the element sits fully inside the visible part of the room list
+  # (or of the viewport, for drawer controls outside the list).
+  def visible_in_drawer?(selector)
+    page.evaluate_script(<<~JS, selector)
+      ((selector) => {
+        const element = document.querySelector(selector);
+        if (!element) return false;
+        const rect = element.getBoundingClientRect();
+        if (rect.width === 0 && rect.height === 0) return false;
+        const scroller = document.querySelector("#sidebar .sidebar__scroll");
+        let top = 0, bottom = window.innerHeight;
+        if (scroller.contains(element)) {
+          top = scroller.getBoundingClientRect().top + scroller.clientTop;
+          bottom = top + scroller.clientHeight;
+        }
+        return rect.top >= top - 1 && rect.bottom <= bottom + 1;
+      })(arguments[0])
+    JS
   end
 
   def wait_until(message, timeout: 5)

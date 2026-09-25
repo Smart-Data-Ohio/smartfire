@@ -10,6 +10,12 @@ const FOCUSABLE_SELECTOR = [
   "[tabindex]:not([tabindex='-1'])"
 ].join(",")
 
+// Room lists that have already been opened once. The sidebar frame is
+// turbo-permanent, so its scroller outlives this controller across visits;
+// keying on the element (not the controller) keeps "first open" meaning the
+// first open of this list, and a frame reload that swaps the list resets it.
+const revealedScrollers = new WeakSet()
+
 export default class extends Controller {
   static targets = [ "sidebar", "opener", "backdrop" ]
 
@@ -37,7 +43,8 @@ export default class extends Controller {
     // The open state does not transition visibility (workspace.css), so
     // the drawer is focusable as soon as the class lands; focus never
     // waits on the slide.
-    requestAnimationFrame(() => this.#focusNavigation())
+    const revealCurrentRoom = this.#firstOpenOfRoomList()
+    requestAnimationFrame(() => this.#focusNavigation({ revealCurrentRoom }))
   }
 
   close(event) {
@@ -169,9 +176,52 @@ export default class extends Controller {
     })
   }
 
-  #focusNavigation() {
+  // The first open of a room list reveals the current room (a normal focus
+  // scroll) so the drawer starts where the user is. After that the list's
+  // scroll position belongs to the user: focus lands on the current room only
+  // when it is already fully in view, otherwise on the first control visible
+  // in the drawer, and never scrolls anything.
+  #focusNavigation({ revealCurrentRoom = false } = {}) {
     const currentRoom = this.sidebarTarget.querySelector("a[aria-current='page']")
-    const target = currentRoom || this.#focusableElements()[0]
-    target?.focus()
+
+    if (currentRoom && revealCurrentRoom) {
+      currentRoom.focus()
+      return
+    }
+
+    const focusable = this.#focusableElements()
+    const target = currentRoom && this.#isVisibleInDrawer(currentRoom)
+      ? currentRoom
+      : focusable.find((element) => this.#isVisibleInDrawer(element)) || focusable[0]
+
+    target?.focus({ preventScroll: true })
+  }
+
+  #firstOpenOfRoomList() {
+    const scroller = this.#scroller()
+    if (!scroller || revealedScrollers.has(scroller)) return false
+
+    revealedScrollers.add(scroller)
+    return true
+  }
+
+  #isVisibleInDrawer(element) {
+    const rect = element.getBoundingClientRect()
+    if (rect.width === 0 && rect.height === 0) return false
+
+    const scroller = this.#scroller()
+    let top = 0
+    let bottom = window.innerHeight
+
+    if (scroller?.contains(element)) {
+      top = scroller.getBoundingClientRect().top + scroller.clientTop
+      bottom = top + scroller.clientHeight
+    }
+
+    return rect.top >= top - 1 && rect.bottom <= bottom + 1
+  }
+
+  #scroller() {
+    return this.sidebarTarget.querySelector(".sidebar__scroll")
   }
 }
