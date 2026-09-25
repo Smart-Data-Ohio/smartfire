@@ -231,6 +231,9 @@ export default class extends Controller {
     this.#fetchMembers()
     this.#startRefreshing()
 
+    // The open state does not transition visibility (workspace.css), so
+    // the panel is focusable as soon as the class lands; focus never waits
+    // on the slide.
     if (focusPanel) requestAnimationFrame(() => this.closeTarget?.focus())
   }
 

@@ -29,10 +29,49 @@
   max-inline-size: none;
   padding: 0;
   position: fixed;
+  /* The discrete transitions keep the dialog rendered and top-layer while
+     the surface slides out; without them close() would cut the exit. */
+  transition:
+    opacity var(--motion-medium) var(--ease-standard),
+    overlay var(--motion-medium) allow-discrete,
+    display var(--motion-medium) allow-discrete;
+}
+
+.stage-panel:not([open]) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.stage-panel:not([open]) .stage-panel__surface {
+  transform: translateX(102%);
+}
+
+@starting-style {
+  .stage-panel[open] {
+    opacity: 0;
+  }
+
+  .stage-panel[open] .stage-panel__surface {
+    transform: translateX(102%);
+  }
 }
 
 .stage-panel::backdrop {
-  background: rgb(11 13 18 / 58%);
+  background-color: rgb(11 13 18 / 0);
+  transition:
+    background-color var(--motion-medium) var(--ease-standard),
+    overlay var(--motion-medium) allow-discrete,
+    display var(--motion-medium) allow-discrete;
+}
+
+.stage-panel[open]::backdrop {
+  background-color: rgb(11 13 18 / 58%);
+}
+
+@starting-style {
+  .stage-panel[open]::backdrop {
+    background-color: rgb(11 13 18 / 0);
+  }
 }
 
 .stage-panel__surface {
@@ -45,6 +84,7 @@
   inset: 0 0 0 auto;
   min-inline-size: 0;
   position: absolute;
+  transition: transform var(--motion-medium) var(--ease-standard);
 }
 
 .stage-panel__header {

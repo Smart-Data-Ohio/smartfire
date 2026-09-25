@@ -448,9 +448,12 @@ export default class extends Controller {
     const menu = this.menuTarget
     menu.style.left = "0px"
     menu.style.top = "0px"
-    const rect = menu.getBoundingClientRect()
-    const left = Math.min(x, window.innerWidth - rect.width - VIEWPORT_PADDING)
-    const top = Math.min(y, window.innerHeight - rect.height - VIEWPORT_PADDING)
+    // offsetWidth/Height ignore the enter scale: getBoundingClientRect
+    // would measure the menu mid-pop at 0.97 and clamp it past the edge.
+    const menuWidth = menu.offsetWidth
+    const menuHeight = menu.offsetHeight
+    const left = Math.min(x, window.innerWidth - menuWidth - VIEWPORT_PADDING)
+    const top = Math.min(y, window.innerHeight - menuHeight - VIEWPORT_PADDING)
     menu.style.left = `${Math.max(VIEWPORT_PADDING, left)}px`
     menu.style.top = `${Math.max(VIEWPORT_PADDING, top)}px`
   }

@@ -61,9 +61,21 @@
   color: var(--color-negative);
   display: block;
   font-size: 0.75rem;
+  /* The display transition keeps the line rendered while it fades out;
+     without it the hidden flip would cut the exit. */
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    display var(--motion-fast) allow-discrete;
 
   &[hidden] {
     display: none;
+    opacity: 0;
+  }
+}
+
+@starting-style {
+  .composer__feedback:not([hidden]) {
+    opacity: 0;
   }
 }
 
