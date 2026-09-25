@@ -60,11 +60,12 @@ class SlashCommandsTest < ApplicationSystemTestCase
     assert_selector "#composer .composer__feedback", text: "not configured", visible: true
   end
 
-  test "suggestion rows hint runs-now and argument placeholders" do
+  test "suggestion rows hint argument placeholders only" do
     editor = find_field("Write a message")
 
     editor.set("/poll")
-    assert_selector "suggestion-option", text: "runs now"
+    assert_selector "suggestion-option", text: "/poll"
+    assert_no_selector ".slash-command__hint", text: "runs now"
 
     editor.set("/remind")
     assert_selector "suggestion-option", text: "<when> <text>"
@@ -80,6 +81,24 @@ class SlashCommandsTest < ApplicationSystemTestCase
     assert_no_selector "suggestion-option"
     assert_field "Write a message", with: "/po"
     assert_no_selector "#poll-builder[open]"
+  end
+
+  test "the close button does not overlap the first row's text" do
+    editor = find_field("Write a message")
+    editor.set("/")
+    assert_selector "suggestion-option", minimum: 1
+
+    overlap = page.evaluate_script(<<~JS)
+      (() => {
+        const close = document.querySelector(".suggestion__close").getBoundingClientRect()
+        const row = document.querySelector("suggestion-option .autocomplete__btn")
+        const style = getComputedStyle(row)
+        const contentRight = row.getBoundingClientRect().right - parseFloat(style.paddingRight)
+        return contentRight > close.left
+      })()
+    JS
+
+    assert_not overlap, "row text runs under the close button"
   end
 
   test "Escape closes the picker without sending" do
@@ -139,7 +158,7 @@ class SlashCommandsTest < ApplicationSystemTestCase
 
     editor = find_field("Write a message")
     editor.set("/dep")
-    assert_selector "suggestion-option", text: "runs now"
+    assert_selector "suggestion-option", text: "/deploy"
     editor.send_keys(:enter)
 
     assert_selector "#composer .composer__feedback", text: "Sent to Bender Bot", visible: true

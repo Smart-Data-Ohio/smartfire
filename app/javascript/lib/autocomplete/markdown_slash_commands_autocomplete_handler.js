@@ -106,8 +106,7 @@ export default class MarkdownSlashCommandsAutocompleteHandler extends BaseAutoco
     return close + autocompletables.map(command => {
       const name = escapeHTML(`/${command.name}`)
       const description = escapeHTML(command.description || "")
-      const hintText = command.takes_arguments === false ? "runs now" : command.arg_hint
-      const hint = hintText ? ` <span class="slash-command__hint">${escapeHTML(hintText)}</span>` : ""
+      const hint = command.arg_hint ? ` <span class="slash-command__hint">${escapeHTML(command.arg_hint)}</span>` : ""
       const agent = command.agent ? ` <small>by ${escapeHTML(command.agent)}</small>` : ""
 
       return `

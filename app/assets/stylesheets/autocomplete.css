@@ -146,6 +146,11 @@ suggestion-option {
   z-index: 1;
 }
 
+/* Keep row text clear of the overlaid ✕. */
+.autocomplete__list:has(.suggestion__close) .autocomplete__btn {
+  padding-inline-end: 2.25rem;
+}
+
 .suggestion__close:hover,
 .suggestion__close:focus-visible {
   background: var(--color-text);
