@@ -5,6 +5,13 @@ class SessionsController < ApplicationController
   before_action :ensure_user_exists, only: :new
 
   def new
+    # Background polls redirected to sign in keep their JSON Accept
+    # header; answer 401 instead of raising UnknownFormat, so the fetch
+    # fails quietly like any other signed-out request.
+    respond_to do |format|
+      format.html
+      format.json { head :unauthorized }
+    end
   end
 
   def create

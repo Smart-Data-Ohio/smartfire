@@ -126,6 +126,34 @@ class AuditLog::RoomsAuditTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "leaving a channel is recorded with the leaver as actor" do
+    sign_in :jz
+    room = rooms(:designers)
+
+    assert_difference -> { AuditLog.where(action: "room.membership.change").count }, +1 do
+      delete leave_room_url(room)
+    end
+
+    entry = AuditLog.where(action: "room.membership.change").last
+    assert_equal users(:jz).id, entry.actor_id
+    assert_equal "JZ <jz@37signals.com>", entry.actor_label
+    assert_equal room.id, entry.target_id
+    assert_equal [ "JZ" ], entry.details["revoked"]
+  end
+
+  test "leaving a group without destroying it is recorded" do
+    room = create_group_dm!([ users(:david), users(:jason), users(:kevin) ])
+
+    assert_difference -> { AuditLog.where(action: "room.membership.change").count }, +1 do
+      delete leave_rooms_direct_url(room)
+    end
+
+    entry = AuditLog.where(action: "room.membership.change").last
+    assert_equal users(:david).id, entry.actor_id
+    assert_equal room.id, entry.target_id
+    assert_equal [ "David" ], entry.details["revoked"]
+  end
+
   test "account settings changes are recorded" do
     assert_difference -> { AuditLog.where(action: "account.settings.change").count }, +1 do
       patch account_url, params: {

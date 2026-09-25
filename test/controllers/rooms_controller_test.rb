@@ -182,6 +182,160 @@ class RoomsControllerTest < ActionDispatch::IntegrationTest
     assert_predicate rooms(:designers).reload, :deleted?
   end
 
+  test "destroy answers the sidebar menu with json and no redirect" do
+    room = rooms(:designers)
+
+    delete room_url(room, format: :json)
+
+    assert_response :success
+    assert_equal({ "deleted" => true, "room_id" => room.id }, response.parsed_body)
+    assert_predicate room.reload, :deleted?
+  end
+
+  test "destroy announces the deleted room" do
+    delete room_url(rooms(:designers))
+
+    assert_redirected_to root_url
+    assert_equal "Deleted #Designers", flash[:notice]
+  end
+
+  test "destroy of a group dm is refused for non-administrators" do
+    sign_in :jz
+    room = Rooms::Direct.create_for({ name: "Weekend Plans", creator: users(:jz) }, users: [ users(:jz), users(:kevin), users(:david) ])
+
+    assert_no_enqueued_jobs do
+      delete room_url(room)
+      assert_response :forbidden
+    end
+    assert_not_predicate room.reload, :deleted?
+  end
+
+  test "leave removes only your membership and the room keeps working" do
+    sign_in :jz
+    room = rooms(:designers)
+
+    assert_difference -> { room.memberships.count }, -1 do
+      delete leave_room_url(room)
+    end
+
+    assert_redirected_to root_url
+    assert_not room.reload.user_ids.include?(users(:jz).id)
+    assert_not_predicate room, :deleted?
+
+    # The leaver lost access while the others keep the room.
+    get room_url(room)
+    assert_redirected_to root_url
+
+    sign_in :david
+    get room_url(room)
+    assert_response :success
+  end
+
+  test "leave answers the sidebar menu with json and no redirect" do
+    sign_in :jz
+
+    delete leave_room_url(rooms(:designers), format: :json)
+
+    assert_response :success
+    assert_equal({ "left" => true, "room_id" => rooms(:designers).id }, response.parsed_body)
+    assert_not rooms(:designers).reload.user_ids.include?(users(:jz).id)
+  end
+
+  test "the last member out does not delete the room" do
+    room = Rooms::Closed.create_for({ name: "Solo", creator: users(:david) }, users: [ users(:david) ])
+
+    assert_no_enqueued_jobs do
+      delete leave_room_url(room)
+    end
+
+    assert_redirected_to root_url
+    assert_not_predicate room.reload, :deleted?
+    assert_empty room.memberships
+  end
+
+  test "leave is rejected for non-members" do
+    room = rooms(:watercooler)
+
+    sign_in :jz
+    delete leave_room_url(room)
+
+    assert_redirected_to root_url
+    assert_equal 3, room.reload.memberships.count
+  end
+
+  test "leave of a group dm through the room route keeps direct semantics" do
+    sign_in :jz
+    room = Rooms::Direct.create_for({ name: "Weekend Plans", creator: users(:jz) }, users: [ users(:jz), users(:kevin), users(:david) ])
+
+    delete leave_room_url(room)
+
+    assert_redirected_to root_url
+    assert_not room.reload.user_ids.include?(users(:jz).id)
+    assert_not_predicate room, :deleted?
+    assert_equal "left the group", room.messages.where(system_note: true).last.plain_text_body
+  end
+
+  test "show renders the join page for a non-member of an open room" do
+    sign_in :jz
+
+    get room_url(rooms(:pets))
+
+    assert_response :success
+    assert_select "h2", text: "#All Pets"
+    assert_select "form[action=?]", join_room_path(rooms(:pets)) do
+      assert_select "button[type=submit]", text: "Join channel"
+    end
+  end
+
+  test "show still redirects non-members of private rooms" do
+    sign_in :jz
+
+    get room_url(rooms(:watercooler))
+
+    assert_redirected_to root_url
+  end
+
+  test "show still redirects non-members of deleted open rooms" do
+    sign_in :jz
+    rooms(:pets).update_columns(deleted_at: Time.current)
+
+    get room_url(rooms(:pets))
+
+    assert_redirected_to root_url
+  end
+
+  test "join recreates the membership and returns to the room" do
+    sign_in :jz
+
+    assert_difference -> { rooms(:pets).memberships.count }, +1 do
+      post join_room_url(rooms(:pets))
+    end
+
+    assert_redirected_to room_url(rooms(:pets))
+    membership = users(:jz).memberships.find_by!(room: rooms(:pets))
+    assert_equal rooms(:pets).default_involvement, membership.involvement
+  end
+
+  test "join is refused for private rooms" do
+    sign_in :jz
+
+    assert_no_difference -> { rooms(:watercooler).memberships.count } do
+      post join_room_url(rooms(:watercooler))
+    end
+
+    assert_redirected_to root_url
+  end
+
+  test "join of a room you already belong to returns to it" do
+    sign_in :jz
+
+    assert_no_difference -> { rooms(:hq).memberships.count } do
+      post join_room_url(rooms(:hq))
+    end
+
+    assert_redirected_to room_url(rooms(:hq))
+  end
+
   private
     def link_preview_body(href:, url:)
       %(<div><action-text-attachment content-type="application/vnd.actiontext.opengraph-embed" ) +
