@@ -1,0 +1,52 @@
+/* The profile page (users/profiles/show and its settings partials) at
+   phone widths. Every row must fit the panel: nothing may push the page
+   into horizontal scroll. */
+
+.profile-settings form {
+  min-inline-size: 0;
+}
+
+/* Controls shrink to the row instead of holding their intrinsic width
+   (a time or datetime input, a long select, a size="6" text field). */
+.profile-settings :is(input, select, textarea) {
+  max-inline-size: 100%;
+  min-inline-size: 0;
+}
+
+/* A short label beside a control keeps its line; the control gives. */
+.profile-settings .flex > label:not(.input, .switch) {
+  flex-shrink: 0;
+}
+
+/* Toggle descriptions and other text beside a control wrap within the
+   row; long unbroken strings (an email address) break rather than
+   overflow. */
+.profile-settings .flex > span {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.profile-settings :is(p, legend, label) {
+  overflow-wrap: anywhere;
+}
+
+/* Rows that wrap ("Custom end [datetime] in your time zone", button
+   pairs): a control keeps a usable width and moves what follows it to
+   the next line instead of shrinking to a sliver. */
+.profile-settings .flex-wrap > :is(input, select, textarea) {
+  flex: 1 1 10rem;
+}
+
+/* "Quiet from [time] until [time]": each label stays with its input,
+   and the second pair drops below the first when both don't fit. */
+.profile-settings__range {
+  flex-wrap: wrap;
+}
+
+.profile-settings__range > span {
+  flex: 1 1 11rem;
+}
+
+.profile-settings__range input {
+  flex: 1 1 0;
+}

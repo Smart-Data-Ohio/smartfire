@@ -29,11 +29,15 @@
       </span>
     </div>
 
-    <div class="flex align-center gap pad-block-half">
-      <%= form.label :quiet_hours_start, "Quiet from", class: "txt-medium" %>
-      <%= form.time_field :quiet_hours_start, class: "input", id: "user_quiet_hours_start" %>
-      <%= form.label :quiet_hours_end, "until", class: "txt-medium" %>
-      <%= form.time_field :quiet_hours_end, class: "input", id: "user_quiet_hours_end" %>
+    <div class="flex align-center gap pad-block-half profile-settings__range">
+      <span class="flex align-center gap">
+        <%= form.label :quiet_hours_start, "Quiet from", class: "txt-medium" %>
+        <%= form.time_field :quiet_hours_start, class: "input", id: "user_quiet_hours_start" %>
+      </span>
+      <span class="flex align-center gap">
+        <%= form.label :quiet_hours_end, "until", class: "txt-medium" %>
+        <%= form.time_field :quiet_hours_end, class: "input", id: "user_quiet_hours_end" %>
+      </span>
     </div>
     <% if @user.errors[:quiet_hours_start].any? %>
       <p class="txt-small margin-none" style="color: var(--color-negative)">Quiet hours <%= @user.errors[:quiet_hours_start].to_sentence %>.</p>

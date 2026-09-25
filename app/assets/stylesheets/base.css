@@ -87,6 +87,10 @@ fieldset {
   display: flex;
   flex-direction: column;
   max-inline-size: 50ch;
+  /* Browsers give fieldsets min-inline-size: min-content, so one wide
+     control row (two time inputs, a long select) widens the whole
+     fieldset past a phone viewport and its text runs off the edge. */
+  min-inline-size: 0;
   padding: var(--block-space) 0;
 
   &.border {
@@ -243,8 +247,10 @@ pre {
   position: absolute;
   z-index: 3;
 
+  /* The menu opens from a button near the leading edge; on a phone it
+     must stop short of the trailing edge rather than run past it. */
   @media (max-width: 100ch) {
-    max-inline-size: calc(var(--max-width) - var(--inline-space));
+    max-inline-size: min(calc(var(--max-width) - var(--inline-space)), calc(100vw - 4rem));
   }
 }
 

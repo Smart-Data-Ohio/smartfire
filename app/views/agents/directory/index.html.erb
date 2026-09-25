@@ -1,17 +1,22 @@
 <% @page_title = "Agents" %>
+<% @body_class = "sidebar workspace-page" %>
 
 <% content_for :nav do %>
-  <div class="flex-item-justify-start">
-    <%= link_back %>
+  <div class="room-header__identity room--current min-width">
+    <span class="room-header__kind">Workspace</span>
+    <h1 id="agents-title" class="room__contents">
+      <span class="room-header__name">Agents</span>
+    </h1>
   </div>
 <% end %>
 
+<% content_for :sidebar, sidebar_turbo_frame_tag(src: user_sidebar_path) %>
+
 <%= turbo_stream_from AgentsChannel::STREAM_NAME, channel: "AgentsChannel" %>
 
-<section class="panel panel--wide txt-align-center flex flex-column gap">
+<section class="panel panel--wide txt-align-center flex flex-column gap" aria-labelledby="agents-title">
   <div class="pad-inline-double center">
-    <h1 class="margin-none">Agents</h1>
-    <p class="margin-none-block-start">
+    <p class="margin-none">
       Every agent in the workspace, with live status.
     </p>
   </div>

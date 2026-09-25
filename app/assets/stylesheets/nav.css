@@ -46,6 +46,17 @@
   }
 }
 
+/* Pages outside the workspace shell (profile, a person's page, account
+   and room settings) keep the fixed header, but give it the shell
+   header's opaque surface and bottom border so scrolled content never
+   shows through it or takes taps meant for the header. A header with
+   nothing in it (sign-in) stays invisible. */
+body:not(.sidebar) #nav:has(> *) {
+  background: var(--color-bg);
+  border-block-end: 1px solid var(--workspace-border, var(--color-border));
+  pointer-events: auto;
+}
+
 .skip-navigation {
   --left-offset: -999em;
 
