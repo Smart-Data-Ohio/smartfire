@@ -25,6 +25,7 @@ class PollsTest < ApplicationSystemTestCase
     poll = Poll.order(:id).last
     card = "##{ActionView::RecordIdentifier.dom_id(poll, :card)}"
     assert_selector "#{card} .poll__label", text: "Sushi"
+    assert_no_selector "#{card} .poll__retract-form .btn", visible: true
 
     # Each vote replaces the card over the stream, so every step
     # re-scopes to the fresh node.
