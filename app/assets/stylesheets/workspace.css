@@ -762,11 +762,12 @@ body.sidebar {
 
 /* Channel members */
 .member-panel {
-  /* visibility flips to visible immediately on open (so focus can move in
-     without waiting and the surface slides from a real before-change
-     style) and only at the end on close, so the surface slides out first.
-     Unlike display:none, the boxes survive while closed, so the member
-     list keeps its scroll position. inert still flips immediately. */
+  /* Closing transitions visibility, so it flips to hidden only at the end
+     and the surface slides out first. Opening must not: an entering
+     visibility transition still reads hidden at progress 0, which keeps
+     the panel unfocusable for a frame or more (see the open rule). Unlike
+     display:none, the boxes survive while closed, so the member list
+     keeps its scroll position. inert still flips immediately. */
   inset: 0;
   opacity: 0;
   pointer-events: none;
@@ -807,6 +808,9 @@ body.sidebar {
 .member-panel-open .member-panel {
   opacity: 1;
   pointer-events: auto;
+  /* No visibility transition on the way in: visible lands with the
+     class, so focus can move in synchronously. */
+  transition: opacity var(--motion-medium) var(--ease-standard);
   visibility: visible;
 }
 
@@ -1006,6 +1010,7 @@ summary.member-panel__group-heading {
     inset: auto;
     min-inline-size: 0;
     position: relative;
+    transition: none;
     z-index: 5;
   }
 
@@ -1088,9 +1093,10 @@ summary.member-panel__group-heading {
 
     background: transparent;
     border: 0;
-    /* visibility flips to visible immediately on open (so focus can move
-       in without waiting and the drawer slides from a real before-change
-       style) and only at the end on close, so the drawer slides out first.
+    /* Closing transitions visibility, so it flips to hidden only at the
+       end and the drawer slides out first. Opening must not: an entering
+       visibility transition still reads hidden at progress 0, which keeps
+       the drawer unfocusable for a frame or more (see the .open rule).
        Unlike display:none, the boxes survive while closed, so the room
        list keeps its scroll position. inert still flips immediately. */
     inline-size: 100dvw;
@@ -1108,6 +1114,9 @@ summary.member-panel__group-heading {
   .sidebar #sidebar.open {
     opacity: 1;
     pointer-events: auto;
+    /* No visibility transition on the way in: visible lands with the
+       class, so focus can move in synchronously. */
+    transition: opacity var(--motion-medium) var(--ease-standard);
     visibility: visible;
   }
 

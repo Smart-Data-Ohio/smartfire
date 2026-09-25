@@ -231,10 +231,10 @@ export default class extends Controller {
     this.#fetchMembers()
     this.#startRefreshing()
 
-    // Two frames: the panel's visibility flips at the first render after
-    // the class lands, and a single rAF callback runs before that render
-    // while the panel still counts as hidden, so focus() silently fails.
-    if (focusPanel) requestAnimationFrame(() => requestAnimationFrame(() => this.closeTarget?.focus()))
+    // The open state does not transition visibility (workspace.css), so
+    // the panel is focusable as soon as the class lands; focus never waits
+    // on the slide.
+    if (focusPanel) requestAnimationFrame(() => this.closeTarget?.focus())
   }
 
   #close({ restoreFocus }) {

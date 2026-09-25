@@ -360,8 +360,10 @@ export default class extends Controller {
     this.joinToastNode.textContent = `${sentence(this.joinBatch.names)} joined`
     this.toastsTarget.append(this.joinToastNode)
 
+    // A fading predecessor is a different node (#hideJoinToast drops the
+    // reference), so its removal timer keeps running: cancelling it would
+    // strand an invisible toast in the stack.
     clearTimeout(this.joinToastTimer)
-    clearTimeout(this.joinToastRemovalTimer)
     this.joinToastTimer = setTimeout(() => this.#hideJoinToast(), this.toastTimeoutValue)
   }
 

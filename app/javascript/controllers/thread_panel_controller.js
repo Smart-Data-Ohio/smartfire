@@ -146,10 +146,7 @@ export default class extends Controller {
       this.createParentTarget.hidden = true
     }
     this.#setView("create")
-    // Two frames like #openPanel: a first open still has the opening
-    // transition ahead of it, and focusing before the visibility flips
-    // silently fails.
-    window.requestAnimationFrame(() => window.requestAnimationFrame(() => this.createMessageTarget.focus()))
+    window.requestAnimationFrame(() => this.createMessageTarget.focus())
   }
 
   filterChanged() {
@@ -448,13 +445,13 @@ export default class extends Controller {
     this.element.classList.add("thread-panel-open")
     this.#syncAccessibility()
 
-    // Two frames: the panel's visibility flips at the first render after
-    // the class lands, and a single rAF callback runs before that render
-    // while the panel still counts as hidden, so focus() silently fails.
+    // The open state does not transition visibility (thread_panel.css), so
+    // the panel is focusable as soon as the class lands; focus never waits
+    // on the slide.
     if (focus) {
-      window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
         if (this.#mobileQuery.matches) this.closeTarget.focus()
-      }))
+      })
     }
   }
 
