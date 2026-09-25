@@ -172,6 +172,41 @@ class ChannelThreadMessagesCountTest < ActiveSupport::TestCase
     assert indicator.at_css("button[hidden]")
   end
 
+  test "a failing indicator broadcast skips no finalize side effect" do
+    stream = start_agent_stream("counter-raising-stream", "hovercraft")
+
+    stream.stubs(:broadcast_thread_indicator).raises(Redis::CannotConnectError, "cable down")
+    streams = nil
+    assert_enqueued_with job: ChannelThread::PushMessageJob do
+      streams = capture_thread_streams { assert stream.finalize_stream! }
+    end
+
+    assert_equal 1, @thread.reload.messages_count
+    assert_equal [ stream ], @room.messages.search("hovercraft")
+    assert streams.any? { |element| element["action"] == "replace" }, "expected the stream's final replace"
+  end
+
+  test "a failing indicator broadcast still ends a quiet finalize" do
+    stream = start_agent_stream("counter-raising-quiet-stream", "Thinking")
+
+    stream.stubs(:broadcast_thread_indicator).raises(Redis::CannotConnectError, "cable down")
+    streams = capture_thread_streams { assert stream.finalize_stream_quietly! }
+
+    assert_equal 1, @thread.reload.messages_count
+    assert streams.any? { |element| element["action"] == "replace" }, "expected the stream's final replace"
+  end
+
+  test "a user's hard destroy recounts the threads their replies leave" do
+    post_reply("Stays")
+    @room.memberships.grant_to(users(:kevin))
+    @thread.post_message!(creator: users(:kevin), attributes: { markdown_source: "Goes with Kevin" })
+    assert_equal 2, @thread.reload.messages_count
+
+    users(:kevin).destroy!
+
+    assert_equal 1, @thread.reload.messages_count
+  end
+
   test "a system note in the thread broadcasts nothing" do
     post_reply("Real")
 
@@ -183,6 +218,17 @@ class ChannelThreadMessagesCountTest < ActiveSupport::TestCase
   end
 
   private
+    def start_agent_stream(client_message_id, text)
+      @room.memberships.grant_to(users(:bender))
+      @thread.post_message!(creator: users(:bender), attributes: {
+        markdown_source: text, client_message_id:, streaming: true })
+    end
+
+    def capture_thread_streams(&block)
+      ActionCable.server.pubsub.clear
+      capture_turbo_stream_broadcasts([ @thread, :messages ], &block)
+    end
+
     def post_reply(text)
       @thread.post_message!(creator: users(:jz), attributes: { markdown_source: text })
     end

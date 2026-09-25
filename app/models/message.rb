@@ -350,6 +350,7 @@ class Message < ApplicationRecord
 
     unless creator.agent&.active?
       creator.agent&.clear_working_presence!
+      broadcast_finalized_thread_indicator
       broadcast_stream_final
       return true
     end
@@ -366,6 +367,7 @@ class Message < ApplicationRecord
     # sidebar badges; thread finalizes stay on the thread channel.
     broadcast_unread_room unless thread_message? || system_note?
     creator.agent&.clear_working_presence!
+    broadcast_finalized_thread_indicator
     broadcast_stream_final
     true
   end
@@ -377,6 +379,7 @@ class Message < ApplicationRecord
     return false unless claim_stream_finalized!
 
     creator.agent&.clear_working_presence!
+    broadcast_finalized_thread_indicator
     broadcast_stream_final
     true
   end
@@ -412,11 +415,9 @@ class Message < ApplicationRecord
       if claimed
         reload
         # The claim skips callbacks, so a finished thread stream joins its
-        # thread's reply count here.
-        if thread_reply?
-          refresh_thread_messages_count
-          broadcast_thread_indicator
-        end
+        # thread's reply count here. The indicator broadcast waits for the
+        # end of the finalize (see #broadcast_finalized_thread_indicator).
+        refresh_thread_messages_count if thread_reply?
       end
       claimed
     end
@@ -434,12 +435,27 @@ class Message < ApplicationRecord
         (thread_message? || thread_id_before_last_save.present?)
     end
 
+    # Only a thread's own cascade (its counter row goes too) or a room
+    # teardown skips the recount. Other cascades, like a user's hard
+    # destroy taking their messages, still recount the threads they leave.
     def destroyed_with_conversation?
-      destroyed_by_association.present? || room&.deleted?
+      destroyed_by_association&.active_record == ChannelThread || room&.deleted?
     end
 
     def thread_indicator_pending?
       @thread_indicator_thread_ids.present?
+    end
+
+    # Runs last in a finalize, after every deferred side effect, and never
+    # raises: the claim has already committed and the sweep will not retry,
+    # so a failing broadcast (the cable adapter down) must not skip the
+    # rest of the finalize. The committed count still reaches clients
+    # through the bumped parent message on their next refresh.
+    def broadcast_finalized_thread_indicator
+      broadcast_thread_indicator
+    rescue => error
+      @thread_indicator_thread_ids = nil
+      Rails.logger.error "Thread indicator broadcast failed for message #{id}: #{error.class}: #{error.message}"
     end
 
     # Loads the threads fresh so the broadcast renders the committed count

@@ -67,7 +67,46 @@ class ThreadIndicatorRenderingTest < ActionDispatch::IntegrationTest
     assert_equal one_thread, three_threads
   end
 
+  # Guards the channel_thread preload: without it every message on the page
+  # loads its thread on its own, so more messages or more thread roots
+  # would cost more queries.
+  test "show costs no extra queries for more messages or thread roots" do
+    get room_url(@room)
+    baseline = count_queries { get room_url(@room) }
+
+    add_plain_messages(2)
+    more_messages = count_queries { get room_url(@room) }
+
+    start_thread(messages(:first), replies: 1)
+    more_roots = count_queries { get room_url(@room) }
+
+    assert_equal baseline, more_messages
+    assert_equal baseline, more_roots
+  end
+
+  test "the paginated index costs no extra queries for more messages or thread roots" do
+    get room_messages_url(@room)
+    baseline = count_queries { get room_messages_url(@room) }
+
+    add_plain_messages(2)
+    more_messages = count_queries { get room_messages_url(@room) }
+
+    start_thread(messages(:first), replies: 1)
+    more_roots = count_queries { get room_messages_url(@room) }
+
+    assert_equal baseline, more_messages
+    assert_equal baseline, more_roots
+  end
+
   private
+    # Posted as the signed-in member, so the room's unread state (and the
+    # divider's lookups) stays as it was.
+    def add_plain_messages(count)
+      count.times do |index|
+        @room.root_messages.create!(creator: users(:david), markdown_source: "Plain #{index}", client_message_id: "plain-#{index}")
+      end
+    end
+
     def start_thread(parent, replies:)
       thread = ChannelThread.create!(room: @room, creator: users(:david), parent_message: parent, name: "Thread on #{parent.id}")
       replies.times { |index| thread.post_message!(creator: users(:david), attributes: { markdown_source: "Reply #{index}" }) }
