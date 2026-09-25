@@ -270,6 +270,9 @@ class Rooms::StagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to room_url(room)
     assert_empty room.reload.users
+    # Hosts are revoked last, so the last host leaves an already-empty room:
+    # no successor is promoted and no stage-ended note is posted.
+    assert_not room.messages.exists?(system_note: true)
   end
 
   test "the room page and the members edit render with zero hosts" do
