@@ -50,10 +50,15 @@ class TestSessionControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "is unreachable outside the test environment" do
+    # Build the path before stubbing Rails.env. Routes load lazily on first
+    # use, and config/routes.rb only draws the test sign-in route when
+    # Rails.env.test?; if this were the first route lookup in a worker, the
+    # stub would make routes load without it for every later test there.
+    path = sign_in_for_tests_path(email_address: users(:david).email_address, password: "secret123456")
     Rails.stubs(:env).returns(ActiveSupport::StringInquirer.new("production"))
 
     with_public_exceptions do
-      get sign_in_for_tests_path(email_address: users(:david).email_address, password: "secret123456")
+      get path
       assert_response :not_found
     end
     assert cookies[:session_token].blank?
