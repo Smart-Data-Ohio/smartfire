@@ -1,0 +1,45 @@
+<%# Global search in the top bar, on every signed-in page (see
+    global_search_controller.js and docs/search.md). A combobox over the
+    viewer's recent searches: focusing the field opens them, ↑/↓ move,
+    Enter opens the highlighted search or submits the typed one through
+    searches#create (which records it), Esc closes. Below 80rem the field
+    folds into an icon button that expands it over the header. The
+    recents panel sits outside the form so its clear button can be a
+    form of its own. %>
+<div id="global-search" class="global-search"
+     data-controller="global-search"
+     data-global-search-expanded-class="global-search--expanded"
+     data-action="keydown->global-search#keydown focusout->global-search#focusOut global-search:focus@window->global-search#focusField pointerdown@document->global-search#pointerDownOutside turbo:before-cache@document->global-search#reset turbo:submit-end->global-search#recentsCleared">
+  <button type="button" class="btn global-search__toggle"
+          aria-label="Search" title="Search (/)"
+          aria-controls="global-search-form" aria-expanded="false"
+          data-global-search-target="toggle"
+          data-action="global-search#expand">
+    <%= image_tag "search.svg", size: 20, aria: { hidden: "true" }, class: "colorize--black" %>
+  </button>
+
+  <%= form_with url: searches_path, id: "global-search-form", class: "global-search__form", html: { role: "search", aria: { label: "Search" } },
+        data: { global_search_target: "form" } do |form| %>
+    <%= image_tag "search.svg", size: 16, aria: { hidden: "true" }, class: "global-search__icon colorize--black" %>
+    <%= form.search_field :q, id: "global-search-input", value: global_search_query,
+          class: "global-search__input", placeholder: "Search messages, threads and events",
+          autocomplete: "off", spellcheck: false, required: true, enterkeyhint: "search",
+          role: "combobox",
+          aria: { label: "Search messages, threads and events", expanded: "false", controls: "global-search-listbox", autocomplete: "list", haspopup: "listbox" },
+          data: { global_search_target: "input", action: "focus->global-search#open click->global-search#open input->global-search#filter" } %>
+    <kbd class="global-search__shortcut" aria-hidden="true">/</kbd>
+    <button type="button" class="btn global-search__close" aria-label="Close search"
+            data-action="global-search#collapse">
+      <%= image_tag "remove.svg", size: 14, aria: { hidden: "true" }, class: "colorize--black" %>
+    </button>
+  <% end %>
+
+  <div id="global-search-panel" class="global-search__panel shadow" hidden data-global-search-target="panel">
+    <div id="global-search-recents">
+      <%= render "searches/dropdown_recents", searches: Current.user.searches.ordered %>
+    </div>
+    <p class="global-search__hint">
+      <kbd>Enter</kbd> to search. Narrow with <code>from:@name</code>, <code>in:#room</code>, <code>has:file</code>.
+    </p>
+  </div>
+</div>

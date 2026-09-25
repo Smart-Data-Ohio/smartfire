@@ -23,9 +23,16 @@ class SearchesController < ApplicationController
     end
   end
 
+  # Clearing from the header dropdown or the results page empties every
+  # recents list in place, wherever the user is; without Turbo it lands
+  # back on the page it came from.
   def clear
     Current.user.searches.destroy_all
-    redirect_to searches_url
+
+    respond_to do |format|
+      format.turbo_stream
+      format.html { redirect_back_or_to searches_url }
+    end
   end
 
   private

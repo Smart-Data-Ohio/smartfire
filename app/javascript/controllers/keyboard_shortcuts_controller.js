@@ -7,6 +7,8 @@ import { Controller } from "@hotwired/stimulus"
 // device menus (which keep Ctrl+K for the browser), or over another
 // open modal. Escape is last in line behind every dialog, menu and
 // panel: it marks the current room read only when nothing else is open.
+// "/" (unchorded) and Ctrl/⌘+Shift+F (from anywhere, inputs included)
+// focus the top-bar search field.
 export default class extends Controller {
   static targets = [ "helpDialog" ]
 
@@ -25,7 +27,12 @@ export default class extends Controller {
   // Toggling the switcher itself closed still works over a modal.
   #onCaptureKeydown(event) {
     if (!event.ctrlKey && !event.metaKey) return
-    if (event.altKey || event.key.toLowerCase() !== "k") return
+    if (event.altKey) return
+    if (event.shiftKey && event.key.toLowerCase() === "f") {
+      this.#focusSearchFromChord(event)
+      return
+    }
+    if (event.key.toLowerCase() !== "k") return
     if (event.isComposing) return
     if (event.target.closest?.(".huddle__devices")) return
     if (!document.getElementById("quick-switcher")?.open && document.querySelector("dialog[open]")) return
@@ -55,7 +62,17 @@ export default class extends Controller {
     if (event.key === "?" && !event.ctrlKey && !event.metaKey && !event.altKey) {
       event.preventDefault()
       this.openHelp()
+      return
     }
+
+    if (event.key === "/" && !event.ctrlKey && !event.metaKey && !event.altKey && document.getElementById("global-search")) {
+      event.preventDefault()
+      this.focusSearch()
+    }
+  }
+
+  focusSearch() {
+    window.dispatchEvent(new CustomEvent("global-search:focus"))
   }
 
   openSwitcher() {
@@ -71,6 +88,18 @@ export default class extends Controller {
   }
 
   // Internal
+
+  // Ctrl/⌘+Shift+F works from inputs and the composer, like Ctrl/⌘+K,
+  // but never over a modal or while composing.
+  #focusSearchFromChord(event) {
+    if (event.isComposing) return
+    if (!document.getElementById("global-search")) return
+    if (this.#overlayOpen()) return
+
+    event.preventDefault()
+    event.stopPropagation()
+    this.focusSearch()
+  }
 
   #moveRoom(event) {
     const links = Array.from(document.querySelectorAll("#sidebar a[data-room-id]"))

@@ -1,5 +1,32 @@
 # Search, message quotes, and the Files tab
 
+## The search field
+
+Every signed-in page has a search field in the top bar, just before the
+page's header actions. Press **/** (outside a text field) or
+**Ctrl/⌘+Shift+F** (anywhere) to focus it. Focusing it opens your recent
+searches (the last ten, newest first) as a combobox: typing filters
+them, **↑**/**↓** move, **Enter** opens the highlighted one or, with
+nothing highlighted, submits what you typed, and **Esc** closes the
+list. Submitting goes through `POST /searches`, which records the query
+in your recent searches and redirects to the results page; the field
+keeps the query there. The list's **Clear** button (and the one on the
+results page) empties your recent searches in place, without leaving
+the page you are on.
+
+The header is a size container: once the member or thread panel (or a
+narrow viewport) leaves it under 68rem, the room's header actions drop
+their labels to keep the field; under 46rem the field folds into a
+search button that expands it over the whole header row.
+
+The results page (`/searches?q=`) reads top down: a way back to your
+last room, the result count, operator chips, board/work-thread/event
+sections, then the messages. Without a query it shows a short hint and
+your recent searches. Only "Load older results" (a request with a
+`before` cursor) answers as a Turbo Stream; every other request,
+including Turbo form redirects that inherit a Turbo Stream `Accept`
+header, renders the page.
+
 ## Search operators
 
 The search page (`/searches`) accepts Slack-style operators alongside
@@ -34,7 +61,7 @@ break out of the query.
 
 Parsed operators render as removable chips above the results; each chip
 links back to the same search without its operator, and the query text
-stays editable in the composer. `from:` and `in:` values are single
+stays editable in the top-bar search field. `from:` and `in:` values are single
 tokens (no spaces); direct rooms have no name, so `in:` never matches
 them. `has:image` only sees uploaded files, because Drive attachments
 store no MIME type. Quiet system notes (pin notes and the like) never
