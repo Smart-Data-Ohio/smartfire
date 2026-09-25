@@ -33,7 +33,7 @@ class GithubPullRequestsHelperTest < ActionView::TestCase
   end
 
   test "cache key for a message without pull requests is just the message" do
-    assert_equal [ messages(:first), nil, nil, nil, false, false, nil, nil, nil ], message_with_pr_cards_cache_key(messages(:first))
+    assert_equal [ messages(:first), nil, nil, nil, nil, false, false, nil, nil, nil ], message_with_pr_cards_cache_key(messages(:first))
   end
 
   test "cache key carries the streaming flag" do

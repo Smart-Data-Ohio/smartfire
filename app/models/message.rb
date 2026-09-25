@@ -16,7 +16,7 @@ class Message < ApplicationRecord
 
   belongs_to :room, touch: true
   belongs_to :creator, class_name: "User", default: -> { Current.user }
-  belongs_to :thread, class_name: "ChannelThread", optional: true, inverse_of: :messages, touch: true
+  belongs_to :thread, class_name: "ChannelThread", optional: true, inverse_of: :messages
   belongs_to :reply_to_message, class_name: "Message", optional: true
   belongs_to :forwarded_from_message, class_name: "Message", optional: true
 
