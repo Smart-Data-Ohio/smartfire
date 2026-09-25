@@ -111,6 +111,17 @@ class Message < ApplicationRecord
   after_destroy_commit :broadcast_quote_cards_removal
   after_create_commit :sync_link_embed_references, unless: :streaming?
   after_update_commit :resync_link_embed_references
+  # The thread reply counter (ChannelThread#messages_count) is refreshed
+  # inside the write's transaction whenever a row joins or leaves the
+  # count, and the parent message's indicator is broadcast once that
+  # commits. A stream finalize bypasses callbacks (see
+  # #claim_stream_finalized!) and refreshes explicitly. Destroys cascading
+  # from the thread or the room skip it: the counter row goes with them.
+  after_create :refresh_thread_messages_count, if: :thread_reply?
+  after_update :refresh_thread_messages_count, if: :thread_reply_membership_changed?
+  after_destroy :refresh_thread_messages_count, if: :thread_reply?, unless: :destroyed_with_conversation?
+  after_commit :broadcast_thread_indicator, if: :thread_indicator_pending?
+  after_rollback -> { @thread_indicator_thread_ids = nil }
 
   # Tie-broken by id so the page windows agree with the (created_at, id)
   # tuple cursors in Pagination: ordering by created_at alone lets the
@@ -299,6 +310,12 @@ class Message < ApplicationRecord
     thread_id.present?
   end
 
+  # A message ChannelThread#messages_count counts (see REPLY_COUNT_SQL):
+  # in a thread, finished, and not a quiet system note.
+  def thread_reply?
+    thread_message? && !system_note? && !streaming?
+  end
+
   def reply?
     reply_to_message_id.present? || reply_target_deleted_at.present?
   end
@@ -392,8 +409,47 @@ class Message < ApplicationRecord
       now = Time.current
       claimed = self.class.where(id: id, streaming: true)
         .update_all(streaming: false, updated_at: now) == 1
-      reload if claimed
+      if claimed
+        reload
+        # The claim skips callbacks, so a finished thread stream joins its
+        # thread's reply count here.
+        if thread_reply?
+          refresh_thread_messages_count
+          broadcast_thread_indicator
+        end
+      end
       claimed
+    end
+
+    def refresh_thread_messages_count
+      thread_ids = [ thread_id, thread_id_before_last_save ].compact.uniq
+      thread_ids.each { |id| ChannelThread.refresh_messages_count(id) }
+      @thread_indicator_thread_ids = thread_ids
+    end
+
+    # A thread move, or a streaming or system-note flip, changes which
+    # thread counts this row.
+    def thread_reply_membership_changed?
+      (saved_change_to_thread_id? || saved_change_to_streaming? || saved_change_to_system_note?) &&
+        (thread_message? || thread_id_before_last_save.present?)
+    end
+
+    def destroyed_with_conversation?
+      destroyed_by_association.present? || room&.deleted?
+    end
+
+    def thread_indicator_pending?
+      @thread_indicator_thread_ids.present?
+    end
+
+    # Loads the threads fresh so the broadcast renders the committed count
+    # rather than whatever copy this message had cached.
+    def broadcast_thread_indicator
+      thread_ids = @thread_indicator_thread_ids
+      @thread_indicator_thread_ids = nil
+      return if thread_ids.blank?
+
+      ChannelThread.where(id: thread_ids).includes(parent_message: :room).find_each(&:broadcast_thread_indicator_change)
     end
 
     def record_activity_items

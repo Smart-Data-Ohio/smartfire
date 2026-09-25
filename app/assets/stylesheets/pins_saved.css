@@ -23,45 +23,6 @@
   display: none;
 }
 
-/* A small "N replies" pill below a message that started a thread. The
-   container always renders so thread-create/reply/delete broadcasts have a
-   target; hidden when no thread exists yet. */
-.message__thread-indicator {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: 999px;
-  color: var(--workspace-text-muted, var(--color-text));
-  cursor: pointer;
-  display: inline-flex;
-  font-size: 0.76rem;
-  font-weight: 700;
-  gap: 0.35rem;
-  margin-block-start: 0.3rem;
-  padding: 0.15rem 0.5rem 0.15rem 0.35rem;
-
-  img {
-    block-size: 0.85rem;
-    inline-size: 0.85rem;
-  }
-
-  @media (any-hover: hover) {
-    &:where(:not(:active):hover) {
-      background: color-mix(in srgb, var(--color-border) 45%, transparent);
-      color: var(--workspace-text, var(--color-text));
-    }
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--color-selected-dark);
-    outline-offset: 2px;
-  }
-}
-
-.message__thread-indicator[hidden] {
-  display: none;
-}
-
 /* Save-for-later dialog, mirroring the forward dialog. */
 .message-save-dialog {
   background: var(--color-bg);
