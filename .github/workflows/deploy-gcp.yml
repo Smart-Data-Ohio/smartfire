@@ -217,8 +217,21 @@ jobs:
           # identical tree AND contains every other parent; nothing else.
           # The containment check rules out a main that moved and was
           # reverted after the PR's CI ran.
+          #
+          # Both arguments assume the other parent is main's tip at merge
+          # time, so every main the PR's CI could have merged with is inside
+          # the branch. That only holds for merges on main's first-parent
+          # line; a --no-ff merge buried inside a branch's history can have a
+          # parent whose pull_request CI tested it merged with a main it never
+          # contained. Anything off that line must have CI of its own.
+          git fetch --quiet origin main
+          parents=()
+          # awk reads the whole list; `grep -q` would exit early and the
+          # SIGPIPE would fail the pipeline under pipefail.
+          if git rev-list --first-parent origin/main | awk -v sha="$SHA" '$0 == sha { found = 1 } END { exit !found }'; then
+            read -r -a parents <<< "$(git rev-list --parents -n 1 "$SHA" | cut -s -d' ' -f2-)"
+          fi
           tree="$(git rev-parse "${SHA}^{tree}")"
-          read -r -a parents <<< "$(git rev-list --parents -n 1 "$SHA" | cut -s -d' ' -f2-)"
           candidates=("$SHA")
           for parent in "${parents[@]}"; do
             [ "$(git rev-parse "${parent}^{tree}")" = "$tree" ] || continue
