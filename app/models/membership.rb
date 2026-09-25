@@ -8,6 +8,13 @@ class Membership < ApplicationRecord
   before_destroy -> { HuddleGrant.revoke_for_membership!(self) }
   before_destroy -> { AgentGrant.revoke_for_membership!(self) }
   before_destroy -> { Stream.end_live_for_membership!(self) }
+  # When the last host's membership is destroyed — self-leave or removal —
+  # the stage's live session ends with them and a successor is promoted
+  # (see Rooms::Stage). Runs in the destroy transaction, after this row is
+  # gone, so the host check reads the remaining memberships. User
+  # deactivation deletes memberships without callbacks, so it handles
+  # hostless stages explicitly instead.
+  after_destroy :handle_last_stage_host_departure
   # The removal notice goes out before the connection reset below: once the
   # client processes the disconnect, broadcasts queued behind it are dropped.
   after_destroy_commit :broadcast_room_removal_to_user
@@ -238,6 +245,14 @@ class Membership < ApplicationRecord
       return if room.memberships.where(stage_role: :host).where.not(id: id).exists?
 
       errors.add(:stage_role, "can't demote the last host")
+    end
+
+    # Only a destroyed host membership can leave a stage hostless; every
+    # other destroy — listeners, speakers, non-stage rooms — returns here.
+    def handle_last_stage_host_departure
+      return unless stage_role == "host" && room&.stage?
+
+      room.end_live_session_and_promote_successor_if_hostless!(departed_host: user)
     end
     # Drop the removed member's sidebar row over their existing rooms stream,
     # the same stream the involvement toggle uses. Every room kind also drops

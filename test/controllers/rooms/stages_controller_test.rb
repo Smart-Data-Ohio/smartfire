@@ -270,6 +270,27 @@ class Rooms::StagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to room_url(room)
     assert_empty room.reload.users
+    # Hosts are revoked last, so the last host leaves an already-empty room:
+    # no successor is promoted and no stage-ended note is posted.
+    assert_not room.messages.exists?(system_note: true)
+  end
+
+  test "the room page and the members edit render with zero hosts" do
+    room = Rooms::Stage.create_for({ name: "Town Hall", creator: users(:david) }, users: [ users(:david), users(:jason), users(:kevin) ])
+    # Departures auto-promote a successor, so a hostless room only arises
+    # from data drift: simulate it directly.
+    room.memberships.update_all(stage_role: "listener")
+    assert_empty room.memberships.where(stage_role: :host)
+
+    users(:kevin).update!(role: :administrator)
+    sign_in :kevin
+
+    get room_url(room)
+    assert_response :success
+    assert_match "Hosts · 0", response.body
+
+    get edit_rooms_stage_url(room)
+    assert_response :success
   end
 
   test "non-members cannot see the room page or its messages" do

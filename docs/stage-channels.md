@@ -128,11 +128,18 @@ would remove the last host while members remain is rejected with 422 and an
 inline error naming the host to replace first; emptying the room entirely
 stays allowed. The members edit checks and revises inside one locked
 transaction, and host demotions re-check after locking the room, so
-concurrent removals cannot strand the room without a host. Deactivating the
-sole host of a stage promotes a replacement in the same transaction that
-deletes the memberships — an active administrator member when one remains,
-otherwise the earliest-joined remaining member — so the stage stays
-manageable; a stage left with no members at all is left empty. Role changes
+concurrent removals cannot strand the room without a host.
+
+When the last host membership disappears anyway — the host leaves or is
+removed, or their user is deactivated — the stage's live session ends
+first: every live stream ends, every active huddle grant in the room is
+revoked so the remaining speakers and listeners drop from the call, and a
+quiet timeline note records the end. Then a successor is promoted so the
+room always has a host whenever it has members: an active administrator
+member is preferred, otherwise the earliest-joined remaining member. The
+room itself, its members, and its message history stay; a stage left with
+no members at all is left alone. A hostless room — only possible with zero
+members or data drift — stays dark until a host exists again. Role changes
 are joined by two call-moderation tools: server-mute and disconnect, under
 `POST /rooms/:room_id/call_moderation/:membership_id/mute`,
 `DELETE /rooms/:room_id/call_moderation/:membership_id/mute`, and

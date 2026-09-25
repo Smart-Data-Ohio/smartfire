@@ -8,8 +8,12 @@ class Room < ApplicationRecord
       room.refresh_direct_member_key! if room.direct?
     end
 
+    # Stage hosts go last: a stage emptied in one revision then loses its
+    # last host after everyone else is gone, so the last-host departure
+    # (see Membership) finds no members left to promote and posts nothing.
+    # Every other room has no hosts, so the order is unchanged there.
     def revoke_from(users)
-      destroy_by user: users
+      where(user: users).sort_by { |membership| membership.host? ? 1 : 0 }.each(&:destroy)
     end
 
     def revise(granted: [], revoked: [])
