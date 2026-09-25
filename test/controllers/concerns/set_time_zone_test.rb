@@ -7,15 +7,19 @@ class TimeZoneProbeController < ApplicationController
 end
 
 class SetTimeZoneTest < ActionDispatch::IntegrationTest
-  setup do
-    sign_in :david
-    Rails.application.routes.draw do
+  # Scoped routes for the probe: with_routing swaps in its own route set for
+  # each test and restores the application's afterwards, so the global
+  # routes are never cleared or reloaded from disk. The set carries the
+  # test sign-in route too, since the integration session only sees it.
+  with_routing do |set|
+    set.draw do
+      get "test_session", to: "test_session#create", as: :sign_in_for_tests
       get "time_zone_probe", to: "time_zone_probe#show"
     end
   end
 
-  teardown do
-    Rails.application.reload_routes!
+  setup do
+    sign_in :david
   end
 
   test "requests render in the member's time zone" do
