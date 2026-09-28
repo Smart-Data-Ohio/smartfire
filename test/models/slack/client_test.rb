@@ -71,7 +71,26 @@ class Slack::ClientTest < ActiveSupport::TestCase
       latest: "1700000060.000000", cursor: "cchan-page-2")
 
     assert_requested stub
-    assert_equal 1, page["messages"].size
+    assert_equal 5, page["messages"].size
+  end
+
+  test "history fixtures arrive newest-first like conversations.history" do
+    # Slack returns conversations.history newest-first, paging backward
+    # with next_cursor; conversations.replies echoes the parent first.
+    # See https://docs.slack.dev/reference/methods/conversations.history
+    %w[ history_CCHAN_p1 history_CCHAN_p2 history_CARCH history_CPRIV
+      history_DIM history_GMPIM ].each do |name|
+      messages = JSON.parse(slack_fixture("#{name}.json"))["messages"]
+      assert_equal messages.map { |message| message["ts"] }.sort.reverse,
+        messages.map { |message| message["ts"] }, "#{name} is not newest-first"
+    end
+
+    %w[ replies_CCHAN_parent replies_GMPIM_parent ].each do |name|
+      messages = JSON.parse(slack_fixture("#{name}.json"))["messages"]
+      assert_nil messages.first["thread_ts"], "#{name} must echo the parent first"
+      assert messages.drop(1).all? { |message| message["thread_ts"].present? },
+        "#{name} replies must carry thread_ts"
+    end
   end
 
   test "conversations.replies sends channel and parent ts" do

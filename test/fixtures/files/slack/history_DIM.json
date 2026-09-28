@@ -3,15 +3,15 @@
   "messages": [
     {
       "type": "message",
-      "user": "U001",
-      "text": "Hey Ada, quick question?",
-      "ts": "1700000040.000040"
-    },
-    {
-      "type": "message",
       "user": "UADMIN",
       "text": "Sure, what is up?",
       "ts": "1700000041.000041"
+    },
+    {
+      "type": "message",
+      "user": "U001",
+      "text": "Hey Ada, quick question?",
+      "ts": "1700000040.000040"
     }
   ],
   "has_more": false,

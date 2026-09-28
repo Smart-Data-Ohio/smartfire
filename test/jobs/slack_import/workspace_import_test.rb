@@ -9,6 +9,11 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     @workspace = create_slack_workspace!
     @connection = create_slack_connection!(workspace: @workspace, user: users(:david))
     stub_slack_workspace!
+    use_tiny_step_budget!
+  end
+
+  teardown do
+    restore_step_budget!
   end
 
   def start_run(mode: "import", options: {}, kind: "workspace")
@@ -106,8 +111,10 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     assert_includes special.markdown_source, "`code *stays*`"
     assert_empty special.mentionees.to_a
 
-    # Second history page was read.
+    # Both history pages were read: the newest message (first page) and the
+    # oldest (second page, since Slack pages newest-first).
     assert general.messages.exists?(created_at: Time.at(1700000011.000011))
+    assert general.messages.exists?(created_at: Time.at(1700000001.000001))
 
     # Skipped subtypes left nothing behind.
     assert_empty general.messages.where("markdown_source LIKE ?", "%has joined%")
@@ -146,6 +153,19 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     end
   end
 
+  test "tiny step budget spans several steps for one conversation" do
+    run = start_run(options: { "conversation_ids" => %w[ CCHAN ] })
+    steps = 0
+    while run.reload.active?
+      SlackImport::StepJob.perform_now(run.id)
+      steps += 1
+      assert steps < 50, "run did not finish"
+    end
+
+    assert_equal "completed", run.status
+    assert_operator steps, :>, 4, "expected CCHAN to span several steps, took #{steps}"
+  end
+
   test "a second import creates zero duplicates" do
     drive_import_to_completion(start_run)
     before = table_counts(except: %w[ slack_imports slack_import_issues ])
@@ -161,12 +181,14 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     drive_import_to_completion(start_run)
 
     WebMock.reset!
+    parent = JSON.parse(slack_fixture("history_CCHAN_p2.json"))["messages"]
+      .find { |message| message["ts"] == "1700000002.000002" }
     stub_slack_workspace!(history_overrides: {
       "CCHAN" => [
         { ok: true, messages: [
-          JSON.parse(slack_fixture("history_CCHAN_p1.json"))["messages"][1],
           { "type" => "message", "user" => "U001", "text" => "Fresh news",
-            "ts" => "1700000099.000099" }
+            "ts" => "1700000099.000099" },
+          parent
         ], has_more: false, response_metadata: { next_cursor: "" } }
       ]
     }, replies_overrides: {

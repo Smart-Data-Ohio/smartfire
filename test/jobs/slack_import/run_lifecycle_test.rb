@@ -9,6 +9,11 @@ class SlackImport::RunLifecycleTest < ActiveSupport::TestCase
     @workspace = create_slack_workspace!
     @connection = create_slack_connection!(workspace: @workspace, user: users(:david))
     stub_slack_workspace!
+    use_tiny_step_budget!
+  end
+
+  teardown do
+    restore_step_budget!
   end
 
   def start_run(kind: "workspace", mode: "import", options: {})

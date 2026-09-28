@@ -3,9 +3,50 @@
   "messages": [
     {
       "type": "message",
+      "user": "U001",
+      "text": "Nice work everyone",
+      "ts": "1700000005.000005",
+      "reactions": [
+        { "name": "thumbsup::skin-tone-2", "users": ["U002"], "count": 1 },
+        { "name": "+1", "users": ["UADMIN"], "count": 1 },
+        { "name": "custom_thing", "users": ["U001"], "count": 1 },
+        { "name": "party-blob", "users": ["U002"], "count": 1 }
+      ]
+    },
+    {
+      "type": "message",
+      "subtype": "bot_message",
+      "bot_id": "B99",
+      "username": "Build Bot",
+      "text": "Build *passed*",
+      "ts": "1700000004.000004",
+      "attachments": [
+        { "pretext": "Details", "text": "All green", "fallback": "Build passed" }
+      ]
+    },
+    {
+      "type": "message",
+      "subtype": "channel_join",
       "user": "U003",
-      "text": "Second page here, with a date <!date^1700000020^{date_short}|Nov 14, 2023> and <!channel>.",
-      "ts": "1700000011.000011"
+      "text": "<@U003|jane2> has joined the channel",
+      "ts": "1700000003.000003"
+    },
+    {
+      "type": "message",
+      "user": "U002",
+      "text": "Thread *parent* with <https://example.com|link> and <https://example.org/plain>.",
+      "ts": "1700000002.000002",
+      "reply_count": 2,
+      "replies": [
+        { "user": "U001", "ts": "1700000101.000101" },
+        { "user": "U002", "ts": "1700000102.000102" }
+      ]
+    },
+    {
+      "type": "message",
+      "user": "U001",
+      "text": "Hello <@U002|kev> and <@U999|ghost>! cc <@U003|jane2>",
+      "ts": "1700000001.000001"
     }
   ],
   "has_more": false,

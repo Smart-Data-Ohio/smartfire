@@ -128,6 +128,19 @@ module SlackImportTestHelper
     JSON.generate(body)
   end
 
+  # Forces a step boundary after every API page for the rest of the test
+  # (restored by restore_step_budget!). End-to-end tests use this so each
+  # conversation spans several steps, the way production does under the
+  # wall-clock budget, instead of completing in a single step.
+  def use_tiny_step_budget!
+    @previous_step_budget = SlackImport::Runner.step_budget
+    SlackImport::Runner.step_budget = 0.seconds
+  end
+
+  def restore_step_budget!
+    SlackImport::Runner.step_budget = @previous_step_budget if defined?(@previous_step_budget)
+  end
+
   # Runs step jobs inline until the run finishes, exercising the same
   # resumable path production takes across executions.
   def drive_import_to_completion(run, limit: 50)

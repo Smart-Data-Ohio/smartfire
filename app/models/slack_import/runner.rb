@@ -3,6 +3,10 @@ class SlackImport::Runner
   # units past this and re-enqueues, so a step never outruns Resque's
   # patience and progress saves incrementally.
   STEP_BUDGET = 25.seconds
+  # Test switch: setting this to 0 forces a step boundary after every API
+  # page, so end-to-end tests exercise multi-step conversations the way
+  # production does under the wall-clock budget.
+  class_attribute :step_budget, default: STEP_BUDGET
   # Catch-up reads history from this far before the newest already-imported
   # message, picking up late thread replies without re-reading everything.
   CATCHUP_LOOKBACK = 30.days
@@ -26,7 +30,7 @@ class SlackImport::Runner
   # Does a bounded unit of work. Returns :continue (re-enqueue), :done
   # (run completed) or :stopped (run cancelled or finished elsewhere).
   def step!
-    @deadline = Time.current + STEP_BUDGET
+    @deadline = Time.current + self.class.step_budget
     @state_before = @state.deep_dup
     check_running!
 
