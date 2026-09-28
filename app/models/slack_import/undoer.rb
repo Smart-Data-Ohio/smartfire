@@ -54,8 +54,8 @@ class SlackImport::Undoer
       batch = current_batch(%w[ message ])
       return advance_to("threads") if batch.empty?
 
-      # Parents of threads holding foreign messages stay: the thread and
-      # its surviving replies still point at them.
+      # Parents of threads that stay behind stay too: the thread and its
+      # surviving replies still point at them.
       keep_live_thread_parents(batch.map(&:record_id))
       ids = batch.map(&:record_id) - kept_message_ids
       # Pins die quietly first: the message destroy would otherwise unpin
@@ -100,15 +100,22 @@ class SlackImport::Undoer
       end
     end
 
-    # A thread parent in this batch whose thread holds foreign messages
-    # marks the thread (and itself) kept before anything is removed.
+    # A thread parent in this batch whose thread must stay (it holds
+    # foreign or kept messages) marks the thread and itself kept before
+    # anything is removed: destroying the parent would leave the surviving
+    # thread without one. A thread someone started on an imported message
+    # after the import keeps that message the same way.
     def keep_live_thread_parents(message_ids)
       run_thread_parents.slice(*message_ids).each do |message_id, thread_id|
-        next unless thread_has_foreign_messages?(thread_id)
+        next unless thread_must_stay?(thread_id)
 
         thread = ChannelThread.find_by(id: thread_id)
         keep_thread!(thread, message_id) if thread
       end
+
+      foreign_parent_ids = ChannelThread.where(parent_message_id: message_ids)
+        .where.not(id: my_thread_ids).pluck(:parent_message_id)
+      keep_message_content!(foreign_parent_ids, "a thread")
     end
 
     # This run's thread parents, as message id to thread id. Threads a
@@ -130,8 +137,7 @@ class SlackImport::Undoer
         # kill real users' messages. The check runs live so a reply that
         # landed mid-undo still saves the thread. Threads holding messages
         # undo kept (polls, saved items, pins) stay for the same reason.
-        if kept_thread_ids.include?(thread.id) || thread_has_foreign_messages?(thread.id) ||
-            thread_has_kept_messages?(thread.id)
+        if kept_thread_ids.include?(thread.id) || thread_must_stay?(thread.id)
           keep_thread!(thread, thread.parent_message_id)
           next
         end
@@ -205,6 +211,10 @@ class SlackImport::Undoer
 
     def my_thread_ids
       @my_thread_ids ||= @run.records.where(slack_kind: "thread").select(:record_id)
+    end
+
+    def thread_must_stay?(thread_id)
+      thread_has_foreign_messages?(thread_id) || thread_has_kept_messages?(thread_id)
     end
 
     def thread_has_foreign_messages?(thread_id)

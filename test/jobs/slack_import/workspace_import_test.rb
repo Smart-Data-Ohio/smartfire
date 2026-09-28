@@ -694,6 +694,49 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     assert run.issues.reload.any? { |issue| issue.message.include?("kept") }
   end
 
+  def imported_thread
+    parent = Rooms::Open.find_by!(name: "general").messages
+      .find_by!(created_at: Time.at(Rational("1700000002.000002")))
+    [ parent, parent.channel_thread ]
+  end
+
+  test "undo keeps the parent of a thread holding a saved reply" do
+    run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+    parent, thread = imported_thread
+    saved_reply = thread.messages.find_by!(created_at: Time.at(Rational("1700000101.000101")))
+    other_reply_ids = thread.messages.where.not(id: saved_reply.id).pluck(:id)
+    assert_not_empty other_reply_ids
+    SavedItem.create!(user: users(:david), message: saved_reply)
+
+    assert run.undo!
+    drive_undo_to_completion(run)
+
+    assert Message.exists?(saved_reply.id)
+    assert Message.exists?(parent.id), "expected the kept thread's parent to survive"
+    assert_equal parent.id, ChannelThread.find(thread.id).parent_message_id
+    assert_equal thread.id, Message.find(saved_reply.id).thread_id
+    assert_empty Message.where(id: other_reply_ids)
+    assert run.records.exists?(slack_kind: "message", record_id: parent.id)
+    assert run.records.exists?(slack_kind: "thread", record_id: thread.id)
+    assert run.records.exists?(slack_kind: "message", record_id: saved_reply.id)
+  end
+
+  test "undo keeps an imported message someone started a thread on" do
+    run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+    general = Rooms::Open.find_by!(name: "general")
+    message = general.messages.find_by!(created_at: Time.at(Rational("1700000001.000001")))
+    thread = ChannelThread.create!(room: general, creator: users(:david), parent_message: message)
+    reply = thread.post_message!(creator: users(:david), attributes: { markdown_source: "real reply" })
+
+    assert run.undo!
+    drive_undo_to_completion(run)
+
+    assert Message.exists?(message.id)
+    assert_equal message.id, ChannelThread.find(thread.id).parent_message_id
+    assert Message.exists?(reply.id)
+    assert run.records.exists?(slack_kind: "message", record_id: message.id)
+  end
+
   test "import stays silent: no foreign jobs, broadcasts, unread or inbox items" do
     activity_before = ActivityItem.count
     broadcasts_before = cable_broadcasts_count

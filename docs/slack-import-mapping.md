@@ -153,8 +153,12 @@ full destroy path (rich text and search rows go, quietly); threads; memberships;
 rooms; placeholder users that never signed in and author nothing left; then the
 run's mapping rows. Matched users and pre-existing content are never touched.
 
-A thread is deleted only when every message in it was created by the run.
-Otherwise the thread and its parent message stay, with an issue recorded. Each
+A thread is deleted only when every message in it was created by the run
+and none of them is kept (see below). Otherwise the thread and its parent
+message — and both their mappings — stay, with an issue recorded, so a
+saved or pinned reply never ends up in a thread without its parent. An
+imported message someone started a thread on after the import stays for
+the same reason. Each
 room's fate is decided before any membership is touched: a room holding
 anything the run did not create stays with all its memberships and its
 conversation mapping, with an issue recorded. That covers every content
