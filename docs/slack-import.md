@@ -27,15 +27,15 @@ Open **Account settings → Slack import** (`/account/slack_import`) and work th
 
 ## The smoke-test path
 
-Runs are listed newest-first at `/account/slack_import/runs`, with kind, mode, status, starter, and time. Only one run is active at a time; a member's run waits behind another member's ("queued behind another import").
+Runs are listed newest-first at `/account/slack_import/runs`, with kind, mode, status, starter, and time. One import or undo runs at a time across the workspace; a member's run waits behind another member's ("queued behind another import"), and undo waits while any other run is queued, running, or undoing (the run page says so until the way is clear).
 
 1. **Dry run.** From the setup page: "Include private channels I'm in" (default on) plus an optional date range. Writes nothing; reports what an import would do.
 2. **Review the plan.** From the completed dry run: a table of conversations (name, type, archived, members, messages, threads) with a checkbox per row (default on), a target select (New room, Skip, or an existing Open/Closed room, preselected from the dry run's suggestion), select all/none, and converted samples showing Slack text next to the Markdown Smartfire will render.
 3. **Test import.** From the plan: the checked conversations, recent messages (oldest defaults to 14 days ago). Undoable.
 4. **Verify in the app.** Read the imported rooms, check members, threads, reactions, and pins.
-5. **Undo or keep.** "Undo import" removes everything the run created — rooms, messages, reactions, pins. Records it only matched to existing accounts or rooms (a member found by email, a merged room) stay. Available on imports that stopped (completed, failed, cancelled).
+5. **Undo or keep.** "Undo import" removes everything the run created — rooms, messages, reactions, pins — and nothing else. Threads and rooms that gained newer activity stay (with all their memberships), as do records the run only matched to existing accounts or rooms (a member found by email, a merged room). Available on imports that stopped (completed, failed, cancelled).
 6. **Full import.** From the plan: the checked conversations, all messages, no date bounds.
-7. **Catch-up at cutover.** On a completed full import, "Run catch-up import" repeats the same conversations and targets to pick up what changed in Slack since. Safe to repeat: already-imported objects are skipped, never duplicated.
+7. **Catch-up at cutover.** On a completed full import, "Run catch-up import" repeats the same conversations and targets to pick up what changed in Slack since. Safe to repeat: already-imported objects are skipped, never duplicated. Only a completed full import opens the 30-day catch-up window — a date-bounded test import leaves the later full import to re-read the whole range (duplicates are still skipped).
 
 Run pages show status, phase, current conversation, counts, the people summary, API calls, issues, timestamps, and errors, and refresh live while the run is active. Cancel stops a run at its next step boundary.
 
@@ -43,11 +43,13 @@ Run pages show status, phase, current conversation, counts, the people summary, 
 
 Tell members to open their profile → **Import from Slack** (`/slack/imports`) once the workspace is connected (until then the page says an administrator needs to set up Slack import first). The page explains the scope: their DMs, group DMs, and private channels, each visible in Smartfire to the other members of it. Connect, run a **Preview** (a personal dry run), review the per-conversation plan, then **Import**. Members see and act only on their own personal runs; administrators can view, cancel, and undo every run from the admin runs pages.
 
-A DM imported by one participant is never duplicated when the other participant imports it: runs share one mapping table.
+A DM imported by one participant is never duplicated when the other participant imports it: runs share one mapping table. Personal runs never merge into a pre-existing room — a private channel whose name matches one gets its own new room — except for rooms an earlier run already mapped and Direct rooms.
 
 ## Placeholders and claiming
 
 Slack members without a Smartfire account become claimable placeholders (active users, matched by email). They claim the account by signing in with Google using the same email address — allowed automatically when the email's domain is in Google sign-in's allowed domains — or an administrator sends them the transfer link from their profile. People deleted in Slack, guests, and bots/apps become deactivated authors: their names stay on the history but they cannot sign in.
+
+If a member signed up with a different email than their Slack one, matching misses and their Slack identity becomes a separate placeholder. Fix that before import by changing the member's Smartfire email to the Slack one (the member can do this from their profile page, password-confirmed).
 
 ## Removing credentials afterwards
 
@@ -59,4 +61,6 @@ After cutover, "Remove Slack credentials" on the setup page deletes the app cred
 - **Token revoked.** If Slack rejects a connection (revoked token, removed app), reconnect from the setup page (admins) or the personal import page (members). A rejection mid-run fails the run with an error; fix the grant and re-run.
 - **Missing scopes.** A grant without every required scope is rejected at connect time with the missing scopes listed. Reconnect and approve them all — the import cannot run on a partial grant.
 - **Wrong workspace.** Grants from a different Slack team than the first admin connection are rejected. Connect with an account in the migrated workspace.
-- **Undo scope.** Undo removes what the run created only. Content members added to imported rooms afterwards, and records the run matched rather than created, stay.
+- **Undo scope.** Undo removes what the run created only. Threads and rooms that members posted in afterwards stay (with all their memberships), and records the run matched rather than created stay too.
+- **Undo waits its turn.** Undo never runs while another import is queued, running, or undoing. If the button is disabled, wait for the other run to finish.
+- **Private channels need a target to merge.** A private channel never merges into an existing room by name. To import one into an existing Closed room, pick that room in the plan's target select; otherwise the import creates a new room.

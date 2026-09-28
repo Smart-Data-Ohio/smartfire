@@ -42,13 +42,30 @@ no email, created with `skip_open_room_grant`.
 Bot authors on messages without a `user` field are keyed by `bot_id` (or
 username) so each bot maps once. `USLACKBOT` becomes a deactivated "Slackbot".
 
+If a member signed up with a different email than their Slack one, matching
+misses and their Slack identity becomes a separate placeholder. Fix that
+before import by changing the member's Smartfire email to the Slack one (the
+member can do this from their profile page, password-confirmed), so the
+import matches instead of minting a duplicate.
+
 ## Rooms and memberships
 
-By default a channel merges into an alive room of the same type with the same
+Merging is narrow, so an import never writes into a room its owner cannot
+see. A public channel merges by default into an alive Open room with the same
 name (case-insensitive); otherwise the import creates a room. `room_targets`
 overrides this per conversation with `"new"`, `"skip"` or an existing room id
-(which must be an alive Open or Closed room). Memberships are only ever
-written in rooms the import created — merged rooms keep theirs untouched.
+(which must be an alive Open or Closed room).
+
+A private channel never auto-merges by name: a workspace run merges one into
+an existing Closed room only when an administrator chose that room in
+`room_targets`, and otherwise creates a new room. Personal runs never merge
+into a pre-existing room at all — the only exceptions are a room an earlier
+run's mapping already points at (reused for deduping) and Direct rooms, which
+resolve through `find_or_create_for` with the owner as a member. Personal runs
+ignore `room_targets` room ids entirely.
+
+Memberships are only ever written in rooms the import created — merged rooms
+keep theirs untouched.
 
 In a created Open room, Slack members get the default involvement and every
 other active user goes invisible. Invisible Open memberships stay reachable:
@@ -102,20 +119,38 @@ stale-thread sweep and room touches.
 
 Every Slack object maps once per workspace in `slack_import_records`, so a
 later run skips everything an earlier run brought over — including DMs and
-private channels imported by a different member's personal run. For
-conversations with earlier records, history is fetched only from 30 days
-before the newest imported message, which picks up late thread replies without
-re-reading all history. Threads found on those pages are re-read in full; only
-new replies are created.
+private channels imported by a different member's personal run.
+
+The 30-day catch-up window opens only when an earlier, completed, full import
+(an import run with no `oldest` bound) already covered the conversation:
+history is then fetched from 30 days before the newest imported message, which
+picks up late thread replies without re-reading all history. A date-bounded
+test import never opens the window, so the later full import re-reads the
+whole range and the mapping skips duplicates. Each conversation's bounds are
+fixed when the run starts that conversation and reused for its history and
+thread replies on every later step, so a long conversation keeps its full
+window however many steps it spans. Threads found on catch-up pages are
+re-read in full; only new replies are created.
 
 ## Undo
 
-Undo deletes in batches, in reverse dependency order, only rows the run
-created: reactions, pins and thread follows; messages through the full destroy
-path (rich text and search rows go, quietly); threads; memberships; rooms that
-hold no other messages (otherwise the room stays with an issue); placeholder
-users that never signed in and author nothing left; then the run's mapping
-rows. Matched users, merged rooms and pre-existing content are never touched.
+Undo deletes in batches, in reverse dependency order, and only ever removes
+what the run created: reactions, pins and thread follows; messages through the
+full destroy path (rich text and search rows go, quietly); threads; memberships;
+rooms; placeholder users that never signed in and author nothing left; then the
+run's mapping rows. Matched users and pre-existing content are never touched.
+
+A thread is deleted only when every message in it was created by the run.
+Otherwise the thread and its parent message stay, with an issue recorded. Each
+room's fate is decided before any membership is touched: a room holding
+messages the run did not create stays with all its memberships and its
+conversation mapping, with an issue recorded. Mappings for everything kept
+stay behind too, so a later run reuses the survivors instead of duplicating
+them.
+
+One import or undo runs at a time across the workspace. Undo waits while any
+other run is queued, running or undoing, and the run page says so until the
+way is clear.
 
 ## Rate limits and expected duration
 
