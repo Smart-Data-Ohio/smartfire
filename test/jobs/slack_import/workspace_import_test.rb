@@ -496,7 +496,9 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
 
   test "finishing refreshes the heartbeat while looping over rooms" do
     run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
-    run.update_columns(heartbeat_at: 10.minutes.ago)
+    # Finishing runs inside a running step, which the per-room cancel
+    # check requires.
+    run.update_columns(status: "running", heartbeat_at: 10.minutes.ago)
 
     SlackImport::Runner.new(run.reload).send(:finish_rooms)
 

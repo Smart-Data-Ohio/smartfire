@@ -92,6 +92,43 @@ class SlackImportTest < ActiveSupport::TestCase
     assert queued.reload.queued?
   end
 
+  test "claim_running! refuses while a cancelled run holds a fresh step lease" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    assert run.acquire_step_lease!("running")
+    other = start_run
+    assert_not SlackImport.claim_running!(other.id)
+
+    # The cancel flips the status while the step is still mid-flight: the
+    # fresh lease keeps blocking until the step ends and clears it.
+    run.cancel!
+
+    assert run.reload.cancelled?
+    assert run.step_lease_fresh?
+    assert_not SlackImport.claim_running!(other.id)
+    assert other.reload.queued?
+
+    run.release_step_lease!
+
+    assert_not run.reload.step_lease_fresh?
+    assert SlackImport.claim_running!(other.id)
+    assert_equal "running", other.reload.status
+  end
+
+  test "a stale step lease no longer blocks claims" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    run.acquire_step_lease!("running")
+    run.cancel!
+    other = start_run
+
+    travel SlackImport::STALE_HEARTBEAT + 1.minute do
+      assert SlackImport.claim_running!(other.id)
+    end
+
+    assert_equal "running", other.reload.status
+  end
+
   test "a step job that cannot claim its queued run exits without re-enqueueing" do
     first = start_run
     second = start_run
@@ -131,6 +168,46 @@ class SlackImportTest < ActiveSupport::TestCase
     run.update!(status: "completed", finished_at: Time.current)
 
     assert_nil run.undo_blocked_reason
+  end
+
+  test "undo waits while the run itself holds a fresh step lease" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    run.acquire_step_lease!("running")
+    run.cancel!
+
+    assert_equal "This import is still finishing. Wait for it to finish, then undo.",
+      run.undo_blocked_reason
+    assert_no_enqueued_jobs do
+      assert_not run.undo!
+    end
+    assert_equal "cancelled", run.reload.status
+
+    run.release_step_lease!
+
+    assert_nil run.undo_blocked_reason
+    assert_enqueued_with(job: SlackImport::UndoJob) do
+      assert run.undo!
+    end
+  end
+
+  test "undo waits while another run holds a fresh step lease" do
+    import = start_run
+    import.update!(status: "completed", started_at: 1.hour.ago, finished_at: Time.current)
+    busy = start_run
+    busy.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    busy.acquire_step_lease!("running")
+    busy.cancel!
+
+    assert_equal "Another import is still finishing. Wait for it to finish, then undo.",
+      import.undo_blocked_reason
+    assert_not import.undo!
+    assert_equal "completed", import.reload.status
+
+    busy.release_step_lease!
+
+    assert_nil import.undo_blocked_reason
+    assert import.undo!
   end
 
   test "failed and cancelled runs kick the next queued run" do

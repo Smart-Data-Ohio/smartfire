@@ -76,6 +76,8 @@ class SlackImport::Runner
       return transition_to("conversations") if @state["users_done"]
 
       page = @client.users_list(cursor: @state["users_cursor"].presence)
+      # The fetch may have overlapped a cancel: re-check before writing.
+      check_running!
       delta = if dry_run?
         @user_mapper.preview_page(page["members"])
       else
@@ -201,6 +203,9 @@ class SlackImport::Runner
       step_convo_members(convo, entry)
       return unless convo["members_done"]
 
+      # A cancel may have landed while paging members: look before
+      # creating the room.
+      check_running!
       resolve_convo_target(convo, entry)
       return if convo["skipped"]
 
@@ -227,6 +232,7 @@ class SlackImport::Runner
       return if convo["members_done"]
 
       loop do
+        check_running!
         page = @client.conversations_members(channel: convo["id"],
           cursor: convo["members_cursor"].presence)
         convo["member_ids"] |= Array(page["members"])
@@ -372,6 +378,8 @@ class SlackImport::Runner
       page = @client.conversations_history(channel: convo["id"],
         oldest: slack_ts(bounds[:oldest]), latest: slack_ts(bounds[:latest]),
         cursor: convo["history_cursor"].presence)
+      # The fetch may have overlapped a cancel: re-check before writing.
+      check_running!
       messages = Array(page["messages"])
 
       if import_mode?
@@ -409,6 +417,8 @@ class SlackImport::Runner
       page = @client.conversations_replies(channel: id, ts: convo["thread_ts"],
         oldest: slack_ts(bounds[:oldest]), latest: slack_ts(bounds[:latest]),
         cursor: convo["thread_cursor"].presence)
+      # The fetch may have overlapped a cancel: re-check before writing.
+      check_running!
       counts = @writer.write_replies_page(room:, conversation_id: id,
         parent_ts: convo["thread_ts"], parent_message_id: convo["thread_message_id"],
         messages: Array(page["messages"]), bounds:, users: convo_users(convo),
@@ -534,10 +544,12 @@ class SlackImport::Runner
       @stats["issues_count"] = @run.issues.count
       @stats["api_calls"] = @api_calls
       # Conditional: a cancel that landed mid-step must not flip to
-      # completed. When the run is gone from running, stop quietly.
+      # completed. When the run is gone from running, stop quietly. The
+      # lease ends with the step either way, so it is stripped from the
+      # saved state: a completed run must not block the next claim.
       now = Time.current
       claimed = SlackImport.where(id: @run.id, status: "running").update_all(
-        state: @state.merge("phase" => "done"), stats: @stats,
+        state: @state.except("step_started_at").merge("phase" => "done"), stats: @stats,
         status: "completed", finished_at: now, heartbeat_at: now, updated_at: now) == 1
       return :stopped unless claimed
 
@@ -570,6 +582,9 @@ class SlackImport::Runner
         @run.records.where(slack_kind: "conversation").pluck(:slack_key)).uniq
       conversation_ids.each_with_index do |conversation_id, seen|
         touch_heartbeat! if (seen % 25).zero?
+        # Finishing writes membership pointers: stop at the next room
+        # when a cancel lands mid-loop.
+        check_running!
         finish_room(conversation_id)
       end
     end
