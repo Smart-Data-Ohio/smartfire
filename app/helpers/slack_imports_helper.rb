@@ -11,6 +11,12 @@ module SlackImportsHelper
     "#{run.kind.humanize} #{run.mode.humanize.downcase} ##{run.id}"
   end
 
+  # Only a completed full import (a workspace import with no date
+  # bounds) offers catch-up: test imports and dry runs repeat nothing.
+  def slack_catch_up_eligible?(run)
+    run.workspace? && run.import? && run.completed? && run.options["oldest"].blank?
+  end
+
   def slack_conversation_type_label(type)
     {
       "public_channel" => "Public channel",

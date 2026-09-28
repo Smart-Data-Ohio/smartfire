@@ -337,13 +337,13 @@ class Accounts::SlackImportRunsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/already running/, flash[:alert])
   end
 
-  test "catch-up repeats the import's conversations and targets" do
+  test "catch-up repeats a full import's conversations and targets" do
     workspace = create_slack_workspace!(team_id: SLACK_TEAM_ID)
     connect_slack!(@david, workspace:)
     room = rooms(:watercooler)
     import = create_slack_import!(workspace:, user: @david, mode: "import", status: "completed",
       options: { "conversation_ids" => [ "C111" ], "room_targets" => { "C111" => room.id },
-        "include_private" => false, "oldest" => "2026-09-14" })
+        "include_private" => false })
 
     post catch_up_account_slack_import_run_path(import)
 
@@ -354,15 +354,53 @@ class Accounts::SlackImportRunsControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ "C111" => room.id }, run.options["room_targets"])
     assert_equal false, run.options["include_private"]
     assert_nil run.options["oldest"]
+    assert_nil run.options["latest"]
+  end
+
+  test "catch-up refuses a date-bounded test import" do
+    workspace = create_slack_workspace!(team_id: SLACK_TEAM_ID)
+    connect_slack!(@david, workspace:)
+    import = create_slack_import!(workspace:, user: @david, mode: "import", status: "completed",
+      options: { "conversation_ids" => [ "C111" ], "oldest" => "2026-09-14T00:00:00Z" })
+
+    post catch_up_account_slack_import_run_path(import)
+
+    assert_redirected_to account_slack_import_run_path(import)
+    assert_match(/completed full import/, flash[:alert])
+    assert_equal 1, SlackImport.count
   end
 
   test "catch-up needs a completed import" do
     dry_run = create_slack_import!(user: @david, status: "completed")
+    running = create_slack_import!(user: @david, mode: "import", status: "running")
 
     post catch_up_account_slack_import_run_path(dry_run)
-
     assert_redirected_to account_slack_import_run_path(dry_run)
-    assert_equal 1, SlackImport.count
+
+    post catch_up_account_slack_import_run_path(running)
+    assert_redirected_to account_slack_import_run_path(running)
+
+    assert_equal 2, SlackImport.count
+  end
+
+  test "only a completed full import offers catch-up" do
+    full = create_slack_import!(user: @david, mode: "import", status: "completed",
+      options: { "conversation_ids" => [ "C111" ] })
+    test = create_slack_import!(user: @david, mode: "import", status: "completed",
+      options: { "conversation_ids" => [ "C111" ], "oldest" => "2026-09-14T00:00:00Z" })
+    dry_run = create_slack_import!(user: @david, status: "completed")
+
+    get account_slack_import_run_path(full)
+    assert_response :success
+    assert_select "button", "Run catch-up import"
+
+    get account_slack_import_run_path(test)
+    assert_response :success
+    assert_select "button", text: "Run catch-up import", count: 0
+
+    get account_slack_import_run_path(dry_run)
+    assert_response :success
+    assert_select "button", text: "Run catch-up import", count: 0
   end
 
   test "cancel and undo act on workspace runs" do

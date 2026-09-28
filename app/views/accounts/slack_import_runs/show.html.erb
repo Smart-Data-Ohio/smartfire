@@ -26,12 +26,12 @@
     <% if @run.workspace? && @run.dry_run? && @run.completed? %>
       <%= link_to "Review the plan", plan_account_slack_import_run_path(@run), class: "btn btn--primary" %>
     <% end %>
-    <% if @run.workspace? && @run.import? && @run.completed? %>
+    <% if slack_catch_up_eligible?(@run) %>
       <%= button_to "Run catch-up import", catch_up_account_slack_import_run_path(@run), class: "btn",
             form: { data: { turbo_confirm: "Run a catch-up import with the same conversations and targets? Already-imported objects are skipped, so it is safe to repeat." } } %>
     <% end %>
   </div>
-  <% if @run.workspace? && @run.import? && @run.completed? %>
+  <% if slack_catch_up_eligible?(@run) %>
     <p class="margin-none txt-small">Catch-up repeats this import's conversations and targets to pick up what changed in Slack since. Already-imported objects are skipped, never duplicated.</p>
   <% end %>
 

@@ -103,8 +103,8 @@ class Accounts::SlackImportRunsController < ApplicationController
   # targets, picking up what changed in Slack since. Safe to repeat:
   # already-imported objects are skipped, never duplicated.
   def catch_up
-    unless @run.workspace? && @run.import? && @run.completed?
-      return redirect_to admin_run_path(@run), alert: "Catch-up starts from a completed import."
+    unless @run.workspace? && @run.import? && @run.completed? && @run.options["oldest"].blank?
+      return redirect_to admin_run_path(@run), alert: "Catch-up starts from a completed full import."
     end
     if (blocker = start_blocker)
       return redirect_to admin_run_path(@run), alert: blocker
