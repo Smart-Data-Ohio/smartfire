@@ -149,7 +149,11 @@ class SlackImport::Undoer
     def decide_kept_rooms!
       return if @state["undo_rooms_decided"]
 
+      seen = 0
       @run.records.where(slack_kind: "conversation", created_record: true).find_each do |record|
+        @run.update_columns(heartbeat_at: Time.current) if (seen % 25).zero?
+        seen += 1
+
         room = Room.find_by(id: record.record_id)
         next if room.nil? || room.deleted?
         next unless room.messages.where.not(id: my_message_ids).exists?

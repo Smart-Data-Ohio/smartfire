@@ -297,6 +297,24 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
       query: hash_including({ "channel" => "CCHAN", "oldest" => expected_oldest }), times: 2
   end
 
+  test "per-conversation record lookups seek the identity index" do
+    plan = ActiveRecord::Base.connection.exec_query(
+      "EXPLAIN QUERY PLAN #{SlackImport::Record.for_conversation(@workspace.id, "message", "CCHAN").to_sql}"
+    ).rows.flatten.join(" ")
+
+    assert_includes plan, "USING INDEX index_slack_import_records_on_slack_identity"
+    assert_includes plan, "slack_key"
+  end
+
+  test "finishing refreshes the heartbeat while looping over rooms" do
+    run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+    run.update_columns(heartbeat_at: 10.minutes.ago)
+
+    SlackImport::Runner.new(run.reload).send(:finish_rooms)
+
+    assert_operator run.reload.heartbeat_at, :>, 5.minutes.ago
+  end
+
   test "completing a run kicks the next queued run" do
     first = start_run(options: { "conversation_ids" => %w[ CARCH ] })
     second = start_run(options: { "conversation_ids" => %w[ CPRIV ] })

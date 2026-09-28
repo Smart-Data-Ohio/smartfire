@@ -172,6 +172,12 @@ import worker. Dry runs cost the same reads minus the replies. Plan the
 cutover catch-up (which re-reads only 30 days of history per channel) from the
 recent-message volume, not the archive size.
 
+Per-conversation mapping lookups seek the workspace/kind/key unique index
+with a key range (`CONV:` to `CONV;`), never a `LIKE` scan. Long loops —
+finishing rooms, deciding kept rooms on undo — refresh the run's heartbeat
+as they go, so the 5-minute stale sweeper never stacks a second job onto a
+live run.
+
 ## Known limitations
 
 Files, custom emoji images, avatars, canvases, huddles, channel topics and

@@ -469,9 +469,7 @@ class SlackImport::Runner
     def catchup_oldest(conversation_id)
       return nil unless full_cover?(conversation_id)
 
-      prefix = "#{conversation_id}:"
-      newest = SlackImport::Record.where(slack_workspace_id: @workspace.id, slack_kind: "message")
-        .where("slack_key LIKE ?", "#{prefix}%")
+      newest = SlackImport::Record.for_conversation(@workspace.id, "message", conversation_id)
         .where.not(slack_import_id: @run.id)
         .pick(Arel.sql("MAX(CAST(SUBSTR(slack_key, INSTR(slack_key, ':') + 1) AS REAL))"))
       newest ? newest - CATCHUP_LOOKBACK.to_f : nil
@@ -532,9 +530,15 @@ class SlackImport::Runner
     # already existed keep the later of their time and that. Memberships
     # the run created point at the last imported message with no unread.
     # Every lookup is per conversation through the mapping's unique index,
-    # never a scan of the run's whole record set.
+    # never a scan of the run's whole record set. The heartbeat refreshes
+    # inside the loop, so a run with thousands of rooms can never look
+    # stalled to the sweeper.
     def finish_rooms
+      seen = 0
       @run.records.where(slack_kind: "conversation").find_each do |record|
+        touch_heartbeat! if (seen % 25).zero?
+        seen += 1
+
         room = Room.alive.find_by(id: record.record_id)
         next if room.nil?
 
@@ -557,12 +561,17 @@ class SlackImport::Runner
     end
 
     # This run's record ids for one conversation, through the workspace /
-    # kind / key unique index: the "CONV:" key prefix keeps it to an index
-    # range scan no matter how many conversations the run imported.
+    # kind / key unique index: the "CONV:" key range seeks exactly this
+    # conversation's keys no matter how many the workspace holds.
     def conversation_record_ids(slack_kind, conversation_id)
-      SlackImport::Record.where(slack_workspace_id: @workspace.id, slack_kind:)
-        .where("slack_key LIKE ?", "#{ActiveRecord::Base.sanitize_sql_like(conversation_id)}:%")
+      SlackImport::Record.for_conversation(@workspace.id, slack_kind, conversation_id)
         .where(slack_import_id: @run.id).pluck(:record_id)
+    end
+
+    # Long loops refresh the heartbeat as they go, so the 5-minute stale
+    # sweeper can never stack a second job onto a live run.
+    def touch_heartbeat!
+      @run.update_columns(heartbeat_at: Time.current)
     end
 
     # -- helpers --------------------------------------------------------
