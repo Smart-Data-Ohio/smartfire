@@ -5,7 +5,7 @@ module Slack
   # personal runs; workspace runs and other members' runs 404 here.
   # Administrators view every run from the admin runs pages instead.
   class ImportsController < ApplicationController
-    before_action :set_run, only: %i[ show cancel undo ]
+    before_action :set_run, only: %i[ show status cancel undo ]
 
     # The personal page. Works only once an administrator has connected
     # the workspace (team_id names the Slack workspace being migrated).
@@ -45,7 +45,13 @@ module Slack
 
     def show
       @conversations = Array(@run.stats["conversations"])
-      @queued_behind = @run.queued? && SlackImport.active.where.not(id: @run.id).exists?
+      @queued_behind = queued_behind?
+    end
+
+    # The live status frame polled from the run page (see the admin
+    # runs controller for why polling reads here, not the run page).
+    def status
+      @queued_behind = queued_behind?
     end
 
     def cancel
@@ -72,6 +78,10 @@ module Slack
       def set_run
         @run = Current.user.slack_imports.personal.find_by(id: params[:id])
         head :not_found unless @run
+      end
+
+      def queued_behind?
+        @run.queued? && SlackImport.active.where.not(id: @run.id).exists?
       end
 
       def start_personal_import(workspace, connection)

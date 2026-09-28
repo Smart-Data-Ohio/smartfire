@@ -60,11 +60,26 @@ class Slack::ImportsControllerTest < ActionDispatch::IntegrationTest
     get slack_import_path(run)
     assert_response :not_found
 
+    get status_slack_import_path(run)
+    assert_response :not_found
+
     post cancel_slack_import_path(run)
     assert_response :not_found
 
     post undo_slack_import_path(run)
     assert_response :not_found
+  end
+
+  test "personal status frame renders the member's own run" do
+    create_slack_workspace!(team_id: SLACK_TEAM_ID)
+    run = create_slack_import!(user: @kevin, kind: "personal", status: "running",
+      stats: slack_stats_shape(overrides: { "current" => "dm-with-jz" }))
+
+    get status_slack_import_path(run)
+
+    assert_response :success
+    assert_select "turbo-frame#slack_import_run dd", "dm-with-jz"
+    assert_select "turbo-frame#slack_import_run[src]", count: 0
   end
 
   test "workspace runs 404 on the personal page" do

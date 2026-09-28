@@ -6,15 +6,12 @@
   </div>
 <% end %>
 
-<div class="panel panel--wide flex flex-column gap">
+<div class="panel panel--wide flex flex-column gap slack-import">
   <h1 class="margin-none"><%= slack_run_title(@run) %></h1>
   <p class="margin-none">Started by <%= @run.user.name %> <%= @run.created_at %>.</p>
 
-  <turbo-frame id="slack_import_run" src="<%= account_slack_import_run_path(@run) %>"<% if @run.active? %> data-controller="frame-poll"<% end %>>
-    <section aria-labelledby="run-status" class="fill-shade border-radius pad">
-      <h2 id="run-status" class="margin-none">Status</h2>
-      <%= render "slack/import_runs/status", run: @run, queued_behind: @queued_behind %>
-    </section>
+  <turbo-frame id="slack_import_run" src="<%= status_account_slack_import_run_path(@run) %>"<% if @run.active? %> data-controller="frame-poll"<% end %>>
+    <%= render "slack/import_runs/status_section", run: @run, queued_behind: @queued_behind %>
   </turbo-frame>
 
   <div class="flex gap">

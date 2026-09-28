@@ -1,6 +1,6 @@
 class Accounts::SlackImportRunsController < ApplicationController
   before_action :ensure_can_administer
-  before_action :set_run, only: %i[ show plan start_import catch_up cancel undo ]
+  before_action :set_run, only: %i[ show status plan start_import catch_up cancel undo ]
 
   ISSUES_PER_PAGE = 50
 
@@ -42,7 +42,14 @@ class Accounts::SlackImportRunsController < ApplicationController
     issues = @run.issues.order(:id)
     set_page_and_extract_portion_from issues, per_page: ISSUES_PER_PAGE
     @issues = @page.records
-    @queued_behind = @run.queued? && SlackImport.active.where.not(id: @run.id).exists?
+    @queued_behind = queued_behind?
+  end
+
+  # The live status frame polled from the run page. A frame's src may
+  # not reference its own page (Turbo rejects a self-referencing
+  # source), so polling reads here instead of reloading the run page.
+  def status
+    @queued_behind = queued_behind?
   end
 
   # The dry run's plan: which conversations import, into which rooms.
@@ -140,6 +147,10 @@ class Accounts::SlackImportRunsController < ApplicationController
     # Admins view every run here, workspace and personal alike.
     def admin_run_path(run)
       account_slack_import_run_path(run)
+    end
+
+    def queued_behind?
+      @run.queued? && SlackImport.active.where.not(id: @run.id).exists?
     end
 
     # Starting needs the admin's own live connection and a quiet queue.

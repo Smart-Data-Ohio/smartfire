@@ -19,6 +19,9 @@ class Accounts::SlackImportRunsControllerTest < ActionDispatch::IntegrationTest
     get account_slack_import_run_path(run)
     assert_response :forbidden
 
+    get status_account_slack_import_run_path(run)
+    assert_response :forbidden
+
     get plan_account_slack_import_run_path(run)
     assert_response :forbidden
 
@@ -119,9 +122,32 @@ class Accounts::SlackImportRunsControllerTest < ActionDispatch::IntegrationTest
 
     get account_slack_import_run_path(active)
     assert_includes response.body, "data-controller=\"frame-poll\""
+    assert_select "turbo-frame#slack_import_run[src=?]", status_account_slack_import_run_path(active)
 
     get account_slack_import_run_path(finished)
     assert_not_includes response.body, "data-controller=\"frame-poll\""
+  end
+
+  test "status frame renders the run without polling itself" do
+    run = create_slack_import!(user: @david, status: "running",
+      stats: slack_stats_shape(overrides: { "current" => "general" }))
+
+    get status_account_slack_import_run_path(run)
+
+    assert_response :success
+    assert_select "turbo-frame#slack_import_run", count: 1
+    assert_select "turbo-frame#slack_import_run dd", "general"
+    assert_select "turbo-frame#slack_import_run[data-controller]", count: 0
+    assert_select "turbo-frame#slack_import_run[src]", count: 0
+  end
+
+  test "status frame marks a finished run so polling stops" do
+    run = create_slack_import!(user: @david, status: "completed")
+
+    get status_account_slack_import_run_path(run)
+
+    assert_response :success
+    assert_select "[data-frame-poll-finished]"
   end
 
   test "run page shows queued-behind while another run is active" do

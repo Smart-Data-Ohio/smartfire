@@ -56,6 +56,7 @@ Rails.application.routes.draw do
       resource :slack_import, only: %i[ show update destroy ], controller: "slack_imports" do
         resources :runs, only: %i[ index show create ], controller: "slack_import_runs" do
           get :plan, on: :member
+          get :status, on: :member
           post :start_import, path: "import", on: :member
           post :catch_up, on: :member
           post :cancel, on: :member
@@ -341,6 +342,7 @@ Rails.application.routes.draw do
     get "oauth/callback", to: "oauth#callback", as: :oauth_callback
     resource :connection, only: :destroy
     resources :imports, only: %i[ index show create ] do
+      get :status, on: :member
       post :cancel, on: :member
       post :undo, on: :member
     end
