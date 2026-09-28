@@ -67,6 +67,21 @@ class Message < ApplicationRecord
 
   has_rich_text :body
 
+  # Non-persisted import flag for the Slack importer. A message saved with
+  # importing keeps markdown rendering, mention resolution, search indexing
+  # and the DB-only reference rows, but skips every noisy side effect:
+  # unread marks and web push, activity inbox items, network reference
+  # fetches, agent deliveries, the thread-indicator broadcast, the stale
+  # sibling-thread sweep, and the per-reply thread count refresh (the
+  # importer refreshes once per thread). Destroying with importing skips
+  # the quote-card and thread-indicator broadcasts but still removes the
+  # search index row. Normal saves leave this unset and behave as before.
+  attr_accessor :importing
+
+  def importing?
+    !!importing
+  end
+
   # A streaming message idle this long — no start, append, or replace —
   # is auto-finalized by the periodic runner (see
   # Message.finalize_overdue_streams!). Every save while streaming bumps
@@ -92,9 +107,9 @@ class Message < ApplicationRecord
   # #finalize_stream!): unread marks, push, inbox items, agent delivery,
   # webhooks, search indexing, and reference syncs all fire exactly once,
   # when the stream finalizes. Nothing fires while streaming.
-  after_create_commit :receive_in_conversation, unless: :streaming?
-  after_create_commit :close_stale_sibling_threads, if: :thread_message?
-  after_create_commit :record_activity_items, unless: :streaming?
+  after_create_commit :receive_in_conversation, unless: [ :streaming?, :importing? ]
+  after_create_commit :close_stale_sibling_threads, if: :thread_message?, unless: :importing?
+  after_create_commit :record_activity_items, unless: [ :streaming?, :importing? ]
   # Create and update need distinct callback filters: registering the same
   # method twice on the commit chain keeps only one registration.
   after_create_commit :sync_github_pull_request_references, unless: :streaming?
@@ -117,7 +132,7 @@ class Message < ApplicationRecord
   # commits. A stream finalize bypasses callbacks (see
   # #claim_stream_finalized!) and refreshes explicitly. Destroys cascading
   # from the thread or the room skip it: the counter row goes with them.
-  after_create :refresh_thread_messages_count, if: :thread_reply?
+  after_create :refresh_thread_messages_count, if: :thread_reply?, unless: :importing?
   after_update :refresh_thread_messages_count, if: :thread_reply_membership_changed?
   after_destroy :refresh_thread_messages_count, if: :thread_reply?, unless: :destroyed_with_conversation?
   after_commit :broadcast_thread_indicator, if: :thread_indicator_pending?
@@ -463,7 +478,7 @@ class Message < ApplicationRecord
     def broadcast_thread_indicator
       thread_ids = @thread_indicator_thread_ids
       @thread_indicator_thread_ids = nil
-      return if thread_ids.blank?
+      return if thread_ids.blank? || importing?
 
       ChannelThread.where(id: thread_ids).includes(parent_message: :room).find_each(&:broadcast_thread_indicator_change)
     end
@@ -473,7 +488,7 @@ class Message < ApplicationRecord
     end
 
     def sync_github_pull_request_references
-      Github::PullRequestReferenceSync.call(self)
+      Github::PullRequestReferenceSync.call(self, enqueue_fetches: !importing?)
     end
 
     def resync_github_pull_request_references
@@ -481,7 +496,7 @@ class Message < ApplicationRecord
     end
 
     def sync_fizzy_card_references
-      Fizzy::CardReferenceSync.call(self)
+      Fizzy::CardReferenceSync.call(self, enqueue_fetches: !importing?)
     end
 
     def resync_fizzy_card_references
@@ -489,7 +504,7 @@ class Message < ApplicationRecord
     end
 
     def sync_twitter_post_references
-      Twitter::PostReferenceSync.call(self)
+      Twitter::PostReferenceSync.call(self, enqueue_fetches: !importing?)
     end
 
     def resync_twitter_post_references
@@ -529,14 +544,14 @@ class Message < ApplicationRecord
 
     def broadcast_quote_cards_removal
       ids = @quote_referencing_ids || []
-      return if ids.empty?
+      return if ids.empty? || importing?
 
       Message.where(id: ids).update_all(updated_at: Time.current)
       Message.where(id: ids).find_each(&:broadcast_quote_cards_replace)
     end
 
     def sync_link_embed_references
-      LinkEmbed::ReferenceSync.call(self)
+      LinkEmbed::ReferenceSync.call(self, enqueue_fetches: !importing?)
     end
 
     def resync_link_embed_references

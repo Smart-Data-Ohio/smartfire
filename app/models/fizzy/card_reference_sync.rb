@@ -6,7 +6,10 @@ module Fizzy
   # Idempotent: re-running with unchanged content enqueues nothing new.
   module CardReferenceSync
     class << self
-      def call(message)
+      # Pass `enqueue_fetches: false` from contexts that must stay quiet,
+      # such as the Slack importer: references are still created, and the
+      # author's cache warms the first time a card renders instead.
+      def call(message, enqueue_fetches: true)
         pairs = CardUrl.extract(reference_text(message))
 
         cards = pairs.map do |ref|
@@ -19,7 +22,9 @@ module Fizzy
 
         cards.each do |card|
           reference = message.fizzy_card_references.find_or_create_by!(card: card)
-          warm_author_cache(message, card) if reference.previously_new_record? || author_cache_stale?(message, card)
+          if enqueue_fetches && (reference.previously_new_record? || author_cache_stale?(message, card))
+            warm_author_cache(message, card)
+          end
         end
       rescue ActiveRecord::RecordNotUnique
         retry

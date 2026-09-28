@@ -53,6 +53,7 @@ When you start Smartfire for the first time, you'll be guided through a wizard t
 - [Huddles](docs/huddles.md) — local LiveKit operation and huddle behavior.
 - [Brand icons and emoji shortcodes](docs/icons.md) — built-in set, uploads, and autocomplete.
 - [Self-hosting](docs/self-hosting.md) — running the Docker image, backups, and upgrades.
+- [Slack import](docs/slack-import.md) — moving a Slack Pro workspace into Smartfire.
 - [Stage channels](docs/stage-channels.md) — roles, enforcement, and hand raising.
 - [Streaming](docs/streaming.md) — going live from a stage channel.
 - [Persistent voice channels](docs/voice-channels.md) — standing calls with text chat.

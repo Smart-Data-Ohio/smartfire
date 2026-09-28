@@ -1,0 +1,115 @@
+<% @page_title = "Slack import" %>
+
+<% content_for :nav do %>
+  <div class="flex-item-justify-start">
+    <%= link_back_to edit_account_path %>
+  </div>
+<% end %>
+
+<div class="panel panel--wide flex flex-column gap slack-import">
+  <h1 class="margin-none">Slack import</h1>
+  <p class="margin-none">Move this workspace from Slack Pro to Smartfire: create an internal Slack app, connect it, dry-run the migration, then import. Full guide in <code>docs/slack-import.md</code>.</p>
+
+  <section aria-labelledby="slack-step-1" class="fill-shade border-radius pad">
+    <h2 id="slack-step-1" class="margin-none">1. Create the Slack app</h2>
+    <p>Create an internal app from this manifest, then copy its Client ID and Client Secret below.</p>
+    <ol>
+      <li>Open <a href="https://api.slack.com/apps" target="_blank" rel="noopener">api.slack.com/apps</a> and choose <strong>Create New App → From a manifest</strong>.</li>
+      <li>Pick the Slack workspace, paste the manifest, and create the app.</li>
+      <li>Open <strong>Basic Information</strong> and copy the <strong>Client ID</strong> and <strong>Client Secret</strong>.</li>
+    </ol>
+    <label for="slack-app-manifest" class="txt-small"><strong>App manifest</strong> <span class="txt-subtle">(user scopes only — no bot user, no events)</span></label>
+    <pre id="slack-app-manifest" class="pad txt-small" style="overflow: auto; max-height: 24rem;"><code><%= @manifest_json %></code></pre>
+    <%= button_to_copy_to_clipboard(@manifest_json) { "Copy manifest" } %>
+  </section>
+
+  <section aria-labelledby="slack-step-2" class="fill-shade border-radius pad">
+    <h2 id="slack-step-2" class="margin-none">2. Save credentials</h2>
+    <% if @workspace&.app_configured? %>
+      <p>Credentials saved<% if @workspace.configured_by %> by <%= @workspace.configured_by.name %><% end %>. The secret is write-only: paste a new one to replace it.</p>
+    <% else %>
+      <p>Paste the Client ID and Client Secret from the app's Basic Information page.</p>
+    <% end %>
+    <% if @workspace&.errors&.any? %>
+      <div class="txt-negative" role="alert">
+        <ul class="margin-none">
+          <% @workspace.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+    <%= form_with url: account_slack_import_path, method: :patch, class: "flex flex-column gap" do |form| %>
+      <label class="flex flex-column gap">
+        <span class="txt-small"><strong>Client ID</strong></span>
+        <%= form.text_field :client_id, class: "input", autocomplete: "off", required: true, value: @workspace&.client_id %>
+      </label>
+      <label class="flex flex-column gap">
+        <span class="txt-small"><strong>Client Secret</strong> <span class="txt-subtle">(never shown again)</span></span>
+        <%= form.password_field :client_secret, class: "input", autocomplete: "new-password", placeholder: @workspace&.app_configured? ? "Saved — paste a new secret to replace it" : "xoxp-…" %>
+      </label>
+      <div>
+        <%= form.submit @workspace&.app_configured? ? "Save new credentials" : "Save credentials", class: "btn btn--reversed" %>
+      </div>
+    <% end %>
+  </section>
+
+  <section aria-labelledby="slack-step-3" class="fill-shade border-radius pad">
+    <h2 id="slack-step-3" class="margin-none">3. Connect your Slack account</h2>
+    <% if @connection&.connected? %>
+      <p>Connected<% if @workspace&.team_name.present? %> to the <strong><%= @workspace.team_name %></strong> Slack workspace<% end %>. Reconnect to refresh the grant.</p>
+      <div class="flex gap">
+        <%= link_to "Reconnect Slack", slack_oauth_start_path(return_to: account_slack_import_path), class: "btn" %>
+        <%= button_to "Disconnect Slack", slack_connection_path(return_to: account_slack_import_path), method: :delete, class: "btn btn--negative",
+              form: { data: { turbo_confirm: "Disconnect Slack? Imports need a connected account." } } %>
+      </div>
+    <% else %>
+      <% if @connection %>
+        <p>Slack rejected the connection<% if @connection.disconnected_reason.present? %> (<%= @connection.disconnected_reason %>)<% end %>. Reconnect below.</p>
+      <% else %>
+        <p>Connect with your Slack account. The workspace import runs as you: it reads every public channel plus the private channels you are in.</p>
+      <% end %>
+      <p><%= link_to "Connect Slack", slack_oauth_start_path(return_to: account_slack_import_path), class: "btn btn--primary" %></p>
+    <% end %>
+  </section>
+
+  <section aria-labelledby="slack-step-4" class="fill-shade border-radius pad">
+    <h2 id="slack-step-4" class="margin-none">4. Dry run and import</h2>
+    <% if @active_run %>
+      <p>A <%= @active_run.kind %> <%= @active_run.mode.humanize.downcase %> is <%= @active_run.status %>. <%= link_to "View the run", account_slack_import_run_path(@active_run) %>.</p>
+    <% elsif @workspace&.team_id.present? && @connection&.connected? %>
+      <p>Dry runs write nothing: review the plan, then run a scoped test import (undoable) before the full import.</p>
+      <%= form_with url: account_slack_import_runs_path, class: "flex flex-column gap" do |form| %>
+        <label class="flex align-center gap">
+          <%= form.check_box :include_private, { checked: true }, "1", "0" %>
+          <span>Include private channels I'm in</span>
+        </label>
+        <div class="flex gap">
+          <label class="flex flex-column gap">
+            <span class="txt-small"><strong>Oldest message</strong> <span class="txt-subtle">(optional)</span></span>
+            <%= form.date_field :oldest, class: "input" %>
+          </label>
+          <label class="flex flex-column gap">
+            <span class="txt-small"><strong>Latest message</strong> <span class="txt-subtle">(optional)</span></span>
+            <%= form.date_field :latest, class: "input" %>
+          </label>
+        </div>
+        <div>
+          <%= form.submit "Start dry run", class: "btn btn--reversed" %>
+        </div>
+      <% end %>
+    <% else %>
+      <p>Finish steps 2 and 3 first: the dry run needs saved credentials and your connected Slack account.</p>
+    <% end %>
+    <p><%= link_to "All import runs", account_slack_import_runs_path, class: "btn" %></p>
+  </section>
+
+  <% if @workspace&.app_configured? %>
+    <section aria-labelledby="slack-remove" class="fill-shade border-radius pad">
+      <h2 id="slack-remove" class="margin-none">Remove Slack credentials</h2>
+      <p>Deletes the app credentials and every member's Slack connection. Run history stays. Blocked while a run is active.</p>
+      <%= button_to "Remove Slack credentials", account_slack_import_path, method: :delete, class: "btn btn--negative",
+            form: { data: { turbo_confirm: "Remove the Slack app credentials and disconnect every member? Past run history stays." } } %>
+    </section>
+  <% end %>
+</div>

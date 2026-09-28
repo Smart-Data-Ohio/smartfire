@@ -26,6 +26,11 @@
         <%= image_tag "common-file-text.svg", size: 20, aria: { hidden: "true" } %>
         <span class="for-screen-reader">Audit log</span>
       <% end %>
+
+      <%= link_to account_slack_import_path, class: "btn", style: "view-transition-name: slack-import" do %>
+        <%= image_tag "download.svg", size: 20, aria: { hidden: "true" } %>
+        <span class="for-screen-reader">Slack import</span>
+      <% end %>
     </div>
   <% end %>
 <% end %>

@@ -44,6 +44,13 @@ class AuditLog < ApplicationRecord
     github.account.disconnect
     fizzy.account.connect
     fizzy.account.disconnect
+    slack.account.connect
+    slack.account.disconnect
+    slack.workspace.configure
+    slack.workspace.remove_credentials
+    slack.import.start
+    slack.import.cancel
+    slack.import.undo
     account.join_code.reset
     account.settings.change
     account.custom_styles.change
