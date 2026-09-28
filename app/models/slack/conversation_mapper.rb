@@ -1,10 +1,12 @@
 module Slack
   # Resolves one Slack conversation to its Smartfire room: public channels
   # to Open rooms, private channels to Closed rooms, ims to one-to-one
-  # Direct rooms, and group DMs to Direct or Closed rooms by size. Channels
-  # merge into an alive same-type room with the same name unless
-  # room_targets says otherwise; memberships are only ever written in rooms
-  # the import created.
+  # Direct rooms, and group DMs to Direct or Closed rooms by size. Public
+  # channels merge into an alive Open room with the same name unless
+  # room_targets says otherwise; private channels never auto-merge (a
+  # workspace run merges one only into an admin-chosen room target), and
+  # personal runs never merge into a pre-existing room at all. Memberships
+  # are only ever written in rooms the import created.
   class ConversationMapper
     Result = Data.define(:action, :room, :created_record, :skip_reason)
 
@@ -68,7 +70,7 @@ module Slack
       end
 
       name = channel_room_name(conversation)
-      room = target == "new" ? nil : merge_room(channel_room_type(conversation), name)
+      room = target == "new" ? nil : merge_room_for(conversation, channel_room_type(conversation), name)
       Result.new(action: room ? "merge" : "create", room:, created_record: room.nil?, skip_reason: nil)
     end
 
@@ -108,6 +110,10 @@ module Slack
 
         value = targets[conversation_id]
         return value if value == "new" || value == "skip"
+        # Personal runs ignore room ids entirely: they never merge into a
+        # pre-existing room (except through an earlier run's mapping, which
+        # the runner reuses before reaching here, and Direct rooms).
+        return nil if @run.personal?
         return value.to_i if value.to_s.match?(/\A\d+\z/)
 
         nil
@@ -128,6 +134,18 @@ module Slack
         Room.alive.where(type:).where("LOWER(name) = ?", name.downcase).order(:id).first
       end
 
+      # Auto-merge by name is narrow, so an import never writes into a room
+      # its owner cannot see: public channels may merge into an alive Open
+      # room, but private channels never auto-merge (a workspace run merges
+      # one only into an admin-chosen room target), and personal runs never
+      # merge into a pre-existing room at all.
+      def merge_room_for(conversation, type, name)
+        return nil if @run.personal?
+        return nil if conversation["is_private"]
+
+        merge_room(type, name)
+      end
+
       def alive_channel_room(id)
         room = Room.alive.find_by(id:)
         room if room.is_a?(Rooms::Open) || room.is_a?(Rooms::Closed)
@@ -140,7 +158,7 @@ module Slack
 
         room = nil
         SlackImport::Record.transaction do
-          room = force_new ? nil : merge_room(room_class.sti_name, name)
+          room = force_new ? nil : merge_room_for(conversation, room_class.sti_name, name)
           if room
             record_conversation(conversation["id"], room, created_record: false)
             return Result.new(action: "merge", room:, created_record: false, skip_reason: nil)
@@ -301,7 +319,7 @@ module Slack
             Result.new(action: created ? "create" : "merge", room:, created_record: created, skip_reason: nil)
           else
             name = mpim_closed_name(conversation, users)
-            room = merge_room("Rooms::Closed", name)
+            room = @run.personal? ? nil : merge_room("Rooms::Closed", name)
             if room
               record_conversation(conversation["id"], room, created_record: false)
               Result.new(action: "merge", room:, created_record: false, skip_reason: nil)
@@ -326,7 +344,7 @@ module Slack
           room = Rooms::Direct.find_for(members)
           Result.new(action: room ? "merge" : "create", room:, created_record: room.nil?, skip_reason: nil)
         else
-          room = merge_room("Rooms::Closed", mpim_closed_name(conversation, users))
+          room = @run.personal? ? nil : merge_room("Rooms::Closed", mpim_closed_name(conversation, users))
           Result.new(action: room ? "merge" : "create", room:, created_record: room.nil?, skip_reason: nil)
         end
       end

@@ -125,6 +125,66 @@ class SlackImport::RunLifecycleTest < ActiveSupport::TestCase
     assert_equal "skip", entry["target"]["action"]
   end
 
+  test "workspace runs never auto-merge a private channel by name" do
+    closed = Rooms::Closed.create!(name: "secret", creator: users(:david))
+
+    run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CPRIV ] }))
+
+    assert_equal 2, Rooms::Closed.where(name: "secret").count
+    record = run.records.find_by!(slack_kind: "conversation", slack_key: "CPRIV")
+    assert record.created_record?
+    assert_empty closed.reload.messages
+    entry = run.stats["conversations"].find { |row| row["id"] == "CPRIV" }
+    assert_equal "create", entry["target"]["action"]
+  end
+
+  test "workspace runs merge a private channel only into its room target" do
+    target = Rooms::Closed.create!(name: "Target", creator: users(:david))
+
+    run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CPRIV ],
+      "room_targets" => { "CPRIV" => target.id } }))
+
+    record = run.records.find_by!(slack_kind: "conversation", slack_key: "CPRIV")
+    assert_not record.created_record?
+    assert_equal target.id, record.record_id
+    assert_equal 1, target.messages.count
+  end
+
+  test "personal runs never merge a private channel into an existing room" do
+    stub_slack_workspace!(list: :personal)
+    closed = Rooms::Closed.create!(name: "secret", creator: users(:david))
+    kevin_connection = create_slack_connection!(workspace: @workspace,
+      user: users(:kevin), slack_user_id: "U002")
+    assert_not closed.users.include?(users(:kevin))
+
+    run = SlackImport.start!(workspace: @workspace, user: users(:kevin),
+      connection: kevin_connection, kind: "personal", mode: "import",
+      options: { "conversation_ids" => %w[ CPRIV ] })
+    drive_import_to_completion(run)
+
+    assert_equal 2, Rooms::Closed.where(name: "secret").count
+    record = run.records.find_by!(slack_kind: "conversation", slack_key: "CPRIV")
+    assert record.created_record?
+    assert_empty closed.reload.messages
+  end
+
+  test "personal runs ignore room target ids" do
+    stub_slack_workspace!(list: :personal)
+    target = Rooms::Closed.create!(name: "Target", creator: users(:david))
+    kevin_connection = create_slack_connection!(workspace: @workspace,
+      user: users(:kevin), slack_user_id: "U002")
+
+    run = SlackImport.start!(workspace: @workspace, user: users(:kevin),
+      connection: kevin_connection, kind: "personal", mode: "import",
+      options: { "conversation_ids" => %w[ CPRIV ], "room_targets" => { "CPRIV" => target.id } })
+    drive_import_to_completion(run)
+
+    record = run.records.find_by!(slack_kind: "conversation", slack_key: "CPRIV")
+    assert record.created_record?
+    assert_not_equal target.id, record.record_id
+    assert_empty target.reload.messages
+  end
+
   test "personal run imports DMs, group DMs and private channels" do
     stub_slack_workspace!(list: :personal)
 
