@@ -330,7 +330,7 @@ class SlackImport::Runner
 
     def step_convo_history(convo, entry)
       room = import_mode? ? Room.alive.find(convo["room_id"]) : nil
-      bounds = effective_bounds(convo["id"])
+      bounds = stored_bounds(convo)
 
       loop do
         if thread_pending?(convo)
@@ -421,13 +421,21 @@ class SlackImport::Runner
 
     # -- bounds ---------------------------------------------------------
 
-    def effective_bounds(conversation_id)
-      oldest = time_bound(@run.options["oldest"])
-      latest = time_bound(@run.options["latest"])
-      if (catchup = catchup_oldest(conversation_id))
-        oldest = [ oldest, catchup ].compact.max
+    # Each conversation's bounds are computed once, when the run first
+    # reaches its history, and stored in that conversation's state. History
+    # and thread replies reuse the stored bounds on every later step:
+    # recomputing per step would see records written by the current run and
+    # shrink the window to the last 30 days, dropping older history.
+    def stored_bounds(convo)
+      convo["bounds"] ||= begin
+        oldest = time_bound(@run.options["oldest"])
+        latest = time_bound(@run.options["latest"])
+        if (catchup = catchup_oldest(convo["id"]))
+          oldest = [ oldest, catchup ].compact.max
+        end
+        { "oldest" => oldest, "latest" => latest }
       end
-      { oldest:, latest: }
+      { oldest: convo["bounds"]["oldest"], latest: convo["bounds"]["latest"] }
     end
 
     def time_bound(value)
@@ -438,14 +446,37 @@ class SlackImport::Runner
       format("%.6f", seconds) unless seconds.nil?
     end
 
-    # Conversations with earlier mapping fetch history only from 30 days
-    # before the newest imported message, catching late thread replies.
+    # The catch-up window opens only when an earlier, completed, full
+    # import (an import run with no oldest bound) already covered this
+    # conversation: history is then fetched from 30 days before the newest
+    # imported message, catching late thread replies without re-reading
+    # everything. A date-bounded test import never opens the window, so the
+    # later full import re-reads the whole range and the mapping skips
+    # duplicates. The current run's own records are excluded, so a resumed
+    # step can never narrow its own window.
     def catchup_oldest(conversation_id)
+      return nil unless full_cover?(conversation_id)
+
       prefix = "#{conversation_id}:"
       newest = SlackImport::Record.where(slack_workspace_id: @workspace.id, slack_kind: "message")
         .where("slack_key LIKE ?", "#{prefix}%")
+        .where.not(slack_import_id: @run.id)
         .pick(Arel.sql("MAX(CAST(SUBSTR(slack_key, INSTR(slack_key, ':') + 1) AS REAL))"))
       newest ? newest - CATCHUP_LOOKBACK.to_f : nil
+    end
+
+    def full_cover?(conversation_id)
+      SlackImport::Record.where(slack_workspace_id: @workspace.id, slack_kind: "conversation",
+        slack_key: conversation_id, slack_import_id: full_import_ids).exists?
+    end
+
+    # Earlier completed full imports in this workspace, memoized per step
+    # job execution. Undone runs are gone by status, and date-bounded runs
+    # by their oldest bound.
+    def full_import_ids
+      @full_import_ids ||= SlackImport.where(slack_workspace_id: @workspace.id,
+        mode: "import", status: "completed").where.not(id: @run.id)
+        .select(:id, :options).filter_map { |run| run.id if run.options["oldest"].blank? }
     end
 
     # -- finishing ------------------------------------------------------

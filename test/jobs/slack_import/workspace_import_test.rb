@@ -21,6 +21,15 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
       connection: @connection, kind:, mode:, options:)
   end
 
+  def history_page(messages, cursor: nil)
+    { ok: true, messages:, has_more: cursor.present?,
+      response_metadata: { next_cursor: cursor.to_s } }
+  end
+
+  def slack_message(ts, text = "message #{ts}", user: "U001")
+    { "type" => "message", "user" => user, "text" => text, "ts" => ts }
+  end
+
   def table_counts(except: [])
     ActiveRecord::Base.connection.tables.to_h do |table|
       quoted = ActiveRecord::Base.connection.quote_table_name(table)
@@ -214,6 +223,48 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     expected_oldest = format("%.6f", 1700000102.000102 - 30.days.to_f)
     assert_requested :get, "#{SLACK_API}/conversations.history",
       query: hash_including({ "channel" => "CCHAN", "oldest" => expected_oldest })
+  end
+
+  test "a multi-year conversation spanning several steps imports everything" do
+    WebMock.reset!
+    stub_slack_workspace!(history_overrides: {
+      "CCHAN" => [
+        history_page([ slack_message("1719792000.000001", "summer 2024"),
+          slack_message("1704067200.000002", "new year 2024") ], cursor: "page-2"),
+        history_page([ slack_message("1685577600.000003", "summer 2023") ], cursor: "page-3"),
+        history_page([ slack_message("1640995200.000004", "new year 2022") ])
+      ]
+    })
+
+    run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+
+    assert_equal "completed", run.status
+    assert_equal 4, run.stats["counts"]["messages"]
+    general = Rooms::Open.find_by!(name: "general")
+    assert_equal 4, general.messages.count
+    assert_equal 1, general.messages.where("created_at < ?", Time.utc(2023, 1, 1)).count
+  end
+
+  test "a full import after a date-bounded test import imports everything older too" do
+    pages = [
+      history_page([ slack_message("1719792000.000001", "recent news") ], cursor: "page-2"),
+      history_page([ slack_message("1640995200.000004", "ancient history") ])
+    ]
+    WebMock.reset!
+    stub_slack_workspace!(history_overrides: { "CCHAN" => pages })
+
+    test_run = drive_import_to_completion(start_run(options: {
+      "conversation_ids" => %w[ CCHAN ], "oldest" => "2024-06-17T00:00:00Z" }))
+    assert_equal "completed", test_run.status
+    assert_equal 1, test_run.stats["counts"]["messages"]
+
+    full_run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+    assert_equal "completed", full_run.status
+    assert_equal 1, full_run.stats["counts"]["messages"]
+
+    general = Rooms::Open.find_by!(name: "general")
+    assert_equal 2, general.messages.count
+    assert_equal 1, general.messages.where("created_at < ?", Time.utc(2023, 1, 1)).count
   end
 
   test "undo removes exactly what the run created and leaves the rest" do
