@@ -478,17 +478,31 @@ class SlackImport::Runner
     end
 
     def full_cover?(conversation_id)
-      SlackImport::Record.where(slack_workspace_id: @workspace.id, slack_kind: "conversation",
-        slack_key: conversation_id, slack_import_id: full_import_ids).exists?
+      full_covered_conversation_ids.include?(conversation_id)
     end
 
-    # Earlier completed full imports in this workspace, memoized per step
-    # job execution. Undone runs are gone by status, and date-bounded runs
-    # by their oldest bound.
-    def full_import_ids
-      @full_import_ids ||= SlackImport.where(slack_workspace_id: @workspace.id,
-        mode: "import", status: "completed").where.not(id: @run.id)
-        .select(:id, :options).filter_map { |run| run.id if run.options["oldest"].blank? }
+    # Conversations an earlier completed full import finished, memoized per
+    # step job execution. Decided from the runs themselves, not the mapping
+    # rows: a full import reuses the test import's conversation mapping, so
+    # the mapping row's run says nothing about coverage. Undone, failed and
+    # cancelled runs are gone by status, date-bounded runs by their oldest
+    # bound, and skipped conversations never covered anything.
+    def full_covered_conversation_ids
+      @full_covered_conversation_ids ||= begin
+        ids = Set.new
+        SlackImport.where(slack_workspace_id: @workspace.id,
+          mode: "import", status: "completed").where.not(id: @run.id)
+          .select(:id, :options, :stats).each do |run|
+            next if run.options["oldest"].present?
+
+            Array(run.stats["conversations"]).each do |entry|
+              if entry["done"] && entry.dig("target", "action") != "skip"
+                ids << entry["id"]
+              end
+            end
+          end
+        ids
+      end
     end
 
     # -- finishing ------------------------------------------------------

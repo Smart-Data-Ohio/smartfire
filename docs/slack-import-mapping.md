@@ -124,13 +124,16 @@ private channels imported by a different member's personal run.
 The 30-day catch-up window opens only when an earlier, completed, full import
 (an import run with no `oldest` bound) already covered the conversation:
 history is then fetched from 30 days before the newest imported message, which
-picks up late thread replies without re-reading all history. A date-bounded
-test import never opens the window, so the later full import re-reads the
-whole range and the mapping skips duplicates. Each conversation's bounds are
-fixed when the run starts that conversation and reused for its history and
-thread replies on every later step, so a long conversation keeps its full
-window however many steps it spans. Threads found on catch-up pages are
-re-read in full; only new replies are created.
+picks up late thread replies without re-reading all history. Coverage is
+decided from the runs themselves — a conversation is covered when a completed
+full import finished it (its run stats mark it done) — not from which run owns
+its mapping row, since a full import reuses the test import's mapping. A
+date-bounded test import never opens the window, so the later full import
+re-reads the whole range and the mapping skips duplicates. Each conversation's
+bounds are fixed when the run starts that conversation and reused for its
+history and thread replies on every later step, so a long conversation keeps
+its full window however many steps it spans. Threads found on catch-up pages
+are re-read in full; only new replies are created.
 
 ## Undo
 

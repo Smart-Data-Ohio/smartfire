@@ -267,6 +267,36 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     assert_equal 1, general.messages.where("created_at < ?", Time.utc(2023, 1, 1)).count
   end
 
+  test "catch-up after a kept test import and a full import re-reads only 30 days" do
+    pages = [
+      history_page([ slack_message("1719792000.000001", "recent news") ], cursor: "page-2"),
+      history_page([ slack_message("1640995200.000004", "ancient history") ])
+    ]
+    WebMock.reset!
+    stub_slack_workspace!(history_overrides: { "CCHAN" => pages })
+
+    test_run = drive_import_to_completion(start_run(options: {
+      "conversation_ids" => %w[ CCHAN ], "oldest" => "2024-06-17T00:00:00Z" }))
+    assert_equal "completed", test_run.status
+    assert_equal 1, test_run.stats["counts"]["messages"]
+
+    full_run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+    assert_equal "completed", full_run.status
+    assert_equal 1, full_run.stats["counts"]["messages"]
+    # The full import reused the test import's mapping, so the mapping row
+    # still belongs to the date-bounded run.
+    assert_equal test_run.id, SlackImport::Record.find_by!(
+      slack_kind: "conversation", slack_key: "CCHAN").slack_import_id
+
+    catchup_run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+
+    assert_equal "completed", catchup_run.status
+    assert_equal 0, catchup_run.stats["counts"]["messages"]
+    expected_oldest = format("%.6f", 1719792000.000001 - 30.days.to_f)
+    assert_requested :get, "#{SLACK_API}/conversations.history",
+      query: hash_including({ "channel" => "CCHAN", "oldest" => expected_oldest }), times: 2
+  end
+
   test "completing a run kicks the next queued run" do
     first = start_run(options: { "conversation_ids" => %w[ CARCH ] })
     second = start_run(options: { "conversation_ids" => %w[ CPRIV ] })
