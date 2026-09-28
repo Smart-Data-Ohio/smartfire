@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_25_174854) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_28_120000) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -1072,6 +1072,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_25_174854) do
     t.integer "quiet_hours_start_minute"
     t.integer "role", default: 0, null: false
     t.integer "status", default: 0, null: false
+    t.string "text_size", default: "default", null: false
     t.string "theme", default: "system", null: false
     t.string "time_zone"
     t.boolean "time_zone_explicit", default: false, null: false

@@ -16,6 +16,19 @@
       <p class="txt-small margin-none" style="color: var(--color-negative)">Theme <%= @user.errors[:theme].to_sentence %>.</p>
     <% end %>
 
+    <div role="radiogroup" aria-label="Text size" class="flex flex-wrap align-center gap pad-block-half">
+      <span class="txt-medium">Text size</span>
+      <% User::StatusSettings::TEXT_SIZES.each do |value| %>
+        <label class="txt-medium">
+          <%= form.radio_button :text_size, value, checked: @user.text_size == value, id: "user_text_size_#{value}" %>
+          <%= User::StatusSettings::TEXT_SIZE_LABELS.fetch(value) %>
+        </label>
+      <% end %>
+    </div>
+    <% if @user.errors[:text_size].any? %>
+      <p class="txt-small margin-none" style="color: var(--color-negative)">Text size <%= @user.errors[:text_size].to_sentence %>.</p>
+    <% end %>
+
     <div class="flex align-center gap pad-block-half">
       <%= form.label :time_zone, "Time zone", class: "txt-medium" %>
       <%= form.select :time_zone, profile_time_zone_choices,

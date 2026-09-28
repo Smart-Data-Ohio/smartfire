@@ -3,6 +3,14 @@ module User::StatusSettings
 
   PRESENCE_SETTINGS = %w[ auto dnd invisible ].freeze
   THEMES = %w[ light dark system ].freeze
+  TEXT_SIZES = %w[ smaller small default large larger ].freeze
+  TEXT_SIZE_LABELS = {
+    "smaller" => "Smaller",
+    "small" => "Small",
+    "default" => "Default",
+    "large" => "Large",
+    "larger" => "Larger"
+  }.freeze
   CUSTOM_STATUS_EMOJI_LIMIT = 8
   CUSTOM_STATUS_TEXT_LIMIT = 100
   CUSTOM_STATUS_EXPIRIES = %w[ minutes_30 hour_1 hours_4 today week never ].freeze
@@ -35,6 +43,7 @@ module User::StatusSettings
 
     validates :presence_setting, inclusion: { in: PRESENCE_SETTINGS }
     validates :theme, inclusion: { in: THEMES }
+    validates :text_size, inclusion: { in: TEXT_SIZES }
     validates :custom_status_emoji, length: { maximum: CUSTOM_STATUS_EMOJI_LIMIT }, allow_nil: true
     validates :custom_status_text, length: { maximum: CUSTOM_STATUS_TEXT_LIMIT }, allow_nil: true
     validates :ooo_note, length: { maximum: OOO_NOTE_LIMIT }, allow_nil: true

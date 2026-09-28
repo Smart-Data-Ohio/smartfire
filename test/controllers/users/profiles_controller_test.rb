@@ -456,6 +456,13 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Pacific Time (US & Canada)", users(:david).time_zone
   end
 
+  test "update saves the text size" do
+    put user_profile_url, params: { user: { text_size: "smaller" } }
+
+    assert_redirected_to user_profile_url
+    assert_equal "smaller", users(:david).reload.text_size
+  end
+
   test "an IANA time zone round-trips through the form" do
     users(:david).update!(time_zone: "America/New_York")
 
@@ -506,17 +513,22 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
     put user_profile_url, params: { user: { time_zone: "Narnia" } }
     assert_response :unprocessable_entity
 
+    put user_profile_url, params: { user: { text_size: "huge" } }
+    assert_response :unprocessable_entity
+
     assert_equal "system", users(:david).reload.theme
+    assert_equal "default", users(:david).text_size
     assert_nil users(:david).time_zone
   end
 
   test "the layout carries the theme, time zone, and sound state" do
-    users(:david).update!(theme: "light", time_zone: "Pacific Time (US & Canada)", dnd_enabled: true)
+    users(:david).update!(theme: "light", text_size: "large", time_zone: "Pacific Time (US & Canada)", dnd_enabled: true)
 
     get user_profile_url
 
     assert_response :success
     assert_select "html[data-theme=light]"
+    assert_select "html[data-text-size=large]"
     assert_select "meta[name=color-scheme][content=light]", count: 1
     assert_select "meta[name=current-user-time-zone][content='Pacific Time (US & Canada)']", count: 1
     assert_select "meta[name=notification-dnd][content=muted]", count: 1
