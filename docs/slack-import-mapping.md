@@ -148,13 +148,17 @@ run's mapping rows. Matched users and pre-existing content are never touched.
 A thread is deleted only when every message in it was created by the run.
 Otherwise the thread and its parent message stay, with an issue recorded. Each
 room's fate is decided before any membership is touched: a room holding
-messages the run did not create stays with all its memberships and its
-conversation mapping, with an issue recorded. Mappings for everything kept
-stay behind too — rooms, threads, parent messages, memberships and surviving
-placeholder users — so a later run reuses the survivors instead of
-duplicating them. A user mapping goes only with its user row: deactivated
-and bot placeholders have no email, so dropping the mapping would make a
-re-import mint a duplicate.
+anything the run did not create stays with all its memberships and its
+conversation mapping, with an issue recorded. That covers every content
+association Room destroys with itself — foreign messages, events, scheduled
+messages, pins and threads by others, repository subscriptions, board rows
+and agent slash commands — as well as messages carrying polls, saved items
+or pins by others, which keep both their own row and the room. Mappings for
+everything kept stay behind too — rooms, threads, parent messages,
+memberships and surviving placeholder users — so a later run reuses the
+survivors instead of duplicating them. A user mapping goes only with its
+user row: deactivated and bot placeholders have no email, so dropping the
+mapping would make a re-import mint a duplicate.
 
 One import or undo runs at a time across the workspace. Undo waits while any
 other run is queued, running or undoing, and the run page says so until the

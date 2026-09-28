@@ -528,6 +528,36 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     assert run.issues.reload.any? { |issue| issue.message.include?("kept") }
   end
 
+  test "undo keeps a created room that holds an event and a scheduled message" do
+    run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN CARCH ] }))
+    general = Rooms::Open.find_by!(name: "general")
+    archived_id = Rooms::Open.find_by!(name: "old-project (archived)").id
+    message_ids_before = general.messages.pluck(:id).to_set
+    event = general.events.create!(organizer: users(:david), title: "Kickoff",
+      starts_at: 1.week.from_now, time_zone: "UTC")
+    scheduled = general.scheduled_messages.create!(user: users(:david),
+      markdown_source: "Reminder!", send_at: 1.day.from_now)
+    # The event announcement is a foreign message too; remove it so the
+    # room is kept for the event and the scheduled message alone.
+    general.messages.where.not(id: message_ids_before.to_a).destroy_all
+    assert_empty general.messages.where.not(id: run.records.where(slack_kind: "message").select(:record_id))
+    memberships_before = general.memberships.pluck(:user_id, :involvement).sort
+
+    assert run.undo!
+    drive_undo_to_completion(run)
+
+    assert_equal "undone", run.status
+    assert Room.exists?(general.id)
+    assert Event.exists?(event.id)
+    assert ScheduledMessage.exists?(scheduled.id)
+    surviving_ids = User.where(id: memberships_before.map(&:first)).pluck(:id).to_set
+    expected = memberships_before.select { |user_id, _| surviving_ids.include?(user_id) }
+    assert_equal expected, general.memberships.reload.pluck(:user_id, :involvement).sort
+    assert run.records.exists?(slack_kind: "conversation", slack_key: "CCHAN")
+    assert run.issues.reload.any? { |issue| issue.message.include?("kept") }
+    assert_not Room.exists?(archived_id)
+  end
+
   test "undo keeps threads and rooms with real activity, with members and mappings" do
     run = drive_import_to_completion(start_run)
     general = Rooms::Open.find_by!(name: "general")

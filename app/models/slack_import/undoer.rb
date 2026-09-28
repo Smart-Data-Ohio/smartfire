@@ -10,8 +10,9 @@ class SlackImport::Undoer
   def initialize(run)
     @run = run
     @state = { "phase" => "undo", "undo_step" => "leaves", "undo_cursor" => 0,
-      "undo_rooms_decided" => false, "undo_kept_room_ids" => [],
-      "undo_kept_thread_ids" => [], "undo_kept_message_ids" => [] }
+      "undo_rooms_decided" => false, "undo_messages_decided" => false,
+      "undo_kept_room_ids" => [], "undo_kept_thread_ids" => [],
+      "undo_kept_message_ids" => [] }
       .merge(run.state || {})
   end
 
@@ -49,6 +50,7 @@ class SlackImport::Undoer
     end
 
     def step_messages
+      decide_kept_messages!
       batch = current_batch(%w[ message ])
       return advance_to("threads") if batch.empty?
 
@@ -71,6 +73,31 @@ class SlackImport::Undoer
       end
       save_cursor(batch)
       :continue
+    end
+
+    # Messages carrying content the run did not create keep their row (and
+    # their room, through the room check): polls, saved items and pins by
+    # others all hang off the message, and the import creates none of them.
+    # Decided once, before the first batch goes.
+    def decide_kept_messages!
+      return if @state["undo_messages_decided"]
+
+      mine = @run.records.where(slack_kind: "message").select(:record_id)
+      keep_message_content!(Poll.where(message_id: mine).pluck(:message_id), "a poll")
+      keep_message_content!(SavedItem.where(message_id: mine).pluck(:message_id), "a saved item")
+      keep_message_content!(MessagePin.where(message_id: mine).where.not(id: my_pin_ids).pluck(:message_id), "a pin")
+      @state["undo_messages_decided"] = true
+      save_undo_state!
+    end
+
+    def keep_message_content!(message_ids, what)
+      Array(message_ids).each do |id|
+        next if kept_message_ids.include?(id)
+
+        (@state["undo_kept_message_ids"] ||= []) << id
+        @run.record_issue!("warning", "message:#{id}",
+          "Message #{id} kept: it holds #{what} this import did not create")
+      end
     end
 
     # A thread parent in this batch whose thread holds foreign messages
@@ -101,8 +128,10 @@ class SlackImport::Undoer
         # A thread goes only when every message in it was created by this
         # run: destroy cascades into its replies, which would otherwise
         # kill real users' messages. The check runs live so a reply that
-        # landed mid-undo still saves the thread.
-        if kept_thread_ids.include?(thread.id) || thread_has_foreign_messages?(thread.id)
+        # landed mid-undo still saves the thread. Threads holding messages
+        # undo kept (polls, saved items, pins) stay for the same reason.
+        if kept_thread_ids.include?(thread.id) || thread_has_foreign_messages?(thread.id) ||
+            thread_has_kept_messages?(thread.id)
           keep_thread!(thread, thread.parent_message_id)
           next
         end
@@ -143,7 +172,7 @@ class SlackImport::Undoer
     end
 
     # Each room's fate is decided before any membership is touched: a room
-    # holding messages this run did not create keeps all its memberships
+    # holding anything this run did not create keeps all its memberships
     # and its conversation mapping, with an issue recorded. Decided once;
     # the rooms step re-checks live before destroying.
     def decide_kept_rooms!
@@ -156,7 +185,7 @@ class SlackImport::Undoer
 
         room = Room.find_by(id: record.record_id)
         next if room.nil? || room.deleted?
-        next unless room.messages.where.not(id: my_message_ids).exists?
+        next unless room_has_foreign_content?(room)
 
         keep_room!(room)
       end
@@ -170,8 +199,42 @@ class SlackImport::Undoer
       @my_message_ids ||= @run.records.where(slack_kind: "message").select(:record_id)
     end
 
+    def my_pin_ids
+      @my_pin_ids ||= @run.records.where(slack_kind: "pin").select(:record_id)
+    end
+
+    def my_thread_ids
+      @my_thread_ids ||= @run.records.where(slack_kind: "thread").select(:record_id)
+    end
+
     def thread_has_foreign_messages?(thread_id)
       Message.where(thread_id: thread_id).where.not(id: my_message_ids).exists?
+    end
+
+    def thread_has_kept_messages?(thread_id)
+      kept = kept_message_ids
+      kept.any? && Message.where(thread_id: thread_id, id: kept).exists?
+    end
+
+    # Anything the run did not create keeps a room it sits in: foreign
+    # messages, events, scheduled messages, pins and threads by others, and
+    # every other content association Room destroys with itself (repository
+    # subscriptions, board rows, agent slash commands). The import creates
+    # only messages, threads, pins and memberships, so any row in the other
+    # associations is foreign by definition. Polls and saved items hang off
+    # messages and keep both the message and the room.
+    def room_has_foreign_content?(room)
+      room.messages.where.not(id: my_message_ids).exists? ||
+        room.events.exists? ||
+        room.scheduled_messages.exists? ||
+        room.message_pins.where.not(id: my_pin_ids).exists? ||
+        room.channel_threads.where.not(id: my_thread_ids).exists? ||
+        room.github_repository_subscriptions.exists? ||
+        room.board_tag_assignments.exists? || room.board_sla_rules.exists? ||
+        room.board_sla_nudges.exists? || room.board_stale_digests.exists? ||
+        room.agent_slash_commands.exists? ||
+        Poll.where(message_id: room.messages.select(:id)).exists? ||
+        SavedItem.where(message_id: room.messages.select(:id)).exists?
     end
 
     def kept_room_ids
@@ -204,19 +267,19 @@ class SlackImport::Undoer
 
       ids << room.id
       @run.record_issue!("warning", "room:#{room.id}",
-        "Room #{room.name || room.id} kept: it holds messages this import did not create")
+        "Room #{room.name || room.id} kept: it holds content this import did not create")
     end
 
-    # A room the run created goes only when no messages remain in it other
-    # than ones this run created (already removed above); a room someone
-    # posted in since stays behind with an issue. Merged rooms are never
-    # touched.
+    # A room the run created goes only when nothing remains in it that this
+    # run did not create (its own messages were already removed above); a
+    # room holding anything else stays behind with an issue. Merged rooms
+    # are never touched.
     def undo_room(record)
       room = Room.find_by(id: record.record_id)
       return if room.nil? || room.deleted?
       return if kept_room_ids.include?(room.id)
 
-      if room.messages.where.not(id: my_message_ids).exists?
+      if room_has_foreign_content?(room)
         keep_room!(room)
         save_undo_state!
         return
