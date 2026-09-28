@@ -459,6 +459,32 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
       "expected CCHAN to be re-read in full, not from the catch-up window"
   end
 
+  test "a full import finishes rooms an earlier test import created" do
+    stub_three_windows!
+    test_run = drive_import_to_completion(start_run(options: middle_window_options))
+    general = Rooms::Open.find_by!(name: "general")
+    test_membership_ids = test_run.records.where(slack_kind: "membership").pluck(:record_id)
+    assert_operator test_membership_ids.size, :>, 1
+    summer_2023 = general.messages.find_by!(created_at: Time.at(Rational("1685577600.000002")))
+    assert_equal summer_2023.created_at, general.reload.updated_at
+    unread = Membership.find(test_membership_ids.first)
+    unread.update_columns(unread_at: Time.current)
+
+    stub_three_windows!
+    full_run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+
+    assert_equal 0, full_run.records.where(slack_kind: %w[ conversation membership ]).count
+    summer_2024 = general.messages.find_by!(created_at: Time.at(Rational("1719792000.000001")))
+    assert_equal summer_2024.created_at, general.reload.updated_at
+    Membership.where(id: test_membership_ids - [ unread.id ]).each do |membership|
+      assert_equal summer_2024.id, membership.last_read_message_id
+      assert_nil membership.unread_at
+    end
+    # A membership with real unread state keeps its pointer and stamp.
+    assert_equal summer_2023.id, unread.reload.last_read_message_id
+    assert_not_nil unread.unread_at
+  end
+
   test "per-conversation record lookups seek the identity index" do
     plan = ActiveRecord::Base.connection.exec_query(
       "EXPLAIN QUERY PLAN #{SlackImport::Record.for_conversation(@workspace.id, "message", "CCHAN").to_sql}"

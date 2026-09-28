@@ -82,8 +82,12 @@ offers the normal involvement control to join visibly.
 Imported memberships carry no unread state, and `last_read_message_id` points
 at the last imported message. Room `updated_at` becomes the last imported
 message time for created rooms (so imported DMs do not jump to the top of the
-sidebar), or stays at the later of its time and that for merged rooms. The
-room creator is the user who started the run.
+sidebar), or stays at the later of its time and that for merged rooms. Every
+room a run writes into is finished this way, including rooms an earlier run
+created (a full import after a test import): the room moves to the later of
+its time and the run's last message, and the earlier run's memberships move
+their pointer forward to it unless they hold real unread state or already
+point at something newer. The room creator is the user who started the run.
 
 Self-DMs and DMs with Slackbot are skipped.
 

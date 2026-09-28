@@ -344,6 +344,7 @@ class SlackImport::Runner
     def step_convo_history(convo, entry)
       room = import_mode? ? Room.alive.find(convo["room_id"]) : nil
       bounds = stored_bounds(convo)
+      note_written_conversation(convo["id"]) if import_mode?
 
       loop do
         if thread_pending?(convo)
@@ -545,38 +546,67 @@ class SlackImport::Runner
       :done
     end
 
+    # Every conversation this run reached history for, whichever run owns
+    # its mapping: a full import after a test import writes into rooms the
+    # test import created, and those rooms still need finishing.
+    def note_written_conversation(conversation_id)
+      ids = (@state["written_conversation_ids"] ||= [])
+      ids << conversation_id unless ids.include?(conversation_id)
+    end
+
     # Imported DMs must not jump to the top of the sidebar: rooms the
     # import created take their last imported message time, rooms that
     # already existed keep the later of their time and that. Memberships
-    # the run created point at the last imported message with no unread.
-    # Every lookup is per conversation through the mapping's unique index,
-    # never a scan of the run's whole record set. The heartbeat refreshes
-    # inside the loop, so a run with thousands of rooms can never look
-    # stalled to the sweeper.
+    # the run created point at the last imported message with no unread;
+    # memberships an earlier run created move forward to it only when
+    # they have nothing unread and point at something older. Every room
+    # this run wrote into is finished, not only rooms whose mapping it
+    # owns. Every lookup is per conversation through the mapping's unique
+    # index, never a scan of the run's whole record set. The heartbeat
+    # refreshes inside the loop, so a run with thousands of rooms can
+    # never look stalled to the sweeper.
     def finish_rooms
-      seen = 0
-      @run.records.where(slack_kind: "conversation").find_each do |record|
+      conversation_ids = (Array(@state["written_conversation_ids"]) +
+        @run.records.where(slack_kind: "conversation").pluck(:slack_key)).uniq
+      conversation_ids.each_with_index do |conversation_id, seen|
         touch_heartbeat! if (seen % 25).zero?
-        seen += 1
+        finish_room(conversation_id)
+      end
+    end
 
-        room = Room.alive.find_by(id: record.record_id)
-        next if room.nil?
+    def finish_room(conversation_id)
+      mapping = SlackImport::Record.find_by(slack_workspace_id: @workspace.id,
+        slack_kind: "conversation", slack_key: conversation_id)
+      room = mapping && Room.alive.find_by(id: mapping.record_id)
+      return if room.nil?
 
-        message_ids = conversation_record_ids("message", record.slack_key)
-        next if message_ids.empty?
+      message_ids = conversation_record_ids("message", conversation_id)
+      return if message_ids.empty?
 
-        last_time, last_id = Message.where(room_id: room.id, id: message_ids)
-          .order(created_at: :desc, id: :desc).pick(:created_at, :id)
-        next if last_time.nil?
+      last_time, last_id = Message.where(room_id: room.id, id: message_ids)
+        .order(created_at: :desc, id: :desc).pick(:created_at, :id)
+      return if last_time.nil?
 
-        updated_at = record.created_record ? last_time : [ room.updated_at, last_time ].max
-        room.update_columns(updated_at:)
+      created_here = mapping.slack_import_id == @run.id && mapping.created_record
+      room.update_columns(updated_at: created_here ? last_time : [ room.updated_at, last_time ].max)
+      finish_memberships(conversation_id, last_time, last_id)
+    end
 
-        membership_ids = conversation_record_ids("membership", record.slack_key)
-        if membership_ids.any?
-          Membership.where(id: membership_ids)
-            .update_all(last_read_message_id: last_id, unread_at: nil, updated_at: Time.current)
-        end
+    def finish_memberships(conversation_id, last_time, last_id)
+      own, earlier = SlackImport::Record.for_conversation(@workspace.id, "membership", conversation_id)
+        .pluck(:record_id, :slack_import_id).partition { |_, run_id| run_id == @run.id }
+        .map { |pairs| pairs.map(&:first) }
+
+      if own.any?
+        Membership.where(id: own)
+          .update_all(last_read_message_id: last_id, unread_at: nil, updated_at: Time.current)
+      end
+      if earlier.any?
+        read_further = Message.where("messages.id = memberships.last_read_message_id")
+          .where("messages.created_at > :time OR (messages.created_at = :time AND messages.id >= :id)",
+            time: last_time, id: last_id)
+        Membership.where(id: earlier, unread_at: nil).where.not(read_further.arel.exists)
+          .update_all(last_read_message_id: last_id, updated_at: Time.current)
       end
     end
 
