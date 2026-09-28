@@ -311,6 +311,51 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     assert run.issues.reload.any? { |issue| issue.message.include?("kept") }
   end
 
+  test "undo keeps threads and rooms with real activity, with members and mappings" do
+    run = drive_import_to_completion(start_run)
+    general = Rooms::Open.find_by!(name: "general")
+    secret = Rooms::Closed.find_by!(name: "secret")
+    parent = general.messages.find_by!(created_at: Time.at(1700000002.000002))
+    thread = parent.channel_thread
+
+    foreign_reply = thread.post_message!(creator: users(:david),
+      attributes: { markdown_source: "real reply after import" })
+    foreign_message = general.messages.create!(creator: users(:david),
+      markdown_source: "real message after import")
+    memberships_before = general.memberships.pluck(:user_id, :involvement).sort
+    placeholder_ids = run.records.where(slack_kind: "user", created_record: true).pluck(:record_id).to_set
+
+    assert run.undo!
+    drive_undo_to_completion(run)
+
+    assert_equal "undone", run.status
+    # The thread, its parent and the real reply survive; the run's own
+    # replies in the kept thread are gone.
+    assert ChannelThread.exists?(thread.id)
+    assert Message.exists?(parent.id)
+    assert_equal thread.id, Message.find(foreign_reply.id).thread_id
+    assert_equal [ foreign_reply.id ], thread.messages.reload.pluck(:id)
+    # The room, the real message and the surviving members' memberships
+    # survive untouched; only import-created placeholders that author
+    # nothing left are removed (with their memberships, per the original
+    # placeholder rules).
+    assert Room.exists?(general.id)
+    assert Message.exists?(foreign_message.id)
+    surviving_ids = User.where(id: memberships_before.map(&:first)).pluck(:id).to_set
+    expected = memberships_before.select { |user_id, _| surviving_ids.include?(user_id) }
+    assert_equal expected, general.memberships.reload.pluck(:user_id, :involvement).sort
+    removed_ids = memberships_before.map(&:first).to_set - surviving_ids
+    assert_not_empty removed_ids
+    assert_empty removed_ids - placeholder_ids
+    # Rooms without foreign content are still removed.
+    assert_not Room.exists?(secret.id)
+    # Mappings for the survivors stay, so a later run reuses them.
+    assert run.records.exists?(slack_kind: "conversation", slack_key: "CCHAN")
+    assert run.records.exists?(slack_kind: "message", record_id: parent.id)
+    assert run.records.exists?(slack_kind: "thread", record_id: thread.id)
+    assert run.issues.reload.any? { |issue| issue.message.include?("kept") }
+  end
+
   test "import stays silent: no foreign jobs, broadcasts, unread or inbox items" do
     activity_before = ActivityItem.count
     broadcasts_before = cable_broadcasts_count
