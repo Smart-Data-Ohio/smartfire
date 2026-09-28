@@ -253,7 +253,7 @@ class GlobalSearchTest < ApplicationSystemTestCase
         return heading.scrollWidth <= heading.clientWidth && name.scrollWidth <= name.clientWidth
       })()
     JS
-    assert_equal "Search", find("#global-search-input")["placeholder"]
+    assert_equal "Search Smartfire", find("#global-search-input")["placeholder"]
     assert page.evaluate_script(<<~JS), "the placeholder is clipped"
       (() => {
         const input = document.querySelector("#global-search-input")
