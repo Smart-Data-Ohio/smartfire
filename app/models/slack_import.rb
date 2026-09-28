@@ -307,6 +307,12 @@ class SlackImport < ApplicationRecord
     self.class.kick_next_queued!
   end
 
+  # Reloading drops the memoized later-overlap scan with the attributes.
+  def reload(*)
+    remove_instance_variable(:@later_overlapping_import) if defined?(@later_overlapping_import)
+    super
+  end
+
   private
     def undo_eligible?
       import? && (completed? || failed? || cancelled?)
@@ -316,7 +322,14 @@ class SlackImport < ApplicationRecord
     # touched any conversation this run touched (from the runs' per-
     # conversation stats, plus this run's own conversation mappings, which
     # cover a crash between creating a room and saving its target).
+    # Memoized per instance: undo_blocked_reason, undoable? and undo!
+    # share one scan within a request.
     def later_overlapping_import
+      return @later_overlapping_import if defined?(@later_overlapping_import)
+      @later_overlapping_import = find_later_overlapping_import
+    end
+
+    def find_later_overlapping_import
       return nil if started_at.nil?
 
       mine = (touched_conversation_ids +

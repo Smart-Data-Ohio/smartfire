@@ -210,6 +210,23 @@ class SlackImportTest < ActiveSupport::TestCase
     assert import.undo!
   end
 
+  test "the later-overlap answer refreshes after reload" do
+    first = start_run
+    first.update!(status: "completed", started_at: 2.hours.ago, finished_at: 1.hour.ago,
+      stats: { "conversations" => [ { "id" => "CCHAN", "target" => { "action" => "create" } } ] })
+    assert_nil first.undo_blocked_reason
+
+    later = start_run
+    later.update!(status: "completed", started_at: 1.hour.ago, finished_at: Time.current,
+      stats: { "conversations" => [ { "id" => "CCHAN", "target" => { "action" => "merge" } } ] })
+
+    first.reload
+
+    assert_equal "A later import (##{later.id}) also imported some of these conversations; undo that one first.",
+      first.undo_blocked_reason
+    assert_not first.undoable?
+  end
+
   test "failed and cancelled runs kick the next queued run" do
     %i[ fail cancel ].each do |finisher|
       first = start_run
