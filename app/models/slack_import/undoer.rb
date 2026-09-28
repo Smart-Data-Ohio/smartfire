@@ -7,8 +7,9 @@ class SlackImport::Undoer
   # points at them, the run's mapping rows last.
   UNDO_STEPS = %w[ leaves messages threads memberships rooms users records ].freeze
 
-  def initialize(run)
+  def initialize(run, lease_token: nil)
     @run = run
+    @lease_token = lease_token
     @state = { "phase" => "undo", "undo_step" => "leaves", "undo_cursor" => 0,
       "undo_rooms_decided" => false, "undo_messages_decided" => false,
       "undo_kept_room_ids" => [], "undo_kept_thread_ids" => [],
@@ -189,7 +190,7 @@ class SlackImport::Undoer
 
       seen = 0
       @run.records.where(slack_kind: "conversation", created_record: true).find_each do |record|
-        @run.update_columns(heartbeat_at: Time.current) if (seen % 25).zero?
+        touch_heartbeat! if (seen % 25).zero?
         seen += 1
 
         room = Room.find_by(id: record.record_id)
@@ -376,8 +377,21 @@ class SlackImport::Undoer
       ids
     end
 
+    # Long loops refresh the heartbeat as they go, so the 5-minute stale
+    # sweeper can never stack a second job onto a live undo. The lease
+    # stamp renews with it, so an undo running past 5 minutes keeps its
+    # lease protection too.
+    def touch_heartbeat!
+      if @lease_token
+        @run.refresh_step_lease!(@lease_token)
+      else
+        @run.update_columns(heartbeat_at: Time.current)
+      end
+    end
+
     def save_undo_state!
       @run.update!(state: @state, heartbeat_at: Time.current)
+      @run.refresh_step_lease!(@lease_token)
     end
 
     def current_batch(kinds)
@@ -389,12 +403,14 @@ class SlackImport::Undoer
     def save_cursor(batch)
       @state["undo_cursor"] = batch.last.id
       @run.update!(state: @state, heartbeat_at: Time.current)
+      @run.refresh_step_lease!(@lease_token)
     end
 
     def advance_to(step)
       @state["undo_step"] = step
       @state["undo_cursor"] = 0
       @run.update!(state: @state, heartbeat_at: Time.current)
+      @run.refresh_step_lease!(@lease_token)
       :continue
     end
 end

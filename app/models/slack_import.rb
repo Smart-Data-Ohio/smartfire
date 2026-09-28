@@ -297,6 +297,29 @@ class SlackImport < ApplicationRecord
     end
   end
 
+  # Renews the step lease stamp, but only when token still holds it:
+  # one conditional UPDATE, so a job never extends another job's
+  # lease. Long steps call this wherever they refresh the heartbeat,
+  # so the lease cannot age out from under a live job while its
+  # heartbeat stays fresh. Touches only the stamp (plus heartbeat_at
+  # and updated_at), never other state keys. Returns true when the
+  # lease was still held.
+  def refresh_step_lease!(token)
+    return false if token.blank?
+
+    now = Time.current
+    stamp = self.class.send(:lease_stamp, now)
+    refreshed = self.class.where(id: id)
+      .where("json_extract(state, '$.step_lease_token') = ?", token.to_s)
+      .update_all([ "state = json_set(state, '$.step_started_at', ?), " \
+        "heartbeat_at = ?, updated_at = ?", stamp, now, now ]) == 1
+    if refreshed
+      self.state = state.merge("step_started_at" => stamp)
+      self.heartbeat_at = now
+    end
+    refreshed
+  end
+
   # Clears the step lease, but only when token still holds it: one
   # conditional UPDATE, so a job never releases another job's lease.
   # Returns true when this token's lease was cleared.

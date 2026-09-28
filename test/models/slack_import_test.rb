@@ -228,6 +228,98 @@ class SlackImportTest < ActiveSupport::TestCase
     assert_equal({}, lease_at_enqueue)
   end
 
+  test "refresh_step_lease! renews a held lease without touching other state" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current,
+      state: { "phase" => "messages", "convo_index" => 3 })
+    token = run.acquire_step_lease!("running")
+    first_stamp = run.state["step_started_at"]
+
+    travel 3.minutes do
+      assert run.refresh_step_lease!(token)
+
+      run.reload
+      assert_equal token, run.state["step_lease_token"]
+      assert_operator run.state["step_started_at"], :>, first_stamp
+      assert_in_delta Time.current.to_f, Time.iso8601(run.state["step_started_at"]).to_f, 5
+      assert_in_delta Time.current.to_f, run.heartbeat_at.to_f, 5
+    end
+
+    assert_equal 3, run.reload.state["convo_index"]
+    assert_equal "messages", run.state["phase"]
+  end
+
+  test "refresh_step_lease! refuses a token that no longer holds the lease" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    token = run.acquire_step_lease!("running")
+    stamp = run.state["step_started_at"]
+
+    travel 3.minutes do
+      assert_equal false, run.refresh_step_lease!("bogus-token")
+    end
+    assert_equal stamp, run.reload.state["step_started_at"]
+
+    run.release_step_lease!(token)
+
+    assert_equal false, run.refresh_step_lease!(token)
+  end
+
+  test "a runner step refreshes its lease wherever it refreshes the heartbeat" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current,
+      state: { "phase" => "users" })
+    token = run.acquire_step_lease!("running")
+    first_stamp = run.state["step_started_at"]
+
+    travel 3.minutes do
+      runner = SlackImport::Runner.new(SlackImport.find(run.id), lease_token: token)
+      runner.send(:touch_heartbeat!)
+      runner.send(:save_progress!)
+
+      stamp = run.reload.state["step_started_at"]
+      assert_equal token, run.state["step_lease_token"]
+      assert_operator stamp, :>, first_stamp
+      assert_in_delta Time.current.to_f, Time.iso8601(stamp).to_f, 5
+    end
+  end
+
+  test "a runner without a lease token leaves the lease alone" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current,
+      state: { "phase" => "users" })
+    token = run.acquire_step_lease!("running")
+    stamp = run.state["step_started_at"]
+
+    travel 1.minute do
+      runner = SlackImport::Runner.new(SlackImport.find(run.id))
+      runner.send(:touch_heartbeat!)
+      runner.send(:save_progress!)
+    end
+
+    assert_equal stamp, run.reload.state["step_started_at"]
+    assert_equal token, run.state["step_lease_token"]
+  end
+
+  test "an undoer step refreshes its lease when it saves undo state" do
+    run = start_run
+    run.update!(status: "undoing", started_at: 1.hour.ago, heartbeat_at: Time.current,
+      state: { "phase" => "undo", "undo_step" => "leaves", "undo_cursor" => 0 })
+    token = run.acquire_step_lease!("undoing")
+    first_stamp = run.state["step_started_at"]
+
+    travel 3.minutes do
+      undoer = SlackImport::Undoer.new(SlackImport.find(run.id), lease_token: token)
+      undoer.send(:touch_heartbeat!)
+      undoer.send(:save_undo_state!)
+
+      stamp = run.reload.state["step_started_at"]
+      assert_equal token, run.state["step_lease_token"]
+      assert_operator stamp, :>, first_stamp
+      assert_in_delta Time.current.to_f, Time.iso8601(stamp).to_f, 5
+    end
+  end
+
   test "another job's lease write is not mistaken for progress on conflict" do
     run = start_run
     run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current,

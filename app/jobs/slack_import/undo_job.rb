@@ -18,7 +18,7 @@ class SlackImport::UndoJob < ApplicationJob
     # the sweeper re-enqueues it.
     outcome = nil
     begin
-      outcome = SlackImport::Undoer.new(run).step!
+      outcome = SlackImport::Undoer.new(run, lease_token: lease_token).step!
     ensure
       run.release_step_lease!(lease_token)
     end

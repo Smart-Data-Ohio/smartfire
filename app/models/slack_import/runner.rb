@@ -11,8 +11,9 @@ class SlackImport::Runner
   # message, picking up late thread replies without re-reading everything.
   CATCHUP_LOOKBACK = 30.days
 
-  def initialize(run, client: nil)
+  def initialize(run, client: nil, lease_token: nil)
     @run = run
+    @lease_token = lease_token
     @workspace = run.slack_workspace
     @user_mapper = Slack::UserMapper.new(workspace: @workspace, run:)
     @conversation_mapper = Slack::ConversationMapper.new(workspace: @workspace, run:)
@@ -637,9 +638,15 @@ class SlackImport::Runner
     end
 
     # Long loops refresh the heartbeat as they go, so the 5-minute stale
-    # sweeper can never stack a second job onto a live run.
+    # sweeper can never stack a second job onto a live run. The lease
+    # stamp renews with it, so a step running past 5 minutes keeps its
+    # lease protection too.
     def touch_heartbeat!
-      @run.update_columns(heartbeat_at: Time.current)
+      if @lease_token
+        @run.refresh_step_lease!(@lease_token)
+      else
+        @run.update_columns(heartbeat_at: Time.current)
+      end
     end
 
     # -- helpers --------------------------------------------------------
@@ -692,6 +699,7 @@ class SlackImport::Runner
       @stats["issues_count"] = @run.issues.count
       @stats["api_calls"] = @api_calls
       @run.update!(state: @state, stats: @stats, heartbeat_at: Time.current)
+      @run.refresh_step_lease!(@lease_token)
     end
 
     def with_state_defaults(state)
