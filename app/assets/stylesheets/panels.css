@@ -4,7 +4,9 @@
 
   inline-size: var(--panel-width);
   margin: calc(var(--navbar-height) - var(--block-space)) auto var(--block-space);
-  max-inline-size: 100vw;
+  /* 100% of the scroller, not 100vw: the viewport width includes the
+     scroller's own scrollbar, which would push the panel past it. */
+  max-inline-size: 100%;
   padding: var(--panel-padding);
 
   @media (min-width: 100ch) {

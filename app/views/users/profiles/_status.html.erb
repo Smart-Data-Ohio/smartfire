@@ -34,7 +34,7 @@
             {}, { class: "input", id: "user_custom_status_expires_in" } %>
     </div>
 
-    <div class="flex align-center gap pad-block-half">
+    <div class="flex flex-wrap align-center gap pad-block-half">
       <%= profile_form_submit_button %>
       <%= form.button "Clear status", name: "user[clear_custom_status]", value: "1", class: "btn txt-small" %>
     </div>
@@ -92,7 +92,7 @@
             class: "input", id: "user_ooo_preset" %>
     </div>
 
-    <div class="flex align-center gap pad-block-half">
+    <div class="flex flex-wrap align-center gap pad-block-half">
       <%= label_tag "user_ooo_until_custom", "Custom end", class: "txt-medium" %>
       <%= datetime_local_field_tag "user[ooo_until_custom]", nil, class: "input", id: "user_ooo_until_custom" %>
       <span class="txt-small">in your time zone</span>
@@ -111,7 +111,7 @@
       <p class="txt-small margin-none" style="color: var(--color-negative)">Note <%= @user.errors[:ooo_note].to_sentence %>.</p>
     <% end %>
 
-    <div class="flex align-center gap pad-block-half">
+    <div class="flex flex-wrap align-center gap pad-block-half">
       <%= profile_form_submit_button %>
       <%= button_tag "Clear out of office", name: "user[clear_ooo]", value: "1", class: "btn txt-small" %>
     </div>

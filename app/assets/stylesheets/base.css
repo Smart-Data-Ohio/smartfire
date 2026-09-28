@@ -87,6 +87,10 @@ fieldset {
   display: flex;
   flex-direction: column;
   max-inline-size: 50ch;
+  /* Browsers give fieldsets min-inline-size: min-content, so one wide
+     control row (two time inputs, a long select) widens the whole
+     fieldset past a phone viewport and its text runs off the edge. */
+  min-inline-size: 0;
   padding: var(--block-space) 0;
 
   &.border {
@@ -243,9 +247,22 @@ pre {
   position: absolute;
   z-index: 3;
 
+  /* The menu's containing block is the translate button's row (below),
+     so 100% is the row's width, not the viewport's (which would count
+     the scrollbar): the menu stops a margin short of the row's end. */
   @media (max-width: 100ch) {
-    max-inline-size: calc(var(--max-width) - var(--inline-space));
+    max-inline-size: min(calc(var(--max-width) - var(--inline-space)), calc(100% - var(--inline-space) * 2));
   }
+}
+
+/* The translate button's <details> stays in place, but the menu measures
+   against the whole row it sits in rather than the 40px button. */
+details.position-relative:has(> .language-list-menu) {
+  position: static;
+}
+
+:has(> details > .language-list-menu) {
+  position: relative;
 }
 
 .language-list {

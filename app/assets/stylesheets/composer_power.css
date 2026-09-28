@@ -88,14 +88,47 @@
 }
 
 .poll__actions {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-block-start: 0.6rem;
 }
 
+/* btn--primary and btn--small carry no global styles, so the card sizes
+   its own buttons: a compact accent vote button with the retract control
+   beside it as a matching-height text button. */
+.poll__actions .btn {
+  --btn-padding: 0.4em 0.95em;
+
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+/* .btn's display beats the UA [hidden] rule, so hide the retract control
+   explicitly until the controller reveals it for voters. */
+.poll__actions .btn[hidden] {
+  display: none;
+}
+
+.poll__actions .btn--primary {
+  --btn-background: var(--workspace-accent-fill-strong, var(--color-text));
+  --btn-border-color: transparent;
+  --btn-color: var(--workspace-accent-contrast, var(--color-text-reversed));
+}
+
+.poll__actions .btn--plain {
+  --btn-padding: 0.4em 0.5em;
+
+  color: var(--workspace-text-muted, var(--color-text));
+}
+
 .poll__form {
   display: contents;
+}
+
+.poll__retract-form {
+  display: inline-flex;
 }
 
 .poll__fieldset {
@@ -104,6 +137,9 @@
   flex-basis: 100%;
   gap: 0.25rem;
   margin: 0;
+  /* Lift the global 50ch settings cap so the choices take the full row
+     and the buttons wrap beneath them instead of floating beside. */
+  max-inline-size: none;
   padding: 0;
 }
 
