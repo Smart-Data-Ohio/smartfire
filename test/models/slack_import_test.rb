@@ -209,6 +209,20 @@ class SlackImportTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordNotUnique) { runner.step! }
   end
 
+  test "a lease-looking state on a completed run does not block claims" do
+    # Completed runs never hold a lease (finishing strips it), so the
+    # blocking scopes only read leases off statuses that still can —
+    # and a stray stamp here blocks nothing.
+    finished = start_run
+    finished.update!(status: "completed", started_at: 1.hour.ago, finished_at: Time.current,
+      state: finished.state.merge("step_started_at" => Time.current.iso8601(6),
+        "step_lease_token" => "stray"))
+    queued = start_run
+
+    assert SlackImport.claim_running!(queued.id)
+    assert_equal "running", queued.reload.status
+  end
+
   test "a step job that cannot claim its queued run exits without re-enqueueing" do
     first = start_run
     second = start_run

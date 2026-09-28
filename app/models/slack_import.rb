@@ -58,12 +58,18 @@ class SlackImport < ApplicationRecord
     end
   end
 
-  # Runs holding a fresh step lease: a step or undo job recorded
-  # step_started_at when it started and clears it when it ends, so a
-  # fresh stamp means the job may still be executing even when the
-  # status already flipped underneath it (cancelled or failed).
+  # Runs still finishing under a fresh step lease after their status
+  # flipped underneath the in-flight job: cancel! flips a running run
+  # to cancelled mid-step, and a run failed the same way keeps its
+  # lease too. Leases are only acquired for running or undoing runs,
+  # and finishing strips them (see step_finishing and the undoer's
+  # final step), so cancelled and failed are the only other statuses
+  # that can hold one — callers cover running, undoing and queued by
+  # status. The status predicate lets the index narrow the scan
+  # before any state JSON is parsed.
   scope :with_fresh_lease, -> {
-    where("json_extract(state, '$.step_started_at') > ?", STALE_HEARTBEAT.ago.iso8601(6))
+    where(status: %w[ cancelled failed ])
+      .where("json_extract(state, '$.step_started_at') > ?", STALE_HEARTBEAT.ago.iso8601(6))
   }
   # Runs that block new claims: a step or undo job may still be
   # executing for them — running or undoing by status, or holding a
