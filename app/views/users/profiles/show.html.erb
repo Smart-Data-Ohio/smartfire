@@ -187,6 +187,8 @@
 
   <%= render "users/profiles/fizzy_connection", user: @user %>
 
+  <%= render "users/profiles/slack_import" %>
+
   <div class="margin-block pad-inline pad-block fill-shade border-radius">
     <menu class="flex flex-column gap margin-none pad">
       <%= render partial: "users/profiles/membership", collection: @shared_memberships %>

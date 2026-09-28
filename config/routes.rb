@@ -53,6 +53,15 @@ Rails.application.routes.draw do
       resources :icons, only: %i[ index create destroy ]
 
       resource :join_code, only: :create
+      resource :slack_import, only: %i[ show update destroy ], controller: "slack_imports" do
+        resources :runs, only: %i[ index show create ], controller: "slack_import_runs" do
+          get :plan, on: :member
+          post :start_import, path: "import", on: :member
+          post :catch_up, on: :member
+          post :cancel, on: :member
+          post :undo, on: :member
+        end
+      end
       resource :logo, only: %i[ show destroy ]
       resource :custom_styles, only: %i[ edit update ]
       resource :audit_log, only: :show, controller: "audit_logs"
@@ -325,6 +334,16 @@ Rails.application.routes.draw do
 
   namespace :fizzy do
     resource :connection, only: %i[ create destroy ], controller: "connections"
+  end
+
+  namespace :slack do
+    get "oauth/start", to: "oauth#start", as: :oauth_start
+    get "oauth/callback", to: "oauth#callback", as: :oauth_callback
+    resource :connection, only: :destroy
+    resources :imports, only: %i[ index show create ] do
+      post :cancel, on: :member
+      post :undo, on: :member
+    end
   end
 
   namespace :google do

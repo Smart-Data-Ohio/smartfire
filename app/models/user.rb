@@ -19,6 +19,8 @@ class User < ApplicationRecord
   has_one :google_identity, dependent: :destroy
   has_one :github_connected_account, dependent: :destroy
   has_one :fizzy_connected_account, dependent: :destroy
+  has_one :slack_connection, dependent: :destroy
+  has_many :slack_imports, dependent: :destroy
   has_many :event_calendar_entries, dependent: :destroy
 
   has_many :boosts, dependent: :destroy, foreign_key: :booster_id
