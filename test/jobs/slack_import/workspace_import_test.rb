@@ -267,6 +267,44 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     assert_equal 1, general.messages.where("created_at < ?", Time.utc(2023, 1, 1)).count
   end
 
+  test "completing a run kicks the next queued run" do
+    first = start_run(options: { "conversation_ids" => %w[ CARCH ] })
+    second = start_run(options: { "conversation_ids" => %w[ CPRIV ] })
+    second.clear_pending_step_job!
+    clear_enqueued_jobs
+
+    drive_import_to_completion(first)
+
+    assert_equal "completed", first.status
+    assert_enqueued_with(job: SlackImport::StepJob, args: [ second.id ])
+  end
+
+  test "undoing a run kicks the next queued run" do
+    first = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CARCH ] }))
+    assert first.undo!
+    second = start_run(options: { "conversation_ids" => %w[ CPRIV ] })
+    second.clear_pending_step_job!
+    clear_enqueued_jobs
+
+    drive_undo_to_completion(first)
+
+    assert_equal "undone", first.status
+    assert_enqueued_with(job: SlackImport::StepJob, args: [ second.id ])
+  end
+
+  test "undo is blocked while another run is queued" do
+    first = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CARCH ] }))
+    second = start_run(options: { "conversation_ids" => %w[ CPRIV ] })
+
+    assert_not first.undo!
+    assert_equal "completed", first.reload.status
+    assert_equal "Another import is queued or running. Wait for it to finish, then undo.",
+      first.undo_blocked_reason
+
+    second.cancel!
+    assert first.undo!
+  end
+
   test "undo removes exactly what the run created and leaves the rest" do
     room = Rooms::Open.create!(name: "Pre-existing", creator: users(:david))
     kept_message = room.messages.create!(creator: users(:david), markdown_source: "keep me")

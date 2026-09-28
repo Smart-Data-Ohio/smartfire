@@ -488,8 +488,16 @@ class SlackImport::Runner
       @stats["current"] = nil
       @stats["issues_count"] = @run.issues.count
       @stats["api_calls"] = @api_calls
-      @run.update!(state: @state.merge("phase" => "done"), stats: @stats,
-        status: "completed", finished_at: Time.current, heartbeat_at: Time.current)
+      # Conditional: a cancel that landed mid-step must not flip to
+      # completed. When the run is gone from running, stop quietly.
+      now = Time.current
+      claimed = SlackImport.where(id: @run.id, status: "running").update_all(
+        state: @state.merge("phase" => "done"), stats: @stats,
+        status: "completed", finished_at: now, heartbeat_at: now, updated_at: now) == 1
+      return :stopped unless claimed
+
+      @run.reload
+      SlackImport.kick_next_queued!
       :done
     end
 

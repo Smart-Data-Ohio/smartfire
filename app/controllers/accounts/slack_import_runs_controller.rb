@@ -140,7 +140,7 @@ class Accounts::SlackImportRunsController < ApplicationController
       AuditLog.record!(action: "slack.import.undo", target: @run)
       redirect_to admin_run_path(@run), notice: "Undo started."
     else
-      redirect_to admin_run_path(@run), alert: "That run cannot be undone."
+      redirect_to admin_run_path(@run), alert: @run.undo_blocked_reason || "That run cannot be undone."
     end
   end
 

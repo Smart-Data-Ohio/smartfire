@@ -83,6 +83,100 @@ class SlackImportTest < ActiveSupport::TestCase
     assert_not SlackImport.claim_running!(first.id)
   end
 
+  test "claim_running! refuses while another run is undoing" do
+    undoing = start_run
+    undoing.update!(status: "undoing", heartbeat_at: Time.current)
+    queued = start_run
+
+    assert_not SlackImport.claim_running!(queued.id)
+    assert queued.reload.queued?
+  end
+
+  test "a step job that cannot claim its queued run exits without re-enqueueing" do
+    first = start_run
+    second = start_run
+    first.update!(status: "running", heartbeat_at: Time.current)
+    clear_enqueued_jobs
+
+    SlackImport::StepJob.perform_now(second.id)
+
+    assert second.reload.queued?
+    assert_empty enqueued_jobs
+    assert_not second.reload.step_job_pending?
+  end
+
+  test "undo! refuses with no status change while another run is queued, running or undoing" do
+    %w[ queued running undoing ].each do |status|
+      import = start_run
+      import.update!(status: "completed", finished_at: Time.current)
+      finished_at = import.finished_at
+      other = start_run
+      other.update!(status:, heartbeat_at: Time.current)
+
+      assert_no_enqueued_jobs do
+        assert_not import.undo!, "undo should be blocked by a #{status} run"
+      end
+      assert_equal "completed", import.reload.status
+      assert_equal finished_at, import.finished_at
+      assert_equal "Another import is queued or running. Wait for it to finish, then undo.",
+        import.undo_blocked_reason
+
+      other.destroy!
+      import.destroy!
+    end
+  end
+
+  test "undo_blocked_reason is nil when nothing else is active" do
+    run = start_run
+    run.update!(status: "completed", finished_at: Time.current)
+
+    assert_nil run.undo_blocked_reason
+  end
+
+  test "failed and cancelled runs kick the next queued run" do
+    %i[ fail cancel ].each do |finisher|
+      first = start_run
+      second = start_run
+      first.update!(status: "running", heartbeat_at: Time.current)
+      second.clear_pending_step_job!
+      clear_enqueued_jobs
+
+      finisher == :fail ? first.mark_failed!("boom") : first.cancel!
+
+      assert_enqueued_with(job: SlackImport::StepJob, args: [ second.id ])
+      assert second.reload.step_job_pending?
+
+      first.destroy!
+      second.destroy!
+    end
+  end
+
+  test "step_finishing does not overwrite a cancelled run" do
+    run = start_run
+    run.update!(status: "running", state: { "phase" => "finishing" }, heartbeat_at: Time.current)
+    run.update!(status: "cancelled", finished_at: Time.current)
+
+    outcome = SlackImport::Runner.new(run).send(:step_finishing)
+
+    assert_equal :stopped, outcome
+    assert run.reload.cancelled?
+  end
+
+  test "step_finishing completes a running run and kicks the next queued one" do
+    first = start_run
+    second = start_run
+    first.update!(status: "running", state: { "phase" => "finishing" }, heartbeat_at: Time.current)
+    second.clear_pending_step_job!
+    clear_enqueued_jobs
+
+    outcome = SlackImport::Runner.new(first).send(:step_finishing)
+
+    assert_equal :done, outcome
+    assert first.reload.completed?
+    assert_equal "done", first.stats["phase"]
+    assert_enqueued_with(job: SlackImport::StepJob, args: [ second.id ])
+  end
+
   test "record_issue! caps issues with a suppression notice" do
     run = start_run
 
@@ -107,9 +201,11 @@ class SlackImportTest < ActiveSupport::TestCase
     assert_equal [ stale.id ], step_jobs.map { |job| job[:args].first }
   end
 
-  test "sweep starts the oldest queued run only when nothing runs" do
+  test "sweep starts the oldest queued run only when nothing runs or undoes" do
     first = start_run
     second = start_run
+    first.clear_pending_step_job!
+    second.clear_pending_step_job!
     clear_enqueued_jobs
 
     SlackImport.sweep_stalled!
@@ -122,6 +218,26 @@ class SlackImportTest < ActiveSupport::TestCase
     SlackImport.sweep_stalled!
 
     assert_empty enqueued_jobs.select { |job| job[:job] == SlackImport::StepJob }
+
+    clear_enqueued_jobs
+    first.update!(status: "undoing", heartbeat_at: Time.current)
+    SlackImport.sweep_stalled!
+
+    assert_empty enqueued_jobs.select { |job| job[:job] == SlackImport::StepJob }
+  end
+
+  test "sweep never enqueues a second job for a run with one pending" do
+    run = start_run
+    clear_enqueued_jobs
+
+    SlackImport.sweep_stalled!
+
+    assert_empty enqueued_jobs.select { |job| job[:job] == SlackImport::StepJob }
+
+    run.update!(state: { "enqueued_at" => 10.minutes.ago.iso8601(6) })
+    SlackImport.sweep_stalled!
+
+    assert_enqueued_with(job: SlackImport::StepJob, args: [ run.id ])
   end
 
   test "sweep re-enqueues stalled undoing runs" do

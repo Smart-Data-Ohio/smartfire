@@ -20,8 +20,12 @@
             form: { data: { turbo_confirm: "Cancel this run? It stops at the next step; already-imported records stay until undone." } } %>
     <% end %>
     <% if @run.undoable? %>
-      <%= button_to "Undo import", undo_account_slack_import_run_path(@run), class: "btn btn--negative",
-            form: { data: { turbo_confirm: "Undo this import? Every room, message, reaction, and pin it created is removed. Records it only matched to existing accounts or rooms stay." } } %>
+      <% if @run.undo_blocked_reason %>
+        <%= button_to "Undo import", undo_account_slack_import_run_path(@run), class: "btn btn--negative", disabled: true %>
+      <% else %>
+        <%= button_to "Undo import", undo_account_slack_import_run_path(@run), class: "btn btn--negative",
+              form: { data: { turbo_confirm: "Undo this import? Every room, message, reaction, and pin it created is removed. Records it only matched to existing accounts or rooms stay." } } %>
+      <% end %>
     <% end %>
     <% if @run.workspace? && @run.dry_run? && @run.completed? %>
       <%= link_to "Review the plan", plan_account_slack_import_run_path(@run), class: "btn btn--primary" %>
@@ -31,6 +35,9 @@
             form: { data: { turbo_confirm: "Run a catch-up import with the same conversations and targets? Already-imported objects are skipped, so it is safe to repeat." } } %>
     <% end %>
   </div>
+  <% if @run.undoable? && (undo_reason = @run.undo_blocked_reason) %>
+    <p class="margin-none txt-small"><%= undo_reason %></p>
+  <% end %>
   <% if slack_catch_up_eligible?(@run) %>
     <p class="margin-none txt-small">Catch-up repeats this import's conversations and targets to pick up what changed in Slack since. Already-imported objects are skipped, never duplicated.</p>
   <% end %>

@@ -19,10 +19,17 @@
             form: { data: { turbo_confirm: "Cancel this run? It stops at the next step." } } %>
     <% end %>
     <% if @run.undoable? %>
-      <%= button_to "Undo import", undo_slack_import_path(@run), class: "btn btn--negative",
-            form: { data: { turbo_confirm: "Undo this import? Every room, message, reaction, and pin it created is removed. Records it only matched to existing accounts or rooms stay." } } %>
+      <% if @run.undo_blocked_reason %>
+        <%= button_to "Undo import", undo_slack_import_path(@run), class: "btn btn--negative", disabled: true %>
+      <% else %>
+        <%= button_to "Undo import", undo_slack_import_path(@run), class: "btn btn--negative",
+              form: { data: { turbo_confirm: "Undo this import? Every room, message, reaction, and pin it created is removed. Records it only matched to existing accounts or rooms stay." } } %>
+      <% end %>
     <% end %>
   </div>
+  <% if @run.undoable? && (undo_reason = @run.undo_blocked_reason) %>
+    <p class="margin-none txt-small"><%= undo_reason %></p>
+  <% end %>
 
   <% if @run.dry_run? && @run.completed? && @conversations.any? %>
     <%= form_with url: slack_imports_path, data: { controller: "check-all" }, class: "flex flex-column gap" do |form| %>

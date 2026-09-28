@@ -486,6 +486,21 @@ class Accounts::SlackImportRunsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "undoing", import.reload.status
   end
 
+  test "undo is blocked with a reason while another run is active" do
+    import = create_slack_import!(user: @david, mode: "import", status: "completed")
+    create_slack_import!(user: users(:kevin), kind: "personal", status: "running")
+
+    post undo_account_slack_import_run_path(import)
+
+    assert_redirected_to account_slack_import_run_path(import)
+    assert_equal "completed", import.reload.status
+    assert_match(/queued or running/, flash[:alert])
+
+    get account_slack_import_run_path(import)
+    assert_select "button[disabled]", "Undo import"
+    assert_match(/queued or running/, response.body)
+  end
+
   test "cancel and undo refuse finished and non-undoable runs" do
     finished = create_slack_import!(user: @david, status: "completed")
     dry_run = create_slack_import!(user: @david, status: "completed")

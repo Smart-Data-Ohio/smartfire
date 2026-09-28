@@ -30,6 +30,10 @@ class SlackImport < ApplicationRecord
   # A running (or undoing) run that has not saved progress within this is
   # considered stalled and re-enqueued by the periodic sweeper.
   STALE_HEARTBEAT = 5.minutes
+  # A queued run whose step job was enqueued within this window is left
+  # alone: its job is still pending. Past the window the job is presumed
+  # lost and the sweeper enqueues again.
+  ENQUEUE_COOLDOWN = 5.minutes
 
   # Contract used by the controllers. The engine fills in the bodies
   # (normalizing options, enqueueing the step and undo jobs); the
@@ -45,34 +49,45 @@ class SlackImport < ApplicationRecord
   def self.start!(workspace:, user:, connection:, kind:, mode:, options: {})
     normalized = normalize_options(options.to_h.stringify_keys)
     create!(slack_workspace: workspace, user: user, slack_connection: connection,
-      kind: kind, mode: mode, options: normalized).tap do |run|
+      kind: kind, mode: mode, options: normalized,
+      state: { "enqueued_at" => Time.current.iso8601(6) }).tap do |run|
       SlackImport::StepJob.perform_later(run.id)
     end
   end
 
   # Single-flight claim: flips one queued run to running only when no other
-  # run is running, in a single conditional UPDATE. Returns true when this
-  # run won the claim.
+  # run is running or undoing, in a single conditional UPDATE. Imports and
+  # undos never interleave. Returns true when this run won the claim.
   def self.claim_running!(id)
     now = Time.current
     where(id: id, status: "queued")
-      .where("NOT EXISTS (?)", where(status: "running").select("1"))
+      .where("NOT EXISTS (?)", where(status: %w[ running undoing ]).select("1"))
       .update_all(status: "running", started_at: now, heartbeat_at: now,
         updated_at: now) == 1
   end
 
+  # Starts the oldest queued run when nothing is running or undoing and no
+  # job is already pending for it. Called whenever a run finishes and by
+  # the periodic sweeper, so queued runs hand off promptly without ever
+  # stacking a second job behind one already pending.
+  def self.kick_next_queued!
+    return if where(status: %w[ running undoing ]).exists?
+
+    oldest = where(status: "queued").order(:created_at, :id).first
+    return if oldest.nil? || oldest.step_job_pending?
+
+    oldest.enqueue_step_job!
+  end
+
   # Periodic sweeper (see Periodic::Runner): re-enqueues running runs whose
   # heartbeat went stale, starts the oldest queued run when nothing is
-  # running, and re-enqueues undoing runs that stall.
+  # running or undoing, and re-enqueues undoing runs that stall.
   def self.sweep_stalled!
     stale = STALE_HEARTBEAT.ago
     where(status: "running").where("heartbeat_at IS NULL OR heartbeat_at < ?", stale)
       .find_each { |run| SlackImport::StepJob.perform_later(run.id) }
 
-    unless where(status: "running").exists?
-      oldest = where(status: "queued").order(:created_at, :id).first
-      SlackImport::StepJob.perform_later(oldest.id) if oldest
-    end
+    kick_next_queued!
 
     where(status: "undoing").where("heartbeat_at IS NULL OR heartbeat_at < ?", stale)
       .find_each { |run| SlackImport::UndoJob.perform_later(run.id) }
@@ -113,6 +128,7 @@ class SlackImport < ApplicationRecord
   def cancel!
     return false unless cancellable?
     update!(status: "cancelled", finished_at: Time.current)
+    self.class.kick_next_queued!
     true
   end
 
@@ -122,16 +138,63 @@ class SlackImport < ApplicationRecord
     import? && (completed? || failed? || cancelled?)
   end
 
-  # Returns false when the run can't be undone.
+  # Why this run cannot be undone right now, or nil when undo may proceed.
+  # Undo never interleaves with another queued, running or undoing run.
+  def undo_blocked_reason
+    return nil unless undoable?
+    return nil unless self.class.where(status: %w[ queued running undoing ]).where.not(id: id).exists?
+
+    "Another import is queued or running. Wait for it to finish, then undo."
+  end
+
+  # Returns false, with no status change, when the run can't be undone or
+  # another run is queued, running or undoing. The claim is a single
+  # conditional UPDATE, so two undos racing each other still serialize.
   def undo!
     return false unless undoable?
+    return false if undo_blocked_reason
 
     now = Time.current
     stats = self.stats.merge("phase" => "undo")
-    update!(status: "undoing", state: { "phase" => "undo" }, stats:,
-      heartbeat_at: now, finished_at: nil)
+    claimed = self.class.where(id: id, status: %w[ completed failed cancelled ])
+      .where("NOT EXISTS (?)",
+        self.class.where(status: %w[ queued running undoing ]).where.not(id: id).select("1"))
+      .update_all(status: "undoing", state: { "phase" => "undo" }, stats: stats,
+        heartbeat_at: now, finished_at: nil, updated_at: now) == 1
+    return false unless claimed
+
+    self.status = "undoing"
+    self.state = { "phase" => "undo" }
+    self.stats = stats
+    self.heartbeat_at = now
+    self.finished_at = nil
     SlackImport::UndoJob.perform_later(id)
     true
+  end
+
+  # Whether a step job is already pending for this queued run. A job that
+  # ran but failed to claim its run clears the stamp (see StepJob), so a
+  # fresh stamp always means a job still waiting in the queue.
+  def step_job_pending?
+    enqueued_at = state["enqueued_at"]
+    enqueued_at.present? && Time.iso8601(enqueued_at.to_s) > ENQUEUE_COOLDOWN.ago
+  rescue ArgumentError, Date::Error
+    false
+  end
+
+  # Enqueues this queued run's step job, stamping it so the sweeper and
+  # later kicks never stack a second job behind the pending one.
+  def enqueue_step_job!
+    update!(state: state.merge("enqueued_at" => Time.current.iso8601(6)))
+    SlackImport::StepJob.perform_later(id)
+  end
+
+  # The pending job ran but lost its claim, so it is no longer pending:
+  # the next finish or sweeper tick enqueues a fresh one.
+  def clear_pending_step_job!
+    return unless state["enqueued_at"].present?
+
+    update!(state: state.except("enqueued_at"))
   end
 
   def finished?
@@ -160,5 +223,6 @@ class SlackImport < ApplicationRecord
   # later run continues where this one stopped.
   def mark_failed!(message)
     update!(status: "failed", error: message, finished_at: Time.current)
+    self.class.kick_next_queued!
   end
 end

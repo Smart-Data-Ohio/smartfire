@@ -265,6 +265,7 @@ class SlackImport::Undoer
         "issues_count" => @run.issues.count)
       @run.update!(state: { "phase" => "done" }, stats:, status: "undone",
         finished_at: Time.current, heartbeat_at: Time.current)
+      SlackImport.kick_next_queued!
       :done
     end
 

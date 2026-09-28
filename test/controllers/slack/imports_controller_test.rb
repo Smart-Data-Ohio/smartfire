@@ -236,6 +236,22 @@ class Slack::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "undoing", import.reload.status
   end
 
+  test "undo is blocked with a reason while another run is active" do
+    create_slack_workspace!(team_id: SLACK_TEAM_ID)
+    import = create_slack_import!(user: @kevin, kind: "personal", mode: "import", status: "completed")
+    create_slack_import!(user: users(:jz), kind: "personal", status: "running")
+
+    post undo_slack_import_path(import)
+
+    assert_redirected_to slack_import_path(import)
+    assert_equal "completed", import.reload.status
+    assert_match(/queued or running/, flash[:alert])
+
+    get slack_import_path(import)
+    assert_select "button[disabled]", "Undo import"
+    assert_match(/queued or running/, response.body)
+  end
+
   test "personal run page shows the plan with skip checkboxes" do
     create_slack_workspace!(team_id: SLACK_TEAM_ID)
     run = create_slack_import!(user: @kevin, kind: "personal", status: "completed",

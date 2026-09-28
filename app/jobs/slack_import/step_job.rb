@@ -8,7 +8,12 @@ class SlackImport::StepJob < ApplicationJob
     return if run.nil?
 
     if run.queued?
-      return unless SlackImport.claim_running!(run.id)
+      # A lost claim exits without re-enqueueing: the stamp is cleared so
+      # the next finish or sweeper tick enqueues a fresh job.
+      unless SlackImport.claim_running!(run.id)
+        run.clear_pending_step_job!
+        return
+      end
 
       run.reload
     end

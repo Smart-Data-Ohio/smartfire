@@ -68,7 +68,7 @@ module Slack
         AuditLog.record!(action: "slack.import.undo", target: @run)
         redirect_to slack_import_path(@run), notice: "Undo started."
       else
-        redirect_to slack_import_path(@run), alert: "That run cannot be undone."
+        redirect_to slack_import_path(@run), alert: @run.undo_blocked_reason || "That run cannot be undone."
       end
     end
 
