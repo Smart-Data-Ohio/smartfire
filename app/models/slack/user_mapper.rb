@@ -141,6 +141,13 @@ module Slack
 
       # Returns [user_or_nil, stats_bucket, created_record].
       def build_mapping(member, email_index, dry_run: false)
+        # The connection owner IS their Slack user: OAuth proved it, so the
+        # id maps to them even when the emails differ. Without this every
+        # run would mint a duplicate placeholder for its own starter.
+        if member["id"] == owner_slack_id && owner_user
+          return [ owner_user, "matched", false ]
+        end
+
         if bot_like?(member)
           user = dry_run ? nil : create_placeholder(name: bot_name(member), status: :deactivated)
           return [ user, "bots", true ]
@@ -232,6 +239,14 @@ module Slack
       def link_allowed?(email)
         domain = email.to_s.strip.downcase.split("@").last.to_s
         domain.present? && Google::SignIn.allowed_domains.include?(domain)
+      end
+
+      def owner_slack_id
+        @run.slack_connection&.slack_user_id
+      end
+
+      def owner_user
+        @run.slack_connection&.user
       end
   end
 end

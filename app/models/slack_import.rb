@@ -94,7 +94,7 @@ class SlackImport < ApplicationRecord
   def self.normalize_time_bound(value, name)
     return if value.blank?
 
-    Time.iso8601(value.to_s).iso8601
+    Time.iso8601(value.to_s).iso8601(6)
   rescue ArgumentError, Date::Error
     raise ArgumentError, "Slack import #{name} bound is not ISO 8601: #{value.inspect}"
   end

@@ -30,7 +30,8 @@ module SlackImportTestHelper
   # with a JSON string or parsed hash (nil removes the stub).
   def stub_slack_workspace!(token: SLACK_TEST_TOKEN, list: :workspace,
       users_body: nil, list_body: nil, history_overrides: {}, replies_overrides: {},
-      members_overrides: {}, auth_error: nil)
+      members_overrides: {}, auth_error: nil, history_error_body: nil,
+      history_first_responses: {})
     auth = { "Authorization" => slack_auth_header(token) }
     json = { "Content-Type" => "application/json" }
 
@@ -42,21 +43,23 @@ module SlackImportTestHelper
       .with(query: hash_including({ "exclude_archived" => "false" }), headers: auth)
       .to_return(status: 200, body: list_body || slack_fixture("conversations_#{list}.json"), headers: json)
 
-    if auth_error
+    error_body = history_error_body || (auth_error && { ok: false, error: auth_error })
+    if error_body
+      # Every history call fails: limit is present on all of them.
       stub_request(:get, "#{SLACK_API}/conversations.history")
-        .with(query: hash_including({ "channel" => "CCHAN" }), headers: auth)
-        .to_return(status: 200, body: JSON.generate({ ok: false, error: auth_error }), headers: json)
-      return
-    end
-
-    {
-      "CCHAN" => %w[ history_CCHAN_p1 history_CCHAN_p2 ], "CARCH" => %w[ history_CARCH ],
-      "CPRIV" => %w[ history_CPRIV ], "DIM" => %w[ history_DIM ],
-      "GMPIM" => %w[ history_GMPIM ]
-    }.each do |channel, pages|
-      bodies = history_overrides.key?(channel) ? Array(history_overrides[channel]) :
-        pages.map { |page| slack_fixture("#{page}.json") }
-      stub_history_pages(channel, bodies, auth, json)
+        .with(query: hash_including({ "limit" => "200" }), headers: auth)
+        .to_return(status: 200, body: JSON.generate(error_body), headers: json)
+    else
+      {
+        "CCHAN" => %w[ history_CCHAN_p1 history_CCHAN_p2 ], "CARCH" => %w[ history_CARCH ],
+        "CPRIV" => %w[ history_CPRIV ], "DIM" => %w[ history_DIM ],
+        "GMPIM" => %w[ history_GMPIM ]
+      }.each do |channel, pages|
+        bodies = history_overrides.key?(channel) ? Array(history_overrides[channel]) :
+          pages.map { |page| slack_fixture("#{page}.json") }
+        firsts = history_first_responses[channel]
+        stub_history_pages(channel, bodies, auth, json, first_responses: firsts)
+      end
     end
 
     { "CCHAN" => "1700000002.000002", "GMPIM" => "1700000050.000050" }.each do |channel, ts|
@@ -69,9 +72,12 @@ module SlackImportTestHelper
         .to_return(status: 200, body: body.is_a?(String) ? body : JSON.generate(body), headers: json)
     end
 
-    %w[ CCHAN CARCH CPRIV DIM GMPIM ].each do |channel|
+    (%w[ CCHAN CARCH CPRIV DIM GMPIM ] + members_overrides.keys).uniq.each do |channel|
       body = members_overrides[channel]
-      body = slack_fixture("members_#{channel}.json") if body.nil? && !members_overrides.key?(channel)
+      if body.nil? && !members_overrides.key?(channel)
+        path = SLACK_FIXTURES.join("members_#{channel}.json")
+        body = File.read(path) if File.exist?(path)
+      end
       next if body.nil?
 
       stub_request(:get, "#{SLACK_API}/conversations.members")
@@ -83,19 +89,31 @@ module SlackImportTestHelper
   # First page matches cursor-less requests; later pages chain in order
   # on cursor-bearing requests for the same channel. The query matcher is
   # required: a stub without one does not match requests carrying a query
-  # string.
-  def stub_history_pages(channel, bodies, auth, json)
-    first, *rest = bodies.map { |body| response_body(body) }
+  # string. first_responses replaces the cursor-less sequence (a 429 before
+  # the first page, a cancelling body); each entry is a body or a
+  # { status:, headers:, body: } response spec.
+  def stub_history_pages(channel, bodies, auth, json, first_responses: nil)
+    firsts = Array(first_responses.presence || [ bodies.first ])
+    _first, *rest = bodies
     query = hash_including({ "channel" => channel })
 
-    stub_request(:get, "#{SLACK_API}/conversations.history")
+    stub = stub_request(:get, "#{SLACK_API}/conversations.history")
       .with(query:, headers: auth) { |request| history_params(request, channel, cursor: false) }
-      .to_return(status: 200, body: first, headers: json)
+    firsts.each { |spec| stub.to_return(**to_return_kwargs(spec, json)) }
 
     unless rest.empty?
       stub = stub_request(:get, "#{SLACK_API}/conversations.history")
         .with(query:, headers: auth) { |request| history_params(request, channel, cursor: true) }
-      rest.each { |body| stub.to_return(status: 200, body:, headers: json) }
+      rest.each { |body| stub.to_return(status: 200, body: response_body(body), headers: json) }
+    end
+  end
+
+  def to_return_kwargs(spec, json)
+    if spec.is_a?(Hash) && spec.key?(:status)
+      { status: spec[:status], body: response_body(spec.fetch(:body, "")),
+        headers: json.merge(spec[:headers] || {}) }
+    else
+      { status: 200, body: response_body(spec), headers: json }
     end
   end
 
@@ -105,7 +123,9 @@ module SlackImportTestHelper
   end
 
   def response_body(body)
-    body.is_a?(String) ? body : JSON.generate(body)
+    return body if body.is_a?(String) || body.respond_to?(:call)
+
+    JSON.generate(body)
   end
 
   # Runs step jobs inline until the run finishes, exercising the same

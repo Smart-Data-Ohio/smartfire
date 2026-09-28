@@ -69,11 +69,10 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     # created Open room go invisible, archived rooms are fully invisible.
     jane = User.find_by!(email_address: "jane@example.com")
     assert_equal "mentions", general.memberships.find_by!(user: jane).involvement
-    assert_equal "invisible", general.memberships.find_by!(user: users(:david)).involvement
-    assert_not_empty general.memberships.where.not(involvement: "invisible")
+    assert_equal "mentions", general.memberships.find_by!(user: users(:david)).involvement
+    assert_equal "invisible", general.memberships.find_by!(user: users(:jason)).involvement
     assert_empty archived.memberships.where.not(involvement: "invisible")
-    assert_equal %w[ Ada\ Admin Kevin ].sort,
-      secret.users.order(:name).pluck(:name).sort
+    assert_equal [ "David", "Kevin" ], secret.users.order(:name).pluck(:name)
 
     # Authors, timestamps with microseconds, converted markdown, mentions.
     first = general.messages.find_by!(created_at: Time.at(1700000001.000001))
