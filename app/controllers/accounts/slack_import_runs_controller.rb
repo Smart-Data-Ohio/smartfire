@@ -29,8 +29,8 @@ class Accounts::SlackImportRunsController < ApplicationController
       kind: "workspace", mode: "dry_run",
       options: {
         "include_private" => params[:include_private] != "0",
-        "oldest" => parse_date(params[:oldest]),
-        "latest" => parse_date(params[:latest])
+        "oldest" => parse_oldest(params[:oldest]),
+        "latest" => parse_latest(params[:latest])
       }.compact)
     AuditLog.record!(action: "slack.import.start", target: run,
       changes: { kind: "workspace", mode: "dry_run" })
@@ -86,8 +86,8 @@ class Accounts::SlackImportRunsController < ApplicationController
       "room_targets" => room_targets_from(params, conversation_ids)
     }
     if preset == "test"
-      options["oldest"] = parse_date(params[:oldest]) || 14.days.ago.to_date.iso8601
-      options["latest"] = parse_date(params[:latest])
+      options["oldest"] = parse_oldest(params[:oldest]) || 14.days.ago.beginning_of_day.iso8601
+      options["latest"] = parse_latest(params[:latest])
     end
 
     run = SlackImport.start!(workspace: @run.slack_workspace, user: Current.user,
@@ -173,8 +173,17 @@ class Accounts::SlackImportRunsController < ApplicationController
       end.compact
     end
 
-    def parse_date(value)
-      Date.iso8601(value.to_s).iso8601 if value.present?
+    # The engine parses bounds with Time.iso8601, which rejects bare
+    # dates, so each bound is a full timestamp: oldest opens its day,
+    # latest closes its own (a bare latest would exclude its day).
+    def parse_oldest(value)
+      Date.iso8601(value.to_s).in_time_zone.beginning_of_day.iso8601 if value.present?
+    rescue Date::Error
+      nil
+    end
+
+    def parse_latest(value)
+      Date.iso8601(value.to_s).in_time_zone.end_of_day.iso8601 if value.present?
     rescue Date::Error
       nil
     end

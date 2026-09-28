@@ -79,8 +79,25 @@ class Accounts::SlackImportRunsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "queued", run.status
     assert_equal @david, run.user
     assert_equal connection, run.slack_connection
-    assert_equal({ "include_private" => false, "oldest" => "2026-01-01", "latest" => "2026-06-01" }, run.options)
+    assert_equal({ "include_private" => false,
+      "oldest" => "2026-01-01T00:00:00Z", "latest" => "2026-06-01T23:59:59Z" }, run.options)
+    # The engine parses bounds with Time.iso8601, and each bound covers
+    # its own day (a bare latest would exclude its day).
+    assert_equal Date.new(2026, 1, 1), Time.iso8601(run.options["oldest"]).to_date
+    assert_equal [ 0, 0, 0 ], Time.iso8601(run.options["oldest"]).then { |t| [ t.hour, t.min, t.sec ] }
+    assert_equal Date.new(2026, 6, 1), Time.iso8601(run.options["latest"]).to_date
+    assert_equal [ 23, 59, 59 ], Time.iso8601(run.options["latest"]).then { |t| [ t.hour, t.min, t.sec ] }
     assert_equal "slack.import.start", AuditLog.last.action
+  end
+
+  test "starting a dry run ignores unparseable dates" do
+    workspace = create_slack_workspace!(team_id: SLACK_TEAM_ID)
+    connect_slack!(@david, workspace:)
+
+    post account_slack_import_runs_path,
+      params: { include_private: "1", oldest: "not-a-date", latest: "2026-13-45" }
+
+    assert_equal({ "include_private" => true }, SlackImport.last.options)
   end
 
   test "starting a dry run defaults to including private channels" do
@@ -242,10 +259,30 @@ class Accounts::SlackImportRunsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "import", run.mode
     assert_equal connection, run.slack_connection
     assert_equal [ "C111" ], run.options["conversation_ids"]
-    assert_equal "2026-09-14", run.options["oldest"]
+    assert_equal "2026-09-14T00:00:00Z", run.options["oldest"]
+    assert_equal Date.new(2026, 9, 14), Time.iso8601(run.options["oldest"]).to_date
     assert_nil run.options["latest"]
     assert_equal true, run.options["include_private"]
     assert_equal({ "C111" => "new" }, run.options["room_targets"])
+  end
+
+  test "test import date bounds are full timestamps covering their days" do
+    workspace = create_slack_workspace!(team_id: SLACK_TEAM_ID)
+    connect_slack!(@david, workspace:)
+    dry_run = create_slack_import!(workspace:, user: @david, status: "completed",
+      stats: slack_stats_shape)
+
+    post start_import_account_slack_import_run_path(dry_run), params: {
+      preset: "test", conversation_ids: [ "C111" ],
+      room_targets: { "C111" => "new" },
+      oldest: "2026-09-01", latest: "2026-09-10"
+    }
+
+    options = SlackImport.last.options
+    oldest = Time.iso8601(options["oldest"])
+    assert_equal [ 2026, 9, 1, 0, 0, 0 ], [ oldest.year, oldest.month, oldest.day, oldest.hour, oldest.min, oldest.sec ]
+    latest = Time.iso8601(options["latest"])
+    assert_equal [ 2026, 9, 10, 23, 59, 59 ], [ latest.year, latest.month, latest.day, latest.hour, latest.min, latest.sec ]
   end
 
   test "full import starts with no date bounds" do
