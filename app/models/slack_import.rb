@@ -24,8 +24,49 @@ class SlackImport < ApplicationRecord
   scope :active, -> { where(status: ACTIVE_STATUSES) }
   scope :newest_first, -> { order(created_at: :desc, id: :desc) }
 
+  # Contract used by the controllers. The engine fills in the bodies
+  # (normalizing options, enqueueing the step and undo jobs); the
+  # signatures, return values and status transitions stay as documented.
+
+  # Creates a queued run and enqueues it. options (string keys):
+  #   "conversation_ids" => [Slack conversation ids] or nil for everything
+  #                         in scope
+  #   "oldest", "latest" => ISO 8601 dates bounding message time, or nil
+  #   "include_private"  => workspace runs: also import private channels
+  #                         the connected admin is in (default true)
+  #   "room_targets"     => { conversation id => room id | "new" | "skip" }
+  def self.start!(workspace:, user:, connection:, kind:, mode:, options: {})
+    create!(slack_workspace: workspace, user: user, slack_connection: connection,
+      kind: kind, mode: mode, options: options.to_h.stringify_keys)
+  end
+
   def active?
     status.in?(ACTIVE_STATUSES)
+  end
+
+  def cancellable?
+    queued? || running?
+  end
+
+  # Stops the run at its next step boundary. Returns false when the run
+  # had already finished.
+  def cancel!
+    return false unless cancellable?
+    update!(status: "cancelled", finished_at: Time.current)
+    true
+  end
+
+  # Imports (not dry runs) that stopped can be undone: everything the run
+  # created is removed; records it only matched are left alone.
+  def undoable?
+    import? && (completed? || failed? || cancelled?)
+  end
+
+  # Returns false when the run can't be undone.
+  def undo!
+    return false unless undoable?
+    update!(status: "undoing")
+    true
   end
 
   def finished?
