@@ -4,7 +4,10 @@ module Github
   # Idempotent: re-running with unchanged content enqueues nothing new.
   module PullRequestReferenceSync
     class << self
-      def call(message)
+      # Pass `enqueue_fetches: false` from contexts that must stay quiet,
+      # such as the Slack importer: references are still created, and each
+      # card enqueues its own fetch the first time it renders.
+      def call(message, enqueue_fetches: true)
         triples = PullRequestUrl.extract(reference_text(message))
 
         pull_requests = triples.map do |ref|
@@ -17,7 +20,7 @@ module Github
 
         pull_requests.each do |pull_request|
           reference = message.github_pull_request_references.find_or_create_by!(pull_request: pull_request)
-          if reference.previously_new_record? || pull_request.stale?
+          if enqueue_fetches && (reference.previously_new_record? || pull_request.stale?)
             Github::FetchPullRequestJob.perform_later(pull_request) if pull_request.claim_fetch_request!
           end
         end

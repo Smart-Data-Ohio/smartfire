@@ -10,7 +10,7 @@ module Periodic
   # the one-time plaintext bot-token clearing, and the daily retention
   # prune all
   # live here so production needs no extra long-running process for any
-  # of them. Add a sweeper by appending
+  # of them, as does the stalled Slack import sweep. Add a sweeper by appending
   # to the task list below: a name, an interval in seconds, and an
   # idempotent callable. The streaming messages sweep finalizes agent
   # streams idle for 10 minutes.
@@ -55,7 +55,8 @@ module Periodic
         Task.new("out of office", OOO_SWEEP_INTERVAL, -> { Calendar::OooDispatcher.dispatch_due! }),
         Task.new("board sla nudges", BOARD_SLA_SWEEP_INTERVAL, -> { BoardAutomations::SlaDispatcher.dispatch_due! }),
         Task.new("board stale digests", BOARD_DIGEST_SWEEP_INTERVAL, -> { BoardAutomations::DigestDispatcher.dispatch_due! }),
-        Task.new("streaming messages", STREAM_SWEEP_INTERVAL, -> { Message.finalize_overdue_streams! })
+        Task.new("streaming messages", STREAM_SWEEP_INTERVAL, -> { Message.finalize_overdue_streams! }),
+        Task.new("slack imports", AGENT_SWEEP_INTERVAL, -> { SlackImport.sweep_stalled! })
       ]
       @last_run = {}
       @logger = logger

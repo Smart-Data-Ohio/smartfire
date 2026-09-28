@@ -97,6 +97,15 @@ class ChannelThread < ApplicationRecord
   # deleted the thread. Cascade and merge destroys leave it nil.
   attr_accessor :deleted_by
 
+  # Non-persisted import flag for the Slack importer and its undo: skips
+  # the thread-indicator broadcast and the parent-message stamp. The
+  # importer sets last_activity_at explicitly, never leaving it as now.
+  attr_accessor :importing
+
+  def importing?
+    !!importing
+  end
+
   scope :ordered, -> { order(last_activity_at: :desc, id: :desc) }
   scope :active, -> { where(closed_at: nil, locked_at: nil) }
   # Discord presents locked threads with closed threads in the normal closed
@@ -868,7 +877,7 @@ class ChannelThread < ApplicationRecord
   # channel_thread can still point at this (deleted) record.
   def broadcast_thread_indicator_change
     message = parent_message
-    return if message.nil? || message.destroyed?
+    return if message.nil? || message.destroyed? || importing?
 
     broadcast_replace_to message.room, :messages,
       target: ActionView::RecordIdentifier.dom_id(message, :thread_indicator),
@@ -890,7 +899,7 @@ class ChannelThread < ApplicationRecord
 
   private
     def stamp_parent_message
-      Message.where(id: parent_message_id).update_all(updated_at: Time.current) if parent_message_id
+      Message.where(id: parent_message_id).update_all(updated_at: Time.current) if parent_message_id && !importing?
     end
 
     def pending_tag_names?
