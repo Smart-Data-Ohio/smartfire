@@ -246,14 +246,25 @@ class SlackImport::Runner
       return if convo["resolved"]
 
       conversation = conversations_by_id[convo["id"]] || { "id" => convo["id"] }
-      if import_mode? && (mapped = mapped_room(convo["id"]))
-        convo["room_id"] = mapped.id
-        convo["direct"] = mapped.direct?
-        convo["resolved"] = true
-        entry["target"] = { "action" => "merge", "room_id" => mapped.id,
-          "room_name" => mapped.name.presence || entry["name"] }
-        save_progress!
-        return
+      if import_mode?
+        case (mapped = mapped_room_state(convo["id"]))
+        when Room
+          convo["room_id"] = mapped.id
+          convo["direct"] = mapped.direct?
+          convo["resolved"] = true
+          entry["target"] = { "action" => "merge", "room_id" => mapped.id,
+            "room_name" => mapped.name.presence || entry["name"] }
+          save_progress!
+          return
+        when :deleted
+          convo["resolved"] = true
+          convo["skipped"] = true
+          entry["target"] = { "action" => "skip", "room_id" => nil, "room_name" => entry["name"] }
+          @run.record_issue!("warning", "channel:#{convo["id"]}",
+            "mapped room was deleted; undo the earlier run or remove the mapping to re-import")
+          advance_convo(entry)
+          return
+        end
       end
 
       if import_mode?
@@ -287,14 +298,15 @@ class SlackImport::Runner
     end
 
     # A conversation an earlier run already mapped reuses its room: the new
-    # run only catches up on messages. A mapping whose room is gone (deleted
-    # since) falls through to fresh resolution.
-    def mapped_room(conversation_id)
+    # run only catches up on messages. A mapping whose room is no longer
+    # alive returns :deleted (re-resolving would collide with the mapping's
+    # unique key, failing every later run); nil means no mapping yet.
+    def mapped_room_state(conversation_id)
       record = SlackImport::Record.find_by(slack_workspace_id: @workspace.id,
         slack_kind: "conversation", slack_key: conversation_id)
       return if record.nil?
 
-      Room.alive.find_by(id: record.record_id)
+      Room.alive.find_by(id: record.record_id) || :deleted
     end
 
     def skipped_by_target?(id)

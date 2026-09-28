@@ -168,6 +168,22 @@ class SlackImport::RunLifecycleTest < ActiveSupport::TestCase
     assert_empty closed.reload.messages
   end
 
+  test "a conversation whose mapped room was deleted is skipped with an issue" do
+    first = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN CARCH ] }))
+    assert_equal "completed", first.status
+    Rooms::Open.find_by!(name: "general").update!(deleted_at: Time.current)
+
+    second = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN CARCH ] }))
+
+    assert_equal "completed", second.status
+    entries = second.stats["conversations"].index_by { |row| row["id"] }
+    assert_equal "skip", entries["CCHAN"]["target"]["action"]
+    assert entries["CCHAN"]["done"]
+    assert_equal "merge", entries["CARCH"]["target"]["action"]
+    assert entries["CARCH"]["done"]
+    assert second.issues.any? { |issue| issue.message == "mapped room was deleted; undo the earlier run or remove the mapping to re-import" }
+  end
+
   test "personal runs ignore room target ids" do
     stub_slack_workspace!(list: :personal)
     target = Rooms::Closed.create!(name: "Target", creator: users(:david))
