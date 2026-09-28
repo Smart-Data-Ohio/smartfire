@@ -186,6 +186,14 @@ class SlackImport::Runner
       entry = stats_entry(id)
       @stats["current"] = entry["name"]
 
+      if skipped_by_target?(id)
+        convo["resolved"] = true
+        convo["skipped"] = true
+        entry["target"] = { "action" => "skip", "room_id" => nil, "room_name" => entry["name"] }
+        advance_convo(entry)
+        return
+      end
+
       step_convo_members(convo, entry)
       return unless convo["members_done"]
 
@@ -259,6 +267,7 @@ class SlackImport::Runner
         users = Slack::ConversationMapper.dry_users_for(convo["member_ids"])
         result = @conversation_mapper.preview(conversation,
           member_ids: convo["member_ids"], users:)
+        dry_target_issue(conversation, result)
       end
 
       entry["target"] = { "action" => result.action, "room_id" => result.room&.id,
@@ -282,6 +291,28 @@ class SlackImport::Runner
       return if record.nil?
 
       Room.alive.find_by(id: record.record_id)
+    end
+
+    def skipped_by_target?(id)
+      targets = @run.options["room_targets"]
+      targets.is_a?(Hash) && targets[id] == "skip"
+    end
+
+    # Dry runs surface the same target problems an import would hit, so the
+    # admin sees them while planning.
+    def dry_target_issue(conversation, result)
+      target = @run.options["room_targets"]&.dig(conversation["id"])
+      target = target.to_i if target.to_s.match?(/\A\d+\z/)
+      return unless target.is_a?(Integer)
+
+      type = Slack::ConversationMapper.conversation_type(conversation)
+      if type == "im" || type == "mpim"
+        @run.record_issue!("error", "channel:#{conversation["id"]}",
+          "Room targets only apply to channels; this DM keeps its own Direct room")
+      elsif result.skip_reason == "invalid room target"
+        @run.record_issue!("error", "channel:#{conversation["id"]}",
+          "Room target #{target} for ##{conversation["name"]} is not an alive Open or Closed room; skipped")
+      end
     end
 
     def target_name(result, conversation, convo)

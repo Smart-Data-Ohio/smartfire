@@ -266,6 +266,41 @@ class SlackImport::RunLifecycleTest < ActiveSupport::TestCase
     assert_nil @connection.reload.disconnected_reason
   end
 
+  test "transient failures past the retry budget fail the run" do
+    WebMock.reset!
+    stub_slack_workspace!(history_first_responses: {
+      "CARCH" => [ { status: 500, body: "boom" } ]
+    })
+
+    run = drive_import_to_completion(start_run)
+
+    assert_equal "failed", run.status
+    assert_includes run.error, "500"
+  end
+
+  test "failed runs stay resumable: a new run continues from the mapping" do
+    WebMock.reset!
+    stub_slack_workspace!(auth_error: "invalid_auth")
+    failed = drive_import_to_completion(start_run)
+    assert_equal "failed", failed.status
+
+    WebMock.reset!
+    stub_slack_workspace!
+    @connection.reload.update!(disconnected_reason: nil)
+    run = drive_import_to_completion(start_run)
+
+    assert_equal "completed", run.status
+    assert_equal 11, run.stats["counts"]["messages"]
+    assert_equal 0, run.stats["users"]["total"]
+  end
+
+  test "workspace runs exclude private channels when asked" do
+    drive_import_to_completion(start_run(options: { "include_private" => false }))
+
+    assert_requested :get, "#{SLACK_API}/conversations.list",
+      query: hash_including({ "types" => "public_channel" })
+  end
+
   test "two queued runs run one at a time" do
     first = start_run
     second = start_run

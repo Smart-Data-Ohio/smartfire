@@ -116,6 +116,7 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     # Thread: default name, historical activity stamp, followers.
     parent = general.messages.find_by!(created_at: Time.at(1700000002.000002))
     thread = parent.channel_thread
+    assert_equal users(:david), thread.creator
     assert_equal 2, thread.messages_count
     assert_equal parent.plain_text_body.lines.first.strip, thread.name
     assert_equal_time 1700000102.000102, thread.last_activity_at
@@ -138,9 +139,10 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     # Room timestamps follow the last imported message, memberships point
     # at it with no unread.
     assert_equal_time 1700000102.000102, general.reload.updated_at
+    last_imported = general.messages.order(created_at: :desc, id: :desc).first
     general.memberships.each do |membership|
       assert_nil membership.unread_at
-      assert_not_nil membership.last_read_message_id
+      assert_equal last_imported.id, membership.last_read_message_id
     end
   end
 
