@@ -163,6 +163,43 @@ class SlackImportTest < ActiveSupport::TestCase
     end
   end
 
+  test "the undo claim itself refuses a queued run that slips in after the pre-check" do
+    import = start_run
+    import.update!(status: "completed", started_at: 1.hour.ago, finished_at: Time.current)
+    assert_nil import.undo_blocked_reason
+
+    # A new run starts after the pre-check ran. The pre-check is stubbed
+    # out so only the atomic UPDATE can refuse the undo.
+    import.stubs(:undo_blocked_reason).returns(nil)
+    queued = start_run
+
+    assert_no_enqueued_jobs do
+      assert_not import.undo!
+    end
+    assert_equal "completed", import.reload.status
+    assert queued.reload.queued?
+  end
+
+  test "the undo claim itself refuses a fresh lease held outside an active status" do
+    import = start_run
+    import.update!(status: "completed", started_at: 1.hour.ago, finished_at: Time.current)
+    assert_nil import.undo_blocked_reason
+
+    busy = start_run
+    busy.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    busy.acquire_step_lease!("running")
+    busy.cancel!
+
+    # The pre-check is stubbed out so only the atomic UPDATE can refuse
+    # the undo; the cancelled run blocks by lease, not by status.
+    import.stubs(:undo_blocked_reason).returns(nil)
+
+    assert_no_enqueued_jobs do
+      assert_not import.undo!
+    end
+    assert_equal "completed", import.reload.status
+  end
+
   test "undo_blocked_reason is nil when nothing else is active" do
     run = start_run
     run.update!(status: "completed", finished_at: Time.current)

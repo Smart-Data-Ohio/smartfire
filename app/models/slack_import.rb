@@ -66,6 +66,11 @@ class SlackImport < ApplicationRecord
   # executing for them — running or undoing by status, or holding a
   # fresh step lease.
   scope :claim_blocking, -> { where(status: %w[ running undoing ]).or(with_fresh_lease) }
+  # Runs that block an undo claim: another run still queued, running
+  # or undoing, or holding a fresh step lease. Separate from
+  # claim_blocking: the step claim and the kick must not block on a
+  # queued status, or the claimant would block itself.
+  scope :undo_blocking, -> { where(status: %w[ queued running undoing ]).or(with_fresh_lease) }
 
   # Single-flight claim: flips one queued run to running only when no
   # other run is running or undoing and none holds a fresh step lease,
@@ -202,7 +207,7 @@ class SlackImport < ApplicationRecord
     stats = self.stats.merge("phase" => "undo")
     claimed = self.class.where(id: id, status: %w[ completed failed cancelled ])
       .where("NOT EXISTS (?)",
-        self.class.claim_blocking.where.not(id: id).select("1"))
+        self.class.undo_blocking.where.not(id: id).select("1"))
       .update_all(status: "undoing", state: { "phase" => "undo" }, stats: stats,
         heartbeat_at: now, finished_at: nil, updated_at: now) == 1
     return false unless claimed
