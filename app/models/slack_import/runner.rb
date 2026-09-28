@@ -47,8 +47,11 @@ class SlackImport::Runner
   rescue ActiveRecord::RecordNotUnique
     # Two executions overlapped (a sweeper re-enqueue racing a slow step):
     # the loser rolls back and continues from the winner's saved state. If
-    # nobody else saved, the conflict is real and must surface.
-    raise if @run.reload.state == @state_before
+    # nobody else saved, the conflict is real and must surface. Lease
+    # writes are not progress: another job merely acquiring must not
+    # mask a genuine conflict.
+    raise if @run.reload.state.except(*SlackImport::STEP_LEASE_KEYS) ==
+      @state_before.except(*SlackImport::STEP_LEASE_KEYS)
 
     :continue
   end
@@ -549,7 +552,7 @@ class SlackImport::Runner
       # saved state: a completed run must not block the next claim.
       now = Time.current
       claimed = SlackImport.where(id: @run.id, status: "running").update_all(
-        state: @state.except("step_started_at").merge("phase" => "done"), stats: @stats,
+        state: @state.except(*SlackImport::STEP_LEASE_KEYS).merge("phase" => "done"), stats: @stats,
         status: "completed", finished_at: now, heartbeat_at: now, updated_at: now) == 1
       return :stopped unless claimed
 

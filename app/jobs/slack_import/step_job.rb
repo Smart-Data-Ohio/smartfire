@@ -26,14 +26,18 @@ class SlackImport::StepJob < ApplicationJob
 
     # The lease marks the run busy while this step executes, so a cancel
     # that lands mid-step still blocks new runs and undos until the
-    # in-flight step stops writing.
-    return unless run.acquire_step_lease!("running")
+    # in-flight step stops writing. A lost race simply returns: the
+    # holder continues the chain, or, if it crashed, the sweeper
+    # re-enqueues once the heartbeat goes stale — which always
+    # outlasts the lease, so the run can never strand with no job.
+    lease_token = run.acquire_step_lease!("running")
+    return unless lease_token
 
     begin
       outcome = SlackImport::Runner.new(run).step!
       self.class.perform_later(run.id) if outcome == :continue
     ensure
-      run.release_step_lease!
+      run.release_step_lease!(lease_token)
     end
     # A stopped step's run finished elsewhere (cancelled mid-step): hand
     # off promptly instead of waiting for the sweeper.

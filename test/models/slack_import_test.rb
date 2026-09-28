@@ -95,7 +95,8 @@ class SlackImportTest < ActiveSupport::TestCase
   test "claim_running! refuses while a cancelled run holds a fresh step lease" do
     run = start_run
     run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
-    assert run.acquire_step_lease!("running")
+    lease_token = run.acquire_step_lease!("running")
+    assert lease_token
     other = start_run
     assert_not SlackImport.claim_running!(other.id)
 
@@ -108,7 +109,7 @@ class SlackImportTest < ActiveSupport::TestCase
     assert_not SlackImport.claim_running!(other.id)
     assert other.reload.queued?
 
-    run.release_step_lease!
+    run.release_step_lease!(lease_token)
 
     assert_not run.reload.step_lease_fresh?
     assert SlackImport.claim_running!(other.id)
@@ -127,6 +128,85 @@ class SlackImportTest < ActiveSupport::TestCase
     end
 
     assert_equal "running", other.reload.status
+  end
+
+  test "a second acquire fails while a fresh lease is held" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    token = run.acquire_step_lease!("running")
+    assert token.is_a?(String)
+
+    # A second job process sees the same row through its own instance.
+    other_view = SlackImport.find(run.id)
+
+    assert_equal false, other_view.acquire_step_lease!("running")
+    assert_equal token, run.reload.state["step_lease_token"]
+    assert run.step_lease_fresh?
+  end
+
+  test "a stale lease can be taken over without losing saved progress" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    first_token = run.acquire_step_lease!("running")
+    run.update!(state: run.state.merge("convo_index" => 3))
+
+    second_token = travel(SlackImport::STALE_HEARTBEAT + 1.minute) do
+      SlackImport.find(run.id).acquire_step_lease!("running")
+    end
+
+    assert second_token.is_a?(String)
+    assert_not_equal first_token, second_token
+    assert_equal second_token, run.reload.state["step_lease_token"]
+    assert_equal 3, run.state["convo_index"]
+    # The previous holder's token no longer releases anything.
+    assert_equal false, run.release_step_lease!(first_token)
+    assert run.reload.step_lease_fresh?
+  end
+
+  test "releasing with the wrong token keeps the lease" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    token = run.acquire_step_lease!("running")
+
+    assert_equal false, run.release_step_lease!("bogus-token")
+    assert run.reload.step_lease_fresh?
+    assert_equal token, run.state["step_lease_token"]
+
+    assert run.release_step_lease!(token)
+    assert_not run.reload.step_lease_fresh?
+    assert_nil run.state["step_started_at"]
+    assert_nil run.state["step_lease_token"]
+  end
+
+  test "a step that raises still releases its lease" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    SlackImport::Runner.any_instance.stubs(:step!).raises(RuntimeError, "boom")
+
+    SlackImport::StepJob.perform_now(run.id)
+
+    run.reload
+    assert_equal "failed", run.status
+    assert_not run.step_lease_fresh?
+    assert_nil run.state["step_started_at"]
+    assert_nil run.state["step_lease_token"]
+  end
+
+  test "another job's lease write is not mistaken for progress on conflict" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current,
+      state: { "phase" => "users" })
+    token = run.acquire_step_lease!("running")
+    runner = SlackImport::Runner.new(run)
+    runner.send(:transition_to, "conversations")
+
+    # Another job takes over the lease without saving progress: only the
+    # lease keys differ on disk when this step hits its conflict.
+    run.release_step_lease!(token)
+    assert SlackImport.find(run.id).acquire_step_lease!("running")
+    runner.stubs(:step_conversations).raises(ActiveRecord::RecordNotUnique.new("conflict"))
+
+    assert_raises(ActiveRecord::RecordNotUnique) { runner.step! }
   end
 
   test "a step job that cannot claim its queued run exits without re-enqueueing" do
@@ -210,7 +290,7 @@ class SlackImportTest < ActiveSupport::TestCase
   test "undo waits while the run itself holds a fresh step lease" do
     run = start_run
     run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
-    run.acquire_step_lease!("running")
+    lease_token = run.acquire_step_lease!("running")
     run.cancel!
 
     assert_equal "This import is still finishing. Wait for it to finish, then undo.",
@@ -220,7 +300,7 @@ class SlackImportTest < ActiveSupport::TestCase
     end
     assert_equal "cancelled", run.reload.status
 
-    run.release_step_lease!
+    run.release_step_lease!(lease_token)
 
     assert_nil run.undo_blocked_reason
     assert_enqueued_with(job: SlackImport::UndoJob) do
@@ -233,7 +313,7 @@ class SlackImportTest < ActiveSupport::TestCase
     import.update!(status: "completed", started_at: 1.hour.ago, finished_at: Time.current)
     busy = start_run
     busy.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
-    busy.acquire_step_lease!("running")
+    busy_token = busy.acquire_step_lease!("running")
     busy.cancel!
 
     assert_equal "Another import is still finishing. Wait for it to finish, then undo.",
@@ -241,7 +321,7 @@ class SlackImportTest < ActiveSupport::TestCase
     assert_not import.undo!
     assert_equal "completed", import.reload.status
 
-    busy.release_step_lease!
+    busy.release_step_lease!(busy_token)
 
     assert_nil import.undo_blocked_reason
     assert import.undo!

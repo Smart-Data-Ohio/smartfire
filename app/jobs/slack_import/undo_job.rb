@@ -4,13 +4,19 @@ class SlackImport::UndoJob < ApplicationJob
   def perform(import_id)
     run = SlackImport.find_by(id: import_id)
     return if run.nil? || !run.undoing?
-    return unless run.acquire_step_lease!("undoing")
+
+    # A lost race simply returns: the lease holder continues the undo,
+    # or, if it crashed, the sweeper re-enqueues once the heartbeat
+    # goes stale — which always outlasts the lease, so the run can
+    # never strand with no job.
+    lease_token = run.acquire_step_lease!("undoing")
+    return unless lease_token
 
     begin
       outcome = SlackImport::Undoer.new(run).step!
       self.class.perform_later(run.id) if outcome == :continue
     ensure
-      run.release_step_lease!
+      run.release_step_lease!(lease_token)
     end
     SlackImport.kick_next_queued! if outcome == :stopped
   end

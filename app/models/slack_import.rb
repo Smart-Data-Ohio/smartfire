@@ -34,6 +34,9 @@ class SlackImport < ApplicationRecord
   # alone: its job is still pending. Past the window the job is presumed
   # lost and the sweeper enqueues again.
   ENQUEUE_COOLDOWN = 5.minutes
+  # The state keys a step lease occupies: the timestamp that ages it out
+  # plus the random token identifying the job that holds it.
+  STEP_LEASE_KEYS = %w[ step_started_at step_lease_token ].freeze
 
   # Contract used by the controllers. The engine fills in the bodies
   # (normalizing options, enqueueing the step and undo jobs); the
@@ -247,30 +250,45 @@ class SlackImport < ApplicationRecord
   end
 
   # Records the step lease: the run is busy while a step or undo job
-  # executes. Conditional on the expected status, so a job whose run was
-  # cancelled underneath it never starts writing. Returns false, writing
-  # nothing, when the run already left that status.
+  # executes. One conditional UPDATE on the expected status and on no
+  # other job holding a fresh lease, so a job whose run was cancelled
+  # underneath it never starts writing and two overlapping jobs (old
+  # and new containers during a deploy) never both run the step. The
+  # UPDATE touches only the lease keys, so taking over a stale lease
+  # never clobbers progress the previous holder saved. Returns the
+  # lease token, or false when the status already left the expected
+  # one or another job's lease is still fresh.
   def acquire_step_lease!(expected_status)
     now = Time.current
-    merged = state.merge("step_started_at" => now.iso8601(6))
+    token = SecureRandom.hex(8)
+    stamp = now.iso8601(6)
     claimed = self.class.where(id: id, status: expected_status)
-      .update_all(state: merged, heartbeat_at: now, updated_at: now) == 1
+      .where("json_extract(state, '$.step_started_at') IS NULL OR " \
+        "json_extract(state, '$.step_started_at') <= ?",
+        STALE_HEARTBEAT.ago.iso8601(6))
+      .update_all([ "state = json_set(state, '$.step_started_at', ?, '$.step_lease_token', ?), " \
+        "heartbeat_at = ?, updated_at = ?", stamp, token, now, now ]) == 1
     if claimed
-      self.state = merged
+      self.state = state.merge("step_started_at" => stamp, "step_lease_token" => token)
       self.heartbeat_at = now
+      token
+    else
+      false
     end
-    claimed
   end
 
-  # Clears the step lease. Reads the row's current state (the step saved
-  # progress since acquiring) and drops only the lease key.
-  def release_step_lease!
-    current = self.class.where(id: id).pick(:state) || {}
-    return unless current["step_started_at"].present?
+  # Clears the step lease, but only when token still holds it: one
+  # conditional UPDATE, so a job never releases another job's lease.
+  # Returns true when this token's lease was cleared.
+  def release_step_lease!(token)
+    return false if token.blank?
 
-    self.class.where(id: id).update_all(
-      state: current.except("step_started_at"), updated_at: Time.current)
-    self.state = state.except("step_started_at")
+    cleared = self.class.where(id: id)
+      .where("json_extract(state, '$.step_lease_token') = ?", token.to_s)
+      .update_all([ "state = json_remove(state, '$.step_started_at', '$.step_lease_token'), " \
+        "updated_at = ?", Time.current ]) == 1
+    self.state = state.except(*STEP_LEASE_KEYS) if cleared
+    cleared
   end
 
   # Whether a step or undo job may still be executing for this run: it
