@@ -440,7 +440,7 @@ class SlackImport::Runner
       prefix = "#{conversation_id}:"
       newest = SlackImport::Record.where(slack_workspace_id: @workspace.id, slack_kind: "message")
         .where("slack_key LIKE ?", "#{prefix}%")
-        .pick(Arel.sql("MAX(CAST(SUBSTR(slack_key, #{prefix.length + 1}) AS REAL))"))
+        .pick(Arel.sql("MAX(CAST(SUBSTR(slack_key, INSTR(slack_key, ':') + 1) AS REAL))"))
       newest ? newest - CATCHUP_LOOKBACK.to_f : nil
     end
 
