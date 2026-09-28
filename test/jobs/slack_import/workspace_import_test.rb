@@ -89,7 +89,7 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     assert_equal [ "David", "Kevin" ], secret.users.order(:name).pluck(:name)
 
     # Authors, timestamps with microseconds, converted markdown, mentions.
-    first = general.messages.find_by!(created_at: Time.at(1700000001.000001))
+    first = general.messages.find_by!(created_at: Time.at(Rational("1700000001.000001")))
     assert_equal jane, first.creator
     assert_equal "Hello @[Kevin] and @ghost! cc @[Jane Doe]", first.markdown_source
     assert_equal [ users(:kevin) ], first.mentionees.to_a
@@ -100,20 +100,20 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     assert_equal 1, first.mentionees.count
 
     # Edited message with a file line.
-    edited = general.messages.find_by!(created_at: Time.at(1700000006.000006))
-    assert_equal Time.at(1700000007.0), edited.edited_at
+    edited = general.messages.find_by!(created_at: Time.at(Rational("1700000006.000006")))
+    assert_equal Time.at(Rational("1700000007.0")), edited.edited_at
     assert_includes edited.markdown_source, "📎 [spec.pdf](https://smartdata.slack.com/files/U002/F123/spec.pdf)"
 
     # Bot author keyed by bot_id, attachments quoted, me_message italic.
-    bot_message = general.messages.find_by!(created_at: Time.at(1700000004.000004))
+    bot_message = general.messages.find_by!(created_at: Time.at(Rational("1700000004.000004")))
     assert_equal "Build Bot", bot_message.creator.name
     assert bot_message.creator.deactivated?
     assert_includes bot_message.markdown_source, "> All green"
-    me = general.messages.find_by!(created_at: Time.at(1700000007.000007))
+    me = general.messages.find_by!(created_at: Time.at(Rational("1700000007.000007")))
     assert_equal "*waves hello*", me.markdown_source
 
     # Special syntax: literals, handles, channels, mailto, bullets, code.
-    special = general.messages.find_by!(created_at: Time.at(1700000010.000010))
+    special = general.messages.find_by!(created_at: Time.at(Rational("1700000010.000010")))
     assert_includes special.markdown_source, "@here standup in #secret with @engs"
     assert_includes special.markdown_source, "[email us](mailto:team@example.com)"
     assert_includes special.markdown_source, "- first item"
@@ -122,15 +122,15 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
 
     # Both history pages were read: the newest message (first page) and the
     # oldest (second page, since Slack pages newest-first).
-    assert general.messages.exists?(created_at: Time.at(1700000011.000011))
-    assert general.messages.exists?(created_at: Time.at(1700000001.000001))
+    assert general.messages.exists?(created_at: Time.at(Rational("1700000011.000011")))
+    assert general.messages.exists?(created_at: Time.at(Rational("1700000001.000001")))
 
     # Skipped subtypes left nothing behind.
     assert_empty general.messages.where("markdown_source LIKE ?", "%has joined%")
     assert_empty Message.where("markdown_source LIKE ?", "%huddle happened%")
 
     # Thread: default name, historical activity stamp, followers.
-    parent = general.messages.find_by!(created_at: Time.at(1700000002.000002))
+    parent = general.messages.find_by!(created_at: Time.at(Rational("1700000002.000002")))
     thread = parent.channel_thread
     assert_equal users(:david), thread.creator
     assert_equal 2, thread.messages_count
@@ -138,17 +138,17 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     assert_equal_time 1700000102.000102, thread.last_activity_at
     assert_equal 2, thread.users.count
     assert_equal [ thread.id ], thread.messages.pluck(:thread_id).uniq
-    broadcast = thread.messages.find_by!(created_at: Time.at(1700000102.000102))
+    broadcast = thread.messages.find_by!(created_at: Time.at(Rational("1700000102.000102")))
     assert_equal "Broadcast reply @[Jane Doe]", broadcast.markdown_source
 
     # Reactions: skin tone stripped, custom emoji kept, bad emoji an issue.
-    reacted = general.messages.find_by!(created_at: Time.at(1700000005.000005))
+    reacted = general.messages.find_by!(created_at: Time.at(Rational("1700000005.000005")))
     assert_equal [ "👍", "👍", ":custom_thing:" ].sort, reacted.boosts.map(&:content).sort
     assert_equal users(:kevin), reacted.boosts.find_by!(content: "👍", booster: users(:kevin)).booster
     assert run.issues.any? { |issue| issue.message.include?("party-blob") }
 
     # Pin written directly: no system note, no broadcast.
-    pinned = general.messages.find_by!(created_at: Time.at(1700000009.000009))
+    pinned = general.messages.find_by!(created_at: Time.at(Rational("1700000009.000009")))
     assert MessagePin.exists?(message: pinned, room: general, pinner: users(:david))
     assert_empty general.messages.where(system_note: true)
 
@@ -388,7 +388,7 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     run = drive_import_to_completion(start_run)
     general = Rooms::Open.find_by!(name: "general")
     secret = Rooms::Closed.find_by!(name: "secret")
-    parent = general.messages.find_by!(created_at: Time.at(1700000002.000002))
+    parent = general.messages.find_by!(created_at: Time.at(Rational("1700000002.000002")))
     thread = parent.channel_thread
 
     foreign_reply = thread.post_message!(creator: users(:david),
@@ -446,7 +446,7 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
       .where(room_id: run.records.where(slack_kind: "conversation").select(:record_id))
 
     # DB-only reference rows are still written for linked messages.
-    linked = Message.find_by!(created_at: Time.at(1700000002.000002))
+    linked = Message.find_by!(created_at: Time.at(Rational("1700000002.000002")))
     assert_not_empty linked.link_embed_references
   end
 
