@@ -133,7 +133,8 @@ class Accounts::SlackImportRunsController < ApplicationController
 
   private
     def set_run
-      @run = SlackImport.find(params[:id])
+      @run = SlackImport.find_by(id: params[:id])
+      head :not_found unless @run
     end
 
     # Admins view every run here, workspace and personal alike.

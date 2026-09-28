@@ -11,7 +11,9 @@ module Slack
       end
 
       if (connection = Current.user.slack_connection)
-        Slack::OAuth.revoke(token) if (token = readable_token(connection)).present?
+        if (token = readable_token(connection)).present?
+          Slack::OAuth.revoke(token)
+        end
         slack_user_id = connection.slack_user_id
         connection.destroy!
         AuditLog.record!(action: "slack.account.disconnect", actor: Current.user, target: Current.user,
@@ -32,7 +34,7 @@ module Slack
 
       def return_path
         candidate = params[:return_to].to_s
-        if OauthController::RETURN_PATHS.include?(candidate)
+        if OAuthController::RETURN_PATHS.include?(candidate)
           candidate
         elsif Current.user.can_administer?
           account_slack_import_path

@@ -3,7 +3,7 @@ module Slack
   # Slack app (user token only). Started from the admin setup page or the
   # member's personal import page; the callback returns there via an
   # allowlisted path, never an arbitrary URL.
-  class OauthController < ApplicationController
+  class OAuthController < ApplicationController
     before_action :require_sudo_mode, only: :start
 
     # Pages the flow may return to. Validated at start (what is stored)

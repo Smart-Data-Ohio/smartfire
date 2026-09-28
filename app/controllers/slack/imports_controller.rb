@@ -70,7 +70,8 @@ module Slack
       # Own personal runs only: anything else 404s, whether a workspace
       # run, another member's run, or a missing id.
       def set_run
-        @run = Current.user.slack_imports.personal.find(params[:id])
+        @run = Current.user.slack_imports.personal.find_by(id: params[:id])
+        head :not_found unless @run
       end
 
       def start_personal_import(workspace, connection)
