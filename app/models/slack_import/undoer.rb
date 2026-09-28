@@ -286,6 +286,14 @@ class SlackImport::Undoer
       if kept_message_ids.any?
         ids |= @run.records.where(slack_kind: "message", record_id: kept_message_ids).pluck(:id)
       end
+      # Every placeholder user undo kept: without its mapping a re-import
+      # cannot match it — deactivated and bot placeholders have no email —
+      # and mints a duplicate. The mapping goes only with the user row.
+      created_user_ids = @run.records.where(slack_kind: "user", created_record: true).pluck(:record_id)
+      surviving_users = User.where(id: created_user_ids).pluck(:id)
+      if surviving_users.any?
+        ids |= @run.records.where(slack_kind: "user", record_id: surviving_users).pluck(:id)
+      end
       ids
     end
 

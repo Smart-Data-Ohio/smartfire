@@ -490,6 +490,31 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     assert_empty Message.search("standup")
   end
 
+  test "undo keeps mappings for kept placeholders, so re-import creates no duplicates" do
+    run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+    general = Rooms::Open.find_by!(name: "general")
+    bot = run.records.find_by!(slack_kind: "user", slack_key: "UBOT1").record
+    assert bot.deactivated?
+    assert_nil bot.email_address
+    general.messages.create!(creator: bot, markdown_source: "bot posted after import")
+
+    assert run.undo!
+    drive_undo_to_completion(run)
+
+    assert_equal "undone", run.status
+    assert User.exists?(bot.id), "expected the bot placeholder to survive undo"
+    assert run.records.exists?(slack_kind: "user", record_id: bot.id),
+      "expected undo to keep the surviving placeholder's mapping"
+
+    reimport = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+
+    assert_equal "completed", reimport.status
+    assert_equal bot.id, SlackImport::Record.find_by!(slack_kind: "user", slack_key: "UBOT1").record_id
+    # UBOT1's placeholder reused; only the message bot (whose user undo
+    # removed) is recreated.
+    assert_equal 2, User.where(name: "Build Bot").count
+  end
+
   test "undo keeps a created room that gained foreign messages and records an issue" do
     run = drive_import_to_completion(start_run)
     assert run.undo!
