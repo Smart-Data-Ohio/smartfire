@@ -517,25 +517,38 @@ class SlackImport::Runner
     # import created take their last imported message time, rooms that
     # already existed keep the later of their time and that. Memberships
     # the run created point at the last imported message with no unread.
+    # Every lookup is per conversation through the mapping's unique index,
+    # never a scan of the run's whole record set.
     def finish_rooms
-      my_messages = @run.records.where(slack_kind: "message").select(:record_id)
-      my_memberships = @run.records.where(slack_kind: "membership").select(:record_id)
-
       @run.records.where(slack_kind: "conversation").find_each do |record|
         room = Room.alive.find_by(id: record.record_id)
         next if room.nil?
 
-        last_time = Message.where(room_id: room.id, id: my_messages).maximum(:created_at)
+        message_ids = conversation_record_ids("message", record.slack_key)
+        next if message_ids.empty?
+
+        last_time, last_id = Message.where(room_id: room.id, id: message_ids)
+          .order(created_at: :desc, id: :desc).pick(:created_at, :id)
         next if last_time.nil?
 
         updated_at = record.created_record ? last_time : [ room.updated_at, last_time ].max
         room.update_columns(updated_at:)
 
-        last_id = Message.where(room_id: room.id, id: my_messages)
-          .order(created_at: :desc, id: :desc).pick(:id)
-        Membership.where(room_id: room.id, id: my_memberships)
-          .update_all(last_read_message_id: last_id, unread_at: nil, updated_at: Time.current)
+        membership_ids = conversation_record_ids("membership", record.slack_key)
+        if membership_ids.any?
+          Membership.where(id: membership_ids)
+            .update_all(last_read_message_id: last_id, unread_at: nil, updated_at: Time.current)
+        end
       end
+    end
+
+    # This run's record ids for one conversation, through the workspace /
+    # kind / key unique index: the "CONV:" key prefix keeps it to an index
+    # range scan no matter how many conversations the run imported.
+    def conversation_record_ids(slack_kind, conversation_id)
+      SlackImport::Record.where(slack_workspace_id: @workspace.id, slack_kind:)
+        .where("slack_key LIKE ?", "#{ActiveRecord::Base.sanitize_sql_like(conversation_id)}:%")
+        .where(slack_import_id: @run.id).pluck(:record_id)
     end
 
     # -- helpers --------------------------------------------------------
