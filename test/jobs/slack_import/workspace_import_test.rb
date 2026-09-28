@@ -485,6 +485,22 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     assert_not_nil unread.unread_at
   end
 
+  test "finishing never moves an earlier membership's read pointer backwards" do
+    stub_three_windows!
+    test_run = drive_import_to_completion(start_run(options: middle_window_options))
+    general = Rooms::Open.find_by!(name: "general")
+    membership = test_run.records.where(slack_kind: "membership").first.record
+    newer = general.messages.create!(creator: users(:david), markdown_source: "newer chat")
+    membership.update_columns(last_read_message_id: newer.id, unread_at: nil)
+
+    stub_three_windows!
+    full_run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+
+    assert_equal "completed", full_run.status
+    assert_equal newer.id, membership.reload.last_read_message_id
+    assert_nil membership.unread_at
+  end
+
   test "per-conversation record lookups seek the identity index" do
     plan = ActiveRecord::Base.connection.exec_query(
       "EXPLAIN QUERY PLAN #{SlackImport::Record.for_conversation(@workspace.id, "message", "CCHAN").to_sql}"
