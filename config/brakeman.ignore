@@ -79,6 +79,29 @@
         601
       ],
       "note": "False positive: redirect target host is hard-coded to github.com in Github::App.authorize_url; all query params are server-generated, so no user input can steer the destination."
+    },
+    {
+      "warning_type": "Redirect",
+      "warning_code": 18,
+      "fingerprint": "f3f8b1083bd4b94aa208da1c6a1a19f1cd71f7d4c8d30078c71ad7db277d028b",
+      "check_name": "Redirect",
+      "message": "Possible unprotected redirect",
+      "file": "app/controllers/slack/oauth_controller.rb",
+      "line": 26,
+      "link": "https://brakemanscanner.org/docs/warning_types/redirect/",
+      "code": "redirect_to(Slack::OAuth.authorize_url(:client_id => SlackWorkspace.current.client_id, :redirect_uri => slack_oauth_callback_url, :state => state_verifier.generate(SecureRandom.hex(16)), :team_id => SlackWorkspace.current.team_id), :allow_other_host => true)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Slack::OAuthController",
+        "method": "start"
+      },
+      "user_input": "Slack::OAuth.authorize_url(:client_id => SlackWorkspace.current.client_id, :redirect_uri => slack_oauth_callback_url, :state => state_verifier.generate(SecureRandom.hex(16)), :team_id => SlackWorkspace.current.team_id)",
+      "confidence": "Weak",
+      "cwe_id": [
+        601
+      ],
+      "note": "False positive: redirect target host is hard-coded to slack.com in Slack::OAuth.authorize_url; all query params are server-generated, so no user input can steer the destination."
     }
   ],
   "brakeman_version": "7.1.0"
