@@ -67,10 +67,24 @@ class SlackImport < ApplicationRecord
   # that can hold one — callers cover running, undoing and queued by
   # status. The status predicate lets the index narrow the scan
   # before any state JSON is parsed.
-  scope :with_fresh_lease, -> {
+  #
+  # A class method rather than a scope so the cutoff goes through the
+  # private lease_stamp helper: scope bodies run on the relation,
+  # which only delegates public methods back to the model.
+  def self.with_fresh_lease
     where(status: %w[ cancelled failed ])
-      .where("json_extract(state, '$.step_started_at') > ?", STALE_HEARTBEAT.ago.iso8601(6))
-  }
+      .where("json_extract(state, '$.step_started_at') > ?", lease_stamp(STALE_HEARTBEAT.ago))
+  end
+
+  # The one formatter for step-lease stamps written into state and the
+  # cutoffs compared against them in SQLite: UTC with microsecond
+  # precision. Jobs run in UTC but web requests run under the user's
+  # zone (see SetTimeZone), and a local offset suffix (…+09:00) would
+  # corrupt the lexical string comparison.
+  def self.lease_stamp(time)
+    time.utc.iso8601(6)
+  end
+  private_class_method :lease_stamp
   # Runs that block new claims: a step or undo job may still be
   # executing for them — running or undoing by status, or holding a
   # fresh step lease.
@@ -267,11 +281,11 @@ class SlackImport < ApplicationRecord
   def acquire_step_lease!(expected_status)
     now = Time.current
     token = SecureRandom.hex(8)
-    stamp = now.iso8601(6)
+    stamp = self.class.send(:lease_stamp, now)
     claimed = self.class.where(id: id, status: expected_status)
       .where("json_extract(state, '$.step_started_at') IS NULL OR " \
         "json_extract(state, '$.step_started_at') <= ?",
-        STALE_HEARTBEAT.ago.iso8601(6))
+        self.class.send(:lease_stamp, STALE_HEARTBEAT.ago))
       .update_all([ "state = json_set(state, '$.step_started_at', ?, '$.step_lease_token', ?), " \
         "heartbeat_at = ?, updated_at = ?", stamp, token, now, now ]) == 1
     if claimed

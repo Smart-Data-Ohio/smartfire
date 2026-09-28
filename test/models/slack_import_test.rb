@@ -223,6 +223,79 @@ class SlackImportTest < ActiveSupport::TestCase
     assert_equal "running", queued.reload.status
   end
 
+  test "step lease stamps are written in UTC even under a user time zone" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+
+    Time.use_zone("Tokyo") do
+      assert run.acquire_step_lease!("running")
+    end
+
+    assert_match(/Z\z/, run.state["step_started_at"])
+  end
+
+  test "fresh leases block and stale leases pass under user time zones" do
+    %w[ Tokyo America/New_York ].each do |zone|
+      import = start_run
+      import.update!(status: "completed", started_at: 1.hour.ago, finished_at: Time.current)
+      undo_candidate = start_run
+      undo_candidate.update!(status: "completed", started_at: 1.hour.ago, finished_at: Time.current)
+      busy = start_run
+      busy.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+      # Jobs acquire in UTC; the reads below run under the user's zone,
+      # like controller requests do through SetTimeZone.
+      busy.acquire_step_lease!("running")
+      busy.cancel!
+
+      Time.use_zone(zone) do
+        assert SlackImport.with_fresh_lease.where(id: busy.id).exists?,
+          "fresh lease should block under #{zone}"
+        assert_equal "Another import is still finishing. Wait for it to finish, then undo.",
+          import.undo_blocked_reason
+        # The pre-check is stubbed out so only the atomic UPDATE can
+        # refuse the undo.
+        import.stubs(:undo_blocked_reason).returns(nil)
+        assert_no_enqueued_jobs do
+          assert_not import.undo!, "undo claim should refuse under #{zone}"
+        end
+
+        fresh_queued = start_run
+        fresh_queued.clear_pending_step_job!
+        assert_no_enqueued_jobs do
+          SlackImport.kick_next_queued!
+        end
+        assert fresh_queued.reload.queued?, "kick should wait under #{zone}"
+        fresh_queued.destroy!
+      end
+
+      # The step ended long ago; only a stale stamp is left behind.
+      busy.update!(state: busy.state.merge("step_started_at" => 6.minutes.ago.utc.iso8601(6)))
+
+      Time.use_zone(zone) do
+        assert_not SlackImport.with_fresh_lease.where(id: busy.id).exists?,
+          "stale lease should pass under #{zone}"
+        assert_nil undo_candidate.undo_blocked_reason
+        assert_enqueued_with(job: SlackImport::UndoJob) do
+          assert undo_candidate.undo!, "undo should proceed under #{zone}"
+        end
+      end
+      # The now-undoing run would block the kick below by status.
+      undo_candidate.destroy!
+
+      stale_queued = start_run
+      stale_queued.clear_pending_step_job!
+      clear_enqueued_jobs
+      Time.use_zone(zone) do
+        SlackImport.kick_next_queued!
+      end
+      assert_enqueued_with(job: SlackImport::StepJob, args: [ stale_queued.id ])
+
+      import.destroy!
+      busy.destroy!
+      stale_queued.destroy!
+    end
+  end
+
   test "a step job that cannot claim its queued run exits without re-enqueueing" do
     first = start_run
     second = start_run
