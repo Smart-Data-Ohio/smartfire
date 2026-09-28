@@ -199,9 +199,9 @@ class Slack::ImportsControllerTest < ActionDispatch::IntegrationTest
     run = SlackImport.last
     assert_redirected_to slack_import_path(run)
     assert_equal [ "D111" ], run.options["conversation_ids"]
-    assert_nil run.options["room_targets"]
     assert_nil run.options["oldest"]
     assert_nil run.options["latest"]
+    assert_empty(run.options["room_targets"] || {})
   end
 
   test "personal import needs a completed preview with checked conversations" do

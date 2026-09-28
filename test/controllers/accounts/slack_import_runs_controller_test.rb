@@ -79,8 +79,11 @@ class Accounts::SlackImportRunsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "queued", run.status
     assert_equal @david, run.user
     assert_equal connection, run.slack_connection
-    assert_equal({ "include_private" => false,
-      "oldest" => "2026-01-01T00:00:00Z", "latest" => "2026-06-01T23:59:59Z" }, run.options)
+    assert_equal false, run.options["include_private"]
+    assert_equal Time.utc(2026, 1, 1), Time.iso8601(run.options["oldest"])
+    assert_equal Time.utc(2026, 6, 1, 23, 59, 59), Time.iso8601(run.options["latest"])
+    assert_nil run.options["conversation_ids"]
+    assert_equal({}, run.options["room_targets"])
     # The engine parses bounds with Time.iso8601, and each bound covers
     # its own day (a bare latest would exclude its day).
     assert_equal Date.new(2026, 1, 1), Time.iso8601(run.options["oldest"]).to_date
@@ -97,7 +100,12 @@ class Accounts::SlackImportRunsControllerTest < ActionDispatch::IntegrationTest
     post account_slack_import_runs_path,
       params: { include_private: "1", oldest: "not-a-date", latest: "2026-13-45" }
 
-    assert_equal({ "include_private" => true }, SlackImport.last.options)
+    options = SlackImport.last.options
+    assert_equal true, options["include_private"]
+    assert_nil options["oldest"]
+    assert_nil options["latest"]
+    assert_nil options["conversation_ids"]
+    assert_equal({}, options["room_targets"])
   end
 
   test "starting a dry run defaults to including private channels" do
@@ -259,7 +267,7 @@ class Accounts::SlackImportRunsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "import", run.mode
     assert_equal connection, run.slack_connection
     assert_equal [ "C111" ], run.options["conversation_ids"]
-    assert_equal "2026-09-14T00:00:00Z", run.options["oldest"]
+    assert_equal Time.utc(2026, 9, 14), Time.iso8601(run.options["oldest"])
     assert_equal Date.new(2026, 9, 14), Time.iso8601(run.options["oldest"]).to_date
     assert_nil run.options["latest"]
     assert_equal true, run.options["include_private"]
