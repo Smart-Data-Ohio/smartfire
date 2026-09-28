@@ -149,7 +149,12 @@ class SlackImport < ApplicationRecord
     return nil unless undo_eligible?
 
     if (later = later_overlapping_import)
-      "A later import (##{later.id}) also imported some of these conversations; undo that one first."
+      if later.user_id == user_id
+        "A later import (##{later.id}) also imported some of these conversations; undo that one first."
+      else
+        "A later import by #{later.user.name} also imported some of these conversations. " \
+          "It has to be undone first; ask them or an administrator."
+      end
     elsif self.class.where(status: %w[ queued running undoing ]).where.not(id: id).exists?
       "Another import is queued or running. Wait for it to finish, then undo."
     end
@@ -264,7 +269,7 @@ class SlackImport < ApplicationRecord
 
       self.class.where(slack_workspace_id:, mode: "import").where.not(id:).where.not(status: "undone")
         .where("started_at > :at OR (started_at = :at AND id > :id)", at: started_at, id:)
-        .order(started_at: :desc, id: :desc).select(:id, :stats)
+        .order(started_at: :desc, id: :desc).select(:id, :user_id, :stats)
         .detect { |run| run.touched_conversation_ids.any? { |conversation_id| mine.include?(conversation_id) } }
     end
 end

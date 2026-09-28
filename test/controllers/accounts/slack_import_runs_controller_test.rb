@@ -522,11 +522,11 @@ class Accounts::SlackImportRunsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to account_slack_import_run_path(import)
     assert_equal "completed", import.reload.status
-    assert_match(/later import \(##{later.id}\)/, flash[:alert])
+    assert_match(/A later import by #{later.user.name} also imported some of these conversations/, flash[:alert])
 
     get account_slack_import_run_path(import)
     assert_select "button[disabled]", "Undo import"
-    assert_select "p", /A later import \(##{later.id}\) also imported some of these conversations; undo that one first/
+    assert_select "p", /It has to be undone first; ask them or an administrator/
 
     get account_slack_import_run_path(later)
     assert_select "button[disabled]", count: 0
