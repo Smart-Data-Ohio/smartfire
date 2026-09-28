@@ -57,6 +57,6 @@ After cutover, "Remove Slack credentials" on the setup page deletes the app cred
 
 - **Rate limits.** The importer backs off and retries through Slack's limits; a run slowed by throttling still finishes. Check the run's API-call count and issues if one stalls.
 - **Token revoked.** If Slack rejects a connection (revoked token, removed app), reconnect from the setup page (admins) or the personal import page (members). A rejection mid-run fails the run with an error; fix the grant and re-run.
-- **Missing scopes.** A grant without every required scope is rejected at connect time with the missing scopes listed. Reconnect and approve them all — Slack lets members deselect scopes at consent, and the import cannot run partial.
+- **Missing scopes.** A grant without every required scope is rejected at connect time with the missing scopes listed. Reconnect and approve them all — the import cannot run on a partial grant.
 - **Wrong workspace.** Grants from a different Slack team than the first admin connection are rejected. Connect with an account in the migrated workspace.
 - **Undo scope.** Undo removes what the run created only. Content members added to imported rooms afterwards, and records the run matched rather than created, stay.

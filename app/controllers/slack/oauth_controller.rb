@@ -95,8 +95,9 @@ module Slack
       # The first admin connection names the workspace being migrated;
       # later grants from any other team are rejected above.
       if workspace.team_id.blank? && Current.user.can_administer?
-        domain = Slack::OAuth.team_info(authed["access_token"])&.dig("domain")
-        workspace.update!(team_id:, team_name: team_name.presence, team_domain: domain.presence)
+        team = Slack::OAuth.team_info(authed["access_token"])
+        workspace.update!(team_id:, team_name: team_name.presence || team&.dig("name").presence,
+          team_domain: team&.dig("domain").presence)
       end
 
       # Only Slack-confirmed, non-secret identifiers reach the log.
@@ -105,7 +106,7 @@ module Slack
 
       redirect_to validated_return_to(return_to), notice: "Slack connected."
     rescue Slack::OAuth::Error
-      redirect_to validated_return_to(session.delete(:slack_oauth_return_to)), alert: "Could not connect Slack. Try again."
+      redirect_to validated_return_to(return_to), alert: "Could not connect Slack. Try again."
     end
 
     private

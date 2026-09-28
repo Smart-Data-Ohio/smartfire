@@ -205,6 +205,32 @@ class Slack::OAuthControllerTest < ActionDispatch::IntegrationTest
     assert_nil @david.reload.slack_connection
   end
 
+  test "callback fills a missing team name from team.info" do
+    workspace = create_slack_workspace!
+    state = start_state
+    stub_slack_code_exchange(slack_exchange_body(team_name: nil))
+    stub_slack_team_info
+
+    get slack_oauth_callback_path, params: { state:, code: "auth-code" }
+
+    assert_redirected_to account_slack_import_path
+    assert_equal SLACK_TEAM_NAME, workspace.reload.team_name
+    assert_equal SLACK_TEAM_DOMAIN, workspace.team_domain
+  end
+
+  test "a failed exchange returns to the page the flow started from" do
+    create_slack_workspace!(team_id: SLACK_TEAM_ID)
+    state = start_state(return_to: slack_imports_path)
+    stub_request(:post, SLACK_ACCESS_URL)
+      .to_return(status: 200, body: { ok: false, error: "invalid_code" }.to_json)
+
+    get slack_oauth_callback_path, params: { state:, code: "bad-code" }
+
+    assert_redirected_to slack_imports_path
+    assert_equal "Could not connect Slack. Try again.", flash[:alert]
+    assert_nil @david.reload.slack_connection
+  end
+
   test "callback with a failed exchange stores nothing" do
     create_slack_workspace!
     state = start_state
