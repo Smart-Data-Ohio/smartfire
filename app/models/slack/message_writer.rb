@@ -32,6 +32,7 @@ module Slack
       counts = fresh_counts
       thread_parents = []
 
+      enrich_users_with_mentions!(users, messages)
       known = existing_message_keys(conversation_id, messages)
       queue_known_parents(conversation_id, messages, bounds, known, thread_parents)
       writable = messages.filter_map do |message|
@@ -66,6 +67,7 @@ module Slack
         messages:, bounds:, users:, direct:, thread_state:)
       counts = fresh_counts
 
+      enrich_users_with_mentions!(users, messages)
       known = existing_message_keys(conversation_id, messages)
       replies = messages.filter_map do |message|
         next if message["ts"] == parent_ts # the echoed parent
@@ -104,6 +106,7 @@ module Slack
     def dry_history_page(conversation_name:, messages:, bounds:, samples_remaining:)
       counts = fresh_counts
       samples = []
+      users = @user_mapper.users_for(mentioned_ids(Array(messages)))
 
       Array(messages).each do |original|
         message = unwrap(original)
@@ -114,7 +117,7 @@ module Slack
           next
         end
 
-        converted = Slack::MarkdownConverter.convert(message, users: {})
+        converted = Slack::MarkdownConverter.convert(message, users: display_names(users))
         if converted.markdown.strip.blank?
           counts["skipped"] += 1
           next
@@ -259,6 +262,26 @@ module Slack
 
       def display_names(users)
         users.transform_values(&:name)
+      end
+
+      # Mentions of any mapped workspace user render as @[Name], even when
+      # that user is not a channel member (the renderer leaves non-member
+      # tokens as text); only truly unknown ids fall back to @label. One
+      # lookup per page for the mentioned ids missing from the member map.
+      def enrich_users_with_mentions!(users, messages)
+        missing = mentioned_ids(messages) - users.keys
+        users.merge!(@user_mapper.users_for(missing)) if missing.any?
+      end
+
+      def mentioned_ids(messages)
+        Array(messages).flat_map do |original|
+          message = unwrap(original)
+          parts = [ message["text"] ]
+          Array(message["attachments"]).each do |attachment|
+            parts.concat([ attachment["pretext"], attachment["text"], attachment["fallback"] ])
+          end
+          parts.join("\n").scan(/<@([A-Z0-9]+)(?:\|[^>]+)?>/)
+        end.flatten.uniq
       end
 
       def edited_at_for(message)

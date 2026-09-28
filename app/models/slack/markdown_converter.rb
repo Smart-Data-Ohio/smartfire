@@ -70,8 +70,22 @@ module Slack
         def convert_segments(text, users)
           segments = text.split(CODE_PATTERN)
           segments.each_with_index.map do |segment, index|
-            index.odd? ? segment : convert_prose(segment, users)
+            index.odd? ? normalize_fence(segment) : convert_prose(segment, users)
           end.join
+        end
+
+        # Slack has no info strings: in ```code on the first line``` the
+        # first line is code, but Markdown would read it as a language tag
+        # and hide it. Push fence-adjacent code onto its own lines.
+        def normalize_fence(segment)
+          return segment unless segment.start_with?("```")
+
+          normalized = segment.sub(/\A```(?!\n)/, "```\n")
+          closing = normalized.rindex("```")
+          if closing && closing > 3 && normalized[closing - 1] != "\n"
+            normalized = "#{normalized[0...closing]}\n#{normalized[closing..]}"
+          end
+          normalized
         end
 
         def convert_prose(text, users)
@@ -105,18 +119,22 @@ module Slack
           # @here, @channel and @everyone stay plain text: Smartfire only
           # turns @[Name] tokens into mentions (see MENTION_TOKEN_PATTERN),
           # so these can never notify anyone.
-          text = text.gsub(/<!(here|channel|everyone)>/) { "@#{$1}" }
+          text = text.gsub(/<!(here|channel|everyone)(?:\|[^>]+)?>/) { "@#{$1}" }
           text = text.gsub(/<!subteam\^[A-Z0-9]+\|@?([^>]+)>/) { "@#{$1}" }
           text = text.gsub(/<!subteam\^[A-Z0-9]+>/) { "@group" }
           text.gsub(/<!date\^[^\s|>]+(?:\^[^\s|>]+)*(?:\|([^>]*))?>/) { $1.to_s }
         end
 
-        # Converted [text](url) links are shielded while emphasis runs so a
-        # * or _ inside a URL or link label is never treated as mrkdwn.
+        # Converted [text](url) links and bare URLs are shielded while
+        # emphasis runs so a * or _ inside a URL or link label is never
+        # treated as mrkdwn.
         def convert_emphasis(text)
           shields = {}
           text = text.gsub(/\[[^\]\n]*\]\([^)\n]*\)/) do |link|
             shield_key(shields.size).tap { |key| shields[key] = link }
+          end
+          text = text.gsub(%r{https?://[^\s<>\]]+}) do |url|
+            shield_key(shields.size).tap { |key| shields[key] = url }
           end
           text = text.gsub(BOLD_PATTERN) { "**#{$1}**" }
           text = text.gsub(ITALIC_PATTERN) { "*#{$1}*" }

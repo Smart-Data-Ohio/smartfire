@@ -32,6 +32,13 @@ class Slack::MarkdownConverterTest < ActiveSupport::TestCase
     assert_equal "@everyone hi", convert("<!everyone> hi").markdown
   end
 
+  test "broadcast mentions with labels stay literal text" do
+    assert_equal "@here standup", convert("<!here|here> standup").markdown
+    assert_equal "@here standup", convert("<!here|@here> standup").markdown
+    assert_equal "@channel news", convert("<!channel|channel> news").markdown
+    assert_equal "@everyone hi", convert("<!everyone|everyone> hi").markdown
+  end
+
   test "subteam mentions become handles and dates become fallbacks" do
     assert_equal "ping @engs", convert("ping <!subteam^S123|@engs>").markdown
     assert_equal "due Feb 1", convert("due <!date^1700000000^{date_short}|Feb 1>").markdown
@@ -62,6 +69,22 @@ class Slack::MarkdownConverterTest < ActiveSupport::TestCase
   test "emphasis leaves urls alone" do
     result = convert("see <https://example.com/a*b_c|a*b_c>").markdown
     assert_equal "see [a*b_c](https://example.com/a*b_c)", result
+  end
+
+  test "emphasis leaves bare urls and angle-bracket links alone" do
+    assert_equal "see https://example.com/*path*/x_y",
+      convert("see <https://example.com/*path*/x_y>").markdown
+    assert_equal "see https://example.com/*path*/x_y and **bold**",
+      convert("see https://example.com/*path*/x_y and *bold*").markdown
+  end
+
+  test "code on the fence's first line stays code" do
+    # Slack has no language tags: the first line is code, so it must not
+    # sit on the fence line where Markdown would read it as one.
+    assert_equal "```\nconst x = 1\nputs x\n```",
+      convert("```const x = 1\nputs x\n```").markdown
+    assert_equal "```\ncode\n```", convert("```code```").markdown
+    assert_equal "```\n*block*\n```", convert("```\n*block*\n```").markdown
   end
 
   test "bullets become dashes" do
@@ -152,6 +175,18 @@ class Slack::MarkdownConverterTest < ActiveSupport::TestCase
 
     assert_includes message.body.body.to_html, "@here"
     assert_empty message.mentionees.to_a
+  ensure
+    message&.destroy!
+  end
+
+  test "rendering: fenced first-line code and bare urls render as intended" do
+    room = rooms(:hq)
+    source = convert("```const x = 1\nputs x\n```\n\nsee https://example.com/docs").markdown
+    message = room.messages.create!(creator: users(:david), markdown_source: source)
+    html = message.body.body.to_html
+
+    assert_includes html, "const x = 1"
+    assert_includes html, 'href="https://example.com/docs"'
   ensure
     message&.destroy!
   end

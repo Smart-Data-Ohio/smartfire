@@ -68,6 +68,24 @@ class SlackImport::RunLifecycleTest < ActiveSupport::TestCase
     assert slackbot.deactivated?
   end
 
+  test "mentions of mapped users outside the channel render as tokens, unknown ids fall back" do
+    history = { ok: true,
+      messages: [ { "type" => "message", "user" => "U002",
+        "text" => "hi <@URET|robin> and <@U999|ghost>", "ts" => "1700000031.000031" } ],
+      has_more: false, response_metadata: { next_cursor: "" } }
+    WebMock.reset!
+    stub_slack_workspace!(history_overrides: { "CPRIV" => [ history ] })
+
+    run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CPRIV ] }))
+
+    assert_equal "completed", run.status
+    message = Rooms::Closed.find_by!(name: "secret").messages.sole
+    # URET is mapped (users phase) but not a room member: the token
+    # renders, and the renderer leaves it as text.
+    assert_equal "hi @[Robin Returner] and @ghost", message.markdown_source
+    assert_empty message.mentionees.to_a
+  end
+
   test "placeholder Google-link eligibility follows the allowed domains" do
     run = with_google_domains("example.com") do
       drive_import_to_completion(start_run)
