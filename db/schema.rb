@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_09_25_174854) do
+ActiveRecord::Schema[8.2].define(version: 2026_09_28_143600) do
   create_table "accounts", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "custom_styles"
@@ -909,6 +909,80 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_25_174854) do
     t.index ["user_id"], name: "index_sessions_on_user_id"
   end
 
+  create_table "slack_connections", force: :cascade do |t|
+    t.text "access_token"
+    t.datetime "created_at", null: false
+    t.string "disconnected_reason"
+    t.string "scopes"
+    t.string "slack_user_id", null: false
+    t.integer "slack_workspace_id", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["slack_workspace_id", "slack_user_id"], name: "idx_on_slack_workspace_id_slack_user_id_cde7a4e4d3", unique: true
+    t.index ["slack_workspace_id"], name: "index_slack_connections_on_slack_workspace_id"
+    t.index ["user_id"], name: "index_slack_connections_on_user_id", unique: true
+  end
+
+  create_table "slack_import_issues", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "level", null: false
+    t.text "message", null: false
+    t.integer "slack_import_id", null: false
+    t.string "slack_ref"
+    t.index ["slack_import_id"], name: "index_slack_import_issues_on_slack_import_id"
+  end
+
+  create_table "slack_import_records", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.boolean "created_record", default: true, null: false
+    t.bigint "record_id", null: false
+    t.string "record_type", null: false
+    t.integer "slack_import_id", null: false
+    t.string "slack_key", null: false
+    t.string "slack_kind", null: false
+    t.integer "slack_workspace_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["record_type", "record_id"], name: "index_slack_import_records_on_record_type_and_record_id"
+    t.index ["slack_import_id"], name: "index_slack_import_records_on_slack_import_id"
+    t.index ["slack_workspace_id", "slack_kind", "slack_key"], name: "index_slack_import_records_on_slack_identity", unique: true
+    t.index ["slack_workspace_id"], name: "index_slack_import_records_on_slack_workspace_id"
+  end
+
+  create_table "slack_imports", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "error"
+    t.datetime "finished_at"
+    t.datetime "heartbeat_at"
+    t.string "kind", null: false
+    t.string "mode", null: false
+    t.json "options", default: {}, null: false
+    t.integer "slack_connection_id"
+    t.integer "slack_workspace_id", null: false
+    t.datetime "started_at"
+    t.json "state", default: {}, null: false
+    t.json "stats", default: {}, null: false
+    t.string "status", default: "queued", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["slack_connection_id"], name: "index_slack_imports_on_slack_connection_id"
+    t.index ["slack_workspace_id"], name: "index_slack_imports_on_slack_workspace_id"
+    t.index ["status"], name: "index_slack_imports_on_status"
+    t.index ["user_id"], name: "index_slack_imports_on_user_id"
+  end
+
+  create_table "slack_workspaces", force: :cascade do |t|
+    t.string "client_id"
+    t.text "client_secret"
+    t.integer "configured_by_id"
+    t.datetime "created_at", null: false
+    t.string "team_domain"
+    t.string "team_id"
+    t.string "team_name"
+    t.datetime "updated_at", null: false
+    t.index ["configured_by_id"], name: "index_slack_workspaces_on_configured_by_id"
+    t.index ["team_id"], name: "index_slack_workspaces_on_team_id", unique: true
+  end
+
   create_table "streams", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "ended_at"
@@ -1244,6 +1318,15 @@ ActiveRecord::Schema[8.2].define(version: 2026_09_25_174854) do
   add_foreign_key "scheduled_messages", "users"
   add_foreign_key "searches", "users"
   add_foreign_key "sessions", "users"
+  add_foreign_key "slack_connections", "slack_workspaces"
+  add_foreign_key "slack_connections", "users"
+  add_foreign_key "slack_import_issues", "slack_imports"
+  add_foreign_key "slack_import_records", "slack_imports"
+  add_foreign_key "slack_import_records", "slack_workspaces"
+  add_foreign_key "slack_imports", "slack_connections", on_delete: :nullify
+  add_foreign_key "slack_imports", "slack_workspaces"
+  add_foreign_key "slack_imports", "users"
+  add_foreign_key "slack_workspaces", "users", column: "configured_by_id"
   add_foreign_key "thread_memberships", "channel_threads", column: "thread_id", on_delete: :cascade
   add_foreign_key "thread_memberships", "users", on_delete: :cascade
   add_foreign_key "twitter_post_references", "messages"
