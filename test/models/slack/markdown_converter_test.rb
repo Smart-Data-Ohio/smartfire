@@ -49,6 +49,14 @@ class Slack::MarkdownConverterTest < ActiveSupport::TestCase
     assert_equal "due ", convert("due <!date^1700000000^{date_short}>").markdown
   end
 
+  # Regression guard, not a proof of the fix: on Ruby 3.4 the regex
+  # engine memoizes backtracking, so this input converts in linear time
+  # even with the old nested-repetition pattern (measured ~7ms at 50k
+  # repeats for the old pattern, ~1ms for the new one, and neither trips
+  # a Regexp.timeout). A static "no nested quantifier" check cannot
+  # discriminate either: the new pattern still quantifies a group that
+  # holds a quantified class. The guard stays to catch a future pattern
+  # (or engine) that turns crafted date tokens super-linear again.
   test "a crafted date token converts in linear time" do
     started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     result = convert("<!date^" + "!^" * 50_000)

@@ -436,6 +436,29 @@ class SlackImport::RunLifecycleTest < ActiveSupport::TestCase
     assert_not_nil run.finished_at
   end
 
+  test "a cancel observed mid-step stops the next page from being written" do
+    run = start_run(options: { "conversation_ids" => %w[ CCHAN ] })
+    other = start_run(options: { "conversation_ids" => %w[ CARCH ] })
+    other.clear_pending_step_job!
+    clear_enqueued_jobs
+    WebMock.reset!
+    stub_slack_workspace!(history_overrides: { "CCHAN" => [
+      slack_fixture("history_CCHAN_p1.json"),
+      ->(_request) { run.cancel! && slack_fixture("history_CCHAN_p2.json") }
+    ] })
+
+    drive_import_to_completion(run)
+
+    assert run.reload.cancelled?
+    general = Rooms::Open.find_by!(name: "general")
+    # The first page went in before the cancel landed...
+    assert general.messages.exists?(created_at: Time.at(Rational("1700000010.000010")))
+    # ...and the page fetched after it never did.
+    assert_empty general.messages.where(created_at: Time.at(Rational("1700000001.000001")))
+    # The stopped step hands off promptly instead of waiting for the sweeper.
+    assert_enqueued_with(job: SlackImport::StepJob, args: [ other.id ])
+  end
+
   test "HTTP 429 reschedules the run after Retry-After" do
     WebMock.reset!
     stub_slack_workspace!(history_first_responses: {

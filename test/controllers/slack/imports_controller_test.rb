@@ -273,6 +273,38 @@ class Slack::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p", /A later import \(##{later.id}\) also imported some of these conversations; undo that one first/
   end
 
+  test "run page loads later runs' stats once across the undo checks" do
+    create_slack_workspace!(team_id: SLACK_TEAM_ID)
+    import = create_slack_import!(user: @kevin, kind: "personal", mode: "import", status: "completed",
+      started_at: 2.hours.ago, stats: slack_stats_shape(conversations: [
+        slack_conversation_entry(id: "D111", name: "dm-with-jz", type: "im")
+      ]))
+    # Later runs over other conversations: the page finds no overlap, so
+    # it runs both the blocked-reason check and the undoable? check.
+    3.times do |index|
+      create_slack_import!(user: @kevin, kind: "personal", mode: "import", status: "completed",
+        started_at: 1.hour.ago, stats: slack_stats_shape(conversations: [
+          slack_conversation_entry(id: "D222#{index}", name: "dm-#{index}", type: "im")
+        ]))
+    end
+
+    stats_loads = 0
+    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*, payload|
+      # Cached reads count too: the request query cache would otherwise
+      # hide the second scan behind a cache hit.
+      sql = payload[:sql].to_s
+      stats_loads += 1 if sql.include?("slack_imports") && sql.include?('"stats"')
+    end
+    begin
+      get slack_import_path(import)
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+    end
+
+    assert_response :success
+    assert_equal 1, stats_loads
+  end
+
   test "personal run page shows the plan with skip checkboxes" do
     create_slack_workspace!(team_id: SLACK_TEAM_ID)
     run = create_slack_import!(user: @kevin, kind: "personal", status: "completed",

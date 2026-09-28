@@ -24,8 +24,29 @@ class SlackImport::StepJob < ApplicationJob
       return
     end
 
-    outcome = SlackImport::Runner.new(run).step!
+    # The lease marks the run busy while this step executes, so a cancel
+    # that lands mid-step still blocks new runs and undos until the
+    # in-flight step stops writing. A lost race simply returns: the
+    # holder continues the chain, or, if it crashed, the sweeper
+    # re-enqueues once the heartbeat goes stale — which always
+    # outlasts the lease, so the run can never strand with no job.
+    lease_token = run.acquire_step_lease!("running")
+    return unless lease_token
+
+    # The lease releases (in the ensure) before the next job is
+    # enqueued below, so the next job acquires immediately instead of
+    # failing to acquire on another worker and stalling the run until
+    # the sweeper re-enqueues it.
+    outcome = nil
+    begin
+      outcome = SlackImport::Runner.new(run, lease_token: lease_token).step!
+    ensure
+      run.release_step_lease!(lease_token)
+    end
     self.class.perform_later(run.id) if outcome == :continue
+    # A stopped step's run finished elsewhere (cancelled mid-step): hand
+    # off promptly instead of waiting for the sweeper.
+    SlackImport.kick_next_queued! if outcome == :stopped
   rescue Slack::Client::RateLimited => error
     # Slack asked for a pause: heartbeat first so the sweeper does not pile
     # on, then resume after Retry-After. Delayed jobs drain via bin/periodic.

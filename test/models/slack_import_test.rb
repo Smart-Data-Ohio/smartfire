@@ -92,6 +92,338 @@ class SlackImportTest < ActiveSupport::TestCase
     assert queued.reload.queued?
   end
 
+  test "claim_running! refuses while a cancelled run holds a fresh step lease" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    lease_token = run.acquire_step_lease!("running")
+    assert lease_token
+    other = start_run
+    assert_not SlackImport.claim_running!(other.id)
+
+    # The cancel flips the status while the step is still mid-flight: the
+    # fresh lease keeps blocking until the step ends and clears it.
+    run.cancel!
+
+    assert run.reload.cancelled?
+    assert run.step_lease_fresh?
+    assert_not SlackImport.claim_running!(other.id)
+    assert other.reload.queued?
+
+    run.release_step_lease!(lease_token)
+
+    assert_not run.reload.step_lease_fresh?
+    assert SlackImport.claim_running!(other.id)
+    assert_equal "running", other.reload.status
+  end
+
+  test "a stale step lease no longer blocks claims" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    run.acquire_step_lease!("running")
+    run.cancel!
+    other = start_run
+
+    travel SlackImport::STALE_HEARTBEAT + 1.minute do
+      assert SlackImport.claim_running!(other.id)
+    end
+
+    assert_equal "running", other.reload.status
+  end
+
+  test "a second acquire fails while a fresh lease is held" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    token = run.acquire_step_lease!("running")
+    assert token.is_a?(String)
+
+    # A second job process sees the same row through its own instance.
+    other_view = SlackImport.find(run.id)
+
+    assert_equal false, other_view.acquire_step_lease!("running")
+    assert_equal token, run.reload.state["step_lease_token"]
+    assert run.step_lease_fresh?
+  end
+
+  test "a stale lease can be taken over without losing saved progress" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    first_token = run.acquire_step_lease!("running")
+    run.update!(state: run.state.merge("convo_index" => 3))
+
+    second_token = travel(SlackImport::STALE_HEARTBEAT + 1.minute) do
+      SlackImport.find(run.id).acquire_step_lease!("running")
+    end
+
+    assert second_token.is_a?(String)
+    assert_not_equal first_token, second_token
+    assert_equal second_token, run.reload.state["step_lease_token"]
+    assert_equal 3, run.state["convo_index"]
+    # The previous holder's token no longer releases anything.
+    assert_equal false, run.release_step_lease!(first_token)
+    assert run.reload.step_lease_fresh?
+  end
+
+  test "releasing with the wrong token keeps the lease" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    token = run.acquire_step_lease!("running")
+
+    assert_equal false, run.release_step_lease!("bogus-token")
+    assert run.reload.step_lease_fresh?
+    assert_equal token, run.state["step_lease_token"]
+
+    assert run.release_step_lease!(token)
+    assert_not run.reload.step_lease_fresh?
+    assert_nil run.state["step_started_at"]
+    assert_nil run.state["step_lease_token"]
+  end
+
+  test "a step that raises still releases its lease" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    SlackImport::Runner.any_instance.stubs(:step!).raises(RuntimeError, "boom")
+
+    SlackImport::StepJob.perform_now(run.id)
+
+    run.reload
+    assert_equal "failed", run.status
+    assert_not run.step_lease_fresh?
+    assert_nil run.state["step_started_at"]
+    assert_nil run.state["step_lease_token"]
+  end
+
+  test "a continuing step releases its lease before enqueueing the next job" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    SlackImport::Runner.any_instance.stubs(:step!).returns(:continue)
+
+    # Read back from the database, like a second worker would: the lease
+    # must already be gone when the next job is enqueued, or the next
+    # job fails to acquire and the run stalls until the sweeper.
+    lease_at_enqueue = :not_enqueued
+    SlackImport::StepJob.stubs(:perform_later).with do |id|
+      lease_at_enqueue = SlackImport.find(id).state.slice(*SlackImport::STEP_LEASE_KEYS)
+      true
+    end
+
+    SlackImport::StepJob.perform_now(run.id)
+
+    assert_equal({}, lease_at_enqueue)
+  end
+
+  test "a continuing undo releases its lease before enqueueing the next job" do
+    run = start_run
+    run.update!(status: "undoing", started_at: 1.hour.ago, heartbeat_at: Time.current,
+      state: { "phase" => "undo" })
+    SlackImport::Undoer.any_instance.stubs(:step!).returns(:continue)
+
+    lease_at_enqueue = :not_enqueued
+    SlackImport::UndoJob.stubs(:perform_later).with do |id|
+      lease_at_enqueue = SlackImport.find(id).state.slice(*SlackImport::STEP_LEASE_KEYS)
+      true
+    end
+
+    SlackImport::UndoJob.perform_now(run.id)
+
+    assert_equal({}, lease_at_enqueue)
+  end
+
+  test "refresh_step_lease! renews a held lease without touching other state" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current,
+      state: { "phase" => "messages", "convo_index" => 3 })
+    token = run.acquire_step_lease!("running")
+    first_stamp = run.state["step_started_at"]
+
+    travel 3.minutes do
+      assert run.refresh_step_lease!(token)
+
+      run.reload
+      assert_equal token, run.state["step_lease_token"]
+      assert_operator run.state["step_started_at"], :>, first_stamp
+      assert_in_delta Time.current.to_f, Time.iso8601(run.state["step_started_at"]).to_f, 5
+      assert_in_delta Time.current.to_f, run.heartbeat_at.to_f, 5
+    end
+
+    assert_equal 3, run.reload.state["convo_index"]
+    assert_equal "messages", run.state["phase"]
+  end
+
+  test "refresh_step_lease! refuses a token that no longer holds the lease" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    token = run.acquire_step_lease!("running")
+    stamp = run.state["step_started_at"]
+
+    travel 3.minutes do
+      assert_equal false, run.refresh_step_lease!("bogus-token")
+    end
+    assert_equal stamp, run.reload.state["step_started_at"]
+
+    run.release_step_lease!(token)
+
+    assert_equal false, run.refresh_step_lease!(token)
+  end
+
+  test "a runner step refreshes its lease wherever it refreshes the heartbeat" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current,
+      state: { "phase" => "users" })
+    token = run.acquire_step_lease!("running")
+    first_stamp = run.state["step_started_at"]
+
+    travel 3.minutes do
+      runner = SlackImport::Runner.new(SlackImport.find(run.id), lease_token: token)
+      runner.send(:touch_heartbeat!)
+      runner.send(:save_progress!)
+
+      stamp = run.reload.state["step_started_at"]
+      assert_equal token, run.state["step_lease_token"]
+      assert_operator stamp, :>, first_stamp
+      assert_in_delta Time.current.to_f, Time.iso8601(stamp).to_f, 5
+    end
+  end
+
+  test "a runner without a lease token leaves the lease alone" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current,
+      state: { "phase" => "users" })
+    token = run.acquire_step_lease!("running")
+    stamp = run.state["step_started_at"]
+
+    travel 1.minute do
+      runner = SlackImport::Runner.new(SlackImport.find(run.id))
+      runner.send(:touch_heartbeat!)
+      runner.send(:save_progress!)
+    end
+
+    assert_equal stamp, run.reload.state["step_started_at"]
+    assert_equal token, run.state["step_lease_token"]
+  end
+
+  test "an undoer step refreshes its lease when it saves undo state" do
+    run = start_run
+    run.update!(status: "undoing", started_at: 1.hour.ago, heartbeat_at: Time.current,
+      state: { "phase" => "undo", "undo_step" => "leaves", "undo_cursor" => 0 })
+    token = run.acquire_step_lease!("undoing")
+    first_stamp = run.state["step_started_at"]
+
+    travel 3.minutes do
+      undoer = SlackImport::Undoer.new(SlackImport.find(run.id), lease_token: token)
+      undoer.send(:touch_heartbeat!)
+      undoer.send(:save_undo_state!)
+
+      stamp = run.reload.state["step_started_at"]
+      assert_equal token, run.state["step_lease_token"]
+      assert_operator stamp, :>, first_stamp
+      assert_in_delta Time.current.to_f, Time.iso8601(stamp).to_f, 5
+    end
+  end
+
+  test "another job's lease write is not mistaken for progress on conflict" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current,
+      state: { "phase" => "users" })
+    token = run.acquire_step_lease!("running")
+    runner = SlackImport::Runner.new(run)
+    runner.send(:transition_to, "conversations")
+
+    # Another job takes over the lease without saving progress: only the
+    # lease keys differ on disk when this step hits its conflict.
+    run.release_step_lease!(token)
+    assert SlackImport.find(run.id).acquire_step_lease!("running")
+    runner.stubs(:step_conversations).raises(ActiveRecord::RecordNotUnique.new("conflict"))
+
+    assert_raises(ActiveRecord::RecordNotUnique) { runner.step! }
+  end
+
+  test "a lease-looking state on a completed run does not block claims" do
+    # Completed runs never hold a lease (finishing strips it), so the
+    # blocking scopes only read leases off statuses that still can —
+    # and a stray stamp here blocks nothing.
+    finished = start_run
+    finished.update!(status: "completed", started_at: 1.hour.ago, finished_at: Time.current,
+      state: finished.state.merge("step_started_at" => Time.current.iso8601(6),
+        "step_lease_token" => "stray"))
+    queued = start_run
+
+    assert SlackImport.claim_running!(queued.id)
+    assert_equal "running", queued.reload.status
+  end
+
+  test "step lease stamps are written in UTC even under a user time zone" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+
+    Time.use_zone("Tokyo") do
+      assert run.acquire_step_lease!("running")
+    end
+
+    assert_match(/Z\z/, run.state["step_started_at"])
+  end
+
+  test "fresh leases block and stale leases pass under user time zones" do
+    %w[ Tokyo America/New_York ].each do |zone|
+      import = start_run
+      import.update!(status: "completed", started_at: 1.hour.ago, finished_at: Time.current)
+      undo_candidate = start_run
+      undo_candidate.update!(status: "completed", started_at: 1.hour.ago, finished_at: Time.current)
+      busy = start_run
+      busy.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+      # Jobs acquire in UTC; the reads below run under the user's zone,
+      # like controller requests do through SetTimeZone.
+      busy.acquire_step_lease!("running")
+      busy.cancel!
+
+      Time.use_zone(zone) do
+        assert SlackImport.with_fresh_lease.where(id: busy.id).exists?,
+          "fresh lease should block under #{zone}"
+        assert_equal "Another import is still finishing. Wait for it to finish, then undo.",
+          import.undo_blocked_reason
+        # The pre-check is stubbed out so only the atomic UPDATE can
+        # refuse the undo.
+        import.stubs(:undo_blocked_reason).returns(nil)
+        assert_no_enqueued_jobs do
+          assert_not import.undo!, "undo claim should refuse under #{zone}"
+        end
+
+        fresh_queued = start_run
+        fresh_queued.clear_pending_step_job!
+        assert_no_enqueued_jobs do
+          SlackImport.kick_next_queued!
+        end
+        assert fresh_queued.reload.queued?, "kick should wait under #{zone}"
+        fresh_queued.destroy!
+      end
+
+      # The step ended long ago; only a stale stamp is left behind.
+      busy.update!(state: busy.state.merge("step_started_at" => 6.minutes.ago.utc.iso8601(6)))
+
+      Time.use_zone(zone) do
+        assert_not SlackImport.with_fresh_lease.where(id: busy.id).exists?,
+          "stale lease should pass under #{zone}"
+        assert_nil undo_candidate.undo_blocked_reason
+        assert_enqueued_with(job: SlackImport::UndoJob) do
+          assert undo_candidate.undo!, "undo should proceed under #{zone}"
+        end
+      end
+      # The now-undoing run would block the kick below by status.
+      undo_candidate.destroy!
+
+      stale_queued = start_run
+      stale_queued.clear_pending_step_job!
+      clear_enqueued_jobs
+      Time.use_zone(zone) do
+        SlackImport.kick_next_queued!
+      end
+      assert_enqueued_with(job: SlackImport::StepJob, args: [ stale_queued.id ])
+
+      import.destroy!
+      busy.destroy!
+      stale_queued.destroy!
+    end
+  end
+
   test "a step job that cannot claim its queued run exits without re-enqueueing" do
     first = start_run
     second = start_run
@@ -126,11 +458,105 @@ class SlackImportTest < ActiveSupport::TestCase
     end
   end
 
+  test "the undo claim itself refuses a queued run that slips in after the pre-check" do
+    import = start_run
+    import.update!(status: "completed", started_at: 1.hour.ago, finished_at: Time.current)
+    assert_nil import.undo_blocked_reason
+
+    # A new run starts after the pre-check ran. The pre-check is stubbed
+    # out so only the atomic UPDATE can refuse the undo.
+    import.stubs(:undo_blocked_reason).returns(nil)
+    queued = start_run
+
+    assert_no_enqueued_jobs do
+      assert_not import.undo!
+    end
+    assert_equal "completed", import.reload.status
+    assert queued.reload.queued?
+  end
+
+  test "the undo claim itself refuses a fresh lease held outside an active status" do
+    import = start_run
+    import.update!(status: "completed", started_at: 1.hour.ago, finished_at: Time.current)
+    assert_nil import.undo_blocked_reason
+
+    busy = start_run
+    busy.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    busy.acquire_step_lease!("running")
+    busy.cancel!
+
+    # The pre-check is stubbed out so only the atomic UPDATE can refuse
+    # the undo; the cancelled run blocks by lease, not by status.
+    import.stubs(:undo_blocked_reason).returns(nil)
+
+    assert_no_enqueued_jobs do
+      assert_not import.undo!
+    end
+    assert_equal "completed", import.reload.status
+  end
+
   test "undo_blocked_reason is nil when nothing else is active" do
     run = start_run
     run.update!(status: "completed", finished_at: Time.current)
 
     assert_nil run.undo_blocked_reason
+  end
+
+  test "undo waits while the run itself holds a fresh step lease" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    lease_token = run.acquire_step_lease!("running")
+    run.cancel!
+
+    assert_equal "This import is still finishing. Wait for it to finish, then undo.",
+      run.undo_blocked_reason
+    assert_no_enqueued_jobs do
+      assert_not run.undo!
+    end
+    assert_equal "cancelled", run.reload.status
+
+    run.release_step_lease!(lease_token)
+
+    assert_nil run.undo_blocked_reason
+    assert_enqueued_with(job: SlackImport::UndoJob) do
+      assert run.undo!
+    end
+  end
+
+  test "undo waits while another run holds a fresh step lease" do
+    import = start_run
+    import.update!(status: "completed", started_at: 1.hour.ago, finished_at: Time.current)
+    busy = start_run
+    busy.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    busy_token = busy.acquire_step_lease!("running")
+    busy.cancel!
+
+    assert_equal "Another import is still finishing. Wait for it to finish, then undo.",
+      import.undo_blocked_reason
+    assert_not import.undo!
+    assert_equal "completed", import.reload.status
+
+    busy.release_step_lease!(busy_token)
+
+    assert_nil import.undo_blocked_reason
+    assert import.undo!
+  end
+
+  test "the later-overlap answer refreshes after reload" do
+    first = start_run
+    first.update!(status: "completed", started_at: 2.hours.ago, finished_at: 1.hour.ago,
+      stats: { "conversations" => [ { "id" => "CCHAN", "target" => { "action" => "create" } } ] })
+    assert_nil first.undo_blocked_reason
+
+    later = start_run
+    later.update!(status: "completed", started_at: 1.hour.ago, finished_at: Time.current,
+      stats: { "conversations" => [ { "id" => "CCHAN", "target" => { "action" => "merge" } } ] })
+
+    first.reload
+
+    assert_equal "A later import (##{later.id}) also imported some of these conversations; undo that one first.",
+      first.undo_blocked_reason
+    assert_not first.undoable?
   end
 
   test "failed and cancelled runs kick the next queued run" do

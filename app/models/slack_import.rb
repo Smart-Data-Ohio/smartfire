@@ -34,6 +34,9 @@ class SlackImport < ApplicationRecord
   # alone: its job is still pending. Past the window the job is presumed
   # lost and the sweeper enqueues again.
   ENQUEUE_COOLDOWN = 5.minutes
+  # The state keys a step lease occupies: the timestamp that ages it out
+  # plus the random token identifying the job that holds it.
+  STEP_LEASE_KEYS = %w[ step_started_at step_lease_token ].freeze
 
   # Contract used by the controllers. The engine fills in the bodies
   # (normalizing options, enqueueing the step and undo jobs); the
@@ -55,23 +58,62 @@ class SlackImport < ApplicationRecord
     end
   end
 
-  # Single-flight claim: flips one queued run to running only when no other
-  # run is running or undoing, in a single conditional UPDATE. Imports and
-  # undos never interleave. Returns true when this run won the claim.
+  # Runs still finishing under a fresh step lease after their status
+  # flipped underneath the in-flight job: cancel! flips a running run
+  # to cancelled mid-step, and a run failed the same way keeps its
+  # lease too. Leases are only acquired for running or undoing runs,
+  # and finishing strips them (see step_finishing and the undoer's
+  # final step), so cancelled and failed are the only other statuses
+  # that can hold one — callers cover running, undoing and queued by
+  # status. The status predicate lets the index narrow the scan
+  # before any state JSON is parsed.
+  #
+  # A class method rather than a scope so the cutoff goes through the
+  # private lease_stamp helper: scope bodies run on the relation,
+  # which only delegates public methods back to the model.
+  def self.with_fresh_lease
+    where(status: %w[ cancelled failed ])
+      .where("json_extract(state, '$.step_started_at') > ?", lease_stamp(STALE_HEARTBEAT.ago))
+  end
+
+  # The one formatter for step-lease stamps written into state and the
+  # cutoffs compared against them in SQLite: UTC with microsecond
+  # precision. Jobs run in UTC but web requests run under the user's
+  # zone (see SetTimeZone), and a local offset suffix (…+09:00) would
+  # corrupt the lexical string comparison.
+  def self.lease_stamp(time)
+    time.utc.iso8601(6)
+  end
+  private_class_method :lease_stamp
+  # Runs that block new claims: a step or undo job may still be
+  # executing for them — running or undoing by status, or holding a
+  # fresh step lease.
+  scope :claim_blocking, -> { where(status: %w[ running undoing ]).or(with_fresh_lease) }
+  # Runs that block an undo claim: another run still queued, running
+  # or undoing, or holding a fresh step lease. Separate from
+  # claim_blocking: the step claim and the kick must not block on a
+  # queued status, or the claimant would block itself.
+  scope :undo_blocking, -> { where(status: %w[ queued running undoing ]).or(with_fresh_lease) }
+
+  # Single-flight claim: flips one queued run to running only when no
+  # other run is running or undoing and none holds a fresh step lease,
+  # in a single conditional UPDATE. Imports and undos never interleave.
+  # Returns true when this run won the claim.
   def self.claim_running!(id)
     now = Time.current
     where(id: id, status: "queued")
-      .where("NOT EXISTS (?)", where(status: %w[ running undoing ]).select("1"))
+      .where("NOT EXISTS (?)", claim_blocking.select("1"))
       .update_all(status: "running", started_at: now, heartbeat_at: now,
         updated_at: now) == 1
   end
 
-  # Starts the oldest queued run when nothing is running or undoing and no
-  # job is already pending for it. Called whenever a run finishes and by
-  # the periodic sweeper, so queued runs hand off promptly without ever
-  # stacking a second job behind one already pending.
+  # Starts the oldest queued run when nothing is running or undoing, no
+  # run holds a fresh step lease, and no job is already pending for it.
+  # Called whenever a run finishes and by the periodic sweeper, so queued
+  # runs hand off promptly without ever stacking a second job behind one
+  # already pending.
   def self.kick_next_queued!
-    return if where(status: %w[ running undoing ]).exists?
+    return if claim_blocking.exists?
 
     oldest = where(status: "queued").order(:created_at, :id).first
     return if oldest.nil? || oldest.step_job_pending?
@@ -144,7 +186,8 @@ class SlackImport < ApplicationRecord
 
   # Why this run cannot be undone right now, or nil when undo may proceed
   # (or the run is not an undoable kind at all). Undo never interleaves
-  # with another queued, running or undoing run.
+  # with another queued, running or undoing run, or with a run whose
+  # step job may still be executing under a fresh step lease.
   def undo_blocked_reason
     return nil unless undo_eligible?
 
@@ -155,8 +198,12 @@ class SlackImport < ApplicationRecord
         "A later import by #{later.user.name} also imported some of these conversations. " \
           "It has to be undone first; ask them or an administrator."
       end
+    elsif step_lease_fresh?
+      "This import is still finishing. Wait for it to finish, then undo."
     elsif self.class.where(status: %w[ queued running undoing ]).where.not(id: id).exists?
       "Another import is queued or running. Wait for it to finish, then undo."
+    elsif self.class.with_fresh_lease.where.not(id: id).exists?
+      "Another import is still finishing. Wait for it to finish, then undo."
     end
   end
 
@@ -171,10 +218,10 @@ class SlackImport < ApplicationRecord
   end
 
   # Returns false, with no status change, when the run can't be undone or
-  # another run is queued, running or undoing. The claim is a single
-  # conditional UPDATE, so two undos racing each other still serialize,
-  # and a new run (which always starts queued) can't slip in between the
-  # later-import check and the claim.
+  # another run is queued, running or undoing, or holds a fresh step
+  # lease. The claim is a single conditional UPDATE, so two undos racing
+  # each other still serialize, and a new run (which always starts
+  # queued) can't slip in between the later-import check and the claim.
   def undo!
     return false unless undoable?
     return false if undo_blocked_reason
@@ -183,7 +230,7 @@ class SlackImport < ApplicationRecord
     stats = self.stats.merge("phase" => "undo")
     claimed = self.class.where(id: id, status: %w[ completed failed cancelled ])
       .where("NOT EXISTS (?)",
-        self.class.where(status: %w[ queued running undoing ]).where.not(id: id).select("1"))
+        self.class.undo_blocking.where.not(id: id).select("1"))
       .update_all(status: "undoing", state: { "phase" => "undo" }, stats: stats,
         heartbeat_at: now, finished_at: nil, updated_at: now) == 1
     return false unless claimed
@@ -222,6 +269,81 @@ class SlackImport < ApplicationRecord
     update!(state: state.except("enqueued_at"))
   end
 
+  # Records the step lease: the run is busy while a step or undo job
+  # executes. One conditional UPDATE on the expected status and on no
+  # other job holding a fresh lease, so a job whose run was cancelled
+  # underneath it never starts writing and two overlapping jobs (old
+  # and new containers during a deploy) never both run the step. The
+  # UPDATE touches only the lease keys, so taking over a stale lease
+  # never clobbers progress the previous holder saved. Returns the
+  # lease token, or false when the status already left the expected
+  # one or another job's lease is still fresh.
+  def acquire_step_lease!(expected_status)
+    now = Time.current
+    token = SecureRandom.hex(8)
+    stamp = self.class.send(:lease_stamp, now)
+    claimed = self.class.where(id: id, status: expected_status)
+      .where("json_extract(state, '$.step_started_at') IS NULL OR " \
+        "json_extract(state, '$.step_started_at') <= ?",
+        self.class.send(:lease_stamp, STALE_HEARTBEAT.ago))
+      .update_all([ "state = json_set(state, '$.step_started_at', ?, '$.step_lease_token', ?), " \
+        "heartbeat_at = ?, updated_at = ?", stamp, token, now, now ]) == 1
+    if claimed
+      self.state = state.merge("step_started_at" => stamp, "step_lease_token" => token)
+      self.heartbeat_at = now
+      token
+    else
+      false
+    end
+  end
+
+  # Renews the step lease stamp, but only when token still holds it:
+  # one conditional UPDATE, so a job never extends another job's
+  # lease. Long steps call this wherever they refresh the heartbeat,
+  # so the lease cannot age out from under a live job while its
+  # heartbeat stays fresh. Touches only the stamp (plus heartbeat_at
+  # and updated_at), never other state keys. Returns true when the
+  # lease was still held.
+  def refresh_step_lease!(token)
+    return false if token.blank?
+
+    now = Time.current
+    stamp = self.class.send(:lease_stamp, now)
+    refreshed = self.class.where(id: id)
+      .where("json_extract(state, '$.step_lease_token') = ?", token.to_s)
+      .update_all([ "state = json_set(state, '$.step_started_at', ?), " \
+        "heartbeat_at = ?, updated_at = ?", stamp, now, now ]) == 1
+    if refreshed
+      self.state = state.merge("step_started_at" => stamp)
+      self.heartbeat_at = now
+    end
+    refreshed
+  end
+
+  # Clears the step lease, but only when token still holds it: one
+  # conditional UPDATE, so a job never releases another job's lease.
+  # Returns true when this token's lease was cleared.
+  def release_step_lease!(token)
+    return false if token.blank?
+
+    cleared = self.class.where(id: id)
+      .where("json_extract(state, '$.step_lease_token') = ?", token.to_s)
+      .update_all([ "state = json_remove(state, '$.step_started_at', '$.step_lease_token'), " \
+        "updated_at = ?", Time.current ]) == 1
+    self.state = state.except(*STEP_LEASE_KEYS) if cleared
+    cleared
+  end
+
+  # Whether a step or undo job may still be executing for this run: it
+  # recorded step_started_at when it started and clears it when it ends.
+  # Stale past the heartbeat window, since a crashed job never clears it.
+  def step_lease_fresh?
+    started_at = state["step_started_at"]
+    started_at.present? && Time.iso8601(started_at.to_s) > STALE_HEARTBEAT.ago
+  rescue ArgumentError, Date::Error
+    false
+  end
+
   def finished?
     !active?
   end
@@ -251,6 +373,12 @@ class SlackImport < ApplicationRecord
     self.class.kick_next_queued!
   end
 
+  # Reloading drops the memoized later-overlap scan with the attributes.
+  def reload(*)
+    remove_instance_variable(:@later_overlapping_import) if defined?(@later_overlapping_import)
+    super
+  end
+
   private
     def undo_eligible?
       import? && (completed? || failed? || cancelled?)
@@ -260,7 +388,14 @@ class SlackImport < ApplicationRecord
     # touched any conversation this run touched (from the runs' per-
     # conversation stats, plus this run's own conversation mappings, which
     # cover a crash between creating a room and saving its target).
+    # Memoized per instance: undo_blocked_reason, undoable? and undo!
+    # share one scan within a request.
     def later_overlapping_import
+      return @later_overlapping_import if defined?(@later_overlapping_import)
+      @later_overlapping_import = find_later_overlapping_import
+    end
+
+    def find_later_overlapping_import
       return nil if started_at.nil?
 
       mine = (touched_conversation_ids +
