@@ -133,7 +133,9 @@ re-reads the whole range and the mapping skips duplicates. Each conversation's
 bounds are fixed when the run starts that conversation and reused for its
 history and thread replies on every later step, so a long conversation keeps
 its full window however many steps it spans. Threads found on catch-up pages
-are re-read in full; only new replies are created.
+are re-read in full; only new replies are created. When a mapped thread or
+its parent message was deleted since the import, the run skips that thread's
+new replies with one issue and continues, the same as for a deleted room.
 
 ## Undo
 

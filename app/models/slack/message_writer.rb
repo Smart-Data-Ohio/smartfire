@@ -76,22 +76,33 @@ module Slack
 
       ActiveRecord::Base.no_touching do
         Message.transaction do
-          replies.each do |planned|
-            if direct
-              created = create_message!(room, planned,
-                thread: nil, reply_to: parent_message_id)
-            else
-              thread = ensure_thread(room, conversation_id, parent_ts, parent_message_id, thread_state)
-              created = create_message!(room, planned, thread:, reply_to: nil)
-              counts["threads"] += 1 if thread_state["created_now"]
-              thread_state["created_now"] = false
-              follow_thread(thread, planned[:author], conversation_id:, parent_ts:)
+          thread = nil
+          skipped_thread = false
+          if !direct && replies.any?
+            thread = ensure_thread(room, conversation_id, parent_ts, parent_message_id, thread_state)
+            if thread.nil?
+              counts["skipped"] += replies.size
+              skipped_thread = true
             end
-            counts["replies"] += 1
-            counts["files_linked"] += planned[:files_linked]
-            record_truncation(conversation_id, planned)
-            write_reactions(room, conversation_id, created, planned[:source], users:, counts:)
-            write_pin(room, conversation_id, created, planned[:source], counts:)
+          end
+
+          unless skipped_thread
+            replies.each do |planned|
+              if direct
+                created = create_message!(room, planned,
+                  thread: nil, reply_to: parent_message_id)
+              else
+                created = create_message!(room, planned, thread:, reply_to: nil)
+                counts["threads"] += 1 if thread_state["created_now"]
+                thread_state["created_now"] = false
+                follow_thread(thread, planned[:author], conversation_id:, parent_ts:)
+              end
+              counts["replies"] += 1
+              counts["files_linked"] += planned[:files_linked]
+              record_truncation(conversation_id, planned)
+              write_reactions(room, conversation_id, created, planned[:source], users:, counts:)
+              write_pin(room, conversation_id, created, planned[:source], counts:)
+            end
           end
         end
       end
@@ -396,16 +407,24 @@ module Slack
           slack_kind: "pin", slack_key: "#{conversation_id}:#{ts}")
       end
 
+      # The thread for these replies, created and mapped on first use.
+      # Returns nil when the mapped thread or its parent message is gone
+      # (a user deleted it since the import): the caller then skips the
+      # thread's new replies with a single issue and the run continues,
+      # instead of failing every later run on a missing row.
       def ensure_thread(room, conversation_id, parent_ts, parent_message_id, thread_state)
-        if thread_state["thread_id"].present?
-          return ChannelThread.find(thread_state["thread_id"])
+        unless Message.exists?(parent_message_id)
+          return skip_deleted_thread(conversation_id, parent_ts, thread_state,
+            "Parent message #{conversation_id}:#{parent_ts} was deleted after import; skipped its thread's new replies")
         end
 
-        record = SlackImport::Record.find_by(slack_workspace_id: @workspace.id,
-          slack_kind: "thread", slack_key: "#{conversation_id}:#{parent_ts}")
-        if record
-          thread_state["thread_id"] = record.record_id
-          return ChannelThread.find(record.record_id)
+        thread_id = thread_state["thread_id"] ||=
+          SlackImport::Record.find_by(slack_workspace_id: @workspace.id,
+            slack_kind: "thread", slack_key: "#{conversation_id}:#{parent_ts}")&.record_id
+        if thread_id
+          return ChannelThread.find_by(id: thread_id) ||
+            skip_deleted_thread(conversation_id, parent_ts, thread_state,
+              "Thread #{conversation_id}:#{parent_ts} was deleted after import; skipped its new replies")
         end
 
         parent = Message.find(parent_message_id)
@@ -417,6 +436,14 @@ module Slack
         thread_state["thread_id"] = thread.id
         thread_state["created_now"] = true
         thread
+      end
+
+      def skip_deleted_thread(conversation_id, parent_ts, thread_state, message)
+        unless thread_state["deleted_reported"]
+          thread_state["deleted_reported"] = true
+          @run.record_issue!("warning", "#{conversation_id}:#{parent_ts}", message)
+        end
+        nil
       end
 
       # Reply authors follow the thread when they belong to the room;

@@ -225,6 +225,77 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
       query: hash_including({ "channel" => "CCHAN", "oldest" => expected_oldest })
   end
 
+  test "catch-up skips a thread whose mapped thread was deleted" do
+    drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+
+    general = Rooms::Open.find_by!(name: "general")
+    parent = general.messages.find_by!(created_at: Time.at(Rational("1700000002.000002")))
+    assert_not_nil parent.channel_thread
+    parent.channel_thread.destroy!
+
+    WebMock.reset!
+    stub_slack_workspace!(history_overrides: {
+      "CCHAN" => [
+        { ok: true, messages: [
+          { "type" => "message", "user" => "U001", "text" => "Fresh news",
+            "ts" => "1700000099.000099" },
+          JSON.parse(slack_fixture("history_CCHAN_p2.json"))["messages"]
+            .find { |message| message["ts"] == "1700000002.000002" }
+        ], has_more: false, response_metadata: { next_cursor: "" } }
+      ]
+    }, replies_overrides: {
+      "CCHAN" => { ok: true, messages: [
+        { "type" => "message", "user" => "U002", "text" => "parent",
+          "ts" => "1700000002.000002" },
+        { "type" => "message", "user" => "U001", "text" => "Late reply",
+          "ts" => "1700000200.000200", "thread_ts" => "1700000002.000002" }
+      ], has_more: false, response_metadata: { next_cursor: "" } }
+    })
+
+    run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+
+    assert_equal "completed", run.status
+    assert_equal 1, run.stats["counts"]["messages"]
+    assert_equal 0, run.stats["counts"]["replies"]
+    assert_empty general.messages.where(created_at: Time.at(Rational("1700000200.000200")))
+    assert_equal 1, run.issues.count { |issue| issue.message.include?("was deleted") }
+  end
+
+  test "import skips a thread whose parent message was deleted mid-run" do
+    parent_ts = "1700000002.000002"
+    reply_ts = "1700000101.000101"
+    WebMock.reset!
+    stub_slack_workspace!(history_overrides: {
+      "CCHAN" => [ { ok: true, messages: [
+        { "type" => "message", "user" => "U001", "text" => "parent",
+          "ts" => parent_ts, "reply_count" => 1 }
+      ], has_more: false, response_metadata: { next_cursor: "" } } ]
+    }, replies_overrides: {
+      "CCHAN" => { ok: true, messages: [
+        { "type" => "message", "user" => "U001", "text" => "parent", "ts" => parent_ts },
+        { "type" => "message", "user" => "U002", "text" => "reply",
+          "ts" => reply_ts, "thread_ts" => parent_ts }
+      ], has_more: false, response_metadata: { next_cursor: "" } }
+    })
+
+    run = start_run(options: { "conversation_ids" => %w[ CCHAN ] })
+    deleted = false
+    50.times do
+      break if run.reload.finished?
+      SlackImport::StepJob.perform_now(run.id)
+      run.reload
+      if !deleted && run.running? && Array(run.state.dig("convo", "thread_queue")).any?
+        Message.find_by!(created_at: Time.at(Rational(parent_ts))).destroy!
+        deleted = true
+      end
+    end
+
+    assert deleted, "expected to delete the parent while its thread was queued"
+    assert_equal "completed", run.status
+    assert_equal 1, run.issues.count { |issue| issue.message.include?("was deleted") }
+    assert_empty Message.where(created_at: Time.at(Rational(reply_ts)))
+  end
+
   test "a multi-year conversation spanning several steps imports everything" do
     WebMock.reset!
     stub_slack_workspace!(history_overrides: {
