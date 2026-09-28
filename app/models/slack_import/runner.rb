@@ -486,21 +486,40 @@ class SlackImport::Runner
     # the mapping row's run says nothing about coverage. Undone, failed and
     # cancelled runs are gone by status, date-bounded runs by their oldest
     # bound, and skipped conversations never covered anything.
+    #
+    # A full import F skips messages an earlier run already mapped, so its
+    # coverage of a conversation also depends on those earlier runs' rows.
+    # When a run that touched the conversation and was running before F
+    # finished is undone after F finished, F's coverage no longer holds:
+    # the conversation is re-read in full. Undo is last-in, first-out per
+    # conversation (SlackImport#undoable?), so this only guards against
+    # state changed behind the app's back.
     def full_covered_conversation_ids
       @full_covered_conversation_ids ||= begin
-        ids = Set.new
-        SlackImport.where(slack_workspace_id: @workspace.id,
-          mode: "import", status: "completed").where.not(id: @run.id)
-          .select(:id, :options, :stats).each do |run|
-            next if run.options["oldest"].present?
+        runs = SlackImport.where(slack_workspace_id: @workspace.id, mode: "import")
+          .where.not(id: @run.id).select(:id, :status, :options, :stats, :started_at, :finished_at).to_a
+        undone = runs.select(&:undone?)
 
-            Array(run.stats["conversations"]).each do |entry|
-              if entry["done"] && entry.dig("target", "action") != "skip"
-                ids << entry["id"]
-              end
-            end
+        ids = Set.new
+        runs.select(&:completed?).each do |run|
+          next if run.options["oldest"].present? || run.finished_at.nil?
+
+          Array(run.stats["conversations"]).each do |entry|
+            next unless entry["done"] && entry.dig("target", "action") != "skip"
+            next if undone_under?(run, entry["id"], undone)
+
+            ids << entry["id"]
           end
+        end
         ids
+      end
+    end
+
+    def undone_under?(full_run, conversation_id, undone_runs)
+      undone_runs.any? do |undone|
+        undone.started_at.present? && undone.finished_at.present? &&
+          undone.started_at < full_run.finished_at && undone.finished_at > full_run.finished_at &&
+          undone.touched_conversation_ids.include?(conversation_id)
       end
     end
 

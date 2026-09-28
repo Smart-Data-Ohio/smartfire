@@ -133,23 +133,43 @@ class SlackImport < ApplicationRecord
   end
 
   # Imports (not dry runs) that stopped can be undone: everything the run
-  # created is removed; records it only matched are left alone.
+  # created is removed; records it only matched are left alone. Undo is
+  # last-in, first-out per conversation: a later import that touched any of
+  # the same conversations skipped this run's messages as already mapped,
+  # so undoing this one first would leave a hole the later run's coverage
+  # hides from every catch-up. That later run must be undone first.
   def undoable?
-    import? && (completed? || failed? || cancelled?)
+    undo_eligible? && later_overlapping_import.nil?
   end
 
-  # Why this run cannot be undone right now, or nil when undo may proceed.
-  # Undo never interleaves with another queued, running or undoing run.
+  # Why this run cannot be undone right now, or nil when undo may proceed
+  # (or the run is not an undoable kind at all). Undo never interleaves
+  # with another queued, running or undoing run.
   def undo_blocked_reason
-    return nil unless undoable?
-    return nil unless self.class.where(status: %w[ queued running undoing ]).where.not(id: id).exists?
+    return nil unless undo_eligible?
 
-    "Another import is queued or running. Wait for it to finish, then undo."
+    if (later = later_overlapping_import)
+      "A later import (##{later.id}) also imported some of these conversations; undo that one first."
+    elsif self.class.where(status: %w[ queued running undoing ]).where.not(id: id).exists?
+      "Another import is queued or running. Wait for it to finish, then undo."
+    end
+  end
+
+  # The Slack conversations this run wrote into: every conversation whose
+  # target resolved to a room (created or merged, including a room an
+  # earlier run's mapping pointed at). Skipped and never-reached
+  # conversations touched nothing.
+  def touched_conversation_ids
+    Array(stats["conversations"]).filter_map do |entry|
+      entry["id"] if entry.dig("target", "action").in?(%w[ create merge ])
+    end
   end
 
   # Returns false, with no status change, when the run can't be undone or
   # another run is queued, running or undoing. The claim is a single
-  # conditional UPDATE, so two undos racing each other still serialize.
+  # conditional UPDATE, so two undos racing each other still serialize,
+  # and a new run (which always starts queued) can't slip in between the
+  # later-import check and the claim.
   def undo!
     return false unless undoable?
     return false if undo_blocked_reason
@@ -225,4 +245,26 @@ class SlackImport < ApplicationRecord
     update!(status: "failed", error: message, finished_at: Time.current)
     self.class.kick_next_queued!
   end
+
+  private
+    def undo_eligible?
+      import? && (completed? || failed? || cancelled?)
+    end
+
+    # The most recent import that started after this one, is not undone, and
+    # touched any conversation this run touched (from the runs' per-
+    # conversation stats, plus this run's own conversation mappings, which
+    # cover a crash between creating a room and saving its target).
+    def later_overlapping_import
+      return nil if started_at.nil?
+
+      mine = (touched_conversation_ids +
+        records.where(slack_kind: "conversation").pluck(:slack_key)).to_set
+      return nil if mine.empty?
+
+      self.class.where(slack_workspace_id:, mode: "import").where.not(id:).where.not(status: "undone")
+        .where("started_at > :at OR (started_at = :at AND id > :id)", at: started_at, id:)
+        .order(started_at: :desc, id: :desc).select(:id, :stats)
+        .detect { |run| run.touched_conversation_ids.any? { |conversation_id| mine.include?(conversation_id) } }
+    end
 end

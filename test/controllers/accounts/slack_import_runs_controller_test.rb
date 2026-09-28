@@ -509,6 +509,30 @@ class Accounts::SlackImportRunsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/queued or running/, response.body)
   end
 
+  test "undo is blocked with a reason while a later import covers the same conversations" do
+    stats = slack_stats_shape(conversations: [ slack_conversation_entry(id: "C111") ])
+    import = create_slack_import!(user: @david, mode: "import", status: "completed",
+      started_at: 2.hours.ago, stats:)
+    later = create_slack_import!(user: users(:kevin), kind: "personal", mode: "import",
+      status: "completed", started_at: 1.hour.ago, stats: slack_stats_shape(conversations: [
+        slack_conversation_entry(id: "C111", target: { "action" => "merge", "room_id" => nil, "room_name" => "general" })
+      ]))
+
+    post undo_account_slack_import_run_path(import)
+
+    assert_redirected_to account_slack_import_run_path(import)
+    assert_equal "completed", import.reload.status
+    assert_match(/later import \(##{later.id}\)/, flash[:alert])
+
+    get account_slack_import_run_path(import)
+    assert_select "button[disabled]", "Undo import"
+    assert_select "p", /A later import \(##{later.id}\) also imported some of these conversations; undo that one first/
+
+    get account_slack_import_run_path(later)
+    assert_select "button[disabled]", count: 0
+    assert_select "button", "Undo import"
+  end
+
   test "cancel and undo refuse finished and non-undoable runs" do
     finished = create_slack_import!(user: @david, status: "completed")
     dry_run = create_slack_import!(user: @david, status: "completed")

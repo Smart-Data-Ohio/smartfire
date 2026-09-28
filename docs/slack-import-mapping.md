@@ -131,6 +131,11 @@ picks up late thread replies without re-reading all history. Coverage is
 decided from the runs themselves — a conversation is covered when a completed
 full import finished it (its run stats mark it done) — not from which run owns
 its mapping row, since a full import reuses the test import's mapping. A
+full import's coverage also rests on the earlier runs whose messages it
+skipped as already mapped: if a run that touched the conversation and was
+running before the full import finished is undone afterwards, the full
+import no longer counts and the conversation is re-read in full (undo order
+normally rules this out; see below). A
 date-bounded test import never opens the window, so the later full import
 re-reads the whole range and the mapping skips duplicates. Each conversation's
 bounds are fixed when the run starts that conversation and reused for its
@@ -162,6 +167,15 @@ memberships and surviving placeholder users — so a later run reuses the
 survivors instead of duplicating them. A user mapping goes only with its
 user row: deactivated and bot placeholders have no email, so dropping the
 mapping would make a re-import mint a duplicate.
+
+Undo is last-in, first-out per conversation. A run can be undone only when
+no later import that is not undone — workspace or personal, finished or
+stopped — touched any of the same conversations (decided from each run's
+per-conversation stats). A later import skipped this run's messages as
+already mapped, so undoing the earlier run first would leave a hole that
+the later run's coverage hides from every catch-up. The run page shows
+"A later import (#id) also imported some of these conversations; undo that
+one first" with the Undo button disabled until that run is undone.
 
 One import or undo runs at a time across the workspace. Undo waits while any
 other run is queued, running or undoing, and the run page says so until the

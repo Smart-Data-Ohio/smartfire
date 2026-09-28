@@ -368,6 +368,97 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
       query: hash_including({ "channel" => "CCHAN", "oldest" => expected_oldest }), times: 2
   end
 
+  # Three years of CCHAN history, newest first: a test import bounded to
+  # the middle window takes only "summer 2023".
+  def three_window_pages
+    [
+      history_page([ slack_message("1719792000.000001", "summer 2024") ], cursor: "page-2"),
+      history_page([ slack_message("1685577600.000002", "summer 2023") ], cursor: "page-3"),
+      history_page([ slack_message("1640995200.000003", "new year 2022") ])
+    ]
+  end
+
+  # History stubs hand out their pages once, so every run re-stubs (which
+  # also clears the recorded requests).
+  def stub_three_windows!
+    WebMock.reset!
+    stub_slack_workspace!(history_overrides: { "CCHAN" => three_window_pages })
+  end
+
+  def middle_window_options
+    { "conversation_ids" => %w[ CCHAN ],
+      "oldest" => "2023-05-01T00:00:00Z", "latest" => "2023-07-01T00:00:00Z" }
+  end
+
+  def cchan_history_requests
+    WebMock::RequestRegistry.instance.requested_signatures.hash.keys.select do |signature|
+      signature.uri.path == "/api/conversations.history" &&
+        URI.decode_www_form(signature.uri.query.to_s).to_h["channel"] == "CCHAN"
+    end.map { |signature| URI.decode_www_form(signature.uri.query.to_s).to_h }
+  end
+
+  test "undo is last-in, first-out per conversation" do
+    stub_three_windows!
+    test_run = drive_import_to_completion(start_run(options: middle_window_options))
+    assert_equal 1, test_run.stats["counts"]["messages"]
+    stub_three_windows!
+    full_run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+    assert_equal 2, full_run.stats["counts"]["messages"]
+    # A later run over other conversations never blocks the test import.
+    other_run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CARCH ] }))
+    assert other_run.undoable?
+
+    assert_not test_run.undoable?
+    assert_equal "A later import (##{full_run.id}) also imported some of these conversations; undo that one first.",
+      test_run.undo_blocked_reason
+    assert_not test_run.undo!
+    assert_equal "completed", test_run.reload.status
+    assert full_run.undoable?
+
+    assert full_run.undo!
+    drive_undo_to_completion(full_run)
+    assert test_run.reload.undoable?
+    assert_nil test_run.undo_blocked_reason
+    assert test_run.undo!
+    drive_undo_to_completion(test_run)
+    assert_nil Rooms::Open.find_by(name: "general")
+
+    stub_three_windows!
+    reimport = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+
+    assert_equal "completed", reimport.status
+    assert_equal 3, reimport.stats["counts"]["messages"]
+    assert_equal [ "new year 2022", "summer 2023", "summer 2024" ],
+      Rooms::Open.find_by!(name: "general").messages.order(:created_at).pluck(:markdown_source)
+    assert_not_empty cchan_history_requests
+    assert cchan_history_requests.none? { |params| params.key?("oldest") },
+      "expected the re-import to read CCHAN's whole history"
+  end
+
+  test "a full import's coverage ends when an earlier run under it is undone" do
+    stub_three_windows!
+    test_run = drive_import_to_completion(start_run(options: middle_window_options))
+    stub_three_windows!
+    full_run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+    assert_equal "completed", full_run.status
+    # Bypass the last-in, first-out rule, as a direct database change would.
+    test_run.update_columns(status: "undoing", state: { "phase" => "undo" }, finished_at: nil)
+    travel 1.minute do
+      drive_undo_to_completion(test_run)
+    end
+    general = Rooms::Open.find_by!(name: "general")
+    assert_empty general.messages.where(created_at: Time.at(Rational("1685577600.000002")))
+
+    stub_three_windows!
+    travel 2.minutes do
+      drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+    end
+
+    assert_equal 1, general.messages.where(created_at: Time.at(Rational("1685577600.000002"))).count
+    assert cchan_history_requests.none? { |params| params.key?("oldest") },
+      "expected CCHAN to be re-read in full, not from the catch-up window"
+  end
+
   test "per-conversation record lookups seek the identity index" do
     plan = ActiveRecord::Base.connection.exec_query(
       "EXPLAIN QUERY PLAN #{SlackImport::Record.for_conversation(@workspace.id, "message", "CCHAN").to_sql}"
