@@ -10,6 +10,7 @@ class User::StatusSettingsTest < ActiveSupport::TestCase
     assert_not @user.dnd_enabled?
     assert_not @user.quiet_hours_enabled?
     assert_equal "system", @user.theme
+    assert_equal "default", @user.text_size
     assert_nil @user.time_zone
   end
 
@@ -22,6 +23,10 @@ class User::StatusSettingsTest < ActiveSupport::TestCase
     assert_not @user.valid?
 
     @user.theme = "system"
+    @user.text_size = "huge"
+    assert_not @user.valid?
+
+    @user.text_size = "larger"
     @user.time_zone = "Narnia"
     assert_not @user.valid?
 

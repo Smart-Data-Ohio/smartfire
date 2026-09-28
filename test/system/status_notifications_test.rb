@@ -92,6 +92,19 @@ class StatusNotificationsTest < ApplicationSystemTestCase
     assert_selector "meta[name='color-scheme'][content='dark']", visible: :all
   end
 
+  test "switching the text size rescales the page" do
+    visit user_profile_url
+    assert_selector "html[data-text-size='default']", visible: :all
+
+    choose "user_text_size_larger"
+    form = find("#user_text_size_larger").ancestor("form")
+    within(form) { find("button[type='submit']").click }
+    wait_for_condition("the text size was not saved") { users(:david).reload.text_size == "larger" }
+
+    assert_selector "html[data-text-size='larger']", visible: :all
+    assert_equal "18px", page.evaluate_script("getComputedStyle(document.documentElement).fontSize")
+  end
+
   test "button icons follow the manual theme, not the OS" do
     users(:david).update!(theme: "light")
 

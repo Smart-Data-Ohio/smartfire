@@ -46,6 +46,11 @@ module Users::PresenceHelper
     User::StatusSettings::THEMES.include?(theme) ? theme : "system"
   end
 
+  def user_text_size
+    text_size = Current.user&.text_size
+    User::StatusSettings::TEXT_SIZES.include?(text_size) ? text_size : "default"
+  end
+
   def theme_color_scheme_meta_content
     case user_theme
     when "light" then "light"
