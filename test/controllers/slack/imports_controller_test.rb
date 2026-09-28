@@ -182,6 +182,28 @@ class Slack::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "D111" ], run.options["conversation_ids"]
   end
 
+  test "personal import never passes room targets or date bounds" do
+    workspace = create_slack_workspace!(team_id: SLACK_TEAM_ID)
+    connect_slack!(@kevin, workspace:)
+    dry_run = create_slack_import!(workspace:, user: @kevin, kind: "personal",
+      status: "completed",
+      stats: slack_stats_shape(conversations: [
+        slack_conversation_entry(id: "D111", name: "dm-with-jz", type: "im")
+      ]))
+
+    post slack_imports_path, params: { mode: "import", dry_run_id: dry_run.id,
+      conversation_ids: [ "D111" ],
+      room_targets: { "D111" => rooms(:pets).id.to_s },
+      oldest: "2026-09-01", latest: "2026-09-10" }
+
+    run = SlackImport.last
+    assert_redirected_to slack_import_path(run)
+    assert_equal [ "D111" ], run.options["conversation_ids"]
+    assert_nil run.options["room_targets"]
+    assert_nil run.options["oldest"]
+    assert_nil run.options["latest"]
+  end
+
   test "personal import needs a completed preview with checked conversations" do
     workspace = create_slack_workspace!(team_id: SLACK_TEAM_ID)
     connect_slack!(@kevin, workspace:)

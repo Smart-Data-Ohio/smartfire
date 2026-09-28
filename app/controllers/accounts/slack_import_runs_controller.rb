@@ -80,6 +80,12 @@ class Accounts::SlackImportRunsController < ApplicationController
       return redirect_to plan_account_slack_import_run_path(@run), alert: "Check at least one conversation to import."
     end
 
+    known_ids = Array(@run.stats["conversations"]).map { |entry| entry["id"].to_s }
+    conversation_ids &= known_ids
+    if conversation_ids.empty?
+      return redirect_to plan_account_slack_import_run_path(@run), alert: "Those conversations are not in the dry run."
+    end
+
     options = {
       "conversation_ids" => conversation_ids,
       "include_private" => @run.options["include_private"] != false,
@@ -165,10 +171,11 @@ class Accounts::SlackImportRunsController < ApplicationController
     def room_targets_from(params, conversation_ids)
       nested = params[:room_targets]
       targets = nested.is_a?(ActionController::Parameters) ? nested.to_unsafe_h : {}
+      room_ids = Room.alive.where(type: %w[ Rooms::Open Rooms::Closed ]).pluck(:id).to_set
       targets.slice(*conversation_ids).transform_values do |value|
         case value.to_s
         when "new", "skip" then value.to_s
-        when /\A\d+\z/ then value.to_i
+        when /\A\d+\z/ then room_ids.include?(value.to_i) ? value.to_i : nil
         end
       end.compact
     end

@@ -305,6 +305,63 @@ class Accounts::SlackImportRunsControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ "C111" => room.id }, options["room_targets"])
   end
 
+  test "starting an import keeps only conversations in the dry run" do
+    workspace = create_slack_workspace!(team_id: SLACK_TEAM_ID)
+    connect_slack!(@david, workspace:)
+    dry_run = create_slack_import!(workspace:, user: @david, status: "completed",
+      stats: slack_stats_shape(conversations: [ slack_conversation_entry(id: "C111") ]))
+
+    post start_import_account_slack_import_run_path(dry_run), params: {
+      preset: "full", conversation_ids: [ "C111", "C999" ],
+      room_targets: { "C111" => "new", "C999" => "new" }
+    }
+
+    run = SlackImport.last
+    assert_redirected_to account_slack_import_run_path(run)
+    assert_equal [ "C111" ], run.options["conversation_ids"]
+    assert_equal({ "C111" => "new" }, run.options["room_targets"])
+  end
+
+  test "starting an import with only unknown conversations is rejected" do
+    workspace = create_slack_workspace!(team_id: SLACK_TEAM_ID)
+    connect_slack!(@david, workspace:)
+    dry_run = create_slack_import!(workspace:, user: @david, status: "completed",
+      stats: slack_stats_shape)
+
+    post start_import_account_slack_import_run_path(dry_run),
+      params: { preset: "full", conversation_ids: [ "C999" ] }
+
+    assert_redirected_to plan_account_slack_import_run_path(dry_run)
+    assert_match(/not in the dry run/, flash[:alert])
+    assert_equal 1, SlackImport.count
+  end
+
+  test "starting an import drops room targets outside alive open and closed rooms" do
+    workspace = create_slack_workspace!(team_id: SLACK_TEAM_ID)
+    connect_slack!(@david, workspace:)
+    direct = rooms(:david_and_kevin)
+    deleted = rooms(:designers)
+    deleted.update!(deleted_at: Time.current)
+    open_room = rooms(:pets)
+    dry_run = create_slack_import!(workspace:, user: @david, status: "completed",
+      stats: slack_stats_shape(conversations: [
+        slack_conversation_entry(id: "C111"), slack_conversation_entry(id: "C222"),
+        slack_conversation_entry(id: "C333"), slack_conversation_entry(id: "C444"),
+        slack_conversation_entry(id: "C555")
+      ]))
+
+    post start_import_account_slack_import_run_path(dry_run), params: {
+      preset: "full", conversation_ids: %w[ C111 C222 C333 C444 C555 ],
+      room_targets: {
+        "C111" => direct.id.to_s, "C222" => deleted.id.to_s, "C333" => "999999",
+        "C444" => "skip", "C555" => open_room.id.to_s
+      }
+    }
+
+    options = SlackImport.last.options
+    assert_equal({ "C444" => "skip", "C555" => open_room.id }, options["room_targets"])
+  end
+
   test "starting an import with nothing checked is rejected" do
     workspace = create_slack_workspace!(team_id: SLACK_TEAM_ID)
     connect_slack!(@david, workspace:)
