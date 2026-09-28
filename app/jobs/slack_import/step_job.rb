@@ -33,12 +33,17 @@ class SlackImport::StepJob < ApplicationJob
     lease_token = run.acquire_step_lease!("running")
     return unless lease_token
 
+    # The lease releases (in the ensure) before the next job is
+    # enqueued below, so the next job acquires immediately instead of
+    # failing to acquire on another worker and stalling the run until
+    # the sweeper re-enqueues it.
+    outcome = nil
     begin
       outcome = SlackImport::Runner.new(run).step!
-      self.class.perform_later(run.id) if outcome == :continue
     ensure
       run.release_step_lease!(lease_token)
     end
+    self.class.perform_later(run.id) if outcome == :continue
     # A stopped step's run finished elsewhere (cancelled mid-step): hand
     # off promptly instead of waiting for the sweeper.
     SlackImport.kick_next_queued! if outcome == :stopped

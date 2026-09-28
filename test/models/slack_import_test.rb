@@ -192,6 +192,42 @@ class SlackImportTest < ActiveSupport::TestCase
     assert_nil run.state["step_lease_token"]
   end
 
+  test "a continuing step releases its lease before enqueueing the next job" do
+    run = start_run
+    run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current)
+    SlackImport::Runner.any_instance.stubs(:step!).returns(:continue)
+
+    # Read back from the database, like a second worker would: the lease
+    # must already be gone when the next job is enqueued, or the next
+    # job fails to acquire and the run stalls until the sweeper.
+    lease_at_enqueue = :not_enqueued
+    SlackImport::StepJob.stubs(:perform_later).with do |id|
+      lease_at_enqueue = SlackImport.find(id).state.slice(*SlackImport::STEP_LEASE_KEYS)
+      true
+    end
+
+    SlackImport::StepJob.perform_now(run.id)
+
+    assert_equal({}, lease_at_enqueue)
+  end
+
+  test "a continuing undo releases its lease before enqueueing the next job" do
+    run = start_run
+    run.update!(status: "undoing", started_at: 1.hour.ago, heartbeat_at: Time.current,
+      state: { "phase" => "undo" })
+    SlackImport::Undoer.any_instance.stubs(:step!).returns(:continue)
+
+    lease_at_enqueue = :not_enqueued
+    SlackImport::UndoJob.stubs(:perform_later).with do |id|
+      lease_at_enqueue = SlackImport.find(id).state.slice(*SlackImport::STEP_LEASE_KEYS)
+      true
+    end
+
+    SlackImport::UndoJob.perform_now(run.id)
+
+    assert_equal({}, lease_at_enqueue)
+  end
+
   test "another job's lease write is not mistaken for progress on conflict" do
     run = start_run
     run.update!(status: "running", started_at: Time.current, heartbeat_at: Time.current,
