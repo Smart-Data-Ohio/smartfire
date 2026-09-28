@@ -138,6 +138,7 @@ module Slack
         name = channel_room_name(conversation)
         archived = conversation["is_archived"]
 
+        room = nil
         SlackImport::Record.transaction do
           room = force_new ? nil : merge_room(room_class.sti_name, name)
           if room
@@ -146,10 +147,16 @@ module Slack
           end
 
           room = room_class.create!(name:, creator: @run.user)
-          grant_channel_memberships(room, conversation, member_ids:, users:, archived:)
+          grant_missing_members(room, member_ids:, users:)
           record_conversation(conversation["id"], room, created_record: true)
-          Result.new(action: "create", room:, created_record: true, skip_reason: nil)
         end
+
+        # The Open-room grant of every active user lands in an
+        # after_save_commit, so invisibility and membership records apply
+        # only once the creation transaction has committed.
+        apply_channel_involvement(room, member_ids:, users:, archived:)
+        record_memberships(conversation["id"], room, users, member_ids)
+        Result.new(action: "create", room:, created_record: true, skip_reason: nil)
       end
 
       def resolve_room_target(conversation, room_id)
@@ -164,30 +171,31 @@ module Slack
         Result.new(action: "merge", room:, created_record: false, skip_reason: nil)
       end
 
-      # Memberships for a room the import created: every mapped Slack member
-      # gets the room default, everyone else in an Open room goes invisible
-      # (archived rooms: every membership invisible). Never called for
-      # merged rooms.
-      def grant_channel_memberships(room, conversation, member_ids:, users:, archived:)
+      # Slack members missing from a room the import created (deactivated
+      # members on Open rooms, everyone on Closed rooms) get the room
+      # default. Never called for merged rooms.
+      def grant_missing_members(room, member_ids:, users:)
         member_users = member_ids.filter_map { |id| users[id] }.uniq(&:id)
         existing_ids = room.memberships.where(user_id: member_users.map(&:id)).pluck(:user_id).to_set
         fresh = member_users.reject { |user| existing_ids.include?(user.id) }
         room.memberships.grant_to(fresh) if fresh.any?
+      end
 
+      # Everyone else in a created Open room goes invisible; archived rooms
+      # go fully invisible. Runs after commit (see resolve_channel).
+      def apply_channel_involvement(room, member_ids:, users:, archived:)
         invisible_ids = if archived
           room.memberships.pluck(:user_id)
         elsif room.open?
-          slack_ids = member_users.map(&:id).to_set
+          slack_ids = member_ids.filter_map { |id| users[id]&.id }.to_set
           room.memberships.pluck(:user_id).reject { |id| slack_ids.include?(id) }
         else
           []
         end
         room.memberships.where(user_id: invisible_ids).update_all(involvement: :invisible) if invisible_ids.any?
-
-        record_memberships(conversation["id"], room, member_users, users, member_ids)
       end
 
-      def record_memberships(conversation_id, room, member_users, users, member_ids)
+      def record_memberships(conversation_id, room, users, member_ids)
         # Map Smartfire user ids back to Slack ids for stable keys; users
         # the Open-room grant pulled in get user-based keys instead.
         slack_by_user_id = users.invert.transform_keys(&:id)
@@ -247,7 +255,7 @@ module Slack
         room = nil
         created = false
         SlackImport::Record.transaction do
-          room = Rooms::Direct.find_or_create_for(members)
+          room = Current.set(user: @run.user) { Rooms::Direct.find_or_create_for(members) }
           created = room.previously_new_record?
           record_conversation(conversation["id"], room, created_record: created)
           record_dm_memberships(conversation["id"], room) if created
@@ -286,7 +294,7 @@ module Slack
 
         SlackImport::Record.transaction do
           if members.size <= Rooms::Direct::MAX_MEMBERS
-            room = Rooms::Direct.find_or_create_for(members)
+            room = Current.set(user: @run.user) { Rooms::Direct.find_or_create_for(members) }
             created = room.previously_new_record?
             record_conversation(conversation["id"], room, created_record: created)
             record_dm_memberships(conversation["id"], room) if created

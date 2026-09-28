@@ -58,9 +58,9 @@ module Slack
 
     AUTH_ERRORS = %w[ invalid_auth token_revoked account_inactive not_authed ].freeze
 
-    # on_request is called with the method name after every HTTP attempt so
-    # the runner can count API calls. Pacing sleeps are disabled in tests
-    # (pass pacing: explicitly to override).
+    # on_request is called with the method name before every HTTP attempt
+    # (retries included) so the runner can count API calls. Pacing sleeps
+    # are disabled in tests (pass pacing: explicitly to override).
     def initialize(token:, on_request: nil, pacing: !Rails.env.test?)
       @token = token
       @on_request = on_request
@@ -115,12 +115,15 @@ module Slack
           attempts += 1
           pace(tier)
           payload = get(method, params.compact)
-          @on_request&.call(method)
           check_ok!(payload, method)
         rescue RateLimited
           raise
         rescue HttpError, IOError, SystemCallError, Timeout::Error, SocketError => error
-          raise if attempts >= MAX_ATTEMPTS
+          if attempts >= MAX_ATTEMPTS
+            raise error if error.is_a?(HttpError)
+
+            raise RequestError, "Slack network error for #{method}: #{error.class}: #{error.message}"
+          end
 
           pause(RETRY_BACKOFF[attempts - 1] || RETRY_BACKOFF.last)
           retry
@@ -128,6 +131,7 @@ module Slack
       end
 
       def get(method, params)
+        @on_request&.call(method)
         uri = URI::HTTPS.build(host: API_HOST, path: "/api/#{method}",
           query: URI.encode_www_form(params))
 

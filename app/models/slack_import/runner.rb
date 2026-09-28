@@ -136,6 +136,12 @@ class SlackImport::Runner
       { "id" => channel["id"], "name" => channel["name"].presence || channel["id"],
         "type" => Slack::ConversationMapper.conversation_type(channel),
         "archived" => !!channel["is_archived"],
+        "is_private" => !!channel["is_private"],
+        "is_archived" => !!channel["is_archived"],
+        "is_im" => !!channel["is_im"],
+        "is_mpim" => !!channel["is_mpim"],
+        "is_channel" => !!channel["is_channel"],
+        "user" => channel["user"],
         "num_members" => channel["num_members"] }
     end
 
@@ -228,6 +234,16 @@ class SlackImport::Runner
       return if convo["resolved"]
 
       conversation = conversations_by_id[convo["id"]] || { "id" => convo["id"] }
+      if import_mode? && (mapped = mapped_room(convo["id"]))
+        convo["room_id"] = mapped.id
+        convo["direct"] = mapped.direct?
+        convo["resolved"] = true
+        entry["target"] = { "action" => "merge", "room_id" => mapped.id,
+          "room_name" => mapped.name.presence || entry["name"] }
+        save_progress!
+        return
+      end
+
       if import_mode?
         users = convo_users(convo)
         result = @conversation_mapper.resolve(conversation,
@@ -255,6 +271,17 @@ class SlackImport::Runner
       else
         save_progress!
       end
+    end
+
+    # A conversation an earlier run already mapped reuses its room: the new
+    # run only catches up on messages. A mapping whose room is gone (deleted
+    # since) falls through to fresh resolution.
+    def mapped_room(conversation_id)
+      record = SlackImport::Record.find_by(slack_workspace_id: @workspace.id,
+        slack_kind: "conversation", slack_key: conversation_id)
+      return if record.nil?
+
+      Room.alive.find_by(id: record.record_id)
     end
 
     def target_name(result, conversation, convo)
@@ -382,7 +409,7 @@ class SlackImport::Runner
       prefix = "#{conversation_id}:"
       newest = SlackImport::Record.where(slack_workspace_id: @workspace.id, slack_kind: "message")
         .where("slack_key LIKE ?", "#{prefix}%")
-        .pick("MAX(CAST(SUBSTR(slack_key, #{prefix.length + 1}) AS REAL))")
+        .pick(Arel.sql("MAX(CAST(SUBSTR(slack_key, #{prefix.length + 1}) AS REAL))"))
       newest ? newest - CATCHUP_LOOKBACK.to_f : nil
     end
 

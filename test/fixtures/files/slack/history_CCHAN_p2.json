@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "messages": [
+    {
+      "type": "message",
+      "user": "U003",
+      "text": "Second page here, with a date <!date^1700000020^{date_short}|Nov 14, 2023> and <!channel>.",
+      "ts": "1700000011.000011"
+    }
+  ],
+  "has_more": false,
+  "response_metadata": { "next_cursor": "" }
+}

@@ -33,6 +33,7 @@ module Slack
       thread_parents = []
 
       known = existing_message_keys(conversation_id, messages)
+      queue_known_parents(conversation_id, messages, bounds, known, thread_parents)
       writable = messages.filter_map do |message|
         prepare_root(room, conversation_id, message, bounds:, users:, known:, counts:)
       end
@@ -168,6 +169,31 @@ module Slack
 
       def message_key(conversation_id, ts)
         "#{conversation_id}:#{ts}"
+      end
+
+      # Catch-up re-reads threads whose parents an earlier run imported:
+      # the replies dedupe by key, so only late replies are created.
+      def queue_known_parents(conversation_id, messages, bounds, known, thread_parents)
+        candidates = messages.filter_map do |message|
+          message = unwrap(message)
+          ts = message["ts"].to_s
+          next unless ts.present? && message["reply_count"].to_i.positive? &&
+            in_bounds?(ts, bounds) && !HISTORY_SKIPPED_SUBTYPES.include?(message["subtype"].to_s)
+          next unless known.include?(message_key(conversation_id, ts))
+
+          ts
+        end
+        return if candidates.empty?
+
+        rows = SlackImport::Record.where(slack_workspace_id: @workspace.id,
+          slack_kind: "message",
+          slack_key: candidates.map { |ts| message_key(conversation_id, ts) })
+          .pluck(:slack_key, :record_id).to_h
+        alive = Message.where(id: rows.values).pluck(:id).to_set
+        candidates.each do |ts|
+          id = rows[message_key(conversation_id, ts)]
+          thread_parents << { "ts" => ts, "message_id" => id } if id && alive.include?(id)
+        end
       end
 
       def prepare_root(room, conversation_id, message, bounds:, users:, known:, counts:)
