@@ -282,7 +282,7 @@ class SlackImport::Runner
         users = Slack::ConversationMapper.dry_users_for(convo["member_ids"])
         result = @conversation_mapper.preview(conversation,
           member_ids: convo["member_ids"], users:)
-        dry_target_issue(conversation, result)
+        dry_target_issue(conversation, result, convo["member_ids"].size)
       end
 
       entry["target"] = { "action" => result.action, "room_id" => result.room&.id,
@@ -315,14 +315,15 @@ class SlackImport::Runner
     end
 
     # Dry runs surface the same target problems an import would hit, so the
-    # admin sees them while planning.
-    def dry_target_issue(conversation, result)
+    # admin sees them while planning. Large group DMs accept room targets
+    # like channels, so only DMs and small group DMs are flagged here.
+    def dry_target_issue(conversation, result, member_count)
       target = @run.options["room_targets"]&.dig(conversation["id"])
       target = target.to_i if target.to_s.match?(/\A\d+\z/)
       return unless target.is_a?(Integer)
 
       type = Slack::ConversationMapper.conversation_type(conversation)
-      if type == "im" || type == "mpim"
+      if type == "im" || (type == "mpim" && member_count <= Rooms::Direct::MAX_MEMBERS)
         @run.record_issue!("error", "channel:#{conversation["id"]}",
           "Room targets only apply to channels; this DM keeps its own Direct room")
       elsif result.skip_reason == "invalid room target"

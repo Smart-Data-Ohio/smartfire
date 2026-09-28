@@ -22,6 +22,32 @@ class SlackImport::RunLifecycleTest < ActiveSupport::TestCase
       connection: @connection, kind:, mode:, options:)
   end
 
+  # Eleven members the users fixture never lists, so each maps to an
+  # "Unknown Slack user" placeholder and the group DM takes the Closed-room
+  # path with this synthetic member name.
+  LARGE_MPIM_MEMBERS = %w[ U101 U102 U103 U104 U105 U106 U107 U108 U109 U110 U111 ].freeze
+  LARGE_MPIM_ROOM_NAME = "Unknown Slack user, Unknown Slack user, Unknown Slack user +8"
+
+  def stub_large_mpim!
+    WebMock.reset!
+    list = { ok: true, channels: [
+      { "id" => "GMPIMBIG", "name" => "big-group", "is_channel" => false,
+        "is_im" => false, "is_mpim" => true, "is_private" => true,
+        "is_archived" => false, "num_members" => LARGE_MPIM_MEMBERS.size }
+    ], response_metadata: { next_cursor: "" } }
+    stub_slack_workspace!(list_body: JSON.generate(list),
+      members_overrides: {
+        "GMPIMBIG" => { ok: true, members: LARGE_MPIM_MEMBERS,
+          response_metadata: { next_cursor: "" } }
+      },
+      history_overrides: {
+        "GMPIMBIG" => [ { ok: true, messages: [
+          { "type" => "message", "user" => "U001", "text" => "hello big group",
+            "ts" => "1700000060.000060" }
+        ], has_more: false, response_metadata: { next_cursor: "" } } ]
+      })
+  end
+
   test "users map by email, placeholders fill in, guests stay deactivated" do
     returning = User.create!(name: "Robin Returner", email_address: "returning@example.com",
       status: :deactivated)
@@ -201,6 +227,70 @@ class SlackImport::RunLifecycleTest < ActiveSupport::TestCase
     assert_equal "merge", entries["CARCH"]["target"]["action"]
     assert entries["CARCH"]["done"]
     assert second.issues.any? { |issue| issue.message == "mapped room was deleted; undo the earlier run or remove the mapping to re-import" }
+  end
+
+  test "workspace runs never auto-merge a large group DM by name" do
+    stub_large_mpim!
+    existing = Rooms::Closed.create!(name: LARGE_MPIM_ROOM_NAME, creator: users(:david))
+
+    run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ GMPIMBIG ] }))
+
+    assert_equal "completed", run.status
+    assert_equal 2, Rooms::Closed.where(name: LARGE_MPIM_ROOM_NAME).count
+    record = run.records.find_by!(slack_kind: "conversation", slack_key: "GMPIMBIG")
+    assert record.created_record?
+    assert_not_equal existing.id, record.record_id
+    assert_empty existing.reload.messages
+    entry = run.stats["conversations"].find { |row| row["id"] == "GMPIMBIG" }
+    assert_equal "create", entry["target"]["action"]
+  end
+
+  test "workspace runs merge a large group DM only into its room target" do
+    stub_large_mpim!
+    target = Rooms::Closed.create!(name: "Target", creator: users(:david))
+
+    run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ GMPIMBIG ],
+      "room_targets" => { "GMPIMBIG" => target.id } }))
+
+    assert_equal "completed", run.status
+    record = run.records.find_by!(slack_kind: "conversation", slack_key: "GMPIMBIG")
+    assert_not record.created_record?
+    assert_equal target.id, record.record_id
+    assert_equal 1, target.messages.count
+  end
+
+  test "personal runs never auto-merge a large group DM by name" do
+    stub_large_mpim!
+    existing = Rooms::Closed.create!(name: LARGE_MPIM_ROOM_NAME, creator: users(:david))
+    target = Rooms::Closed.create!(name: "Target", creator: users(:david))
+    kevin_connection = create_slack_connection!(workspace: @workspace,
+      user: users(:kevin), slack_user_id: "U002")
+
+    run = SlackImport.start!(workspace: @workspace, user: users(:kevin),
+      connection: kevin_connection, kind: "personal", mode: "import",
+      options: { "conversation_ids" => %w[ GMPIMBIG ], "room_targets" => { "GMPIMBIG" => target.id } })
+    drive_import_to_completion(run)
+
+    assert_equal "completed", run.status
+    assert_equal 2, Rooms::Closed.where(name: LARGE_MPIM_ROOM_NAME).count
+    record = run.records.find_by!(slack_kind: "conversation", slack_key: "GMPIMBIG")
+    assert record.created_record?
+    assert_empty existing.reload.messages
+    assert_empty target.reload.messages
+  end
+
+  test "dry runs preview a targeted large group DM as a merge" do
+    stub_large_mpim!
+    target = Rooms::Closed.create!(name: "Target", creator: users(:david))
+
+    run = drive_import_to_completion(start_run(mode: "dry_run", options: {
+      "conversation_ids" => %w[ GMPIMBIG ], "room_targets" => { "GMPIMBIG" => target.id } }))
+
+    assert_equal "completed", run.status
+    entry = run.stats["conversations"].find { |row| row["id"] == "GMPIMBIG" }
+    assert_equal "merge", entry["target"]["action"]
+    assert_equal target.id, entry["target"]["room_id"]
+    assert_empty run.issues.select { |issue| issue.level == "error" }
   end
 
   test "personal runs ignore room target ids" do

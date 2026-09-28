@@ -58,11 +58,14 @@ overrides this per conversation with `"new"`, `"skip"` or an existing room id
 
 A private channel never auto-merges by name: a workspace run merges one into
 an existing Closed room only when an administrator chose that room in
-`room_targets`, and otherwise creates a new room. Personal runs never merge
-into a pre-existing room at all — the only exceptions are a room an earlier
-run's mapping already points at (reused for deduping) and Direct rooms, which
-resolve through `find_or_create_for` with the owner as a member. Personal runs
-ignore `room_targets` room ids entirely.
+`room_targets`, and otherwise creates a new room. Large group DMs (more than
+10 members) likewise never auto-merge by their synthetic member name, on
+workspace runs as well as personal runs — only an admin `room_targets`
+choice merges one. Personal runs never merge into a pre-existing room at
+all — the only exceptions are a room an earlier run's mapping already points
+at (reused for deduping) and Direct rooms, which resolve through
+`find_or_create_for` with the owner as a member. Personal runs ignore
+`room_targets` room ids entirely.
 
 Memberships are only ever written in rooms the import created — merged rooms
 keep theirs untouched.

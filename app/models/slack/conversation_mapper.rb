@@ -294,12 +294,6 @@ module Slack
       end
 
       def resolve_mpim(conversation, target, member_ids:, users:)
-        if target.is_a?(Integer)
-          @run.record_issue!("error", "channel:#{conversation["id"]}",
-            "Room targets only apply to channels; this group DM keeps its own room")
-          return resolve_mpim(conversation, nil, member_ids:, users:)
-        end
-
         members = member_ids.filter_map { |id| users[id] }.uniq(&:id)
         if members.size < 2
           @run.record_issue!("warning", "channel:#{conversation["id"]}",
@@ -307,26 +301,31 @@ module Slack
           return skip("too few members")
         end
 
-        SlackImport::Record.transaction do
-          if members.size <= Rooms::Direct::MAX_MEMBERS
+        if members.size <= Rooms::Direct::MAX_MEMBERS
+          if target.is_a?(Integer)
+            @run.record_issue!("error", "channel:#{conversation["id"]}",
+              "Room targets only apply to channels; this group DM keeps its own room")
+          end
+          SlackImport::Record.transaction do
             room = Current.set(user: @run.user) { Rooms::Direct.find_or_create_for(members) }
             created = room.previously_new_record?
             record_conversation(conversation["id"], room, created_record: created)
             record_dm_memberships(conversation["id"], room) if created
             Result.new(action: created ? "create" : "merge", room:, created_record: created, skip_reason: nil)
-          else
-            name = mpim_closed_name(conversation, users)
-            room = @run.personal? ? nil : merge_room("Rooms::Closed", name)
-            if room
-              record_conversation(conversation["id"], room, created_record: false)
-              Result.new(action: "merge", room:, created_record: false, skip_reason: nil)
-            else
-              room = Rooms::Closed.create!(name:, creator: @run.user)
-              room.memberships.grant_to(members)
-              record_membership_rows(conversation["id"], room)
-              record_conversation(conversation["id"], room, created_record: true)
-              Result.new(action: "create", room:, created_record: true, skip_reason: nil)
-            end
+          end
+        else
+          # Large group DMs never auto-merge by their synthetic member name,
+          # on workspace runs as well as personal runs: only an admin
+          # room_targets choice merges one. (Personal runs never reach the
+          # target branch: they ignore room ids entirely.)
+          return resolve_room_target(conversation, target) if target.is_a?(Integer)
+
+          SlackImport::Record.transaction do
+            room = Rooms::Closed.create!(name: mpim_closed_name(conversation, users), creator: @run.user)
+            room.memberships.grant_to(members)
+            record_membership_rows(conversation["id"], room)
+            record_conversation(conversation["id"], room, created_record: true)
+            Result.new(action: "create", room:, created_record: true, skip_reason: nil)
           end
         end
       end
@@ -341,8 +340,14 @@ module Slack
           room = Rooms::Direct.find_for(members)
           Result.new(action: room ? "merge" : "create", room:, created_record: room.nil?, skip_reason: nil)
         else
-          room = @run.personal? ? nil : merge_room("Rooms::Closed", mpim_closed_name(conversation, users))
-          Result.new(action: room ? "merge" : "create", room:, created_record: room.nil?, skip_reason: nil)
+          if target.is_a?(Integer)
+            room = alive_channel_room(target)
+            if room.nil?
+              return Result.new(action: "skip", room: nil, created_record: false, skip_reason: "invalid room target")
+            end
+            return Result.new(action: "merge", room:, created_record: false, skip_reason: nil)
+          end
+          Result.new(action: "create", room: nil, created_record: true, skip_reason: nil)
         end
       end
 

@@ -60,6 +60,15 @@ module SlackImportTestHelper
         firsts = history_first_responses[channel]
         stub_history_pages(channel, bodies, auth, json, first_responses: firsts)
       end
+      # Overrides may also add channels the fixtures never list (a caller
+      # fabricates the list, members and history together).
+      (history_overrides.keys - %w[ CCHAN CARCH CPRIV DIM GMPIM ]).each do |channel|
+        bodies = Array(history_overrides[channel]).compact
+        next if bodies.empty?
+
+        stub_history_pages(channel, bodies, auth, json,
+          first_responses: history_first_responses[channel])
+      end
     end
 
     { "CCHAN" => "1700000002.000002", "GMPIM" => "1700000050.000050" }.each do |channel, ts|
