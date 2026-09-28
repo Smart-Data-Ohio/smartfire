@@ -70,6 +70,12 @@ module Slack
           alert: "Slack did not grant every required permission. Missing: #{missing.join(", ")}. Reconnect and approve them all."
       end
 
+      if SlackConnection.where(slack_workspace: workspace, slack_user_id: authed["id"])
+          .where.not(user_id: Current.user.id).exists?
+        return redirect_to validated_return_to(return_to),
+          alert: "That Slack account is already connected to another Smartfire user."
+      end
+
       connection = Current.user.slack_connection || Current.user.build_slack_connection(slack_workspace: workspace)
       connection.assign_attributes(
         slack_workspace: workspace,
@@ -78,7 +84,13 @@ module Slack
         scopes: granted_scopes.join(","),
         disconnected_reason: nil
       )
-      connection.save!
+      begin
+        connection.save!
+      rescue ActiveRecord::RecordNotUnique
+        # Another member claimed this Slack account after the check above.
+        return redirect_to validated_return_to(return_to),
+          alert: "That Slack account is already connected to another Smartfire user."
+      end
 
       # The first admin connection names the workspace being migrated;
       # later grants from any other team are rejected above.

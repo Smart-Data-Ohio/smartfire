@@ -178,6 +178,33 @@ class Slack::OAuthControllerTest < ActionDispatch::IntegrationTest
     assert_nil @david.reload.slack_connection
   end
 
+  test "callback refuses a Slack account linked to another member" do
+    workspace = create_slack_workspace!(team_id: SLACK_TEAM_ID)
+    connect_slack!(users(:kevin), workspace:, slack_user_id: SLACK_USER_ID)
+    state = start_state
+    stub_slack_code_exchange
+
+    get slack_oauth_callback_path, params: { state:, code: "auth-code" }
+
+    assert_redirected_to account_slack_import_path
+    assert_equal "That Slack account is already connected to another Smartfire user.", flash[:alert]
+    assert_nil @david.reload.slack_connection
+    assert_equal users(:kevin).id, SlackConnection.find_by(slack_user_id: SLACK_USER_ID).user_id
+  end
+
+  test "callback rescues a duplicate connection raced in after the check" do
+    create_slack_workspace!(team_id: SLACK_TEAM_ID)
+    state = start_state
+    stub_slack_code_exchange
+    SlackConnection.any_instance.stubs(:save!).raises(ActiveRecord::RecordNotUnique)
+
+    get slack_oauth_callback_path, params: { state:, code: "auth-code" }
+
+    assert_redirected_to account_slack_import_path
+    assert_equal "That Slack account is already connected to another Smartfire user.", flash[:alert]
+    assert_nil @david.reload.slack_connection
+  end
+
   test "callback with a failed exchange stores nothing" do
     create_slack_workspace!
     state = start_state
