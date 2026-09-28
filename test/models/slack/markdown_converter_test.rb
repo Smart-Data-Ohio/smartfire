@@ -44,6 +44,20 @@ class Slack::MarkdownConverterTest < ActiveSupport::TestCase
     assert_equal "due Feb 1", convert("due <!date^1700000000^{date_short}|Feb 1>").markdown
   end
 
+  test "date tokens keep their fallback with or without a link part" do
+    assert_equal "due Feb 1", convert("due <!date^1700000000^{date_short}^https://example.com|Feb 1>").markdown
+    assert_equal "due ", convert("due <!date^1700000000^{date_short}>").markdown
+  end
+
+  test "a crafted date token converts in linear time" do
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    result = convert("<!date^" + "!^" * 50_000)
+    elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+
+    assert_operator elapsed, :<, 0.5, "date token conversion took #{elapsed.round(3)}s"
+    assert result.markdown.start_with?("<!date^!^")
+  end
+
   test "links convert to markdown and bare urls pass through" do
     assert_equal "see [docs](https://example.com)", convert("see <https://example.com|docs>").markdown
     assert_equal "see https://example.com", convert("see <https://example.com>").markdown

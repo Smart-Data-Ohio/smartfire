@@ -122,7 +122,10 @@ module Slack
           text = text.gsub(/<!(here|channel|everyone)(?:\|[^>]+)?>/) { "@#{$1}" }
           text = text.gsub(/<!subteam\^[A-Z0-9]+\|@?([^>]+)>/) { "@#{$1}" }
           text = text.gsub(/<!subteam\^[A-Z0-9]+>/) { "@group" }
-          text.gsub(/<!date\^[^\s|>]+(?:\^[^\s|>]+)*(?:\|([^>]*))?>/) { $1.to_s }
+          # <!date^ts^format^link|fallback>: the format and link parts are
+          # plain characters of the one run (the class already admits ^),
+          # so no nested repetition can backtrack on a crafted token.
+          text.gsub(/<!date\^[^\s|>]+(?:\|([^>]*))?>/) { $1.to_s }
         end
 
         # Converted [text](url) links and bare URLs are shielded while
