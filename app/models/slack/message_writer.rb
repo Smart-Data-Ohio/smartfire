@@ -222,7 +222,7 @@ module Slack
 
         { ts:, key: message_key(conversation_id, ts), author:, source: message,
           markdown: converted.markdown, truncated: converted.truncated,
-          files_linked: converted.files_linked, created_at: Time.at(ts.to_f),
+          files_linked: converted.files_linked, created_at: Time.at(Rational(ts.to_s)),
           edited_at: edited_at_for(message) }
       end
 
@@ -241,7 +241,9 @@ module Slack
       end
 
       def in_bounds?(ts, bounds)
-        seconds = ts.to_f
+        # Rational, not Float: doubles cannot hold every microsecond past
+        # the epoch exactly, and a message on its bound must compare true.
+        seconds = Rational(ts.to_s)
         (bounds[:oldest].nil? || seconds >= bounds[:oldest]) &&
           (bounds[:latest].nil? || seconds <= bounds[:latest])
       end
@@ -286,7 +288,7 @@ module Slack
 
       def edited_at_for(message)
         ts = message.dig("edited", "ts") || message["edited_ts"]
-        Time.at(ts.to_f) if ts.present?
+        Time.at(Rational(ts.to_s)) if ts.present?
       end
 
       def create_message!(room, planned, thread:, reply_to:)
@@ -313,10 +315,16 @@ module Slack
         reactions = Array(source["reactions"])
         return if reactions.empty?
 
+        truncated = []
         reactions.each do |reaction|
           base_name = reaction["name"].to_s.sub(/::skin-tone-\d+\z/, "")
           content = reaction_content(base_name)
-          Array(reaction["users"]).each do |slack_user_id|
+          listed = Array(reaction["users"])
+          # Slack truncates long reactor lists: count runs past the users
+          # array. The listed users still import, with one issue per
+          # message saying the rest never arrived.
+          truncated << reaction["name"].to_s if reaction["count"].to_i > listed.size
+          listed.each do |slack_user_id|
             key = "#{conversation_id}:#{source["ts"]}:#{base_name}:#{slack_user_id}"
             if content.nil?
               @run.record_issue!("warning", key,
@@ -333,6 +341,10 @@ module Slack
               record: boost, created_record: true)
             counts["reactions"] += 1
           end
+        end
+        if truncated.any?
+          @run.record_issue!("warning", "#{conversation_id}:#{source["ts"]}",
+            "Slack truncated the reaction list on #{conversation_id}:#{source["ts"]} (#{truncated.uniq.join(", ")}); imported the listed users only")
         end
       end
 

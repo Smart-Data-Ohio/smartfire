@@ -305,6 +305,41 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     assert first.undo!
   end
 
+  test "message timestamps keep exact microseconds" do
+    # 1700000001.015838 cannot round-trip through a double: Time.at of the
+    # float lands on .015837.
+    WebMock.reset!
+    stub_slack_workspace!(history_overrides: {
+      "CCHAN" => [ history_page([ slack_message("1700000001.015838", "exact") ]) ]
+    })
+
+    run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+
+    assert_equal "completed", run.status
+    message = Rooms::Open.find_by!(name: "general").messages.sole
+    assert_equal 15_838, message.reload.created_at.usec
+    assert_equal "2023-11-14T22:13:21.015838Z", message.created_at.utc.iso8601(6)
+  end
+
+  test "truncated reaction lists import the listed users with one issue per message" do
+    history = { ok: true, messages: [ {
+      "type" => "message", "user" => "U001", "text" => "popular",
+      "ts" => "1700000001.000001",
+      "reactions" => [
+        { "name" => "thumbsup", "users" => %w[ U002 UADMIN ], "count" => 5 },
+        { "name" => "+1", "users" => %w[ U001 ], "count" => 3 }
+      ] } ], has_more: false, response_metadata: { next_cursor: "" } }
+    WebMock.reset!
+    stub_slack_workspace!(history_overrides: { "CCHAN" => [ history ] })
+
+    run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+
+    message = Rooms::Open.find_by!(name: "general").messages.sole
+    assert_equal 3, message.boosts.count
+    assert_equal 3, run.stats["counts"]["reactions"]
+    assert_equal 1, run.issues.count { |issue| issue.message.include?("truncated") }
+  end
+
   test "undo removes exactly what the run created and leaves the rest" do
     room = Rooms::Open.create!(name: "Pre-existing", creator: users(:david))
     kept_message = room.messages.create!(creator: users(:david), markdown_source: "keep me")
