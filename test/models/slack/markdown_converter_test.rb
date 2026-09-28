@@ -84,7 +84,7 @@ class Slack::MarkdownConverterTest < ActiveSupport::TestCase
   end
 
   test "files without any url are skipped" do
-    result = convert("see this", files: [{ "name" => "x" }])
+    result = convert("see this", files: [ { "name" => "x" } ])
 
     assert_equal 0, result.files_linked
     assert_equal "see this", result.markdown
@@ -100,14 +100,14 @@ class Slack::MarkdownConverterTest < ActiveSupport::TestCase
 
   test "bot messages quote attachments even with text" do
     result = convert("Build *passed*", subtype: "bot_message", bot_id: "B1",
-      attachments: [{ "text" => "All green" }])
+      attachments: [ { "text" => "All green" } ])
 
     assert_includes result.markdown, "Build **passed**"
     assert_includes result.markdown, "> All green"
   end
 
   test "human messages with text skip attachments" do
-    result = convert("look", attachments: [{ "text" => "unfurl" }])
+    result = convert("look", attachments: [ { "text" => "unfurl" } ])
 
     assert_equal "look", result.markdown
   end
