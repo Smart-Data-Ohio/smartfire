@@ -23,6 +23,7 @@ history. There are no foreign keys from the log to users or targets.
 | Google | `google.sign_in.link` (profile links and first-sign-in auto-links), `google.sign_in.link_allow`, `google.sign_in.unlink`, `google.account.connect`, `google.account.disconnect` |
 | GitHub | `github.account.connect` (personal token and GitHub App OAuth), `github.account.disconnect` (members), `agent.github.connect`, `agent.github.disconnect` (agents) |
 | Fizzy | `fizzy.account.connect`, `fizzy.account.disconnect` (members) |
+| Slack import | `slack.account.connect`, `slack.account.disconnect` (members), `slack.workspace.configure`, `slack.workspace.remove_credentials`, `slack.import.start`, `slack.import.cancel`, `slack.import.undo`. Tokens and secrets never reach the log. |
 | Account | `account.join_code.reset`, `account.settings.change`, `account.custom_styles.change` |
 | Agents | `agent.create`, `agent.update`, `agent.suspend`, `agent.credential.create`, `agent.credential.revoke`, `agent.credential.reset`, `agent.grant.create`, `agent.grant.revoke`, `agent.webhook_url.change`, `agent.webhook_secret.reset`, `agent.approval.decide`, `agent.github_action.execute`, `agent.fizzy_action.execute`, `agent.kill_switch` |
 | Rooms | `room.create`, `room.destroy`, `room.membership.change` |
