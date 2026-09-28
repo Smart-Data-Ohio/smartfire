@@ -165,15 +165,10 @@ module Slack
           end
 
           room = room_class.create!(name:, creator: @run.user)
-          grant_missing_members(room, member_ids:, users:)
+          grant_channel_members(room, member_ids:, users:, archived:)
           record_conversation(conversation["id"], room, created_record: true)
+          record_memberships(conversation["id"], room, users, member_ids)
         end
-
-        # The Open-room grant of every active user lands in an
-        # after_save_commit, so invisibility and membership records apply
-        # only once the creation transaction has committed.
-        apply_channel_involvement(room, member_ids:, users:, archived:)
-        record_memberships(conversation["id"], room, users, member_ids)
         Result.new(action: "create", room:, created_record: true, skip_reason: nil)
       end
 
@@ -189,23 +184,25 @@ module Slack
         Result.new(action: "merge", room:, created_record: false, skip_reason: nil)
       end
 
-      # Slack members missing from a room the import created (deactivated
-      # members on Open rooms, everyone on Closed rooms) get the room
-      # default. Never called for merged rooms.
-      def grant_missing_members(room, member_ids:, users:)
+      # Memberships for a room the import created, granted and levelled
+      # inside the setup transaction so a crash can never leave a
+      # half-set-up room behind for a resumed run to reuse. Slack members
+      # keep the room default; everyone else in an Open room goes
+      # invisible, and archived rooms go fully invisible. Open rooms mirror
+      # the model's after-commit grant of every active user here; that
+      # grant then finds everyone present and adds nobody. Never called for
+      # merged rooms.
+      def grant_channel_members(room, member_ids:, users:, archived:)
         member_users = member_ids.filter_map { |id| users[id] }.uniq(&:id)
-        existing_ids = room.memberships.where(user_id: member_users.map(&:id)).pluck(:user_id).to_set
-        fresh = member_users.reject { |user| existing_ids.include?(user.id) }
+        grants = room.open? ? (User.active.to_a + member_users).uniq(&:id) : member_users
+        existing_ids = room.memberships.where(user_id: grants.map(&:id)).pluck(:user_id).to_set
+        fresh = grants.reject { |user| existing_ids.include?(user.id) }
         room.memberships.grant_to(fresh) if fresh.any?
-      end
 
-      # Everyone else in a created Open room goes invisible; archived rooms
-      # go fully invisible. Runs after commit (see resolve_channel).
-      def apply_channel_involvement(room, member_ids:, users:, archived:)
+        slack_ids = member_users.map(&:id).to_set
         invisible_ids = if archived
           room.memberships.pluck(:user_id)
         elsif room.open?
-          slack_ids = member_ids.filter_map { |id| users[id]&.id }.to_set
           room.memberships.pluck(:user_id).reject { |id| slack_ids.include?(id) }
         else
           []

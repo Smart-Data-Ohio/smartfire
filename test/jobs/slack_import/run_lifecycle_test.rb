@@ -1,4 +1,5 @@
 require "test_helper"
+require "minitest/mock"
 
 # User mapping, room targets, personal runs, date bounds, cancel, errors
 # and single-flight for the Slack importer.
@@ -217,6 +218,36 @@ class SlackImport::RunLifecycleTest < ActiveSupport::TestCase
     assert record.created_record?
     assert_not_equal target.id, record.record_id
     assert_empty target.reload.messages
+  end
+
+  test "room setup is atomic: a crash while recording memberships leaves nothing behind" do
+    # Simulates a process crash at the exact point room setup writes its
+    # membership mappings: the fault raises for those rows only, and every
+    # other insert goes through. A resumed run must then set the room up
+    # completely instead of reusing a half-set-up room.
+    original_insert_all = SlackImport::Record.method(:insert_all)
+    crash = lambda do |rows, *args, **kwargs|
+      if Array(rows).any? { |row| row[:slack_kind].to_s == "membership" }
+        raise "simulated crash writing membership records"
+      end
+      original_insert_all.call(rows, *args, **kwargs)
+    end
+
+    run = nil
+    SlackImport::Record.stub(:insert_all, crash) do
+      run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+    end
+
+    assert_equal "failed", run.status
+    assert_nil Room.find_by(name: "general")
+    assert_empty run.records.where(slack_kind: %w[ conversation membership ])
+
+    second = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+
+    assert_equal "completed", second.status
+    general = Rooms::Open.find_by!(name: "general")
+    assert_equal general.memberships.count, second.records.where(slack_kind: "membership").count
+    assert_not_empty second.records.where(slack_kind: "membership")
   end
 
   test "personal run imports DMs, group DMs and private channels" do
