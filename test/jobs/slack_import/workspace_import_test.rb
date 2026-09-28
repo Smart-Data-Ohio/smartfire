@@ -737,6 +737,85 @@ class SlackImport::WorkspaceImportTest < ActiveSupport::TestCase
     assert run.records.exists?(slack_kind: "message", record_id: message.id)
   end
 
+  test "undo keeps imported messages holding a poll, a saved item or someone else's pin" do
+    run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+    general = Rooms::Open.find_by!(name: "general")
+    unpinned = general.messages.where(thread_id: nil)
+      .where.not(id: MessagePin.select(:message_id)).order(:created_at).to_a
+    polled, saved, pinned, plain = unpinned.first(4)
+    assert plain, "expected four unpinned imported messages"
+    Poll.create_for_message!(message: polled, labels: %w[ yes no ])
+    SavedItem.create!(user: users(:kevin), message: saved)
+    MessagePin.create!(message: pinned, room: general, pinner: users(:kevin))
+
+    assert run.undo!
+    drive_undo_to_completion(run)
+
+    [ polled, saved, pinned ].each do |message|
+      assert Message.exists?(message.id), "expected message #{message.id} to be kept"
+      assert run.records.exists?(slack_kind: "message", record_id: message.id)
+    end
+    assert Poll.exists?(message_id: polled.id)
+    assert SavedItem.exists?(message_id: saved.id)
+    assert MessagePin.exists?(message_id: pinned.id)
+    assert_not Message.exists?(plain.id)
+    assert Room.exists?(general.id)
+    assert_equal 3, run.issues.count { |issue| issue.message.match?(/Message \d+ kept/) }
+  end
+
+  test "undo keeps a thread whose reply holds a poll" do
+    run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+    parent, thread = imported_thread
+    reply = thread.messages.find_by!(created_at: Time.at(Rational("1700000102.000102")))
+    Poll.create_for_message!(message: reply, labels: %w[ yes no ])
+
+    assert run.undo!
+    drive_undo_to_completion(run)
+
+    assert ChannelThread.exists?(thread.id)
+    assert Message.exists?(parent.id)
+    assert_equal [ reply.id ], ChannelThread.find(thread.id).messages.pluck(:id)
+  end
+
+  test "undo keeps a thread with a pending scheduled reply, and the message it quotes" do
+    run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+    general = Rooms::Open.find_by!(name: "general")
+    parent, thread = imported_thread
+    quoted = thread.messages.find_by!(created_at: Time.at(Rational("1700000101.000101")))
+    scheduled = ScheduledMessage.create!(user: users(:david), room: general, thread:,
+      reply_to_message: quoted, markdown_source: "Later!", send_at: 1.day.from_now)
+    other_reply_ids = thread.messages.where.not(id: quoted.id).pluck(:id)
+
+    assert run.undo!
+    drive_undo_to_completion(run)
+
+    assert ChannelThread.exists?(thread.id)
+    assert Message.exists?(parent.id)
+    assert_equal parent.id, ChannelThread.find(thread.id).parent_message_id
+    assert Message.exists?(quoted.id)
+    assert_empty Message.where(id: other_reply_ids)
+    scheduled.reload
+    assert scheduled.pending?, "expected the scheduled reply to stay pending, dropped: #{scheduled.drop_reason}"
+    assert_equal thread.id, scheduled.thread_id
+    assert_equal quoted.id, scheduled.reply_to_message_id
+    assert run.records.exists?(slack_kind: "thread", record_id: thread.id)
+  end
+
+  test "undo removes a thread whose scheduled replies were all sent" do
+    run = drive_import_to_completion(start_run(options: { "conversation_ids" => %w[ CCHAN ] }))
+    general = Rooms::Open.find_by!(name: "general")
+    _parent, thread = imported_thread
+    sent = ScheduledMessage.create!(user: users(:david), room: general, thread:,
+      markdown_source: "Sent already", send_at: 1.day.from_now)
+    sent.update_columns(sent_at: Time.current)
+
+    assert run.undo!
+    drive_undo_to_completion(run)
+
+    assert_not ChannelThread.exists?(thread.id)
+    assert_nil sent.reload.thread_id
+  end
+
   test "import stays silent: no foreign jobs, broadcasts, unread or inbox items" do
     activity_before = ActivityItem.count
     broadcasts_before = cable_broadcasts_count

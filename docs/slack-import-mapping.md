@@ -158,14 +158,18 @@ and none of them is kept (see below). Otherwise the thread and its parent
 message — and both their mappings — stay, with an issue recorded, so a
 saved or pinned reply never ends up in a thread without its parent. An
 imported message someone started a thread on after the import stays for
-the same reason. Each
+the same reason. A thread with a pending scheduled reply stays too (deleting
+it would drop the reply with a "not sent" notice), as does any imported
+message a pending scheduled reply quotes; scheduled rows already sent or
+dropped are history and keep nothing. Each
 room's fate is decided before any membership is touched: a room holding
 anything the run did not create stays with all its memberships and its
 conversation mapping, with an issue recorded. That covers every content
 association Room destroys with itself — foreign messages, events, scheduled
 messages, pins and threads by others, repository subscriptions, board rows
-and agent slash commands — as well as messages carrying polls, saved items
-or pins by others, which keep both their own row and the room. Mappings for
+and agent slash commands — as well as messages carrying polls, saved items,
+pins by others or pending scheduled replies, which keep both their own row
+and the room. Mappings for
 everything kept stay behind too — rooms, threads, parent messages,
 memberships and surviving placeholder users — so a later run reuses the
 survivors instead of duplicating them. A user mapping goes only with its

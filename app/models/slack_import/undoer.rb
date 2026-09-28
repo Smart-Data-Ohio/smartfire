@@ -76,8 +76,9 @@ class SlackImport::Undoer
     end
 
     # Messages carrying content the run did not create keep their row (and
-    # their room, through the room check): polls, saved items and pins by
-    # others all hang off the message, and the import creates none of them.
+    # their room, through the room check): polls, saved items, pins by
+    # others and pending scheduled replies quoting them all hang off the
+    # message, and the import creates none of them.
     # Decided once, before the first batch goes.
     def decide_kept_messages!
       return if @state["undo_messages_decided"]
@@ -86,6 +87,8 @@ class SlackImport::Undoer
       keep_message_content!(Poll.where(message_id: mine).pluck(:message_id), "a poll")
       keep_message_content!(SavedItem.where(message_id: mine).pluck(:message_id), "a saved item")
       keep_message_content!(MessagePin.where(message_id: mine).where.not(id: my_pin_ids).pluck(:message_id), "a pin")
+      keep_message_content!(ScheduledMessage.pending.where(reply_to_message_id: mine).pluck(:reply_to_message_id),
+        "a pending scheduled reply")
       @state["undo_messages_decided"] = true
       save_undo_state!
     end
@@ -213,8 +216,11 @@ class SlackImport::Undoer
       @my_thread_ids ||= @run.records.where(slack_kind: "thread").select(:record_id)
     end
 
+    # A pending scheduled reply targets the thread: destroying it would
+    # drop the reply with a "not sent" notice, so the thread stays.
     def thread_must_stay?(thread_id)
-      thread_has_foreign_messages?(thread_id) || thread_has_kept_messages?(thread_id)
+      thread_has_foreign_messages?(thread_id) || thread_has_kept_messages?(thread_id) ||
+        ScheduledMessage.pending.where(thread_id:).exists?
     end
 
     def thread_has_foreign_messages?(thread_id)
