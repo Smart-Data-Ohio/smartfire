@@ -186,8 +186,13 @@ fn export_database_for_rails() {
     let path = std::env::var("CAMPFIRE_EXPORT_DB").expect("CAMPFIRE_EXPORT_DB");
     let _ = std::fs::remove_file(&path);
     // Frozen, so the messages written in one step below share a `created_at` and Rails has to
-    // break the tie by id.
-    let clock = crate::TestClock::frozen_at(crate::Clock::now(&crate::SystemClock));
+    // break the tie by id. At the instant Ruby loaded its fixtures, when differential.sh gives
+    // one, so rollback.rb can tell every row Rust wrote from the fixtures by comparing with them.
+    let start = std::env::var("CAMPFIRE_FIXTURES_NOW")
+        .ok()
+        .map(|now| crate::Timestamp::parse_db(&now).expect("CAMPFIRE_FIXTURES_NOW"))
+        .unwrap_or_else(|| crate::Clock::now(&crate::SystemClock));
+    let clock = crate::TestClock::frozen_at(start);
     let env = crate::Env {
         clock: std::sync::Arc::new(clock.clone()),
         bcrypt_cost: 4,
@@ -329,7 +334,13 @@ fn export_database_for_rails() {
             [],
             |r| r.get(0),
         )?;
+        // No Rust path creates threads yet (WS8): the post is set up directly, tracked as a board
+        // post must be (`work_status_required_in_boards`).
         let post = super::message_test::create_thread(tx, board_id, rusty.id)?;
+        tx.conn().execute(
+            r#"UPDATE "channel_threads" SET "work_status" = 'planned', "work_status_changed_at" = ? WHERE "id" = ?"#,
+            rusqlite::params![tx.now(), post],
+        )?;
         for (client_message_id, thread_id, system_note) in
             [("rust-board-note", None, true), ("rust-board-post", Some(post), false)]
         {

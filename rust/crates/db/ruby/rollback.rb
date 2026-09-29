@@ -78,13 +78,34 @@ check("bot key authenticates by digest") do
   bot.bot_token.nil? && User.authenticate_bot(bot_key) == bot && User.authenticate_bot(tampered).nil?
 end
 
-rust_written = [
-  *Message.where("client_message_id LIKE 'rust-%'"), *Room.where("name LIKE 'Rust %'"),
-  *Membership.where(user: rusty), *rusty.sessions, rusty, bot, *Rooms::Direct.find_for([ jason, rusty, kevin ])
-]
-check("Rails validates every row Rust wrote: #{rust_written.reject(&:valid?).map { [ _1.class.name, _1.id, _1.errors.full_messages ] }}") do
-  rust_written.size > 20 && rust_written.all?(&:valid?)
+# Every row Rust inserted or changed: what differs from the reference's own fixtures, which
+# the Rust export loaded at the same instant (fixtures_match_ruby_row_for_row proves the loads
+# identical). Password digests are left out: the export hashes at a lower cost, with its own salt.
+connection = ActiveRecord::Base.connection
+connection.execute("ATTACH DATABASE '/out/fixtures_ruby.sqlite3' AS fixtures")
+Rails.application.eager_load!
+models = ActiveRecord::Base.descendants.reject(&:abstract_class?).select { _1 == _1.base_class }.index_by(&:table_name)
+tables = connection.select_values(<<~SQL)
+  SELECT name FROM main.sqlite_master WHERE type = 'table' AND sql NOT LIKE 'CREATE VIRTUAL%'
+    AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'message_search_index%'
+    AND name NOT IN ('ar_internal_metadata', 'schema_migrations')
+SQL
+rust_written = {}
+tables.each do |table|
+  columns = (connection.columns(table).map(&:name) - [ "password_digest" ]).map { connection.quote_column_name(_1) }.join(", ")
+  changed = connection.select_values("SELECT id FROM (SELECT #{columns} FROM main.#{table} EXCEPT SELECT #{columns} FROM fixtures.#{table})")
+  rust_written[table] = changed if changed.any?
 end
+connection.execute("DETACH DATABASE fixtures")
+unmodeled = rust_written.keys - models.keys
+check("every table Rust wrote has a model: #{unmodeled}") { unmodeled.empty? }
+records = rust_written.flat_map { |table, ids| models.fetch(table).where(id: ids).to_a }
+invalid = records.reject(&:valid?).map { [ _1.class.name, _1.id, _1.errors.full_messages ] }
+check("Rails validates every row Rust wrote: #{invalid}") do
+  records.size == rust_written.values.sum(&:size) && %w[ messages boosts searches channel_threads memberships rooms users sessions ].all? { rust_written.key?(_1) } &&
+    invalid.empty?
+end
+puts "validated #{records.size} rows Rust wrote: #{rust_written.transform_values(&:size).sort.to_h}"
 
 check("account settings") { Account.first.settings.restrict_room_creation_to_administrators == true }
 
