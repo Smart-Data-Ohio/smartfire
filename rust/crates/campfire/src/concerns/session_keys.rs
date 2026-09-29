@@ -263,9 +263,8 @@ fn to_s(value: &Value) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use campfire_kit::testing::OurRailsCrypto;
     use campfire_kit::session::SessionConfig;
-    use campfire_kit::{CookieJar, SharedClock};
+    use campfire_kit::{CookieJar, Crypto, RailsCrypto, SharedClock};
     use std::sync::Arc;
 
     fn vectors() -> Value {
@@ -276,8 +275,8 @@ mod tests {
         time.parse().unwrap()
     }
 
-    fn crypto(vectors: &Value) -> Arc<OurRailsCrypto> {
-        Arc::new(OurRailsCrypto::new(vectors["secret_key_base"].as_str().unwrap()))
+    fn crypto(vectors: &Value) -> Arc<RailsCrypto> {
+        Arc::new(RailsCrypto::new(Arc::new(rails_compat::Secrets::new(vectors["secret_key_base"].as_str().unwrap()))))
     }
 
     fn jar(vectors: &Value, raw: Option<&str>) -> CookieJar {
@@ -351,7 +350,7 @@ mod tests {
 
         let header = jar.set_cookie_headers(false, "campfire.test").into_iter().next().unwrap();
         let raw = rails_compat::cookies::unescape(header.strip_prefix("_campfire_session=").unwrap().split(';').next().unwrap());
-        assert_eq!(&crypto(&vectors).decrypt("_campfire_session", &raw, now).unwrap(), data);
+        assert_eq!(&crypto(&vectors).decrypt_cookie("_campfire_session", &raw, now).unwrap(), data);
 
         let output = json!({ "now": vectors["now"], "raw": raw, "data": data, "checks": vectors["session_keys"]["checks"] });
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/campfire_session_keys_rust_output.json");

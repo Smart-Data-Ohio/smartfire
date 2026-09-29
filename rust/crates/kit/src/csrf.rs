@@ -137,7 +137,8 @@ pub fn mask(raw: &[u8], pad: [u8; TOKEN_LENGTH]) -> String {
 /// `ActiveSupport::SecurityUtils.fixed_length_secure_compare`, which raises on a length mismatch
 /// (never the case here: every token compared is 32 bytes).
 fn fixed_length_secure_compare(a: &[u8], b: &[u8]) -> bool {
-    a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+    use subtle::ConstantTimeEq;
+    a.len() == b.len() && bool::from(a.ct_eq(b))
 }
 
 /// `normalize_action_path`: a form's `action` as the path its per-form token is bound to. A

@@ -8,9 +8,6 @@
 //!   posts to the reference app (a tab opened on the port that submits after a rollback).
 //!
 //! A signed cookie Rails wrote (`vectors/rails_compat.json`) is read as well.
-//!
-//! Our Rails app's cookies are keyed with PBKDF2-HMAC-SHA1, which `RailsCrypto` can't read yet;
-//! these tests use `testing::OurRailsCrypto` (see there).
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -19,8 +16,7 @@ use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, header};
 use campfire_kit::crypto::SharedCrypto;
-use campfire_kit::testing::OurRailsCrypto;
-use campfire_kit::{Ctx, FrozenClock, Kit, KitConfig, RailsCrypto, Result, StatusCode, action};
+use campfire_kit::{Crypto, Ctx, FrozenClock, Kit, KitConfig, RailsCrypto, Result, StatusCode, action};
 use serde_json::{Value, json};
 use tower::ServiceExt;
 
@@ -65,8 +61,9 @@ fn app_with(crypto: SharedCrypto, vectors: &Value) -> Router {
 }
 
 /// The kit with our Rails app's cookie crypto.
-fn app(vectors: &Value) -> (Router, Arc<OurRailsCrypto>) {
-    let crypto = Arc::new(OurRailsCrypto::new(vectors["secret_key_base"].as_str().unwrap()));
+fn app(vectors: &Value) -> (Router, Arc<RailsCrypto>) {
+    let secrets = rails_compat::Secrets::new(vectors["secret_key_base"].as_str().unwrap());
+    let crypto = Arc::new(RailsCrypto::new(Arc::new(secrets)));
     (app_with(crypto.clone(), vectors), crypto)
 }
 
@@ -161,7 +158,7 @@ async fn rails_sessions_carry_over_in_rails_format() {
     let raw = set_cookie.strip_prefix("_campfire_session=").unwrap().split(';').next().unwrap();
     let raw = rails_compat::cookies::unescape(raw);
     let now = vectors["now"].as_str().unwrap().parse().unwrap();
-    let decoded = crypto.decrypt("_campfire_session", &raw, now).unwrap();
+    let decoded = crypto.decrypt_cookie("_campfire_session", &raw, now).unwrap();
     let mut expected = sign_in["session"].clone();
     expected["return_to_after_authenticating"] = "/rooms/1".into();
     assert_eq!(decoded, expected);
@@ -198,7 +195,7 @@ async fn kit_issued_tokens_verify_here_and_are_written_for_rails() {
     let (cookies, fresh) = page(None).await;
     assert_eq!(cookies.len(), 1, "the page's tokens need a session: {cookies:?}");
     let fresh_raw = rails_compat::cookies::unescape(cookies[0].strip_prefix("_campfire_session=").unwrap().split(';').next().unwrap());
-    let fresh_session = crypto.decrypt("_campfire_session", &fresh_raw, now).unwrap();
+    let fresh_session = crypto.decrypt_cookie("_campfire_session", &fresh_raw, now).unwrap();
     assert_eq!(fresh_session["_csrf_token"].as_str().unwrap().len(), 43);
     assert_eq!(fresh_session["session_id"].as_str().unwrap().len(), 32);
 
