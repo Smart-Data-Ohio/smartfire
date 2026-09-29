@@ -33,6 +33,8 @@ pub struct FormWith {
     id: Option<String>,
     class: Option<String>,
     data: Attrs,
+    /// `html:`, merged after the options Rails slices out (`id`, `class`, `data`).
+    html: Attrs,
     multipart: Rc<Cell<bool>>,
 }
 
@@ -44,6 +46,7 @@ pub fn form_with(url: impl std::fmt::Display) -> FormWith {
         id: None,
         class: None,
         data: attrs(),
+        html: attrs(),
         multipart: Rc::new(Cell::new(false)),
     }
 }
@@ -76,6 +79,13 @@ impl FormWith {
         self
     }
 
+    /// `html: { role: "search", aria: { label: "Search" } }`: extra attributes for the `<form>`,
+    /// after `id`, `class` and `data` (`html_options_for_form_with`).
+    pub fn html(mut self, html: Attrs) -> Self {
+        self.html = self.html.merge(html);
+        self
+    }
+
     /// `auto_submit_form_with` (`FormsHelper`): prepends the auto-submit Stimulus controller.
     pub fn auto_submit(mut self) -> Self {
         let existing = self.data.get_str("data-controller").unwrap_or_default();
@@ -103,7 +113,7 @@ impl FormWith {
     /// this action and method (see [`super::request_forgery`]).
     pub fn open(&self) -> Html {
         let mut html = attrs().attr_opt("id", self.id.as_deref()).attr_opt("class", self.class.as_deref());
-        html = html.merge(self.data.clone());
+        html = html.merge(self.data.clone()).merge(self.html.clone());
         if self.multipart.get() {
             html = html.attr("enctype", "multipart/form-data");
         }
@@ -138,6 +148,20 @@ impl FormWith {
 
     pub fn email_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
         self.builder().input_field("email", method, value, options)
+    }
+
+    /// `form.search_field(method, options)`: pass the value as the `value` option, where the
+    /// ERB passes it (`Tags::SearchField`).
+    pub fn search_field(&self, method: &str, options: Attrs) -> Html {
+        self.builder().input_field("search", method, None, options)
+    }
+
+    /// `form.label(method, text, options)` (`Tags::Label`): `for` defaults to the field's id.
+    pub fn label(&self, method: &str, text: &str, options: Attrs) -> Html {
+        let builder = self.builder();
+        let mut options = options;
+        options.fetch_or_set("for", Some(builder.tag_id(method).into()));
+        super::tag::content_tag_text("label", &options, text)
     }
 
     pub fn url_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
@@ -283,9 +307,18 @@ fn sanitize_to_id(name: &str) -> String {
 
 /// `button_to(url, options) { content }`. `options` may carry `method` ("delete", "put",
 /// "patch", "post" or "get"), `form_class`, and the button's own attributes.
-pub fn button_to(url: &str, mut options: Attrs, content: &str) -> Html {
+pub fn button_to(url: &str, options: Attrs, content: &str) -> Html {
+    button_to_form(url, options, attrs(), content)
+}
+
+/// `button_to(url, options.merge(form: form_options)) { content }`: `form_options` are the
+/// `<form>`'s attributes, ahead of its `method` and `action`. Its `class` defaults to
+/// `form_class`, else "button_to".
+pub fn button_to_form(url: &str, mut options: Attrs, form_options: Attrs, content: &str) -> Html {
     let method = options.remove("method").map(|value| value_to_string(&value)).unwrap_or_else(|| "post".into());
     let form_class = options.remove("form_class").map(|value| value_to_string(&value)).unwrap_or_else(|| "button_to".into());
+    let mut form = form_options;
+    form.set_default("class", Some(form_class.into()));
 
     let method_field = if matches!(method.as_str(), "delete" | "patch" | "put") { method_tag(&method).0 } else { String::new() };
     let form_method = if method == "get" { "get" } else { "post" };
@@ -300,8 +333,24 @@ pub fn button_to(url: &str, mut options: Attrs, content: &str) -> Html {
     options.set("type", Some("submit".into()));
     let button = content_tag("button", &options, content).0;
 
-    let form = attrs().class(form_class).method(form_method).attr("action", url);
+    let form = form.method(form_method).attr("action", url);
     Safe(format!("<form{}>{method_field}{button}{token}</form>", form.render()))
+}
+
+/// `radio_button_tag(name, value, checked, options)`: `type`, `name`, `id` and `value` first,
+/// then the options, then `checked`.
+pub fn radio_button_tag(name: &str, value: &str, checked: bool, options: Attrs) -> Html {
+    let id = format!("{}_{}", sanitize_to_id(name), sanitize_to_id(value));
+    let base = attrs().type_("radio").name(name).id(id).value(value).merge(options);
+    let base = if checked { base.attr("checked", "checked") } else { base };
+    legacy_tag("input", base)
+}
+
+/// `datetime_local_field_tag(name, value, options)` (`text_field_tag` with type
+/// "datetime-local").
+pub fn datetime_local_field_tag(name: &str, value: Option<&str>, options: Attrs) -> Html {
+    let base = attrs().type_("datetime-local").name(name).id(sanitize_to_id(name)).attr_opt("value", value);
+    legacy_tag("input", base.merge(options))
 }
 
 #[cfg(test)]

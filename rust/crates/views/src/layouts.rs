@@ -10,7 +10,7 @@ use crate::helpers as h;
 
 /// The instance variables a page template hands to the application layout.
 pub trait Page {
-    /// `@page_title`; the layout falls back to "Campfire".
+    /// `@page_title`; the layout falls back to "Smartfire".
     fn page_title(&self) -> Option<String> {
         None
     }
@@ -18,6 +18,12 @@ pub trait Page {
     /// `@body_class`.
     fn body_class(&self) -> Option<&str> {
         None
+    }
+
+    /// `content_for?(:sidebar)`: whether the page fills the `sidebar` block with something not
+    /// blank. The layout only offers the workspace drawer's toggle then.
+    fn has_sidebar(&self) -> bool {
+        false
     }
 }
 
@@ -36,6 +42,8 @@ pub struct Application<'a> {
     pub nav: h::Html,
     pub content: h::Html,
     pub footer: h::Html,
+    pub member_panel: h::Html,
+    pub thread_panel: h::Html,
     pub sidebar: h::Html,
 }
 
@@ -50,6 +58,8 @@ impl<'a> Application<'a> {
             nav: h::empty(),
             content,
             footer: h::empty(),
+            member_panel: h::empty(),
+            thread_panel: h::empty(),
             sidebar: h::empty(),
         }
     }
@@ -62,6 +72,10 @@ impl Page for Application<'_> {
 
     fn body_class(&self) -> Option<&str> {
         self.body_class.as_deref()
+    }
+
+    fn has_sidebar(&self) -> bool {
+        !h::is_blank(&self.sidebar.0)
     }
 }
 

@@ -9,6 +9,7 @@
 pub mod application;
 pub mod assets;
 pub mod filters;
+pub mod emoji;
 pub mod forms;
 pub mod html;
 pub mod links;

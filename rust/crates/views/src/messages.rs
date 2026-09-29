@@ -207,17 +207,8 @@ impl<'de> Deserialize<'de> for MessageItem {
     }
 }
 
-/// `EmojiHelper::REACTIONS`.
-pub const REACTIONS: [(&str, &str); 8] = [
-    ("👍", "Thumbs up"),
-    ("👏", "Clapping"),
-    ("👋", "Waving hand"),
-    ("💪", "Muscle"),
-    ("❤️", "Red heart"),
-    ("😂", "Face with tears of joy"),
-    ("🎉", "Party popper"),
-    ("🔥", "Fire"),
-];
+/// `EmojiHelper::REACTIONS` (see [`crate::helpers::emoji`]).
+pub use crate::helpers::emoji::REACTIONS;
 
 impl MessageView {
     /// `dom_id(message)` / `dom_id(message, prefix)`.

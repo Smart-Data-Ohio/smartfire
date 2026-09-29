@@ -9,9 +9,71 @@ use super::links::link_to;
 use super::tag::{attrs, builder_tag, content_tag, content_tag_text, legacy_tag};
 use crate::ViewContext;
 
-/// `page_title_tag`: `@page_title || "Campfire"`.
+/// `page_title_tag`: `@page_title || "Smartfire"`.
 pub fn page_title_tag(page_title: Option<&str>) -> Html {
-    content_tag_text("title", attrs(), page_title.unwrap_or("Campfire"))
+    content_tag_text("title", attrs(), page_title.unwrap_or("Smartfire"))
+}
+
+/// `Users::PresenceHelper#user_theme`: the user's theme if it's one of `THEMES`, else "system".
+pub fn user_theme(ctx: &ViewContext) -> &str {
+    let theme = ctx.current_user.as_ref().and_then(|user| user.preferences.theme.as_deref());
+    match theme {
+        Some(theme @ ("light" | "dark" | "system")) => theme,
+        _ => "system",
+    }
+}
+
+/// `Users::PresenceHelper#user_text_size`: the user's text size if it's one of `TEXT_SIZES`, else
+/// "default".
+pub fn user_text_size(ctx: &ViewContext) -> &str {
+    let text_size = ctx.current_user.as_ref().and_then(|user| user.preferences.text_size.as_deref());
+    match text_size {
+        Some(size @ ("smaller" | "small" | "default" | "large" | "larger")) => size,
+        _ => "default",
+    }
+}
+
+/// `Users::PresenceHelper#theme_color_scheme_meta_content`.
+pub fn theme_color_scheme_meta_content(ctx: &ViewContext) -> &'static str {
+    match user_theme(ctx) {
+        "light" => "light",
+        "dark" => "dark",
+        _ => "light dark",
+    }
+}
+
+/// `current_user_time_zone_meta_content`: the saved zone, "" when "Not set" was chosen on
+/// purpose, else nothing (the meta tag then has no content attribute).
+pub fn current_user_time_zone_meta_content(ctx: &ViewContext) -> Option<&str> {
+    let preferences = &ctx.current_user.as_ref()?.preferences;
+    super::text::presence(preferences.time_zone.as_deref()).or(preferences.time_zone_explicit.then_some(""))
+}
+
+/// `notification_sound_meta_tags` (`app/helpers/application_helper.rb`), from what the settings'
+/// owners decided ([`crate::layouts::NotificationSounds`]).
+pub fn notification_sound_meta_tags(ctx: &ViewContext) -> Html {
+    let Some(user) = &ctx.current_user else { return Safe(String::new()) };
+    let sounds = &user.preferences.notification_sounds;
+    let meta = |name: &str, content: &str| builder_tag("meta", attrs().name(name).attr("content", content)).0;
+    let windows = |epochs: &[(i64, i64)]| epochs.iter().map(|(start, finish)| format!("{start}-{finish}")).collect::<Vec<_>>().join(",");
+
+    let mut tags = String::new();
+    if sounds.muted {
+        tags.push_str(&meta("notification-dnd", "muted"));
+    }
+    if let Some((start, finish)) = sounds.quiet_hours {
+        tags.push_str(&meta("quiet-hours", &format!("{start}-{finish}")));
+        // `time_zone_or_default`: the saved zone even when Rails doesn't know it, else `Time.zone`.
+        let zone = super::text::presence(user.preferences.time_zone.as_deref()).unwrap_or(ctx.time_zone.name());
+        tags.push_str(&meta("quiet-hours-zone", zone));
+    }
+    if !sounds.meeting_quiet.is_empty() {
+        tags.push_str(&meta("meeting-quiet", &windows(&sounds.meeting_quiet)));
+    }
+    if !sounds.ooo_quiet.is_empty() {
+        tags.push_str(&meta("ooo-quiet", &windows(&sounds.ooo_quiet)));
+    }
+    Safe(tags)
 }
 
 /// `current_user_meta_tags`.
@@ -144,7 +206,7 @@ pub fn to_sentence(items: &[String], two_words_connector: &str) -> String {
     }
 }
 
-mod base64_url {
+pub(crate) mod base64_url {
     /// `Base64.urlsafe_encode64` (padded).
     pub fn urlsafe_encode64(input: &str) -> String {
         const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";

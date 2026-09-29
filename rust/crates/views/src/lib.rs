@@ -82,6 +82,36 @@ impl ViewContext<'_> {
         self.current_user.as_ref().map(|user| user.id)
     }
 
+    /// `Current.user && !Current.user.bot?`: the global search, help menu and tour are for people.
+    pub fn human_signed_in(&self) -> bool {
+        self.current_user.as_ref().is_some_and(|user| !user.bot)
+    }
+
+    /// The signed-in user's settings.
+    pub fn preferences(&self) -> Option<&layouts::UserPreferences> {
+        self.current_user.as_ref().map(|user| &user.preferences)
+    }
+
+    /// `Current.user&.google_account&.drive?`.
+    pub fn google_drive_previews(&self) -> bool {
+        self.preferences().is_some_and(|preferences| preferences.google_drive)
+    }
+
+    /// `Google::Picker.configured? && Current.user`.
+    pub fn google_picker(&self) -> Option<&layouts::GooglePicker> {
+        self.current_user.as_ref().and(self.chrome.google_picker.as_ref())
+    }
+
+    /// `Current.user.tour_completed_at.nil?`.
+    pub fn tour_pending(&self) -> bool {
+        self.preferences().is_some_and(|preferences| !preferences.tour_completed)
+    }
+
+    /// `Current.user && Huddle.configured?`.
+    pub fn huddle_configured(&self) -> bool {
+        self.current_user.is_some() && self.chrome.huddle_configured
+    }
+
     /// `Current.user == user`.
     pub fn is_current_user(&self, user_id: impl std::borrow::Borrow<i64>) -> bool {
         self.current_user_id() == Some(*user_id.borrow())
