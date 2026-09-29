@@ -156,9 +156,10 @@ fn router(app: &App, kit: Kit) -> Router {
     let dispatch = || axum::routing::any(campfire_kit::action(dispatch_with_fragment_cache));
     let routes = Router::new()
         .merge(app.cable.router::<Kit>(campfire_cable::protocol::DEFAULT_MOUNT_PATH))
-        // `post "csp_reports"`: an `ActionController::API`, outside the ApplicationController routes.
-        .route("/csp_reports", axum::routing::post(campfire_kit::action(controllers::csp_reports::create)))
-        .route("/csp_reports.{format}", axum::routing::post(campfire_kit::action(controllers::csp_reports::create)))
+        // `post "csp_reports"`: an `ActionController::API`, outside the ApplicationController
+        // routes, which reads its own body after its rate limit.
+        .route("/csp_reports", axum::routing::post(campfire_kit::unparsed_action(controllers::csp_reports::create)))
+        .route("/csp_reports.{format}", axum::routing::post(campfire_kit::unparsed_action(controllers::csp_reports::create)))
         .route("/", dispatch())
         .route("/{*path}", dispatch())
         .layer(axum::middleware::from_fn(public_files));

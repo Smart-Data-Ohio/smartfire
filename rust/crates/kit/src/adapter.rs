@@ -47,14 +47,28 @@ where
 
 /// An Axum handler running one action.
 #[derive(Clone)]
-pub struct ActionHandler<F>(F);
+pub struct ActionHandler<F> {
+    action: F,
+    parse_body: bool,
+}
 
 /// Wrap an action for `axum::routing` (`get(action(rooms::show))`).
 pub fn action<F>(f: F) -> ActionHandler<F>
 where
     F: for<'a> ActionFn<'a> + Clone,
 {
-    ActionHandler(f)
+    ActionHandler { action: f, parse_body: true }
+}
+
+/// [`action`] for one that reads its own body ([`Ctx::read_body`]) and has no body params: the
+/// kit neither buffers nor parses it first, so what the action does before reading it (a rate
+/// limit, say) comes first, and a body the kit would refuse to parse is only as big or as
+/// malformed as the action lets it be. (Form data is still read before routing, for `_method`.)
+pub fn unparsed_action<F>(f: F) -> ActionHandler<F>
+where
+    F: for<'a> ActionFn<'a> + Clone,
+{
+    ActionHandler { action: f, parse_body: false }
 }
 
 #[doc(hidden)]
@@ -67,7 +81,7 @@ where
     type Future = Pin<Box<dyn Future<Output = axum::response::Response> + Send>>;
 
     fn call(self, req: axum::extract::Request, kit: Kit) -> Self::Future {
-        Box::pin(async move { dispatch(kit, req, self.0).await })
+        Box::pin(async move { dispatch(kit, req, self.action, self.parse_body).await })
     }
 }
 
@@ -93,7 +107,7 @@ pub struct OriginalMethod(pub Method);
 #[derive(Debug, Clone)]
 pub struct RequestId(pub String);
 
-async fn dispatch<F>(kit: Kit, req: axum::extract::Request, action: F) -> axum::response::Response
+async fn dispatch<F>(kit: Kit, req: axum::extract::Request, action: F, parse_body: bool) -> axum::response::Response
 where
     F: for<'a> ActionFn<'a>,
 {
@@ -102,8 +116,13 @@ where
         raw.iter().map(|(k, v)| (k.to_string(), Param::Str(v.to_string()))).collect::<ParamMap>()
     });
     let original_method = parts.extensions.get::<OriginalMethod>().map(|m| m.0.clone()).unwrap_or(parts.method.clone());
+    let mut unread = None;
     let parsed = match parts.extensions.remove::<ParsedBody>() {
         Some(parsed) => Ok(parsed),
+        None if !parse_body => {
+            unread = Some(body);
+            Ok(ParsedBody::empty())
+        }
         None => body::parse(&original_method, &parts.headers, body, kit.config().max_body_bytes).await,
     };
     let peer = parts.extensions.get::<ConnectInfo<SocketAddr>>().map(|c| c.0.ip());
@@ -134,6 +153,9 @@ where
         body_params.unwrap_or_default(),
         cookies,
     );
+    if let Some(body) = unread {
+        ctx.leave_body_unread(body);
+    }
     let result = match failure {
         Some(error) => Err(error),
         None => {

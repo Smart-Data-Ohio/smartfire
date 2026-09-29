@@ -50,6 +50,9 @@ pub struct Ctx {
     formats: Option<std::result::Result<Vec<Format>, InvalidMimeType>>,
     rendered_format: Option<Format>,
     live: bool,
+    /// The body of an [`crate::unparsed_action`], until [`Ctx::read_body`] reads it. (A `Mutex`
+    /// only because a body isn't `Sync`.)
+    unread_body: std::sync::Mutex<Option<axum::body::Body>>,
 }
 
 /// Options for `redirect_to`.
@@ -113,7 +116,34 @@ impl Ctx {
             formats: None,
             rendered_format: None,
             live: false,
+            unread_body: std::sync::Mutex::new(None),
         }
+    }
+
+    pub(crate) fn leave_body_unread(&mut self, body: axum::body::Body) {
+        *self.unread_body.get_mut().unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(body);
+    }
+
+    /// `request.body.read(limit)`: at most the first `limit` bytes of the body. An
+    /// [`crate::unparsed_action`]'s body is read here: those bytes are kept and the rest is read
+    /// and dropped, as Puma reads a whole body before the app sees any of it (so the client gets
+    /// the response rather than a reset connection). Any other action's comes from `raw_post`.
+    pub async fn read_body(&mut self, limit: usize) -> bytes::Bytes {
+        use http_body_util::BodyExt;
+
+        let unread = self.unread_body.get_mut().unwrap_or_else(|poisoned| poisoned.into_inner()).take();
+        let Some(mut body) = unread else {
+            let raw = self.request.raw_post();
+            return raw.slice(..raw.len().min(limit));
+        };
+        let mut read = bytes::BytesMut::new();
+        while let Some(Ok(frame)) = body.frame().await {
+            if let Ok(data) = frame.into_data() {
+                let wanted = limit.saturating_sub(read.len()).min(data.len());
+                read.extend_from_slice(&data[..wanted]);
+            }
+        }
+        read.freeze()
     }
 
     pub fn kit(&self) -> &Kit {

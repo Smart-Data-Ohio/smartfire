@@ -409,6 +409,43 @@ async fn csp_reports_are_rate_limited_per_ip() {
     assert_eq!(app.send(report("10.4.0.2")).await.status, StatusCode::NO_CONTENT);
 }
 
+/// The rate limit comes before anything reads the body, and nothing parses it: a malformed JSON
+/// report is no report, and it counts toward the limit.
+#[tokio::test]
+async fn malformed_json_csp_reports_are_rate_limited_not_refused() {
+    let vectors = vectors();
+    let expected = &vectors["rate_limit"]["csp_reports"]["malformed_json_statuses"];
+    let app = boot_fresh(false).await;
+    let mut statuses = Vec::new();
+    for _ in 0..expected.as_array().unwrap().len() {
+        let report = request("POST", "/csp_reports")
+            .header("x-forwarded-for", "10.4.0.3")
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from("{"))
+            .unwrap();
+        statuses.push(json!(app.send(report).await.status.as_u16()));
+    }
+    assert_eq!(&Value::Array(statuses), expected);
+}
+
+/// A report of any size is read only as far as `MAX_BODY + 1` bytes, never refused for its size.
+#[tokio::test]
+async fn csp_reports_read_a_bounded_prefix_of_any_body() {
+    let vectors = vectors();
+    let expected = &vectors["rate_limit"]["csp_reports"]["seventeen_mib_statuses"];
+    let app = boot_fresh(false).await;
+    let mut body = br#"{"csp-report":{"violated-directive":"img-src"}}"#.to_vec();
+    body.resize(17 * 1024 * 1024, b' ');
+    for (content_type, status) in expected.as_object().unwrap() {
+        let report = request("POST", "/csp_reports")
+            .header("x-forwarded-for", "10.4.0.4")
+            .header(header::CONTENT_TYPE, content_type.as_str())
+            .body(Body::from(body.clone()))
+            .unwrap();
+        assert_eq!(json!(app.send(report).await.status.as_u16()), *status, "{content_type}");
+    }
+}
+
 // --- Session plumbing --------------------------------------------------------------------------
 
 #[tokio::test]

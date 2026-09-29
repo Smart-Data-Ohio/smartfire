@@ -2671,7 +2671,34 @@
         429
       ],
       "limit": 20,
-      "max_body": 16384
+      "max_body": 16384,
+      "malformed_json_statuses": [
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        429
+      ],
+      "seventeen_mib_statuses": {
+        "application/csp-report": 204,
+        "application/json": 204
+      }
     }
   },
   "secret_key_base": "5335c3b1ad35b4ad170c3413bd651ef3b6ed64e257261871a6de3f978cf3868ee417a927040935fb30b0f7debdedb34a2a403e9f34b16cf594c917c2ecd4a995",
