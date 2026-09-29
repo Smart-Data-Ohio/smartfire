@@ -532,6 +532,23 @@ fn export_database_for_rails() {
         crate::SavedItem::dispatch_reminder(tx, reminded.id, now.since(hour * 2))?;
         let mut done = crate::SavedItem::save_for(tx, id("jason"), id("second"), Some(now.since(hour)))?;
         done.update(tx, crate::SavedItemChanges { status: Some("done".into()), ..Default::default() })?;
+        crate::KeywordAlert::create(tx, id("david"), "  Deploy   freeze  ")?;
+        let category = crate::RoomCategory::create(tx, id("david"), "Team", 1, true)?;
+        let mut membership = Membership::find_by_room_and_user(tx.conn(), id("designers"), id("david"))?.unwrap();
+        membership.update_category(tx, Some(category.id))?;
+        membership.favorite(tx)?;
+
+        let attrs = crate::NewScheduledMessage {
+            user_id: id("david"), room_id: id("designers"), thread_id: None,
+            reply_to_message_id: Some(id("first")), markdown_source: "Scheduled hello".into(),
+            send_at: now.since(hour),
+        };
+        let sent = crate::ScheduledMessage::create(tx, attrs.clone())?;
+        crate::ScheduledMessage::dispatch(tx, sent.id, now, true)?;
+        let pending = crate::ScheduledMessage::create(tx, crate::NewScheduledMessage { markdown_source: "Pending hello".into(), ..attrs.clone() })?;
+        let mut dropped = crate::ScheduledMessage::create(tx, crate::NewScheduledMessage { markdown_source: "Dropped hello".into(), ..attrs })?;
+        dropped.drop(tx, Some("its thread was deleted"), now)?;
+        assert!(pending.pending());
         Ok(())
     })
     .unwrap();

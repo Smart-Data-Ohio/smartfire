@@ -120,6 +120,27 @@ end
 done = SavedItem.find_by!(user: jason)
 check("done saved item") { done.done? && done.reminder_pending? && SavedItem.due_reminders(done.remind_at).include?(done) }
 
+check("keyword normalization") { david.keyword_alerts.sole.phrase == "Deploy freeze" }
+check("category and favorite") do
+  category = david.room_categories.sole
+  membership = david.memberships.find_by!(room: designers)
+  category.name == "Team" && category.collapsed? && category.position == 1 &&
+    membership.room_category == category && membership.favorite_position == 0 &&
+    david.memberships.favorites.include?(membership)
+end
+scheduled = ScheduledMessage.find_by!(markdown_source: "Scheduled hello")
+check("sent schedule") do
+  scheduled.sent? && scheduled.sent_message.plain_text_body == "Scheduled hello" &&
+    scheduled.sent_message.creator == david && scheduled.sent_message.reply_to_message == pinned
+end
+pending = ScheduledMessage.find_by!(markdown_source: "Pending hello")
+check("pending schedule") { pending.pending? && pending.sendable? && ScheduledMessage.owned_by(david).include?(pending) }
+dropped = ScheduledMessage.find_by!(markdown_source: "Dropped hello")
+check("dropped schedule") do
+  dropped.dropped? && dropped.drop_reason == "its thread was deleted" &&
+    dropped.activity_items.sole.event_type == "scheduled_message_dropped"
+end
+
 bot = User.find_by!(name: "Rust Bot")
 bot_key = File.read("/out/rust_export.sqlite3.bot_key")
 tampered = bot_key.sub(/.\z/) { _1 == "a" ? "b" : "a" }
