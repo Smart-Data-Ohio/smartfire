@@ -7,7 +7,7 @@ use std::time::Duration;
 use campfire_cable::Config;
 use campfire_db::fixtures::{self, identify};
 use campfire_db::rich_text::BasicRichText;
-use campfire_db::{Boost, Database, Event, EventSink, Membership, Message, NewSession, Room, Session, TestClock};
+use campfire_db::{Boost, Database, Event, EventSink, Membership, Message, NewMessage, NewSession, Room, Session, TestClock, WorkspacePresenceLease};
 use campfire_kit::{Crypto, RailsCrypto, SystemClock};
 use futures_util::{SinkExt, StreamExt};
 use rails_compat::Secrets;
@@ -91,6 +91,10 @@ pub async fn start() -> TestApp {
     }
 }
 
+pub fn count(conn: &campfire_db::Connection, sql: &str, id: i64) -> campfire_db::Result<i64> {
+    Ok(conn.query_row(sql, [id], |row| row.get(0))?)
+}
+
 pub fn id(label: &str) -> i64 {
     identify(label)
 }
@@ -107,6 +111,48 @@ impl TestApp {
         let user_id = id(user);
         let attributes = NewSession { user_agent: Some("test"), ip_address: Some("8.8.8.8"), two_factor_verified: verified, ..Default::default() };
         self.db.write(move |tx| Session::start_with(tx, user_id, attributes)).await.unwrap()
+    }
+
+    /// Connects with the session's cookie and reads the welcome.
+    pub async fn connect_with_session(&self, session: &Session) -> Client {
+        let cookie = self.cookie_with_token(&session.token);
+        let mut client = self.connect_with_cookie(Some(&cookie)).await;
+        assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
+        client
+    }
+
+    /// Runs one statement, bypassing the models (as `delete`/`update_columns` do in the Ruby
+    /// tests).
+    pub async fn sql(&self, sql: &'static str, params: Vec<rusqlite::types::Value>) -> usize {
+        self.db.write(move |tx| Ok(tx.conn().execute(sql, rusqlite::params_from_iter(params))?)).await.unwrap()
+    }
+
+    /// Every workspace presence lease, oldest first.
+    pub async fn leases(&self) -> Vec<WorkspacePresenceLease> {
+        self.db
+            .read(|conn| {
+                let mut statement = conn.prepare(r#"SELECT "id" FROM "workspace_presence_leases" ORDER BY "id""#)?;
+                let ids: Vec<i64> = statement.query_map([], |row| row.get(0))?.collect::<rusqlite::Result<_>>()?;
+                ids.into_iter().map(|id| Ok(WorkspacePresenceLease::find_by_id(conn, id)?.expect("listed"))).collect()
+            })
+            .await
+            .unwrap()
+    }
+
+    pub async fn session_exists(&self, session_id: i64) -> bool {
+        self.db.read(move |conn| Ok(crate::channels::tests::support::count(conn, "SELECT COUNT(*) FROM sessions WHERE id = ?", session_id)? > 0)).await.unwrap()
+    }
+
+    /// `room.messages.create!(body:, creator:, client_message_id:)`.
+    pub async fn create_message(&self, room: &str, creator: &str, body: &str, client_message_id: &str) -> Message {
+        let attributes = NewMessage {
+            room_id: id(room),
+            creator_id: id(creator),
+            body: Some(body.to_string()),
+            client_message_id: Some(client_message_id.to_string()),
+            ..Default::default()
+        };
+        self.db.write(move |tx| Message::create(tx, attributes)).await.unwrap()
     }
 
     pub fn cookie_with_token(&self, token: &str) -> String {
