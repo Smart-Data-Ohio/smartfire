@@ -1,5 +1,6 @@
 # Validate the built Smartfire corpus using the reference's actual models and encrypted secrets.
 require "json"
+enrolled_credentials = TwoFactorCredential.where.not(confirmed_at: nil)
 checks = {
   markdown: Message.where.not(markdown_source: [nil, ""]).exists?,
   thread_replies: Message.where.not(thread_id: nil).exists?,
@@ -26,7 +27,7 @@ checks = {
   linkedin_recording: LinkEmbed.where("normalized_url LIKE '%linkedin.com%'").where.not(title: nil).exists?,
   link_recording: LinkEmbed.where(normalized_url: "https://example.com/parity").exists?,
   remembered_two_factor: TwoFactorRememberedDevice.exists?,
-  enrolled_two_factor: TwoFactorCredential.where.not(confirmed_at: nil).all? { |credential| credential.secret.present? },
+  enrolled_two_factor: enrolled_credentials.exists? && enrolled_credentials.all? { |credential| credential.secret.present? },
   setup_secret: TwoFactorSetupSecret.all.any? { |secret| secret.secret == "JBSWY3DPEHPK3PXP" },
   verified_sessions: Session.where.not(two_factor_verified_at: nil).exists?
 }
