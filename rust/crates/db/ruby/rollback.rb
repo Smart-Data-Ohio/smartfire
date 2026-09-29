@@ -98,6 +98,28 @@ end
 later = Message.find_by!(client_message_id: "rust-poll-later").poll
 check("open poll") { later.open? && later.anonymous? && Poll.open.include?(later) && Poll.open.exclude?(poll) }
 
+designers = Room.find_by!(name: "Designers")
+pinned = Message.find_by!(client_message_id: "0001")
+check("pins") do
+  MessagePin.pinned?(pinned) && !MessagePin.pinned?(Message.find_by!(client_message_id: "0002")) &&
+    designers.message_pins.sole.pinner == david && designers.pins_changed_at.present?
+end
+check("pin notes") do
+  notes = designers.root_messages.where(system_note: true).order(:id)
+  notes.map(&:markdown_source) == [
+    "pinned a message: [jump to message](/rooms/#{designers.id}/@#{pinned.id})",
+    "pinned a message: [jump to message](/rooms/#{designers.id}/@#{Message.find_by!(client_message_id: "0002").id})"
+  ] && notes.map(&:creator) == [ david, jason ] && notes.first.plain_text_body.include?("jump to message")
+end
+reminded = SavedItem.find_by!(user: david, message: pinned)
+check("fired reminder") do
+  reminded.reminder_fired? && reminded.in_progress? &&
+    ActivityItem.find_by!(user: david, source: reminded).then { _1.event_type == "message_reminder" && _1.unread? } &&
+    SavedItem.accessible_to(david).include?(reminded) && SavedItem.due_reminders(reminded.remind_at + 1.day).exclude?(reminded)
+end
+done = SavedItem.find_by!(user: jason)
+check("done saved item") { done.done? && done.reminder_pending? && SavedItem.due_reminders(done.remind_at).include?(done) }
+
 bot = User.find_by!(name: "Rust Bot")
 bot_key = File.read("/out/rust_export.sqlite3.bot_key")
 tampered = bot_key.sub(/.\z/) { _1 == "a" ? "b" : "a" }

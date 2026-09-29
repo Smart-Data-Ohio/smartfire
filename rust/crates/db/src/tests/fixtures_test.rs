@@ -517,4 +517,22 @@ fn export_database_for_rails() {
         Ok(())
     })
     .unwrap();
+
+    // Pins: the fixture message "first" pinned (with its note); "second" pinned and unpinned.
+    // Saved items: David's reminder on "first", fired; Jason's "second", done, reminding later.
+    db.write_blocking(|tx| {
+        let first = Message::find(tx.conn(), id("first"))?;
+        crate::MessagePin::pin(tx, &first, id("david"))?.map_err(|e| crate::Error::Other(e.0))?;
+        let second = Message::find(tx.conn(), id("second"))?;
+        crate::MessagePin::pin(tx, &second, id("jason"))?.map_err(|e| crate::Error::Other(e.0))?.unpin(tx)?;
+
+        let now = tx.now();
+        let hour = jiff::SignedDuration::from_hours(1);
+        let reminded = crate::SavedItem::save_for(tx, id("david"), id("first"), Some(now.since(hour)))?;
+        crate::SavedItem::dispatch_reminder(tx, reminded.id, now.since(hour * 2))?;
+        let mut done = crate::SavedItem::save_for(tx, id("jason"), id("second"), Some(now.since(hour)))?;
+        done.update(tx, crate::SavedItemChanges { status: Some("done".into()), ..Default::default() })?;
+        Ok(())
+    })
+    .unwrap();
 }

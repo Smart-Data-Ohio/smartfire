@@ -1,6 +1,7 @@
 //! One module per model under `reference/app/models`.
 
 pub mod account;
+pub mod activity_item;
 pub mod active_storage;
 pub mod ban;
 pub mod boost;
@@ -8,10 +9,12 @@ pub mod channel_thread;
 pub mod first_run;
 pub mod forwarder;
 pub mod membership;
+pub mod message_pin;
 pub mod message;
 pub mod poll;
 pub mod push_subscription;
 pub mod rich_text_record;
+pub mod saved_item;
 pub mod room;
 pub mod search;
 pub mod session;
@@ -23,16 +26,19 @@ pub mod webhook;
 
 pub use account::{Account, AccountSettings};
 pub use active_storage::{Attachment, Blob};
+pub use activity_item::ActivityItem;
 pub use ban::Ban;
 pub use boost::Boost;
 pub use channel_thread::{ChannelThread, NewChannelThread, ThreadPush, ThreadPushCandidate, ThreadStatus};
 pub use first_run::FirstRun;
 pub use membership::{Involvement, Membership, StageRole};
+pub use message_pin::MessagePin;
 pub use message::{ContentType, Message, MessageChanges, NewMessage, Timeline};
 pub use poll::{NewPoll, Poll, PollOption, PollVote};
 pub use push_subscription::{MAX_PAYLOAD_BODY_BYTES, MAX_PAYLOAD_TITLE_BYTES, PushPayload, PushSubscription};
 pub use rich_text_record::RichTextRecord;
 pub use room::{Room, RoomType};
+pub use saved_item::{NewSavedItem, SavedItem, SavedItemChanges};
 pub use search::Search;
 pub use session::{NewSession, Session};
 pub use sound::Sound;

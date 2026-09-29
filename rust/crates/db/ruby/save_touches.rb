@@ -27,7 +27,10 @@ ACTIONS = {
   "markdown_new"    => ->(m, _) { m.update!(markdown_source: "rewritten") },
   "embeds_suppress" => ->(m, _) { m.update!(embeds_suppressed: true) },
   "forward_note"    => ->(m, _) { m.update!(forward_note: "note") },
-  "drive_add"       => ->(m, _) { m.drive_attachments.build(file_id: "1AbcDefGhIjKlMnOpQrSt"); m.save! }
+  "drive_add"       => ->(m, _) { m.drive_attachments.build(file_id: "1AbcDefGhIjKlMnOpQrSt"); m.save! },
+  "pin"             => ->(m, u) { MessagePin.pin!(message: m, pinner: u) },
+  "unpin"           => ->(m, _) { MessagePin.find_by!(message: m).unpin! },
+  "save_item"       => ->(m, u) { SavedItem.create!(user: u, message: m, remind_at: 1.hour.from_now) }
 }
 
 t0 = Time.utc(2026, 9, 29, 12, 0, 0)
@@ -40,6 +43,7 @@ results = {}
   attributes[:attachment] = blob("old") if attached
   message = room.messages.create!(attributes)
   message.boosts.create!(content: "yo", booster: jason) if action == "boost_destroy"
+  MessagePin.pin!(message:, pinner: jason) if action == "unpin"
   travel_to t0 + 60.seconds
   ACTIONS.fetch(action).call(Message.find(message.id), jason)
   travel_back
