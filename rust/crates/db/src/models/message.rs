@@ -471,6 +471,10 @@ impl Message {
 
         let committed = message.clone();
         tx.after_commit(move |tx| committed.after_create_commit(tx, &indicator_threads));
+        if !message.streaming {
+            // Persist jobs now, then wake the runner after the receive/indicator hook.
+            message.push_later_in_conversation(tx);
+        }
         Ok(message)
     }
 
@@ -934,6 +938,15 @@ impl Message {
         match self.thread_id {
             Some(thread_id) => ChannelThread::receive(tx, thread_id, self),
             None => Room::receive(tx, self.room_id, self),
+        }
+    }
+
+    /// The push job `receive_in_conversation` enqueues, written in the message's transaction
+    /// (see [`Room::push_later`]).
+    fn push_later_in_conversation(&self, tx: &mut Tx<'_>) {
+        match self.thread_id {
+            Some(thread_id) => ChannelThread::push_later(tx, thread_id, self),
+            None => Room::push_later(tx, self.room_id, self),
         }
     }
 

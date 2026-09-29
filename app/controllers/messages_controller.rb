@@ -16,7 +16,12 @@ class MessagesController < ApplicationController
     @messages = find_paged_messages
 
     if @messages.any?
-      fresh_when @messages, etag: [ @messages, rendered_related_stamp(@messages), rendered_pin_stamp(@messages) ]
+      # The ETag is the page's only validator. Its freshness also turns on
+      # things no timestamp can express (an unpin, or a change to the
+      # presentation code, see MessagesHelper::PRESENTATION_CACHE_VERSION),
+      # so a Last-Modified would let a client revalidate HTML the server no
+      # longer renders with a bare If-Modified-Since.
+      fresh_when etag: [ @messages, rendered_related_stamp(@messages), rendered_pin_stamp(@messages), MessagesHelper::PRESENTATION_CACHE_VERSION ]
       unless performed?
         Message.preload_rendering_details(@messages)
         Message::MentionPreloader.preload_for(@messages)

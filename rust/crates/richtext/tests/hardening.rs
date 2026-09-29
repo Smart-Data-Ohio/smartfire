@@ -33,7 +33,7 @@ fn parsed_markup(html: &str) -> Vec<String> {
     let mut names = Vec::new();
     for node in dom.descendants(root) {
         if let Some(name) = dom.local_name(node) {
-            if name == "div" && dom.attr(node, "class") == Some("lexxy-content") {
+            if name == "div" && dom.attr(node, "class") == Some("trix-content") {
                 continue; // the layout's wrapper
             }
             names.push(name.to_string());
@@ -72,9 +72,20 @@ fn an_email_address_after_a_greater_than_sign_in_an_attribute_cannot_break_out_o
 }
 
 #[test]
-fn name_attributes_cant_clobber_the_pages_globals() {
-    let html = presentation(r#"<p><a name="body" href="/x">x</a><span name="cookie">y</span></p>"#);
-    assert_eq!(parsed_markup(&html), ["p", "a", "a[href]", "span"], "{html}");
+fn named_anchors_keep_escaped_names() {
+    let html = presentation(r#"<p><a name='a b"c' href="/x">x</a><span name="cookie">y</span></p>"#);
+    assert_eq!(parsed_markup(&html), ["p", "a", "a[name]", "a[href]", "span"], "{html}");
+    assert!(html.contains("name=\"a%20b%22c\""), "{html}");
+}
+
+#[test]
+fn attachment_generated_image_names_cannot_create_dom_globals() {
+    let html = presentation(
+        r#"<action-text-attachment content-type="text/html" content="&lt;img src=&quot;/image.png&quot; name=&quot;body&quot;&gt;"></action-text-attachment>"#,
+    );
+    let markup = parsed_markup(&html);
+    assert!(markup.iter().any(|m| m == "img"), "{html}");
+    assert!(!markup.iter().any(|m| m.ends_with("[name]")), "{html}");
 }
 
 #[test]
@@ -139,10 +150,9 @@ impl AttachableResolver for DeletedUsers {
 const DELETED_MENTION: &str = r#"<p>Hi <action-text-attachment sgid="eyJfcmFpbHMiOnsiZGF0YSI6ImdpZDovL2NhbXBmaXJlL1VzZXIvNj9leHBpcmVzX2luIiwicHVyIjoiYXR0YWNoYWJsZSJ9fQ==--fc4f83a239475557295b8e2f5ff55482bebc9bfe" content-type="application/vnd.campfire.mention"></action-text-attachment>, welcome</p>"#;
 
 #[test]
-fn a_mention_of_a_deleted_user_leaves_the_rest_of_the_message() {
+fn a_deleted_user_mention_matches_the_forks_empty_presentation() {
     let ctx = RenderContext { resolver: &DeletedUsers, request_host: None };
-    let html = message_presentation(DELETED_MENTION, &ctx).unwrap();
-    assert!(html.contains("Hi") && html.contains('☒') && html.contains("welcome"), "{html}");
+    assert_eq!(campfire_richtext::present_message(DELETED_MENTION, &ctx), campfire_richtext::Presentation::Html(String::new()));
 }
 
 #[test]

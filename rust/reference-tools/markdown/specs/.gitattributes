@@ -1,0 +1,2 @@
+# Official executable spec: trailing spaces are intentional Markdown test input.
+gfm-0.29.0.gfm.13.txt whitespace=-blank-at-eol

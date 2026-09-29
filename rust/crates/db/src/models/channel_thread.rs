@@ -595,8 +595,15 @@ impl ChannelThread {
                 payload: serde_json::json!({ "threadId": thread.id, "roomId": thread.room_id }),
             }));
         }
-        tx.emit_after_commit(Event::job(&PushMessageJob { thread_id: thread.id, message_id: message.id }));
         Ok(())
+    }
+
+    /// Persist the receive callback's job in the triggering write. The runner is woken after
+    /// the unread broadcasts, when the transaction commits (WS3's EventSink::persist).
+    pub(crate) fn push_later(tx: &mut Tx<'_>, thread_id: i64, message: &Message) {
+        if !message.system_note {
+            tx.emit_after_commit(Event::job(&PushMessageJob { thread_id, message_id: message.id }));
+        }
     }
 
     /// `ChannelThread.refresh_messages_count(thread_id)`: recount with `REPLY_COUNT_SQL`, then
