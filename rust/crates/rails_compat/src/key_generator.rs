@@ -20,8 +20,11 @@ pub struct KeyGenerator {
     secret: Vec<u8>,
     digest: HashDigest,
     iterations: u32,
-    cache: Mutex<HashMap<(Vec<u8>, usize), Vec<u8>>>,
+    cache: Mutex<KeyCache>,
 }
+
+/// Derived keys by `(salt, length)`, as `ActiveSupport::CachingKeyGenerator` keeps them.
+type KeyCache = HashMap<(Vec<u8>, usize), Vec<u8>>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HashDigest {
