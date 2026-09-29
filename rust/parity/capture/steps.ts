@@ -2,7 +2,7 @@
 // parity/screens.yml). Touch cells tap instead of clicking, as a phone would.
 import path from "node:path"
 import type { Page } from "playwright"
-import { REPO_DIR } from "./config.ts"
+import { repoPath } from "./config.ts"
 import type { Step } from "./inventory.ts"
 import { settle } from "./readiness.ts"
 import type { PageTracker } from "./readiness.ts"
@@ -43,7 +43,7 @@ export async function runStep(step: Step, ctx: StepContext): Promise<void> {
     else if (step.press.selector) await page.locator(step.press.selector).first().press(step.press.key, { timeout })
     else await page.keyboard.press(step.press.key)
   } else if ("upload" in step) {
-    const files = step.upload.files.map((f) => path.resolve(REPO_DIR, f))
+    const files = step.upload.files.map(repoPath)
     await page.locator(step.upload.selector).first().setInputFiles(files, { timeout })
   } else if ("scroll" in step) {
     await page.locator(step.scroll.selector).first().evaluate((el, to) => {

@@ -12,6 +12,10 @@
 # through capture/forward.ts (see run_in_image).
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
+# The reference Rails app (CAMPFIRE_REFERENCE, else the repository root that contains rust/) is
+# mounted read-only at its host path too: screens upload its test fixtures and the breakpoint
+# sweep reads its stylesheets.
+REFERENCE_ROOT=$(cd "${CAMPFIRE_REFERENCE:-$ROOT/..}" && pwd)
 PARITY=$ROOT/parity
 SANDBOX=$PARITY/capture/sandbox
 
@@ -56,13 +60,13 @@ run_in_image() {
       local name=parity-capture-$$-$RANDOM
       CAPTURE_CONTAINERS+=("$name" "$name-forward")
       docker run -d --rm --init --name "$name-forward" --network host -u "$(id -u):$(id -g)" \
-        -v "$ROOT:$ROOT" --tmpfs "$PARITY/node_modules" -w "$PARITY" \
+        -v "$REFERENCE_ROOT:$REFERENCE_ROOT:ro" -v "$ROOT:$ROOT" --tmpfs "$PARITY/node_modules" -w "$PARITY" \
         "$image" node capture/forward.ts "$socket" >/dev/null
       wait_for_socket "$socket"
       docker run --rm --init --name "$name" --network none --ipc host \
         -u "$(id -u):$(id -g)" -e HOME=/tmp -e TZ=UTC -e CI="${CI:-}" -e PARITY_WORKERS="${PARITY_WORKERS:-}" \
-        -e PARITY_UPSTREAM_SOCKET="$socket" \
-        -v "$ROOT:$ROOT" --tmpfs "$PARITY/node_modules" -w "$PARITY" \
+        -e PARITY_UPSTREAM_SOCKET="$socket" -e CAMPFIRE_REFERENCE="$REFERENCE_ROOT" \
+        -v "$REFERENCE_ROOT:$REFERENCE_ROOT:ro" -v "$ROOT:$ROOT" --tmpfs "$PARITY/node_modules" -w "$PARITY" \
         "$image" node capture/cli.ts "$@" &
       local status=0
       wait $! || status=$? # in the background so an interrupt runs the caller's trap (parity_cleanup) at once
@@ -77,13 +81,15 @@ run_in_image() {
       # The image is read-only; a tmpfs over the repo's top-level directory (e.g. /home) lets
       # bubblewrap create the mount point for the repo at its host path.
       local top; top="/$(echo "$ROOT" | cut -d/ -f2)"
-      local bw=(bwrap --ro-bind "$rootfs" / --tmpfs "$top" --bind "$ROOT" "$ROOT" --ro-bind "$modules" /node_modules
+      local bw=(bwrap --ro-bind "$rootfs" / --tmpfs "$top" --ro-bind "$REFERENCE_ROOT" "$REFERENCE_ROOT"
+        --bind "$ROOT" "$ROOT" --ro-bind "$modules" /node_modules
         --tmpfs "$PARITY/node_modules" --dev /dev --proc /proc --tmpfs /tmp --tmpfs /dev/shm
         --ro-bind /etc/resolv.conf /etc/resolv.conf --unshare-user --unshare-pid --unshare-ipc
         --die-with-parent --clearenv
         --setenv PATH /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         --setenv HOME /tmp --setenv TZ UTC --setenv LANG C.UTF-8
         --setenv PLAYWRIGHT_BROWSERS_PATH /ms-playwright --setenv CI "${CI:-}" --setenv PARITY_WORKERS "${PARITY_WORKERS:-}"
+        --setenv CAMPFIRE_REFERENCE "$REFERENCE_ROOT"
         --chdir "$PARITY")
       "${bw[@]}" --share-net node capture/forward.ts "$socket" &
       local forward=$!

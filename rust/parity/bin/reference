@@ -37,6 +37,8 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+# The reference Rails app: CAMPFIRE_REFERENCE, else the repository root that contains rust/.
+REFERENCE_ROOT=$(cd "${CAMPFIRE_REFERENCE:-$ROOT/..}" && pwd)
 PARITY=$ROOT/parity
 SEEDS=${PARITY_SEED_DIR:-$PARITY/.seed}
 INSTANCES=$SEEDS/.instances
@@ -132,13 +134,13 @@ wait_until_up() {
 docker_name() { echo "campfire-reference-$1"; }
 
 docker_build() {
-  log "building campfire-reference:app from reference/Dockerfile"
-  docker build -t campfire-reference:app -f "$ROOT/reference/Dockerfile" \
-    --build-arg APP_VERSION=parity --build-arg GIT_REVISION="$(git -C "$ROOT/reference" rev-parse HEAD)" \
-    "$ROOT/reference"
+  log "building campfire-reference:app from $REFERENCE_ROOT/Dockerfile"
+  docker build -t campfire-reference:app -f "$REFERENCE_ROOT/Dockerfile" \
+    --build-arg APP_VERSION=parity --build-arg GIT_REVISION="$(git -C "$REFERENCE_ROOT" rev-parse HEAD)" \
+    "$REFERENCE_ROOT"
   log "building $IMAGE from parity/docker/Dockerfile"
   docker build -t "$IMAGE" -f "$PARITY/docker/Dockerfile" \
-    --build-context fixtures="$ROOT/reference/test/fixtures" \
+    --build-context fixtures="$REFERENCE_ROOT/test/fixtures" \
     "$PARITY/docker"
 }
 
@@ -244,13 +246,16 @@ native_env() {
 }
 
 native_build() {
-  local want; want=$(cat "$ROOT/reference/.ruby-version")
+  local want; want=$(cat "$REFERENCE_ROOT/.ruby-version")
   ruby -e "exit(RUBY_VERSION == '$want')" || log "warning: host Ruby $(ruby -e 'print RUBY_VERSION') != reference $want"
   mkdir -p "$NATIVE"/{bin,lib,src}
 
-  log "syncing reference/ into parity/.native/app"
+  log "syncing $REFERENCE_ROOT into parity/.native/app"
+  # The reference contains this tree (rust/) when it's the repository root: leave it out, or the
+  # copy would contain itself.
   rsync -a --delete --exclude=/.git --exclude='/storage/*' --exclude='/tmp/*' --exclude='/log/*' \
-    --exclude=/.bundle --exclude=/public/assets "$ROOT/reference/" "$NATIVE/app/"
+    --exclude=/.bundle --exclude=/public/assets --exclude=/rust --exclude=/.claude --exclude=node_modules \
+    "$REFERENCE_ROOT/" "$NATIVE/app/"
 
   log "bundle install"
   ( cd "$NATIVE/app" && native_env && bundle install -j8 --quiet )

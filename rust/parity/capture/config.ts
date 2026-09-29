@@ -4,7 +4,16 @@ import { fileURLToPath } from "node:url"
 
 export const PARITY_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 export const REPO_DIR = path.resolve(PARITY_DIR, "..")
-export const STYLESHEETS_DIR = path.join(REPO_DIR, "reference/app/assets/stylesheets")
+// The reference Rails app: CAMPFIRE_REFERENCE, else the repository root that contains rust/.
+export const REFERENCE_DIR = path.resolve(process.env.CAMPFIRE_REFERENCE || path.join(REPO_DIR, ".."))
+export const STYLESHEETS_DIR = path.join(REFERENCE_DIR, "app/assets/stylesheets")
+
+// A path in screens.yml or the harness: "reference/..." is inside the reference app, anything
+// else is relative to the port's own tree (rust/).
+export function repoPath(file: string): string {
+  const inReference = file.match(/^reference\/(.*)$/)
+  return inReference ? path.resolve(REFERENCE_DIR, inReference[1]) : path.resolve(REPO_DIR, file)
+}
 export const SCREENS_FILE = path.join(PARITY_DIR, "screens.yml")
 export const ALLOWLIST_FILE = path.join(PARITY_DIR, "allowlist.yml")
 export const SEED_DIR = path.join(PARITY_DIR, ".seed")

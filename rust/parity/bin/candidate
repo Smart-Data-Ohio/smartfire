@@ -40,6 +40,8 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+# The reference Rails app: CAMPFIRE_REFERENCE, else the repository root that contains rust/.
+REFERENCE_ROOT=$(cd "${CAMPFIRE_REFERENCE:-$ROOT/..}" && pwd)
 PARITY=$ROOT/parity
 SEEDS=${PARITY_SEED_DIR:-$PARITY/.seed}
 INSTANCES=$SEEDS/.candidates
@@ -145,7 +147,8 @@ ports() {
 build() {
   log "building $APP_IMAGE from /Dockerfile"
   docker build -t "$APP_IMAGE" -f "$ROOT/Dockerfile" \
-    --build-arg APP_VERSION=parity --build-arg GIT_REVISION="$(git -C "$ROOT/reference" rev-parse HEAD)" \
+    --build-arg APP_VERSION=parity --build-arg GIT_REVISION="$(git -C "$REFERENCE_ROOT" rev-parse HEAD)" \
+    --build-context reference="$REFERENCE_ROOT" \
     "$ROOT"
   log "building $IMAGE from parity/docker/candidate/Dockerfile"
   docker build -t "$IMAGE" --build-arg BASE_IMAGE="$APP_IMAGE" "$PARITY/docker/candidate"

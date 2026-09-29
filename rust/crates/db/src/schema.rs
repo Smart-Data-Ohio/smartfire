@@ -164,17 +164,17 @@ mod tests {
     use super::*;
     use crate::time::SystemClock;
 
-    const REFERENCE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../reference/db");
-
     #[test]
     fn schema_sha1_matches_reference_schema_rb() {
-        let contents = std::fs::read(format!("{REFERENCE}/schema.rb")).unwrap();
+        let schema_rb = crate::fixtures::reference_root().join("db/schema.rb");
+        let contents = std::fs::read(schema_rb).unwrap();
         assert_eq!(schema_sha1(&contents), SCHEMA_SHA1);
     }
 
     #[test]
     fn migration_versions_match_reference_migrations() {
-        let mut versions: Vec<String> = std::fs::read_dir(format!("{REFERENCE}/migrate"))
+        let migrate = crate::fixtures::reference_root().join("db/migrate");
+        let mut versions: Vec<String> = std::fs::read_dir(migrate)
             .unwrap()
             .map(|e| {
                 e.unwrap()

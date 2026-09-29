@@ -29,8 +29,13 @@ fn vectors() -> J {
     serde_json::from_str(&std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()))).unwrap()
 }
 
+/// The reference Rails app: `CAMPFIRE_REFERENCE` if set, else the repository root above `rust/`.
+fn reference_root() -> PathBuf {
+    option_env!("CAMPFIRE_REFERENCE").map(PathBuf::from).unwrap_or_else(|| repo_root().join(".."))
+}
+
 fn fixture(name: &str) -> PathBuf {
-    repo_root().join("reference/test/fixtures/files").join(name)
+    reference_root().join("test/fixtures/files").join(name)
 }
 
 /// `Rails.application.key_generator.generate_key("ActiveStorage")`: PBKDF2-HMAC-SHA256, 1000

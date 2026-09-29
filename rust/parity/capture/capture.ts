@@ -7,7 +7,7 @@ import type { BrowserContext, BrowserContextOptions, Frame, Locator, Page, Reque
 import { freezeAnimatedImages } from "./animated_images.ts"
 import { contextOptions } from "./browsers.ts"
 import type { BrowserPool } from "./browsers.ts"
-import { PARITY_DIR, REPO_DIR } from "./config.ts"
+import { PARITY_DIR, repoPath } from "./config.ts"
 import { cellId, interpolate, interpolateStep, isFragment, loadLabels } from "./inventory.ts"
 import type { Job, Labels, Masks, State } from "./inventory.ts"
 import { maskText, normalizeResponse, normalizeDocument } from "./normalize.ts"
@@ -416,7 +416,7 @@ async function isolateNetwork(context: BrowserContext, originUrl: string) {
   const origin = new URL(originUrl).origin
   await context.route((url) => url.origin !== origin && /^https?:$/.test(url.protocol), (route) => route.abort("blockedbyclient"))
   for (const [glob, file] of EXTERNAL_FIXTURES) {
-    await context.route(glob, (route) => route.fulfill({ path: path.join(REPO_DIR, file) }))
+    await context.route(glob, (route) => route.fulfill({ path: repoPath(file) }))
   }
 }
 

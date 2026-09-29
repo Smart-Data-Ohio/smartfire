@@ -10,6 +10,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# The reference Rails app: CAMPFIRE_REFERENCE, else the repository root that contains rust/.
+REFERENCE_ROOT=$(cd "${CAMPFIRE_REFERENCE:-$ROOT/..}" && pwd)
 SCRIPT="$(realpath "$1")"; shift
 SCRIPT_REL="${SCRIPT#"$ROOT"/}"
 SECRET_KEY_BASE="${SECRET_KEY_BASE:-$(sed -n 's/^SECRET_KEY_BASE=//p' "$ROOT/parity/.env.reference" | head -1)}"
@@ -28,6 +30,6 @@ else
   mkdir -p "$ROOT/target/reference-db"
   rm -f "$ROOT/target/reference-db/reference-tools.sqlite3"
   export DATABASE_URL="sqlite3:$ROOT/target/reference-db/reference-tools.sqlite3"
-  cd "$ROOT/reference"
+  cd "$REFERENCE_ROOT"
   exec bin/rails runner "$SCRIPT" "$@" 2> >(grep -v VIPS-WARNING >&2)
 fi

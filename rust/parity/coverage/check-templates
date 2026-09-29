@@ -13,7 +13,9 @@
 require "yaml"
 
 ROOT = File.expand_path("../..", __dir__)
-VIEWS = File.join(ROOT, "reference/app/views")
+# The reference Rails app: CAMPFIRE_REFERENCE, else the repository root that contains rust/.
+REFERENCE_ROOT = File.expand_path(ENV.fetch("CAMPFIRE_REFERENCE", File.join(ROOT, "..")))
+VIEWS = File.join(REFERENCE_ROOT, "app/views")
 OUT = File.join(__dir__, "templates.txt")
 
 def template_name(path)

@@ -1,12 +1,17 @@
 # syntax = docker/dockerfile:1
 #
-# Production image for the Rust port. A drop-in for the reference image (reference/Dockerfile):
+# Production image for the Rust port. A drop-in for the reference image (the Rails app's Dockerfile):
 # same user (uid 1000), working directory, storage layout (/rails/storage/{db,files,backups}), env
 # vars, ports and ONCE hooks. The binary does Thruster's job itself (crates/kit/src/front): HTTP on
 # 80, and with TLS_DOMAIN, HTTPS on 443 with Let's Encrypt certificates cached in
 # /rails/storage/thruster, where the reference's Thruster keeps them.
 #
-#   docker build -t campfire-rust --build-arg APP_VERSION=... --build-arg GIT_REVISION=... .
+#   docker build -t campfire-rust --build-context reference=.. \
+#     --build-arg APP_VERSION=... --build-arg GIT_REVISION=... .
+#
+# The build context is rust/; the reference Rails app (the repository root, or any checkout of it)
+# comes in as the named context `reference`, for the assets and public/ files the binary embeds and
+# the post-restore hook.
 #
 # Media: variants and video posters must be byte-identical to the reference's, so libvips and
 # ffmpeg are built from the same Debian trixie source packages the reference image ships
@@ -113,8 +118,15 @@ ARG TARGETARCH
 WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
 COPY crates crates
-# crates/assets/build.rs digests and embeds the reference's assets and public/ at build time.
-COPY reference reference
+# crates/assets/build.rs digests and embeds the reference's assets and public/ at build time: only
+# those parts of the reference app come in (build.rs leaves out a stray public/assets precompile).
+ENV CAMPFIRE_REFERENCE=/reference
+COPY --from=reference app/assets /reference/app/assets
+COPY --from=reference app/javascript /reference/app/javascript
+COPY --from=reference vendor/javascript /reference/vendor/javascript
+COPY --from=reference public /reference/public
+COPY --from=reference config/importmap.rb /reference/config/importmap.rb
+COPY --from=reference config/initializers/assets.rb /reference/config/initializers/assets.rb
 
 RUN --mount=type=cache,id=campfire-rust-cargo-registry,target=/usr/local/cargo/registry \
     --mount=type=cache,id=campfire-rust-target,target=/src/target \
@@ -184,7 +196,7 @@ COPY --chmod=755 <<'EOF' /hooks/pre-backup
 cd /rails
 exec /usr/local/bin/campfire backup
 EOF
-COPY --chmod=755 reference/hooks/post-restore /hooks/post-restore
+COPY --from=reference --chmod=755 hooks/post-restore /hooks/post-restore
 
 USER 1000:1000
 

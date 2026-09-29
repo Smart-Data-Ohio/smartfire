@@ -4,14 +4,16 @@
 #   crates/assets/script/revendor
 #
 # Uses the `campfire-reference` Docker image (whose build already ran assets:precompile) when
-# Docker is reachable. Otherwise it copies reference/ to a scratch directory, installs the bundle
+# Docker is reachable. Otherwise it copies the reference app to a scratch directory, installs the bundle
 # (into $BUNDLE_PATH, default target/reference-bundle), precompiles there, and exports from that.
 # Either way, crates/assets/script/export_reference.rb does the work inside the reference app.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+# The reference Rails app: CAMPFIRE_REFERENCE, else the repository root that contains rust/.
+REFERENCE_ROOT=$(cd "${CAMPFIRE_REFERENCE:-$ROOT/..}" && pwd)
 CRATE="$ROOT/crates/assets"
-REFERENCE_SHA="$(git -C "$ROOT/reference" rev-parse HEAD)"
+REFERENCE_SHA="$(git -C "$REFERENCE_ROOT" rev-parse HEAD)"
 
 if docker info >/dev/null 2>&1 && docker image inspect campfire-reference >/dev/null 2>&1; then
   docker run --rm -i --user "$(id -u):$(id -g)" \
@@ -25,7 +27,8 @@ else
 
   WORK="$(mktemp -d)"
   trap 'rm -rf "$WORK"' EXIT
-  rsync -a --exclude /tmp --exclude /log --exclude /storage --exclude /public/assets "$ROOT/reference/" "$WORK/"
+  rsync -a --exclude /tmp --exclude /log --exclude /storage --exclude /public/assets \
+    --exclude /rust --exclude /.claude --exclude /.git --exclude node_modules "$REFERENCE_ROOT/" "$WORK/"
   mkdir -p "$WORK/tmp" "$WORK/log"
 
   cd "$WORK"

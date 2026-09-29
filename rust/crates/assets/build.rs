@@ -1,5 +1,5 @@
 //! Digests and compiles the reference's assets the way `bin/rails assets:precompile` does
-//! (Propshaft), renders the import map, and embeds the results plus reference/public into the
+//! (Propshaft), renders the import map, and embeds the results plus the reference's public/ into the
 //! crate as `$OUT_DIR/embedded.rs`.
 
 #[path = "build/importmap.rs"]
@@ -18,10 +18,7 @@ const PREFIX: &str = "/assets";
 
 fn main() {
     let crate_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let rails_root = crate_dir
-        .join("../../reference")
-        .canonicalize()
-        .expect("reference/ submodule is missing");
+    let rails_root = reference_root(&crate_dir);
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
     for watched in [
@@ -47,6 +44,7 @@ fn main() {
     );
     println!("cargo:rerun-if-changed=build");
     println!("cargo:rerun-if-env-changed=SOURCE_DATE_EPOCH");
+    println!("cargo:rerun-if-env-changed=CAMPFIRE_REFERENCE");
 
     let load_path = propshaft::LoadPath::new(
         &load_path_dirs(&crate_dir, &rails_root),
@@ -168,6 +166,23 @@ fn main() {
     .unwrap();
 
     fs::write(out_dir.join("embedded.rs"), code).unwrap();
+}
+
+/// The reference Rails app: `CAMPFIRE_REFERENCE` if set, else the repository root that contains
+/// `rust/` (crates/assets -> rust -> the Rails app).
+fn reference_root(crate_dir: &Path) -> PathBuf {
+    let root = env::var_os("CAMPFIRE_REFERENCE")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| crate_dir.join("../../.."));
+    root.canonicalize()
+        .ok()
+        .filter(|root| root.join("config/importmap.rb").is_file())
+        .unwrap_or_else(|| {
+            panic!(
+                "no reference Rails app at {} (set CAMPFIRE_REFERENCE to its root)",
+                root.display()
+            )
+        })
 }
 
 /// `overrides/` first, so the app's own changes to the frontend shadow the reference's files of

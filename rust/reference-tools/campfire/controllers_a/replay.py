@@ -16,6 +16,7 @@ to the other, copying the session row between the two databases.
 import difflib
 import http.client
 import json
+import os
 import re
 import sys
 import urllib.parse
@@ -198,7 +199,8 @@ def finish(_):
     return 1 if FAILURES else 0
 
 
-PNG = open("reference/app/assets/images/campfire-icon.png", "rb").read()
+REFERENCE_ROOT = os.environ.get("CAMPFIRE_REFERENCE") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../..")
+PNG = open(os.path.join(REFERENCE_ROOT, "app/assets/images/campfire-icon.png"), "rb").read()
 
 
 def crowd(rails_base, rust_base):

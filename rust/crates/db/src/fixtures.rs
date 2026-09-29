@@ -32,9 +32,18 @@ pub fn identify(label: &str) -> i64 {
     i64::from(crc32fast::hash(label.as_bytes()) % MAX_ID)
 }
 
+/// The reference Rails app: `CAMPFIRE_REFERENCE` at compile time if set, else the repository
+/// root that contains `rust/` (crates/db -> rust -> the Rails app).
+pub fn reference_root() -> PathBuf {
+    match option_env!("CAMPFIRE_REFERENCE") {
+        Some(root) => PathBuf::from(root),
+        None => Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.."),
+    }
+}
+
 /// The fixture directory in the reference checkout.
 pub fn reference_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../reference/test/fixtures")
+    reference_root().join("test/fixtures")
 }
 
 #[derive(Debug, Clone)]

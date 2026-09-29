@@ -3,9 +3,9 @@ import assert from "node:assert/strict"
 import fs from "node:fs"
 import path from "node:path"
 import { firstFrameGif, firstFrameWebp } from "../animated_images.ts"
-import { REPO_DIR } from "../config.ts"
+import { REFERENCE_DIR } from "../config.ts"
 
-const sounds = path.join(REPO_DIR, "reference/app/assets/images/sounds")
+const sounds = path.join(REFERENCE_DIR, "app/assets/images/sounds")
 
 test("reduces animated WebPs to one frame", () => {
   const original = fs.readFileSync(path.join(sounds, "56k.webp"))
