@@ -6,8 +6,9 @@
 //! into an empty database and otherwise only checks that a database was migrated to exactly the
 //! schema it was built against. It never creates or alters anything in an existing database.
 //!
-//! `schema.sql`, `schema_migrations.txt` and `schema_sha1.txt` are generated from the reference
-//! app by `reference-tools/db/regenerate-schema.sh`, never edited by hand: `schema.sql` is the
+//! `schema.sql`, `schema_migrations.txt`, `schema_sha1.txt` and `schema_sequences.txt` are
+//! generated from the reference app by `reference-tools/db/regenerate-schema.sh`, never edited
+//! by hand: `schema.sql` is the
 //! `sqlite_master` of a database the reference app created with `db:prepare` (loading
 //! `reference/db/schema.rb`), minus the objects SQLite derives on its own (FTS5 shadow tables,
 //! `sqlite_sequence`, autoindexes). A fresh `db:prepare` loads `schema.rb`, so columns come out
@@ -33,6 +34,10 @@ const SCHEMA_MIGRATIONS: &str = include_str!("schema_migrations.txt");
 pub fn migration_versions() -> impl Iterator<Item = &'static str> {
     SCHEMA_MIGRATIONS.lines().filter(|line| !line.is_empty())
 }
+
+/// Tables `db:prepare` leaves a zeroed `sqlite_sequence` row for, in insertion order: the
+/// SQLite adapter rebuilds a table by copying it for each `add_foreign_key` in schema.rb.
+const SCHEMA_SEQUENCES: &str = include_str!("schema_sequences.txt");
 
 /// SHA1 of `reference/db/schema.rb`, which `db:schema:load` records in `ar_internal_metadata`.
 pub const SCHEMA_SHA1: &str = include_str!("schema_sha1.txt").trim_ascii();
@@ -143,6 +148,9 @@ fn is_empty(conn: &Connection) -> Result<bool> {
 fn load_schema(conn: &mut Connection, environment: &str, clock: &dyn Clock) -> Result<()> {
     let tx = conn.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
     tx.execute_batch(SCHEMA_SQL)?;
+    for table in SCHEMA_SEQUENCES.lines().filter(|line| !line.is_empty()) {
+        tx.execute("INSERT INTO sqlite_sequence (name, seq) VALUES (?, 0)", [table])?;
+    }
 
     for version in migration_versions() {
         tx.execute(
@@ -267,6 +275,24 @@ mod tests {
         // Partial and expression indexes come through as written.
         assert!(SCHEMA_SQL.contains(r#"CREATE UNIQUE INDEX "index_rooms_on_direct_member_key" ON "rooms" ("direct_member_key") WHERE direct_member_key IS NOT NULL AND deleted_at IS NULL;"#));
         assert!(SCHEMA_SQL.contains(r#"CREATE UNIQUE INDEX "index_users_on_lower_github_login" ON "users" (LOWER(github_login)) WHERE github_login IS NOT NULL;"#));
+    }
+
+    /// `db:prepare` leaves a zeroed `sqlite_sequence` row for each table whose foreign keys
+    /// schema.rb adds after `create_table` (the adapter rebuilds those tables by copying them):
+    /// 59 of them in our schema.
+    #[test]
+    fn a_prepared_database_has_rails_sqlite_sequence_rows() {
+        let conn = prepared();
+        let rows: Vec<(String, i64)> = conn
+            .prepare("SELECT name, seq FROM sqlite_sequence ORDER BY rowid")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .map(|r| r.unwrap())
+            .collect();
+        assert_eq!(rows.len(), 59);
+        assert!(rows.iter().all(|(_, seq)| *seq == 0));
+        assert_eq!(rows[0].0, "active_storage_attachments");
     }
 
     #[test]
