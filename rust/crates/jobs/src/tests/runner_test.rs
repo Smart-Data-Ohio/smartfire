@@ -81,6 +81,8 @@ async fn a_job_runs_after_its_write_commits_and_sees_it() {
     assert!(db_slot.set(h.db.clone()).is_ok());
     h.db.write(|tx| Ok(tx.conn().execute_batch("CREATE TABLE triggers (n integer)")?)).await.unwrap();
     let runner = start(h.db.clone(), h.queue.clone(), registry, (), config);
+    // Let the queue find nothing and go to sleep: only the commit's wake can start the job now.
+    tokio::time::sleep(Duration::from_millis(200)).await;
 
     let committed = Arc::new(Mutex::new(None));
     let committed_at = committed.clone();

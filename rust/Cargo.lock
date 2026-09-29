@@ -446,7 +446,6 @@ dependencies = [
  "campfire_db",
  "futures-util",
  "jiff",
- "libc",
  "rand 0.9.5",
  "rusqlite",
  "serde",
