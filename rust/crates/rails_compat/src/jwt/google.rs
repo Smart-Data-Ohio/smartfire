@@ -230,16 +230,28 @@ fn verify_audience(payload: &Map<String, Value>, client_id: &str) -> Result<(), 
     Ok(())
 }
 
-/// `Array(value).flatten.compact.map(&:to_s)`. `Array(hash)` is its `[key, value]` pairs.
-fn flatten_audiences(value: Option<&Value>, out: &mut Vec<String>) {
-    match value {
+/// `Array(aud).flatten.compact.map(&:to_s)`. Only the top level goes through `Array()`, which
+/// turns a hash into its `[key, value]` pairs; `flatten` then unnests arrays only, so a hash
+/// anywhere below stays one element whose `to_s` is its inspect and never names a client.
+fn flatten_audiences(aud: Option<&Value>, out: &mut Vec<String>) {
+    match aud {
         None | Some(Value::Null) => {}
-        Some(Value::Array(items)) => items.iter().for_each(|item| flatten_audiences(Some(item), out)),
+        Some(Value::Array(items)) => items.iter().for_each(|item| flatten_array(item, out)),
         Some(Value::Object(pairs)) => pairs.iter().for_each(|(key, value)| {
             out.push(key.clone());
-            flatten_audiences(Some(value), out);
+            flatten_array(value, out);
         }),
         Some(scalar) => out.push(ruby_to_s(Some(scalar))),
+    }
+}
+
+/// One element of an array under `flatten.compact.map(&:to_s)`.
+fn flatten_array(value: &Value, out: &mut Vec<String>) {
+    match value {
+        Value::Null => {}
+        Value::Array(items) => items.iter().for_each(|item| flatten_array(item, out)),
+        // Objects included: `ruby_to_s` gives them an inspect-like string no client id equals.
+        other => out.push(ruby_to_s(Some(other))),
     }
 }
 
@@ -253,5 +265,38 @@ fn verify_domain(payload: &Map<String, Value>, allowed: &[String]) -> Result<(),
         Ok(())
     } else {
         Err(Rejection::WrongDomain)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    const CLIENT: &str = "client.apps.googleusercontent.com";
+
+    fn audience(claims: Value) -> Result<(), Rejection> {
+        verify_audience(claims.as_object().unwrap(), CLIENT)
+    }
+
+    /// A hash below the top level is one opaque element, however it names the client: the
+    /// reviewer's `aud: [{"nested": client}]` token with a matching `azp`, which Rails rejects.
+    #[test]
+    fn nested_hashes_never_name_the_audience() {
+        assert_eq!(audience(json!({"aud": [{"nested": CLIENT}], "azp": CLIENT})), Err(Rejection::BadAudience));
+        assert_eq!(audience(json!({"aud": [[{CLIENT: CLIENT}]], "azp": CLIENT})), Err(Rejection::BadAudience));
+        assert_eq!(audience(json!({"aud": {"x": {"y": CLIENT}}, "azp": CLIENT})), Err(Rejection::BadAudience));
+    }
+
+    /// Only the top level goes through `Array()`: a hash there is its `[key, value]` pairs, and
+    /// every element counts toward `many?`, hashes included.
+    #[test]
+    fn top_level_hashes_are_pairs_and_every_element_counts() {
+        assert_eq!(audience(json!({"aud": {"x": CLIENT}, "azp": CLIENT})), Ok(()));
+        assert_eq!(audience(json!({"aud": {"x": CLIENT}})), Err(Rejection::BadAudience));
+        assert_eq!(audience(json!({"aud": {CLIENT: null}})), Ok(()));
+        assert_eq!(audience(json!({"aud": [CLIENT, {"a": "b"}]})), Err(Rejection::BadAudience));
+        assert_eq!(audience(json!({"aud": [CLIENT, {"a": "b"}], "azp": CLIENT})), Ok(()));
+        assert_eq!(audience(json!({"aud": [null, [CLIENT, null]]})), Ok(()));
     }
 }
