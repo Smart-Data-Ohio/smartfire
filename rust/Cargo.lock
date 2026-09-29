@@ -438,6 +438,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "campfire_jobs"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "campfire_db",
+ "futures-util",
+ "jiff",
+ "libc",
+ "rand 0.9.5",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "campfire_kit"
 version = "0.1.0"
 dependencies = [

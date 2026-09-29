@@ -79,6 +79,9 @@ pub struct Tx<'c> {
     env: &'c Env,
     in_transaction: bool,
     after_commit: Vec<AfterCommit>,
+    /// The first error persisting an emitted event (see [`EventSink::persist`]), which rolls the
+    /// transaction back.
+    persist_error: Option<Error>,
 }
 
 impl<'c> Tx<'c> {
@@ -100,18 +103,40 @@ impl<'c> Tx<'c> {
     }
 
     /// Emits an event right away, even though the transaction may still roll back, for the
-    /// side effects Rails performs mid-transaction.
-    pub fn emit_now(&self, event: Event) {
-        self.env.sink.emit(event);
+    /// side effects Rails performs mid-transaction. What the sink persists for it (a job's row)
+    /// is still written in the transaction, and rolls back with it.
+    pub fn emit_now(&mut self, event: Event) {
+        if self.persist(&event) {
+            self.env.sink.emit(event);
+        }
     }
 
     /// Emits an event once the transaction commits (`after_commit`), or right away when
-    /// already running after commit.
+    /// already running after commit. What the sink persists for it (a job's row) is written now,
+    /// in the transaction.
     pub fn emit_after_commit(&mut self, event: Event) {
+        if !self.persist(&event) {
+            return;
+        }
         if self.in_transaction {
             self.after_commit.push(AfterCommit::Event(event));
         } else {
             self.env.sink.emit(event);
+        }
+    }
+
+    /// [`EventSink::persist`]. A failure fails the write (the transaction rolls back when `f`
+    /// returns); after commit it's logged, and the event dropped.
+    fn persist(&mut self, event: &Event) -> bool {
+        match self.env.sink.persist(self, event) {
+            Ok(()) => true,
+            Err(error) => {
+                tracing::error!(%error, ?event, "persisting an event failed");
+                if self.in_transaction {
+                    self.persist_error.get_or_insert(error);
+                }
+                false
+            }
         }
     }
 
@@ -125,6 +150,7 @@ impl<'c> Tx<'c> {
                 env: self.env,
                 in_transaction: false,
                 after_commit: Vec::new(),
+                persist_error: None,
             };
             if let Err(error) = hook(&mut tx) {
                 tracing::error!(%error, "after_commit hook failed");
@@ -151,8 +177,12 @@ pub fn run_write<T>(
         env,
         in_transaction: true,
         after_commit: Vec::new(),
+        persist_error: None,
     };
-    let value = match f(&mut tx) {
+    let value = match f(&mut tx).and_then(|value| match tx.persist_error.take() {
+        Some(error) => Err(error),
+        None => Ok(value),
+    }) {
         Ok(value) => value,
         Err(error) => {
             let _ = conn.execute_batch("ROLLBACK TRANSACTION");
@@ -171,6 +201,7 @@ pub fn run_write<T>(
         env,
         in_transaction: false,
         after_commit: Vec::new(),
+        persist_error: None,
     };
     for item in queue.drain(..) {
         match item {
