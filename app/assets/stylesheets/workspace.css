@@ -1232,7 +1232,7 @@ summary.member-panel__group-heading {
   /* Header budget below 80rem. The labeled row (~740px plus the help menu)
      already spills past the bell at 64rem, before the voice stack joins
      it, so labels step aside here and every action becomes an icon-only
-     2rem square with no gaps. Nothing is ever silently hidden: the
+     2rem square, with no gaps until the phone row thins out. Nothing is ever silently hidden: the
      less-used actions move into the header overflow menu instead.
      What fits where:
      - 40rem and up (tablets): members, search, call plus the capped
@@ -1244,8 +1244,8 @@ summary.member-panel__group-heading {
        pip) and the overflow button. Stage, settings and notifications
        join the menu too, so four 2rem squares plus the stack leave room
        for the name.
-     - At 360px: four 30px squares plus the stack leave ~100px for the
-       name in every room kind.
+     - At 360px: four 30px squares, their 4px gaps and the stack leave
+       ~90px for the name in every room kind.
      The identity yields first (its flex-shrink dwarfs the row's), so the
      name truncates with an ellipsis before any action shrinks; every
      action child keeps its natural width instead. The row's inner scroll
@@ -1335,6 +1335,12 @@ summary.member-panel__group-heading {
     display: none;
   }
 
+  /* With only a few actions left, the gap matches the header's own
+     column gap so every icon, search included, sits evenly apart. */
+  .room-header__actions {
+    gap: 0.375rem;
+  }
+
   .sidebar .message {
     column-gap: 0.55rem;
     grid-auto-columns: 2rem minmax(0, 1fr);
@@ -1357,6 +1363,10 @@ summary.member-panel__group-heading {
   .sidebar #nav {
     column-gap: 0.25rem;
     padding-inline: 0.5rem;
+  }
+
+  .room-header__actions {
+    gap: 0.25rem;
   }
 
   .room-header__actions .btn,
