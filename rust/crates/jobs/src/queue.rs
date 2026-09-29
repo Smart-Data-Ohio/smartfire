@@ -55,6 +55,14 @@ impl JobQueue {
         store::insert(tx.conn(), job, now)
     }
 
+    /// Releases jobs held back by their `wait`: `class`'s waiting jobs whose `argument` is
+    /// `value` are due now. A write can enqueue follow-up jobs held until work it can't do in its
+    /// transaction is done (so they're never lost, only late if the process dies first), then
+    /// release them. Call [`JobQueue::wake`] once `tx` commits. Returns how many were released.
+    pub fn release_held(&self, tx: &Tx<'_>, class: &str, argument: &str, value: i64) -> campfire_db::Result<usize> {
+        store::make_due(tx.conn(), self.route(class).queue, class, &format!("$.{argument}"), value, tx.now())
+    }
+
     /// Enqueues a job in a write of its own, and wakes its queue.
     pub async fn perform_later(&self, db: &Database, request: JobRequest) -> campfire_db::Result<i64> {
         let queue = self.clone();

@@ -12,6 +12,7 @@ async fn app_in(dir: &std::path::Path) -> Booted {
     let config = Config::from_lookup(|name| match name {
         "SECRET_KEY_BASE_DUMMY" => Some("1".into()),
         "CAMPFIRE_STORAGE_PATH" => Some(root.clone()),
+        "DISABLE_SSL" => Some("true".into()), // plain HTTP requests, for the controller tests
         _ => None,
     })
     .unwrap();
@@ -193,6 +194,97 @@ async fn a_job_that_cant_be_enqueued_fails_the_write_that_asks_for_it() {
     assert_eq!(count(&app, "SELECT count(*) FROM users WHERE status = 0"), 2, "nobody banned");
     app.db.write(ban).await.unwrap();
     assert_eq!(take_jobs(&app).await, ["RemoveBannedContentJob"]);
+}
+
+/// A browser on the booted app's router: a cookie jar, Chrome, same-origin requests.
+struct Browser {
+    router: axum::Router,
+    cookies: std::collections::BTreeMap<String, String>,
+}
+
+impl Browser {
+    fn new(router: &axum::Router) -> Self {
+        Self { router: router.clone(), cookies: Default::default() }
+    }
+
+    async fn post(&mut self, path: &str, accept: &str, fields: &[(&str, &str)]) -> (axum::http::StatusCode, String) {
+        use tower::ServiceExt as _;
+        let body = fields.iter().map(|(k, v)| format!("{}={}", campfire_views::helpers::url::cgi_escape(k), campfire_views::helpers::url::cgi_escape(v))).collect::<Vec<_>>().join("&");
+        let cookie = self.cookies.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join("; ");
+        let request = axum::http::Request::post(path)
+            .header("host", "campfire.test")
+            .header("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
+            .header("sec-fetch-site", "same-origin")
+            .header("accept", accept)
+            .header("cookie", cookie)
+            .header("content-type", "application/x-www-form-urlencoded")
+            .body(axum::body::Body::from(body))
+            .unwrap();
+        let response = self.router.clone().oneshot(request).await.unwrap();
+        for cookie in response.headers().get_all("set-cookie") {
+            let (name, value) = cookie.to_str().unwrap().split(';').next().unwrap().split_once('=').unwrap();
+            self.cookies.insert(name.to_string(), value.to_string());
+        }
+        let status = response.status();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        (status, String::from_utf8_lossy(&body).into_owned())
+    }
+}
+
+/// Posting a message through `MessagesController#create` enqueues its push and its bots'
+/// webhooks in the message's own transaction: a webhook that can't be enqueued fails the post
+/// with nothing committed. Committed, the webhooks are held until the message has been broadcast,
+/// then released; if releasing them fails (as if the process died), they're delivered when the
+/// hold runs out rather than lost.
+#[tokio::test]
+async fn a_posted_message_and_its_webhooks_commit_together() {
+    use campfire_db::{FirstRun, PasswordDigest, Room, RoomType, User};
+
+    let (booted, _dir) = app().await;
+    let (app, router) = (booted.app.clone(), booted.router.clone());
+    booted.jobs.shutdown(Duration::from_secs(5)).await; // leave the rows be
+    let digest = PasswordDigest::create("secret123456", 4).unwrap();
+    let room = app
+        .db
+        .write(move |tx| {
+            let person = FirstRun::create(tx, "Person", "person@example.com", digest)?;
+            let bot = User::create_bot(tx, "Bender", Some("https://example.com/hook"))?;
+            Ok(Room::create_for(tx, RoomType::Direct, None, person.id, &[person.id, bot.id])?.id)
+        })
+        .await
+        .unwrap();
+    take_jobs(&app).await;
+    let mut browser = Browser::new(&router);
+    let (status, body) = browser.post("/session", "text/html", &[("email_address", "person@example.com"), ("password", "secret123456")]).await;
+    assert_eq!(status, axum::http::StatusCode::FOUND, "signed in: {body}");
+    let path = format!("/rooms/{room}/messages");
+    let post = |n: &'static str| [("message[body]", "<p>Hello bot</p>"), ("message[client_message_id]", n)];
+    let messages = || count(&app, "SELECT count(*) FROM messages");
+
+    const REJECT: &str = "CREATE TRIGGER ws3_reject_webhooks BEFORE INSERT ON background_jobs WHEN NEW.job_class = 'Bot::WebhookJob' BEGIN SELECT RAISE(ABORT, 'webhooks rejected'); END";
+    app.db.write(|tx| Ok(tx.conn().execute_batch(REJECT)?)).await.unwrap();
+    let (status, _) = browser.post(&path, "text/vnd.turbo-stream.html", &post("rejected")).await;
+    assert!(status.is_server_error(), "{status}");
+    assert_eq!((messages(), jobs(&app).len()), (0, 0), "the message rolled back with its webhook");
+    app.db.write(|tx| Ok(tx.conn().execute_batch("DROP TRIGGER ws3_reject_webhooks")?)).await.unwrap();
+
+    let (status, body) = browser.post(&path, "text/vnd.turbo-stream.html", &post("posted")).await;
+    assert_eq!(status, axum::http::StatusCode::OK, "{body}");
+    assert_eq!(messages(), 1);
+    let now = app.db.env().now();
+    let mut queued: Vec<_> = jobs(&app).into_iter().map(|job| (job.class, job.run_at <= now)).collect();
+    queued.sort();
+    assert_eq!(queued, [("Bot::WebhookJob".to_string(), true), ("Room::PushMessageJob".to_string(), true)], "released once broadcast");
+    take_jobs(&app).await;
+
+    const KEEP_HELD: &str = "CREATE TRIGGER ws3_keep_webhooks_held BEFORE UPDATE OF run_at ON background_jobs WHEN NEW.job_class = 'Bot::WebhookJob' BEGIN SELECT RAISE(ABORT, 'release rejected'); END";
+    app.db.write(|tx| Ok(tx.conn().execute_batch(KEEP_HELD)?)).await.unwrap();
+    let (status, body) = browser.post(&path, "text/vnd.turbo-stream.html", &post("held")).await;
+    assert_eq!(status, axum::http::StatusCode::OK, "{body}");
+    assert_eq!(messages(), 2);
+    let webhook = jobs(&app).into_iter().find(|job| job.class == "Bot::WebhookJob").expect("the webhook is queued");
+    let held = webhook.run_at.as_microsecond() - app.db.env().now().as_microsecond();
+    assert!(held > 60_000_000 && held <= WEBHOOK_HOLD.as_micros() as i64, "held for {held} µs");
 }
 
 // --- The handlers --------------------------------------------------------------------------------------

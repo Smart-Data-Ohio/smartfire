@@ -100,6 +100,17 @@ pub(crate) fn next_run_at(conn: &Connection, queue: &str) -> Result<Option<Times
         .flatten())
 }
 
+/// Makes `queue`'s waiting `class` jobs whose argument at `path` is `value` due now, if they
+/// aren't already.
+pub(crate) fn make_due(conn: &Connection, queue: &str, class: &str, path: &str, value: i64, now: Timestamp) -> Result<usize> {
+    Ok(conn
+        .prepare_cached(
+            r#"UPDATE "background_jobs" SET "run_at" = ?5, "updated_at" = ?5
+                WHERE "status" = 'ready' AND "queue_name" = ?1 AND "job_class" = ?2 AND "run_at" > ?5 AND json_extract("arguments", ?3) = ?4"#,
+        )?
+        .execute(params![queue, class, path, value, now])?)
+}
+
 /// Deletes a job `runner` still holds: it's done, or discarded.
 pub(crate) fn delete(conn: &Connection, id: i64, runner: &str) -> Result<bool> {
     Ok(conn.prepare_cached(r#"DELETE FROM "background_jobs" WHERE "id" = ?1 AND "status" = 'running' AND "claimed_by" = ?2"#)?.execute(params![id, runner])? == 1)

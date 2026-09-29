@@ -60,6 +60,31 @@ async fn a_delayed_job_is_due_after_its_wait() {
     assert_eq!(h.job(id).unwrap().run_at, at("2026-09-29 12:01:30"));
 }
 
+/// A held job (enqueued with a wait) runs once released, only if its argument matches; one
+/// that's already due, or running, is left alone.
+#[tokio::test]
+async fn held_jobs_run_once_released() {
+    let (registry, mut performed) = echo_registry();
+    let h = harness(&registry, &config());
+    let hold = Duration::from_secs(300);
+    let held = h.enqueue_request(JobRequest::new(&Echo { n: 1 }).wait(hold)).await;
+    let other = h.enqueue_request(JobRequest::new(&Echo { n: 2 }).wait(hold)).await;
+    let runner = start(h.db.clone(), h.queue.clone(), registry, (), config());
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert!(performed.try_recv().is_err(), "held");
+
+    let queue = h.queue.clone();
+    let released = h.db.write(move |tx| queue.release_held(tx, Echo::CLASS, "n", 1)).await.unwrap();
+    assert_eq!(released, 1);
+    h.queue.wake(Echo::CLASS);
+    assert_eq!(next(&mut performed).await, (1, 1));
+    h.wait_for("the released job to finish", |jobs| jobs.iter().all(|job| job.id != held)).await;
+    let queue = h.queue.clone();
+    assert_eq!(h.db.write(move |tx| queue.release_held(tx, Echo::CLASS, "n", 1)).await.unwrap(), 0);
+    assert_eq!(h.job(other).unwrap().run_at, at("2026-09-29 12:05:00"), "still held");
+    runner.shutdown(Duration::from_secs(5)).await;
+}
+
 /// The job only becomes visible to the runner when the write that enqueued it commits, so it
 /// sees everything that write did (`after_commit { perform_later }`), and the runner is woken
 /// after the commit rather than finding it at its next poll.

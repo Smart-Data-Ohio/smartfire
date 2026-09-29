@@ -84,6 +84,11 @@ impl JobKind for WebhookJob {
     const QUEUE: &'static str = WEBHOOKS_QUEUE;
 }
 
+/// How long a posted message's webhooks wait for the post to be broadcast before they're due
+/// anyway (see `controllers::messages::create_message`): long enough for the slowest attachment
+/// processing, so only a process that dies mid-request waits it out.
+pub const WEBHOOK_HOLD: Duration = Duration::from_secs(5 * 60);
+
 /// `RemoveBannedContentJob.perform_later(user)`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RemoveBannedContentJob {
