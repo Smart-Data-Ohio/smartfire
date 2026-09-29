@@ -38,13 +38,13 @@ fn fixture(name: &str) -> PathBuf {
     reference_root().join("test/fixtures/files").join(name)
 }
 
-/// `Rails.application.key_generator.generate_key("ActiveStorage")`: PBKDF2-HMAC-SHA256, 1000
+/// `Rails.application.key_generator.generate_key("ActiveStorage")`: PBKDF2-HMAC-SHA1, 1000
 /// iterations, 64 bytes.
 fn verifier() -> AppMessageVerifier {
     let env = std::fs::read_to_string(repo_root().join("parity/.env.reference")).unwrap();
     let secret_key_base = env.lines().find_map(|l| l.strip_prefix("SECRET_KEY_BASE=")).unwrap();
     let mut key = vec![0u8; 64];
-    pbkdf2::pbkdf2_hmac::<sha2::Sha256>(secret_key_base.as_bytes(), b"ActiveStorage", 1000, &mut key);
+    pbkdf2::pbkdf2_hmac::<sha1::Sha1>(secret_key_base.as_bytes(), b"ActiveStorage", 1000, &mut key);
     AppMessageVerifier::new(key)
 }
 
