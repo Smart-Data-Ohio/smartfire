@@ -57,9 +57,9 @@ pub const PARAM: &str = "authenticity_token";
 /// `token_tag(nil, form_options: { action:, method: })`: the hidden per-form token field.
 ///
 /// A fragment rendered for the cache is shown to whoever renders it next, so there the field is
-/// a slot instead ([`fill_token_slots`] puts each render's own field in it). Our Rails renders a
-/// room's messages uncached, with the viewer's tokens, and broadcasts them without any; its cached
-/// pages of messages hand the first viewer's tokens to everyone (`reference-tools/kit/fragment_tokens.rb`).
+/// a slot instead ([`fill_token_slots`] puts each render's own field in it). Rails #148 omits
+/// tokens from the five cached message-tree forms; slots remain as defence in depth for any
+/// other form rendered inside a cached fragment.
 pub fn token_tag(action: &str, method: &str) -> Html {
     if crate::fragment_cache::rendering_fragment() {
         return Safe(format!("{}{method} {action}{SLOT_END}", slot_start()));

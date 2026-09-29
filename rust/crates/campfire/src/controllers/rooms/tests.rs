@@ -296,12 +296,9 @@ fn by_owner(html: &str, page_path: &str, sessions: &[(&str, &campfire_kit::csrf:
     (page, owners)
 }
 
-/// Cached message fragments are rendered once and shown to everyone who reads the room, so
-/// nothing in them may belong to the session that happened to render them first. Our Rails
-/// renders a room's messages uncached, each form with the viewer's own token; its cached pages
-/// of messages (`messages/index`) serve the first viewer's tokens to everyone after
-/// (`reference-tools/kit/fragment_tokens.rb`). Here every page carries its own viewer's tokens,
-/// whether its fragments were cold or warm.
+/// Rails #148 leaves the cached message-tree forms tokenless. The legacy boost-delete form is
+/// the only one ported so far; other write forms must carry only the current viewer's token,
+/// whether the message fragments were cold or warm.
 #[tokio::test]
 async fn room_pages_carry_only_their_own_viewers_session_bound_values() {
     let Some(app) = TestApp::boot().await else { return };
@@ -331,13 +328,29 @@ async fn room_pages_carry_only_their_own_viewers_session_bound_values() {
     let sessions = [("david", &david_real), ("jason", &jason_real)];
 
     let mut labeled = Vec::new();
+    let form = regex::Regex::new(r#"(?s)<form\b([^>]*)>(.*?)</form>"#).unwrap();
+    let method = regex::Regex::new(r#"\smethod="([^"]*)""#).unwrap();
+    let mut tokenless_boosts = 0;
     for (page_path, name, html) in &renders {
+        for captures in form.captures_iter(html) {
+            let (attributes, inner) = (&captures[1], &captures[2]);
+            let tokens = inner.matches(r#"name="authenticity_token""#).count();
+            if inner.contains(r#"data-action="boost-delete#perform""#) {
+                assert_eq!(tokens, 0, "{page_path} as {name}: cached boost-delete forms are tokenless (#148)");
+                tokenless_boosts += 1;
+            } else if method.captures(attributes).is_some_and(|c| c[1].eq_ignore_ascii_case("get") || c[1].eq_ignore_ascii_case("dialog")) {
+                assert_eq!(tokens, 0, "GET and dialog forms carry no token");
+            } else {
+                assert_eq!(tokens, 1, "{page_path} as {name}: other write forms carry one viewer token: {attributes}");
+            }
+        }
         let (page, owners) = by_owner(html, page_path, &sessions);
         assert!(owners.len() > 1, "{page_path} as {name} has forms with tokens");
         let foreign: Vec<&String> = owners.iter().filter(|owner| owner.as_str() != *name).collect();
         assert!(foreign.is_empty(), "{page_path} as {name}: {} of {} tokens aren't {name}'s: {:?}", foreign.len(), owners.len(), &foreign[..foreign.len().min(3)]);
         labeled.push(page);
     }
+    assert!(tokenless_boosts > 0, "the seed exercises #148's boost-delete form");
     // No token or nonce one viewer was given turns up in the other's pages.
     let values = |who: &str| -> std::collections::HashSet<String> {
         renders.iter().filter(|(_, name, _)| *name == who).flat_map(|(path, _, html)| session_bound(html, path)).map(|b| b.value().to_string()).collect()
