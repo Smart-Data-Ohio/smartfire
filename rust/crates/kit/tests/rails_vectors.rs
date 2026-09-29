@@ -9,12 +9,8 @@
 //!
 //! A signed cookie Rails wrote (`vectors/rails_compat.json`) is read as well.
 //!
-//! Our Rails app derives its cookie keys with PBKDF2-HMAC-**SHA1**, not the SHA256 that
-//! `load_defaults` asks for: `config/initializers/active_record_encryption.rb` calls
-//! `Rails.application.key_generator` while the app initializes, which memoizes a generator built
-//! before `key_generator_hash_digest_class` takes effect (an `after_initialize`). `rails_compat`'s
-//! `KeyGenerator` (WS1's) only does SHA256, which reads stock Campfire's cookies but not ours, so
-//! these tests use [`OurRailsCrypto`] until it can do both.
+//! Our Rails app's cookies are keyed with PBKDF2-HMAC-SHA1, which `RailsCrypto` can't read yet;
+//! these tests use `testing::OurRailsCrypto` (see there).
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -22,11 +18,9 @@ use std::sync::Arc;
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, header};
-use campfire_kit::crypto::{Crypto, SharedCrypto};
+use campfire_kit::crypto::SharedCrypto;
+use campfire_kit::testing::OurRailsCrypto;
 use campfire_kit::{Ctx, FrozenClock, Kit, KitConfig, RailsCrypto, Result, StatusCode, action};
-use jiff::Timestamp;
-use rails_compat::message_verifier::{Digest, Encoding, Serializer};
-use rails_compat::{MessageEncryptor, MessageVerifier};
 use serde_json::{Value, json};
 use tower::ServiceExt;
 
@@ -58,60 +52,6 @@ async fn create_session(c: &mut Ctx) -> Result {
 async fn whoami(c: &mut Ctx) -> Result {
     let token = c.cookies.signed("session_token");
     c.json(StatusCode::OK, &json!({ "token": token }))
-}
-
-/// Our Rails app's cookie jars: `cookies.signed` (HMAC-SHA1) and `cookies.encrypted`
-/// (aes-256-gcm), both with the legacy `_rails` envelope and JSON values, keyed by
-/// PBKDF2-HMAC-SHA1 over `secret_key_base` (1000 iterations).
-struct OurRailsCrypto {
-    verifier: MessageVerifier,
-    encryptor: MessageEncryptor,
-}
-
-impl OurRailsCrypto {
-    fn new(secret_key_base: &str) -> Self {
-        let key = |salt: &str, length: usize| {
-            let mut key = vec![0u8; length];
-            pbkdf2::pbkdf2_hmac::<sha1::Sha1>(secret_key_base.as_bytes(), salt.as_bytes(), 1000, &mut key);
-            key
-        };
-        Self {
-            verifier: MessageVerifier::new(key("signed cookie", 64), Digest::Sha1, Encoding::Strict, Serializer::Null),
-            encryptor: MessageEncryptor::new(&key("authenticated encrypted cookie", 32), Serializer::Null),
-        }
-    }
-
-    fn load(dumped: Value) -> Option<Value> {
-        serde_json::from_str(dumped.as_str()?).ok()
-    }
-
-    fn decrypt(&self, name: &str, raw: &str, now: Timestamp) -> Option<Value> {
-        let purpose = format!("cookie.{name}");
-        let dumped = self.encryptor.decrypt_and_verify(raw, Some(&purpose), now).or_else(|_| self.encryptor.decrypt_and_verify(raw, None, now));
-        Self::load(dumped.ok()?)
-    }
-}
-
-impl Crypto for OurRailsCrypto {
-    fn sign_cookie(&self, name: &str, value: &str, expires_at: Option<Timestamp>) -> String {
-        let dumped = Value::String(serde_json::to_string(value).unwrap());
-        self.verifier.generate(&dumped, Some(&format!("cookie.{name}")), expires_at)
-    }
-
-    fn verify_signed_cookie(&self, name: &str, raw: &str, now: Timestamp) -> Option<String> {
-        let purpose = format!("cookie.{name}");
-        let dumped = self.verifier.verify(raw, Some(&purpose), now).or_else(|_| self.verifier.verify(raw, None, now)).ok()?;
-        Self::load(dumped)?.as_str().map(str::to_string)
-    }
-
-    fn encrypt_cookie(&self, name: &str, value: &Value, expires_at: Option<Timestamp>) -> String {
-        let dumped = Value::String(serde_json::to_string(value).unwrap());
-        self.encryptor.encrypt_and_sign(&dumped, Some(&format!("cookie.{name}")), expires_at)
-    }
-
-    fn decrypt_cookie(&self, name: &str, raw: &str, now: Timestamp) -> Option<Value> {
-        self.decrypt(name, raw, now)
-    }
 }
 
 fn app_with(crypto: SharedCrypto, vectors: &Value) -> Router {

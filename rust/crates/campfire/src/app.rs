@@ -98,6 +98,9 @@ pub async fn boot(config: Config) -> anyhow::Result<Booted> {
 
     let mut kit_config = KitConfig::production(config.disable_ssl);
     kit_config.error_pages = error_pages();
+    kit_config.default_headers = crate::security::default_headers();
+    kit_config.content_security_policy = Some(Arc::new(crate::security::content_security_policy(config.livekit_url.clone())));
+    campfire_kit::param_filter::install(crate::security::parameter_filter());
 
     let fragment_cache = FragmentCache::new(config.fragment_cache_bytes);
     let web_push = crate::integrations::web_push_pool(&config, &db);
@@ -142,6 +145,9 @@ fn router(app: &App, kit: Kit) -> Router {
     let dispatch = || axum::routing::any(campfire_kit::action(dispatch_with_fragment_cache));
     let routes = Router::new()
         .merge(app.cable.router::<Kit>(campfire_cable::protocol::DEFAULT_MOUNT_PATH))
+        // `post "csp_reports"`: an `ActionController::API`, outside the ApplicationController routes.
+        .route("/csp_reports", axum::routing::post(campfire_kit::action(controllers::csp_reports::create)))
+        .route("/csp_reports.{format}", axum::routing::post(campfire_kit::action(controllers::csp_reports::create)))
         .route("/", dispatch())
         .route("/{*path}", dispatch())
         .layer(axum::middleware::from_fn(public_files));
@@ -261,7 +267,8 @@ fn init_logging(config: &Config) {
     let front = if campfire_kit::front::FrontConfig::from_env().debug { "debug" } else { "info" };
     let default = format!("{level},thruster={front},campfire_kit::front={front}");
     let filter = tracing_subscriber::EnvFilter::try_from_env("CAMPFIRE_LOG").unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(default));
-    let _ = tracing_subscriber::fmt().with_env_filter(filter).try_init();
+    // `LogScrubbingFormatter`: bot keys in paths never reach the log.
+    let _ = tracing_subscriber::fmt().with_env_filter(filter).with_writer(crate::security::ScrubbingStdout).try_init();
 }
 
 /// How long in-flight requests and queued jobs get after SIGTERM/SIGINT.

@@ -14,6 +14,8 @@ use sha2::{Digest, Sha256};
 
 use crate::clock::{FrozenClock, SharedClock};
 use crate::crypto::{Crypto, SharedCrypto};
+use rails_compat::message_verifier::{Digest as VerifierDigest, Encoding, Serializer};
+use rails_compat::{MessageEncryptor, MessageVerifier};
 
 pub const TEST_TIME: &str = "2024-06-01T12:00:00Z";
 
@@ -88,5 +90,68 @@ impl Crypto for TestCrypto {
 
     fn decrypt_cookie(&self, name: &str, raw: &str, now: Timestamp) -> Option<Value> {
         self.open("encrypted", name, raw.get(8..)?, now)
+    }
+}
+
+/// Our Rails app's cookie jars: `cookies.signed` (HMAC-SHA1) and `cookies.encrypted`
+/// (aes-256-gcm), both with the legacy `_rails` envelope and JSON values, keyed by
+/// PBKDF2-HMAC-**SHA1** over `secret_key_base` (1000 iterations).
+///
+/// Not the SHA256 `load_defaults` asks for: `config/initializers/active_record_encryption.rb`
+/// calls `Rails.application.key_generator` while the app initializes, which memoizes a generator
+/// built before `key_generator_hash_digest_class` takes effect (an `after_initialize`), and the
+/// cookie jars use that generator. `rails_compat::KeyGenerator` only derives with SHA256, which
+/// reads stock Campfire's cookies (`vectors/rails_compat.json`) but not ours. Until it can do both,
+/// tests that replay our Rails app's cookies use this. (Values are JSON-encoded with `serde_json`,
+/// which matches `ActiveSupport::JSON` for the plain strings, numbers and hashes tests use.)
+pub struct OurRailsCrypto {
+    verifier: MessageVerifier,
+    encryptor: MessageEncryptor,
+}
+
+impl OurRailsCrypto {
+    pub fn new(secret_key_base: &str) -> Self {
+        let key = |salt: &str, length: usize| {
+            let mut key = vec![0u8; length];
+            pbkdf2::pbkdf2_hmac::<sha1::Sha1>(secret_key_base.as_bytes(), salt.as_bytes(), 1000, &mut key);
+            key
+        };
+        Self {
+            verifier: MessageVerifier::new(key("signed cookie", 64), VerifierDigest::Sha1, Encoding::Strict, Serializer::Null),
+            encryptor: MessageEncryptor::new(&key("authenticated encrypted cookie", 32), Serializer::Null),
+        }
+    }
+
+    fn load(dumped: Value) -> Option<Value> {
+        serde_json::from_str(dumped.as_str()?).ok()
+    }
+
+    /// `cookies.encrypted[name]`
+    pub fn decrypt(&self, name: &str, raw: &str, now: Timestamp) -> Option<Value> {
+        let purpose = format!("cookie.{name}");
+        let dumped = self.encryptor.decrypt_and_verify(raw, Some(&purpose), now).or_else(|_| self.encryptor.decrypt_and_verify(raw, None, now));
+        Self::load(dumped.ok()?)
+    }
+}
+
+impl Crypto for OurRailsCrypto {
+    fn sign_cookie(&self, name: &str, value: &str, expires_at: Option<Timestamp>) -> String {
+        let dumped = Value::String(serde_json::to_string(value).unwrap());
+        self.verifier.generate(&dumped, Some(&format!("cookie.{name}")), expires_at)
+    }
+
+    fn verify_signed_cookie(&self, name: &str, raw: &str, now: Timestamp) -> Option<String> {
+        let purpose = format!("cookie.{name}");
+        let dumped = self.verifier.verify(raw, Some(&purpose), now).or_else(|_| self.verifier.verify(raw, None, now)).ok()?;
+        Self::load(dumped)?.as_str().map(str::to_string)
+    }
+
+    fn encrypt_cookie(&self, name: &str, value: &Value, expires_at: Option<Timestamp>) -> String {
+        let dumped = Value::String(serde_json::to_string(value).unwrap());
+        self.encryptor.encrypt_and_sign(&dumped, Some(&format!("cookie.{name}")), expires_at)
+    }
+
+    fn decrypt_cookie(&self, name: &str, raw: &str, now: Timestamp) -> Option<Value> {
+        self.decrypt(name, raw, now)
     }
 }

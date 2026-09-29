@@ -32,6 +32,7 @@ use crate::active_storage;
 // view models. Controller agents add their `pub mod` lines here.
 pub mod accounts;
 pub mod autocompletable;
+pub mod csp_reports;
 pub mod first_runs;
 pub mod messages;
 pub mod presenters;
