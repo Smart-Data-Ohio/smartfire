@@ -16,11 +16,28 @@ pub enum Error {
     #[error("database writer is gone")]
     WriterGone,
 
+    /// The database's `schema_migrations` isn't exactly the set this build's schema was generated
+    /// from (see `schema::prepare`).
+    #[error("{0}")]
+    SchemaMismatch(crate::schema::SchemaMismatch),
+
     #[error("{0}")]
     Other(String),
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
+
+impl Error {
+    /// `ActiveRecord::RecordNotUnique`: a unique index (or primary key) rejected the write.
+    pub fn is_record_not_unique(&self) -> bool {
+        matches!(
+            self,
+            Error::Sqlite(rusqlite::Error::SqliteFailure(e, _))
+                if e.extended_code == rusqlite::ffi::SQLITE_CONSTRAINT_UNIQUE
+                    || e.extended_code == rusqlite::ffi::SQLITE_CONSTRAINT_PRIMARYKEY
+        )
+    }
+}
 
 /// `ActiveModel::Errors`: attribute/message pairs in the order they were added.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]

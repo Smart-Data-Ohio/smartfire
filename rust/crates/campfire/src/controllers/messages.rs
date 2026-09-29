@@ -7,7 +7,7 @@ pub mod boosts;
 pub mod by_bots;
 
 use askama::Template;
-use campfire_db::{Message, NewMessage, Role, Room, Status, User};
+use campfire_db::{Message, NewMessage, Role, Room, Status, Timeline, User};
 use campfire_kit::format;
 use campfire_kit::{Ctx, Error, Freshness, Param, Result, StatusCode, halt, permit_keys};
 use campfire_richtext::Content;
@@ -188,7 +188,7 @@ pub(crate) fn attachment_assignment(permitted: &campfire_kit::ParamMap) -> Resul
     }
 }
 
-/// `@room.messages.find(params[:before])` and friends (`find_paged_messages`).
+/// `@room.root_messages.find(params[:before])` and friends (`find_paged_messages`).
 pub(crate) async fn find_paged_messages(c: &Ctx, room: &Room) -> Result<Vec<Message>> {
     let present = |key: &str| c.params.get(key).filter(|p| p.is_present()).map(|p| p.as_str().and_then(cast_integer));
     let (before, after) = (present("before"), present("after"));
@@ -197,14 +197,14 @@ pub(crate) async fn find_paged_messages(c: &Ctx, room: &Room) -> Result<Vec<Mess
         .db
         .read(move |conn| match (before, after) {
             (Some(before), _) => {
-                let message = Message::find_in_room(conn, room_id, before.ok_or(campfire_db::Error::RecordNotFound("Message"))?)?;
-                Message::page_before(conn, room_id, &message)
+                let message = Message::find_in(conn, Timeline::Room(room_id), before.ok_or(campfire_db::Error::RecordNotFound("Message"))?)?;
+                Message::page_before(conn, Timeline::Room(room_id), &message)
             }
             (None, Some(after)) => {
-                let message = Message::find_in_room(conn, room_id, after.ok_or(campfire_db::Error::RecordNotFound("Message"))?)?;
-                Message::page_after(conn, room_id, &message)
+                let message = Message::find_in(conn, Timeline::Room(room_id), after.ok_or(campfire_db::Error::RecordNotFound("Message"))?)?;
+                Message::page_after(conn, Timeline::Room(room_id), &message)
             }
-            (None, None) => Message::last_page(conn, room_id),
+            (None, None) => Message::last_page(conn, Timeline::Room(room_id)),
         })
         .await
         .map_err(db_error)
@@ -240,6 +240,7 @@ pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessagePara
                     client_message_id: attributes.client_message_id,
                     body,
                     attachment_blob_id: blob.as_ref().map(|blob| blob.id),
+                    ..Default::default()
                 },
             )?;
             Ok((message, blob))

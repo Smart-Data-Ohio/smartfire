@@ -105,6 +105,9 @@ pub fn room_param_key(room_type: RoomType) -> &'static str {
         RoomType::Open => "rooms_open",
         RoomType::Closed => "rooms_closed",
         RoomType::Direct => "rooms_direct",
+        RoomType::Voice => "rooms_voice",
+        RoomType::Stage => "rooms_stage",
+        RoomType::Board => "rooms_board",
     }
 }
 

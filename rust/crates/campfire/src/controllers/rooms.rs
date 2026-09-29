@@ -14,7 +14,7 @@ pub mod opens;
 pub mod refreshes;
 
 use askama::Template;
-use campfire_db::{Account, Message, Room, RoomType, User};
+use campfire_db::{Account, Message, Room, RoomType, Timeline, User};
 use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode, halt};
 
 use crate::app::AppCtx;
@@ -196,8 +196,8 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
         .db
         .read(move |conn| {
             let messages = match message_id.map(|id| Message::find_by_id(conn, id)).transpose()?.flatten() {
-                Some(message) if message.room_id == room.id => Message::page_around(conn, room.id, &message)?,
-                _ => Message::last_page(conn, room.id)?,
+                Some(message) if message.room_id == room.id => Message::page_around(conn, Timeline::Room(room.id), &message)?,
+                _ => Message::last_page(conn, Timeline::Room(room.id))?,
             };
             let presenter = Presenter::new(conn, &app, request_host);
             let original = Room::original(conn)?.is_some_and(|original| original.id == room.id);
@@ -208,7 +208,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
                 user: user_view(&app.secrets, &user),
                 // The page's message fragments come from the store the render then uses.
                 messages: campfire_views::fragment_cache::with(&app.fragment_cache, || presenter.messages(&messages))?,
-                invitation: original && !Message::paged(conn, room.id)?,
+                invitation: original && !Message::paged(conn, Timeline::Room(room.id))?,
                 join_code: Account::first(conn)?.map(|account| account.join_code).unwrap_or_default(),
                 messages_stream_name: rails_compat::turbo::signed_stream_name(&app.secrets, &[&room_gid, "messages"]),
             })

@@ -31,6 +31,7 @@ fn creating_a_message_touches_the_room_marks_disconnected_members_unread_and_ind
         client_message_id: Some("abc".into()),
         body: Some("Hello <b>there</b>".into()),
         attachment_blob_id: None,
+        ..Default::default()
     };
     let message = t.write(move |tx| Message::create(tx, attributes));
 
@@ -97,13 +98,14 @@ fn rolled_back_writes_emit_nothing_after_commit() {
         body: Some("x".into()),
         ..Default::default()
     };
+    let count = t.read(Message::count);
     let result: crate::Result<()> = t.try_write(move |tx| {
         Message::create(tx, attributes)?;
         Err(crate::Error::Other("boom".into()))
     });
     assert!(result.is_err());
     assert!(t.events().is_empty());
-    assert_eq!(t.read(Message::count), 13);
+    assert_eq!(t.read(Message::count), count);
 }
 
 #[test]
@@ -224,6 +226,37 @@ fn recording_searches_keeps_the_ten_most_recent() {
         t.read(|c| Search::ordered_for_user(c, david))[0].query,
         "query 5"
     );
+}
+
+/// `Search#set_dedup_key` (`app/models/search.rb`): new rows carry their query as the key the
+/// unique `[user_id, dedup_key]` index deduplicates on; legacy rows keep a NULL key and are
+/// still found by query.
+#[test]
+fn recorded_searches_carry_a_dedup_key() {
+    let t = TestDb::new();
+    let david = id("david");
+    let dedup_key = |t: &TestDb, query: &'static str| -> Vec<Option<String>> {
+        t.read(move |c| {
+            crate::sql::query_all(
+                c,
+                r#"SELECT "dedup_key" FROM "searches" WHERE "user_id" = ? AND "query" = ?"#,
+                rusqlite::params![david, query],
+                |r| r.get(0),
+            )
+        })
+    };
+    t.write(move |tx| Search::record(tx, david, "pizza place"));
+    assert_eq!(dedup_key(&t, "pizza place"), [Some("pizza place".to_string())]);
+
+    t.write(move |tx| {
+        let now = tx.now();
+        tx.conn().execute(
+            r#"INSERT INTO "searches" ("created_at", "query", "updated_at", "user_id") VALUES (?, 'legacy', ?, ?)"#,
+            rusqlite::params![now, now, david],
+        )?;
+        Search::record(tx, david, "legacy").map(|_| ())
+    });
+    assert_eq!(dedup_key(&t, "legacy"), [None]);
 }
 
 #[test]
