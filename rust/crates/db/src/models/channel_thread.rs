@@ -650,6 +650,7 @@ impl ChannelThread {
     /// events, links, handoffs, SLA nudges, agent steps and PR thread rows are deleted without
     /// their own callbacks until their owners (WS11, WS12, WS15) port them.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
+        crate::ScheduledMessage::drop_for_thread(tx, self.id)?;
         for tag in ThreadTag::for_thread(tx.conn(), self.id)? {
             tag.destroy(tx)?;
         }

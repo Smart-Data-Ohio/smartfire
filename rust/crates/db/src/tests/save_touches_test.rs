@@ -17,7 +17,7 @@ use crate::models::active_storage::Blob;
 use crate::{Boost, Message, MessageChanges, MessagePin, NewMessage, NewSavedItem, Room, RoomType, SavedItem, Timestamp};
 
 const RUBY: &str = include_str!("message_save_touches.json");
-const ACTIONS: [&str; 15] = [
+const ACTIONS: [&str; 16] = [
     "attach_nil",
     "attach_blob",
     "body_same",
@@ -33,6 +33,7 @@ const ACTIONS: [&str; 15] = [
     "pin",
     "unpin",
     "save_item",
+    "schedule",
 ];
 
 #[derive(Debug, PartialEq, Deserialize)]
@@ -86,6 +87,11 @@ fn act(tx: &mut Tx<'_>, message_id: i64, action: &str) -> Result<()> {
             let remind_at = Some(tx.now().since(jiff::SignedDuration::from_hours(1)));
             SavedItem::create(tx, NewSavedItem { user_id: id("jason"), message_id: message.id, remind_at, status: None }).map(drop)
         }
+        "schedule" => crate::ScheduledMessage::create(tx, crate::NewScheduledMessage {
+            user_id: id("jason"), room_id: message.room_id, thread_id: None,
+            reply_to_message_id: Some(message.id), markdown_source: "Later".into(),
+            send_at: tx.now().since(jiff::SignedDuration::from_hours(1)),
+        }).map(drop),
         other => unreachable!("{other}"),
     }
 }
@@ -151,7 +157,7 @@ fn message_saves_touch_what_rails_touches() {
             }
         }
     }
-    assert_eq!(rust.len(), 60);
+    assert_eq!(rust.len(), 64);
     let differing: Vec<_> = ruby
         .iter()
         .filter(|(name, outcome)| rust.get(*name) != Some(outcome))

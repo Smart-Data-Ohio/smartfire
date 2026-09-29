@@ -30,7 +30,8 @@ ACTIONS = {
   "drive_add"       => ->(m, _) { m.drive_attachments.build(file_id: "1AbcDefGhIjKlMnOpQrSt"); m.save! },
   "pin"             => ->(m, u) { MessagePin.pin!(message: m, pinner: u) },
   "unpin"           => ->(m, _) { MessagePin.find_by!(message: m).unpin! },
-  "save_item"       => ->(m, u) { SavedItem.create!(user: u, message: m, remind_at: 1.hour.from_now) }
+  "save_item"       => ->(m, u) { SavedItem.create!(user: u, message: m, remind_at: 1.hour.from_now) },
+  "schedule"        => ->(m, u) { ScheduledMessage.create!(user: u, room: m.room, reply_to_message: m, markdown_source: "Later", send_at: 1.hour.from_now) }
 }
 
 t0 = Time.utc(2026, 9, 29, 12, 0, 0)

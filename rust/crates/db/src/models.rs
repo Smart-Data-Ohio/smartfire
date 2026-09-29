@@ -16,6 +16,7 @@ pub mod poll;
 pub mod push_subscription;
 pub mod rich_text_record;
 pub mod saved_item;
+pub mod scheduled_message;
 pub mod room;
 pub mod search;
 pub mod session;
@@ -41,6 +42,7 @@ pub use push_subscription::{MAX_PAYLOAD_BODY_BYTES, MAX_PAYLOAD_TITLE_BYTES, Pus
 pub use rich_text_record::RichTextRecord;
 pub use room::{Room, RoomType};
 pub use saved_item::{NewSavedItem, SavedItem, SavedItemChanges};
+pub use scheduled_message::{NewScheduledMessage, ScheduledMessage};
 pub use search::Search;
 pub use session::{NewSession, Session};
 pub use sound::Sound;
