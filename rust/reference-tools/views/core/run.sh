@@ -15,6 +15,12 @@ STORE=${STORE:-target/views-core-reference}
 OUT=${OUT:-crates/views/tests/golden/core}
 
 rm -rf "$STORE"; mkdir -p "$STORE/db" "$STORE/storage"
-parity/bin/reference exec --storage "$STORE" --time "$FROZEN_AT" --freeze -- bin/rails db:prepare >/dev/null
-parity/bin/reference runner --storage "$STORE" --time "$FROZEN_AT" --freeze reference-tools/views/core/goldens.rb
+# Give the throwaway container an explicit worker-owned name. The shared parity runner's
+# anonymous exec containers otherwise get random names, outside the worker's namespace.
+docker run --rm --name "${PARITY_OWNER:-ws6}-views-goldens-$$" --cpus 2 \
+  --user "$(id -u):$(id -g)" --env-file parity/.env.reference \
+  -e RAILS_LOG_LEVEL=warn -e PARITY_REDIS=1 -e "FAKETIME=$(date -u -d "$FROZEN_AT" '+%Y-%m-%d %H:%M:%S')" \
+  -v "$(realpath "$STORE/db"):/rails/storage/db" -v "$(realpath "$STORE/storage"):/rails/storage/files" \
+  -v "$ROOT:/work:ro" "${PARITY_IMAGE:-campfire-reference}" \
+  bash -c 'bin/rails db:prepare >/dev/null && bin/rails runner /work/reference-tools/views/core/goldens.rb'
 python3 reference-tools/views/core/split.py "$STORE/db/goldens.json" "$OUT"

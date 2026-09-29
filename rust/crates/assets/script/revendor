@@ -13,11 +13,11 @@ ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 # The reference Rails app: CAMPFIRE_REFERENCE, else the repository root that contains rust/.
 REFERENCE_ROOT=$(cd "${CAMPFIRE_REFERENCE:-$ROOT/..}" && pwd)
 CRATE="$ROOT/crates/assets"
-REFERENCE_SHA="$(git -C "$REFERENCE_ROOT" rev-parse HEAD)"
+REFERENCE_SHA="${REFERENCE_SHA:-$(git -C "$REFERENCE_ROOT" rev-parse HEAD)}"
 REFERENCE_IMAGE="${REFERENCE_IMAGE:-campfire-reference}"
 
 if docker info >/dev/null 2>&1 && docker image inspect "$REFERENCE_IMAGE" >/dev/null 2>&1; then
-  docker run --rm -i --user "$(id -u):$(id -g)" \
+  docker run --rm -i --name "${ASSET_EXPORT_PREFIX:-assets}-export-$$" --user "$(id -u):$(id -g)" \
     -e RAILS_ENV=production -e SECRET_KEY_BASE_DUMMY=1 -e DISABLE_SSL=1 -e ASSETS_DIR=/work/assets -e REFERENCE_SHA="$REFERENCE_SHA" \
     -v "$CRATE:/work/assets" \
     "$REFERENCE_IMAGE" bin/rails runner /work/assets/script/export_reference.rb
@@ -26,7 +26,7 @@ else
   export BUNDLE_PATH="${BUNDLE_PATH:-$ROOT/target/reference-bundle}" BUNDLE_WITHOUT="development:test"
   export RAILS_ENV=production SECRET_KEY_BASE_DUMMY=1 DISABLE_SSL=1 ASSETS_DIR="$CRATE" REFERENCE_SHA
 
-  WORK="$(mktemp -d)"
+  WORK="$(mktemp -d -p "${TMPDIR:-$ROOT/target}" assets-export.XXXXXX)"
   trap 'rm -rf "$WORK"' EXIT
   rsync -a --exclude /tmp --exclude /log --exclude /storage --exclude /public/assets \
     --exclude /rust --exclude /.claude --exclude /.git --exclude node_modules "$REFERENCE_ROOT/" "$WORK/"

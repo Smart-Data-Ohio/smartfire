@@ -2,7 +2,7 @@
     signed-in users. Locals: `user` (the current user). -#}
 <dialog id="quick-switcher" class="quick-switcher" aria-labelledby="quick-switcher-title"
         data-controller="quick-switcher"
-        data-quick-switcher-url-value="{{ h::routes::SWITCHER.path_with(&[], Some("json"), &[]) }}"
+        data-quick-switcher-url-value="{{ h::routes::SWITCHER.path_with([].as_slice(), Some("json"), [].as_slice()) }}"
         data-quick-switcher-user-id-value="{{ user.id }}"
         data-action="switcher:open@window->quick-switcher#open switcher:toggle@window->quick-switcher#toggle close->quick-switcher#wasClosed click->quick-switcher#dismissBackdrop">
   <div class="quick-switcher__surface">

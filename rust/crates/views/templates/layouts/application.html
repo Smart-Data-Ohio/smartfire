@@ -31,7 +31,7 @@
       {{ h::builder_tag("meta", h::attrs().name("time-zone-url").attr("content", h::routes::user_time_zone())) }}
       {{ h::notification_sound_meta_tags(ctx) }}
 {% endif %}
-    {{ h::builder_tag("link", h::attrs().attr("rel", "manifest").attr("href", h::routes::WEBMANIFEST.path_with(&[], Some("json"), &[]))) }}
+    {{ h::builder_tag("link", h::attrs().attr("rel", "manifest").attr("href", h::routes::WEBMANIFEST.path_with([].as_slice(), Some("json"), [].as_slice()))) }}
     {{ h::builder_tag("link", h::attrs().attr("rel", "icon").attr("href", ctx.account.logo_url.as_str()).type_("image/png")) }}
     {{ h::builder_tag("link", h::attrs().attr("rel", "apple-touch-icon").attr("href", ctx.account.logo_url.as_str())) }}
 
@@ -104,11 +104,11 @@
 
 {# The rooms subscriptions live here, outside the reloading sidebar frame: those streams also
    drive main-page targets, and a sidebar reload would otherwise drop broadcasts in the
-   resubscribe gap. #}{% if let Some(user) = ctx.current_user.as_ref() %}      {{ h::turbo_stream_from_streamables(ctx, &["rooms"]) }}
-      {{ h::turbo_stream_from_streamables(ctx, &[&h::gid_param("User", user.id), "rooms"]) }}
+   resubscribe gap. #}{% if let Some(user) = ctx.current_user.as_ref() %}      {{ h::turbo_stream_from_streamables(ctx, ["rooms"].as_slice()) }}
+      {{ h::turbo_stream_from_streamables(ctx, [h::gid_param("User", user.id).as_str(), "rooms"].as_slice()) }}
       <div id="workspace_presence" data-controller="workspace-presence" data-turbo-permanent hidden></div>
 {% endif %}
-    {% if ctx.huddle_configured() %}{% include "layouts/_huddle.html" %}{% endif %}
+    {% if ctx.huddle_configured() %}{% let user = ctx.current_user.as_ref().unwrap() %}{% include "layouts/_huddle.html" %}{% endif %}
 
     {% if ctx.huddle_configured() %}{% include "layouts/_huddle_invitation.html" %}{% endif %}
 
@@ -128,4 +128,4 @@
       {{ h::image_tag(ctx, "campfire-icon.png", h::attrs().alt("Smartfire logo").attr("width", 256).attr("height", 216)) }}
     </a>
   </body>
-</html>
+</html>{{ "\n" }}

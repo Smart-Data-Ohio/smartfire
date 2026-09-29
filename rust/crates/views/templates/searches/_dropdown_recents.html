@@ -11,7 +11,7 @@
 <ul id="global-search-listbox" class="global-search__options" role="listbox" aria-labelledby="global-search-recents-label"{% if searches.is_empty() %} hidden{% endif %}>
 {% for search in searches %}    <li id="{{ h::dom_id("search", search.id, Some("global_search_option")) }}" class="global-search__option" role="option" aria-selected="false"
         data-global-search-target="option"
-        data-url="{{ h::routes::SEARCHES.path_with(&[], None, &[("q", Some(search.query.as_str()))]) }}"
+        data-url="{{ h::routes::SEARCHES.path_with([].as_slice(), None, [("q", Some(search.query.as_str()))].as_slice()) }}"
         data-query="{{ search.query }}"
         data-action="mousedown->global-search#keepFocus click->global-search#choose">
       {{ h::image_tag(ctx, "search.svg", h::attrs().size(14).aria("hidden", "true").class("colorize--black global-search__option-icon")) }}

@@ -15,7 +15,7 @@ pub fn page_title_tag(page_title: Option<&str>) -> Html {
 }
 
 /// `Users::PresenceHelper#user_theme`: the user's theme if it's one of `THEMES`, else "system".
-pub fn user_theme(ctx: &ViewContext) -> &str {
+pub fn user_theme<'a>(ctx: &'a ViewContext<'_>) -> &'a str {
     let theme = ctx.current_user.as_ref().and_then(|user| user.preferences.theme.as_deref());
     match theme {
         Some(theme @ ("light" | "dark" | "system")) => theme,
@@ -25,7 +25,7 @@ pub fn user_theme(ctx: &ViewContext) -> &str {
 
 /// `Users::PresenceHelper#user_text_size`: the user's text size if it's one of `TEXT_SIZES`, else
 /// "default".
-pub fn user_text_size(ctx: &ViewContext) -> &str {
+pub fn user_text_size<'a>(ctx: &'a ViewContext<'_>) -> &'a str {
     let text_size = ctx.current_user.as_ref().and_then(|user| user.preferences.text_size.as_deref());
     match text_size {
         Some(size @ ("smaller" | "small" | "default" | "large" | "larger")) => size,
@@ -44,7 +44,7 @@ pub fn theme_color_scheme_meta_content(ctx: &ViewContext) -> &'static str {
 
 /// `current_user_time_zone_meta_content`: the saved zone, "" when "Not set" was chosen on
 /// purpose, else nothing (the meta tag then has no content attribute).
-pub fn current_user_time_zone_meta_content(ctx: &ViewContext) -> Option<&str> {
+pub fn current_user_time_zone_meta_content<'a>(ctx: &'a ViewContext<'_>) -> Option<&'a str> {
     let preferences = &ctx.current_user.as_ref()?.preferences;
     super::text::presence(preferences.time_zone.as_deref()).or(preferences.time_zone_explicit.then_some(""))
 }

@@ -6,7 +6,7 @@
 
 use askama::Template;
 
-use crate::helpers as h;
+use crate::helpers::{self as h, filters};
 
 /// The instance variables a page template hands to the application layout.
 pub trait Page {
@@ -17,6 +17,10 @@ pub trait Page {
 
     /// `@body_class`.
     fn body_class(&self) -> Option<&str> {
+        None
+    }
+
+    fn page_description(&self) -> Option<&str> {
         None
     }
 
@@ -186,4 +190,34 @@ pub struct NotificationSounds {
     /// Unless `ooo_notify_enabled?`: `[0, ooo_until]` when manual OOO is active, then the
     /// calendar's `ooo_window_epochs` when calendar OOO is enabled.
     pub ooo_quiet: Vec<(i64, i64)>,
+}
+
+/// The public layout receives its stylesheet from the asset owner, without workspace state.
+#[derive(Template)]
+#[template(path = "layouts/public_wrapper.html")]
+pub struct Public {
+    pub page_title: Option<String>,
+    pub page_description: Option<String>,
+    /// `stylesheet_link_tag "public", media: "all"`.
+    pub public_stylesheet: h::Html,
+    pub content: h::Html,
+}
+
+impl Page for Public {
+    fn page_title(&self) -> Option<String> { self.page_title.clone() }
+    fn page_description(&self) -> Option<&str> { self.page_description.as_deref() }
+}
+
+#[derive(Template)]
+#[template(path = "layouts/mailer.html")]
+pub struct Mailer { pub content: h::Html }
+
+#[derive(Template)]
+#[template(path = "layouts/mailer.txt", escape = "none")]
+pub struct TextMailer<'a> { pub content: &'a str }
+
+/// The app adapter supplies domain-owned values; views never perform domain queries.
+pub trait ChromeSource {
+    fn chrome(&self) -> Chrome;
+    fn user_preferences(&self) -> UserPreferences;
 }

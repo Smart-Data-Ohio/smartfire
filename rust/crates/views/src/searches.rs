@@ -3,7 +3,7 @@
 use askama::Template;
 use serde::Deserialize;
 
-use crate::helpers as h;
+use crate::helpers::{self as h, filters};
 use crate::layouts::Page;
 use crate::messages::MessageItem;
 use crate::ViewContext;

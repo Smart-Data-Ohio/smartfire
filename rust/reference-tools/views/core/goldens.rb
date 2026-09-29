@@ -307,6 +307,7 @@ helpers["translations"] = TranslationsHelper::TRANSLATIONS.keys.to_h do |key|
   [ key.to_s, { "entries" => TranslationsHelper::TRANSLATIONS[key].map { |language, text| [ language.to_s, text ] },
     "translations_for" => view.translations_for(key), "translation_button" => view.translation_button(key) } ]
 end
+helpers["translation_table"] = TranslationsHelper::TRANSLATIONS
 helpers["reactions"] = EmojiHelper::REACTIONS.to_a
 
 helpers["signed_stream_names"] = [

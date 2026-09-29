@@ -532,6 +532,7 @@ name = "campfire_views"
 version = "0.1.0"
 dependencies = [
  "askama",
+ "campfire_assets",
  "campfire_routes",
  "jiff",
  "rails_compat",
