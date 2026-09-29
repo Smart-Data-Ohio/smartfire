@@ -305,10 +305,18 @@ async fn start_rust(fixtures: &Fixtures, dir: &Path) -> Target {
     let rows = fixtures.rows.clone();
     db.write(move |tx| {
         for table in ["users", "rooms", "memberships", "sessions", "messages"] {
+            // Only the columns our schema has: the reference records every column of its own
+            // (two-factor, agent and bot token state the port doesn't store yet).
+            let known: Vec<String> = tx
+                .conn()
+                .prepare(&format!("SELECT name FROM pragma_table_info('{table}')"))?
+                .query_map([], |row| row.get(0))?
+                .collect::<Result<_, _>>()?;
             for row in &rows[table] {
-                let columns: Vec<String> = row.keys().map(|c| format!("\"{c}\"")).collect();
+                let values: Vec<(&String, &Value)> = row.iter().filter(|(column, _)| known.contains(column)).collect();
+                let columns: Vec<String> = values.iter().map(|(c, _)| format!("\"{c}\"")).collect();
                 let sql = format!("INSERT INTO {table} ({}) VALUES ({})", columns.join(", "), vec!["?"; columns.len()].join(", "));
-                tx.conn().execute(&sql, rusqlite::params_from_iter(row.values().map(sql_value)))?;
+                tx.conn().execute(&sql, rusqlite::params_from_iter(values.iter().map(|(_, v)| sql_value(v))))?;
             }
         }
         Ok(())
