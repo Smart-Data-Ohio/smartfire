@@ -264,3 +264,6 @@ labels.select { |key, _| key.start_with?("users.") }.each do |key, id|
   person = User.find(id)
   label :two_factor_cookies, key.delete_prefix("users."), enroll_in_two_factor(person) if person.requires_two_factor?
 end
+
+# Our fork's primary route families and recorded integration states.
+based_on "smartfire"

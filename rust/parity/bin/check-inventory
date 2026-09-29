@@ -31,6 +31,7 @@ abort "--port is required" unless options[:port]
 labels = JSON.parse(File.read(File.join(ROOT, "parity/.seed", options[:seed], "labels.json")))
 user_agents = YAML.load_file(File.join(ROOT, "parity/seeds/user_agents.yml"))
 states = YAML.load_file(File.join(ROOT, "parity/screens.yml"))
+states = states.fetch("states") if states.is_a?(Hash)
 BASE = URI("http://127.0.0.1:#{options[:port]}")
 
 def interpolate(value, labels, missing)
@@ -103,8 +104,14 @@ states.each do |state|
   headers = (state["headers"] || {}).merge(request && request["headers"] || {})
   begin
     cookies = if user
-      sessions[user] ||= Browser.new(user_agent: user_agents.fetch("chrome_mac")).tap { |b|
-        b.sign_in(labels.fetch("emails.#{user}"), labels.fetch("passwords.all")) }.cookies
+      if labels["browser_cookies.#{user}"]
+        labels.fetch("browser_cookies.#{user}")
+      elsif labels["session_cookies.#{user}"]
+        { "session_token" => labels.fetch("session_cookies.#{user}") }
+      else
+        sessions[user] ||= Browser.new(user_agent: user_agents.fetch("chrome_mac"), cookies: { "two_factor_remember" => labels["two_factor_cookies.#{user}"] }.compact).tap { |b|
+          b.sign_in(labels.fetch("emails.#{user}"), labels.fetch("passwords.all")) }.cookies
+      end
     end
     browser = Browser.new(user_agent: ua, headers: headers, cookies: cookies || {})
     res, uri = browser.request(:get, state["path"])
@@ -118,7 +125,8 @@ states.each do |state|
   expected = (state["expect_status"] || 200).to_i
   problems = []
   problems << "status #{res.code}, expected #{expected}" if res.code.to_i != expected
-  problems << "landed on the sign-in page" if user && uri.path == "/session/new"
+  expected_path = state["expected_path"] || URI(state["path"]).path
+  problems << "unexpected redirect to #{uri.path}, expected #{expected_path}" if uri.path != expected_path
   if problems.any?
     failures += 1
     puts "FAIL #{id}: #{problems.join("; ")} (#{state["path"]} -> #{uri.request_uri})"

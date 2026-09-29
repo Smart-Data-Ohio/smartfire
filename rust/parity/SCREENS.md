@@ -1,132 +1,152 @@
-# Screen inventory format (`parity/screens.yml`)
+# Smartfire screen oracle
 
-The inventory lists *states*. The capture engine (`parity/capture`) renders every state against
-both servers across the support matrix, and compares the results.
+The reference is the Rails app at the repository root, pinned to this checkout. The upstream
+`rust/reference/` corpus is not the Smartfire reference. `screens.yml` describes **172 states in
+23 feature areas**. Both targets receive copies of one built seed at 2026-03-02T16:00:00Z and
+appear under the same browser origin, http://localhost:3999.
 
-```yaml
-- id: rooms/show/busy                 # unique, path-like; used for artifact names
-  as: david                           # fixture user label to sign in as; omit for signed out
-  path: /rooms/{{rooms.designers}}    # {{table.label}} interpolates fixture IDs
-  seed: default                       # named seed variant from parity/seeds/ (default: default)
-  matrix:                             # optional narrowing of the support matrix
-    viewports: [desktop, phone]       # desktop 1440x900, laptop 1280x800, tablet 834x1194, phone 390x844
-    schemes: [light, dark]
-    engines: [chromium, firefox, webkit]
-  steps:                              # optional interactions after the page is ready
-    - click: ".message__actions-btn"
-    - fill: { selector: "#message_body", text: "Hello" }
-    - hover: ".boost"
-    - press: "Enter"
-    - wait_for: ".autocomplete__list"
-    - pause_animations_at: 500        # ms; pauses all document.getAnimations() at this time
-  actors:                             # multi-user states; steps may then carry `actor:`
-    a: david
-    b: kevin
-  capture: b                          # which actor's page is captured (multi-user only)
-  covers: [rooms/show, rooms/show/_composer]   # templates this state is meant to exercise
-  masks:                              # optional; see "Masks"
-    values:
-      join_code: { selector: "#invite_url", attribute: value, match: "/join/([^/?#]+)$" }
-    pixels: ["#invite_url"]
+## Feature inventory
+
+| Area | States | Primary states and interactions |
+|---|---:|---|
+| Channels | 19 | Markdown/media timeline, empty/busy/open channel, deep link, open/closed creation/settings, members, files, pins, categories, sidebar/unread, switcher, refresh frame |
+| Composer | 7 | Markdown draft, Drive attachment menu, schedule dialog, mention suggestions, mobile header overflow, shortcut dialog, quick switcher |
+| Threads | 13 | List, active/closed/locked, panel browser/create/conversation, content frame, message JSON, reply actions/forward source |
+| DMs | 4 | Direct/group conversation, new DM, group settings |
+| Voice | 7 | New/edit/empty/occupied, participants, unconfigured gateway responses |
+| Stage | 7 | New/edit/empty/live, open participant panel, unconfigured gateway responses |
+| Boards | 12 | Board/new/edit, new post, all four work states, owner/tag/state filters, automations |
+| Work | 3 | Cross-board work list, links, handoff form |
+| Events | 7 | List/new/edit/show/cancelled, attendance frame, live stage venue |
+| Saved / scheduled | 2 / 2 | Pending/completed saved items; pending/history scheduled rows |
+| Activity | 5 | Unread/all/mentions, unread count, inbox live frame |
+| Search | 8 | Recent/results/empty/filtered, live frame, user/icon/command autocomplete |
+| Agents | 3 | Directory, event ledger, approvals |
+| Admin | 11 | Workspace settings, people frame, bots/new/edit/credentials/grants, icons, custom styles, audit, integration health |
+| Integrations | 19 | Recorded GitHub/Fizzy/link/LinkedIn cards/frames; disconnected Drive; Slack settings/list/workspace and personal preview/plan/status/failure |
+| Account | 10 | Profile with notification/status/security/integration preferences, sessions, directory, self/other user, human/agent cards, presence/huddle presence, push subscriptions |
+| Auth | 12 | Sign-in/join/first-run/welcome, password-to-2FA/rejection, transfer form, pending 2FA/setup/rejection, sudo prompt/rejection |
+| Public / PWA | 7 / 3 | About/privacy/terms, 404/422/500/502, offline page, manifest, service worker |
+| Messages / polls | 7 / 2 | Message/actions/edit, forward source/destinations, boosts/form, open/closed poll |
+| Realtime | 2 | Send channel message and reply through the thread panel on freshly reset servers |
+
+Aliases of these screens do not multiply screenshots. Protocol routes (agent APIs, webhooks,
+huddle authorization, OAuth round trips, direct uploads, media delivery) are captured in
+`rust/vectors/campfire_routes.json`; page network logs also observe asset/media delivery. Rails
+`resources` declares some actions with no implementation/template; `rooms/settings#show`, for
+example, has no controller. A declared route is not proof of a reference screen.
+
+`coverage/templates.txt` lists current templates and explicit `covers` declarations. UNCOVERED
+stays visible. This breadth-first inventory does not claim every conditional partial,
+destructive action, validation branch, or provider integration.
+
+## Per-PR and nightly matrices
+
+The lean gate has **288 cells**:
+
+| Seed | States | Lean cells | Full cells before breakpoint sweep |
+|---|---:|---:|---:|
+| default | 159 | 261 | 2648 |
+| unread | 1 | 8 | 24 |
+| first_run | 1 | 1 | 24 |
+| live_rooms | 5 | 12 | 97 |
+| imports | 6 | 6 | 98 |
+| Total | 172 | 288 | 2891 |
+
+Ordinary states run once: Chromium, 1440x900 desktop, light. `smoke: true` runs Chromium
+desktop/phone x light/dark plus Firefox/WebKit desktop/phone in light: eight cells. `realtime/**`
+also runs every engine on desktop/light. Explicit matrix narrowing applies (the header menu is
+phone only). Response fragments run once. Lean does not sweep widths.
+
+Nightly/cutover uses `--matrix full`: Chromium/Firefox/WebKit x desktop 1440x900, laptop
+1280x800, tablet 834x1194, phone 390x844 x light/dark, respecting narrowing. It adds widths one
+pixel either side of stylesheet breakpoints for channels/timeline, account/profile and
+auth/sign_in. Full self-parity defaults to two runs and an across-run comparison. The nightly
+matrix is configured; WS19 acceptance evidence covers the entire lean inventory.
+
+## Canonical commands
+
+Run from the checkout containing `rust/`:
+
+```sh
+export PARITY_NAMESPACE=ws19 PARITY_OWNER=ws19
+rust/parity/bin/reference build
+rust/parity/bin/seed build default unread first_run live_rooms imports
+rust/parity/bin/compare --self-parity --matrix lean --ports 49301,49302 --workers 4 --isolated 2
+rust/parity/bin/compare --self-parity --matrix full --ports 49301,49302 --workers 4 --isolated 2
+rust/parity/bin/candidate build
+rust/parity/bin/candidate compare --seed default --ports 49001,49002 --workers 4 --matrix lean
 ```
 
-Steps run in order. Any step may take `actor: <name>` in multi-user states. The engine waits for
-readiness (Stimulus controllers connected, cable subscriptions confirmed, fonts, images and network
-idle) after navigation and after every step.
+Self-parity selects all inventory seeds automatically. Seed index i uses base +10i; fresh
+mutation slot k uses base +100(k+1). Reserve base through base+250 for one invocation; do not run
+another invocation on its mutation ports. Candidate compare takes one seed: run all five to
+produce a complete baseline. Namespace images/containers/network with `PARITY_NAMESPACE` and
+cleanup ownership with `PARITY_OWNER`. WS19 uses only 49000-49999. `Dockerfile.dev` is an optional
+local shortcut copying an explicitly built current executable into the pinned candidate media
+runtime; `candidate build` remains the canonical source build.
 
-Fake time moves only in fixed ticks (50ms of the browser's paused clock), and only while the page
-has settled in real time: network idle, nothing left that real time resolves (cable confirmations,
-images, zero-delay timeouts), and the DOM unchanged since the previous tick. A page is ready after
-8 ticks in a row that changed nothing, and a `wait_for` ticks until its element shows. So the fake
-time a capture spends depends only on the app's own timers, never on the machine's speed
-(`parity/capture/readiness.ts`).
+Seeds run serially by default, with parallel jobs and targets within each seed. This bounds
+browser and app memory on the shared worker. `PARITY_SEED_JOBS` explicitly raises concurrent
+seeds on a dedicated runner; `PARITY_VARIANT_WORKERS` controls the smaller seed job pools.
 
-Every document's fake clock starts at the same point: Playwright replays the harness's
-`install` and `pauseAt` in each new document and would advance the clock by the real milliseconds
-between the two calls, which moved every `requestAnimationFrame` by up to a frame (a room's
-composer got its focus ring whenever Lexxy's rAF mount came before composer_controller.js's
-zero-delay `focus()`). `capture.ts` (`freezeClock`) dates the pause at the install. Before the
-screenshot the mouse is moved to where it already is, so `:hover` reflects the settled page in
-every engine rather than whenever the engine next synthesizes a mouse move (Firefox showed the
-actions button of the message that moved under the pointer in `interactions/message_deleted` in
-some captures and not in others).
+Capture containers have `--network none`. App instances use an **internal** Docker bridge with
+no Internet route. `bin/forward-port` supplies host-loopback ingress; the Unix-socket capture
+forwarder permits only loopback destinations. Seeded external images resolve to local fixtures;
+all other external browser requests are blocked. Build-time downloads are separate.
 
-`mutates: true` states (see the top of `screens.yml` for what counts) never share a server: with a
-reset hook (`--reset`, which `parity/bin/compare --self-parity` sets up), each of their captures
-gets freshly started servers of its own, `--isolated N` (default 3) at a time, alongside the other
-states. Slot k of a server on port P listens on P + 1000 × (k + 1), and the reset command is run
-with that `{port}`.
+## Inventory format and comparison
 
-## Matrix
+```yaml
+states:
+  - id: threads/panel_conversation
+    area: threads
+    path: /rooms/{{rooms.designers}}
+    as: david
+    seed: default
+    steps:
+      - click: '[data-action="thread-panel#toggle"]'
+      - click: '.thread-panel__thread-item[data-thread-id="{{threads.launch}}"]'
+      - wait_for: '#thread-panel .composer__textarea'
+```
 
-`parity/bin/compare` (and `capture`) take `--matrix lean|full`; lean is the default
-(plans/rust-conversion.md, decision 4). The frontend is byte-identical and the browsers are pinned,
-so a port can only change pixels by sending different bytes: the gate is server output, and pixels
-back it up.
+`{{table.label}}` resolves against that seed's labels. `as` installs a seeded reference-issued
+verified session; challenge/enrollment contexts install app-issued pending-session cookies.
+Unseeded users still use real password login with the remembered-device cookie. Auth states
+exercise real forms. Wrong initial status or accidental redirect fails immediately.
+`expect_final_status` checks a resulting full document; `expect_responses` asserts interaction
+HTTP outcomes. Full-document Turbo fetches count as documents; card/frame fragments cannot
+overwrite the document layer.
 
-Every page capture records five text layers besides the screenshot, and every one is compared:
+Pages compare exact pixels, normalized server HTML, live DOM, accessibility tree, response
+header shape/body hash, and cable subscriptions/broadcasts. Fragments compare status, type,
+redirect and normalized body. Normalized response text is saved in `.responses/` to diagnose
+hashes. Repeated browser-cache requests collapse to the latest response per method/URL;
+subscription and payload sets discard transport duplicates.
 
-| Layer | File | What |
-|---|---|---|
-| server | `.server.norm.html` | the main document's response, normalized (typed placeholders for tokens and times) |
-| live | `.live.norm.html` | `body.outerHTML` at capture time, normalized |
-| aria | `.aria.yml` | the accessibility tree |
-| network | `.network.txt` | every response from the server to the page (and navigation): method, path, status, header shape (names, plus the values of `content-type`, `location`, `cache-control`, `content-disposition`, `vary`, and each cookie's name and attributes), and the sha256 of the normalized body (media ranges: the total size). Sorted, since requests run in parallel. |
-| cable | `.cable.txt` | every Action Cable frame except pings, per subscription in order, payloads normalized |
+Readiness requires connected/registered Stimulus controllers, confirmed cable identifiers,
+fonts/images, quiet network and stable DOM under deterministic fake-clock ticks. Two client
+subscriptions to the same cable identifier need one confirmation. Both targets capture in
+parallel, with four self-parity jobs by default. Interactive selectors/readiness fail after 8s;
+cold navigation and initial readiness each have 20s. Failed script resources fail immediately.
+Only renderer/network infrastructure crashes retry. Pixel-only retries
+are reported as flaky; acceptance requires **zero** flaky cells. All engines discard stale
+raster tiles before screenshotting; there is no pixel tolerance.
 
-The **lean** matrix (`parity/capture/inventory.ts`, `LEAN_*`):
+## Masks and remaining integration boundaries
 
-- every state on Chromium, desktop and phone, light and dark (a state narrowed to other viewports
-  keeps its first one);
-- the smoke states (`realtime/**`, `auth/sign_in`, `rooms/show/designers`,
-  `interactions/composer/with_text`, `interactions/lightbox`,
-  `interactions/mention_autocomplete/results`) also on Firefox and WebKit, desktop and phone, light;
-- the breakpoint sweep on Chromium;
-- fragments once, as always.
+There are **no state value masks, no pixel masks and no approved divergence entries**.
+`allowlist.yml` documents inherited normalization cases and reasons. WS19 removed asset/PWA
+body substitutions and the manifest exception. CSRF element structure remains; only token
+bytes normalize. Signed IDs retain decoded record/purpose data; timestamps and frozen expiries
+retain exact offsets. Crypto vectors separately exercise cookie/signature bytes. UI text,
+missing elements, HTTP status and controller failures are never masked.
 
-The **full** matrix is every engine × every viewport × both schemes plus the sweep on every
-engine: keep it for release checks. `--self-parity` runs once with the lean matrix (twice, plus a
-run-1-vs-run-2 comparison, with the full one), all seeds in parallel.
-
-## Masks
-
-A few values are made up at random by the server while a state runs, so two servers never agree on
-them: today only the join code that `Account::Joinable` generates when `auth/first_run/completed`
-creates the account (every other random value is either seeded or has a typed placeholder in
-`normalize.ts`). A state declares these in `masks:`, and nothing is masked anywhere else:
-
-- `values: { name: { selector, attribute?, match? } }`: after the steps, the harness reads the value
-  from that element on *this* server's page (the attribute, or the text; `match` is a regular
-  expression whose one group is the value) and replaces that exact string with `«name»` in every
-  text layer: server HTML, live DOM, accessibility tree, the network layer (before bodies are
-  hashed) and the cable layer. The value is never guessed by a pattern over arbitrary text, so the
-  same code rendered for the wrong account, or a different code anywhere else, still differs. A
-  missing element fails the capture.
-- `pixels: [selector, …]`: those elements' boxes are painted over (magenta) in the screenshot on
-  both sides. Each selector must match something.
-
-What each capture found is in its `.json` (`masks`), and the report lists every masked state.
-
-| State | Values | Pixels |
-|---|---|---|
-| `auth/first_run/completed` | `«join_code»` from `#invite_url[value]`, `/join/([^/?#]+)$` | `#invite_url`, `a[href^='/qr_code/']` |
-
-## Pixel flakes
-
-The pixel layer backs up the server-output layers, and a few rasterization effects aren't the
-server's doing. So when a cell's server output (server HTML, live DOM, accessibility tree, network
-and cable) is identical on both sides and only the pixels differ, the cell is captured again on
-both sides (on fresh servers for `mutates: true` states), up to 2 more times. If a later attempt
-matches, the cell passes and is marked **flaky** in `report.json` (`flaky: true`, `attempts`) and
-the HTML report, which keeps each failed attempt's screenshots and diff
-(`<cell>.attempt-N.png`). A cell whose server output differs is never retried, and one whose pixels
-still differ after 3 attempts fails. The summary line counts flaky cells.
-
-The sidebar toggle's arc on phone after the sign-up redirects (`auth/join/completed`,
-`auth/first_run/completed`) used to come out one gray level apart along its top arc. It was stale
-raster, not the server: the room's sidebar frame loads once or twice depending on whether
-UnreadRoomsChannel's confirmation (which reloads it) lands before or after the first load, and with
-one load Chromium kept the toggle's tiles from an earlier raster. The winner followed each server's
-speed, so a retry wasn't an independent sample. Before the screenshot, Chromium captures now
-promote the root to its own layer and back, giving each change 150ms to be drawn (`rasterAfresh`
-in `capture.ts`). That throws every tile away, so the pixels are a fresh raster of the final page.
+Live voice/stage states cover rendered participants and a synthetic live stream. Microphone/
+camera permission, RTC media, gateway reconciliation, OAuth provider success/cancel/re-consent,
+Drive's external Picker SDK, notification delivery, agent execution, periodic scheduling,
+installed/offline service-worker lifecycle, destructive admin operations, first-run completion,
+new secret/backup-code reveals and all validation branches remain integration extensions.
+Static offline/manifest/worker bytes are covered. Rails loses wrong-password `flash.now` on
+Turbo's required reload: that state asserts the 401 POST and captures the actual sign-in result
+without modifying Rails.
