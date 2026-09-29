@@ -221,14 +221,22 @@ async fn the_last_room_cookie_is_set_only_when_it_changes() {
 }
 
 #[tokio::test]
-async fn a_room_page_has_the_same_etag_cold_and_warm() {
+async fn a_room_page_renders_the_same_cold_and_warm() {
     let Some(app) = TestApp::boot().await else { return };
     let mut david = app.david();
     let etag = |reply: &Reply| reply.header("etag").map(str::to_string);
     // The first render stores the page's messages in the fragment cache; the second reads them.
     let cold = david.get(&format!("/rooms/{HQ}")).await;
     let warm = david.get(&format!("/rooms/{HQ}")).await;
-    assert_eq!(cold.text(), warm.text());
-    assert!(etag(&cold).is_some());
-    assert_eq!(etag(&cold), etag(&warm));
+    // Each render masks the CSRF token afresh, as Rails does, and the CSP nonce is random until
+    // the browser has a session id to derive it from (the cold request arrives with only its
+    // session_token cookie). The rest of the page must match.
+    let per_request =
+        regex::Regex::new(r#"(name="csrf-token" content="|name="csp-nonce" content="|name="authenticity_token" value="|nonce=")[^"]*""#).unwrap();
+    let page = |reply: &Reply| per_request.replace_all(&reply.text(), "${1}…\"").into_owned();
+    assert_eq!(page(&cold), page(&warm));
+    // Rack::ETag digests the body, so a page carrying a freshly masked token gets a new ETag on
+    // every request, in our Rails as here.
+    assert!(etag(&cold).is_some() && etag(&warm).is_some());
+    assert_ne!(etag(&cold), etag(&warm));
 }
