@@ -17,6 +17,7 @@ hmac.workspace = true
 md-5.workspace = true
 rand.workspace = true
 tempfile.workspace = true
+subtle.workspace = true
 
 [dev-dependencies]
 pbkdf2.workspace = true

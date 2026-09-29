@@ -1,6 +1,7 @@
 use hmac::{Hmac, Mac};
 use jiff::Timestamp;
 use serde_json::Value;
+use subtle::ConstantTimeEq;
 
 use crate::{Error, encoding, metadata};
 
@@ -123,7 +124,8 @@ impl MessageVerifier {
     }
 
     fn digest_matches(&self, data: &str, digest: &str) -> bool {
-        constant_time_eq(digest.as_bytes(), self.hex_digest(data).as_bytes())
+        // `ActiveSupport::SecurityUtils.secure_compare`: the length may leak, the contents don't.
+        bool::from(digest.as_bytes().ct_eq(self.hex_digest(data).as_bytes()))
     }
 
     fn mac(&self, data: &str) -> Vec<u8> {
@@ -142,7 +144,3 @@ impl MessageVerifier {
     }
 }
 
-/// `ActiveSupport::SecurityUtils.secure_compare`-style comparison (length leaks, contents don't).
-pub(crate) fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
-    a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
-}
