@@ -163,10 +163,23 @@ fn ar_encryption_encrypts_byte_for_byte_given_rails_iv() {
     assert!(compressed >= 5, "the vectors cover compressed values");
 }
 
+/// Cases where the port knowingly refuses a value Rails decrypts: a plaintext in an encoding
+/// Ruby knows but Smartfire never writes (the `e` header names it). The port only returns bytes
+/// with an encoding it can hand on faithfully, so these fail closed as `UnknownEncoding`.
+const AR_FAIL_CLOSED: &[&str] = &["Shift_JIS plaintext", "ISO-8859-1 plaintext"];
+
 #[test]
 fn ar_encryption_decrypt_outcomes_match_rails() {
+    let mut fail_closed = Vec::new();
     for case in cases("ar_encryption.decrypt") {
         let result = AR.decrypt_bytes(str(&case["ciphertext"]));
+        if AR_FAIL_CLOSED.contains(&str(&case["case"])) {
+            assert!(case["error"].is_null(), "{}: Rails decrypts it", label(case));
+            assert!(!ar_encryption::KNOWN_ENCODINGS.contains(&str(&case["expected_encoding"])), "{}", label(case));
+            assert_eq!(result, Err(DecryptionError::UnknownEncoding), "{}", label(case));
+            fail_closed.push(str(&case["case"]));
+            continue;
+        }
         match case["error"].as_str() {
             None => {
                 let decrypted = result.unwrap_or_else(|error| panic!("{}: {error}", label(case)));
@@ -182,6 +195,7 @@ fn ar_encryption_decrypt_outcomes_match_rails() {
             Some(other) => panic!("{}: unexpected Rails error {other}", label(case)),
         }
     }
+    assert_eq!(fail_closed, AR_FAIL_CLOSED, "every fail-closed case is in the vectors");
 }
 
 // --- Calendar::DisconnectCleanupJob credentials -------------------------------------------------

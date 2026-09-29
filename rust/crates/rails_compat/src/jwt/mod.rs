@@ -10,8 +10,8 @@
 use hmac::{Hmac, Mac};
 use serde_json::{Map, Value};
 use sha2::Sha256;
+use subtle::ConstantTimeEq;
 
-use crate::message_verifier::constant_time_eq;
 use crate::{encoding, json, ruby};
 
 pub mod google;
@@ -80,7 +80,7 @@ impl Key<'_> {
         match self {
             // JWA::Hmac#verify: the key must be a non-empty string.
             Key::Hs256([]) => Err(JwtError::Malformed),
-            Key::Hs256(key) => constant_time_eq(signature, &hs256(key, signing_input)).then_some(()).ok_or(JwtError::Signature),
+            Key::Hs256(key) => bool::from(signature.ct_eq(&hs256(key, signing_input))).then_some(()).ok_or(JwtError::Signature),
             Key::Rs256(key) => key.verify(signing_input, signature),
         }
     }

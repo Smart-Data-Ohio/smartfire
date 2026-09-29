@@ -23,7 +23,7 @@ use rand::RngCore;
 use serde_json::{Map, Value, json};
 use sha1::{Digest, Sha1};
 
-use crate::key_generator::{DEFAULT_ITERATIONS, HashDigest, KeyGenerator};
+use crate::key_generator::DEFAULT_ITERATIONS;
 use crate::{Secrets, encoding};
 
 pub const PRIMARY_KEY_SALT: &str = "active_record_encryption/primary";
@@ -39,7 +39,7 @@ const AUTH_TAG_LENGTH: usize = 16;
 const DEFAULT_ENCODING: &str = "UTF-8";
 /// The encodings Smartfire's writers produce. Rails would decrypt any encoding Ruby knows (and
 /// raises `ArgumentError` for unknown names); this port refuses the rest.
-const KNOWN_ENCODINGS: &[&str] = &["UTF-8", "US-ASCII", "ASCII-8BIT", "BINARY"];
+pub(crate) const KNOWN_ENCODINGS: &[&str] = &["UTF-8", "US-ASCII", "ASCII-8BIT", "BINARY"];
 
 /// Every `encrypts` declaration in the app (`app/models/**`), with the encoding its writer's
 /// plaintext has, which is what Rails records in the `e` header. Pass it to
@@ -106,9 +106,10 @@ impl ArEncryption {
         Self::from_key(&derive_key(&primary_key, &salt))
     }
 
-    /// From the derived 32-byte cipher key itself.
-    pub fn from_key(key: &[u8]) -> Self {
-        let cipher = Aes256Gcm::new_from_slice(key).expect("the Active Record encryption key is 32 bytes");
+    /// From the derived 32-byte cipher key itself. The type carries the length, so no key can
+    /// make this fail.
+    pub fn from_key(key: &[u8; KEY_LENGTH]) -> Self {
+        let cipher = Aes256Gcm::new(key.into());
         // ActiveRecord::Encryption::Key#id
         let key_id = hex::encode(Sha1::digest(key))[..4].to_string();
         Self { cipher, key_id }
@@ -197,9 +198,13 @@ impl ArEncryption {
     }
 }
 
-/// `ActiveRecord::Encryption::KeyGenerator#derive_key_from`.
-pub(crate) fn derive_key(primary_key: &[u8], salt: &[u8]) -> Vec<u8> {
-    KeyGenerator::with_options(primary_key, HashDigest::Sha256, DEFAULT_ITERATIONS).generate_key_from_bytes(salt, KEY_LENGTH)
+/// `ActiveRecord::Encryption::KeyGenerator#derive_key_from`: `ActiveSupport::KeyGenerator.new(
+/// primary_key, hash_digest_class: SHA256).generate_key(salt, 32)`, which is
+/// `OpenSSL::PKCS5.pbkdf2_hmac` at the default 2**16 iterations.
+pub(crate) fn derive_key(primary_key: &[u8], salt: &[u8]) -> [u8; KEY_LENGTH] {
+    let mut key = [0u8; KEY_LENGTH];
+    pbkdf2::pbkdf2_hmac::<sha2::Sha256>(primary_key, salt, DEFAULT_ITERATIONS, &mut key);
+    key
 }
 
 /// `Zlib::Deflate.deflate(data)`: zlib format at the default level.
