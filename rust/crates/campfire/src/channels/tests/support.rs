@@ -368,9 +368,12 @@ impl Client {
     }
 
     /// Reads until the server closes the socket, returning the text frames before the close.
+    /// Panics if it's still open after 10 s (pings would otherwise keep it reading forever).
     pub async fn until_closed(&mut self) -> Vec<String> {
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
         let mut frames = Vec::new();
         loop {
+            assert!(tokio::time::Instant::now() < deadline, "the socket is still open; frames so far: {frames:?}");
             match self.next().await {
                 Frame::Text(text) => frames.push(text),
                 // Keep reading so the client's close reply goes out and the server finishes
