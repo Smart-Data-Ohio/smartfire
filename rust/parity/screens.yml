@@ -54,6 +54,7 @@ states:
     covers:
       - rooms/closeds/edit
   - id: channels/members
+    isolated: true
     area: channels
     path: /rooms/{{rooms.designers}}/members.json
     as: david

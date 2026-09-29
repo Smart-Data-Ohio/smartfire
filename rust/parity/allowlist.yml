@@ -36,6 +36,8 @@
 # - Disk blob keys/disposition: opaque storage key; signed blob ID/media hash remain.
 # - Cable: subscription/outcome and broadcast sets; omit heartbeat/duplicate delivery order.
 #   Mutation states record broadcasts; presence-sensitive UI runs on fresh isolated servers.
+# - Firefox browser history: fresh process per capture; contexts otherwise retain :visited
+#   colours from other cells. Real visited styling remains enabled; no colour mask is applied.
 # - Animated WebP/GIF pixels: freeze to the first frame; actual original asset bytes (all
 #   frames) are independently hashed before transformation. No asset byte normalization.
 # - Offscreen lazy image requests: deterministically fetch declared sources at step boundaries;

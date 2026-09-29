@@ -13,7 +13,9 @@ const TYPES: Record<Engine, BrowserType> = { chromium, firefox, webkit }
 // drew their focus ring or not depending on what else was running, and Chromium shares its
 // decoded-image cache, so the lightbox's 3840x2160 JPEG came out of it at a different scale.
 const CONTEXTS_PER_BROWSER: Record<Engine, number> = { chromium: 1, firefox: 1, webkit: 1 }
-const RECYCLE_AFTER = 200
+// Firefox retains visited-link colours across contexts in the same process. A fresh process
+// preserves real :visited styling without importing history from a different capture cell.
+const RECYCLE_AFTER: Record<Engine, number> = { chromium: 200, firefox: 1, webkit: 200 }
 
 interface Slot {
   browser: Promise<Browser>
@@ -27,7 +29,7 @@ export class BrowserPool {
 
   async acquire(engine: Engine): Promise<{ browser: Browser; release: () => Promise<void> }> {
     const slots = (this.slots[engine] ??= [])
-    let slot = slots.find((s) => s.active < CONTEXTS_PER_BROWSER[engine] && s.served < RECYCLE_AFTER)
+    let slot = slots.find((s) => s.active < CONTEXTS_PER_BROWSER[engine] && s.served < RECYCLE_AFTER[engine])
     if (!slot) {
       slot = { browser: launch(engine), active: 0, served: 0 }
       slots.push(slot)
@@ -41,7 +43,7 @@ export class BrowserPool {
       browser,
       release: async () => {
         chosen.active--
-        if (chosen.served >= RECYCLE_AFTER && chosen.active === 0) {
+        if (chosen.served >= RECYCLE_AFTER[engine] && chosen.active === 0) {
           slots.splice(slots.indexOf(chosen), 1)
           await browser.close().catch(() => {})
         }

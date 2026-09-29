@@ -167,13 +167,17 @@ bytes. The networkless browser process verifies that fingerprint. Editing a seed
 validation invalidates the receipt. Standalone Node and the exported run function validate
 through the same path; metadata-only list/seeds/breakpoints do not capture.
 
-`account/directory`, `account/self`, `account/other`, human/agent cards and the presence response
+`channels/members`, `account/directory`, `account/self`, `account/other`, human/agent cards and the presence response
 use `isolated: true`. Each cell gets fresh reference/candidate servers without concurrent
 captures, independently of `mutates`. Omitted reset hooks fail before capture instead of
 silently falling back to shared servers. The initial presence lease corpus must be empty;
 normal cable subscriptions inside the isolated cell remain live. No Online/Offline text,
 HTML, accessibility output or presence pixels are masked. Two fresh complete lean runs plus
 an across-run comparison verify determinism.
+
+Firefox gets a fresh browser process per cell because it retains visited-link colours across
+contexts. This preserves real `:visited` styling while keeping other cells' history out of the
+capture; no preference override or colour mask is used.
 
 For deterministic request coverage, the harness fetches each declared same-origin lazy image
 through its authenticated API request context at navigation and interaction boundaries,
