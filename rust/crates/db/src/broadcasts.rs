@@ -125,6 +125,15 @@ pub fn thread_messages(thread_id: i64) -> Vec<Streamable> {
     vec![Streamable::Thread(thread_id), Streamable::Name("messages")]
 }
 
+/// `[message.conversation, :messages]` (`message_stream_target`): the message's thread, else
+/// its room.
+pub fn conversation_messages(conn: &rusqlite::Connection, message: &Message) -> crate::Result<Vec<Streamable>> {
+    Ok(match message.thread_id {
+        Some(thread_id) => thread_messages(thread_id),
+        None => room_messages(&Room::find(conn, message.room_id)?),
+    })
+}
+
 impl Broadcast {
     pub fn replace(streamables: Vec<Streamable>, target: String, partial: Partial) -> Self {
         Broadcast::Turbo(TurboStream { streamables, action: TurboAction::Replace, target, partial: Some(partial), maintain_scroll: false })

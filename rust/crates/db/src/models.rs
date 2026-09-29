@@ -9,6 +9,7 @@ pub mod first_run;
 pub mod forwarder;
 pub mod membership;
 pub mod message;
+pub mod poll;
 pub mod push_subscription;
 pub mod rich_text_record;
 pub mod room;
@@ -28,6 +29,7 @@ pub use channel_thread::{ChannelThread, NewChannelThread, ThreadPush, ThreadPush
 pub use first_run::FirstRun;
 pub use membership::{Involvement, Membership, StageRole};
 pub use message::{ContentType, Message, MessageChanges, NewMessage, Timeline};
+pub use poll::{NewPoll, Poll, PollOption, PollVote};
 pub use push_subscription::{MAX_PAYLOAD_BODY_BYTES, MAX_PAYLOAD_TITLE_BYTES, PushPayload, PushSubscription};
 pub use rich_text_record::RichTextRecord;
 pub use room::{Room, RoomType};

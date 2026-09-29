@@ -882,7 +882,8 @@ impl Message {
         for boost in Boost::for_message(tx.conn(), self.id)? {
             boost.delete_row(tx)?;
         }
-        // DEPENDENTS: poll, pins, saved items
+        crate::models::Poll::destroy_for_message(tx, self.id)?;
+        // DEPENDENTS: pins, saved items
         tx.conn().execute_cached(
             r#"UPDATE "board_stale_digests" SET "message_id" = NULL WHERE "board_stale_digests"."message_id" = ?"#,
             [self.id],

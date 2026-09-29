@@ -471,4 +471,50 @@ fn export_database_for_rails() {
         Ok(())
     })
     .unwrap();
+
+    // A multiple-choice poll with votes, closed; and an open one closing later.
+    db.write_blocking(|tx| {
+        let question = Message::create(
+            tx,
+            crate::NewMessage {
+                room_id: id("watercooler"),
+                creator_id: id("david"),
+                client_message_id: Some("rust-poll".into()),
+                markdown_source: Some("Lunch?".into()),
+                ..Default::default()
+            },
+        )?;
+        let mut poll = crate::Poll::create_for_message(
+            tx,
+            &question,
+            crate::NewPoll { labels: vec!["Tacos".into(), "Pizza".into()], multiple: true, ..Default::default() },
+        )?;
+        let options: Vec<i64> = poll.options(tx.conn())?.iter().map(|o| o.id).collect();
+        poll.cast_vote(tx, id("david"), &options)?;
+        poll.cast_vote(tx, id("jason"), &options[..1])?;
+        let now = tx.now();
+        poll.close(tx, now)?;
+        let later = Message::create(
+            tx,
+            crate::NewMessage {
+                room_id: id("watercooler"),
+                creator_id: id("jason"),
+                client_message_id: Some("rust-poll-later".into()),
+                markdown_source: Some("Dinner?".into()),
+                ..Default::default()
+            },
+        )?;
+        crate::Poll::create_for_message(
+            tx,
+            &later,
+            crate::NewPoll {
+                labels: vec!["Soup".into(), "Salad".into()],
+                anonymous: true,
+                closes_at: Some(now.since(jiff::SignedDuration::from_hours(1))),
+                ..Default::default()
+            },
+        )?;
+        Ok(())
+    })
+    .unwrap();
 }

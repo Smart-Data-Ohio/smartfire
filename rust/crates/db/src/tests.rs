@@ -10,6 +10,7 @@ mod fixtures_test;
 mod membership_test;
 mod message_edit_test;
 mod message_test;
+mod poll_test;
 mod push_test;
 mod room_test;
 mod save_touches_test;
@@ -90,6 +91,22 @@ impl TestDb {
 
     pub fn events(&self) -> Vec<Event> {
         self.sink.events()
+    }
+
+    /// Another handle on the same database file, with its own writer connection, as a second
+    /// process (another Puma worker, the periodic runner) would have: for claims that must hold
+    /// across processes. It shares this one's clock and event sink.
+    pub fn another_process(&self) -> Database {
+        let env = Env {
+            clock: Arc::new(self.clock.clone()),
+            sink: Arc::new(self.sink.clone()),
+            rich_text: Arc::new(BasicRichText),
+            bcrypt_cost: 4,
+        };
+        let mut config = Config::new(self.db.path());
+        config.readers = 1;
+        config.prepare = false;
+        Database::open(config, env).unwrap()
     }
 
     /// `travel_to Membership::Connectable::CONNECTION_TTL.from_now + 1`

@@ -89,6 +89,15 @@ check("forwards") do
     forwards.first.plain_text_body.start_with?("@[Jason] look\n\n")
 end
 
+poll = Message.find_by!(client_message_id: "rust-poll").poll
+check("closed poll") do
+  poll.closed? && poll.multiple? && poll.poll_options.map(&:label) == %w[ Tacos Pizza ] &&
+    poll.results_payload(viewer: david)[:options].map { [ _1[:votes], _1[:voters], _1[:voted] ] } ==
+      [ [ 2, %w[ David Jason ], true ], [ 1, %w[ David ], true ] ]
+end
+later = Message.find_by!(client_message_id: "rust-poll-later").poll
+check("open poll") { later.open? && later.anonymous? && Poll.open.include?(later) && Poll.open.exclude?(poll) }
+
 bot = User.find_by!(name: "Rust Bot")
 bot_key = File.read("/out/rust_export.sqlite3.bot_key")
 tampered = bot_key.sub(/.\z/) { _1 == "a" ? "b" : "a" }
