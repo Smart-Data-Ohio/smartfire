@@ -345,6 +345,7 @@ dependencies = [
  "campfire_assets",
  "campfire_cable",
  "campfire_db",
+ "campfire_jobs",
  "campfire_kit",
  "campfire_richtext",
  "campfire_routes",
@@ -433,6 +434,24 @@ dependencies = [
  "subtle",
  "tempfile",
  "thiserror",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "campfire_jobs"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "campfire_db",
+ "futures-util",
+ "jiff",
+ "rand 0.9.5",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
  "tokio",
  "tracing",
  "uuid",
