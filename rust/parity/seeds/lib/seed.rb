@@ -105,11 +105,23 @@ module Parity
     def load_fixtures
       names = Dir[FIXTURES.join("**/*.yml").to_s].sort.map { |f| f.delete_prefix("#{FIXTURES}/").delete_suffix(".yml") }
       at NOW
-      ActiveRecord::FixtureSet.create_fixtures(FIXTURES.to_s, names).each do |set|
+      ActiveRecord::FixtureSet.create_fixtures(FIXTURES.to_s, names, fixture_classes(names)).each do |set|
         set.fixtures.each_key do |fixture|
           label set.table_name, fixture, ActiveRecord::FixtureSet.identify(fixture)
         end
       end
+    end
+
+    # The test suite names the models of fixture files whose class Rails can't infer from the file
+    # name (`set_fixture_class` in test/test_helper.rb, e.g. twitter_posts: Twitter::Post): find
+    # each file's model by its table instead.
+    def fixture_classes(names)
+      names.filter_map do |name|
+        model = ActiveRecord::Base.descendants.find do |candidate|
+          !candidate.abstract_class? && candidate.table_name == name.tr("/", "_") && candidate.base_class == candidate
+        end
+        [ name, model ] if model
+      end.to_h
     end
 
     # Fixtures without explicit timestamps all get the same `now`. Spread each table's rows out,
