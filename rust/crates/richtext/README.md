@@ -41,6 +41,12 @@ unsafe/raw HTML off, GFM table/tasklist/strikethrough/autolink/tagfilter on, sho
 off, no syntax-highlighter plugin, soft breaks, code language classes, no header IDs. The gem's
 escaped-character-span default is reproduced before sanitization.
 
+The SGID JSON reader follows json **2.21.2**'s one-shot byte parser, including the first
+error cursor, comments, nesting limit, deferred string unescaping and raw error-message
+fragments. Binary JSON strings are not prevalidated as UTF-8. An invalid UTF-8 parser message
+makes the helper's logging rescue raise; other errors produce the normal empty presentation.
+There is no comment pre-scan or serde error-position classifier on this path.
+
 The vendored html5ever also reproduces Nokogiri 1.19.4 Gumbo's adoption-agency stack behavior.
 The Ruby-generated `tests/markdown/parser.json` regression explains why this compatibility change
 is required; it is not a serializer rewrite or a corpus normalization.
@@ -52,6 +58,7 @@ From `rust/`:
 ```sh
 reference-tools/markdown/run.sh
 reference-tools/richtext/run.sh
+reference-tools/richtext/run-sgids.sh
 mise exec rust@1.98.1 -- cargo test -j 6 -p campfire_richtext -- --nocapture
 mise exec rust@1.98.1 -- cargo clippy -j 6 -p campfire_richtext --all-targets -- -D warnings
 ```
@@ -63,6 +70,12 @@ additional source-limit vectors come from Rails model validation, and the parser
 from Nokogiri. The independent XSS suite checks 768 outputs and detects planted defects. The legacy generator
 defaults to 5,000 fuzz and 2,000 mutation cases; 72 additional probes compare JSON parser-error
 encoding directly with json 2.21.2, including fixed messages and bounded raw-byte fragments.
+A separate **25,634-case SGID corpus** is generated through real `MessagesHelper#message_presentation`
+with production rescue logging enabled. It includes six named review-derived regressions,
+fault insertion at every byte of structured inputs, truncations, comment/UTF-8/fragment boundaries,
+BOMs, NaN, nesting limits and 10,000 deterministic random mutations. Rust compares both raw parser
+error bytes and the helper's presentation, with no normalization. Valid JSON controls receive
+independently recorded `GlobalID.find` outcomes through the DB-free resolver input.
 
 The inherited legacy corpus now comes from our fork (7,322 cases). Its historical test still
 accounts for **pre-existing security differences**: the port never inserts auto-links into
@@ -87,3 +100,6 @@ Both specification datasets are distributed under CC BY-SA 4.0; their examples a
 The derived golden examples retain that license. Other code and assets retain their own licenses.
 The alias table is derived from [gemoji 4.1.0](https://github.com/github/gemoji/tree/v4.1.0)'s data
 (MIT); see `data/GEMOJI-LICENSE`.
+
+The SGID reader ports the decision procedure in json 2.21.2's `ext/json/ext/parser/parser.c`;
+see `data/JSON-PARSER-LICENSE` for its BSD license.

@@ -42,3 +42,33 @@ fn malformed_json_with_invalid_utf8_can_have_a_loggable_error() {
         campfire_richtext::Presentation::Unrenderable
     );
 }
+
+macro_rules! sgid_regression {
+    ($name:ident, $sgid:literal, $expected:expr) => {
+        #[test]
+        fn $name() {
+            let ctx = RenderContext { resolver: &NoRecords, request_host: None };
+            let body = concat!("<action-text-attachment sgid=\"", $sgid, "\"></action-text-attachment>");
+            assert_eq!(campfire_richtext::present_message(body, &ctx), $expected);
+        }
+    };
+}
+sgid_regression!(reviewer_unknown_token_before_line_comment, "eC8v/3k=", campfire_richtext::Presentation::Unrenderable);
+sgid_regression!(reviewer_unknown_token_before_block_comment, "eC8q/3k=", campfire_richtext::Presentation::Unrenderable);
+sgid_regression!(reviewer_false_token_before_invalid_utf8, "ZiD/eQ==", campfire_richtext::Presentation::Html(String::new()));
+sgid_regression!(
+    reviewer_nested_false_token_before_invalid_utf8,
+    "WzEsMix7IngiOmYgbHP/LDNd",
+    campfire_richtext::Presentation::Html(String::new())
+);
+
+sgid_regression!(
+    reviewer_keyword_before_unterminated_comment,
+    "WzEsMix7IngiOmZhbC8qeCo6c2V9LDOAXQ==",
+    campfire_richtext::Presentation::Unrenderable
+);
+sgid_regression!(
+    reviewer_keyword_before_later_invalid_token,
+    "eyJhIjpbdHJ1ZSxmYWxzCSxudf9sbCwidGVzdCJdLCJiIjoxMi4zfQ==",
+    campfire_richtext::Presentation::Html(String::new())
+);

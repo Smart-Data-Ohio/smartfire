@@ -225,33 +225,35 @@ fn attachable_from_possibly_expired_sgid(sgid: Option<&str>, ctx: &RenderContext
         return Ok(None);
     }
     let decoded = decode_base64(message)?;
-    // Ruby's JSON parser takes the bytes as UTF-8 without validating what's inside strings
-    let json = match crate::ruby::json_parse(&String::from_utf8_lossy(&decoded)) {
-        Some(json) => json,
-        None if json_parser_error_is_unloggable(&decoded) => return Err(Error::Unrenderable("JSON::ParserError")),
-        None => return Err(Error::Raised("JSON::ParserError")),
-    };
+    // The fork's Message::MentionPreloader parses binary bytes with json 2.21.2.
+    // Its first error and raw message bytes decide whether the helper's logging rescue raises.
+    use crate::sgid_json::Value;
+    let json = crate::sgid_json::parse(&decoded)
+        .map_err(|error| if error.unloggable() { Error::Unrenderable(error.class) } else { Error::Raised(error.class) })?;
     let rails = match &json {
-        serde_json::Value::Object(map) => map.get("_rails"),
+        Value::Object(_) => json.field(b"_rails"),
         _ => return Err(Error::Raised("NoMethodError: dig")),
     };
     let rails = match rails {
-        None | Some(serde_json::Value::Null) => None,
-        Some(serde_json::Value::Object(map)) => Some(map),
+        None | Some(Value::Null) => None,
+        Some(value @ Value::Object(_)) => Some(value),
         Some(_) => return Err(Error::Raised("TypeError: dig")),
     };
-    let truthy =
-        |v: Option<&serde_json::Value>| v.filter(|v| !matches!(v, serde_json::Value::Null | serde_json::Value::Bool(false))).cloned();
-    let gid: Option<String> = if let Some(data) = truthy(rails.and_then(|r| r.get("data"))) {
-        // GlobalID.find of anything but a string finds nothing
-        data.as_str().map(str::to_string)
-    } else if let Some(message) = truthy(rails.and_then(|r| r.get("message"))) {
+    let gid: Option<String> = if let Some(data) = rails.and_then(|r| r.field(b"data")).filter(|v| v.truthy()) {
+        // GlobalID.find of anything but a string finds nothing. URI/model/database
+        // resolution, including its errors, remains the supplied resolver's contract.
+        match data {
+            Value::String(bytes) => Some(String::from_utf8_lossy(bytes).into_owned()),
+            _ => None,
+        }
+    } else if let Some(message) = rails.and_then(|r| r.field(b"message")).filter(|v| v.truthy()) {
         // Rails 7 Marshal-dumped the GID. The signature isn't verified, so the dump can't be
         // safely loaded; the GID is matched out of its bytes instead.
-        let serde_json::Value::String(message) = message else {
+        let Value::String(message) = message else {
             return Err(Error::Raised("NoMethodError: unpack1"));
         };
-        let bytes = decode_base64(&message)?;
+        let message = std::str::from_utf8(message).map_err(|_| Error::Raised("ArgumentError: unpack1"))?;
+        let bytes = decode_base64(message)?;
         MARSHALED_GID_RE.find(&bytes).map(|m| String::from_utf8_lossy(m.as_bytes()).into_owned())
     } else {
         None
@@ -503,141 +505,4 @@ pub fn attachment_plain_text(attachment: &Attachment) -> PlainTextRepresentation
 pub enum PlainTextRepresentation {
     Html(String),
     Content(String),
-}
-
-// json 2.21.2's parser.c: first-key colon, array separators and EOF errors use fixed
-// ASCII messages. Other errors quote a bounded byte fragment from the parser cursor.
-// Invalid UTF-8 elsewhere in the payload therefore does not make logging fail.
-fn json_parser_error_is_unloggable(decoded: &[u8]) -> bool {
-    if std::str::from_utf8(decoded).is_ok() {
-        return false;
-    }
-    let mut masked = decoded.to_vec();
-    let mut offset = 0;
-    while let Err(error) = std::str::from_utf8(&masked[offset..]) {
-        offset += error.valid_up_to();
-        let end = offset + error.error_len().unwrap_or(masked.len() - offset);
-        masked[offset..end].fill(b'?');
-        offset = end;
-    }
-    let mut in_string = false;
-    let mut index = 0;
-    while index < masked.len() {
-        match masked[index] {
-            b'\\' if in_string => index += 1,
-            b'"' => in_string = !in_string,
-            b'/' if !in_string && masked.get(index + 1) == Some(&b'*') => {
-                let start = index;
-                index += 2;
-                while index + 1 < masked.len() && &masked[index..index + 2] != b"*/" {
-                    index += 1;
-                }
-                if index + 1 >= masked.len() {
-                    return false;
-                }
-                index += 1;
-                for byte in &mut masked[start..=index] {
-                    if *byte != b'\n' {
-                        *byte = b' ';
-                    }
-                }
-            }
-            b'/' if !in_string && masked.get(index + 1) == Some(&b'/') => {
-                while index < masked.len() && masked[index] != b'\n' {
-                    masked[index] = b' ';
-                    index += 1;
-                }
-                if index == masked.len() {
-                    return false;
-                }
-            }
-            _ => {}
-        }
-        index += 1;
-    }
-    let Err(error) = serde_json::from_slice::<serde_json::Value>(&masked) else {
-        return false;
-    };
-    let reason = error.to_string();
-    if error.is_eof() || reason.starts_with("expected `,` or `]`") {
-        return false;
-    }
-    let line_start = masked.iter().enumerate().filter(|(_, b)| **b == b'\n').nth(error.line().saturating_sub(2)).map_or(0, |(i, _)| i + 1);
-    let mut cursor = if error.line() == 1 { 0 } else { line_start } + error.column().saturating_sub(1);
-    cursor = cursor.min(decoded.len());
-    if reason.starts_with("expected `:`") {
-        let mut stack = Vec::new();
-        let mut quoted = false;
-        let mut i = 0;
-        while i < cursor {
-            match masked[i] {
-                b'\\' if quoted => i += 1,
-                b'"' => quoted = !quoted,
-                b'{' | b'[' if !quoted => stack.push((masked[i], false)),
-                b'}' | b']' if !quoted => {
-                    stack.pop();
-                }
-                b',' if !quoted => {
-                    if let Some(last) = stack.last_mut() {
-                        last.1 = true;
-                    }
-                }
-                _ => {}
-            }
-            i += 1;
-        }
-        if stack.last() == Some(&(b'{', false)) {
-            return false;
-        }
-    }
-    if reason.starts_with("invalid number") {
-        while cursor > 0 && b"-+0123456789.eE".contains(&masked[cursor - 1]) {
-            cursor -= 1;
-        }
-    }
-    if reason.starts_with("invalid escape") && masked.get(cursor) == Some(&b'\\') {
-        cursor += 1;
-    }
-    if (reason.starts_with("invalid escape") || reason.contains("unicode") || reason.contains("surrogate"))
-        && let Some(start) = masked[..cursor].iter().rposition(|byte| *byte == b'\\')
-        && masked.get(start + 1) == Some(&b'u')
-    {
-        cursor = start;
-    }
-    if reason.starts_with("control character") && error.column() == 0 {
-        cursor = cursor.saturating_sub(1);
-    }
-    let rest = &decoded[cursor..];
-    let mut length = rest.iter().take(32).position(|b| b"\0\n \t\r".contains(b)).unwrap_or(rest.len().min(32));
-    if length == 0 {
-        let end = rest.iter().position(|b| *b == 0).unwrap_or(rest.len());
-        return std::str::from_utf8(&rest[..end]).is_err();
-    }
-    while length > 0 && (0x80..0xc0).contains(&rest[length - 1]) {
-        length -= 1;
-    }
-    if length > 0 && rest[length - 1] >= 0xc0 {
-        length -= 1;
-    }
-    std::str::from_utf8(&rest[..length]).is_err()
-}
-
-#[cfg(test)]
-mod json_error_tests {
-    use super::*;
-
-    #[test]
-    fn malformed_json_error_encoding_matches_the_ruby_gem() {
-        let cases: serde_json::Value = serde_json::from_str(include_str!("../tests/corpus/json-errors.json")).unwrap();
-        let mut failures = Vec::new();
-        for case in cases.as_array().unwrap() {
-            let decoded = decode_base64(case["payload"].as_str().unwrap()).unwrap();
-            let actual = json_parser_error_is_unloggable(&decoded);
-            let expected = case["unloggable"].as_bool().unwrap();
-            if actual != expected {
-                failures.push(format!("{}: {actual} != {expected}: {}", case["name"], case["message"]));
-            }
-        }
-        assert!(failures.is_empty(), "{}", failures.join("\n"));
-    }
 }

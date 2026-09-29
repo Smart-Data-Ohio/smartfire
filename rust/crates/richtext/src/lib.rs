@@ -22,6 +22,7 @@ pub mod markdown;
 pub mod plain_text;
 pub mod ruby;
 pub mod sanitizer;
+mod sgid_json;
 pub mod uri;
 
 pub use attachables::{AttachableResolver, GidLookup, MentionUser, RenderContext, SignedLookup};
