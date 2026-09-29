@@ -125,7 +125,7 @@ async function capturePage(
   const pages: Record<string, Page> = {}
   const trackers: Record<string, PageTracker> = {}
   const networks: Record<string, NetworkLog> = {}
-  const normalizeOptions = { seedTime: Date.parse(env.time) }
+  const normalizeOptions = { seedTime: Date.parse(env.time), frozenServerClock: true }
   let serverResponse: Response | null = null
 
   // Contexts are set up one actor at a time so multi-user states connect in a fixed order.
@@ -140,18 +140,44 @@ async function capturePage(
     pages[actor] = page
     trackers[actor] = new PageTracker(page)
     trackers[actor].cable = new CableLog(normalizeOptions, !!state.mutates)
-    networks[actor] = new NetworkLog(page, new URL(target.origin).origin, normalizeOptions)
+    networks[actor] = new NetworkLog(page, new URL(target.origin).origin, normalizeOptions, base + ".responses")
     beforeClose.push(() => trackers[actor].abortHeld())
     const route = typeof state.path === "string" ? state.path : state.path[actor] ?? state.path[captureActor]
     const url = new URL(interpolate(route, labels, state.id), target.origin).href
-    const response = await page.goto(url, { waitUntil: "load", timeout: env.timeoutMs })
-    if (actor === captureActor) serverResponse = response
-    await waitForReady([trackers[actor]], env.timeoutMs, clockTime)
+    const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: Math.max(env.timeoutMs, 20_000) })
+    if (actor === captureActor) {
+      serverResponse = response
+      meta.status = response?.status()
+      meta.finalUrl = page.url()
+      checkStatus(state, meta)
+      const expectedPath = interpolate(state.expected_path ?? new URL(url).pathname, labels, state.id)
+      if (new URL(page.url()).pathname !== expectedPath) throw new Error(`unexpected redirect: ${new URL(url).pathname} -> ${new URL(page.url()).pathname}; expected ${expectedPath}`)
+    }
+    // Cold module loading gets the same bounded budget as the first navigation. Interactive
+    // selector waits keep the shorter cell timeout, and failed scripts stop readiness immediately.
+    meta.readiness = await waitForReady([trackers[actor]], Math.max(env.timeoutMs, 20_000), clockTime)
   }
 
   const capturePage = pages[captureActor]
+  const documentResponses: Promise<void>[] = []
+  let responseOrdinal = 0, selectedOrdinal = 0
   capturePage.on("response", (response) => {
-    if (response.request().isNavigationRequest() && response.frame() === capturePage.mainFrame()) serverResponse = response
+    const request = response.request()
+    if (response.frame() !== capturePage.mainFrame()) return
+    const ordinal = ++responseOrdinal
+    if (request.isNavigationRequest() && response.status() < 300) {
+      selectedOrdinal = ordinal
+      serverResponse = response
+    } else if (!request.headers()["turbo-frame"] && /text\/html/.test(response.headers()["content-type"] ?? "")) {
+      // Turbo Drive fetches complete documents without a navigation request. Frame/card
+      // fragments must not replace the main document's status or source HTML.
+      documentResponses.push(response.text().then((body) => {
+        if (ordinal > selectedOrdinal && /^\s*(?:<!doctype\s+html|<html[\s>])/i.test(body)) {
+          selectedOrdinal = ordinal
+          serverResponse = response
+        }
+      }).catch(() => {}))
+    }
   })
   const stepContext: StepContext = { pages, trackers, defaultActor: captureActor, touch, baseUrl: target.origin, timeoutMs: env.timeoutMs, time: clockTime }
   meta.trace = []
@@ -160,7 +186,13 @@ async function capturePage(
     meta.readiness = await waitForReady(Object.values(trackers), env.timeoutMs, clockTime)
     meta.trace.push(`${JSON.stringify(step)} -> ${await pageTrace(capturePage)}`)
   }
-  if (!state.steps.length) meta.readiness = await waitForReady([trackers[captureActor]], env.timeoutMs, clockTime)
+  await Promise.all(documentResponses)
+  for (const required of state.expect_responses ?? []) {
+    const responsePath = interpolate(required.path, labels, state.id)
+    if (!networks[captureActor].hasResponse(required.method, responsePath, required.status)) {
+      throw new Error(`missing interaction response: ${required.method} ${responsePath} HTTP ${required.status}`)
+    }
+  }
 
   const response = serverResponse as Response | null
   meta.status = response?.status()
@@ -170,7 +202,7 @@ async function capturePage(
   if (response) {
     const html = await response.text().catch(() => "")
     fs.writeFileSync(base + ".server.html", html)
-    fs.writeFileSync(base + ".server.norm.html", mask(normalizeDocument(html, { seedTime })))
+    fs.writeFileSync(base + ".server.norm.html", mask(normalizeDocument(html, { seedTime, frozenServerClock: true })))
   }
 
   if (Object.keys(pages).length > 1) {
@@ -191,7 +223,7 @@ async function capturePage(
   fs.writeFileSync(base + ".png", shot.png)
   if (!shot.stable) meta.console.push("screenshot never stabilized (two consecutive frames always differed)")
   const live = await capturePage.evaluate(() => document.body?.outerHTML ?? "")
-  fs.writeFileSync(base + ".live.norm.html", mask(normalizeDocument(`<!DOCTYPE html><html><head></head>${live}</html>`, { seedTime })))
+  fs.writeFileSync(base + ".live.norm.html", mask(normalizeDocument(`<!DOCTYPE html><html><head></head>${live}</html>`, { seedTime, frozenServerClock: true })))
   const aria = await capturePage.locator("body").ariaSnapshot({ timeout: env.timeoutMs })
   fs.writeFileSync(base + ".aria.yml", mask(maskText(aria, { seedTime })) + "\n")
 
@@ -204,7 +236,7 @@ async function capturePage(
   fs.writeFileSync(base + ".cable.txt", await perActor((actor) => trackers[actor].cable!.text(mask)))
   meta.pageErrors = Object.values(trackers).flatMap((t) => t.errors)
   meta.console.push(...Object.values(trackers).flatMap((t) => t.console))
-  checkStatus(state, meta)
+  checkStatus(state, meta, true)
 }
 
 // The mouse stays where the last step left it, and when the page changes under it (the message it
@@ -282,7 +314,7 @@ async function captureFragment(state: State, target: Target, env: CaptureEnv, ba
   fs.writeFileSync(base + ".server.html", body)
   const location = response.headers()["location"]
   const head = [`HTTP ${meta.status}`, `content-type: ${meta.contentType ?? ""}`, ...(location ? [`location: ${location}`] : [])]
-  fs.writeFileSync(base + ".server.norm.html", `${head.join("\n")}\n\n${normalizeResponse(body, meta.contentType ?? "", { seedTime: Date.parse(env.time) })}`)
+  fs.writeFileSync(base + ".server.norm.html", `${head.join("\n")}\n\n${normalizeResponse(body, meta.contentType ?? "", { seedTime: Date.parse(env.time), frozenServerClock: true })}`)
   checkStatus(state, meta)
 }
 
@@ -358,7 +390,6 @@ const CLOCK_EPOCH_SCRIPT = `(() => {
 const RASTER_SETTLE_MS = 150
 
 async function rasterAfresh(page: Page) {
-  if (page.context().browser()?.browserType().name() !== "chromium") return
   const style = await page.evaluate(() => {
     const root = document.documentElement
     const style = root.getAttribute("style")
@@ -399,8 +430,8 @@ async function stableScreenshot(page: Page, timeoutMs: number, mask: Locator[] =
   return { png: previous, stable: false }
 }
 
-function checkStatus(state: State, meta: CellMeta) {
-  const expected = state.expect_status ?? 200
+export function checkStatus(state: State, meta: CellMeta, final = false) {
+  const expected = (final ? state.expect_final_status : undefined) ?? state.expect_status ?? 200
   if (meta.status !== expected) throw new Error(`expected HTTP ${expected}, got ${meta.status}`)
 }
 

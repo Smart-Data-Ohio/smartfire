@@ -13,9 +13,8 @@
 //   --time ISO             the instant both servers' clocks are frozen at (default: the seed's)
 //   --only GLOB[,GLOB]     state id globs      --engines chromium,firefox,webkit
 //   --viewports desktop,…  --schemes light,dark
-//   --matrix lean|full     lean (default): Chromium desktop+phone, light+dark for every state, a smoke
-//                          set on Firefox and WebKit, the breakpoint sweep on Chromium; full: the
-//                          whole support matrix (release checks). See inventory.ts LEAN_*.
+//   --matrix lean|full     lean (default): one cell per route plus explicit browser/mobile/dark
+//                          smoke states; full: the whole support matrix and breakpoint sweep.
 //   --breakpoints include|only|exclude (default include)
 //   --breakpoint-states GLOBS   states swept across breakpoints (default DEFAULT_BREAKPOINT_STATES)
 //   --workers N            --timeout MS        --inventory FILE
@@ -209,7 +208,7 @@ async function main() {
       try {
         const f = filter()
         const all = states()
-        const widths = f.breakpoints !== "exclude" ? await breakpointWidths(pool, f.engines ?? ENGINES) : ({} as Record<Engine, number[]>)
+        const widths = f.matrix === "full" && f.breakpoints !== "exclude" ? await breakpointWidths(pool, f.engines ?? ENGINES) : ({} as Record<Engine, number[]>)
         const jobs = expandJobs(all, f, widths)
         for (const job of jobs) console.log(jobId(job))
         console.log(`${jobs.length} cells in ${new Set(jobs.map((j) => j.state.id)).size} states`)
@@ -228,6 +227,7 @@ function recompare(runDir: string, expectedName: string, actualName: string, qui
   const started = Date.now()
   const allowlist = loadAllowlist()
   const jobs = expandJobs(states(), filter(), readWidths(path.join(runDir, expectedName)))
+  if (!jobs.length) fail("no selected inventory cells")
   const comparisons = jobs.map((job) => compareJob(job, runDir, expectedName, actualName, allowlist))
   const result: RunResult = { jobs, metas: [], comparisons, durationMs: Date.now() - started }
   result.reportFile = writeReport(runDir, opts.report!, comparisons, {

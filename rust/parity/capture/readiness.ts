@@ -47,6 +47,7 @@ export class PageTracker {
   serverDisconnected = false
   errors: string[] = []
   networkErrors: string[] = []
+  readonly fatalResources: string[] = []
   cableLog: string[] = [] // subscribe/unsubscribe/confirm/reject frames, for diagnosing readiness
   cable?: CableLog // every frame, normalized: the cable layer of the comparison
   console: string[] = []
@@ -80,6 +81,9 @@ export class PageTracker {
     })
     page.on("response", (response) => {
       if (response.status() >= 400) this.console.push(`http: ${response.status()} ${response.request().method()} ${response.url()}`)
+      if (response.status() >= 400 && response.request().resourceType() === "script") {
+        this.fatalResources.push(`HTTP ${response.status()} ${response.url()}`)
+      }
     })
     page.on("framenavigated", (frame) => {
       if (frame !== page.mainFrame()) return
@@ -115,7 +119,14 @@ export class PageTracker {
         const message = JSON.parse(payload)
         if (message.command) this.cableLog.push(`> ${message.command} ${short(message.identifier)}`)
         if (message.command === "subscribe" && socket === this.socket) {
-          this.outstanding.set(message.identifier, (this.outstanding.get(message.identifier) ?? 0) + 1)
+          // Rails has one subscription per identifier, even when two Stimulus controllers
+          // subscribe to it (activity-inbox and activity-indicator). Duplicate subscribe
+          // commands receive no extra confirmation. A real unsubscribe starts a new generation.
+          if (!this.confirmed.has(message.identifier)) this.outstanding.set(message.identifier, 1)
+        } else if (message.command === "unsubscribe" && socket === this.socket) {
+          this.confirmed.delete(message.identifier)
+          this.rejected.delete(message.identifier)
+          this.outstanding.delete(message.identifier)
         }
       } catch {}
     })
@@ -137,7 +148,7 @@ export class PageTracker {
         this.serverDisconnected = true
       } else if (message.type === "confirm_subscription" || message.type === "reject_subscription") {
         ;(message.type === "confirm_subscription" ? this.confirmed : this.rejected).add(message.identifier)
-        this.outstanding.set(message.identifier, (this.outstanding.get(message.identifier) ?? 0) - 1)
+        this.outstanding.set(message.identifier, 0)
       }
     })
     socket.on("close", () => {
@@ -185,6 +196,7 @@ export async function settle(tracker: PageTracker, timeoutMs: number, time: numb
   const { page } = tracker
   const started = Date.now()
   if (tracker.networkErrors.length) throw new Error(`network failure: ${tracker.networkErrors[0]}`)
+  if (tracker.fatalResources.length) throw new Error(`script load failure: ${tracker.fatalResources[0]}`)
   let lastFingerprint = ""
   let changedAt = Date.now()
   let tickedAt = 0
@@ -201,6 +213,7 @@ export async function settle(tracker: PageTracker, timeoutMs: number, time: numb
       reasons = [`evaluate: ${String(error).split("\n")[0]}`]
     }
     if (tracker.networkErrors.length) throw new Error(`network failure: ${tracker.networkErrors[0]}`)
+    if (tracker.fatalResources.length) throw new Error(`script load failure: ${tracker.fatalResources[0]}`)
     if (snapshot) {
       if (snapshot.fingerprint !== lastFingerprint) {
         lastFingerprint = snapshot.fingerprint

@@ -35,7 +35,7 @@ ensure_host_modules() {
 
 docker_image() {
   local hash; hash=$(cat "$PARITY/Dockerfile.playwright" "$PARITY/package-lock.json" | sha256sum | cut -c1-12)
-  local image=campfire-parity-playwright:$hash
+  local image=${PARITY_NAMESPACE:-campfire}-parity-playwright:$hash
   if ! docker image inspect "$image" >/dev/null 2>&1; then
     echo "parity: building $image" >&2
     docker build -q -f "$PARITY/Dockerfile.playwright" -t "$image" "$PARITY" >&2
@@ -58,7 +58,7 @@ run_in_image() {
     docker)
       local image; image=$(docker_image)
       # Named, so parity_cleanup can stop them if the run is interrupted.
-      local name=parity-capture-$$-$RANDOM
+      local name=${PARITY_NAMESPACE:-campfire}-parity-capture-$$-$RANDOM
       CAPTURE_CONTAINERS+=("$name" "$name-forward")
       docker run -d --rm --init --name "$name-forward" --network host -u "$(id -u):$(id -g)" \
         -v "$REFERENCE_ROOT:$REFERENCE_ROOT:ro" -v "$ROOT:$ROOT" -v "$net_dir:$net_dir" \
@@ -124,6 +124,7 @@ wait_for_socket() {
 start_reset_loop() {
   local reset_cmd=$1
   RESET_CTRL=$(mktemp -d "$PARITY/out/.control.XXXXXX")
+  date +%s >"$RESET_CTRL/heartbeat"
   (
     serve() {
       local id=$1 port target url cmd status
@@ -134,6 +135,7 @@ start_reset_loop() {
       rm -f "$RESET_CTRL/work.$id"
     }
     while [ -d "$RESET_CTRL" ]; do
+      date +%s >"$RESET_CTRL/.heartbeat" && mv "$RESET_CTRL/.heartbeat" "$RESET_CTRL/heartbeat" || break
       for req in "$RESET_CTRL"/req.*; do
         [ -e "$req" ] || continue
         id=${req##*/req.}

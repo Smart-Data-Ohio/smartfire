@@ -12,19 +12,20 @@
 # --self-parity is the Phase 0 gate: for each seed the selected states use (or --seed NAME), it
 # starts two fresh reference instances (parity/bin/reference) at that seed's clock, compares them,
 # repeats that --runs times (default 1 with the lean matrix, 2 with the full one), and then
-# compares the first run's captures with the last run's. Seeds run in parallel, seed i on
+# compares the first run's captures with the last run's. Seeds run serially by default
+# (PARITY_SEED_JOBS controls concurrent seeds), seed i on
 # --ports P + 10 * i, each with its own log (DIR/<seed>.log); the default seed gets the workers
-# (PARITY_WORKERS, default 16), the others 2 each. Any difference fails; parity/allowlist.yml is
+# (PARITY_WORKERS, default 4), the others PARITY_VARIANT_WORKERS (default 2) each. Any difference fails; parity/allowlist.yml is
 # ignored. --reference-env KEY=VALUE (repeatable) is passed to `parity/bin/reference up` as -e.
-# Each capture of a `mutates: true` state gets fresh instances of its own, --isolated N (default 6)
-# at a time, on ports P + 1000 * (k + 1) (see parity/capture/run.ts isolatedUrl).
+# Each capture of a `mutates: true` state gets fresh instances of its own, --isolated N (default 2)
+# at a time, on ports P + 100 * (k + 1) (see parity/capture/run.ts isolatedUrl).
 #
 # OPTIONS are those of parity/bin/capture, plus --out DIR, --allowlist FILE | --no-allowlist and
 # --report NAME. Exit status is 1 if any cell fails or errors. The report is DIR/report.html.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../capture/sandbox/run.sh"
 
-seed_given="" mode=compare runs="" ports=4301,4302 seed=default time="" out="" recompare="" reset_host="" isolated=6 matrix=lean workers=""
+seed_given="" mode=compare runs="" ports=49001,49002 seed=default time="" out="" recompare="" reset_host="" isolated=2 matrix=lean workers=""
 args=() ref_env=()
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -51,7 +52,9 @@ cleanup() {
   parity_cleanup
   for port in "${UP_PORTS[@]}"; do "$REFERENCE" down --port "$port" >/dev/null 2>&1 || true; done
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 seed_time() {
   local labels=$PARITY/.seed/$seed/labels.json
@@ -64,11 +67,13 @@ seed_time() {
 
 # One seed's self-parity runs (in a background subshell of --self-parity): two reference
 # instances on PORT_A and PORT_B, --runs times, then run 1 against the last run.
-self_parity_seed() (
+self_parity_seed() {
   local seed=$1 port_a=$2 port_b=$3 seed_workers=$4
   local seed_clock out=$root/$1 failed=() scratch=() i k port
   UP_PORTS=()
-  trap cleanup EXIT INT TERM
+  trap cleanup EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
   seed_clock=${time:-$(seed_time)}
   [ -n "$seed_clock" ] || die "seed $seed records no clock.now; pass --time"
   # Every server's clock is frozen at the seed's instant (--freeze, which runs Puma in single
@@ -79,7 +84,7 @@ self_parity_seed() (
   # capture.
   up() { "$REFERENCE" up --seed "$seed" --port "$1" --time "$seed_clock" --freeze "${ref_env[@]}" >/dev/null; }
   start_reset_loop "'$REFERENCE' down --port {port} >/dev/null && '$REFERENCE' up --seed '$seed' --port {port} --time '$seed_clock' --freeze ${ref_env[*]} >/dev/null"
-  for k in $(seq 1 "$isolated"); do scratch+=($((port_a + 1000 * k)) $((port_b + 1000 * k))); done
+  for k in $(seq 1 "$isolated"); do scratch+=($((port_a + 100 * k)) $((port_b + 100 * k))); done
   for i in $(seq 1 "$runs"); do
     echo "self-parity [$seed] run $i/$runs: reference :$port_a vs reference :$port_b (clock $seed_clock)"
     UP_PORTS=("$port_a" "$port_b" "${scratch[@]}")
@@ -88,8 +93,8 @@ self_parity_seed() (
     wait "$pid_a" && wait "$pid_b" || die "reference instances did not come up"
     run_in_image compare --seed "$seed" --expected "http://127.0.0.1:$port_a" --actual "http://127.0.0.1:$port_b" \
       --expected-name "run-$i/expected" --actual-name "run-$i/actual" --out "$out" --time "$seed_clock" \
-      --no-allowlist --report "report-run-$i" --reset "$RESET_ARG" --isolated "$isolated" --workers "$seed_workers" "${pass[@]}" || failed+=("run $i")
-    for port in "${UP_PORTS[@]}"; do "$REFERENCE" down --port "$port" >/dev/null; done
+      --no-allowlist --report "report-run-$i" --reset "$RESET_ARG" --isolated "$isolated" --isolated-port-offset 100 --workers "$seed_workers" "${pass[@]}" || failed+=("run $i")
+    for port in "${UP_PORTS[@]}"; do "$REFERENCE" logs --port "$port" >"$out/reference-$port-run-$i.log" 2>&1 || true; "$REFERENCE" down --port "$port" >/dev/null; done
     UP_PORTS=()
   done
   stop_reset_loop
@@ -99,7 +104,7 @@ self_parity_seed() (
       --time "$seed_clock" --no-allowlist --report report-across-runs "${pass[@]}" || failed+=("across runs")
   fi
   [ ${#failed[@]} -eq 0 ] || { echo "SELF-PARITY [$seed] FAILED: ${failed[*]}"; exit 1; }
-)
+}
 
 case "$mode" in
   compare)
@@ -123,6 +128,7 @@ case "$mode" in
     else
       seeds=$seed
     fi
+    [ -n "$seeds" ] || die "no selected inventory states"
     # Drop --seed from the pass-through; each seed gets its own instances below.
     pass=() skip=""
     for a in "${args[@]}"; do
@@ -130,19 +136,30 @@ case "$mode" in
       if [ "$a" = --seed ]; then skip=1; continue; fi
       pass+=("$a")
     done
-    pids=() names=() index=0
+    pids=() names=() index=0 reaped=0 failed=()
+    seed_jobs=${PARITY_SEED_JOBS:-1}
+    [[ "$seed_jobs" =~ ^[1-9][0-9]*$ ]] || die "PARITY_SEED_JOBS must be a positive integer"
+    # Termination must exit after children finish cleanup. Returning from the signal trap
+    # would resume dispatch and let an interrupted run tear down a later run's ports.
+    trap 'kill -TERM "${pids[@]:$reaped}" 2>/dev/null || true; wait; exit 130' INT
+    trap 'kill -TERM "${pids[@]:$reaped}" 2>/dev/null || true; wait; exit 143' TERM
+    reap_seed() {
+      wait "${pids[$reaped]}" || failed+=("${names[$reaped]}")
+      grep -E "^self-parity|cells:" "$root/${names[$reaped]}.log" | sed "s/^/  /" || true
+      reaped=$((reaped + 1))
+    }
     for seed in $seeds; do
-      seed_workers=${workers:-$([ "$seed" = default ] && echo "${PARITY_WORKERS:-16}" || echo 2)}
+      if [ "$seed" = default ] || [ -n "$seed_given" ]; then
+        seed_workers=${workers:-${PARITY_WORKERS:-4}}
+      else
+        seed_workers=${PARITY_VARIANT_WORKERS:-2}
+      fi
       self_parity_seed "$seed" $((port_a + 10 * index)) $((port_b + 10 * index)) "$seed_workers" >"$root/$seed.log" 2>&1 &
       pids+=($!) names+=("$seed") index=$((index + 1))
       echo "self-parity [$seed] started (log: $root/$seed.log)"
+      if [ $((${#pids[@]} - reaped)) -ge "$seed_jobs" ]; then reap_seed; fi
     done
-    trap 'kill -TERM "${pids[@]}" 2>/dev/null; wait; cleanup' INT TERM
-    failed=()
-    for i in "${!pids[@]}"; do
-      wait "${pids[$i]}" || failed+=("${names[$i]}")
-      grep -E "^self-parity|cells:" "$root/${names[$i]}.log" | sed "s/^/  /" || true
-    done
+    while [ "$reaped" -lt "${#pids[@]}" ]; do reap_seed; done
     echo "reports: $root/<seed>/report-*.html"
     if [ ${#failed[@]} -gt 0 ]; then echo "SELF-PARITY FAILED: ${failed[*]}"; exit 1; fi
     echo "SELF-PARITY PASSED: zero diffs"

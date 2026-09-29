@@ -26,9 +26,11 @@ export async function startProxy(upstreamUrl: string): Promise<Proxy> {
   // Through forward.ts when the capture has no network of its own.
   ;(agent as any).createConnection = (_options: unknown, callback: (error: Error | null, socket: net.Socket) => void) => {
     const socket = connectUpstream(host, port, () => callback(null, socket))
+    track(socket)
     socket.once("error", (error) => callback(error, socket))
   }
   const sockets = new Set<net.Socket>()
+  let closing = false
 
   const server = http.createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://placeholder")
@@ -79,6 +81,7 @@ export async function startProxy(upstreamUrl: string): Promise<Proxy> {
 
   function track(...pair: net.Socket[]) {
     for (const s of pair) {
+      if (closing) { s.destroy(); continue }
       sockets.add(s)
       s.on("error", () => pair.forEach((p) => p.destroy()))
       s.on("close", () => {
@@ -93,6 +96,7 @@ export async function startProxy(upstreamUrl: string): Promise<Proxy> {
   return {
     server: `http://127.0.0.1:${proxyPort}`,
     close: async () => {
+      closing = true
       for (const s of sockets) s.destroy()
       agent.destroy()
       server.closeAllConnections()

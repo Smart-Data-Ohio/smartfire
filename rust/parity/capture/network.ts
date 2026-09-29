@@ -1,6 +1,8 @@
 // Server-output layers of a page capture (plans/rust-conversion.md, decision 4): every response
 // the server sent the page, and every Action Cable frame, normalized so that two servers that
 // sent the same bytes (up to the typed placeholders of normalize.ts) produce the same text.
+import fs from "node:fs"
+import path from "node:path"
 import { createHash } from "node:crypto"
 import type { Page, Request, Response } from "playwright"
 import { maskText, normalizeFragment, normalizeResponse } from "./normalize.ts"
@@ -23,12 +25,24 @@ export class NetworkLog {
   private origin: string
   private options: NormalizeOptions
   private page: Page
+  private errors: string[] = []
+  private bodyDir?: string
+  private observed = new Set<string>()
 
-  constructor(page: Page, origin: string, options: NormalizeOptions) {
+  constructor(page: Page, origin: string, options: NormalizeOptions, bodyDir?: string) {
+    this.bodyDir = bodyDir
     this.page = page
     this.origin = origin
     this.options = options
-    page.on("response", (response) => this.pending.push({ key: `${response.request().method()} ${response.url()}`, entry: this.describe(response) }))
+    page.on("response", (response) => {
+      const url = new URL(response.url())
+      if (url.origin === this.origin) this.observed.add(`${response.request().method()} ${url.pathname}${url.search} ${response.status()}`)
+      this.pending.push({ key: `${response.request().method()} ${response.url()}`, entry: this.describe(response).catch((error) => { this.errors.push(String(error)); return undefined }) })
+    })
+  }
+
+  hasResponse(method: string, path: string, status: number): boolean {
+    return this.observed.has(`${method.toUpperCase()} ${path} ${status}`)
   }
 
   private async describe(response: Response): Promise<Entry | undefined> {
@@ -57,6 +71,10 @@ export class NetworkLog {
     } else {
       const buffer = await this.bodyOf(response)
       normalized = normalizeResponse(buffer, headers["content-type"] ?? "", this.options)
+      if (this.bodyDir) {
+        fs.mkdirSync(this.bodyDir, { recursive: true })
+        fs.writeFileSync(path.join(this.bodyDir, encodeURIComponent(url.pathname + url.search).slice(0, 120) + "-" + createHash("sha256").update(url.pathname + url.search).digest("hex").slice(0, 12) + ".txt"), normalized)
+      }
       body = buffer.length ? "" : "empty "
     }
     const head = [
@@ -82,6 +100,8 @@ export class NetworkLog {
   // The log as sorted text: requests run in parallel, so arrival order isn't the server's. `mask`
   // replaces a state's page-derived values (masks.values in screens.yml) before bodies are hashed.
   async text(mask: (text: string) => string = (t) => t): Promise<string> {
+    await Promise.all(this.pending.map(p => p.entry))
+    if (this.errors.length) throw new Error(`network body capture failed: ${this.errors[0]}`)
     // Whether a resource is requested once or twice (the memory cache, a preload) is the browser's
     // business, and so is what an earlier request for it got: a frame loaded while the page was
     // still marking the room read on another connection (the sidebar) may come back either way.

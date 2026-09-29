@@ -86,11 +86,12 @@ export async function run(options: RunOptions): Promise<RunResult> {
   const proxies = await Promise.all(all.map((t) => startProxy(t.url)))
   all.forEach((t, i) => (t.proxy = proxies[i].server))
   try {
-    const wantsBreakpoints = options.filter.breakpoints !== "exclude"
+    const wantsBreakpoints = options.filter.matrix === "full" && options.filter.breakpoints !== "exclude"
     const engines = (options.filter.engines ?? ENGINES).filter((e) => ENGINES.includes(e))
     const widths = wantsBreakpoints ? await breakpointWidths(pool, engines) : ({} as Record<Engine, number[]>)
     if (wantsBreakpoints && !options.quiet) console.log(`breakpoint widths: ${JSON.stringify(widths)}`)
     const jobs = expandJobs(options.states, options.filter, widths)
+    if (!jobs.length) throw new Error("no selected inventory cells")
     const metas: CellMeta[] = []
     const comparisons: CellComparison[] = []
     let done = 0
@@ -121,20 +122,18 @@ export async function run(options: RunOptions): Promise<RunResult> {
     const captureAll = async (job: Job, slot?: number): Promise<CellMeta[]> => {
       const fresh = slot !== undefined
       const targets = fresh ? isolated[slot] : options.targets
-      const captured: CellMeta[] = []
-      for (const target of targets) {
+      return await Promise.all(targets.map(async (target) => {
         let meta = await captureOn(job, target, fresh)
-        if (meta.error) {
-          // One retry for infrastructure flakes (a crashed renderer, a page whose modules never
-          // ran); the retry is recorded, and a deterministic failure fails again.
+        if (meta.error && retryableCaptureError(meta.error)) {
+          // One recorded retry for renderer/socket infrastructure failures. Deterministic
+          // HTTP, resource and selector failures remain failures without a timeout retry.
           const first = meta.error
           meta = await captureOn(job, target, fresh)
           meta.retriedAfter = first
           fs.writeFileSync(artifactBase(options.outDir, target.name, job) + ".json", JSON.stringify(meta, null, 2) + "\n")
         }
-        captured.push(meta)
-      }
-      return captured
+        return meta
+      }))
     }
 
     const runJob = async (job: Job, slot?: number) => {
@@ -284,4 +283,8 @@ export function shell(command: string) {
 
 export function relativeToCwd(file: string) {
   return path.relative(process.cwd(), file) || file
+}
+
+export function retryableCaptureError(error: string): boolean {
+  return /Target (page|context|browser).*closed|browser has been closed|ECONNRESET|ERR_NETWORK_CHANGED|NS_ERROR_NET_RESET/.test(error)
 }

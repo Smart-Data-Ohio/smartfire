@@ -20,6 +20,9 @@ export type Step =
 
 export interface State {
   id: string
+  area?: string
+  smoke?: boolean
+  expected_path?: string // reject accidental redirects (e.g. 2FA enforcement instead of the requested screen)
   as?: string
   path: string | Record<string, string>
   seed: string
@@ -35,6 +38,8 @@ export interface State {
   user_agent?: string // key of parity/seeds/user_agents.yml, or a literal UA string
   accept_dialogs?: boolean // accept window.confirm (turbo_confirm) instead of dismissing
   expect_status?: number // HTTP status of the main document (default 200)
+  expect_final_status?: number // HTTP status after steps, when a rejection renders a new document
+  expect_responses?: { method: string; path: string; status: number }[] // required interaction outcomes
   mutates?: boolean // changes the database: runs serially, each capture on a freshly reset server
   breakpoints?: boolean // include in the breakpoint sweep (besides DEFAULT_BREAKPOINT_STATES)
   notifications?: "denied" | "granted" // the browser's notification state (default denied)
@@ -166,19 +171,7 @@ export const LEAN_SMOKE_STATES = [
 
 // Representative layouts swept 1px either side of every width breakpoint: signed out, a room
 // (group, direct, composer in use), settings forms, profile, search, and the empty state.
-export const DEFAULT_BREAKPOINT_STATES = [
-  "auth/sign_in",
-  "rooms/show/designers",
-  "rooms/show/direct",
-  "interactions/composer/with_text",
-  "interactions/actions_menu",
-  "account/edit/admin",
-  "rooms/opens/new",
-  "users/profile",
-  "users/show/self",
-  "search/results",
-  "welcome/no_rooms",
-]
+export const DEFAULT_BREAKPOINT_STATES = ["channels/timeline", "account/profile", "auth/sign_in"]
 
 export function isFragment(state: State): boolean {
   return state.kind === "fragment"
@@ -201,11 +194,12 @@ export function expandJobs(states: State[], filter: MatrixFilter, breakpointWidt
       groups.push([stateEngines, stateViewports, stateSchemes])
     } else {
       // A state narrowed to other viewports (tablet only, say) keeps its first one.
-      const leanViewports = stateViewports.filter((v) => LEAN_VIEWPORTS.includes(v))
+      const leanViewports = stateViewports.filter((v) => (state.smoke ? LEAN_VIEWPORTS : ["desktop"]).includes(v))
       const viewports = leanViewports.length ? leanViewports : stateViewports.slice(0, 1)
       const primary = stateEngines.includes("chromium") ? ["chromium" as Engine] : stateEngines.slice(0, 1)
-      groups.push([primary, viewports, stateSchemes])
-      if (smokeRes.some((re) => re.test(state.id))) {
+      const schemes = state.smoke ? stateSchemes : stateSchemes.includes("light") ? ["light" as Scheme] : stateSchemes.slice(0, 1)
+      groups.push([primary, viewports, schemes])
+      if (state.smoke || smokeRes.some((re) => re.test(state.id))) {
         const others = stateEngines.filter((e) => !primary.includes(e))
         const light = stateSchemes.includes("light") ? ["light" as Scheme] : stateSchemes.slice(0, 1)
         groups.push([others, viewports, light])
@@ -227,7 +221,7 @@ export function expandJobs(states: State[], filter: MatrixFilter, breakpointWidt
       }
     }
     const swept = state.breakpoints || sweepRes.some((re) => re.test(state.id))
-    if (swept && filter.breakpoints !== "exclude") {
+    if (swept && !lean && filter.breakpoints !== "exclude") {
       const sweepEngines = intersect(lean ? groups[0][0] : stateEngines, filter.engines)
       for (const engine of sweepEngines) for (const width of breakpointWidths[engine] ?? []) for (const scheme of intersect(stateSchemes, filter.schemes)) {
         jobs.push({ state, cell: { engine, viewport: breakpointViewport(width), scheme } })
