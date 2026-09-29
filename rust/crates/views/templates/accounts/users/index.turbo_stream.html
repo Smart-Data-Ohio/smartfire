@@ -1,0 +1,4 @@
+<turbo-stream action="replace" target="next_page_container"><template>{% for user in users %}{% include "accounts/users/_user.html" %}{% endfor %}</template></turbo-stream>
+
+{% if let Some(page) = next_page %}<turbo-stream action="append" target="account_users"><template>{% include "accounts/users/_next_page_container.html" %}</template></turbo-stream>
+{% endif %}

@@ -1,0 +1,131 @@
+date: 2026-09-27T06:52:08+02:00
+host: 7.2.5-4-omarchy, AMD Ryzen 9 9955HX 16-Core Processor, 32 threads, 91GB
+server cpus: 8-11 (nproc 4); loadgen cpus: 12-15; network: host
+env: WEB_CONCURRENCY=3 JOB_CONCURRENCY=3 RAILS_MAX_THREADS=5 
+rust extra env: 
+reference image: campfire-reference:app sha256:70ab5e2abe726bfdfc177af4fa8465cd90ba3b3e3f532c8633f818cf63545adf 2026-09-26T14:42:50.327050882+02:00
+rust image: campfire-rust:head-5181aa4 sha256:033927228539c17717887043791c154d9996f7ca9eb2e3683c91f9925eb200d5 2026-09-27T04:05:37.180679451+02:00
+rust HEAD: 5181aa4 (dirty: 0 files)
+[06:53:18] load before run: 1.46 3.84 3.96 (waited 70s)
+[06:53:18] reference rep 1: starting (load: 1.46 3.84 3.96)
+[06:53:30] reference rep 1: cold start 2438ms, idle 302MB (anon 280MB)
+[06:53:55] reference rep 1: cable 1000 clients ready 1000 lat all p50 77.311 p99 162.431 tput 14.4 msg/s 218 / 218
+[06:53:58] reference rep 1: done -> ./bench/results/final-20260927/cable-only/reference-1.json
+[06:54:38] load before run: 1.43 3.33 3.77 (waited 40s)
+[06:54:38] rust rep 1: starting (load: 1.43 3.33 3.77)
+[06:54:48] rust rep 1: cold start 236ms, idle 50MB (anon 46MB)
+[06:55:11] rust rep 1: cable 1000 clients ready 1000 lat all p50 9.935 p99 12.127 tput 285.6 msg/s 4288 / 4288
+[06:55:15] rust rep 1: done -> ./bench/results/final-20260927/cable-only/rust-1.json
+[06:56:05] load before run: 1.46 3.01 3.63 (waited 50s)
+[06:56:05] rust rep 2: starting (load: 1.46 3.01 3.63)
+[06:56:16] rust rep 2: cold start 861ms, idle 47MB (anon 44MB)
+[06:56:39] rust rep 2: cable 1000 clients ready 1000 lat all p50 9.295 p99 12.823 tput 301.0 msg/s 4517 / 4517
+[06:56:42] rust rep 2: done -> ./bench/results/final-20260927/cable-only/rust-2.json
+[06:57:22] load before run: 1.36 2.69 3.47 (waited 40s)
+[06:57:22] reference rep 2: starting (load: 1.36 2.69 3.47)
+[06:57:34] reference rep 2: cold start 2467ms, idle 317MB (anon 295MB)
+[06:57:59] reference rep 2: cable 1000 clients ready 1000 lat all p50 78.527 p99 156.159 tput 14.3 msg/s 219 / 219
+[06:58:02] reference rep 2: done -> ./bench/results/final-20260927/cable-only/reference-2.json
+[06:58:12] load before run: 1.32 2.49 3.36 (waited 10s)
+[06:58:12] reference rep 3: starting (load: 1.32 2.49 3.36)
+[06:58:25] reference rep 3: cold start 2449ms, idle 309MB (anon 288MB)
+[06:58:50] reference rep 3: cable 1000 clients ready 1000 lat all p50 95.039 p99 181.503 tput 12.2 msg/s 185 / 185
+[06:58:52] reference rep 3: done -> ./bench/results/final-20260927/cable-only/reference-3.json
+[06:59:02] load before run: 1.32 2.32 3.25 (waited 10s)
+[06:59:02] rust rep 3: starting (load: 1.32 2.32 3.25)
+[06:59:13] rust rep 3: cold start 225ms, idle 47MB (anon 44MB)
+[06:59:36] rust rep 3: cable 1000 clients ready 1000 lat all p50 9.439 p99 11.983 tput 305.0 msg/s 4579 / 4579
+[06:59:38] rust rep 3: done -> ./bench/results/final-20260927/cable-only/rust-3.json
+[07:00:18] load before run: 1.27 2.17 3.13 (waited 40s)
+[07:00:18] rust rep 4: starting (load: 1.27 2.17 3.13)
+[07:00:29] rust rep 4: cold start 227ms, idle 47MB (anon 44MB)
+[07:00:52] rust rep 4: cable 1000 clients ready 1000 lat all p50 8.751 p99 12.647 tput 308.7 msg/s 4634 / 4634
+[07:00:54] rust rep 4: done -> ./bench/results/final-20260927/cable-only/rust-4.json
+[07:01:44] load before run: 1.27 2.05 3.01 (waited 50s)
+[07:01:44] reference rep 4: starting (load: 1.27 2.05 3.01)
+[07:01:57] reference rep 4: cold start 2459ms, idle 309MB (anon 288MB)
+[07:02:23] reference rep 4: cable 1000 clients ready 1000 lat all p50 97.407 p99 193.279 tput 11.4 msg/s 183 / 183
+[07:02:25] reference rep 4: done -> ./bench/results/final-20260927/cable-only/reference-4.json
+[07:02:45] load before run: 1.34 1.95 2.92 (waited 20s)
+[07:02:45] reference rep 5: starting (load: 1.34 1.95 2.92)
+[07:02:58] reference rep 5: cold start 2411ms, idle 309MB (anon 288MB)
+[07:03:23] reference rep 5: cable 1000 clients ready 1000 lat all p50 78.591 p99 151.167 tput 13.9 msg/s 210 / 210
+[07:03:26] reference rep 5: done -> ./bench/results/final-20260927/cable-only/reference-5.json
+[07:03:36] load before run: 1.49 1.88 2.84 (waited 10s)
+[07:03:36] rust rep 5: starting (load: 1.49 1.88 2.84)
+[07:03:46] rust rep 5: cold start 232ms, idle 47MB (anon 44MB)
+[07:04:10] rust rep 5: cable 1000 clients ready 1000 lat all p50 8.319 p99 11.863 tput 302.7 msg/s 4543 / 4543
+[07:04:13] rust rep 5: done -> ./bench/results/final-20260927/cable-only/rust-5.json
+```
+date: 2026-09-27T06:52:08+02:00
+host: 7.2.5-4-omarchy, AMD Ryzen 9 9955HX 16-Core Processor, 32 threads, 91GB
+server cpus: 8-11 (nproc 4); loadgen cpus: 12-15; network: host
+env: WEB_CONCURRENCY=3 JOB_CONCURRENCY=3 RAILS_MAX_THREADS=5 
+rust extra env: 
+reference image: campfire-reference:app sha256:70ab5e2abe726bfdfc177af4fa8465cd90ba3b3e3f532c8633f818cf63545adf 2026-09-26T14:42:50.327050882+02:00
+rust image: campfire-rust:head-5181aa4 sha256:033927228539c17717887043791c154d9996f7ca9eb2e3683c91f9925eb200d5 2026-09-27T04:05:37.180679451+02:00
+rust HEAD: 5181aa4 (dirty: 0 files)
+```
+
+Reps: reference 5, rust 5. Cells: median [min–max].
+
+### Startup and memory
+
+| Metric | Rails | Rust | Rust adv. |
+|---|---|---|---|
+| cold start: docker run → /up 200 (ms) | 2,449 [2,411–2,467] | 232 [225–861] | 10.6× |
+| idle memory.current (MB) | 309 [302–317] | 47.0 [47.0–50.0] | 6.6× |
+| idle anon (MB) | 288 [280–295] | 44.0 [44.0–46.0] | 6.5× |
+| peak memory.current under load (MB) | 1,176 [1,081–1,240] | 379 [359–392] | 3.1× |
+| peak anon under load (MB) | 1,136 [1,041–1,200] | 289 [277–301] | 3.9× |
+
+### HTTP (signed in as david; keep-alive; c = concurrent connections)
+
+| Metric | Rails | Rust | Rust adv. |
+|---|---|---|---|
+
+### HTTP errors / non-2xx-3xx (first rep, per app)
+
+| Metric | Rails | Rust | Rust adv. |
+|---|---|---|---|
+- reference: none
+- rust: none
+
+### Action Cable fan-out (one room; chatter.js subscriptions per client)
+
+| Metric | Rails | Rust | Rust adv. |
+|---|---|---|---|
+| 1000 clients: subscribed | 1,000 [1,000–1,000] | 1,000 [1,000–1,000] | 1.0× |
+| 1000 clients: connect+subscribe all (s) | 1.51 [1.47–1.56] | 0.13 [0.11–1.09] | 11.6× |
+| 1000 clients: paced post→one client p50 ms | 38.7 [36.0–47.7] | 4.83 [4.63–4.98] | 8.0× |
+| 1000 clients: paced post→all clients p50 ms | 78.6 [77.3–97.4] | 9.29 [8.32–9.94] | 8.5× |
+| 1000 clients: paced post→all clients p99 ms | 162 [151–193] | 12.1 [11.9–12.8] | 13.4× |
+| 1000 clients: max sustained msgs/s (delivered to all) | 13.9 [11.4–14.4] | 303 [286–309] | 21.8× |
+| 1000 clients: deliveries/s (client×message) | 13,864 [11,395–14,436] | 302,722 [285,633–308,707] | 21.8× |
+| 1000 clients: saturated post→all p50 ms | 221 [213–1,126] | 17.2 [16.9–18.0] | 12.9× |
+| 1000 clients: saturated POST p50 ms | 230 [182–268] | 13.0 [12.8–13.6] | 17.7× |
+
+### Upload + thumbnail (black_hole.jpg, 505 KB)
+
+| Metric | Rails | Rust | Rust adv. |
+|---|---|---|---|
+| POST with attachment (ms) | – | – | – |
+| then GET thumb → 200 (ms) | – | – | – |
+| POST → thumbnail served (ms) | – | – | – |
+
+### Memory during cable fan-out, by process (MB, peak within the phase)
+
+App process: Rails' Puma master and workers (Action Cable runs in them), or Rust's one campfire
+process (its front server included). Pss counts pages shared between forked workers once;
+RssAnon counts them in every process.
+
+| Metric | Rails | Rust | Rust adv. |
+|---|---|---|---|
+| 1000 clients, all subscribed, idle: app process Pss | 459 [455–484] | 154 [151–154] | 3.0× |
+| 1000 clients, all subscribed, idle: app process RssAnon | 622 [621–646] | 122 [120–123] | 5.1× |
+| 1000 clients, all subscribed, idle: app + Redis + Thruster Pss | 539 [535–564] | 154 [151–154] | 3.5× |
+| 1000 clients, all subscribed, idle: whole container Pss | 713 [695–727] | 154 [151–154] | 4.6× |
+| 1000 clients, saturated fan-out: app process Pss | 836 [751–879] | 319 [309–331] | 2.6× |
+| 1000 clients, saturated fan-out: app process RssAnon | 985 [897–1,030] | 287 [277–299] | 3.4× |
+| 1000 clients, saturated fan-out: app + Redis + Thruster Pss | 925 [841–970] | 319 [309–331] | 2.9× |
+| 1000 clients, saturated fan-out: whole container Pss | 1,188 [1,095–1,255] | 319 [309–331] | 3.7× |

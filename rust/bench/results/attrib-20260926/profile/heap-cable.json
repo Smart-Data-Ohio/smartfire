@@ -1,0 +1,60 @@
+{
+ "clients": "1000",
+ "tput": 84.4,
+ "memory_by_phase": {
+  "before": {
+   "peak_anon_mb": 40.3
+  },
+  "connect": {
+   "peak_anon_mb": 251.7,
+   "end_anon_mb": 251.7,
+   "peak_threads": 130
+  },
+  "connected": {
+   "peak_anon_mb": 251.7,
+   "end_anon_mb": 251.7,
+   "peak_threads": 130
+  },
+  "paced": {
+   "peak_anon_mb": 307.2,
+   "end_anon_mb": 307.2,
+   "peak_threads": 131
+  },
+  "paced_drained": {
+   "peak_anon_mb": 307.2,
+   "end_anon_mb": 307.2,
+   "peak_threads": 131
+  },
+  "saturated": {
+   "peak_anon_mb": 373.9,
+   "end_anon_mb": 351.2,
+   "peak_threads": 131
+  },
+  "saturated_posted": {
+   "peak_anon_mb": 351.2,
+   "end_anon_mb": 351.2,
+   "peak_threads": 131
+  },
+  "saturated_drained": {
+   "peak_anon_mb": 351.2,
+   "end_anon_mb": 351.2,
+   "peak_threads": 131
+  },
+  "done": {
+   "peak_anon_mb": 351.2,
+   "end_anon_mb": 351.2,
+   "peak_threads": 131
+  }
+ },
+ "phase_dumps": {
+  "connect": "./bench/results/attrib-20260926/profile/raw/heap.300215.366.u366.heap",
+  "connected": "./bench/results/attrib-20260926/profile/raw/heap.300215.2451.u2451.heap",
+  "paced": "./bench/results/attrib-20260926/profile/raw/heap.300215.2451.u2451.heap",
+  "paced_drained": "./bench/results/attrib-20260926/profile/raw/heap.300215.5663.u5663.heap",
+  "saturated": "./bench/results/attrib-20260926/profile/raw/heap.300215.5704.u5704.heap",
+  "saturated_posted": "./bench/results/attrib-20260926/profile/raw/heap.300215.9338.u9338.heap",
+  "saturated_drained": "./bench/results/attrib-20260926/profile/raw/heap.300215.9338.u9338.heap",
+  "done": "./bench/results/attrib-20260926/profile/raw/heap.300215.9338.u9338.heap"
+ },
+ "peak_dump": "./bench/results/attrib-20260926/profile/raw/heap.300215.9338.u9338.heap"
+}

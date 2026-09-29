@@ -1,0 +1,4 @@
+main exit=0
+prelim exit=0
+cable-only exit=0
+jemalloc-bg exit=0

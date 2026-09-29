@@ -1,0 +1,179 @@
+[00:23:16] native-base rep 1: starting (load 34.17 16.78 14.06)
+[00:23:24] native-base rep 1: room_show c=1 124.7 rps p50 7.739 p99 13.279 cpu ms/req {'campfire': 7.2596, 'loadgen': 0.1815} statuses {'200': 624} err 0
+[00:23:29] native-base rep 1: room_show c=16 552.6 rps p50 28.271 p99 49.087 cpu ms/req {'campfire': 6.5166, 'loadgen': 0.106} statuses {'200': 2776} err 0
+[00:23:35] native-base rep 1: messages_page c=1 127.3 rps p50 7.579 p99 15.311 cpu ms/req {'campfire': 6.4521, 'loadgen': 0.1698} statuses {'200': 637} err 0
+[00:23:40] native-base rep 1: messages_page c=16 689.3 rps p50 22.847 p99 39.711 cpu ms/req {'campfire': 5.1126, 'loadgen': 0.0861} statuses {'200': 3464} err 0
+[00:23:46] native-base rep 1: sidebar c=1 395.0 rps p50 2.223 p99 6.091 cpu ms/req {'campfire': 1.6658, 'loadgen': 0.1258} statuses {'200': 1975} err 0
+[00:23:51] native-base rep 1: sidebar c=16 2850.1 rps p50 5.035 p99 14.959 cpu ms/req {'campfire': 1.0778, 'loadgen': 0.0493} statuses {'200': 14260} err 0
+[00:24:15] native-base rep 1: cable 1000 ready 1000 tput 40.1 msg/s all p50 32.831 cpu us/delivery {'campfire': 65.48, 'loadgen': 39.32} mem {'before': {'peak_anon_mb': 31.3}, 'connect': {'peak_anon_mb': 179.8, 'end_anon_mb': 179.8, 'peak_threads': 48, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'connected': {'peak_anon_mb': 179.8, 'end_anon_mb': 179.8, 'peak_threads': 48, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'paced': {'peak_anon_mb': 200.5, 'end_anon_mb': 200.5, 'peak_threads': 49, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'paced_drained': {'peak_anon_mb': 200.5, 'end_anon_mb': 200.5, 'peak_threads': 49, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated': {'peak_anon_mb': 212.8, 'end_anon_mb': 212.4, 'peak_threads': 49, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated_posted': {'peak_anon_mb': 212.4, 'end_anon_mb': 212.4, 'peak_threads': 49, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated_drained': {'peak_anon_mb': 212.4, 'end_anon_mb': 212.4, 'peak_threads': 49, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'done': {'peak_anon_mb': 212.4, 'end_anon_mb': 205.5, 'peak_threads': 49, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}}
+[00:24:15] native-expws rep 1: starting (load 42.01 22.00 16.02)
+[00:24:23] native-expws rep 1: room_show c=1 151.3 rps p50 6.523 p99 9.583 cpu ms/req {'campfire': 6.2616, 'loadgen': 0.1453} statuses {'200': 757} err 0
+[00:24:28] native-expws rep 1: room_show c=16 603.6 rps p50 25.999 p99 45.247 cpu ms/req {'campfire': 6.2318, 'loadgen': 0.0949} statuses {'200': 3028} err 0
+[00:24:34] native-expws rep 1: messages_page c=1 169.8 rps p50 5.735 p99 9.055 cpu ms/req {'campfire': 5.4417, 'loadgen': 0.1439} statuses {'200': 849} err 0
+[00:24:39] native-expws rep 1: messages_page c=16 741.1 rps p50 21.167 p99 36.095 cpu ms/req {'campfire': 4.8601, 'loadgen': 0.0783} statuses {'200': 3718} err 0
+[00:24:45] native-expws rep 1: sidebar c=1 771.7 rps p50 1.16 p99 3.499 cpu ms/req {'campfire': 1.1013, 'loadgen': 0.0584} statuses {'200': 3859} err 0
+[00:24:50] native-expws rep 1: sidebar c=16 3915.8 rps p50 3.895 p99 8.279 cpu ms/req {'campfire': 0.8947, 'loadgen': 0.0359} statuses {'200': 19593} err 0
+[00:25:13] native-expws rep 1: cable 1000 ready 1000 tput 99.3 msg/s all p50 28.287 cpu us/delivery {'campfire': 25.42, 'loadgen': 32.22} mem {'before': {'peak_anon_mb': 29.9}, 'connect': {'peak_anon_mb': 52.9, 'end_anon_mb': 52.9, 'peak_threads': 40, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'connected': {'peak_anon_mb': 58.5, 'end_anon_mb': 58.5, 'peak_threads': 40, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'paced': {'peak_anon_mb': 79.5, 'end_anon_mb': 79.5, 'peak_threads': 41, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'paced_drained': {'peak_anon_mb': 79.5, 'end_anon_mb': 79.5, 'peak_threads': 41, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated': {'peak_anon_mb': 97.5, 'end_anon_mb': 97.5, 'peak_threads': 41, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated_posted': {'peak_anon_mb': 97.6, 'end_anon_mb': 97.6, 'peak_threads': 41, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated_drained': {'peak_anon_mb': 97.6, 'end_anon_mb': 97.6, 'peak_threads': 41, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'done': {'peak_anon_mb': 97.6, 'end_anon_mb': 90.1, 'peak_threads': 41, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}}
+[00:25:14] native-expzlib rep 1: starting (load 39.81 24.66 17.29)
+[00:25:22] native-expzlib rep 1: room_show c=1 222.9 rps p50 4.223 p99 7.807 cpu ms/req {'campfire': 4.2691, 'loadgen': 0.1087} statuses {'200': 1115} err 0
+[00:25:27] native-expzlib rep 1: room_show c=16 961.5 rps p50 16.207 p99 28.799 cpu ms/req {'campfire': 3.793, 'loadgen': 0.0589} statuses {'200': 4822} err 0
+[00:25:33] native-expzlib rep 1: messages_page c=1 278.9 rps p50 3.237 p99 8.943 cpu ms/req {'campfire': 3.3405, 'loadgen': 0.0893} statuses {'200': 1395} err 0
+[00:25:38] native-expzlib rep 1: messages_page c=16 1019.1 rps p50 15.319 p99 27.151 cpu ms/req {'campfire': 3.4839, 'loadgen': 0.0667} statuses {'200': 5115} err 0
+[00:25:44] native-expzlib rep 1: sidebar c=1 788.7 rps p50 1.102 p99 3.609 cpu ms/req {'campfire': 1.052, 'loadgen': 0.0617} statuses {'200': 3945} err 0
+[00:25:49] native-expzlib rep 1: sidebar c=16 4241.1 rps p50 3.611 p99 7.359 cpu ms/req {'campfire': 0.8258, 'loadgen': 0.038} statuses {'200': 21217} err 0
+[00:26:12] native-expzlib rep 1: cable 1000 ready 1000 tput 53.6 msg/s all p50 25.791 cpu us/delivery {'campfire': 62.31, 'loadgen': 38.66} mem {'before': {'peak_anon_mb': 30.9}, 'connect': {'peak_anon_mb': 179.3, 'end_anon_mb': 179.3, 'peak_threads': 44, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'connected': {'peak_anon_mb': 179.3, 'end_anon_mb': 179.3, 'peak_threads': 44, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'paced': {'peak_anon_mb': 200.3, 'end_anon_mb': 200.3, 'peak_threads': 45, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'paced_drained': {'peak_anon_mb': 200.3, 'end_anon_mb': 200.3, 'peak_threads': 45, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated': {'peak_anon_mb': 213.1, 'end_anon_mb': 213.1, 'peak_threads': 45, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated_posted': {'peak_anon_mb': 213.1, 'end_anon_mb': 213.1, 'peak_threads': 45, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated_drained': {'peak_anon_mb': 213.1, 'end_anon_mb': 213.1, 'peak_threads': 45, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'done': {'peak_anon_mb': 213.2, 'end_anon_mb': 206.7, 'peak_threads': 45, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}}
+[00:26:12] native-base rep 2: starting (load 33.16 25.84 18.17)
+[00:26:21] native-base rep 2: room_show c=1 196.0 rps p50 4.943 p99 7.079 cpu ms/req {'campfire': 4.9592, 'loadgen': 0.0922} statuses {'200': 980} err 0
+[00:26:26] native-base rep 2: room_show c=16 757.1 rps p50 20.655 p99 37.215 cpu ms/req {'campfire': 4.9618, 'loadgen': 0.0533} statuses {'200': 3799} err 0
+[00:26:32] native-base rep 2: messages_page c=1 254.2 rps p50 3.781 p99 6.719 cpu ms/req {'campfire': 3.8002, 'loadgen': 0.0738} statuses {'200': 1271} err 0
+[00:26:37] native-base rep 2: messages_page c=16 984.2 rps p50 15.799 p99 28.127 cpu ms/req {'campfire': 3.7102, 'loadgen': 0.0461} statuses {'200': 4935} err 0
+[00:26:43] native-base rep 2: sidebar c=1 1154.1 rps p50 0.718 p99 2.503 cpu ms/req {'campfire': 0.7936, 'loadgen': 0.0315} statuses {'200': 5771} err 0
+[00:26:48] native-base rep 2: sidebar c=16 4833.5 rps p50 3.125 p99 6.963 cpu ms/req {'campfire': 0.7389, 'loadgen': 0.0244} statuses {'200': 24184} err 0
+[00:27:11] native-base rep 2: cable 1000 ready 1000 tput 41.8 msg/s all p50 23.167 cpu us/delivery {'campfire': 53.79, 'loadgen': 34.04} mem {'before': {'peak_anon_mb': 30.5}, 'connect': {'peak_anon_mb': 150.8, 'end_anon_mb': 150.8, 'peak_threads': 48, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'connected': {'peak_anon_mb': 179.4, 'end_anon_mb': 179.4, 'peak_threads': 48, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'paced': {'peak_anon_mb': 208.9, 'end_anon_mb': 201.8, 'peak_threads': 49, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'paced_drained': {'peak_anon_mb': 201.8, 'end_anon_mb': 201.8, 'peak_threads': 49, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated': {'peak_anon_mb': 209.2, 'end_anon_mb': 209.2, 'peak_threads': 49, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated_posted': {'peak_anon_mb': 209.2, 'end_anon_mb': 209.2, 'peak_threads': 49, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated_drained': {'peak_anon_mb': 209.2, 'end_anon_mb': 209.2, 'peak_threads': 49, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'done': {'peak_anon_mb': 209.2, 'end_anon_mb': 202.2, 'peak_threads': 49, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}}
+[00:27:11] native-expws rep 2: starting (load 30.78 26.20 18.72)
+[00:27:20] native-expws rep 2: room_show c=1 145.5 rps p50 6.739 p99 10.359 cpu ms/req {'campfire': 6.4698, 'loadgen': 0.1427} statuses {'200': 728} err 0
+[00:27:25] native-expws rep 2: room_show c=16 636.6 rps p50 24.447 p99 45.151 cpu ms/req {'campfire': 5.7867, 'loadgen': 0.0781} statuses {'200': 3197} err 0
+[00:27:31] native-expws rep 2: messages_page c=1 161.5 rps p50 5.943 p99 11.175 cpu ms/req {'campfire': 5.5941, 'loadgen': 0.1507} statuses {'200': 808} err 0
+[00:27:36] native-expws rep 2: messages_page c=16 742.1 rps p50 20.943 p99 39.711 cpu ms/req {'campfire': 4.8189, 'loadgen': 0.0783} statuses {'200': 3727} err 0
+[00:27:42] native-expws rep 2: sidebar c=1 591.8 rps p50 1.457 p99 4.359 cpu ms/req {'campfire': 1.3306, 'loadgen': 0.0781} statuses {'200': 2961} err 0
+[00:27:47] native-expws rep 2: sidebar c=16 4018.0 rps p50 3.767 p99 8.231 cpu ms/req {'campfire': 0.8919, 'loadgen': 0.0333} statuses {'200': 20104} err 0
+[00:28:10] native-expws rep 2: cable 1000 ready 1000 tput 120.4 msg/s all p50 12.231 cpu us/delivery {'campfire': 22.04, 'loadgen': 26.74} mem {'before': {'peak_anon_mb': 30.8}, 'connect': {'peak_anon_mb': 53.7, 'end_anon_mb': 53.7, 'peak_threads': 62, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'connected': {'peak_anon_mb': 59.0, 'end_anon_mb': 59.0, 'peak_threads': 62, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'paced': {'peak_anon_mb': 80.2, 'end_anon_mb': 80.2, 'peak_threads': 63, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'paced_drained': {'peak_anon_mb': 80.2, 'end_anon_mb': 80.2, 'peak_threads': 63, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated': {'peak_anon_mb': 103.1, 'end_anon_mb': 103.1, 'peak_threads': 63, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated_posted': {'peak_anon_mb': 103.1, 'end_anon_mb': 103.1, 'peak_threads': 63, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated_drained': {'peak_anon_mb': 103.1, 'end_anon_mb': 103.1, 'peak_threads': 63, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'done': {'peak_anon_mb': 103.1, 'end_anon_mb': 99.5, 'peak_threads': 63, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}}
+[00:28:10] native-expzlib rep 2: starting (load 30.66 26.85 19.41)
+[00:28:19] native-expzlib rep 2: room_show c=1 205.4 rps p50 4.371 p99 10.999 cpu ms/req {'campfire': 4.4358, 'loadgen': 0.1364} statuses {'200': 1028} err 0
+[00:28:24] native-expzlib rep 2: room_show c=16 811.6 rps p50 18.799 p99 40.863 cpu ms/req {'campfire': 4.2903, 'loadgen': 0.0885} statuses {'200': 4072} err 0
+[00:28:30] native-expzlib rep 2: messages_page c=1 161.0 rps p50 5.999 p99 12.047 cpu ms/req {'campfire': 4.9628, 'loadgen': 0.2089} statuses {'200': 806} err 0
+[00:28:35] native-expzlib rep 2: messages_page c=16 1057.5 rps p50 14.615 p99 27.087 cpu ms/req {'campfire': 3.3522, 'loadgen': 0.0652} statuses {'200': 5298} err 0
+[00:28:41] native-expzlib rep 2: sidebar c=1 930.0 rps p50 0.954 p99 3.047 cpu ms/req {'campfire': 0.9288, 'loadgen': 0.0492} statuses {'200': 4651} err 0
+[00:28:46] native-expzlib rep 2: sidebar c=16 4244.0 rps p50 3.581 p99 7.731 cpu ms/req {'campfire': 0.8278, 'loadgen': 0.0335} statuses {'200': 21238} err 0
+[00:29:09] native-expzlib rep 2: cable 1000 ready 1000 tput 43.8 msg/s all p50 22.191 cpu us/delivery {'campfire': 60.17, 'loadgen': 37.71} mem {'before': {'peak_anon_mb': 31.7}, 'connect': {'peak_anon_mb': 108.5, 'end_anon_mb': 108.5, 'peak_threads': 47, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'connected': {'peak_anon_mb': 180.1, 'end_anon_mb': 180.1, 'peak_threads': 47, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'paced': {'peak_anon_mb': 201.3, 'end_anon_mb': 201.3, 'peak_threads': 48, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'paced_drained': {'peak_anon_mb': 201.3, 'end_anon_mb': 201.3, 'peak_threads': 48, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated': {'peak_anon_mb': 209.1, 'end_anon_mb': 209.0, 'peak_threads': 48, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated_posted': {'peak_anon_mb': 209.0, 'end_anon_mb': 209.0, 'peak_threads': 48, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated_drained': {'peak_anon_mb': 209.0, 'end_anon_mb': 209.0, 'peak_threads': 48, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'done': {'peak_anon_mb': 209.0, 'end_anon_mb': 202.7, 'peak_threads': 48, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}}
+[00:29:09] native-base rep 3: starting (load 29.06 26.82 19.85)
+[00:29:18] native-base rep 3: room_show c=1 133.2 rps p50 7.375 p99 11.223 cpu ms/req {'campfire': 7.012, 'loadgen': 0.159} statuses {'200': 666} err 0
+[00:29:23] native-base rep 3: room_show c=16 604.2 rps p50 25.823 p99 46.175 cpu ms/req {'campfire': 6.2063, 'loadgen': 0.0885} statuses {'200': 3034} err 0
+[00:29:29] native-base rep 3: messages_page c=1 174.2 rps p50 5.463 p99 10.919 cpu ms/req {'campfire': 5.2239, 'loadgen': 0.1381} statuses {'200': 871} err 0
+[00:29:34] native-base rep 3: messages_page c=16 802.1 rps p50 19.439 p99 36.063 cpu ms/req {'campfire': 4.5703, 'loadgen': 0.0705} statuses {'200': 4026} err 0
+[00:29:40] native-base rep 3: sidebar c=1 655.8 rps p50 1.317 p99 4.131 cpu ms/req {'campfire': 1.2439, 'loadgen': 0.0733} statuses {'200': 3280} err 0
+[00:29:45] native-base rep 3: sidebar c=16 3740.5 rps p50 4.127 p99 8.087 cpu ms/req {'campfire': 0.9607, 'loadgen': 0.0404} statuses {'200': 18715} err 0
+[00:30:09] native-base rep 3: cable 1000 ready 1000 tput 44.8 msg/s all p50 29.103 cpu us/delivery {'campfire': 77.13, 'loadgen': 47.29} mem {'before': {'peak_anon_mb': 29.6}, 'connect': {'peak_anon_mb': 151.1, 'end_anon_mb': 151.1, 'peak_threads': 48, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'connected': {'peak_anon_mb': 178.6, 'end_anon_mb': 178.6, 'peak_threads': 48, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'paced': {'peak_anon_mb': 201.2, 'end_anon_mb': 201.2, 'peak_threads': 49, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'paced_drained': {'peak_anon_mb': 201.2, 'end_anon_mb': 201.2, 'peak_threads': 49, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated': {'peak_anon_mb': 227.2, 'end_anon_mb': 209.8, 'peak_threads': 49, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated_posted': {'peak_anon_mb': 209.8, 'end_anon_mb': 209.8, 'peak_threads': 49, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated_drained': {'peak_anon_mb': 209.8, 'end_anon_mb': 209.8, 'peak_threads': 49, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'done': {'peak_anon_mb': 209.8, 'end_anon_mb': 203.5, 'peak_threads': 49, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}}
+[00:30:09] native-expws rep 3: starting (load 29.90 27.48 20.52)
+[00:30:17] native-expws rep 3: room_show c=1 127.2 rps p50 7.659 p99 12.351 cpu ms/req {'campfire': 7.1698, 'loadgen': 0.2069} statuses {'200': 636} err 0
+[00:30:22] native-expws rep 3: room_show c=16 615.9 rps p50 25.583 p99 42.975 cpu ms/req {'campfire': 6.1003, 'loadgen': 0.0867} statuses {'200': 3090} err 0
+[00:30:28] native-expws rep 3: messages_page c=1 159.9 rps p50 6.083 p99 9.839 cpu ms/req {'campfire': 5.6875, 'loadgen': 0.1504} statuses {'200': 800} err 0
+[00:30:33] native-expws rep 3: messages_page c=16 751.5 rps p50 20.975 p99 35.455 cpu ms/req {'campfire': 4.9058, 'loadgen': 0.0738} statuses {'200': 3769} err 0
+[00:30:39] native-expws rep 3: sidebar c=1 727.9 rps p50 1.228 p99 3.547 cpu ms/req {'campfire': 1.1593, 'loadgen': 0.0616} statuses {'200': 3640} err 0
+[00:30:44] native-expws rep 3: sidebar c=16 3797.9 rps p50 4.033 p99 8.231 cpu ms/req {'campfire': 0.9341, 'loadgen': 0.0362} statuses {'200': 19003} err 0
+[00:31:07] native-expws rep 3: cable 1000 ready 1000 tput 114.6 msg/s all p50 15.191 cpu us/delivery {'campfire': 23.38, 'loadgen': 28.41} mem {'before': {'peak_anon_mb': 31.0}, 'connect': {'peak_anon_mb': 49.4, 'end_anon_mb': 49.4, 'peak_threads': 47, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'connected': {'peak_anon_mb': 59.0, 'end_anon_mb': 59.0, 'peak_threads': 47, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'paced': {'peak_anon_mb': 80.3, 'end_anon_mb': 80.3, 'peak_threads': 48, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'paced_drained': {'peak_anon_mb': 80.3, 'end_anon_mb': 80.3, 'peak_threads': 48, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated': {'peak_anon_mb': 100.9, 'end_anon_mb': 100.9, 'peak_threads': 48, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated_posted': {'peak_anon_mb': 100.9, 'end_anon_mb': 100.9, 'peak_threads': 48, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated_drained': {'peak_anon_mb': 100.9, 'end_anon_mb': 100.9, 'peak_threads': 48, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'done': {'peak_anon_mb': 100.9, 'end_anon_mb': 95.6, 'peak_threads': 48, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}}
+[00:31:07] native-expzlib rep 3: starting (load 33.89 28.67 21.34)
+[00:31:16] native-expzlib rep 3: room_show c=1 195.8 rps p50 4.899 p99 8.935 cpu ms/req {'campfire': 4.7449, 'loadgen': 0.136} statuses {'200': 980} err 0
+[00:31:21] native-expzlib rep 3: room_show c=16 883.2 rps p50 17.727 p99 30.783 cpu ms/req {'campfire': 4.1283, 'loadgen': 0.0709} statuses {'200': 4428} err 0
+[00:31:27] native-expzlib rep 3: messages_page c=1 315.4 rps p50 2.877 p99 6.587 cpu ms/req {'campfire': 2.9867, 'loadgen': 0.0724} statuses {'200': 1577} err 0
+[00:31:32] native-expzlib rep 3: messages_page c=16 1336.6 rps p50 11.639 p99 20.191 cpu ms/req {'campfire': 2.6658, 'loadgen': 0.0349} statuses {'200': 6696} err 0
+[00:31:38] native-expzlib rep 3: sidebar c=1 1147.0 rps p50 0.686 p99 2.983 cpu ms/req {'campfire': 0.7601, 'loadgen': 0.0342} statuses {'200': 5736} err 0
+[00:31:43] native-expzlib rep 3: sidebar c=16 4350.0 rps p50 3.539 p99 6.927 cpu ms/req {'campfire': 0.8078, 'loadgen': 0.0338} statuses {'200': 21763} err 0
+[00:32:06] native-expzlib rep 3: cable 1000 ready 1000 tput 43.5 msg/s all p50 32.415 cpu us/delivery {'campfire': 82.53, 'loadgen': 49.85} mem {'before': {'peak_anon_mb': 33.1}, 'connect': {'peak_anon_mb': 150.9, 'end_anon_mb': 150.9, 'peak_threads': 60, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'connected': {'peak_anon_mb': 181.2, 'end_anon_mb': 181.2, 'peak_threads': 60, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'paced': {'peak_anon_mb': 204.0, 'end_anon_mb': 204.0, 'peak_threads': 61, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'paced_drained': {'peak_anon_mb': 204.0, 'end_anon_mb': 204.0, 'peak_threads': 61, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated': {'peak_anon_mb': 229.3, 'end_anon_mb': 215.3, 'peak_threads': 61, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated_posted': {'peak_anon_mb': 215.3, 'end_anon_mb': 215.3, 'peak_threads': 61, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'saturated_drained': {'peak_anon_mb': 215.3, 'end_anon_mb': 215.3, 'peak_threads': 61, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}, 'done': {'peak_anon_mb': 215.4, 'end_anon_mb': 208.1, 'peak_threads': 61, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 0}}
+```
+date: 2026-09-27T00:23:16+0200
+host: 7.2.5-4-omarchy, 32 threads
+server cpus: 4-7; loadgen cpus: 0-3
+image: campfire-rust:perf-a654b08 sha256:82a2c82b7f7ff1d371c701e3d9f81b894f76c1120231f421a817d183748a54c3
+native-base: ./target/perf-base/release/campfire preload=
+native-expws: ./target/perf-exp-ws/release/campfire preload=
+native-expzlib: ./target/perf-exp-zlib/release/campfire preload=
+env: WEB_CONCURRENCY=3 RAILS_MAX_THREADS=5 JOB_CONCURRENCY=3
+routes: room_show,messages_page,sidebar; concs: 1,16; secs: 5; cable: 1000; app env:
+```
+
+Reps per configuration: native-base 3, native-expws 3, native-expzlib 3. Cells: median [min–max]; (×) is the gain over native-base (>1 is better).
+Host load (1-min loadavg at start of each run): native-base 34.17/33.16/29.06, native-expws 42.01/30.78/29.90, native-expzlib 39.81/30.66/33.89
+
+### HTTP room_show
+
+| Metric | native-base | native-expws | native-expzlib |
+|---|---|---|---|
+| c=1 req/s | 133 [125–196] | 146 [127–151] (1.09×) | 205 [196–223] (1.54×) |
+| c=1 p50 ms | 7.38 [4.94–7.74] | 6.74 [6.52–7.66] (1.09×) | 4.37 [4.22–4.90] (1.69×) |
+| c=1 p99 ms | 11.2 [7.08–13.3] | 10.4 [9.58–12.4] (1.08×) | 8.94 [7.81–11.0] (1.26×) |
+| c=16 req/s | 604 [553–757] | 616 [604–637] (1.02×) | 883 [812–962] (1.46×) |
+| c=16 p50 ms | 25.8 [20.7–28.3] | 25.6 [24.4–26.0] (1.01×) | 17.7 [16.2–18.8] (1.46×) |
+| c=16 p99 ms | 46.2 [37.2–49.1] | 45.2 [43.0–45.2] (1.02×) | 30.8 [28.8–40.9] (1.50×) |
+| c=1 campfire CPU ms/req | 7.01 [4.96–7.26] | 6.47 [6.26–7.17] (1.08×) | 4.44 [4.27–4.74] (1.58×) |
+| c=1 thrust CPU ms/req | – | – | – |
+| c=1 docker-proxy CPU ms/req | – | – | – |
+| c=1 loadgen cores busy | 0.020 [0.020–0.020] | 0.020 [0.020–0.030] | 0.030 [0.020–0.030] |
+| c=1 campfire cores busy | 0.93 [0.91–0.97] | 0.94 [0.91–0.95] | 0.93 [0.91–0.95] |
+| c=16 campfire CPU ms/req | 6.21 [4.96–6.52] | 6.10 [5.79–6.23] (1.02×) | 4.13 [3.79–4.29] (1.50×) |
+| c=16 thrust CPU ms/req | – | – | – |
+| c=16 docker-proxy CPU ms/req | – | – | – |
+| c=16 loadgen cores busy | 0.050 [0.040–0.060] | 0.050 [0.050–0.060] | 0.060 [0.060–0.070] |
+| c=16 campfire cores busy | 3.75 [3.60–3.75] | 3.75 [3.69–3.76] | 3.64 [3.48–3.65] |
+| avg response bytes | 44,268 [44,265–44,272] | 44,269 [44,248–44,283] | 45,620 [45,538–45,730] |
+
+### HTTP messages_page
+
+| Metric | native-base | native-expws | native-expzlib |
+|---|---|---|---|
+| c=1 req/s | 174 [127–254] | 162 [160–170] (0.93×) | 279 [161–315] (1.60×) |
+| c=1 p50 ms | 5.46 [3.78–7.58] | 5.94 [5.74–6.08] (0.92×) | 3.24 [2.88–6.00] (1.69×) |
+| c=1 p99 ms | 10.9 [6.72–15.3] | 9.84 [9.05–11.2] (1.11×) | 8.94 [6.59–12.0] (1.22×) |
+| c=16 req/s | 802 [689–984] | 742 [741–752] (0.93×) | 1,058 [1,019–1,337] (1.32×) |
+| c=16 p50 ms | 19.4 [15.8–22.8] | 21.0 [20.9–21.2] (0.93×) | 14.6 [11.6–15.3] (1.33×) |
+| c=16 p99 ms | 36.1 [28.1–39.7] | 36.1 [35.5–39.7] (1.00×) | 27.1 [20.2–27.2] (1.33×) |
+| c=1 campfire CPU ms/req | 5.22 [3.80–6.45] | 5.59 [5.44–5.69] (0.93×) | 3.34 [2.99–4.96] (1.56×) |
+| c=1 thrust CPU ms/req | – | – | – |
+| c=1 docker-proxy CPU ms/req | – | – | – |
+| c=1 loadgen cores busy | 0.020 [0.020–0.020] | 0.020 [0.020–0.020] | 0.020 [0.020–0.030] |
+| c=1 campfire cores busy | 0.91 [0.82–0.97] | 0.91 [0.90–0.92] | 0.93 [0.80–0.94] |
+| c=16 campfire CPU ms/req | 4.57 [3.71–5.11] | 4.86 [4.82–4.91] (0.94×) | 3.35 [2.67–3.48] (1.36×) |
+| c=16 thrust CPU ms/req | – | – | – |
+| c=16 docker-proxy CPU ms/req | – | – | – |
+| c=16 loadgen cores busy | 0.060 [0.050–0.060] | 0.060 [0.060–0.060] | 0.070 [0.050–0.070] |
+| c=16 campfire cores busy | 3.65 [3.52–3.67] | 3.60 [3.58–3.68] | 3.55 [3.54–3.56] |
+| avg response bytes | 34,650 [34,643–34,653] | 34,651 [34,621–34,687] | 36,012 [35,962–36,078] |
+
+### HTTP sidebar
+
+| Metric | native-base | native-expws | native-expzlib |
+|---|---|---|---|
+| c=1 req/s | 656 [395–1,154] | 728 [592–772] (1.11×) | 930 [789–1,147] (1.42×) |
+| c=1 p50 ms | 1.32 [0.72–2.22] | 1.23 [1.16–1.46] (1.07×) | 0.95 [0.69–1.10] (1.38×) |
+| c=1 p99 ms | 4.13 [2.50–6.09] | 3.55 [3.50–4.36] (1.16×) | 3.05 [2.98–3.61] (1.36×) |
+| c=16 req/s | 3,740 [2,850–4,834] | 3,916 [3,798–4,018] (1.05×) | 4,244 [4,241–4,350] (1.13×) |
+| c=16 p50 ms | 4.13 [3.12–5.04] | 3.90 [3.77–4.03] (1.06×) | 3.58 [3.54–3.61] (1.15×) |
+| c=16 p99 ms | 8.09 [6.96–15.0] | 8.23 [8.23–8.28] (0.98×) | 7.36 [6.93–7.73] (1.10×) |
+| c=1 campfire CPU ms/req | 1.24 [0.79–1.67] | 1.16 [1.10–1.33] (1.07×) | 0.93 [0.76–1.05] (1.34×) |
+| c=1 thrust CPU ms/req | – | – | – |
+| c=1 docker-proxy CPU ms/req | – | – | – |
+| c=1 loadgen cores busy | 0.050 [0.040–0.050] | 0.050 [0.040–0.050] | 0.050 [0.040–0.050] |
+| c=1 campfire cores busy | 0.82 [0.66–0.92] | 0.84 [0.79–0.85] | 0.86 [0.83–0.87] |
+| c=16 campfire CPU ms/req | 0.96 [0.74–1.08] | 0.89 [0.89–0.93] (1.07×) | 0.83 [0.81–0.83] (1.16×) |
+| c=16 thrust CPU ms/req | – | – | – |
+| c=16 docker-proxy CPU ms/req | – | – | – |
+| c=16 loadgen cores busy | 0.14 [0.12–0.15] | 0.14 [0.13–0.14] | 0.15 [0.14–0.16] |
+| c=16 campfire cores busy | 3.57 [3.07–3.60] | 3.55 [3.51–3.59] | 3.52 [3.50–3.52] |
+| avg response bytes | 6,277 [6,277–6,277] | 6,277 [6,277–6,277] | 6,291 [6,291–6,291] |
+
+### Action Cable, 1000 clients
+
+| Metric | native-base | native-expws | native-expzlib |
+|---|---|---|---|
+| subscribed | 1,000 [1,000–1,000] | 1,000 [1,000–1,000] | 1,000 [1,000–1,000] |
+| paced post→all p50 ms | 29.1 [23.2–32.8] | 15.2 [12.2–28.3] (1.92×) | 25.8 [22.2–32.4] (1.13×) |
+| paced post→all p99 ms | 46.2 [42.0–64.7] | 34.8 [24.7–53.3] (1.33×) | 49.3 [37.5–50.1] (0.94×) |
+| paced POST p50 ms | 35.7 [28.9–41.0] | 14.9 [13.1–24.4] (2.40×) | 32.9 [30.5–40.9] (1.09×) |
+| max sustained msgs/s (to all) | 41.8 [40.1–44.8] | 115 [99.3–120] (2.74×) | 43.8 [43.5–53.6] (1.05×) |
+| deliveries/s | 41,753 [40,145–44,768] | 114,627 [99,327–120,383] (2.75×) | 43,809 [43,462–53,648] (1.05×) |
+| saturated post→all p50 ms | 71.0 [52.6–75.0] | 33.3 [31.7–37.6] (2.13×) | 61.1 [58.9–76.9] (1.16×) |
+| campfire CPU µs/delivery | 65.5 [53.8–77.1] | 23.4 [22.0–25.4] (2.80×) | 62.3 [60.2–82.5] (1.05×) |
+| thrust CPU µs/delivery | – | – | – |
+| docker-proxy CPU µs/delivery | – | – | – |
+| loadgen CPU µs/delivery | 39.3 [34.0–47.3] | 28.4 [26.7–32.2] | 38.7 [37.7–49.9] |
+| RssAnon peak MB: before | 30.5 [29.6–31.3] | 30.8 [29.9–31.0] | 31.7 [30.9–33.1] |
+| RssAnon peak MB: connected | 179 [179–180] | 59.0 [58.5–59.0] | 180 [179–181] |
+| RssAnon peak MB: paced | 201 [200–209] | 80.2 [79.5–80.3] | 201 [200–204] |
+| RssAnon peak MB: saturated | 213 [209–227] | 101 [97.5–103] | 213 [209–229] |
+| RssAnon peak MB: saturated_posted | 210 [209–212] | 101 [97.6–103] | 213 [209–215] |
+| RssAnon peak MB: saturated_drained | 210 [209–212] | 101 [97.6–103] | 213 [209–215] |
+| thrust RssAnon peak MB (saturated) | 0.000 [0.000–0.000] | 0.000 [0.000–0.000] | 0.000 [0.000–0.000] |
+| container memory.current peak MB (saturated) | 0.000 [0.000–0.000] | 0.000 [0.000–0.000] | 0.000 [0.000–0.000] |
+| peak threads | 49.0 [49.0–49.0] | 48.0 [41.0–63.0] | 48.0 [45.0–61.0] |
+
+done

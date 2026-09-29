@@ -1,0 +1,21 @@
+# The Rust app image (Dockerfile) builds from Cargo.toml, Cargo.lock and crates/ in this context,
+# plus the parts of the reference Rails app that crates/assets/build.rs embeds, which come in
+# through the named build context `reference` (the repository root). Everything else stays out.
+
+/.git
+/.gitignore
+/.claude
+/target
+/parity
+/plans
+/vectors
+/reference-tools
+/NOTES.md
+/AGENTS.md
+/CLAUDE.md
+/Dockerfile
+/.dockerignore
+
+# crates: test data isn't compiled into the binary
+/crates/*/target
+/crates/*/tests/golden

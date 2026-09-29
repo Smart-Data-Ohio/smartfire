@@ -1,0 +1,161 @@
+date: 2026-09-28T13:36:41+02:00
+host: 7.2.5-4-omarchy, AMD RYZEN AI MAX+ 395 w/ Radeon 8060S, 32 threads, 30GB
+server cpus: 8-11 (nproc 4); loadgen cpus: 12-15; network: host
+env: WEB_CONCURRENCY=3 JOB_CONCURRENCY=3 RAILS_MAX_THREADS=5 
+rust extra env: 
+rust image: campfire-rust:nothp sha256:89c128841812c9e1c5f1e4f8690dd15f422aa72827e7ff7b2875216518610e52 2026-09-28T13:18:12.610782156+02:00
+rust HEAD: 50687be (dirty: 0 files)
+[13:36:41] load before run: 9.67 11.75 10.37 (waited 0s)
+[13:36:41] rust rep 1: starting (load: 9.67 11.75 10.37)
+[13:36:52] rust rep 1: cold start 146ms, idle 14MB (anon 11MB)
+[13:37:02] rust rep 1: room_show c=1 4907.7 rps p50 0.199 p99 0.279 {'200': 39262} err 0
+[13:37:10] rust rep 1: room_show c=16 19882.5 rps p50 0.779 p99 1.51 {'200': 159074} err 0
+[13:37:18] rust rep 1: room_show c=64 19609.5 rps p50 3.249 p99 5.371 {'200': 156926} err 0
+[13:37:28] rust rep 1: messages_page c=1 5861.2 rps p50 0.167 p99 0.226 {'200': 46890} err 0
+[13:37:36] rust rep 1: messages_page c=16 22572.1 rps p50 0.667 p99 1.525 {'200': 180593} err 0
+[13:37:44] rust rep 1: messages_page c=64 23363.2 rps p50 2.673 p99 4.611 {'200': 186956} err 0
+[13:37:54] rust rep 1: sidebar c=1 3182.3 rps p50 0.305 p99 0.44 {'200': 25459} err 0
+[13:38:02] rust rep 1: sidebar c=16 12157.6 rps p50 1.287 p99 2.371 {'200': 97276} err 0
+[13:38:10] rust rep 1: sidebar c=64 12383.1 rps p50 5.147 p99 8.703 {'200': 99123} err 0
+[13:38:20] rust rep 1: search c=1 6370.1 rps p50 0.153 p99 0.218 {'200': 50961} err 0
+[13:38:28] rust rep 1: search c=16 23227.2 rps p50 0.646 p99 1.519 {'200': 185830} err 0
+[13:38:36] rust rep 1: search c=64 23946.5 rps p50 2.611 p99 4.455 {'200': 191618} err 0
+[13:38:46] rust rep 1: avatar c=1 68754.7 rps p50 0.014 p99 0.018 {'200': 550041} err 0
+[13:38:54] rust rep 1: avatar c=16 413407.5 rps p50 0.035 p99 0.076 {'200': 3307407} err 0
+[13:39:02] rust rep 1: avatar c=64 459982.2 rps p50 0.133 p99 0.279 {'200': 3680330} err 0
+[13:39:12] rust rep 1: static_css c=1 74788.8 rps p50 0.013 p99 0.017 {'200': 598315} err 0
+[13:39:20] rust rep 1: static_css c=16 438451.3 rps p50 0.034 p99 0.066 {'200': 3507755} err 0
+[13:39:28] rust rep 1: static_css c=64 474015.2 rps p50 0.128 p99 0.274 {'200': 3792561} err 0
+[13:39:39] rust rep 1: up c=1 27411.2 rps p50 0.035 p99 0.049 {'200': 219291} err 0
+[13:39:47] rust rep 1: up c=16 134055.2 rps p50 0.119 p99 0.206 {'200': 1072476} err 0
+[13:39:55] rust rep 1: up c=64 134324.9 rps p50 0.463 p99 0.967 {'200': 1074718} err 0
+[13:40:05] rust rep 1: post_message c=1 2191.7 rps p50 0.423 p99 1.738 {'200': 17534} err 0
+[13:40:13] rust rep 1: post_message c=16 5433.7 rps p50 2.727 p99 6.975 {'200': 43481} err 0
+[13:40:21] rust rep 1: post_message c=64 5191.0 rps p50 11.639 p99 17.199 {'200': 41551} err 1805
+[13:40:21] rust rep 1: done -> /home/dhh/Work/basecamp/once-campfire-rust/bench/results/thp-20260928/nothp/rust-1.json
+```
+date: 2026-09-28T13:36:41+02:00
+host: 7.2.5-4-omarchy, AMD RYZEN AI MAX+ 395 w/ Radeon 8060S, 32 threads, 30GB
+server cpus: 8-11 (nproc 4); loadgen cpus: 12-15; network: host
+env: WEB_CONCURRENCY=3 JOB_CONCURRENCY=3 RAILS_MAX_THREADS=5 
+rust extra env: 
+rust image: campfire-rust:nothp sha256:89c128841812c9e1c5f1e4f8690dd15f422aa72827e7ff7b2875216518610e52 2026-09-28T13:18:12.610782156+02:00
+rust HEAD: 50687be (dirty: 0 files)
+```
+
+Reps: rust 1. Cells: median [min–max].
+
+### Startup and memory
+
+| Metric | Rust | Rust adv. |
+|---|---|---|
+| cold start: docker run → /up 200 (ms) | 146 | – |
+| idle memory.current (MB) | 14.0 | – |
+| idle anon (MB) | 11.0 | – |
+| peak memory.current under load (MB) | 199 | – |
+| peak anon under load (MB) | 114 | – |
+
+### HTTP (signed in as david; keep-alive; c = concurrent connections)
+
+| Metric | Rust | Rust adv. |
+|---|---|---|
+| room_show c=1 req/s | 4,908 | – |
+| room_show c=1 p50 ms | 0.20 | – |
+| room_show c=1 p99 ms | 0.28 | – |
+| room_show c=16 req/s | 19,882 | – |
+| room_show c=16 p50 ms | 0.78 | – |
+| room_show c=16 p99 ms | 1.51 | – |
+| room_show c=64 req/s | 19,610 | – |
+| room_show c=64 p50 ms | 3.25 | – |
+| room_show c=64 p99 ms | 5.37 | – |
+| messages_page c=1 req/s | 5,861 | – |
+| messages_page c=1 p50 ms | 0.17 | – |
+| messages_page c=1 p99 ms | 0.23 | – |
+| messages_page c=16 req/s | 22,572 | – |
+| messages_page c=16 p50 ms | 0.67 | – |
+| messages_page c=16 p99 ms | 1.52 | – |
+| messages_page c=64 req/s | 23,363 | – |
+| messages_page c=64 p50 ms | 2.67 | – |
+| messages_page c=64 p99 ms | 4.61 | – |
+| sidebar c=1 req/s | 3,182 | – |
+| sidebar c=1 p50 ms | 0.30 | – |
+| sidebar c=1 p99 ms | 0.44 | – |
+| sidebar c=16 req/s | 12,158 | – |
+| sidebar c=16 p50 ms | 1.29 | – |
+| sidebar c=16 p99 ms | 2.37 | – |
+| sidebar c=64 req/s | 12,383 | – |
+| sidebar c=64 p50 ms | 5.15 | – |
+| sidebar c=64 p99 ms | 8.70 | – |
+| search c=1 req/s | 6,370 | – |
+| search c=1 p50 ms | 0.15 | – |
+| search c=1 p99 ms | 0.22 | – |
+| search c=16 req/s | 23,227 | – |
+| search c=16 p50 ms | 0.65 | – |
+| search c=16 p99 ms | 1.52 | – |
+| search c=64 req/s | 23,946 | – |
+| search c=64 p50 ms | 2.61 | – |
+| search c=64 p99 ms | 4.46 | – |
+| avatar c=1 req/s | 68,755 | – |
+| avatar c=1 p50 ms | 0.01 | – |
+| avatar c=1 p99 ms | 0.02 | – |
+| avatar c=16 req/s | 413,408 | – |
+| avatar c=16 p50 ms | 0.04 | – |
+| avatar c=16 p99 ms | 0.08 | – |
+| avatar c=64 req/s | 459,982 | – |
+| avatar c=64 p50 ms | 0.13 | – |
+| avatar c=64 p99 ms | 0.28 | – |
+| static_css c=1 req/s | 74,789 | – |
+| static_css c=1 p50 ms | 0.01 | – |
+| static_css c=1 p99 ms | 0.02 | – |
+| static_css c=16 req/s | 438,451 | – |
+| static_css c=16 p50 ms | 0.03 | – |
+| static_css c=16 p99 ms | 0.07 | – |
+| static_css c=64 req/s | 474,015 | – |
+| static_css c=64 p50 ms | 0.13 | – |
+| static_css c=64 p99 ms | 0.27 | – |
+| up c=1 req/s | 27,411 | – |
+| up c=1 p50 ms | 0.04 | – |
+| up c=1 p99 ms | 0.05 | – |
+| up c=16 req/s | 134,055 | – |
+| up c=16 p50 ms | 0.12 | – |
+| up c=16 p99 ms | 0.21 | – |
+| up c=64 req/s | 134,325 | – |
+| up c=64 p50 ms | 0.46 | – |
+| up c=64 p99 ms | 0.97 | – |
+| post_message c=1 req/s | 2,192 | – |
+| post_message c=1 p50 ms | 0.42 | – |
+| post_message c=1 p99 ms | 1.74 | – |
+| post_message c=16 req/s | 5,434 | – |
+| post_message c=16 p50 ms | 2.73 | – |
+| post_message c=16 p99 ms | 6.97 | – |
+| post_message c=64 req/s | 5,191 | – |
+| post_message c=64 p50 ms | 11.6 | – |
+| post_message c=64 p99 ms | 17.2 | – |
+
+### HTTP errors / non-2xx-3xx (first rep, per app)
+
+| Metric | Rust | Rust adv. |
+|---|---|---|
+- rust: post_message c=64: {'200': 41551} errors=1805
+
+### Action Cable fan-out (one room; chatter.js subscriptions per client)
+
+| Metric | Rust | Rust adv. |
+|---|---|---|
+
+### Upload + thumbnail (black_hole.jpg, 505 KB)
+
+| Metric | Rust | Rust adv. |
+|---|---|---|
+| POST with attachment (ms) | – | – |
+| then GET thumb → 200 (ms) | – | – |
+| POST → thumbnail served (ms) | – | – |
+
+### Memory during cable fan-out, by process (MB, peak within the phase)
+
+App process: Rails' Puma master and workers (Action Cable runs in them), or Rust's one campfire
+process (its front server included). Pss counts pages shared between forked workers once;
+RssAnon counts them in every process.
+
+| Metric | Rust | Rust adv. |
+|---|---|---|

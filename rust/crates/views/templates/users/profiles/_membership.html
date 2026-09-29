@@ -1,0 +1,12 @@
+<li class="flex align-center gap margin-none min-width membership-item">
+  {% filter link_to(h::routes::room(membership.room_id), h::attrs().class("overflow-ellipsis fill-shade txt-primary txt-undecorated")) %}
+    <strong>{{ membership.room_display_name }}</strong>
+{% endfilter %}
+  <hr class="separator" aria-hidden="true">
+
+  <span class="txt-small">
+    {% filter turbo_frame_tag(h::dom_id(membership.room_param_key.as_str(), membership.room_id, Some("involvement")), h::attrs()) %}
+      {{ h::button_to_change_involvement(ctx, membership.involvement_room(), membership.involvement.as_str()) }}
+{% endfilter %}  </span>
+</li>
+

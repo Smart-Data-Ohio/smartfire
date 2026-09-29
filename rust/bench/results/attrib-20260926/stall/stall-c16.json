@@ -1,0 +1,154 @@
+[
+ {
+  "requests": 34757,
+  "p50_ms": 3.834,
+  "p90_ms": 17.591,
+  "p99_ms": 23.602,
+  "max_ms": 37.383,
+  "slow_cut_ms": 15.336,
+  "slow_requests": 6163,
+  "slow_overlapping_fsync": 6163,
+  "requests_overlapping_fsync": 10740,
+  "overlapping_p50_ms": 16.1,
+  "clean_p99_ms": 6.335,
+  "fsyncs": {
+   "fsync db-wal": {
+    "n": 1333,
+    "p50_ms": 3.494,
+    "max_ms": 13.381,
+    "total_ms": 5087.67
+   },
+   "fsync db": {
+    "n": 521,
+    "p50_ms": 3.366,
+    "max_ms": 24.091,
+    "total_ms": 1875.731
+   }
+  },
+  "posts_per_checkpoint": 66.7,
+  "where": "disk",
+  "rep": 1,
+  "conc": "16",
+  "rps": 2315.0,
+  "campfire_cpu_ms_per_req": 0.7794,
+  "load": [
+   "8.48",
+   "10.87",
+   "12.66"
+  ]
+ },
+ {
+  "requests": 76162,
+  "p50_ms": 3.091,
+  "p90_ms": 4.052,
+  "p99_ms": 5.092,
+  "max_ms": 12.064,
+  "slow_cut_ms": 12.364,
+  "slow_requests": 0,
+  "slow_overlapping_fsync": 0,
+  "requests_overlapping_fsync": 20529,
+  "overlapping_p50_ms": 3.283,
+  "clean_p99_ms": 4.963,
+  "fsyncs": {
+   "fsync db-wal": {
+    "n": 4006,
+    "p50_ms": 0.0,
+    "max_ms": 0.266,
+    "total_ms": 1.524
+   },
+   "fsync db": {
+    "n": 1273,
+    "p50_ms": 0.0,
+    "max_ms": 0.085,
+    "total_ms": 0.219
+   }
+  },
+  "posts_per_checkpoint": 59.8,
+  "where": "tmpfs",
+  "rep": 1,
+  "conc": "16",
+  "rps": 5076.8,
+  "campfire_cpu_ms_per_req": 0.67,
+  "load": [
+   "8.14",
+   "10.63",
+   "12.54"
+  ]
+ },
+ {
+  "requests": 12761,
+  "p50_ms": 3.715,
+  "p90_ms": 68.132,
+  "p99_ms": 192.411,
+  "max_ms": 782.66,
+  "slow_cut_ms": 14.86,
+  "slow_requests": 2985,
+  "slow_overlapping_fsync": 2961,
+  "requests_overlapping_fsync": 4105,
+  "overlapping_p50_ms": 18.853,
+  "clean_p99_ms": 6.55,
+  "fsyncs": {
+   "fsync db-wal": {
+    "n": 504,
+    "p50_ms": 8.608,
+    "max_ms": 193.522,
+    "total_ms": 8283.012
+   },
+   "fsync db": {
+    "n": 200,
+    "p50_ms": 9.031,
+    "max_ms": 337.66,
+    "total_ms": 3492.661
+   }
+  },
+  "posts_per_checkpoint": 63.8,
+  "where": "disk",
+  "rep": 2,
+  "conc": "16",
+  "rps": 850.6,
+  "campfire_cpu_ms_per_req": 0.8009,
+  "load": [
+   "8.06",
+   "10.47",
+   "12.46"
+  ]
+ },
+ {
+  "requests": 75096,
+  "p50_ms": 3.128,
+  "p90_ms": 4.132,
+  "p99_ms": 5.226,
+  "max_ms": 14.11,
+  "slow_cut_ms": 12.512,
+  "slow_requests": 5,
+  "slow_overlapping_fsync": 0,
+  "requests_overlapping_fsync": 20271,
+  "overlapping_p50_ms": 3.321,
+  "clean_p99_ms": 5.119,
+  "fsyncs": {
+   "fsync db-wal": {
+    "n": 3925,
+    "p50_ms": 0.0,
+    "max_ms": 0.041,
+    "total_ms": 1.149
+   },
+   "fsync db": {
+    "n": 1295,
+    "p50_ms": 0.0,
+    "max_ms": 0.147,
+    "total_ms": 0.278
+   }
+  },
+  "posts_per_checkpoint": 58.0,
+  "where": "tmpfs",
+  "rep": 2,
+  "conc": "16",
+  "rps": 5005.6,
+  "campfire_cpu_ms_per_req": 0.6895,
+  "load": [
+   "9.23",
+   "10.57",
+   "12.45"
+  ]
+ }
+]

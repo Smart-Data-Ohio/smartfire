@@ -1,2 +1,12 @@
 # Omakase Ruby styling for Rails
 inherit_gem: { rubocop-rails-omakase: rubocop.yml }
+
+# The Rust port's Ruby (rust/: reference tooling, parity seeds, golden-vector generators) isn't
+# part of the Rails app and keeps the upstream port's style. Merged with the inherited excludes.
+inherit_mode:
+  merge:
+    - Exclude
+
+AllCops:
+  Exclude:
+    - "rust/**/*"

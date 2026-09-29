@@ -1,0 +1,11 @@
+# idle after boot and one /up request; THP: [always] madvise never; host 32 cores
+# app = before; nothp = PR_SET_THP_DISABLE + jemalloc thp:never
+image cpus rss_anon_kB anon_huge_kB cgroup_anon_kB threads
+app 0 14680 6144 21896 5
+app 0-1 36876 30720 45852 6
+app 0-3 43060 36864 50056 8
+app 0-31 160196 153600 167192 36
+nothp 0 10148 0 17356 5
+nothp 0-1 10964 0 15904 6
+nothp 0-3 11260 0 18264 8
+nothp 0-31 14920 0 21924 36

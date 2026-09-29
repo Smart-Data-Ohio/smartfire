@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Re-vendor gem-provided assets and regenerate the golden fixtures after a reference bump.
+#
+#   crates/assets/script/revendor
+#
+# Uses the `campfire-reference` Docker image (whose build already ran assets:precompile) when
+# Docker is reachable. Otherwise it copies the reference app to a scratch directory, installs the bundle
+# (into $BUNDLE_PATH, default target/reference-bundle), precompiles there, and exports from that.
+# Either way, crates/assets/script/export_reference.rb does the work inside the reference app.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+# The reference Rails app: CAMPFIRE_REFERENCE, else the repository root that contains rust/.
+REFERENCE_ROOT=$(cd "${CAMPFIRE_REFERENCE:-$ROOT/..}" && pwd)
+CRATE="$ROOT/crates/assets"
+REFERENCE_SHA="$(git -C "$REFERENCE_ROOT" rev-parse HEAD)"
+
+if docker info >/dev/null 2>&1 && docker image inspect campfire-reference >/dev/null 2>&1; then
+  docker run --rm -i --user "$(id -u):$(id -g)" \
+    -e RAILS_ENV=production -e SECRET_KEY_BASE_DUMMY=1 -e DISABLE_SSL=1 -e ASSETS_DIR=/work/assets -e REFERENCE_SHA="$REFERENCE_SHA" \
+    -v "$CRATE:/work/assets" \
+    campfire-reference bin/rails runner /work/assets/script/export_reference.rb
+else
+  export PATH="$HOME/.local/share/gem/ruby/3.4.0/bin:$PATH"
+  export BUNDLE_PATH="${BUNDLE_PATH:-$ROOT/target/reference-bundle}" BUNDLE_WITHOUT="development:test"
+  export RAILS_ENV=production SECRET_KEY_BASE_DUMMY=1 DISABLE_SSL=1 ASSETS_DIR="$CRATE" REFERENCE_SHA
+
+  WORK="$(mktemp -d)"
+  trap 'rm -rf "$WORK"' EXIT
+  rsync -a --exclude /tmp --exclude /log --exclude /storage --exclude /public/assets \
+    --exclude /rust --exclude /.claude --exclude /.git --exclude node_modules "$REFERENCE_ROOT/" "$WORK/"
+  mkdir -p "$WORK/tmp" "$WORK/log"
+
+  cd "$WORK"
+  bundle check >/dev/null || bundle install
+  bin/rails assets:precompile >/dev/null 2> >(grep -v VIPS-WARNING >&2)
+  bin/rails runner "$CRATE/script/export_reference.rb" 2> >(grep -v VIPS-WARNING >&2)
+fi

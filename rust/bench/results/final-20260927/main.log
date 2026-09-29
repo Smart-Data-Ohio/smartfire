@@ -1,0 +1,650 @@
+date: 2026-09-27T04:46:24+02:00
+host: 7.2.5-4-omarchy, AMD Ryzen 9 9955HX 16-Core Processor, 32 threads, 91GB
+server cpus: 8-11 (nproc 4); loadgen cpus: 12-15; network: host
+env: WEB_CONCURRENCY=3 JOB_CONCURRENCY=3 RAILS_MAX_THREADS=5 
+rust extra env: 
+reference image: campfire-reference:app sha256:70ab5e2abe726bfdfc177af4fa8465cd90ba3b3e3f532c8633f818cf63545adf 2026-09-26T14:42:50.327050882+02:00
+rust image: campfire-rust:head-5181aa4 sha256:033927228539c17717887043791c154d9996f7ca9eb2e3683c91f9925eb200d5 2026-09-27T04:05:37.180679451+02:00
+rust-identity image: campfire-rust:head-5181aa4 sha256:033927228539c17717887043791c154d9996f7ca9eb2e3683c91f9925eb200d5 2026-09-27T04:05:37.180679451+02:00
+rust HEAD: 5181aa4 (dirty: 0 files)
+[04:46:54] load before run: 1.47 3.17 5.82 (waited 30s)
+[04:46:54] reference rep 1: starting (load: 1.47 3.17 5.82)
+[04:47:07] reference rep 1: cold start 2465ms, idle 305MB (anon 283MB)
+[04:47:18] reference rep 1: room_show c=1 94.8 rps p50 10.095 p99 13.095 {'200': 759} err 0
+[04:47:26] reference rep 1: room_show c=16 233.8 rps p50 60.735 p99 171.903 {'200': 1890} err 0
+[04:47:34] reference rep 1: room_show c=64 233.1 rps p50 270.335 p99 347.903 {'200': 1928} err 0
+[04:47:44] reference rep 1: messages_page c=1 176.2 rps p50 5.519 p99 7.199 {'200': 1410} err 0
+[04:47:52] reference rep 1: messages_page c=16 455.6 rps p50 35.615 p99 74.175 {'200': 3658} err 0
+[04:48:00] reference rep 1: messages_page c=64 432.6 rps p50 155.519 p99 204.415 {'200': 3524} err 0
+[04:48:10] reference rep 1: sidebar c=1 222.3 rps p50 4.343 p99 6.183 {'200': 1779} err 0
+[04:48:19] reference rep 1: sidebar c=16 602.6 rps p50 27.007 p99 49.599 {'200': 4832} err 0
+[04:48:27] reference rep 1: sidebar c=64 592.8 rps p50 104.063 p99 151.167 {'200': 4808} err 0
+[04:48:37] reference rep 1: search c=1 177.4 rps p50 5.487 p99 7.355 {'200': 1419} err 0
+[04:48:45] reference rep 1: search c=16 420.4 rps p50 37.631 p99 60.767 {'200': 3374} err 0
+[04:48:53] reference rep 1: search c=64 418.2 rps p50 152.319 p99 178.047 {'200': 3402} err 0
+[04:49:03] reference rep 1: avatar c=1 29945.3 rps p50 0.031 p99 0.091 {'200': 239564} err 0
+[04:49:11] reference rep 1: avatar c=16 99829.5 rps p50 0.1 p99 0.876 {'200': 798662} err 0
+[04:49:19] reference rep 1: avatar c=64 79496.1 rps p50 0.332 p99 4.791 {'200': 636071} err 0
+[04:49:29] reference rep 1: static_css c=1 37285.9 rps p50 0.025 p99 0.063 {'200': 298290} err 0
+[04:49:37] reference rep 1: static_css c=16 136287.0 rps p50 0.08 p99 0.63 {'200': 1090373} err 0
+[04:49:45] reference rep 1: static_css c=64 110375.8 rps p50 0.287 p99 3.433 {'200': 883152} err 0
+[04:49:55] reference rep 1: up c=1 1927.9 rps p50 0.493 p99 0.981 {'200': 15423} err 0
+[04:50:03] reference rep 1: up c=16 4300.4 rps p50 3.591 p99 7.411 {'200': 34418} err 0
+[04:50:11] reference rep 1: up c=64 4285.3 rps p50 14.839 p99 22.463 {'200': 34344} err 0
+[04:50:21] reference rep 1: post_message c=1 151.2 rps p50 6.135 p99 18.255 {'200': 1210} err 0
+[04:50:29] reference rep 1: post_message c=16 277.3 rps p50 53.599 p99 148.863 {'200': 2229} err 0
+[04:50:38] reference rep 1: post_message c=64 279.4 rps p50 225.151 p99 331.519 {'200': 2305} err 0
+[04:51:00] reference rep 1: cable 100 clients ready 100 lat all p50 18.511 p99 48.895 tput 86.4 msg/s 1304 / 1304
+[04:51:26] reference rep 1: cable 500 clients ready 500 lat all p50 43.071 p99 126.527 tput 27.5 msg/s 413 / 413
+[04:51:52] reference rep 1: cable 1000 clients ready 1000 lat all p50 76.415 p99 162.431 tput 14.1 msg/s 214 / 214
+[04:51:54] reference rep 1: upload median 50.1ms
+[04:51:55] reference rep 1: done -> ./bench/results/final-20260927/main/reference-1.json
+[04:52:45] load before run: 1.35 2.78 4.85 (waited 50s)
+[04:52:45] rust rep 1: starting (load: 1.35 2.78 4.85)
+[04:52:55] rust rep 1: cold start 234ms, idle 49MB (anon 46MB)
+[04:53:06] rust rep 1: room_show c=1 631.9 rps p50 1.556 p99 2.243 {'200': 5056} err 0
+[04:53:14] rust rep 1: room_show c=16 2577.0 rps p50 6.247 p99 10.383 {'200': 20631} err 0
+[04:53:22] rust rep 1: room_show c=64 2564.2 rps p50 24.719 p99 42.879 {'200': 20574} err 0
+[04:53:32] rust rep 1: messages_page c=1 1018.2 rps p50 0.972 p99 1.147 {'200': 8146} err 0
+[04:53:40] rust rep 1: messages_page c=16 3952.3 rps p50 4.045 p99 6.655 {'200': 31634} err 0
+[04:53:48] rust rep 1: messages_page c=64 3924.9 rps p50 16.143 p99 28.079 {'200': 31459} err 0
+[04:53:58] rust rep 1: sidebar c=1 2763.9 rps p50 0.359 p99 0.426 {'200': 22112} err 0
+[04:54:06] rust rep 1: sidebar c=16 11033.8 rps p50 1.418 p99 2.585 {'200': 88287} err 0
+[04:54:14] rust rep 1: sidebar c=64 11262.4 rps p50 5.635 p99 9.391 {'200': 90152} err 0
+[04:54:24] rust rep 1: search c=1 1558.6 rps p50 0.631 p99 0.779 {'200': 12470} err 0
+[04:54:32] rust rep 1: search c=16 5933.2 rps p50 2.671 p99 4.511 {'200': 47480} err 0
+[04:54:40] rust rep 1: search c=64 5970.8 rps p50 10.647 p99 17.359 {'200': 47824} err 0
+[04:54:50] rust rep 1: avatar c=1 70726.7 rps p50 0.013 p99 0.017 {'200': 565818} err 0
+[04:54:58] rust rep 1: avatar c=16 418051.5 rps p50 0.035 p99 0.093 {'200': 3344648} err 0
+[04:55:06] rust rep 1: avatar c=64 435304.2 rps p50 0.138 p99 0.378 {'200': 3482903} err 0
+[04:55:16] rust rep 1: static_css c=1 76006.7 rps p50 0.012 p99 0.016 {'200': 608058} err 0
+[04:55:24] rust rep 1: static_css c=16 417726.7 rps p50 0.034 p99 0.085 {'200': 3341932} err 0
+[04:55:32] rust rep 1: static_css c=64 465595.2 rps p50 0.131 p99 0.316 {'200': 3725184} err 0
+[04:55:42] rust rep 1: up c=1 23890.9 rps p50 0.041 p99 0.048 {'200': 191128} err 0
+[04:55:50] rust rep 1: up c=16 107641.5 rps p50 0.151 p99 0.257 {'200': 861162} err 0
+[04:55:58] rust rep 1: up c=64 109699.8 rps p50 0.567 p99 1.183 {'200': 877696} err 0
+[04:56:08] rust rep 1: post_message c=1 2210.7 rps p50 0.412 p99 1.517 {'200': 17686} err 0
+[04:56:16] rust rep 1: post_message c=16 5260.2 rps p50 2.635 p99 14.551 {'200': 42098} err 0
+[04:56:24] rust rep 1: post_message c=64 5310.9 rps p50 11.095 p99 24.703 {'200': 42541} err 0
+[04:56:47] rust rep 1: cable 100 clients ready 100 lat all p50 2.513 p99 6.267 tput 2428.0 msg/s 36422 / 36422
+[04:57:12] rust rep 1: cable 500 clients ready 500 lat all p50 5.171 p99 6.715 tput 601.1 msg/s 9019 / 9019
+[04:57:37] rust rep 1: cable 1000 clients ready 1000 lat all p50 8.839 p99 13.311 tput 310.3 msg/s 4656 / 4656
+[04:57:39] rust rep 1: upload median 28.7ms
+[04:57:39] rust rep 1: done -> ./bench/results/final-20260927/main/rust-1.json
+[04:59:09] load before run: 1.28 3.12 4.43 (waited 90s)
+[04:59:09] rust-identity rep 1: starting (load: 1.28 3.12 4.43)
+[04:59:20] rust-identity rep 1: cold start 232ms, idle 47MB (anon 44MB)
+[04:59:30] rust-identity rep 1: room_show c=1 2099.7 rps p50 0.466 p99 0.561 {'200': 16798} err 0
+[04:59:38] rust-identity rep 1: room_show c=16 8973.4 rps p50 1.761 p99 3.129 {'200': 71801} err 0
+[04:59:46] rust-identity rep 1: room_show c=64 8652.5 rps p50 7.327 p99 12.271 {'200': 69278} err 0
+[04:59:56] rust-identity rep 1: messages_page c=1 3960.7 rps p50 0.243 p99 0.333 {'200': 31686} err 0
+[05:00:04] rust-identity rep 1: messages_page c=16 16499.8 rps p50 0.92 p99 1.896 {'200': 132013} err 0
+[05:00:12] rust-identity rep 1: messages_page c=64 15573.1 rps p50 4.025 p99 6.675 {'200': 124644} err 0
+[05:00:22] rust-identity rep 1: sidebar c=1 5554.3 rps p50 0.175 p99 0.243 {'200': 44435} err 0
+[05:00:30] rust-identity rep 1: sidebar c=16 19608.9 rps p50 0.768 p99 1.689 {'200': 156884} err 0
+[05:00:38] rust-identity rep 1: sidebar c=64 20908.0 rps p50 2.971 p99 5.351 {'200': 167319} err 0
+[05:00:48] rust-identity rep 1: search c=1 3918.7 rps p50 0.25 p99 0.309 {'200': 31351} err 0
+[05:00:56] rust-identity rep 1: search c=16 14893.9 rps p50 1.021 p99 2.115 {'200': 119165} err 0
+[05:01:04] rust-identity rep 1: search c=64 15195.1 rps p50 4.127 p99 6.791 {'200': 121613} err 0
+[05:01:14] rust-identity rep 1: avatar c=1 71587.4 rps p50 0.013 p99 0.018 {'200': 572703} err 0
+[05:01:22] rust-identity rep 1: avatar c=16 405719.7 rps p50 0.036 p99 0.092 {'200': 3245885} err 0
+[05:01:30] rust-identity rep 1: avatar c=64 441521.3 rps p50 0.136 p99 0.372 {'200': 3532624} err 0
+[05:01:40] rust-identity rep 1: static_css c=1 75761.5 rps p50 0.012 p99 0.016 {'200': 606097} err 0
+[05:01:48] rust-identity rep 1: static_css c=16 424558.7 rps p50 0.034 p99 0.081 {'200': 3396594} err 0
+[05:01:56] rust-identity rep 1: static_css c=64 468730.3 rps p50 0.129 p99 0.32 {'200': 3750255} err 0
+[05:02:07] rust-identity rep 1: up c=1 36551.1 rps p50 0.026 p99 0.032 {'200': 292411} err 0
+[05:02:15] rust-identity rep 1: up c=16 165620.0 rps p50 0.096 p99 0.165 {'200': 1325007} err 0
+[05:02:23] rust-identity rep 1: up c=64 165133.6 rps p50 0.377 p99 0.783 {'200': 1321216} err 0
+[05:02:33] rust-identity rep 1: post_message c=1 2549.8 rps p50 0.35 p99 1.516 {'200': 20399} err 0
+[05:02:41] rust-identity rep 1: post_message c=16 5514.7 rps p50 2.481 p99 14.423 {'200': 44128} err 0
+[05:02:49] rust-identity rep 1: post_message c=64 5620.9 rps p50 10.391 p99 24.639 {'200': 45023} err 0
+[05:02:49] rust-identity rep 1: done -> ./bench/results/final-20260927/main/rust-identity-1.json
+[05:04:29] load before run: 1.47 3.37 4.25 (waited 100s)
+[05:04:29] rust-identity rep 2: starting (load: 1.47 3.37 4.25)
+[05:04:40] rust-identity rep 2: cold start 230ms, idle 48MB (anon 44MB)
+[05:04:50] rust-identity rep 2: room_show c=1 2080.8 rps p50 0.469 p99 0.632 {'200': 16647} err 0
+[05:04:58] rust-identity rep 2: room_show c=16 8927.2 rps p50 1.767 p99 3.171 {'200': 71434} err 0
+[05:05:06] rust-identity rep 2: room_show c=64 8619.1 rps p50 7.355 p99 12.463 {'200': 69013} err 0
+[05:05:16] rust-identity rep 2: messages_page c=1 4335.6 rps p50 0.22 p99 0.309 {'200': 34686} err 0
+[05:05:24] rust-identity rep 2: messages_page c=16 16641.6 rps p50 0.911 p99 1.886 {'200': 133148} err 0
+[05:05:32] rust-identity rep 2: messages_page c=64 15530.2 rps p50 4.065 p99 6.495 {'200': 124308} err 0
+[05:05:42] rust-identity rep 2: sidebar c=1 5587.2 rps p50 0.174 p99 0.236 {'200': 44698} err 0
+[05:05:50] rust-identity rep 2: sidebar c=16 19881.1 rps p50 0.761 p99 1.633 {'200': 159065} err 0
+[05:05:58] rust-identity rep 2: sidebar c=64 20833.4 rps p50 3.007 p99 5.183 {'200': 166730} err 0
+[05:06:08] rust-identity rep 2: search c=1 4045.1 rps p50 0.242 p99 0.304 {'200': 32362} err 0
+[05:06:16] rust-identity rep 2: search c=16 15114.0 rps p50 1.014 p99 2.002 {'200': 120924} err 0
+[05:06:24] rust-identity rep 2: search c=64 15536.3 rps p50 4.089 p99 6.291 {'200': 124342} err 0
+[05:06:34] rust-identity rep 2: avatar c=1 71538.9 rps p50 0.013 p99 0.017 {'200': 572316} err 0
+[05:06:42] rust-identity rep 2: avatar c=16 417641.9 rps p50 0.036 p99 0.091 {'200': 3341270} err 0
+[05:06:50] rust-identity rep 2: avatar c=64 437448.4 rps p50 0.137 p99 0.373 {'200': 3500073} err 0
+[05:07:00] rust-identity rep 2: static_css c=1 76741.8 rps p50 0.012 p99 0.016 {'200': 613941} err 0
+[05:07:08] rust-identity rep 2: static_css c=16 417567.9 rps p50 0.035 p99 0.082 {'200': 3340657} err 0
+[05:07:16] rust-identity rep 2: static_css c=64 465707.0 rps p50 0.131 p99 0.314 {'200': 3726066} err 0
+[05:07:27] rust-identity rep 2: up c=1 36503.2 rps p50 0.026 p99 0.033 {'200': 292029} err 0
+[05:07:35] rust-identity rep 2: up c=16 160949.8 rps p50 0.1 p99 0.171 {'200': 1287645} err 0
+[05:07:43] rust-identity rep 2: up c=64 165218.4 rps p50 0.377 p99 0.78 {'200': 1321896} err 0
+[05:07:53] rust-identity rep 2: post_message c=1 2573.8 rps p50 0.346 p99 1.522 {'200': 20591} err 0
+[05:08:01] rust-identity rep 2: post_message c=16 5619.7 rps p50 2.417 p99 14.543 {'200': 44969} err 0
+[05:08:09] rust-identity rep 2: post_message c=64 5845.1 rps p50 9.991 p99 24.191 {'200': 46825} err 0
+[05:08:09] rust-identity rep 2: done -> ./bench/results/final-20260927/main/rust-identity-2.json
+[05:09:39] load before run: 1.49 3.91 4.38 (waited 90s)
+[05:09:39] rust rep 2: starting (load: 1.49 3.91 4.38)
+[05:09:50] rust rep 2: cold start 233ms, idle 49MB (anon 46MB)
+[05:10:00] rust rep 2: room_show c=1 636.3 rps p50 1.533 p99 2.249 {'200': 5091} err 0
+[05:10:08] rust rep 2: room_show c=16 2587.0 rps p50 6.223 p99 10.439 {'200': 20711} err 0
+[05:10:16] rust rep 2: room_show c=64 2564.2 rps p50 24.655 p99 44.095 {'200': 20574} err 0
+[05:10:26] rust rep 2: messages_page c=1 1017.9 rps p50 0.972 p99 1.145 {'200': 8143} err 0
+[05:10:34] rust rep 2: messages_page c=16 3939.0 rps p50 4.055 p99 6.727 {'200': 31527} err 0
+[05:10:42] rust rep 2: messages_page c=64 3929.4 rps p50 16.159 p99 26.719 {'200': 31495} err 0
+[05:10:52] rust rep 2: sidebar c=1 3014.6 rps p50 0.326 p99 0.422 {'200': 24118} err 0
+[05:11:00] rust rep 2: sidebar c=16 11291.9 rps p50 1.388 p99 2.527 {'200': 90351} err 0
+[05:11:08] rust rep 2: sidebar c=64 11397.1 rps p50 5.571 p99 9.319 {'200': 91234} err 0
+[05:11:18] rust rep 2: search c=1 1563.7 rps p50 0.63 p99 0.751 {'200': 12510} err 0
+[05:11:26] rust rep 2: search c=16 5996.0 rps p50 2.637 p99 4.471 {'200': 47982} err 0
+[05:11:34] rust rep 2: search c=64 5996.9 rps p50 10.591 p99 17.295 {'200': 48035} err 0
+[05:11:44] rust rep 2: avatar c=1 70379.9 rps p50 0.013 p99 0.017 {'200': 563043} err 0
+[05:11:52] rust rep 2: avatar c=16 408397.4 rps p50 0.035 p99 0.093 {'200': 3267327} err 0
+[05:12:00] rust rep 2: avatar c=64 429851.8 rps p50 0.138 p99 0.393 {'200': 3439282} err 0
+[05:12:10] rust rep 2: static_css c=1 75725.8 rps p50 0.012 p99 0.016 {'200': 605810} err 0
+[05:12:18] rust rep 2: static_css c=16 421142.0 rps p50 0.034 p99 0.083 {'200': 3369262} err 0
+[05:12:26] rust rep 2: static_css c=64 441193.7 rps p50 0.133 p99 0.336 {'200': 3529968} err 0
+[05:12:37] rust rep 2: up c=1 23955.8 rps p50 0.04 p99 0.052 {'200': 191647} err 0
+[05:12:45] rust rep 2: up c=16 110551.0 rps p50 0.146 p99 0.248 {'200': 884439} err 0
+[05:12:53] rust rep 2: up c=64 109221.7 rps p50 0.572 p99 1.184 {'200': 873870} err 0
+[05:13:03] rust rep 2: post_message c=1 2213.3 rps p50 0.412 p99 1.392 {'200': 17707} err 0
+[05:13:11] rust rep 2: post_message c=16 5291.0 rps p50 2.607 p99 14.583 {'200': 42338} err 0
+[05:13:19] rust rep 2: post_message c=64 4188.3 rps p50 11.151 p99 90.175 {'200': 33543} err 0
+[05:13:41] rust rep 2: cable 100 clients ready 100 lat all p50 2.461 p99 5.859 tput 2477.5 msg/s 37164 / 37164
+[05:14:06] rust rep 2: cable 500 clients ready 500 lat all p50 4.871 p99 8.655 tput 626.4 msg/s 9401 / 9401
+[05:14:31] rust rep 2: cable 1000 clients ready 1000 lat all p50 8.991 p99 11.855 tput 304.2 msg/s 4566 / 4566
+[05:14:33] rust rep 2: upload median 27.7ms
+[05:14:34] rust rep 2: done -> ./bench/results/final-20260927/main/rust-2.json
+[05:15:54] load before run: 1.36 3.35 4.05 (waited 80s)
+[05:15:54] reference rep 2: starting (load: 1.36 3.35 4.05)
+[05:16:06] reference rep 2: cold start 2473ms, idle 308MB (anon 287MB)
+[05:16:17] reference rep 2: room_show c=1 87.4 rps p50 9.831 p99 31.439 {'200': 699} err 0
+[05:16:25] reference rep 2: room_show c=16 247.6 rps p50 62.335 p99 156.415 {'200': 2004} err 0
+[05:16:34] reference rep 2: room_show c=64 224.9 rps p50 285.951 p99 356.351 {'200': 1863} err 0
+[05:16:44] reference rep 2: messages_page c=1 176.7 rps p50 5.419 p99 9.655 {'200': 1414} err 0
+[05:16:52] reference rep 2: messages_page c=16 442.8 rps p50 34.367 p99 92.863 {'200': 3556} err 0
+[05:17:00] reference rep 2: messages_page c=64 441.5 rps p50 146.943 p99 199.551 {'200': 3592} err 0
+[05:17:10] reference rep 2: sidebar c=1 222.9 rps p50 4.291 p99 6.191 {'200': 1784} err 0
+[05:17:18] reference rep 2: sidebar c=16 600.3 rps p50 25.343 p99 58.271 {'200': 4816} err 0
+[05:17:26] reference rep 2: sidebar c=64 588.0 rps p50 104.895 p99 150.015 {'200': 4782} err 0
+[05:17:36] reference rep 2: search c=1 175.5 rps p50 5.531 p99 7.347 {'200': 1404} err 0
+[05:17:44] reference rep 2: search c=16 423.5 rps p50 41.823 p99 71.487 {'200': 3401} err 0
+[05:17:52] reference rep 2: search c=64 417.1 rps p50 152.575 p99 177.023 {'200': 3398} err 0
+[05:18:02] reference rep 2: avatar c=1 29983.4 rps p50 0.031 p99 0.09 {'200': 239868} err 0
+[05:18:10] reference rep 2: avatar c=16 97362.5 rps p50 0.103 p99 0.897 {'200': 778926} err 0
+[05:18:18] reference rep 2: avatar c=64 79133.5 rps p50 0.32 p99 4.863 {'200': 633173} err 0
+[05:18:28] reference rep 2: static_css c=1 37383.0 rps p50 0.025 p99 0.062 {'200': 299066} err 0
+[05:18:37] reference rep 2: static_css c=16 135193.0 rps p50 0.08 p99 0.648 {'200': 1081581} err 0
+[05:18:45] reference rep 2: static_css c=64 114297.5 rps p50 0.299 p99 3.275 {'200': 914510} err 0
+[05:18:55] reference rep 2: up c=1 1924.6 rps p50 0.494 p99 0.982 {'200': 15397} err 0
+[05:19:03] reference rep 2: up c=16 4328.9 rps p50 3.613 p99 7.295 {'200': 34645} err 0
+[05:19:11] reference rep 2: up c=64 4266.6 rps p50 14.719 p99 23.391 {'200': 34197} err 0
+[05:19:21] reference rep 2: post_message c=1 153.8 rps p50 6.035 p99 18.463 {'200': 1231} err 0
+[05:19:29] reference rep 2: post_message c=16 281.7 rps p50 45.215 p99 166.655 {'200': 2272} err 0
+[05:19:37] reference rep 2: post_message c=64 279.1 rps p50 226.431 p99 342.015 {'200': 2285} err 0
+[05:20:00] reference rep 2: cable 100 clients ready 100 lat all p50 18.239 p99 27.135 tput 90.5 msg/s 1361 / 1361
+[05:20:25] reference rep 2: cable 500 clients ready 500 lat all p50 44.351 p99 70.719 tput 26.2 msg/s 396 / 396
+[05:20:51] reference rep 2: cable 1000 clients ready 1000 lat all p50 75.711 p99 161.023 tput 15.0 msg/s 228 / 228
+[05:20:54] reference rep 2: upload median 54.9ms
+[05:20:55] reference rep 2: done -> ./bench/results/final-20260927/main/reference-2.json
+[05:21:55] load before run: 1.36 2.92 3.70 (waited 60s)
+[05:21:55] reference rep 3: starting (load: 1.36 2.92 3.70)
+[05:22:07] reference rep 3: cold start 2443ms, idle 309MB (anon 286MB)
+[05:22:18] reference rep 3: room_show c=1 94.4 rps p50 10.487 p99 12.335 {'200': 756} err 0
+[05:22:26] reference rep 3: room_show c=16 231.8 rps p50 61.087 p99 174.463 {'200': 1870} err 0
+[05:22:34] reference rep 3: room_show c=64 197.1 rps p50 316.671 p99 419.839 {'200': 1639} err 0
+[05:22:44] reference rep 3: messages_page c=1 175.0 rps p50 5.579 p99 7.295 {'200': 1400} err 0
+[05:22:53] reference rep 3: messages_page c=16 444.1 rps p50 28.271 p99 104.255 {'200': 3571} err 0
+[05:23:01] reference rep 3: messages_page c=64 426.1 rps p50 143.743 p99 226.047 {'200': 3468} err 0
+[05:23:11] reference rep 3: sidebar c=1 222.3 rps p50 4.355 p99 6.035 {'200': 1779} err 0
+[05:23:19] reference rep 3: sidebar c=16 569.3 rps p50 27.439 p99 47.839 {'200': 4569} err 0
+[05:23:27] reference rep 3: sidebar c=64 526.7 rps p50 115.903 p99 190.207 {'200': 4282} err 0
+[05:23:37] reference rep 3: search c=1 173.2 rps p50 5.639 p99 7.255 {'200': 1386} err 0
+[05:23:45] reference rep 3: search c=16 414.1 rps p50 36.223 p99 79.167 {'200': 3329} err 0
+[05:23:53] reference rep 3: search c=64 386.6 rps p50 161.151 p99 228.351 {'200': 3152} err 0
+[05:24:03] reference rep 3: avatar c=1 30417.2 rps p50 0.03 p99 0.092 {'200': 243339} err 0
+[05:24:11] reference rep 3: avatar c=16 98435.8 rps p50 0.101 p99 0.882 {'200': 787512} err 0
+[05:24:19] reference rep 3: avatar c=64 78571.0 rps p50 0.33 p99 4.851 {'200': 628663} err 0
+[05:24:29] reference rep 3: static_css c=1 38051.0 rps p50 0.024 p99 0.063 {'200': 304411} err 0
+[05:24:37] reference rep 3: static_css c=16 134563.6 rps p50 0.08 p99 0.66 {'200': 1076550} err 0
+[05:24:45] reference rep 3: static_css c=64 110786.5 rps p50 0.293 p99 3.391 {'200': 886416} err 0
+[05:24:55] reference rep 3: up c=1 1935.2 rps p50 0.49 p99 0.933 {'200': 15482} err 0
+[05:25:03] reference rep 3: up c=16 4247.3 rps p50 3.661 p99 7.331 {'200': 33994} err 0
+[05:25:11] reference rep 3: up c=64 4192.5 rps p50 15.215 p99 23.087 {'200': 33606} err 0
+[05:25:21] reference rep 3: post_message c=1 150.9 rps p50 6.131 p99 18.351 {'200': 1208} err 0
+[05:25:30] reference rep 3: post_message c=16 261.7 rps p50 55.263 p99 159.871 {'200': 2105} err 0
+[05:25:38] reference rep 3: post_message c=64 270.9 rps p50 218.879 p99 400.383 {'200': 2227} err 0
+[05:26:01] reference rep 3: cable 100 clients ready 100 lat all p50 17.279 p99 63.231 tput 92.9 msg/s 1397 / 1397
+[05:26:26] reference rep 3: cable 500 clients ready 500 lat all p50 43.743 p99 115.263 tput 27.0 msg/s 408 / 408
+[05:26:54] reference rep 3: cable 1000 clients ready 1000 lat all p50 85.119 p99 152.703 tput 12.7 msg/s 217 / 217
+[05:26:57] reference rep 3: upload median 55.4ms
+[05:26:58] reference rep 3: done -> ./bench/results/final-20260927/main/reference-3.json
+[05:27:58] load before run: 1.36 2.71 3.42 (waited 60s)
+[05:27:58] rust rep 3: starting (load: 1.36 2.71 3.42)
+[05:28:08] rust rep 3: cold start 222ms, idle 50MB (anon 46MB)
+[05:28:18] rust rep 3: room_show c=1 621.6 rps p50 1.58 p99 2.249 {'200': 4973} err 0
+[05:28:26] rust rep 3: room_show c=16 2564.4 rps p50 6.259 p99 10.559 {'200': 20529} err 0
+[05:28:34] rust rep 3: room_show c=64 2547.6 rps p50 24.831 p99 44.767 {'200': 20443} err 0
+[05:28:44] rust rep 3: messages_page c=1 1002.9 rps p50 0.989 p99 1.131 {'200': 8023} err 0
+[05:28:52] rust rep 3: messages_page c=16 3934.8 rps p50 4.059 p99 6.751 {'200': 31493} err 0
+[05:29:01] rust rep 3: messages_page c=64 3888.8 rps p50 16.279 p99 27.567 {'200': 31171} err 0
+[05:29:11] rust rep 3: sidebar c=1 2980.5 rps p50 0.329 p99 0.426 {'200': 23845} err 0
+[05:29:19] rust rep 3: sidebar c=16 11008.2 rps p50 1.42 p99 2.621 {'200': 88079} err 0
+[05:29:27] rust rep 3: sidebar c=64 11265.3 rps p50 5.639 p99 9.495 {'200': 90180} err 0
+[05:29:37] rust rep 3: search c=1 1517.2 rps p50 0.655 p99 0.731 {'200': 12138} err 0
+[05:29:45] rust rep 3: search c=16 5915.5 rps p50 2.679 p99 4.515 {'200': 47339} err 0
+[05:29:53] rust rep 3: search c=64 5909.9 rps p50 10.751 p99 17.535 {'200': 47338} err 0
+[05:30:03] rust rep 3: avatar c=1 71462.9 rps p50 0.013 p99 0.018 {'200': 571707} err 0
+[05:30:11] rust rep 3: avatar c=16 393489.5 rps p50 0.036 p99 0.095 {'200': 3148067} err 0
+[05:30:19] rust rep 3: avatar c=64 429546.6 rps p50 0.138 p99 0.386 {'200': 3436849} err 0
+[05:30:29] rust rep 3: static_css c=1 78362.3 rps p50 0.012 p99 0.016 {'200': 626903} err 0
+[05:30:37] rust rep 3: static_css c=16 432479.0 rps p50 0.034 p99 0.082 {'200': 3459959} err 0
+[05:30:45] rust rep 3: static_css c=64 461182.9 rps p50 0.131 p99 0.324 {'200': 3689862} err 0
+[05:30:55] rust rep 3: up c=1 23839.8 rps p50 0.041 p99 0.049 {'200': 190720} err 0
+[05:31:03] rust rep 3: up c=16 106809.5 rps p50 0.151 p99 0.259 {'200': 854509} err 0
+[05:31:11] rust rep 3: up c=64 107001.1 rps p50 0.583 p99 1.205 {'200': 856107} err 0
+[05:31:21] rust rep 3: post_message c=1 2183.1 rps p50 0.417 p99 1.512 {'200': 17465} err 0
+[05:31:29] rust rep 3: post_message c=16 5262.1 rps p50 2.619 p99 14.567 {'200': 42105} err 0
+[05:31:37] rust rep 3: post_message c=64 5354.8 rps p50 10.975 p99 25.087 {'200': 42888} err 0
+[05:32:00] rust rep 3: cable 100 clients ready 100 lat all p50 2.445 p99 5.903 tput 2445.5 msg/s 36686 / 36686
+[05:32:25] rust rep 3: cable 500 clients ready 500 lat all p50 5.107 p99 21.519 tput 584.8 msg/s 8774 / 8774
+[05:32:49] rust rep 3: cable 1000 clients ready 1000 lat all p50 8.975 p99 11.447 tput 304.3 msg/s 4568 / 4568
+[05:32:51] rust rep 3: upload median 27.8ms
+[05:32:53] rust rep 3: done -> ./bench/results/final-20260927/main/rust-3.json
+[05:34:23] load before run: 1.41 3.45 3.66 (waited 90s)
+[05:34:23] rust-identity rep 3: starting (load: 1.41 3.45 3.66)
+[05:34:33] rust-identity rep 3: cold start 220ms, idle 47MB (anon 44MB)
+[05:34:43] rust-identity rep 3: room_show c=1 2172.1 rps p50 0.446 p99 0.552 {'200': 17377} err 0
+[05:34:51] rust-identity rep 3: room_show c=16 9020.2 rps p50 1.752 p99 3.089 {'200': 72178} err 0
+[05:34:59] rust-identity rep 3: room_show c=64 8621.4 rps p50 7.347 p99 12.495 {'200': 69031} err 0
+[05:35:09] rust-identity rep 3: messages_page c=1 3865.8 rps p50 0.251 p99 0.314 {'200': 30927} err 0
+[05:35:17] rust-identity rep 3: messages_page c=16 16689.7 rps p50 0.917 p99 1.789 {'200': 133534} err 0
+[05:35:25] rust-identity rep 3: messages_page c=64 15529.8 rps p50 4.077 p99 6.411 {'200': 124297} err 0
+[05:35:35] rust-identity rep 3: sidebar c=1 5620.5 rps p50 0.173 p99 0.242 {'200': 44965} err 0
+[05:35:43] rust-identity rep 3: sidebar c=16 19840.7 rps p50 0.767 p99 1.588 {'200': 158736} err 0
+[05:35:51] rust-identity rep 3: sidebar c=64 20576.5 rps p50 3.073 p99 5.027 {'200': 164666} err 0
+[05:36:01] rust-identity rep 3: search c=1 4017.1 rps p50 0.243 p99 0.325 {'200': 32138} err 0
+[05:36:09] rust-identity rep 3: search c=16 15339.4 rps p50 1.001 p99 1.942 {'200': 122730} err 0
+[05:36:17] rust-identity rep 3: search c=64 15396.8 rps p50 4.127 p99 6.327 {'200': 123231} err 0
+[05:36:28] rust-identity rep 3: avatar c=1 70524.8 rps p50 0.013 p99 0.017 {'200': 564203} err 0
+[05:36:36] rust-identity rep 3: avatar c=16 414953.2 rps p50 0.036 p99 0.092 {'200': 3319763} err 0
+[05:36:44] rust-identity rep 3: avatar c=64 434203.6 rps p50 0.137 p99 0.381 {'200': 3474075} err 0
+[05:36:54] rust-identity rep 3: static_css c=1 75239.7 rps p50 0.012 p99 0.017 {'200': 601923} err 0
+[05:37:02] rust-identity rep 3: static_css c=16 415861.5 rps p50 0.035 p99 0.083 {'200': 3327021} err 0
+[05:37:10] rust-identity rep 3: static_css c=64 446186.2 rps p50 0.132 p99 0.339 {'200': 3569922} err 0
+[05:37:20] rust-identity rep 3: up c=1 36050.1 rps p50 0.026 p99 0.034 {'200': 288403} err 0
+[05:37:28] rust-identity rep 3: up c=16 161940.8 rps p50 0.099 p99 0.169 {'200': 1295572} err 0
+[05:37:36] rust-identity rep 3: up c=64 166001.4 rps p50 0.373 p99 0.778 {'200': 1328158} err 0
+[05:37:46] rust-identity rep 3: post_message c=1 2559.0 rps p50 0.35 p99 1.428 {'200': 20472} err 0
+[05:37:54] rust-identity rep 3: post_message c=16 5483.7 rps p50 2.475 p99 14.607 {'200': 43886} err 0
+[05:38:02] rust-identity rep 3: post_message c=64 5690.9 rps p50 10.271 p99 24.351 {'200': 45582} err 0
+[05:38:03] rust-identity rep 3: done -> ./bench/results/final-20260927/main/rust-identity-3.json
+[05:39:43] load before run: 1.39 3.98 4.03 (waited 100s)
+[05:39:43] rust-identity rep 4: starting (load: 1.39 3.98 4.03)
+[05:39:53] rust-identity rep 4: cold start 226ms, idle 48MB (anon 44MB)
+[05:40:03] rust-identity rep 4: room_show c=1 2090.4 rps p50 0.467 p99 0.606 {'200': 16724} err 0
+[05:40:11] rust-identity rep 4: room_show c=16 9010.4 rps p50 1.755 p99 3.073 {'200': 72099} err 0
+[05:40:19] rust-identity rep 4: room_show c=64 8643.1 rps p50 7.335 p99 12.487 {'200': 69206} err 0
+[05:40:29] rust-identity rep 4: messages_page c=1 3916.5 rps p50 0.246 p99 0.353 {'200': 31332} err 0
+[05:40:37] rust-identity rep 4: messages_page c=16 16482.6 rps p50 0.927 p99 1.835 {'200': 131874} err 0
+[05:40:45] rust-identity rep 4: messages_page c=64 15425.7 rps p50 4.107 p99 6.435 {'200': 123464} err 0
+[05:40:55] rust-identity rep 4: sidebar c=1 5486.3 rps p50 0.177 p99 0.24 {'200': 43891} err 0
+[05:41:03] rust-identity rep 4: sidebar c=16 20024.0 rps p50 0.761 p99 1.574 {'200': 160208} err 0
+[05:41:11] rust-identity rep 4: sidebar c=64 20827.0 rps p50 3.039 p99 4.967 {'200': 166676} err 0
+[05:41:21] rust-identity rep 4: search c=1 4087.9 rps p50 0.238 p99 0.315 {'200': 32704} err 0
+[05:41:29] rust-identity rep 4: search c=16 15323.8 rps p50 1.002 p99 1.939 {'200': 122606} err 0
+[05:41:37] rust-identity rep 4: search c=64 15642.3 rps p50 4.065 p99 6.191 {'200': 125193} err 0
+[05:41:48] rust-identity rep 4: avatar c=1 71774.9 rps p50 0.013 p99 0.018 {'200': 574204} err 0
+[05:41:56] rust-identity rep 4: avatar c=16 436162.2 rps p50 0.035 p99 0.09 {'200': 3489465} err 0
+[05:42:04] rust-identity rep 4: avatar c=64 408459.0 rps p50 0.14 p99 0.452 {'200': 3268111} err 0
+[05:42:14] rust-identity rep 4: static_css c=1 75393.8 rps p50 0.012 p99 0.017 {'200': 603155} err 0
+[05:42:22] rust-identity rep 4: static_css c=16 436604.2 rps p50 0.034 p99 0.081 {'200': 3492966} err 0
+[05:42:30] rust-identity rep 4: static_css c=64 442689.4 rps p50 0.132 p99 0.34 {'200': 3541933} err 0
+[05:42:40] rust-identity rep 4: up c=1 36339.8 rps p50 0.026 p99 0.033 {'200': 290720} err 0
+[05:42:48] rust-identity rep 4: up c=16 164229.9 rps p50 0.097 p99 0.167 {'200': 1313887} err 0
+[05:42:56] rust-identity rep 4: up c=64 166270.5 rps p50 0.374 p99 0.777 {'200': 1330306} err 0
+[05:43:06] rust-identity rep 4: post_message c=1 2564.0 rps p50 0.345 p99 1.552 {'200': 20512} err 0
+[05:43:14] rust-identity rep 4: post_message c=16 5514.1 rps p50 2.455 p99 14.687 {'200': 44123} err 0
+[05:43:22] rust-identity rep 4: post_message c=64 5757.3 rps p50 10.143 p99 24.543 {'200': 46113} err 0
+[05:43:23] rust-identity rep 4: done -> ./bench/results/final-20260927/main/rust-identity-4.json
+[05:45:03] load before run: 1.36 4.18 4.31 (waited 100s)
+[05:45:03] rust rep 4: starting (load: 1.36 4.18 4.31)
+[05:45:13] rust rep 4: cold start 232ms, idle 47MB (anon 44MB)
+[05:45:23] rust rep 4: room_show c=1 638.8 rps p50 1.53 p99 2.243 {'200': 5111} err 0
+[05:45:31] rust rep 4: room_show c=16 2598.1 rps p50 6.211 p99 10.335 {'200': 20800} err 0
+[05:45:39] rust rep 4: room_show c=64 2577.9 rps p50 24.479 p99 43.423 {'200': 20686} err 0
+[05:45:49] rust rep 4: messages_page c=1 1014.0 rps p50 0.978 p99 1.11 {'200': 8112} err 0
+[05:45:57] rust rep 4: messages_page c=16 3968.8 rps p50 4.031 p99 6.679 {'200': 31766} err 0
+[05:46:05] rust rep 4: messages_page c=64 3938.4 rps p50 16.087 p99 27.615 {'200': 31566} err 0
+[05:46:15] rust rep 4: sidebar c=1 3038.4 rps p50 0.322 p99 0.439 {'200': 24308} err 0
+[05:46:23] rust rep 4: sidebar c=16 11281.0 rps p50 1.387 p99 2.535 {'200': 90265} err 0
+[05:46:31] rust rep 4: sidebar c=64 11308.0 rps p50 5.615 p99 9.631 {'200': 90517} err 0
+[05:46:41] rust rep 4: search c=1 1568.8 rps p50 0.629 p99 0.74 {'200': 12551} err 0
+[05:46:50] rust rep 4: search c=16 5997.6 rps p50 2.635 p99 4.503 {'200': 47996} err 0
+[05:46:58] rust rep 4: search c=64 6026.3 rps p50 10.551 p99 17.087 {'200': 48268} err 0
+[05:47:08] rust rep 4: avatar c=1 71071.2 rps p50 0.013 p99 0.017 {'200': 568574} err 0
+[05:47:16] rust rep 4: avatar c=16 426579.7 rps p50 0.035 p99 0.091 {'200': 3412787} err 0
+[05:47:24] rust rep 4: avatar c=64 433030.6 rps p50 0.141 p99 0.367 {'200': 3464717} err 0
+[05:47:34] rust rep 4: static_css c=1 76870.2 rps p50 0.012 p99 0.016 {'200': 614967} err 0
+[05:47:42] rust rep 4: static_css c=16 426374.2 rps p50 0.034 p99 0.083 {'200': 3411109} err 0
+[05:47:50] rust rep 4: static_css c=64 448062.3 rps p50 0.132 p99 0.33 {'200': 3584919} err 0
+[05:48:00] rust rep 4: up c=1 23892.6 rps p50 0.04 p99 0.049 {'200': 191142} err 0
+[05:48:08] rust rep 4: up c=16 108571.0 rps p50 0.149 p99 0.255 {'200': 868597} err 0
+[05:48:16] rust rep 4: up c=64 109032.1 rps p50 0.572 p99 1.189 {'200': 872358} err 0
+[05:48:26] rust rep 4: post_message c=1 2202.2 rps p50 0.413 p99 1.562 {'200': 17618} err 0
+[05:48:34] rust rep 4: post_message c=16 5304.2 rps p50 2.605 p99 14.847 {'200': 42441} err 0
+[05:48:42] rust rep 4: post_message c=64 5498.3 rps p50 10.663 p99 24.447 {'200': 44032} err 0
+[05:49:05] rust rep 4: cable 100 clients ready 100 lat all p50 2.461 p99 2.805 tput 2448.0 msg/s 36724 / 36724
+[05:49:29] rust rep 4: cable 500 clients ready 500 lat all p50 5.111 p99 8.247 tput 613.0 msg/s 9199 / 9199
+[05:49:55] rust rep 4: cable 1000 clients ready 1000 lat all p50 8.431 p99 12.311 tput 302.4 msg/s 4541 / 4541
+[05:49:57] rust rep 4: upload median 28.3ms
+[05:49:58] rust rep 4: done -> ./bench/results/final-20260927/main/rust-4.json
+[05:51:18] load before run: 1.41 3.76 4.21 (waited 80s)
+[05:51:18] reference rep 4: starting (load: 1.41 3.76 4.21)
+[05:51:31] reference rep 4: cold start 2432ms, idle 309MB (anon 287MB)
+[05:51:42] reference rep 4: room_show c=1 94.5 rps p50 10.527 p99 11.775 {'200': 756} err 0
+[05:51:50] reference rep 4: room_show c=16 233.0 rps p50 64.767 p99 170.495 {'200': 1877} err 0
+[05:51:58] reference rep 4: room_show c=64 203.8 rps p50 311.807 p99 391.167 {'200': 1690} err 0
+[05:52:08] reference rep 4: messages_page c=1 169.3 rps p50 5.487 p99 15.271 {'200': 1355} err 0
+[05:52:16] reference rep 4: messages_page c=16 456.3 rps p50 29.519 p99 90.303 {'200': 3663} err 0
+[05:52:24] reference rep 4: messages_page c=64 430.7 rps p50 153.599 p99 233.727 {'200': 3517} err 0
+[05:52:35] reference rep 4: sidebar c=1 221.5 rps p50 4.387 p99 6.079 {'200': 1773} err 0
+[05:52:43] reference rep 4: sidebar c=16 580.7 rps p50 26.735 p99 52.895 {'200': 4662} err 0
+[05:52:51] reference rep 4: sidebar c=64 540.8 rps p50 115.391 p99 182.911 {'200': 4386} err 0
+[05:53:01] reference rep 4: search c=1 173.3 rps p50 5.643 p99 7.375 {'200': 1387} err 0
+[05:53:09] reference rep 4: search c=16 416.7 rps p50 38.495 p99 69.823 {'200': 3346} err 0
+[05:53:17] reference rep 4: search c=64 391.2 rps p50 154.495 p99 243.199 {'200': 3201} err 0
+[05:53:27] reference rep 4: avatar c=1 30316.3 rps p50 0.03 p99 0.088 {'200': 242533} err 0
+[05:53:35] reference rep 4: avatar c=16 98243.9 rps p50 0.102 p99 0.876 {'200': 785985} err 0
+[05:53:43] reference rep 4: avatar c=64 78987.9 rps p50 0.328 p99 4.851 {'200': 632006} err 0
+[05:53:53] reference rep 4: static_css c=1 37828.6 rps p50 0.024 p99 0.062 {'200': 302631} err 0
+[05:54:01] reference rep 4: static_css c=16 136236.7 rps p50 0.08 p99 0.633 {'200': 1089936} err 0
+[05:54:09] reference rep 4: static_css c=64 111817.1 rps p50 0.283 p99 3.367 {'200': 894658} err 0
+[05:54:19] reference rep 4: up c=1 1926.7 rps p50 0.491 p99 0.864 {'200': 15414} err 0
+[05:54:27] reference rep 4: up c=16 4283.2 rps p50 3.649 p99 7.411 {'200': 34280} err 0
+[05:54:35] reference rep 4: up c=64 4231.3 rps p50 15.119 p99 22.415 {'200': 33919} err 0
+[05:54:45] reference rep 4: post_message c=1 150.2 rps p50 6.159 p99 18.111 {'200': 1202} err 0
+[05:54:53] reference rep 4: post_message c=16 272.6 rps p50 51.551 p99 158.975 {'200': 2195} err 0
+[05:55:02] reference rep 4: post_message c=64 271.7 rps p50 235.647 p99 369.919 {'200': 2228} err 0
+[05:55:25] reference rep 4: cable 100 clients ready 100 lat all p50 17.199 p99 62.431 tput 96.5 msg/s 1456 / 1456
+[05:55:50] reference rep 4: cable 500 clients ready 500 lat all p50 44.095 p99 66.495 tput 27.1 msg/s 410 / 410
+[05:56:16] reference rep 4: cable 1000 clients ready 1000 lat all p50 78.847 p99 104.511 tput 13.6 msg/s 208 / 208
+[05:56:19] reference rep 4: upload median 55.4ms
+[05:56:19] reference rep 4: done -> ./bench/results/final-20260927/main/reference-4.json
+[05:57:19] load before run: 1.32 3.02 3.78 (waited 60s)
+[05:57:19] reference rep 5: starting (load: 1.32 3.02 3.78)
+[05:57:32] reference rep 5: cold start 2457ms, idle 314MB (anon 291MB)
+[05:57:43] reference rep 5: room_show c=1 95.8 rps p50 10.215 p99 12.415 {'200': 767} err 0
+[05:57:51] reference rep 5: room_show c=16 239.3 rps p50 64.287 p99 162.303 {'200': 1926} err 0
+[05:57:59] reference rep 5: room_show c=64 206.2 rps p50 310.527 p99 392.191 {'200': 1717} err 0
+[05:58:09] reference rep 5: messages_page c=1 176.1 rps p50 5.511 p99 7.343 {'200': 1410} err 0
+[05:58:17] reference rep 5: messages_page c=16 442.9 rps p50 33.375 p99 83.967 {'200': 3561} err 0
+[05:58:25] reference rep 5: messages_page c=64 419.6 rps p50 150.911 p99 243.967 {'200': 3410} err 0
+[05:58:35] reference rep 5: sidebar c=1 222.1 rps p50 4.363 p99 6.015 {'200': 1777} err 0
+[05:58:43] reference rep 5: sidebar c=16 580.9 rps p50 23.919 p99 52.927 {'200': 4664} err 0
+[05:58:52] reference rep 5: sidebar c=64 537.2 rps p50 114.239 p99 186.751 {'200': 4361} err 0
+[05:59:02] reference rep 5: search c=1 176.8 rps p50 5.515 p99 7.235 {'200': 1415} err 0
+[05:59:10] reference rep 5: search c=16 427.4 rps p50 38.527 p99 72.255 {'200': 3431} err 0
+[05:59:18] reference rep 5: search c=64 388.5 rps p50 159.231 p99 235.775 {'200': 3166} err 0
+[05:59:28] reference rep 5: avatar c=1 29893.5 rps p50 0.031 p99 0.089 {'200': 239150} err 0
+[05:59:36] reference rep 5: avatar c=16 97896.8 rps p50 0.102 p99 0.899 {'200': 783210} err 0
+[05:59:44] reference rep 5: avatar c=64 78543.8 rps p50 0.323 p99 4.867 {'200': 628447} err 0
+[05:59:54] reference rep 5: static_css c=1 37428.6 rps p50 0.025 p99 0.063 {'200': 299435} err 0
+[06:00:02] reference rep 5: static_css c=16 134175.9 rps p50 0.08 p99 0.657 {'200': 1073445} err 0
+[06:00:10] reference rep 5: static_css c=64 111077.7 rps p50 0.289 p99 3.395 {'200': 888742} err 0
+[06:00:20] reference rep 5: up c=1 1924.4 rps p50 0.49 p99 0.889 {'200': 15396} err 0
+[06:00:28] reference rep 5: up c=16 4289.2 rps p50 3.629 p99 7.211 {'200': 34332} err 0
+[06:00:36] reference rep 5: up c=64 4214.0 rps p50 15.119 p99 23.167 {'200': 33785} err 0
+[06:00:46] reference rep 5: post_message c=1 146.7 rps p50 6.151 p99 23.423 {'200': 1174} err 0
+[06:00:54] reference rep 5: post_message c=16 273.4 rps p50 55.935 p99 155.647 {'200': 2197} err 0
+[06:01:02] reference rep 5: post_message c=64 264.3 rps p50 243.071 p99 455.679 {'200': 2188} err 0
+[06:01:25] reference rep 5: cable 100 clients ready 100 lat all p50 16.927 p99 64.159 tput 96.4 msg/s 1449 / 1449
+[06:01:51] reference rep 5: cable 500 clients ready 500 lat all p50 43.775 p99 111.807 tput 27.0 msg/s 409 / 409
+[06:02:18] reference rep 5: cable 1000 clients ready 1000 lat all p50 79.167 p99 158.847 tput 13.5 msg/s 225 / 225
+[06:02:21] reference rep 5: upload median 55.5ms
+[06:02:21] reference rep 5: done -> ./bench/results/final-20260927/main/reference-5.json
+[06:03:12] load before run: 1.38 2.87 3.55 (waited 50s)
+[06:03:12] rust rep 5: starting (load: 1.38 2.87 3.55)
+[06:03:22] rust rep 5: cold start 229ms, idle 48MB (anon 44MB)
+[06:03:32] rust rep 5: room_show c=1 636.7 rps p50 1.549 p99 2.221 {'200': 5094} err 0
+[06:03:40] rust rep 5: room_show c=16 2574.4 rps p50 6.247 p99 10.415 {'200': 20614} err 0
+[06:03:48] rust rep 5: room_show c=64 2547.3 rps p50 24.719 p99 44.255 {'200': 20442} err 0
+[06:03:58] rust rep 5: messages_page c=1 1010.6 rps p50 0.976 p99 1.394 {'200': 8085} err 0
+[06:04:06] rust rep 5: messages_page c=16 3920.7 rps p50 4.069 p99 6.799 {'200': 31380} err 0
+[06:04:14] rust rep 5: messages_page c=64 3896.1 rps p50 16.295 p99 27.983 {'200': 31228} err 0
+[06:04:24] rust rep 5: sidebar c=1 2813.9 rps p50 0.352 p99 0.425 {'200': 22511} err 0
+[06:04:32] rust rep 5: sidebar c=16 11065.6 rps p50 1.416 p99 2.579 {'200': 88540} err 0
+[06:04:40] rust rep 5: sidebar c=64 11249.1 rps p50 5.643 p99 9.479 {'200': 90051} err 0
+[06:04:50] rust rep 5: search c=1 1547.6 rps p50 0.638 p99 0.744 {'200': 12382} err 0
+[06:04:58] rust rep 5: search c=16 5865.2 rps p50 2.693 p99 4.575 {'200': 46934} err 0
+[06:05:06] rust rep 5: search c=64 5894.4 rps p50 10.767 p99 17.535 {'200': 47215} err 0
+[06:05:16] rust rep 5: avatar c=1 71237.5 rps p50 0.013 p99 0.017 {'200': 569904} err 0
+[06:05:24] rust rep 5: avatar c=16 413216.7 rps p50 0.035 p99 0.093 {'200': 3305907} err 0
+[06:05:32] rust rep 5: avatar c=64 425342.1 rps p50 0.138 p99 0.396 {'200': 3403241} err 0
+[06:05:43] rust rep 5: static_css c=1 76445.7 rps p50 0.012 p99 0.016 {'200': 611570} err 0
+[06:05:51] rust rep 5: static_css c=16 431768.4 rps p50 0.034 p99 0.082 {'200': 3454368} err 0
+[06:05:59] rust rep 5: static_css c=64 459212.4 rps p50 0.13 p99 0.326 {'200': 3674122} err 0
+[06:06:09] rust rep 5: up c=1 23639.9 rps p50 0.041 p99 0.052 {'200': 189121} err 0
+[06:06:17] rust rep 5: up c=16 107715.0 rps p50 0.15 p99 0.257 {'200': 861750} err 0
+[06:06:25] rust rep 5: up c=64 111856.2 rps p50 0.554 p99 1.157 {'200': 894955} err 0
+[06:06:35] rust rep 5: post_message c=1 2192.6 rps p50 0.417 p99 1.423 {'200': 17541} err 0
+[06:06:43] rust rep 5: post_message c=16 5272.1 rps p50 2.623 p99 14.727 {'200': 42187} err 0
+[06:06:51] rust rep 5: post_message c=64 5354.6 rps p50 10.943 p99 24.847 {'200': 42911} err 0
+[06:07:13] rust rep 5: cable 100 clients ready 100 lat all p50 2.459 p99 4.795 tput 2447.2 msg/s 36711 / 36711
+[06:07:38] rust rep 5: cable 500 clients ready 500 lat all p50 4.771 p99 8.527 tput 603.8 msg/s 9060 / 9060
+[06:08:03] rust rep 5: cable 1000 clients ready 1000 lat all p50 9.015 p99 14.623 tput 298.0 msg/s 4474 / 4474
+[06:08:05] rust rep 5: upload median 27.6ms
+[06:08:06] rust rep 5: done -> ./bench/results/final-20260927/main/rust-5.json
+[06:09:16] load before run: 1.46 3.30 3.64 (waited 70s)
+[06:09:16] rust-identity rep 5: starting (load: 1.46 3.30 3.64)
+[06:09:26] rust-identity rep 5: cold start 239ms, idle 48MB (anon 44MB)
+[06:09:36] rust-identity rep 5: room_show c=1 2083.2 rps p50 0.468 p99 0.606 {'200': 16666} err 0
+[06:09:44] rust-identity rep 5: room_show c=16 8946.5 rps p50 1.761 p99 3.115 {'200': 71588} err 0
+[06:09:53] rust-identity rep 5: room_show c=64 8566.5 rps p50 7.403 p99 12.743 {'200': 68591} err 0
+[06:10:03] rust-identity rep 5: messages_page c=1 3938.2 rps p50 0.245 p99 0.322 {'200': 31506} err 0
+[06:10:11] rust-identity rep 5: messages_page c=16 16357.6 rps p50 0.933 p99 1.831 {'200': 130879} err 0
+[06:10:19] rust-identity rep 5: messages_page c=64 15350.1 rps p50 4.127 p99 6.491 {'200': 122859} err 0
+[06:10:29] rust-identity rep 5: sidebar c=1 5452.9 rps p50 0.179 p99 0.241 {'200': 43625} err 0
+[06:10:37] rust-identity rep 5: sidebar c=16 20004.0 rps p50 0.761 p99 1.569 {'200': 160046} err 0
+[06:10:45] rust-identity rep 5: sidebar c=64 20907.9 rps p50 3.017 p99 4.983 {'200': 167322} err 0
+[06:10:55] rust-identity rep 5: search c=1 4019.3 rps p50 0.243 p99 0.319 {'200': 32155} err 0
+[06:11:03] rust-identity rep 5: search c=16 15253.6 rps p50 1.007 p99 1.945 {'200': 122043} err 0
+[06:11:11] rust-identity rep 5: search c=64 15398.3 rps p50 4.123 p99 6.315 {'200': 123237} err 0
+[06:11:21] rust-identity rep 5: avatar c=1 71179.9 rps p50 0.013 p99 0.018 {'200': 569443} err 0
+[06:11:29] rust-identity rep 5: avatar c=16 416941.2 rps p50 0.036 p99 0.093 {'200': 3335674} err 0
+[06:11:37] rust-identity rep 5: avatar c=64 437124.5 rps p50 0.137 p99 0.375 {'200': 3497472} err 0
+[06:11:47] rust-identity rep 5: static_css c=1 74467.8 rps p50 0.013 p99 0.016 {'200': 595748} err 0
+[06:11:55] rust-identity rep 5: static_css c=16 439195.4 rps p50 0.034 p99 0.08 {'200': 3513682} err 0
+[06:12:03] rust-identity rep 5: static_css c=64 452850.3 rps p50 0.132 p99 0.332 {'200': 3623245} err 0
+[06:12:13] rust-identity rep 5: up c=1 36386.3 rps p50 0.026 p99 0.033 {'200': 291093} err 0
+[06:12:21] rust-identity rep 5: up c=16 163589.2 rps p50 0.098 p99 0.167 {'200': 1308760} err 0
+[06:12:29] rust-identity rep 5: up c=64 162440.4 rps p50 0.385 p99 0.794 {'200': 1299669} err 0
+[06:12:39] rust-identity rep 5: post_message c=1 2539.1 rps p50 0.351 p99 1.601 {'200': 20314} err 0
+[06:12:47] rust-identity rep 5: post_message c=16 5615.9 rps p50 2.427 p99 14.431 {'200': 44938} err 0
+[06:12:55] rust-identity rep 5: post_message c=64 5620.0 rps p50 10.399 p99 24.911 {'200': 45074} err 0
+[06:12:56] rust-identity rep 5: done -> ./bench/results/final-20260927/main/rust-identity-5.json
+```
+date: 2026-09-27T04:46:24+02:00
+host: 7.2.5-4-omarchy, AMD Ryzen 9 9955HX 16-Core Processor, 32 threads, 91GB
+server cpus: 8-11 (nproc 4); loadgen cpus: 12-15; network: host
+env: WEB_CONCURRENCY=3 JOB_CONCURRENCY=3 RAILS_MAX_THREADS=5 
+rust extra env: 
+reference image: campfire-reference:app sha256:70ab5e2abe726bfdfc177af4fa8465cd90ba3b3e3f532c8633f818cf63545adf 2026-09-26T14:42:50.327050882+02:00
+rust image: campfire-rust:head-5181aa4 sha256:033927228539c17717887043791c154d9996f7ca9eb2e3683c91f9925eb200d5 2026-09-27T04:05:37.180679451+02:00
+rust-identity image: campfire-rust:head-5181aa4 sha256:033927228539c17717887043791c154d9996f7ca9eb2e3683c91f9925eb200d5 2026-09-27T04:05:37.180679451+02:00
+rust HEAD: 5181aa4 (dirty: 0 files)
+```
+
+Reps: reference 5, rust 5, rust-identity 5. Cells: median [min–max].
+
+### Startup and memory
+
+| Metric | Rails | Rust | Rust adv. |
+|---|---|---|---|
+| cold start: docker run → /up 200 (ms) | 2,457 [2,432–2,473] | 232 [222–234] | 10.6× |
+| idle memory.current (MB) | 309 [305–314] | 49.0 [47.0–50.0] | 6.3× |
+| idle anon (MB) | 287 [283–291] | 46.0 [44.0–46.0] | 6.2× |
+| peak memory.current under load (MB) | 1,468 [1,383–1,552] | 1,867 [1,838–1,876] | 0.8× |
+| peak anon under load (MB) | 1,417 [1,326–1,500] | 1,514 [1,510–1,520] | 0.9× |
+
+### HTTP (signed in as david; keep-alive; c = concurrent connections)
+
+| Metric | Rails | Rust | Rust adv. | Rust, no gzip | vs Rust gzip |
+|---|---|---|---|---|---|
+| room_show c=1 req/s | 94.5 [87.4–95.8] | 636 [622–639] | 6.7× | 2,090 [2,081–2,172] | 3.29× |
+| room_show c=1 p50 ms | 10.2 [9.8–10.5] | 1.55 [1.53–1.58] | 6.6× | 0.47 [0.45–0.47] | 3.32× |
+| room_show c=1 p99 ms | 12.4 [11.8–31.4] | 2.24 [2.22–2.25] | 5.5× | 0.61 [0.55–0.63] | 3.70× |
+| room_show c=16 req/s | 234 [232–248] | 2,577 [2,564–2,598] | 11.0× | 8,973 [8,927–9,020] | 3.48× |
+| room_show c=16 p50 ms | 62.3 [60.7–64.8] | 6.25 [6.21–6.26] | 10.0× | 1.76 [1.75–1.77] | 3.55× |
+| room_show c=16 p99 ms | 170 [156–174] | 10.4 [10.3–10.6] | 16.4× | 3.12 [3.07–3.17] | 3.34× |
+| room_show c=64 req/s | 206 [197–233] | 2,564 [2,547–2,578] | 12.4× | 8,621 [8,566–8,652] | 3.36× |
+| room_show c=64 p50 ms | 311 [270–317] | 24.7 [24.5–24.8] | 12.6× | 7.35 [7.33–7.40] | 3.36× |
+| room_show c=64 p99 ms | 391 [348–420] | 44.1 [42.9–44.8] | 8.9× | 12.5 [12.3–12.7] | 3.53× |
+| messages_page c=1 req/s | 176 [169–177] | 1,014 [1,003–1,018] | 5.8× | 3,938 [3,866–4,336] | 3.88× |
+| messages_page c=1 p50 ms | 5.51 [5.42–5.58] | 0.98 [0.97–0.99] | 5.6× | 0.24 [0.22–0.25] | 3.98× |
+| messages_page c=1 p99 ms | 7.34 [7.20–15.27] | 1.15 [1.11–1.39] | 6.4× | 0.32 [0.31–0.35] | 3.56× |
+| messages_page c=16 req/s | 444 [443–456] | 3,939 [3,921–3,969] | 8.9× | 16,500 [16,358–16,690] | 4.19× |
+| messages_page c=16 p50 ms | 33.4 [28.3–35.6] | 4.05 [4.03–4.07] | 8.2× | 0.92 [0.91–0.93] | 4.41× |
+| messages_page c=16 p99 ms | 90.3 [74.2–104.3] | 6.73 [6.66–6.80] | 13.4× | 1.83 [1.79–1.90] | 3.67× |
+| messages_page c=64 req/s | 431 [420–442] | 3,925 [3,889–3,938] | 9.1× | 15,530 [15,350–15,573] | 3.96× |
+| messages_page c=64 p50 ms | 151 [144–156] | 16.2 [16.1–16.3] | 9.3× | 4.08 [4.03–4.13] | 3.96× |
+| messages_page c=64 p99 ms | 226 [200–244] | 27.6 [26.7–28.1] | 8.2× | 6.49 [6.41–6.67] | 4.25× |
+| sidebar c=1 req/s | 222 [222–223] | 2,980 [2,764–3,038] | 13.4× | 5,554 [5,453–5,620] | 1.86× |
+| sidebar c=1 p50 ms | 4.36 [4.29–4.39] | 0.33 [0.32–0.36] | 13.2× | 0.17 [0.17–0.18] | 1.88× |
+| sidebar c=1 p99 ms | 6.08 [6.01–6.19] | 0.43 [0.42–0.44] | 14.3× | 0.24 [0.24–0.24] | 1.77× |
+| sidebar c=16 req/s | 581 [569–603] | 11,066 [11,008–11,292] | 19.0× | 19,881 [19,609–20,024] | 1.80× |
+| sidebar c=16 p50 ms | 26.7 [23.9–27.4] | 1.42 [1.39–1.42] | 18.9× | 0.76 [0.76–0.77] | 1.86× |
+| sidebar c=16 p99 ms | 52.9 [47.8–58.3] | 2.58 [2.53–2.62] | 20.5× | 1.59 [1.57–1.69] | 1.62× |
+| sidebar c=64 req/s | 541 [527–593] | 11,265 [11,249–11,397] | 20.8× | 20,833 [20,576–20,908] | 1.85× |
+| sidebar c=64 p50 ms | 114 [104–116] | 5.63 [5.57–5.64] | 20.3× | 3.02 [2.97–3.07] | 1.87× |
+| sidebar c=64 p99 ms | 183 [150–190] | 9.48 [9.32–9.63] | 19.3× | 5.03 [4.97–5.35] | 1.89× |
+| search c=1 req/s | 176 [173–177] | 1,559 [1,517–1,569] | 8.9× | 4,019 [3,919–4,088] | 2.58× |
+| search c=1 p50 ms | 5.53 [5.49–5.64] | 0.63 [0.63–0.66] | 8.8× | 0.24 [0.24–0.25] | 2.60× |
+| search c=1 p99 ms | 7.35 [7.24–7.38] | 0.74 [0.73–0.78] | 9.9× | 0.32 [0.30–0.33] | 2.36× |
+| search c=16 req/s | 420 [414–427] | 5,933 [5,865–5,998] | 14.1× | 15,254 [14,894–15,339] | 2.57× |
+| search c=16 p50 ms | 38.5 [36.2–41.8] | 2.67 [2.63–2.69] | 14.4× | 1.01 [1.00–1.02] | 2.65× |
+| search c=16 p99 ms | 71.5 [60.8–79.2] | 4.51 [4.47–4.58] | 15.8× | 1.95 [1.94–2.12] | 2.32× |
+| search c=64 req/s | 391 [387–418] | 5,971 [5,894–6,026] | 15.3× | 15,398 [15,195–15,642] | 2.58× |
+| search c=64 p50 ms | 154 [152–161] | 10.6 [10.6–10.8] | 14.5× | 4.12 [4.07–4.13] | 2.58× |
+| search c=64 p99 ms | 228 [177–243] | 17.4 [17.1–17.5] | 13.2× | 6.32 [6.19–6.79] | 2.75× |
+| avatar c=1 req/s | 29,983 [29,894–30,417] | 71,071 [70,380–71,463] | 2.4× | 71,539 [70,525–71,775] | 1.01× |
+| avatar c=1 p50 ms | 0.03 [0.03–0.03] | 0.01 [0.01–0.01] | 2.4× | 0.01 [0.01–0.01] | 1.00× |
+| avatar c=1 p99 ms | 0.09 [0.09–0.09] | 0.02 [0.02–0.02] | 5.3× | 0.02 [0.02–0.02] | 0.94× |
+| avatar c=16 req/s | 98,244 [97,362–99,830] | 413,217 [393,490–426,580] | 4.2× | 416,941 [405,720–436,162] | 1.01× |
+| avatar c=16 p50 ms | 0.10 [0.10–0.10] | 0.04 [0.04–0.04] | 2.9× | 0.04 [0.04–0.04] | 0.97× |
+| avatar c=16 p99 ms | 0.88 [0.88–0.90] | 0.09 [0.09–0.10] | 9.5× | 0.09 [0.09–0.09] | 1.01× |
+| avatar c=64 req/s | 78,988 [78,544–79,496] | 429,852 [425,342–435,304] | 5.4× | 437,124 [408,459–441,521] | 1.02× |
+| avatar c=64 p50 ms | 0.33 [0.32–0.33] | 0.14 [0.14–0.14] | 2.4× | 0.14 [0.14–0.14] | 1.01× |
+| avatar c=64 p99 ms | 4.85 [4.79–4.87] | 0.39 [0.37–0.40] | 12.6× | 0.38 [0.37–0.45] | 1.03× |
+| static_css c=1 req/s | 37,429 [37,286–38,051] | 76,446 [75,726–78,362] | 2.0× | 75,394 [74,468–76,742] | 0.99× |
+| static_css c=1 p50 ms | 0.03 [0.02–0.03] | 0.01 [0.01–0.01] | 2.1× | 0.01 [0.01–0.01] | 1.00× |
+| static_css c=1 p99 ms | 0.06 [0.06–0.06] | 0.02 [0.02–0.02] | 3.9× | 0.02 [0.02–0.02] | 1.00× |
+| static_css c=16 req/s | 135,193 [134,176–136,287] | 426,374 [417,727–432,479] | 3.2× | 424,559 [415,862–439,195] | 1.00× |
+| static_css c=16 p50 ms | 0.08 [0.08–0.08] | 0.03 [0.03–0.03] | 2.4× | 0.03 [0.03–0.04] | 1.00× |
+| static_css c=16 p99 ms | 0.65 [0.63–0.66] | 0.08 [0.08–0.09] | 7.8× | 0.08 [0.08–0.08] | 1.02× |
+| static_css c=64 req/s | 111,078 [110,376–114,298] | 459,212 [441,194–465,595] | 4.1× | 452,850 [442,689–468,730] | 0.99× |
+| static_css c=64 p50 ms | 0.29 [0.28–0.30] | 0.13 [0.13–0.13] | 2.2× | 0.13 [0.13–0.13] | 0.99× |
+| static_css c=64 p99 ms | 3.39 [3.27–3.43] | 0.33 [0.32–0.34] | 10.4× | 0.33 [0.31–0.34] | 0.98× |
+| up c=1 req/s | 1,927 [1,924–1,935] | 23,891 [23,640–23,956] | 12.4× | 36,386 [36,050–36,551] | 1.52× |
+| up c=1 p50 ms | 0.49 [0.49–0.49] | 0.04 [0.04–0.04] | 12.0× | 0.03 [0.03–0.03] | 1.58× |
+| up c=1 p99 ms | 0.93 [0.86–0.98] | 0.05 [0.05–0.05] | 19.0× | 0.03 [0.03–0.03] | 1.48× |
+| up c=16 req/s | 4,289 [4,247–4,329] | 107,715 [106,810–110,551] | 25.1× | 163,589 [160,950–165,620] | 1.52× |
+| up c=16 p50 ms | 3.63 [3.59–3.66] | 0.15 [0.15–0.15] | 24.2× | 0.10 [0.10–0.10] | 1.53× |
+| up c=16 p99 ms | 7.33 [7.21–7.41] | 0.26 [0.25–0.26] | 28.5× | 0.17 [0.17–0.17] | 1.54× |
+| up c=64 req/s | 4,231 [4,192–4,285] | 109,222 [107,001–111,856] | 25.8× | 165,218 [162,440–166,270] | 1.51× |
+| up c=64 p50 ms | 15.1 [14.7–15.2] | 0.57 [0.55–0.58] | 26.4× | 0.38 [0.37–0.39] | 1.52× |
+| up c=64 p99 ms | 23.1 [22.4–23.4] | 1.18 [1.16–1.21] | 19.5× | 0.78 [0.78–0.79] | 1.52× |
+| post_message c=1 req/s | 151 [147–154] | 2,202 [2,183–2,213] | 14.6× | 2,559 [2,539–2,574] | 1.16× |
+| post_message c=1 p50 ms | 6.13 [6.04–6.16] | 0.41 [0.41–0.42] | 14.9× | 0.35 [0.34–0.35] | 1.18× |
+| post_message c=1 p99 ms | 18.4 [18.1–23.4] | 1.51 [1.39–1.56] | 12.1× | 1.52 [1.43–1.60] | 0.99× |
+| post_message c=16 req/s | 273 [262–282] | 5,272 [5,260–5,304] | 19.3× | 5,515 [5,484–5,620] | 1.05× |
+| post_message c=16 p50 ms | 53.6 [45.2–55.9] | 2.62 [2.60–2.63] | 20.5× | 2.46 [2.42–2.48] | 1.07× |
+| post_message c=16 p99 ms | 159 [149–167] | 14.6 [14.6–14.8] | 10.9× | 14.5 [14.4–14.7] | 1.00× |
+| post_message c=64 req/s | 272 [264–279] | 5,355 [4,188–5,498] | 19.7× | 5,691 [5,620–5,845] | 1.06× |
+| post_message c=64 p50 ms | 226 [219–243] | 11.0 [10.7–11.2] | 20.6× | 10.3 [10.0–10.4] | 1.07× |
+| post_message c=64 p99 ms | 370 [332–456] | 24.8 [24.4–90.2] | 14.9× | 24.5 [24.2–24.9] | 1.01× |
+
+### HTTP errors / non-2xx-3xx (first rep, per app)
+
+| Metric | Rails | Rust | Rust adv. |
+|---|---|---|---|
+- reference: none
+- rust: none
+- rust-identity: none
+
+### Action Cable fan-out (one room; chatter.js subscriptions per client)
+
+| Metric | Rails | Rust | Rust adv. |
+|---|---|---|---|
+| 100 clients: subscribed | 100 [100–100] | 100 [100–100] | 1.0× |
+| 100 clients: connect+subscribe all (s) | 0.22 [0.22–0.27] | 0.06 [0.06–0.11] | 3.7× |
+| 100 clients: paced post→one client p50 ms | 13.1 [12.6–13.5] | 2.21 [2.19–2.29] | 5.9× |
+| 100 clients: paced post→all clients p50 ms | 17.3 [16.9–18.5] | 2.46 [2.44–2.51] | 7.0× |
+| 100 clients: paced post→all clients p99 ms | 62.4 [27.1–64.2] | 5.86 [2.81–6.27] | 10.7× |
+| 100 clients: max sustained msgs/s (delivered to all) | 92.9 [86.4–96.5] | 2,447 [2,428–2,478] | 26.3× |
+| 100 clients: deliveries/s (client×message) | 9,286 [8,644–9,648] | 244,719 [242,799–247,746] | 26.4× |
+| 100 clients: saturated post→all p50 ms | 40.7 [39.1–41.0] | 1.32 [1.31–1.33] | 30.8× |
+| 100 clients: saturated POST p50 ms | 34.0 [29.6–39.0] | 1.45 [1.44–1.47] | 23.4× |
+| 500 clients: subscribed | 500 [500–500] | 500 [500–500] | 1.0× |
+| 500 clients: connect+subscribe all (s) | 0.69 [0.68–0.75] | 0.13 [0.11–0.14] | 5.3× |
+| 500 clients: paced post→one client p50 ms | 23.2 [23.0–24.7] | 3.25 [3.19–3.34] | 7.1× |
+| 500 clients: paced post→all clients p50 ms | 43.8 [43.1–44.4] | 5.11 [4.77–5.17] | 8.6× |
+| 500 clients: paced post→all clients p99 ms | 112 [66–127] | 8.53 [6.71–21.52] | 13.1× |
+| 500 clients: max sustained msgs/s (delivered to all) | 27.0 [26.2–27.5] | 604 [585–626] | 22.4× |
+| 500 clients: deliveries/s (client×message) | 13,523 [13,106–13,727] | 301,899 [292,379–313,220] | 22.3× |
+| 500 clients: saturated post→all p50 ms | 124 [114–129] | 8.75 [8.70–9.03] | 14.2× |
+| 500 clients: saturated POST p50 ms | 111 [107–142] | 6.25 [6.14–6.32] | 17.7× |
+| 1000 clients: subscribed | 1,000 [1,000–1,000] | 1,000 [1,000–1,000] | 1.0× |
+| 1000 clients: connect+subscribe all (s) | 1.32 [1.32–1.39] | 0.13 [0.12–1.15] | 10.2× |
+| 1000 clients: paced post→one client p50 ms | 38.0 [37.2–40.9] | 4.86 [4.75–4.91] | 7.8× |
+| 1000 clients: paced post→all clients p50 ms | 78.8 [75.7–85.1] | 8.97 [8.43–9.02] | 8.8× |
+| 1000 clients: paced post→all clients p99 ms | 159 [105–162] | 12.3 [11.4–14.6] | 12.9× |
+| 1000 clients: max sustained msgs/s (delivered to all) | 13.6 [12.7–15.0] | 304 [298–310] | 22.4× |
+| 1000 clients: deliveries/s (client×message) | 13,646 [12,712–14,955] | 304,197 [297,988–310,255] | 22.3× |
+| 1000 clients: saturated post→all p50 ms | 266 [214–2,179] | 16.7 [16.3–17.1] | 15.9× |
+| 1000 clients: saturated POST p50 ms | 184 [120–245] | 13.0 [12.7–13.3] | 14.2× |
+
+### Upload + thumbnail (black_hole.jpg, 505 KB)
+
+| Metric | Rails | Rust | Rust adv. |
+|---|---|---|---|
+| POST with attachment (ms) | 55.0 [49.7–55.2] | 27.5 [27.4–28.4] | 2.0× |
+| then GET thumb → 200 (ms) | 0.40 [0.40–0.50] | 0.30 [0.20–0.30] | 1.3× |
+| POST → thumbnail served (ms) | 55.4 [50.1–55.5] | 27.8 [27.6–28.7] | 2.0× |
+
+### Memory during cable fan-out, by process (MB, peak within the phase)
+
+App process: Rails' Puma master and workers (Action Cable runs in them), or Rust's one campfire
+process (its front server included). Pss counts pages shared between forked workers once;
+RssAnon counts them in every process.
+
+| Metric | Rails | Rust | Rust adv. |
+|---|---|---|---|
+| 100 clients, all subscribed, idle: app process Pss | 560 [545–579] | 1,365 [1,356–1,369] | 0.4× |
+| 100 clients, all subscribed, idle: app process RssAnon | 703 [693–723] | 1,330 [1,322–1,335] | 0.5× |
+| 100 clients, all subscribed, idle: app + Redis + Thruster Pss | 600 [585–619] | 1,365 [1,356–1,369] | 0.4× |
+| 100 clients, all subscribed, idle: whole container Pss | 883 [870–898] | 1,365 [1,356–1,369] | 0.6× |
+| 100 clients, saturated fan-out: app process Pss | 699 [670–714] | 1,368 [1,363–1,371] | 0.5× |
+| 100 clients, saturated fan-out: app process RssAnon | 842 [813–859] | 1,334 [1,329–1,336] | 0.6× |
+| 100 clients, saturated fan-out: app + Redis + Thruster Pss | 751 [722–766] | 1,368 [1,363–1,371] | 0.5× |
+| 100 clients, saturated fan-out: whole container Pss | 1,028 [1,004–1,066] | 1,368 [1,363–1,371] | 0.8× |
+| 500 clients, all subscribed, idle: app process Pss | 635 [632–652] | 1,353 [1,352–1,357] | 0.5× |
+| 500 clients, all subscribed, idle: app process RssAnon | 778 [774–796] | 1,318 [1,316–1,322] | 0.6× |
+| 500 clients, all subscribed, idle: app + Redis + Thruster Pss | 704 [701–722] | 1,353 [1,352–1,357] | 0.5× |
+| 500 clients, all subscribed, idle: whole container Pss | 997 [980–1,021] | 1,353 [1,352–1,357] | 0.7× |
+| 500 clients, saturated fan-out: app process Pss | 829 [782–839] | 1,368 [1,366–1,371] | 0.6× |
+| 500 clients, saturated fan-out: app process RssAnon | 973 [923–981] | 1,333 [1,331–1,335] | 0.7× |
+| 500 clients, saturated fan-out: app + Redis + Thruster Pss | 911 [865–919] | 1,368 [1,366–1,371] | 0.7× |
+| 500 clients, saturated fan-out: whole container Pss | 1,193 [1,161–1,210] | 1,368 [1,366–1,371] | 0.9× |
+| 1000 clients, all subscribed, idle: app process Pss | 708 [681–719] | 1,372 [1,369–1,375] | 0.5× |
+| 1000 clients, all subscribed, idle: app process RssAnon | 850 [821–861] | 1,336 [1,334–1,339] | 0.6× |
+| 1000 clients, all subscribed, idle: app + Redis + Thruster Pss | 823 [798–849] | 1,372 [1,369–1,375] | 0.6× |
+| 1000 clients, all subscribed, idle: whole container Pss | 1,110 [1,099–1,129] | 1,372 [1,369–1,375] | 0.8× |
+| 1000 clients, saturated fan-out: app process Pss | 981 [907–1,039] | 1,408 [1,403–1,409] | 0.7× |
+| 1000 clients, saturated fan-out: app process RssAnon | 1,124 [1,047–1,179] | 1,372 [1,368–1,373] | 0.8× |
+| 1000 clients, saturated fan-out: app + Redis + Thruster Pss | 1,092 [1,051–1,176] | 1,408 [1,403–1,409] | 0.8× |
+| 1000 clients, saturated fan-out: whole container Pss | 1,388 [1,325–1,471] | 1,408 [1,403–1,409] | 1.0× |

@@ -55,3 +55,9 @@
 /script/livekit-client/node_modules/
 /script/livekit-gateway/node_modules/
 /script/code-highlighter/node_modules/
+
+# The Rust port has its own image (rust/Dockerfile); none of it belongs in the Rails image.
+/rust/
+
+# Agent worktrees and local tooling state.
+/.claude/

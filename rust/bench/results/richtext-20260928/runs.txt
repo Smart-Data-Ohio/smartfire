@@ -1,0 +1,22 @@
+# message_presentation / to_plain_text, native release build, one run each (timing.rs)
+# before: commit 98818bd (autolink.rs as it was)
+domains 1024 bytes: presentation 11.526838ms (Ok(4070)), plain text 47.684µs (Ok(702))
+domains 2048 bytes: presentation 72.380149ms (Ok(8102)), plain text 86.329µs (Ok(1406))
+domains 4096 bytes: presentation 514.842566ms (Ok(16166)), plain text 135.225µs (Ok(2814))
+domains 8192 bytes: presentation 4.04651989s (Ok(32294)), plain text 258.786µs (Ok(5630))
+# after: tag positions indexed once per pass
+domains 4096 bytes: presentation 1.555863ms (Ok(16166)), plain text 101.92µs (Ok(2814))
+domains 16384 bytes: presentation 3.534705ms (Ok(64550)), plain text 389.121µs (Ok(11262))
+domains 65536 bytes: presentation 14.166282ms (Ok(258086)), plain text 1.592495ms (Ok(45054))
+
+# SHAPE=nested: content attachments nested in one another
+# before: commit 20c9f43
+nested 4054 bytes: presentation 6.073521ms (Ok(136)), plain text 67.081µs (Ok(0))
+nested 16044 bytes: presentation 50.032514ms (Ok(246)), plain text 148.921µs (Ok(0))
+nested 64689 bytes: presentation 520.630631ms (Ok(471)), plain text 382.599µs (Ok(0))
+nested 342798 bytes: presentation 9.147079536s (Err(Parse(TreeDepthExceeded))), plain text 1.413215ms (Ok(0))
+# after: content attachments render at most 8 deep
+nested 4054 bytes: presentation 3.398929ms (Ok(82)), plain text 65.558µs (Ok(0))
+nested 16044 bytes: presentation 7.726914ms (Ok(82)), plain text 140.986µs (Ok(0))
+nested 64689 bytes: presentation 26.409778ms (Ok(82)), plain text 394.843µs (Ok(0))
+nested 342798 bytes: presentation 102.800803ms (Ok(82)), plain text 1.398656ms (Ok(0))

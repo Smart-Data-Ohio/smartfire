@@ -1,0 +1,111 @@
+//! Wall-clock time behind a trait, so parity runs can freeze it.
+//!
+//! Set `CAMPFIRE_FROZEN_TIME` (an RFC 3339 timestamp such as `2024-06-01T12:00:00Z`) to pin
+//! `now()` for the whole process; [`from_env`] reads it at boot.
+
+use std::sync::{Arc, Mutex};
+
+use jiff::{SignedDuration, Timestamp};
+
+pub const FROZEN_TIME_ENV: &str = "CAMPFIRE_FROZEN_TIME";
+
+pub trait Clock: Send + Sync + std::fmt::Debug {
+    fn now(&self) -> Timestamp;
+}
+
+pub type SharedClock = Arc<dyn Clock>;
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct SystemClock;
+
+impl Clock for SystemClock {
+    fn now(&self) -> Timestamp {
+        Timestamp::now()
+    }
+}
+
+/// A clock that only moves when told to.
+#[derive(Debug)]
+pub struct FrozenClock {
+    now: Mutex<Timestamp>,
+}
+
+impl FrozenClock {
+    pub fn new(now: Timestamp) -> Self {
+        Self { now: Mutex::new(now) }
+    }
+
+    pub fn set(&self, now: Timestamp) {
+        *self.now.lock().unwrap() = now;
+    }
+
+    pub fn advance(&self, by: SignedDuration) {
+        let mut now = self.now.lock().unwrap();
+        *now = now.checked_add(by).expect("frozen clock overflow");
+    }
+}
+
+impl Clock for FrozenClock {
+    fn now(&self) -> Timestamp {
+        *self.now.lock().unwrap()
+    }
+}
+
+/// The process clock: frozen at `CAMPFIRE_FROZEN_TIME` when set, the system clock otherwise.
+pub fn from_env() -> anyhow::Result<SharedClock> {
+    match std::env::var(FROZEN_TIME_ENV) {
+        Ok(value) if !value.trim().is_empty() => {
+            let now: Timestamp = value
+                .trim()
+                .parse()
+                .map_err(|e| anyhow::anyhow!("{FROZEN_TIME_ENV}={value:?} is not an RFC 3339 timestamp: {e}"))?;
+            Ok(Arc::new(FrozenClock::new(now)))
+        }
+        _ => Ok(Arc::new(SystemClock)),
+    }
+}
+
+/// `n.years.from_now` as ActiveSupport computes it: calendar years in UTC.
+pub fn years_from(now: Timestamp, years: i64) -> Timestamp {
+    now.to_zoned(jiff::tz::TimeZone::UTC)
+        .checked_add(jiff::Span::new().years(years))
+        .map(|z| z.timestamp())
+        .unwrap_or(now)
+}
+
+/// An HTTP date (`Time#httpdate`): `Thu, 01 Jan 1970 00:00:00 GMT`.
+pub fn httpdate(at: Timestamp) -> String {
+    jiff::fmt::rfc2822::DateTimePrinter::new().timestamp_to_rfc9110_string(&at).expect("valid http date")
+}
+
+/// Parse an HTTP date (`Time.httpdate` / `Time.rfc2822`), `None` when malformed.
+pub fn parse_httpdate(value: &str) -> Option<Timestamp> {
+    jiff::fmt::rfc2822::DateTimeParser::new().parse_timestamp(value.trim()).ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn frozen_clock_moves_only_when_told() {
+        let t: Timestamp = "2024-06-01T12:00:00Z".parse().unwrap();
+        let clock = FrozenClock::new(t);
+        assert_eq!(clock.now(), t);
+        clock.advance(SignedDuration::from_secs(60));
+        assert_eq!(clock.now().to_string(), "2024-06-01T12:01:00Z");
+    }
+
+    #[test]
+    fn twenty_years_is_calendar_years() {
+        let t: Timestamp = "2024-02-29T00:00:00Z".parse().unwrap();
+        assert_eq!(years_from(t, 20).to_string(), "2044-02-29T00:00:00Z");
+    }
+
+    #[test]
+    fn http_dates() {
+        assert_eq!(httpdate(Timestamp::UNIX_EPOCH), "Thu, 01 Jan 1970 00:00:00 GMT");
+        assert_eq!(parse_httpdate("Thu, 01 Jan 1970 00:00:00 GMT"), Some(Timestamp::UNIX_EPOCH));
+        assert_eq!(parse_httpdate("garbage"), None);
+    }
+}

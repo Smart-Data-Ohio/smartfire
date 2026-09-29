@@ -1,0 +1,160 @@
+[00:46:23] native-base rep 1: starting (load 9.93 13.99 18.12)
+[00:46:30] native-base rep 1: room_show c=16 795.2 rps p50 19.759 p99 33.951 cpu ms/req {'campfire': 4.6166, 'loadgen': 0.0411} statuses {'200': 3195} err 0
+[00:46:35] native-base rep 1: room_show_identity c=16 1822.3 rps p50 8.535 p99 15.295 cpu ms/req {'campfire': 1.8749, 'loadgen': 0.0962} statuses {'200': 7307} err 0
+[00:46:40] native-base rep 1: sidebar c=16 5566.7 rps p50 2.813 p99 5.003 cpu ms/req {'campfire': 0.6677, 'loadgen': 0.0146} statuses {'200': 22286} err 0
+[00:46:40] native-lto rep 1: starting (load 11.27 14.09 18.09)
+[00:46:47] native-lto rep 1: room_show c=16 944.7 rps p50 16.687 p99 28.655 cpu ms/req {'campfire': 3.9694, 'loadgen': 0.0192} statuses {'200': 3794} err 0
+[00:46:52] native-lto rep 1: room_show_identity c=16 2085.8 rps p50 7.495 p99 12.895 cpu ms/req {'campfire': 1.6565, 'loadgen': 0.0774} statuses {'200': 8361} err 0
+[00:46:57] native-lto rep 1: sidebar c=16 5605.8 rps p50 2.767 p99 5.135 cpu ms/req {'campfire': 0.6526, 'loadgen': 0.0151} statuses {'200': 22434} err 0
+[00:46:57] native-tuned rep 1: starting (load 10.52 13.73 17.88)
+[00:47:05] native-tuned rep 1: room_show c=16 913.7 rps p50 17.327 p99 29.631 cpu ms/req {'campfire': 4.0845, 'loadgen': 0.0267} statuses {'200': 3670} err 0
+[00:47:10] native-tuned rep 1: room_show_identity c=16 2151.9 rps p50 7.251 p99 12.599 cpu ms/req {'campfire': 1.6017, 'loadgen': 0.0792} statuses {'200': 8622} err 0
+[00:47:15] native-tuned rep 1: sidebar c=16 5818.4 rps p50 2.677 p99 4.951 cpu ms/req {'campfire': 0.6292, 'loadgen': 0.0145} statuses {'200': 23285} err 0
+[00:47:15] native-base-je rep 1: starting (load 10.71 13.61 17.78)
+[00:47:22] native-base-je rep 1: room_show c=16 885.0 rps p50 17.855 p99 29.871 cpu ms/req {'campfire': 4.2612, 'loadgen': 0.03} statuses {'200': 3553} err 0
+[00:47:27] native-base-je rep 1: room_show_identity c=16 1902.0 rps p50 7.575 p99 34.047 cpu ms/req {'campfire': 1.7331, 'loadgen': 0.1008} statuses {'200': 7674} err 0
+[00:47:32] native-base-je rep 1: sidebar c=16 2341.1 rps p50 5.651 p99 24.639 cpu ms/req {'campfire': 1.1499, 'loadgen': 0.0538} statuses {'200': 9375} err 0
+[00:47:32] native-tuned-je rep 1: starting (load 14.78 14.30 17.91)
+[00:47:39] native-tuned-je rep 1: room_show c=16 809.1 rps p50 19.407 p99 34.687 cpu ms/req {'campfire': 4.6433, 'loadgen': 0.0451} statuses {'200': 3252} err 0
+[00:47:44] native-tuned-je rep 1: room_show_identity c=16 2039.9 rps p50 7.535 p99 14.967 cpu ms/req {'campfire': 1.6758, 'loadgen': 0.101} statuses {'200': 8181} err 0
+[00:47:49] native-tuned-je rep 1: sidebar c=16 6638.9 rps p50 2.337 p99 4.483 cpu ms/req {'campfire': 0.5653, 'loadgen': 0.0123} statuses {'200': 26568} err 0
+[00:47:49] native-base rep 2: starting (load 14.36 14.25 17.84)
+[00:47:57] native-base rep 2: room_show c=16 835.2 rps p50 18.895 p99 32.623 cpu ms/req {'campfire': 4.4826, 'loadgen': 0.0313} statuses {'200': 3353} err 0
+[00:48:02] native-base rep 2: room_show_identity c=16 1962.1 rps p50 7.951 p99 13.807 cpu ms/req {'campfire': 1.769, 'loadgen': 0.0835} statuses {'200': 7863} err 0
+[00:48:07] native-base rep 2: sidebar c=16 5117.5 rps p50 2.923 p99 7.107 cpu ms/req {'campfire': 0.7195, 'loadgen': 0.0181} statuses {'200': 20486} err 0
+[00:48:07] native-lto rep 2: starting (load 13.64 14.07 17.70)
+[00:48:14] native-lto rep 2: room_show c=16 607.9 rps p50 25.679 p99 48.319 cpu ms/req {'campfire': 6.228, 'loadgen': 0.0819} statuses {'200': 2447} err 0
+[00:48:19] native-lto rep 2: room_show_identity c=16 1713.6 rps p50 8.663 p99 20.511 cpu ms/req {'campfire': 2.0079, 'loadgen': 0.1009} statuses {'200': 6863} err 0
+[00:48:24] native-lto rep 2: sidebar c=16 6307.1 rps p50 2.495 p99 4.447 cpu ms/req {'campfire': 0.5946, 'loadgen': 0.012} statuses {'200': 25244} err 0
+[00:48:24] native-tuned rep 2: starting (load 14.66 14.29 17.72)
+[00:48:31] native-tuned rep 2: room_show c=16 861.0 rps p50 18.223 p99 32.303 cpu ms/req {'campfire': 4.3622, 'loadgen': 0.0316} statuses {'200': 3457} err 0
+[00:48:36] native-tuned rep 2: room_show_identity c=16 2209.8 rps p50 7.099 p99 12.039 cpu ms/req {'campfire': 1.5761, 'loadgen': 0.0732} statuses {'200': 8851} err 0
+[00:48:41] native-tuned rep 2: sidebar c=16 6559.7 rps p50 2.403 p99 4.187 cpu ms/req {'campfire': 0.5653, 'loadgen': 0.0099} statuses {'200': 26253} err 0
+[00:48:41] native-base-je rep 2: starting (load 13.49 14.05 17.58)
+[00:48:49] native-base-je rep 2: room_show c=16 954.0 rps p50 16.463 p99 28.367 cpu ms/req {'campfire': 3.9791, 'loadgen': 0.0179} statuses {'200': 3830} err 0
+[00:48:54] native-base-je rep 2: room_show_identity c=16 2259.2 rps p50 6.935 p99 11.895 cpu ms/req {'campfire': 1.5521, 'loadgen': 0.0755} statuses {'200': 9052} err 0
+[00:48:59] native-base-je rep 2: sidebar c=16 6938.3 rps p50 2.261 p99 4.075 cpu ms/req {'campfire': 0.5463, 'loadgen': 0.01} statuses {'200': 27767} err 0
+[00:48:59] native-tuned-je rep 2: starting (load 12.21 13.71 17.39)
+[00:49:06] native-tuned-je rep 2: room_show c=16 1005.8 rps p50 15.703 p99 27.135 cpu ms/req {'campfire': 3.7964, 'loadgen': 0.0187} statuses {'200': 4038} err 0
+[00:49:11] native-tuned-je rep 2: room_show_identity c=16 2460.1 rps p50 6.339 p99 11.135 cpu ms/req {'campfire': 1.4286, 'loadgen': 0.0755} statuses {'200': 9856} err 0
+[00:49:16] native-tuned-je rep 2: sidebar c=16 7412.7 rps p50 2.113 p99 3.793 cpu ms/req {'campfire': 0.5131, 'loadgen': 0.0097} statuses {'200': 29664} err 0
+[00:49:16] native-base rep 3: starting (load 10.37 13.23 17.18)
+[00:49:23] native-base rep 3: room_show c=16 947.9 rps p50 16.703 p99 28.159 cpu ms/req {'campfire': 3.99, 'loadgen': 0.0227} statuses {'200': 3807} err 0
+[00:49:28] native-base rep 3: room_show_identity c=16 1575.5 rps p50 9.311 p99 20.799 cpu ms/req {'campfire': 2.2027, 'loadgen': 0.1136} statuses {'200': 6315} err 0
+[00:49:33] native-base rep 3: sidebar c=16 5643.2 rps p50 2.751 p99 5.171 cpu ms/req {'campfire': 0.6464, 'loadgen': 0.0145} statuses {'200': 22587} err 0
+[00:49:33] native-lto rep 3: starting (load 12.60 13.51 17.18)
+[00:49:41] native-lto rep 3: room_show c=16 527.5 rps p50 29.359 p99 53.759 cpu ms/req {'campfire': 6.4892, 'loadgen': 0.1068} statuses {'200': 2122} err 0
+[00:49:46] native-lto rep 3: room_show_identity c=16 1332.0 rps p50 11.583 p99 22.079 cpu ms/req {'campfire': 2.4944, 'loadgen': 0.1616} statuses {'200': 5340} err 0
+[00:49:51] native-lto rep 3: sidebar c=16 3993.6 rps p50 3.795 p99 8.327 cpu ms/req {'campfire': 0.8722, 'loadgen': 0.0348} statuses {'200': 15983} err 0
+[00:49:51] native-tuned rep 3: starting (load 20.72 15.26 17.70)
+[00:49:58] native-tuned rep 3: room_show c=16 606.6 rps p50 25.887 p99 45.855 cpu ms/req {'campfire': 6.0886, 'loadgen': 0.0946} statuses {'200': 2439} err 0
+[00:50:03] native-tuned rep 3: room_show_identity c=16 1398.2 rps p50 10.999 p99 21.551 cpu ms/req {'campfire': 2.3832, 'loadgen': 0.1716} statuses {'200': 5606} err 0
+[00:50:08] native-tuned rep 3: sidebar c=16 3446.3 rps p50 4.447 p99 9.215 cpu ms/req {'campfire': 1.0103, 'loadgen': 0.0415} statuses {'200': 13798} err 0
+[00:50:08] native-base-je rep 3: starting (load 23.88 16.36 18.01)
+[00:50:16] native-base-je rep 3: room_show c=16 646.0 rps p50 24.319 p99 42.495 cpu ms/req {'campfire': 5.8176, 'loadgen': 0.0806} statuses {'200': 2599} err 0
+[00:50:21] native-base-je rep 3: room_show_identity c=16 1302.6 rps p50 11.831 p99 22.223 cpu ms/req {'campfire': 2.5876, 'loadgen': 0.1867} statuses {'200': 5221} err 0
+[00:50:26] native-base-je rep 3: sidebar c=16 3801.7 rps p50 4.039 p99 8.135 cpu ms/req {'campfire': 0.9514, 'loadgen': 0.0386} statuses {'200': 15219} err 0
+[00:50:26] native-tuned-je rep 3: starting (load 26.00 17.18 18.25)
+[00:50:33] native-tuned-je rep 3: room_show c=16 579.2 rps p50 26.447 p99 53.599 cpu ms/req {'campfire': 6.138, 'loadgen': 0.1049} statuses {'200': 2333} err 0
+[00:50:38] native-tuned-je rep 3: room_show_identity c=16 1190.1 rps p50 12.735 p99 27.151 cpu ms/req {'campfire': 2.7054, 'loadgen': 0.1962} statuses {'200': 4772} err 0
+[00:50:43] native-tuned-je rep 3: sidebar c=16 4024.1 rps p50 3.713 p99 8.879 cpu ms/req {'campfire': 0.9002, 'loadgen': 0.0386} statuses {'200': 16107} err 0
+[00:50:43] native-base rep 4: starting (load 27.27 18.00 18.50)
+[00:50:50] native-base rep 4: room_show c=16 681.9 rps p50 22.959 p99 39.615 cpu ms/req {'campfire': 5.4761, 'loadgen': 0.0684} statuses {'200': 2741} err 0
+[00:50:55] native-base rep 4: room_show_identity c=16 1574.6 rps p50 9.719 p99 18.879 cpu ms/req {'campfire': 2.1724, 'loadgen': 0.1313} statuses {'200': 6311} err 0
+[00:51:00] native-base rep 4: sidebar c=16 5297.6 rps p50 2.931 p99 5.467 cpu ms/req {'campfire': 0.6933, 'loadgen': 0.0175} statuses {'200': 21202} err 0
+[00:51:00] native-lto rep 4: starting (load 32.86 19.67 19.03)
+[00:51:09] native-lto rep 4: room_show c=16 653.0 rps p50 24.175 p99 40.639 cpu ms/req {'campfire': 5.7219, 'loadgen': 0.0803} statuses {'200': 2625} err 0
+[00:51:14] native-lto rep 4: room_show_identity c=16 1507.4 rps p50 10.287 p99 18.799 cpu ms/req {'campfire': 2.2472, 'loadgen': 0.1432} statuses {'200': 6043} err 0
+[00:51:19] native-lto rep 4: sidebar c=16 4767.8 rps p50 3.213 p99 6.519 cpu ms/req {'campfire': 0.755, 'loadgen': 0.0244} statuses {'200': 19085} err 0
+[00:51:19] native-tuned rep 4: starting (load 31.37 20.21 19.22)
+[00:51:27] native-tuned rep 4: room_show c=16 723.5 rps p50 21.711 p99 37.791 cpu ms/req {'campfire': 5.1754, 'loadgen': 0.0624} statuses {'200': 2908} err 0
+[00:51:32] native-tuned rep 4: room_show_identity c=16 885.0 rps p50 14.815 p99 51.903 cpu ms/req {'campfire': 2.8756, 'loadgen': 0.2239} statuses {'200': 3554} err 0
+[00:51:37] native-tuned rep 4: sidebar c=16 3213.2 rps p50 4.399 p99 15.015 cpu ms/req {'campfire': 0.9811, 'loadgen': 0.0414} statuses {'200': 12863} err 0
+[00:51:37] native-base-je rep 4: starting (load 32.26 21.06 19.52)
+[00:51:44] native-base-je rep 4: room_show c=16 603.7 rps p50 25.727 p99 49.375 cpu ms/req {'campfire': 6.0082, 'loadgen': 0.0935} statuses {'200': 2430} err 0
+[00:51:49] native-base-je rep 4: room_show_identity c=16 1679.4 rps p50 9.087 p99 18.159 cpu ms/req {'campfire': 2.027, 'loadgen': 0.1198} statuses {'200': 6729} err 0
+[00:51:54] native-base-je rep 4: sidebar c=16 5813.9 rps p50 2.633 p99 5.407 cpu ms/req {'campfire': 0.6332, 'loadgen': 0.0157} statuses {'200': 23279} err 0
+[00:51:54] native-tuned-je rep 4: starting (load 40.97 23.54 20.36)
+[00:52:02] native-tuned-je rep 4: room_show c=16 672.3 rps p50 23.439 p99 39.839 cpu ms/req {'campfire': 5.6382, 'loadgen': 0.0829} statuses {'200': 2703} err 0
+[00:52:07] native-tuned-je rep 4: room_show_identity c=16 1600.9 rps p50 9.711 p99 17.935 cpu ms/req {'campfire': 2.1381, 'loadgen': 0.157} statuses {'200': 6417} err 0
+[00:52:12] native-tuned-je rep 4: sidebar c=16 4545.0 rps p50 3.241 p99 8.487 cpu ms/req {'campfire': 0.7861, 'loadgen': 0.0285} statuses {'200': 18191} err 0
+[00:52:12] native-base rep 5: starting (load 36.95 23.49 20.40)
+[00:52:19] native-base rep 5: room_show c=16 763.9 rps p50 20.479 p99 35.743 cpu ms/req {'campfire': 4.9055, 'loadgen': 0.048} statuses {'200': 3068} err 0
+[00:52:24] native-base rep 5: room_show_identity c=16 1607.0 rps p50 9.615 p99 17.855 cpu ms/req {'campfire': 2.1518, 'loadgen': 0.1296} statuses {'200': 6441} err 0
+[00:52:29] native-base rep 5: sidebar c=16 4521.7 rps p50 3.427 p99 6.475 cpu ms/req {'campfire': 0.8144, 'loadgen': 0.0263} statuses {'200': 18100} err 0
+[00:52:29] native-lto rep 5: starting (load 31.40 23.07 20.32)
+[00:52:36] native-lto rep 5: room_show c=16 792.0 rps p50 19.887 p99 35.295 cpu ms/req {'campfire': 4.7297, 'loadgen': 0.0462} statuses {'200': 3182} err 0
+[00:52:41] native-lto rep 5: room_show_identity c=16 1675.6 rps p50 9.239 p99 16.799 cpu ms/req {'campfire': 2.0351, 'loadgen': 0.1262} statuses {'200': 6717} err 0
+[00:52:46] native-lto rep 5: sidebar c=16 3083.8 rps p50 3.519 p99 23.071 cpu ms/req {'campfire': 0.8302, 'loadgen': 0.0261} statuses {'200': 12347} err 0
+[00:52:46] native-tuned rep 5: starting (load 28.36 22.81 20.28)
+[00:52:54] native-tuned rep 5: room_show c=16 666.3 rps p50 22.591 p99 54.431 cpu ms/req {'campfire': 5.4308, 'loadgen': 0.0619} statuses {'200': 2681} err 0
+[00:52:59] native-tuned rep 5: room_show_identity c=16 1675.6 rps p50 9.207 p99 16.751 cpu ms/req {'campfire': 2.0456, 'loadgen': 0.1296} statuses {'200': 6712} err 0
+[00:53:04] native-tuned rep 5: sidebar c=16 4854.2 rps p50 3.183 p99 6.191 cpu ms/req {'campfire': 0.7466, 'loadgen': 0.023} statuses {'200': 19436} err 0
+[00:53:04] native-base-je rep 5: starting (load 27.40 22.93 20.37)
+[00:53:11] native-base-je rep 5: room_show c=16 757.2 rps p50 20.719 p99 36.191 cpu ms/req {'campfire': 5.0181, 'loadgen': 0.0496} statuses {'200': 3041} err 0
+[00:53:16] native-base-je rep 5: room_show_identity c=16 1645.0 rps p50 9.031 p99 24.703 cpu ms/req {'campfire': 2.0252, 'loadgen': 0.1267} statuses {'200': 6597} err 0
+[00:53:21] native-base-je rep 5: sidebar c=16 4527.0 rps p50 3.395 p99 6.719 cpu ms/req {'campfire': 0.8183, 'loadgen': 0.0291} statuses {'200': 18122} err 0
+[00:53:21] native-tuned-je rep 5: starting (load 24.33 22.45 20.25)
+[00:53:30] native-tuned-je rep 5: room_show c=16 543.2 rps p50 22.591 p99 100.159 cpu ms/req {'campfire': 5.4787, 'loadgen': 0.0625} statuses {'200': 2183} err 0
+[00:53:35] native-tuned-je rep 5: room_show_identity c=16 2061.9 rps p50 7.451 p99 14.535 cpu ms/req {'campfire': 1.6745, 'loadgen': 0.0991} statuses {'200': 8259} err 0
+[00:53:40] native-tuned-je rep 5: sidebar c=16 4441.8 rps p50 3.483 p99 6.719 cpu ms/req {'campfire': 0.8363, 'loadgen': 0.0327} statuses {'200': 17780} err 0
+```
+date: 2026-09-27T00:46:23+0200
+host: 7.2.5-4-omarchy, 32 threads
+server cpus: 8-11; loadgen cpus: 12-15
+image: campfire-rust:perf-a654b08 sha256:82a2c82b7f7ff1d371c701e3d9f81b894f76c1120231f421a817d183748a54c3
+native-base: ./target/perf-base/release/campfire preload=
+native-lto: ./target/perf-lto/release/campfire preload=
+native-tuned: ./target/perf-tuned/release/campfire preload=
+native-base-je: ./target/perf-base/release/campfire preload=/usr/lib/libjemalloc.so
+native-tuned-je: ./target/perf-tuned/release/campfire preload=/usr/lib/libjemalloc.so
+env: WEB_CONCURRENCY=3 RAILS_MAX_THREADS=5 JOB_CONCURRENCY=3
+routes: room_show,room_show_identity,sidebar; concs: 16; secs: 4; cable: ; app env:
+```
+
+Reps per configuration: native-base 5, native-base-je 5, native-lto 5, native-tuned 5, native-tuned-je 5. Cells: median [min–max]; (×) is the gain over native-base (>1 is better).
+Host load (1-min loadavg at start of each run): native-base 9.93/14.36/10.37/27.27/36.95, native-base-je 10.71/13.49/23.88/32.26/27.40, native-lto 11.27/13.64/12.60/32.86/31.40, native-tuned 10.52/14.66/20.72/31.37/28.36, native-tuned-je 14.78/12.21/26.00/40.97/24.33
+
+### HTTP room_show
+
+| Metric | native-base | native-base-je | native-lto | native-tuned | native-tuned-je |
+|---|---|---|---|---|---|
+| c=16 req/s | 795 [682–948] | 757 [604–954] (0.95×) | 653 [528–945] (0.82×) | 724 [607–914] (0.91×) | 672 [543–1,006] (0.85×) |
+| c=16 p50 ms | 19.8 [16.7–23.0] | 20.7 [16.5–25.7] (0.95×) | 24.2 [16.7–29.4] (0.82×) | 21.7 [17.3–25.9] (0.91×) | 22.6 [15.7–26.4] (0.87×) |
+| c=16 p99 ms | 34.0 [28.2–39.6] | 36.2 [28.4–49.4] (0.94×) | 40.6 [28.7–53.8] (0.84×) | 37.8 [29.6–54.4] (0.90×) | 39.8 [27.1–100] (0.85×) |
+| c=16 campfire CPU ms/req | 4.62 [3.99–5.48] | 5.02 [3.98–6.01] (0.92×) | 5.72 [3.97–6.49] (0.81×) | 5.18 [4.08–6.09] (0.89×) | 5.48 [3.80–6.14] (0.84×) |
+| c=16 thrust CPU ms/req | – | – | – | – | – |
+| c=16 docker-proxy CPU ms/req | – | – | – | – | – |
+| c=16 loadgen cores busy | 0.030 [0.020–0.050] | 0.040 [0.020–0.060] | 0.050 [0.020–0.060] | 0.040 [0.020–0.060] | 0.040 [0.020–0.060] |
+| c=16 campfire cores busy | 3.74 [3.67–3.78] | 3.78 [3.62–3.80] | 3.74 [3.43–3.78] | 3.73 [3.62–3.76] | 3.76 [2.98–3.82] |
+| avg response bytes | 44,271 [44,259–44,277] | 44,253 [44,250–44,271] | 44,256 [44,240–44,283] | 44,272 [44,244–44,279] | 44,272 [44,250–44,287] |
+
+### HTTP room_show_identity
+
+| Metric | native-base | native-base-je | native-lto | native-tuned | native-tuned-je |
+|---|---|---|---|---|---|
+| c=16 req/s | 1,607 [1,575–1,962] | 1,679 [1,303–2,259] (1.05×) | 1,676 [1,332–2,086] (1.04×) | 1,676 [885–2,210] (1.04×) | 2,040 [1,190–2,460] (1.27×) |
+| c=16 p50 ms | 9.31 [7.95–9.72] | 9.03 [6.93–11.8] (1.03×) | 9.24 [7.50–11.6] (1.01×) | 9.21 [7.10–14.8] (1.01×) | 7.54 [6.34–12.7] (1.24×) |
+| c=16 p99 ms | 17.9 [13.8–20.8] | 22.2 [11.9–34.0] (0.80×) | 18.8 [12.9–22.1] (0.95×) | 16.8 [12.0–51.9] (1.07×) | 15.0 [11.1–27.2] (1.19×) |
+| c=16 campfire CPU ms/req | 2.15 [1.77–2.20] | 2.03 [1.55–2.59] (1.06×) | 2.04 [1.66–2.49] (1.06×) | 2.05 [1.58–2.88] (1.05×) | 1.68 [1.43–2.71] (1.28×) |
+| c=16 thrust CPU ms/req | – | – | – | – | – |
+| c=16 docker-proxy CPU ms/req | – | – | – | – | – |
+| c=16 loadgen cores busy | 0.18 [0.16–0.21] | 0.20 [0.17–0.24] | 0.21 [0.16–0.22] | 0.20 [0.16–0.24] | 0.21 [0.19–0.25] |
+| c=16 campfire cores busy | 3.46 [3.42–3.47] | 3.37 [3.30–3.50] | 3.41 [3.32–3.45] | 3.42 [2.54–3.48] | 3.42 [3.22–3.51] |
+| avg response bytes | 463,818 [463,818–463,818] | 463,818 [463,818–463,818] | 463,818 [463,818–463,818] | 463,818 [463,818–463,818] | 463,818 [463,818–463,818] |
+
+### HTTP sidebar
+
+| Metric | native-base | native-base-je | native-lto | native-tuned | native-tuned-je |
+|---|---|---|---|---|---|
+| c=16 req/s | 5,298 [4,522–5,643] | 4,527 [2,341–6,938] (0.85×) | 4,768 [3,084–6,307] (0.90×) | 4,854 [3,213–6,560] (0.92×) | 4,545 [4,024–7,413] (0.86×) |
+| c=16 p50 ms | 2.92 [2.75–3.43] | 3.40 [2.26–5.65] (0.86×) | 3.21 [2.50–3.79] (0.91×) | 3.18 [2.40–4.45] (0.92×) | 3.24 [2.11–3.71] (0.90×) |
+| c=16 p99 ms | 5.47 [5.00–7.11] | 6.72 [4.08–24.6] (0.81×) | 6.52 [4.45–23.1] (0.84×) | 6.19 [4.19–15.0] (0.88×) | 6.72 [3.79–8.88] (0.81×) |
+| c=16 campfire CPU ms/req | 0.69 [0.65–0.81] | 0.82 [0.55–1.15] (0.85×) | 0.76 [0.59–0.87] (0.92×) | 0.75 [0.57–1.01] (0.93×) | 0.79 [0.51–0.90] (0.88×) |
+| c=16 thrust CPU ms/req | – | – | – | – | – |
+| c=16 docker-proxy CPU ms/req | – | – | – | – | – |
+| c=16 loadgen cores busy | 0.090 [0.080–0.12] | 0.13 [0.070–0.15] | 0.080 [0.080–0.14] | 0.11 [0.070–0.14] | 0.13 [0.070–0.16] |
+| c=16 campfire cores busy | 3.69 [3.65–3.72] | 3.69 [2.70–3.79] | 3.60 [2.56–3.75] | 3.63 [3.15–3.71] | 3.72 [3.57–3.80] |
+| avg response bytes | 6,277 [6,277–6,277] | 6,277 [6,277–6,277] | 6,277 [6,277–6,277] | 6,277 [6,277–6,277] | 6,277 [6,277–6,277] |
+
+done

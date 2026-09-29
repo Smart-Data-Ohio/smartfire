@@ -1,0 +1,29 @@
+{#- reference/app/views/rooms/directs/edit.html.erb -#}
+{% extends "layouts/application.html" %}
+{%- block head %}{% endblock %}
+
+{%- block nav %}
+  <div class="flex-item-justify-start">
+    {{ h::link_back_to_last_room_visited(ctx) }}
+  </div>
+{%- endblock %}
+
+{%- block content %}
+<div class="panel txt-align-center">
+  <section class="directs--edit margin-block-end">
+    {%- for user in edit.users %}
+      <div class="member flex flex-column gap fill-shade pad border-radius">
+        <figure class="avatar center" style="--avatar-border-radius: 10ch; --avatar-size: 10ch;" >
+          <a title="{{ user.title }}" class="btn avatar" data-turbo-frame="_top" href="{{ user.path() }}"><img aria-hidden="true" loading="lazy" src="{{ user.avatar_url }}" width="48" height="48" /></a>
+        </figure>
+
+        <strong>{{ user.name }}</strong>
+      </div>
+    {%- endfor %}
+  </section>
+
+  <form class="button_to" method="post" action="{{ ctx.url(h::routes::rooms_direct(edit.room_id).as_str()) }}"><input type="hidden" name="_method" value="delete" /><button class="btn btn--negative center" aria-label="Delete Ping" data-turbo-confirm="Are you sure you want to delete this ping and all messages in it? This can’t be undone." type="submit">
+    <img aria-hidden="true" src="{{ ctx.asset("trash.svg") }}" />
+    Ping
+</button></form></div>
+{%- endblock %}
