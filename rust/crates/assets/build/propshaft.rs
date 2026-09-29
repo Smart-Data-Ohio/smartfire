@@ -1,7 +1,7 @@
 //! A port of Propshaft 1.2.1's load path, digesting and compilers (the gem's lib/propshaft/*),
 //! run at build time so the digested paths and compiled bytes match `assets:precompile`.
 
-use fancy_regex::{Captures, Regex};
+use fancy_regex::{Captures, Regex, RegexBuilder};
 use sha1::{Digest, Sha1};
 use std::collections::HashMap;
 use std::fs;
@@ -84,22 +84,18 @@ impl LoadPath {
             version: version.to_string(),
             prefix: prefix.to_string(),
             // Propshaft::Compiler::CssAssetUrls::ASSET_URL_PATTERN
-            css_asset_urls: Regex::new(&quoted_url("url", r"\#|%23|data:|http:|https:|//"))
-                .unwrap(),
+            css_asset_urls: unlimited_regex(&quoted_url("url", r"\#|%23|data:|http:|https:|//")),
             // Propshaft::Compiler::JsAssetUrls::ASSET_URL_PATTERN
-            js_asset_urls: Regex::new(&quoted_url("RAILS_ASSET_URL", r"\#|%23|data|http|//"))
-                .unwrap(),
+            js_asset_urls: unlimited_regex(&quoted_url("RAILS_ASSET_URL", r"\#|%23|data|http|//")),
             // Propshaft::Compiler::SourceMappingUrls::SOURCE_MAPPING_PATTERN, with Ruby's \Z
-            source_mapping_urls: Regex::new(&format!(
+            source_mapping_urls: unlimited_regex(&format!(
                 r"(//|/\*)# sourceMappingURL=(.+\.map)({WS}*?\*/)?{WS}*?(?=\n?\z)"
-            ))
-            .unwrap(),
-            url_prefix_in_source_map: Regex::new(&format!(
+            )),
+            url_prefix_in_source_map: unlimited_regex(&format!(
                 r"(?m)^(.+/)?{}/",
                 fancy_regex::escape(prefix)
-            ))
-            .unwrap(),
-            already_digested: Regex::new(r"-([0-9a-zA-Z_-]{7,128})\.digested").unwrap(),
+            )),
+            already_digested: unlimited_regex(r"-([0-9a-zA-Z_-]{7,128})\.digested"),
         }
     }
 
@@ -408,4 +404,14 @@ fn utf8_to_latin1(s: &str) -> String {
 
 pub fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// Ruby's Onigmo has no backtracking limit (Regexp.timeout is nil by default), so neither do
+/// these: fancy-regex's default of a million backtracks per search is exceeded by scanning a
+/// multi-megabyte bundle such as vendor/javascript/code-highlighter-worker.js.
+fn unlimited_regex(pattern: &str) -> Regex {
+    RegexBuilder::new(pattern)
+        .backtrack_limit(usize::MAX)
+        .build()
+        .unwrap()
 }
