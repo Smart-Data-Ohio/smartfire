@@ -9,18 +9,19 @@
 #   4. rollback: the reference boots on a database the Rust crate wrote (export_database_for_rails)
 #      and reads, edits, searches and deletes through it (crates/db/ruby/rollback.rb)
 #
-# Databases land in OUT (default target/db-differential).
+# Databases land in OUT (default target/db-differential). CONTAINER_PREFIX, when set, names the
+# reference containers (for a shared Docker host).
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 OUT=${OUT:-$ROOT/target/db-differential}
 export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$ROOT/target/db-differential/cargo}
-rm -f "$OUT"/*.sqlite3 "$OUT"/*.sql; mkdir -p "$OUT"
+rm -f "$OUT"/*.sqlite3 "$OUT"/*.sql "$OUT"/*.bot_key; mkdir -p "$OUT"
 
 # sqlite_master minus what SQLite derives on its own (see crates/db/src/schema.rs).
 SCHEMA_QUERY="SELECT sql || ';' FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'message_search_index_%' ORDER BY rowid"
 
 reference() {
-  docker run --rm --entrypoint "" \
+  docker run --rm --entrypoint "" ${CONTAINER_PREFIX:+--name "$CONTAINER_PREFIX-db-differential-$$"} \
     --cpus "${PARITY_CPUS:-2}" \
     --user "$(id -u):$(id -g)" \
     --env-file "$ROOT/parity/.env.reference" \
@@ -34,7 +35,7 @@ reference '
   db=storage/db/test.sqlite3
   bin/rails db:prepare >/dev/null
   sqlite3 $db "$SCHEMA_QUERY" > /out/schema_ruby.sql
-  bin/rails db:fixtures:load
+  bin/rails runner /tools/load_fixtures.rb
   sqlite3 $db "PRAGMA wal_checkpoint(TRUNCATE)" >/dev/null && cp $db /out/fixtures_ruby.sqlite3
   bin/rails runner /tools/scenario.rb
   sqlite3 $db "PRAGMA wal_checkpoint(TRUNCATE)" >/dev/null && cp $db /out/scenario_ruby.sqlite3'

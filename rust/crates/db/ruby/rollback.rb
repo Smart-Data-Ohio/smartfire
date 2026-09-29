@@ -12,10 +12,53 @@ check("search finds the Rust message") { Message.search("hovercraft").include?(m
 
 rusty = User.find_by!(email_address: "rusty@example.com")
 check("password") { rusty.authenticate("secret123456") }
-check("session") { rusty.sessions.sole.ip_address == "8.8.8.8" }
+check("sessions, device and two-factor columns") do
+  rusty.sessions.order(:id).map { [ _1.ip_address, _1.device_id, _1.two_factor_verified? ] } ==
+    [ [ "8.8.8.8", nil, false ], [ "9.9.9.9", "rust-device", true ] ]
+end
 check("search record") { rusty.searches.pluck(:query) == [ "hovercraft" ] }
 room = Room.find_by!(name: "Rust Room")
 check("closed room") { room.is_a?(Rooms::Closed) && room.users.pluck(:name).sort == %w[ David Rusty ] }
+david, kevin, jason = %w[ David Kevin Jason ].map { User.find_by!(name: _1) }
+
+check("room types") do
+  { "Rust Voice" => Rooms::Voice, "Rust Stage" => Rooms::Stage, "Rust Board" => Rooms::Board }.all? do |name, type|
+    Room.find_by!(name: name).then { _1.instance_of?(type) && _1.users.sort == [ david, rusty ].sort }
+  end
+end
+stage = Room.find_by!(name: "Rust Stage")
+check("stage roles") { stage.memberships.find_by!(user: rusty).host? && stage.memberships.find_by!(user: david).listener? }
+direct = Rooms::Direct.find_for([ jason, rusty, kevin ])
+check("direct room found by its member key") do
+  direct&.direct_member_key == Rooms::Direct.member_key_for([ rusty.id, kevin.id, jason.id ]) &&
+    direct.users.sort == [ jason, kevin, rusty ].sort &&
+    Rooms::Direct.find_or_create_for([ kevin, jason, rusty ]) == direct
+end
+check("muted involvement") { room.memberships.find_by!(user: rusty).involved_in_muted? }
+check("unread for the disconnected member") { room.memberships.find_by!(user: david).unread? }
+
+tied = room.root_messages.where(client_message_id: [ "rust-tie one", "rust-tie two", "rust-tie three" ]).ordered.to_a
+check("messages ordered by (created_at, id)") do
+  tied.map(&:plain_text_body) == [ "tie one", "tie two", "tie three" ] && tied.map(&:created_at).uniq.size == 1
+end
+check("pagination breaks the tie by id") do
+  room.root_messages.page_before(tied.last).last(2) == tied.first(2) &&
+    room.root_messages.page_after(tied.first).first(2) == tied.last(2)
+end
+note = Message.find_by!(client_message_id: "rust-note")
+check("system note") { note.system_note? && Message.search("renamed").exclude?(note) }
+reply = Message.find_by!(client_message_id: "rust-reply")
+check("thread reply") do
+  reply.thread_message? && reply.thread.messages == [ reply ] && room.root_messages.exclude?(reply) && room.messages.include?(reply)
+end
+
+bot = User.find_by!(name: "Rust Bot")
+bot_key = File.read("/out/rust_export.sqlite3.bot_key")
+tampered = bot_key.sub(/.\z/) { _1 == "a" ? "b" : "a" }
+check("bot key authenticates by digest") do
+  bot.bot_token.nil? && User.authenticate_bot(bot_key) == bot && User.authenticate_bot(tampered).nil?
+end
+
 check("account settings") { Account.first.settings.restrict_room_creation_to_administrators == true }
 
 Current.user = rusty

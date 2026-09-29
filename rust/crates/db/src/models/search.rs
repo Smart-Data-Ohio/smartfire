@@ -74,11 +74,13 @@ impl Search {
         Ok(search)
     }
 
+    /// `before_create :set_dedup_key` (`dedup_key ||= query`), the key of the unique
+    /// `[user_id, dedup_key]` index.
     fn create(tx: &mut Tx<'_>, user_id: i64, query: &str) -> Result<Self> {
         let now = tx.now();
         let id: i64 = tx.conn().query_row_cached(
-            r#"INSERT INTO "searches" ("created_at", "query", "updated_at", "user_id") VALUES (?, ?, ?, ?) RETURNING "id""#,
-            params![now, query, now, user_id],
+            r#"INSERT INTO "searches" ("created_at", "dedup_key", "query", "updated_at", "user_id") VALUES (?, ?, ?, ?, ?) RETURNING "id""#,
+            params![now, query, query, now, user_id],
             |r| r.get(0),
         )?;
         trim_recent_searches(tx, user_id)?;

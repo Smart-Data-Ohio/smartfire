@@ -9,6 +9,7 @@ mod membership_test;
 mod message_test;
 mod push_test;
 mod room_test;
+mod session_test;
 mod user_test;
 
 use std::sync::Arc;
@@ -88,6 +89,10 @@ impl TestDb {
         self.clock.travel(jiff::SignedDuration::from_secs(seconds));
     }
 }
+
+/// Golden vectors from our Rails (`bin/rails runner` in the reference image):
+/// `User.digest_bot_token("BenderToken1")`, the bender fixture's `bot_token_digest`.
+pub const BENDER_TOKEN_DIGEST: &str = "eca7c1486ccaf098cc637f7f8e48cad465ac9f14a4da3b2287e0f5addc62a4c2";
 
 /// A fixture's id, by label.
 pub fn id(label: &str) -> i64 {

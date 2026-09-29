@@ -179,11 +179,88 @@ fn removing_a_membership_resets_the_users_connections() {
     );
 }
 
+/// `read` writes nothing once the member is read and the pointer is on the newest root message.
 #[test]
 fn reading_is_a_noop_when_already_read() {
     let t = TestDb::new();
-    let m = membership(&t);
-    let before = m.updated_at;
+    let m = run(&t, membership(&t), |m, tx| m.read(tx));
+    let before = t.read(|c| Membership::find(c, m.id)).updated_at;
+    t.travel(5);
     let m = run(&t, m, |m, tx| m.read(tx));
     assert_eq!(t.read(|c| Membership::find(c, m.id)).updated_at, before);
+}
+
+/// `membership_navigation_test.rb`: "read clears unread and points at the newest root message".
+#[test]
+fn read_clears_unread_and_points_at_the_newest_root_message() {
+    let t = TestDb::new();
+    let designers = crate::Timeline::Room(id("designers"));
+    let messages = t.read(|c| crate::Message::first_page(c, designers));
+    let (first, second) = (messages[0].clone(), messages[1].clone());
+    let membership_id = id("david_designers");
+    let (first_id, second_at) = (first.id, second.created_at);
+    t.write(move |tx| {
+        tx.conn().execute(
+            "UPDATE memberships SET unread_at = ?, last_read_message_id = ? WHERE id = ?",
+            rusqlite::params![second_at, first_id, membership_id],
+        )?;
+        Ok(())
+    });
+    let m = t.read(|c| Membership::find(c, membership_id));
+    assert!(m.unread());
+    let m = run(&t, m, |m, tx| m.read(tx));
+    let newest = t.read(|c| crate::Message::last_page(c, designers)).last().unwrap().id;
+    let stored = t.read(|c| Membership::find(c, m.id));
+    assert!(!stored.unread());
+    assert_eq!(stored.last_read_message_id, Some(newest));
+    assert_eq!(m, stored);
+}
+
+/// The pointer is the newest *root* message: thread replies don't move it.
+#[test]
+fn latest_root_message_id_skips_thread_messages_and_breaks_ties_by_id() {
+    let t = TestDb::new();
+    t.clock.travel_to(t.now());
+    let room_id = id("designers");
+    let (root_a, root_b, reply) = t.write(move |tx| {
+        let thread_id = super::message_test::create_thread(tx, room_id, id("david"))?;
+        let root = |tx: &mut Tx<'_>| {
+            crate::Message::create(tx, crate::NewMessage { room_id, creator_id: id("david"), ..Default::default() })
+        };
+        let root_a = root(tx)?;
+        let root_b = root(tx)?;
+        let reply = crate::Message::create(
+            tx,
+            crate::NewMessage { room_id, creator_id: id("david"), thread_id: Some(thread_id), ..Default::default() },
+        )?;
+        Ok((root_a, root_b, reply))
+    });
+    assert_eq!(root_a.created_at, reply.created_at, "same instant");
+    assert!(reply.id > root_b.id && root_b.id > root_a.id);
+    let m = t.read(|c| Membership::find(c, id("kevin_designers")));
+    assert_eq!(t.read(|c| m.latest_root_message_id(c)), Some(root_b.id));
+}
+
+/// `Membership.connect` also moves the read pointer to the newest root message.
+#[test]
+fn present_moves_the_read_pointer() {
+    let t = TestDb::new();
+    let m = membership(&t);
+    assert_eq!(m.last_read_message_id, None);
+    let m = run(&t, m, |m, tx| m.present(tx));
+    let newest = t.read(|c| m.latest_root_message_id(c));
+    assert!(newest.is_some());
+    assert_eq!(t.read(|c| Membership::find(c, m.id)).last_read_message_id, newest);
+}
+
+/// `enum :involvement` includes `muted`; `stage_role` reads back as its enum.
+#[test]
+fn muted_involvement_and_stage_role_round_trip() {
+    let t = TestDb::new();
+    let m = run(&t, membership(&t), |m, tx| m.update_involvement(tx, crate::Involvement::Muted));
+    let stored = t.read(|c| Membership::find(c, m.id));
+    assert_eq!(stored.involvement, Some(crate::Involvement::Muted));
+    let raw: String = t.read(|c| Ok(c.query_row("SELECT involvement FROM memberships WHERE id = ?", [m.id], |r| r.get(0))?));
+    assert_eq!(raw, "muted");
+    assert_eq!(stored.stage_role, None, "non-stage rooms leave the stage columns nil");
 }

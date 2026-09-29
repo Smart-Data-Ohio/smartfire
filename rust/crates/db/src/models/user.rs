@@ -3,6 +3,7 @@
 
 use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, ValueRef};
 use rusqlite::{Connection, Row, params};
+use sha2::{Digest, Sha256};
 
 use crate::database::Tx;
 use crate::error::{OptionalExt, Result};
@@ -108,7 +109,12 @@ pub struct User {
     pub role: Role,
     pub status: Status,
     pub bio: Option<String>,
-    pub bot_token: Option<String>,
+    /// SHA-256 hex of the bot token (`User::Bot`). The plaintext `bot_token` column is retired:
+    /// never written except to clear it, never read.
+    pub bot_token_digest: Option<String>,
+    /// `plain_bot_token`: the token, known only on the value that just created or reset it.
+    /// Never persisted.
+    pub plain_bot_token: Option<String>,
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
 }
@@ -122,7 +128,7 @@ pub struct NewUser {
     pub password_digest: Option<PasswordDigest>,
     pub role: Role,
     pub bio: Option<String>,
-    pub bot_token: Option<String>,
+    pub bot_token_digest: Option<String>,
 }
 
 /// Attributes for `user.update`. `None` leaves an attribute alone.
@@ -134,10 +140,9 @@ pub struct UserChanges {
     pub role: Option<Role>,
     pub status: Option<Status>,
     pub bio: Option<Option<String>>,
-    pub bot_token: Option<Option<String>>,
 }
 
-const INSERT: &str = r#"INSERT INTO "users" ("bio", "bot_token", "created_at", "email_address", "name", "password_digest", "role", "status", "updated_at") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#;
+const INSERT: &str = r#"INSERT INTO "users" ("bio", "bot_token_digest", "created_at", "email_address", "name", "password_digest", "role", "status", "updated_at") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#;
 
 impl User {
     /// A `SELECT "users".*` row.
@@ -150,7 +155,8 @@ impl User {
             role: row.get("role")?,
             status: row.get("status")?,
             bio: row.get("bio")?,
-            bot_token: row.get("bot_token")?,
+            bot_token_digest: row.get("bot_token_digest")?,
+            plain_bot_token: None,
             created_at: row.get("created_at")?,
             updated_at: row.get("updated_at")?,
         })
@@ -292,19 +298,31 @@ impl User {
         }
     }
 
-    /// `User.authenticate_bot(bot_key)`: `"#{id}-#{bot_token}"`
+    /// `User.authenticate_bot(bot_key)` (`app/models/user/bot.rb`): the key is `"<id>-<token>"`,
+    /// and the token's SHA-256 digest is compared in constant time with `bot_token_digest`. The
+    /// plaintext `bot_token` column is never consulted, so a bot without a digest can't
+    /// authenticate until its key is reset.
     pub fn authenticate_bot(conn: &Connection, bot_key: &str) -> Result<Option<Self>> {
-        // Ruby's `split("-")` drops trailing empty fields; a key without a token finds nothing.
-        let mut parts = bot_key.split('-');
-        let (Some(id), Some(token)) = (parts.next(), parts.next()) else {
+        // `bot_key.to_s.split("-", 2)`: the token keeps any further dashes.
+        let (id, token) = bot_key.split_once('-').unwrap_or((bot_key, ""));
+        if is_blank(id) || is_blank(token) || !id.bytes().all(|b| b.is_ascii_digit()) {
+            return Ok(None);
+        }
+        // `find_by(id:)` casts "007" to 7; an id past the integer range finds nothing.
+        let Ok(id) = id.parse::<i64>() else { return Ok(None) };
+        let Some(bot) = query_one(
+            conn,
+            r#"SELECT * FROM "users" WHERE "users"."status" = 0 AND "users"."role" = 2 AND "users"."id" = ? LIMIT 1"#,
+            [id],
+            Self::from_row,
+        )?
+        else {
             return Ok(None);
         };
-        query_one(
-            conn,
-            r#"SELECT * FROM "users" WHERE "users"."status" = 0 AND "users"."role" = 2 AND "users"."id" = ? AND "users"."bot_token" = ? LIMIT 1"#,
-            params![id, token],
-            Self::from_row,
-        )
+        let Some(digest) = bot.bot_token_digest.as_deref().filter(|d| !is_blank(d)) else {
+            return Ok(None);
+        };
+        Ok(secure_compare(digest.as_bytes(), digest_bot_token(token).as_bytes()).then_some(bot))
     }
 
     // Creating
@@ -317,7 +335,7 @@ impl User {
             INSERT,
             params![
                 attributes.bio,
-                attributes.bot_token,
+                attributes.bot_token_digest,
                 now,
                 attributes.email_address,
                 attributes.name,
@@ -332,17 +350,20 @@ impl User {
         Self::find(tx.conn(), id)
     }
 
-    /// `User.create_bot!`
+    /// `User.create_bot!`: stores the token's digest alone; the returned bot knows its key
+    /// (`plain_bot_token`) until it's dropped.
     pub fn create_bot(tx: &mut Tx<'_>, name: &str, webhook_url: Option<&str>) -> Result<Self> {
-        let user = Self::create(
+        let token = generate_bot_token();
+        let mut user = Self::create(
             tx,
             NewUser {
                 name: name.to_string(),
-                bot_token: Some(generate_bot_token()),
+                bot_token_digest: Some(digest_bot_token(&token)),
                 role: Role::Bot,
                 ..Default::default()
             },
         )?;
+        user.plain_bot_token = Some(token);
         if let Some(url) = webhook_url {
             Webhook::create(tx, user.id, Some(url))?;
         }
@@ -378,10 +399,6 @@ impl User {
         if let Some(bio) = changes.bio.filter(|b| *b != self.bio) {
             self.bio = bio.clone();
             sets.push(("bio", Box::new(bio)));
-        }
-        if let Some(token) = changes.bot_token.filter(|t| *t != self.bot_token) {
-            self.bot_token = token.clone();
-            sets.push(("bot_token", Box::new(token)));
         }
         if sets.is_empty() {
             return Ok(());
@@ -419,14 +436,21 @@ impl User {
         self.update(tx, changes)
     }
 
-    pub fn reset_bot_key(&mut self, tx: &mut Tx<'_>) -> Result<()> {
-        self.update(
-            tx,
-            UserChanges {
-                bot_token: Some(Some(generate_bot_token())),
-                ..Default::default()
-            },
-        )
+    /// `reset_bot_key`: a new token, invalidating the old key. `update! bot_token: nil,
+    /// bot_token_digest:` stores the digest alone and clears any retired plaintext; the new key
+    /// is known on `self` afterwards.
+    pub fn reset_bot_key(&mut self, tx: &mut Tx<'_>) -> Result<String> {
+        let token = generate_bot_token();
+        let digest = digest_bot_token(&token);
+        let now = tx.now();
+        tx.conn().execute_cached(
+            r#"UPDATE "users" SET "bot_token" = NULL, "bot_token_digest" = ?, "updated_at" = ? WHERE "users"."id" = ?"#,
+            params![digest, now, self.id],
+        )?;
+        self.bot_token_digest = Some(digest);
+        self.updated_at = now;
+        self.plain_bot_token = Some(token);
+        Ok(self.bot_key())
     }
 
     /// `deactivate`: disconnects sockets first (mid-transaction, as Rails does), then removes
@@ -596,8 +620,19 @@ impl User {
             .join(" – ")
     }
 
+    /// `plain_bot_key`: the full key while it's still known (just created or reset).
+    pub fn plain_bot_key(&self) -> Option<String> {
+        self.plain_bot_token
+            .as_deref()
+            .filter(|token| !is_blank(token))
+            .map(|token| format!("{}-{token}", self.id))
+    }
+
+    /// `bot_key`: the full key while it's still known, otherwise [`BOT_KEY_PLACEHOLDER`]. Stored
+    /// bots never reveal their key.
     pub fn bot_key(&self) -> String {
-        format!("{}-{}", self.id, self.bot_token.as_deref().unwrap_or(""))
+        self.plain_bot_key()
+            .unwrap_or_else(|| BOT_KEY_PLACEHOLDER.to_string())
     }
 
     /// `can_administer?(record)`: administrators, the record's creator, or a new record.
@@ -651,9 +686,32 @@ impl User {
 /// `MENTION_CONTENT_TYPE`
 pub const MENTION_CONTENT_TYPE: &str = "application/vnd.campfire.mention";
 
+/// `User::Bot::BOT_KEY_PLACEHOLDER`
+pub const BOT_KEY_PLACEHOLDER: &str = "BOT_KEY";
+
 /// `User.generate_bot_token`
 pub fn generate_bot_token() -> String {
     sql::alphanumeric(12)
+}
+
+/// `User.digest_bot_token(token)`: `Digest::SHA256.hexdigest(token.to_s)`.
+pub fn digest_bot_token(token: &str) -> String {
+    hex::encode(Sha256::digest(token.as_bytes()))
+}
+
+/// `ActiveSupport::SecurityUtils.secure_compare`: false for different lengths, otherwise a
+/// comparison whose time doesn't depend on where the inputs differ.
+pub fn secure_compare(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let difference = a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y));
+    std::hint::black_box(difference) == 0
+}
+
+/// `blank?` for a string: empty or whitespace only.
+fn is_blank(s: &str) -> bool {
+    s.chars().all(char::is_whitespace)
 }
 
 /// A password hashed for `password_digest`. Hashing takes about 250 ms at cost 12, so it's done
@@ -688,11 +746,11 @@ pub fn password_digest(password: &str, cost: u32) -> Result<String> {
 
 const DUMMY_DIGEST: &str = "$2a$12$FiKmSp4UhLvSB4Sd/ZUjQunyKP6.NjDRHdr5LnKUVk.BUn4Mq12WS";
 
-/// `after_create_commit :grant_membership_to_open_rooms`
+/// `after_create_commit :grant_membership_to_open_rooms`: `Rooms::Open.alive` (`app/models/user.rb`).
 fn grant_membership_to_open_rooms(tx: &mut Tx<'_>, user_id: i64) -> Result<()> {
     let room_ids: Vec<i64> = query_all(
         tx.conn(),
-        r#"SELECT "rooms"."id" FROM "rooms" WHERE "rooms"."type" = ?"#,
+        r#"SELECT "rooms"."id" FROM "rooms" WHERE "rooms"."type" = ? AND "rooms"."deleted_at" IS NULL"#,
         ["Rooms::Open"],
         |r| r.get(0),
     )?;

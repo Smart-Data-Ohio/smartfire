@@ -3,10 +3,13 @@
 //!
 //! - ids are `Zlib.crc32(label) % (2**30 - 1)` unless given;
 //! - `belongs_to` values are labels (`creator: :david`), polymorphic ones name the class
-//!   (`record: first (Message)`);
+//!   (`record: first (Message)`); the foreign key is `<association>_id` unless the model names
+//!   another ([`custom_foreign_key`]);
 //! - enum names become their stored values (`role: administrator` is 1);
+//! - `$LABEL` in a string value becomes the fixture's label;
 //! - `created_at`/`updated_at` default to one `now` per fixture file;
 //! - columns a fixture leaves out get the column default;
+//! - hashes and arrays are stored as JSON (the `json` columns);
 //! - each table is emptied, then filled, with foreign keys checked at commit.
 //!
 //! ERB is evaluated for the forms the fixtures use: `<%= N.<unit>.ago %>` and `.from_now`, plus
@@ -67,72 +70,42 @@ impl Loaded {
     }
 }
 
-/// A `belongs_to` in a fixture: the key, and the column it sets (or, for polymorphic
-/// ones, the `_id`/`_type` pair).
-enum Association {
-    BelongsTo {
-        key: &'static str,
-        column: &'static str,
-    },
-    Polymorphic {
-        key: &'static str,
-    },
+/// `belongs_to` associations whose foreign key isn't `<association>_id`: the `foreign_key:`
+/// option in the model.
+fn custom_foreign_key(table: &str, association: &str) -> Option<&'static str> {
+    match (table, association) {
+        // app/models/twitter/post_reference.rb: `belongs_to :post, foreign_key: :twitter_post_id`
+        ("twitter_post_references", "post") => Some("twitter_post_id"),
+        // app/models/event.rb: `belongs_to :venue, foreign_key: :venue_room_id`
+        ("events", "venue") => Some("venue_room_id"),
+        _ => None,
+    }
 }
 
-fn associations(table: &str) -> &'static [Association] {
-    use Association::*;
-    match table {
-        "boosts" => &[
-            BelongsTo {
-                key: "message",
-                column: "message_id",
-            },
-            BelongsTo {
-                key: "booster",
-                column: "booster_id",
-            },
-        ],
-        "memberships" => &[
-            BelongsTo {
-                key: "room",
-                column: "room_id",
-            },
-            BelongsTo {
-                key: "user",
-                column: "user_id",
-            },
-        ],
-        "messages" => &[
-            BelongsTo {
-                key: "room",
-                column: "room_id",
-            },
-            BelongsTo {
-                key: "creator",
-                column: "creator_id",
-            },
-        ],
-        "rooms" => &[BelongsTo {
-            key: "creator",
-            column: "creator_id",
-        }],
-        "bans" | "searches" | "sessions" | "webhooks" | "push_subscriptions" => &[BelongsTo {
-            key: "user",
-            column: "user_id",
-        }],
-        "action_text_rich_texts" => &[Polymorphic { key: "record" }],
-        "active_storage_attachments" => &[
-            Polymorphic { key: "record" },
-            BelongsTo {
-                key: "blob",
-                column: "blob_id",
-            },
-        ],
-        "active_storage_variant_records" => &[BelongsTo {
-            key: "blob",
-            column: "blob_id",
-        }],
-        _ => &[],
+/// A fixture key that names a `belongs_to` rather than a column.
+enum Association {
+    BelongsTo { column: String },
+    Polymorphic { id: String, type_column: String },
+}
+
+/// `TableRow#resolve_sti_reflections`, from the schema: a key that isn't a column but has an
+/// `_id` column (and, for polymorphic ones, a `_type` column) is an association.
+fn association(table: &str, key: &str, columns: &[Column]) -> Option<Association> {
+    let has = |name: &str| columns.iter().any(|c| c.name == name);
+    if has(key) {
+        return None;
+    }
+    if let Some(column) = custom_foreign_key(table, key) {
+        return Some(Association::BelongsTo {
+            column: column.into(),
+        });
+    }
+    let id = format!("{key}_id");
+    let type_column = format!("{key}_type");
+    match (has(&id), has(&type_column)) {
+        (true, true) => Some(Association::Polymorphic { id, type_column }),
+        (true, false) => Some(Association::BelongsTo { column: id }),
+        _ => None,
     }
 }
 
@@ -141,6 +114,8 @@ fn resolve_enum(table: &str, column: &str, value: &str) -> Option<Value> {
     match (table, column) {
         ("users", "role") => Role::from_name(value).map(|r| Value::Integer(r as i64)),
         ("users", "status") => Status::from_name(value).map(|s| Value::Integer(s as i64)),
+        // String-backed enums (`index_by(&:itself)`) store the name itself; this one is checked
+        // because the Rust enum must know every value the fixtures use.
         ("memberships", "involvement") => {
             Involvement::from_name(value).map(|i| Value::Text(i.name().into()))
         }
@@ -213,7 +188,7 @@ fn fixture_row(
     table: &str,
     label: &str,
     row: Yaml,
-    columns: &[String],
+    columns: &[Column],
     now: Timestamp,
 ) -> Result<BTreeMap<String, Value>> {
     let mut values: BTreeMap<String, Value> = BTreeMap::new();
@@ -230,43 +205,37 @@ fn fixture_row(
     for (key, value) in mapping {
         let key = scalar_string(&key)
             .ok_or_else(|| Error::Other(format!("bad key in {table}.{label}")))?;
-        let association = associations(table).iter().find(|a| match a {
-            Association::BelongsTo { key: k, .. } | Association::Polymorphic { key: k } => {
-                *k == key
-            }
-        });
-        match association {
-            Some(Association::BelongsTo { column, .. }) => {
+        match association(table, &key, columns) {
+            Some(Association::BelongsTo { column }) => {
                 let target = scalar_string(&value)
                     .ok_or_else(|| Error::Other(format!("{table}.{label}.{key}")))?;
-                values.insert(
-                    (*column).into(),
-                    Value::Integer(identify(target.trim_start_matches(':'))),
-                );
+                values.insert(column, Value::Integer(identify(target.trim_start_matches(':'))));
             }
-            Some(Association::Polymorphic { key }) => {
+            Some(Association::Polymorphic { id, type_column }) => {
                 let target = scalar_string(&value)
                     .ok_or_else(|| Error::Other(format!("{table}.{label}.{key}")))?;
-                let (target_label, class) = match target
+                // "label (Type)"; without the type only the id is set, as in Rails.
+                let target_label = match target
                     .trim()
                     .strip_suffix(')')
-                    .and_then(|t| t.rsplit_once(" ("))
+                    .and_then(|t| t.rsplit_once('('))
                 {
-                    Some((l, c)) => (l.to_string(), c.to_string()),
-                    None => {
-                        return Err(Error::Other(format!(
-                            "{table}.{label}.{key} needs a (Class)"
-                        )));
+                    Some((l, class)) => {
+                        values.insert(type_column, Value::Text(class.to_string()));
+                        l.trim().to_string()
                     }
+                    None => target,
                 };
                 values.insert(
-                    format!("{key}_id"),
+                    id,
                     Value::Integer(identify(target_label.trim_start_matches(':'))),
                 );
-                values.insert(format!("{key}_type"), Value::Text(class));
             }
             None => {
-                let value = yaml_to_sql(table, &key, value)?;
+                let column = columns.iter().find(|c| c.name == key).ok_or_else(|| {
+                    Error::Other(format!("{table}.{label}: no column or association {key}"))
+                })?;
+                let value = yaml_to_sql(table, column, value, label)?;
                 values.insert(key, value);
             }
         }
@@ -276,7 +245,7 @@ fn fixture_row(
         .entry("id".into())
         .or_insert_with(|| Value::Integer(identify(label)));
     for column in ["created_at", "updated_at"] {
-        if columns.iter().any(|c| c == column) {
+        if columns.iter().any(|c| c.name == column) {
             values
                 .entry(column.into())
                 .or_insert_with(|| Value::Text(now.to_db()));
@@ -285,7 +254,7 @@ fn fixture_row(
     Ok(values)
 }
 
-fn yaml_to_sql(table: &str, column: &str, value: Yaml) -> Result<Value> {
+fn yaml_to_sql(table: &str, column: &Column, value: Yaml, label: &str) -> Result<Value> {
     Ok(match value {
         Yaml::Null => Value::Null,
         Yaml::Bool(b) => Value::Integer(b as i64),
@@ -294,9 +263,11 @@ fn yaml_to_sql(table: &str, column: &str, value: Yaml) -> Result<Value> {
             None => Value::Real(n.as_f64().unwrap_or_default()),
         },
         Yaml::String(s) => {
-            if let Some(v) = resolve_enum(table, column, &s) {
+            // `interpolate_label`
+            let s = s.replace("$LABEL", label);
+            if let Some(v) = resolve_enum(table, &column.name, &s) {
                 v
-            } else if is_datetime_column(column) {
+            } else if column.is_datetime() {
                 // Time columns cast the text (e.g. ERB's "2026-09-26 11:24:38 UTC").
                 match Timestamp::parse_db(&s) {
                     Some(ts) => Value::Text(ts.to_db()),
@@ -306,17 +277,12 @@ fn yaml_to_sql(table: &str, column: &str, value: Yaml) -> Result<Value> {
                 Value::Text(s)
             }
         }
+        // A hash or array: the json type serializes it.
         other => Value::Text(
-            serde_yaml::to_string(&other)
-                .unwrap_or_default()
-                .trim()
-                .to_string(),
+            serde_json::to_string(&other)
+                .map_err(|e| Error::Other(format!("{table}.{label}.{}: {e}", column.name)))?,
         ),
     })
-}
-
-fn is_datetime_column(column: &str) -> bool {
-    column.ends_with("_at")
 }
 
 fn insert_row(conn: &Connection, table: &str, row: &BTreeMap<String, Value>) -> Result<()> {
@@ -330,10 +296,27 @@ fn insert_row(conn: &Connection, table: &str, row: &BTreeMap<String, Value>) -> 
     Ok(())
 }
 
-fn table_columns(conn: &Connection, table: &str) -> Result<Vec<String>> {
+/// A column's name and declared type, from `PRAGMA table_info`.
+struct Column {
+    name: String,
+    declared_type: String,
+}
+
+impl Column {
+    fn is_datetime(&self) -> bool {
+        self.declared_type.starts_with("datetime")
+    }
+}
+
+fn table_columns(conn: &Connection, table: &str) -> Result<Vec<Column>> {
     let mut stmt = conn.prepare(&format!(r#"PRAGMA table_info("{table}")"#))?;
     let columns = stmt
-        .query_map([], |r| r.get::<_, String>("name"))?
+        .query_map([], |r| {
+            Ok(Column {
+                name: r.get("name")?,
+                declared_type: r.get("type")?,
+            })
+        })?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     if columns.is_empty() {
         return Err(Error::Other(format!("no table {table}")));

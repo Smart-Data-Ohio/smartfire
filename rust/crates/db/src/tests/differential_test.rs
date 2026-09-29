@@ -45,6 +45,7 @@ fn message(room: &str, creator: &str, body: &str, client_message_id: &str) -> Ne
         client_message_id: Some(client_message_id.into()),
         body: Some(body.into()),
         attachment_blob_id: None,
+        ..Default::default()
     }
 }
 
@@ -160,7 +161,7 @@ fn normalized_dump(conn: &Connection, table: &str, order: &str) -> Vec<String> {
                 ("password_digest", rusqlite::types::Value::Text(s)) => {
                     format!("bcrypt:{}", &s[..4])
                 }
-                ("bot_token" | "token" | "join_code", rusqlite::types::Value::Text(s)) => {
+                ("bot_token" | "bot_token_digest" | "token" | "join_code", rusqlite::types::Value::Text(s)) => {
                     format!("random:{}", s.len())
                 }
                 ("email_address", rusqlite::types::Value::Text(s))
