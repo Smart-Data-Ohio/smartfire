@@ -2,7 +2,7 @@
 //! changed in a room since the client last loaded it.
 
 use askama::Template;
-use campfire_db::{Message, Timestamp};
+use campfire_db::{Message, Timeline, Timestamp};
 use campfire_kit::{Ctx, Error, Result, StatusCode, format};
 use campfire_views::rooms::{RefreshShow, RefreshView};
 
@@ -23,9 +23,9 @@ pub async fn show(c: &mut Ctx) -> Result {
         .app()
         .db
         .read(move |conn| {
-            let new_messages = Message::page_created_since(conn, room.id, last_updated_at)?;
+            let new_messages = Message::page_created_since(conn, Timeline::Room(room.id), last_updated_at)?;
             let new_ids: Vec<i64> = new_messages.iter().map(|message| message.id).collect();
-            let updated_messages = Message::page_updated_since(conn, room.id, last_updated_at, &new_ids)?;
+            let updated_messages = Message::page_updated_since(conn, Timeline::Room(room.id), last_updated_at, &new_ids)?;
             let presenter = Presenter::new(conn, &app, request_host);
             campfire_views::fragment_cache::with(&app.fragment_cache, || {
                 Ok(RefreshView {

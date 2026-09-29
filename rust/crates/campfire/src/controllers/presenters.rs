@@ -69,6 +69,9 @@ pub fn room_kind(room_type: RoomType) -> RoomKind {
         RoomType::Open => RoomKind::Open,
         RoomType::Closed => RoomKind::Closed,
         RoomType::Direct => RoomKind::Direct,
+        // The views' RoomKind has no voice, stage or board rooms yet (their screens aren't
+        // ported); they're explicit-membership rooms like closed ones.
+        RoomType::Voice | RoomType::Stage | RoomType::Board => RoomKind::Closed,
     }
 }
 

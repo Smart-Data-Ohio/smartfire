@@ -53,6 +53,8 @@ impl JobKind {
             Event::RemoveBannedContent { .. } => Some(JobKind::RemoveBannedContent),
             Event::PurgeBlob { .. } => Some(JobKind::PurgeBlob),
             Event::DisconnectUser { .. } => None,
+            // Domain jobs (`campfire_db::Job`) aren't dispatched yet: nothing emits them so far.
+            Event::Job(_) => None,
         }
     }
 

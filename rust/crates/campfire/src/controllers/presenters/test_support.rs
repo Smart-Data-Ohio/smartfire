@@ -18,7 +18,10 @@ pub const DAVID: i64 = 127326141;
 pub const JASON: i64 = 149087659;
 pub const KEVIN: i64 = 712064548;
 pub const BENDER: i64 = 394959859;
-pub const BENDER_KEY: &str = "394959859-BenderBot123";
+/// Bender's key as our Rails accepts it: the seed keeps the fixture's `bot_token_digest`
+/// (`User.digest_bot_token("BenderToken1")`); the plaintext `bot_token` column is legacy and
+/// no longer authenticates (`User::Bot.authenticate_bot`).
+pub const BENDER_KEY: &str = "394959859-BenderToken1";
 /// Rooms::Closed "All Talk" (David, Jason, Bender): 131 messages.
 pub const ALL_TALK: i64 = 486777696;
 /// Rooms::Open "HQ" (David can't see messages; no messages).
