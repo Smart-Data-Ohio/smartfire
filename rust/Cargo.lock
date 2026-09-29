@@ -429,6 +429,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "sha1",
+ "sha2",
  "tempfile",
  "thiserror",
  "tokio",

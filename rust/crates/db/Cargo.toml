@@ -11,6 +11,7 @@ jiff.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_yaml = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
 thiserror.workspace = true
 tokio.workspace = true
 bcrypt.workspace = true
@@ -24,7 +25,7 @@ base64.workspace = true
 
 [features]
 # `campfire_db::fixtures`: the reference's test fixtures, loaded into a database for tests.
-test-support = ["dep:serde_yaml"]
+test-support = ["dep:serde_yaml", "dep:sha2"]
 
 [dev-dependencies]
 campfire_db = { path = ".", features = ["test-support"] }

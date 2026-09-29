@@ -9,8 +9,9 @@
 //! - columns a fixture leaves out get the column default;
 //! - each table is emptied, then filled, with foreign keys checked at commit.
 //!
-//! ERB is evaluated for the forms the fixtures use: `<%= N.<unit>.ago %>`,
-//! `BCrypt::Password.create("...")` assigned to a local, and `User.generate_bot_token`.
+//! ERB is evaluated for the forms the fixtures use: `<%= N.<unit>.ago %>` and `.from_now`, plus
+//! `+ N.<unit>` and `.to_fs(:db)`, `BCrypt::Password.create("...")` assigned to a local,
+//! `Digest::SHA256.hexdigest("...")` (optionally sliced, `[0, 4]`) and `User.generate_bot_token`.
 
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
@@ -437,23 +438,68 @@ impl<'a> Erb<'a> {
         if code == "User.generate_bot_token" {
             return Ok(user::generate_bot_token());
         }
-        if let Some(duration) = parse_ago(code) {
-            // `TimeWithZone#to_s` in UTC: whole seconds.
-            let at = Timestamp::from_second(self.options.now.as_second()).ago(duration);
-            return Ok(format!("{} UTC", at.to_db()));
+        if let Some(hexdigest) = sha256_hexdigest(code) {
+            return Ok(hexdigest);
+        }
+        let (expression, db_format) = match code.strip_suffix(".to_fs(:db)") {
+            Some(expression) => (expression, true),
+            None => (code, false),
+        };
+        if let Some(offset) = parse_relative_time(expression) {
+            let at = Timestamp::from_second(self.options.now.as_second()).since(offset);
+            // `to_fs(:db)` drops the zone; `TimeWithZone#to_s` in UTC keeps it. Whole seconds.
+            return Ok(if db_format {
+                at.to_db()
+            } else {
+                format!("{} UTC", at.to_db())
+            });
         }
         Err(Error::Other(format!("unsupported ERB in fixture: {code}")))
     }
 }
 
-/// `1.hour.ago`, `36.minutes.ago`, `2.days.ago`...
-fn parse_ago(code: &str) -> Option<SignedDuration> {
-    let mut parts = code.split('.');
-    let n: i64 = parts.next()?.trim().parse().ok()?;
-    let unit = parts.next()?;
-    if parts.next()? != "ago" || parts.next().is_some() {
-        return None;
+/// `Digest::SHA256.hexdigest("...")`, optionally sliced as `String#[start, length]`.
+fn sha256_hexdigest(code: &str) -> Option<String> {
+    use sha2::{Digest, Sha256};
+    let rest = code.strip_prefix("Digest::SHA256.hexdigest(\"")?;
+    let (input, rest) = rest.split_once("\")")?;
+    let hexdigest = hex::encode(Sha256::digest(input.as_bytes()));
+    match rest.trim() {
+        "" => Some(hexdigest),
+        slice => {
+            let (start, length) = slice
+                .strip_prefix('[')?
+                .strip_suffix(']')?
+                .split_once(',')?;
+            let start: usize = start.trim().parse().ok()?;
+            let length: usize = length.trim().parse().ok()?;
+            hexdigest
+                .get(start..(start + length).min(hexdigest.len()))
+                .map(str::to_string)
+        }
     }
+}
+
+/// `1.hour.ago`, `36.minutes.ago`, `2.days.from_now + 1.hour`...: the offset from now.
+fn parse_relative_time(code: &str) -> Option<SignedDuration> {
+    let mut terms = code.split(" + ");
+    let base = terms.next()?.trim();
+    let (duration, direction) = base.rsplit_once('.')?;
+    let mut offset = match direction {
+        "ago" => -parse_duration(duration)?,
+        "from_now" => parse_duration(duration)?,
+        _ => return None,
+    };
+    for term in terms {
+        offset += parse_duration(term.trim())?;
+    }
+    Some(offset)
+}
+
+/// `1.hour`, `36.minutes`, `2.days`...
+fn parse_duration(code: &str) -> Option<SignedDuration> {
+    let (n, unit) = code.split_once('.')?;
+    let n: i64 = n.trim().parse().ok()?;
     let seconds = match unit.trim_end_matches('s') {
         "second" => 1,
         "minute" => 60,
@@ -505,6 +551,31 @@ mod tests {
         assert_eq!(
             erb.render("<% x = 5.minutes.ago %>\na: <%= x %>").unwrap(),
             "\na: 2026-09-26 12:19:38 UTC"
+        );
+        assert_eq!(
+            erb.render("<%= 2.days.from_now + 1.hour %>|<%= 1.hour.ago.to_fs(:db) %>")
+                .unwrap(),
+            "2026-09-28 13:24:38 UTC|2026-09-26 11:24:38"
+        );
+    }
+
+    #[test]
+    fn erb_sha256_hexdigest() {
+        let options = Options {
+            now: Timestamp::parse_db("2026-09-26 12:24:38").unwrap(),
+            bcrypt_cost: 4,
+        };
+        let mut erb = Erb::new(&options);
+        // Digest::SHA256.hexdigest("abc")
+        assert_eq!(
+            erb.render(r#"<%= Digest::SHA256.hexdigest("abc") %>"#)
+                .unwrap(),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+        assert_eq!(
+            erb.render(r#"<%= Digest::SHA256.hexdigest("abc")[0, 4] %>"#)
+                .unwrap(),
+            "ba78"
         );
     }
 }
