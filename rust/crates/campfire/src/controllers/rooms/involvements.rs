@@ -40,7 +40,7 @@ pub async fn update(c: &mut Ctx) -> Result {
 
     // broadcast_visibility_changes
     let partials = render_shared_room(c, &room).await?;
-    c.app().broadcasts.involvement_change(&room, &membership, previous, &partials).map_err(Error::internal)?;
+    c.app().broadcasts.involvement_change(&room, &membership, previous, &partials);
 
     let url = c.url_for(&campfire_routes::room_involvement(room.id));
     c.redirect_to(&url)

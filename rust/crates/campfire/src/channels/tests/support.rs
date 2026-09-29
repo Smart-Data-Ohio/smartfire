@@ -7,7 +7,7 @@ use std::time::Duration;
 use campfire_cable::Config;
 use campfire_db::fixtures::{self, identify};
 use campfire_db::rich_text::BasicRichText;
-use campfire_db::{Boost, Database, Event, EventSink, Membership, Message, Room, Session, TestClock};
+use campfire_db::{Boost, Database, Event, EventSink, Membership, Message, NewSession, Room, Session, TestClock};
 use campfire_kit::{Crypto, RailsCrypto, SystemClock};
 use futures_util::{SinkExt, StreamExt};
 use rails_compat::Secrets;
@@ -96,11 +96,17 @@ pub fn id(label: &str) -> i64 {
 }
 
 impl TestApp {
-    /// A session cookie for the fixture user (`cookies.signed[:session_token]`).
+    /// A session cookie for the fixture user (`cookies.signed[:session_token]`), for a session that
+    /// completed two-step sign-in.
     pub async fn cookie_for(&self, user: &str) -> String {
+        self.cookie_with_token(&self.session_for(user, true).await.token)
+    }
+
+    /// A new session for the fixture user, verified or not.
+    pub async fn session_for(&self, user: &str, verified: bool) -> Session {
         let user_id = id(user);
-        let session = self.db.write(move |tx| Session::start(tx, user_id, Some("test"), Some("8.8.8.8"))).await.unwrap();
-        self.cookie_with_token(&session.token)
+        let attributes = NewSession { user_agent: Some("test"), ip_address: Some("8.8.8.8"), two_factor_verified: verified, ..Default::default() };
+        self.db.write(move |tx| Session::start_with(tx, user_id, attributes)).await.unwrap()
     }
 
     pub fn cookie_with_token(&self, token: &str) -> String {
@@ -147,6 +153,54 @@ impl TestApp {
         self.db.read(move |conn| Message::find(conn, message_id)).await.unwrap()
     }
 
+    /// `ChannelThread.create!(room:, creator:, name:)`, as a bare row: the channels only read
+    /// threads.
+    pub async fn create_thread(&self, room: &str, creator: &str, name: &str) -> i64 {
+        let (room_id, creator_id, name) = (id(room), id(creator), name.to_string());
+        self.db
+            .write(move |tx| {
+                let now = tx.now();
+                Ok(tx.conn().query_row(
+                    "INSERT INTO channel_threads (room_id, creator_id, name, last_activity_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
+                    rusqlite::params![room_id, creator_id, name, now, now, now],
+                    |row| row.get(0),
+                )?)
+            })
+            .await
+            .unwrap()
+    }
+
+    pub async fn set_involvement(&self, room: &str, user: &str, involvement: &str) {
+        let (room_id, user_id, involvement) = (id(room), id(user), involvement.to_string());
+        self.db
+            .write(move |tx| {
+                tx.conn().execute("UPDATE memberships SET involvement = ? WHERE room_id = ? AND user_id = ?", rusqlite::params![involvement, room_id, user_id])?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+    }
+
+    pub async fn set_body(&self, message: &Message, html: &str) {
+        let (message_id, html) = (message.id, html.to_string());
+        self.db
+            .write(move |tx| {
+                tx.conn().execute(
+                    "UPDATE action_text_rich_texts SET body = ? WHERE record_type = 'Message' AND record_id = ? AND name = 'body'",
+                    rusqlite::params![html, message_id],
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+    }
+
+    /// `message.broadcast_create` with [`FakePartials`].
+    pub async fn message_create(&self, room: &Room, message: &Message) {
+        let (broadcasts, room, message) = (self.broadcasts.clone(), room.clone(), message.clone());
+        self.db.read(move |conn| broadcasts.message_create(conn, &room, &message, &FakePartials, &BasicRichText)).await.unwrap();
+    }
+
     pub async fn boost(&self, label: &str) -> Boost {
         let boost_id = id(label);
         self.db.read(move |conn| Boost::find(conn, boost_id)).await.unwrap()
@@ -171,6 +225,9 @@ impl Partials for FakePartials {
     }
     fn direct_room(&self, membership: &Membership) -> String {
         format!("<li>direct {}</li>", membership.id)
+    }
+    fn sidebar_row(&self, room: &Room, _membership: &Membership, unread: Option<bool>) -> String {
+        format!("<li>row {} unread {unread:?}</li>", room.id)
     }
 }
 

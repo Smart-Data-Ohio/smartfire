@@ -247,7 +247,7 @@ async fn trigger(target: &Target, event: &str, args: &[String]) {
             .db
             .read(move |conn| {
                 let message = Message::find(conn, ids[0])?;
-                broadcasts.unread_room(conn, &Room::find(conn, message.room_id)?)
+                broadcasts.unread_room(conn, &Room::find(conn, message.room_id)?, &message, &campfire_db::rich_text::BasicRichText)
             })
             .await
             .unwrap(),

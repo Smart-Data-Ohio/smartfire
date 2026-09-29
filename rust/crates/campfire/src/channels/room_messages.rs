@@ -2,62 +2,75 @@
 //! `RoomStreamsAreAuthorized` guard prepended onto `Turbo::StreamsChannel`
 //! (reference/app/channels/concerns/room_streams_are_authorized.rb).
 //!
-//! A room's message stream (`<room gid param>:messages`) is only served here, and only to a
-//! current member of the room the verified stream name points at.
+//! A room's or a thread's message stream (`<gid param>:messages`, `<gid param>:threads`) is only
+//! served here, and only to a current member of the room the verified stream name points at (a
+//! thread's parent room).
 use campfire_cable::turbo::StreamsChannel;
 use campfire_cable::{Channel, ChannelError, ChannelResult, Params, Subscription};
 use campfire_db::{Connection, Database, Room, RoomType};
 use rails_compat::global_id::GlobalId;
 
-use super::CableUser;
+use super::{CableUser, threads};
 
 pub const STREAM_SUFFIX: &str = "messages";
+/// `GUARDED_STREAM_SUFFIXES`
+pub const GUARDED_STREAM_SUFFIXES: [&str; 2] = [STREAM_SUFFIX, "threads"];
 
 /// `RoomMessagesChannel.guarded_stream?`: true for the stream names this channel guards, whoever
 /// is asking. Also the guard on `Turbo::StreamsChannel`.
 pub fn guarded_stream(stream_name: &str) -> bool {
-    stream_name.split_once(':').map(|(_, suffix)| suffix) == Some(STREAM_SUFFIX)
+    stream_name.split_once(':').is_some_and(|(_, suffix)| GUARDED_STREAM_SUFFIXES.contains(&suffix))
 }
 
-/// `RoomMessagesChannel.subscribable_room(user, stream_name)`.
-pub fn subscribable_room(conn: &Connection, user_id: i64, stream_name: &str) -> Result<Option<Room>, ChannelError> {
-    let Some((gid_param, STREAM_SUFFIX)) = stream_name.split_once(':') else {
+/// `RoomMessagesChannel.subscribable_room(user, stream_name)` (alias `subscribable_target`): the
+/// room, among the user's, that the stream's room or thread belongs to.
+pub fn subscribable_room(conn: &Connection, user_id: i64, stream_name: &str) -> campfire_db::Result<Option<Room>> {
+    let Some((gid_param, suffix)) = stream_name.split_once(':') else {
         return Ok(None);
     };
-    match room_from(conn, gid_param)? {
-        Some(room) => Ok(Room::find_for_user(conn, user_id, room.id)?),
-        None => Ok(None),
+    if !GUARDED_STREAM_SUFFIXES.contains(&suffix) {
+        return Ok(None);
     }
+    let room_id = match target_from(conn, gid_param)? {
+        Some(Target::Room(room)) => room.id,
+        Some(Target::ChannelThread { room_id }) => room_id,
+        None => return Ok(None),
+    };
+    Room::find_for_user(conn, user_id, room_id)
 }
 
-/// `GlobalID::Locator.locate gid_param, only: Room`, with `RecordNotFound` as nil.
-fn room_from(conn: &Connection, gid_param: &str) -> Result<Option<Room>, ChannelError> {
+enum Target {
+    Room(Room),
+    ChannelThread { room_id: i64 },
+}
+
+/// `GlobalID::Locator.locate gid_param`, with `RecordNotFound` and `NameError` as nil, narrowed
+/// to the two targets `subscribable_room` accepts (any other record is nil there too). The name
+/// was signed by this app, so it only ever names records the app streams.
+fn target_from(conn: &Connection, gid_param: &str) -> campfire_db::Result<Option<Target>> {
     // `GlobalID.parse` takes the URI form or its Base64 param.
     let Some(gid) = GlobalId::parse(gid_param).or_else(|| GlobalId::from_param(gid_param)) else {
         return Ok(None);
     };
-    // `find_allowed?(gid.model_class, only: Room)`: Room or one of its STI subclasses, whose
-    // `find` also requires the type to match.
-    let required_type = match gid.model_name.as_str() {
-        "Room" => None,
-        name => match RoomType::from_class_name(name) {
-            Some(room_type) => Some(room_type),
-            None if KNOWN_MODELS.contains(&name) => return Ok(None),
-            // `model_name.constantize` raises NameError.
-            None => return Err(ChannelError(format!("uninitialized constant {name}"))),
-        },
-    };
     let Ok(id) = gid.id.parse::<i64>() else {
         return Ok(None);
     };
-    let room = Room::find_by_id(conn, id)?;
-    Ok(room.filter(|room| required_type.is_none_or(|t| t == room.room_type)))
+    match gid.model_name.as_str() {
+        "ChannelThread" => Ok(threads::room_id_of(conn, id)?.map(|room_id| Target::ChannelThread { room_id })),
+        // `Room.find`, or an STI subclass's, whose `find` also requires the type to match.
+        name => {
+            let required_type = match name {
+                "Room" => None,
+                name => match RoomType::from_class_name(name) {
+                    Some(room_type) => Some(room_type),
+                    None => return Ok(None),
+                },
+            };
+            let room = Room::find_by_id(conn, id)?;
+            Ok(room.filter(|room| required_type.is_none_or(|t| t == room.room_type)).map(Target::Room))
+        }
+    }
 }
-
-/// Constants a GID could name that aren't rooms (`only: Room` turns them away without raising).
-const KNOWN_MODELS: &[&str] = &[
-    "Account", "Ban", "Boost", "Current", "Membership", "Message", "Push::Subscription", "Search", "Session", "User", "Webhook",
-];
 
 pub struct RoomMessagesChannel {
     db: Database,
@@ -80,11 +93,7 @@ impl RoomMessagesChannel {
         }
         let user_id = sub.current_user().id;
         let name = stream_name.clone();
-        let room = self
-            .db
-            .read(move |conn| Ok(subscribable_room(conn, user_id, &name)))
-            .await
-            .map_err(|error| ChannelError(error.to_string()))??;
+        let room = self.db.read(move |conn| subscribable_room(conn, user_id, &name)).await.map_err(|error| ChannelError(error.to_string()))?;
         Ok(room.map(|_| stream_name))
     }
 }
@@ -125,5 +134,9 @@ mod tests {
         assert!(!guarded_stream("Z2lk:messages:more"));
         assert!(!guarded_stream(""));
         assert!(guarded_stream(":messages"));
+        assert!(guarded_stream("Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC8x:threads"));
+        assert!(!guarded_stream("Z2lk:threads:more"));
+        assert!(!guarded_stream("Z2lk:status"));
+        assert!(!guarded_stream("Z2lk:ooo_notice"));
     }
 }

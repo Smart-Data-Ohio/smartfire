@@ -146,6 +146,12 @@ impl Partials for Rendered {
     fn direct_room(&self, membership: &Membership) -> String {
         self.direct_rooms.iter().find(|(id, _)| *id == membership.id).map(|(_, html)| html.clone()).unwrap_or_default()
     }
+
+    /// Only the shared row is ported (`users/sidebars/rooms/_shared`); stage, voice and board rows
+    /// and the `unread:`/`membership:` locals wait on the sidebar views.
+    fn sidebar_row(&self, _: &Room, _: &Membership, _: Option<bool>) -> String {
+        self.shared_room.clone().unwrap_or_default()
+    }
 }
 
 pub fn db_error(error: campfire_db::Error) -> Error {

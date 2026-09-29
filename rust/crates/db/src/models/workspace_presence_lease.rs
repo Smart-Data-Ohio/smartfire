@@ -11,7 +11,7 @@ use jiff::SignedDuration;
 use rusqlite::{Connection, Row, params};
 
 use crate::database::Tx;
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::sql::{self, CachedStatements, query_one};
 use crate::time::Timestamp;
 
@@ -30,6 +30,8 @@ pub struct WorkspacePresenceLease {
     pub user_id: i64,
     pub created_at: Timestamp,
     pub updated_at: Timestamp,
+    /// `destroyed?`: set by [`Self::delete`]. Active Record refuses `update_columns` on it.
+    pub destroyed: bool,
 }
 
 impl WorkspacePresenceLease {
@@ -43,6 +45,7 @@ impl WorkspacePresenceLease {
             user_id: row.get("user_id")?,
             created_at: row.get("created_at")?,
             updated_at: row.get("updated_at")?,
+            destroyed: false,
         })
     }
 
@@ -64,7 +67,7 @@ impl WorkspacePresenceLease {
             params![connection_id, now, expires_at, now, session_id, now, user_id],
             |row| row.get(0),
         )?;
-        Ok(Some(Self { id, connection_id, expires_at, last_active_at: Some(now), session_id, user_id, created_at: now, updated_at: now }))
+        Ok(Some(Self { id, connection_id, expires_at, last_active_at: Some(now), session_id, user_id, created_at: now, updated_at: now, destroyed: false }))
     }
 
     /// `identity_valid?(user:, session:)`: `User.active.exists?(id:)` and
@@ -81,11 +84,15 @@ impl WorkspacePresenceLease {
 
     /// `refresh(active:)`: with the identity still valid, extends the lease (and its activity,
     /// when the heartbeat reports recent input) with `update_columns`, which is true only if the
-    /// row is still there; otherwise deletes it and returns false.
+    /// row is still there; otherwise deletes it and returns false. `update_columns` raises on a
+    /// lease this value deleted.
     pub fn refresh(&mut self, tx: &mut Tx<'_>, active: bool) -> Result<bool> {
         if !Self::identity_valid(tx.conn(), self.user_id, self.session_id)? {
             self.delete(tx)?;
             return Ok(false);
+        }
+        if self.destroyed {
+            return Err(Error::Other("cannot update a destroyed record".into()));
         }
         let now = tx.now();
         let expires_at = now.since(TTL);
@@ -108,8 +115,9 @@ impl WorkspacePresenceLease {
     }
 
     /// `delete`: no callbacks.
-    pub fn delete(&self, tx: &mut Tx<'_>) -> Result<()> {
+    pub fn delete(&mut self, tx: &mut Tx<'_>) -> Result<()> {
         tx.conn().execute_cached(r#"DELETE FROM "workspace_presence_leases" WHERE "workspace_presence_leases"."id" = ?"#, [self.id])?;
+        self.destroyed = true;
         Ok(())
     }
 }

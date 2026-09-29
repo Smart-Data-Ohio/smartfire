@@ -139,10 +139,8 @@ async fn unread_rooms_streams_only_the_subscribers_own_stream() {
     outsider.confirm(&unreads).await;
     member.confirm(&unreads).await;
 
-    let broadcasts = app.broadcasts.clone();
     let message = app.message("first").await;
-    let room = direct.clone();
-    app.db.read(move |conn| broadcasts.message_create(conn, &room, &message, &FakePartials)).await.unwrap();
+    app.message_create(&direct, &message).await;
 
     assert_eq!(member.next_text().await, delivery(&unreads, &format!(r#"{{"roomId":{}}}"#, direct.id)));
     member.assert_silent().await;
@@ -320,7 +318,8 @@ async fn performing_subscribed_streams_twice_like_ruby() {
 
     let broadcasts = app.broadcasts.clone();
     let room = app.room("bender_and_kevin").await;
-    app.db.read(move |conn| broadcasts.unread_room(conn, &room)).await.unwrap();
+    let message = app.message("first").await;
+    app.db.read(move |conn| broadcasts.unread_room(conn, &room, &message, &campfire_db::rich_text::BasicRichText)).await.unwrap();
     let expected = delivery(&unreads, &format!(r#"{{"roomId":{}}}"#, id("bender_and_kevin")));
     assert_eq!(client.next_text().await, expected);
     assert_eq!(client.next_text().await, expected);

@@ -17,23 +17,26 @@ impl PresenceChannel {
         Self { db, room: None }
     }
 
-    /// `present`: `membership.present`, then `broadcast_read_room`.
+    /// `present`: `membership.present`, then `broadcast_read_room`. Raises (NoMethodError on nil)
+    /// once the membership is gone.
     async fn present(&self, sub: &Subscription<CableUser>) -> ChannelResult {
-        self.with_membership(sub, |membership, tx| membership.present(tx)).await?;
+        if !self.with_membership(sub, |membership, tx| membership.present(tx)).await? {
+            return Err(nil_membership());
+        }
         // `membership.room_id` finds the membership again.
         let room_id = self.membership(sub).await?.room_id;
         read_room(sub.server(), sub.current_user().id, room_id);
         Ok(())
     }
 
-    /// `absent`: `membership.disconnected`.
+    /// `absent`: `membership&.disconnected`, so a membership removed with its room is skipped.
     async fn absent(&self, sub: &Subscription<CableUser>) -> ChannelResult {
-        self.with_membership(sub, |membership, tx| membership.disconnected(tx)).await
+        self.with_membership(sub, |membership, tx| membership.disconnected(tx)).await.map(|_| ())
     }
 
-    /// `refresh`: `membership.refresh_connection`.
+    /// `refresh`: `membership&.refresh_connection`.
     async fn refresh(&self, sub: &Subscription<CableUser>) -> ChannelResult {
-        self.with_membership(sub, |membership, tx| membership.refresh_connection(tx)).await
+        self.with_membership(sub, |membership, tx| membership.refresh_connection(tx)).await.map(|_| ())
     }
 
     /// `@room.memberships.find_by(user: current_user)`, which is nil (and so raises
@@ -43,11 +46,12 @@ impl PresenceChannel {
         self.db.read(move |conn| Membership::find_by_room_and_user(conn, room_id, user_id)).await?.ok_or_else(nil_membership)
     }
 
+    /// Applies `change` to the membership; false when there's none.
     async fn with_membership(
         &self,
         sub: &Subscription<CableUser>,
         change: impl FnOnce(&mut Membership, &mut campfire_db::Tx<'_>) -> campfire_db::Result<()> + Send + 'static,
-    ) -> ChannelResult {
+    ) -> ChannelResult<bool> {
         let (room_id, user_id) = self.ids(sub)?;
         let found = self
             .db
@@ -56,7 +60,7 @@ impl PresenceChannel {
                 None => Ok(false),
             })
             .await?;
-        if found { Ok(()) } else { Err(nil_membership()) }
+        Ok(found)
     }
 
     fn ids(&self, sub: &Subscription<CableUser>) -> ChannelResult<(i64, i64)> {
