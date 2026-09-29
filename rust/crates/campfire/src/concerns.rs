@@ -515,6 +515,37 @@ pub fn post_authenticating_url(c: &mut Ctx) -> String {
     }
 }
 
+// --- Sudo mode (app/controllers/concerns/sudo_mode.rb) ---------------------------------------------
+
+/// `SudosController`: `rate_limit to: 10, within: 3.minutes, only: %i[ create google ], with: ->
+/// { render_sudo_rejection }` (a 429 with "Too many confirmation attempts. Try again in a few
+/// minutes."). Counted per `request.remote_ip` in the shared store.
+#[allow(dead_code)]
+pub fn sudo_rate_limit() -> campfire_kit::RateLimit {
+    campfire_kit::RateLimit::new("sudos", 10, jiff::SignedDuration::from_mins(3))
+}
+
+/// `require_sudo_mode`: through when the session confirmed its member less than
+/// [`session_keys::SUDO_TIMEOUT`] ago; otherwise stashes this request to continue after
+/// confirming (`store_sudo_pending_request`) and redirects to `new_sudo_url`.
+#[allow(dead_code)]
+pub fn require_sudo_mode(c: &mut Ctx) -> Result<()> {
+    let now = c.now();
+    if session_keys::sudo_verified(c.session(), now) {
+        return Ok(());
+    }
+    let method = c.request.method.as_str().to_string();
+    let pending = session_keys::SudoPendingRequest {
+        params: session_keys::sudo_storable_params(&method, &c.request_params),
+        method,
+        path: c.request.fullpath(),
+        origin: session_keys::sudo_origin_path(c.request.referer(), &c.request.host(), "/"),
+    };
+    session_keys::store_sudo_pending_request(c.session(), pending);
+    let location = c.url_for("/sudo/new");
+    halt(c.redirect_to(&location)?)
+}
+
 /// `deny_bots`: 403 for bot-key and bot-reply-token requests.
 pub fn deny_bots(c: &mut Ctx) -> Result<()> {
     if matches!(authenticated_by(c), AuthenticatedBy::BotKey | AuthenticatedBy::BotReply) {

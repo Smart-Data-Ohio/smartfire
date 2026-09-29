@@ -184,6 +184,7 @@ fn static_response(request: &axum::extract::Request) -> Option<axum::response::R
         range: header(axum::http::header::RANGE),
         if_modified_since: header(axum::http::header::IF_MODIFIED_SINCE),
     })?;
+    let immutable = immutable_asset(request.uri().path(), served.status);
     let mut response = axum::response::Response::new(axum::body::Body::from(served.body.into_owned()));
     *response.status_mut() = axum::http::StatusCode::from_u16(served.status).unwrap_or(axum::http::StatusCode::OK);
     response.extensions_mut().insert(campfire_kit::deflater::StaticFile);
@@ -194,7 +195,21 @@ fn static_response(request: &axum::extract::Request) -> Option<axum::response::R
             response.headers_mut().append(name, value);
         }
     }
+    if immutable {
+        response.headers_mut().insert(axum::http::header::CACHE_CONTROL, axum::http::HeaderValue::from_static(IMMUTABLE_CACHE_CONTROL));
+    }
     Some(response)
+}
+
+/// `RailsExt::ImmutableAssetHeaders::IMMUTABLE_CACHE_CONTROL`: `"public, immutable, max-age=#{1.year.to_i}"`.
+const IMMUTABLE_CACHE_CONTROL: &str = "public, immutable, max-age=31556952";
+
+/// `RailsExt::ImmutableAssetHeaders` (reference/lib/rails_ext/immutable_asset_headers.rb), which
+/// wraps `ActionDispatch::Static`: a digest-stamped asset the static server found (200 or 304) can
+/// never change, so it's cached as immutable. Anything else under `/assets/` falls through to the
+/// app's 404 and stays correctable.
+fn immutable_asset(path: &str, status: u16) -> bool {
+    path.starts_with("/assets/") && matches!(status, 200 | 304)
 }
 
 /// The error pages kit renders (`ActionDispatch::PublicExceptions`), from the embedded `public/`.
@@ -352,5 +367,7 @@ fn copy_database(source: &std::path::Path, target: &std::path::Path) -> anyhow::
     }
 }
 
+#[cfg(test)]
+mod security_tests;
 #[cfg(test)]
 mod tests;

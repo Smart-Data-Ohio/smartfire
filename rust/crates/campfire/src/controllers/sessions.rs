@@ -22,6 +22,11 @@ const REJECTION: &str = "Too many requests or unauthorized.";
 pub async fn new(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default().allow_unauthenticated_access()).await?;
     ensure_user_exists(c).await?;
+    // Our Rails app: background polls redirected to sign in keep their JSON Accept header, and
+    // get a 401 (`format.json { head :unauthorized }`) rather than UnknownFormat's 406.
+    if *c.respond_to(&[&format::HTML, &format::JSON])? == format::JSON {
+        return Ok(c.head(StatusCode::UNAUTHORIZED));
+    }
     render_new(c, StatusCode::OK).await
 }
 
