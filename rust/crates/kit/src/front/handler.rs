@@ -361,7 +361,9 @@ impl RequestLog {
         Self {
             started: Instant::now(),
             path: request.uri().path().to_string(),
-            query: request.uri().query().unwrap_or("").to_string(),
+            // Thruster logs the raw query; Rails' own request log filters it (`filtered_path`),
+            // and here this is the only request log there is.
+            query: crate::param_filter::global().filtered_query(request.uri().query().unwrap_or("")),
             method: request.method().to_string(),
             proto: match request.version() {
                 axum::http::Version::HTTP_2 => "HTTP/2.0",

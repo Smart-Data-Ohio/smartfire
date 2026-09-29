@@ -9,6 +9,7 @@ use axum::http::{HeaderName, HeaderValue};
 use crate::clock::SharedClock;
 use crate::csp::ContentSecurityPolicy;
 use crate::crypto::SharedCrypto;
+use crate::rate_limit::RateLimitStore;
 use crate::exceptions::ErrorPages;
 use crate::request::ProxyConfig;
 use crate::session::SessionConfig;
@@ -92,6 +93,8 @@ pub(crate) struct KitInner {
     pub crypto: SharedCrypto,
     pub clock: SharedClock,
     pub state: Arc<dyn Any + Send + Sync>,
+    /// The counters `rate_limit` keeps (Rails' cache store).
+    pub rate_limits: RateLimitStore,
 }
 
 impl std::fmt::Debug for Kit {
@@ -104,7 +107,7 @@ impl Kit {
     /// `state` is the application's own state (database handles etc.), reachable from actions
     /// with [`crate::Ctx::state`].
     pub fn new<S: Send + Sync + 'static>(config: KitConfig, crypto: SharedCrypto, clock: SharedClock, state: S) -> Self {
-        Self { inner: Arc::new(KitInner { config, crypto, clock, state: Arc::new(state) }) }
+        Self { inner: Arc::new(KitInner { config, crypto, clock, state: Arc::new(state), rate_limits: RateLimitStore::new() }) }
     }
 
     pub fn config(&self) -> &KitConfig {
@@ -117,6 +120,11 @@ impl Kit {
 
     pub fn clock(&self) -> &SharedClock {
         &self.inner.clock
+    }
+
+    /// The app's `rate_limit` counters.
+    pub fn rate_limits(&self) -> &RateLimitStore {
+        &self.inner.rate_limits
     }
 
     pub(crate) fn error_pages(&self) -> &ErrorPages {

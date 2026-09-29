@@ -912,3 +912,47 @@ async fn serves_with_peer_addresses_and_shuts_down_gracefully() {
     tokio::time::timeout(std::time::Duration::from_secs(5), server).await.unwrap().unwrap();
     tokio::time::timeout(std::time::Duration::from_secs(5), shutdown.drained()).await.unwrap();
 }
+
+/// `rate_limit to: 2, within: 1.minute, only: :create` with the default `with:` (a 429), and a
+/// second, named limit that renders its own rejection.
+async fn limited(c: &mut Ctx) -> Result {
+    c.rate_limit(&campfire_kit::RateLimit::new("limited", 2, jiff::SignedDuration::from_mins(1)))?;
+    let by_name = campfire_kit::RateLimit::new("limited", 3, jiff::SignedDuration::from_mins(1)).named("by_user");
+    let user = c.request.header("x-user").unwrap_or("nobody").to_string();
+    if c.rate_limited(&by_name, Some(&user))? {
+        return Ok(c.render(StatusCode::TOO_MANY_REQUESTS, &HTML, "slow down"));
+    }
+    Ok(c.head(StatusCode::NO_CONTENT))
+}
+
+#[tokio::test]
+async fn rate_limit_hits_the_limit_then_resets() {
+    let clock = std::sync::Arc::new(campfire_kit::FrozenClock::new("2026-01-01T12:00:00Z".parse().unwrap()));
+    let error_pages = ErrorPages::new([(429, "<h1>Too many</h1>".into())]);
+    let kit = Kit::new(KitConfig { error_pages, ..KitConfig::default() }, testing::crypto(), clock.clone(), AppState { name: "Campfire" });
+    let app = campfire_kit::app(Router::new().route("/limited", campfire_kit::get(limited)), kit);
+    let hit = |ip: &'static str, user: &'static str| {
+        let app = app.clone();
+        async move {
+            let mut request = get("/limited").header("x-user", user).body(AxumBody::empty()).unwrap();
+            request.extensions_mut().insert(ConnectInfo(format!("{ip}:5000").parse::<SocketAddr>().unwrap()));
+            send(&app, request).await
+        }
+    };
+
+    let statuses = [hit("10.0.0.1", "a").await.status, hit("10.0.0.1", "a").await.status, hit("10.0.0.1", "a").await.status];
+    assert_eq!(statuses, [StatusCode::NO_CONTENT, StatusCode::NO_CONTENT, StatusCode::TOO_MANY_REQUESTS]);
+    let limited = hit("10.0.0.1", "a").await;
+    assert_eq!((limited.status, limited.text().as_str()), (StatusCode::TOO_MANY_REQUESTS, "<h1>Too many</h1>"));
+    assert_eq!(hit("10.0.0.2", "a").await.status, StatusCode::NO_CONTENT, "another IP has its own count");
+
+    // The named limit counts by user: "a" has made 3 requests that got past the first limit.
+    let by_user = hit("10.0.0.3", "a").await;
+    assert_eq!((by_user.status, by_user.text().as_str()), (StatusCode::TOO_MANY_REQUESTS, "slow down"));
+
+    clock.advance(jiff::SignedDuration::from_secs(59));
+    assert_eq!(hit("10.0.0.1", "b").await.status, StatusCode::TOO_MANY_REQUESTS, "still inside the window");
+    clock.advance(jiff::SignedDuration::from_secs(1));
+    assert_eq!(hit("10.0.0.1", "b").await.status, StatusCode::NO_CONTENT, "the window from the first request is over");
+    assert_eq!(hit("10.0.0.3", "a").await.status, StatusCode::NO_CONTENT);
+}

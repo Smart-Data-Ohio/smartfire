@@ -16,6 +16,7 @@ use crate::csrf::{self, AuthenticityTokens, RealToken};
 use crate::deflater::splice::PageParts;
 use crate::format::{self, Format, InvalidMimeType, NegotiationInput};
 use crate::params::{Param, ParamMap};
+use crate::rate_limit::RateLimit;
 use crate::request::Request;
 use crate::response::{self, Body, CacheControl, ExpiresIn, Response, SendBody, SendOptions};
 use crate::session::{Flash, Session};
@@ -293,6 +294,25 @@ impl Ctx {
         self.session_bound_body = true;
         let real = self.real_csrf_token();
         AuthenticityTokens::new(real, self.request.path())
+    }
+
+    // --- Rate limiting ---------------------------------------------------------------------------
+
+    /// `rate_limit to:, within:, by:, with:` as a before-action: counts this request under `by`
+    /// (`request.remote_ip` when `None`) and says whether it's over the limit, for the caller to
+    /// run its `with:`.
+    pub fn rate_limited(&mut self, limit: &RateLimit, by: Option<&str>) -> Result<bool> {
+        let by = match by {
+            Some(by) => by.to_string(),
+            None => self.request.remote_ip()?.to_string(),
+        };
+        let now = self.now();
+        Ok(limit.exceeded(self.kit.rate_limits(), &by, now))
+    }
+
+    /// `rate_limit` with the default `with:` (`raise ActionController::TooManyRequests`, a 429).
+    pub fn rate_limit(&mut self, limit: &RateLimit) -> Result<()> {
+        if self.rate_limited(limit, None)? { Err(Error::Status(StatusCode::TOO_MANY_REQUESTS)) } else { Ok(()) }
     }
 
     // --- Content Security Policy -----------------------------------------------------------------
