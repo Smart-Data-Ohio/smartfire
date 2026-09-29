@@ -4,7 +4,7 @@ use hmac::{Hmac, Mac};
 use jiff::Timestamp;
 use sha2::Sha256;
 
-use crate::message_verifier::constant_time_eq;
+use subtle::ConstantTimeEq;
 
 pub const SIGNATURE_HEADER: &str = "X-Smartfire-Signature";
 pub const TIMESTAMP_HEADER: &str = "X-Smartfire-Timestamp";
@@ -39,7 +39,7 @@ pub fn smartfire_headers(secret: Option<&str>, body: &[u8], now: Timestamp) -> V
 /// Checks an `X-Smartfire-Signature` the way a receiver should: exact, constant-time. (Smartfire
 /// itself only signs; this is for tests and for anything in the port that receives them.)
 pub fn verify_smartfire_signature(secret: &str, timestamp: &str, body: &[u8], signature: &str) -> bool {
-    constant_time_eq(signature.as_bytes(), smartfire_signature(secret, timestamp, body).as_bytes())
+    bool::from(signature.as_bytes().ct_eq(smartfire_signature(secret, timestamp, body).as_bytes()))
 }
 
 /// `valid_signature?(secret)`: the `X-Hub-Signature-256` header (missing is `""`) starts with
@@ -48,7 +48,7 @@ pub fn verify_smartfire_signature(secret: &str, timestamp: &str, body: &[u8], si
 pub fn verify_github_signature(secret: &str, raw_body: &[u8], signature: Option<&str>) -> bool {
     let signature = signature.unwrap_or("");
     let expected = format!("{PREFIX}{}", hmac_sha256_hex(secret.as_bytes(), &[raw_body]));
-    signature.starts_with(PREFIX) && constant_time_eq(signature.as_bytes(), expected.as_bytes())
+    signature.starts_with(PREFIX) && bool::from(signature.as_bytes().ct_eq(expected.as_bytes()))
 }
 
 #[cfg(test)]

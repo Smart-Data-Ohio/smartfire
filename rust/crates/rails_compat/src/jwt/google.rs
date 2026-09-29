@@ -6,9 +6,9 @@
 //! Fetching and caching Google's keys (an hour, refetched once on an unknown `kid`) is the app's
 //! job: [`verify_id_token`] asks a closure for the key.
 use serde_json::{Map, Value};
+use subtle::ConstantTimeEq;
 
 use super::{Key, RsaPublicKey, Validation, decode, decode_unverified};
-use crate::message_verifier::constant_time_eq;
 use crate::metadata::ruby_to_s;
 use crate::{encoding, ruby};
 
@@ -210,7 +210,7 @@ fn verify_claims(payload: &Map<String, Value>, nonce: &str, max_auth_age: Option
     if payload.get("email_verified") != Some(&Value::Bool(true)) {
         return Err(Rejection::UnverifiedEmail);
     }
-    if !matches!(payload.get("nonce"), Some(Value::String(actual)) if constant_time_eq(actual.as_bytes(), nonce.as_bytes())) {
+    if !matches!(payload.get("nonce"), Some(Value::String(actual)) if bool::from(actual.as_bytes().ct_eq(nonce.as_bytes()))) {
         return Err(Rejection::BadNonce);
     }
     verify_domain(payload, config.allowed_domains)

@@ -13,6 +13,7 @@ use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use hmac::{Hmac, Mac};
 use sha1::Sha1;
+use subtle::ConstantTimeEq;
 
 use crate::json::Json;
 
@@ -57,7 +58,7 @@ impl Verifier for AppMessageVerifier {
 
     fn verified(&self, message: &str, purpose: &str, now: jiff::Timestamp) -> Option<String> {
         let (data, digest) = message.rsplit_once("--")?;
-        if data.is_empty() || !constant_time_eq(self.digest(data).as_bytes(), digest.as_bytes()) {
+        if data.is_empty() || !bool::from(self.digest(data).as_bytes().ct_eq(digest.as_bytes())) {
             return None;
         }
         let decoded = String::from_utf8(STANDARD.decode(data).ok()?).ok()?;
@@ -79,8 +80,4 @@ impl Verifier for AppMessageVerifier {
 /// `Time#iso8601(3)` in UTC, as MessageVerifier writes expirations.
 fn iso8601_ms(t: jiff::Timestamp) -> String {
     t.strftime("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
-}
-
-fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
-    a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
 }
