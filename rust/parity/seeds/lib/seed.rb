@@ -98,6 +98,29 @@ module Parity
     def room(name) = Room.find(id_for(:rooms, name))
     def message(name) = Message.find(id_for(:messages, name))
 
+    # -- Two-step sign-in ---------------------------------------------------------------------
+
+    # The reference makes every human enroll in two-step sign-in (TwoFactorEnforcement). Enroll USER
+    # with a TOTP credential and a remembered device, and return that device's signed cookie, escaped
+    # as it goes in a Cookie header: with it, the password alone signs in (Authentication
+    # #begin_session_for), so captures land on the page they asked for instead of the challenge.
+    def enroll_in_two_factor(user)
+      seed = "parity two-factor #{user.id}"
+      TwoFactorCredential.create!(user: user, confirmed_at: NOW,
+        secret: ROTP::Base32.encode(Digest::SHA256.digest(seed)).first(32))
+      token = Digest::SHA256.hexdigest("#{seed} device")
+      TwoFactorRememberedDevice.create!(user: user, token_digest: TwoFactorRememberedDevice.digest(token),
+        expires_at: NOW + TwoFactorRememberedDevice::REMEMBER_FOR, last_used_at: NOW)
+      Rack::Utils.escape(signed_cookie(Authentication::TWO_FACTOR_REMEMBER_COOKIE, token))
+    end
+
+    # The value `cookies.signed[name] = value` writes, with the app's secrets.
+    def signed_cookie(name, value)
+      jar = ActionDispatch::Request.new(Rails.application.env_config.merge("HTTP_HOST" => "localhost")).cookie_jar
+      jar.signed[name] = value
+      jar[name.to_s]
+    end
+
     # -- Fixtures -----------------------------------------------------------------------------
 
     # Load reference/test/fixtures exactly as the test suite does (`fixtures :all`), with the clock at

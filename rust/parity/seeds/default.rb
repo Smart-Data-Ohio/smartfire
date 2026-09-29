@@ -257,3 +257,10 @@ labels.select { |key, _| key.start_with?("users.") }.each do |key, id|
   email = User.find(id).email_address
   label :emails, key.delete_prefix("users."), email if email
 end
+
+# Every person who can sign in is enrolled in two-step sign-in, as the reference requires, with a
+# remembered device the capture presents at sign-in (see enroll_in_two_factor)
+labels.select { |key, _| key.start_with?("users.") }.each do |key, id|
+  person = User.find(id)
+  label :two_factor_cookies, key.delete_prefix("users."), enroll_in_two_factor(person) if person.requires_two_factor?
+end

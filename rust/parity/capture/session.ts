@@ -9,6 +9,9 @@ import type { Labels } from "./inventory.ts"
 export interface Credentials {
   email: string
   password: string
+  // The reference's remembered-device cookie (seeds label it two_factor_cookies.<user>): with it,
+  // sign-in skips the second step, which every enrolled human otherwise takes.
+  twoFactorCookie?: string
 }
 
 type StorageState = Awaited<ReturnType<BrowserContext["storageState"]>>
@@ -19,6 +22,7 @@ export function credentialsFor(user: string, labels: Labels): Credentials {
   return {
     email: String(label(labels, "emails", user) ?? `${user}@37signals.com`),
     password: String(label(labels, "passwords", user) ?? label(labels, "passwords", "all") ?? "secret123456"),
+    twoFactorCookie: label(labels, "two_factor_cookies", user) as string | undefined,
   }
 }
 
@@ -49,6 +53,9 @@ export class SessionCache {
 async function signIn(browser: Browser, baseUrl: string, proxy: BrowserContextOptions["proxy"], credentials: Credentials): Promise<StorageState> {
   const context = await browser.newContext({ timezoneId: "UTC", locale: "en-US", proxy })
   try {
+    if (credentials.twoFactorCookie) {
+      await context.addCookies([{ name: "two_factor_remember", value: credentials.twoFactorCookie, url: baseUrl }])
+    }
     const page = await context.newPage()
     await page.goto(new URL("/session/new", baseUrl).href)
     await page.locator("input[name=email_address]").fill(credentials.email)
