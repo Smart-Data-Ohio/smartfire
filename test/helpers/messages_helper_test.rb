@@ -120,4 +120,46 @@ class MessagesHelperTest < ActionView::TestCase
     assert_match /<a href="https:\/\/example\.com"[^>]*>example<\/a>/, presentation
     assert_match /<strong>bold<\/strong>/, presentation
   end
+
+  # Nokogiri leaves ">" raw inside quoted attribute values, which fooled
+  # auto_link into treating the rest of the value as text and inserting an
+  # anchor there. The anchor's quotes closed the attribute early, turning the
+  # rest of the stored value into live markup after sanitization.
+  test "legacy presentation doesn't autolink URLs inside attribute values" do
+    title = "x> http://evil.test/ <img src=x onerror=alert(1)>"
+    message = legacy_message(%(<p title="#{title}">hi</p>))
+
+    rendered = Nokogiri::HTML5.fragment(view.message_presentation(message))
+
+    assert_empty rendered.css("img, a, [onerror]")
+    assert_equal title, rendered.at_css("p")["title"]
+    assert_equal "hi", rendered.at_css("p").text
+  end
+
+  test "legacy presentation leaves an attribute value holding a URL byte-identical" do
+    message = legacy_message(%(<span title="a>b http://example.com/x">t</span>))
+
+    assert_equal %(<div class="trix-content">\n  <span title="a>b http://example.com/x">t</span>\n</div>\n),
+      view.message_presentation(message)
+  end
+
+  test "legacy presentation doesn't autolink email addresses inside attribute values" do
+    message = legacy_message(%(<span title="a>b me@example.com">t</span>))
+
+    assert_equal %(<div class="trix-content">\n  <span title="a>b me@example.com">t</span>\n</div>\n),
+      view.message_presentation(message)
+  end
+
+  test "legacy presentation still autolinks text after an attribute value holding a bracket" do
+    message = legacy_message(%(<span title="a>b">t</span> http://example.com/x me@example.com))
+
+    assert_equal %(<div class="trix-content">\n  <span title="a>b">t</span> <a target="_blank" href="http://example.com/x">http://example.com/x</a> ) +
+      %(<a target="_blank" href="mailto:me@example.com">me@example.com</a>\n</div>\n),
+      view.message_presentation(message)
+  end
+
+  private
+    def legacy_message(body)
+      Message.create! room: rooms(:pets), body: body, client_message_id: "legacy-autolink", creator: users(:jason)
+    end
 end
