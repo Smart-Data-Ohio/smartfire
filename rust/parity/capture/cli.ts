@@ -29,6 +29,7 @@
 // The self-parity gate (reference vs reference) is orchestrated by parity/bin/compare --self-parity,
 // because it starts and stops servers on the host.
 import fs from "node:fs"
+import { validateSeed } from "./seed_validation.ts"
 import path from "node:path"
 import { parseArgs } from "node:util"
 import { execFile } from "node:child_process"
@@ -76,6 +77,7 @@ const { values: opts, positionals } = parseArgs({
     origin: { type: "string", default: DEFAULT_ORIGIN },
     "no-allowlist": { type: "boolean", default: false },
     report: { type: "string", default: "report" },
+    receipt: { type: "string" },
   },
 })
 
@@ -153,11 +155,13 @@ function finish(result: RunResult) {
   if (result.reportFile) console.log(`report: ${result.reportFile}`)
   const c = summarize(result.comparisons)
   const errors = result.metas.filter((m) => m.error).length
-  process.exitCode = c.fail || c.error || errors ? 1 : 0
+  process.exitCode = c.fail || c.error || errors || result.comparisons.some(c => c.flaky) || result.metas.some(m => m.retriedAfter) ? 1 : 0
 }
 
 async function main() {
+  if (["recompare", "validate"].includes(command)) validateSeed(opts.seed!, path.resolve(opts["seed-dir"]!), time(), command === "validate" ? opts.receipt : undefined)
   switch (command) {
+    case "validate": return
     case "capture": {
       if (!opts.target) fail("capture needs --target URL")
       const dir = outDir("capture")

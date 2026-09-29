@@ -28,6 +28,7 @@ const QUIET_TICKS = 8
 const LONG_LIVED = new Set(["websocket", "eventsource", "media"])
 
 export class PageTracker {
+  documentGeneration = 0
   readonly page: Page
   inflight = new Set<Request>()
   held = new Set<Request>()
@@ -87,6 +88,7 @@ export class PageTracker {
     })
     page.on("framenavigated", (frame) => {
       if (frame !== page.mainFrame()) return
+      this.documentGeneration++
       this.resetCable()
       if (this.cable) this.cable.recording = false
     })

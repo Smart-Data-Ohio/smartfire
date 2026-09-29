@@ -162,7 +162,13 @@ docker_env_args() {
 docker_alive() { [ "$(docker inspect -f '{{.State.Running}}' "$(docker_name "$1")" 2>/dev/null)" = "true" ]; }
 
 docker_network() {
-  docker network inspect "$NETWORK" >/dev/null 2>&1 || docker network create --internal --label parity.owner="$OWNER" "$NETWORK" >/dev/null
+  if ! docker network inspect "$NETWORK" >/dev/null 2>&1; then
+    # A sibling reference/candidate may create the same fresh namespace after our inspect.
+    # Accept that race only when re-inspection proves the network now exists; still verify it
+    # is internal below. A genuine Docker failure remains fatal.
+    docker network create --internal --label parity.owner="$OWNER" "$NETWORK" >/dev/null 2>&1 ||
+      docker network inspect "$NETWORK" >/dev/null 2>&1 || die "cannot create network $NETWORK"
+  fi
   [ "$(docker network inspect -f '{{.Internal}}' "$NETWORK")" = true ] || die "network $NETWORK must be internal"
 }
 

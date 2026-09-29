@@ -4,10 +4,11 @@
 // so the capture shows a deterministic frame. Their bytes are compared elsewhere (assets).
 import type { BrowserContext, Route } from "playwright"
 
-export async function freezeAnimatedImages(context: BrowserContext, origin: string) {
+export async function freezeAnimatedImages(context: BrowserContext, origin: string, record?: (url: string, body: Buffer) => void) {
   const handler = async (route: Route) => {
     const response = await route.fetch()
     const body = await response.body()
+    record?.(route.request().url(), body)
     const frozen = firstFrameWebp(body) ?? firstFrameGif(body)
     await route.fulfill({ response, body: frozen ?? body })
   }

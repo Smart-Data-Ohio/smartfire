@@ -1,6 +1,11 @@
 # Validate the built Smartfire corpus using the reference's actual models and encrypted secrets.
 require "json"
-enrolled_credentials = TwoFactorCredential.where.not(confirmed_at: nil)
+seed = ARGV.first || "default"
+abort "unknown parity seed #{seed}" unless %w[default first_run unread live_rooms imports].include?(seed)
+if seed == "first_run"
+  checks = { no_account: !Account.exists?, no_users: !User.exists?, no_rooms: !Room.exists?, no_messages: !Message.exists? }
+else
+  enrolled_credentials = TwoFactorCredential.where.not(confirmed_at: nil)
 checks = {
   markdown: Message.where.not(markdown_source: [nil, ""]).exists?,
   thread_replies: Message.where.not(thread_id: nil).exists?,
@@ -31,5 +36,20 @@ checks = {
   setup_secret: TwoFactorSetupSecret.all.any? { |secret| secret.secret == "JBSWY3DPEHPK3PXP" },
   verified_sessions: Session.where.not(two_factor_verified_at: nil).exists?
 }
+  checks[:no_presence_leases] = !WorkspacePresenceLease.exists?
+  case seed
+  when "unread"
+    checks[:unread_memberships] = Membership.where.not(unread_at: nil).count >= 3
+  when "live_rooms"
+    checks[:recorded_grants] = HuddleGrant.count == 2
+    checks[:recorded_stream] = Stream.where.not(started_at: nil).exists?
+    checks[:stage_speaker] = HuddleGrant.where(stage_role: "speaker").exists?
+  when "imports"
+    checks[:slack_workspace] = SlackWorkspace.where(team_id: "PARITY").exists?
+    checks[:workspace_preview] = SlackImport.where(kind: "workspace", mode: "dry_run", status: "completed").exists?
+    checks[:personal_preview] = SlackImport.where(kind: "personal", mode: "dry_run", status: "completed").exists?
+    checks[:failed_import] = SlackImport.where(status: "failed", error: "Recorded permission error").exists?
+  end
+end
 puts JSON.pretty_generate(checks: checks, passed: checks.count { |_, value| value }, failed: checks.count { |_, value| !value })
 abort "parity seed verification failed" unless checks.values.all?

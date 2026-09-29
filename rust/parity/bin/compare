@@ -33,6 +33,7 @@ while [ $# -gt 0 ]; do
     --recompare)   mode=recompare; recompare=$2; shift 2 ;;
     --runs)        runs=$2; shift 2 ;;
     --ports)       ports=$2; shift 2 ;;
+    --seed-dir)    export PARITY_SEED_DIR=$2; args+=(--seed-dir "$2"); shift 2 ;;
     --seed)        seed=$2; seed_given=1; args+=(--seed "$2"); shift 2 ;;
     --time)        time=$2; shift 2 ;;
     --out)         out=$2; shift 2 ;;
@@ -57,7 +58,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 seed_time() {
-  local labels=$PARITY/.seed/$seed/labels.json
+  local labels=${PARITY_SEED_DIR:-$PARITY/.seed}/$seed/labels.json
   [ -f "$labels" ] || die "no seed $seed at $labels; run parity/bin/seed $seed"
   node -e 'const l=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")); console.log(l["clock.now"] ?? l.clock?.now ?? "")' "$labels"
 }

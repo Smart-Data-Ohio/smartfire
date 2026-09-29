@@ -72,7 +72,7 @@ Run from the checkout containing `rust/`:
 export PARITY_NAMESPACE=ws19 PARITY_OWNER=ws19
 rust/parity/bin/reference build
 rust/parity/bin/seed build default unread first_run live_rooms imports
-rust/parity/bin/compare --self-parity --matrix lean --ports 49301,49302 --workers 4 --isolated 2
+rust/parity/bin/compare --self-parity --matrix lean --runs 2 --ports 49301,49302 --workers 4 --isolated 2
 rust/parity/bin/compare --self-parity --matrix full --ports 49301,49302 --workers 4 --isolated 2
 rust/parity/bin/candidate build
 rust/parity/bin/candidate compare --seed default --ports 49001,49002 --workers 4 --matrix lean
@@ -119,8 +119,12 @@ HTTP outcomes. Full-document Turbo fetches count as documents; card/frame fragme
 overwrite the document layer.
 
 Pages compare exact pixels, normalized server HTML, live DOM, accessibility tree, response
-header shape/body hash, and cable subscriptions/broadcasts. Fragments compare status, type,
-redirect and normalized body. Normalized response text is saved in `.responses/` to diagnose
+header values/cookie values and attributes/body hash, and cable subscriptions/broadcasts.
+Fragments compare status, all meaningful headers/cookies and normalized body. Digest-named
+assets compare a full SHA-256 hash of the actual response bytes. Each cell has its own
+proxy retaining upstream payloads before drivers discard response bodies; browser memory
+cache reuse uses previously captured bytes, and animated-image routes record the original
+full payload before freezing its first frame. Every distinct delivered asset payload counts. Normalized response text is saved in `.responses/` to diagnose
 hashes. Repeated browser-cache requests collapse to the latest response per method/URL;
 subscription and payload sets discard transport duplicates.
 
@@ -129,8 +133,10 @@ fonts/images, quiet network and stable DOM under deterministic fake-clock ticks.
 subscriptions to the same cable identifier need one confirmation. Both targets capture in
 parallel, with four self-parity jobs by default. Interactive selectors/readiness fail after 8s;
 cold navigation and initial readiness each have 20s. Failed script resources fail immediately.
-Only renderer/network infrastructure crashes retry. Pixel-only retries
-are reported as flaky; acceptance requires **zero** flaky cells. All engines discard stale
+Only renderer/network infrastructure crashes retry. Any retry disagreement fails the gate
+with a non-zero exit, including a pixel-only difference that matches on a later capture.
+Earlier screenshots/diffs and the per-capture result are retained; recompare cannot erase
+recorded pixel flakes. Acceptance requires **zero** flaky cells. All engines discard stale
 raster tiles before screenshotting; there is no pixel tolerance.
 
 ## Masks and remaining integration boundaries
@@ -150,3 +156,50 @@ new secret/backup-code reveals and all validation branches remain integration ex
 Static offline/manifest/worker bytes are covered. Rails loses wrong-password `flash.now` on
 Turbo's required reload: that state asserts the 401 POST and captures the actual sign-in result
 without modifying Rails.
+
+## Seed and presence validation
+
+Every capture/compare/recompare mode validates the selected seed using the reference's actual
+models before capturing. `verify_parity_seed.rb` checks the default corpus plus unread, import
+and live-room requirements; first_run instead checks the empty schema. Unknown seeds fail.
+The host writes a receipt tied to the complete seed files, seed name, clock and validator
+bytes. The networkless browser process verifies that fingerprint. Editing a seed after
+validation invalidates the receipt. Standalone Node and the exported run function validate
+through the same path; metadata-only list/seeds/breakpoints do not capture.
+
+`account/directory`, `account/self`, `account/other`, human/agent cards and the presence response
+use `isolated: true`. Each cell gets fresh reference/candidate servers without concurrent
+captures, independently of `mutates`. Omitted reset hooks fail before capture instead of
+silently falling back to shared servers. The initial presence lease corpus must be empty;
+normal cable subscriptions inside the isolated cell remain live. No Online/Offline text,
+HTML, accessibility output or presence pixels are masked. Two fresh complete lean runs plus
+an across-run comparison verify determinism.
+
+For deterministic request coverage, the harness fetches each declared same-origin lazy image
+through its authenticated API request context at navigation and interaction boundaries,
+without changing image attributes or rendered DOM.
+Otherwise WebKit opportunistically fetching an offscreen timeline image races a thread-panel
+transition. Their actual response headers and bytes remain compared. `realtime/thread_reply` explicitly
+scrolls the background timeline to the bottom after panel reflow so WebKit scroll anchoring
+cannot choose two viewport positions for the same DOM. Non-GET bodies retain
+the inherited boundary: their status/headers and resulting rendered state are compared,
+but a submission is never replayed to recover a discarded response body.
+
+Scratch sockets/browser profiles live under `PARITY_SCRATCH` (default
+`/home/riels/.cache/rust-port/ws19/`); tests and reports use parity/out. The short socket path
+also avoids Unix's 108-byte limit. No host scratch is written to /tmp.
+
+Run the committed oracle fault suite with `node capture/test/injections/suite.ts after` from
+rust/parity, using the WS19 namespace/image. It checks 17 header/cookie/asset divergences,
+a transient first-capture pixel, a deleted-pins seed, and shared-server presence activity.
+The unchanged control must pass, every fault must fail. `before` is for reproducing the old
+98c96ef2 oracle with these injection fixtures. `bin/test-network-race` exercises concurrent
+reference boots in three fresh namespaces. All are offline and keep the real seeds intact.
+
+## Follow-up coverage wave
+
+The review identified these gaps; they are not implemented by this oracle correction:
+successful 2FA and the complete session lifecycle; permission boundaries; CRUD transitions;
+cross-user realtime; agent execution; RTC; OAuth and Picker; periodic jobs; installed and
+offline PWA behaviour; and **208 uncovered template declarations** in coverage/templates.txt.
+These need behavioural coverage in addition to the current screen inventory.

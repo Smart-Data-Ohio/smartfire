@@ -109,6 +109,9 @@ states:
     path: /rooms/{{rooms.designers}}
     as: david
     steps:
+      # Exercise the pagination threshold deterministically before mobile composer reflow.
+      - scroll: { selector: '.messages', to: top }
+      - scroll: { selector: '.messages', to: bottom }
       - fill:
           selector: .composer__textarea
           text: |-
@@ -684,22 +687,26 @@ states:
     covers:
       - users/sessions/index
   - id: account/directory
+    isolated: true
     area: account
     path: /users
     as: david
     covers:
       - users/index
   - id: account/self
+    isolated: true
     area: account
     path: /users/{{users.david}}
     as: david
     covers:
       - users/show
   - id: account/other
+    isolated: true
     area: account
     path: /users/{{users.jason}}
     as: david
   - id: account/user_card
+    isolated: true
     area: account
     path: /users/{{users.jason}}/card
     as: david
@@ -707,11 +714,13 @@ states:
     covers:
       - users/cards/show
   - id: account/agent_card
+    isolated: true
     area: account
     path: /users/{{users.bender}}/card
     as: david
     kind: fragment
   - id: account/presence
+    isolated: true
     area: account
     path: /users/presence.json
     as: david
@@ -972,6 +981,8 @@ states:
           text: A deterministic thread reply
       - click: '#thread-panel button[name=send]'
       - wait_for: '#thread-panel .message:has-text("A deterministic thread reply")'
+      # Pin the background timeline viewport after the panel reflows its lazy images/cards.
+      - scroll: { selector: '.messages', to: bottom }
   - id: integrations/slack_workspace_preview
     area: integrations
     path: /account/slack_import/runs/{{slack_imports.workspace}}

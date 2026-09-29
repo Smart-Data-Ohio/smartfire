@@ -7,12 +7,15 @@
 import http from "node:http"
 import net from "node:net"
 import type { AddressInfo } from "node:net"
+import { gunzipSync, inflateSync, brotliDecompressSync } from "node:zlib"
 import { connectUpstream } from "./forward.ts"
 
 export const DEFAULT_ORIGIN = "http://localhost:3999"
 
 export interface Proxy {
   server: string // http://127.0.0.1:<port>, for BrowserContextOptions.proxy
+  assetBody: (url: string) => Promise<Buffer>
+  rememberAsset: (url: string, body: Buffer) => void
   close: () => Promise<void>
 }
 
@@ -30,6 +33,8 @@ export async function startProxy(upstreamUrl: string): Promise<Proxy> {
     socket.once("error", (error) => callback(error, socket))
   }
   const sockets = new Set<net.Socket>()
+  const assets = new Map<string, Promise<Buffer>[]>()
+  const cachedAssets = new Map<string, Promise<Buffer>>()
   let closing = false
 
   const server = http.createServer((req, res) => {
@@ -37,6 +42,27 @@ export async function startProxy(upstreamUrl: string): Promise<Proxy> {
     const headers: http.OutgoingHttpHeaders = {}
     for (const [name, value] of Object.entries(req.headers)) if (!HOP_BY_HOP.has(name)) headers[name] = value
     const forward = http.request({ host, port, agent, method: req.method, path: url.pathname + url.search, headers }, (response) => {
+      if (!req.headers["x-parity-prefetch"] && /^\/assets\/.+-[0-9a-f]{8,}\.[a-z0-9]+$/.test(url.pathname)) {
+        const body = new Promise<Buffer>((resolve, reject) => {
+          const chunks: Buffer[] = []
+          response.on("data", chunk => chunks.push(chunk))
+          response.once("error", reject)
+          response.once("aborted", () => reject(new Error(`asset response truncated: ${url.pathname}`)))
+          response.once("end", () => {
+            try {
+              const bytes = Buffer.concat(chunks)
+              const encoding = response.headers["content-encoding"]
+              resolve(encoding === "gzip" ? gunzipSync(bytes) : encoding === "deflate" ? inflateSync(bytes) : encoding === "br" ? brotliDecompressSync(bytes) : bytes)
+            } catch (error) { reject(error) }
+          })
+        })
+        // A cancelled browser request might never emit a response event. Drain it anyway,
+        // without an unhandled rejection; consumers still receive the original failure.
+        void body.catch(() => {})
+        const key = url.pathname + url.search
+        assets.set(key, [...(assets.get(key) ?? []), body])
+        cachedAssets.set(key, body)
+      }
       const raw: string[] = []
       for (let i = 0; i < response.rawHeaders.length; i += 2) {
         if (!HOP_BY_HOP.has(response.rawHeaders[i].toLowerCase())) raw.push(response.rawHeaders[i], response.rawHeaders[i + 1])
@@ -95,6 +121,23 @@ export async function startProxy(upstreamUrl: string): Promise<Proxy> {
   const { port: proxyPort } = server.address() as AddressInfo
   return {
     server: `http://127.0.0.1:${proxyPort}`,
+    assetBody: async url => {
+      const parsed = new URL(url)
+      const key = parsed.pathname + parsed.search
+      // A browser can report its memory-cached asset again after Turbo navigation. Its exact
+      // bytes were already captured by this cell's proxy; never re-fetch from the server.
+      const body = assets.get(key)?.shift() ?? cachedAssets.get(key)
+      if (!body) throw new Error(`asset has no captured upstream response: ${url}`)
+      return body
+    },
+    rememberAsset: (url, body) => {
+      const parsed = new URL(url)
+      const key = parsed.pathname + parsed.search
+      // route.fetch uses an API CONNECT tunnel; keep its actual, unfrozen bytes explicitly.
+      const captured = Promise.resolve(body)
+      assets.set(key, [...(assets.get(key) ?? []), captured])
+      cachedAssets.set(key, captured)
+    },
     close: async () => {
       closing = true
       for (const s of sockets) s.destroy()

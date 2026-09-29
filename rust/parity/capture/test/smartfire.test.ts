@@ -6,8 +6,10 @@ import { retryableCaptureError, run } from '../run.ts'
 import { checkStatus } from '../capture.ts'
 import { NetworkLog } from '../network.ts'
 import fs from 'node:fs'
-import os from 'node:os'
+import { PARITY_DIR } from '../config.ts'
 import path from 'node:path'
+
+fs.mkdirSync(path.join(PARITY_DIR, 'out'), { recursive: true })
 
 test('CSRF fields are compared; only their random values differ', () => {
   const html = (token: string) => `<meta name="csrf-param" content="authenticity_token"><meta name="csrf-token" content="${token}"><form action="/session"><input name="authenticity_token" value="${token}" type="hidden"></form>`
@@ -29,7 +31,7 @@ test('deterministic HTTP and selector failures are never retried', () => {
 })
 
 test('an empty capture selection cannot pass the gate', async () => {
-  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ws19-empty-'))
+  const outDir = fs.mkdtempSync(path.join(PARITY_DIR, 'out/ws19-empty-'))
   try {
     await assert.rejects(run({
       states: [], filter: { matrix: 'lean' }, targets: [], outDir,

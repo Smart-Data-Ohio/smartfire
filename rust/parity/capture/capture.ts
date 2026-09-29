@@ -12,6 +12,8 @@ import { cellId, interpolate, interpolateStep, isFragment, loadLabels } from "./
 import type { Job, Labels, Masks, State } from "./inventory.ts"
 import { maskText, normalizeResponse, normalizeDocument } from "./normalize.ts"
 import { CableLog, NetworkLog } from "./network.ts"
+import { responseHeaders } from "./headers.ts"
+import { startProxy } from "./proxy.ts"
 import { DETERMINISM_SCRIPT, PageTracker, READINESS_SCRIPT, waitForReady } from "./readiness.ts"
 import type { SessionCache } from "./session.ts"
 import { runStep } from "./steps.ts"
@@ -21,6 +23,7 @@ export interface Target {
   name: string // "expected" | "actual" | ...
   url: string // the real server
   origin: string // what the browser sees (shared by all targets; see proxy.ts)
+  assetBody?: (url: string) => Promise<Buffer>
   proxy?: string // this target's forward proxy, set by run()
 }
 
@@ -47,6 +50,7 @@ export interface CellMeta {
   animations?: string[]
   focus?: string
   trace?: string[] // after each step: the step, then scroll positions and the focused element
+  flakyAttempts?: import("./compare.ts").Attempt[]
   retriedAfter?: string
   masks?: { values: Record<string, string>; pixels: Record<string, number> } // what masks.* found
   cable?: Record<string, string[]>
@@ -80,6 +84,8 @@ export async function captureCell(job: Job, target: Target, env: CaptureEnv): Pr
     pageErrors: [], console: [], durationMs: 0,
   }
   const { browser, release } = await env.pool.acquire(cell.engine)
+  const proxy = await startProxy(target.url)
+  target = { ...target, proxy: proxy.server, assetBody: proxy.assetBody }
   meta.browserVersion = browser.version()
   const contexts: BrowserContext[] = []
   const beforeClose: (() => Promise<void>)[] = []
@@ -94,7 +100,7 @@ export async function captureCell(job: Job, target: Target, env: CaptureEnv): Pr
     context.setDefaultTimeout(env.timeoutMs)
     await isolateNetwork(context, target.origin)
     await scriptsInOrder(context, target.origin, meta)
-    await freezeAnimatedImages(context, target.origin)
+    await freezeAnimatedImages(context, target.origin, proxy.rememberAsset)
     return context
   }
   try {
@@ -106,6 +112,7 @@ export async function captureCell(job: Job, target: Target, env: CaptureEnv): Pr
   } finally {
     await Promise.all(beforeClose.map((f) => f().catch(() => {})))
     await Promise.all(contexts.map((c) => c.close().catch(() => {})))
+    await proxy.close()
     await release()
     meta.durationMs = Date.now() - started
     fs.writeFileSync(base + ".json", JSON.stringify(meta, null, 2) + "\n")
@@ -140,7 +147,7 @@ async function capturePage(
     pages[actor] = page
     trackers[actor] = new PageTracker(page)
     trackers[actor].cable = new CableLog(normalizeOptions, !!state.mutates)
-    networks[actor] = new NetworkLog(page, new URL(target.origin).origin, normalizeOptions, base + ".responses")
+    networks[actor] = new NetworkLog(page, new URL(target.origin).origin, normalizeOptions, base + ".responses", target.assetBody)
     beforeClose.push(() => trackers[actor].abortHeld())
     const route = typeof state.path === "string" ? state.path : state.path[actor] ?? state.path[captureActor]
     const url = new URL(interpolate(route, labels, state.id), target.origin).href
@@ -155,6 +162,7 @@ async function capturePage(
     }
     // Cold module loading gets the same bounded budget as the first navigation. Interactive
     // selector waits keep the shorter cell timeout, and failed scripts stop readiness immediately.
+    await fetchLazyImages(page, networks[actor], env.timeoutMs)
     meta.readiness = await waitForReady([trackers[actor]], Math.max(env.timeoutMs, 20_000), clockTime)
   }
 
@@ -182,8 +190,11 @@ async function capturePage(
   const stepContext: StepContext = { pages, trackers, defaultActor: captureActor, touch, baseUrl: target.origin, timeoutMs: env.timeoutMs, time: clockTime }
   meta.trace = []
   for (const step of state.steps) {
+    const generations = Object.fromEntries(Object.entries(trackers).map(([actor, tracker]) => [actor, tracker.documentGeneration]))
     await runStep(interpolateStep(step, labels, state.id), stepContext)
-    meta.readiness = await waitForReady(Object.values(trackers), env.timeoutMs, clockTime)
+    await Promise.all(Object.entries(pages).map(([actor, page]) => fetchLazyImages(page, networks[actor], env.timeoutMs)))
+    const navigated = Object.entries(trackers).some(([actor, tracker]) => tracker.documentGeneration !== generations[actor])
+    meta.readiness = await waitForReady(Object.values(trackers), navigated ? Math.max(env.timeoutMs, 20_000) : env.timeoutMs, clockTime)
     meta.trace.push(`${JSON.stringify(step)} -> ${await pageTrace(capturePage)}`)
   }
   await Promise.all(documentResponses)
@@ -237,6 +248,26 @@ async function capturePage(
   meta.pageErrors = Object.values(trackers).flatMap((t) => t.errors)
   meta.console.push(...Object.values(trackers).flatMap((t) => t.console))
   checkStatus(state, meta, true)
+}
+
+// WebKit may opportunistically fetch an offscreen lazy image before a thread panel covers the
+// timeline. Request every declared lazy image at the same step boundary on both sides instead
+// of masking missing network entries. This changes no DOM attributes or rendered content.
+async function fetchLazyImages(page: Page, network: NetworkLog, timeoutMs: number): Promise<void> {
+  const urls = await page.evaluate(() => [...new Set([...document.images].filter(img => img.loading === 'lazy').map(img => img.currentSrc || img.src))]
+    .filter(url => url && new URL(url, location.href).origin === location.origin))
+  for (let url of urls) {
+    for (let redirects = 0; redirects < 6; redirects++) {
+      const response = await page.context().request.get(url, { maxRedirects: 0, timeout: timeoutMs, headers: { 'x-parity-prefetch': 'lazy-image', 'accept-encoding': 'identity' } })
+      await network.recordAPI(url, response)
+      if (response.status() < 300 || response.status() >= 400) break
+      const location = response.headers().location
+      if (!location) break
+      url = new URL(location, url).href
+      if (new URL(url).origin !== new URL(page.url()).origin) throw new Error('lazy image redirected outside the offline reference')
+      if (redirects === 5) throw new Error('lazy image redirect loop')
+    }
+  }
 }
 
 // The mouse stays where the last step left it, and when the page changes under it (the message it
@@ -312,9 +343,9 @@ async function captureFragment(state: State, target: Target, env: CaptureEnv, ba
   meta.status = response.status()
   meta.contentType = response.headers()["content-type"]
   fs.writeFileSync(base + ".server.html", body)
-  const location = response.headers()["location"]
-  const head = [`HTTP ${meta.status}`, `content-type: ${meta.contentType ?? ""}`, ...(location ? [`location: ${location}`] : [])]
-  fs.writeFileSync(base + ".server.norm.html", `${head.join("\n")}\n\n${normalizeResponse(body, meta.contentType ?? "", { seedTime: Date.parse(env.time), frozenServerClock: true })}`)
+  const options = { seedTime: Date.parse(env.time), frozenServerClock: true }
+  const head = `HTTP ${meta.status}\n${responseHeaders(response.headersArray(), options, body)}`
+  fs.writeFileSync(base + ".server.norm.html", `${head}\n\n${normalizeResponse(body, meta.contentType ?? "", options)}`)
   checkStatus(state, meta)
 }
 

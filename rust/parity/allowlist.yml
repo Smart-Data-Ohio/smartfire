@@ -4,18 +4,42 @@
 # - CSP script/style/meta nonces: fresh per response; element structure remains.
 # - Signed IDs/SGIDs/streams: retain record/purpose/payload; ignore signature bytes.
 #   Frozen-clock expiries retain exact offsets. Golden vectors cover cookie/signature bytes.
-# - Encrypted pending-session cookies: random IV/ciphertext; cookie names/attributes remain.
+# - _campfire_session/session_token values only: random encryption IVs/session identifiers;
+#   empty/deletion values and every attribute (Path, Domain, SameSite, Secure, HttpOnly,
+#   Expires and Max-Age, including values) remain. Other cookie values never normalize.
 #   Pending 2FA and verified-session behaviors are separately exercised, never merged.
 # - Attachment object URLs: browser UUID; file bytes and surrounding DOM remain.
 # - Asset filenames: Propshaft digest in DOM; network request digest remains checked.
-#   Digest-named bodies are not independently rehashed (an inherited comparison limit).
+#   Actual digest-named response bytes are independently SHA-256 hashed in full.
 # - QR URLs: decode destination; join/transfer URL meaning remains visible.
 # - ISO/epoch times: exact offset from fixed seed time, not arbitrary timestamp removal.
-# - Transport headers: omit Date/request ID/runtime/encoding bookkeeping; retain status,
-#   content type, redirect, cache, disposition, vary, cookie names/attributes.
+# - Header fields: all application/security values and cookie attributes are compared in
+#   pages and fragments. Only connection/content-length/keep-alive/server/server-timing/
+#   transfer-encoding/x-runtime are omitted: hop framing, implementation identity or timing;
+#   payload hashes still compare application bytes. Content-Encoding remains significant.
+# - Date header: valid RFC1123 dates become response-date; server/proxy clocks differ.
+#   Presence/multiplicity/malformed dates remain; Expires/Last-Modified are not removed.
+# - X-Request-Id and X-CSRF-Token: only nonempty values normalize, as per-request identifiers
+#   and anti-forgery entropy. Header presence and empty values remain significant.
+# - CSP / CSP-Report-Only: only quoted nonce bytes normalize; every directive/source remains.
+# - Set-Cookie Expires: exact seconds from the seed clock; preserve lifetime, not remove it.
+# - Cache-Control/Vary: comma directive whitespace/case/order canonicalized, values retained.
+# - Location: the existing typed signed-ID/time/blob normalizer; destination meaning retained.
+# - X-Cache: only literal hit/miss normalize: Rack::Cache instrumentation varies with request
+#   interleaving. Presence/unknown values, cache policy, validators and body bytes remain.
+# - HTML weak ETag: ONLY Rack SHA-256 truncated validators proven to hash the actual response
+#   body become its normalized-body digest: fresh CSRF/nonces otherwise change validators.
+#   Incorrect validators, strong ETags, non-HTML validators and header presence still differ.
+# - Header arrays: rejoin comma fields split by WebKit, never join Set-Cookie. This restores
+#   the HTTP field value (not a mask); attributes retain their actual values.
 # - Duplicate network requests: latest per method+URL; browser preload/cache ordering.
 # - Disk blob keys/disposition: opaque storage key; signed blob ID/media hash remain.
 # - Cable: subscription/outcome and broadcast sets; omit heartbeat/duplicate delivery order.
-#   Mutation states record broadcasts; background presence is not a UI state.
+#   Mutation states record broadcasts; presence-sensitive UI runs on fresh isolated servers.
+# - Animated WebP/GIF pixels: freeze to the first frame; actual original asset bytes (all
+#   frames) are independently hashed before transformation. No asset byte normalization.
+# - Offscreen lazy image requests: deterministically fetch declared sources at step boundaries;
+#   no DOM/pixel/header/body mask. realtime/thread_reply declares a bottom scroll after panel
+#   reflow to remove WebKit scroll-anchor ambiguity, with all visible pixels still compared.
 # No state-specific values/pixels or asset/PWA bodies are hidden to force agreement.
 []

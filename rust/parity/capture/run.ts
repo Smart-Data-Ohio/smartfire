@@ -11,13 +11,13 @@ import { artifactBase, captureCell } from "./capture.ts"
 import type { CaptureEnv, CellMeta, Target } from "./capture.ts"
 import { compareJob, pixelOnlyFailure } from "./compare.ts"
 import type { Attempt, CellComparison } from "./compare.ts"
-import { ENGINES } from "./config.ts"
+import { ENGINES, SEED_DIR } from "./config.ts"
+import { validateSeed } from "./seed_validation.ts"
 import type { Engine } from "./config.ts"
 import { cellId, expandJobs, jobId } from "./inventory.ts"
 import type { Job, MatrixFilter, State } from "./inventory.ts"
 import { summarize, writeReport } from "./report.ts"
 import { SessionCache } from "./session.ts"
-import { startProxy } from "./proxy.ts"
 
 // Each worker drives one browser context, roughly a core of renderer work, and the servers under
 // test need room too. The box is shared, so the default is modest; PARITY_WORKERS or --workers
@@ -82,9 +82,6 @@ export async function run(options: RunOptions): Promise<RunResult> {
   const isolated: Target[][] = Array.from({ length: slots }, (_, k) =>
     options.targets.map((t) => ({ ...t, url: isolatedUrl(t.url, k, options.isolatedPortOffset), proxy: undefined })),
   )
-  const all = [...options.targets, ...isolated.flat()]
-  const proxies = await Promise.all(all.map((t) => startProxy(t.url)))
-  all.forEach((t, i) => (t.proxy = proxies[i].server))
   try {
     const wantsBreakpoints = options.filter.matrix === "full" && options.filter.breakpoints !== "exclude"
     const engines = (options.filter.engines ?? ENGINES).filter((e) => ENGINES.includes(e))
@@ -92,6 +89,9 @@ export async function run(options: RunOptions): Promise<RunResult> {
     if (wantsBreakpoints && !options.quiet) console.log(`breakpoint widths: ${JSON.stringify(widths)}`)
     const jobs = expandJobs(options.states, options.filter, widths)
     if (!jobs.length) throw new Error("no selected inventory cells")
+    const presence = jobs.filter(j => j.state.isolated)
+    if (presence.length && !options.reset) throw new Error(`presence-sensitive states require fresh servers (--reset/--reset-host): ${[...new Set(presence.map(j => j.state.id))].join(", ")}`)
+    for (const seed of new Set(jobs.map(j => j.state.seed))) validateSeed(seed, options.seedDir ?? SEED_DIR, options.time)
     const metas: CellMeta[] = []
     const comparisons: CellComparison[] = []
     let done = 0
@@ -145,7 +145,7 @@ export async function run(options: RunOptions): Promise<RunResult> {
         let comparison = compare()
         // Pixel flake policy (parity/SCREENS.md, "Pixel flakes"): when every server-output layer
         // is identical and only the pixels differ, the cell is captured again on both sides, up to
-        // PIXEL_RETRIES more times. A later match passes the cell, marked flaky with its attempts.
+        // PIXEL_RETRIES more times. A later match is diagnostic only: the gate still fails, with every attempt retained.
         const attempts: Attempt[] = []
         while (pixelOnlyFailure(comparison) && attempts.length < PIXEL_RETRIES) {
           attempts.push(keepAttempt(options.outDir, options.targets, job, comparison, attempts.length + 1))
@@ -156,9 +156,17 @@ export async function run(options: RunOptions): Promise<RunResult> {
         if (attempts.length) {
           comparison.attempts = [...attempts, attemptOf(comparison, attempts.length + 1)]
           comparison.flaky = comparison.status === "pass"
+          if (comparison.flaky) {
+            comparison.status = "fail"
+            comparison.error = "captures disagreed; a later match cannot clear an earlier pixel failure"
+            for (const meta of captured) {
+              meta.flakyAttempts = comparison.attempts
+              fs.writeFileSync(artifactBase(options.outDir, meta.target, job) + ".json", JSON.stringify(meta, null, 2) + "\n")
+            }
+          }
         }
         comparisons.push(comparison)
-        status = comparison.flaky ? "pass (flaky)" : comparison.status
+        status = comparison.flaky ? "fail (flaky)" : comparison.status
       }
       metas.push(...captured)
       done++
@@ -167,8 +175,8 @@ export async function run(options: RunOptions): Promise<RunResult> {
       }
     }
 
-    const shared = interleave(jobs.filter((j) => !j.state.mutates))
-    const mutating = interleave(jobs.filter((j) => j.state.mutates))
+    const shared = interleave(jobs.filter((j) => !j.state.mutates && !j.state.isolated))
+    const mutating = interleave(jobs.filter((j) => j.state.mutates || j.state.isolated))
     if (!options.quiet) {
       console.log(`${jobs.length} cells (${shared.length} on shared servers, ${mutating.length} ${slots ? `on fresh servers in ${slots} slots` : "serial"}) × ${options.targets.length} targets, ${options.workers} workers`)
     }
@@ -193,7 +201,6 @@ export async function run(options: RunOptions): Promise<RunResult> {
     return result
   } finally {
     await pool.close()
-    await Promise.all(proxies.map((p) => p.close()))
   }
 }
 
@@ -274,7 +281,7 @@ export function summaryLine(result: RunResult): string {
   }
   const c = summarize(result.comparisons)
   const flaky = result.comparisons.filter((r) => r.flaky).length
-  return `${result.comparisons.length} cells: ${c.pass} pass (${flaky} flaky), ${c.fail} fail, ${c.allowed} allowed, ${c.error} error in ${(result.durationMs / 1000).toFixed(1)}s`
+  return `${result.comparisons.length} cells: ${c.pass} pass, ${flaky} flaky, ${c.fail} fail, ${c.allowed} allowed, ${c.error} error in ${(result.durationMs / 1000).toFixed(1)}s`
 }
 
 export function shell(command: string) {

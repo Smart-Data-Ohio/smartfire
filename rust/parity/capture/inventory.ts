@@ -40,6 +40,7 @@ export interface State {
   expect_status?: number // HTTP status of the main document (default 200)
   expect_final_status?: number // HTTP status after steps, when a rejection renders a new document
   expect_responses?: { method: string; path: string; status: number }[] // required interaction outcomes
+  isolated?: boolean // reads live shared state (presence): MUST have a freshly reset server
   mutates?: boolean // changes the database: runs serially, each capture on a freshly reset server
   breakpoints?: boolean // include in the breakpoint sweep (besides DEFAULT_BREAKPOINT_STATES)
   notifications?: "denied" | "granted" // the browser's notification state (default denied)

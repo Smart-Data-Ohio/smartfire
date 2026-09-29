@@ -80,11 +80,15 @@ export function compareJob(job: Job, runDir: string, expectedName: string, actua
     actual: { base: actualBase, meta: readMeta(actualBase) },
     masks: describeMasks(job.state.masks),
   }
+  const previous = result.expected.meta?.flakyAttempts ?? result.actual.meta?.flakyAttempts
+  if (previous) { result.flaky = true; result.attempts = previous; result.error = "captures disagreed in the original run" }
   const errors = [
     !result.expected.meta && `${expectedName}: not captured`,
     result.expected.meta?.error && `${expectedName}: ${result.expected.meta.error}`,
+    result.expected.meta?.retriedAfter && `${expectedName}: an earlier capture failed: ${result.expected.meta.retriedAfter}`,
     !result.actual.meta && `${actualName}: not captured`,
     result.actual.meta?.error && `${actualName}: ${result.actual.meta.error}`,
+    result.actual.meta?.retriedAfter && `${actualName}: an earlier capture failed: ${result.actual.meta.retriedAfter}`,
   ].filter(Boolean)
   if (errors.length) {
     result.status = "error"
@@ -127,7 +131,7 @@ function finish(result: CellComparison, allowlist: Allowlist): CellComparison {
     if (!layer.equal) layer.allowed = allowlist.match(result.state, result.cell, layer.layer)
   }
   const failing = result.layers.filter((l) => !l.equal)
-  result.status = !failing.length ? "pass" : failing.every((l) => l.allowed) ? "allowed" : "fail"
+  result.status = result.flaky ? "fail" : !failing.length ? "pass" : failing.every((l) => l.allowed) ? "allowed" : "fail"
   return result
 }
 
