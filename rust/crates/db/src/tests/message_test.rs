@@ -574,6 +574,25 @@ fn saving_a_streaming_message_restarts_its_activity_clock() {
     assert_eq!(t.read(|c| Message::find(c, id("first"))).streaming_updated_at, None);
 }
 
+/// `update!(attachment: nil)` on a streaming message with no attachment still saves (the
+/// activity clock changes), and a saved change touches the room (`belongs_to :room, touch: true`).
+#[test]
+fn a_streaming_attachment_save_touches_the_room() {
+    let t = TestDb::new();
+    t.clock.travel_to(t.now());
+    let room_id = id("designers");
+    let message = t.write(move |tx| {
+        Message::create(tx, NewMessage { room_id, creator_id: id("david"), streaming: true, body: Some("partial".into()), ..Default::default() })
+    });
+    t.travel(60);
+    let mut m = message.clone();
+    t.write(move |tx| m.replace_attachment(tx, None));
+    let saved = t.read(|c| Message::find(c, message.id));
+    assert_eq!(saved.updated_at, t.now());
+    assert_eq!(saved.streaming_updated_at, Some(t.now()));
+    assert_eq!(t.read(|c| Room::find(c, room_id)).updated_at, t.now());
+}
+
 fn create_thread_under(tx: &mut Tx<'_>, parent: &Message) -> Result<i64> {
     let thread_id = create_thread(tx, parent.room_id, parent.creator_id)?;
     tx.conn().execute(r#"UPDATE "channel_threads" SET "parent_message_id" = ? WHERE "id" = ?"#, rusqlite::params![parent.id, thread_id])?;
