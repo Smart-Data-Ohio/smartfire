@@ -6,7 +6,9 @@
 <% title = reaction_title(content) %>
 <% tooltip_id = dom_id(message, "reactors_#{index}") %>
 
-<%= form_with model: [ message, Boost.new ], class: "reaction-chip__form",
+<%# Part of the message fragment every viewer shares, so no session-bound
+    authenticity token: Turbo sends the page's csrf-token meta instead. %>
+<%= form_with model: [ message, Boost.new ], class: "reaction-chip__form", authenticity_token: false,
       data: { turbo_frame: dom_id(message, :boosting) } do %>
   <%= hidden_field_tag "boost[content]", content %>
   <span class="reaction-chip__wrap">

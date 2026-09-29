@@ -156,7 +156,9 @@ module MessagesHelper
   #
   # 2: legacy bodies stop autolinking inside attribute values (stored XSS,
   #    lib/rails_ext/auto_link_outside_attribute_values.rb).
-  PRESENTATION_CACHE_VERSION = 2
+  # 3: forms inside the fragment stop embedding the session-bound CSRF
+  #    token, which the cache served from the first viewer to every other.
+  PRESENTATION_CACHE_VERSION = 3
 
   def message_presentation(message)
     case message.content_type
