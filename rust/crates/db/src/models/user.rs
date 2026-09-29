@@ -4,6 +4,7 @@
 use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, ValueRef};
 use rusqlite::{Connection, Row, params};
 use sha2::{Digest, Sha256};
+use subtle::ConstantTimeEq;
 
 use crate::database::Tx;
 use crate::error::{OptionalExt, Result};
@@ -700,13 +701,10 @@ pub fn digest_bot_token(token: &str) -> String {
 }
 
 /// `ActiveSupport::SecurityUtils.secure_compare`: false for different lengths, otherwise a
-/// comparison whose time doesn't depend on where the inputs differ.
+/// comparison whose time doesn't depend on where the inputs differ (`subtle`'s `ct_eq`, which
+/// like Rails lets only the length leak).
 pub fn secure_compare(a: &[u8], b: &[u8]) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-    let difference = a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y));
-    std::hint::black_box(difference) == 0
+    a.ct_eq(b).into()
 }
 
 /// `blank?` for a string: empty or whitespace only.
