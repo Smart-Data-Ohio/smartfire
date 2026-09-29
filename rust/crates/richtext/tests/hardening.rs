@@ -72,9 +72,20 @@ fn an_email_address_after_a_greater_than_sign_in_an_attribute_cannot_break_out_o
 }
 
 #[test]
-fn name_attributes_cant_clobber_the_pages_globals() {
-    let html = presentation(r#"<p><a name="body" href="/x">x</a><span name="cookie">y</span></p>"#);
-    assert_eq!(parsed_markup(&html), ["p", "a", "a[href]", "span"], "{html}");
+fn named_anchors_keep_escaped_names() {
+    let html = presentation(r#"<p><a name='a b"c' href="/x">x</a><span name="cookie">y</span></p>"#);
+    assert_eq!(parsed_markup(&html), ["p", "a", "a[name]", "a[href]", "span"], "{html}");
+    assert!(html.contains("name=\"a%20b%22c\""), "{html}");
+}
+
+#[test]
+fn attachment_generated_image_names_cannot_create_dom_globals() {
+    let html = presentation(
+        r#"<action-text-attachment content-type="text/html" content="&lt;img src=&quot;/image.png&quot; name=&quot;body&quot;&gt;"></action-text-attachment>"#,
+    );
+    let markup = parsed_markup(&html);
+    assert!(markup.iter().any(|m| m == "img"), "{html}");
+    assert!(!markup.iter().any(|m| m.ends_with("[name]")), "{html}");
 }
 
 #[test]

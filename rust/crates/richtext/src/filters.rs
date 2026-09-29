@@ -2,7 +2,7 @@
 //! RemoveSoloUnfurledLinkText, StyleUnfurledTwitterAvatars, SanitizeTags, SanitizeAttributes.
 
 use crate::Error;
-use crate::attachables::{OPENGRAPH_EMBED_CONTENT_TYPE, RenderContext, opengraph_embed_from_node};
+use crate::attachables::{OPENGRAPH_EMBED_CONTENT_TYPE, RenderContext};
 use crate::content::{ATTACHMENT_TAG, Content};
 use crate::ruby::{is_blank, strip};
 use crate::sanitizer::{self, SafeList, sanitize_tags_allowed_tags};
@@ -27,11 +27,7 @@ pub fn remove_solo_unfurled_link_text(content: Content, ctx: &RenderContext) -> 
             content.dom.local_name(n) == Some(ATTACHMENT_TAG) && content.dom.attr(n, "content-type") == Some(OPENGRAPH_EMBED_CONTENT_TYPE)
         })
         .collect();
-    let solo_unfurled_url = if unfurled_links.len() == 1 {
-        opengraph_embed_from_node(&content.dom, unfurled_links[0], ctx)?.and_then(|embed| embed.href)
-    } else {
-        None
-    };
+    let solo_unfurled_url = if unfurled_links.len() == 1 { content.dom.attr(unfurled_links[0], "href").map(str::to_owned) } else { None };
     let plain_text = content.to_plain_text(ctx)?;
     let applicable = normalize_tweet_url(solo_unfurled_url.as_deref())? == normalize_tweet_url(Some(&plain_text))?;
     if !applicable {

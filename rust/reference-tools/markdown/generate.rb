@@ -52,6 +52,11 @@ emoji_aliases = {}
 emoji_aliases.each_key { |aka| add.call("gemoji #{aka}", ":#{aka}:") }
 Icons.brands.each { |b| [b.name, *b.aliases].each { |aka| add.call("brand #{aka}", ":#{aka}:") } }
 add.call("bot avatar mentions", "@[Bot openai] @[Bot acme] @[Bot smile]")
+["\u00a0", "\u1680", "\u2000", "\u2003", "\u202f", "\u205f", "\u3000"].each do |space|
+  add.call("review trailing mention #{space.ord.to_s(16)}", "@[David]#{space}")
+  add.call("review trailing shortcode #{space.ord.to_s(16)}", ":smile:#{space}")
+end
+
 
 schemes = ["javascript:alert(1)", "jav&#x09;ascript:x", "&#106;avascript:x", "data:text/html,x", "vbscript:x", "\njavascript:x", "https://example.com", "/rooms/1"]
 tags = %w[script style svg math iframe object embed form button input img a table pre code span div]
@@ -74,6 +79,9 @@ legacy = ["<div>hello <strong>bold</strong><br>next</div>", "<table><tr><td>hidd
 attachment = ActionText::Attachment.from_attachable(users.first, content_type: Message::Markdown::MENTION_CONTENT_TYPE).to_html
 legacy << "<div>Hey #{attachment}</div>"
 legacy << "<div>" + users.select(&:bot?).map { |u| ActionText::Attachment.from_attachable(u, content_type: Message::Markdown::MENTION_CONTENT_TYPE).to_html }.join(" ") + "</div>"
+["/rooms/1", "https://once.campfire.test/rooms/1"].each do |href|
+  cases << { name: "review solo raw href #{href}", mode: "legacy", body: %(<div>#{href}</div><action-text-attachment content-type="application/vnd.actiontext.opengraph-embed" href="#{href}" filename="Room"></action-text-attachment>) }
+end
 legacy << '<div>https://example.com/</div><action-text-attachment content-type="application/vnd.actiontext.opengraph-embed" href="https://example.com/" filename="Example"></action-text-attachment>'
 legacy << '<div>https://x.com/dhh/status/1?q=x<action-text-attachment content-type="application/vnd.actiontext.opengraph-embed" href="https://twitter.com/dhh/status/1" url="https://pbs.twimg.com/profile_images/x.jpg" filename="Tweet"></action-text-attachment></div>'
 legacy << '<action-text-attachment content-type="image/png" url="https://example.com/a.png" caption="Image"></action-text-attachment>'

@@ -58,11 +58,10 @@ pub const DEFAULT_ALLOWED_TAGS: &[&str] = &[
     "var",
 ];
 
-/// `Rails::HTML::Concern::Scrubber::SafeList::DEFAULT_ALLOWED_ATTRIBUTES` without `name`, which let
-/// a message clobber the page's DOM globals (`<img name="body">` shadows `document.body`). Nothing
-/// Campfire's composer writes has one.
+/// Rails' default attributes. `name` is retained only on anchors; image names can create
+/// Window/Document globals, including when the image was rendered from an attachment.
 pub const DEFAULT_ALLOWED_ATTRIBUTES: &[&str] =
-    &["abbr", "alt", "cite", "class", "datetime", "height", "href", "lang", "src", "title", "width", "xml:lang"];
+    &["abbr", "alt", "cite", "class", "datetime", "height", "href", "lang", "name", "src", "title", "width", "xml:lang"];
 
 /// `ActionText::Attachment::ATTRIBUTES`
 pub const ATTACHMENT_ATTRIBUTES: &[&str] = &[
@@ -242,7 +241,7 @@ fn scrub_attributes(dom: &mut Dom, node: NodeId, list: &SafeList) {
         let Some(value) = dom.attr(node, &name).map(str::to_string) else {
             continue;
         };
-        if !list.allows_attribute(&name) {
+        if !list.allows_attribute(&name) || (name == "name" && dom.local_name(node) != Some("a")) {
             dom.remove_attr(node, &name);
             continue;
         }

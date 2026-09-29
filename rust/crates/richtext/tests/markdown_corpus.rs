@@ -84,7 +84,7 @@ fn ruby_differential_corpus_is_byte_identical() {
     let mentions = |name: &str| markdown::MentionResolver::unique_active_member(members.as_slice(), name);
     let mut failures = Vec::new();
     let cases = json["cases"].as_array().unwrap();
-    assert!(cases.len() >= 4184);
+    assert!(cases.len() >= 4200);
     for c in cases {
         let host = c["asset_host"].as_str();
         let name = c["name"].as_str().unwrap();

@@ -249,7 +249,7 @@ fn restore_mentions(dom: &mut Dom, root: NodeId, tokens: &[(String, String)], pa
             replacements.push(new);
             cursor = m.end();
         }
-        if cursor < text.len() {
+        if !is_blank(&text[cursor..]) {
             replacements.push(dom.create_text(&text[cursor..]));
         }
         dom.replace_with_nodes(node, &replacements);
@@ -301,7 +301,7 @@ fn expand_shortcodes(dom: &mut Dom, root: NodeId, icons: &dyn IconResolver) {
             remaining = &remaining[end..];
         }
         if !replacements.is_empty() {
-            if !remaining.is_empty() {
+            if !is_blank(remaining) {
                 replacements.push(dom.create_text(remaining));
             }
             dom.replace_with_nodes(node, &replacements);
