@@ -56,12 +56,14 @@ pub struct Deps {
     pub secrets: Arc<Secrets>,
     pub crypto: campfire_kit::SharedCrypto,
     pub clock: campfire_kit::SharedClock,
+    /// `config.x.admin_session_idle_timeout`
+    pub admin_session_idle_timeout: jiff::SignedDuration,
 }
 
 /// The cable server with `ApplicationCable::Connection` and every channel registered. Mount it
 /// with `cable.router("/cable")`.
 pub fn server(deps: Deps, config: Config) -> Cable {
-    let authenticator = SessionAuthenticator::new(deps.db.clone(), deps.crypto.clone(), deps.clock.clone());
+    let authenticator = SessionAuthenticator::new(deps.db.clone(), deps.crypto.clone(), deps.clock.clone(), deps.admin_session_idle_timeout);
     register(Server::builder(config, authenticator), &deps.db, StreamsChannel::new(deps.secrets.clone())).build()
 }
 

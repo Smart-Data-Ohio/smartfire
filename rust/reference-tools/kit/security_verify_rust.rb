@@ -1,6 +1,9 @@
 # Verifies, with the reference app, the session cookies and CSRF tokens crates/kit issued
 # (target/kit_security_rust_output.json, written by `cargo test -p campfire_kit --test rails_vectors`):
-# a page rendered by the port whose form is submitted after switching back to Rails.
+# a page rendered by the port whose form is submitted after switching back to Rails. Then, if
+# present, the session the port wrote with the sign-in and sudo keys
+# (target/campfire_session_keys_rust_output.json, written by `cargo test -p campfire --bin campfire
+# session_keys`): Rails reads it back and draws the same conclusions from it.
 #
 #   PARITY_OWNER=... parity/bin/reference runner reference-tools/kit/security_verify_rust.rb
 #
@@ -11,8 +14,9 @@ require_relative "../support"
 class KitSecurityVerifyRust
   include ReferenceTools
 
-  def initialize(path)
+  def initialize(path, session_keys_path)
     @output = JSON.parse(File.read(path))
+    @session_keys = JSON.parse(File.read(session_keys_path)) if File.exist?(session_keys_path)
     @failures = []
     @checks = 0
     @ip = 0
@@ -35,12 +39,35 @@ class KitSecurityVerifyRust
       check "#{label}: form token without the cookie", post({}, token: issued["form"]), 422
     end
     check "a token with another session's cookie", post({ "_campfire_session" => carried["session_cookie_raw"] }, token: fresh["form"]), 422
+    check_session_keys if @session_keys
 
     travel_back
     report
   end
 
   private
+    def check_session_keys
+      data = read_cookie(:encrypted, "_campfire_session", @session_keys.fetch("raw"))
+      check "the port's session keys read the same", data, @session_keys.fetch("data")
+      @session_keys.fetch("checks").each do |expected|
+        at(Time.iso8601(expected.fetch("now"))) do
+          check "pending second factor at #{expected["now"]}", session_controller(data).send(:two_factor_pending_user)&.id, expected["two_factor_pending_user_id"]
+          check "sudo at #{expected["now"]}", session_controller(data).send(:sudo_verified?), expected["sudo_verified"]
+          check "reauthentication at #{expected["now"]}", session_controller(data).send(:consume_google_reauthentication!), expected["reauthenticated"]
+        end
+      end
+      controller = session_controller(data)
+      controller.send(:clear_two_factor_pending!)
+      check "clearing the pending second factor", controller.request.session.to_h.keys.grep(/two_factor_pending/), []
+    end
+
+    def session_controller(data)
+      request = request_for(path: "/", env: { "REQUEST_METHOD" => "GET" })
+      request.session = ActionController::TestSession.new(data.deep_dup)
+      klass = Class.new(ApplicationController) { include SudoMode, TwoFactorReauthentication }
+      klass.new.tap { |controller| controller.set_request!(request) }
+    end
+
     def post(cookies, token: nil, header: nil)
       @ip += 1
       headers = { "REMOTE_ADDR" => "10.9.0.#{@ip}" }
@@ -67,4 +94,5 @@ class KitSecurityVerifyRust
 end
 
 root = ENV.fetch("PARITY_WORK", File.expand_path("../..", __dir__))
-KitSecurityVerifyRust.new(ARGV.first || File.join(root, "target/kit_security_rust_output.json")).run
+KitSecurityVerifyRust.new(ARGV[0] || File.join(root, "target/kit_security_rust_output.json"),
+  ARGV[1] || File.join(root, "target/campfire_session_keys_rust_output.json")).run

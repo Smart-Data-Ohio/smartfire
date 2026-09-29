@@ -93,7 +93,13 @@ pub async fn boot(config: Config) -> anyhow::Result<Booted> {
     ));
 
     let cable_config = campfire_cable::Config { assume_ssl: !config.disable_ssl, ..campfire_cable::Config::default() };
-    let deps = channels::Deps { db: db.clone(), secrets: secrets.clone(), crypto: crypto.clone(), clock: clock.clone() };
+    let deps = channels::Deps {
+        db: db.clone(),
+        secrets: secrets.clone(),
+        crypto: crypto.clone(),
+        clock: clock.clone(),
+        admin_session_idle_timeout: config.admin_session_idle_timeout,
+    };
     let cable = channels::server(deps, cable_config);
 
     let mut kit_config = KitConfig::production(config.disable_ssl);

@@ -68,6 +68,7 @@ pub async fn start() -> TestApp {
         secrets: secrets.clone(),
         crypto: Arc::new(RailsCrypto::new(secrets.clone())),
         clock: Arc::new(SystemClock),
+        admin_session_idle_timeout: crate::config::admin_session_idle_timeout(None),
     };
     let server = channels::server(deps, Config { assume_ssl: false, ..Config::default() });
     let _ = sink.server.set(server.clone());

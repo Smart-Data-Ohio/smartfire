@@ -11,11 +11,12 @@
 //! 3. `reject_banned_ip`, unless GET/HEAD (BlockBannedRequests)
 //! 4. `require_authentication` (Authentication)
 //! 5. `deny_bots` (Authentication)
-//! 6. `verify_authenticity_token`, unless authenticated by bot key (Authentication's
-//!    `protect_from_forgery with: :exception, unless: -> { authenticated_by.bot_key? }`)
-//! 7. `allow_browser` (AllowBrowser)
+//! 6. `deny_agent_tokens` (Authentication)
+//! 7. `verify_authenticity_token`, unless authenticated by bot key, bot reply token or agent token
+//!    (Authentication's `protect_from_forgery with: :exception, unless: -> { ... }`)
+//! 8. `allow_browser` (AllowBrowser)
 //!
-//! then the controller's own before-actions. [`before_actions`] runs 1–7 with a controller's
+//! then the controller's own before-actions. [`before_actions`] runs 1–8 with a controller's
 //! skips ([`Before`]); controllers then call their own (`set_room`, `ensure_can_administer`, ...)
 //! in declaration order. Everything returns `Err(Error::Halt(..))` to stop the chain the way a
 //! Rails callback that renders or redirects does, so actions just use `?`:
@@ -28,12 +29,18 @@
 //! }
 //! ```
 //!
+//! Our Rails app's `ApplicationController` also includes `SetTimeZone`, `SudoMode` and
+//! `TwoFactorEnforcement` (`require_two_factor_enrollment`); those need schema the port doesn't
+//! have yet (sessions' `two_factor_verified_at`, users' 2FA credentials and time zone), so they
+//! aren't in the chain. The session state they keep is in [`session_keys`].
+//!
 //! Current attributes (`Current.user`, `Current.session`) live in the `Ctx` extensions; read them
 //! with [`current_user`] / [`current_session`].
 
 // The frame later controller ports build on; parts are unused until they land.
 
 pub mod platform;
+pub mod session_keys;
 pub mod user_agent;
 
 use campfire_db::{Ban, Membership, PasswordDigest, Room, Session, User};
@@ -51,13 +58,25 @@ pub struct CurrentUser(pub User);
 #[derive(Debug, Clone)]
 pub struct CurrentSession(pub Session);
 
-/// `authenticated_by` (`"".inquiry`, `"session"` or `"bot_key"`).
+/// `authenticated_by` (`"".inquiry`, `"session"`, `"bot_key"`, `"bot_reply"` or `"agent_token"`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AuthenticatedBy {
     #[default]
     Nothing,
     Session,
     BotKey,
+    /// Not constructed until the port's schema has bot reply tokens (see [`bot_authentication`]).
+    #[allow(dead_code)]
+    BotReply,
+    AgentToken,
+}
+
+impl AuthenticatedBy {
+    /// The key-authenticated callers `protect_from_forgery` leaves alone: they send no cookies, so
+    /// there's no session to forge.
+    pub fn skips_forgery_protection(self) -> bool {
+        matches!(self, Self::BotKey | Self::BotReply | Self::AgentToken)
+    }
 }
 
 pub fn current_user(c: &Ctx) -> Option<&User> {
@@ -89,12 +108,15 @@ fn set_authenticated_by(c: &mut Ctx, by: AuthenticatedBy) {
 // --- The ApplicationController chain ---------------------------------------------------------
 
 /// How a controller's `allow_unauthenticated_access` / `require_unauthenticated_access` /
-/// `allow_bot_access` / `skip_forgery_protection` change the chain for one action.
+/// `allow_bot_access` / `allow_agent_access` / `skip_forgery_protection` change the chain for one
+/// action.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Before {
     pub authentication: Authentication,
     /// `deny_bots` (skipped by `allow_bot_access`).
     pub deny_bots: bool,
+    /// `deny_agent_tokens` (skipped by `allow_agent_access`).
+    pub deny_agent_tokens: bool,
     /// `verify_authenticity_token` (skipped by `skip_forgery_protection`).
     pub forgery_protection: bool,
 }
@@ -113,7 +135,7 @@ pub enum Authentication {
 
 impl Default for Before {
     fn default() -> Self {
-        Self { authentication: Authentication::Required, deny_bots: true, forgery_protection: true }
+        Self { authentication: Authentication::Required, deny_bots: true, deny_agent_tokens: true, forgery_protection: true }
     }
 }
 
@@ -128,6 +150,11 @@ impl Before {
 
     pub fn allow_bot_access(self) -> Self {
         Self { deny_bots: false, ..self }
+    }
+
+    #[allow(dead_code)] // for the agent API controllers
+    pub fn allow_agent_access(self) -> Self {
+        Self { deny_agent_tokens: false, ..self }
     }
 
     pub fn skip_forgery_protection(self) -> Self {
@@ -146,7 +173,10 @@ pub async fn before_actions(c: &mut Ctx, before: Before) -> Result<()> {
     if before.deny_bots {
         deny_bots(c)?;
     }
-    if before.forgery_protection && authenticated_by(c) != AuthenticatedBy::BotKey {
+    if before.deny_agent_tokens {
+        deny_agent_tokens(c)?;
+    }
+    if before.forgery_protection && !authenticated_by(c).skips_forgery_protection() {
         c.verify_authenticity_token()?;
     }
     allow_browser(c).await?;
@@ -199,23 +229,53 @@ pub async fn find_session_by_cookie(c: &Ctx) -> Result<Option<Session>> {
     c.app().db.read(move |conn| Session::find_by_token(conn, &token)).await.map_err(Error::internal)
 }
 
-/// `require_authentication`: `restore_authentication || bot_authentication || request_authentication`.
+/// `require_authentication`: `restore_authentication || bot_authentication ||
+/// agent_authentication || request_authentication`.
 pub async fn require_authentication(c: &mut Ctx) -> Result<()> {
-    if restore_authentication(c).await? || bot_authentication(c).await? {
+    if restore_authentication(c).await? || bot_authentication(c).await? || agent_authentication(c).await? {
         return Ok(());
     }
-    request_authentication(c)
+    request_authentication(c).await
 }
 
-/// `restore_authentication`: resume the session named by the `session_token` cookie.
+/// `restore_authentication`: resume the session named by the `session_token` cookie, unless it
+/// has expired ([`session_expired`]), in which case it's destroyed and its cookie dropped.
 pub async fn restore_authentication(c: &mut Ctx) -> Result<bool> {
-    match find_session_by_cookie(c).await? {
-        Some(session) => {
-            resume_session(c, session).await?;
-            Ok(true)
-        }
-        None => Ok(false),
+    let Some(token) = c.cookies.signed("session_token") else { return Ok(false) };
+    let found = c
+        .app()
+        .db
+        .read(move |conn| {
+            let Some(session) = Session::find_by_token(conn, &token)? else { return Ok(None) };
+            let user = User::find_by_id(conn, session.user_id)?;
+            Ok(Some((session, user)))
+        })
+        .await
+        .map_err(Error::internal)?;
+    let Some((session, user)) = found else { return Ok(false) };
+    let now = campfire_db::Timestamp::from_jiff(c.now());
+    if user.as_ref().is_some_and(|user| session_expired(&session, user, c.app().config.admin_session_idle_timeout, now)) {
+        c.app().db.write(move |tx| session.destroy(tx)).await.map_err(Error::internal)?;
+        c.cookies.delete("session_token");
+        return Ok(false);
     }
+    resume_session(c, session, user).await?;
+    enforce_two_factor_for_restored_session(c)?;
+    Ok(true)
+}
+
+/// `Session#expired?`: administrators' sessions end after `ADMIN_SESSION_IDLE_TIMEOUT_DAYS`
+/// without activity (`config/initializers/session_lifetimes.rb`); members' never do. Checked when
+/// a request restores the session and when a cable connects.
+pub fn session_expired(session: &Session, user: &User, idle_timeout: jiff::SignedDuration, now: campfire_db::Timestamp) -> bool {
+    user.is_administrator() && session.last_active_at < now.ago(idle_timeout)
+}
+
+/// `enforce_two_factor_for_restored_session`, which `TwoFactorEnforcement` overrides with
+/// `require_two_factor_enrollment`. That needs sessions' `two_factor_verified_at` and users' 2FA
+/// credentials, which the port's schema doesn't have yet, so for now it lets every session through.
+pub fn enforce_two_factor_for_restored_session(_c: &mut Ctx) -> Result<()> {
+    Ok(())
 }
 
 /// `bot_authentication`: `params[:bot_key].present?` and a matching active bot.
@@ -226,6 +286,8 @@ pub async fn bot_authentication(c: &mut Ctx) -> Result<bool> {
         return Err(Error::internal(anyhow::anyhow!("undefined method 'strip' for bot_key")));
     };
     let bot = c.app().db.read(move |conn| User::authenticate_bot(conn, &bot_key)).await.map_err(Error::internal)?;
+    // Then `User.authenticate_bot_reply_token(key, room_id: params[:room_id])` for
+    // `AuthenticatedBy::BotReply`, once the port's schema has bot reply tokens.
     match bot {
         Some(bot) => {
             c.set_current(CurrentUser(bot));
@@ -236,12 +298,77 @@ pub async fn bot_authentication(c: &mut Ctx) -> Result<bool> {
     }
 }
 
-/// `request_authentication`: remember where we were, then off to sign in.
-pub fn request_authentication(c: &mut Ctx) -> Result<()> {
-    let url = c.request.url();
-    c.session().insert("return_to_after_authenticating", url);
+/// `agent_authentication`: an `Authorization: Bearer` secret authenticates its agent's user, and
+/// an unknown secret, or an inactive agent's, is a 401 that ends the chain.
+///
+/// The port's schema has no agent credentials yet, so every secret is unknown: agents get the 401
+/// Rails gives a revoked token rather than being taken for signed-out browsers.
+pub async fn agent_authentication(c: &mut Ctx) -> Result<bool> {
+    if agent_bearer_secret(c.request.header("authorization")).is_none() {
+        return Ok(false);
+    }
+    halt(head(StatusCode::UNAUTHORIZED))
+}
+
+/// `agent_bearer_secret`: `scheme, token = request.authorization.to_s.split(" ", 2)`, then the
+/// token (stripped) if the scheme is `Bearer` in any case.
+pub fn agent_bearer_secret(authorization: Option<&str>) -> Option<&str> {
+    // `split(" ", 2)` is awk-style: leading whitespace skipped, then one run of it separates.
+    let authorization = authorization?.trim_start_matches(ruby_space);
+    let (scheme, token) = authorization.split_once(ruby_space)?;
+    let token = token.trim_start_matches(ruby_space);
+    if !scheme.eq_ignore_ascii_case("Bearer") || token.chars().all(char::is_whitespace) {
+        return None;
+    }
+    Some(ruby_strip(token)).filter(|token| !token.is_empty())
+}
+
+/// The whitespace Ruby's awk-style `split(" ")` splits on.
+fn ruby_space(c: char) -> bool {
+    matches!(c, ' ' | '\t' | '\n' | '\u{b}' | '\u{c}' | '\r')
+}
+
+/// `request_authentication`: someone waiting on their second factor goes back to the challenge;
+/// anyone else to sign in, remembering the page they were after.
+pub async fn request_authentication(c: &mut Ctx) -> Result<()> {
+    if two_factor_pending_user(c).await?.is_some() {
+        let location = c.url_for("/two_factor_challenge");
+        return halt(c.redirect_to(&location)?);
+    }
+    // Only page navigations bounce back after sign in: not background polls (JSON, Turbo Stream
+    // refreshes) or form submissions.
+    if bounce_back_after_sign_in(c)? {
+        let url = c.request.url();
+        c.session().insert(session_keys::RETURN_TO_KEY, url);
+    }
     let location = c.url_for(&campfire_routes::new_session());
     halt(c.redirect_to(&location)?)
+}
+
+/// `bounce_back_after_sign_in?`: `request.get? && request.format.html? &&
+/// !request.format.turbo_stream?`. (Turbo Stream's MIME type contains "html", which is what
+/// `html?` checks.)
+fn bounce_back_after_sign_in(c: &mut Ctx) -> Result<bool> {
+    if !c.request.is_get() {
+        return Ok(false);
+    }
+    let format = c.format()?;
+    Ok(format.is_some_and(|format| (format.symbol == "html" || format.string.contains("html")) && format.symbol != "turbo_stream"))
+}
+
+/// `two_factor_pending_user`: the active user a still-valid pending second factor names.
+pub async fn two_factor_pending_user(c: &mut Ctx) -> Result<Option<User>> {
+    let now = c.now();
+    let Some(user_id) = session_keys::two_factor_pending_user_id(c.session(), now) else { return Ok(None) };
+    c.app()
+        .db
+        .read(move |conn| match User::find_active(conn, user_id) {
+            Ok(user) => Ok(Some(user)),
+            Err(campfire_db::Error::RecordNotFound(_)) => Ok(None),
+            Err(error) => Err(error),
+        })
+        .await
+        .map_err(Error::internal)
 }
 
 /// `redirect_signed_in_user_to_root`
@@ -271,8 +398,16 @@ pub async fn authenticate_by(c: &Ctx, email_address: String, password: String) -
     tokio::task::spawn_blocking(move || User::authenticated(candidate, &password)).await.map_err(Error::internal)
 }
 
-/// `start_new_session_for(user)`
+/// `start_new_session_for(user)`: drop the previous member's confirmations, make sure the browser
+/// has its `device_id`, start the session, and settle the CSRF token before any page renders (so
+/// concurrent first renders don't each start their own).
+///
+/// Rails stores the `device_id` on the session, and `two_factor_verified:` as
+/// `two_factor_verified_at`, then sends `NewSignInAlert`; the port's sessions table doesn't have
+/// those columns yet.
 pub async fn start_new_session_for(c: &mut Ctx, user: User) -> Result<Session> {
+    session_keys::clear_confirmations(c.session());
+    let _device_id = ensure_device_cookie(c)?;
     let (user_agent, ip) = (c.request.user_agent().map(str::to_string), c.request.remote_ip()?.to_string());
     let user_id = user.id;
     let session = c
@@ -282,7 +417,21 @@ pub async fn start_new_session_for(c: &mut Ctx, user: User) -> Result<Session> {
         .await
         .map_err(Error::internal)?;
     authenticated_as(c, session.clone(), Some(user), true).await?;
+    c.form_authenticity_token();
     Ok(session)
+}
+
+/// `ensure_device_cookie`: the browser's `device_id` (new-device sign-in alerts key on it), minted
+/// on its first sign-in as `SecureRandom.hex(16)` in a signed, permanent, HttpOnly, SameSite=Lax
+/// cookie.
+pub fn ensure_device_cookie(c: &mut Ctx) -> Result<String> {
+    if let Some(device_id) = c.cookies.signed("device_id") {
+        return Ok(device_id);
+    }
+    let device_id: String = rand::random::<[u8; 16]>().iter().map(|byte| format!("{byte:02x}")).collect();
+    let cookie = Cookie::new(device_id.clone()).permanent().httponly().same_site(Some(SameSite::Lax));
+    c.cookies.set_signed("device_id", cookie)?;
+    Ok(device_id)
 }
 
 /// `resume_session(session)`: refresh its activity (at most hourly), then authenticate as it.
@@ -291,7 +440,7 @@ pub async fn start_new_session_for(c: &mut Ctx, user: User) -> Result<Session> {
 /// behind every write for nothing. The `session_token` cookie is re-signed on the same schedule
 /// rather than on every request as Rails does, which keeps its 20-year expiry rolling without a
 /// cookie on every response.
-pub async fn resume_session(c: &mut Ctx, session: Session) -> Result<()> {
+async fn resume_session(c: &mut Ctx, session: Session, user: Option<User>) -> Result<()> {
     let refresh = session.needs_resume(campfire_db::Timestamp::from_jiff(c.now()));
     let session = if refresh {
         let (user_agent, ip) = (c.request.user_agent().map(str::to_string), c.request.remote_ip()?.to_string());
@@ -307,7 +456,7 @@ pub async fn resume_session(c: &mut Ctx, session: Session) -> Result<()> {
     } else {
         session
     };
-    authenticated_as(c, session, None, refresh).await
+    authenticated_as(c, session, user, refresh).await
 }
 
 /// `authenticated_as(session)`: `Current.session = session` (which sets `Current.user` to
@@ -358,7 +507,7 @@ pub async fn terminate_current_session(c: &mut Ctx) -> Result<()> {
 
 /// `post_authenticating_url`: `session.delete(:return_to_after_authenticating) || root_url`.
 pub fn post_authenticating_url(c: &mut Ctx) -> String {
-    let stored = c.session().remove("return_to_after_authenticating");
+    let stored = c.session().remove(session_keys::RETURN_TO_KEY);
     match stored {
         Some(serde_json::Value::String(url)) => url,
         Some(serde_json::Value::Null) | None => c.url_for(&campfire_routes::root()),
@@ -366,9 +515,17 @@ pub fn post_authenticating_url(c: &mut Ctx) -> String {
     }
 }
 
-/// `deny_bots`: 403 for bot-key requests.
+/// `deny_bots`: 403 for bot-key and bot-reply-token requests.
 pub fn deny_bots(c: &mut Ctx) -> Result<()> {
-    if authenticated_by(c) == AuthenticatedBy::BotKey {
+    if matches!(authenticated_by(c), AuthenticatedBy::BotKey | AuthenticatedBy::BotReply) {
+        return halt(head(StatusCode::FORBIDDEN));
+    }
+    Ok(())
+}
+
+/// `deny_agent_tokens`: 403 for agent-token requests.
+pub fn deny_agent_tokens(c: &mut Ctx) -> Result<()> {
+    if authenticated_by(c) == AuthenticatedBy::AgentToken {
         return halt(head(StatusCode::FORBIDDEN));
     }
     Ok(())

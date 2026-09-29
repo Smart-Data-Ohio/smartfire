@@ -322,6 +322,7 @@ async fn start_rust(fixtures: &Fixtures, dir: &Path) -> Target {
         secrets: secrets.clone(),
         crypto: Arc::new(campfire_kit::RailsCrypto::new(secrets)),
         clock: Arc::new(campfire_kit::SystemClock),
+        admin_session_idle_timeout: crate::config::admin_session_idle_timeout(None),
     };
     // The reference runs with DISABLE_SSL, so without assume_ssl.
     let server = channels::server(deps, Config { assume_ssl: false, ..Config::default() });

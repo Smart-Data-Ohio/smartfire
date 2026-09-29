@@ -254,7 +254,7 @@ impl<W: Write> Write for ScrubbingWriter<W> {
 /// Just enough of Ruby's `URI.parse` (RFC 3986) for the two callers above: the scheme
 /// (lowercased), the host as written (brackets kept for IPv6), the port and the path. `None` is
 /// `URI::InvalidURIError`.
-mod ruby_uri {
+pub(crate) mod ruby_uri {
     pub struct Uri {
         pub scheme: Option<String>,
         pub host: Option<String>,
