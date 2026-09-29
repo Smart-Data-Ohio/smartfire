@@ -140,53 +140,6 @@ fn normalize_into(dom: &Dom, node: usize, out: &mut String) {
     }
 }
 
-// --- Deliberate differences ----------------------------------------------------------------------
-
-/// Pre-existing hardening differences: links rails_autolink inserted inside attribute values
-/// remain text. Named anchors now match Rails. Raw differences are counted and reported before
-/// this historical comparison; the new Markdown corpus compares without any normalization.
-fn with_port_divergences(rails: &str) -> String {
-    const INSERTED_LINK: &str = "<a target=\"_blank\" href=\"";
-    enum State {
-        Text,
-        Tag,
-        Value,
-    }
-    let mut out = String::with_capacity(rails.len());
-    let mut state = State::Text;
-    let mut rest = rails;
-    while let Some(c) = rest.chars().next() {
-        if matches!(state, State::Value) && rest.starts_with(INSERTED_LINK) {
-            let text_start = rest.find("\">").unwrap() + 2;
-            let text_end = text_start + rest[text_start..].find("</a>").unwrap();
-            out.push_str(&rest[text_start..text_end]);
-            rest = &rest[text_end + 4..];
-            continue;
-        }
-        match (&state, c) {
-            (State::Text, '<') => state = State::Tag,
-            (State::Tag, '>') => state = State::Text,
-            (State::Tag, '"') => state = State::Value,
-            (State::Value, '"') => state = State::Tag,
-            _ => {}
-        }
-        out.push(c);
-        rest = &rest[c.len_utf8()..];
-    }
-    out
-}
-
-#[test]
-fn port_divergences_apply_to_attribute_values_only() {
-    assert_eq!(
-        with_port_divergences(
-            "<p title=\"a>b <a target=\"_blank\" href=\"http://x.test/\">http://x.test/</a>\">c > <a target=\"_blank\" href=\"http://y.test/\">y</a></p>"
-        ),
-        "<p title=\"a>b http://x.test/\">c > <a target=\"_blank\" href=\"http://y.test/\">y</a></p>"
-    );
-    assert_eq!(with_port_divergences("<a name=\"x y\" title=\"name=\">n</a>"), "<a name=\"x y\" title=\"name=\">n</a>");
-}
-
 // --- Security assertions -------------------------------------------------------------------------
 
 const DANGEROUS_ELEMENTS: &[&str] = &[
@@ -326,16 +279,12 @@ fn corpus_matches_rails() {
 
         // presentation
         let expected = match outcome_str(&case["presentation"]) {
-            Ok(html) => Presentation::Html(with_port_divergences(&html.unwrap_or_default())),
-            Err(_) => Presentation::Unrenderable,
-        };
-        let actual = present_message(body, &ctx);
-        let raw = match outcome_str(&case["presentation"]) {
             Ok(html) => Presentation::Html(html.unwrap_or_default()),
             Err(_) => Presentation::Unrenderable,
         };
-        if actual != raw {
-            raw_diffs.push(serde_json::json!({ "name": name, "body": body, "rails": format!("{raw:?}"), "rust": format!("{actual:?}") }));
+        let actual = present_message(body, &ctx);
+        if actual != expected {
+            raw_diffs.push(serde_json::json!({ "name": name, "body": body, "rails": format!("{expected:?}"), "rust": format!("{actual:?}") }));
         }
         let label = format!("[presentation] {name}");
         match (&expected, &actual) {
@@ -406,9 +355,6 @@ fn corpus_matches_rails() {
     if let Ok(path) = std::env::var("RICHTEXT_RAW_DIFF_OUTPUT") {
         std::fs::write(path, serde_json::to_string_pretty(&raw_diffs).unwrap()).unwrap();
     }
-    if std::env::var("RICHTEXT_STRICT_PARITY").as_deref() == Ok("1") {
-        assert!(raw_diffs.is_empty(), "{} raw Rails differences (strict comparison)", raw_diffs.len());
-    }
     let mut failed = false;
     for (kind, tally) in &tallies {
         let total = tally.exact + tally.mismatched.len();
@@ -431,15 +377,14 @@ fn corpus_matches_rails() {
     assert!(!failed, "differences from the Rails pipeline");
 }
 
-/// Historical assertion over hardened oracle outputs, not raw Rails output. Rails' autolink
-/// attribute-breakout differences are reported above and await the approved Rails security fix.
+/// Check the reference outputs directly, without changing their bytes.
 #[test]
-fn rails_outputs_with_inherited_hardening_pass_security_assertions() {
+fn rails_outputs_pass_security_assertions() {
     let corpus = Corpus::load();
     let mut violations = Vec::new();
     for case in corpus.json["cases"].as_array().unwrap() {
         if let Ok(Some(html)) = outcome_str(&case["presentation"]) {
-            for v in security_violations(&with_port_divergences(&html), false) {
+            for v in security_violations(&html, false) {
                 violations.push(format!("{}: {v}", case["name"].as_str().unwrap()));
             }
         }

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
-image="${WS5_REFERENCE_IMAGE:-campfire-reference}"
+image="${WS5_REFERENCE_IMAGE:-ws5-reference-79b45383}"
 "$root/reference-tools/markdown/verify-reference.sh"
 docker run --rm --name ws5-sgid-json-goldens --entrypoint '' \
   --env-file "$root/parity/.env.reference" -e RAILS_LOG_LEVEL=error \

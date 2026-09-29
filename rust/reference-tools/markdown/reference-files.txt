@@ -17,3 +17,4 @@ lib/rails_ext/action_text_attachables.rb
 lib/rails_ext/actiontext_opengraph_embeds.rb
 test/fixtures/action_text/rich_texts.yml
 Gemfile.lock
+lib/rails_ext/auto_link_outside_attribute_values.rb

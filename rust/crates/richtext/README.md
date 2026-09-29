@@ -56,6 +56,7 @@ is required; it is not a serializer rewrite or a corpus normalization.
 From `rust/`:
 
 ```sh
+reference-tools/markdown/build-reference.sh
 reference-tools/markdown/run.sh
 reference-tools/richtext/run.sh
 reference-tools/richtext/run-sgids.sh
@@ -77,18 +78,16 @@ BOMs, NaN, nesting limits and 10,000 deterministic random mutations. Rust compar
 error bytes and the helper's presentation, with no normalization. Valid JSON controls receive
 independently recorded `GlobalID.find` outcomes through the DB-free resolver input.
 
-The inherited legacy corpus now comes from our fork (7,322 cases). Its historical test still
-accounts for **pre-existing security differences**: the port never inserts auto-links into
-attributes. Named anchors retain Rails' escaped `name` attributes; image names remain blocked.
-The test prints the raw byte-difference count and every affected case before its historical
-comparison. Set `RICHTEXT_RAW_DIFF_OUTPUT=/tmp/ws5-diffs.json` to export
-the raw audit. Set `RICHTEXT_STRICT_PARITY=1` to assert that the raw audit is empty as well.
-At the original `11d8ad7c` pin, 324 cases await the approved Rails autolink security fix.
-One also has a trailing `>` serialized as `&gt;` by unsafe Rails autolinking; the historical
-comparison reports that byte difference, rather than adding another normalization.
-Against the actual fixed app at `82fbf994`, all 7,322 cases are byte-identical. That preview
-is not an accepted reference-pin advance: regenerate the default goldens after the lead bumps
-its pin. These pending cases are separate from the new Markdown corpus's zero-difference result.
+All default goldens come from the accepted Rails pin **`79b45383`**
+(`79b453836f9e7a40f96aabb1fae7613a089d939d`), including the merged autolink attribute
+security fix. The isolated default image `ws5-reference-79b45383` is built by the command
+above from that exact Git tree; no preview override is needed. The verifier checks the
+committed reference-file hashes against both the local app and the image before generation.
+The legacy corpus contains 7,322 cases and compares the raw oracle output byte-for-byte.
+Every mismatch, including DOM-equal serialization differences, fails the default test.
+Set `RICHTEXT_RAW_DIFF_OUTPUT` to a disk-backed path such as
+`/home/riels/.cache/rust-port/ws5/diffs.json` to export the raw audit. Named anchors retain
+Rails' escaped `name` attributes; attachment-generated image names remain blocked.
 
 ## Source attribution
 
