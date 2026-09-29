@@ -9,7 +9,7 @@ use axum::body::Body;
 use axum::http::{HeaderMap, Method, Request, StatusCode, header};
 use tower::ServiceExt;
 
-use crate::app::{Booted, boot};
+use crate::app::{Booted, boot_with_clock};
 use crate::config::Config;
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
@@ -32,6 +32,28 @@ pub const QUIET_CORNER: i64 = 699448326;
 pub const DIRECT_DAVID_JASON: i64 = 186869642;
 /// Kevin and Bender's direct room: David isn't in it.
 pub const DIRECT_KEVIN_BENDER: i64 = 340026324;
+
+/// `NOW` in the parity seeds (`parity/seeds/README.md`): the reference serves a seed with its
+/// clock started there (`reference up --time 2026-03-02T16:00:00Z`).
+pub const SEED_NOW: &str = "2026-03-02T16:00:00Z";
+
+/// The clock a seeded app runs on: [`SEED_NOW`] when the app boots, then ticking, as the
+/// reference's libfaketime clock does. (On the real clock, the seed's administrator sessions,
+/// last active that afternoon, are long past `ADMIN_SESSION_IDLE_TIMEOUT_DAYS`.)
+pub fn seed_clock() -> campfire_kit::SharedClock {
+    #[derive(Debug)]
+    struct SeedClock {
+        start: jiff::Timestamp,
+        booted: std::time::Instant,
+    }
+    impl campfire_kit::Clock for SeedClock {
+        fn now(&self) -> jiff::Timestamp {
+            let elapsed = jiff::SignedDuration::try_from(self.booted.elapsed()).unwrap();
+            self.start.checked_add(elapsed).unwrap()
+        }
+    }
+    std::sync::Arc::new(SeedClock { start: SEED_NOW.parse().unwrap(), booted: std::time::Instant::now() })
+}
 
 fn seed_dir() -> Option<PathBuf> {
     let dir = Path::new(ROOT).join("parity/.seed/default");
@@ -84,7 +106,7 @@ impl TestApp {
             _ => None,
         })
         .unwrap();
-        Some(TestApp { booted: boot(config).await.unwrap(), _dir: dir })
+        Some(TestApp { booted: boot_with_clock(config, seed_clock()).await.unwrap(), _dir: dir })
     }
 
     pub fn db(&self) -> &campfire_db::Database {

@@ -79,7 +79,7 @@ async fn boot_seeded() -> Option<Test> {
         _ => None,
     })
     .unwrap();
-    Some(Test { booted: boot(config).await.unwrap(), _dir: dir })
+    Some(Test { booted: boot_with_clock(config, crate::controllers::presenters::test_support::seed_clock()).await.unwrap(), _dir: dir })
 }
 
 fn copy_dir(from: &Path, to: &Path) {
@@ -146,10 +146,13 @@ async fn public_files_are_served_before_routing() {
     let css = campfire_assets::stylesheet_path(campfire_assets::all_stylesheet_paths()[0]);
     let reply = send(&test.booted.router, get(&css)).await;
     assert_eq!(reply.status, StatusCode::OK, "{css}");
-    assert_eq!(reply.header("cache-control"), Some("public, max-age=2592000"));
+    // Our Rails marks fingerprinted assets immutable (RailsExt::ImmutableAssetHeaders) and serves
+    // other public files briefly cached (config.public_file_server.headers); vectors/kit_security.json.
+    assert_eq!(reply.header("cache-control"), Some("public, immutable, max-age=31556952"));
 
     let robots = send(&test.booted.router, get("/robots.txt")).await;
     assert_eq!(robots.status, StatusCode::OK);
+    assert_eq!(robots.header("cache-control"), Some("public, max-age=60, stale-while-revalidate=300"));
 }
 
 #[tokio::test]

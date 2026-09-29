@@ -75,9 +75,14 @@ pub struct Booted {
 /// Boots the app from `config`: prepares the database, restores the reference's boot-time
 /// side effects, and builds the HTTP stack. Must run inside a Tokio runtime.
 pub async fn boot(config: Config) -> anyhow::Result<Booted> {
+    boot_with_clock(config, campfire_kit::clock::from_env()?).await
+}
+
+/// [`boot`] with its clock given rather than read from `CAMPFIRE_FROZEN_TIME`: the seeded tests
+/// run at the parity seed's instant, as the reference does (`parity/seeds/README.md`).
+pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Result<Booted> {
     config.storage.create_dirs()?;
     let secrets = Arc::new(Secrets::new(&config.secret_key_base));
-    let clock = campfire_kit::clock::from_env()?;
     let crypto: SharedCrypto = Arc::new(RailsCrypto::new(secrets.clone()));
 
     let (jobs, queue) = jobs::Jobs::new(jobs::QUEUE_CAPACITY);

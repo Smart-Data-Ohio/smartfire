@@ -11,9 +11,9 @@ use axum::body::Body;
 use axum::http::{Method, Request, StatusCode, header};
 use tower::ServiceExt;
 
-use crate::app::{Booted, boot};
+use crate::app::{Booted, boot_with_clock};
 use crate::config::Config;
-use crate::controllers::presenters::test_support::masked_session_token;
+use crate::controllers::presenters::test_support::{masked_session_token, seed_clock};
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 const HOST: &str = "campfire.test";
@@ -49,7 +49,7 @@ async fn boot_seed(name: &str) -> Option<Test> {
         _ => None,
     })
     .unwrap();
-    Some(Test { booted: boot(config).await.unwrap(), labels, _dir: dir })
+    Some(Test { booted: boot_with_clock(config, seed_clock()).await.unwrap(), labels, _dir: dir })
 }
 
 fn parity_env(name: &str) -> Option<String> {
