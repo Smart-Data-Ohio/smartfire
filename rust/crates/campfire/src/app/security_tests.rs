@@ -68,7 +68,7 @@ impl Fresh {
                     password_digest: Some(digest),
                     role: Role::Administrator,
                     bio: None,
-                    bot_token: None,
+                    bot_token_digest: None,
                 };
                 User::create(tx, david)
             })
@@ -284,6 +284,109 @@ async fn sign_ins_are_rate_limited_per_ip_and_forgeries_are_not_counted() {
     assert_eq!(limited.header("content-type"), expected["limited"]["content_type"].as_str());
     assert!(limited.text().contains("<form"), "the sign-in form again: {}", limited.text());
     assert_eq!(app.send(attempt("10.3.0.2", Some(&token))).await.status.as_u16(), expected["other_ip_status"].as_u64().unwrap() as u16);
+}
+
+/// `start_new_session_for`: the browser's signed `device_id` cookie is stored on its session,
+/// which starts unverified (`two_factor_verified: false`).
+#[tokio::test]
+async fn a_sign_in_records_the_browser_device_on_its_session() {
+    let app = boot_fresh(false).await;
+    let david = app.seed().await;
+    let page = app.send(request("GET", "/session/new").body(Body::empty()).unwrap()).await;
+    let cookie = Fresh::session_cookie(&page).unwrap();
+    let token = masked_session_token(&app.booted.app.secrets, &cookie).unwrap();
+    let sign_in = request("POST", "/session")
+        .header(header::COOKIE, format!("_campfire_session={cookie}"))
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .body(form(&[("email_address", "david@example.com"), ("password", "secret123456"), ("authenticity_token", &token)]))
+        .unwrap();
+    let reply = app.send(sign_in).await;
+    assert_eq!(reply.status, StatusCode::FOUND, "{}", reply.text());
+
+    let set_cookie = |name: &str| {
+        reply.set_cookies().iter().find_map(|c| c.split(';').next()?.strip_prefix(&format!("{name}=")).map(str::to_string)).unwrap()
+    };
+    let raw = |value: String| percent_encoding::percent_decode_str(&value).decode_utf8_lossy().into_owned();
+    let now = jiff::Timestamp::now();
+    let device_id = app.crypto().verify_signed_cookie("device_id", &raw(set_cookie("device_id")), now).unwrap();
+    let session_token = app.crypto().verify_signed_cookie("session_token", &raw(set_cookie("session_token")), now).unwrap();
+    let session = app.booted.app.db.read(move |conn| Session::find_by_token(conn, &session_token)).await.unwrap().unwrap();
+    assert_eq!(session.user_id, david.id);
+    assert_eq!(session.device_id.as_deref(), Some(device_id.as_str()));
+    assert_eq!(device_id.len(), 32);
+    assert!(!session.two_factor_verified());
+}
+
+/// `bot_authentication`'s second half, `User.authenticate_bot_reply_token(key, room_id:)`: a
+/// webhook reply token (`bot.reply_token_for(room)`) signs in its bot for that room only, while
+/// the bot is active and still a member, and like a bot key it skips forgery protection.
+#[tokio::test]
+async fn bot_reply_tokens_sign_in_their_bot_for_their_room() {
+    use crate::concerns::{Before, before_actions, current_user};
+
+    async fn whoami(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {
+        // `allow_bot_access`, as the bot-facing controllers declare.
+        before_actions(c, Before { deny_bots: false, ..Before::default() }).await?;
+        let name = current_user(c).map(|user| user.name.clone()).unwrap_or_default();
+        Ok(c.html(name))
+    }
+
+    let app = boot_fresh(false).await;
+    let david = app.seed().await;
+    let (bot, room, other_room) = app
+        .booted
+        .app
+        .db
+        .write(move |tx| {
+            let bot = User::create(
+                tx,
+                NewUser { name: "Replier".into(), email_address: None, password_digest: None, role: Role::Bot, bio: None, bot_token_digest: None },
+            )?;
+            let room = campfire_db::Room::create_for(tx, campfire_db::RoomType::Closed, Some("Bots"), david.id, &[david.id, bot.id])?;
+            let other = campfire_db::Room::create_for(tx, campfire_db::RoomType::Closed, Some("Elsewhere"), david.id, &[david.id])?;
+            Ok((bot, room, other))
+        })
+        .await
+        .unwrap();
+    let kit = campfire_kit::Kit::new(
+        campfire_kit::KitConfig::production(true),
+        Arc::new(RailsCrypto::new(app.booted.app.secrets.clone())),
+        app.booted.app.clock.clone(),
+        app.booted.app.clone(),
+    );
+    let router = campfire_kit::app(axum::Router::new().route("/whoami", campfire_kit::get(whoami).post(campfire_kit::action(whoami))), kit);
+    let post = |bot_key: String, room_id: i64| {
+        let router = router.clone();
+        async move {
+            let body = form(&[("bot_key", &bot_key), ("room_id", &room_id.to_string())]);
+            let request = request("POST", "/whoami").header(header::CONTENT_TYPE, "application/x-www-form-urlencoded").body(body).unwrap();
+            let response = router.oneshot(request).await.unwrap();
+            let status = response.status();
+            (status, String::from_utf8(axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap().to_vec()).unwrap())
+        }
+    };
+    let secrets = &app.booted.app.secrets;
+    let now = app.booted.app.clock.now();
+    let token = rails_compat::verifiers::bot_reply::token_for(secrets, bot.id, room.id, now);
+    // What a request that authenticates as nobody gets.
+    let refused = post("not-a-key".into(), room.id).await;
+    assert_ne!(refused.0, StatusCode::OK);
+    let refused = refused.0;
+
+    assert_eq!(post(format!(" {token}\n"), room.id).await, (StatusCode::OK, "Replier".to_string()), "no authenticity token needed");
+    assert_eq!(post(token.clone(), other_room.id).await.0, refused, "bound to its room");
+    let lapsed = rails_compat::verifiers::bot_reply::token_for(secrets, bot.id, room.id, now - jiff::SignedDuration::from_mins(16));
+    assert_eq!(post(lapsed, room.id).await.0, refused, "expired");
+    let not_a_bot = rails_compat::verifiers::bot_reply::token_for(secrets, david.id, room.id, now);
+    assert_eq!(post(not_a_bot, room.id).await.0, refused, "only bots");
+
+    let (bot_id, room_id) = (bot.id, room.id);
+    app.booted.app.db.write(move |tx| campfire_db::Room::find(tx.conn(), room_id)?.revoke_from(tx, &[bot_id])).await.unwrap();
+    assert_eq!(post(token.clone(), room.id).await.0, refused, "a member of the room");
+    app.booted.app.db.write(move |tx| campfire_db::Room::find(tx.conn(), room_id)?.grant_to(tx, &[bot_id])).await.unwrap();
+    assert_eq!(post(token.clone(), room.id).await.0, StatusCode::OK);
+    app.booted.app.db.write(move |tx| User::find(tx.conn(), bot_id)?.deactivate(tx)).await.unwrap();
+    assert_eq!(post(token, room.id).await.0, refused, "an active bot");
 }
 
 #[tokio::test]

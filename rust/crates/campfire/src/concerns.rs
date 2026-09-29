@@ -30,9 +30,10 @@
 //! ```
 //!
 //! Our Rails app's `ApplicationController` also includes `SetTimeZone`, `SudoMode` and
-//! `TwoFactorEnforcement` (`require_two_factor_enrollment`); those need schema the port doesn't
-//! have yet (sessions' `two_factor_verified_at`, users' 2FA credentials and time zone), so they
-//! aren't in the chain. The session state they keep is in [`session_keys`].
+//! `TwoFactorEnforcement` (`require_two_factor_enrollment`). The schema has their tables now, but
+//! the two-factor setup and challenge flows, remembered devices and the sudo screens they send
+//! people to aren't ported, so they aren't in the chain yet. The session state they keep is in
+//! [`session_keys`].
 //!
 //! Current attributes (`Current.user`, `Current.session`) live in the `Ctx` extensions; read them
 //! with [`current_user`] / [`current_session`].
@@ -43,7 +44,7 @@ pub mod platform;
 pub mod session_keys;
 pub mod user_agent;
 
-use campfire_db::{Ban, Membership, PasswordDigest, Room, Session, User};
+use campfire_db::{Ban, Membership, NewSession, PasswordDigest, Room, Session, User};
 use campfire_kit::{Cookie, Ctx, Error, Result, SameSite, StatusCode, halt};
 
 use crate::app::AppCtx;
@@ -65,8 +66,6 @@ pub enum AuthenticatedBy {
     Nothing,
     Session,
     BotKey,
-    /// Not constructed until the port's schema has bot reply tokens (see [`bot_authentication`]).
-    #[allow(dead_code)]
     BotReply,
     AgentToken,
 }
@@ -272,8 +271,9 @@ pub fn session_expired(session: &Session, user: &User, idle_timeout: jiff::Signe
 }
 
 /// `enforce_two_factor_for_restored_session`, which `TwoFactorEnforcement` overrides with
-/// `require_two_factor_enrollment`. That needs sessions' `two_factor_verified_at` and users' 2FA
-/// credentials, which the port's schema doesn't have yet, so for now it lets every session through.
+/// `require_two_factor_enrollment`. Sessions carry `two_factor_verified_at` now, but enforcing it
+/// needs the enrollment and challenge flows it redirects to (not ported yet), so for now it lets
+/// every session through.
 pub fn enforce_two_factor_for_restored_session(_c: &mut Ctx) -> Result<()> {
     Ok(())
 }
@@ -285,23 +285,62 @@ pub async fn bot_authentication(c: &mut Ctx) -> Result<bool> {
     let Some(bot_key) = param.as_str().map(|key| ruby_strip(key).to_string()) else {
         return Err(Error::internal(anyhow::anyhow!("undefined method 'strip' for bot_key")));
     };
-    let bot = c.app().db.read(move |conn| User::authenticate_bot(conn, &bot_key)).await.map_err(Error::internal)?;
-    // Then `User.authenticate_bot_reply_token(key, room_id: params[:room_id])` for
-    // `AuthenticatedBy::BotReply`, once the port's schema has bot reply tokens.
+    // `params[:room_id]` for `authenticate_bot_reply_token`, compared `to_s`: nil is "", and a
+    // hash or array never matches a signed room id.
+    let room_id = match c.params.get("room_id") {
+        None => Some(String::new()),
+        Some(param) => param.as_str().map(str::to_string),
+    };
+    let (secrets, now) = (c.app().secrets.clone(), c.now());
+    let bot = c
+        .app()
+        .db
+        .read(move |conn| {
+            if let Some(bot) = User::authenticate_bot(conn, &bot_key)? {
+                return Ok(Some((bot, AuthenticatedBy::BotKey)));
+            }
+            let Some(room_id) = room_id else { return Ok(None) };
+            Ok(authenticate_bot_reply_token(conn, &secrets, &bot_key, &room_id, now)?.map(|bot| (bot, AuthenticatedBy::BotReply)))
+        })
+        .await
+        .map_err(Error::internal)?;
     match bot {
-        Some(bot) => {
+        Some((bot, by)) => {
             c.set_current(CurrentUser(bot));
-            set_authenticated_by(c, AuthenticatedBy::BotKey);
+            set_authenticated_by(c, by);
             Ok(true)
         }
         None => Ok(false),
     }
 }
 
+/// `User.authenticate_bot_reply_token(token, room_id:)`: a webhook reply token that verifies for
+/// this room (`rails_compat::verifiers::bot_reply`), naming an active bot (`active_bots.find_by(id:)`)
+/// that is still a member of the room (`bot.rooms.exists?(room_id)`).
+fn authenticate_bot_reply_token(
+    conn: &campfire_db::Connection,
+    secrets: &rails_compat::Secrets,
+    token: &str,
+    room_id: &str,
+    now: jiff::Timestamp,
+) -> campfire_db::Result<Option<User>> {
+    let Some(bot_id) = rails_compat::verifiers::bot_reply::verify(secrets, token, room_id, now) else { return Ok(None) };
+    // Active Record casts the id: an integer, or a string of digits.
+    let bot_id = bot_id.as_i64().or_else(|| bot_id.as_str().and_then(|id| id.trim().parse().ok()));
+    let (Some(bot_id), Ok(room_id)) = (bot_id, room_id.parse::<i64>()) else { return Ok(None) };
+    let bot = match User::find_active_bot(conn, bot_id) {
+        Ok(bot) => bot,
+        Err(campfire_db::Error::RecordNotFound(_)) => return Ok(None),
+        Err(error) => return Err(error),
+    };
+    Ok(Membership::find_by_room_and_user(conn, room_id, bot.id)?.map(|_| bot))
+}
+
 /// `agent_authentication`: an `Authorization: Bearer` secret authenticates its agent's user, and
 /// an unknown secret, or an inactive agent's, is a 401 that ends the chain.
 ///
-/// The port's schema has no agent credentials yet, so every secret is unknown: agents get the 401
+/// `AgentCredential` and `Agent` aren't ported yet (the tables are), so every secret is unknown:
+/// agents get the 401
 /// Rails gives a revoked token rather than being taken for signed-out browsers.
 pub async fn agent_authentication(c: &mut Ctx) -> Result<bool> {
     if agent_bearer_secret(c.request.header("authorization")).is_none() {
@@ -402,18 +441,25 @@ pub async fn authenticate_by(c: &Ctx, email_address: String, password: String) -
 /// has its `device_id`, start the session, and settle the CSRF token before any page renders (so
 /// concurrent first renders don't each start their own).
 ///
-/// Rails stores the `device_id` on the session, and `two_factor_verified:` as
-/// `two_factor_verified_at`, then sends `NewSignInAlert`; the port's sessions table doesn't have
-/// those columns yet.
+/// Rails' `two_factor_verified:` defaults to false, and only the second-factor flows (not ported
+/// yet) pass true. It then sends `NewSignInAlert`, which isn't ported either.
 pub async fn start_new_session_for(c: &mut Ctx, user: User) -> Result<Session> {
     session_keys::clear_confirmations(c.session());
-    let _device_id = ensure_device_cookie(c)?;
+    let device_id = ensure_device_cookie(c)?;
     let (user_agent, ip) = (c.request.user_agent().map(str::to_string), c.request.remote_ip()?.to_string());
     let user_id = user.id;
     let session = c
         .app()
         .db
-        .write(move |tx| Session::start(tx, user_id, user_agent.as_deref(), Some(&ip)))
+        .write(move |tx| {
+            let attributes = NewSession {
+                user_agent: user_agent.as_deref(),
+                ip_address: Some(&ip),
+                device_id: Some(&device_id),
+                two_factor_verified: false,
+            };
+            Session::start_with(tx, user_id, attributes)
+        })
         .await
         .map_err(Error::internal)?;
     authenticated_as(c, session.clone(), Some(user), true).await?;

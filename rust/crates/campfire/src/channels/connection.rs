@@ -4,8 +4,9 @@
 //! rejected.
 //!
 //! Rails also rejects a session that never completed a required second factor
-//! (`user.requires_two_factor? && !session.two_factor_verified?`); the port's schema doesn't have
-//! that state yet.
+//! (`user.requires_two_factor? && !session.two_factor_verified?`). Sessions carry that state now,
+//! but the HTTP side doesn't enforce it until the two-factor flows are ported, and the two gates
+//! go in together: a gate here alone would refuse every browser signed in through the port.
 use campfire_cable::{Authenticate, ConnectRequest};
 use campfire_db::{Database, Session, User};
 use campfire_kit::{CookieJar, SharedClock, SharedCrypto};
@@ -86,7 +87,7 @@ mod tests {
     /// A session for a new user, last active `idle` seconds ago.
     async fn session(db: &Database, role: Role, idle: i64) -> Session {
         db.write(move |tx| {
-            let attributes = NewUser { name: format!("{role:?} {idle}"), email_address: None, password_digest: None, role, bio: None, bot_token: None };
+            let attributes = NewUser { name: format!("{role:?} {idle}"), email_address: None, password_digest: None, role, bio: None, bot_token_digest: None };
             let user = User::create(tx, attributes)?;
             let session = Session::start(tx, user.id, Some("test"), Some("8.8.8.8"))?;
             tx.conn().execute("UPDATE sessions SET last_active_at = ? WHERE id = ?", rusqlite::params![Timestamp::from_second(NOW - idle), session.id])?;
