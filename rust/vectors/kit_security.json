@@ -1,0 +1,2993 @@
+{
+  "admin_idle_timeout": [
+    {
+      "env": null,
+      "seconds": 604800
+    },
+    {
+      "env": "",
+      "seconds": 604800
+    },
+    {
+      "env": "7",
+      "seconds": 604800
+    },
+    {
+      "env": "1",
+      "seconds": 86400
+    },
+    {
+      "env": "0",
+      "seconds": 604800
+    },
+    {
+      "env": "-3",
+      "seconds": 604800
+    },
+    {
+      "env": "30",
+      "seconds": 2592000
+    },
+    {
+      "env": "abc",
+      "seconds": 604800
+    },
+    {
+      "env": "3.5",
+      "seconds": 259200
+    },
+    {
+      "env": " 5",
+      "seconds": 432000
+    },
+    {
+      "env": "10days",
+      "seconds": 864000
+    },
+    {
+      "env": "0x10",
+      "seconds": 604800
+    },
+    {
+      "env": "1_0",
+      "seconds": 864000
+    }
+  ],
+  "csp": {
+    "policies": [
+      {
+        "livekit_url": null,
+        "sources": [],
+        "header": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-NONCE'; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+        "without_nonce": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports"
+      },
+      {
+        "livekit_url": "",
+        "sources": [],
+        "header": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-NONCE'; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+        "without_nonce": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports"
+      },
+      {
+        "livekit_url": "wss://livekit.campfire.test",
+        "sources": [
+          "wss://livekit.campfire.test",
+          "https://livekit.campfire.test"
+        ],
+        "header": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-NONCE'; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://livekit.campfire.test https://livekit.campfire.test; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+        "without_nonce": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://livekit.campfire.test https://livekit.campfire.test; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports"
+      },
+      {
+        "livekit_url": "wss://livekit.campfire.test:7880",
+        "sources": [
+          "wss://livekit.campfire.test:7880",
+          "https://livekit.campfire.test:7880"
+        ],
+        "header": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-NONCE'; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://livekit.campfire.test:7880 https://livekit.campfire.test:7880; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+        "without_nonce": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://livekit.campfire.test:7880 https://livekit.campfire.test:7880; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports"
+      },
+      {
+        "livekit_url": "ws://10.0.0.5:7880",
+        "sources": [
+          "ws://10.0.0.5:7880",
+          "http://10.0.0.5:7880"
+        ],
+        "header": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-NONCE'; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com ws://10.0.0.5:7880 http://10.0.0.5:7880; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+        "without_nonce": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com ws://10.0.0.5:7880 http://10.0.0.5:7880; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports"
+      },
+      {
+        "livekit_url": "https://lk.example.com:443",
+        "sources": [
+          "https://lk.example.com",
+          "wss://lk.example.com"
+        ],
+        "header": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-NONCE'; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com https://lk.example.com wss://lk.example.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+        "without_nonce": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com https://lk.example.com wss://lk.example.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports"
+      },
+      {
+        "livekit_url": "http://lk.example.com:80",
+        "sources": [
+          "http://lk.example.com",
+          "ws://lk.example.com"
+        ],
+        "header": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-NONCE'; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com http://lk.example.com ws://lk.example.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+        "without_nonce": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com http://lk.example.com ws://lk.example.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports"
+      },
+      {
+        "livekit_url": "ftp://lk.example.com",
+        "sources": [],
+        "header": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-NONCE'; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+        "without_nonce": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports"
+      },
+      {
+        "livekit_url": "livekit.campfire.test",
+        "sources": [],
+        "header": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-NONCE'; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+        "without_nonce": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports"
+      },
+      {
+        "livekit_url": "wss://",
+        "sources": [],
+        "header": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-NONCE'; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+        "without_nonce": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports"
+      },
+      {
+        "livekit_url": "not a url",
+        "sources": [],
+        "header": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-NONCE'; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+        "without_nonce": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports"
+      },
+      {
+        "livekit_url": "WSS://LK.Example.com",
+        "sources": [
+          "wss://LK.Example.com",
+          "https://LK.Example.com"
+        ],
+        "header": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-NONCE'; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://LK.Example.com https://LK.Example.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+        "without_nonce": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://LK.Example.com https://LK.Example.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports"
+      },
+      {
+        "livekit_url": "wss://user:pw@lk.example.com:7881/path?q=1",
+        "sources": [
+          "wss://lk.example.com:7881",
+          "https://lk.example.com:7881"
+        ],
+        "header": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-NONCE'; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://lk.example.com:7881 https://lk.example.com:7881; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+        "without_nonce": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://lk.example.com:7881 https://lk.example.com:7881; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports"
+      },
+      {
+        "livekit_url": "wss://[::1]:7880",
+        "sources": [
+          "wss://[::1]:7880",
+          "https://[::1]:7880"
+        ],
+        "header": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-NONCE'; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://[::1]:7880 https://[::1]:7880; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+        "without_nonce": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://[::1]:7880 https://[::1]:7880; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports"
+      }
+    ],
+    "nonces": [
+      {
+        "session_id": "0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+        "nonce": "e4LJU/XL85tLJTVtvCUCeGnE2hnaaKVuTQGHQzeJ8No="
+      },
+      {
+        "session_id": "36166e44ee4e3a234bcf50a9f864d2a7",
+        "nonce": "e/OYYGEbIS9OTA1Drp5YHQraqSq4yiQmOulOtFzGf/Y="
+      }
+    ],
+    "random_nonce_example": "T1HpSibvRKnHCtkL7EFsBg==",
+    "nonce_directives": [
+      "script-src"
+    ],
+    "report_only": false,
+    "default_headers": {
+      "X-Frame-Options": "SAMEORIGIN",
+      "X-XSS-Protection": "0",
+      "X-Content-Type-Options": "nosniff",
+      "X-Permitted-Cross-Domain-Policies": "none",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Permissions-Policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)"
+    },
+    "ssl_options": "{hsts: {expires: 1 year, subdomains: true}}",
+    "immutable_cache_control": "public, immutable, max-age=31556952",
+    "public_file_server_headers": {
+      "cache-control": "public, max-age=60, stale-while-revalidate=300"
+    }
+  },
+  "csrf": {
+    "session_token": "qK3zv7cQ2oYlP4-sX6JtW0nBf9eR1uHaMdLgE5iVy8k",
+    "global_token_hex": "6ec0767be83c2cd5b35a59da9e04dc63995d1884b214289561b6d7528cd85d37",
+    "global_tokens": [
+      "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+      "1ix8Fj8OjhXnSLuUV0PLAZ0zbmR4j_N6n5MzOpLOb0G47Apt1zKiwFQS4k7JRxdiBG524Mqb2-_-JeRoHhYydg"
+    ],
+    "form_tokens": [
+      {
+        "action": "/session",
+        "method": "post",
+        "page_path": "/session/new",
+        "normalized_action_path": "/session",
+        "unmasked_hex": "211efb87ddee9bc039e52945fddb57b4b3ebd1a99d6ce3c553a4e837a19736d8",
+        "token": "Ia2ycPDRdwtXFRQQ0IGw0F1SYDfyxfh3QCPBQ-G56twAs0n3LT_sy27wPVUtWudk7rmxnm-pG7IThyl0QC7cBA"
+      },
+      {
+        "action": "http://campfire.test/session",
+        "method": "post",
+        "page_path": "/session/new",
+        "normalized_action_path": "/session",
+        "unmasked_hex": "211efb87ddee9bc039e52945fddb57b4b3ebd1a99d6ce3c553a4e837a19736d8",
+        "token": "1lEnbIiTRNWlYfwsSRGp3Cnj18GvuaxZmy6yiF7PWcb3T9zrVX3fFZyE1Wm0yv5omggGaDLVT5zIilq__1hvHg"
+      },
+      {
+        "action": "/rooms/1/",
+        "method": "patch",
+        "page_path": "/rooms/1/edit",
+        "normalized_action_path": "/rooms/1",
+        "unmasked_hex": "5b48c342a55506e1387e69c42c117c57ed73a673488246a7243ebcc870d3f01f",
+        "token": "IE2oPTP9dQpFMl_VRIPymdjQKdJtLKvtD5mFa8RB4ol7BWt_lqhz631MNhFoko7ONaOPoSWu7UorpzmjtJISlg"
+      },
+      {
+        "action": "/rooms/1?x=1",
+        "method": "delete",
+        "page_path": "/rooms/1",
+        "normalized_action_path": "/rooms/1",
+        "unmasked_hex": "fdd3e5c35cbb2c63b07dcdf6c71047105c5701bfcd8230f327e43c299e8a8850",
+        "token": "Wp0UA0mTBE7mUF0KKa9vLWI1b0J2oMc2w5E_Fa56CS6nTvHAFSgoLVYtkPzuvyg9PmJu_bsi98XkdQM8MPCBfg"
+      },
+      {
+        "action": "messages",
+        "method": "post",
+        "page_path": "/rooms/1",
+        "normalized_action_path": "/rooms/1/messages",
+        "unmasked_hex": "c619633b83b27a77ba076ca7df0d6fbbcf92c7ac28d070244f7aed5f26fefa9a",
+        "token": "cHN_6SZ_yZ4WZIWIXE5zgLLXV9kndiSezOPcAz9iUPW2ahzSpc2z6axj6S-DQxw7fUWQdQ-mVLqDmTFcGZyqbw"
+      },
+      {
+        "action": "./involvement",
+        "method": "put",
+        "page_path": "/rooms/1/",
+        "normalized_action_path": "/rooms/1//involvement",
+        "unmasked_hex": "9dba14a1fff9d2a699101a7bab5d8f5aaa0da736bbe014ef615304ba9bf09ca4",
+        "token": "ISQpQo6vHyDl2JxRth_VNCn1KFjxbzaOXT6gKJv0DVS8nj3jcVbNhnzIhiodQlpug_iPbkqPImE8baSSAASR8A"
+      },
+      {
+        "action": "",
+        "method": "post",
+        "page_path": "/account/edit",
+        "normalized_action_path": "/account/edit",
+        "unmasked_hex": "57d1148317080650fbf8c1ea26d510b58e532b611eebcf4a502c22ffaab0fcac",
+        "token": "1GRh1On278ROchQBS_9-JdSvsGNKfvaGPU1k8lgB59aDtXVX_v7plLWK1ettKm6QWvybAlSVOcxtYUYN8rEbeg"
+      },
+      {
+        "action": "/rooms/1/messages#anchor",
+        "method": "post",
+        "page_path": "/rooms/1",
+        "normalized_action_path": "/rooms/1/messages",
+        "unmasked_hex": "c619633b83b27a77ba076ca7df0d6fbbcf92c7ac28d070244f7aed5f26fefa9a",
+        "token": "Vxqk0-C370cXeHw4Vrt1HDVW_i5XT6mZzEjXa2HXN2yRA8foYwWVMK1_EJ-Jthqn-sQ5gn-f2b2DMjo0RynN9g"
+      }
+    ],
+    "validity": [
+      {
+        "case": "masked global token",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/session",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "masked global token",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/session/",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "masked global token",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/session",
+        "method": "PUT",
+        "expected": true
+      },
+      {
+        "case": "masked global token",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": true
+      },
+      {
+        "case": "masked global token",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": true
+      },
+      {
+        "case": "masked global token",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "masked global token",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": true
+      },
+      {
+        "case": "masked global token",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "masked global token",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/other",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "masked global token",
+        "token": "1ix8Fj8OjhXnSLuUV0PLAZ0zbmR4j_N6n5MzOpLOb0G47Apt1zKiwFQS4k7JRxdiBG524Mqb2-_-JeRoHhYydg",
+        "path": "/session",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "masked global token",
+        "token": "1ix8Fj8OjhXnSLuUV0PLAZ0zbmR4j_N6n5MzOpLOb0G47Apt1zKiwFQS4k7JRxdiBG524Mqb2-_-JeRoHhYydg",
+        "path": "/session/",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "masked global token",
+        "token": "1ix8Fj8OjhXnSLuUV0PLAZ0zbmR4j_N6n5MzOpLOb0G47Apt1zKiwFQS4k7JRxdiBG524Mqb2-_-JeRoHhYydg",
+        "path": "/session",
+        "method": "PUT",
+        "expected": true
+      },
+      {
+        "case": "masked global token",
+        "token": "1ix8Fj8OjhXnSLuUV0PLAZ0zbmR4j_N6n5MzOpLOb0G47Apt1zKiwFQS4k7JRxdiBG524Mqb2-_-JeRoHhYydg",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": true
+      },
+      {
+        "case": "masked global token",
+        "token": "1ix8Fj8OjhXnSLuUV0PLAZ0zbmR4j_N6n5MzOpLOb0G47Apt1zKiwFQS4k7JRxdiBG524Mqb2-_-JeRoHhYydg",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": true
+      },
+      {
+        "case": "masked global token",
+        "token": "1ix8Fj8OjhXnSLuUV0PLAZ0zbmR4j_N6n5MzOpLOb0G47Apt1zKiwFQS4k7JRxdiBG524Mqb2-_-JeRoHhYydg",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "masked global token",
+        "token": "1ix8Fj8OjhXnSLuUV0PLAZ0zbmR4j_N6n5MzOpLOb0G47Apt1zKiwFQS4k7JRxdiBG524Mqb2-_-JeRoHhYydg",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": true
+      },
+      {
+        "case": "masked global token",
+        "token": "1ix8Fj8OjhXnSLuUV0PLAZ0zbmR4j_N6n5MzOpLOb0G47Apt1zKiwFQS4k7JRxdiBG524Mqb2-_-JeRoHhYydg",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "masked global token",
+        "token": "1ix8Fj8OjhXnSLuUV0PLAZ0zbmR4j_N6n5MzOpLOb0G47Apt1zKiwFQS4k7JRxdiBG524Mqb2-_-JeRoHhYydg",
+        "path": "/other",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "unmasked session token",
+        "token": "qK3zv7cQ2oYlP4-sX6JtW0nBf9eR1uHaMdLgE5iVy8k",
+        "path": "/session",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "unmasked session token",
+        "token": "qK3zv7cQ2oYlP4-sX6JtW0nBf9eR1uHaMdLgE5iVy8k",
+        "path": "/session/",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "unmasked session token",
+        "token": "qK3zv7cQ2oYlP4-sX6JtW0nBf9eR1uHaMdLgE5iVy8k",
+        "path": "/session",
+        "method": "PUT",
+        "expected": true
+      },
+      {
+        "case": "unmasked session token",
+        "token": "qK3zv7cQ2oYlP4-sX6JtW0nBf9eR1uHaMdLgE5iVy8k",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": true
+      },
+      {
+        "case": "unmasked session token",
+        "token": "qK3zv7cQ2oYlP4-sX6JtW0nBf9eR1uHaMdLgE5iVy8k",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": true
+      },
+      {
+        "case": "unmasked session token",
+        "token": "qK3zv7cQ2oYlP4-sX6JtW0nBf9eR1uHaMdLgE5iVy8k",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "unmasked session token",
+        "token": "qK3zv7cQ2oYlP4-sX6JtW0nBf9eR1uHaMdLgE5iVy8k",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": true
+      },
+      {
+        "case": "unmasked session token",
+        "token": "qK3zv7cQ2oYlP4-sX6JtW0nBf9eR1uHaMdLgE5iVy8k",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "unmasked session token",
+        "token": "qK3zv7cQ2oYlP4-sX6JtW0nBf9eR1uHaMdLgE5iVy8k",
+        "path": "/other",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "session token masked with a pad",
+        "token": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQGprPK-thHbhyQ-jq1eo2xaSMB-1pDX4Nsw0-ESmZTKyA",
+        "path": "/session",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "session token masked with a pad",
+        "token": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQGprPK-thHbhyQ-jq1eo2xaSMB-1pDX4Nsw0-ESmZTKyA",
+        "path": "/session/",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "session token masked with a pad",
+        "token": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQGprPK-thHbhyQ-jq1eo2xaSMB-1pDX4Nsw0-ESmZTKyA",
+        "path": "/session",
+        "method": "PUT",
+        "expected": true
+      },
+      {
+        "case": "session token masked with a pad",
+        "token": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQGprPK-thHbhyQ-jq1eo2xaSMB-1pDX4Nsw0-ESmZTKyA",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": true
+      },
+      {
+        "case": "session token masked with a pad",
+        "token": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQGprPK-thHbhyQ-jq1eo2xaSMB-1pDX4Nsw0-ESmZTKyA",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": true
+      },
+      {
+        "case": "session token masked with a pad",
+        "token": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQGprPK-thHbhyQ-jq1eo2xaSMB-1pDX4Nsw0-ESmZTKyA",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "session token masked with a pad",
+        "token": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQGprPK-thHbhyQ-jq1eo2xaSMB-1pDX4Nsw0-ESmZTKyA",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": true
+      },
+      {
+        "case": "session token masked with a pad",
+        "token": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQGprPK-thHbhyQ-jq1eo2xaSMB-1pDX4Nsw0-ESmZTKyA",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "session token masked with a pad",
+        "token": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQGprPK-thHbhyQ-jq1eo2xaSMB-1pDX4Nsw0-ESmZTKyA",
+        "path": "/other",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "unmasked global token",
+        "token": "bsB2e-g8LNWzWlnangTcY5ldGISyFCiVYbbXUozYXTc",
+        "path": "/session",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "unmasked global token",
+        "token": "bsB2e-g8LNWzWlnangTcY5ldGISyFCiVYbbXUozYXTc",
+        "path": "/session/",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "unmasked global token",
+        "token": "bsB2e-g8LNWzWlnangTcY5ldGISyFCiVYbbXUozYXTc",
+        "path": "/session",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "unmasked global token",
+        "token": "bsB2e-g8LNWzWlnangTcY5ldGISyFCiVYbbXUozYXTc",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": false
+      },
+      {
+        "case": "unmasked global token",
+        "token": "bsB2e-g8LNWzWlnangTcY5ldGISyFCiVYbbXUozYXTc",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": false
+      },
+      {
+        "case": "unmasked global token",
+        "token": "bsB2e-g8LNWzWlnangTcY5ldGISyFCiVYbbXUozYXTc",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "unmasked global token",
+        "token": "bsB2e-g8LNWzWlnangTcY5ldGISyFCiVYbbXUozYXTc",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "unmasked global token",
+        "token": "bsB2e-g8LNWzWlnangTcY5ldGISyFCiVYbbXUozYXTc",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "unmasked global token",
+        "token": "bsB2e-g8LNWzWlnangTcY5ldGISyFCiVYbbXUozYXTc",
+        "path": "/other",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "masked global token, padded",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ==",
+        "path": "/session",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "masked global token, padded",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ==",
+        "path": "/session/",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "masked global token, padded",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ==",
+        "path": "/session",
+        "method": "PUT",
+        "expected": true
+      },
+      {
+        "case": "masked global token, padded",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ==",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": true
+      },
+      {
+        "case": "masked global token, padded",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ==",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": true
+      },
+      {
+        "case": "masked global token, padded",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ==",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "masked global token, padded",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ==",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": true
+      },
+      {
+        "case": "masked global token, padded",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ==",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "masked global token, padded",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ==",
+        "path": "/other",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "masked global token, standard alphabet",
+        "token": "b9nujsSArbTPZCv83zfuPY1o/I4eXPfzcBGPELgp2xIBGZj1LLyBYXw+ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/session",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "masked global token, standard alphabet",
+        "token": "b9nujsSArbTPZCv83zfuPY1o/I4eXPfzcBGPELgp2xIBGZj1LLyBYXw+ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/session/",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "masked global token, standard alphabet",
+        "token": "b9nujsSArbTPZCv83zfuPY1o/I4eXPfzcBGPELgp2xIBGZj1LLyBYXw+ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/session",
+        "method": "PUT",
+        "expected": true
+      },
+      {
+        "case": "masked global token, standard alphabet",
+        "token": "b9nujsSArbTPZCv83zfuPY1o/I4eXPfzcBGPELgp2xIBGZj1LLyBYXw+ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": true
+      },
+      {
+        "case": "masked global token, standard alphabet",
+        "token": "b9nujsSArbTPZCv83zfuPY1o/I4eXPfzcBGPELgp2xIBGZj1LLyBYXw+ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": true
+      },
+      {
+        "case": "masked global token, standard alphabet",
+        "token": "b9nujsSArbTPZCv83zfuPY1o/I4eXPfzcBGPELgp2xIBGZj1LLyBYXw+ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "masked global token, standard alphabet",
+        "token": "b9nujsSArbTPZCv83zfuPY1o/I4eXPfzcBGPELgp2xIBGZj1LLyBYXw+ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": true
+      },
+      {
+        "case": "masked global token, standard alphabet",
+        "token": "b9nujsSArbTPZCv83zfuPY1o/I4eXPfzcBGPELgp2xIBGZj1LLyBYXw+ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "masked global token, standard alphabet",
+        "token": "b9nujsSArbTPZCv83zfuPY1o/I4eXPfzcBGPELgp2xIBGZj1LLyBYXw+ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/other",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "token for another session",
+        "token": "la1lHVEPQfFTt3qw3GZ2hZv_AnJDXC3Y5VQ5TFq8T9ocGdWm54M0DRH-JUjhTLn0tIojxzeC47PbPgEuE_kV0g",
+        "path": "/session",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "token for another session",
+        "token": "la1lHVEPQfFTt3qw3GZ2hZv_AnJDXC3Y5VQ5TFq8T9ocGdWm54M0DRH-JUjhTLn0tIojxzeC47PbPgEuE_kV0g",
+        "path": "/session/",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "token for another session",
+        "token": "la1lHVEPQfFTt3qw3GZ2hZv_AnJDXC3Y5VQ5TFq8T9ocGdWm54M0DRH-JUjhTLn0tIojxzeC47PbPgEuE_kV0g",
+        "path": "/session",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "token for another session",
+        "token": "la1lHVEPQfFTt3qw3GZ2hZv_AnJDXC3Y5VQ5TFq8T9ocGdWm54M0DRH-JUjhTLn0tIojxzeC47PbPgEuE_kV0g",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": false
+      },
+      {
+        "case": "token for another session",
+        "token": "la1lHVEPQfFTt3qw3GZ2hZv_AnJDXC3Y5VQ5TFq8T9ocGdWm54M0DRH-JUjhTLn0tIojxzeC47PbPgEuE_kV0g",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": false
+      },
+      {
+        "case": "token for another session",
+        "token": "la1lHVEPQfFTt3qw3GZ2hZv_AnJDXC3Y5VQ5TFq8T9ocGdWm54M0DRH-JUjhTLn0tIojxzeC47PbPgEuE_kV0g",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "token for another session",
+        "token": "la1lHVEPQfFTt3qw3GZ2hZv_AnJDXC3Y5VQ5TFq8T9ocGdWm54M0DRH-JUjhTLn0tIojxzeC47PbPgEuE_kV0g",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "token for another session",
+        "token": "la1lHVEPQfFTt3qw3GZ2hZv_AnJDXC3Y5VQ5TFq8T9ocGdWm54M0DRH-JUjhTLn0tIojxzeC47PbPgEuE_kV0g",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "token for another session",
+        "token": "la1lHVEPQfFTt3qw3GZ2hZv_AnJDXC3Y5VQ5TFq8T9ocGdWm54M0DRH-JUjhTLn0tIojxzeC47PbPgEuE_kV0g",
+        "path": "/other",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "tampered masked token",
+        "token": "A9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/session",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "tampered masked token",
+        "token": "A9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/session/",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "tampered masked token",
+        "token": "A9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/session",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "tampered masked token",
+        "token": "A9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": false
+      },
+      {
+        "case": "tampered masked token",
+        "token": "A9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": false
+      },
+      {
+        "case": "tampered masked token",
+        "token": "A9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "tampered masked token",
+        "token": "A9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "tampered masked token",
+        "token": "A9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "tampered masked token",
+        "token": "A9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNPGGJQ",
+        "path": "/other",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "truncated masked token",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNP",
+        "path": "/session",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "truncated masked token",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNP",
+        "path": "/session/",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "truncated masked token",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNP",
+        "path": "/session",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "truncated masked token",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNP",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": false
+      },
+      {
+        "case": "truncated masked token",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNP",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": false
+      },
+      {
+        "case": "truncated masked token",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNP",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "truncated masked token",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNP",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "truncated masked token",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNP",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "truncated masked token",
+        "token": "b9nujsSArbTPZCv83zfuPY1o_I4eXPfzcBGPELgp2xIBGZj1LLyBYXw-ciZBMzJeFDXkCqxI32YRp1hCNP",
+        "path": "/other",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "invalid base64",
+        "token": "!!!!",
+        "path": "/session",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "invalid base64",
+        "token": "!!!!",
+        "path": "/session/",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "invalid base64",
+        "token": "!!!!",
+        "path": "/session",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "invalid base64",
+        "token": "!!!!",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": false
+      },
+      {
+        "case": "invalid base64",
+        "token": "!!!!",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": false
+      },
+      {
+        "case": "invalid base64",
+        "token": "!!!!",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "invalid base64",
+        "token": "!!!!",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "invalid base64",
+        "token": "!!!!",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "invalid base64",
+        "token": "!!!!",
+        "path": "/other",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "empty",
+        "token": "",
+        "path": "/session",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "empty",
+        "token": "",
+        "path": "/session/",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "empty",
+        "token": "",
+        "path": "/session",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "empty",
+        "token": "",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": false
+      },
+      {
+        "case": "empty",
+        "token": "",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": false
+      },
+      {
+        "case": "empty",
+        "token": "",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "empty",
+        "token": "",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "empty",
+        "token": "",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "empty",
+        "token": "",
+        "path": "/other",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token post /session",
+        "token": "Ia2ycPDRdwtXFRQQ0IGw0F1SYDfyxfh3QCPBQ-G56twAs0n3LT_sy27wPVUtWudk7rmxnm-pG7IThyl0QC7cBA",
+        "path": "/session",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "per-form token post /session",
+        "token": "Ia2ycPDRdwtXFRQQ0IGw0F1SYDfyxfh3QCPBQ-G56twAs0n3LT_sy27wPVUtWudk7rmxnm-pG7IThyl0QC7cBA",
+        "path": "/session/",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "per-form token post /session",
+        "token": "Ia2ycPDRdwtXFRQQ0IGw0F1SYDfyxfh3QCPBQ-G56twAs0n3LT_sy27wPVUtWudk7rmxnm-pG7IThyl0QC7cBA",
+        "path": "/session",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "per-form token post /session",
+        "token": "Ia2ycPDRdwtXFRQQ0IGw0F1SYDfyxfh3QCPBQ-G56twAs0n3LT_sy27wPVUtWudk7rmxnm-pG7IThyl0QC7cBA",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": false
+      },
+      {
+        "case": "per-form token post /session",
+        "token": "Ia2ycPDRdwtXFRQQ0IGw0F1SYDfyxfh3QCPBQ-G56twAs0n3LT_sy27wPVUtWudk7rmxnm-pG7IThyl0QC7cBA",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": false
+      },
+      {
+        "case": "per-form token post /session",
+        "token": "Ia2ycPDRdwtXFRQQ0IGw0F1SYDfyxfh3QCPBQ-G56twAs0n3LT_sy27wPVUtWudk7rmxnm-pG7IThyl0QC7cBA",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token post /session",
+        "token": "Ia2ycPDRdwtXFRQQ0IGw0F1SYDfyxfh3QCPBQ-G56twAs0n3LT_sy27wPVUtWudk7rmxnm-pG7IThyl0QC7cBA",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "per-form token post /session",
+        "token": "Ia2ycPDRdwtXFRQQ0IGw0F1SYDfyxfh3QCPBQ-G56twAs0n3LT_sy27wPVUtWudk7rmxnm-pG7IThyl0QC7cBA",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token post /session",
+        "token": "Ia2ycPDRdwtXFRQQ0IGw0F1SYDfyxfh3QCPBQ-G56twAs0n3LT_sy27wPVUtWudk7rmxnm-pG7IThyl0QC7cBA",
+        "path": "/other",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token post http://campfire.test/session",
+        "token": "1lEnbIiTRNWlYfwsSRGp3Cnj18GvuaxZmy6yiF7PWcb3T9zrVX3fFZyE1Wm0yv5omggGaDLVT5zIilq__1hvHg",
+        "path": "/session",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "per-form token post http://campfire.test/session",
+        "token": "1lEnbIiTRNWlYfwsSRGp3Cnj18GvuaxZmy6yiF7PWcb3T9zrVX3fFZyE1Wm0yv5omggGaDLVT5zIilq__1hvHg",
+        "path": "/session/",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "per-form token post http://campfire.test/session",
+        "token": "1lEnbIiTRNWlYfwsSRGp3Cnj18GvuaxZmy6yiF7PWcb3T9zrVX3fFZyE1Wm0yv5omggGaDLVT5zIilq__1hvHg",
+        "path": "/session",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "per-form token post http://campfire.test/session",
+        "token": "1lEnbIiTRNWlYfwsSRGp3Cnj18GvuaxZmy6yiF7PWcb3T9zrVX3fFZyE1Wm0yv5omggGaDLVT5zIilq__1hvHg",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": false
+      },
+      {
+        "case": "per-form token post http://campfire.test/session",
+        "token": "1lEnbIiTRNWlYfwsSRGp3Cnj18GvuaxZmy6yiF7PWcb3T9zrVX3fFZyE1Wm0yv5omggGaDLVT5zIilq__1hvHg",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": false
+      },
+      {
+        "case": "per-form token post http://campfire.test/session",
+        "token": "1lEnbIiTRNWlYfwsSRGp3Cnj18GvuaxZmy6yiF7PWcb3T9zrVX3fFZyE1Wm0yv5omggGaDLVT5zIilq__1hvHg",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token post http://campfire.test/session",
+        "token": "1lEnbIiTRNWlYfwsSRGp3Cnj18GvuaxZmy6yiF7PWcb3T9zrVX3fFZyE1Wm0yv5omggGaDLVT5zIilq__1hvHg",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "per-form token post http://campfire.test/session",
+        "token": "1lEnbIiTRNWlYfwsSRGp3Cnj18GvuaxZmy6yiF7PWcb3T9zrVX3fFZyE1Wm0yv5omggGaDLVT5zIilq__1hvHg",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token post http://campfire.test/session",
+        "token": "1lEnbIiTRNWlYfwsSRGp3Cnj18GvuaxZmy6yiF7PWcb3T9zrVX3fFZyE1Wm0yv5omggGaDLVT5zIilq__1hvHg",
+        "path": "/other",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token patch /rooms/1/",
+        "token": "IE2oPTP9dQpFMl_VRIPymdjQKdJtLKvtD5mFa8RB4ol7BWt_lqhz631MNhFoko7ONaOPoSWu7UorpzmjtJISlg",
+        "path": "/session",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token patch /rooms/1/",
+        "token": "IE2oPTP9dQpFMl_VRIPymdjQKdJtLKvtD5mFa8RB4ol7BWt_lqhz631MNhFoko7ONaOPoSWu7UorpzmjtJISlg",
+        "path": "/session/",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token patch /rooms/1/",
+        "token": "IE2oPTP9dQpFMl_VRIPymdjQKdJtLKvtD5mFa8RB4ol7BWt_lqhz631MNhFoko7ONaOPoSWu7UorpzmjtJISlg",
+        "path": "/session",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "per-form token patch /rooms/1/",
+        "token": "IE2oPTP9dQpFMl_VRIPymdjQKdJtLKvtD5mFa8RB4ol7BWt_lqhz631MNhFoko7ONaOPoSWu7UorpzmjtJISlg",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": true
+      },
+      {
+        "case": "per-form token patch /rooms/1/",
+        "token": "IE2oPTP9dQpFMl_VRIPymdjQKdJtLKvtD5mFa8RB4ol7BWt_lqhz631MNhFoko7ONaOPoSWu7UorpzmjtJISlg",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": false
+      },
+      {
+        "case": "per-form token patch /rooms/1/",
+        "token": "IE2oPTP9dQpFMl_VRIPymdjQKdJtLKvtD5mFa8RB4ol7BWt_lqhz631MNhFoko7ONaOPoSWu7UorpzmjtJISlg",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token patch /rooms/1/",
+        "token": "IE2oPTP9dQpFMl_VRIPymdjQKdJtLKvtD5mFa8RB4ol7BWt_lqhz631MNhFoko7ONaOPoSWu7UorpzmjtJISlg",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "per-form token patch /rooms/1/",
+        "token": "IE2oPTP9dQpFMl_VRIPymdjQKdJtLKvtD5mFa8RB4ol7BWt_lqhz631MNhFoko7ONaOPoSWu7UorpzmjtJISlg",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token patch /rooms/1/",
+        "token": "IE2oPTP9dQpFMl_VRIPymdjQKdJtLKvtD5mFa8RB4ol7BWt_lqhz631MNhFoko7ONaOPoSWu7UorpzmjtJISlg",
+        "path": "/other",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token delete /rooms/1?x=1",
+        "token": "Wp0UA0mTBE7mUF0KKa9vLWI1b0J2oMc2w5E_Fa56CS6nTvHAFSgoLVYtkPzuvyg9PmJu_bsi98XkdQM8MPCBfg",
+        "path": "/session",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token delete /rooms/1?x=1",
+        "token": "Wp0UA0mTBE7mUF0KKa9vLWI1b0J2oMc2w5E_Fa56CS6nTvHAFSgoLVYtkPzuvyg9PmJu_bsi98XkdQM8MPCBfg",
+        "path": "/session/",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token delete /rooms/1?x=1",
+        "token": "Wp0UA0mTBE7mUF0KKa9vLWI1b0J2oMc2w5E_Fa56CS6nTvHAFSgoLVYtkPzuvyg9PmJu_bsi98XkdQM8MPCBfg",
+        "path": "/session",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "per-form token delete /rooms/1?x=1",
+        "token": "Wp0UA0mTBE7mUF0KKa9vLWI1b0J2oMc2w5E_Fa56CS6nTvHAFSgoLVYtkPzuvyg9PmJu_bsi98XkdQM8MPCBfg",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": false
+      },
+      {
+        "case": "per-form token delete /rooms/1?x=1",
+        "token": "Wp0UA0mTBE7mUF0KKa9vLWI1b0J2oMc2w5E_Fa56CS6nTvHAFSgoLVYtkPzuvyg9PmJu_bsi98XkdQM8MPCBfg",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": true
+      },
+      {
+        "case": "per-form token delete /rooms/1?x=1",
+        "token": "Wp0UA0mTBE7mUF0KKa9vLWI1b0J2oMc2w5E_Fa56CS6nTvHAFSgoLVYtkPzuvyg9PmJu_bsi98XkdQM8MPCBfg",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token delete /rooms/1?x=1",
+        "token": "Wp0UA0mTBE7mUF0KKa9vLWI1b0J2oMc2w5E_Fa56CS6nTvHAFSgoLVYtkPzuvyg9PmJu_bsi98XkdQM8MPCBfg",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "per-form token delete /rooms/1?x=1",
+        "token": "Wp0UA0mTBE7mUF0KKa9vLWI1b0J2oMc2w5E_Fa56CS6nTvHAFSgoLVYtkPzuvyg9PmJu_bsi98XkdQM8MPCBfg",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token delete /rooms/1?x=1",
+        "token": "Wp0UA0mTBE7mUF0KKa9vLWI1b0J2oMc2w5E_Fa56CS6nTvHAFSgoLVYtkPzuvyg9PmJu_bsi98XkdQM8MPCBfg",
+        "path": "/other",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token post messages",
+        "token": "cHN_6SZ_yZ4WZIWIXE5zgLLXV9kndiSezOPcAz9iUPW2ahzSpc2z6axj6S-DQxw7fUWQdQ-mVLqDmTFcGZyqbw",
+        "path": "/session",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token post messages",
+        "token": "cHN_6SZ_yZ4WZIWIXE5zgLLXV9kndiSezOPcAz9iUPW2ahzSpc2z6axj6S-DQxw7fUWQdQ-mVLqDmTFcGZyqbw",
+        "path": "/session/",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token post messages",
+        "token": "cHN_6SZ_yZ4WZIWIXE5zgLLXV9kndiSezOPcAz9iUPW2ahzSpc2z6axj6S-DQxw7fUWQdQ-mVLqDmTFcGZyqbw",
+        "path": "/session",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "per-form token post messages",
+        "token": "cHN_6SZ_yZ4WZIWIXE5zgLLXV9kndiSezOPcAz9iUPW2ahzSpc2z6axj6S-DQxw7fUWQdQ-mVLqDmTFcGZyqbw",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": false
+      },
+      {
+        "case": "per-form token post messages",
+        "token": "cHN_6SZ_yZ4WZIWIXE5zgLLXV9kndiSezOPcAz9iUPW2ahzSpc2z6axj6S-DQxw7fUWQdQ-mVLqDmTFcGZyqbw",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": false
+      },
+      {
+        "case": "per-form token post messages",
+        "token": "cHN_6SZ_yZ4WZIWIXE5zgLLXV9kndiSezOPcAz9iUPW2ahzSpc2z6axj6S-DQxw7fUWQdQ-mVLqDmTFcGZyqbw",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "per-form token post messages",
+        "token": "cHN_6SZ_yZ4WZIWIXE5zgLLXV9kndiSezOPcAz9iUPW2ahzSpc2z6axj6S-DQxw7fUWQdQ-mVLqDmTFcGZyqbw",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "per-form token post messages",
+        "token": "cHN_6SZ_yZ4WZIWIXE5zgLLXV9kndiSezOPcAz9iUPW2ahzSpc2z6axj6S-DQxw7fUWQdQ-mVLqDmTFcGZyqbw",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token post messages",
+        "token": "cHN_6SZ_yZ4WZIWIXE5zgLLXV9kndiSezOPcAz9iUPW2ahzSpc2z6axj6S-DQxw7fUWQdQ-mVLqDmTFcGZyqbw",
+        "path": "/other",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token put ./involvement",
+        "token": "ISQpQo6vHyDl2JxRth_VNCn1KFjxbzaOXT6gKJv0DVS8nj3jcVbNhnzIhiodQlpug_iPbkqPImE8baSSAASR8A",
+        "path": "/session",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token put ./involvement",
+        "token": "ISQpQo6vHyDl2JxRth_VNCn1KFjxbzaOXT6gKJv0DVS8nj3jcVbNhnzIhiodQlpug_iPbkqPImE8baSSAASR8A",
+        "path": "/session/",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token put ./involvement",
+        "token": "ISQpQo6vHyDl2JxRth_VNCn1KFjxbzaOXT6gKJv0DVS8nj3jcVbNhnzIhiodQlpug_iPbkqPImE8baSSAASR8A",
+        "path": "/session",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "per-form token put ./involvement",
+        "token": "ISQpQo6vHyDl2JxRth_VNCn1KFjxbzaOXT6gKJv0DVS8nj3jcVbNhnzIhiodQlpug_iPbkqPImE8baSSAASR8A",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": false
+      },
+      {
+        "case": "per-form token put ./involvement",
+        "token": "ISQpQo6vHyDl2JxRth_VNCn1KFjxbzaOXT6gKJv0DVS8nj3jcVbNhnzIhiodQlpug_iPbkqPImE8baSSAASR8A",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": false
+      },
+      {
+        "case": "per-form token put ./involvement",
+        "token": "ISQpQo6vHyDl2JxRth_VNCn1KFjxbzaOXT6gKJv0DVS8nj3jcVbNhnzIhiodQlpug_iPbkqPImE8baSSAASR8A",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token put ./involvement",
+        "token": "ISQpQo6vHyDl2JxRth_VNCn1KFjxbzaOXT6gKJv0DVS8nj3jcVbNhnzIhiodQlpug_iPbkqPImE8baSSAASR8A",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": true
+      },
+      {
+        "case": "per-form token put ./involvement",
+        "token": "ISQpQo6vHyDl2JxRth_VNCn1KFjxbzaOXT6gKJv0DVS8nj3jcVbNhnzIhiodQlpug_iPbkqPImE8baSSAASR8A",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token put ./involvement",
+        "token": "ISQpQo6vHyDl2JxRth_VNCn1KFjxbzaOXT6gKJv0DVS8nj3jcVbNhnzIhiodQlpug_iPbkqPImE8baSSAASR8A",
+        "path": "/other",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token post ",
+        "token": "1GRh1On278ROchQBS_9-JdSvsGNKfvaGPU1k8lgB59aDtXVX_v7plLWK1ettKm6QWvybAlSVOcxtYUYN8rEbeg",
+        "path": "/session",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token post ",
+        "token": "1GRh1On278ROchQBS_9-JdSvsGNKfvaGPU1k8lgB59aDtXVX_v7plLWK1ettKm6QWvybAlSVOcxtYUYN8rEbeg",
+        "path": "/session/",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token post ",
+        "token": "1GRh1On278ROchQBS_9-JdSvsGNKfvaGPU1k8lgB59aDtXVX_v7plLWK1ettKm6QWvybAlSVOcxtYUYN8rEbeg",
+        "path": "/session",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "per-form token post ",
+        "token": "1GRh1On278ROchQBS_9-JdSvsGNKfvaGPU1k8lgB59aDtXVX_v7plLWK1ettKm6QWvybAlSVOcxtYUYN8rEbeg",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": false
+      },
+      {
+        "case": "per-form token post ",
+        "token": "1GRh1On278ROchQBS_9-JdSvsGNKfvaGPU1k8lgB59aDtXVX_v7plLWK1ettKm6QWvybAlSVOcxtYUYN8rEbeg",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": false
+      },
+      {
+        "case": "per-form token post ",
+        "token": "1GRh1On278ROchQBS_9-JdSvsGNKfvaGPU1k8lgB59aDtXVX_v7plLWK1ettKm6QWvybAlSVOcxtYUYN8rEbeg",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token post ",
+        "token": "1GRh1On278ROchQBS_9-JdSvsGNKfvaGPU1k8lgB59aDtXVX_v7plLWK1ettKm6QWvybAlSVOcxtYUYN8rEbeg",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "per-form token post ",
+        "token": "1GRh1On278ROchQBS_9-JdSvsGNKfvaGPU1k8lgB59aDtXVX_v7plLWK1ettKm6QWvybAlSVOcxtYUYN8rEbeg",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "per-form token post ",
+        "token": "1GRh1On278ROchQBS_9-JdSvsGNKfvaGPU1k8lgB59aDtXVX_v7plLWK1ettKm6QWvybAlSVOcxtYUYN8rEbeg",
+        "path": "/other",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token post /rooms/1/messages#anchor",
+        "token": "Vxqk0-C370cXeHw4Vrt1HDVW_i5XT6mZzEjXa2HXN2yRA8foYwWVMK1_EJ-Jthqn-sQ5gn-f2b2DMjo0RynN9g",
+        "path": "/session",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token post /rooms/1/messages#anchor",
+        "token": "Vxqk0-C370cXeHw4Vrt1HDVW_i5XT6mZzEjXa2HXN2yRA8foYwWVMK1_EJ-Jthqn-sQ5gn-f2b2DMjo0RynN9g",
+        "path": "/session/",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token post /rooms/1/messages#anchor",
+        "token": "Vxqk0-C370cXeHw4Vrt1HDVW_i5XT6mZzEjXa2HXN2yRA8foYwWVMK1_EJ-Jthqn-sQ5gn-f2b2DMjo0RynN9g",
+        "path": "/session",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "per-form token post /rooms/1/messages#anchor",
+        "token": "Vxqk0-C370cXeHw4Vrt1HDVW_i5XT6mZzEjXa2HXN2yRA8foYwWVMK1_EJ-Jthqn-sQ5gn-f2b2DMjo0RynN9g",
+        "path": "/rooms/1",
+        "method": "PATCH",
+        "expected": false
+      },
+      {
+        "case": "per-form token post /rooms/1/messages#anchor",
+        "token": "Vxqk0-C370cXeHw4Vrt1HDVW_i5XT6mZzEjXa2HXN2yRA8foYwWVMK1_EJ-Jthqn-sQ5gn-f2b2DMjo0RynN9g",
+        "path": "/rooms/1",
+        "method": "DELETE",
+        "expected": false
+      },
+      {
+        "case": "per-form token post /rooms/1/messages#anchor",
+        "token": "Vxqk0-C370cXeHw4Vrt1HDVW_i5XT6mZzEjXa2HXN2yRA8foYwWVMK1_EJ-Jthqn-sQ5gn-f2b2DMjo0RynN9g",
+        "path": "/rooms/1/messages",
+        "method": "POST",
+        "expected": true
+      },
+      {
+        "case": "per-form token post /rooms/1/messages#anchor",
+        "token": "Vxqk0-C370cXeHw4Vrt1HDVW_i5XT6mZzEjXa2HXN2yRA8foYwWVMK1_EJ-Jthqn-sQ5gn-f2b2DMjo0RynN9g",
+        "path": "/rooms/1//involvement",
+        "method": "PUT",
+        "expected": false
+      },
+      {
+        "case": "per-form token post /rooms/1/messages#anchor",
+        "token": "Vxqk0-C370cXeHw4Vrt1HDVW_i5XT6mZzEjXa2HXN2yRA8foYwWVMK1_EJ-Jthqn-sQ5gn-f2b2DMjo0RynN9g",
+        "path": "/account/edit",
+        "method": "POST",
+        "expected": false
+      },
+      {
+        "case": "per-form token post /rooms/1/messages#anchor",
+        "token": "Vxqk0-C370cXeHw4Vrt1HDVW_i5XT6mZzEjXa2HXN2yRA8foYwWVMK1_EJ-Jthqn-sQ5gn-f2b2DMjo0RynN9g",
+        "path": "/other",
+        "method": "POST",
+        "expected": false
+      }
+    ],
+    "origin": [
+      {
+        "origin": null,
+        "base_url": "http://campfire.test",
+        "expected": true
+      },
+      {
+        "origin": "http://campfire.test",
+        "base_url": "http://campfire.test",
+        "expected": true
+      },
+      {
+        "origin": "https://campfire.test",
+        "base_url": "http://campfire.test",
+        "expected": false
+      },
+      {
+        "origin": "http://evil.test",
+        "base_url": "http://campfire.test",
+        "expected": false
+      },
+      {
+        "origin": "null",
+        "base_url": "http://campfire.test",
+        "expected": "raises"
+      },
+      {
+        "origin": "http://campfire.test:8080",
+        "base_url": "http://campfire.test",
+        "expected": false
+      },
+      {
+        "origin": "http://campfire.test:8080",
+        "base_url": "http://campfire.test:8080",
+        "expected": true
+      },
+      {
+        "origin": "HTTP://CAMPFIRE.TEST",
+        "base_url": "http://campfire.test",
+        "expected": false
+      },
+      {
+        "origin": "https://campfire.test",
+        "base_url": "https://campfire.test",
+        "expected": true
+      },
+      {
+        "origin": "",
+        "base_url": "http://campfire.test",
+        "expected": false
+      }
+    ],
+    "per_form_csrf_tokens": true,
+    "forgery_protection_origin_check": true,
+    "csrf_meta_tags": {
+      "html": "<meta name=\"csrf-param\" content=\"authenticity_token\" />\n<meta name=\"csrf-token\" content=\"VPkmVj7KnqlNQGKSiWmSSX6fbIiJ1dMIj7UFzl423246OVAt1vayfP4aO0gXbU4q58J0DDvB-53uA9Kc0u6CWQ\" />",
+      "token_tag": "<input type=\"hidden\" name=\"authenticity_token\" value=\"os-IqUXPtxa_yB8zi1EgxHlKDDfry7e05QXmEtQDRFaD0XMumCEs1oYtNnZ2indwyqHdnnanVHG2oQ4ldZRyjg\" />"
+    }
+  },
+  "headers_plain": {
+    "asset_path": "/assets/base-3fbb6e39.css",
+    "requests": {
+      "html_page": {
+        "method": "GET",
+        "path": "/first_run",
+        "env": {},
+        "cookies": [],
+        "status": 200,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "x-version": "parity",
+          "x-rev": "parity",
+          "link": "</assets/_reset-9c3efd7b.css>; rel=preload; as=style; nopush,</assets/actiontext-6a395a16.css>; rel=preload; as=style; nopush,</assets/activity_inbox-83199ac6.css>; rel=preload; as=style; nopush,</assets/agents-2e5a1a28.css>; rel=preload; as=style; nopush,</assets/animation-456db163.css>; rel=preload; as=style; nopush,</assets/audit_log-6e4895db.css>; rel=preload; as=style; nopush,</assets/autocomplete-0ed08664.css>; rel=preload; as=style; nopush,</assets/avatars-406ac70e.css>; rel=preload; as=style; nopush,</assets/base-3fbb6e39.css>; rel=preload; as=style; nopush,</assets/boards-91aa0b79.css>; rel=preload; as=style; nopush,</assets/boosts-57a8020e.css>; rel=preload; as=style; nopush,</assets/buttons-a7353db7.css>; rel=preload; as=style; nopush,</assets/code-d23bb853.css>; rel=preload; as=style; nopush,</assets/colorize-1bb78062.css>; rel=preload; as=style; nopush,</assets/colors-29158886.css>; rel=preload; as=style; nopush,</assets/composer-b177c9c6.css>; rel=preload; as=style; nopush",
+          "content-type": "text/html; charset=utf-8",
+          "vary": "Accept",
+          "etag": "W/\"c820483efe39523374b8a405fadba53c\"",
+          "cache-control": "max-age=0, private, must-revalidate",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-oVOihICCmvlfFI2sSBfTcA=='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "set-cookie": "_campfire_session=oxu6hOl9kEOiLXTCRiZcqMCGGwMuLYTcrjEJEGLqUn95EN%2By16OOuoWIkWoO18IV3dn6ERVi6q4yRSmVT0nnvvjm%2B5Hwno%2FmVBQkQkGa7kzVV9ZTCp%2BZLO2FTykSwte752pjOkF9%2FQKTa%2FvkDD0BLKVWH4v3MavNXRbN%2BKDAiSHZNj8Tb%2FNtuTA4lFLFOagRaqiLjI8CWzzxqtdmgj0%2F%2FY2CLf%2FNUIOppoDYn5wH5a%2FvCOVgYZ%2BENUT8%2Fy3dSNopc1gbPikLqzRP%2B8%2FMPeHuKODa0rZly1yWRuRXUX8bfzH3Pn3rTKNQ2co8OkY5eZo%3D--WJVuWCNKm3a9yriH--KOmtKBIg90o8qsb%2BWiaf6w%3D%3D; path=/; expires=Mon, 01 Jan 2046 12:00:00 GMT; httponly; samesite=lax",
+          "x-request-id": "d8e56b86-5a36-4de0-b220-738283406314",
+          "x-runtime": "0.094220"
+        },
+        "body_prefix": "<!DOCTYPE html>\n<html data-theme=\"system\" data-text-size=\"default\" data-service-"
+      },
+      "redirect": {
+        "method": "GET",
+        "path": "/session/new",
+        "env": {},
+        "cookies": [],
+        "status": 302,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "x-version": "parity",
+          "x-rev": "parity",
+          "location": "http://campfire.test/first_run",
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-cache",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-EIsJudoxWeXJNGZz8ijpxw=='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "x-request-id": "57726092-57ae-468d-ba1c-21539a3e2fe7",
+          "x-runtime": "0.005571"
+        },
+        "body_prefix": ""
+      },
+      "health": {
+        "method": "GET",
+        "path": "/up",
+        "env": {},
+        "cookies": [],
+        "status": 200,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "content-type": "text/html; charset=utf-8",
+          "vary": "Accept",
+          "etag": "W/\"7e6c9877b2dec7dfadc43e742246d94d\"",
+          "cache-control": "max-age=0, private, must-revalidate",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-p/CFq01qn6YgTLUG0ZzSrg=='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "x-request-id": "841d1b96-d155-4f69-8f6a-38119da7fe4b",
+          "x-runtime": "0.001900"
+        },
+        "body_prefix": "<!DOCTYPE html><html><body style=\"background-color: green\"></body></html>"
+      },
+      "json": {
+        "method": "GET",
+        "path": "/webmanifest.json",
+        "env": {
+          "HTTP_ACCEPT": "application/json"
+        },
+        "cookies": [],
+        "status": 200,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "x-version": "parity",
+          "x-rev": "parity",
+          "content-type": "application/json; charset=utf-8",
+          "etag": "W/\"2ed66df58e5e02bfc3f99d7becc313ae\"",
+          "cache-control": "max-age=0, private, must-revalidate",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-IdR7EB17ugN2Uq5zvO5w7Q=='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "x-request-id": "48c9268d-6efb-4bac-a8ce-f3f6fecf5ae2",
+          "x-runtime": "0.006082"
+        },
+        "body_prefix": "{\n  \"name\": \"Smartfire\",\n  \"icons\": [\n    {\n      \"src\": \"/account/logo?size=sma"
+      },
+      "javascript": {
+        "method": "GET",
+        "path": "/service-worker.js",
+        "env": {
+          "HTTP_ACCEPT": "*/*"
+        },
+        "cookies": [],
+        "status": 200,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "x-version": "parity",
+          "x-rev": "parity",
+          "content-type": "text/javascript; charset=utf-8",
+          "etag": "W/\"215c8e992b1b9fccda9c42cfd9391fe8\"",
+          "cache-control": "max-age=0, private, must-revalidate",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-aquvZdH7mYnF2vjL6uYIPw=='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "x-request-id": "dae529e4-f81b-4130-84c0-468449f4b89b",
+          "x-runtime": "0.001466"
+        },
+        "body_prefix": "// Smartfire service worker: push notifications and the offline shell.\n//\n// Cac"
+      },
+      "asset": {
+        "method": "GET",
+        "path": "/assets/base-3fbb6e39.css",
+        "env": {
+          "HTTP_ACCEPT": "text/css"
+        },
+        "cookies": [],
+        "status": 200,
+        "headers": {
+          "last-modified": "Tue, 29 Sep 2026 17:07:47 GMT",
+          "content-type": "text/css",
+          "cache-control": "public, immutable, max-age=31556952",
+          "content-length": "6955"
+        },
+        "body_prefix": ":root {\n  --font-family: -apple-system, BlinkMacSystemFont, Aptos, Roboto, \"Sego"
+      },
+      "asset_head": {
+        "method": "HEAD",
+        "path": "/assets/base-3fbb6e39.css",
+        "env": {
+          "HTTP_ACCEPT": "text/css"
+        },
+        "cookies": [],
+        "status": 200,
+        "headers": {
+          "last-modified": "Tue, 29 Sep 2026 17:07:47 GMT",
+          "content-type": "text/css",
+          "cache-control": "public, immutable, max-age=31556952",
+          "content-length": "6955"
+        },
+        "body_prefix": ""
+      },
+      "missing_asset": {
+        "method": "GET",
+        "path": "/assets/missing-0000000000000000.css",
+        "env": {},
+        "cookies": [],
+        "status": 404,
+        "headers": {
+          "content-type": "text/html; charset=UTF-8",
+          "content-length": "4237",
+          "x-request-id": "f180313e-eeec-4bbf-b63c-a2d098154572",
+          "x-runtime": "0.000997"
+        },
+        "body_prefix": "<!DOCTYPE html>\n<html>\n\n<head>\n  <title>We can’t find that (404)</title>\n  <me"
+      },
+      "public_file": {
+        "method": "GET",
+        "path": "/robots.txt",
+        "env": {},
+        "cookies": [],
+        "status": 200,
+        "headers": {
+          "last-modified": "Tue, 29 Sep 2026 16:49:12 GMT",
+          "content-type": "text/plain",
+          "cache-control": "public, max-age=60, stale-while-revalidate=300",
+          "content-length": "99"
+        },
+        "body_prefix": "# See https://www.robotstxt.org/robotstxt.html for documentation on how to use t"
+      },
+      "not_found": {
+        "method": "GET",
+        "path": "/no/such/page",
+        "env": {},
+        "cookies": [],
+        "status": 404,
+        "headers": {
+          "content-type": "text/html; charset=UTF-8",
+          "content-length": "4237",
+          "x-request-id": "c09d667a-5a77-4ad6-a8d8-d96b5206ad53",
+          "x-runtime": "0.000702"
+        },
+        "body_prefix": "<!DOCTYPE html>\n<html>\n\n<head>\n  <title>We can’t find that (404)</title>\n  <me"
+      },
+      "csp_report": {
+        "method": "POST",
+        "path": "/csp_reports",
+        "env": {
+          "CONTENT_TYPE": "application/csp-report",
+          "input": "{\"csp-report\":{\"document-uri\":\"https://campfire.test/rooms/1?secret=1\",\"violated-directive\":\"script-src-elem\",\"effective-directive\":\"script-src-elem\",\"blocked-uri\":\"https://evil.test:8443/x.js?q=1\",\"source-file\":\"https://campfire.test/assets/application-abc.js\",\"line-number\":12}}",
+          "REMOTE_ADDR": "10.7.7.7"
+        },
+        "cookies": [],
+        "status": 204,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "cache-control": "no-cache",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-slnVEjatWdJn1njWTvakpg=='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "x-request-id": "778a8603-0e78-4bc1-9885-9488fb213b85",
+          "x-runtime": "0.001372"
+        },
+        "body_prefix": ""
+      },
+      "sign_in_page": {
+        "method": "GET",
+        "path": "/session/new",
+        "env": {},
+        "cookies": [],
+        "status": 200,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "x-version": "parity",
+          "x-rev": "parity",
+          "content-type": "text/html; charset=utf-8",
+          "link": "</assets/_reset-9c3efd7b.css>; rel=preload; as=style; nopush,</assets/actiontext-6a395a16.css>; rel=preload; as=style; nopush,</assets/activity_inbox-83199ac6.css>; rel=preload; as=style; nopush,</assets/agents-2e5a1a28.css>; rel=preload; as=style; nopush,</assets/animation-456db163.css>; rel=preload; as=style; nopush,</assets/audit_log-6e4895db.css>; rel=preload; as=style; nopush,</assets/autocomplete-0ed08664.css>; rel=preload; as=style; nopush,</assets/avatars-406ac70e.css>; rel=preload; as=style; nopush,</assets/base-3fbb6e39.css>; rel=preload; as=style; nopush,</assets/boards-91aa0b79.css>; rel=preload; as=style; nopush,</assets/boosts-57a8020e.css>; rel=preload; as=style; nopush,</assets/buttons-a7353db7.css>; rel=preload; as=style; nopush,</assets/code-d23bb853.css>; rel=preload; as=style; nopush,</assets/colorize-1bb78062.css>; rel=preload; as=style; nopush,</assets/colors-29158886.css>; rel=preload; as=style; nopush,</assets/composer-b177c9c6.css>; rel=preload; as=style; nopush",
+          "vary": "Accept",
+          "etag": "W/\"81bbab50203f5aac8024bfa1bfa5b9af\"",
+          "cache-control": "max-age=0, private, must-revalidate",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-fnymeMV8/clGFlrfJMW4Fg=='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "set-cookie": "_campfire_session=CZ0mnJ5th8DDpC2NB5gII9r20T7tgrqWwrDEir62Sn52rylL11zCGv6JYklN2YUKEDoymtAKX5PlstAbtV5a7pFsnD2Br1Tjg3nU0JM7wXesbQa2bzCSvRNIKGnWjVJJdU8f3B6qQA41XaGpTCcfqTdTtG0mP6L%2FQIjeNGhLFSZJ7Qo0rs1mqQYVAmTlHOXZwXczs%2BOufVKJZUHVsWCOthLltIPxqRlNFhl7qITtnpmlsa9RH8bnHvH61C1RkjSksp59Eb9kK84ZLOMwXjYAiyFWrRFfrLtA4eKS%2F5mrItsBtrHqXH9XDvJDXpZ6ueI%3D--MipbLwDbc6KRx%2FtG--umOs6Pu1Ll5FG2c%2FHWmncQ%3D%3D; path=/; expires=Mon, 01 Jan 2046 12:00:00 GMT; httponly; samesite=lax",
+          "x-request-id": "88df838f-2d98-463b-875a-6f94aa5030ad",
+          "x-runtime": "0.024370"
+        },
+        "body_prefix": "<!DOCTYPE html>\n<html data-theme=\"system\" data-text-size=\"default\" data-service-"
+      },
+      "sign_in_page_with_session": {
+        "method": "GET",
+        "path": "/session/new",
+        "env": {},
+        "cookies": [
+          "_campfire_session"
+        ],
+        "status": 200,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "x-version": "parity",
+          "x-rev": "parity",
+          "content-type": "text/html; charset=utf-8",
+          "link": "</assets/_reset-9c3efd7b.css>; rel=preload; as=style; nopush,</assets/actiontext-6a395a16.css>; rel=preload; as=style; nopush,</assets/activity_inbox-83199ac6.css>; rel=preload; as=style; nopush,</assets/agents-2e5a1a28.css>; rel=preload; as=style; nopush,</assets/animation-456db163.css>; rel=preload; as=style; nopush,</assets/audit_log-6e4895db.css>; rel=preload; as=style; nopush,</assets/autocomplete-0ed08664.css>; rel=preload; as=style; nopush,</assets/avatars-406ac70e.css>; rel=preload; as=style; nopush,</assets/base-3fbb6e39.css>; rel=preload; as=style; nopush,</assets/boards-91aa0b79.css>; rel=preload; as=style; nopush,</assets/boosts-57a8020e.css>; rel=preload; as=style; nopush,</assets/buttons-a7353db7.css>; rel=preload; as=style; nopush,</assets/code-d23bb853.css>; rel=preload; as=style; nopush,</assets/colorize-1bb78062.css>; rel=preload; as=style; nopush,</assets/colors-29158886.css>; rel=preload; as=style; nopush,</assets/composer-b177c9c6.css>; rel=preload; as=style; nopush",
+          "vary": "Accept",
+          "etag": "W/\"52548988ccbca3734848b7ffb9fa73db\"",
+          "cache-control": "max-age=0, private, must-revalidate",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-s5U2rAu/feSKTsI56lnDEQK3UqwwYgl1JQVG7b7DBi8='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "set-cookie": "_campfire_session=6cu3dLwPRKPRWEwVVyxKMEEyvdI4560liVygQmSi7WTnc1I350acXWBVXHVvskC5nweGjLLo%2FMhAIKsW%2F0n8ks4oP%2Bex3VKw%2FmdaSHbFlAaylm%2BThphcF%2B2bDtwVevmyfGp%2BEWKpe01scRJA2eXaF3xqstFg%2BydvLIweS%2BlEZOc892eCs1CAoyzUrlQ%2FOLZStX%2BKgaSINW2rG%2B9kCHPFfdZGhbQjo%2FGQzu9ZUXOHn2FGmrbYMxqXujsgYGqk6domlSnLN5Mn3xWw3fcG646QxIAYcszex6gWXlIAicxyXQkbU8tx%2FeJM%2BleSzOcIR78%3D--YtmYEKMPeTVoF%2Fx1--6CU9RPxvnytQMJdSNAuU5w%3D%3D; path=/; expires=Mon, 01 Jan 2046 12:00:00 GMT; httponly; samesite=lax",
+          "x-request-id": "8a9560b9-c90f-4a37-bbbc-659abfffc1cf",
+          "x-runtime": "0.020922"
+        },
+        "body_prefix": "<!DOCTYPE html>\n<html data-theme=\"system\" data-text-size=\"default\" data-service-"
+      },
+      "json_head": {
+        "method": "GET",
+        "path": "/session/new",
+        "env": {
+          "HTTP_ACCEPT": "application/json"
+        },
+        "cookies": [],
+        "status": 401,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "x-version": "parity",
+          "x-rev": "parity",
+          "content-type": "application/json",
+          "cache-control": "no-cache",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-Zu5AH4/1AcRo/svWg0OnEA=='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "x-request-id": "8cacec67-e9aa-4f58-b8c2-7b66000de29e",
+          "x-runtime": "0.002928"
+        },
+        "body_prefix": ""
+      },
+      "forgery": {
+        "method": "POST",
+        "path": "/session",
+        "env": {},
+        "cookies": [],
+        "status": 422,
+        "headers": {
+          "content-type": "text/html; charset=UTF-8",
+          "content-length": "5408",
+          "x-request-id": "bc952c70-5de1-4e5a-99d9-445e92d9c9d3",
+          "x-runtime": "0.006675"
+        },
+        "body_prefix": "<!DOCTYPE html>\n<html>\n  <head>\n    <title>That didn’t work (422)</title>\n    "
+      },
+      "unauthorized_render": {
+        "method": "POST",
+        "path": "/session",
+        "env": {
+          "REMOTE_ADDR": "10.9.9.9"
+        },
+        "cookies": [
+          "_campfire_session"
+        ],
+        "status": 401,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "x-version": "parity",
+          "x-rev": "parity",
+          "link": "</assets/_reset-9c3efd7b.css>; rel=preload; as=style; nopush,</assets/actiontext-6a395a16.css>; rel=preload; as=style; nopush,</assets/activity_inbox-83199ac6.css>; rel=preload; as=style; nopush,</assets/agents-2e5a1a28.css>; rel=preload; as=style; nopush,</assets/animation-456db163.css>; rel=preload; as=style; nopush,</assets/audit_log-6e4895db.css>; rel=preload; as=style; nopush,</assets/autocomplete-0ed08664.css>; rel=preload; as=style; nopush,</assets/avatars-406ac70e.css>; rel=preload; as=style; nopush,</assets/base-3fbb6e39.css>; rel=preload; as=style; nopush,</assets/boards-91aa0b79.css>; rel=preload; as=style; nopush,</assets/boosts-57a8020e.css>; rel=preload; as=style; nopush,</assets/buttons-a7353db7.css>; rel=preload; as=style; nopush,</assets/code-d23bb853.css>; rel=preload; as=style; nopush,</assets/colorize-1bb78062.css>; rel=preload; as=style; nopush,</assets/colors-29158886.css>; rel=preload; as=style; nopush,</assets/composer-b177c9c6.css>; rel=preload; as=style; nopush",
+          "content-type": "text/html; charset=utf-8",
+          "vary": "Accept",
+          "cache-control": "no-cache",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-s5U2rAu/feSKTsI56lnDEQK3UqwwYgl1JQVG7b7DBi8='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "set-cookie": "_campfire_session=elhFg1cIzz67Oj%2Bu%2BSWlDHO6Frioy0E2kd4p6AyjV4PlzITq8ZTRxKlkCD8x6GEGMts6mdqlPQ9N4WbhS2z2m%2Bi%2BHaLJp10WvBaB30Hby3ACCkWmVnILtTUn3cbaBarRanaoG2n9hJ1EUqRaAhZV6DJKSIwb5VapPCg5YpkS7%2BNSOVlEzH148MfSDxm%2FFqoHvISJuQLL5DHl3RlNT7yTe7cQAJ09p5B4TBikRuu2Ofzgx4QdcFiSAYOhx4%2BCI8DskZxgv3DzevOm8alW%2By1ZuT6jX3qm43JLRPUko%2F5EjOBbPpoHVAy%2FRj7FuMbZjgE%3D--famkXkNmLYiFhBS4--cZ%2BPLBrAUba7gLS1CT00sg%3D%3D; path=/; expires=Mon, 01 Jan 2046 12:00:00 GMT; httponly; samesite=lax",
+          "x-request-id": "eab03f2a-8b1e-401f-80be-1adab7ce96a0",
+          "x-runtime": "0.195218"
+        },
+        "body_prefix": "<!DOCTYPE html>\n<html data-theme=\"system\" data-text-size=\"default\" data-service-"
+      }
+    }
+  },
+  "headers_ssl": {
+    "asset_path": "/assets/base-3fbb6e39.css",
+    "requests": {
+      "html_page": {
+        "method": "GET",
+        "path": "/first_run",
+        "env": {},
+        "cookies": [],
+        "status": 200,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "x-version": "parity",
+          "x-rev": "parity",
+          "link": "</assets/_reset-9c3efd7b.css>; rel=preload; as=style; nopush,</assets/actiontext-6a395a16.css>; rel=preload; as=style; nopush,</assets/activity_inbox-83199ac6.css>; rel=preload; as=style; nopush,</assets/agents-2e5a1a28.css>; rel=preload; as=style; nopush,</assets/animation-456db163.css>; rel=preload; as=style; nopush,</assets/audit_log-6e4895db.css>; rel=preload; as=style; nopush,</assets/autocomplete-0ed08664.css>; rel=preload; as=style; nopush,</assets/avatars-406ac70e.css>; rel=preload; as=style; nopush,</assets/base-3fbb6e39.css>; rel=preload; as=style; nopush,</assets/boards-91aa0b79.css>; rel=preload; as=style; nopush,</assets/boosts-57a8020e.css>; rel=preload; as=style; nopush,</assets/buttons-a7353db7.css>; rel=preload; as=style; nopush,</assets/code-d23bb853.css>; rel=preload; as=style; nopush,</assets/colorize-1bb78062.css>; rel=preload; as=style; nopush,</assets/colors-29158886.css>; rel=preload; as=style; nopush,</assets/composer-b177c9c6.css>; rel=preload; as=style; nopush",
+          "content-type": "text/html; charset=utf-8",
+          "vary": "Accept",
+          "etag": "W/\"a9daaf30fdddedd6362820449c18005c\"",
+          "cache-control": "max-age=0, private, must-revalidate",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-3cYDejKVp9qGz3ivRpi2MA=='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://livekit.campfire.test:7880 https://livekit.campfire.test:7880; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "set-cookie": "_campfire_session=Xp%2BFlOTOd02A7R8sVi1OS%2FjCHxWyXHfVuuHpNLiNLQWx0GTfeeFYs8bvXL14lD5IaVsT9Me%2BUsdig94ls4C98VOb9OpLGAGsvqkCqqXbQweO2BZpH6FKxZzBCe70ye%2FjMry8EDZE75voQzdY4Ru00Lm4YUtQgb3BkZ9XyjA2KM%2F%2BdjI1aYshv4cV9A8KLeYTKH3wSdVqitjJMbamcyU1wTxJ57Ck%2FE5D3BuP8RlsZWjlDzggEjPAmdLMmIGn2GXmoOE09e3dWVA5fZM04ct9A37YBFmGT9pdb%2FUEkQrbIr1IAwK0vIyNe1THY6z81ZA%3D--TTFbiruUeB4JMHA4--rVL8UNpfeGOcWimAF7G0Cg%3D%3D; path=/; expires=Mon, 01 Jan 2046 12:00:00 GMT; secure; httponly; samesite=lax",
+          "x-request-id": "620d3f28-70df-49b9-b99b-8786a9fb8790",
+          "x-runtime": "0.103450",
+          "strict-transport-security": "max-age=31556952; includeSubDomains"
+        },
+        "body_prefix": "<!DOCTYPE html>\n<html data-theme=\"system\" data-text-size=\"default\" data-service-"
+      },
+      "redirect": {
+        "method": "GET",
+        "path": "/session/new",
+        "env": {},
+        "cookies": [],
+        "status": 302,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "x-version": "parity",
+          "x-rev": "parity",
+          "location": "https://campfire.test/first_run",
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "no-cache",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-tgDaD0HStnMnUzzVrQV2NQ=='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://livekit.campfire.test:7880 https://livekit.campfire.test:7880; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "x-request-id": "231e69dc-a9fe-4111-9a73-0ddab369a3ea",
+          "x-runtime": "0.006554",
+          "strict-transport-security": "max-age=31556952; includeSubDomains"
+        },
+        "body_prefix": ""
+      },
+      "health": {
+        "method": "GET",
+        "path": "/up",
+        "env": {},
+        "cookies": [],
+        "status": 200,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "content-type": "text/html; charset=utf-8",
+          "vary": "Accept",
+          "etag": "W/\"7e6c9877b2dec7dfadc43e742246d94d\"",
+          "cache-control": "max-age=0, private, must-revalidate",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-E+4uoPrrjrVuVUoI7fCPyw=='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://livekit.campfire.test:7880 https://livekit.campfire.test:7880; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "x-request-id": "afe8c7f1-ea32-45cf-ba11-f2f491fd1d15",
+          "x-runtime": "0.001782",
+          "strict-transport-security": "max-age=31556952; includeSubDomains"
+        },
+        "body_prefix": "<!DOCTYPE html><html><body style=\"background-color: green\"></body></html>"
+      },
+      "json": {
+        "method": "GET",
+        "path": "/webmanifest.json",
+        "env": {
+          "HTTP_ACCEPT": "application/json"
+        },
+        "cookies": [],
+        "status": 200,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "x-version": "parity",
+          "x-rev": "parity",
+          "content-type": "application/json; charset=utf-8",
+          "etag": "W/\"984632ffb83a729114c3c2a244288857\"",
+          "cache-control": "max-age=0, private, must-revalidate",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-CnRjK+uhisbAzlRi/SnVuQ=='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://livekit.campfire.test:7880 https://livekit.campfire.test:7880; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "x-request-id": "56c7b644-91bd-4d0a-86db-3deed5d9da15",
+          "x-runtime": "0.006445",
+          "strict-transport-security": "max-age=31556952; includeSubDomains"
+        },
+        "body_prefix": "{\n  \"name\": \"Smartfire\",\n  \"icons\": [\n    {\n      \"src\": \"/account/logo?size=sma"
+      },
+      "javascript": {
+        "method": "GET",
+        "path": "/service-worker.js",
+        "env": {
+          "HTTP_ACCEPT": "*/*"
+        },
+        "cookies": [],
+        "status": 200,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "x-version": "parity",
+          "x-rev": "parity",
+          "content-type": "text/javascript; charset=utf-8",
+          "etag": "W/\"215c8e992b1b9fccda9c42cfd9391fe8\"",
+          "cache-control": "max-age=0, private, must-revalidate",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-xPPi4JhbhyH3vkP1shurng=='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://livekit.campfire.test:7880 https://livekit.campfire.test:7880; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "x-request-id": "634df4fb-df1f-47a3-b58a-2b3e2bc77957",
+          "x-runtime": "0.001920",
+          "strict-transport-security": "max-age=31556952; includeSubDomains"
+        },
+        "body_prefix": "// Smartfire service worker: push notifications and the offline shell.\n//\n// Cac"
+      },
+      "asset": {
+        "method": "GET",
+        "path": "/assets/base-3fbb6e39.css",
+        "env": {
+          "HTTP_ACCEPT": "text/css"
+        },
+        "cookies": [],
+        "status": 200,
+        "headers": {
+          "last-modified": "Tue, 29 Sep 2026 17:07:47 GMT",
+          "content-type": "text/css",
+          "cache-control": "public, immutable, max-age=31556952",
+          "content-length": "6955",
+          "strict-transport-security": "max-age=31556952; includeSubDomains"
+        },
+        "body_prefix": ":root {\n  --font-family: -apple-system, BlinkMacSystemFont, Aptos, Roboto, \"Sego"
+      },
+      "asset_head": {
+        "method": "HEAD",
+        "path": "/assets/base-3fbb6e39.css",
+        "env": {
+          "HTTP_ACCEPT": "text/css"
+        },
+        "cookies": [],
+        "status": 200,
+        "headers": {
+          "last-modified": "Tue, 29 Sep 2026 17:07:47 GMT",
+          "content-type": "text/css",
+          "cache-control": "public, immutable, max-age=31556952",
+          "content-length": "6955",
+          "strict-transport-security": "max-age=31556952; includeSubDomains"
+        },
+        "body_prefix": ""
+      },
+      "missing_asset": {
+        "method": "GET",
+        "path": "/assets/missing-0000000000000000.css",
+        "env": {},
+        "cookies": [],
+        "status": 404,
+        "headers": {
+          "content-type": "text/html; charset=UTF-8",
+          "content-length": "4237",
+          "x-request-id": "1e67cc67-c544-4056-8f71-0ebdaf3de148",
+          "x-runtime": "0.005948",
+          "strict-transport-security": "max-age=31556952; includeSubDomains"
+        },
+        "body_prefix": "<!DOCTYPE html>\n<html>\n\n<head>\n  <title>We can’t find that (404)</title>\n  <me"
+      },
+      "public_file": {
+        "method": "GET",
+        "path": "/robots.txt",
+        "env": {},
+        "cookies": [],
+        "status": 200,
+        "headers": {
+          "last-modified": "Tue, 29 Sep 2026 16:49:12 GMT",
+          "content-type": "text/plain",
+          "cache-control": "public, max-age=60, stale-while-revalidate=300",
+          "content-length": "99",
+          "strict-transport-security": "max-age=31556952; includeSubDomains"
+        },
+        "body_prefix": "# See https://www.robotstxt.org/robotstxt.html for documentation on how to use t"
+      },
+      "not_found": {
+        "method": "GET",
+        "path": "/no/such/page",
+        "env": {},
+        "cookies": [],
+        "status": 404,
+        "headers": {
+          "content-type": "text/html; charset=UTF-8",
+          "content-length": "4237",
+          "x-request-id": "22c0d4bc-f3a0-4a02-b226-1cb84add6366",
+          "x-runtime": "0.001426",
+          "strict-transport-security": "max-age=31556952; includeSubDomains"
+        },
+        "body_prefix": "<!DOCTYPE html>\n<html>\n\n<head>\n  <title>We can’t find that (404)</title>\n  <me"
+      },
+      "csp_report": {
+        "method": "POST",
+        "path": "/csp_reports",
+        "env": {
+          "CONTENT_TYPE": "application/csp-report",
+          "input": "{\"csp-report\":{\"document-uri\":\"https://campfire.test/rooms/1?secret=1\",\"violated-directive\":\"script-src-elem\",\"effective-directive\":\"script-src-elem\",\"blocked-uri\":\"https://evil.test:8443/x.js?q=1\",\"source-file\":\"https://campfire.test/assets/application-abc.js\",\"line-number\":12}}",
+          "REMOTE_ADDR": "10.7.7.7"
+        },
+        "cookies": [],
+        "status": 204,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "cache-control": "no-cache",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-OoKe/adFWKx96MCJqeLPoQ=='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://livekit.campfire.test:7880 https://livekit.campfire.test:7880; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "x-request-id": "84d8bcce-0b7d-401d-8476-264aa1c3c0d7",
+          "x-runtime": "0.002169",
+          "strict-transport-security": "max-age=31556952; includeSubDomains"
+        },
+        "body_prefix": ""
+      },
+      "sign_in_page": {
+        "method": "GET",
+        "path": "/session/new",
+        "env": {},
+        "cookies": [],
+        "status": 200,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "x-version": "parity",
+          "x-rev": "parity",
+          "content-type": "text/html; charset=utf-8",
+          "link": "</assets/_reset-9c3efd7b.css>; rel=preload; as=style; nopush,</assets/actiontext-6a395a16.css>; rel=preload; as=style; nopush,</assets/activity_inbox-83199ac6.css>; rel=preload; as=style; nopush,</assets/agents-2e5a1a28.css>; rel=preload; as=style; nopush,</assets/animation-456db163.css>; rel=preload; as=style; nopush,</assets/audit_log-6e4895db.css>; rel=preload; as=style; nopush,</assets/autocomplete-0ed08664.css>; rel=preload; as=style; nopush,</assets/avatars-406ac70e.css>; rel=preload; as=style; nopush,</assets/base-3fbb6e39.css>; rel=preload; as=style; nopush,</assets/boards-91aa0b79.css>; rel=preload; as=style; nopush,</assets/boosts-57a8020e.css>; rel=preload; as=style; nopush,</assets/buttons-a7353db7.css>; rel=preload; as=style; nopush,</assets/code-d23bb853.css>; rel=preload; as=style; nopush,</assets/colorize-1bb78062.css>; rel=preload; as=style; nopush,</assets/colors-29158886.css>; rel=preload; as=style; nopush,</assets/composer-b177c9c6.css>; rel=preload; as=style; nopush",
+          "vary": "Accept",
+          "etag": "W/\"d9e619f2e22ce4231c29c3bbe1460477\"",
+          "cache-control": "max-age=0, private, must-revalidate",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-UzdJr2SDZYQ+Trjjhg4YOg=='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://livekit.campfire.test:7880 https://livekit.campfire.test:7880; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "set-cookie": "_campfire_session=2rRDhhDEB1Pfbjz9bA0nMVJYiqujqc2MD6a1bRTfoHtLWcSyiPg2g8i5EIPPgdC8YKnwu2s32tiLMGDx%2FuoDr5Ce9HrlGMmsnFRlQl74lEbDEjbRV6nnIR9FIU5RGSj%2FGK%2FhbqsQ%2BPdn3dJdH%2B%2BMCYmNfASInC%2BPlYyDoh9LFI48aJzDvnQjuNY16HMUmvPWX3hNHw7yb%2BHOlyo1LZ9F5guaVuy1V0EuHTg4hx6zFP94ZmC6z9prPOgVkjG9cBjccqK3SC2vhMSJAoNXlbyTBN%2FST8vF6jZQgZjXxey%2BdjyZO8WPR0lSQ4m42CG6nsI%3D--lcdqocuWwYzw7C8%2B--fPp1I9MvSn1z4BRYwzdweg%3D%3D; path=/; expires=Mon, 01 Jan 2046 12:00:00 GMT; secure; httponly; samesite=lax",
+          "x-request-id": "7b637220-530c-4604-a55d-35421dcd0a91",
+          "x-runtime": "0.017722",
+          "strict-transport-security": "max-age=31556952; includeSubDomains"
+        },
+        "body_prefix": "<!DOCTYPE html>\n<html data-theme=\"system\" data-text-size=\"default\" data-service-"
+      },
+      "sign_in_page_with_session": {
+        "method": "GET",
+        "path": "/session/new",
+        "env": {},
+        "cookies": [
+          "_campfire_session"
+        ],
+        "status": 200,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "x-version": "parity",
+          "x-rev": "parity",
+          "content-type": "text/html; charset=utf-8",
+          "link": "</assets/_reset-9c3efd7b.css>; rel=preload; as=style; nopush,</assets/actiontext-6a395a16.css>; rel=preload; as=style; nopush,</assets/activity_inbox-83199ac6.css>; rel=preload; as=style; nopush,</assets/agents-2e5a1a28.css>; rel=preload; as=style; nopush,</assets/animation-456db163.css>; rel=preload; as=style; nopush,</assets/audit_log-6e4895db.css>; rel=preload; as=style; nopush,</assets/autocomplete-0ed08664.css>; rel=preload; as=style; nopush,</assets/avatars-406ac70e.css>; rel=preload; as=style; nopush,</assets/base-3fbb6e39.css>; rel=preload; as=style; nopush,</assets/boards-91aa0b79.css>; rel=preload; as=style; nopush,</assets/boosts-57a8020e.css>; rel=preload; as=style; nopush,</assets/buttons-a7353db7.css>; rel=preload; as=style; nopush,</assets/code-d23bb853.css>; rel=preload; as=style; nopush,</assets/colorize-1bb78062.css>; rel=preload; as=style; nopush,</assets/colors-29158886.css>; rel=preload; as=style; nopush,</assets/composer-b177c9c6.css>; rel=preload; as=style; nopush",
+          "vary": "Accept",
+          "etag": "W/\"b2846e4b32518698cbfd3b1f40b878a7\"",
+          "cache-control": "max-age=0, private, must-revalidate",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-5qRSWbYHSpBHtfILAyQtrIeGmYqBa9zrErHH5Ww3yqc='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://livekit.campfire.test:7880 https://livekit.campfire.test:7880; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "set-cookie": "_campfire_session=n5yzw3tjjab0sEG1pTtOJQc3uXQWsNpVTNaWtlMHdspEyb7eCXKxTLuRhCYqMuWLYpe%2FOKCmR1Q02%2F7MUqAAwr7CiEZcVRVGbhbuw8Y7wiR%2FHhh2jDRGHT83wSWz69IXcZYDNIJibFJidZz2YtZjBskzJcpqXc%2BpohralSn85RR3DICXv4oK7h3syBPd5ANtW6Wk%2BYveg8xcDE%2FONMDwt6fP%2BrfRUN4wk4ti1gJlVEBdxYkTrjwhSUmbIR0uSV209yAL19NmVx1FhUtG8LnvWx25QJjBXgMzAlyrKr2T6ZBhtQqCCQYlOHErweqKAyg%3D--GNQ4JPRL2o0bUlqw--qhvnzeofVcRBFFGt9TI0pA%3D%3D; path=/; expires=Mon, 01 Jan 2046 12:00:00 GMT; secure; httponly; samesite=lax",
+          "x-request-id": "37c9cac1-6a9f-4f54-bb33-360c17c224fc",
+          "x-runtime": "0.018155",
+          "strict-transport-security": "max-age=31556952; includeSubDomains"
+        },
+        "body_prefix": "<!DOCTYPE html>\n<html data-theme=\"system\" data-text-size=\"default\" data-service-"
+      },
+      "json_head": {
+        "method": "GET",
+        "path": "/session/new",
+        "env": {
+          "HTTP_ACCEPT": "application/json"
+        },
+        "cookies": [],
+        "status": 401,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "x-version": "parity",
+          "x-rev": "parity",
+          "content-type": "application/json",
+          "cache-control": "no-cache",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-gWmthqmpqkIe7oi1xr+18g=='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://livekit.campfire.test:7880 https://livekit.campfire.test:7880; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "x-request-id": "c10d2c6a-b2ec-4384-9d03-9c2683a04f9a",
+          "x-runtime": "0.004038",
+          "strict-transport-security": "max-age=31556952; includeSubDomains"
+        },
+        "body_prefix": ""
+      },
+      "forgery": {
+        "method": "POST",
+        "path": "/session",
+        "env": {},
+        "cookies": [],
+        "status": 422,
+        "headers": {
+          "content-type": "text/html; charset=UTF-8",
+          "content-length": "5408",
+          "x-request-id": "3e1d97ee-2615-40f3-bfc9-a41386b0cb6b",
+          "x-runtime": "0.013715",
+          "strict-transport-security": "max-age=31556952; includeSubDomains"
+        },
+        "body_prefix": "<!DOCTYPE html>\n<html>\n  <head>\n    <title>That didn’t work (422)</title>\n    "
+      },
+      "unauthorized_render": {
+        "method": "POST",
+        "path": "/session",
+        "env": {
+          "REMOTE_ADDR": "10.9.9.9"
+        },
+        "cookies": [
+          "_campfire_session"
+        ],
+        "status": 401,
+        "headers": {
+          "x-frame-options": "SAMEORIGIN",
+          "x-xss-protection": "0",
+          "x-content-type-options": "nosniff",
+          "x-permitted-cross-domain-policies": "none",
+          "referrer-policy": "strict-origin-when-cross-origin",
+          "permissions-policy": "camera=(self), display-capture=(self), microphone=(self), notifications=(self)",
+          "x-version": "parity",
+          "x-rev": "parity",
+          "link": "</assets/_reset-9c3efd7b.css>; rel=preload; as=style; nopush,</assets/actiontext-6a395a16.css>; rel=preload; as=style; nopush,</assets/activity_inbox-83199ac6.css>; rel=preload; as=style; nopush,</assets/agents-2e5a1a28.css>; rel=preload; as=style; nopush,</assets/animation-456db163.css>; rel=preload; as=style; nopush,</assets/audit_log-6e4895db.css>; rel=preload; as=style; nopush,</assets/autocomplete-0ed08664.css>; rel=preload; as=style; nopush,</assets/avatars-406ac70e.css>; rel=preload; as=style; nopush,</assets/base-3fbb6e39.css>; rel=preload; as=style; nopush,</assets/boards-91aa0b79.css>; rel=preload; as=style; nopush,</assets/boosts-57a8020e.css>; rel=preload; as=style; nopush,</assets/buttons-a7353db7.css>; rel=preload; as=style; nopush,</assets/code-d23bb853.css>; rel=preload; as=style; nopush,</assets/colorize-1bb78062.css>; rel=preload; as=style; nopush,</assets/colors-29158886.css>; rel=preload; as=style; nopush,</assets/composer-b177c9c6.css>; rel=preload; as=style; nopush",
+          "content-type": "text/html; charset=utf-8",
+          "vary": "Accept",
+          "cache-control": "no-cache",
+          "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://accounts.google.com/gsi/ https://apis.google.com 'nonce-5qRSWbYHSpBHtfILAyQtrIeGmYqBa9zrErHH5Ww3yqc='; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob: https: https://*.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' data: blob:; connect-src 'self' https://accounts.google.com https://www.googleapis.com https://content.googleapis.com wss://livekit.campfire.test:7880 https://livekit.campfire.test:7880; frame-src 'self' https://docs.google.com https://drive.google.com https://accounts.google.com https://www.linkedin.com; worker-src 'self' blob:; manifest-src 'self'; form-action 'self' https://accounts.google.com https://github.com; report-uri /csp_reports",
+          "set-cookie": "_campfire_session=pq8hT0TVzBS11J20BpAHAomjJhpkpEw1uEyrOtUaYHdHmqfhAdgEzwIo%2Fdvj9X7laauYeywYIv2rEuNqW0Js%2BtKfSrOICjniy%2FZ4ncVrVMLxBnME%2Fq4PnJvdtn5H%2BeKLX3naDnURg5fz78D3hwAkmPpyi2YIXIoyFIH%2BKPTEeNXAlEp%2F7fp7e7p%2F1UBLiU01GN5JegtKfXtnWldCZztOmcVn6puP9%2FnILiTTsPKT%2Fwn4wPy5%2BlIr3P7Kw4JkrRx1ffcFDGCV9QdNuACVbfrI89mw%2FHsuwK%2Ft0Bh3LaFID1saUDuJ%2FZm6XZQ%2FNj64oSo%3D--gWK32odC6dURmdrE--0BCUpPaoqQ73ixl2AgBC%2Fg%3D%3D; path=/; expires=Mon, 01 Jan 2046 12:00:00 GMT; secure; httponly; samesite=lax",
+          "x-request-id": "9ce855db-8388-4c3e-8010-0f2d8cecf4b1",
+          "x-runtime": "0.204761",
+          "strict-transport-security": "max-age=31556952; includeSubDomains"
+        },
+        "body_prefix": "<!DOCTYPE html>\n<html data-theme=\"system\" data-text-size=\"default\" data-service-"
+      }
+    }
+  },
+  "host": "campfire.test",
+  "log_scrubbing": {
+    "pattern": "(/rooms/\\d+/)(?:\\d+-[A-Za-z0-9]+|[^/\\s\"<>]*--[0-9a-f]+)",
+    "lines": [
+      {
+        "line": "Started POST \"/rooms/1/12-AbCdEf123/messages\" for 127.0.0.1",
+        "scrubbed": "Started POST \"/rooms/1/[FILTERED]/messages\" for 127.0.0.1"
+      },
+      {
+        "line": "Started POST \"/rooms/42/eyJfcmFpbHMiOnsiZGF0YSI6eyJib3RfaWQiOjF9fX0%3D--0123abcdef/messages\" for ::1",
+        "scrubbed": "Started POST \"/rooms/42/[FILTERED]/messages\" for ::1"
+      },
+      {
+        "line": "Started GET \"/rooms/1/agents/messages\" for 127.0.0.1",
+        "scrubbed": "Started GET \"/rooms/1/agents/messages\" for 127.0.0.1"
+      },
+      {
+        "line": "Started POST \"/rooms/7/messages\" for 127.0.0.1",
+        "scrubbed": "Started POST \"/rooms/7/messages\" for 127.0.0.1"
+      },
+      {
+        "line": "Redirected to http://campfire.test/rooms/3/5-xyz/messages and /rooms/3/9-abc",
+        "scrubbed": "Redirected to http://campfire.test/rooms/3/[FILTERED]/messages and /rooms/3/[FILTERED]"
+      },
+      {
+        "line": "Started POST \"/rooms/1/foo--bar/messages\"",
+        "scrubbed": "Started POST \"/rooms/1/[FILTERED]r/messages\""
+      },
+      {
+        "line": "Started POST \"/rooms/1/abc--0f/messages\" then \"/rooms/2/2-B/x\"",
+        "scrubbed": "Started POST \"/rooms/1/[FILTERED]/messages\" then \"/rooms/2/[FILTERED]/x\""
+      },
+      {
+        "line": "Started GET \"/rooms/x/1-abc\"",
+        "scrubbed": "Started GET \"/rooms/x/1-abc\""
+      },
+      {
+        "line": "Parameters: {\"bot_key\"=>\"[FILTERED]\"} /rooms/12/1-a",
+        "scrubbed": "Parameters: {\"bot_key\"=>\"[FILTERED]\"} /rooms/12/[FILTERED]"
+      }
+    ]
+  },
+  "now": "2026-01-01T12:00:00.000Z",
+  "parameter_filter": {
+    "filter_parameters": [
+      {
+        "regexp": "(?i:passw)|(?i:email)|(?i:secret)|(?i:token)|(?i:_key)|(?i:crypt)|(?i:salt)|(?i:certificate)|(?i:otp)|(?i:ssn)|(?i:cvv)|(?i:cvc)|(?i:endpoint)|(?i:code)|(?i:reauth)"
+      },
+      {
+        "regexp": "(?i:message\\.body)|(?i:agent\\.webhook_signing_secret)|(?i:agent\\.passw)|(?i:agent\\.email)|(?i:agent\\.secret)|(?i:agent\\.token)|(?i:agent\\._key)|(?i:agent\\.crypt)|(?i:agent\\.salt)|(?i:agent\\.certificate)|(?i:agent\\.otp)|(?i:agent\\.ssn)|(?i:agent\\.cvv)|(?i:agent\\.cvc)|(?i:agent\\.endpoint)|(?i:agent\\.message\\.body)|(?i:agent\\.code)|(?i:agent\\.reauth)|(?i:fizzy_connected_account\\.access_token)|(?i:fizzy_connected_account\\.passw)|(?i:fizzy_connected_account\\.email)|(?i:fizzy_connected_account\\.secret)|(?i:fizzy_connected_account\\.token)|(?i:fizzy_connected_account\\._key)|(?i:fizzy_connected_account\\.crypt)|(?i:fizzy_connected_account\\.salt)|(?i:fizzy_connected_account\\.certificate)|(?i:fizzy_connected_account\\.otp)|(?i:fizzy_connected_account\\.ssn)|(?i:fizzy_connected_account\\.cvv)|(?i:fizzy_connected_account\\.cvc)|(?i:fizzy_connected_account\\.endpoint)|(?i:fizzy_connected_account\\.message\\.body)|(?i:fizzy_connected_account\\.code)|(?i:fizzy_connected_account\\.reauth)|(?i:github_connected_account\\.access_token)|(?i:github_connected_account\\.passw)|(?i:github_connected_account\\.email)|(?i:github_connected_account\\.secret)|(?i:github_connected_account\\.token)|(?i:github_connected_account\\._key)|(?i:github_connected_account\\.crypt)|(?i:github_connected_account\\.salt)|(?i:github_connected_account\\.certificate)|(?i:github_connected_account\\.otp)|(?i:github_connected_account\\.ssn)|(?i:github_connected_account\\.cvv)|(?i:github_connected_account\\.cvc)|(?i:github_connected_account\\.endpoint)|(?i:github_connected_account\\.message\\.body)|(?i:github_connected_account\\.code)|(?i:github_connected_account\\.reauth)|(?i:github_connected_account\\.refresh_token)|(?i:google_account\\.refresh_token)|(?i:google_account\\.passw)|(?i:google_account\\.email)|(?i:google_account\\.secret)|(?i:google_account\\.token)|(?i:google_account\\._key)|(?i:google_account\\.crypt)|(?i:google_account\\.salt)|(?i:google_account\\.certificate)|(?i:google_account\\.otp)|(?i:google_account\\.ssn)|(?i:google_account\\.cvv)|(?i:google_account\\.cvc)|(?i:google_account\\.endpoint)|(?i:google_account\\.message\\.body)|(?i:google_account\\.code)|(?i:google_account\\.reauth)|(?i:google_account\\.access_token)|(?i:slack_connection\\.access_token)|(?i:slack_connection\\.passw)|(?i:slack_connection\\.email)|(?i:slack_connection\\.secret)|(?i:slack_connection\\.token)|(?i:slack_connection\\._key)|(?i:slack_connection\\.crypt)|(?i:slack_connection\\.salt)|(?i:slack_connection\\.certificate)|(?i:slack_connection\\.otp)|(?i:slack_connection\\.ssn)|(?i:slack_connection\\.cvv)|(?i:slack_connection\\.cvc)|(?i:slack_connection\\.endpoint)|(?i:slack_connection\\.message\\.body)|(?i:slack_connection\\.code)|(?i:slack_connection\\.reauth)|(?i:slack_workspace\\.client_secret)|(?i:slack_workspace\\.passw)|(?i:slack_workspace\\.email)|(?i:slack_workspace\\.secret)|(?i:slack_workspace\\.token)|(?i:slack_workspace\\._key)|(?i:slack_workspace\\.crypt)|(?i:slack_workspace\\.salt)|(?i:slack_workspace\\.certificate)|(?i:slack_workspace\\.otp)|(?i:slack_workspace\\.ssn)|(?i:slack_workspace\\.cvv)|(?i:slack_workspace\\.cvc)|(?i:slack_workspace\\.endpoint)|(?i:slack_workspace\\.message\\.body)|(?i:slack_workspace\\.code)|(?i:slack_workspace\\.reauth)|(?i:two_factor_credential\\.secret)|(?i:two_factor_credential\\.passw)|(?i:two_factor_credential\\.email)|(?i:two_factor_credential\\.token)|(?i:two_factor_credential\\._key)|(?i:two_factor_credential\\.crypt)|(?i:two_factor_credential\\.salt)|(?i:two_factor_credential\\.certificate)|(?i:two_factor_credential\\.otp)|(?i:two_factor_credential\\.ssn)|(?i:two_factor_credential\\.cvv)|(?i:two_factor_credential\\.cvc)|(?i:two_factor_credential\\.endpoint)|(?i:two_factor_credential\\.message\\.body)|(?i:two_factor_credential\\.code)|(?i:two_factor_credential\\.reauth)|(?i:two_factor_setup_secret\\.secret)|(?i:two_factor_setup_secret\\.passw)|(?i:two_factor_setup_secret\\.email)|(?i:two_factor_setup_secret\\.token)|(?i:two_factor_setup_secret\\._key)|(?i:two_factor_setup_secret\\.crypt)|(?i:two_factor_setup_secret\\.salt)|(?i:two_factor_setup_secret\\.certificate)|(?i:two_factor_setup_secret\\.otp)|(?i:two_factor_setup_secret\\.ssn)|(?i:two_factor_setup_secret\\.cvv)|(?i:two_factor_setup_secret\\.cvc)|(?i:two_factor_setup_secret\\.endpoint)|(?i:two_factor_setup_secret\\.message\\.body)|(?i:two_factor_setup_secret\\.code)|(?i:two_factor_setup_secret\\.reauth)|(?i:webhook\\.signing_secret)|(?i:webhook\\.passw)|(?i:webhook\\.email)|(?i:webhook\\.secret)|(?i:webhook\\.token)|(?i:webhook\\._key)|(?i:webhook\\.crypt)|(?i:webhook\\.salt)|(?i:webhook\\.certificate)|(?i:webhook\\.otp)|(?i:webhook\\.ssn)|(?i:webhook\\.cvv)|(?i:webhook\\.cvc)|(?i:webhook\\.endpoint)|(?i:webhook\\.message\\.body)|(?i:webhook\\.code)|(?i:webhook\\.reauth)|(?i:encrypted_rich_text\\.body)|(?i:encrypted_rich_text\\.passw)|(?i:encrypted_rich_text\\.email)|(?i:encrypted_rich_text\\.secret)|(?i:encrypted_rich_text\\.token)|(?i:encrypted_rich_text\\._key)|(?i:encrypted_rich_text\\.crypt)|(?i:encrypted_rich_text\\.salt)|(?i:encrypted_rich_text\\.certificate)|(?i:encrypted_rich_text\\.otp)|(?i:encrypted_rich_text\\.ssn)|(?i:encrypted_rich_text\\.cvv)|(?i:encrypted_rich_text\\.cvc)|(?i:encrypted_rich_text\\.endpoint)|(?i:encrypted_rich_text\\.message\\.body)|(?i:encrypted_rich_text\\.code)|(?i:encrypted_rich_text\\.reauth)"
+      }
+    ],
+    "params": [
+      {
+        "params": {
+          "email_address": "david@example.com",
+          "password": "secret",
+          "commit": "Sign in"
+        },
+        "filtered": {
+          "email_address": "[FILTERED]",
+          "password": "[FILTERED]",
+          "commit": "Sign in"
+        }
+      },
+      {
+        "params": {
+          "user": {
+            "name": "David",
+            "email_address": "d@example.com",
+            "password_confirmation": "x"
+          },
+          "authenticity_token": "tok"
+        },
+        "filtered": {
+          "user": {
+            "name": "David",
+            "email_address": "[FILTERED]",
+            "password_confirmation": "[FILTERED]"
+          },
+          "authenticity_token": "[FILTERED]"
+        }
+      },
+      {
+        "params": {
+          "message": {
+            "body": "hello",
+            "client_message_id": "abc"
+          },
+          "room_id": "1"
+        },
+        "filtered": {
+          "message": {
+            "body": "[FILTERED]",
+            "client_message_id": "abc"
+          },
+          "room_id": "1"
+        }
+      },
+      {
+        "params": {
+          "message": {
+            "body_html": "<b>",
+            "attachment": "f"
+          },
+          "body": "top-level body"
+        },
+        "filtered": {
+          "message": {
+            "body_html": "[FILTERED]",
+            "attachment": "f"
+          },
+          "body": "top-level body"
+        }
+      },
+      {
+        "params": {
+          "code": "4/0Ab",
+          "state": "xyz",
+          "reauth": "123456",
+          "otp_attempt": "1",
+          "totp_code": "2"
+        },
+        "filtered": {
+          "code": "[FILTERED]",
+          "state": "xyz",
+          "reauth": "[FILTERED]",
+          "otp_attempt": "[FILTERED]",
+          "totp_code": "[FILTERED]"
+        }
+      },
+      {
+        "params": {
+          "bot_key": "1-abc",
+          "api_key": "k",
+          "webhook": {
+            "url": "https://x",
+            "secret": "s"
+          },
+          "keys": {
+            "p256dh": "a",
+            "auth": "b"
+          }
+        },
+        "filtered": {
+          "bot_key": "[FILTERED]",
+          "api_key": "[FILTERED]",
+          "webhook": {
+            "url": "https://x",
+            "secret": "[FILTERED]"
+          },
+          "keys": {
+            "p256dh": "a",
+            "auth": "b"
+          }
+        }
+      },
+      {
+        "params": {
+          "push_subscription_endpoint": "https://fcm",
+          "endpoint": "e",
+          "items": [
+            {
+              "token": "a"
+            },
+            "plain",
+            [
+              "x"
+            ]
+          ]
+        },
+        "filtered": {
+          "push_subscription_endpoint": "[FILTERED]",
+          "endpoint": "[FILTERED]",
+          "items": [
+            {
+              "token": "[FILTERED]"
+            },
+            "plain",
+            [
+              "x"
+            ]
+          ]
+        }
+      },
+      {
+        "params": {
+          "agent": {
+            "name": "A",
+            "token_digest": "d"
+          },
+          "ssn": "1",
+          "cvv": "2",
+          "cvc": "3",
+          "salt": "4",
+          "certificate": "5",
+          "encrypted_thing": "6"
+        },
+        "filtered": {
+          "agent": {
+            "name": "A",
+            "token_digest": "[FILTERED]"
+          },
+          "ssn": "[FILTERED]",
+          "cvv": "[FILTERED]",
+          "cvc": "[FILTERED]",
+          "salt": "[FILTERED]",
+          "certificate": "[FILTERED]",
+          "encrypted_thing": "[FILTERED]"
+        }
+      },
+      {
+        "params": {
+          "two_factor_credential": {
+            "secret": "s",
+            "label": "l"
+          },
+          "google_account": {
+            "access_token": "t",
+            "refresh_token": "r",
+            "email": "e"
+          }
+        },
+        "filtered": {
+          "two_factor_credential": {
+            "secret": "[FILTERED]",
+            "label": "l"
+          },
+          "google_account": {
+            "access_token": "[FILTERED]",
+            "refresh_token": "[FILTERED]",
+            "email": "[FILTERED]"
+          }
+        }
+      },
+      {
+        "params": {
+          "slack_connection": {
+            "access_token": "t"
+          },
+          "q": "search",
+          "page": "2",
+          "nested": {
+            "deep": {
+              "password": "p",
+              "ok": "fine"
+            }
+          }
+        },
+        "filtered": {
+          "slack_connection": {
+            "access_token": "[FILTERED]"
+          },
+          "q": "search",
+          "page": "2",
+          "nested": {
+            "deep": {
+              "password": "[FILTERED]",
+              "ok": "fine"
+            }
+          }
+        }
+      },
+      {
+        "params": {
+          "Password": "caps",
+          "PASSWORD_CONFIRMATION": "caps2",
+          "eMail": "mixed"
+        },
+        "filtered": {
+          "Password": "[FILTERED]",
+          "PASSWORD_CONFIRMATION": "[FILTERED]",
+          "eMail": "[FILTERED]"
+        }
+      }
+    ],
+    "paths": [
+      {
+        "path": "/session",
+        "filtered": "/session"
+      },
+      {
+        "path": "/rooms/1?token=abc&page=2",
+        "filtered": "/rooms/1?token=[FILTERED]&page=2"
+      },
+      {
+        "path": "/search?q=hi&email=a@b.c",
+        "filtered": "/search?q=hi&email=[FILTERED]"
+      },
+      {
+        "path": "/x?password=1;code=2&ok=3",
+        "filtered": "/x?password=[FILTERED];code=[FILTERED]&ok=3"
+      },
+      {
+        "path": "/rooms/1/messages?message[body]=secret&x=1",
+        "filtered": "/rooms/1/messages?message[body]=secret&x=1"
+      },
+      {
+        "path": "/a?=novalue&flag&api_key=k",
+        "filtered": "/a?=novalue&flag&api_key=[FILTERED]"
+      },
+      {
+        "path": "/b?%70assword=encoded",
+        "filtered": "/b?%70assword=encoded"
+      }
+    ]
+  },
+  "rate_limit": {
+    "statuses": [
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      401,
+      429,
+      429
+    ],
+    "other_ip_status": 401,
+    "forged_status": 422,
+    "limited": {
+      "status": 429,
+      "content_type": "text/html; charset=utf-8",
+      "alert": "<div class=\"flash\" data-controller=\"element-removal\" data-action=\"animationend->element-removal#remove\">\n        <div class=\"flash__inner shadow\" style=\"--flash-background: var(--color-negative)\">\n            <img aria-hidden=\"true\" class=\"colorize--white\" src=\"/assets/alert-b937985b.svg\" width=\"24\" height=\"24\" /></span>\n        </div>",
+      "has_sign_in_form": true
+    },
+    "rejected": {
+      "status": 401
+    },
+    "cache_key": "rate-limit:sessions:10.3.0.1",
+    "csp_reports": {
+      "statuses": [
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        204,
+        429,
+        429
+      ],
+      "limit": 20,
+      "max_body": 16384
+    }
+  },
+  "secret_key_base": "5335c3b1ad35b4ad170c3413bd651ef3b6ed64e257261871a6de3f978cf3868ee417a927040935fb30b0f7debdedb34a2a403e9f34b16cf594c917c2ecd4a995",
+  "session_keys": {
+    "data": {
+      "session_id": "0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+      "_csrf_token": "qK3zv7cQ2oYlP4-sX6JtW0nBf9eR1uHaMdLgE5iVy8k",
+      "two_factor_pending_user_id": 2,
+      "two_factor_pending_expires_at": 1767269400,
+      "two_factor_pending_method": "password",
+      "sudo_verified_at": 1767268800,
+      "sudo_pending_request": {
+        "method": "PATCH",
+        "path": "/account?x=1",
+        "params": {
+          "account": {
+            "name": "New"
+          }
+        },
+        "origin": "/account/edit"
+      },
+      "two_factor_reauthenticated_at": 1767268800,
+      "return_to_after_authenticating": "http://campfire.test/rooms/1?a=1&b=<2>"
+    },
+    "raw": "c4NELRbtc9tQU10vsONz6cfsK+B1rSHVeSuOJBcosTkYknC5+RYfje0+aybNwbHBSqfRQGZWdOtwTUyPU7ZpQXxJ543htIVXMg6b6vUihoz579mnIWTmpIt/5oJisaI14gmEMMBiljBe23D1W9yTFKxoTWmYk2+wY85C3cGBQu6hNqyKGm+G2KzI2ZNBU5UII3kFQXg1RX/4+aM5FQNMhWQUX8psoB0xWBtZFyALwTO7H+fYO3SvuWtoYp2gnyNDcBNnqUp97YsEW0l2s/+o7lUc+gNgDMZeSYhj57lAtvASMZKUFywgZz5ZzvaYU/PMJ9KU20kV8aiIpuF0N94hENtFQdbGlpTVvYtdDUFOebaWVZktAUckIReyEr5tZ3s5V8pLEq8rgH4sdm3SxZCOfAvfxKwTXgglJMvrZKaQ8KbmjVeuw4KihEgv/pILIVPhBezRAZRzhNvh48wd0/wYbHenAOyUG/zxtmnXmmMQtKMyhnx7o+6MQpomBtnVvLTqQ09aQf0K4FUIZvRtkcbYJr4P1dr8gleMBN3To0LhGIxyR81s6e65oNDCPlqRkWLszjbzsjBJ1g4xmZlRupMThoLA45YasSI5KFWhnJ7ZmAY683aYm5pG9ZZ5k12Jhm5UiSxKVYOvb5fPezygFfMBMNLHNqJuBSq8L7bJ1CI3jdE7Ca4Vm83kqUtCL4JXMHNP3JNNqlPDWDSEmeP56jYCgg/L+lLJlufC5m1kjEzG6n9aRSuEw1+HZn7os87yl1tD3NnJAwHCAYObocpiZXTwiu1ysjQ9i7Y15A3b7CI6o7Yy8QAsmD3LgVmecp7AGbTLzfLufz0djmiPPafWQozoMe59i3Nq0wuqPcN6ALnZeTy1ic/abw2ErF6gwFBCacidJzV+8i3RsegE/5sr5KPH3Cp26V78mRSHurUMD9/z3RG5oJEvQ7nMqVOichpXEQa+q6RKnM1VP6FZ1YzDdiqp196QpBLZFLydGT8NAxgyjdL6qsb3UenLXZsOY4bodOJMXZ56--jR6RhUA7cURrvgn3--ryU//3de2Y2okmne1NHetQ==",
+    "set_cookie": "_campfire_session=c4NELRbtc9tQU10vsONz6cfsK%2BB1rSHVeSuOJBcosTkYknC5%2BRYfje0%2BaybNwbHBSqfRQGZWdOtwTUyPU7ZpQXxJ543htIVXMg6b6vUihoz579mnIWTmpIt%2F5oJisaI14gmEMMBiljBe23D1W9yTFKxoTWmYk2%2BwY85C3cGBQu6hNqyKGm%2BG2KzI2ZNBU5UII3kFQXg1RX%2F4%2BaM5FQNMhWQUX8psoB0xWBtZFyALwTO7H%2BfYO3SvuWtoYp2gnyNDcBNnqUp97YsEW0l2s%2F%2Bo7lUc%2BgNgDMZeSYhj57lAtvASMZKUFywgZz5ZzvaYU%2FPMJ9KU20kV8aiIpuF0N94hENtFQdbGlpTVvYtdDUFOebaWVZktAUckIReyEr5tZ3s5V8pLEq8rgH4sdm3SxZCOfAvfxKwTXgglJMvrZKaQ8KbmjVeuw4KihEgv%2FpILIVPhBezRAZRzhNvh48wd0%2FwYbHenAOyUG%2FzxtmnXmmMQtKMyhnx7o%2B6MQpomBtnVvLTqQ09aQf0K4FUIZvRtkcbYJr4P1dr8gleMBN3To0LhGIxyR81s6e65oNDCPlqRkWLszjbzsjBJ1g4xmZlRupMThoLA45YasSI5KFWhnJ7ZmAY683aYm5pG9ZZ5k12Jhm5UiSxKVYOvb5fPezygFfMBMNLHNqJuBSq8L7bJ1CI3jdE7Ca4Vm83kqUtCL4JXMHNP3JNNqlPDWDSEmeP56jYCgg%2FL%2BlLJlufC5m1kjEzG6n9aRSuEw1%2BHZn7os87yl1tD3NnJAwHCAYObocpiZXTwiu1ysjQ9i7Y15A3b7CI6o7Yy8QAsmD3LgVmecp7AGbTLzfLufz0djmiPPafWQozoMe59i3Nq0wuqPcN6ALnZeTy1ic%2Fabw2ErF6gwFBCacidJzV%2B8i3RsegE%2F5sr5KPH3Cp26V78mRSHurUMD9%2Fz3RG5oJEvQ7nMqVOichpXEQa%2Bq6RKnM1VP6FZ1YzDdiqp196QpBLZFLydGT8NAxgyjdL6qsb3UenLXZsOY4bodOJMXZ56--jR6RhUA7cURrvgn3--ryU%2F%2F3de2Y2okmne1NHetQ%3D%3D; path=/; expires=Mon, 01 Jan 2046 12:00:00 GMT; samesite=lax",
+    "checks": [
+      {
+        "now": "2026-01-01T12:00:00.000Z",
+        "two_factor_pending_user_id": 2,
+        "sudo_verified": true,
+        "reauthenticated": true
+      },
+      {
+        "now": "2026-01-01T12:09:00.000Z",
+        "two_factor_pending_user_id": 2,
+        "sudo_verified": true,
+        "reauthenticated": true
+      },
+      {
+        "now": "2026-01-01T12:11:00.000Z",
+        "two_factor_pending_user_id": null,
+        "sudo_verified": true,
+        "reauthenticated": false
+      },
+      {
+        "now": "2026-01-01T12:16:00.000Z",
+        "two_factor_pending_user_id": null,
+        "sudo_verified": false,
+        "reauthenticated": false
+      }
+    ],
+    "sudo_timeout_seconds": 900,
+    "two_factor_pending_ttl_seconds": 600,
+    "reauth_ttl_seconds": 600
+  },
+  "sign_in": {
+    "status": 422,
+    "session_cookie_raw": "9AklPHRsJJfy/MvB4Y2QLkl2araMeC0EXrRIY82HQmTKFPBkTy5LAKCz9TCE8HVRqN3WDW+g/bsoyph/lbuJA3uZgFswO5PtL71cfB1sV1HM7ZXdQL2A2Aa8Fo3W5iMqFxYRd2iGadDws3RIOX0pQIs/Qedh/2gOk/VKWU5Tn76Q/9Ty85wmTT8eSGisXgs7q8H2jvmSx78603JAh/tBTL0pNDsOCygmNMOOt4wEEPHfPTWicNyGYYzzma558wCAXK3rXsWqNE92/SPtD+ov+lNGiFYJjuqaZWfmRBZds0dytQjZ7lsOPXEKEhF/whg=--hfiQCinkZ2u+DGHn--GghelyGgZBpCKgUH6imYBA==",
+    "set_cookie": "_campfire_session=9AklPHRsJJfy%2FMvB4Y2QLkl2araMeC0EXrRIY82HQmTKFPBkTy5LAKCz9TCE8HVRqN3WDW%2Bg%2Fbsoyph%2FlbuJA3uZgFswO5PtL71cfB1sV1HM7ZXdQL2A2Aa8Fo3W5iMqFxYRd2iGadDws3RIOX0pQIs%2FQedh%2F2gOk%2FVKWU5Tn76Q%2F9Ty85wmTT8eSGisXgs7q8H2jvmSx78603JAh%2FtBTL0pNDsOCygmNMOOt4wEEPHfPTWicNyGYYzzma558wCAXK3rXsWqNE92%2FSPtD%2Bov%2BlNGiFYJjuqaZWfmRBZds0dytQjZ7lsOPXEKEhF%2Fwhg%3D--hfiQCinkZ2u%2BDGHn--GghelyGgZBpCKgUH6imYBA%3D%3D; path=/; expires=Mon, 01 Jan 2046 12:00:00 GMT; httponly; samesite=lax",
+    "session": {
+      "session_id": "668b4799a14b37c203344841492beecb",
+      "_csrf_token": "NQSPu9hxQTkdtrL9olQPYtIQZlNHj4oTa2CgBv60C0c"
+    },
+    "csrf_meta_token": "RkuiiSJmy4eHh0rHacuPhZMd8idnCKfCpt4IxkZhuEORXYJ8geRWhkxnT_m_BYbi6oHp1E3s-XqnY6uihfrN0Q",
+    "session_form_token": "uJ4m6ltP4GCbQMjOYXsjphLHL8vMhlCnJSHsAWeaYOZ8u7zHfY9Eot_GAtn8woFDa9tzfs80iymXoQwJrYavew",
+    "other_session_cookie_raw": "3QxmlHdkeqBbhJfSED34FdBJ7h2HgLPkHxgJAJKZM93pd7PpweaWqTYi6xjxwZqmj95Ce0EXuYSQCCktq2QP0ivSm5jv9ip/cvOH9K5yI073IKSyT4l7/KasgeG4X9WSQFpyYiYa+lutO9+MWXYUcUBa6IuuXQ1cpHxdJBblIX4u2b0c2ZK5/CdKWGaqsyylFaxUKf2VMbh2K039S7xlga0JFWM1ibnxX4Bi7L90eD36wGpopynL83tFK4OqLBcqgvfK1x3nVP2FjYpldlTISG2Pjo6xptuD6tIuerwZCjCCTilkK9DRCE1an+5+Uqk=--hZAJ2E3mGs6Y3K2k--pS+K5th9a9MIl5lCiubLCw==",
+    "csp_nonce": "6tqmISgEOhdzX0diC2fkdw==",
+    "head": "<head>\n    <title>Sign in</title>\n\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1, interactive-widget=resizes-content\">\n    <meta name=\"view-transition\" content=\"same-origin\">\n    <meta name=\"color-scheme\" content=\"light dark\">\n    <meta name=\"theme-color\" content=\"#ffffff\" media=\"(prefers-color-scheme: light)\">\n    <meta name=\"theme-color\" content=\"#15171c\" media=\"(prefers-color-scheme: dark)\">\n    <meta name=\"apple-mobile-web-app-capable\" content=\"yes\">\n    <meta name=\"csrf-param\" content=\"authenticity_token\" />\n<meta name=\"csrf-token\" content=\"RkuiiSJmy4eHh0rHacuPhZMd8idnCKfCpt4IxkZhuEORXYJ8geRWhkxnT_m_BYbi6oHp1E3s-XqnY6uihfrN0Q\" />\n    <meta name=\"csp-nonce\" content=\"6tqmISgEOhdzX0diC2fkdw==\" />\n    \n    <meta name=\"action-cable-url\" content=\"/cable\">\n\n    <meta name=\"vapid-public-key\" content=\"BEYXTBB5_jNhNzXDmx5KEU55Vbbd-u--Lk9rM5OFQvUkPIBwZJ9QzAq0zdEzFw6yTV8cTriz_qYBVicY02_VxTQ=\">\n    <meta name=\"turbo-prefetch\" content=\"true\">\n    \n    <meta name=\"brand-icon-names\" content=\"openai,gpt,anthropic,claude,googlegemini,gemini,google,apple,meta,nvidia,github,x,mistralai,huggingface,hf,perplexity,cursor,slack,discord,linux,docker,kubernetes,githubcopilot,ollama,vercel,cloudflare,stripe,notion,figma,linear,microsoft,msft,azure,aws,amazonaws,xai,grok,deepseek\">\n\n    <link rel=\"manifest\" href=\"/webmanifest.json\">\n    <link rel=\"icon\" href=\"/account/logo?v=20260101120000\" type=\"image/png\">\n    <link rel=\"apple-touch-icon\" href=\"/account/logo?v=20260101120000\">\n\n    <link rel=\"stylesheet\" href=\"/assets/_reset-9c3efd7b.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/actiontext-6a395a16.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/activity_inbox-83199ac6.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/agents-2e5a1a28.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/animation-456db163.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/audit_log-6e4895db.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/autocomplete-0ed08664.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/avatars-406ac70e.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/base-3fbb6e39.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/boards-91aa0b79.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/boosts-57a8020e.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/buttons-a7353db7.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/code-d23bb853.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/colorize-1bb78062.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/colors-29158886.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/composer-b177c9c6.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/composer_power-0f117f18.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/drive-bbcf5456.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/embeds-c2564969.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/filters-8a4d63ed.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/fizzy_cards-37bb0ec3.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/flash-2bebcebf.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/github_pr_cards-1c6f5015.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/global_search-35d125a0.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/header_overflow-3297aa42.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/huddle-89870051.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/huddle_invitation-090bee08.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/huddle_join_notice-3ee33ff0.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/icons-209ff391.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/inputs-6e06ff6a.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/layout-ff6ddfc6.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/lightbox-af496d39.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/link_embeds-692ba221.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/markdown-4a4d2e6e.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/messages-70898b6c.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/motion-535d4a9f.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/nav-4f83591a.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/navigation-d9be90a7.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/panels-3721947f.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/people-b8926caa.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/pins_saved-d50815ec.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/profile_settings-ee00efb3.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/public-fd278953.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/room_events-4a98d5ac.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/room_files-1b36e9a9.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/separators-172b3ab8.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/sidebar-f9e42ccc.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/signup-6e02d591.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/slack_import-c250e93f.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/spinner-5a118f25.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/stage-67166157.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/status-e109ec92.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/text_size-2511e944.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/theme-55f137e9.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/thread_panel-70546b04.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/tour-5ac7cce2.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/trix-65afdb1d.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/two_factor-540cf28b.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/utilities-4f89c148.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/voice_channels-4b667aef.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/work_thread_links-5e070978.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/work_threads-d777677b.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/workspace-ee6bc006.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/workspace_destinations-7f1ece60.css\" data-turbo-track=\"reload\" />\n<link rel=\"stylesheet\" href=\"/assets/x_cards-7b7f19b7.css\" data-turbo-track=\"reload\" />\n    \n\n    <script type=\"importmap\" data-turbo-track=\"reload\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">{\n  \"imports\": {\n    \"application\": \"/assets/application-a54c74a7.js\",\n    \"@hotwired/stimulus\": \"/assets/stimulus.min-4b1e420e.js\",\n    \"@hotwired/stimulus-loading\": \"/assets/stimulus-loading-1fc53fe7.js\",\n    \"@hotwired/turbo-rails\": \"/assets/turbo-a1e3a50a.js\",\n    \"@rails/actioncable\": \"/assets/actioncable.esm-e0ec9819.js\",\n    \"@rails/request.js\": \"/assets/@rails--request-3fc8489d.js\",\n    \"code-highlighter-worker\": \"/assets/code-highlighter-worker-1ac40959.js\",\n    \"livekit-client\": \"/assets/livekit-client-ae36432e.js\",\n    \"noise-suppressor\": \"/assets/noise-suppressor-b7cb655b.js\",\n    \"initializers/autocomplete\": \"/assets/initializers/autocomplete-ba9abe45.js\",\n    \"initializers/current\": \"/assets/initializers/current-3a3b90da.js\",\n    \"initializers\": \"/assets/initializers/index-c15ee6a0.js\",\n    \"initializers/navigation_progress\": \"/assets/initializers/navigation_progress-9e1a0647.js\",\n    \"initializers/service_worker\": \"/assets/initializers/service_worker-392869cf.js\",\n    \"initializers/stream_focus\": \"/assets/initializers/stream_focus-b91b823e.js\",\n    \"lib/autocomplete/autocomplete_handler\": \"/assets/lib/autocomplete/autocomplete_handler-becd1e1a.js\",\n    \"lib/autocomplete/base_autocomplete_handler\": \"/assets/lib/autocomplete/base_autocomplete_handler-d146f93d.js\",\n    \"lib/autocomplete/collection\": \"/assets/lib/autocomplete/collection-3e251a0e.js\",\n    \"lib/autocomplete/constants\": \"/assets/lib/autocomplete/constants-17c2858b.js\",\n    \"lib/autocomplete/custom_elements/suggestion_option\": \"/assets/lib/autocomplete/custom_elements/suggestion_option-ac7846b3.js\",\n    \"lib/autocomplete/custom_elements/suggestion_select\": \"/assets/lib/autocomplete/custom_elements/suggestion_select-f0045305.js\",\n    \"lib/autocomplete/helpers\": \"/assets/lib/autocomplete/helpers-651308b9.js\",\n    \"lib/autocomplete/markdown_icons_autocomplete_handler\": \"/assets/lib/autocomplete/markdown_icons_autocomplete_handler-68d06bcd.js\",\n    \"lib/autocomplete/markdown_mentions_autocomplete_handler\": \"/assets/lib/autocomplete/markdown_mentions_autocomplete_handler-8f7f4748.js\",\n    \"lib/autocomplete/markdown_slash_commands_autocomplete_handler\": \"/assets/lib/autocomplete/markdown_slash_commands_autocomplete_handler-70d74b00.js\",\n    \"lib/autocomplete/renderer\": \"/assets/lib/autocomplete/renderer-5caf6120.js\",\n    \"lib/autocomplete/selection\": \"/assets/lib/autocomplete/selection-862705bf.js\",\n    \"lib/autocomplete/suggestion_context\": \"/assets/lib/autocomplete/suggestion_context-b265ffb4.js\",\n    \"lib/autocomplete/suggestion_controller\": \"/assets/lib/autocomplete/suggestion_controller-ab82011a.js\",\n    \"lib/autocomplete/suggestion_results_controller\": \"/assets/lib/autocomplete/suggestion_results_controller-a980a4a6.js\",\n    \"lib/autocomplete/utils\": \"/assets/lib/autocomplete/utils-296fb278.js\",\n    \"lib/cookie\": \"/assets/lib/cookie-76006835.js\",\n    \"lib/huddle/devices\": \"/assets/lib/huddle/devices-fcae04dc.js\",\n    \"lib/huddle/meter\": \"/assets/lib/huddle/meter-8045cff5.js\",\n    \"lib/huddle/stats\": \"/assets/lib/huddle/stats-79478c26.js\",\n    \"lib/huddle_noise_suppressor\": \"/assets/lib/huddle_noise_suppressor-cc2e5388.js\",\n    \"controllers/activity_inbox_controller\": \"/assets/controllers/activity_inbox_controller-78d14e42.js\",\n    \"controllers/activity_indicator_controller\": \"/assets/controllers/activity_indicator_controller-4c0a2099.js\",\n    \"controllers/application\": \"/assets/controllers/application-f004202c.js\",\n    \"controllers/attach_menu_controller\": \"/assets/controllers/attach_menu_controller-4a85d87b.js\",\n    \"controllers/auto_submit_controller\": \"/assets/controllers/auto_submit_controller-ee52d396.js\",\n    \"controllers/autocomplete_controller\": \"/assets/controllers/autocomplete_controller-eaf5b07d.js\",\n    \"controllers/badge_dot_controller\": \"/assets/controllers/badge_dot_controller-e0d733c8.js\",\n    \"controllers/board_list_controller\": \"/assets/controllers/board_list_controller-8a5c5270.js\",\n    \"controllers/boost_delete_controller\": \"/assets/controllers/boost_delete_controller-29fd1686.js\",\n    \"controllers/check_all_controller\": \"/assets/controllers/check_all_controller-f185b790.js\",\n    \"controllers/composer_controller\": \"/assets/controllers/composer_controller-813bd5df.js\",\n    \"controllers/copy_to_clipboard_controller\": \"/assets/controllers/copy_to_clipboard_controller-07e32f4d.js\",\n    \"controllers/dm_picker_controller\": \"/assets/controllers/dm_picker_controller-ec753b41.js\",\n    \"controllers/dm_presence_controller\": \"/assets/controllers/dm_presence_controller-a514f26c.js\",\n    \"controllers/drive_link_controller\": \"/assets/controllers/drive_link_controller-41efd87c.js\",\n    \"controllers/drive_picker_controller\": \"/assets/controllers/drive_picker_controller-45bc0786.js\",\n    \"controllers/drive_share_controller\": \"/assets/controllers/drive_share_controller-c247e0be.js\",\n    \"controllers/drop_target_controller\": \"/assets/controllers/drop_target_controller-64a81b6e.js\",\n    \"controllers/element_removal_controller\": \"/assets/controllers/element_removal_controller-4526910a.js\",\n    \"controllers/emoji_picker_controller\": \"/assets/controllers/emoji_picker_controller-25c75851.js\",\n    \"controllers/event_time_zone_controller\": \"/assets/controllers/event_time_zone_controller-1852fe57.js\",\n    \"controllers/filter_controller\": \"/assets/controllers/filter_controller-ca9769d5.js\",\n    \"controllers/form_controller\": \"/assets/controllers/form_controller-6f3d64db.js\",\n    \"controllers/forward_source_controller\": \"/assets/controllers/forward_source_controller-e9e68d4c.js\",\n    \"controllers/frame_poll_controller\": \"/assets/controllers/frame_poll_controller-80b1929c.js\",\n    \"controllers/global_search_controller\": \"/assets/controllers/global_search_controller-d0f2f075.js\",\n    \"controllers/header_overflow_controller\": \"/assets/controllers/header_overflow_controller-0a7a2fb6.js\",\n    \"controllers/help_menu_controller\": \"/assets/controllers/help_menu_controller-d15d64f3.js\",\n    \"controllers/huddle_controller\": \"/assets/controllers/huddle_controller-c0b348ef.js\",\n    \"controllers/huddle_invitation_controller\": \"/assets/controllers/huddle_invitation_controller-05a857ed.js\",\n    \"controllers/huddle_join_notice_controller\": \"/assets/controllers/huddle_join_notice_controller-49b67728.js\",\n    \"controllers/huddle_launcher_controller\": \"/assets/controllers/huddle_launcher_controller-df0064be.js\",\n    \"controllers/huddle_participants_controller\": \"/assets/controllers/huddle_participants_controller-0c990206.js\",\n    \"controllers/huddle_presence_controller\": \"/assets/controllers/huddle_presence_controller-490a3ba4.js\",\n    \"controllers/huddle_share_indicator_controller\": \"/assets/controllers/huddle_share_indicator_controller-5a2828b8.js\",\n    \"controllers/icon_field_controller\": \"/assets/controllers/icon_field_controller-6e7e62f3.js\",\n    \"controllers\": \"/assets/controllers/index-a2897030.js\",\n    \"controllers/keyboard_shortcuts_controller\": \"/assets/controllers/keyboard_shortcuts_controller-86b4124a.js\",\n    \"controllers/lightbox_controller\": \"/assets/controllers/lightbox_controller-98fc07ca.js\",\n    \"controllers/linkedin_embed_controller\": \"/assets/controllers/linkedin_embed_controller-7b4cc097.js\",\n    \"controllers/local_time_controller\": \"/assets/controllers/local_time_controller-e6492786.js\",\n    \"controllers/maintain_scroll_controller\": \"/assets/controllers/maintain_scroll_controller-1debbbfb.js\",\n    \"controllers/markdown_autocomplete_controller\": \"/assets/controllers/markdown_autocomplete_controller-b12fb838.js\",\n    \"controllers/markdown_editor_controller\": \"/assets/controllers/markdown_editor_controller-609753e1.js\",\n    \"controllers/member_panel_controller\": \"/assets/controllers/member_panel_controller-4f19a4bf.js\",\n    \"controllers/message_actions_controller\": \"/assets/controllers/message_actions_controller-69cb8b4d.js\",\n    \"controllers/message_format_controller\": \"/assets/controllers/message_format_controller-27aed557.js\",\n    \"controllers/message_list_controller\": \"/assets/controllers/message_list_controller-92f62e5e.js\",\n    \"controllers/message_toolbar_controller\": \"/assets/controllers/message_toolbar_controller-7e4727a7.js\",\n    \"controllers/messages_controller\": \"/assets/controllers/messages_controller-d90f8204.js\",\n    \"controllers/multi_select_controller\": \"/assets/controllers/multi_select_controller-0841eeb2.js\",\n    \"controllers/notifications_controller\": \"/assets/controllers/notifications_controller-746d0662.js\",\n    \"controllers/pins_panel_controller\": \"/assets/controllers/pins_panel_controller-d2c420d0.js\",\n    \"controllers/poll_builder_controller\": \"/assets/controllers/poll_builder_controller-fba2ec80.js\",\n    \"controllers/poll_controller\": \"/assets/controllers/poll_controller-05853562.js\",\n    \"controllers/popup_controller\": \"/assets/controllers/popup_controller-9f8ea824.js\",\n    \"controllers/presence_controller\": \"/assets/controllers/presence_controller-28f14aad.js\",\n    \"controllers/profile_card_controller\": \"/assets/controllers/profile_card_controller-25a0f42e.js\",\n    \"controllers/profile_voice_controller\": \"/assets/controllers/profile_voice_controller-22cfdf28.js\",\n    \"controllers/pwa_install_controller\": \"/assets/controllers/pwa_install_controller-3fe3fc5e.js\",\n    \"controllers/quick_switcher_controller\": \"/assets/controllers/quick_switcher_controller-2345744b.js\",\n    \"controllers/reaction_chip_controller\": \"/assets/controllers/reaction_chip_controller-38d5acd8.js\",\n    \"controllers/read_rooms_controller\": \"/assets/controllers/read_rooms_controller-8245522a.js\",\n    \"controllers/refresh_room_controller\": \"/assets/controllers/refresh_room_controller-4e4b6014.js\",\n    \"controllers/reply_controller\": \"/assets/controllers/reply_controller-d79596bd.js\",\n    \"controllers/room_menu_controller\": \"/assets/controllers/room_menu_controller-050064e6.js\",\n    \"controllers/rooms_list_controller\": \"/assets/controllers/rooms_list_controller-e35b9658.js\",\n    \"controllers/schedule_send_controller\": \"/assets/controllers/schedule_send_controller-a9a5f458.js\",\n    \"controllers/scroll_into_view_controller\": \"/assets/controllers/scroll_into_view_controller-8a0bc733.js\",\n    \"controllers/search_results_controller\": \"/assets/controllers/search_results_controller-0a0d5200.js\",\n    \"controllers/sessions_controller\": \"/assets/controllers/sessions_controller-a9fdfe3d.js\",\n    \"controllers/sidebar_organize_controller\": \"/assets/controllers/sidebar_organize_controller-88251d69.js\",\n    \"controllers/soft_keyboard_controller\": \"/assets/controllers/soft_keyboard_controller-be1da837.js\",\n    \"controllers/sorted_list_controller\": \"/assets/controllers/sorted_list_controller-9f9ae485.js\",\n    \"controllers/sound_controller\": \"/assets/controllers/sound_controller-b3ad53e1.js\",\n    \"controllers/stage_panel_controller\": \"/assets/controllers/stage_panel_controller-8e82d134.js\",\n    \"controllers/stage_rejoin_controller\": \"/assets/controllers/stage_rejoin_controller-2c5719d4.js\",\n    \"controllers/thread_messages_controller\": \"/assets/controllers/thread_messages_controller-28b594c1.js\",\n    \"controllers/thread_panel_controller\": \"/assets/controllers/thread_panel_controller-3422264e.js\",\n    \"controllers/timezone_controller\": \"/assets/controllers/timezone_controller-84c08b99.js\",\n    \"controllers/tour_controller\": \"/assets/controllers/tour_controller-2553e608.js\",\n    \"controllers/turbo_frame_controller\": \"/assets/controllers/turbo_frame_controller-9f4f722f.js\",\n    \"controllers/typing_notifications_controller\": \"/assets/controllers/typing_notifications_controller-3268db6d.js\",\n    \"controllers/upload_preview_controller\": \"/assets/controllers/upload_preview_controller-9b8b26bb.js\",\n    \"controllers/web_share_controller\": \"/assets/controllers/web_share_controller-9b57fd01.js\",\n    \"controllers/workspace_navigation_controller\": \"/assets/controllers/workspace_navigation_controller-0a4078bd.js\",\n    \"controllers/workspace_presence_controller\": \"/assets/controllers/workspace_presence_controller-b1f6eeb0.js\",\n    \"helpers/dom_helpers\": \"/assets/helpers/dom_helpers-0f234176.js\",\n    \"helpers/drive_attachments\": \"/assets/helpers/drive_attachments-f9ad3d5a.js\",\n    \"helpers/live_region_helpers\": \"/assets/helpers/live_region_helpers-0c34bdf4.js\",\n    \"helpers/navigator_helpers\": \"/assets/helpers/navigator_helpers-3c9f4c31.js\",\n    \"helpers/string_helpers\": \"/assets/helpers/string_helpers-40941ba8.js\",\n    \"helpers/timing_helpers\": \"/assets/helpers/timing_helpers-94d95529.js\",\n    \"helpers/turbo_helpers\": \"/assets/helpers/turbo_helpers-a3c01462.js\",\n    \"models/client_message\": \"/assets/models/client_message-fa10c0f1.js\",\n    \"models/code_highlighter\": \"/assets/models/code_highlighter-08a283de.js\",\n    \"models/drive_share_client\": \"/assets/models/drive_share_client-31338302.js\",\n    \"models/file_uploader\": \"/assets/models/file_uploader-98c34a10.js\",\n    \"models/message_formatter\": \"/assets/models/message_formatter-66351374.js\",\n    \"models/message_paginator\": \"/assets/models/message_paginator-035a8ee7.js\",\n    \"models/scroll_manager\": \"/assets/models/scroll_manager-ed559629.js\",\n    \"models/typing_tracker\": \"/assets/models/typing_tracker-9d841e30.js\"\n  }\n}</script>\n<link rel=\"modulepreload\" href=\"/assets/application-a54c74a7.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/stimulus.min-4b1e420e.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/stimulus-loading-1fc53fe7.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/turbo-a1e3a50a.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/actioncable.esm-e0ec9819.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/@rails--request-3fc8489d.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/initializers/autocomplete-ba9abe45.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/initializers/current-3a3b90da.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/initializers/index-c15ee6a0.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/initializers/navigation_progress-9e1a0647.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/initializers/service_worker-392869cf.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/initializers/stream_focus-b91b823e.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/autocomplete/autocomplete_handler-becd1e1a.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/autocomplete/base_autocomplete_handler-d146f93d.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/autocomplete/collection-3e251a0e.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/autocomplete/constants-17c2858b.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/autocomplete/custom_elements/suggestion_option-ac7846b3.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/autocomplete/custom_elements/suggestion_select-f0045305.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/autocomplete/helpers-651308b9.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/autocomplete/markdown_icons_autocomplete_handler-68d06bcd.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/autocomplete/markdown_mentions_autocomplete_handler-8f7f4748.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/autocomplete/markdown_slash_commands_autocomplete_handler-70d74b00.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/autocomplete/renderer-5caf6120.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/autocomplete/selection-862705bf.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/autocomplete/suggestion_context-b265ffb4.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/autocomplete/suggestion_controller-ab82011a.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/autocomplete/suggestion_results_controller-a980a4a6.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/autocomplete/utils-296fb278.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/cookie-76006835.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/huddle/devices-fcae04dc.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/huddle/meter-8045cff5.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/huddle/stats-79478c26.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/lib/huddle_noise_suppressor-cc2e5388.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/helpers/dom_helpers-0f234176.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/helpers/drive_attachments-f9ad3d5a.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/helpers/live_region_helpers-0c34bdf4.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/helpers/navigator_helpers-3c9f4c31.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/helpers/string_helpers-40941ba8.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/helpers/timing_helpers-94d95529.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/helpers/turbo_helpers-a3c01462.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/models/client_message-fa10c0f1.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/models/code_highlighter-08a283de.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/models/drive_share_client-31338302.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/models/file_uploader-98c34a10.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/models/message_formatter-66351374.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/models/message_paginator-035a8ee7.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/models/scroll_manager-ed559629.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<link rel=\"modulepreload\" href=\"/assets/models/typing_tracker-9d841e30.js\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">\n<script type=\"module\" nonce=\"6tqmISgEOhdzX0diC2fkdw==\">import \"application\"</script>\n\n    <meta name=\"turbo-visit-control\" content=\"reload\">\n  </head>",
+    "posts": [
+      {
+        "case": "form token",
+        "token": "uJ4m6ltP4GCbQMjOYXsjphLHL8vMhlCnJSHsAWeaYOZ8u7zHfY9Eot_GAtn8woFDa9tzfs80iymXoQwJrYavew",
+        "header": null,
+        "origin": null,
+        "cookies": [
+          "_campfire_session"
+        ],
+        "path": "/session",
+        "status": 401,
+        "set_cookie": [
+          "_campfire_session"
+        ]
+      },
+      {
+        "case": "meta token as header",
+        "token": null,
+        "header": "RkuiiSJmy4eHh0rHacuPhZMd8idnCKfCpt4IxkZhuEORXYJ8geRWhkxnT_m_BYbi6oHp1E3s-XqnY6uihfrN0Q",
+        "origin": null,
+        "cookies": [
+          "_campfire_session"
+        ],
+        "path": "/session",
+        "status": 401,
+        "set_cookie": [
+          "_campfire_session"
+        ]
+      },
+      {
+        "case": "meta token as param",
+        "token": "RkuiiSJmy4eHh0rHacuPhZMd8idnCKfCpt4IxkZhuEORXYJ8geRWhkxnT_m_BYbi6oHp1E3s-XqnY6uihfrN0Q",
+        "header": null,
+        "origin": null,
+        "cookies": [
+          "_campfire_session"
+        ],
+        "path": "/session",
+        "status": 401,
+        "set_cookie": [
+          "_campfire_session"
+        ]
+      },
+      {
+        "case": "unmasked session token",
+        "token": "NQSPu9hxQTkdtrL9olQPYtIQZlNHj4oTa2CgBv60C0c",
+        "header": null,
+        "origin": null,
+        "cookies": [
+          "_campfire_session"
+        ],
+        "path": "/session",
+        "status": 401,
+        "set_cookie": [
+          "_campfire_session"
+        ]
+      },
+      {
+        "case": "unmasked global token",
+        "token": "1xYg9aOCnQHL4AU-1s4JZ3mcG_Mq5F64Ab2jZMObdZI",
+        "header": null,
+        "origin": null,
+        "cookies": [
+          "_campfire_session"
+        ],
+        "path": "/session",
+        "status": 422,
+        "set_cookie": []
+      },
+      {
+        "case": "per-form token for another form",
+        "token": "OQpYI-KV5YZs1bEyqjWpFMk9nOD_vyl0C05rpz4_ATODAzSBAJQrIZAOijaSZhUvlSl_ahE6ZjloRJRtDRMvCg",
+        "header": null,
+        "origin": null,
+        "cookies": [
+          "_campfire_session"
+        ],
+        "path": "/session",
+        "status": 422,
+        "set_cookie": []
+      },
+      {
+        "case": "no token",
+        "token": null,
+        "header": null,
+        "origin": null,
+        "cookies": [
+          "_campfire_session"
+        ],
+        "path": "/session",
+        "status": 422,
+        "set_cookie": []
+      },
+      {
+        "case": "forged token",
+        "token": "z1FAXTN4P9BfpfzcU7YdmtlVpR0ZwggU1QBiTBlO3s7pdPcS8wG4zZ0KWmz2M-rf5IhDc4JyEjleeWd3AWoXxw",
+        "header": null,
+        "origin": null,
+        "cookies": [
+          "_campfire_session"
+        ],
+        "path": "/session",
+        "status": 422,
+        "set_cookie": []
+      },
+      {
+        "case": "token from another session",
+        "token": "7_xGNUs3SV50HEUPt4qPdJjq958MT1s-7JZqwaK8uyXyrQXtKFwDDNkaZDPODaCPPoPdept7D7RrpVRpfPDY5g",
+        "header": null,
+        "origin": null,
+        "cookies": [
+          "_campfire_session"
+        ],
+        "path": "/session",
+        "status": 422,
+        "set_cookie": []
+      },
+      {
+        "case": "meta token from another session as header",
+        "token": null,
+        "header": "kKf3Hcw_1y-4mgvkk3SsKTuWaKkwru1hplxngowlFZn1Xr-3pOg9lVU32lslPtp7X_SLFujXkMSmhfwOpdnNcg",
+        "origin": null,
+        "cookies": [
+          "_campfire_session"
+        ],
+        "path": "/session",
+        "status": 422,
+        "set_cookie": []
+      },
+      {
+        "case": "form token without the session cookie",
+        "token": "uJ4m6ltP4GCbQMjOYXsjphLHL8vMhlCnJSHsAWeaYOZ8u7zHfY9Eot_GAtn8woFDa9tzfs80iymXoQwJrYavew",
+        "header": null,
+        "origin": null,
+        "cookies": [],
+        "path": "/session",
+        "status": 422,
+        "set_cookie": []
+      },
+      {
+        "case": "form token with the other session's cookie",
+        "token": "uJ4m6ltP4GCbQMjOYXsjphLHL8vMhlCnJSHsAWeaYOZ8u7zHfY9Eot_GAtn8woFDa9tzfs80iymXoQwJrYavew",
+        "header": null,
+        "origin": null,
+        "cookies": [
+          "_campfire_session"
+        ],
+        "path": "/session",
+        "status": 422,
+        "set_cookie": []
+      },
+      {
+        "case": "form token, same origin",
+        "token": "uJ4m6ltP4GCbQMjOYXsjphLHL8vMhlCnJSHsAWeaYOZ8u7zHfY9Eot_GAtn8woFDa9tzfs80iymXoQwJrYavew",
+        "header": null,
+        "origin": "http://campfire.test",
+        "cookies": [
+          "_campfire_session"
+        ],
+        "path": "/session",
+        "status": 401,
+        "set_cookie": [
+          "_campfire_session"
+        ]
+      },
+      {
+        "case": "form token, cross origin",
+        "token": "uJ4m6ltP4GCbQMjOYXsjphLHL8vMhlCnJSHsAWeaYOZ8u7zHfY9Eot_GAtn8woFDa9tzfs80iymXoQwJrYavew",
+        "header": null,
+        "origin": "http://evil.test",
+        "cookies": [
+          "_campfire_session"
+        ],
+        "path": "/session",
+        "status": 422,
+        "set_cookie": []
+      },
+      {
+        "case": "form token, null origin",
+        "token": "uJ4m6ltP4GCbQMjOYXsjphLHL8vMhlCnJSHsAWeaYOZ8u7zHfY9Eot_GAtn8woFDa9tzfs80iymXoQwJrYavew",
+        "header": null,
+        "origin": "null",
+        "cookies": [
+          "_campfire_session"
+        ],
+        "path": "/session",
+        "status": 422,
+        "set_cookie": []
+      },
+      {
+        "case": "bad header, good param",
+        "token": "uJ4m6ltP4GCbQMjOYXsjphLHL8vMhlCnJSHsAWeaYOZ8u7zHfY9Eot_GAtn8woFDa9tzfs80iymXoQwJrYavew",
+        "header": "bad",
+        "origin": null,
+        "cookies": [
+          "_campfire_session"
+        ],
+        "path": "/session",
+        "status": 401,
+        "set_cookie": [
+          "_campfire_session"
+        ]
+      },
+      {
+        "case": "good header, bad param",
+        "token": "bad",
+        "header": "RkuiiSJmy4eHh0rHacuPhZMd8idnCKfCpt4IxkZhuEORXYJ8geRWhkxnT_m_BYbi6oHp1E3s-XqnY6uihfrN0Q",
+        "origin": null,
+        "cookies": [
+          "_campfire_session"
+        ],
+        "path": "/session",
+        "status": 401,
+        "set_cookie": [
+          "_campfire_session"
+        ]
+      },
+      {
+        "case": "form token, tampered",
+        "token": "AJ4m6ltP4GCbQMjOYXsjphLHL8vMhlCnJSHsAWeaYOZ8u7zHfY9Eot_GAtn8woFDa9tzfs80iymXoQwJrYavew",
+        "header": null,
+        "origin": null,
+        "cookies": [
+          "_campfire_session"
+        ],
+        "path": "/session",
+        "status": 422,
+        "set_cookie": []
+      }
+    ],
+    "sign_in": {
+      "set_cookie_names": [
+        "device_id",
+        "session_token",
+        "_campfire_session"
+      ],
+      "location": "http://campfire.test/",
+      "device_id_set_cookie": "device_id=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklqZGxOemt3WlRjeVlqTmlPVGhsTkRWa01XVXhaRFkwTnpCaVptUTFaVEJsSWc9PSIsImV4cCI6IjIwNDYtMDEtMDFUMTI6MDA6MDAuMDAwWiIsInB1ciI6ImNvb2tpZS5kZXZpY2VfaWQifX0%3D--111ba7375bbe51713948b3c9b032aa05d1ce843e; path=/; expires=Mon, 01 Jan 2046 12:00:00 GMT; httponly; samesite=lax",
+      "device_id": "7e790e72b3b98e45d1e1d6470bfd5e0e",
+      "session": {
+        "session_id": "668b4799a14b37c203344841492beecb",
+        "_csrf_token": "NQSPu9hxQTkdtrL9olQPYtIQZlNHj4oTa2CgBv60C0c"
+      },
+      "session_row": {
+        "device_id": "7e790e72b3b98e45d1e1d6470bfd5e0e",
+        "two_factor_verified_at": null
+      }
+    }
+  }
+}

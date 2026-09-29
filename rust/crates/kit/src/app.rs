@@ -7,6 +7,7 @@ use std::time::Duration;
 use axum::http::{HeaderName, HeaderValue};
 
 use crate::clock::SharedClock;
+use crate::csp::ContentSecurityPolicy;
 use crate::crypto::SharedCrypto;
 use crate::exceptions::ErrorPages;
 use crate::request::ProxyConfig;
@@ -24,6 +25,8 @@ pub struct KitConfig {
     pub forgery_protection_origin_check: bool,
     /// `action_dispatch.default_headers` (`load_defaults 7.1`).
     pub default_headers: Vec<(HeaderName, HeaderValue)>,
+    /// `config.content_security_policy`, with its nonce generator; `None` sends no policy.
+    pub content_security_policy: Option<Arc<ContentSecurityPolicy>>,
     /// `public/404.html`, `422.html`, `500.html`, ... (`ActionDispatch::PublicExceptions`).
     pub error_pages: ErrorPages,
     /// Largest request body accepted; `None` is unlimited, like Puma.
@@ -41,6 +44,7 @@ impl Default for KitConfig {
             session: SessionConfig::default(),
             forgery_protection_origin_check: true,
             default_headers: rails_default_headers(),
+            content_security_policy: None,
             error_pages: ErrorPages::default(),
             max_body_bytes: None,
             request_timeout: None,
@@ -49,15 +53,20 @@ impl Default for KitConfig {
 }
 
 impl KitConfig {
-    /// Campfire's production settings: `assume_ssl` and `force_ssl` unless `DISABLE_SSL` is set
-    /// (`reference/config/environments/production.rb`).
+    /// Campfire's production settings: `assume_ssl` and `force_ssl` unless `DISABLE_SSL` is set,
+    /// and HSTS for a year (`ssl_options = { hsts: { expires: 1.year, subdomains: true } }`, where
+    /// `1.year` is 365.2425 days) (`reference/config/environments/production.rb`).
     pub fn production(disable_ssl: bool) -> Self {
         let mut config = Self::default();
         config.proxy.assume_ssl = !disable_ssl;
         config.force_ssl = !disable_ssl;
+        config.hsts = format!("max-age={HSTS_ONE_YEAR}; includeSubDomains");
         config
     }
 }
+
+/// `1.year.to_i`: ActiveSupport's year is 365.2425 days.
+pub const HSTS_ONE_YEAR: u64 = 31_556_952;
 
 pub fn rails_default_headers() -> Vec<(HeaderName, HeaderValue)> {
     [
