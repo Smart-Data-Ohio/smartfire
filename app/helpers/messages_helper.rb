@@ -146,11 +146,13 @@ module MessagesHelper
   end
 
   # Part of every cached message fragment's key (see
-  # message_with_pr_cards_cache_key). Fragments live in Redis across deploys
-  # and are keyed on the message row and template digests, neither of which
-  # moves when message_presentation's rendering code changes. Bump this
-  # whenever that code changes the HTML of messages already stored, so no
-  # fragment rendered by the old code is served again.
+  # message_with_pr_cards_cache_key) and of the message page ETag (see
+  # MessagesController#index). Fragments live in Redis across deploys, and
+  # browsers keep pages they can revalidate; both are keyed on message rows
+  # and template digests, neither of which moves when message_presentation's
+  # rendering code changes. Bump this whenever that code changes the HTML of
+  # messages already stored, so nothing rendered by the old code is served
+  # again.
   #
   # 2: legacy bodies stop autolinking inside attribute values (stored XSS,
   #    lib/rails_ext/auto_link_outside_attribute_values.rb).

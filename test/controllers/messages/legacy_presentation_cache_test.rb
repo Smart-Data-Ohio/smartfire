@@ -1,8 +1,8 @@
 require "test_helper"
 
-# Message fragments outlive deploys in Redis, so a fix to legacy presentation
-# only reaches cached messages if MessagesHelper::PRESENTATION_CACHE_VERSION
-# moves with it.
+# Message fragments outlive deploys in Redis, and browsers revalidate the pages
+# they hold, so a fix to legacy presentation only reaches cached messages if
+# MessagesHelper::PRESENTATION_CACHE_VERSION moves with it.
 class Messages::LegacyPresentationCacheTest < ActionDispatch::IntegrationTest
   PAYLOAD = %(<p title="x> http://evil.test/ <img src=x onerror=alert(1)>">hi</p>)
 
@@ -21,14 +21,34 @@ class Messages::LegacyPresentationCacheTest < ActionDispatch::IntegrationTest
       end
 
       get room_messages_url(@room)
-
-      assert_response :success
-      assert_select "[onerror]", 0
-      assert_select "p[title=?]", "x> http://evil.test/ <img src=x onerror=alert(1)>"
+      assert_safe_page
     end
   end
 
+  test "pages validated before the autolink fix aren't revalidated after it" do
+    old_etag = as_rendered_before_the_fix do
+      get room_messages_url(@room)
+      assert_select "[onerror]", 1, "the pre-fix render is the vulnerable one"
+      response.headers["ETag"]
+    end
+    # Before the fix the page's Last-Modified was its newest message's
+    # updated_at, and a record change is the only thing that moves that.
+    old_last_modified = @room.messages.maximum(:updated_at).httpdate
+
+    get room_messages_url(@room), headers: { "If-None-Match" => old_etag }
+    assert_safe_page
+
+    get room_messages_url(@room), headers: { "If-Modified-Since" => old_last_modified }
+    assert_safe_page
+  end
+
   private
+    def assert_safe_page
+      assert_response :ok
+      assert_select "[onerror]", 0
+      assert_select "p[title=?]", "x> http://evil.test/ <img src=x onerror=alert(1)>"
+    end
+
     # Renders as the code did before the fix: without the attribute-value
     # check, and under the cache version that went with it.
     def as_rendered_before_the_fix
