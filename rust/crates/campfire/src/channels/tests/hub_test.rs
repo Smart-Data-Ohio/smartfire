@@ -6,10 +6,12 @@ use axum::http::Method;
 use campfire_db::{Room, User};
 use serde_json::json;
 
-use super::support::{Client, delivery, identifier, html_json};
+use super::support::{Client, delivery, html_json, identifier};
 use crate::channels::broadcasts::Stream;
 use crate::channels::user_gid;
-use crate::controllers::presenters::test_support::{DAVID, QUIET_CORNER, Req, TestApp, david_cookie};
+use crate::controllers::presenters::test_support::{
+    DAVID, QUIET_CORNER, Req, TestApp, david_cookie,
+};
 
 const DISCONNECT_RECONNECT: &str = r#"{"type":"disconnect","reason":"remote","reconnect":true}"#;
 const UNAUTHORIZED: &str = r#"{"type":"disconnect","reason":"unauthorized","reconnect":false}"#;
@@ -27,7 +29,10 @@ async fn boot() -> Option<Hub> {
     let app = TestApp::boot().await?;
     app.db()
         .write(|tx| {
-            tx.conn().execute("UPDATE sessions SET two_factor_verified_at = created_at WHERE user_id = ?", [DAVID])?;
+            tx.conn().execute(
+                "UPDATE sessions SET two_factor_verified_at = created_at WHERE user_id = ?",
+                [DAVID],
+            )?;
             Ok(())
         })
         .await
@@ -36,7 +41,11 @@ async fn boot() -> Option<Hub> {
     let addr = listener.local_addr().unwrap();
     let router = app.booted.router.clone();
     tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
-    Some(Hub { app, url: format!("ws://{addr}/cable"), origin: format!("http://{addr}") })
+    Some(Hub {
+        app,
+        url: format!("ws://{addr}/cable"),
+        origin: format!("http://{addr}"),
+    })
 }
 
 impl Hub {
@@ -45,9 +54,16 @@ impl Hub {
         let mut request = self.url.as_str().into_client_request().unwrap();
         let headers = request.headers_mut();
         headers.insert("origin", self.origin.parse().unwrap());
-        headers.insert("sec-websocket-protocol", "actioncable-v1-json, actioncable-unsupported".parse().unwrap());
+        headers.insert(
+            "sec-websocket-protocol",
+            "actioncable-v1-json, actioncable-unsupported"
+                .parse()
+                .unwrap(),
+        );
         headers.insert("cookie", cookie.parse().unwrap());
-        let (socket, _) = tokio_tungstenite::connect_async(request).await.expect("upgrade");
+        let (socket, _) = tokio_tungstenite::connect_async(request)
+            .await
+            .expect("upgrade");
         Client { socket }
     }
 
@@ -59,7 +75,8 @@ impl Hub {
 
     /// `turbo_stream_from *streamables` on the stock channel.
     fn turbo(&self, streamables: &[&str]) -> String {
-        let signed = rails_compat::turbo::signed_stream_name(&self.app.booted.app.secrets, streamables);
+        let signed =
+            rails_compat::turbo::signed_stream_name(&self.app.booted.app.secrets, streamables);
         identifier(json!({ "channel": "Turbo::StreamsChannel", "signed_stream_name": signed }))
     }
 }
@@ -76,8 +93,14 @@ async fn signing_out_disconnects_every_socket_of_the_user() {
     let reply = browser.write(Req::new(Method::DELETE, "/session")).await;
     assert_eq!(reply.status, 302, "{}", reply.text());
 
-    assert_eq!(first.until_closed().await, vec![DISCONNECT_RECONNECT.to_string()]);
-    assert_eq!(second.until_closed().await, vec![DISCONNECT_RECONNECT.to_string()]);
+    assert_eq!(
+        first.until_closed().await,
+        vec![DISCONNECT_RECONNECT.to_string()]
+    );
+    assert_eq!(
+        second.until_closed().await,
+        vec![DISCONNECT_RECONNECT.to_string()]
+    );
     // The client reconnects with the cookie of the session that's gone.
     let mut again = hub.connect(&david_cookie()).await;
     assert_eq!(again.until_closed().await, vec![UNAUTHORIZED.to_string()]);
@@ -92,10 +115,22 @@ async fn model_broadcasts_reach_sockets_through_the_jobs_sink() {
     let user_rooms = hub.turbo(&[&user_gid(DAVID).to_param(), "rooms"]);
     david.confirm(&user_rooms).await;
 
-    hub.app.db().write(|tx| Room::find(tx.conn(), QUIET_CORNER)?.revoke_from(tx, &[DAVID])).await.unwrap();
+    hub.app
+        .db()
+        .write(|tx| Room::find(tx.conn(), QUIET_CORNER)?.revoke_from(tx, &[DAVID]))
+        .await
+        .unwrap();
 
-    let remove = format!(r#"<turbo-stream action="remove" target="list_rooms_closed_{QUIET_CORNER}"></turbo-stream>"#);
-    assert_eq!(david.until_closed().await, vec![delivery(&user_rooms, &html_json(&remove)), DISCONNECT_RECONNECT.to_string()]);
+    let remove = format!(
+        r#"<turbo-stream action="remove" target="list_rooms_closed_{QUIET_CORNER}"></turbo-stream>"#
+    );
+    assert_eq!(
+        david.until_closed().await,
+        vec![
+            delivery(&user_rooms, &html_json(&remove)),
+            DISCONNECT_RECONNECT.to_string()
+        ]
+    );
 }
 
 /// Work on the job runner (`perform_later`) broadcasts through the app's `Broadcasts`, which is
@@ -109,14 +144,21 @@ async fn job_broadcasts_reach_sockets() {
 
     let app = hub.app.booted.app.clone();
     let (done, finished) = tokio::sync::oneshot::channel();
-    hub.app.booted.app.jobs.perform_later("ChannelsHubTest", async move {
-        let delivered = app.broadcasts.remove(&Stream::rooms(), "list_rooms_open_1");
-        let _ = done.send(delivered);
-        Ok(())
-    });
+    hub.app
+        .booted
+        .app
+        .jobs
+        .perform_later("ChannelsHubTest", async move {
+            let delivered = app.broadcasts.remove(&Stream::rooms(), "list_rooms_open_1");
+            let _ = done.send(delivered);
+            Ok(())
+        });
     assert_eq!(finished.await.unwrap(), 1);
     let remove = r#"<turbo-stream action="remove" target="list_rooms_open_1"></turbo-stream>"#;
-    assert_eq!(david.next_text().await, delivery(&rooms, &html_json(remove)));
+    assert_eq!(
+        david.next_text().await,
+        delivery(&rooms, &html_json(remove))
+    );
 }
 
 /// Deactivating closes the sockets for good through the same sink.
@@ -124,7 +166,14 @@ async fn job_broadcasts_reach_sockets() {
 async fn deactivation_through_the_booted_app_disconnects_for_good() {
     let Some(hub) = boot().await else { return };
     let mut david = hub.david().await;
-    hub.app.db().write(|tx| User::find(tx.conn(), DAVID)?.deactivate(tx)).await.unwrap();
+    hub.app
+        .db()
+        .write(|tx| User::find(tx.conn(), DAVID)?.deactivate(tx))
+        .await
+        .unwrap();
     let frames = david.until_closed().await;
-    assert_eq!(frames, vec![r#"{"type":"disconnect","reason":"remote","reconnect":false}"#.to_string()]);
+    assert_eq!(
+        frames,
+        vec![r#"{"type":"disconnect","reason":"remote","reconnect":false}"#.to_string()]
+    );
 }

@@ -172,10 +172,14 @@ fn removing_a_membership_resets_the_users_connections() {
     t.write(move |tx| m.destroy(tx));
     assert_eq!(
         t.events(),
-        vec![Event::DisconnectUser {
-            user_id: id("david"),
-            reconnect: true
-        }]
+        vec![
+            Event::broadcast(&crate::RoomRemovalBroadcast {
+                user_id: id("david"),
+                room_id: id("watercooler"),
+                room_class: "Rooms::Closed".into(),
+            }),
+            Event::DisconnectUser { user_id: id("david"), reconnect: true },
+        ]
     );
 }
 

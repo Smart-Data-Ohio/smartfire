@@ -7,7 +7,10 @@ use std::time::Duration;
 use campfire_cable::Config;
 use campfire_db::fixtures::{self, identify};
 use campfire_db::rich_text::BasicRichText;
-use campfire_db::{Boost, Database, Event, EventSink, Membership, Message, NewMessage, NewSession, Room, Session, TestClock, WorkspacePresenceLease};
+use campfire_db::{
+    Boost, Database, Event, EventSink, Membership, Message, NewMessage, NewSession, Room, Session,
+    TestClock, WorkspacePresenceLease,
+};
 use campfire_kit::{Crypto, RailsCrypto, SystemClock};
 use futures_util::{SinkExt, StreamExt};
 use rails_compat::Secrets;
@@ -51,13 +54,21 @@ pub async fn start() -> TestApp {
     let dir = tempfile::tempdir().unwrap();
     let sink = Arc::new(CableSink::default());
     let clock = TestClock::new();
-    let env = campfire_db::Env { clock: Arc::new(clock.clone()), sink: sink.clone(), rich_text: Arc::new(BasicRichText), bcrypt_cost: 4 };
+    let env = campfire_db::Env {
+        clock: Arc::new(clock.clone()),
+        sink: sink.clone(),
+        rich_text: Arc::new(BasicRichText),
+        bcrypt_cost: 4,
+    };
     let mut config = campfire_db::Config::new(dir.path().join("test.sqlite3"));
     config.readers = 2;
     config.environment = "test".into();
     let db = Database::open(config, env).unwrap();
     db.write(|tx| {
-        let options = fixtures::Options { now: tx.now(), bcrypt_cost: 4 };
+        let options = fixtures::Options {
+            now: tx.now(),
+            bcrypt_cost: 4,
+        };
         fixtures::load(tx.conn(), &fixtures::reference_dir(), &options).map(|_| ())
     })
     .await
@@ -71,7 +82,13 @@ pub async fn start() -> TestApp {
         clock: Arc::new(SystemClock),
         admin_session_idle_timeout: crate::config::admin_session_idle_timeout(None),
     };
-    let server = channels::server(deps, Config { assume_ssl: false, ..Config::default() });
+    let server = channels::server(
+        deps,
+        Config {
+            assume_ssl: false,
+            ..Config::default()
+        },
+    );
     let _ = sink.server.set(server.clone());
 
     let listener = bind_listener().await;
@@ -96,7 +113,9 @@ pub async fn bind_listener() -> tokio::net::TcpListener {
     let Ok(range) = std::env::var("CABLE_TEST_PORT_RANGE") else {
         return tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     };
-    let (start, end) = range.split_once('-').expect("CABLE_TEST_PORT_RANGE=start-end");
+    let (start, end) = range
+        .split_once('-')
+        .expect("CABLE_TEST_PORT_RANGE=start-end");
     let (start, end): (u16, u16) = (start.parse().unwrap(), end.parse().unwrap());
     assert!(start > 0 && start <= end, "invalid test port range");
     for port in start..=end {
@@ -127,8 +146,16 @@ impl TestApp {
     /// A new session for the fixture user, verified or not.
     pub async fn session_for(&self, user: &str, verified: bool) -> Session {
         let user_id = id(user);
-        let attributes = NewSession { user_agent: Some("test"), ip_address: Some("8.8.8.8"), two_factor_verified: verified, ..Default::default() };
-        self.db.write(move |tx| Session::start_with(tx, user_id, attributes)).await.unwrap()
+        let attributes = NewSession {
+            user_agent: Some("test"),
+            ip_address: Some("8.8.8.8"),
+            two_factor_verified: verified,
+            ..Default::default()
+        };
+        self.db
+            .write(move |tx| Session::start_with(tx, user_id, attributes))
+            .await
+            .unwrap()
     }
 
     /// Connects with the session's cookie and reads the welcome.
@@ -142,27 +169,50 @@ impl TestApp {
     /// Runs one statement, bypassing the models (as `delete`/`update_columns` do in the Ruby
     /// tests).
     pub async fn sql(&self, sql: &'static str, params: Vec<rusqlite::types::Value>) -> usize {
-        self.db.write(move |tx| Ok(tx.conn().execute(sql, rusqlite::params_from_iter(params))?)).await.unwrap()
+        self.db
+            .write(move |tx| Ok(tx.conn().execute(sql, rusqlite::params_from_iter(params))?))
+            .await
+            .unwrap()
     }
 
     /// Every workspace presence lease, oldest first.
     pub async fn leases(&self) -> Vec<WorkspacePresenceLease> {
         self.db
             .read(|conn| {
-                let mut statement = conn.prepare(r#"SELECT "id" FROM "workspace_presence_leases" ORDER BY "id""#)?;
-                let ids: Vec<i64> = statement.query_map([], |row| row.get(0))?.collect::<rusqlite::Result<_>>()?;
-                ids.into_iter().map(|id| Ok(WorkspacePresenceLease::find_by_id(conn, id)?.expect("listed"))).collect()
+                let mut statement =
+                    conn.prepare(r#"SELECT "id" FROM "workspace_presence_leases" ORDER BY "id""#)?;
+                let ids: Vec<i64> = statement
+                    .query_map([], |row| row.get(0))?
+                    .collect::<rusqlite::Result<_>>()?;
+                ids.into_iter()
+                    .map(|id| Ok(WorkspacePresenceLease::find_by_id(conn, id)?.expect("listed")))
+                    .collect()
             })
             .await
             .unwrap()
     }
 
     pub async fn session_exists(&self, session_id: i64) -> bool {
-        self.db.read(move |conn| Ok(crate::channels::tests::support::count(conn, "SELECT COUNT(*) FROM sessions WHERE id = ?", session_id)? > 0)).await.unwrap()
+        self.db
+            .read(move |conn| {
+                Ok(crate::channels::tests::support::count(
+                    conn,
+                    "SELECT COUNT(*) FROM sessions WHERE id = ?",
+                    session_id,
+                )? > 0)
+            })
+            .await
+            .unwrap()
     }
 
     /// `room.messages.create!(body:, creator:, client_message_id:)`.
-    pub async fn create_message(&self, room: &str, creator: &str, body: &str, client_message_id: &str) -> Message {
+    pub async fn create_message(
+        &self,
+        room: &str,
+        creator: &str,
+        body: &str,
+        client_message_id: &str,
+    ) -> Message {
         let attributes = NewMessage {
             room_id: id(room),
             creator_id: id(creator),
@@ -170,12 +220,22 @@ impl TestApp {
             client_message_id: Some(client_message_id.to_string()),
             ..Default::default()
         };
-        self.db.write(move |tx| Message::create(tx, attributes)).await.unwrap()
+        self.db
+            .write(move |tx| Message::create(tx, attributes))
+            .await
+            .unwrap()
     }
 
     pub fn cookie_with_token(&self, token: &str) -> String {
-        let signed = RailsCrypto::new(self.secrets.clone()).sign_cookie("session_token", token, None);
-        format!("session_token={}", signed.replace('+', "%2B").replace('/', "%2F").replace('=', "%3D"))
+        let signed =
+            RailsCrypto::new(self.secrets.clone()).sign_cookie("session_token", token, None);
+        format!(
+            "session_token={}",
+            signed
+                .replace('+', "%2B")
+                .replace('/', "%2F")
+                .replace('=', "%3D")
+        )
     }
 
     /// Connects as the fixture user and reads the welcome.
@@ -190,11 +250,18 @@ impl TestApp {
         let mut request = self.url.as_str().into_client_request().unwrap();
         let headers = request.headers_mut();
         headers.insert("origin", self.origin.parse().unwrap());
-        headers.insert("sec-websocket-protocol", "actioncable-v1-json, actioncable-unsupported".parse().unwrap());
+        headers.insert(
+            "sec-websocket-protocol",
+            "actioncable-v1-json, actioncable-unsupported"
+                .parse()
+                .unwrap(),
+        );
         if let Some(cookie) = cookie {
             headers.insert("cookie", cookie.parse().unwrap());
         }
-        let (socket, _) = tokio_tungstenite::connect_async(request).await.expect("upgrade");
+        let (socket, _) = tokio_tungstenite::connect_async(request)
+            .await
+            .expect("upgrade");
         Client { socket }
     }
 
@@ -204,17 +271,26 @@ impl TestApp {
 
     pub async fn room(&self, label: &str) -> Room {
         let room_id = id(label);
-        self.db.read(move |conn| Room::find(conn, room_id)).await.unwrap()
+        self.db
+            .read(move |conn| Room::find(conn, room_id))
+            .await
+            .unwrap()
     }
 
     pub async fn membership(&self, room: &str, user: &str) -> Option<Membership> {
         let (room_id, user_id) = (id(room), id(user));
-        self.db.read(move |conn| Membership::find_by_room_and_user(conn, room_id, user_id)).await.unwrap()
+        self.db
+            .read(move |conn| Membership::find_by_room_and_user(conn, room_id, user_id))
+            .await
+            .unwrap()
     }
 
     pub async fn message(&self, label: &str) -> Message {
         let message_id = id(label);
-        self.db.read(move |conn| Message::find(conn, message_id)).await.unwrap()
+        self.db
+            .read(move |conn| Message::find(conn, message_id))
+            .await
+            .unwrap()
     }
 
     /// `ChannelThread.create!(room:, creator:, name:)`, as a bare row: the channels only read
@@ -238,7 +314,10 @@ impl TestApp {
         let (room_id, user_id, involvement) = (id(room), id(user), involvement.to_string());
         self.db
             .write(move |tx| {
-                tx.conn().execute("UPDATE memberships SET involvement = ? WHERE room_id = ? AND user_id = ?", rusqlite::params![involvement, room_id, user_id])?;
+                tx.conn().execute(
+                    "UPDATE memberships SET involvement = ? WHERE room_id = ? AND user_id = ?",
+                    rusqlite::params![involvement, room_id, user_id],
+                )?;
                 Ok(())
             })
             .await
@@ -262,12 +341,20 @@ impl TestApp {
     /// `message.broadcast_create` with [`FakePartials`].
     pub async fn message_create(&self, room: &Room, message: &Message) {
         let (broadcasts, room, message) = (self.broadcasts.clone(), room.clone(), message.clone());
-        self.db.read(move |conn| broadcasts.message_create(conn, &room, &message, &FakePartials, &BasicRichText)).await.unwrap();
+        self.db
+            .read(move |conn| {
+                broadcasts.message_create(conn, &room, &message, &FakePartials, &BasicRichText)
+            })
+            .await
+            .unwrap();
     }
 
     pub async fn boost(&self, label: &str) -> Boost {
         let boost_id = id(label);
-        self.db.read(move |conn| Boost::find(conn, boost_id)).await.unwrap()
+        self.db
+            .read(move |conn| Boost::find(conn, boost_id))
+            .await
+            .unwrap()
     }
 }
 
@@ -276,7 +363,10 @@ pub struct FakePartials;
 
 impl Partials for FakePartials {
     fn message(&self, message: &Message) -> String {
-        format!(r#"<div id="message_{}">message {}</div>"#, message.client_message_id, message.id)
+        format!(
+            r#"<div id="message_{}">message {}</div>"#,
+            message.client_message_id, message.id
+        )
     }
     fn message_presentation(&self, message: &Message) -> String {
         format!("<div>presentation {} & more</div>", message.id)
@@ -313,7 +403,11 @@ pub fn rejection(identifier: &str) -> String {
 
 /// The frame a broadcast of `message` (already ActiveSupport-JSON-encoded) arrives in.
 pub fn delivery(identifier: &str, encoded_message: &str) -> String {
-    format!(r#"{{"identifier":{},"message":{}}}"#, campfire_cable::json::encode(identifier), encoded_message)
+    format!(
+        r#"{{"identifier":{},"message":{}}}"#,
+        campfire_cable::json::encode(identifier),
+        encoded_message
+    )
 }
 
 pub struct Client {
@@ -329,11 +423,15 @@ pub enum Frame {
 
 impl Client {
     pub async fn send(&mut self, command: Value) {
-        self.socket.send(WsMessage::Text(command.to_string().into())).await.unwrap();
+        self.socket
+            .send(WsMessage::Text(command.to_string().into()))
+            .await
+            .unwrap();
     }
 
     pub async fn subscribe(&mut self, identifier: &str) {
-        self.send(json!({ "command": "subscribe", "identifier": identifier })).await;
+        self.send(json!({ "command": "subscribe", "identifier": identifier }))
+            .await;
     }
 
     /// Subscribes and returns the confirm or reject frame.
@@ -343,32 +441,55 @@ impl Client {
     }
 
     pub async fn confirm(&mut self, identifier: &str) {
-        assert_eq!(self.subscribe_reply(identifier).await, confirmation(identifier), "subscribing to {identifier}");
+        assert_eq!(
+            self.subscribe_reply(identifier).await,
+            confirmation(identifier),
+            "subscribing to {identifier}"
+        );
     }
 
     pub async fn reject(&mut self, identifier: &str) {
-        assert_eq!(self.subscribe_reply(identifier).await, rejection(identifier), "subscribing to {identifier}");
+        assert_eq!(
+            self.subscribe_reply(identifier).await,
+            rejection(identifier),
+            "subscribing to {identifier}"
+        );
     }
 
     pub async fn unsubscribe(&mut self, identifier: &str) {
-        self.send(json!({ "command": "unsubscribe", "identifier": identifier })).await;
+        self.send(json!({ "command": "unsubscribe", "identifier": identifier }))
+            .await;
     }
 
     pub async fn perform(&mut self, identifier: &str, data: Value) {
-        self.send(json!({ "command": "message", "identifier": identifier, "data": data.to_string() })).await;
+        self.send(
+            json!({ "command": "message", "identifier": identifier, "data": data.to_string() }),
+        )
+        .await;
     }
 
     /// The next frame, skipping pings.
     pub async fn next(&mut self) -> Frame {
+        self.next_before(tokio::time::Instant::now() + Duration::from_secs(5))
+            .await
+            .expect("a frame within 5s")
+    }
+
+    async fn next_before(
+        &mut self,
+        deadline: tokio::time::Instant,
+    ) -> Result<Frame, tokio::time::error::Elapsed> {
         loop {
-            let message = tokio::time::timeout(Duration::from_secs(5), self.socket.next()).await.expect("a frame within 5s");
-            return match message {
-                Some(Ok(WsMessage::Text(text))) if text.starts_with(r#"{"type":"ping""#) => continue,
+            let message = tokio::time::timeout_at(deadline, self.socket.next()).await?;
+            return Ok(match message {
+                Some(Ok(WsMessage::Text(text))) if text.starts_with(r#"{"type":"ping""#) => {
+                    continue;
+                }
                 Some(Ok(WsMessage::Text(text))) => Frame::Text(text.to_string()),
                 Some(Ok(WsMessage::Close(_))) => Frame::Close,
                 Some(Ok(_)) => continue,
                 Some(Err(_)) | None => Frame::End,
-            };
+            });
         }
     }
 
@@ -391,7 +512,9 @@ impl Client {
         let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
         let mut frames = Vec::new();
         loop {
-            let frame = tokio::time::timeout_at(deadline, self.next()).await
+            let frame = self
+                .next_before(deadline)
+                .await
                 .unwrap_or_else(|_| panic!("the socket is still open; frames so far: {frames:?}"));
             match frame {
                 Frame::Text(text) => frames.push(text),
@@ -442,7 +565,16 @@ async fn until_closed_bounds_a_socket_that_keeps_pinging() {
     let mut client = app.connect("david").await;
     let wait = std::panic::AssertUnwindSafe(client.until_closed()).catch_unwind();
     let result = tokio::time::timeout(Duration::from_secs(11), wait).await;
-    let panic = result.expect("until_closed exceeded its overall deadline").expect_err("the open socket must fail");
-    let message = panic.downcast_ref::<String>().map(String::as_str).or_else(|| panic.downcast_ref::<&str>().copied()).unwrap();
-    assert!(message.contains("the socket is still open"), "unexpected failure: {message}");
+    let panic = result
+        .expect("until_closed exceeded its overall deadline")
+        .expect_err("the open socket must fail");
+    let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap();
+    assert!(
+        message.contains("the socket is still open"),
+        "unexpected failure: {message}"
+    );
 }

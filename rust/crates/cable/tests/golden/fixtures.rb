@@ -9,6 +9,7 @@ room = Rooms::Open.find_by(name: "Golden") || Rooms::Open.create_for({ name: "Go
 closed = Rooms::Closed.find_by(name: "Private") || Rooms::Closed.create_for({ name: "Private", creator: other }, users: [ other ])
 closed.memberships.revoke_from(user)
 session = user.sessions.start!(user_agent: "golden", ip_address: "127.0.0.1")
+session.mark_two_factor_verified!
 
 request = ActionDispatch::Request.new(Rails.application.env_config.merge("HTTP_HOST" => "127.0.0.1", "rack.input" => StringIO.new))
 request.cookie_jar.signed[:session_token] = session.token

@@ -52,7 +52,10 @@ pub fn dom_id(param_key: &str, key: impl std::fmt::Display, prefix: Option<&str>
 
 /// `Room.model_name.param_key` for the room's STI class: `Rooms::Open` is `rooms_open`.
 pub fn room_param_key(room: &Room) -> String {
-    room.room_type.class_name().replace("::", "_").to_ascii_lowercase()
+    room.room_type
+        .class_name()
+        .replace("::", "_")
+        .to_ascii_lowercase()
 }
 
 /// `dom_id(room, prefix)`.
@@ -99,11 +102,13 @@ impl Stream {
     }
 
     /// `user, :status`
+    #[allow(dead_code)] // WS14's status broadcasts use this API.
     pub fn user_status(user_id: i64) -> Self {
         Self::record(&user_gid(user_id), "status")
     }
 
     /// `member, :ooo_notice`
+    #[allow(dead_code)] // WS14's OOO broadcasts use this API.
     pub fn ooo_notice(user_id: i64) -> Self {
         Self::record(&user_gid(user_id), "ooo_notice")
     }
@@ -128,11 +133,6 @@ impl Stream {
 
     pub fn streamables(&self) -> Vec<&str> {
         self.0.iter().map(String::as_str).collect()
-    }
-
-    /// The stream name (`stream_name_from`).
-    pub fn name(&self) -> String {
-        campfire_cable::naming::stream_name_from(&self.streamables())
     }
 }
 
@@ -170,9 +170,26 @@ impl Broadcasts {
 
     /// `broadcast_action_to stream, action:, target:, html:, attributes:` (`maintain_scroll: true`
     /// is the only attribute the app passes). Returns how many subscribers it reached.
-    pub fn turbo(&self, stream: &Stream, action: Action, target: &str, html: Option<&str>, maintain_scroll: bool) -> usize {
-        let attributes = if maintain_scroll { MAINTAIN_SCROLL } else { &[] };
-        self.server.broadcast_action_to(&stream.streamables(), action, Target::Target(target), html, attributes)
+    pub fn turbo(
+        &self,
+        stream: &Stream,
+        action: Action,
+        target: &str,
+        html: Option<&str>,
+        maintain_scroll: bool,
+    ) -> usize {
+        let attributes = if maintain_scroll {
+            MAINTAIN_SCROLL
+        } else {
+            &[]
+        };
+        self.server.broadcast_action_to(
+            &stream.streamables(),
+            action,
+            Target::Target(target),
+            html,
+            attributes,
+        )
     }
 
     pub fn append(&self, stream: &Stream, target: &str, html: &str) -> usize {
@@ -187,6 +204,7 @@ impl Broadcasts {
         self.turbo(stream, Action::Replace, target, Some(html), false)
     }
 
+    #[allow(dead_code)] // WS14's status and OOO broadcasts use this primitive.
     pub fn update(&self, stream: &Stream, target: &str, html: &str) -> usize {
         self.turbo(stream, Action::Update, target, Some(html), false)
     }
@@ -214,7 +232,11 @@ impl Broadcasts {
         rich_text: &dyn RichText,
     ) -> campfire_db::Result<()> {
         let html = partials.message(message);
-        self.append(&Stream::conversation(room, message), &conversation_messages_target(room, message), &html);
+        self.append(
+            &Stream::conversation(room, message),
+            &conversation_messages_target(room, message),
+            &html,
+        );
         if message.thread_id.is_none() && !message.system_note {
             self.unread_room(conn, room, message, rich_text)?;
         }
@@ -223,14 +245,23 @@ impl Broadcasts {
 
     /// `broadcast_unread_room`: `{ roomId: }` to each member's `user_<id>_unreads`, leaving out
     /// muted members the message doesn't mention (`unread_user_ids`).
-    pub fn unread_room(&self, conn: &Connection, room: &Room, message: &Message, rich_text: &dyn RichText) -> campfire_db::Result<()> {
+    pub fn unread_room(
+        &self,
+        conn: &Connection,
+        room: &Room,
+        message: &Message,
+        rich_text: &dyn RichText,
+    ) -> campfire_db::Result<()> {
         #[derive(Serialize)]
         struct UnreadRoom {
             #[serde(rename = "roomId")]
             room_id: i64,
         }
         for user_id in unread_user_ids(conn, room, message, rich_text)? {
-            self.channel(&unread_rooms::stream_name_for(user_id), &UnreadRoom { room_id: room.id });
+            self.channel(
+                &unread_rooms::stream_name_for(user_id),
+                &UnreadRoom { room_id: room.id },
+            );
         }
         Ok(())
     }
@@ -238,7 +269,10 @@ impl Broadcasts {
     /// `message.broadcast_remove`: `broadcast_remove_to message_stream_target, :messages`.
     /// MessagesController#destroy and `User#remove_banned_content`.
     pub fn message_remove(&self, room: &Room, message: &Message) {
-        self.remove(&Stream::conversation(room, message), &message_dom_id(message, None));
+        self.remove(
+            &Stream::conversation(room, message),
+            &message_dom_id(message, None),
+        );
     }
 
     /// MessagesController#update: replace `[message, :presentation]` on `[@room, :messages]` (the
@@ -253,27 +287,55 @@ impl Broadcasts {
     /// `@message.broadcast_replace_to @room, :messages, target: [ @message, part ], partial:,
     /// attributes: { maintain_scroll: true }` (MessagesController#update).
     pub fn message_part_replace(&self, room: &Room, message: &Message, part: &str, html: &str) {
-        self.turbo(&Stream::room_messages(room), Action::Replace, &message_dom_id(message, Some(part)), Some(html), true);
+        self.turbo(
+            &Stream::room_messages(room),
+            Action::Replace,
+            &message_dom_id(message, Some(part)),
+            Some(html),
+            true,
+        );
     }
 
     /// `broadcast_reactions_replace`: `messages/boosts/_reactions` over `dom_id(message, :boosts)`
     /// on the conversation, keeping the scroll position (Messages::BoostsController).
+    #[allow(dead_code)] // WS8 switches the inherited boost broadcasts to this API.
     pub fn message_reactions_replace(&self, room: &Room, message: &Message, html: &str) {
-        self.turbo(&Stream::conversation(room, message), Action::Replace, &message_dom_id(message, Some("boosts")), Some(html), true);
+        self.turbo(
+            &Stream::conversation(room, message),
+            Action::Replace,
+            &message_dom_id(message, Some("boosts")),
+            Some(html),
+            true,
+        );
     }
 
     // Messages::BoostsController's `broadcast_create`/`broadcast_remove`
 
     /// Append the boost to `boosts_message_<client_message_id>` on the conversation.
-    pub fn boost_create(&self, room: &Room, message: &Message, boost: &Boost, partials: &dyn Partials) {
+    pub fn boost_create(
+        &self,
+        room: &Room,
+        message: &Message,
+        boost: &Boost,
+        partials: &dyn Partials,
+    ) {
         let html = partials.boost(boost);
         let target = format!("boosts_message_{}", message.client_message_id);
-        self.turbo(&Stream::conversation(room, message), Action::Append, &target, Some(&html), true);
+        self.turbo(
+            &Stream::conversation(room, message),
+            Action::Append,
+            &target,
+            Some(&html),
+            true,
+        );
     }
 
     /// Remove `dom_id(boost)` from the conversation.
     pub fn boost_remove(&self, room: &Room, message: &Message, boost: &Boost) {
-        self.remove(&Stream::conversation(room, message), &dom_id("boost", boost.id, None));
+        self.remove(
+            &Stream::conversation(room, message),
+            &dom_id("boost", boost.id, None),
+        );
     }
 
     // The sidebar's room lists (layouts/application.html.erb streams from `:rooms` and
@@ -286,7 +348,11 @@ impl Broadcasts {
 
     /// Rooms::OpensController#create: prepend to everyone's `shared_rooms`.
     pub fn open_room_create(&self, room: &Room, partials: &dyn Partials) {
-        self.prepend(&Stream::rooms(), "shared_rooms", &partials.shared_room(room));
+        self.prepend(
+            &Stream::rooms(),
+            "shared_rooms",
+            &partials.shared_room(room),
+        );
     }
 
     /// Rooms::OpensController#update: replace `[room, :list]` on `:rooms`, then `[room, :header]`
@@ -294,7 +360,11 @@ impl Broadcasts {
     /// room as an open room (`becomes!(Rooms::Open)`), so the targets name that class even when
     /// the room was closed before.
     pub fn open_room_update(&self, room: &Room, partials: &dyn Partials, header: Option<&str>) {
-        self.replace(&Stream::rooms(), &room_dom_id(room, "list"), &partials.shared_room(room));
+        self.replace(
+            &Stream::rooms(),
+            &room_dom_id(room, "list"),
+            &partials.shared_room(room),
+        );
         if let Some(header) = header {
             self.replace(&Stream::rooms(), &room_dom_id(room, "header"), header);
         }
@@ -302,7 +372,12 @@ impl Broadcasts {
 
     /// Rooms::ClosedsController#create: render once, prepend to each member's own stream
     /// (`room.users`).
-    pub fn closed_room_create(&self, conn: &Connection, room: &Room, partials: &dyn Partials) -> campfire_db::Result<()> {
+    pub fn closed_room_create(
+        &self,
+        conn: &Connection,
+        room: &Room,
+        partials: &dyn Partials,
+    ) -> campfire_db::Result<()> {
         let html = partials.shared_room(room);
         for user_id in room.user_ids(conn)? {
             self.prepend(&Stream::user_rooms(user_id), "shared_rooms", &html);
@@ -312,7 +387,13 @@ impl Broadcasts {
 
     /// Rooms::ClosedsController#update: after `memberships.revise`, replace `[room, :list]` for
     /// each remaining member (`room` as a closed room), then `[room, :header]` for each.
-    pub fn closed_room_update(&self, conn: &Connection, room: &Room, partials: &dyn Partials, header: Option<&str>) -> campfire_db::Result<()> {
+    pub fn closed_room_update(
+        &self,
+        conn: &Connection,
+        room: &Room,
+        partials: &dyn Partials,
+        header: Option<&str>,
+    ) -> campfire_db::Result<()> {
         let html = partials.shared_room(room);
         let target = room_dom_id(room, "list");
         let user_ids = room.user_ids(conn)?;
@@ -330,23 +411,43 @@ impl Broadcasts {
 
     /// Rooms::DirectsController#create: prepend `users/sidebars/rooms/_direct` to each member's
     /// `direct_rooms`, rendered per membership.
-    pub fn direct_room_create(&self, conn: &Connection, room: &Room, partials: &dyn Partials) -> campfire_db::Result<()> {
+    pub fn direct_room_create(
+        &self,
+        conn: &Connection,
+        room: &Room,
+        partials: &dyn Partials,
+    ) -> campfire_db::Result<()> {
         for membership in room.memberships(conn)? {
             let html = partials.direct_room(&membership);
-            self.prepend(&Stream::user_rooms(membership.user_id), "direct_rooms", &html);
+            self.prepend(
+                &Stream::user_rooms(membership.user_id),
+                "direct_rooms",
+                &html,
+            );
         }
         Ok(())
     }
 
     /// Rooms::InvolvementsController#update (`broadcast_visibility_changes`). `previous` is
     /// `involvement_previously_was` (nil reads as no involvement: `nil.to_s.inquiry`).
-    pub fn involvement_change(&self, room: &Room, membership: &Membership, previous: Option<Involvement>, partials: &dyn Partials) {
+    pub fn involvement_change(
+        &self,
+        room: &Room,
+        membership: &Membership,
+        previous: Option<Involvement>,
+        partials: &dyn Partials,
+    ) {
         let stream = Stream::user_rooms(membership.user_id);
         let was = |involvement| previous == Some(involvement);
-        let muted_transition = membership.involved_in(Involvement::Muted) != was(Involvement::Muted);
+        let muted_transition =
+            membership.involved_in(Involvement::Muted) != was(Involvement::Muted);
         if room.direct() {
             if muted_transition {
-                self.replace(&stream, &room_dom_id(room, "list"), &partials.direct_room(membership));
+                self.replace(
+                    &stream,
+                    &room_dom_id(room, "list"),
+                    &partials.direct_room(membership),
+                );
             }
         } else if membership.involved_in(Involvement::Invisible) {
             self.remove(&stream, &room_dom_id(room, "list"));
@@ -360,7 +461,11 @@ impl Broadcasts {
             } else {
                 "shared_rooms"
             };
-            self.prepend(&stream, target, &partials.sidebar_row(room, membership, None));
+            self.prepend(
+                &stream,
+                target,
+                &partials.sidebar_row(room, membership, None),
+            );
         } else if muted_transition {
             let html = partials.sidebar_row(room, membership, Some(membership.unread()));
             self.replace(&stream, &room_dom_id(room, "list"), &html);
@@ -370,12 +475,28 @@ impl Broadcasts {
 
 /// `unread_user_ids`: every member, except that when any is muted, muted members the message
 /// doesn't mention are left out.
-fn unread_user_ids(conn: &Connection, room: &Room, message: &Message, rich_text: &dyn RichText) -> campfire_db::Result<Vec<i64>> {
+fn unread_user_ids(
+    conn: &Connection,
+    room: &Room,
+    message: &Message,
+    rich_text: &dyn RichText,
+) -> campfire_db::Result<Vec<i64>> {
     let memberships = Membership::for_room(conn, room.id)?;
     let muted = |membership: &Membership| membership.involvement == Some(Involvement::Muted);
     if !memberships.iter().any(muted) {
-        return Ok(memberships.iter().map(|membership| membership.user_id).collect());
+        return Ok(memberships
+            .iter()
+            .map(|membership| membership.user_id)
+            .collect());
     }
-    let mentioned: Vec<i64> = message.mentionees(conn, rich_text)?.iter().map(|user| user.id).collect();
-    Ok(memberships.iter().filter(|m| !muted(m) || mentioned.contains(&m.user_id)).map(|m| m.user_id).collect())
+    let mentioned: Vec<i64> = message
+        .mentionees(conn, rich_text)?
+        .iter()
+        .map(|user| user.id)
+        .collect();
+    Ok(memberships
+        .iter()
+        .filter(|m| !muted(m) || mentioned.contains(&m.user_id))
+        .map(|m| m.user_id)
+        .collect())
 }
