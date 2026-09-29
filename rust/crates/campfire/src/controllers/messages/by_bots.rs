@@ -2,7 +2,7 @@
 //! bot API under `/rooms/:room_id/:bot_key/messages` (JSON by route default). Bodies are the raw
 //! request body (`RawRequestBody`), or a top-level multipart `attachment`.
 
-use campfire_db::{Message, Room};
+use campfire_db::{Message, Room, Timeline};
 use campfire_kit::{Ctx, Param, Response, Result, StatusCode, format, halt, permit_keys};
 use campfire_views::messages::json;
 
@@ -127,9 +127,9 @@ async fn set_pagination_headers(c: &mut Ctx, room: &Room, messages: &[Message]) 
             let count = Message::count_in_room(conn, room_id)?;
             let next_page = match (first, last) {
                 (Some(_), Some(last)) if after => {
-                    Message::exists_after(conn, room_id, &last)?.then_some(("after", last.id))
+                    Message::exists_after(conn, Timeline::Room(room_id), &last)?.then_some(("after", last.id))
                 }
-                (Some(first), Some(_)) => Message::exists_before(conn, room_id, &first)?.then_some(("before", first.id)),
+                (Some(first), Some(_)) => Message::exists_before(conn, Timeline::Room(room_id), &first)?.then_some(("before", first.id)),
                 _ => None,
             };
             Ok((count, next_page))

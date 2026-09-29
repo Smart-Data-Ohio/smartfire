@@ -105,7 +105,7 @@ async fn create_text_reply(app: &App, room: &Room, bot: &User, text: String) -> 
     let body = canonicalize_body(app, text, None).await.map_err(|e| anyhow!("{e:?}"))?;
     let message = app
         .db
-        .write(move |tx| Message::create(tx, NewMessage { room_id, creator_id, client_message_id: None, body: Some(body), attachment_blob_id: None }))
+        .write(move |tx| Message::create(tx, NewMessage { room_id, creator_id, client_message_id: None, body: Some(body), attachment_blob_id: None, ..Default::default() }))
         .await?;
     Ok(message)
 }
@@ -121,7 +121,7 @@ async fn create_attachment_reply(app: &App, room: &Room, bot: &User, attachment:
     let (room_id, creator_id, blob_id) = (room.id, bot.id, blob.id);
     let message = app
         .db
-        .write(move |tx| Message::create(tx, NewMessage { room_id, creator_id, client_message_id: None, body: None, attachment_blob_id: Some(blob_id) }))
+        .write(move |tx| Message::create(tx, NewMessage { room_id, creator_id, client_message_id: None, body: None, attachment_blob_id: Some(blob_id), ..Default::default() }))
         .await?;
     process_attachment(app, blob).await.map_err(|e| anyhow!("{e:?}"))?;
     let id = message.id;

@@ -5,13 +5,19 @@ use crate::{FirstRun, PasswordDigest, Room, User};
 
 fn fresh() -> TestDb {
     let t = TestDb::new();
-    // Account.destroy_all, Room.destroy_all, User.destroy_all
+    // Account.destroy_all, Room.destroy_all, User.destroy_all: their dependents cascade to
+    // nearly every table, so this empties every table (checking foreign keys at commit).
     t.write(|tx| {
-        tx.conn().execute_batch(
-            "DELETE FROM accounts; DELETE FROM boosts; DELETE FROM action_text_rich_texts; DELETE FROM messages; DELETE FROM memberships;
-             DELETE FROM rooms; DELETE FROM sessions; DELETE FROM searches; DELETE FROM push_subscriptions; DELETE FROM webhooks;
-             DELETE FROM bans; DELETE FROM users;",
+        let tables: Vec<String> = crate::sql::query_all(
+            tx.conn(),
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'message_search_index_%' AND name NOT IN ('schema_migrations', 'ar_internal_metadata')",
+            [],
+            |r| r.get(0),
         )?;
+        tx.conn().execute_batch("PRAGMA defer_foreign_keys = ON")?;
+        for table in tables {
+            tx.conn().execute(&format!(r#"DELETE FROM "{table}""#), [])?;
+        }
         Ok(())
     });
     t

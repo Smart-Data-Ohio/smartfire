@@ -70,7 +70,8 @@ variations = [
   { resize_to_limit: [ 0, 1, 121, 122, 123, 255, 256, 65535, 65536, 16777216, 1073741823, 1073741824, -1, -123, -124, -256, -257, -65536, -65537 ], format: :png }
 ].map { variation_vector(_1) }
 
-MARCEL_SAMPLES = Dir.children(FIXTURES).sort.flat_map do |name|
+# Top-level files only: the app keeps importer fixtures in subdirectories (test/fixtures/files/slack).
+MARCEL_SAMPLES = Dir.children(FIXTURES).sort.select { FIXTURES.join(_1).file? }.flat_map do |name|
   data = FIXTURES.join(name).binread
   [
     [ name, data, nil, name ], [ name, data, "application/octet-stream", name ], [ "renamed.txt", data, nil, name ],

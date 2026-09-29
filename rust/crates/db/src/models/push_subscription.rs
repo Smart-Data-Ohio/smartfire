@@ -260,7 +260,7 @@ impl PushSubscription {
             return Ok(Vec::new());
         }
         let sql = format!(
-            r#"SELECT "push_subscriptions".* FROM "push_subscriptions" INNER JOIN "users" ON "users"."id" = "push_subscriptions"."user_id" INNER JOIN "memberships" ON "memberships"."user_id" = "users"."id" WHERE ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?) AND "memberships"."room_id" = ? AND "memberships"."user_id" != ? AND "memberships"."involvement" = 'mentions' AND "push_subscriptions"."user_id" IN ({})"#,
+            r#"SELECT "push_subscriptions".* FROM "push_subscriptions" INNER JOIN "users" ON "users"."id" = "push_subscriptions"."user_id" INNER JOIN "memberships" ON "memberships"."user_id" = "users"."id" WHERE ("memberships"."connected_at" IS NULL OR "memberships"."connected_at" < ?) AND "memberships"."room_id" = ? AND "memberships"."user_id" != ? AND "memberships"."involvement" IN ('mentions', 'muted') AND "push_subscriptions"."user_id" IN ({})"#,
             placeholders(mentionee_ids.len())
         );
         let mut values: Vec<rusqlite::types::Value> = vec![
