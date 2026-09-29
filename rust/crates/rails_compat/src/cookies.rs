@@ -12,7 +12,7 @@
 //!   carrying `pur: "cookie.<name>"` and `exp` (ISO 8601 with milliseconds, or `null`),
 //! - reading tries purpose `cookie.<name>` first, then *no purpose*, so a value signed without
 //!   metadata (pre-Rails 5.2) is accepted under any cookie name.
-use jiff::{Timestamp, ToSpan, tz::TimeZone};
+use jiff::{SignedDuration, Timestamp, ToSpan, tz::TimeZone};
 use serde_json::Value;
 
 use crate::message_verifier::{Digest, Encoding};
@@ -80,9 +80,73 @@ fn load(dumped: Value) -> Option<Value> {
     Serializer::JsonWithFallback { allow_marshal: false }.load(dumped.as_bytes()).ok()
 }
 
+/// Smartfire's own signed cookies, set by `app/controllers/concerns/authentication.rb`.
+pub const DEVICE_ID: &str = "device_id";
+/// `Authentication::TWO_FACTOR_REMEMBER_COOKIE`.
+pub const TWO_FACTOR_REMEMBER: &str = "two_factor_remember";
+/// `TwoFactorRememberedDevice::REMEMBER_FOR`.
+pub const TWO_FACTOR_REMEMBER_FOR: SignedDuration = SignedDuration::from_hours(30 * 24);
+
+/// A cookie as the jar writes it: the raw (unescaped) jar value and the attributes Rails sets.
+/// Rails sends no `domain`, and `path` is `/`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SignedCookie {
+    pub name: &'static str,
+    pub value: String,
+    pub expires: Timestamp,
+    /// Rails only writes a `secure` cookie on an HTTPS request (`CookieJar#write_cookie?`); on
+    /// plain HTTP it silently drops it.
+    pub secure: bool,
+    pub http_only: bool,
+    /// `same_site: :lax` for both.
+    pub same_site: &'static str,
+}
+
+impl SignedCookie {
+    /// The `Set-Cookie` header Rack writes: `name=<escaped>; path=/; expires=<httpdate>;
+    /// [secure; ]httponly; samesite=lax`.
+    pub fn set_cookie_header(&self) -> String {
+        let mut header = format!("{}={}; path=/; expires={}", self.name, escape(&self.value), self.expires.strftime("%a, %d %b %Y %H:%M:%S GMT"));
+        if self.secure {
+            header.push_str("; secure");
+        }
+        if self.http_only {
+            header.push_str("; httponly");
+        }
+        header.push_str("; samesite=");
+        header.push_str(self.same_site);
+        header
+    }
+}
+
+/// `ensure_device_cookie`: `cookies.signed.permanent[:device_id] = { value: device_id,
+/// httponly: true, same_site: :lax }`, the device id being `SecureRandom.hex(16)`. It is only
+/// written when the request has no valid one ([`read_device_id`]).
+pub fn device_id_cookie(secrets: &Secrets, device_id: &str, now: Timestamp) -> SignedCookie {
+    let expires = permanent_expires_at(now);
+    SignedCookie { name: DEVICE_ID, value: sign(secrets, DEVICE_ID, device_id, Some(expires)), expires, secure: false, http_only: true, same_site: "lax" }
+}
+
+/// `cookies.signed[:device_id]`.
+pub fn read_device_id(secrets: &Secrets, raw: &str, now: Timestamp) -> Option<String> {
+    verify_signed(secrets, DEVICE_ID, raw, now)
+}
+
+/// `remember_two_factor_device!`: `cookies.signed[:two_factor_remember] = { value: token,
+/// expires: 30.days, httponly: true, secure: true, same_site: :lax }`. The token is
+/// `SecureRandom.hex(32)`; only its SHA256 is stored (`TwoFactorRememberedDevice.digest`).
+pub fn two_factor_remember_cookie(secrets: &Secrets, token: &str, now: Timestamp) -> SignedCookie {
+    let expires = now + TWO_FACTOR_REMEMBER_FOR;
+    SignedCookie { name: TWO_FACTOR_REMEMBER, value: sign(secrets, TWO_FACTOR_REMEMBER, token, Some(expires)), expires, secure: true, http_only: true, same_site: "lax" }
+}
+
+/// `cookies.signed[TWO_FACTOR_REMEMBER_COOKIE]`.
+pub fn read_two_factor_remember(secrets: &Secrets, raw: &str, now: Timestamp) -> Option<String> {
+    verify_signed(secrets, TWO_FACTOR_REMEMBER, raw, now)
+}
+
 pub fn signed_cookie_verifier(secrets: &Secrets) -> MessageVerifier {
-    // `signed_cookie_digest` is unset, so the jar falls back to "SHA1" even though the key itself
-    // is derived with PBKDF2-SHA256.
+    // `signed_cookie_digest` is unset, so the jar falls back to "SHA1".
     let secret = secrets.key_generator.generate_key(SIGNED_COOKIE_SALT, 64);
     MessageVerifier::new(secret, Digest::Sha1, Encoding::Strict, Serializer::Null)
 }
@@ -127,4 +191,32 @@ pub fn unescape(wire: &str) -> String {
         i += 1;
     }
     String::from_utf8_lossy(&out).into_owned()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn device_and_remember_cookies_expire_and_stay_under_their_names() {
+        let secrets = Secrets::new(&"a".repeat(128));
+        let now: Timestamp = "2026-01-01T12:00:00Z".parse().unwrap();
+        let device = device_id_cookie(&secrets, "device", now);
+        let remember = two_factor_remember_cookie(&secrets, "token", now);
+        assert!(!device.secure && remember.secure && device.http_only && remember.http_only);
+
+        assert_eq!(read_device_id(&secrets, &device.value, device.expires - SignedDuration::from_secs(1)).as_deref(), Some("device"));
+        assert_eq!(read_device_id(&secrets, &device.value, device.expires + SignedDuration::from_secs(1)), None);
+        assert_eq!(read_two_factor_remember(&secrets, &remember.value, now + TWO_FACTOR_REMEMBER_FOR - SignedDuration::from_secs(1)).as_deref(), Some("token"));
+        assert_eq!(read_two_factor_remember(&secrets, &remember.value, now + TWO_FACTOR_REMEMBER_FOR), None);
+
+        assert_eq!(read_two_factor_remember(&secrets, &device.value, now), None);
+        assert_eq!(read_device_id(&secrets, &remember.value, now), None);
+        assert_eq!(verify_signed(&secrets, "session_token", &remember.value, now), None);
+        assert_eq!(read_two_factor_remember(&Secrets::new(&"b".repeat(128)), &remember.value, now), None);
+
+        let (data, digest) = remember.value.split_once("--").unwrap();
+        let tampered = format!("{data}--{}", if digest.starts_with('0') { digest.replacen('0', "1", 1) } else { format!("0{}", &digest[1..]) });
+        assert_eq!(read_two_factor_remember(&secrets, &tampered, now), None);
+    }
 }
