@@ -17,6 +17,9 @@ OUT=${OUT:-$ROOT/target/db-differential}
 export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$ROOT/target/db-differential/cargo}
 rm -f "$OUT"/*.sqlite3 "$OUT"/*.sql "$OUT"/*.bot_key; mkdir -p "$OUT"
 
+# The instant both fixture loaders are frozen at, with microseconds.
+export CAMPFIRE_FIXTURES_NOW=${CAMPFIRE_FIXTURES_NOW:-$(date -u +"%Y-%m-%d %H:%M:%S.%6N")}
+
 # sqlite_master minus what SQLite derives on its own (see crates/db/src/schema.rs).
 SCHEMA_QUERY="SELECT sql || ';' FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'message_search_index_%' ORDER BY rowid"
 
@@ -25,7 +28,7 @@ reference() {
     --cpus "${PARITY_CPUS:-2}" \
     --user "$(id -u):$(id -g)" \
     --env-file "$ROOT/parity/.env.reference" \
-    -e RAILS_ENV=test -e RAILS_LOG_LEVEL=warn -e SCHEMA_QUERY="$SCHEMA_QUERY" \
+    -e RAILS_ENV=test -e RAILS_LOG_LEVEL=warn -e SCHEMA_QUERY="$SCHEMA_QUERY" -e CAMPFIRE_FIXTURES_NOW \
     -v "$ROOT/crates/db/ruby:/tools:ro" -v "$OUT:/out" \
     campfire-reference:latest sh -ec "$1" 2> >(grep -v -e VIPS -e '^$' >&2)
 }

@@ -52,11 +52,38 @@ check("thread reply") do
   reply.thread_message? && reply.thread.messages == [ reply ] && room.root_messages.exclude?(reply) && room.messages.include?(reply)
 end
 
+check("thread counter") { reply.thread.messages_count == 1 }
+board = Room.find_by!(name: "Rust Board")
+check("board root holds only the system note") do
+  board.root_messages.pluck(:client_message_id) == [ "rust-board-note" ] &&
+    Message.find_by!(client_message_id: "rust-board-post").thread.room == board
+end
+stream = Message.find_by!(client_message_id: "rust-stream")
+check("stream activity clock") do
+  stream.streaming? && stream.streaming_updated_at == stream.created_at + 9.minutes &&
+    Message.overdue_streams(now: stream.created_at + 11.minutes).exclude?(stream) &&
+    Message.overdue_streams(now: stream.streaming_updated_at + 11.minutes).include?(stream)
+end
+
+orphan = Message.find_by!(client_message_id: "rust-reply-to-doomed")
+check("reply tombstone") do
+  Message.where(client_message_id: "rust-doomed").none? && orphan.reply? && orphan.reply_to_message.nil? &&
+    orphan.reply_target_deleted_at.present?
+end
+
 bot = User.find_by!(name: "Rust Bot")
 bot_key = File.read("/out/rust_export.sqlite3.bot_key")
 tampered = bot_key.sub(/.\z/) { _1 == "a" ? "b" : "a" }
 check("bot key authenticates by digest") do
   bot.bot_token.nil? && User.authenticate_bot(bot_key) == bot && User.authenticate_bot(tampered).nil?
+end
+
+rust_written = [
+  *Message.where("client_message_id LIKE 'rust-%'"), *Room.where("name LIKE 'Rust %'"),
+  *Membership.where(user: rusty), *rusty.sessions, rusty, bot, *Rooms::Direct.find_for([ jason, rusty, kevin ])
+]
+check("Rails validates every row Rust wrote: #{rust_written.reject(&:valid?).map { [ _1.class.name, _1.id, _1.errors.full_messages ] }}") do
+  rust_written.size > 20 && rust_written.all?(&:valid?)
 end
 
 check("account settings") { Account.first.settings.restrict_room_creation_to_administrators == true }
