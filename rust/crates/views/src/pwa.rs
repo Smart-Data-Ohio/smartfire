@@ -29,7 +29,6 @@ impl Manifest<'_> {
     fn image_url(&self, source: &str) -> String {
         format!("{}{}", self.base_url, (self.asset_path)(source))
     }
-
 }
 
 /// `pwa/_install_instructions.html.erb`.

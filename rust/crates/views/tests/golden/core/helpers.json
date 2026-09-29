@@ -1,4 +1,16 @@
 {
+  "avatars": [
+    {
+      "user": "David",
+      "title": "David",
+      "html": "<a title=\"David\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/127326141/card\" href=\"/users/127326141\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260210120000\" width=\"32\" height=\"32\" /></a>"
+    },
+    {
+      "user": "Bender Bot",
+      "title": "Bender Bot",
+      "html": "<a title=\"Bender Bot\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"/users/394959859/card\" href=\"/users/394959859\"><img aria-hidden=\"true\" loading=\"lazy\" src=\"/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260210120000\" width=\"32\" height=\"32\" /></a>"
+    }
+  ],
   "zones": [
     [
       "International Date Line West",

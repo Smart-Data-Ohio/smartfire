@@ -29,6 +29,8 @@ use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
 
+pub mod keys;
+
 /// A rendered fragment as the store keeps it.
 pub type Fragment = Arc<String>;
 
@@ -119,7 +121,10 @@ impl FragmentCache {
     /// A store that keeps at most `max_bytes` of entries (as [`CacheSize`] and
     /// [`PER_ENTRY_OVERHEAD`] count them).
     pub fn new(max_bytes: usize) -> Arc<Self> {
-        Arc::new(Self { max_bytes, entries: Mutex::default() })
+        Arc::new(Self {
+            max_bytes,
+            entries: Mutex::default(),
+        })
     }
 
     /// `Rails.cache.fetch(key) { render }` for a rendered fragment.
@@ -129,7 +134,11 @@ impl FragmentCache {
 
     /// `Rails.cache.fetch(key) { value }` for any cloneable value (Jbuilder caches the hash it
     /// built, not its JSON).
-    pub fn fetch_value<T: CacheSize + Clone + Send + Sync + 'static>(&self, key: &str, compute: impl FnOnce() -> T) -> T {
+    pub fn fetch_value<T: CacheSize + Clone + Send + Sync + 'static>(
+        &self,
+        key: &str,
+        compute: impl FnOnce() -> T,
+    ) -> T {
         match self.try_fetch_value(key, || Ok::<T, std::convert::Infallible>(compute())) {
             Ok(value) => value,
             Err(never) => match never {},
@@ -180,7 +189,12 @@ impl FragmentCache {
 
     fn read<T: Clone + 'static>(&self, key: &str) -> Option<T> {
         let mut entries = self.lock();
-        let Entries { values, recency, clock, .. } = &mut *entries;
+        let Entries {
+            values,
+            recency,
+            clock,
+            ..
+        } = &mut *entries;
         let entry = values.get_mut(key)?;
         let value = entry.value.downcast_ref::<T>()?.clone();
         *clock += 1;
@@ -191,7 +205,12 @@ impl FragmentCache {
     /// Stores `value` unless `key` already holds one of its type, and returns what `key` holds.
     fn write<T: Clone + Send + Sync + 'static>(&self, key: &str, value: T, size: usize) -> T {
         let mut entries = self.lock();
-        let Entries { values, recency, clock, bytes } = &mut *entries;
+        let Entries {
+            values,
+            recency,
+            clock,
+            bytes,
+        } = &mut *entries;
         *clock += 1;
         if let Some(entry) = values.get_mut(key) {
             if let Some(stored) = entry.value.downcast_ref::<T>() {
@@ -208,14 +227,24 @@ impl FragmentCache {
             return value;
         }
         let key: Arc<str> = key.into();
-        values.insert(key.clone(), Entry { key: key.clone(), value: Arc::new(value.clone()), used: *clock, size });
+        values.insert(
+            key.clone(),
+            Entry {
+                key: key.clone(),
+                value: Arc::new(value.clone()),
+                used: *clock,
+                size,
+            },
+        );
         recency.insert(*clock, key);
         *bytes += size;
         if *bytes > self.max_bytes {
             // `MemoryStore#prune(@max_size * 0.75)`
             let target = self.max_bytes / 4 * 3;
             while *bytes > target {
-                let Some((_, oldest)) = recency.pop_first() else { break };
+                let Some((_, oldest)) = recency.pop_first() else {
+                    break;
+                };
                 if let Some(entry) = values.remove(&oldest) {
                     *bytes -= entry.size;
                 }
@@ -225,7 +254,9 @@ impl FragmentCache {
     }
 
     fn lock(&self) -> std::sync::MutexGuard<'_, Entries> {
-        self.entries.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+        self.entries
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 }
 
@@ -286,7 +317,10 @@ pub struct Scoped<F> {
 
 impl<F: Future> Scoped<F> {
     pub fn new(cache: Arc<FragmentCache>, future: F) -> Self {
-        Self { cache, future: Box::pin(future) }
+        Self {
+            cache,
+            future: Box::pin(future),
+        }
     }
 }
 
@@ -311,7 +345,11 @@ pub fn digest(sources: &[&str]) -> String {
 
 /// `Time#to_fs(:usec)` of a record's `updated_at`: its `cache_version`.
 pub fn cache_version(updated_at: jiff::Timestamp) -> String {
-    format!("{}{:06}", updated_at.strftime("%Y%m%d%H%M%S"), updated_at.subsec_microsecond())
+    format!(
+        "{}{:06}",
+        updated_at.strftime("%Y%m%d%H%M%S"),
+        updated_at.subsec_microsecond()
+    )
 }
 
 /// `record.cache_key_with_version`: `"messages/1-20240601120000000000"`.
@@ -349,9 +387,16 @@ mod tests {
         let cache = FragmentCache::new(BIG);
         cache.fetch("a", || "x".repeat(100));
         cache.fetch("bb", || "y".repeat(10));
-        assert_eq!(cache.bytes(), (1 + 100 + PER_ENTRY_OVERHEAD) + (2 + 10 + PER_ENTRY_OVERHEAD));
+        assert_eq!(
+            cache.bytes(),
+            (1 + 100 + PER_ENTRY_OVERHEAD) + (2 + 10 + PER_ENTRY_OVERHEAD)
+        );
         cache.fetch("a", || unreachable!());
-        assert_eq!(cache.bytes(), entry(100) + (2 + 10 + PER_ENTRY_OVERHEAD), "a hit costs nothing");
+        assert_eq!(
+            cache.bytes(),
+            entry(100) + (2 + 10 + PER_ENTRY_OVERHEAD),
+            "a hit costs nothing"
+        );
         cache.clear();
         assert_eq!(cache.bytes(), 0);
     }
@@ -363,12 +408,22 @@ mod tests {
         for i in 0..1000 {
             cache.fetch(&format!("{}", i % 3), || "x".repeat(1000));
             cache.fetch(&format!("k{i}"), || "x".repeat(1000));
-            assert!(cache.bytes() <= max, "{} bytes after {i} writes", cache.bytes());
+            assert!(
+                cache.bytes() <= max,
+                "{} bytes after {i} writes",
+                cache.bytes()
+            );
         }
         assert!(cache.len() < 20);
-        assert!(cache.bytes() > max / 2, "pruning stops at three quarters, not empty");
+        assert!(
+            cache.bytes() > max / 2,
+            "pruning stops at three quarters, not empty"
+        );
         for hot in 0..3 {
-            assert!(cache.get::<Fragment>(&hot.to_string()).is_some(), "entry {hot} is used every sixth write");
+            assert!(
+                cache.get::<Fragment>(&hot.to_string()).is_some(),
+                "entry {hot} is used every sixth write"
+            );
         }
     }
 
@@ -384,10 +439,17 @@ mod tests {
         cache.fetch("e", || "x".repeat(100));
         assert_eq!(cache.len(), 3);
         assert!(cache.bytes() <= 3 * entry(100));
-        assert_eq!(cache.get::<Fragment>("b"), None, "b was least recently used");
+        assert_eq!(
+            cache.get::<Fragment>("b"),
+            None,
+            "b was least recently used"
+        );
         assert_eq!(cache.get::<Fragment>("c"), None, "c went next");
         for key in ["a", "d", "e"] {
-            assert!(cache.get::<Fragment>(key).is_some(), "{key} survives (a was used after d)");
+            assert!(
+                cache.get::<Fragment>(key).is_some(),
+                "{key} survives (a was used after d)"
+            );
         }
     }
 
@@ -399,7 +461,10 @@ mod tests {
             html.push_str("<p>hi</p>");
             html
         });
-        assert_eq!(cache.get::<Fragment>("a").unwrap().capacity(), "<p>hi</p>".len());
+        assert_eq!(
+            cache.get::<Fragment>("a").unwrap().capacity(),
+            "<p>hi</p>".len()
+        );
         assert_eq!(cache.bytes(), entry("<p>hi</p>".len()));
     }
 
@@ -422,7 +487,10 @@ mod tests {
         assert_eq!(cache.len(), 3, "the big value isn't kept");
         assert_eq!(cache.get::<Fragment>("big"), None);
         for key in ["a", "b", "c"] {
-            assert!(cache.get::<Fragment>(key).is_some(), "{key} is still stored");
+            assert!(
+                cache.get::<Fragment>(key).is_some(),
+                "{key} is still stored"
+            );
         }
         assert_eq!(cache.bytes(), 3 * entry(100));
     }
@@ -446,8 +514,20 @@ mod tests {
         });
         let len = cache.len();
         assert!(len > 0 && cache.bytes() <= max);
-        assert_eq!(cache.bytes(), cache.lock().values.values().map(|entry| entry.size).sum::<usize>());
-        assert_eq!(cache.lock().recency.len(), len, "every entry is in the recency order once");
+        assert_eq!(
+            cache.bytes(),
+            cache
+                .lock()
+                .values
+                .values()
+                .map(|entry| entry.size)
+                .sum::<usize>()
+        );
+        assert_eq!(
+            cache.lock().recency.len(),
+            len,
+            "every entry is in the recency order once"
+        );
     }
 
     #[test]
@@ -466,10 +546,19 @@ mod tests {
                     })
                 })
                 .collect();
-            handles.into_iter().map(|handle| handle.join().unwrap()).collect()
+            handles
+                .into_iter()
+                .map(|handle| handle.join().unwrap())
+                .collect()
         });
-        assert!(values.iter().all(|value| Arc::ptr_eq(value, &values[0])), "{values:?}");
-        assert!(Arc::ptr_eq(&cache.get::<Fragment>("k").unwrap(), &values[0]));
+        assert!(
+            values.iter().all(|value| Arc::ptr_eq(value, &values[0])),
+            "{values:?}"
+        );
+        assert!(Arc::ptr_eq(
+            &cache.get::<Fragment>("k").unwrap(),
+            &values[0]
+        ));
         assert_eq!(cache.len(), 1);
     }
 
@@ -481,10 +570,18 @@ mod tests {
     #[test]
     fn nested_fragments_use_the_same_store() {
         let cache = FragmentCache::new(BIG);
-        let outer = with(&cache, || fetch(|| "outer".into(), || format!("[{}]", fetch(|| "inner".into(), || "x".into()))));
+        let outer = with(&cache, || {
+            fetch(
+                || "outer".into(),
+                || format!("[{}]", fetch(|| "inner".into(), || "x".into())),
+            )
+        });
         assert_eq!(outer, "[x]");
         assert_eq!(cache.len(), 2);
-        assert!(current().is_none(), "the store is only current inside `with`");
+        assert!(
+            current().is_none(),
+            "the store is only current inside `with`"
+        );
         assert_eq!(fetch(|| "outer".into(), || "uncached".into()), "uncached");
     }
 
@@ -493,14 +590,21 @@ mod tests {
         let cache = FragmentCache::new(BIG);
         assert_eq!(with(&cache, || read("a")), None);
         with(&cache, || fetch(|| "a".into(), || "rendered".into()));
-        assert_eq!(with(&cache, || read("a")).as_deref().map(String::as_str), Some("rendered"));
+        assert_eq!(
+            with(&cache, || read("a")).as_deref().map(String::as_str),
+            Some("rendered")
+        );
         assert_eq!(read("a"), None, "no store, no fragments");
     }
 
     #[test]
     fn failures_are_not_stored() {
         let cache = FragmentCache::new(BIG);
-        assert!(cache.try_fetch_value::<i32, _>("k", || Err("boom")).is_err());
+        assert!(
+            cache
+                .try_fetch_value::<i32, _>("k", || Err("boom"))
+                .is_err()
+        );
         assert_eq!(cache.try_fetch_value::<i32, &str>("k", || Ok(1)), Ok(1));
         assert_eq!(cache.try_fetch_value::<i32, &str>("k", || Ok(2)), Ok(1));
     }
@@ -508,6 +612,9 @@ mod tests {
     #[test]
     fn keys_use_usec_versions() {
         let time: jiff::Timestamp = "2024-06-01T12:00:00.000123Z".parse().unwrap();
-        assert_eq!(cache_key_with_version("messages", 1, time), "messages/1-20240601120000000123");
+        assert_eq!(
+            cache_key_with_version("messages", 1, time),
+            "messages/1-20240601120000000123"
+        );
     }
 }

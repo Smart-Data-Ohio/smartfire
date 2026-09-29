@@ -16,7 +16,10 @@ pub fn page_title_tag(page_title: Option<&str>) -> Html {
 
 /// `Users::PresenceHelper#user_theme`: the user's theme if it's one of `THEMES`, else "system".
 pub fn user_theme<'a>(ctx: &'a ViewContext<'_>) -> &'a str {
-    let theme = ctx.current_user.as_ref().and_then(|user| user.preferences.theme.as_deref());
+    let theme = ctx
+        .current_user
+        .as_ref()
+        .and_then(|user| user.preferences.theme.as_deref());
     match theme {
         Some(theme @ ("light" | "dark" | "system")) => theme,
         _ => "system",
@@ -26,7 +29,10 @@ pub fn user_theme<'a>(ctx: &'a ViewContext<'_>) -> &'a str {
 /// `Users::PresenceHelper#user_text_size`: the user's text size if it's one of `TEXT_SIZES`, else
 /// "default".
 pub fn user_text_size<'a>(ctx: &'a ViewContext<'_>) -> &'a str {
-    let text_size = ctx.current_user.as_ref().and_then(|user| user.preferences.text_size.as_deref());
+    let text_size = ctx
+        .current_user
+        .as_ref()
+        .and_then(|user| user.preferences.text_size.as_deref());
     match text_size {
         Some(size @ ("smaller" | "small" | "default" | "large" | "larger")) => size,
         _ => "default",
@@ -46,16 +52,27 @@ pub fn theme_color_scheme_meta_content(ctx: &ViewContext) -> &'static str {
 /// purpose, else nothing (the meta tag then has no content attribute).
 pub fn current_user_time_zone_meta_content<'a>(ctx: &'a ViewContext<'_>) -> Option<&'a str> {
     let preferences = &ctx.current_user.as_ref()?.preferences;
-    super::text::presence(preferences.time_zone.as_deref()).or(preferences.time_zone_explicit.then_some(""))
+    super::text::presence(preferences.time_zone.as_deref())
+        .or(preferences.time_zone_explicit.then_some(""))
 }
 
 /// `notification_sound_meta_tags` (`app/helpers/application_helper.rb`), from what the settings'
 /// owners decided ([`crate::layouts::NotificationSounds`]).
 pub fn notification_sound_meta_tags(ctx: &ViewContext) -> Html {
-    let Some(user) = &ctx.current_user else { return Safe(String::new()) };
+    let Some(user) = &ctx.current_user else {
+        return Safe(String::new());
+    };
     let sounds = &user.preferences.notification_sounds;
-    let meta = |name: &str, content: &str| builder_tag("meta", attrs().name(name).attr("content", content)).0;
-    let windows = |epochs: &[(i64, i64)]| epochs.iter().map(|(start, finish)| format!("{start}-{finish}")).collect::<Vec<_>>().join(",");
+    let meta = |name: &str, content: &str| {
+        builder_tag("meta", attrs().name(name).attr("content", content)).0
+    };
+    let windows = |epochs: &[(i64, i64)]| {
+        epochs
+            .iter()
+            .map(|(start, finish)| format!("{start}-{finish}"))
+            .collect::<Vec<_>>()
+            .join(",")
+    };
 
     let mut tags = String::new();
     if sounds.muted {
@@ -64,7 +81,8 @@ pub fn notification_sound_meta_tags(ctx: &ViewContext) -> Html {
     if let Some((start, finish)) = sounds.quiet_hours {
         tags.push_str(&meta("quiet-hours", &format!("{start}-{finish}")));
         // `time_zone_or_default`: the saved zone even when Rails doesn't know it, else `Time.zone`.
-        let zone = super::text::presence(user.preferences.time_zone.as_deref()).unwrap_or(ctx.time_zone.name());
+        let zone = super::text::presence(user.preferences.time_zone.as_deref())
+            .unwrap_or(ctx.time_zone.name());
         tags.push_str(&meta("quiet-hours-zone", zone));
     }
     if !sounds.meeting_quiet.is_empty() {
@@ -81,8 +99,18 @@ pub fn current_user_meta_tags(ctx: &ViewContext) -> Html {
     match &ctx.current_user {
         Some(user) => Safe(format!(
             "{}{}",
-            legacy_tag("meta", attrs().name("current-user-id").attr("content", user.id)).0,
-            legacy_tag("meta", attrs().name("current-user-name").attr("content", user.name.as_str())).0
+            legacy_tag(
+                "meta",
+                attrs().name("current-user-id").attr("content", user.id)
+            )
+            .0,
+            legacy_tag(
+                "meta",
+                attrs()
+                    .name("current-user-name")
+                    .attr("content", user.name.as_str())
+            )
+            .0
         )),
         None => Safe(String::new()),
     }
@@ -90,7 +118,12 @@ pub fn current_user_meta_tags(ctx: &ViewContext) -> Html {
 
 /// `script_aware_action_cable_meta_tag`.
 pub fn script_aware_action_cable_meta_tag(ctx: &ViewContext) -> Html {
-    builder_tag("meta", attrs().name("action-cable-url").attr("content", ctx.cable_url.as_str()))
+    builder_tag(
+        "meta",
+        attrs()
+            .name("action-cable-url")
+            .attr("content", ctx.cable_url.as_str()),
+    )
 }
 
 /// `custom_styles_tag`: the account's CSS, unescaped.
@@ -105,7 +138,11 @@ pub fn custom_styles_tag(ctx: &ViewContext) -> Html {
 pub fn body_classes(ctx: &ViewContext, body_class: Option<&str>) -> String {
     let admin = ctx.can_administer().then_some("admin");
     let logo = ctx.account.has_logo.then_some("account-has-logo");
-    [body_class, admin, logo].into_iter().flatten().collect::<Vec<_>>().join(" ")
+    [body_class, admin, logo]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 /// `link_back`: to the referrer, unless it's missing or the current page.
@@ -191,7 +228,10 @@ pub fn truncate(text: &str, length: usize, omission: &str) -> String {
 pub fn capitalize(text: &str) -> String {
     let mut chars = text.chars();
     match chars.next() {
-        Some(first) => first.to_uppercase().chain(chars.flat_map(char::to_lowercase)).collect(),
+        Some(first) => first
+            .to_uppercase()
+            .chain(chars.flat_map(char::to_lowercase))
+            .collect(),
         None => String::new(),
     }
 }
@@ -209,16 +249,29 @@ pub fn to_sentence(items: &[String], two_words_connector: &str) -> String {
 pub(crate) mod base64_url {
     /// `Base64.urlsafe_encode64` (padded).
     pub fn urlsafe_encode64(input: &str) -> String {
-        const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+        const ALPHABET: &[u8; 64] =
+            b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
         let bytes = input.as_bytes();
         let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
         for chunk in bytes.chunks(3) {
-            let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
+            let b = [
+                chunk[0],
+                *chunk.get(1).unwrap_or(&0),
+                *chunk.get(2).unwrap_or(&0),
+            ];
             let n = (u32::from(b[0]) << 16) | (u32::from(b[1]) << 8) | u32::from(b[2]);
             out.push(ALPHABET[(n >> 18) as usize & 63] as char);
             out.push(ALPHABET[(n >> 12) as usize & 63] as char);
-            out.push(if chunk.len() > 1 { ALPHABET[(n >> 6) as usize & 63] as char } else { '=' });
-            out.push(if chunk.len() > 2 { ALPHABET[n as usize & 63] as char } else { '=' });
+            out.push(if chunk.len() > 1 {
+                ALPHABET[(n >> 6) as usize & 63] as char
+            } else {
+                '='
+            });
+            out.push(if chunk.len() > 2 {
+                ALPHABET[n as usize & 63] as char
+            } else {
+                '='
+            });
         }
         out
     }
@@ -245,6 +298,9 @@ mod tests {
 
     #[test]
     fn encodes_urlsafe_base64() {
-        assert_eq!(base64_url::urlsafe_encode64("http://x/?a"), "aHR0cDovL3gvP2E=");
+        assert_eq!(
+            base64_url::urlsafe_encode64("http://x/?a"),
+            "aHR0cDovL3gvP2E="
+        );
     }
 }

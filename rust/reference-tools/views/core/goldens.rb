@@ -215,6 +215,10 @@ partials["searches_dropdown_recents_empty"] =
   render_with(user: david, partial: "searches/dropdown_recents", locals: { searches: [] })
 partials["first_paint_controller_preloads"] =
   render_with(user: david, inline: "<%= first_paint_controller_preloads %>")
+goldens["helpers"]["avatars"] = [ david, bender ].map do |u|
+  { "user" => u.name, "title" => u.title,
+    "html" => render_with(inline: '<%= avatar_tag u, size: 32, loading: "lazy" %>', locals: { u: u }) }
+end
 
 # ---------------------------------------------------------------------------------------------
 # Worked-example pages, as real responses
@@ -328,15 +332,8 @@ cache["expand"] = [
 ].map { |label, key| [ label, ActiveSupport::Cache.expand_cache_key(key) ] }
 
 
-# message_with_pr_cards_cache_key (app/helpers/github/pull_requests_helper.rb) with
-# PRESENTATION_CACHE_VERSION from our Rails PR #144 (origin/main), which this image may predate:
-# it appends the version as the key's last element, and nothing else changed.
-unless defined?(MessagesHelper::PRESENTATION_CACHE_VERSION)
-  MessagesHelper.const_set(:PRESENTATION_CACHE_VERSION, 2)
-  Github::PullRequestsHelper.prepend(Module.new do
-    def message_with_pr_cards_cache_key(message) = super << MessagesHelper::PRESENTATION_CACHE_VERSION
-  end)
-end
+# Refuse an old image: this must exercise the real helper, without repairing its behavior here.
+raise "Reference must include Rails PR #148" unless MessagesHelper::PRESENTATION_CACHE_VERSION == 3
 cache["presentation_cache_version"] = MessagesHelper::PRESENTATION_CACHE_VERSION
 
 # The key is built from associations; each case stubs them on a real message (and the view's
@@ -358,7 +355,8 @@ message_cases = [
                           { "updated_at" => "2026-01-02T00:00:00Z", "edited_at" => nil, "creator" => "jz", "room" => "Hash \#{x} \\ tab\t" } ] },
   { "label" => "pull_request_without_thread", "has_pull_requests" => true, "pr_threads_stamp" => nil, "cards" => [ "2026-03-08T07:00:00Z" ] },
   { "label" => "empty_thread", "thread_messages_count" => 0, "pins" => [], "agent_steps" => [] },
-  { "label" => "quote_of_unedited_source", "quoted_sources" => [ { "updated_at" => "2026-02-01T00:00:00Z", "edited_at" => nil, "creator" => "Bender Bot", "room" => "All Pets" } ] }
+  { "label" => "quote_of_unedited_source", "quoted_sources" => [ { "updated_at" => "2026-02-01T00:00:00Z", "edited_at" => nil, "creator" => "Bender Bot", "room" => "All Pets" } ] },
+  { "label" => "quote_updated_after_edit", "quoted_sources" => [ { "updated_at" => "2026-02-02T00:00:00Z", "edited_at" => "2026-02-01T00:00:00Z", "creator" => "David", "room" => "HQ" } ] }
 ]
 fragment_message = Message.order(:id).first
 parse = ->(iso) { iso && Time.iso8601(iso).in_time_zone }

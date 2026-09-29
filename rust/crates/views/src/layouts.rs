@@ -98,8 +98,17 @@ pub struct FrameLayout<'a> {
 
 /// Renders a page's `head` and `content` blocks in the Turbo-Frame layout:
 /// `frame(ctx, page.as_head(), page.as_content())`.
-pub fn frame(ctx: &crate::ViewContext, head: impl Template, content: impl Template) -> askama::Result<String> {
-    FrameLayout { ctx, head: h::raw(head.render()?), content: h::raw(content.render()?) }.render()
+pub fn frame(
+    ctx: &crate::ViewContext,
+    head: impl Template,
+    content: impl Template,
+) -> askama::Result<String> {
+    FrameLayout {
+        ctx,
+        head: h::raw(head.render()?),
+        content: h::raw(content.render()?),
+    }
+    .render()
 }
 
 /// What the application layout's chrome shows that other domains own. The controller gathers it
@@ -204,17 +213,25 @@ pub struct Public {
 }
 
 impl Page for Public {
-    fn page_title(&self) -> Option<String> { self.page_title.clone() }
-    fn page_description(&self) -> Option<&str> { self.page_description.as_deref() }
+    fn page_title(&self) -> Option<String> {
+        self.page_title.clone()
+    }
+    fn page_description(&self) -> Option<&str> {
+        self.page_description.as_deref()
+    }
 }
 
 #[derive(Template)]
 #[template(path = "layouts/mailer.html")]
-pub struct Mailer { pub content: h::Html }
+pub struct Mailer {
+    pub content: h::Html,
+}
 
 #[derive(Template)]
 #[template(path = "layouts/mailer.txt", escape = "none")]
-pub struct TextMailer<'a> { pub content: &'a str }
+pub struct TextMailer<'a> {
+    pub content: &'a str,
+}
 
 /// The app adapter supplies domain-owned values; views never perform domain queries.
 pub trait ChromeSource {

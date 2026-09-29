@@ -24,3 +24,9 @@ docker run --rm --name "${PARITY_OWNER:-ws6}-views-goldens-$$" --cpus 2 \
   -v "$ROOT:/work:ro" "${PARITY_IMAGE:-campfire-reference}" \
   bash -c 'bin/rails db:prepare >/dev/null && bin/rails runner /work/reference-tools/views/core/goldens.rb'
 python3 reference-tools/views/core/split.py "$STORE/db/goldens.json" "$OUT"
+python3 - "$OUT" <<'PY'
+from pathlib import Path
+import sys
+root = Path(sys.argv[1])
+print(f"Rails core goldens: {len(list((root / 'layouts').iterdir()))} layouts, {len(list((root / 'partials').iterdir()))} partials, {len(list((root / 'pages').iterdir()))} pages")
+PY

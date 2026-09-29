@@ -12,7 +12,10 @@ pub struct Zone {
 impl Zone {
     /// `ActiveSupport::TimeZone["UTC"]`, the app's default `Time.zone`.
     pub fn utc() -> Self {
-        Zone { name: "UTC".into(), tz: jiff::tz::TimeZone::UTC }
+        Zone {
+            name: "UTC".into(),
+            tz: jiff::tz::TimeZone::UTC,
+        }
     }
 
     /// `SetTimeZone#apply_user_time_zone`: the user's zone if it names one, else the default.
@@ -22,10 +25,19 @@ impl Zone {
 
     /// Case-sensitive, like ActiveSupport/TZInfo (Jiff's database lookup is case-insensitive).
     pub fn lookup(name: &str) -> Option<Self> {
-        let identifier = rails_zones::MAPPING.iter().find(|(label, _)| *label == name).map(|(_, identifier)| *identifier).unwrap_or(name);
-        if rails_zones::IDENTIFIERS.binary_search(&identifier).is_err() { return None; }
+        let identifier = rails_zones::MAPPING
+            .iter()
+            .find(|(label, _)| *label == name)
+            .map(|(_, identifier)| *identifier)
+            .unwrap_or(name);
+        if rails_zones::IDENTIFIERS.binary_search(&identifier).is_err() {
+            return None;
+        }
         let tz = jiff::tz::TimeZone::get(identifier).ok()?;
-        Some(Self { name: name.into(), tz })
+        Some(Self {
+            name: name.into(),
+            tz,
+        })
     }
 
     pub fn name(&self) -> &str {
@@ -37,7 +49,10 @@ impl Zone {
     }
 
     pub fn format(&self, instant: jiff::Timestamp, format: &str) -> String {
-        instant.to_zoned(self.tz.clone()).strftime(format).to_string()
+        instant
+            .to_zoned(self.tz.clone())
+            .strftime(format)
+            .to_string()
     }
 
     pub fn iso8601(&self, instant: jiff::Timestamp) -> String {
@@ -56,25 +71,55 @@ impl Zone {
             "db" => instant.strftime("%Y-%m-%d %H:%M:%S").to_string(),
             "number" => self.format(instant, "%Y%m%d%H%M%S"),
             "epoch" => instant.as_millisecond().to_string(),
-            _ if self.tz.to_offset_info(instant).abbreviation() == "UTC" => self.format(instant, "%Y-%m-%d %H:%M:%S UTC"),
+            _ if self.tz.to_offset_info(instant).abbreviation() == "UTC" => {
+                self.format(instant, "%Y-%m-%d %H:%M:%S UTC")
+            }
             _ => self.format(instant, "%Y-%m-%d %H:%M:%S %z"),
         }
     }
 }
 
 /// `TimeHelper#local_datetime_tag`. The supplied block content is already rendered HTML.
-pub fn local_datetime_tag(zone: &Zone, instant: jiff::Timestamp, style: &str, attributes: crate::helpers::Attrs, content: &str) -> crate::helpers::Html {
-    crate::helpers::content_tag("time", attributes.attr("datetime", zone.iso8601(instant)).data("local_time_target", style), content)
+pub fn local_datetime_tag(
+    zone: &Zone,
+    instant: jiff::Timestamp,
+    style: &str,
+    attributes: crate::helpers::Attrs,
+    content: &str,
+) -> crate::helpers::Html {
+    crate::helpers::content_tag(
+        "time",
+        attributes
+            .attr("datetime", zone.iso8601(instant))
+            .data("local_time_target", style),
+        content,
+    )
 }
 
 /// ActionView::Helpers::DateHelper, English defaults (our config/locales/en.yml is empty).
-pub fn distance_of_time_in_words(zone: &Zone, from: jiff::Timestamp, to: jiff::Timestamp, include_seconds: bool) -> String {
+pub fn distance_of_time_in_words(
+    zone: &Zone,
+    from: jiff::Timestamp,
+    to: jiff::Timestamp,
+    include_seconds: bool,
+) -> String {
     let (from, to) = if from > to { (to, from) } else { (from, to) };
     let seconds = (to.as_nanosecond() - from.as_nanosecond()) as f64 / 1e9;
     let minutes = (seconds / 60.0).round() as i64;
-    let words = |prefix: &str, count: i64, unit: &str| format!("{prefix}{count} {unit}{}", if count == 1 { "" } else { "s" });
+    let words = |prefix: &str, count: i64, unit: &str| {
+        format!(
+            "{prefix}{count} {unit}{}",
+            if count == 1 { "" } else { "s" }
+        )
+    };
     match minutes {
-        0..=1 if !include_seconds => if minutes == 0 { "less than a minute".into() } else { "1 minute".into() },
+        0..=1 if !include_seconds => {
+            if minutes == 0 {
+                "less than a minute".into()
+            } else {
+                "1 minute".into()
+            }
+        }
         0..=1 => match seconds.round() as i64 {
             0..=4 => "less than 5 seconds".into(),
             5..=9 => "less than 10 seconds".into(),
@@ -96,7 +141,11 @@ pub fn distance_of_time_in_words(zone: &Zone, from: jiff::Timestamp, to: jiff::T
             let first_year = i64::from(from.year()) + i64::from(from.month() >= 3);
             let last_year = i64::from(to.year()) - i64::from(to.month() < 3);
             let leap_count = |year: i64| year / 4 - year / 100 + year / 400;
-            let leap_days = if first_year > last_year { 0 } else { leap_count(last_year) - leap_count(first_year - 1) };
+            let leap_days = if first_year > last_year {
+                0
+            } else {
+                leap_count(last_year) - leap_count(first_year - 1)
+            };
             let adjusted = minutes - leap_days * 1440;
             let years = adjusted / 525600;
             match adjusted % 525600 {
