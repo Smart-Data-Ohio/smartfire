@@ -49,6 +49,11 @@ test('cache instrumentation normalizes only known hit/miss values', () => {
   assert.notEqual(describe('x-cache', 'hit'), describe('x-cache', 'wrong'))
   assert.notEqual(describe('x-cache', 'hit'), responseHeaders([], options))
 })
+test('cache directive names canonicalize while extension values remain exact', () => {
+  assert.equal(describe('cache-control', 'PRIVATE, Max-Age=60'), describe('cache-control', 'max-age=60, private'))
+  assert.notEqual(describe('cache-control', 'private, extension="A,B"'), describe('cache-control', 'private, extension="a,B"'))
+  assert.match(describe('cache-control', 'private, extension="A,B"'), /extension="A,B"/)
+})
 test('WebKit comma splitting reconstructs dates and policy fields, never cookie pairs', () => {
   const complete = responseHeaders([{ name: 'date', value: 'Mon, 02 Mar 2026 16:00:00 GMT' }, { name: 'permissions-policy', value: 'camera=(self), microphone=(self)' }, { name: 'set-cookie', value: 'a=1; Expires=Mon, 02 Mar 2026 17:00:00 GMT' }, { name: 'set-cookie', value: 'b=2' }], options)
   const split = responseHeaders([{ name: 'date', value: 'Mon' }, { name: 'date', value: '02 Mar 2026 16:00:00 GMT' }, { name: 'permissions-policy', value: 'camera=(self)' }, { name: 'permissions-policy', value: 'microphone=(self)' }, { name: 'set-cookie', value: 'a=1; Expires=Mon, 02 Mar 2026 17:00:00 GMT' }, { name: 'set-cookie', value: 'b=2' }], options)

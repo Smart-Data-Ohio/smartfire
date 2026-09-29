@@ -23,7 +23,8 @@
 #   and anti-forgery entropy. Header presence and empty values remain significant.
 # - CSP / CSP-Report-Only: only quoted nonce bytes normalize; every directive/source remains.
 # - Set-Cookie Expires: exact seconds from the seed clock; preserve lifetime, not remove it.
-# - Cache-Control/Vary: comma directive whitespace/case/order canonicalized, values retained.
+# - Cache-Control/Vary: directive-name whitespace/case/order canonicalized; Cache-Control
+#   values (including quoted extension values and embedded commas) remain exact.
 # - Location: the existing typed signed-ID/time/blob normalizer; destination meaning retained.
 # - X-Cache: only literal hit/miss normalize: Rack::Cache instrumentation varies with request
 #   interleaving. Presence/unknown values, cache policy, validators and body bytes remain.

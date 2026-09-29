@@ -34,7 +34,15 @@ export function responseHeaders(headers: Header[], options: NormalizeOptions = {
       // these bytes before substituting their normalized digest. An invented/wrong ETag fails.
       value = `W/"«normalized-sha256:${createHash('sha256').update(normalizeResponse(body, 'text/html', options)).digest('hex')}»"`
     }
-    else if (name === 'cache-control' || name === 'vary') value = value.split(',').map(s => s.trim().toLowerCase()).sort().join(', ')
+    else if (name === 'cache-control') {
+      // Directive names are case-insensitive; quoted extension values are not. Keep commas
+      // inside quoted strings and preserve value bytes while canonicalizing name/order.
+      value = (value.match(/(?:[^,"]|"(?:\\.|[^"\\])*")+/g) ?? [value]).map(directive => {
+        const equal = directive.indexOf('=')
+        return equal < 0 ? directive.trim().toLowerCase() : `${directive.slice(0, equal).trim().toLowerCase()}=${directive.slice(equal + 1).trim()}`
+      }).sort().join(', ')
+    }
+    else if (name === 'vary') value = value.split(',').map(s => s.trim().toLowerCase()).sort().join(', ')
     else if (name === 'location') value = maskText(value, options)
     return [`${name}: ${value}`]
   }).sort().join('\n')
