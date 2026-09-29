@@ -568,7 +568,8 @@ impl ChannelThread {
 
     /// `receive(message)`, from the message's `after_create_commit`: every other thread member
     /// who is still in the room goes unread (`update_columns`) and hears about it on their unread
-    /// threads stream; then the push job is enqueued. A system note does none of it.
+    /// threads stream. The push job is persisted by `push_later` in the message's transaction.
+    /// A system note does none of it.
     pub(crate) fn receive(tx: &mut Tx<'_>, thread_id: i64, message: &Message) -> Result<()> {
         if message.system_note {
             return Ok(());

@@ -33,7 +33,7 @@ reference() {
     -e RAILS_ENV=test -e RAILS_LOG_LEVEL=warn -e SCHEMA_QUERY="$SCHEMA_QUERY" -e CAMPFIRE_FIXTURES_NOW \
     -v "${CAMPFIRE_REFERENCE:-$ROOT/..}/test:/rails/test:ro" \
     -v "$ROOT/crates/db/ruby:/tools:ro" -v "$OUT:/out" \
-    campfire-reference:latest sh -ec "$1" 2> >(grep -v -e VIPS -e '^$' >&2)
+    "${PARITY_IMAGE:-campfire-reference:latest}" sh -ec "$1" 2> >(grep -v -e VIPS -e '^$' >&2)
 }
 
 echo "== reference: db:prepare, db:fixtures:load, scenario.rb, save_touches.rb"

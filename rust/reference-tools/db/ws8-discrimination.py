@@ -27,7 +27,7 @@ def replace_body(source, marker, body):
     return source[:start] + "{\n" + body + "\n}" + source[end:]
 
 
-def check(name, changes, test_filter, must_fail):
+def check(name, changes, test_filter, must_fail, package="campfire_db"):
     original = {path: path.read_text() for path in changes}
     try:
         for path, mutate in changes.items():
@@ -35,7 +35,7 @@ def check(name, changes, test_filter, must_fail):
             assert broken != original[path], f"mutation did not change {path}"
             path.write_text(broken)
         run = subprocess.run(
-            ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "-j", "4", "-p", "campfire_db", test_filter],
+            ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "-j", "4", "-p", package, test_filter],
             cwd=ROOT / "rust", env=ENV, capture_output=True, text=True,
         )
         output = run.stdout + run.stderr
@@ -106,4 +106,12 @@ def incomplete_golden(source):
 check("save-touch-golden", {ROOT / "rust/crates/db/src/tests/message_save_touches.json": incomplete_golden},
     "message_saves_touch_what_rails_touches", ["message_saves_touch_what_rails_touches"])
 
-print("WS8 discrimination: 10 mutations detected; sources restored", flush=True)
+check("thread-job-atomicity", {MODELS / "channel_thread.rs": lambda s: replace_body(s, "pub(crate) fn push_later(", "")},
+    "ws8_messaging_test", ["thread_post_rolls_back_with_a_failed_durable_enqueue",
+        "scheduled_thread_post_rolls_back_claim_and_history_with_a_failed_enqueue"], "campfire_jobs")
+
+check("reminder-job-atomicity", {MODELS / "saved_item.rs": lambda s: s.replace(
+    "tx.emit_after_commit(Event::job(&ReminderPushJob { saved_item_id: item.id }));", "// Deliberately omitted enqueue.")},
+    "ws8_messaging_test", ["saved_reminder_rolls_back_claim_and_activity_with_a_failed_enqueue"], "campfire_jobs")
+
+print("WS8 discrimination: 12 mutations detected; sources restored", flush=True)
