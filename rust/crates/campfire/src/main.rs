@@ -8,6 +8,7 @@ mod config;
 mod controllers;
 mod integrations;
 mod jobs;
+mod mail;
 mod rich_text;
 
 /// jemalloc: the room page alone makes thousands of allocations per request, across as many

@@ -37,6 +37,7 @@ pub struct AppState {
     pub cable: Cable,
     pub broadcasts: channels::Broadcasts,
     pub jobs: jobs::Jobs,
+    pub mail: crate::mail::State,
     /// `config.x.web_push_pool`; `None` when Web Push is off (no valid VAPID keys).
     pub web_push: Option<crate::integrations::web_push::Pool>,
     /// `Rails.cache` for view fragments (`cache message do`), current during every request
@@ -81,6 +82,7 @@ pub async fn boot(config: Config) -> anyhow::Result<Booted> {
     let crypto: SharedCrypto = Arc::new(RailsCrypto::new(secrets.clone()));
 
     // The job classes first: the database's sink enqueues them on their queues.
+    let mail = crate::mail::State::new(config.mail.clone());
     let registry = jobs::registry();
     let runner_config = jobs::runner_config(&config);
     let (jobs, ad_hoc) = jobs::Jobs::new(&registry, &runner_config)?;
@@ -114,6 +116,7 @@ pub async fn boot(config: Config) -> anyhow::Result<Booted> {
         broadcasts: channels::Broadcasts::new(cable.clone()),
         cable,
         jobs,
+        mail,
         web_push,
         fragment_cache,
     });

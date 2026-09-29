@@ -286,7 +286,7 @@ static ROUTES: LazyLock<Vec<Route>> = LazyLock::new(|| {
         get("/resume_historical_location(.:format)", "turbo/native/navigation#resume", turbo_native::resume),
         get("/refresh_historical_location(.:format)", "turbo/native/navigation#refresh", turbo_native::refresh),
         post("/rails/action_mailbox/postmark/inbound_emails(.:format)", "action_mailbox/ingresses/postmark/inbound_emails#create", mailbox::ingress_not_configured),
-        post("/rails/action_mailbox/relay/inbound_emails(.:format)", "action_mailbox/ingresses/relay/inbound_emails#create", mailbox::ingress_not_configured),
+        post("/rails/action_mailbox/relay/inbound_emails(.:format)", "action_mailbox/ingresses/relay/inbound_emails#create", crate::mail::relay),
         post("/rails/action_mailbox/sendgrid/inbound_emails(.:format)", "action_mailbox/ingresses/sendgrid/inbound_emails#create", mailbox::ingress_not_configured),
         get("/rails/action_mailbox/mandrill/inbound_emails(.:format)", "action_mailbox/ingresses/mandrill/inbound_emails#health_check", mailbox::ingress_not_configured),
         post("/rails/action_mailbox/mandrill/inbound_emails(.:format)", "action_mailbox/ingresses/mandrill/inbound_emails#create", mailbox::ingress_not_configured),
