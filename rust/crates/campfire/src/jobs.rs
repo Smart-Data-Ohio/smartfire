@@ -55,6 +55,8 @@ impl JobKind {
             Event::DisconnectUser { .. } => None,
             // Domain jobs (`campfire_db::Job`) aren't dispatched yet: nothing emits them so far.
             Event::Job(_) => None,
+            // Rendered and delivered by the broadcast sink (WS7), not a job.
+            Event::Broadcast(_) => None,
         }
     }
 

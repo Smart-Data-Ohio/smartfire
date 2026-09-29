@@ -38,6 +38,10 @@ pub enum Event {
 
     /// `SomeJob.perform_later(*arguments)` for a job a domain module defines (see [`Job`]).
     Job(JobRequest),
+
+    /// A Turbo Stream or Action Cable broadcast a model makes, described for the app's sink to
+    /// render and deliver (see [`crate::broadcasts`]).
+    Broadcast(crate::broadcasts::Broadcast),
 }
 
 /// A job's arguments, serializable like Active Job's. Implemented by each domain's job type.
@@ -68,6 +72,22 @@ impl Event {
             class: J::CLASS,
             arguments: serde_json::to_value(arguments).expect("job arguments serialize to JSON"),
         })
+    }
+
+    /// The job request, if this is a domain job of class `J`.
+    pub fn as_job<J: Job>(&self) -> Option<J> {
+        match self {
+            Event::Job(request) => request.decode::<J>().and_then(|decoded| decoded.ok()),
+            _ => None,
+        }
+    }
+
+    /// The broadcast, if this is one.
+    pub fn as_broadcast(&self) -> Option<&crate::broadcasts::Broadcast> {
+        match self {
+            Event::Broadcast(broadcast) => Some(broadcast),
+            _ => None,
+        }
     }
 }
 

@@ -306,18 +306,26 @@ fn export_database_for_rails() {
                     ..Default::default()
                 },
             )?;
-            let thread_id = super::message_test::create_thread(tx, rust_room.id, rusty.id)?;
-            Message::create(
+            let mut thread = crate::ChannelThread::create(
                 tx,
-                crate::NewMessage {
+                crate::NewChannelThread {
                     room_id: rust_room.id,
                     creator_id: rusty.id,
-                    client_message_id: Some("rust-reply".into()),
-                    body: Some("in the thread".into()),
-                    thread_id: Some(thread_id),
+                    name: Some("Thread".into()),
                     ..Default::default()
                 },
             )?;
+            thread.post_message(
+                tx,
+                rusty.id,
+                crate::NewMessage {
+                    client_message_id: Some("rust-reply".into()),
+                    body: Some("in the thread".into()),
+                    ..Default::default()
+                },
+            )?;
+            crate::ThreadMembership::join(tx, thread.id, id("david"))?
+                .update_involvement(tx, crate::ThreadInvolvement::Everything)?;
 
             let mut bot = User::create_bot(tx, "Rust Bot", None)?;
             bot.reset_bot_key(tx)
@@ -334,13 +342,19 @@ fn export_database_for_rails() {
             [],
             |r| r.get(0),
         )?;
-        // No Rust path creates threads yet (WS8): the post is set up directly, tracked as a board
-        // post must be (`work_status_required_in_boards`).
-        let post = super::message_test::create_thread(tx, board_id, rusty.id)?;
-        tx.conn().execute(
-            r#"UPDATE "channel_threads" SET "work_status" = 'planned', "work_status_changed_at" = ? WHERE "id" = ?"#,
-            rusqlite::params![tx.now(), post],
-        )?;
+        // Tracked, as a board post must be (`work_status_required_in_boards`), and tagged.
+        let post = crate::ChannelThread::create(
+            tx,
+            crate::NewChannelThread {
+                room_id: board_id,
+                creator_id: rusty.id,
+                name: Some("Thread".into()),
+                work_status: Some("planned".into()),
+                tag_names: Some(vec!["Rust-Tag".into(), "ui".into()]),
+                ..Default::default()
+            },
+        )?
+        .id;
         for (client_message_id, thread_id, system_note) in
             [("rust-board-note", None, true), ("rust-board-post", Some(post), false)]
         {
@@ -382,25 +396,28 @@ fn export_database_for_rails() {
     db.write_blocking(move |tx| stream.update_body(tx, "thinking harder"))
         .unwrap();
 
-    // Destroying a message leaves a tombstone on its replies. (No Rust path writes a reply link
-    // yet, so the link is set directly.)
+    // Destroying a message leaves a tombstone on its replies.
     db.write_blocking(|tx| {
-        let [doomed, reply] = ["rust-doomed", "rust-reply-to-doomed"].map(|client_message_id| {
-            Message::create(
-                tx,
-                crate::NewMessage {
-                    room_id: id("designers"),
-                    creator_id: id("david"),
-                    client_message_id: Some(client_message_id.into()),
-                    body: Some(client_message_id.into()),
-                    ..Default::default()
-                },
-            )
-        });
-        let (doomed, reply) = (doomed?, reply?);
-        tx.conn().execute(
-            r#"UPDATE "messages" SET "reply_to_message_id" = ? WHERE "id" = ?"#,
-            rusqlite::params![doomed.id, reply.id],
+        let doomed = Message::create(
+            tx,
+            crate::NewMessage {
+                room_id: id("designers"),
+                creator_id: id("david"),
+                client_message_id: Some("rust-doomed".into()),
+                body: Some("rust-doomed".into()),
+                ..Default::default()
+            },
+        )?;
+        Message::create(
+            tx,
+            crate::NewMessage {
+                room_id: id("designers"),
+                creator_id: id("david"),
+                client_message_id: Some("rust-reply-to-doomed".into()),
+                body: Some("rust-reply-to-doomed".into()),
+                reply_to_message_id: Some(doomed.id),
+                ..Default::default()
+            },
         )?;
         doomed.destroy(tx)
     })

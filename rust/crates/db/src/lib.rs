@@ -6,6 +6,7 @@
 //! [`Tx`], which carries the clock, the [`EventSink`] for side effects that leave the
 //! database, and the after-commit queue.
 
+pub mod broadcasts;
 pub mod database;
 pub mod error;
 pub mod events;

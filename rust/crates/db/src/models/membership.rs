@@ -316,7 +316,7 @@ impl Membership {
     /// room are dropped, and a direct room recomputes its member key
     /// (`after_destroy_commit :refresh_direct_member_key`). Not yet ported, for the workstreams
     /// that own them: the huddle, agent and stream revocations (`before_destroy`), the last stage
-    /// host's successor, the sidebar removal broadcast, thread memberships and calendar syncs.
+    /// host's successor, the sidebar removal broadcast and calendar syncs.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         tx.conn().execute_cached(
             r#"DELETE FROM "memberships" WHERE "memberships"."id" = ?"#,
@@ -325,6 +325,8 @@ impl Membership {
         let (user_id, room_id) = (self.user_id, self.room_id);
         tx.after_commit(move |tx| {
             User::find(tx.conn(), user_id)?.reset_remote_connections(tx);
+            // `remove_thread_membership` (WS8)
+            crate::models::ThreadMembership::delete_for_room_member(tx, room_id, user_id)?;
             if let Some(room) = Room::find_by_id(tx.conn(), room_id)?.filter(Room::direct) {
                 room.refresh_direct_member_key(tx)?;
             }

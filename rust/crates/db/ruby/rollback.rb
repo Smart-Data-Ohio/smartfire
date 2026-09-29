@@ -53,11 +53,15 @@ check("thread reply") do
 end
 
 check("thread counter") { reply.thread.messages_count == 1 }
+check("thread membership") do
+  reply.thread.memberships.order(:id).map { [ _1.user.name, _1.involvement ] } == [ [ "Rusty", "mentions" ], [ "David", "everything" ] ]
+end
 board = Room.find_by!(name: "Rust Board")
 check("board root holds only the system note") do
   board.root_messages.pluck(:client_message_id) == [ "rust-board-note" ] &&
     Message.find_by!(client_message_id: "rust-board-post").thread.room == board
 end
+check("board post tags") { board.channel_threads.sole.tags.pluck(:name) == %w[ rust-tag ui ] && board.channel_threads.sole.work_status == "planned" }
 stream = Message.find_by!(client_message_id: "rust-stream")
 check("stream activity clock") do
   stream.streaming? && stream.streaming_updated_at == stream.created_at + 9.minutes &&
@@ -102,7 +106,7 @@ check("every table Rust wrote has a model: #{unmodeled}") { unmodeled.empty? }
 records = rust_written.flat_map { |table, ids| models.fetch(table).where(id: ids).to_a }
 invalid = records.reject(&:valid?).map { [ _1.class.name, _1.id, _1.errors.full_messages ] }
 check("Rails validates every row Rust wrote: #{invalid}") do
-  records.size == rust_written.values.sum(&:size) && %w[ messages boosts searches channel_threads memberships rooms users sessions ].all? { rust_written.key?(_1) } &&
+  records.size == rust_written.values.sum(&:size) && %w[ messages boosts searches channel_threads thread_memberships thread_tags memberships rooms users sessions ].all? { rust_written.key?(_1) } &&
     invalid.empty?
 end
 puts "validated #{records.size} rows Rust wrote: #{rust_written.transform_values(&:size).sort.to_h}"

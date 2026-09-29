@@ -20,6 +20,72 @@ pub trait RichText: Send + Sync {
     /// `body.attachables.grep(User).uniq`: user ids from mention attachments, in document
     /// order, deduplicated (`reference/app/models/message/mentionee.rb`).
     fn mentioned_user_ids(&self, conn: &Connection, html: &str) -> Vec<i64>;
+
+    /// `Message::Markdown.render(source, room:)`: the Action Text body a Markdown source renders
+    /// to, with `@[Name]` tokens resolved against the room's members. The app plugs in
+    /// `campfire_richtext::markdown::render` (WS5); the default is [`BasicRichText`]'s stand-in,
+    /// which escapes the source into paragraphs and resolves mentions the same way.
+    fn render_markdown(&self, conn: &Connection, source: &str, room_id: i64) -> Result<String, String> {
+        Ok(basic_markdown(conn, source, room_id))
+    }
+
+    /// `Message::Markdown.plain_text(body)`: the plain text of a Markdown-rendered body. The
+    /// default reads it like any other body.
+    fn markdown_plain_text(&self, conn: &Connection, html: &str, user_names: UserNames<'_>) -> String {
+        self.to_plain_text(conn, html, user_names)
+    }
+}
+
+/// `Message::Markdown::MENTION_TOKEN_PATTERN` (`/(?<!\\)@\[(?<name>[^\[\]\r\n]+)\]/`): the
+/// names of the `@[Name]` tokens in `source`, in order, repeats included.
+pub fn mention_token_names(source: &str) -> Vec<String> {
+    let bytes = source.as_bytes();
+    let mut names = Vec::new();
+    let mut i = 0;
+    while let Some(offset) = source[i..].find("@[") {
+        let start = i + offset;
+        i = start + 2;
+        if start > 0 && bytes[start - 1] == b'\\' {
+            continue;
+        }
+        let rest = &source[start + 2..];
+        let Some(end) = rest.find(['[', ']', '\r', '\n']) else { break };
+        if end > 0 && rest.as_bytes()[end] == b']' {
+            names.push(rest[..end].to_string());
+            i = start + 2 + end + 1;
+        }
+    }
+    names
+}
+
+/// The stand-in Markdown renderer: each paragraph escaped into a `<p>`, with `@[Name]` naming
+/// exactly one member of the room turned into a mention attachment.
+fn basic_markdown(conn: &Connection, source: &str, room_id: i64) -> String {
+    let member_id = |name: &str| -> Option<i64> {
+        let mut stmt = conn
+            .prepare_cached(r#"SELECT "users"."id" FROM "users" INNER JOIN "memberships" ON "memberships"."user_id" = "users"."id" WHERE "memberships"."room_id" = ? AND "users"."name" = ? AND "users"."status" = 0"#)
+            .ok()?;
+        let ids: Vec<i64> = stmt.query_map(rusqlite::params![room_id, name], |r| r.get(0)).ok()?.filter_map(|r| r.ok()).collect();
+        (ids.len() == 1).then(|| ids[0])
+    };
+    source
+        .split("\n\n")
+        .filter(|paragraph| !paragraph.trim().is_empty())
+        .map(|paragraph| {
+            let mut html = escape(paragraph);
+            for name in mention_token_names(paragraph) {
+                if let Some(id) = member_id(&name) {
+                    html = html.replacen(&format!("@[{}]", escape(&name)), &mention_attachment_for(id), 1);
+                }
+            }
+            format!("<p>{html}</p>")
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn escape(text: &str) -> String {
+    text.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
 }
 
 /// Tag stripping plus unverified SGID decoding. Campfire accepts unverified user SGIDs
@@ -172,6 +238,13 @@ mod tests {
             BasicRichText.to_plain_text(&memory(), &html, &|id| (id == 7).then(|| "Kevin".to_string())),
             "Hey @Kevin"
         );
+    }
+
+    #[test]
+    fn mention_tokens_skip_escaped_and_bracketed_names() {
+        assert_eq!(mention_token_names("hi @[Jason Fried] and \\@[Nope] and @[David]"), vec!["Jason Fried", "David"]);
+        assert_eq!(mention_token_names("@[a[b] @[]"), Vec::<String>::new());
+        assert_eq!(mention_token_names("@[Line\nbreak] @[Kevin]"), vec!["Kevin"]);
     }
 
     #[test]
