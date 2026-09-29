@@ -336,7 +336,7 @@ async fn start_rust(fixtures: &Fixtures, dir: &Path) -> Target {
     let server = channels::server(deps, Config { assume_ssl: false, ..Config::default() });
     let _ = sink.server.set(server.clone());
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = super::support::bind_listener().await;
     let addr = listener.local_addr().unwrap();
     let app = server.router::<()>("/cable");
     tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });

@@ -101,12 +101,30 @@ pub async fn start(config: Config) -> TestServer {
         })
         .build();
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = bind_listener().await;
     let addr = listener.local_addr().unwrap();
     let app = server.router::<()>("/cable");
     tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
 
     TestServer { server, url: format!("ws://{addr}/cable"), origin: format!("http://{addr}"), log }
+}
+
+/// Restricts listening ports on a shared worker host; unset, lets the OS choose.
+pub async fn bind_listener() -> tokio::net::TcpListener {
+    let Ok(range) = std::env::var("CABLE_TEST_PORT_RANGE") else {
+        return tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    };
+    let (start, end) = range.split_once('-').expect("CABLE_TEST_PORT_RANGE=start-end");
+    let (start, end): (u16, u16) = (start.parse().unwrap(), end.parse().unwrap());
+    assert!(start > 0 && start <= end, "invalid test port range");
+    for port in start..=end {
+        match tokio::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).await {
+            Ok(listener) => return listener,
+            Err(error) if error.kind() == std::io::ErrorKind::AddrInUse => continue,
+            Err(error) => panic!("binding {port}: {error}"),
+        }
+    }
+    panic!("no free listening port in {range}");
 }
 
 pub fn test_config() -> Config {

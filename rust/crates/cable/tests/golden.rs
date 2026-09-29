@@ -393,7 +393,7 @@ async fn start_campfire_like_server(tokens: &BTreeMap<String, String>) -> Target
         .channel("Turbo::StreamsChannel", move || turbo.clone())
         .build();
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = support::bind_listener().await;
     let addr = listener.local_addr().unwrap();
     let app = server.router::<()>("/cable");
     tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });

@@ -74,7 +74,7 @@ pub async fn start() -> TestApp {
     let server = channels::server(deps, Config { assume_ssl: false, ..Config::default() });
     let _ = sink.server.set(server.clone());
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = bind_listener().await;
     let addr = listener.local_addr().unwrap();
     let app = server.router::<()>("/cable");
     tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
@@ -89,6 +89,24 @@ pub async fn start() -> TestApp {
         origin: format!("http://{addr}"),
         _dir: dir,
     }
+}
+
+/// Restricts listening ports on a shared worker host; unset, lets the OS choose.
+pub async fn bind_listener() -> tokio::net::TcpListener {
+    let Ok(range) = std::env::var("CABLE_TEST_PORT_RANGE") else {
+        return tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    };
+    let (start, end) = range.split_once('-').expect("CABLE_TEST_PORT_RANGE=start-end");
+    let (start, end): (u16, u16) = (start.parse().unwrap(), end.parse().unwrap());
+    assert!(start > 0 && start <= end, "invalid test port range");
+    for port in start..=end {
+        match tokio::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, port)).await {
+            Ok(listener) => return listener,
+            Err(error) if error.kind() == std::io::ErrorKind::AddrInUse => continue,
+            Err(error) => panic!("binding {port}: {error}"),
+        }
+    }
+    panic!("no free listening port in {range}");
 }
 
 pub fn count(conn: &campfire_db::Connection, sql: &str, id: i64) -> campfire_db::Result<i64> {
@@ -373,8 +391,9 @@ impl Client {
         let deadline = tokio::time::Instant::now() + Duration::from_secs(10);
         let mut frames = Vec::new();
         loop {
-            assert!(tokio::time::Instant::now() < deadline, "the socket is still open; frames so far: {frames:?}");
-            match self.next().await {
+            let frame = tokio::time::timeout_at(deadline, self.next()).await
+                .unwrap_or_else(|_| panic!("the socket is still open; frames so far: {frames:?}"));
+            match frame {
                 Frame::Text(text) => frames.push(text),
                 // Keep reading so the client's close reply goes out and the server finishes
                 // closing (unsubscribing everything) without waiting out its close timeout.
@@ -412,4 +431,18 @@ pub fn html_json(html: &str) -> String {
         .replace('>', &format!("{backslash}u003e"))
         .replace('&', &format!("{backslash}u0026"));
     format!("\"{escaped}\"")
+}
+
+/// A healthy socket emits pings forever. They must not keep the close waiter alive forever.
+#[tokio::test]
+async fn until_closed_bounds_a_socket_that_keeps_pinging() {
+    use futures_util::FutureExt;
+
+    let app = start().await;
+    let mut client = app.connect("david").await;
+    let wait = std::panic::AssertUnwindSafe(client.until_closed()).catch_unwind();
+    let result = tokio::time::timeout(Duration::from_secs(11), wait).await;
+    let panic = result.expect("until_closed exceeded its overall deadline").expect_err("the open socket must fail");
+    let message = panic.downcast_ref::<String>().map(String::as_str).or_else(|| panic.downcast_ref::<&str>().copied()).unwrap();
+    assert!(message.contains("the socket is still open"), "unexpected failure: {message}");
 }
