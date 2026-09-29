@@ -60,10 +60,15 @@ for anything that walks directories.
 
 CI for this tree is `.github/workflows/rust.yml` at the repository root. It runs on changes under
 `rust/**` (and by hand, for a Rails change the port reads), in the `toolchain` stage of
-`Dockerfile`. Clippy and the build are gates. The tests aren't yet: until WS2 ports our schema,
-about 120 fail against our fixtures and assets, so that step is `continue-on-error` and the run's
-summary counts the failures. WS2 makes it a gate again. Upstream's image publishing workflow isn't
-carried over: we deploy through our own GCP pipeline.
+`Dockerfile`. Clippy, the build and `cargo test -p campfire_db` are gates. The rest of the tests
+aren't yet: `campfire_assets`' reference tests still fail against our assets, so that step is
+`continue-on-error` and the run's summary counts the failures. Upstream's image publishing
+workflow isn't carried over: we deploy through our own GCP pipeline.
+
+`crates/db/src/schema.sql` (with `schema_migrations.txt` and `schema_sha1.txt`) is generated from
+the Rails app by `reference-tools/db/regenerate-schema.sh`; rerun it after a Rails migration
+(`--check` verifies). `reference-tools/db/differential.sh` compares fixtures and a scenario with
+Ruby's and checks that Rails reads what the Rust crate wrote.
 
 ## Working rules
 
