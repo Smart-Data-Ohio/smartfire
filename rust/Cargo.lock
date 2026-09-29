@@ -515,6 +515,7 @@ dependencies = [
  "serde_json",
  "sha1",
  "sha2",
+ "subtle",
  "tempfile",
  "thiserror",
 ]
@@ -1955,15 +1956,20 @@ dependencies = [
  "aes-gcm",
  "base64 0.22.1",
  "bcrypt",
+ "flate2",
  "hex",
  "hmac",
  "jiff",
  "pbkdf2",
  "rand 0.9.5",
+ "regex",
+ "ring",
  "serde_json",
  "sha1",
  "sha2",
+ "subtle",
  "thiserror",
+ "uuid",
 ]
 
 [[package]]
