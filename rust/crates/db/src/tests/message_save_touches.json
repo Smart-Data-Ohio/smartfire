@@ -71,6 +71,24 @@
     "room_updated_at": 60,
     "attached": false
   },
+  "finished/bare/pin": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "finished/bare/unpin": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 0,
+    "attached": false
+  },
+  "finished/bare/save_item": {
+    "message_updated_at": 0,
+    "streaming_updated_at": null,
+    "room_updated_at": 0,
+    "attached": false
+  },
   "finished/attached/attach_nil": {
     "message_updated_at": 60,
     "streaming_updated_at": null,
@@ -141,6 +159,24 @@
     "message_updated_at": 60,
     "streaming_updated_at": null,
     "room_updated_at": 60,
+    "attached": true
+  },
+  "finished/attached/pin": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "finished/attached/unpin": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 0,
+    "attached": true
+  },
+  "finished/attached/save_item": {
+    "message_updated_at": 0,
+    "streaming_updated_at": null,
+    "room_updated_at": 0,
     "attached": true
   },
   "streaming/bare/attach_nil": {
@@ -215,6 +251,24 @@
     "room_updated_at": 60,
     "attached": false
   },
+  "streaming/bare/pin": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 0,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "streaming/bare/unpin": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 0,
+    "room_updated_at": 0,
+    "attached": false
+  },
+  "streaming/bare/save_item": {
+    "message_updated_at": 0,
+    "streaming_updated_at": 0,
+    "room_updated_at": 0,
+    "attached": false
+  },
   "streaming/attached/attach_nil": {
     "message_updated_at": 60,
     "streaming_updated_at": 60,
@@ -285,6 +339,24 @@
     "message_updated_at": 60,
     "streaming_updated_at": 60,
     "room_updated_at": 60,
+    "attached": true
+  },
+  "streaming/attached/pin": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 0,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "streaming/attached/unpin": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 0,
+    "room_updated_at": 0,
+    "attached": true
+  },
+  "streaming/attached/save_item": {
+    "message_updated_at": 0,
+    "streaming_updated_at": 0,
+    "room_updated_at": 0,
     "attached": true
   }
 }
