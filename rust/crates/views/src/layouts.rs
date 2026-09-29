@@ -83,3 +83,93 @@ pub struct FrameLayout<'a> {
 pub fn frame(ctx: &crate::ViewContext, head: impl Template, content: impl Template) -> askama::Result<String> {
     FrameLayout { ctx, head: h::raw(head.render()?), content: h::raw(content.render()?) }.render()
 }
+
+/// What the application layout's chrome shows that other domains own. The controller gathers it
+/// before rendering (see `PORTING.md`, "Layout view models"); `Default` is a signed-out page in an
+/// app with nothing optional configured.
+#[derive(Clone, Debug, Default)]
+pub struct Chrome {
+    /// `service_worker_auto_register?`: true outside the test environment (the reference runs in
+    /// production), or when the `enable_service_worker` cookie is present.
+    pub service_worker_auto_register: bool,
+    /// `Icons.client_icon_names` (the icons domain).
+    pub brand_icon_names: Vec<String>,
+    /// `Google::Picker.configured?` and its settings (the Google domain).
+    pub google_picker: Option<GooglePicker>,
+    /// `Huddle.configured?` (the huddles domain): renders the huddle, invitation and join-notice
+    /// partials.
+    pub huddle_configured: bool,
+    /// `global_search_query`: `params[:q].to_s.squish.presence` on the searches controller only.
+    pub global_search_query: Option<String>,
+    /// `Current.user.searches.ordered.limit(10)` (the searches domain).
+    pub recent_searches: Vec<RecentSearch>,
+}
+
+#[derive(Clone, Debug)]
+pub struct GooglePicker {
+    pub client_id: String,
+    pub api_key: String,
+    pub project_number: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct RecentSearch {
+    pub id: i64,
+    pub query: String,
+}
+
+/// The settings the layout reads off `Current.user` (`User::StatusSettings` and friends).
+#[derive(Clone, Debug, Default)]
+pub struct UserPreferences {
+    /// `users.theme`, as stored (`user_theme` falls back to "system" for anything else).
+    pub theme: Option<String>,
+    /// `users.text_size`, as stored (`user_text_size` falls back to "default").
+    pub text_size: Option<String>,
+    /// `users.time_zone`, as stored (possibly blank or a name Rails doesn't know).
+    pub time_zone: Option<String>,
+    /// `users.time_zone_explicit`: "Not set" was chosen on purpose.
+    pub time_zone_explicit: bool,
+    /// `tour_completed_at.present?`.
+    pub tour_completed: bool,
+    /// `users.voice_mode` and `users.push_to_talk_key` as stored, for the huddle partial (see
+    /// [`UserPreferences::voice_mode`]).
+    pub voice_mode: Option<String>,
+    pub push_to_talk_key: Option<String>,
+    /// `Current.user.google_account&.drive?`.
+    pub google_drive: bool,
+    pub notification_sounds: NotificationSounds,
+}
+
+impl UserPreferences {
+    /// `User#voice_mode`: the stored mode if it's one of `VOICE_MODES`, else "voice_activity".
+    pub fn voice_mode(&self) -> &str {
+        match self.voice_mode.as_deref() {
+            Some(mode @ ("voice_activity" | "push_to_talk")) => mode,
+            _ => "voice_activity",
+        }
+    }
+
+    /// `User#push_to_talk_key`: the stored key unless blank, else "`".
+    pub fn push_to_talk_key(&self) -> &str {
+        match self.push_to_talk_key.as_deref() {
+            Some(key) if !crate::helpers::is_blank(key) => key,
+            _ => "`",
+        }
+    }
+}
+
+/// What `notification_sound_meta_tags` sends (`app/helpers/application_helper.rb`), already
+/// decided by the owner of each setting (the presence and calendar domains):
+#[derive(Clone, Debug, Default)]
+pub struct NotificationSounds {
+    /// `manual_dnd_active? || presence_setting == "dnd"`.
+    pub muted: bool,
+    /// `[quiet_hours_start_minute, quiet_hours_end_minute]` when quiet hours are enabled and both
+    /// are set.
+    pub quiet_hours: Option<(i64, i64)>,
+    /// `meeting_cache.quiet_window_epochs` when meeting DND and meeting status are both enabled.
+    pub meeting_quiet: Vec<(i64, i64)>,
+    /// Unless `ooo_notify_enabled?`: `[0, ooo_until]` when manual OOO is active, then the
+    /// calendar's `ooo_window_epochs` when calendar OOO is enabled.
+    pub ooo_quiet: Vec<(i64, i64)>,
+}

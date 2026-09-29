@@ -6,9 +6,12 @@ edition.workspace = true
 [dependencies]
 askama = { workspace = true, features = ["blocks"] }
 campfire_routes.workspace = true
-jiff.workspace = true
+# The bundled tzdb (2026c, as the reference image's zoneinfo) so zones render the same wherever
+# the binary runs, zoneinfo installed or not.
+jiff = { workspace = true, features = ["tzdb-bundle-always"] }
 serde.workspace = true
 serde_json.workspace = true
 
 [dev-dependencies]
-html5ever.workspace = true
+# Signs the goldens' stream names with the parity SECRET_KEY_BASE.
+rails_compat.workspace = true

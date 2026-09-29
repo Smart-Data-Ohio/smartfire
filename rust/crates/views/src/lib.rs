@@ -6,6 +6,9 @@
 pub mod fragment_cache;
 pub mod helpers;
 pub mod layouts;
+pub mod public_pages;
+pub mod shared;
+pub mod time;
 pub mod sessions;
 pub mod first_runs;
 pub mod users;
@@ -49,6 +52,16 @@ pub struct ViewContext<'a> {
     pub last_room_visited_id: Option<i64>,
     /// `Rails.application.config.app_version` (APP_VERSION, GIT_REVISION or "0").
     pub app_version: String,
+    /// `Turbo::StreamsChannel.signed_stream_name` over already-resolved streamables (a record is
+    /// its GID param, see [`helpers::gid_param`]): the stream names `turbo_stream_from` renders.
+    /// They depend only on the app's secret, never on the session.
+    pub signed_stream_name: &'a dyn Fn(&[&str]) -> String,
+    /// `Time.zone` for this request: the user's saved zone if it names one (`SetTimeZone`),
+    /// else the default, UTC. Times render in it.
+    pub time_zone: time::Zone,
+    /// What the layout's chrome shows that belongs to other domains (huddles, Google, searches,
+    /// icons), gathered by the controller before rendering.
+    pub chrome: layouts::Chrome,
 }
 
 impl ViewContext<'_> {
@@ -83,6 +96,8 @@ pub struct CurrentUser {
     pub bot: bool,
     /// `fresh_user_avatar_path(Current.user)`.
     pub avatar_url: String,
+    /// The settings the layout reads off `Current.user`.
+    pub preferences: layouts::UserPreferences,
 }
 
 #[derive(Clone, Debug)]
