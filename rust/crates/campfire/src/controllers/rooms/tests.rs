@@ -220,21 +220,160 @@ async fn the_last_room_cookie_is_set_only_when_it_changes() {
     assert!(last_room(&david.get(&format!("/rooms/{ALL_TALK}")).await));
 }
 
+/// A value on a page that belongs to the session it was rendered for: an authenticity token (the
+/// `csrf-token` meta tag's, or a form's, with the path and method the form submits to) or a CSP
+/// nonce.
+#[derive(Debug)]
+enum SessionBound {
+    Token { value: String, path: String, method: String },
+    Nonce(String),
+}
+
+impl SessionBound {
+    fn value(&self) -> &str {
+        match self {
+            SessionBound::Token { value, .. } | SessionBound::Nonce(value) => value,
+        }
+    }
+}
+
+/// Every session-bound value on `html`, a page served for `page_path`, in page order.
+fn session_bound(html: &str, page_path: &str) -> Vec<SessionBound> {
+    let meta = regex::Regex::new(r#"<meta name="csrf-token" content="([^"]*)""#).unwrap();
+    let form = regex::Regex::new(r#"(?s)<form\b([^>]*)>(.*?)</form>"#).unwrap();
+    let attribute = |name: &str| regex::Regex::new(&format!(r#"\s{name}="([^"]*)""#)).unwrap();
+    let (action, form_method) = (attribute("action"), attribute("method"));
+    let hidden = |name: &str| regex::Regex::new(&format!(r#"name="{name}" value="([^"]*)""#)).unwrap();
+    let (token, method_override) = (hidden("authenticity_token"), hidden("_method"));
+    let nonce = regex::Regex::new(r#"(?:name="csp-nonce" content="|\snonce=")([^"]*)""#).unwrap();
+
+    let mut found: Vec<(usize, SessionBound)> = Vec::new();
+    for captures in meta.captures_iter(html) {
+        let value = captures.get(1).unwrap();
+        found.push((value.start(), SessionBound::Token { value: value.as_str().into(), path: "/".into(), method: "post".into() }));
+    }
+    for captures in form.captures_iter(html) {
+        let (attributes, inner) = (&captures[1], captures.get(2).unwrap());
+        let Some(value) = token.captures(inner.as_str()).map(|c| c.get(1).unwrap()) else { continue };
+        let action = action.captures(attributes).map_or(String::new(), |c| c[1].replace("&amp;", "&"));
+        // A relative action gets the per-form token of the page's own path
+        // (RequestForgeryProtection#normalize_relative_action_path).
+        let path = if action.starts_with('/') { action.split(['?', '#']).next().unwrap().to_string() } else { page_path.to_string() };
+        let method = method_override.captures(inner.as_str()).or_else(|| form_method.captures(attributes)).map_or("post".into(), |c| c[1].to_lowercase());
+        found.push((inner.start() + value.start(), SessionBound::Token { value: value.as_str().into(), path, method }));
+    }
+    for captures in nonce.captures_iter(html) {
+        let value = captures.get(1).unwrap();
+        found.push((value.start(), SessionBound::Nonce(value.as_str().into())));
+    }
+    assert_eq!(
+        found.iter().filter(|(_, bound)| matches!(bound, SessionBound::Token { .. })).count(),
+        html.matches(r#"name="csrf-token""#).count() + html.matches(r#"name="authenticity_token""#).count(),
+        "every token on the page is in a form or the meta tag"
+    );
+    found.sort_by_key(|(at, _)| *at);
+    found.into_iter().map(|(_, bound)| bound).collect()
+}
+
+/// Whose session each token on the page verifies for (`valid_authenticity_token?` for the path and
+/// method it's submitted with), written over the token, so pages compare by who their tokens
+/// belong to rather than by their masked bytes. Nonces become `nonce`.
+fn by_owner(html: &str, page_path: &str, sessions: &[(&str, &campfire_kit::csrf::RealToken)]) -> (String, Vec<String>) {
+    let mut page = html.to_string();
+    let mut owners = Vec::new();
+    for bound in session_bound(html, page_path) {
+        let label = match &bound {
+            SessionBound::Token { value, path, method } => {
+                let owner: Vec<&str> = sessions.iter().filter(|(_, real)| real.is_valid(value, path, method)).map(|(name, _)| *name).collect();
+                let owner = if owner.is_empty() { "nobody".to_string() } else { owner.join("+") };
+                owners.push(owner.clone());
+                format!("{owner}'s token for {method} {path}")
+            }
+            SessionBound::Nonce(_) => "nonce".to_string(),
+        };
+        page = page.replacen(bound.value(), &label, 1);
+    }
+    (page, owners)
+}
+
+/// Cached message fragments are rendered once and shown to everyone who reads the room, so
+/// nothing in them may belong to the session that happened to render them first. Our Rails
+/// renders a room's messages uncached, each form with the viewer's own token; its cached pages
+/// of messages (`messages/index`) serve the first viewer's tokens to everyone after
+/// (`reference-tools/kit/fragment_tokens.rb`). Here every page carries its own viewer's tokens,
+/// whether its fragments were cold or warm.
 #[tokio::test]
-async fn a_room_page_renders_the_same_cold_and_warm() {
+async fn room_pages_carry_only_their_own_viewers_session_bound_values() {
+    let Some(app) = TestApp::boot().await else { return };
+    let newest = app
+        .db()
+        .read(|conn| Ok(campfire_db::Message::for_room(conn, ALL_TALK)?.into_iter().max_by_key(|m| m.created_at).unwrap()))
+        .await
+        .unwrap();
+    let room = format!("/rooms/{ALL_TALK}");
+    let older = format!("/rooms/{ALL_TALK}/messages?before={}", newest.id);
+    let mut david = app.sign_in(DAVID).await;
+    let mut jason = app.sign_in(JASON).await;
+
+    // David's first render of each page stores its messages in the fragment cache; every render
+    // after reads them.
+    let mut renders = Vec::new();
+    for path in [&room, &older] {
+        for name in ["david", "jason", "david", "jason"] {
+            let browser = if name == "david" { &mut david } else { &mut jason };
+            let reply = browser.get(path).await;
+            assert_eq!(reply.status, StatusCode::OK, "{path} as {name}");
+            renders.push((path.split('?').next().unwrap().to_string(), name, reply.text()));
+        }
+    }
+    let david_real = david.real_authenticity_token().unwrap();
+    let jason_real = jason.real_authenticity_token().unwrap();
+    let sessions = [("david", &david_real), ("jason", &jason_real)];
+
+    let mut labeled = Vec::new();
+    for (page_path, name, html) in &renders {
+        let (page, owners) = by_owner(html, page_path, &sessions);
+        assert!(owners.len() > 1, "{page_path} as {name} has forms with tokens");
+        let foreign: Vec<&String> = owners.iter().filter(|owner| owner.as_str() != *name).collect();
+        assert!(foreign.is_empty(), "{page_path} as {name}: {} of {} tokens aren't {name}'s: {:?}", foreign.len(), owners.len(), &foreign[..foreign.len().min(3)]);
+        labeled.push(page);
+    }
+    // No token or nonce one viewer was given turns up in the other's pages.
+    let values = |who: &str| -> std::collections::HashSet<String> {
+        renders.iter().filter(|(_, name, _)| *name == who).flat_map(|(path, _, html)| session_bound(html, path)).map(|b| b.value().to_string()).collect()
+    };
+    let shared: Vec<String> = values("david").intersection(&values("jason")).cloned().collect();
+    assert!(shared.is_empty(), "{} values in both viewers' pages: {:?}", shared.len(), &shared[..shared.len().min(3)]);
+    // Cold and warm, a viewer's page is the same but for fresh masks and nonces (the first
+    // request's nonce is random: it arrives without a session id to derive one from).
+    for page in 0..2 {
+        let at = |pass: usize| &labeled[page * 4 + pass];
+        assert_eq!(at(0), at(2), "{} cold and warm for david", renders[page * 4].0);
+        assert_eq!(at(1), at(3), "{} for jason", renders[page * 4].0);
+    }
+
+    // Submitted with each person's cookies, a boost form's token from Jason's page works for
+    // Jason only.
+    let (_, _, jason_page) = &renders[3];
+    let (value, path) = session_bound(jason_page, &room)
+        .into_iter()
+        .find_map(|bound| match bound {
+            SessionBound::Token { value, path, .. } if path.ends_with("/boosts") => Some((value, path)),
+            _ => None,
+        })
+        .expect("a boost form on the room page");
+    let boost = |token: &str| Req::new(Method::POST, &path).form(&[("authenticity_token", token), ("boost[content]", "👍")]);
+    assert_eq!(david.send(boost(&value)).await.status, StatusCode::UNPROCESSABLE_ENTITY, "Jason's token with David's session");
+    assert_ne!(jason.send(boost(&value)).await.status, StatusCode::UNPROCESSABLE_ENTITY, "Jason's token with his own session");
+}
+
+#[tokio::test]
+async fn a_room_page_gets_a_new_etag_for_every_render() {
     let Some(app) = TestApp::boot().await else { return };
     let mut david = app.david();
     let etag = |reply: &Reply| reply.header("etag").map(str::to_string);
-    // The first render stores the page's messages in the fragment cache; the second reads them.
     let cold = david.get(&format!("/rooms/{HQ}")).await;
     let warm = david.get(&format!("/rooms/{HQ}")).await;
-    // Each render masks the CSRF token afresh, as Rails does, and the CSP nonce is random until
-    // the browser has a session id to derive it from (the cold request arrives with only its
-    // session_token cookie). The rest of the page must match.
-    let per_request =
-        regex::Regex::new(r#"(name="csrf-token" content="|name="csp-nonce" content="|name="authenticity_token" value="|nonce=")[^"]*""#).unwrap();
-    let page = |reply: &Reply| per_request.replace_all(&reply.text(), "${1}…\"").into_owned();
-    assert_eq!(page(&cold), page(&warm));
     // Rack::ETag digests the body, so a page carrying a freshly masked token gets a new ETag on
     // every request, in our Rails as here.
     assert!(etag(&cold).is_some() && etag(&warm).is_some());

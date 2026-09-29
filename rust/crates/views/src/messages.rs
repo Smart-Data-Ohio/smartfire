@@ -180,9 +180,10 @@ impl MessageItem {
         }
     }
 
-    /// The cached fragments of a rendered page's `items`, in order, including those this render
-    /// just stored in `cache`: they're in the page as they are. Call it after rendering, so the
+    /// The cached fragments of a rendered page's `items` that are in the page as they are, in
+    /// order, including those this render just stored in `cache`. Call it after rendering, so the
     /// page's parts (and its ETag) don't depend on which messages happened to be cached before.
+    /// A fragment with forms isn't: the page has this render's tokens where it has slots.
     pub fn cached_fragments(cache: &fragment_cache::FragmentCache, items: &[MessageItem]) -> Vec<fragment_cache::Fragment> {
         items
             .iter()
@@ -190,6 +191,7 @@ impl MessageItem {
                 MessageItem::Fragment { html, .. } => Some(html.clone()),
                 MessageItem::View(message) => cache.get(&message_fragment_key(message.id, message.updated_at)),
             })
+            .filter(|html| !crate::helpers::request_forgery::has_token_slots(html))
             .collect()
     }
 }
@@ -305,10 +307,11 @@ pub fn cached_message(ctx: &ViewContext, message: &MessageView) -> crate::helper
     askama::filters::Safe(self::message(ctx, message))
 }
 
-/// [`cached_message`] for a [`MessageItem`]: a fragment found up front goes out as it is.
+/// [`cached_message`] for a [`MessageItem`]: a fragment found up front goes out as it is, with
+/// this render's tokens in its slots.
 pub fn cached_message_item<'a>(ctx: &ViewContext, item: &'a MessageItem) -> askama::filters::Safe<std::borrow::Cow<'a, str>> {
     askama::filters::Safe(match item {
-        MessageItem::Fragment { html, .. } => std::borrow::Cow::Borrowed(html.as_str()),
+        MessageItem::Fragment { html, .. } => crate::helpers::request_forgery::fill_token_slots(html),
         MessageItem::View(message) => std::borrow::Cow::Owned(self::message(ctx, message)),
     })
 }

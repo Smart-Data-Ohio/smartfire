@@ -3,6 +3,8 @@
 //! renders it: a broadcast renders without a request, and the pages that show the same message
 //! afterwards repeat that rendering byte for byte. So nothing in a fragment may depend on the
 //! request unless its key does (a message's "Copy link" carries a path, not the request's host).
+//! Forms are the exception: a fragment holds slots for their authenticity tokens, and each render
+//! puts its own session's in them (`request_forgery::token_tag`).
 //!
 //! [`FragmentCache`] is the process's store. The reference keeps fragments in Redis
 //! (`config.cache_store = :redis_cache_store`, `config/environments/production.rb`), whose
@@ -122,9 +124,11 @@ impl FragmentCache {
         Arc::new(Self { max_bytes, entries: Mutex::default() })
     }
 
-    /// `Rails.cache.fetch(key) { render }` for a rendered fragment.
+    /// `Rails.cache.fetch(key) { render }` for a rendered fragment. What's stored has slots for
+    /// the render's authenticity tokens; what's returned has this render's own in them.
     pub fn fetch(&self, key: &str, render: impl FnOnce() -> String) -> String {
-        String::clone(&self.fetch_value(key, || Fragment::new(fitted(render()))))
+        let stored = self.fetch_value(key, || Fragment::new(fitted(for_the_cache(render))));
+        crate::helpers::request_forgery::fill_token_slots(&stored).into_owned()
     }
 
     /// `Rails.cache.fetch(key) { value }` for any cloneable value (Jbuilder caches the hash it
@@ -231,6 +235,27 @@ impl FragmentCache {
 
 thread_local! {
     static CURRENT: RefCell<Option<Arc<FragmentCache>>> = const { RefCell::new(None) };
+    /// How many fragments for the cache are being rendered, one inside another.
+    static RENDERING: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// Runs `render` as a fragment for the cache: one whoever renders it next is shown, so what
+/// belongs to this render's session is left as slots (see `request_forgery::token_tag`).
+fn for_the_cache<R>(render: impl FnOnce() -> R) -> R {
+    struct Leave;
+    impl Drop for Leave {
+        fn drop(&mut self) {
+            RENDERING.with(|depth| depth.set(depth.get() - 1));
+        }
+    }
+    RENDERING.with(|depth| depth.set(depth.get() + 1));
+    let _leave = Leave;
+    render()
+}
+
+/// Whether a fragment for the cache is being rendered on this thread.
+pub fn rendering_fragment() -> bool {
+    RENDERING.with(|depth| depth.get() > 0)
 }
 
 /// Runs `f` with `cache` as this thread's current store.
