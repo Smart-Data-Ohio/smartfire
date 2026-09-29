@@ -65,7 +65,7 @@ impl AppCtx for Ctx {
     }
 }
 
-/// A booted app: its state, the HTTP service, and the job runner.
+/// A booted app: its state, the HTTP service, and the job runner (with the periodic loops).
 pub struct Booted {
     pub app: App,
     pub router: Router,
@@ -80,7 +80,11 @@ pub async fn boot(config: Config) -> anyhow::Result<Booted> {
     let clock = campfire_kit::clock::from_env()?;
     let crypto: SharedCrypto = Arc::new(RailsCrypto::new(secrets.clone()));
 
-    let (jobs, queue) = jobs::Jobs::new(jobs::QUEUE_CAPACITY);
+    // The job classes first: the database's sink enqueues them on their queues.
+    let registry = jobs::registry();
+    let runner_config = jobs::runner_config(&config);
+    let (jobs, ad_hoc) = jobs::Jobs::new(&registry, &runner_config)?;
+    let loops = jobs::periodic::Loops::new(jobs::periodic::Intervals::from_env()?);
     let rich_text = Arc::new(AppRichText::new(secrets.clone(), clock.clone()));
     let db = open_database(&config, clock.clone(), jobs.clone(), rich_text.clone()).await?;
 
@@ -114,10 +118,7 @@ pub async fn boot(config: Config) -> anyhow::Result<Booted> {
         fragment_cache,
     });
 
-    let mut registry = jobs::Registry::with_core_jobs();
-    // Room::PushMessageJob and Bot::WebhookJob
-    crate::integrations::register_jobs(&mut registry);
-    let runner = jobs::start(queue, app.clone(), registry, app.config.job_concurrency);
+    let runner = jobs::start(app.clone(), registry, ad_hoc, runner_config, loops);
 
     let kit = Kit::new(kit_config, crypto, clock, app.clone());
     let router = router(&app, kit);
@@ -264,7 +265,8 @@ fn init_logging(config: &Config) {
     let _ = tracing_subscriber::fmt().with_env_filter(filter).try_init();
 }
 
-/// How long in-flight requests and queued jobs get after SIGTERM/SIGINT.
+/// How long in-flight requests and running jobs get after SIGTERM/SIGINT. Jobs still waiting
+/// stay in the queue for the next process.
 const SHUTDOWN_GRACE: Duration = Duration::from_secs(10);
 
 /// `bin/boot`'s `thrust bin/start-app`: the front server (kit's Thruster) on HTTP_PORT and, with

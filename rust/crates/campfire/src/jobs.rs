@@ -1,168 +1,191 @@
-//! The in-process job runner that replaces Resque (see plans/rust-conversion.md, "Jobs").
+//! The app's jobs, on the durable queue in the main database (`campfire_jobs`), replacing Resque.
 //!
 //! Models emit [`Event`]s at the point Rails would `perform_later` (the database's
-//! [`EventSink`]); [`Jobs`] puts each on its kind's **bounded** queue without blocking the writer
-//! thread, and each kind has its own workers, so a kind that's slow (webhooks to a slow bot) or
-//! full can't hold up the others (pushes, purges). Nothing retries (`retry_on` is commented out
-//! in `reference/app/jobs/application_job.rb`); a failure or panic is logged. Queued work is lost
-//! if the process crashes, which the plan accepts. On shutdown the runner stops taking new work,
-//! performs what's queued and waits for it up to a deadline.
+//! [`EventSink`]). [`Jobs`] turns each job event into a row in `background_jobs`, written in the
+//! transaction of the write that emitted it ([`EventSink::persist`]), so a job exists exactly when
+//! the write that asked for it committed, and survives a crash or restart; once the write
+//! commits, it wakes the job's queue. The runner then performs it with its class's retries
+//! (`retry_on`/`discard_on`, see [`campfire_jobs::RetryPolicy`]).
 //!
-//! Handlers are looked up in a [`Registry`]. Core registers `RemoveBannedContent` and
-//! `PurgeBlob`; integrations register `PushMessage` and `DeliverWebhook` through
-//! `crate::integrations::register_jobs`. `DisconnectUser` is not a job in Rails (it's a
-//! synchronous Action Cable broadcast), so it goes straight to the cable server.
+//! Rails enqueues these in the transaction too (`enqueue_after_transaction_commit` is off), but
+//! into Redis, so a rolled-back write could still leave its job behind (performed later against
+//! rows that don't exist, and discarded), and a job could run before its write committed. Here
+//! the job's row commits or rolls back with the write, and becomes visible to the runner only
+//! when it commits.
+//!
+//! The queues: `push` (`Room::PushMessageJob`) and `webhooks` (`Bot::WebhookJob`) each have
+//! their own workers, so a slow bot's webhooks can't hold up notifications, nor either of them
+//! the rest (`default`); `slack_import` runs one job at a time across every process
+//! (`config/resque-pool.yml`). Each has `JOB_CONCURRENCY` workers but `slack_import`.
+//!
+//! `DisconnectUser` is not a job in Rails (it's a synchronous Action Cable broadcast), so it goes
+//! straight to the cable server. [`Jobs::perform_later`] still runs ad hoc futures in memory
+//! (`ActiveStorage::AnalyzeJob`, whose callers hand over a future rather than arguments): lost if
+//! the process stops before they run, as before.
+//!
+//! [`periodic`] is `bin/periodic` and the huddle reconciler's host.
 
-use std::collections::HashMap;
 use std::future::Future;
 use std::panic::AssertUnwindSafe;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-use anyhow::anyhow;
-use campfire_db::{Event, EventSink};
+use campfire_db::{Event, EventSink, Job, JobRequest, Tx};
+use campfire_jobs::{Execution, JobError, JobKind, JobQueue, JobResult, Outcome, QueueConfig, RetryPolicy, RunnerConfig, Wait};
 use futures_util::FutureExt as _;
 use futures_util::future::BoxFuture;
+use serde::{Deserialize, Serialize};
 use tokio::sync::{Mutex, mpsc, watch};
 use tokio::task::JoinHandle;
 
 use crate::app::{App, Cable};
+use crate::config::Config;
 
-/// How many jobs of each kind may wait before new ones of that kind are dropped (and logged).
-pub const QUEUE_CAPACITY: usize = 1024;
+pub mod periodic;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum JobKind {
-    PushMessage,
-    DeliverWebhook,
-    RemoveBannedContent,
-    PurgeBlob,
-    /// Work enqueued with [`Jobs::perform_later`].
-    AdHoc,
+/// The app's job classes and their handlers, which get the [`App`].
+pub type Registry = campfire_jobs::Registry<App>;
+
+pub const DEFAULT_QUEUE: &str = "default";
+pub const PUSH_QUEUE: &str = "push";
+pub const WEBHOOKS_QUEUE: &str = "webhooks";
+pub const SLACK_IMPORT_QUEUE: &str = "slack_import";
+
+/// How many ad hoc jobs may wait before new ones are dropped (and logged).
+pub const AD_HOC_CAPACITY: usize = 1024;
+
+/// `Room::PushMessageJob.perform_later(room, message)`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PushMessageJob {
+    pub room_id: i64,
+    pub message_id: i64,
 }
 
-impl JobKind {
-    const ALL: [JobKind; 5] =
-        [JobKind::PushMessage, JobKind::DeliverWebhook, JobKind::RemoveBannedContent, JobKind::PurgeBlob, JobKind::AdHoc];
-
-    /// `None` for an event that isn't a job.
-    pub fn of(event: &Event) -> Option<Self> {
-        match event {
-            Event::PushMessage { .. } => Some(JobKind::PushMessage),
-            Event::DeliverWebhook { .. } => Some(JobKind::DeliverWebhook),
-            Event::RemoveBannedContent { .. } => Some(JobKind::RemoveBannedContent),
-            Event::PurgeBlob { .. } => Some(JobKind::PurgeBlob),
-            Event::DisconnectUser { .. } => None,
-            // Domain jobs (`campfire_db::Job`) aren't dispatched yet: nothing emits them so far.
-            Event::Job(_) => None,
-        }
-    }
-
-    /// The Rails job class, for logs.
-    pub fn name(self) -> &'static str {
-        match self {
-            JobKind::PushMessage => "Room::PushMessageJob",
-            JobKind::DeliverWebhook => "Bot::WebhookJob",
-            JobKind::RemoveBannedContent => "RemoveBannedContentJob",
-            JobKind::PurgeBlob => "ActiveStorage::PurgeJob",
-            JobKind::AdHoc => "AdHoc",
-        }
-    }
+impl Job for PushMessageJob {
+    const CLASS: &'static str = "Room::PushMessageJob";
 }
 
-/// Performs one kind of job.
-#[async_trait::async_trait]
-pub trait Handler: Send + Sync + 'static {
-    async fn perform(&self, app: App, event: Event) -> anyhow::Result<()>;
+impl JobKind for PushMessageJob {
+    const QUEUE: &'static str = PUSH_QUEUE;
 }
 
-#[async_trait::async_trait]
-impl<F, Fut> Handler for F
-where
-    F: Fn(App, Event) -> Fut + Send + Sync + 'static,
-    Fut: Future<Output = anyhow::Result<()>> + Send + 'static,
-{
-    async fn perform(&self, app: App, event: Event) -> anyhow::Result<()> {
-        self(app, event).await
-    }
+/// `Bot::WebhookJob.perform_later(bot, message)`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WebhookJob {
+    pub bot_id: i64,
+    pub message_id: i64,
 }
 
-/// Which handler performs which kind of job.
-#[derive(Default)]
-pub struct Registry {
-    handlers: HashMap<JobKind, Arc<dyn Handler>>,
+impl Job for WebhookJob {
+    const CLASS: &'static str = "Bot::WebhookJob";
 }
 
-impl Registry {
-    /// The jobs the app core performs itself.
-    pub fn with_core_jobs() -> Self {
-        let mut registry = Self::default();
-        registry.handle(JobKind::RemoveBannedContent, remove_banned_content);
-        registry.handle(JobKind::PurgeBlob, purge_blob);
-        registry
-    }
+impl JobKind for WebhookJob {
+    const QUEUE: &'static str = WEBHOOKS_QUEUE;
+}
 
-    pub fn handle(&mut self, kind: JobKind, handler: impl Handler) {
-        self.handlers.insert(kind, Arc::new(handler));
-    }
+/// `RemoveBannedContentJob.perform_later(user)`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RemoveBannedContentJob {
+    pub user_id: i64,
+}
 
-    fn get(&self, kind: JobKind) -> Option<Arc<dyn Handler>> {
-        self.handlers.get(&kind).cloned()
+impl Job for RemoveBannedContentJob {
+    const CLASS: &'static str = "RemoveBannedContentJob";
+}
+
+impl JobKind for RemoveBannedContentJob {}
+
+/// `ActiveStorage::PurgeJob.perform_later(blob)` (`purge_later`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PurgeJob {
+    pub blob_id: i64,
+}
+
+impl Job for PurgeJob {
+    const CLASS: &'static str = "ActiveStorage::PurgeJob";
+}
+
+impl JobKind for PurgeJob {
+    /// `ActiveStorage::BaseJob` isn't an `ApplicationJob`: `retry_on ActiveRecord::Deadlocked,
+    /// attempts: 10, wait: :polynomially_longer`, which SQLite never raises, so it doesn't retry.
+    fn retry_policy() -> RetryPolicy {
+        RetryPolicy::application_job().attempts(10).wait(Wait::PolynomiallyLonger { jitter: 0.15 }).retry_on(|_| false)
     }
 }
 
-enum Work {
-    Event(JobKind, Event),
-    AdHoc(&'static str, BoxFuture<'static, anyhow::Result<()>>),
+/// The job a legacy job event asks for, or an [`Event::Job`]'s own. `None` for an event that
+/// isn't a job.
+pub fn request_for(event: &Event) -> Option<JobRequest> {
+    Some(match event {
+        Event::PushMessage { room_id, message_id } => JobRequest::new(&PushMessageJob { room_id: *room_id, message_id: *message_id }),
+        Event::DeliverWebhook { bot_id, message_id } => JobRequest::new(&WebhookJob { bot_id: *bot_id, message_id: *message_id }),
+        Event::RemoveBannedContent { user_id } => JobRequest::new(&RemoveBannedContentJob { user_id: *user_id }),
+        Event::PurgeBlob { blob_id } => JobRequest::new(&PurgeJob { blob_id: *blob_id }),
+        Event::Job(request) => request.clone(),
+        Event::DisconnectUser { .. } => return None,
+    })
 }
 
-impl Work {
-    fn kind(&self) -> JobKind {
-        match self {
-            Work::Event(kind, _) => *kind,
-            Work::AdHoc(..) => JobKind::AdHoc,
-        }
-    }
-
-    fn name(&self) -> &'static str {
-        match self {
-            Work::Event(kind, _) => kind.name(),
-            Work::AdHoc(name, _) => name,
-        }
+/// `discard_on ActiveJob::DeserializationError`: a job whose argument records are gone by the
+/// time it runs is discarded. Any other error is the job's to retry or fail.
+pub fn discard_missing(error: campfire_db::Error) -> JobError {
+    match error {
+        campfire_db::Error::RecordNotFound(_) => JobError::discard(error),
+        error => JobError::from(error),
     }
 }
 
-/// The enqueueing side: the database's event sink, and `perform_later` for everything else.
+/// Every job class the app performs: core's, and the integrations'.
+pub fn registry() -> Registry {
+    let mut registry = Registry::new();
+    registry.register(remove_banned_content);
+    registry.register(purge_blob);
+    // Room::PushMessageJob and Bot::WebhookJob
+    crate::integrations::register_jobs(&mut registry);
+    registry
+}
+
+/// The queues and their workers.
+pub fn runner_config(config: &Config) -> RunnerConfig {
+    let workers = config.job_concurrency.max(1);
+    RunnerConfig::new(vec![
+        QueueConfig::new(DEFAULT_QUEUE, workers),
+        QueueConfig::new(PUSH_QUEUE, workers),
+        QueueConfig::new(WEBHOOKS_QUEUE, workers),
+        QueueConfig::new(SLACK_IMPORT_QUEUE, 1),
+    ])
+}
+
+type AdHocWork = (&'static str, BoxFuture<'static, anyhow::Result<()>>);
+
+/// The enqueueing side: the database's event sink, and [`Jobs::perform_later`] for ad hoc work.
 /// Cheap to clone.
 #[derive(Clone)]
 pub struct Jobs {
-    queues: Arc<HashMap<JobKind, mpsc::Sender<Work>>>,
+    /// Inside a write, emit [`Event::Job`] so the job commits with it; outside one,
+    /// `queue.perform_later(&db, request)` enqueues it in a write of its own.
+    pub queue: JobQueue,
+    ad_hoc: mpsc::Sender<AdHocWork>,
     cable: Arc<OnceLock<Cable>>,
 }
 
+/// The ad hoc queue's receiving end, until the runner starts.
+pub struct AdHocQueue(mpsc::Receiver<AdHocWork>);
+
 impl Jobs {
-    /// A queue of `capacity` for each kind, and their receiving ends, which [`start`] turns into
-    /// the runner.
-    pub fn new(capacity: usize) -> (Self, Queue) {
-        let (queues, receivers) = JobKind::ALL
-            .into_iter()
-            .map(|kind| {
-                let (sender, receiver) = mpsc::channel(capacity.max(1));
-                ((kind, sender), (kind, receiver))
-            })
-            .unzip();
-        (Self { queues: Arc::new(queues), cable: Arc::new(OnceLock::new()) }, Queue { receivers })
+    /// The sink for `registry`'s classes on `config`'s queues, and the ad hoc queue, which
+    /// [`start`] turns into the runner.
+    pub fn new(registry: &Registry, config: &RunnerConfig) -> anyhow::Result<(Self, AdHocQueue)> {
+        let queue = JobQueue::new(registry, config)?;
+        let (ad_hoc, receiver) = mpsc::channel(AD_HOC_CAPACITY);
+        Ok((Self { queue, ad_hoc, cable: Arc::new(OnceLock::new()) }, AdHocQueue(receiver)))
     }
 
-    /// Enqueues best-effort work (`SomeJob.perform_later`). Dropped with an error log when its
-    /// queue is full.
+    /// Runs best-effort work in memory. Dropped with an error log when the ad hoc queue is full,
+    /// or lost if the process stops first.
     pub fn perform_later(&self, name: &'static str, work: impl Future<Output = anyhow::Result<()>> + Send + 'static) {
-        self.enqueue(Work::AdHoc(name, Box::pin(work)));
-    }
-
-    fn enqueue(&self, work: Work) {
-        let name = work.name();
-        match self.queues[&work.kind()].try_send(work) {
+        match self.ad_hoc.try_send((name, Box::pin(work))) {
             Ok(()) => tracing::debug!(job = name, "enqueued"),
             Err(mpsc::error::TrySendError::Full(_)) => tracing::error!(job = name, "job queue is full, dropping job"),
             Err(mpsc::error::TrySendError::Closed(_)) => tracing::warn!(job = name, "job runner stopped, dropping job"),
@@ -175,9 +198,18 @@ impl Jobs {
 }
 
 impl EventSink for Jobs {
+    fn persist(&self, tx: &Tx<'_>, event: &Event) -> campfire_db::Result<()> {
+        if let Some(request) = request_for(event) {
+            let id = self.queue.enqueue(tx, &request)?;
+            tracing::debug!(job = request.class, id, "enqueued");
+        }
+        Ok(())
+    }
+
     fn emit(&self, event: Event) {
-        match (JobKind::of(&event), event) {
-            (Some(kind), event) => self.enqueue(Work::Event(kind, event)),
+        match (request_for(&event), event) {
+            // Committed (or emitted after commit): the runner can claim it now.
+            (Some(request), _) => self.queue.wake(request.class),
             // `ActionCable.server.remote_connections.where(current_user: user).disconnect`: a
             // pub/sub broadcast in Rails, done right away. Before boot finishes there are no
             // connections to disconnect.
@@ -191,54 +223,61 @@ impl EventSink for Jobs {
     }
 }
 
-/// The receiving ends of the queues, until the runner starts.
-pub struct Queue {
-    receivers: Vec<(JobKind, mpsc::Receiver<Work>)>,
-}
-
-/// The running job runner.
+/// The running jobs: the durable queue's runner, the ad hoc workers, and the periodic loops.
 pub struct Runner {
-    stopping: watch::Sender<bool>,
-    workers: Vec<JoinHandle<()>>,
+    durable: campfire_jobs::Runner,
+    ad_hoc_stopping: watch::Sender<bool>,
+    ad_hoc: Vec<JoinHandle<()>>,
+    periodic_stopping: watch::Sender<bool>,
+    periodic: Vec<JoinHandle<()>>,
 }
 
 impl Runner {
-    /// Stops taking new work, performs what's already queued, and waits for running jobs until
-    /// `deadline`, after which they're abandoned (logged).
-    pub async fn shutdown(self, deadline: Duration) {
-        let _ = self.stopping.send(true);
-        if tokio::time::timeout(deadline, futures_util::future::join_all(self.workers)).await.is_err() {
+    /// Stops the periodic loops (a task in progress finishes), then the durable runner (running
+    /// jobs get `grace` to finish; the rest stay queued for the next process), then the ad hoc
+    /// workers (they perform what's queued, up to `grace`).
+    pub async fn shutdown(self, grace: Duration) {
+        let _ = self.periodic_stopping.send(true);
+        if tokio::time::timeout(grace, futures_util::future::join_all(self.periodic)).await.is_err() {
+            tracing::warn!("periodic tasks still running at shutdown were abandoned");
+        }
+        self.durable.shutdown(grace).await;
+        let _ = self.ad_hoc_stopping.send(true);
+        if tokio::time::timeout(grace, futures_util::future::join_all(self.ad_hoc)).await.is_err() {
             tracing::warn!("jobs still running at shutdown were abandoned");
         }
     }
 }
 
-/// Starts performing queued jobs: `concurrency` workers for each kind of job.
-pub fn start(queue: Queue, app: App, registry: Registry, concurrency: usize) -> Runner {
+/// Starts performing jobs: the durable queue's (recovering those a previous process left
+/// running once their leases expire), the ad hoc ones, and the periodic loops.
+pub fn start(app: App, registry: Registry, ad_hoc: AdHocQueue, config: RunnerConfig, periodic: periodic::Loops) -> Runner {
     app.jobs.set_cable(app.cable.clone());
-    let (stopping, _) = watch::channel(false);
-    let registry = Arc::new(registry);
-    let mut workers = Vec::new();
-    for (_, receiver) in queue.receivers {
-        let receiver = Arc::new(Mutex::new(receiver));
-        for _ in 0..concurrency.max(1) {
-            workers.push(tokio::spawn(work(receiver.clone(), app.clone(), registry.clone(), stopping.subscribe())));
+    let workers = app.config.job_concurrency.max(1);
+    let durable = campfire_jobs::start(app.db.clone(), app.jobs.queue.clone(), registry, app.clone(), config);
+
+    let (ad_hoc_stopping, _) = watch::channel(false);
+    let receiver = Arc::new(Mutex::new(ad_hoc.0));
+    let ad_hoc = (0..workers).map(|_| tokio::spawn(work(receiver.clone(), ad_hoc_stopping.subscribe()))).collect();
+
+    let (periodic_stopping, _) = watch::channel(false);
+    let periodic = periodic.spawn(&app, &periodic_stopping);
+    Runner { durable, ad_hoc_stopping, ad_hoc, periodic_stopping, periodic }
+}
+
+/// An ad hoc worker: performs ad hoc jobs one at a time, until the queue has closed and drained.
+async fn work(queue: Arc<Mutex<mpsc::Receiver<AdHocWork>>>, mut stopping: watch::Receiver<bool>) {
+    while let Some((name, work)) = next(&queue, &mut stopping).await {
+        match AssertUnwindSafe(work).catch_unwind().await {
+            Ok(Ok(())) => tracing::info!(job = name, "performed"),
+            Ok(Err(error)) => tracing::error!(job = name, %error, "job failed"),
+            Err(panic) => tracing::error!(job = name, panic = panic_message(&*panic), "job panicked"),
         }
     }
-    Runner { stopping, workers }
 }
 
-/// One of a kind's workers: performs that kind's jobs, one at a time, until its queue has closed
-/// and drained.
-async fn work(queue: Arc<Mutex<mpsc::Receiver<Work>>>, app: App, registry: Arc<Registry>, mut stopping: watch::Receiver<bool>) {
-    while let Some(work) = next(&queue, &mut stopping).await {
-        perform(app.clone(), &registry, work).await;
-    }
-}
-
-/// The next job from the queue; once the runner is stopping, the queue closes and what's left in
-/// it drains.
-async fn next(queue: &Mutex<mpsc::Receiver<Work>>, stopping: &mut watch::Receiver<bool>) -> Option<Work> {
+/// The next ad hoc job; once the runner is stopping, the queue closes and what's left drains.
+async fn next(queue: &Mutex<mpsc::Receiver<AdHocWork>>, stopping: &mut watch::Receiver<bool>) -> Option<AdHocWork> {
     let mut queue = queue.lock().await;
     tokio::select! {
         work = queue.recv() => work,
@@ -256,24 +295,6 @@ async fn stopped(stopping: &mut watch::Receiver<bool>) {
     }
 }
 
-async fn perform(app: App, registry: &Registry, work: Work) {
-    let name = work.name();
-    let job = async move {
-        match work {
-            Work::AdHoc(_, future) => future.await,
-            Work::Event(kind, event) => match registry.get(kind) {
-                Some(handler) => handler.perform(app, event).await,
-                None => Err(anyhow!("no handler registered for {event:?}")),
-            },
-        }
-    };
-    match AssertUnwindSafe(job).catch_unwind().await {
-        Ok(Ok(())) => tracing::info!(job = name, "performed"),
-        Ok(Err(error)) => tracing::error!(job = name, %error, "job failed"),
-        Err(panic) => tracing::error!(job = name, panic = panic_message(&*panic), "job panicked"),
-    }
-}
-
 fn panic_message(panic: &(dyn std::any::Any + Send)) -> &str {
     panic.downcast_ref::<&str>().copied().or_else(|| panic.downcast_ref::<String>().map(String::as_str)).unwrap_or("Box<dyn Any>")
 }
@@ -281,22 +302,29 @@ fn panic_message(panic: &(dyn std::any::Any + Send)) -> &str {
 /// `RemoveBannedContentJob`: `user.remove_banned_content`, which destroys each of the user's
 /// messages (each in its own transaction) and broadcasts its removal
 /// (`reference/app/models/user/bannable.rb`, `Message::Broadcasts#broadcast_remove`).
-async fn remove_banned_content(app: App, event: Event) -> anyhow::Result<()> {
-    let Event::RemoveBannedContent { user_id } = event else { return Ok(()) };
-    let messages = app.db.read(move |conn| campfire_db::Message::by_creator(conn, user_id)).await?;
+async fn remove_banned_content(app: App, job: RemoveBannedContentJob, _: Execution) -> JobResult {
+    let user_id = job.user_id;
+    let messages = app
+        .db
+        .read(move |conn| {
+            campfire_db::User::find(conn, user_id)?;
+            campfire_db::Message::by_creator(conn, user_id)
+        })
+        .await
+        .map_err(discard_missing)?;
     for message in messages {
         let (removed, room_id) = (message.clone(), message.room_id);
         app.db.write(move |tx| message.destroy(tx)).await?;
         let room = app.db.read(move |conn| campfire_db::Room::find(conn, room_id)).await?;
         app.broadcasts.message_remove(&room, &removed);
     }
-    Ok(())
+    Ok(Outcome::Done)
 }
 
-/// `ActiveStorage::PurgeJob`
-async fn purge_blob(app: App, event: Event) -> anyhow::Result<()> {
-    let Event::PurgeBlob { blob_id } = event else { return Ok(()) };
-    crate::active_storage::purge(&app, blob_id).await
+/// `ActiveStorage::PurgeJob`: `blob.purge`. A blob that's gone is nothing to purge.
+async fn purge_blob(app: App, job: PurgeJob, _: Execution) -> JobResult {
+    crate::active_storage::purge(&app, job.blob_id).await?;
+    Ok(Outcome::Done)
 }
 
 #[cfg(test)]

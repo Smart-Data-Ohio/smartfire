@@ -345,6 +345,7 @@ dependencies = [
  "campfire_assets",
  "campfire_cable",
  "campfire_db",
+ "campfire_jobs",
  "campfire_kit",
  "campfire_richtext",
  "campfire_routes",

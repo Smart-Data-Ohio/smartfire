@@ -8,6 +8,7 @@ rails_compat.workspace = true
 campfire_kit.workspace = true
 campfire_routes.workspace = true
 campfire_db.workspace = true
+campfire_jobs.workspace = true
 campfire_richtext.workspace = true
 campfire_storage.workspace = true
 campfire_cable.workspace = true
