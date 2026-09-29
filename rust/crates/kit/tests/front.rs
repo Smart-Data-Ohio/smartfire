@@ -396,6 +396,106 @@ async fn limits_request_bodies() {
     server.stop().await;
 }
 
+/// Counts the bytes allocated and not yet freed, and their peak, so a test can see whether a
+/// body was held in memory on its way through.
+struct CountingAllocator;
+
+static LIVE_BYTES: AtomicUsize = AtomicUsize::new(0);
+static PEAK_BYTES: AtomicUsize = AtomicUsize::new(0);
+
+unsafe impl std::alloc::GlobalAlloc for CountingAllocator {
+    unsafe fn alloc(&self, layout: std::alloc::Layout) -> *mut u8 {
+        let pointer = unsafe { std::alloc::System.alloc(layout) };
+        if !pointer.is_null() {
+            let live = LIVE_BYTES.fetch_add(layout.size(), Ordering::Relaxed) + layout.size();
+            PEAK_BYTES.fetch_max(live, Ordering::Relaxed);
+        }
+        pointer
+    }
+
+    unsafe fn dealloc(&self, pointer: *mut u8, layout: std::alloc::Layout) {
+        unsafe { std::alloc::System.dealloc(pointer, layout) };
+        LIVE_BYTES.fetch_sub(layout.size(), Ordering::Relaxed);
+    }
+}
+
+#[global_allocator]
+static ALLOCATOR: CountingAllocator = CountingAllocator;
+
+/// How far allocations rose above where they were while `f` ran.
+async fn allocation_rise<T>(f: impl std::future::Future<Output = T>) -> (T, usize) {
+    let base = LIVE_BYTES.load(Ordering::Relaxed);
+    PEAK_BYTES.store(base, Ordering::Relaxed);
+    let value = f.await;
+    (value, PEAK_BYTES.load(Ordering::Relaxed).saturating_sub(base))
+}
+
+/// A kit app with the CSP reports' shape (an `unparsed_action` that keeps a prefix of its body and
+/// drains the rest) and an ordinary action, whose body the kit parses first.
+fn kit_app() -> Router {
+    async fn report(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {
+        let kept = c.read_body(16 * 1024).await;
+        Ok(c.head(if kept.is_empty() { campfire_kit::StatusCode::BAD_REQUEST } else { campfire_kit::StatusCode::NO_CONTENT }))
+    }
+    async fn parsed(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {
+        Ok(c.head(campfire_kit::StatusCode::NO_CONTENT))
+    }
+    let router = Router::new()
+        .route("/report", post(campfire_kit::unparsed_action(report)))
+        .route("/parsed", post(campfire_kit::action(parsed)));
+    let kit = campfire_kit::Kit::new(campfire_kit::KitConfig::default(), campfire_kit::testing::crypto(), campfire_kit::testing::frozen_clock(), ());
+    campfire_kit::app(router, kit)
+}
+
+/// POSTs `total` bytes of report to `path`, chunked 64 KiB at a time with no `Content-Length`,
+/// ending the body when `end` (else leaving it open, as a client still uploading does), and
+/// returns the reply's status.
+async fn post_chunked(port: u16, path: &str, total: usize, end: bool) -> u16 {
+    let mut stream = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
+    let head = format!("POST {path} HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: application/csp-report\r\nTransfer-Encoding: chunked\r\n\r\n");
+    stream.write_all(head.as_bytes()).await.unwrap();
+    let chunk = vec![b' '; 64 * 1024];
+    let mut sent = 0;
+    while sent < total {
+        let n = (total - sent).min(chunk.len());
+        let frame = [format!("{n:x}\r\n").as_bytes(), &chunk[..n], b"\r\n"].concat();
+        if stream.write_all(&frame).await.is_err() {
+            break;
+        }
+        sent += n;
+    }
+    if end {
+        let _ = stream.write_all(b"0\r\n\r\n").await;
+    }
+    let mut raw = Vec::new();
+    tokio::time::timeout(Duration::from_secs(30), stream.read_to_end(&mut raw)).await.expect("a reply").unwrap();
+    parse(&raw).status
+}
+
+/// MAX_REQUEST_BODY is enforced on the body as it streams to the app, which is never held whole
+/// in memory on the way: an upload under the limit reaches an action that drains it in bounded
+/// chunks, and one over it is cut off where it crosses the limit with a 413, whatever the action
+/// would have answered.
+#[tokio::test]
+async fn request_bodies_stream_to_the_app_within_the_limit() {
+    const LIMIT: usize = 8 * 1024 * 1024;
+    let limit = LIMIT.to_string();
+    let server = Server::start(&[("MAX_REQUEST_BODY", limit.as_str())], kit_app()).await;
+    for port in [server.http, server.target] {
+        let (status, rise) = allocation_rise(post_chunked(port, "/report", LIMIT * 3 / 4, true)).await;
+        assert_eq!(status, 204, "under the limit, port {port}");
+        assert!(rise < LIMIT / 4, "{rise} bytes held for a body of {} under a limit of {LIMIT}, port {port}", LIMIT * 3 / 4);
+
+        let (status, rise) = allocation_rise(post_chunked(port, "/report", LIMIT + 256 * 1024, false)).await;
+        assert_eq!(status, 413, "over the limit, port {port}");
+        assert!(rise < LIMIT / 4, "{rise} bytes held for a body over a limit of {LIMIT}, port {port}");
+
+        assert_eq!(post_chunked(port, "/parsed", LIMIT + 256 * 1024, false).await, 413, "a parsed action, port {port}");
+        assert_eq!(post_chunked(port, "/parsed", 1024, true).await, 204, "a parsed action under the limit, port {port}");
+    }
+    server.stop().await;
+}
+
 #[tokio::test]
 async fn closes_idle_and_slow_connections() {
     let (app, _) = test_app();

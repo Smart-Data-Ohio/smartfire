@@ -117,8 +117,8 @@ fn limited_app_service(app: Router, max_request_body: u64) -> Service {
     Arc::new(move |request, conn| {
         let app = app.clone();
         Box::pin(async move {
-            match handler::within_limit(request, max_request_body).await {
-                Ok(request) => app(request, conn).await,
+            match handler::within_limit(request, max_request_body) {
+                Ok((request, limit)) => limit.checked(app(request, conn).await),
                 Err(()) => handler::too_large(),
             }
         })
