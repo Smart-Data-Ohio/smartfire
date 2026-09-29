@@ -85,6 +85,81 @@ async fn held_jobs_run_once_released() {
     runner.shutdown(Duration::from_secs(5)).await;
 }
 
+/// Releasing only moves a job still in its initial hold. Once the hold has run out the job is
+/// its runner's: a retry's backoff (`Retry-After`), a rerun's wait, a running job and a failed
+/// one are left as they are, and so is a job whose hold expired before it ran.
+#[tokio::test]
+async fn releasing_leaves_jobs_past_their_hold_alone() {
+    let (performed, mut performed_rx) = mpsc::unbounded_channel();
+    let finish = Arc::new(tokio::sync::Notify::new());
+    let mut registry = Registry::new();
+    let finish_by_job = finish.clone();
+    registry.register(move |(), job: Echo, execution: Execution| {
+        let (performed, finish) = (performed.clone(), finish_by_job.clone());
+        async move {
+            let _ = performed.send((job.n, execution.executions));
+            match job.n {
+                1 => Err(JobError::retry_after(anyhow::anyhow!("429 Too Many Requests"), Duration::from_secs(120))),
+                2 => Ok(Outcome::Again(Duration::from_secs(300))),
+                3 => {
+                    finish.notified().await;
+                    Ok(Outcome::Done)
+                }
+                _ => Err(JobError::fail(anyhow::anyhow!("gone for good"))),
+            }
+        }
+    });
+    let h = harness(&registry, &config());
+    let hold = Duration::from_secs(300);
+    let ids: Vec<i64> = {
+        let mut ids = Vec::new();
+        for n in 1..=5 {
+            ids.push(h.enqueue_request(JobRequest::new(&Echo { n }).wait(hold)).await);
+        }
+        ids
+    };
+    let release = |n: i64| {
+        let queue = h.queue.clone();
+        h.db.write(move |tx| queue.release_held(tx, Echo::CLASS, "n", n))
+    };
+    h.travel(300); // every hold has run out (12:05)
+
+    // 5 expired unperformed: already due, not moved.
+    assert_eq!(release(5).await.unwrap(), 0);
+    assert_eq!(h.job(ids[4]).unwrap().run_at, at("2026-09-29 12:05:00"));
+
+    let runner = start(h.db.clone(), h.queue.clone(), registry, (), config());
+    let mut first = Vec::new();
+    for _ in 0..5 {
+        first.push(next(&mut performed_rx).await);
+    }
+    first.sort();
+    assert_eq!(first, [(1, 1), (2, 1), (3, 1), (4, 1), (5, 1)]);
+    h.wait_for("the outcomes", |jobs| {
+        let status = |id: i64| jobs.iter().find(|job| job.id == id).map(|job| job.status.as_str());
+        status(ids[0]) == Some(READY) && status(ids[1]) == Some(READY) && status(ids[3]) == Some(FAILED) && status(ids[4]) == Some(FAILED)
+    })
+    .await;
+    let before = h.jobs();
+
+    for n in 1..=5 {
+        assert_eq!(release(n).await.unwrap(), 0, "job {n}");
+    }
+    h.queue.wake(Echo::CLASS);
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert!(performed_rx.try_recv().is_err(), "nothing ran early");
+    let after = h.jobs();
+    let run_at = |jobs: &[JobRow], id: i64| jobs.iter().find(|job| job.id == id).map(|job| (job.status.clone(), job.run_at)).unwrap();
+    assert_eq!(run_at(&after, ids[0]), (READY.to_string(), at("2026-09-29 12:07:00")), "the Retry-After backoff stands");
+    assert_eq!(run_at(&after, ids[1]), (READY.to_string(), at("2026-09-29 12:10:00")), "the rerun's wait stands");
+    assert_eq!(run_at(&after, ids[2]).0, RUNNING);
+    for id in &ids {
+        assert_eq!(run_at(&after, *id), run_at(&before, *id), "job {id} untouched");
+    }
+    finish.notify_one();
+    runner.shutdown(Duration::from_secs(5)).await;
+}
+
 /// The job only becomes visible to the runner when the write that enqueued it commits, so it
 /// sees everything that write did (`after_commit { perform_later }`), and the runner is woken
 /// after the commit rather than finding it at its next poll.
