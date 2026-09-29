@@ -29,9 +29,13 @@ pub struct TestDb {
 
 impl TestDb {
     pub fn new() -> Self {
+        Self::with_clock(TestClock::new(), 4)
+    }
+
+    /// Fixtures loaded with `clock` and BCrypt cost `bcrypt_cost` for their password digests.
+    pub fn with_clock(clock: TestClock, bcrypt_cost: u32) -> Self {
         let dir = tempfile::tempdir().unwrap();
         let sink = RecordingSink::new();
-        let clock = TestClock::new();
         let env = Env {
             clock: Arc::new(clock.clone()),
             sink: Arc::new(sink.clone()),
@@ -42,10 +46,10 @@ impl TestDb {
         config.readers = 2;
         config.environment = "test".into();
         let db = Database::open(config, env).unwrap();
-        db.write_blocking(|tx| {
+        db.write_blocking(move |tx| {
             let options = fixtures::Options {
                 now: tx.now(),
-                bcrypt_cost: 4,
+                bcrypt_cost,
             };
             fixtures::load(tx.conn(), &fixtures::reference_dir(), &options)
         })

@@ -3,6 +3,14 @@
 # Twitter fixtures resolve to no model and their associations stay unexpanded. Run by
 # reference-tools/db/differential.sh.
 require "active_record/fixtures"
+require "active_support/testing/time_helpers"
+
+# The Rust loader compares row for row, timestamps included, at the same frozen instant
+# (fixtures_match_ruby_row_for_row). Without a freeze each fixture set takes its own Time.now.
+if (now = ENV["CAMPFIRE_FIXTURES_NOW"].presence)
+  extend ActiveSupport::Testing::TimeHelpers
+  travel_to ActiveSupport::TimeZone["UTC"].parse(now), with_usec: true
+end
 
 fixtures_dir = ActiveRecord::Tasks::DatabaseTasks.fixtures_path
 files = Dir[File.join(fixtures_dir, "**/*.{yml}")]

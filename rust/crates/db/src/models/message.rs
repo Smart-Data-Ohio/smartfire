@@ -4,9 +4,9 @@
 use rusqlite::{Connection, Row, params};
 
 use crate::database::Tx;
-use crate::error::{OptionalExt, Result};
+use crate::error::{Errors, OptionalExt, Result};
 use crate::events::Event;
-use crate::models::{Attachment, Blob, Boost, RichTextRecord, Room, Sound, User};
+use crate::models::{Attachment, Blob, Boost, RichTextRecord, Room, RoomType, Sound, User};
 use crate::rich_text::RichText;
 use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
 use crate::time::Timestamp;
@@ -366,10 +366,15 @@ impl Message {
     /// the room touch. After commit, unless the message is still streaming: the search index
     /// (never for a system note), then `receive_in_conversation`.
     ///
+    /// Validated like `Message` (see [`Message::validate`]); a thread reply refreshes its
+    /// thread's counter (`after_create :refresh_thread_messages_count`).
+    ///
     /// Not yet ported (later workstreams): Markdown rendering, the reference syncs, activity
-    /// items, the thread reply counter and stale sibling threads, and `ChannelThread#receive`
-    /// for thread messages, which here mark nothing unread and push nothing.
+    /// items, agent deliveries, stale sibling threads, the thread indicator broadcast, and
+    /// `ChannelThread#receive` for thread messages, which here mark nothing unread and push
+    /// nothing.
     pub fn create(tx: &mut Tx<'_>, attributes: NewMessage) -> Result<Self> {
+        Self::validate(tx.conn(), &attributes)?.into_result()?;
         let now = tx.now();
         let client_message_id = attributes.client_message_id.unwrap_or_else(sql::uuid);
         // `before_save :touch_streaming_activity, if: :streaming?`
@@ -390,6 +395,9 @@ impl Message {
             |r| r.get(0),
         )?;
         let mut message = Self::find(tx.conn(), id)?;
+        if message.thread_reply() {
+            refresh_thread_messages_count(tx, message.thread_id)?;
+        }
 
         let mut touched = false;
         if let Some(body) = &attributes.body {
@@ -415,11 +423,74 @@ impl Message {
         Ok(message)
     }
 
+    /// The validations of `app/models/message.rb` that the attributes a [`NewMessage`] can
+    /// carry are subject to. The others need attributes no Rust path writes yet (Markdown
+    /// source, reply and forward links, Drive attachments).
+    pub fn validate(conn: &Connection, attributes: &NewMessage) -> Result<Errors> {
+        let mut errors = Errors::default();
+        // `validate_conversation_links`
+        if let Some(thread_id) = attributes.thread_id {
+            let thread_room = query_one(
+                conn,
+                r#"SELECT "rooms"."id", "rooms"."type" FROM "channel_threads" INNER JOIN "rooms" ON "rooms"."id" = "channel_threads"."room_id" WHERE "channel_threads"."id" = ?"#,
+                [thread_id],
+                |r| Ok((r.get::<_, i64>(0)?, r.get::<_, RoomType>(1)?)),
+            )?;
+            if let Some((room_id, room_type)) = thread_room
+                && (room_id != attributes.room_id || room_type == RoomType::Direct)
+            {
+                errors.add("thread", "must belong to the message room and cannot be a direct room thread");
+            }
+        }
+        // `no_root_messages_in_boards`: quiet system notes (the stale-work digest) may sit at a
+        // board's root; chat may not.
+        if attributes.thread_id.is_none() && !attributes.system_note {
+            let room_type = query_one(
+                conn,
+                r#"SELECT "rooms"."type" FROM "rooms" WHERE "rooms"."id" = ?"#,
+                [attributes.room_id],
+                |r| r.get::<_, RoomType>(0),
+            )?;
+            if room_type == Some(RoomType::Board) {
+                errors.add("thread", "must be present in a board");
+            }
+        }
+        Ok(errors)
+    }
+
+    /// `thread_reply?`: what `ChannelThread#messages_count` counts.
+    pub fn thread_reply(&self) -> bool {
+        self.thread_id.is_some() && !self.system_note && !self.streaming
+    }
+
+    /// `before_save :touch_streaming_activity, if: :streaming?`: every save while streaming
+    /// restarts the finalize sweep's inactivity clock. (`touch` isn't a save, so boosts don't.)
+    fn touch_streaming_activity(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        if !self.streaming {
+            return Ok(());
+        }
+        let now = tx.now();
+        tx.conn().execute_cached(
+            r#"UPDATE "messages" SET "streaming_updated_at" = ?, "updated_at" = ? WHERE "messages"."id" = ?"#,
+            params![now, now, self.id],
+        )?;
+        self.streaming_updated_at = Some(now);
+        self.updated_at = now;
+        Ok(())
+    }
+
     /// `message.update!(body:)`: the body changes, which touches the message and its room;
-    /// the search index follows after commit.
+    /// the search index follows after commit. A streaming message is saved even when the body
+    /// is unchanged, which restarts its activity clock (and so touches the room).
     pub fn update_body(&mut self, tx: &mut Tx<'_>, body: &str) -> Result<()> {
+        self.touch_streaming_activity(tx)?;
         match RichTextRecord::find_for(tx.conn(), RECORD_TYPE, self.id, "body")? {
-            Some(record) if record.body.as_deref() == Some(body) => return Ok(()),
+            Some(record) if record.body.as_deref() == Some(body) => {
+                if self.streaming {
+                    Room::touch(tx, self.room_id)?;
+                }
+                return Ok(());
+            }
             Some(mut record) => record.update_body(tx, body)?,
             None => {
                 RichTextRecord::create(tx, RECORD_TYPE, self.id, "body", body)?;
@@ -457,6 +528,7 @@ impl Message {
     /// one is destroyed (its blob purged after commit, `dependent: :purge_later`) and each
     /// attachment change touches the message (`belongs_to :record, touch: true`), and so its room.
     pub fn replace_attachment(&mut self, tx: &mut Tx<'_>, blob_id: Option<i64>) -> Result<()> {
+        self.touch_streaming_activity(tx)?;
         if let Some(attachment) =
             Attachment::find_for(tx.conn(), RECORD_TYPE, self.id, "attachment")?
         {
@@ -473,9 +545,24 @@ impl Message {
         Ok(())
     }
 
-    /// `destroy`: its attachment (blob purged later), boosts and body, then the message, and
-    /// the room is touched. The search index entry goes after commit.
+    /// `destroy`: `preserve_reply_tombstones`, then the dependents in declaration order (boosts;
+    /// board stale digests nullified; activity items and agent steps, which have no destroy
+    /// callbacks), its attachment (blob purged later) and body, then the message, and the room
+    /// is touched. Its thread's parent link and its forwards' source link are nulled by their
+    /// foreign keys (`ON DELETE SET NULL`), as `dependent: :nullify` would. A thread reply
+    /// refreshes its thread's counter unless the room is being torn down
+    /// (`destroyed_with_conversation?`). The search index entry goes after commit.
+    ///
+    /// Not ported (WS8): the dependents with destroy callbacks of their own (poll, pins, saved
+    /// items, the reference rows, Drive attachments). Their foreign keys have no `ON DELETE`, so
+    /// destroying a message that has any fails with a constraint error rather than orphaning
+    /// them. The quote card broadcasts aren't ported either.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
+        let now = tx.now();
+        tx.conn().execute_cached(
+            r#"UPDATE "messages" SET "reply_to_message_id" = NULL, "reply_target_deleted_at" = ?, "updated_at" = ? WHERE "messages"."reply_to_message_id" = ?"#,
+            params![now, now, self.id],
+        )?;
         if let Some(attachment) =
             Attachment::find_for(tx.conn(), RECORD_TYPE, self.id, "attachment")?
         {
@@ -487,6 +574,18 @@ impl Message {
         for boost in Boost::for_message(tx.conn(), self.id)? {
             boost.delete_row(tx)?;
         }
+        tx.conn().execute_cached(
+            r#"UPDATE "board_stale_digests" SET "message_id" = NULL WHERE "board_stale_digests"."message_id" = ?"#,
+            [self.id],
+        )?;
+        tx.conn().execute_cached(
+            r#"DELETE FROM "activity_items" WHERE "activity_items"."source_type" = 'Message' AND "activity_items"."source_id" = ?"#,
+            [self.id],
+        )?;
+        tx.conn().execute_cached(
+            r#"DELETE FROM "agent_steps" WHERE "agent_steps"."message_id" = ?"#,
+            [self.id],
+        )?;
         if let Some(body) = RichTextRecord::find_for(tx.conn(), RECORD_TYPE, self.id, "body")? {
             body.delete(tx)?;
         }
@@ -494,6 +593,9 @@ impl Message {
             r#"DELETE FROM "messages" WHERE "messages"."id" = ?"#,
             [self.id],
         )?;
+        if self.thread_reply() && !Room::find(tx.conn(), self.room_id)?.deleted() {
+            refresh_thread_messages_count(tx, self.thread_id)?;
+        }
         Room::touch(tx, self.room_id)?;
         let id = self.id;
         tx.after_commit(move |tx| remove_from_index(tx, id));
@@ -644,6 +746,21 @@ pub fn sound_in(plain_text: &str) -> Option<&'static Sound> {
         return None;
     }
     Sound::find_by_name(name)
+}
+
+/// `ChannelThread.refresh_messages_count` (`app/models/channel_thread.rb`): recount with
+/// `REPLY_COUNT_SQL`, then bump the parent message so its reply indicator re-renders.
+fn refresh_thread_messages_count(tx: &Tx<'_>, thread_id: Option<i64>) -> Result<()> {
+    let Some(thread_id) = thread_id else { return Ok(()) };
+    tx.conn().execute_cached(
+        r#"UPDATE "channel_threads" SET messages_count = ( SELECT COUNT(*) FROM messages WHERE messages.thread_id = channel_threads.id AND messages.system_note = 0 AND messages.streaming = 0 ) WHERE "channel_threads"."id" = ?"#,
+        [thread_id],
+    )?;
+    tx.conn().execute_cached(
+        r#"UPDATE "messages" SET "updated_at" = ? WHERE "messages"."id" IN (SELECT "channel_threads"."parent_message_id" FROM "channel_threads" WHERE "channel_threads"."id" = ? AND "channel_threads"."parent_message_id" IS NOT NULL)"#,
+        params![tx.now(), thread_id],
+    )?;
+    Ok(())
 }
 
 fn remove_from_index(tx: &Tx<'_>, id: i64) -> Result<()> {

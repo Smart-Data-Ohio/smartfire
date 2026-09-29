@@ -65,10 +65,12 @@ aren't yet: `campfire_assets`' reference tests still fail against our assets, so
 `continue-on-error` and the run's summary counts the failures. Upstream's image publishing
 workflow isn't carried over: we deploy through our own GCP pipeline.
 
-`crates/db/src/schema.sql` (with `schema_migrations.txt` and `schema_sha1.txt`) is generated from
-the Rails app by `reference-tools/db/regenerate-schema.sh`; rerun it after a Rails migration
-(`--check` verifies). `reference-tools/db/differential.sh` compares fixtures and a scenario with
-Ruby's and checks that Rails reads what the Rust crate wrote.
+`crates/db/src/schema.sql` (with `schema_migrations.txt`, `schema_sha1.txt` and
+`schema_sequences.txt`) is generated from the Rails app by `reference-tools/db/regenerate-schema.sh`;
+rerun it after a Rails migration (`--check` verifies). `reference-tools/db/check-migration-replay.sh`
+checks that replaying every migration from empty (how production databases were built) gives the
+same schema. `reference-tools/db/differential.sh` compares fixtures and a scenario with Ruby's
+and checks that Rails reads, and validates, what the Rust crate wrote.
 
 ## Working rules
 
