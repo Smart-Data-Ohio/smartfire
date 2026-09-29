@@ -308,21 +308,40 @@ async fn clearing_plaintext_bot_tokens_heals_their_digests() {
     assert_eq!(periodic::clear_plaintext_bot_tokens(&app.db).await.unwrap(), 0, "idempotent");
 }
 
-/// The periodic loop runs in the app: a booting process clears the plaintext tokens.
+/// The periodic loops run beside the job runner, until it shuts down; the plaintext token task
+/// does its work once.
 #[tokio::test]
-async fn a_booting_app_clears_plaintext_bot_tokens() {
-    let dir = tempfile::tempdir().unwrap();
-    let booted = app_in(dir.path()).await;
+async fn the_periodic_loops_run_with_the_jobs() {
+    let (booted, _dir) = app().await;
+    let app = booted.app.clone();
     booted.jobs.shutdown(Duration::from_secs(5)).await;
-    let stale = insert_user(&booted.app, "Stale", Some("BenderToken1"), None).await;
+    let stale = insert_user(&app, "Stale", Some("BenderToken1"), None).await;
 
-    let booted = app_in(dir.path()).await;
+    let (ticked, mut ticks) = mpsc::unbounded_channel();
+    let mut loops = periodic::Loops::new(periodic::Intervals::from_lookup(|_| None).unwrap());
+    loops.periodic.task(periodic::clear_plaintext_bot_tokens_task());
+    loops.huddle.task(campfire_jobs::periodic::Task::new("reconcile", Duration::from_millis(20), move |_: App| {
+        let ticked = ticked.clone();
+        async move {
+            let _ = ticked.send(());
+            Ok(())
+        }
+    }));
+    let config = runner_config(&app.config);
+    let (_, ad_hoc) = Jobs::new(&registry(), &config).unwrap();
+    let runner = start(app.clone(), registry(), ad_hoc, config, loops);
+    for _ in 0..3 {
+        tokio::time::timeout(Duration::from_secs(5), ticks.recv()).await.expect("the huddle loop ticks").unwrap();
+    }
     let deadline = std::time::Instant::now() + Duration::from_secs(5);
-    while tokens(&booted.app, stale).await.0.is_some() {
+    while tokens(&app, stale).await.0.is_some() {
         assert!(std::time::Instant::now() < deadline, "not cleared");
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
-    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    runner.shutdown(Duration::from_secs(5)).await;
+    while ticks.try_recv().is_ok() {}
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    assert!(ticks.try_recv().is_err(), "stopped with the runner");
 }
 
 #[test]

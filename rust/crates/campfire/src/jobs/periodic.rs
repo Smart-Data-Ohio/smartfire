@@ -17,7 +17,7 @@
 //! | stuck GitHub claims | 30 s | WS15 |
 //! | stuck Fizzy claims | 30 s | WS15 |
 //! | calendar push channels | 1 h (`Calendar::PushChannel::RENEW_INTERVAL`) | WS14 |
-//! | clear plaintext bot tokens | 24 h, its work once per process | here |
+//! | clear plaintext bot tokens | 24 h, its work once per process | ported ([`clear_plaintext_bot_tokens_task`]), not registered: see below |
 //! | retention prune | `RETENTION_PRUNE_INTERVAL` (24 h) | WS8 |
 //! | presence leases | 1 min | WS17 |
 //! | meeting status | 1 min | WS14 |
@@ -29,6 +29,14 @@
 //!
 //! The huddle reconciler's steps (overdue invitations, stale streams) belong to WS13, and are
 //! registered in [`huddle_reconciler`].
+//!
+//! Clearing plaintext bot tokens is ported but not registered yet. Production's rows were healed
+//! long ago by Rails' own `bin/periodic`, but the parity seed (`parity/seeds/default.rb`) still
+//! writes plaintext tokens that disagree with the digests, and the parity reference doesn't run
+//! `bin/periodic`: registered, it would re-key the seed's bots at boot, and the bot API's parity
+//! screens and seeded tests would fail on the port alone. It's registered once the seed (and the
+//! cable golden vectors that record its tokens) stop doing that, or the reference runs
+//! `bin/periodic` too.
 
 use std::time::Duration;
 
@@ -93,13 +101,16 @@ impl Loops {
     }
 }
 
-/// `Periodic::Runner`'s tasks that have been ported.
+/// `Periodic::Runner`'s tasks that have been ported and registered (none yet: see the module's
+/// docs).
 pub fn periodic(_intervals: Intervals) -> Periodic<App> {
-    let mut periodic = Periodic::new("Periodic");
-    periodic.task(Task::once("clear plaintext bot tokens", BOT_TOKEN_CLEAR_INTERVAL, |app: App| async move {
-        clear_plaintext_bot_tokens(&app.db).await.map(drop)
-    }));
-    periodic
+    Periodic::new("Periodic")
+}
+
+/// `Task.new("clear plaintext bot tokens", BOT_TOKEN_CLEAR_INTERVAL, clear_bot_tokens_once)`.
+#[allow(dead_code, reason = "registered once the parity seed stops writing stale plaintext tokens (see the module's docs)")]
+pub fn clear_plaintext_bot_tokens_task() -> Task<App> {
+    Task::once("clear plaintext bot tokens", BOT_TOKEN_CLEAR_INTERVAL, |app: App| async move { clear_plaintext_bot_tokens(&app.db).await.map(drop) })
 }
 
 /// `Huddle::Reconciler`'s steps, every `HUDDLE_RECONCILE_INTERVAL`, each isolated from the
@@ -111,6 +122,7 @@ pub fn huddle_reconciler(_intervals: Intervals) -> Periodic<App> {
 /// `Bots::ClearPlaintextTokens.run!`: for every user that still has a plaintext `bot_token`, the
 /// digest is recomputed from it and the plaintext nulled, one conditional update per row (a key
 /// reset between the read and the write wins). Returns how many rows it healed.
+#[allow(dead_code, reason = "registered once the parity seed stops writing stale plaintext tokens (see the module's docs)")]
 pub async fn clear_plaintext_bot_tokens(db: &Database) -> anyhow::Result<usize> {
     let tokens: Vec<(i64, String)> = db
         .read(|conn| {
