@@ -22,8 +22,10 @@ The goal is a drop-in replacement for the Rails app, indistinguishable from it b
 
 ## Where the reference lives
 
-`CAMPFIRE_REFERENCE` names the reference Rails app's root. Unset, it's the repository root, the
-parent of `rust/`, which is what every tool uses by default:
+`CAMPFIRE_REFERENCE` names the reference Rails app's root, as an absolute path (Cargo runs build
+scripts and tests from each crate's directory, so a relative one resolves differently there than in
+the shell tools). Tests read it at compile time, so changing it rebuilds them. Unset, it's the
+repository root, the parent of `rust/`, which is what every tool uses by default:
 
 | Consumer | How it finds the reference |
 |---|---|
@@ -56,9 +58,12 @@ for anything that walks directories.
 | `bench/` | — | Load generator, benchmark scripts and recorded results (upstream's, against stock Campfire) |
 | `plans/` | — | Upstream's conversion plan and reports, kept for their reasoning |
 
-CI for this tree is `.github/workflows/rust.yml` at the repository root (runs on changes under
-`rust/**`). Upstream's image publishing workflow isn't carried over: we deploy through our own GCP
-pipeline.
+CI for this tree is `.github/workflows/rust.yml` at the repository root. It runs on changes under
+`rust/**` (and by hand, for a Rails change the port reads), in the `toolchain` stage of
+`Dockerfile`. Clippy and the build are gates. The tests aren't yet: until WS2 ports our schema,
+about 120 fail against our fixtures and assets, so that step is `continue-on-error` and the run's
+summary counts the failures. WS2 makes it a gate again. Upstream's image publishing workflow isn't
+carried over: we deploy through our own GCP pipeline.
 
 ## Working rules
 

@@ -120,7 +120,7 @@ fn main() {
     let public = rails_root.join("public");
     let mut public_files = Vec::new();
     all_files(&public, &mut public_files);
-    // A stray precompile inside the submodule mustn't shadow what we build.
+    // A stray precompile inside the reference app mustn't shadow what we build.
     public_files.retain(|file| !file.starts_with(public.join("assets")));
     for (i, file) in public_files.iter().enumerate() {
         let url = format!("/{}", file.strip_prefix(&public).unwrap().display());
