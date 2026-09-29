@@ -117,6 +117,84 @@ async fn job_events_are_enqueued_with_their_write() {
     );
 }
 
+/// Runs `f` in a write while a trigger rejects every new `background_jobs` row.
+async fn rejecting_jobs<T: Send + 'static>(app: &App, f: impl FnOnce(&mut Tx<'_>) -> campfire_db::Result<T> + Send + 'static) -> campfire_db::Result<T> {
+    const TRIGGER: &str = "CREATE TRIGGER ws3_reject_jobs BEFORE INSERT ON background_jobs BEGIN SELECT RAISE(ABORT, 'jobs rejected'); END";
+    app.db.write(|tx| Ok(tx.conn().execute_batch(TRIGGER)?)).await.unwrap();
+    let result = app.db.write(f).await;
+    app.db.write(|tx| Ok(tx.conn().execute_batch("DROP TRIGGER ws3_reject_jobs")?)).await.unwrap();
+    result
+}
+
+fn count(app: &App, sql: &'static str) -> i64 {
+    app.db.read_blocking(move |conn| Ok(conn.query_row(sql, [], |row| row.get(0))?)).unwrap()
+}
+
+/// The classes of the queued jobs, which are then cleared.
+async fn take_jobs(app: &App) -> Vec<String> {
+    let classes = jobs(app).into_iter().map(|job| job.class).collect();
+    app.db.write(|tx| Ok(tx.conn().execute_batch("DELETE FROM background_jobs")?)).await.unwrap();
+    classes
+}
+
+/// Every path that enqueues one of the migrated jobs, through the app's real sink, writes the
+/// job's row in the write's own transaction: when the row can't be written the write fails and
+/// none of it commits; when it can, the row commits with the write.
+#[tokio::test]
+async fn a_job_that_cant_be_enqueued_fails_the_write_that_asks_for_it() {
+    use campfire_db::{Message, NewMessage, NewUser, Room, RoomType, User};
+
+    let (booted, _dir) = app().await;
+    let app = booted.app.clone();
+    booted.jobs.shutdown(Duration::from_secs(5)).await; // leave the rows be
+    let (storage, now) = (app.storage.clone(), app.clock.now());
+    let (author, bot, room, blob) = app
+        .db
+        .write(move |tx| {
+            let author = User::create(tx, NewUser { name: "Author".into(), ..Default::default() })?;
+            let bot = User::create_bot(tx, "Bender", Some("https://example.com/hook"))?;
+            let room = Room::create_for(tx, RoomType::Closed, Some("Jobs"), author.id, &[author.id, bot.id])?;
+            let blob = storage
+                .create_and_upload(tx.conn(), b"hello", campfire_storage::Filename::new("hello.txt"), None, now)
+                .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
+            Ok((author.id, bot.id, room.id, blob.id))
+        })
+        .await
+        .unwrap();
+    take_jobs(&app).await;
+    let post = move |attachment_blob_id| move |tx: &mut Tx<'_>| {
+        Message::create(tx, NewMessage { room_id: room, creator_id: author, body: Some("<div>Hi</div>".into()), attachment_blob_id, ..Default::default() }).map(|message| message.id)
+    };
+
+    // Message#receive_in_conversation → Room#push_later
+    assert!(rejecting_jobs(&app, post(None)).await.is_err(), "posting a message");
+    assert_eq!(count(&app, "SELECT count(*) FROM messages"), 0);
+    let message = app.db.write(post(Some(blob))).await.unwrap();
+    assert_eq!(count(&app, "SELECT count(*) FROM messages"), 1);
+    assert_eq!(take_jobs(&app).await, ["Room::PushMessageJob"]);
+
+    // User::Bot#deliver_webhook_later
+    let webhook = move |tx: &mut Tx<'_>| User::find(tx.conn(), bot)?.deliver_webhook_later(tx, message);
+    assert!(rejecting_jobs(&app, webhook).await.is_err(), "a webhook");
+    app.db.write(webhook).await.unwrap();
+    assert_eq!(take_jobs(&app).await, ["Bot::WebhookJob"]);
+
+    // Message#destroy → the attachment's `dependent: :purge_later`
+    let destroy = move |tx: &mut Tx<'_>| Message::find(tx.conn(), message)?.destroy(tx);
+    assert!(rejecting_jobs(&app, destroy).await.is_err(), "destroying a message");
+    assert_eq!(count(&app, "SELECT count(*) FROM messages"), 1);
+    app.db.write(destroy).await.unwrap();
+    assert_eq!(count(&app, "SELECT count(*) FROM messages"), 0);
+    assert_eq!(take_jobs(&app).await, ["ActiveStorage::PurgeJob"]);
+
+    // User::Bannable#ban → apply_ban
+    let ban = move |tx: &mut Tx<'_>| User::find(tx.conn(), author)?.ban(tx);
+    assert!(rejecting_jobs(&app, ban).await.is_err(), "a ban");
+    assert_eq!(count(&app, "SELECT count(*) FROM users WHERE status = 0"), 2, "nobody banned");
+    app.db.write(ban).await.unwrap();
+    assert_eq!(take_jobs(&app).await, ["RemoveBannedContentJob"]);
+}
+
 // --- The handlers --------------------------------------------------------------------------------------
 
 /// `discard_on ActiveJob::DeserializationError`: jobs whose records are gone are discarded, not
@@ -270,6 +348,68 @@ async fn shutdown_performs_the_queued_ad_hoc_jobs_and_then_takes_no_more() {
     let mut ns: Vec<i64> = std::iter::from_fn(|| performed_rx.try_recv().ok()).collect();
     ns.sort();
     assert_eq!(ns, [1, 2, 3, 4, 5]);
+}
+
+/// Records whether a task finished, or was dropped (aborted) before it did.
+#[derive(Clone, Default)]
+struct Fate {
+    finished: Arc<std::sync::atomic::AtomicBool>,
+    dropped: Arc<std::sync::atomic::AtomicBool>,
+}
+
+struct DropFlag(Arc<std::sync::atomic::AtomicBool>);
+
+impl Drop for DropFlag {
+    fn drop(&mut self) {
+        self.0.store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+}
+
+impl Fate {
+    /// Sleeps 250 ms, after reporting it started.
+    fn work(&self, started: mpsc::UnboundedSender<()>) -> impl Future<Output = anyhow::Result<()>> + Send + use<> {
+        let (finished, guard) = (self.finished.clone(), DropFlag(self.dropped.clone()));
+        async move {
+            let _guard = guard;
+            let _ = started.send(());
+            tokio::time::sleep(Duration::from_millis(250)).await;
+            finished.store(true, std::sync::atomic::Ordering::SeqCst);
+            Ok(())
+        }
+    }
+
+    fn get(&self) -> (bool, bool) {
+        (self.finished.load(std::sync::atomic::Ordering::SeqCst), self.dropped.load(std::sync::atomic::Ordering::SeqCst))
+    }
+}
+
+/// Periodic tasks and ad hoc jobs still running when the grace period ends are aborted, and gone
+/// by the time shutdown returns: none carries on detached.
+#[tokio::test]
+async fn shutdown_aborts_what_outlasts_the_grace_period() {
+    let (booted, _dir) = app().await;
+    let app = booted.app.clone();
+    booted.jobs.shutdown(Duration::from_secs(5)).await;
+
+    let (periodic_fate, ad_hoc_fate) = (Fate::default(), Fate::default());
+    let (started, mut starts) = mpsc::unbounded_channel();
+    let mut loops = periodic::Loops::new(periodic::Intervals::from_lookup(|_| None));
+    let (fate, started_by_task) = (periodic_fate.clone(), started.clone());
+    loops.periodic.as_mut().unwrap().task(campfire_jobs::periodic::Task::new("slow", Duration::from_secs(60), move |_: App| fate.work(started_by_task.clone())));
+    let config = runner_config(&app.config);
+    let (jobs, ad_hoc) = Jobs::new(&registry(), &config).unwrap();
+    let runner = start(app.clone(), registry(), ad_hoc, config, loops);
+    jobs.perform_later("Slow", ad_hoc_fate.work(started));
+    for _ in 0..2 {
+        tokio::time::timeout(Duration::from_secs(5), starts.recv()).await.expect("started").unwrap();
+    }
+
+    runner.shutdown(Duration::from_millis(20)).await;
+    assert_eq!(periodic_fate.get(), (false, true), "the periodic task was aborted");
+    assert_eq!(ad_hoc_fate.get(), (false, true), "the ad hoc job was aborted");
+    tokio::time::sleep(Duration::from_millis(400)).await;
+    assert_eq!(periodic_fate.get(), (false, true), "and didn't carry on");
+    assert_eq!(ad_hoc_fate.get(), (false, true), "and didn't carry on");
 }
 
 // --- Periodic -------------------------------------------------------------------------------------------

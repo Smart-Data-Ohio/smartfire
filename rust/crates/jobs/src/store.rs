@@ -151,14 +151,17 @@ pub(crate) struct Orphan {
     pub attempts: u32,
 }
 
-/// Running jobs whose lease has expired, other than `runner`'s own (which it's still performing).
-pub(crate) fn orphans(conn: &Connection, runner: &str, now: Timestamp) -> Result<Vec<Orphan>> {
+/// Running jobs whose lease has expired, other than those `runner` is still `performing`: its
+/// own claims whose execution is over (their outcome couldn't be written) are orphans too.
+pub(crate) fn orphans(conn: &Connection, runner: &str, performing: &[i64], now: Timestamp) -> Result<Vec<Orphan>> {
+    let performing = serde_json::to_string(performing).expect("ids serialize");
     let mut statement = conn.prepare_cached(
         r#"SELECT "id", "queue_name", "job_class", "attempts" FROM "background_jobs"
-            WHERE "status" = 'running' AND "lease_expires_at" <= ?1 AND "claimed_by" IS NOT ?2 ORDER BY "id""#,
+            WHERE "status" = 'running' AND "lease_expires_at" <= ?1
+              AND NOT ("claimed_by" IS ?2 AND "id" IN (SELECT "value" FROM json_each(?3))) ORDER BY "id""#,
     )?;
     let orphans = statement
-        .query_map(params![now, runner], |row| Ok(Orphan { id: row.get(0)?, queue: row.get(1)?, class: row.get(2)?, attempts: row.get(3)? }))?
+        .query_map(params![now, runner, performing], |row| Ok(Orphan { id: row.get(0)?, queue: row.get(1)?, class: row.get(2)?, attempts: row.get(3)? }))?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     Ok(orphans)
 }

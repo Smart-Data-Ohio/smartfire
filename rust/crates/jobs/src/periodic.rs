@@ -119,7 +119,8 @@ impl<C: Clone + Send + 'static> Periodic<C> {
     }
 
     /// `run`: ticks, then sleeps the tick interval, until `stopping` (checked between ticks; a
-    /// tick in progress finishes). Does nothing without tasks.
+    /// tick in progress finishes, unless the host aborts the task when its grace period is over).
+    /// Does nothing without tasks.
     pub fn spawn(mut self, context: C, clock: Arc<dyn Clock>, mut stopping: watch::Receiver<bool>) -> JoinHandle<()>
     where
         C: Sync,

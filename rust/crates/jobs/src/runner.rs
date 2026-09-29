@@ -65,6 +65,8 @@ pub struct Runner {
     id: String,
     db: Database,
     stopping: watch::Sender<bool>,
+    /// Tells the queues to abort the jobs still running, once the grace period is over.
+    abandoning: watch::Sender<bool>,
     queues: JoinSet<()>,
     background_stopping: watch::Sender<bool>,
     background: Vec<JoinHandle<()>>,
@@ -87,6 +89,7 @@ struct Shared<C> {
 pub fn start<C: Clone + Send + Sync + 'static>(db: Database, queue: JobQueue, registry: Registry<C>, context: C, config: RunnerConfig) -> Runner {
     let id = format!("{}-{}", std::process::id(), uuid::Uuid::new_v4().simple());
     let (stopping, _) = watch::channel(false);
+    let (abandoning, _) = watch::channel(false);
     let (background_stopping, _) = watch::channel(false);
     let shared = Arc::new(Shared { id: id.clone(), db: db.clone(), registry, queue, context, config, performing: Mutex::new(HashSet::new()) });
 
@@ -96,9 +99,9 @@ pub fn start<C: Clone + Send + Sync + 'static>(db: Database, queue: JobQueue, re
     ];
     let mut queues = JoinSet::new();
     for queue in &shared.config.queues {
-        queues.spawn(queue_loop(shared.clone(), queue.clone(), stopping.subscribe()));
+        queues.spawn(queue_loop(shared.clone(), queue.clone(), stopping.subscribe(), abandoning.subscribe()));
     }
-    Runner { id, db, stopping, queues, background_stopping, background }
+    Runner { id, db, stopping, abandoning, queues, background_stopping, background }
 }
 
 impl Runner {
@@ -108,16 +111,17 @@ impl Runner {
     }
 
     /// Stops claiming jobs and waits up to `grace` for the ones running to finish. Jobs still
-    /// running then are abandoned, and handed back to their queues (due now, the interrupted
-    /// execution not counted as an attempt) for the next process to perform. Jobs waiting in
-    /// the queues stay there.
+    /// running then are abandoned: aborted (gone by the time this returns), and handed back to
+    /// their queues (due now, the interrupted execution not counted as an attempt) for the next
+    /// process to perform. Jobs waiting in the queues stay there.
     pub async fn shutdown(self, grace: Duration) {
         let _ = self.stopping.send(true);
         let mut queues = self.queues;
         let drained = tokio::time::timeout(grace, async { while queues.join_next().await.is_some() {} }).await.is_ok();
         if !drained {
-            // Aborting a queue drops its jobs' tasks, which aborts them.
-            queues.shutdown().await;
+            // Each queue aborts its running jobs and waits for them to go.
+            let _ = self.abandoning.send(true);
+            while queues.join_next().await.is_some() {}
         }
         let _ = self.background_stopping.send(true);
         for task in self.background {
@@ -135,7 +139,7 @@ impl Runner {
 
 /// One queue: claims due jobs while it has free slots, and otherwise waits to be woken (a job
 /// committed), for a job to finish, or for the next job to come due.
-async fn queue_loop<C: Clone + Send + Sync + 'static>(shared: Arc<Shared<C>>, queue: QueueConfig, mut stopping: watch::Receiver<bool>) {
+async fn queue_loop<C: Clone + Send + Sync + 'static>(shared: Arc<Shared<C>>, queue: QueueConfig, mut stopping: watch::Receiver<bool>, mut abandoning: watch::Receiver<bool>) {
     let waker = shared.queue.waker(&queue.name);
     let mut performing = JoinSet::new();
     loop {
@@ -169,8 +173,11 @@ async fn queue_loop<C: Clone + Send + Sync + 'static>(shared: Arc<Shared<C>>, qu
             () = stopped(&mut stopping) => break,
         }
     }
-    // Shutdown: finish what's running (the runner abandons it after the grace period).
-    while performing.join_next().await.is_some() {}
+    // Shutdown: finish what's running, until the runner abandons it after the grace period.
+    tokio::select! {
+        () = async { while performing.join_next().await.is_some() {} } => {}
+        () = stopped(&mut abandoning) => performing.shutdown().await,
+    }
 }
 
 /// Claims up to `free` of `queue`'s due jobs, and reads when its next waiting job is due.
@@ -186,6 +193,11 @@ async fn claim<C: Send + Sync + 'static>(shared: &Shared<C>, queue: &QueueConfig
         })
         .await
 }
+
+/// The first wait before retrying a job's outcome that couldn't be written, doubling up to
+/// [`COMPLETION_BACKOFF_LIMIT`].
+const COMPLETION_BACKOFF: Duration = Duration::from_millis(50);
+const COMPLETION_BACKOFF_LIMIT: Duration = Duration::from_secs(1);
 
 async fn perform<C: Clone + Send + Sync + 'static>(shared: Arc<Shared<C>>, job: Claimed) {
     let started = Instant::now();
@@ -260,20 +272,34 @@ async fn finish<C: Send + Sync + 'static>(shared: &Shared<C>, job: &Claimed, pol
         (Err(_), Decision::Delete) => {}
     }
 
-    let runner = shared.id.clone();
-    let written = shared
-        .db
-        .write(move |tx| {
-            let now = tx.now();
-            match decision {
-                Decision::Delete => store::delete(tx.conn(), id, &runner),
-                Decision::Reschedule { wait, error, reset_attempts } => {
-                    store::reschedule(tx.conn(), id, &runner, now.since(signed(wait)), error.as_deref(), reset_attempts, now)
+    // A write that fails is retried, backing off, for up to a lease (the heartbeat keeps the
+    // claim meanwhile). Then the job is let go, and recovered once its lease expires.
+    let deadline = Instant::now() + shared.config.lease;
+    let mut backoff = COMPLETION_BACKOFF;
+    let written = loop {
+        let (runner, decision) = (shared.id.clone(), decision.clone());
+        let written = shared
+            .db
+            .write(move |tx| {
+                let now = tx.now();
+                match decision {
+                    Decision::Delete => store::delete(tx.conn(), id, &runner),
+                    Decision::Reschedule { wait, error, reset_attempts } => {
+                        store::reschedule(tx.conn(), id, &runner, now.since(signed(wait)), error.as_deref(), reset_attempts, now)
+                    }
+                    Decision::Fail(error) => store::fail(tx.conn(), id, &runner, &error, now),
                 }
-                Decision::Fail(error) => store::fail(tx.conn(), id, &runner, &error, now),
+            })
+            .await;
+        match written {
+            Err(error) if Instant::now() + backoff < deadline => {
+                tracing::warn!(job = class, id, %error, retry_in = ?backoff, "recording the job's outcome failed, retrying");
+                tokio::time::sleep(backoff).await;
+                backoff = (backoff * 2).min(COMPLETION_BACKOFF_LIMIT);
             }
-        })
-        .await;
+            written => break written,
+        }
+    };
     match written {
         Ok(true) => {}
         // Its lease expired and it was recovered: the other claim's outcome stands.
@@ -319,13 +345,15 @@ async fn recovery_loop<C: Send + Sync + 'static>(shared: Arc<Shared<C>>, mut sto
     }
 }
 
-/// Takes back jobs whose lease expired: their process stopped heartbeating, mid-execution. That
+/// Takes back jobs whose lease expired: their process stopped heartbeating, mid-execution, or
+/// this runner let one go when its outcome couldn't be written. That
 /// execution counts as an attempt, so a job with attempts left is due again now, and one without
 /// (a job that kills its process every time, or one that must not run twice) fails for good.
 /// Returns the queues with jobs due again.
 async fn recover<C: Send + Sync + 'static>(shared: &Shared<C>) -> campfire_db::Result<Vec<String>> {
     let runner = shared.id.clone();
-    let orphans = shared.db.write(move |tx| store::orphans(tx.conn(), &runner, tx.now())).await?;
+    let performing: Vec<i64> = shared.performing.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).iter().copied().collect();
+    let orphans = shared.db.write(move |tx| store::orphans(tx.conn(), &runner, &performing, tx.now())).await?;
     let mut due = Vec::new();
     for orphan in orphans {
         let attempts = shared.registry.get(&orphan.class).map_or(1, |kind| kind.policy.attempts);

@@ -1,3 +1,5 @@
+use std::sync::atomic::{AtomicBool, AtomicUsize};
+
 use super::*;
 
 // --- Enqueueing ------------------------------------------------------------------------------------
@@ -542,6 +544,89 @@ async fn an_orphaned_job_is_recovered_when_its_lease_expires() {
     runner.shutdown(Duration::from_secs(5)).await;
 }
 
+/// A job its runner is still performing isn't recovered from under it, even with its lease
+/// expired (a heartbeat that couldn't be written in time).
+#[tokio::test]
+async fn a_job_still_being_performed_is_not_recovered_by_its_runner() {
+    let (release, released) = (Arc::new(tokio::sync::Notify::new()), Arc::new(AtomicUsize::new(0)));
+    let (performed, mut performed_rx) = mpsc::unbounded_channel();
+    let mut registry = Registry::new();
+    let (release_by_job, released_by_job) = (release.clone(), released.clone());
+    registry.register(move |(), job: Echo, execution: Execution| {
+        let (release, released, performed) = (release_by_job.clone(), released_by_job.clone(), performed.clone());
+        async move {
+            let _ = performed.send((job.n, execution.executions));
+            release.notified().await;
+            released.fetch_add(1, Ordering::SeqCst);
+            Ok(Outcome::Done)
+        }
+    });
+    let mut config = config();
+    config.recovery = Duration::from_millis(50);
+    let h = harness(&registry, &config);
+    h.enqueue(Echo { n: 1 }).await;
+    let runner = start(h.db.clone(), h.queue.clone(), registry, (), config);
+    assert_eq!(next(&mut performed_rx).await, (1, 1));
+    h.travel(60); // the lease has expired; the heartbeat is 10 s away
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert!(performed_rx.try_recv().is_err(), "not performed again");
+    let job = &h.jobs()[0];
+    assert_eq!((job.status.as_str(), job.attempts), (RUNNING, 1));
+    release.notify_one();
+    h.wait_for("the job to finish", |jobs| jobs.is_empty()).await;
+    assert_eq!(released.load(Ordering::SeqCst), 1);
+    runner.shutdown(Duration::from_secs(5)).await;
+}
+
+/// Rejects every DELETE from `background_jobs` (a job's completion) until dropped.
+async fn reject_completions(h: &Harness) {
+    h.db.write(|tx| Ok(tx.conn().execute_batch("CREATE TRIGGER reject_completions BEFORE DELETE ON background_jobs BEGIN SELECT RAISE(ABORT, 'completion rejected'); END")?)).await.unwrap();
+}
+
+async fn accept_completions(h: &Harness) {
+    h.db.write(|tx| Ok(tx.conn().execute_batch("DROP TRIGGER reject_completions")?)).await.unwrap();
+}
+
+/// A completion that can't be written is retried while its runner lives, lease or no lease.
+#[tokio::test]
+async fn a_failed_completion_write_is_retried() {
+    let (registry, mut performed) = echo_registry();
+    let h = harness(&registry, &config());
+    reject_completions(&h).await;
+    h.enqueue(Echo { n: 1 }).await;
+    let runner = start(h.db.clone(), h.queue.clone(), registry, (), config());
+    assert_eq!(next(&mut performed).await, (1, 1));
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert_eq!(h.jobs()[0].status, RUNNING, "not recorded yet");
+    accept_completions(&h).await;
+    h.wait_for("the completion", |jobs| jobs.is_empty()).await; // the clock is frozen: no lease expired
+    assert!(performed.try_recv().is_err(), "performed once");
+    runner.shutdown(Duration::from_secs(5)).await;
+}
+
+/// A claim its own runner holds but no longer performs (its completion couldn't be written in
+/// time) is recovered once its lease expires, like a dead runner's.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_claim_its_runner_stopped_performing_is_recovered() {
+    let (registry, mut performed) = echo_registry();
+    let mut config = config();
+    config.lease = Duration::from_millis(300);
+    config.heartbeat = Duration::from_millis(100);
+    config.recovery = Duration::from_millis(50);
+    let h = harness(&registry, &config);
+    h.clock.travel_back(); // real time: the lease runs out
+    reject_completions(&h).await;
+    h.enqueue(Echo { n: 1 }).await;
+    let runner = start(h.db.clone(), h.queue.clone(), registry, (), config);
+    assert_eq!(next(&mut performed).await, (1, 1));
+    tokio::time::sleep(Duration::from_millis(1000)).await; // past the completion's retries
+    accept_completions(&h).await;
+    h.wait_for("the job to be recovered and performed", |jobs| jobs.is_empty()).await;
+    let (n, executions) = next(&mut performed).await;
+    assert!(n == 1 && executions >= 2, "performed again: {executions}");
+    runner.shutdown(Duration::from_secs(5)).await;
+}
+
 /// Shutdown stops claiming, lets running jobs finish within the grace period, and leaves waiting
 /// jobs in the queue for the next process.
 #[tokio::test]
@@ -571,14 +656,30 @@ async fn shutdown_drains_running_jobs_and_leaves_the_rest_queued() {
     assert!(jobs.iter().all(|job| job.status == READY && job.attempts == 0), "{jobs:#?}");
 }
 
-/// Jobs still running when the grace period ends are abandoned and handed back, due now, the
-/// interrupted execution not counted.
-#[tokio::test]
+/// Sets its flag when dropped, after a while (a job's cleanup).
+struct SlowDrop(Arc<AtomicBool>);
+
+impl Drop for SlowDrop {
+    fn drop(&mut self) {
+        std::thread::sleep(Duration::from_millis(100));
+        self.0.store(true, Ordering::SeqCst);
+    }
+}
+
+/// Jobs still running when the grace period ends are abandoned (aborted, and gone by the time
+/// shutdown returns) and handed back, due now, the interrupted execution not counted.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn shutdown_hands_back_jobs_that_outlast_the_grace_period() {
+    let dropped = Arc::new(AtomicBool::new(false));
     let mut registry = Registry::new();
-    registry.register(|(), _: Echo, _: Execution| async {
-        std::future::pending::<()>().await;
-        Ok(Outcome::Done)
+    let dropped_by_job = dropped.clone();
+    registry.register(move |(), _: Echo, _: Execution| {
+        let guard = SlowDrop(dropped_by_job.clone());
+        async move {
+            let _guard = guard;
+            std::future::pending::<()>().await;
+            Ok(Outcome::Done)
+        }
     });
     let h = harness(&registry, &config());
     let id = h.enqueue(Echo { n: 1 }).await;
@@ -586,6 +687,7 @@ async fn shutdown_hands_back_jobs_that_outlast_the_grace_period() {
     h.wait_for("the claim", |jobs| jobs[0].status == RUNNING).await;
     h.travel(10);
     runner.shutdown(Duration::from_millis(200)).await;
+    assert!(dropped.load(Ordering::SeqCst), "the abandoned job was aborted before shutdown returned");
     let job = h.job(id).unwrap();
     assert_eq!((job.status.as_str(), job.attempts, job.claimed_by), (READY, 0, None));
     assert_eq!(job.run_at, at("2026-09-29 12:00:10"));
