@@ -11,7 +11,7 @@
   let turboCable
 
   // Controllers with `static shouldLoad` false (soft_keyboard_controller.js off touch devices) are
-  // never registered; importing the module (already loaded, or being loaded, by the app's eager
+  // never registered; importing the module (already loaded, or being loaded, by the app's lazy
   // loader) tells them apart from ones that just haven't registered yet.
   const shouldLoad = new Map() // import-map key -> true | false | "pending"
   function expectsRegistration(key) {
@@ -49,8 +49,13 @@
     const scripts = document.querySelector('script[type="importmap"]')
     if (!hasApp) return { present: false, expectsApp: !!scripts, missing: [], unregistered: [], connected: 0 }
     const registered = app.router.modulesByIdentifier
+    // The reference lazy-loads controllers (lazyLoadControllersFrom in controllers/index.js): one
+    // registers once an element uses it, so only the controllers on the page are expected.
+    const used = new Set(
+      [...document.querySelectorAll("[data-controller]")].flatMap((el) => (el.getAttribute("data-controller") || "").split(/\s+/)),
+    )
     const unregistered = expectedControllerIdentifiers()
-      .filter(({ id, key }) => !registered.has(id) && expectsRegistration(key) !== false)
+      .filter(({ id, key }) => used.has(id) && !registered.has(id) && expectsRegistration(key) !== false)
       .map(({ id }) => id)
     const missing = []
     const unknown = new Set()
