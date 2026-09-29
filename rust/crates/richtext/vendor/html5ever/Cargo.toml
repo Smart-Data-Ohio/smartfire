@@ -1,7 +1,8 @@
-# html5ever 0.35.0 from crates.io, with one fix backported from 0.39: reconstruct the active
+# html5ever 0.35.0 from crates.io, with a fix backported from 0.39: reconstruct the active
 # formatting elements before inserting <svg> or <math> in body, as the HTML spec (and Gumbo, which
 # Nokogiri uses) does. Later releases also adopt the customizable-<select> parsing rules, which
-# Gumbo doesn't, so upgrading isn't an option. See crates/richtext/src/dom.rs.
+# Gumbo doesn't, so upgrading isn't an option. Also mirrors Nokogiri 1.19.4 Gumbo's adoption-agency
+# stack behavior after its third inner iteration. See crates/richtext/src/dom.rs and its vectors.
 [package]
 edition = "2021"
 name = "html5ever"

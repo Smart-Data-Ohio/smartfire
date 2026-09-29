@@ -28,6 +28,8 @@ module Github::PullRequestsHelper
   # parent message, but the count rides along explicitly for the same
   # reason as pins: deleting an older reply leaves every other stamp
   # untouched.
+  # The presentation cache version busts every fragment when the rendering
+  # code itself changes (see MessagesHelper::PRESENTATION_CACHE_VERSION).
   def message_with_pr_cards_cache_key(message)
     newest_card = (message.github_pull_requests.map(&:updated_at) + message.fizzy_cards.map(&:updated_at) + message.twitter_posts.map(&:updated_at) + message.events.map(&:updated_at)).compact.max
     # Link embeds are fetched after the message renders; their rows (and the
@@ -44,6 +46,7 @@ module Github::PullRequestsHelper
     key << message.agent_steps.map(&:updated_at).max
     key << message_quote_stamp(message)
     key << message_quote_names_digest(message)
+    key << MessagesHelper::PRESENTATION_CACHE_VERSION
     key
   end
 

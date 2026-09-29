@@ -1,0 +1,1 @@
+[{"character":"x","count":50000,"too_long":false},{"character":"x","count":50001,"too_long":true},{"character":"😀","count":50000,"too_long":false},{"character":"😀","count":50001,"too_long":true}]
