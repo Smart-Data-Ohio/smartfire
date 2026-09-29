@@ -424,6 +424,7 @@ dependencies = [
  "hex",
  "jiff",
  "rand 0.9.5",
+ "regex",
  "rusqlite",
  "serde",
  "serde_json",

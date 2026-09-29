@@ -23,6 +23,7 @@ hex.workspace = true
 crc32fast.workspace = true
 tracing.workspace = true
 base64.workspace = true
+regex.workspace = true
 
 [features]
 # `campfire_db::fixtures`: the reference's test fixtures, loaded into a database for tests.
