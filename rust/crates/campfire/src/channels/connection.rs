@@ -68,7 +68,7 @@ mod tests {
 
     use campfire_db::{NewUser, Role, TestClock, Timestamp};
     use campfire_kit::testing::crypto;
-    use campfire_kit::{Crypto, FrozenClock};
+    use campfire_kit::FrozenClock;
 
     use super::*;
 

@@ -250,8 +250,42 @@ impl Browser<'_> {
         self.send(Req::new(Method::GET, path)).await
     }
 
-    /// A write as the app's own pages make it: same-origin, by `Sec-Fetch-Site`.
+    /// A write as the app's own pages make it: with the session's authenticity token in
+    /// `X-CSRF-Token`, as Turbo sends it from the `csrf-token` meta tag.
     pub async fn write(&mut self, req: Req) -> Reply {
-        self.send(req.header("sec-fetch-site", "same-origin")).await
+        let token = self.authenticity_token().await;
+        self.send(req.header(campfire_kit::csrf::HEADER, &token)).await
     }
+
+    /// A masked global token for this browser's session, as `csrf_meta_tags` renders it. A
+    /// session without one yet gets one from a page first.
+    pub async fn authenticity_token(&mut self) -> String {
+        if let Some(token) = self.session_token() {
+            return token;
+        }
+        let mut path = "/".to_string();
+        for _ in 0..3 {
+            match self.get(&path).await.location() {
+                Some(location) => path = location.to_string(),
+                None => break,
+            }
+        }
+        self.session_token().expect("the session has an authenticity token after a page")
+    }
+
+    fn session_token(&self) -> Option<String> {
+        masked_session_token(&self.app.booted.app.secrets, self.cookies.get(campfire_kit::session::SESSION_KEY)?)
+    }
+}
+
+/// A masked global authenticity token for the session in the `_campfire_session` cookie value
+/// `raw` (as sent, still escaped), or `None` when the session hasn't been given one.
+pub fn masked_session_token(secrets: &std::sync::Arc<rails_compat::Secrets>, raw: &str) -> Option<String> {
+    use campfire_kit::Crypto;
+
+    let raw = percent_encoding::percent_decode_str(raw).decode_utf8_lossy();
+    let crypto = campfire_kit::RailsCrypto::new(secrets.clone());
+    let session = crypto.decrypt_cookie(campfire_kit::session::SESSION_KEY, &raw, jiff::Timestamp::now())?;
+    let real = session.get(campfire_kit::csrf::SESSION_KEY)?.as_str()?;
+    Some(campfire_kit::csrf::RealToken::decode(real)?.masked(None))
 }

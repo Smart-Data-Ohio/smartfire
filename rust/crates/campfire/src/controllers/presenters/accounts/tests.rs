@@ -13,6 +13,7 @@ use tower::ServiceExt;
 
 use crate::app::{Booted, boot};
 use crate::config::Config;
+use crate::controllers::presenters::test_support::masked_session_token;
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 const HOST: &str = "campfire.test";
@@ -134,12 +135,18 @@ struct Browser<'a> {
 
 impl Browser<'_> {
     async fn request(&mut self, method: Method, path: &str, headers: &[(&str, &str)], body: Option<(&str, String)>) -> Reply {
-        let mut request = Request::builder().method(method).uri(path).header(header::HOST, HOST).header("x-forwarded-for", &self.ip);
+        let mut request = Request::builder().method(method.clone()).uri(path).header(header::HOST, HOST).header("x-forwarded-for", &self.ip);
         if !headers.iter().any(|(name, _)| name.eq_ignore_ascii_case("user-agent")) {
             request = request.header(header::USER_AGENT, CHROME);
         }
-        // What a browser sends for requests the page itself makes (forms, fetches).
-        request = request.header("sec-fetch-site", "same-origin");
+        // What the page itself sends with the writes it makes (forms, fetches): the session's
+        // authenticity token, once a page has given the session one.
+        if method != Method::GET {
+            let session = self.cookies.get(campfire_kit::session::SESSION_KEY);
+            if let Some(token) = session.and_then(|raw| masked_session_token(&self.test.booted.app.secrets, raw)) {
+                request = request.header(campfire_kit::csrf::HEADER, token);
+            }
+        }
         if !self.cookies.is_empty() {
             let cookie = self.cookies.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join("; ");
             request = request.header(header::COOKIE, cookie);

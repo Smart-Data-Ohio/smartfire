@@ -12,6 +12,8 @@
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    {{ h::csrf_meta_tags() }}
+    {{ h::csp_meta_tag() }}
     {{ h::current_user_meta_tags(ctx) }}
     {{ h::script_aware_action_cable_meta_tag(ctx) }}
 
@@ -25,7 +27,7 @@
     {{ h::raw(ctx.stylesheet_tags) }}
     {{ h::custom_styles_tag(ctx) }}
 
-    {{ h::raw(ctx.importmap_tags) }}
+    {{ h::request_forgery::javascript_importmap_tags(ctx.importmap_tags) }}
 
 {% block head %}{% endblock %}  </head>
 
