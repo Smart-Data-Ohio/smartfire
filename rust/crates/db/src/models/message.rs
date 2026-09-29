@@ -464,7 +464,10 @@ impl Message {
     }
 
     /// `before_save :touch_streaming_activity, if: :streaming?`: every save while streaming
-    /// restarts the finalize sweep's inactivity clock. (`touch` isn't a save, so boosts don't.)
+    /// restarts the finalize sweep's inactivity clock. That's a saved change, so it touches the
+    /// room too (`belongs_to :room, touch: true`), even when nothing else changed. (`touch` isn't
+    /// a save, so boosts don't restart the clock.) `save_touches_test` holds each save path to
+    /// Rails' answer.
     fn touch_streaming_activity(&mut self, tx: &mut Tx<'_>) -> Result<()> {
         if !self.streaming {
             return Ok(());
@@ -476,21 +479,16 @@ impl Message {
         )?;
         self.streaming_updated_at = Some(now);
         self.updated_at = now;
-        Ok(())
+        Room::touch(tx, self.room_id)
     }
 
     /// `message.update!(body:)`: the body changes, which touches the message and its room;
     /// the search index follows after commit. A streaming message is saved even when the body
-    /// is unchanged, which restarts its activity clock (and so touches the room).
+    /// is unchanged, which restarts its activity clock and touches the room.
     pub fn update_body(&mut self, tx: &mut Tx<'_>, body: &str) -> Result<()> {
         self.touch_streaming_activity(tx)?;
         match RichTextRecord::find_for(tx.conn(), RECORD_TYPE, self.id, "body")? {
-            Some(record) if record.body.as_deref() == Some(body) => {
-                if self.streaming {
-                    Room::touch(tx, self.room_id)?;
-                }
-                return Ok(());
-            }
+            Some(record) if record.body.as_deref() == Some(body) => return Ok(()),
             Some(mut record) => record.update_body(tx, body)?,
             None => {
                 RichTextRecord::create(tx, RECORD_TYPE, self.id, "body", body)?;
@@ -527,6 +525,7 @@ impl Message {
     /// `update!(attachment: blob or nil)`: `has_one_attached` replaces the attachment. The old
     /// one is destroyed (its blob purged after commit, `dependent: :purge_later`) and each
     /// attachment change touches the message (`belongs_to :record, touch: true`), and so its room.
+    /// A streaming message saves even with no attachment change (`touch_streaming_activity`).
     pub fn replace_attachment(&mut self, tx: &mut Tx<'_>, blob_id: Option<i64>) -> Result<()> {
         self.touch_streaming_activity(tx)?;
         if let Some(attachment) =
