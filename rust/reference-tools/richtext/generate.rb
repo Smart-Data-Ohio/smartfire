@@ -4,7 +4,7 @@
 # For every stored body in inputs.yml it records what Rails produces for:
 #   presentation  MessagesHelper#message_presentation (rescued) and whether it raised
 #   plain_text    message.body.to_plain_text
-#   editable      the <lexxy-editor> value: editable_body + Lexxy's render_custom_attachments_in
+#   editable      Message::LegacyMarkdown.render of the canonical stored body
 #   mentioned     Message::Mentionee#mentioned_users (ids)
 #   filtered      TextMessagePresentationFilters.apply(...).to_html, for debugging
 
@@ -15,6 +15,8 @@ INPUT = ENV.fetch("RICHTEXT_INPUT", "/corpus/inputs.yml")
 OUTPUT = ENV.fetch("RICHTEXT_OUTPUT", "/corpus/expected.json")
 DEFAULT_HOST = "once.campfire.test"
 
+# Error logging is observable: invalid-encoding exception messages can make the helper
+# rescue raise. Preserve the production logger behavior rather than suppressing it.
 Rails.logger.level = :error
 ActiveRecord::Base.logger = nil
 
@@ -157,16 +159,48 @@ module Mutate
   end
 end
 
+# Error-message encoding is observable through the helper's logging rescue. Generate these
+# independently from JSON.parse in the pinned gem, including fixed-message and fragment errors.
+json_errors = []
+faults = ["\xff".b, "bad\xffend".b, ("x" * 31 + "\xffend").b, "bad\xff end".b, "bad\xff\x00end".b, "é\xffend".b]
+templates = [
+  ->(v) { %( {"_rails":{"data" "#{v}"}} ).b },
+  ->(v) { %( {"_rails":{"x":1,"data" "#{v}"}} ).b },
+  ->(v) { %( [1 "#{v}"] ).b },
+  ->(v) { %( {"_rails":1 "#{v}"} ).b },
+  ->(v) { v },
+  ->(v) { %( {"_rails":#{v}} ).b },
+  ->(v) { %( {"_rails":{"data":"unterminated#{v}} ).b },
+  ->(v) { %( {"_rails":1}#{v} ).b },
+  ->(v) { %( {"_rails":/*#{v} ).b },
+  ->(v) { %( {"_rails":{"data":"\\q#{v}"}} ).b },
+  ->(v) { %( {"_rails":{"data":"\\uXX#{v}"}} ).b },
+  ->(v) { %( {"_rails":{"data":"line\n#{v}"}} ).b }
+]
+templates.each_with_index do |template, t|
+  faults.each_with_index do |fault, f|
+    payload = template.call(fault).strip
+    begin
+      JSON.parse(payload)
+    rescue JSON::ParserError => e
+      json_errors << { name: "review JSON error #{t}/#{f}", payload: Base64.strict_encode64(payload), unloggable: !e.message.valid_encoding?, message: e.message.scrub }
+    end
+  end
+end
+review_cases = YAML.load_file("/tools/review-inputs.yml").fetch("cases") + json_errors.map do |probe|
+  { "name" => probe[:name], "body" => %(<action-text-attachment sgid="#{probe[:payload]}"></action-text-attachment>) }
+end
+
 random = Random.new(20240102)
 handwritten = YAML.load_file(INPUT).fetch("cases")
-fuzz_cases = Array.new(Integer(ENV.fetch("RICHTEXT_FUZZ_CASES", 400))) { |i| { "name" => "fuzz #{i}", "body" => Fuzz.body(random) } }
+fuzz_cases = Array.new(Integer(ENV.fetch("RICHTEXT_FUZZ_CASES", 5000))) { |i| { "name" => "fuzz #{i}", "body" => Fuzz.body(random) } }
 mutation_random = Random.new(20240103)
-mutation_cases = Array.new(Integer(ENV.fetch("RICHTEXT_MUTATION_CASES", 400))) do |i|
+mutation_cases = Array.new(Integer(ENV.fetch("RICHTEXT_MUTATION_CASES", 2000))) do |i|
   source = handwritten.sample(random: mutation_random)
   { "name" => "mutation #{i} of #{source["name"]}", "body" => source["body"], "host" => source["host"], "mutate" => true }
 end
 
-cases = (handwritten + fuzz_cases + mutation_cases).each_with_index.map do |c, index|
+cases = (handwritten + fuzz_cases + mutation_cases + review_cases).each_with_index.map do |c, index|
   body = expand(c.fetch("body"), users:, room:, deleted_sgid:)
   body = Mutate.apply(body, mutation_random) if c["mutate"]
   host = c["host"] || DEFAULT_HOST
@@ -175,7 +209,7 @@ cases = (handwritten + fuzz_cases + mutation_cases).each_with_index.map do |c, i
   with_request(host) do |v|
     raw = outcome do
       v.auto_link ERB::Util.html_escape(ContentFilters::TextMessagePresentationFilters.apply(message.body.body)),
-        html: { target: "_blank" }, sanitize_options: { tags: MessagesHelper::AUTO_LINK_ALLOWED_TAGS, attributes: MessagesHelper::AUTO_LINK_ALLOWED_ATTRIBUTES }
+        html: { target: "_blank" }
     end
     {
       "name" => c.fetch("name"),
@@ -187,9 +221,11 @@ cases = (handwritten + fuzz_cases + mutation_cases).each_with_index.map do |c, i
       "presentation_raised" => raw["error"],
       "presentation_raised_message" => raw["message"],
       "plain_text" => outcome { message.body.to_plain_text },
-      "editable" => outcome { value = v.send(:render_custom_attachments_in, v.editable_body(message)); value&.to_s },
+      "editable" => outcome { Message::LegacyMarkdown.render(message.body.body.to_html) },
+      "canonical" => outcome { message.body.body.to_html },
       "mentioned" => outcome { message.send(:mentioned_users).map(&:id) },
-      "filtered" => outcome { ContentFilters::TextMessagePresentationFilters.apply(message.body.body).to_html }
+      "filtered" => outcome { ContentFilters::TextMessagePresentationFilters.apply(message.body.body).to_html },
+      "rendered" => outcome { ContentFilters::TextMessagePresentationFilters.apply(message.body.body).to_s }
     }
   end
 end
@@ -227,9 +263,14 @@ expected = {
   # SGIDs whose signature verifies for the attachable purpose (and haven't expired)
   "signed" => users.values.map { |u| { "sgid" => u.attachable_sgid, "model" => "User", "id" => u.id, "exists" => true } } +
     [ { "sgid" => deleted_sgid, "model" => "User", "id" => deleted.id, "exists" => false } ],
+  "embed_images" => cases.flat_map do |c|
+    html = c.dig("canonical", "ok").to_s
+    Nokogiri::HTML5.fragment(html).css("action-text-attachment").filter_map { |n| outcome { ActionText::Attachment::OpengraphEmbed.from_node(n)&.url }["ok"] }
+  end.uniq.to_h { |url| [url, Embeds::ImageProxy.signed_path(url)] },
   "cases" => cases,
   "web_urls" => web_url_results
 }
 
 File.write(OUTPUT, JSON.pretty_generate(expected) + "\n")
+File.write("/corpus/json-errors.json", JSON.pretty_generate(json_errors) + "\n")
 puts "Wrote #{cases.size} cases to #{OUTPUT}"

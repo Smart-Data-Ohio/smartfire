@@ -145,6 +145,21 @@ module MessagesHelper
     }
   end
 
+  # Part of every cached message fragment's key (see
+  # message_with_pr_cards_cache_key) and of the message page ETag (see
+  # MessagesController#index). Fragments live in Redis across deploys, and
+  # browsers keep pages they can revalidate; both are keyed on message rows
+  # and template digests, neither of which moves when message_presentation's
+  # rendering code changes. Bump this whenever that code changes the HTML of
+  # messages already stored, so nothing rendered by the old code is served
+  # again.
+  #
+  # 2: legacy bodies stop autolinking inside attribute values (stored XSS,
+  #    lib/rails_ext/auto_link_outside_attribute_values.rb).
+  # 3: forms inside the fragment stop embedding the session-bound CSRF
+  #    token, which the cache served from the first viewer to every other.
+  PRESENTATION_CACHE_VERSION = 3
+
   def message_presentation(message)
     case message.content_type
     when "attachment"
