@@ -1,4 +1,32 @@
-# Campfire in Rust
+# Smartfire in Rust
+
+This directory is the start of a Rust port of Smartfire, the Rails app at the root of this
+repository. It derives from [basecamp/once-campfire-rust](https://github.com/basecamp/once-campfire-rust),
+37signals' Rust port of stock [ONCE Campfire](https://github.com/basecamp/once-campfire), which is
+MIT licensed (Copyright 37signals, LLC; see [`MIT-LICENSE`](MIT-LICENSE)). It was imported with its
+full history by `git subtree add --prefix=rust` from upstream `main` at `24c85975`, and we don't
+track upstream after that.
+
+What changed on import:
+
+- **The reference is our Rails app**, the repository root, instead of a `reference/` submodule
+  pinned to stock Campfire (upstream matched basecamp/once-campfire `90b33002`). Tools find it
+  through `CAMPFIRE_REFERENCE`, which defaults to `rust/..`; see [`AGENTS.md`](AGENTS.md).
+- **Parity with Smartfire is the goal and isn't reached yet.** The port covers stock Campfire's
+  screens and routes; Smartfire's own features (boards, threads, huddles and stages, Slack import,
+  Google and GitHub integrations, two-factor and more) aren't ported. The parity harness in
+  `parity/` compares the two apps, and `parity/screens.yml` has to grow to cover what Smartfire
+  added. Until cutover, any difference from the Rails app is a bug.
+- CI runs from `.github/workflows/rust.yml` at the repository root. Upstream's image publishing
+  workflow wasn't brought over; deployment goes through our own GCP pipeline.
+
+Everything below is upstream's README as imported: it describes their port against stock
+Campfire, including its numbers and its deliberate differences from Rails, which we inherit but
+haven't decided to keep.
+
+---
+
+## Upstream: Campfire in Rust
 
 A port of [ONCE Campfire](https://github.com/basecamp/once-campfire) from Rails to Rust. It was
 built to be impossible to tell apart from the Rails app: the same screens pixel for pixel, the same
@@ -12,10 +40,10 @@ The port ships as a single `campfire` executable (plus libvips and ffmpeg). It r
 Redis, Resque and Thruster. Against the Rails app it replaces, it serves pages, posts and real-time
 delivery 20–95× faster, and holds 10,000 connected clients in a fifth of the memory.
 
-## What was done
+### What was done
 
-The Rails app lives in `reference/` as a git submodule, pinned to the commit being matched. It is
-the oracle for everything: no expected output was written by hand. Golden vectors, screenshots and
+Upstream, the Rails app lived in `reference/` as a git submodule, pinned to the commit being
+matched (here, the reference is the repository root). It is the oracle for everything: no expected output was written by hand. Golden vectors, screenshots and
 protocol recordings all come from running the real Rails app.
 
 **The port (`crates/`)**
@@ -68,7 +96,7 @@ differ on purpose; everything else still has to match. The latest lean gate, for
 made the repository public, passed 873 of 874 cells in Chromium, Firefox and WebKit; the one left is
 the web app manifest, allowlisted as a deliberate difference (`parity/allowlist.yml`).
 
-## Performance
+### Performance
 
 These numbers come from benchmarking the [`v0.1.1`](https://github.com/basecamp/once-campfire-rust/releases/tag/v0.1.1)
 image against the Rails app: production images of both, the same seed data, the same 4 pinned
@@ -78,7 +106,7 @@ tables with spreads are in
 other light work on other cores during the run; the spread between runs stays within a few percent
 for the Rust app.
 
-### Throughput (16 concurrent clients)
+#### Throughput (16 concurrent clients)
 
 | Route | Rails | Rust | Rust advantage |
 |---|---|---|---|
@@ -89,7 +117,7 @@ for the Rust app.
 | Post a message | 274 req/s | 5,452 req/s | **20×** |
 | `/up` | 4,069 req/s | 136,228 req/s | **33×** |
 
-### Latency
+#### Latency
 
 | Measurement | Rails | Rust | Rust advantage |
 |---|---|---|---|
@@ -99,7 +127,7 @@ for the Rust app.
 | Post a message p99, 64 clients | 349 ms | 16.7 ms | **21×** |
 | Upload a 505 KB JPEG until its thumbnail is served | 132 ms | 29.4 ms | **4.5×** |
 
-### Real time (Action Cable, up to 10,000 clients in one room)
+#### Real time (Action Cable, up to 10,000 clients in one room)
 
 | Measurement | Rails | Rust | Rust advantage |
 |---|---|---|---|
@@ -114,7 +142,7 @@ for the Rust app.
 
 Every client subscribed in every run, for both apps.
 
-### Startup and memory
+#### Startup and memory
 
 | Measurement | Rails | Rust | Rust advantage |
 |---|---|---|---|
@@ -129,7 +157,7 @@ Every client subscribed in every run, for both apps.
 
 Rails' whole container adds Redis and Thruster to its app processes; the Rust app is one process.
 
-### Since the previous benchmark
+#### Since the previous benchmark
 
 The run before this one benchmarked `main` at `898653e` the same way
 ([`bench/results/scale-20260927`](bench/results/scale-20260927/report.md)). Since then came
@@ -147,7 +175,7 @@ layer](#100000-clients-and-a-raspberry-pi-5), and opting out of transparent huge
 | App process, 10,000 idle cable clients (Pss) | 582 MB | 313 MB | **1.9× less** |
 | App process, 10,000 cable clients under load (Pss) | 876 MB | 310 MB | **2.8× less** |
 
-### 100,000 clients, and a Raspberry Pi 5
+#### 100,000 clients, and a Raspberry Pi 5
 
 One Campfire holds 100,000 connected clients in 1.5 GB: every one connects in about 13 s, and
 memory stays flat while messages fan out to all of them. On a Raspberry Pi 5's CPU budget
@@ -171,7 +199,7 @@ broadcast once for all of its subscribers (`permessage-deflate`, which browsers 
 run on threads of their own, so page loads and posts don't queue behind a fan-out. The app also
 raises its own open-file limit, which in Docker would otherwise stop it at 65,536 clients.
 
-### Where the speed came from
+#### Where the speed came from
 
 A straight translation was already 3–10× faster than Rails. Profiling (in
 [`plans/perf-attribution.md`](plans/perf-attribution.md)) then showed where the time went, and each
@@ -197,7 +225,7 @@ In the order they landed:
 
 Against Rails, the room page went from 4.4× in the preliminary benchmark to 95× in the latest one.
 
-### gzip and ETags from cached page parts
+#### gzip and ETags from cached page parts
 
 Every response is gzipped at level 6, as Rails' `Rack::Deflater` does, and after the passes above
 that was 60–76% of the CPU on large pages. Most of a room page is cached messages, whose bytes are
@@ -235,7 +263,7 @@ come from different runs (the page-parts run on a busy host, which understates i
 [`bench/results/header-csrf-20260927`](bench/results/header-csrf-20260927/report.md) and
 [`bench/results/page-parts-20260927`](bench/results/page-parts-20260927/report.md).
 
-## Running it
+### Running it
 
 It's a drop-in replacement for the Rails image: the same environment variables, ports and storage
 layout. Point it at an existing Campfire's storage and everyone stays signed in.
@@ -289,15 +317,15 @@ docker run -d -p 80:80 -p 443:443 \
 - **ONCE hooks:** `/hooks/pre-backup` runs `campfire backup`, which uses SQLite's online backup API.
 - **Other options:** see `crates/campfire/src/config.rs`.
 
-To build the image yourself: `docker build -t campfire-rust .` (the `reference/` submodule must be
-checked out). For development:
+To build the image yourself, from `rust/`: `docker build -t campfire-rust --build-context
+reference=.. .` (the reference app comes in as a named build context). For development:
 
 ```sh
 cargo test --workspace --exclude html5ever   # all crates
 cargo run -p campfire -- server               # needs SECRET_KEY_BASE or SECRET_KEY_BASE_DUMMY=1
 ```
 
-## Verifying changes
+### Verifying changes
 
 ```sh
 parity/bin/reference build && parity/bin/candidate build   # Rails and Rust images
@@ -314,7 +342,7 @@ bench/results/pi-100k-20260928/run100k.sh BIN LABEL        # 100,000 cable clien
 [`CONTRIBUTING.md`](CONTRIBUTING.md) how to propose changes. Report security issues as
 [`SECURITY.md`](SECURITY.md) describes.
 
-## Known differences
+### Known differences
 
 Deliberate:
 
@@ -455,7 +483,7 @@ Not fully covered:
   exactly apart from the deliberate differences above. Active Storage attachments embedded in a
   message body, which Campfire's composer can't create, render as ☒.
 
-## How it was built
+### How it was built
 
 The port was built in about a day by coordinated Claude Code agents, each owning one crate or
 harness component. They followed the plan in `plans/rust-conversion.md`, which Codex also reviewed.
@@ -464,6 +492,6 @@ parity gate going green, the Thruster replacement, the benchmarks, and each opti
 before and after numbers. The optimizations and divergences since then were made the same way, one
 pull request each, with their measurements in `bench/results/`.
 
-## License
+### License
 
 MIT, like Campfire. See [`MIT-LICENSE`](MIT-LICENSE).
