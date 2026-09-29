@@ -14,6 +14,17 @@ They use the fixed `SECRET_KEY_BASE` from `parity/.env.reference` (recorded in e
     CARGO_TARGET_DIR=target/rails_compat cargo test -p rails_compat     # also writes target/rails_compat_rust_output.json
     reference-tools/run.sh reference-tools/rails_compat_verify_rust.rb  # Rails verifies what Rust generated
 
+Smartfire's own contracts (Active Record encryption, the Calendar cleanup encryptor, named
+verifiers, device and two-factor cookies, signed ids, LiveKit and Google JWTs, webhook signatures)
+have their own pair, generated through our app's models, controllers and services:
+
+    reference-tools/run.sh reference-tools/rails_compat_smartfire_vectors.rb      # writes vectors/rails_compat_smartfire.json
+    CARGO_TARGET_DIR=target/rails_compat cargo test -p rails_compat               # also writes target/rails_compat_smartfire_rust_output.json
+    reference-tools/run.sh reference-tools/rails_compat_smartfire_verify_rust.rb  # Rails verifies what Rust generated
+
+Where the app draws randomness (AR encryption IVs, JWT ids, RSA test keys, webhook secrets) the file
+records the value drawn, so regenerating changes those bytes but not what the tests assert.
+
 `run.sh` uses the `campfire-reference` Docker image (the oracle). With `REFERENCE_NATIVE=1`, or
 without Docker, it runs the local Ruby (see `reference/.ruby-version`) with the same bundle
 installed into `target/reference-bundle`:

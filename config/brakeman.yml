@@ -1,0 +1,5 @@
+---
+# The Rust port's reference tools generate deliberately weak inputs (e.g. 1024-bit
+# RSA keys) to prove the Rust side rejects them. They are not part of the Rails app.
+:skip_files:
+- rust/

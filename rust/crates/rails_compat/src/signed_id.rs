@@ -5,7 +5,7 @@
 //! it generates with SHA256, `::JSON`, URL-safe Base64, and falls back when reading to the
 //! app-wide default (SHA1, `:json_allow_marshal`, strict Base64). The purpose is
 //! `"<base class name underscored>/<purpose>"`, e.g. `user/avatar`, or just `user`.
-use jiff::Timestamp;
+use jiff::{SignedDuration, Timestamp};
 use serde_json::Value;
 
 use crate::Secrets;
@@ -26,6 +26,31 @@ pub fn verify(secrets: &Secrets, model_name: &str, signed_id: &str, purpose: Opt
         Value::String(s) => s.trim().parse().ok(),
         _ => None,
     }
+}
+
+/// `User::Transferable::TRANSFER_LINK_EXPIRY_DURATION`.
+pub const TRANSFER_EXPIRES_IN: SignedDuration = SignedDuration::from_hours(4);
+
+/// `User#transfer_id` (`app/models/user/transferable.rb`):
+/// `signed_id(purpose: :transfer, expires_in: 4.hours)`.
+pub fn transfer_id(secrets: &Secrets, user_id: i64, now: Timestamp) -> String {
+    generate(secrets, "User", user_id, Some("transfer"), Some(now + TRANSFER_EXPIRES_IN))
+}
+
+/// `User.find_by_transfer_id(id)`'s verification step: `find_signed(id, purpose: :transfer)`.
+pub fn verify_transfer_id(secrets: &Secrets, signed_id: &str, now: Timestamp) -> Option<i64> {
+    verify(secrets, "User", signed_id, Some("transfer"), now)
+}
+
+/// `User#avatar_token` (`app/models/user/avatar.rb`): `signed_id(purpose: :avatar)`, no expiry.
+pub fn avatar_token(secrets: &Secrets, user_id: i64) -> String {
+    generate(secrets, "User", user_id, Some("avatar"), None)
+}
+
+/// `User.from_avatar_token(sid)`'s verification step (`find_signed!`, which raises where this
+/// returns `None`).
+pub fn verify_avatar_token(secrets: &Secrets, signed_id: &str, now: Timestamp) -> Option<i64> {
+    verify(secrets, "User", signed_id, Some("avatar"), now)
 }
 
 pub fn verifier(secrets: &Secrets) -> MessageVerifier {
@@ -75,5 +100,21 @@ mod tests {
         assert_eq!(combine_purposes("User", None), "user");
         assert_eq!(combine_purposes("Rooms::Open", Some("")), "rooms/open");
         assert_eq!(combine_purposes("HTTPRequest", Some("x")), "http_request/x");
+    }
+
+    #[test]
+    fn transfer_ids_expire_and_purposes_do_not_cross() {
+        let secrets = Secrets::new(&"a".repeat(128));
+        let now: Timestamp = "2026-01-01T12:00:00Z".parse().unwrap();
+        let transfer = transfer_id(&secrets, 7, now);
+        let avatar = avatar_token(&secrets, 7);
+        assert_eq!(verify_transfer_id(&secrets, &transfer, now + TRANSFER_EXPIRES_IN - SignedDuration::from_secs(1)), Some(7));
+        assert_eq!(verify_transfer_id(&secrets, &transfer, now + TRANSFER_EXPIRES_IN), None);
+        assert_eq!(verify_avatar_token(&secrets, &avatar, now + SignedDuration::from_hours(24 * 365 * 50)), Some(7));
+        assert_eq!(verify_transfer_id(&secrets, &avatar, now), None);
+        assert_eq!(verify_avatar_token(&secrets, &transfer, now), None);
+        let room_avatar = generate(&secrets, "Room", 7, Some("avatar"), None);
+        assert_eq!(verify_avatar_token(&secrets, &room_avatar, now), None);
+        assert_eq!(verify_avatar_token(&Secrets::new(&"b".repeat(128)), &avatar, now), None);
     }
 }
