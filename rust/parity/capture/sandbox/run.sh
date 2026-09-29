@@ -49,8 +49,9 @@ run_in_image() {
   # The capture has no network of its own, only loopback: Chromium fails requests in flight with
   # ERR_NETWORK_CHANGED whenever an interface comes or goes in its namespace, which on the host
   # network is every docker run/rm. Its proxies reach the servers through capture/forward.ts,
-  # which runs on the host network, over a Unix socket in NET_DIR.
-  local net_dir; net_dir=$(mktemp -d "$PARITY/out/.net.XXXXXX")
+  # which runs on the host network, over a Unix socket in NET_DIR. That's under TMPDIR rather than
+  # the checkout, which may be too deep for a socket path (108 bytes), and is mounted into both.
+  local net_dir; net_dir=$(mktemp -d "${TMPDIR:-/tmp}/parity-net.XXXXXX")
   NET_DIRS+=("$net_dir")
   local socket=$net_dir/upstream.sock
   case "$runtime" in
@@ -60,14 +61,14 @@ run_in_image() {
       local name=parity-capture-$$-$RANDOM
       CAPTURE_CONTAINERS+=("$name" "$name-forward")
       docker run -d --rm --init --name "$name-forward" --network host -u "$(id -u):$(id -g)" \
-        -v "$REFERENCE_ROOT:$REFERENCE_ROOT:ro" -v "$ROOT:$ROOT" --tmpfs "$PARITY/node_modules" -w "$PARITY" \
-        "$image" node capture/forward.ts "$socket" >/dev/null
+        -v "$REFERENCE_ROOT:$REFERENCE_ROOT:ro" -v "$ROOT:$ROOT" -v "$net_dir:$net_dir" \
+        --tmpfs "$PARITY/node_modules" -w "$PARITY" "$image" node capture/forward.ts "$socket" >/dev/null
       wait_for_socket "$socket"
       docker run --rm --init --name "$name" --network none --ipc host \
         -u "$(id -u):$(id -g)" -e HOME=/tmp -e TZ=UTC -e CI="${CI:-}" -e PARITY_WORKERS="${PARITY_WORKERS:-}" \
         -e PARITY_UPSTREAM_SOCKET="$socket" -e CAMPFIRE_REFERENCE="$REFERENCE_ROOT" \
-        -v "$REFERENCE_ROOT:$REFERENCE_ROOT:ro" -v "$ROOT:$ROOT" --tmpfs "$PARITY/node_modules" -w "$PARITY" \
-        "$image" node capture/cli.ts "$@" &
+        -v "$REFERENCE_ROOT:$REFERENCE_ROOT:ro" -v "$ROOT:$ROOT" -v "$net_dir:$net_dir" \
+        --tmpfs "$PARITY/node_modules" -w "$PARITY" "$image" node capture/cli.ts "$@" &
       local status=0
       wait $! || status=$? # in the background so an interrupt runs the caller's trap (parity_cleanup) at once
       docker kill "$name-forward" >/dev/null 2>&1 || true
@@ -83,7 +84,8 @@ run_in_image() {
       local top; top="/$(echo "$ROOT" | cut -d/ -f2)"
       local bw=(bwrap --ro-bind "$rootfs" / --tmpfs "$top" --ro-bind "$REFERENCE_ROOT" "$REFERENCE_ROOT"
         --bind "$ROOT" "$ROOT" --ro-bind "$modules" /node_modules
-        --tmpfs "$PARITY/node_modules" --dev /dev --proc /proc --tmpfs /tmp --tmpfs /dev/shm
+        --tmpfs "$PARITY/node_modules" --dev /dev --proc /proc --tmpfs /tmp --bind "$net_dir" "$net_dir"
+        --tmpfs /dev/shm
         --ro-bind /etc/resolv.conf /etc/resolv.conf --unshare-user --unshare-pid --unshare-ipc
         --die-with-parent --clearenv
         --setenv PATH /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
