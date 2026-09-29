@@ -158,6 +158,21 @@ class MessagesHelperTest < ActionView::TestCase
       view.message_presentation(message)
   end
 
+  # Scanning everything before each match made a body with many links
+  # quadratic: 2,000 addresses took several times as long as without the fix.
+  test "legacy presentation finds attribute values once per autolink pass, however many matches" do
+    scanned = []
+    view.singleton_class.prepend(Module.new do
+      define_method(:quoted_attribute_values) { |html| scanned << html.bytesize; super(html) }
+    end)
+    message = legacy_message(%(<span title="hello">me@example.test http://example.test/ </span>) * 500)
+
+    presentation = view.message_presentation(message)
+
+    assert_equal 1_000, presentation.scan("<a ").size
+    assert_equal 2, scanned.size, "one scan for the URL pass and one for the email pass"
+  end
+
   private
     def legacy_message(body)
       Message.create! room: rooms(:pets), body: body, client_message_id: "legacy-autolink", creator: users(:jason)
