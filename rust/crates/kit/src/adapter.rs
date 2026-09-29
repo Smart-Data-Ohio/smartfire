@@ -61,9 +61,9 @@ where
 }
 
 /// [`action`] for one that reads its own body ([`Ctx::read_body`]) and has no body params: the
-/// kit neither buffers nor parses it first, so what the action does before reading it (a rate
-/// limit, say) comes first, and a body the kit would refuse to parse is only as big or as
-/// malformed as the action lets it be. (Form data is still read before routing, for `_method`.)
+/// kit validates the complete upload, spooling it to disk without parsing it, before entering
+/// the action. The action can rate-limit before parsing or keeping a prefix of even a malformed
+/// body. (Form data is still parsed before routing, for `_method`.)
 pub fn unparsed_action<F>(f: F) -> ActionHandler<F>
 where
     F: for<'a> ActionFn<'a> + Clone,
@@ -120,8 +120,13 @@ where
     let parsed = match parts.extensions.remove::<ParsedBody>() {
         Some(parsed) => Ok(parsed),
         None if !parse_body => {
-            unread = Some(body);
-            Ok(ParsedBody::empty())
+            match body::validate_unparsed(body, kit.config().max_body_bytes).await {
+                Ok(body) => {
+                    unread = Some(body);
+                    Ok(ParsedBody::empty())
+                }
+                Err(error) => Err(error),
+            }
         }
         None => body::parse(&original_method, &parts.headers, body, kit.config().max_body_bytes).await,
     };

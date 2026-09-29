@@ -62,23 +62,22 @@ impl Server {
         env.insert("LOG_REQUESTS".into(), "false".into());
         let config = FrontConfig::from_lookup(|name| env.get(name).cloned());
         let (stop, stopped) = oneshot::channel::<()>();
+        let (ready, started) = oneshot::channel();
         let done = tokio::spawn(async move {
-            if let Err(error) = front::serve_with(config, app, acme, async move {
-                let _ = stopped.await;
-            })
+            if let Err(error) = front::serve_with_ready(
+                config, app, acme,
+                move || { let _ = ready.send(()); },
+                async move { let _ = stopped.await; },
+            )
             .await
             {
                 eprintln!("front server stopped: {error}");
             }
         });
-        for _ in 0..100 {
-            if done.is_finished() {
-                return None;
-            }
-            if TcpStream::connect(("127.0.0.1", http)).await.is_ok() {
-                break;
-            }
-            tokio::time::sleep(Duration::from_millis(20)).await;
+        if !matches!(tokio::time::timeout(Duration::from_secs(2), started).await, Ok(Ok(()))) {
+            let _ = stop.send(());
+            let _ = tokio::time::timeout(Duration::from_secs(10), done).await;
+            return None;
         }
         Some(Self { http, target, stop: Some(stop), done })
     }
@@ -91,6 +90,18 @@ impl Server {
 
 fn free_port() -> u16 {
     std::net::TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port()
+}
+
+#[tokio::test]
+async fn readiness_does_not_accept_another_servers_listener() {
+    let occupied = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = occupied.local_addr().unwrap().port();
+    let server = Server::try_start(&[], Router::new(), None, port, free_port()).await;
+    let incorrectly_started = server.is_some();
+    if let Some(server) = server {
+        server.stop().await;
+    }
+    assert!(!incorrectly_started, "a connection to another listener must not establish readiness");
 }
 
 /// A raw HTTP/1.1 exchange on a fresh connection, read to EOF.
@@ -472,10 +483,9 @@ async fn post_chunked(port: u16, path: &str, total: usize, end: bool) -> u16 {
     parse(&raw).status
 }
 
-/// MAX_REQUEST_BODY is enforced on the body as it streams to the app, which is never held whole
-/// in memory on the way: an upload under the limit reaches an action that drains it in bounded
-/// chunks, and one over it is cut off where it crosses the limit with a 413, whatever the action
-/// would have answered.
+/// MAX_REQUEST_BODY is enforced as the upload streams through validation, never held whole
+/// in memory: a raw upload under the limit is spooled and replayed in bounded chunks, and one
+/// over it is cut off with a 413 as soon as it crosses the limit, before entering the action.
 #[tokio::test]
 async fn request_bodies_stream_to_the_app_within_the_limit() {
     const LIMIT: usize = 8 * 1024 * 1024;
@@ -494,6 +504,88 @@ async fn request_bodies_stream_to_the_app_within_the_limit() {
         assert_eq!(post_chunked(port, "/parsed", 1024, true).await, 204, "a parsed action under the limit, port {port}");
     }
     server.stop().await;
+}
+
+/// An unparsed action must not make a change before discovering that its body is too large,
+/// even if it never asks for the body at all.
+#[tokio::test]
+async fn raw_actions_wait_for_the_whole_body_before_running() {
+    async fn change(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {
+        c.state::<Arc<AtomicUsize>>().fetch_add(1, Ordering::SeqCst);
+        Ok(c.head(campfire_kit::StatusCode::NO_CONTENT))
+    }
+    let changes = Arc::new(AtomicUsize::new(0));
+    let kit = campfire_kit::Kit::new(
+        campfire_kit::KitConfig::default(),
+        campfire_kit::testing::crypto(),
+        campfire_kit::testing::frozen_clock(),
+        changes.clone(),
+    );
+    let app = campfire_kit::app(Router::new().route("/change", post(campfire_kit::unparsed_action(change))), kit);
+    let server = Server::start(&[("MAX_REQUEST_BODY", "4096")], app).await;
+    let mut outcomes = Vec::new();
+    for port in [server.http, server.target] {
+        let before = changes.load(Ordering::SeqCst);
+        let status = post_chunked(port, "/change", 64 * 1024, true).await;
+        outcomes.push((status, changes.load(Ordering::SeqCst) - before));
+        assert_eq!(post_chunked(port, "/change", 4096, true).await, 204, "exact limit, port {port}");
+    }
+    server.stop().await;
+    assert_eq!(outcomes, [(413, 0), (413, 0)], "front and target must refuse before entering the action");
+}
+
+#[tokio::test]
+async fn parsed_actions_wait_for_the_whole_body_before_running() {
+    async fn change(c: &mut campfire_kit::Ctx) -> campfire_kit::Result {
+        c.state::<Arc<AtomicUsize>>().fetch_add(1, Ordering::SeqCst);
+        Ok(c.head(campfire_kit::StatusCode::NO_CONTENT))
+    }
+    let changes = Arc::new(AtomicUsize::new(0));
+    let kit = campfire_kit::Kit::new(
+        campfire_kit::KitConfig::default(),
+        campfire_kit::testing::crypto(),
+        campfire_kit::testing::frozen_clock(),
+        changes.clone(),
+    );
+    let app = campfire_kit::app(Router::new().route("/change", post(campfire_kit::action(change))), kit);
+    let server = Server::start(&[("MAX_REQUEST_BODY", "4096")], app).await;
+    let mut outcomes = Vec::new();
+    for port in [server.http, server.target] {
+        for (content_type, prefix) in [
+            (
+                "multipart/form-data; boundary=B",
+                "--B\r\nContent-Disposition: form-data; name=\"value\"\r\n\r\nok\r\n--B--\r\n",
+            ),
+            ("application/x-www-form-urlencoded", "value=ok&padding="),
+            ("application/json", "{\"value\":\"ok\"}"),
+            ("application/octet-stream", "ok"),
+        ] {
+            for total in [4096, 4097] {
+                let before = changes.load(Ordering::SeqCst);
+                let mut stream = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
+                let head = format!(
+                    "POST /change HTTP/1.1\r\nHost: x\r\nConnection: close\r\nContent-Type: {content_type}\r\nTransfer-Encoding: chunked\r\n\r\n"
+                );
+                stream.write_all(head.as_bytes()).await.unwrap();
+                stream.write_all(format!("{:x}\r\n{prefix}\r\n", prefix.len()).as_bytes()).await.unwrap();
+                tokio::time::sleep(Duration::from_millis(100)).await;
+                let early = changes.load(Ordering::SeqCst) - before;
+                let tail = vec![b' '; total - prefix.len()];
+                let suffix = [format!("{:x}\r\n", tail.len()).as_bytes(), &tail, b"\r\n0\r\n\r\n"].concat();
+                let _ = stream.write_all(&suffix).await;
+                let mut raw = Vec::new();
+                tokio::time::timeout(Duration::from_secs(10), stream.read_to_end(&mut raw)).await.unwrap().unwrap();
+                let status = parse(&raw).status;
+                let added = changes.load(Ordering::SeqCst) - before;
+                let expected = if total == 4096 { (204, 0, 1) } else { (413, 0, 0) };
+                outcomes.push((port, content_type, total, (status, early, added), expected));
+            }
+        }
+    }
+    server.stop().await;
+    for (port, content_type, total, actual, expected) in outcomes {
+        assert_eq!(actual, expected, "port {port}, {content_type}, {total} bytes");
+    }
 }
 
 #[tokio::test]

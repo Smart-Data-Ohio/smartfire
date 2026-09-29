@@ -125,9 +125,9 @@ impl Ctx {
     }
 
     /// `request.body.read(limit)`: at most the first `limit` bytes of the body. An
-    /// [`crate::unparsed_action`]'s body is read here: those bytes are kept and the rest is read
-    /// and dropped, as Puma reads a whole body before the app sees any of it (so the client gets
-    /// the response rather than a reset connection). Any other action's comes from `raw_post`.
+    /// [`crate::unparsed_action`]'s body has already been validated and spooled before the
+    /// action ran: those bytes are kept and the rest is read and dropped. Any other action's
+    /// comes from `raw_post`.
     pub async fn read_body(&mut self, limit: usize) -> bytes::Bytes {
         use http_body_util::BodyExt;
 

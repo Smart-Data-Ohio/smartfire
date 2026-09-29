@@ -329,9 +329,8 @@ pub(super) struct BodyLimit(Option<Arc<AtomicBool>>);
 impl BodyLimit {
     /// The app's response, or the empty 413 when the body crossed the limit while the app read it.
     /// That's `http.MaxBytesHandler`'s: the read past the limit fails, and Thruster's proxy
-    /// answers 413 for it, whatever the app was going to say. (Puma reads a whole body before
-    /// calling Rails, so there an app never answers first; here one that doesn't read its body to
-    /// the end, which Rails actions can't do, keeps its own answer.)
+    /// answers 413 for it, whatever the app was going to say. Kit parsers and raw-body validation
+    /// read through EOF before entering an action, as Puma does before calling Rails.
     pub(super) fn checked(&self, response: Response<Body>) -> Response<Body> {
         match &self.0 {
             Some(crossed) if crossed.load(Ordering::Acquire) => too_large(),
