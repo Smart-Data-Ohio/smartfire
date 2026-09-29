@@ -23,7 +23,11 @@ ACTIONS = {
   "touch"           => ->(m, _) { m.touch },
   "boost_create"    => ->(m, u) { m.boosts.create!(content: "hi", booster: u) },
   "boost_destroy"   => ->(m, _) { m.boosts.first.destroy! },
-  "destroy"         => ->(m, _) { m.destroy! }
+  "destroy"         => ->(m, _) { m.destroy! },
+  "markdown_new"    => ->(m, _) { m.update!(markdown_source: "rewritten") },
+  "embeds_suppress" => ->(m, _) { m.update!(embeds_suppressed: true) },
+  "forward_note"    => ->(m, _) { m.update!(forward_note: "note") },
+  "drive_add"       => ->(m, _) { m.drive_attachments.build(file_id: "1AbcDefGhIjKlMnOpQrSt"); m.save! }
 }
 
 t0 = Time.utc(2026, 9, 29, 12, 0, 0)

@@ -422,4 +422,53 @@ fn export_database_for_rails() {
         doomed.destroy(tx)
     })
     .unwrap();
+
+    // An edit (Markdown, Drive set, embeds), a quiet reply to it, and two forwards of it.
+    db.write_blocking(|tx| {
+        let mut edited = Message::create(
+            tx,
+            crate::NewMessage {
+                room_id: id("designers"),
+                creator_id: id("david"),
+                client_message_id: Some("rust-edited".into()),
+                markdown_source: Some("before".into()),
+                drive_file_ids: vec!["1AbcDefGhIjKlMnOpQrSt".into()],
+                ..Default::default()
+            },
+        )?;
+        edited.edit(
+            tx,
+            crate::MessageChanges {
+                markdown_source: Some("after".into()),
+                drive_file_ids: Some(vec!["2BcdEfgHiJkLmNoPqRsTu".into()]),
+                ..Default::default()
+            },
+        )?;
+        edited.suppress_embeds(tx)?;
+        Message::create(
+            tx,
+            crate::NewMessage {
+                room_id: id("designers"),
+                creator_id: id("jason"),
+                client_message_id: Some("rust-quiet-reply".into()),
+                markdown_source: Some("quiet".into()),
+                reply_to_message_id: Some(edited.id),
+                reply_notify_author: Some(false),
+                ..Default::default()
+            },
+        )?;
+        struct NoAttachments;
+        impl crate::models::forwarder::BlobCopier for NoAttachments {
+            fn copy(&self, _: &Tx<'_>, _: &crate::Blob) -> Result<crate::Blob> {
+                unreachable!("the source has no attachment")
+            }
+            fn discard(&self, _: &[crate::Blob]) {}
+        }
+        use crate::models::forwarder::{Destination, forward};
+        let destinations = [Destination::room(id("watercooler")), Destination::room(id("designers"))];
+        forward(tx, &edited, &destinations, Some("@[Jason] look"), id("david"), &NoAttachments)?
+            .map_err(|refusal| crate::Error::Other(refusal.to_string()))?;
+        Ok(())
+    })
+    .unwrap();
 }

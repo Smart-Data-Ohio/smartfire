@@ -47,6 +47,30 @@
     "room_updated_at": 60,
     "attached": false
   },
+  "finished/bare/markdown_new": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "finished/bare/embeds_suppress": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "finished/bare/forward_note": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "finished/bare/drive_add": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": false
+  },
   "finished/attached/attach_nil": {
     "message_updated_at": 60,
     "streaming_updated_at": null,
@@ -95,6 +119,30 @@
     "room_updated_at": 60,
     "attached": false
   },
+  "finished/attached/markdown_new": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "finished/attached/embeds_suppress": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "finished/attached/forward_note": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "finished/attached/drive_add": {
+    "message_updated_at": 60,
+    "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": true
+  },
   "streaming/bare/attach_nil": {
     "message_updated_at": 60,
     "streaming_updated_at": 60,
@@ -140,6 +188,30 @@
   "streaming/bare/destroy": {
     "message_updated_at": null,
     "streaming_updated_at": null,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "streaming/bare/markdown_new": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 60,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "streaming/bare/embeds_suppress": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 60,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "streaming/bare/forward_note": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 60,
+    "room_updated_at": 60,
+    "attached": false
+  },
+  "streaming/bare/drive_add": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 60,
     "room_updated_at": 60,
     "attached": false
   },
@@ -190,5 +262,29 @@
     "streaming_updated_at": null,
     "room_updated_at": 60,
     "attached": false
+  },
+  "streaming/attached/markdown_new": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 60,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "streaming/attached/embeds_suppress": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 60,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "streaming/attached/forward_note": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 60,
+    "room_updated_at": 60,
+    "attached": true
+  },
+  "streaming/attached/drive_add": {
+    "message_updated_at": 60,
+    "streaming_updated_at": 60,
+    "room_updated_at": 60,
+    "attached": true
   }
 }

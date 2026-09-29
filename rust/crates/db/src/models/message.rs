@@ -85,6 +85,20 @@ pub struct NewMessage {
     pub drive_file_ids: Vec<String>,
 }
 
+/// Attributes assigned to a saved message (`message.update!(...)`); `None` leaves one alone.
+#[derive(Debug, Clone, Default)]
+pub struct MessageChanges {
+    /// Rendered into the body before validation, like a new message's.
+    pub markdown_source: Option<String>,
+    /// A legacy (Action Text) body.
+    pub body: Option<String>,
+    pub forward_note: Option<Option<String>>,
+    pub embeds_suppressed: Option<bool>,
+    /// The whole Drive set (`apply_drive_file_ids!`): ids missing from it are destroyed, new
+    /// ones built, the rest kept.
+    pub drive_file_ids: Option<Vec<String>>,
+}
+
 /// The message list a page is cut from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Timeline {
@@ -493,6 +507,12 @@ impl Message {
 
     /// The validations of `app/models/message.rb` for a new message.
     pub fn validate(conn: &Connection, attributes: &NewMessage) -> Result<Errors> {
+        Self::validate_attributes(conn, attributes, true)
+    }
+
+    /// The validations, for a new record or (`new_record` false) a saved one being updated to
+    /// `attributes`.
+    fn validate_attributes(conn: &Connection, attributes: &NewMessage, new_record: bool) -> Result<Errors> {
         let mut errors = Errors::default();
         // `belongs_to :room` and `:creator` (required)
         if Room::find_by_id(conn, attributes.room_id)?.is_none() {
@@ -556,10 +576,13 @@ impl Message {
                 errors.add("reply_to_message", "must be in the same conversation");
             }
         }
-        // `validate_forward_metadata` (new records only)
+        // `validate_forward_metadata` (new records only: deleting the source nullifies the link
+        // and leaves `forwarded_at`)
         match (attributes.forwarded_from_message_id, attributes.forwarded_at) {
-            (Some(_), None) => errors.add("forwarded_at", "must be present for a forwarded message"),
-            (None, Some(_)) => errors.add("forwarded_from_message", "must be present for a forwarded message"),
+            (Some(_), None) if new_record => errors.add("forwarded_at", "must be present for a forwarded message"),
+            (None, Some(_)) if new_record => {
+                errors.add("forwarded_from_message", "must be present for a forwarded message")
+            }
             _ => {}
         }
         // `no_root_messages_in_boards`: quiet system notes (the stale-work digest) may sit at a
@@ -623,6 +646,155 @@ impl Message {
         self.touch(tx)
     }
 
+    /// The edit endpoints' save (`MessagesController#update`,
+    /// `ChannelThreadMessagesController#update`): assign `changes`, stamp `edited_at` only when
+    /// the text itself changes (`body_content_will_change?`), then save. Reactions, tombstones,
+    /// card fetches, attachment-only and identical saves never mark a message "(edited)". The
+    /// controllers' presentation and card broadcasts are WS8b's.
+    pub fn edit(&mut self, tx: &mut Tx<'_>, changes: MessageChanges) -> Result<()> {
+        self.save_changes(tx, changes, true)
+    }
+
+    /// `update!(...)`: a save that never stamps `edited_at`.
+    pub fn update(&mut self, tx: &mut Tx<'_>, changes: MessageChanges) -> Result<()> {
+        self.save_changes(tx, changes, false)
+    }
+
+    /// `MessageEmbedSuppressionsController#create`: `update!(embeds_suppressed: true) unless
+    /// embeds_suppressed?`.
+    pub fn suppress_embeds(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        if self.embeds_suppressed {
+            return Ok(());
+        }
+        self.update(tx, MessageChanges { embeds_suppressed: Some(true), ..Default::default() })
+    }
+
+    /// `body_content_will_change?`: a new Markdown source, or a body whose HTML changes when
+    /// either side has any text (a blank body assigned to an attachment-only message isn't a
+    /// text change).
+    pub fn body_content_will_change(&self, conn: &Connection, rich_text: &dyn RichText, changes: &MessageChanges) -> Result<bool> {
+        if self.markdown_source_will_change(changes) {
+            return Ok(true);
+        }
+        let Some(body) = &changes.body else { return Ok(false) };
+        let previous = self.body_html(conn)?.unwrap_or_default();
+        if *body == previous {
+            return Ok(false);
+        }
+        let names = |id| User::find_by_id(conn, id).ok().flatten().map(|u| u.name);
+        let has_text = |html: &str| !rich_text.to_plain_text(conn, html, &names).trim().is_empty();
+        Ok(has_text(body) || has_text(&previous))
+    }
+
+    fn markdown_source_will_change(&self, changes: &MessageChanges) -> bool {
+        changes.markdown_source.as_ref().is_some_and(|source| self.markdown_source.as_ref() != Some(source))
+    }
+
+    /// `save!` of assigned changes. A changed Markdown source re-renders the body
+    /// (`render_markdown_body`); the validations run as for an update; the message and its room
+    /// are touched when anything changed (or always while streaming); the search index follows
+    /// after commit (`after_update_commit :update_in_index, unless: :streaming?`).
+    fn save_changes(&mut self, tx: &mut Tx<'_>, changes: MessageChanges, stamp_edited: bool) -> Result<()> {
+        let conn = tx.conn();
+        let content_changes = stamp_edited && self.body_content_will_change(conn, tx.rich_text(), &changes)?;
+        let markdown_source =
+            if self.markdown_source_will_change(&changes) { changes.markdown_source.clone() } else { self.markdown_source.clone() };
+        let body = match &changes.markdown_source {
+            Some(source) if self.markdown_source_will_change(&changes) => {
+                if source.chars().count() <= SOURCE_LIMIT {
+                    Some(tx.rich_text().render_markdown(conn, source, self.room_id).map_err(crate::error::Error::Other)?)
+                } else {
+                    None
+                }
+            }
+            _ => changes.body.clone(),
+        };
+        let current_body = self.body_html(conn)?;
+        let body = body.filter(|body| current_body.as_deref() != Some(body.as_str()));
+        let current_drive_ids = drive_file_ids(conn, self.id)?;
+        let drive_file_ids = changes.drive_file_ids.clone().unwrap_or_else(|| current_drive_ids.clone());
+        let forward_note = changes.forward_note.clone().unwrap_or_else(|| self.forward_note.clone());
+        let embeds_suppressed = changes.embeds_suppressed.unwrap_or(self.embeds_suppressed);
+
+        let attributes = NewMessage {
+            room_id: self.room_id,
+            creator_id: self.creator_id,
+            client_message_id: Some(self.client_message_id.clone()),
+            body: body.clone(),
+            attachment_blob_id: Attachment::find_for(conn, RECORD_TYPE, self.id, "attachment")?.map(|a| a.blob_id),
+            thread_id: self.thread_id,
+            system_note: self.system_note,
+            streaming: self.streaming,
+            markdown_source: markdown_source.clone(),
+            action: self.action,
+            board_post_opener: self.board_post_opener,
+            embeds_suppressed,
+            reply_to_message_id: self.reply_to_message_id,
+            reply_notify_author: Some(self.reply_notify_author),
+            forwarded_from_message_id: self.forwarded_from_message_id,
+            forwarded_at: self.forwarded_at,
+            forward_note: forward_note.clone(),
+            forwarded_markdown: self.forwarded_markdown,
+            drive_file_ids: drive_file_ids.clone(),
+        };
+        Self::validate_attributes(conn, &attributes, false)?.into_result()?;
+
+        let now = tx.now();
+        let edited_at = if content_changes { Some(now) } else { self.edited_at };
+        let columns_changed = markdown_source != self.markdown_source
+            || forward_note != self.forward_note
+            || embeds_suppressed != self.embeds_suppressed
+            || edited_at != self.edited_at;
+        let drive_changed = drive_file_ids != current_drive_ids;
+        if !(columns_changed || body.is_some() || drive_changed || self.streaming) {
+            return Ok(());
+        }
+        let streaming_updated_at = if self.streaming { Some(now) } else { self.streaming_updated_at };
+        tx.conn().execute_cached(
+            r#"UPDATE "messages" SET "markdown_source" = ?, "forward_note" = ?, "embeds_suppressed" = ?, "edited_at" = ?, "streaming_updated_at" = ?, "updated_at" = ? WHERE "messages"."id" = ?"#,
+            params![markdown_source, forward_note, embeds_suppressed, edited_at, streaming_updated_at, now, self.id],
+        )?;
+        if let Some(body) = &body {
+            match RichTextRecord::find_for(tx.conn(), RECORD_TYPE, self.id, "body")? {
+                Some(mut record) => record.update_body(tx, body)?,
+                None => {
+                    RichTextRecord::create(tx, RECORD_TYPE, self.id, "body", body)?;
+                }
+            }
+        }
+        if drive_changed {
+            for file_id in current_drive_ids.iter().filter(|id| !drive_file_ids.contains(id)) {
+                tx.conn().execute_cached(
+                    r#"DELETE FROM "drive_attachments" WHERE "drive_attachments"."message_id" = ? AND "drive_attachments"."file_id" = ?"#,
+                    params![self.id, file_id],
+                )?;
+            }
+            for file_id in drive_file_ids.iter().filter(|id| !current_drive_ids.contains(id)) {
+                tx.conn().execute_cached(
+                    r#"INSERT INTO "drive_attachments" ("created_at", "file_id", "message_id") VALUES (?, ?, ?)"#,
+                    params![now, file_id, self.id],
+                )?;
+            }
+        }
+        Room::touch(tx, self.room_id)?;
+        self.reload(tx.conn())?;
+        let id = self.id;
+        tx.after_commit(move |tx| {
+            // Destroyed later in the same transaction: only its destroy callbacks run.
+            let Some(message) = Message::find_by_id(tx.conn(), id)? else { return Ok(()) };
+            if message.streaming {
+                return Ok(());
+            }
+            message.update_in_index(tx)
+        });
+        Ok(())
+    }
+
+    /// `drive_attachments.map(&:file_id)`, in id order.
+    pub fn drive_file_ids(&self, conn: &Connection) -> Result<Vec<String>> {
+        drive_file_ids(conn, self.id)
+    }
+
     /// `touch` (from a boost, or the body): the message, then its room, then a reindex
     /// after commit.
     pub fn touch(&mut self, tx: &mut Tx<'_>) -> Result<()> {
@@ -630,7 +802,8 @@ impl Message {
         Room::touch(tx, self.room_id)?;
         let id = self.id;
         tx.after_commit(move |tx| {
-            let message = Message::find(tx.conn(), id)?;
+            // Destroyed later in the same transaction: only its destroy callbacks run.
+            let Some(message) = Message::find_by_id(tx.conn(), id)? else { return Ok(()) };
             if message.streaming {
                 return Ok(());
             }
@@ -945,13 +1118,20 @@ impl Message {
     }
 }
 
+fn drive_file_ids(conn: &Connection, message_id: i64) -> Result<Vec<String>> {
+    query_all(
+        conn,
+        r#"SELECT "drive_attachments"."file_id" FROM "drive_attachments" WHERE "drive_attachments"."message_id" = ? ORDER BY "drive_attachments"."id" ASC"#,
+        [message_id],
+        |r| r.get(0),
+    )
+}
+
 /// `forward_note_mentionees`: the note's `@[Name]` names that identify exactly one active member
 /// of the room, as those members.
 pub fn forward_note_mentionees(conn: &Connection, room_id: i64, note: &str) -> Result<Vec<User>> {
-    let mut names = mention_token_names(note);
-    names.dedup();
     let mut unique = Vec::new();
-    for name in names {
+    for name in mention_token_names(note) {
         if !unique.contains(&name) {
             unique.push(name);
         }

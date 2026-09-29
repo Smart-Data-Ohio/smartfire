@@ -29,6 +29,13 @@ pub trait RichText: Send + Sync {
         Ok(basic_markdown(conn, source, room_id))
     }
 
+    /// Assigning a string to a rich text attribute stores the canonicalized content
+    /// (`ActionText::Content.new(html, canonicalize: true).to_html`). The app plugs in
+    /// `campfire_richtext`'s; the default stores the HTML as given.
+    fn canonicalize_html(&self, _conn: &Connection, html: &str) -> String {
+        html.to_string()
+    }
+
     /// `Message::Markdown.plain_text(body)`: the plain text of a Markdown-rendered body. The
     /// default reads it like any other body.
     fn markdown_plain_text(&self, conn: &Connection, html: &str, user_names: UserNames<'_>) -> String {

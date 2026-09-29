@@ -14,10 +14,10 @@ use serde::Deserialize;
 
 use super::*;
 use crate::models::active_storage::Blob;
-use crate::{Boost, Message, NewMessage, Room, RoomType, Timestamp};
+use crate::{Boost, Message, MessageChanges, NewMessage, Room, RoomType, Timestamp};
 
 const RUBY: &str = include_str!("message_save_touches.json");
-const ACTIONS: [&str; 8] = [
+const ACTIONS: [&str; 12] = [
     "attach_nil",
     "attach_blob",
     "body_same",
@@ -26,6 +26,10 @@ const ACTIONS: [&str; 8] = [
     "boost_create",
     "boost_destroy",
     "destroy",
+    "markdown_new",
+    "embeds_suppress",
+    "forward_note",
+    "drive_add",
 ];
 
 #[derive(Debug, PartialEq, Deserialize)]
@@ -66,6 +70,13 @@ fn act(tx: &mut Tx<'_>, message_id: i64, action: &str) -> Result<()> {
         "boost_create" => Boost::create(tx, message_id, id("jason"), "hi").map(|_| ()),
         "boost_destroy" => message.boosts(tx.conn())?[0].destroy(tx),
         "destroy" => message.destroy(tx),
+        "markdown_new" => message.update(tx, MessageChanges { markdown_source: Some("rewritten".into()), ..Default::default() }),
+        "embeds_suppress" => message.update(tx, MessageChanges { embeds_suppressed: Some(true), ..Default::default() }),
+        "forward_note" => message.update(tx, MessageChanges { forward_note: Some(Some("note".into())), ..Default::default() }),
+        "drive_add" => {
+            let ids = vec!["1AbcDefGhIjKlMnOpQrSt".to_string()];
+            message.update(tx, MessageChanges { drive_file_ids: Some(ids), ..Default::default() })
+        }
         other => unreachable!("{other}"),
     }
 }
@@ -128,7 +139,7 @@ fn message_saves_touch_what_rails_touches() {
             }
         }
     }
-    assert_eq!(rust.len(), 32);
+    assert_eq!(rust.len(), 48);
     let differing: Vec<_> = ruby
         .iter()
         .filter(|(name, outcome)| rust.get(*name) != Some(outcome))

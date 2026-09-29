@@ -75,6 +75,20 @@ check("reply tombstone") do
     orphan.reply_target_deleted_at.present?
 end
 
+edited = Message.find_by!(client_message_id: "rust-edited")
+check("edit markers") do
+  edited.edited_at.present? && edited.markdown_source == "after" && edited.embeds_suppressed? &&
+    edited.drive_attachments.pluck(:file_id) == [ "2BcdEfgHiJkLmNoPqRsTu" ]
+end
+quiet = Message.find_by!(client_message_id: "rust-quiet-reply")
+check("quiet reply") { quiet.reply_to_message == edited && !quiet.reply_notify_author? }
+forwards = Message.where(forwarded_from_message: edited).order(:id)
+check("forwards") do
+  forwards.map { _1.room.name } == [ "All Talk", "Designers" ] &&
+    forwards.all? { _1.forwarded? && _1.forwarded_markdown? && !_1.markdown? && _1.mentionees.to_a == [ jason ] } &&
+    forwards.first.plain_text_body.start_with?("@[Jason] look\n\n")
+end
+
 bot = User.find_by!(name: "Rust Bot")
 bot_key = File.read("/out/rust_export.sqlite3.bot_key")
 tampered = bot_key.sub(/.\z/) { _1 == "a" ? "b" : "a" }
