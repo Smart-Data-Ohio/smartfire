@@ -1,0 +1,225 @@
+//! `reference/app/models/account.rb` and `account/joinable.rb`.
+
+use rusqlite::{Connection, Row, params};
+use serde_json::{Map, Value};
+
+use crate::database::Tx;
+use crate::error::{Error, OptionalExt, Result};
+use crate::sql::{self, CachedStatements, query_one};
+use crate::time::Timestamp;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Account {
+    pub id: i64,
+    pub name: String,
+    pub join_code: String,
+    pub custom_styles: Option<String>,
+    /// The raw `settings` JSON column; read it through [`Account::settings`].
+    pub settings_json: Option<String>,
+    pub singleton_guard: i64,
+    pub created_at: Timestamp,
+    pub updated_at: Timestamp,
+}
+
+/// `has_json :settings, restrict_room_creation_to_administrators: false`
+/// (`ActiveModel::SchematizedJson`): the stored hash with the schema defaults merged in.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AccountSettings {
+    data: Map<String, Value>,
+}
+
+const RESTRICT_ROOM_CREATION: &str = "restrict_room_creation_to_administrators";
+
+impl AccountSettings {
+    fn from_column(raw: Option<&str>) -> Self {
+        let mut data = raw
+            .and_then(|r| serde_json::from_str::<Map<String, Value>>(r).ok())
+            .unwrap_or_default();
+        data.entry(RESTRICT_ROOM_CREATION)
+            .or_insert(Value::Bool(false));
+        Self { data }
+    }
+
+    /// `restrict_room_creation_to_administrators?`: `present?` of the stored value.
+    pub fn restrict_room_creation_to_administrators(&self) -> bool {
+        present(self.data.get(RESTRICT_ROOM_CREATION))
+    }
+
+    /// `restrict_room_creation_to_administrators = value`, cast as a boolean.
+    pub fn set_restrict_room_creation_to_administrators(&mut self, value: &str) {
+        let cast = cast_boolean(value).map(Value::Bool).unwrap_or(Value::Null);
+        self.data.insert(RESTRICT_ROOM_CREATION.into(), cast);
+    }
+
+    /// `assign_data_with_type_casting`: every key must be in the schema.
+    pub fn assign(&mut self, values: &[(&str, &str)]) -> Result<()> {
+        for (key, value) in values {
+            match *key {
+                RESTRICT_ROOM_CREATION => self.set_restrict_room_creation_to_administrators(value),
+                other => {
+                    return Err(Error::Other(format!(
+                        "undefined method '{other}=' for account settings"
+                    )));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn get(&self, key: &str) -> Option<&Value> {
+        self.data.get(key)
+    }
+
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(&self.data).expect("settings encode")
+    }
+}
+
+/// `ActiveModel::Type::Boolean#cast` of a form value: blank is nil, the `FALSE_VALUES` are
+/// false, anything else is true.
+pub fn cast_boolean(value: &str) -> Option<bool> {
+    const FALSE_VALUES: &[&str] = &["0", "f", "F", "false", "FALSE", "off", "OFF"];
+    if value.is_empty() {
+        None
+    } else {
+        Some(!FALSE_VALUES.contains(&value))
+    }
+}
+
+fn present(value: Option<&Value>) -> bool {
+    match value {
+        None | Some(Value::Null) | Some(Value::Bool(false)) => false,
+        Some(Value::String(s)) => !s.trim().is_empty(),
+        Some(Value::Array(a)) => !a.is_empty(),
+        Some(Value::Object(o)) => !o.is_empty(),
+        Some(_) => true,
+    }
+}
+
+impl Account {
+    fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
+        Ok(Self {
+            id: row.get("id")?,
+            name: row.get("name")?,
+            join_code: row.get("join_code")?,
+            custom_styles: row.get("custom_styles")?,
+            settings_json: row.get("settings")?,
+            singleton_guard: row.get("singleton_guard")?,
+            created_at: row.get("created_at")?,
+            updated_at: row.get("updated_at")?,
+        })
+    }
+
+    /// `Account.first` (`Current.account`).
+    pub fn first(conn: &Connection) -> Result<Option<Self>> {
+        query_one(
+            conn,
+            r#"SELECT * FROM "accounts" ORDER BY "accounts"."id" ASC LIMIT 1"#,
+            [],
+            Self::from_row,
+        )
+    }
+
+    pub fn find(conn: &Connection, id: i64) -> Result<Self> {
+        query_one(
+            conn,
+            r#"SELECT * FROM "accounts" WHERE "accounts"."id" = ? LIMIT 1"#,
+            [id],
+            Self::from_row,
+        )?
+        .or_not_found("Account")
+    }
+
+    pub fn count(conn: &Connection) -> Result<i64> {
+        sql::count(conn, r#"SELECT COUNT(*) FROM "accounts""#, [])
+    }
+
+    pub fn settings(&self) -> AccountSettings {
+        AccountSettings::from_column(self.settings_json.as_deref())
+    }
+
+    /// `Account.create!(name:)`: a fresh join code, and the settings defaults written out.
+    pub fn create(tx: &mut Tx<'_>, name: &str) -> Result<Self> {
+        let now = tx.now();
+        let join_code = generate_join_code();
+        let settings = AccountSettings::from_column(None).to_json();
+        let id: i64 = tx.conn().query_row_cached(
+            r#"INSERT INTO "accounts" ("created_at", "custom_styles", "join_code", "name", "settings", "singleton_guard", "updated_at") VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING "id""#,
+            params![now, None::<String>, join_code, name, settings, 0, now],
+            |r| r.get(0),
+        )?;
+        Self::find(tx.conn(), id)
+    }
+
+    /// `reset_join_code`
+    pub fn reset_join_code(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        let join_code = generate_join_code();
+        let now = tx.now();
+        tx.conn().execute_cached(
+            r#"UPDATE "accounts" SET "join_code" = ?, "updated_at" = ? WHERE "accounts"."id" = ?"#,
+            params![join_code, now, self.id],
+        )?;
+        self.join_code = join_code;
+        self.updated_at = now;
+        Ok(())
+    }
+
+    /// `update!(name:, custom_styles:, settings:)`. Only changed attributes are written; the
+    /// settings column is written when its (defaulted) hash changes.
+    pub fn update(
+        &mut self,
+        tx: &mut Tx<'_>,
+        name: Option<&str>,
+        custom_styles: Option<Option<&str>>,
+        settings: Option<&[(&str, &str)]>,
+    ) -> Result<()> {
+        let mut sets: Vec<(&str, Box<dyn rusqlite::ToSql>)> = Vec::new();
+        if let Some(name) = name.filter(|n| *n != self.name) {
+            self.name = name.into();
+            sets.push(("name", Box::new(name.to_string())));
+        }
+        if let Some(styles) = custom_styles
+            .map(|s| s.map(str::to_string))
+            .filter(|s| *s != self.custom_styles)
+        {
+            self.custom_styles = styles.clone();
+            sets.push(("custom_styles", Box::new(styles)));
+        }
+        if let Some(values) = settings {
+            let original = self.settings();
+            let mut updated = original.clone();
+            updated.assign(values)?;
+            if self.settings_json.is_none() || updated != original {
+                let json = updated.to_json();
+                self.settings_json = Some(json.clone());
+                sets.push(("settings", Box::new(json)));
+            }
+        }
+        if sets.is_empty() {
+            return Ok(());
+        }
+        let now = tx.now();
+        self.updated_at = now;
+        sets.push(("updated_at", Box::new(now)));
+        let assignments: Vec<String> = sets.iter().map(|(c, _)| format!(r#""{c}" = ?"#)).collect();
+        let sql = format!(
+            r#"UPDATE "accounts" SET {} WHERE "accounts"."id" = ?"#,
+            assignments.join(", ")
+        );
+        let mut values: Vec<&dyn rusqlite::ToSql> = sets.iter().map(|(_, v)| v.as_ref()).collect();
+        values.push(&self.id);
+        tx.conn().execute_cached(&sql, values.as_slice())?;
+        Ok(())
+    }
+
+    pub fn reload(&mut self, conn: &Connection) -> Result<()> {
+        *self = Self::find(conn, self.id)?;
+        Ok(())
+    }
+}
+
+/// `SecureRandom.alphanumeric(12).scan(/.{4}/).join("-")`
+pub fn generate_join_code() -> String {
+    let code = sql::alphanumeric(12);
+    format!("{}-{}-{}", &code[0..4], &code[4..8], &code[8..12])
+}

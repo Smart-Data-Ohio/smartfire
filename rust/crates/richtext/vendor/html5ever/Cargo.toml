@@ -1,0 +1,28 @@
+# html5ever 0.35.0 from crates.io, with one fix backported from 0.39: reconstruct the active
+# formatting elements before inserting <svg> or <math> in body, as the HTML spec (and Gumbo, which
+# Nokogiri uses) does. Later releases also adopt the customizable-<select> parsing rules, which
+# Gumbo doesn't, so upgrading isn't an option. See crates/richtext/src/dom.rs.
+[package]
+edition = "2021"
+name = "html5ever"
+version = "0.35.0"
+license = "MIT OR Apache-2.0"
+publish = false
+autoexamples = false
+autotests = false
+autobenches = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+log = "0.4"
+markup5ever = "0.35.0"
+match_token = "0.35.0"
+
+[features]
+trace_tokenizer = []
+
+# Upstream's code, not ours: keep clippy's opinions of it out of the workspace's lint run.
+[lints.clippy]
+all = "allow"

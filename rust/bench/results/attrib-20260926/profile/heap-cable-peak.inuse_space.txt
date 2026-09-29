@@ -1,0 +1,100 @@
+Total: 211.7 MB
+   123.9  58.5%  58.5%    133.7  63.1% ::new (inline)
+    44.5  21.0%  79.5%     44.5  21.0% ::finish_grow (inline)
+    15.9   7.5%  87.1%     15.9   7.5% alloc::alloc::realloc_nonnull (inline)
+     7.3   3.4%  90.5%      7.3   3.4% std::sys::alloc::unix::aligned_malloc (inline)
+     3.2   1.5%  92.0%      3.2   1.5% alloc::alloc::alloc (inline)
+     3.0   1.4%  93.4%     38.9  18.4% campfire_cable::connection::run::::{closure#0} (inline)
+     2.7   1.3%  94.7%      2.7   1.3% ::shrink (inline)
+     2.2   1.0%  95.8%      3.0   1.4% tokio::sync::mpsc::chan::channel:: (inline)
+     1.1   0.5%  96.3%      1.1   0.5% ::try_reserve (inline)
+     1.0   0.5%  96.8%      1.0   0.5% sqlite3MemMalloc
+     0.8   0.4%  97.1%      0.8   0.4% ::push (inline)
+     0.7   0.3%  97.5%      1.2   0.6% regex_automata::meta::strategy::new (inline)
+     0.7   0.3%  97.8%      0.9   0.4% ::channel::::{closure#0} (inline)
+     0.6   0.3%  98.1%      0.6   0.3% ::into_nfa (inline)
+     0.4   0.2%  98.3%      5.1   2.4% ::build (inline)
+     0.4   0.2%  98.5%      0.4   0.2% ::reserve_rehash:: (inline)
+     0.3   0.1%  98.7%    211.0  99.6% ::poll (inline)
+     0.3   0.1%  98.8%      0.6   0.3% deserialize_any (inline)
+     0.3   0.1%  99.0%      0.3   0.1% ::next_key_seed:: (inline)
+     0.3   0.1%  99.1%      3.0   1.4% ::build_from_nfa (inline)
+     0.3   0.1%  99.2%      3.4   1.6% ::clone (inline)
+     0.3   0.1%  99.3%      0.3   0.1% ::subscribe (inline)
+     0.2   0.1%  99.4%      0.9   0.4% ::get_slow (inline)
+     0.2   0.1%  99.5%      0.2   0.1% ::new:: (inline)
+     0.1   0.1%  99.6%      0.1   0.1% tokio::sync::broadcast::channel:: (inline)
+     0.1   0.1%  99.6%      0.1   0.1% _dl_fatal_printf@@GLIBC_PRIVATE
+     0.1   0.1%  99.7%      0.1   0.1% ::to_owned (inline)
+     0.1   0.1%  99.7%      0.1   0.1% std::thread::lifecycle::spawn_unchecked:: (inline)
+     0.1   0.1%  99.8%      0.1   0.1% std::basic_format_arg::_M_handle_unrecognized
+     0.1   0.0%  99.8%     15.4   7.3% ::reserve_inner (inline)
+     0.1   0.0%  99.9%      0.1   0.0% pixman_blt
+     0.1   0.0%  99.9%      0.4   0.2% ::from_iter (inline)
+     0.1   0.0%  99.9%      0.1   0.0% ::get (inline)
+     0.1   0.0%  99.9%      0.1   0.0% ::read:: (inline)
+     0.1   0.0% 100.0%      0.1   0.0% ::write (inline)
+     0.1   0.0% 100.0%      0.1   0.0% alloc::str::join_generic_copy:: (inline)
+     0.0   0.0% 100.0%     23.8  11.2% ::_write::
+     0.0   0.0% 100.0%      0.3   0.1% ::add_source::
+     0.0   0.0% 100.0%      0.1   0.0% ::advance (inline)
+     0.0   0.0% 100.0%      7.3   3.4% ::alloc (inline)
+     0.0   0.0% 100.0%      3.2   1.5% ::alloc_impl (inline)
+     0.0   0.0% 100.0%      3.2   1.5% ::alloc_impl_runtime (inline)
+     0.0   0.0% 100.0%      3.6   1.7% ::allocate (inline)
+     0.0   0.0% 100.0%     15.9   7.5% ::append_elements (inline)
+     0.0   0.0% 100.0%      0.1   0.0% ::banned
+     0.0   0.0% 100.0%      6.0   2.8% ::bind_new_task:: (inline)
+     0.0   0.0% 100.0%      0.3   0.1% ::block_on:: (inline)
+     0.0   0.0% 100.0%      0.1   0.1% ::body_html (inline)
+     0.0   0.0% 100.0%     23.8  11.2% ::buffer_frame::
+     0.0   0.0% 100.0%     23.8  11.2% ::buffer_frame:: (inline)
+     0.0   0.0% 100.0%      0.7   0.3% ::build
+     0.0   0.0% 100.0%      0.9   0.4% ::build_many_from_hir:: (inline)
+     0.0   0.0% 100.0%      0.1   0.0% ::cache_next_state (inline)
+     0.0   0.0% 100.0%      5.2   2.5% ::call
+     0.0   0.0% 100.0%      6.0   2.8% ::call::{closure#0}
+     0.0   0.0% 100.0%      9.3   4.4% ::call::{closure#0} (inline)
+     0.0   0.0% 100.0%      5.0   2.4% ::call_once
+     0.0   0.0% 100.0%    211.6  99.9% ::call_once (inline)
+     0.0   0.0% 100.0%    211.2  99.7% ::call_once::{shim:vtable#0} (inline)
+     0.0   0.0% 100.0%      5.2   2.5% ::call_once_force::::{closure#0} (inline)
+     0.0   0.0% 100.0%      3.1   1.5% ::clone
+     0.0   0.0% 100.0%      0.1   0.1% ::connect::{closure#0} (inline)
+     0.0   0.0% 100.0%      0.3   0.1% ::create_cache (inline)
+     0.0   0.0% 100.0%      0.1   0.0% ::create_in_index
+     0.0   0.0% 100.0%      2.6   1.2% ::deserialize:: (inline)
+     0.0   0.0% 100.0%      0.1   0.0% ::execute:: (inline)
+     0.0   0.0% 100.0%      0.1   0.1% ::execute_batch (inline)
+     0.0   0.0% 100.0%      0.1   0.0% ::execute_with_bound_parameters (inline)
+     0.0   0.0% 100.0%     15.9   7.5% ::extend_from_slice (inline)
+     0.0   0.0% 100.0%      0.1   0.0% ::find_by_room_and_user
+     0.0   0.0% 100.0%      0.1   0.0% ::find_by_token
+     0.0   0.0% 100.0%     16.0   7.6% ::finish_grow
+     0.0   0.0% 100.0%      0.4   0.2% ::get
+     0.0   0.0% 100.0%      0.1   0.0% ::get_expected_row (inline)
+     0.0   0.0% 100.0%      0.1   0.1% ::get_or_init_slow:: (inline)
+     0.0   0.0% 100.0%     15.9   7.5% ::grow (inline)
+     0.0   0.0% 100.0%     16.0   7.6% ::grow_amortized (inline)
+     0.0   0.0% 100.0%     15.9   7.5% ::grow_impl (inline)
+     0.0   0.0% 100.0%     15.9   7.5% ::grow_impl_runtime (inline)
+     0.0   0.0% 100.0%      0.1   0.1% ::grow_one
+     0.0   0.0% 100.0%      3.2   1.5% ::grow_one (inline)
+     0.0   0.0% 100.0%      0.3   0.1% ::init_cache (inline)
+     0.0   0.0% 100.0%      0.2   0.1% ::initialize:: (inline)
+     0.0   0.0% 100.0%      0.1   0.0% ::insert:: (inline)
+     0.0   0.0% 100.0%      2.0   0.9% ::insert_full (inline)
+     0.0   0.0% 100.0%      0.1   0.0% ::lock_slow (inline)
+     0.0   0.0% 100.0%      0.5   0.2% ::message (inline)
+     0.0   0.0% 100.0%      0.1   0.0% ::message_create (inline)
+     0.0   0.0% 100.0%      5.9   2.8% ::new
+     0.0   0.0% 100.0%      2.6   1.3% ::new::
+     0.0   0.0% 100.0%    211.2  99.7% ::new::thread_start
+     0.0   0.0% 100.0%      0.3   0.1% ::new_with_interest_and_handle::
+     0.0   0.0% 100.0%      3.3   1.6% ::on_upgrade::
+     0.0   0.0% 100.0%     39.8  18.8% ::on_upgrade::::{closure#0}
+     0.0   0.0% 100.0%    124.0  58.6% ::on_upgrade::::{closure#0} (inline)
+     0.0   0.0% 100.0%      0.5   0.2% ::open
+     0.0   0.0% 100.0%      0.3   0.1% ::open (inline)
+     0.0   0.0% 100.0%      0.3   0.2% ::open_with_flags
+     0.0   0.0% 100.0%      1.1   0.5% ::parse (inline)

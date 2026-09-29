@@ -1,0 +1,520 @@
+[00:08:26] proxy-thruster rep 1: starting (load 7.92 10.21 12.86)
+[00:08:52] proxy-thruster rep 1: cable 1000 ready 1000 tput 55.0 msg/s all p50 22.639 cpu us/delivery {'thrust': 16.84, 'campfire': 45.4, 'docker-proxy': 26.23, 'loadgen': 32.21} mem {'before': {'peak_anon_mb': 12.2}, 'connect': {'peak_anon_mb': 170.7, 'end_anon_mb': 170.7, 'peak_threads': 81, 'thrust_peak_anon_mb': 118.0, 'cgroup_peak_mb': 316.2}, 'connected': {'peak_anon_mb': 170.7, 'end_anon_mb': 170.7, 'peak_threads': 81, 'thrust_peak_anon_mb': 118.0, 'cgroup_peak_mb': 316.2}, 'paced': {'peak_anon_mb': 196.0, 'end_anon_mb': 196.0, 'peak_threads': 82, 'thrust_peak_anon_mb': 118.1, 'cgroup_peak_mb': 339.3}, 'paced_drained': {'peak_anon_mb': 196.0, 'end_anon_mb': 196.0, 'peak_threads': 82, 'thrust_peak_anon_mb': 118.1, 'cgroup_peak_mb': 339.1}, 'saturated': {'peak_anon_mb': 227.5, 'end_anon_mb': 221.6, 'peak_threads': 82, 'thrust_peak_anon_mb': 156.5, 'cgroup_peak_mb': 409.2}, 'saturated_posted': {'peak_anon_mb': 221.6, 'end_anon_mb': 221.6, 'peak_threads': 82, 'thrust_peak_anon_mb': 156.5, 'cgroup_peak_mb': 407.0}, 'saturated_drained': {'peak_anon_mb': 221.6, 'end_anon_mb': 221.6, 'peak_threads': 82, 'thrust_peak_anon_mb': 156.5, 'cgroup_peak_mb': 407.0}, 'done': {'peak_anon_mb': 221.6, 'end_anon_mb': 219.1, 'peak_threads': 82, 'thrust_peak_anon_mb': 156.6, 'cgroup_peak_mb': 407.0}}
+[00:08:52] host-direct rep 1: starting (load 11.77 10.91 13.01)
+[00:09:18] host-direct rep 1: cable 1000 ready 1000 tput 94.6 msg/s all p50 15.543 cpu us/delivery {'campfire': 36.4, 'loadgen': 24.29} mem {'before': {'peak_anon_mb': 12.3}, 'connect': {'peak_anon_mb': 159.0, 'end_anon_mb': 159.0, 'peak_threads': 115, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 173.3}, 'connected': {'peak_anon_mb': 170.9, 'end_anon_mb': 170.9, 'peak_threads': 115, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 185.0}, 'paced': {'peak_anon_mb': 197.2, 'end_anon_mb': 197.2, 'peak_threads': 116, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 211.7}, 'paced_drained': {'peak_anon_mb': 197.2, 'end_anon_mb': 197.2, 'peak_threads': 116, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 211.6}, 'saturated': {'peak_anon_mb': 231.5, 'end_anon_mb': 231.5, 'peak_threads': 116, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 248.0}, 'saturated_posted': {'peak_anon_mb': 231.5, 'end_anon_mb': 231.5, 'peak_threads': 116, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 247.9}, 'saturated_drained': {'peak_anon_mb': 231.5, 'end_anon_mb': 231.5, 'peak_threads': 116, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 247.9}, 'done': {'peak_anon_mb': 231.5, 'end_anon_mb': 226.5, 'peak_threads': 116, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 247.9}}
+[00:09:18] proxy-thruster rep 2: starting (load 12.34 11.10 13.01)
+[00:09:45] proxy-thruster rep 2: cable 1000 ready 1000 tput 51.3 msg/s all p50 29.967 cpu us/delivery {'thrust': 19.05, 'campfire': 42.32, 'docker-proxy': 17.86, 'loadgen': 30.72} mem {'before': {'peak_anon_mb': 12.2}, 'connect': {'peak_anon_mb': 153.0, 'end_anon_mb': 153.0, 'peak_threads': 38, 'thrust_peak_anon_mb': 114.1, 'cgroup_peak_mb': 288.8}, 'connected': {'peak_anon_mb': 169.4, 'end_anon_mb': 169.4, 'peak_threads': 38, 'thrust_peak_anon_mb': 122.2, 'cgroup_peak_mb': 314.7}, 'paced': {'peak_anon_mb': 193.7, 'end_anon_mb': 193.7, 'peak_threads': 39, 'thrust_peak_anon_mb': 122.2, 'cgroup_peak_mb': 338.5}, 'paced_drained': {'peak_anon_mb': 193.7, 'end_anon_mb': 193.7, 'peak_threads': 39, 'thrust_peak_anon_mb': 122.2, 'cgroup_peak_mb': 338.5}, 'saturated': {'peak_anon_mb': 208.0, 'end_anon_mb': 208.0, 'peak_threads': 39, 'thrust_peak_anon_mb': 138.5, 'cgroup_peak_mb': 389.0}, 'saturated_posted': {'peak_anon_mb': 208.0, 'end_anon_mb': 208.0, 'peak_threads': 39, 'thrust_peak_anon_mb': 138.5, 'cgroup_peak_mb': 375.3}, 'saturated_drained': {'peak_anon_mb': 208.0, 'end_anon_mb': 208.0, 'peak_threads': 39, 'thrust_peak_anon_mb': 138.5, 'cgroup_peak_mb': 375.3}, 'done': {'peak_anon_mb': 208.0, 'end_anon_mb': 204.0, 'peak_threads': 39, 'thrust_peak_anon_mb': 138.5, 'cgroup_peak_mb': 375.3}}
+[00:09:46] host-direct rep 2: starting (load 15.79 11.97 13.25)
+[00:10:13] host-direct rep 2: cable 1000 ready 1000 tput 90.7 msg/s all p50 17.055 cpu us/delivery {'campfire': 37.2, 'loadgen': 25.33} mem {'before': {'peak_anon_mb': 12.3}, 'connect': {'peak_anon_mb': 168.5, 'end_anon_mb': 168.5, 'peak_threads': 135, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 183.3}, 'connected': {'peak_anon_mb': 171.2, 'end_anon_mb': 171.2, 'peak_threads': 135, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 185.8}, 'paced': {'peak_anon_mb': 197.5, 'end_anon_mb': 197.5, 'peak_threads': 136, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 212.6}, 'paced_drained': {'peak_anon_mb': 197.5, 'end_anon_mb': 197.5, 'peak_threads': 136, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 212.6}, 'saturated': {'peak_anon_mb': 232.3, 'end_anon_mb': 232.3, 'peak_threads': 136, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 250.5}, 'saturated_posted': {'peak_anon_mb': 232.3, 'end_anon_mb': 232.3, 'peak_threads': 136, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 250.5}, 'saturated_drained': {'peak_anon_mb': 232.3, 'end_anon_mb': 232.3, 'peak_threads': 136, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 250.5}, 'done': {'peak_anon_mb': 232.3, 'end_anon_mb': 226.5, 'peak_threads': 136, 'thrust_peak_anon_mb': 0, 'cgroup_peak_mb': 250.5}}
+```
+date: 2026-09-27T00:08:26+0200
+host: 7.2.5-4-omarchy, 32 threads
+server cpus: 4-7; loadgen cpus: 0-3
+image: campfire-rust:perf-a654b08 sha256:82a2c82b7f7ff1d371c701e3d9f81b894f76c1120231f421a817d183748a54c3
+env: WEB_CONCURRENCY=3 RAILS_MAX_THREADS=5 JOB_CONCURRENCY=3
+routes: ; concs: 1,16,64; secs: 5; cable: 1000; app env:
+```
+
+Reps per configuration: proxy-thruster 2, host-direct 2. Cells: median [min–max]; (×) is the gain over proxy-thruster (>1 is better).
+Host load (1-min loadavg at start of each run): proxy-thruster 7.92/12.34, host-direct 11.77/15.79
+
+### Action Cable, 1000 clients
+
+| Metric | proxy-thruster | host-direct |
+|---|---|---|
+| subscribed | 1,000 [1,000–1,000] | 1,000 [1,000–1,000] |
+| paced post→all p50 ms | 26.3 [22.6–30.0] | 16.3 [15.5–17.1] (1.61×) |
+| paced post→all p99 ms | 34.4 [29.9–38.9] | 28.4 [23.5–33.4] (1.21×) |
+| paced POST p50 ms | 28.6 [26.4–30.9] | 21.7 [21.3–22.0] (1.32×) |
+| max sustained msgs/s (to all) | 53.1 [51.3–55.0] | 92.7 [90.7–94.6] (1.74×) |
+| deliveries/s | 53,154 [51,301–55,006] | 92,645 [90,720–94,570] (1.74×) |
+| saturated post→all p50 ms | 64.9 [61.4–68.4] | 36.2 [35.4–37.0] (1.79×) |
+| campfire CPU µs/delivery | 43.9 [42.3–45.4] | 36.8 [36.4–37.2] (1.19×) |
+| thrust CPU µs/delivery | 17.9 [16.8–19.1] | – |
+| docker-proxy CPU µs/delivery | 22.0 [17.9–26.2] | – |
+| loadgen CPU µs/delivery | 31.5 [30.7–32.2] | 24.8 [24.3–25.3] |
+| RssAnon peak MB: before | 12.2 [12.2–12.2] | 12.3 [12.3–12.3] |
+| RssAnon peak MB: connected | 170 [169–171] | 171 [171–171] |
+| RssAnon peak MB: paced | 195 [194–196] | 197 [197–198] |
+| RssAnon peak MB: saturated | 218 [208–228] | 232 [232–232] |
+| RssAnon peak MB: saturated_posted | 215 [208–222] | 232 [232–232] |
+| RssAnon peak MB: saturated_drained | 215 [208–222] | 232 [232–232] |
+| thrust RssAnon peak MB (saturated) | 148 [138–156] | 0.000 [0.000–0.000] |
+| container memory.current peak MB (saturated) | 399 [389–409] | 249 [248–250] |
+| peak threads | 60.5 [39.0–82.0] | 126 [116–136] |
+
+[00:10:13] proxy-thruster rep 1: starting (load 15.40 12.24 13.30)
+[00:10:21] proxy-thruster rep 1: up c=1 9006.0 rps p50 0.099 p99 0.22 cpu ms/req {'thrust': 0.0628, 'campfire': 0.0435, 'docker-proxy': 0.0135, 'loadgen': 0.0107} statuses {'200': 45031} err 0
+[00:10:26] proxy-thruster rep 1: up c=16 21303.2 rps p50 0.7 p99 1.827 cpu ms/req {'thrust': 0.0917, 'campfire': 0.0528, 'docker-proxy': 0.016, 'loadgen': 0.0119} statuses {'200': 106530} err 0
+[00:10:31] proxy-thruster rep 1: up c=64 14997.9 rps p50 3.657 p99 13.719 cpu ms/req {'thrust': 0.1434, 'campfire': 0.0685, 'docker-proxy': 0.0272, 'loadgen': 0.021} statuses {'200': 75044} err 0
+[00:10:37] proxy-thruster rep 1: room_show c=1 185.1 rps p50 4.667 p99 8.711 cpu ms/req {'thrust': 0.3344, 'campfire': 5.0485, 'docker-proxy': 0.0539, 'loadgen': 0.1026} statuses {'200': 927} err 0
+[00:10:43] proxy-thruster rep 1: room_show c=16 485.0 rps p50 32.127 p99 60.767 cpu ms/req {'thrust': 0.5287, 'campfire': 7.2295, 'docker-proxy': 0.0984, 'loadgen': 0.1216} statuses {'200': 2440} err 0
+[00:10:48] proxy-thruster rep 1: room_show c=64 538.0 rps p50 114.303 p99 230.271 cpu ms/req {'thrust': 0.4142, 'campfire': 6.7962, 'docker-proxy': 0.0916, 'loadgen': 0.1155} statuses {'200': 2728} err 0
+[00:10:54] proxy-thruster rep 1: room_show_identity c=1 441.2 rps p50 2.225 p99 2.939 cpu ms/req {'thrust': 0.5483, 'campfire': 1.8668, 'docker-proxy': 0.0816, 'loadgen': 0.1199} statuses {'200': 2207} err 0
+[00:10:59] proxy-thruster rep 1: room_show_identity c=16 1233.8 rps p50 12.847 p99 23.615 cpu ms/req {'thrust': 0.7957, 'campfire': 2.1139, 'docker-proxy': 0.11, 'loadgen': 0.1794} statuses {'200': 6183} err 0
+[00:11:04] proxy-thruster rep 1: room_show_identity c=64 1355.2 rps p50 45.823 p99 96.319 cpu ms/req {'thrust': 0.7047, 'campfire': 2.0482, 'docker-proxy': 0.1116, 'loadgen': 0.1761} statuses {'200': 6811} err 0
+[00:11:10] proxy-thruster rep 1: messages_page c=1 295.1 rps p50 3.305 p99 4.487 cpu ms/req {'thrust': 0.2168, 'campfire': 3.1911, 'docker-proxy': 0.0339, 'loadgen': 0.0358} statuses {'200': 1476} err 0
+[00:11:15] proxy-thruster rep 1: messages_page c=16 1054.8 rps p50 14.839 p99 25.503 cpu ms/req {'thrust': 0.2666, 'campfire': 3.3548, 'docker-proxy': 0.0303, 'loadgen': 0.0315} statuses {'200': 5288} err 0
+[00:11:20] proxy-thruster rep 1: messages_page c=64 1049.8 rps p50 59.647 p99 99.455 cpu ms/req {'thrust': 0.2147, 'campfire': 3.4765, 'docker-proxy': 0.032, 'loadgen': 0.0356} statuses {'200': 5310} err 0
+[00:11:26] proxy-thruster rep 1: sidebar c=1 1304.0 rps p50 0.764 p99 0.925 cpu ms/req {'thrust': 0.1258, 'campfire': 0.6518, 'docker-proxy': 0.023, 'loadgen': 0.0167} statuses {'200': 6520} err 0
+[00:11:31] proxy-thruster rep 1: sidebar c=16 4425.7 rps p50 3.509 p99 6.687 cpu ms/req {'thrust': 0.1436, 'campfire': 0.6793, 'docker-proxy': 0.0244, 'loadgen': 0.0189} statuses {'200': 22141} err 0
+[00:11:36] proxy-thruster rep 1: sidebar c=64 4489.3 rps p50 13.999 p99 24.127 cpu ms/req {'thrust': 0.1427, 'campfire': 0.6797, 'docker-proxy': 0.0267, 'loadgen': 0.0208} statuses {'200': 22496} err 0
+[00:11:42] proxy-thruster rep 1: post_message c=1 1026.1 rps p50 0.791 p99 11.895 cpu ms/req {'thrust': 0.1362, 'campfire': 0.7881, 'docker-proxy': 0.0175, 'loadgen': 0.0155} statuses {'200': 5139} err 0
+[00:11:47] proxy-thruster rep 1: post_message c=16 1998.9 rps p50 4.899 p99 27.823 cpu ms/req {'thrust': 0.1546, 'campfire': 0.8794, 'docker-proxy': 0.0179, 'loadgen': 0.0192} statuses {'200': 10029} err 0
+[00:11:52] proxy-thruster rep 1: post_message c=64 2033.7 rps p50 31.007 p99 51.487 cpu ms/req {'thrust': 0.1671, 'campfire': 0.9076, 'docker-proxy': 0.0234, 'loadgen': 0.0235} statuses {'200': 10236} err 0
+[00:12:16] proxy-thruster rep 1: cable 1000 ready 1000 tput 72.7 msg/s all p50 22.111 cpu us/delivery {'thrust': 13.38, 'campfire': 32.27, 'docker-proxy': 18.78, 'loadgen': 23.25} mem {'before': {'peak_anon_mb': 352.4}, 'connect': {'peak_anon_mb': 499.8, 'end_anon_mb': 499.8, 'peak_threads': 135, 'thrust_peak_anon_mb': 106.5, 'cgroup_peak_mb': 658.8}, 'connected': {'peak_anon_mb': 499.8, 'end_anon_mb': 499.8, 'peak_threads': 135, 'thrust_peak_anon_mb': 106.5, 'cgroup_peak_mb': 658.8}, 'paced': {'peak_anon_mb': 517.2, 'end_anon_mb': 517.2, 'peak_threads': 135, 'thrust_peak_anon_mb': 108.8, 'cgroup_peak_mb': 677.6}, 'paced_drained': {'peak_anon_mb': 517.2, 'end_anon_mb': 517.2, 'peak_threads': 135, 'thrust_peak_anon_mb': 108.8, 'cgroup_peak_mb': 675.3}, 'saturated': {'peak_anon_mb': 534.0, 'end_anon_mb': 534.0, 'peak_threads': 135, 'thrust_peak_anon_mb': 153.1, 'cgroup_peak_mb': 747.1}, 'saturated_posted': {'peak_anon_mb': 534.0, 'end_anon_mb': 534.0, 'peak_threads': 135, 'thrust_peak_anon_mb': 153.1, 'cgroup_peak_mb': 740.8}, 'saturated_drained': {'peak_anon_mb': 534.0, 'end_anon_mb': 534.0, 'peak_threads': 135, 'thrust_peak_anon_mb': 153.1, 'cgroup_peak_mb': 740.8}, 'done': {'peak_anon_mb': 534.0, 'end_anon_mb': 530.2, 'peak_threads': 135, 'thrust_peak_anon_mb': 153.1, 'cgroup_peak_mb': 740.8}}
+```
+date: 2026-09-27T00:10:13+0200
+host: 7.2.5-4-omarchy, 32 threads
+server cpus: 4-7; loadgen cpus: 0-3
+image: campfire-rust:perf-a654b08 sha256:82a2c82b7f7ff1d371c701e3d9f81b894f76c1120231f421a817d183748a54c3
+env: WEB_CONCURRENCY=3 RAILS_MAX_THREADS=5 JOB_CONCURRENCY=3
+routes: up,room_show,room_show_identity,messages_page,sidebar,post_message; concs: 1,16,64; secs: 5; cable: 1000; app env: RAILS_MAX_THREADS=128
+```
+
+Reps per configuration: proxy-thruster 1. Cells: median [min–max]; (×) is the gain over proxy-thruster (>1 is better).
+Host load (1-min loadavg at start of each run): proxy-thruster 15.40
+
+### HTTP up
+
+| Metric | proxy-thruster |
+|---|---|
+| c=1 req/s | 9,006 |
+| c=1 p50 ms | 0.099 |
+| c=1 p99 ms | 0.22 |
+| c=16 req/s | 21,303 |
+| c=16 p50 ms | 0.70 |
+| c=16 p99 ms | 1.83 |
+| c=64 req/s | 14,998 |
+| c=64 p50 ms | 3.66 |
+| c=64 p99 ms | 13.7 |
+| c=1 campfire CPU ms/req | 0.043 |
+| c=1 thrust CPU ms/req | 0.063 |
+| c=1 docker-proxy CPU ms/req | 0.013 |
+| c=1 loadgen cores busy | 0.10 |
+| c=1 campfire cores busy | 0.39 |
+| c=16 campfire CPU ms/req | 0.053 |
+| c=16 thrust CPU ms/req | 0.092 |
+| c=16 docker-proxy CPU ms/req | 0.016 |
+| c=16 loadgen cores busy | 0.25 |
+| c=16 campfire cores busy | 1.13 |
+| c=64 campfire CPU ms/req | 0.069 |
+| c=64 thrust CPU ms/req | 0.14 |
+| c=64 docker-proxy CPU ms/req | 0.027 |
+| c=64 loadgen cores busy | 0.32 |
+| c=64 campfire cores busy | 1.03 |
+| avg response bytes | 103 |
+
+### HTTP room_show
+
+| Metric | proxy-thruster |
+|---|---|
+| c=1 req/s | 185 |
+| c=1 p50 ms | 4.67 |
+| c=1 p99 ms | 8.71 |
+| c=16 req/s | 485 |
+| c=16 p50 ms | 32.1 |
+| c=16 p99 ms | 60.8 |
+| c=64 req/s | 538 |
+| c=64 p50 ms | 114 |
+| c=64 p99 ms | 230 |
+| c=1 campfire CPU ms/req | 5.05 |
+| c=1 thrust CPU ms/req | 0.33 |
+| c=1 docker-proxy CPU ms/req | 0.054 |
+| c=1 loadgen cores busy | 0.020 |
+| c=1 campfire cores busy | 0.93 |
+| c=16 campfire CPU ms/req | 7.23 |
+| c=16 thrust CPU ms/req | 0.53 |
+| c=16 docker-proxy CPU ms/req | 0.098 |
+| c=16 loadgen cores busy | 0.060 |
+| c=16 campfire cores busy | 3.51 |
+| c=64 campfire CPU ms/req | 6.80 |
+| c=64 thrust CPU ms/req | 0.41 |
+| c=64 docker-proxy CPU ms/req | 0.092 |
+| c=64 loadgen cores busy | 0.060 |
+| c=64 campfire cores busy | 3.66 |
+| avg response bytes | 44,278 |
+
+### HTTP room_show_identity
+
+| Metric | proxy-thruster |
+|---|---|
+| c=1 req/s | 441 |
+| c=1 p50 ms | 2.23 |
+| c=1 p99 ms | 2.94 |
+| c=16 req/s | 1,234 |
+| c=16 p50 ms | 12.8 |
+| c=16 p99 ms | 23.6 |
+| c=64 req/s | 1,355 |
+| c=64 p50 ms | 45.8 |
+| c=64 p99 ms | 96.3 |
+| c=1 campfire CPU ms/req | 1.87 |
+| c=1 thrust CPU ms/req | 0.55 |
+| c=1 docker-proxy CPU ms/req | 0.082 |
+| c=1 loadgen cores busy | 0.050 |
+| c=1 campfire cores busy | 0.82 |
+| c=16 campfire CPU ms/req | 2.11 |
+| c=16 thrust CPU ms/req | 0.80 |
+| c=16 docker-proxy CPU ms/req | 0.11 |
+| c=16 loadgen cores busy | 0.22 |
+| c=16 campfire cores busy | 2.61 |
+| c=64 campfire CPU ms/req | 2.05 |
+| c=64 thrust CPU ms/req | 0.70 |
+| c=64 docker-proxy CPU ms/req | 0.11 |
+| c=64 loadgen cores busy | 0.24 |
+| c=64 campfire cores busy | 2.77 |
+| avg response bytes | 463,818 |
+
+### HTTP messages_page
+
+| Metric | proxy-thruster |
+|---|---|
+| c=1 req/s | 295 |
+| c=1 p50 ms | 3.31 |
+| c=1 p99 ms | 4.49 |
+| c=16 req/s | 1,055 |
+| c=16 p50 ms | 14.8 |
+| c=16 p99 ms | 25.5 |
+| c=64 req/s | 1,050 |
+| c=64 p50 ms | 59.6 |
+| c=64 p99 ms | 99.5 |
+| c=1 campfire CPU ms/req | 3.19 |
+| c=1 thrust CPU ms/req | 0.22 |
+| c=1 docker-proxy CPU ms/req | 0.034 |
+| c=1 loadgen cores busy | 0.010 |
+| c=1 campfire cores busy | 0.94 |
+| c=16 campfire CPU ms/req | 3.35 |
+| c=16 thrust CPU ms/req | 0.27 |
+| c=16 docker-proxy CPU ms/req | 0.030 |
+| c=16 loadgen cores busy | 0.030 |
+| c=16 campfire cores busy | 3.54 |
+| c=64 campfire CPU ms/req | 3.48 |
+| c=64 thrust CPU ms/req | 0.21 |
+| c=64 docker-proxy CPU ms/req | 0.032 |
+| c=64 loadgen cores busy | 0.040 |
+| c=64 campfire cores busy | 3.65 |
+| avg response bytes | 34,636 |
+
+### HTTP sidebar
+
+| Metric | proxy-thruster |
+|---|---|
+| c=1 req/s | 1,304 |
+| c=1 p50 ms | 0.76 |
+| c=1 p99 ms | 0.93 |
+| c=16 req/s | 4,426 |
+| c=16 p50 ms | 3.51 |
+| c=16 p99 ms | 6.69 |
+| c=64 req/s | 4,489 |
+| c=64 p50 ms | 14.0 |
+| c=64 p99 ms | 24.1 |
+| c=1 campfire CPU ms/req | 0.65 |
+| c=1 thrust CPU ms/req | 0.13 |
+| c=1 docker-proxy CPU ms/req | 0.023 |
+| c=1 loadgen cores busy | 0.020 |
+| c=1 campfire cores busy | 0.85 |
+| c=16 campfire CPU ms/req | 0.68 |
+| c=16 thrust CPU ms/req | 0.14 |
+| c=16 docker-proxy CPU ms/req | 0.024 |
+| c=16 loadgen cores busy | 0.080 |
+| c=16 campfire cores busy | 3.01 |
+| c=64 campfire CPU ms/req | 0.68 |
+| c=64 thrust CPU ms/req | 0.14 |
+| c=64 docker-proxy CPU ms/req | 0.027 |
+| c=64 loadgen cores busy | 0.090 |
+| c=64 campfire cores busy | 3.05 |
+| avg response bytes | 6,277 |
+
+### HTTP post_message
+
+| Metric | proxy-thruster |
+|---|---|
+| c=1 req/s | 1,026 |
+| c=1 p50 ms | 0.79 |
+| c=1 p99 ms | 11.9 |
+| c=16 req/s | 1,999 |
+| c=16 p50 ms | 4.90 |
+| c=16 p99 ms | 27.8 |
+| c=64 req/s | 2,034 |
+| c=64 p50 ms | 31.0 |
+| c=64 p99 ms | 51.5 |
+| c=1 campfire CPU ms/req | 0.79 |
+| c=1 thrust CPU ms/req | 0.14 |
+| c=1 docker-proxy CPU ms/req | 0.018 |
+| c=1 loadgen cores busy | 0.020 |
+| c=1 campfire cores busy | 0.81 |
+| c=16 campfire CPU ms/req | 0.88 |
+| c=16 thrust CPU ms/req | 0.15 |
+| c=16 docker-proxy CPU ms/req | 0.018 |
+| c=16 loadgen cores busy | 0.040 |
+| c=16 campfire cores busy | 1.76 |
+| c=64 campfire CPU ms/req | 0.91 |
+| c=64 thrust CPU ms/req | 0.17 |
+| c=64 docker-proxy CPU ms/req | 0.023 |
+| c=64 loadgen cores busy | 0.050 |
+| c=64 campfire cores busy | 1.85 |
+| avg response bytes | 2,005 |
+
+### Action Cable, 1000 clients
+
+| Metric | proxy-thruster |
+|---|---|
+| subscribed | 1,000 |
+| paced post→all p50 ms | 22.1 |
+| paced post→all p99 ms | 26.4 |
+| paced POST p50 ms | 24.7 |
+| max sustained msgs/s (to all) | 72.7 |
+| deliveries/s | 72,723 |
+| saturated post→all p50 ms | 47.1 |
+| campfire CPU µs/delivery | 32.3 |
+| thrust CPU µs/delivery | 13.4 |
+| docker-proxy CPU µs/delivery | 18.8 |
+| loadgen CPU µs/delivery | 23.2 |
+| RssAnon peak MB: before | 352 |
+| RssAnon peak MB: connected | 500 |
+| RssAnon peak MB: paced | 517 |
+| RssAnon peak MB: saturated | 534 |
+| RssAnon peak MB: saturated_posted | 534 |
+| RssAnon peak MB: saturated_drained | 534 |
+| thrust RssAnon peak MB (saturated) | 153 |
+| container memory.current peak MB (saturated) | 747 |
+| peak threads | 135 |
+
+[00:12:17] proxy-thruster rep 1: starting (load 17.01 14.24 13.92)
+[00:12:26] proxy-thruster rep 1: up c=1 4167.3 rps p50 0.208 p99 1.099 cpu ms/req {'thrust': 0.1272, 'campfire': 0.0825, 'docker-proxy': 0.0259, 'loadgen': 0.0242} statuses {'200': 20837} err 0
+[00:12:31] proxy-thruster rep 1: up c=16 19952.3 rps p50 0.732 p99 2.209 cpu ms/req {'thrust': 0.096, 'campfire': 0.0549, 'docker-proxy': 0.0167, 'loadgen': 0.013} statuses {'200': 99772} err 0
+[00:12:36] proxy-thruster rep 1: up c=64 18004.8 rps p50 3.163 p99 9.839 cpu ms/req {'thrust': 0.118, 'campfire': 0.0555, 'docker-proxy': 0.0208, 'loadgen': 0.0161} statuses {'200': 90051} err 0
+[00:12:42] proxy-thruster rep 1: room_show c=1 192.2 rps p50 4.815 p99 8.999 cpu ms/req {'thrust': 0.2495, 'campfire': 4.8753, 'docker-proxy': 0.052, 'loadgen': 0.0617} statuses {'200': 962} err 0
+[00:12:47] proxy-thruster rep 1: room_show c=16 823.8 rps p50 19.231 p99 32.239 cpu ms/req {'thrust': 0.2784, 'campfire': 4.3186, 'docker-proxy': 0.0436, 'loadgen': 0.0435} statuses {'200': 4131} err 0
+[00:12:52] proxy-thruster rep 1: room_show c=64 843.7 rps p50 73.791 p99 127.999 cpu ms/req {'thrust': 0.2431, 'campfire': 4.3408, 'docker-proxy': 0.0468, 'loadgen': 0.052} statuses {'200': 4278} err 0
+[00:12:58] proxy-thruster rep 1: room_show_identity c=1 362.4 rps p50 2.613 p99 4.511 cpu ms/req {'thrust': 0.6512, 'campfire': 2.1854, 'docker-proxy': 0.1104, 'loadgen': 0.2339} statuses {'200': 1812} err 0
+[00:13:03] proxy-thruster rep 1: room_show_identity c=16 1079.8 rps p50 14.407 p99 27.487 cpu ms/req {'thrust': 0.9244, 'campfire': 2.3165, 'docker-proxy': 0.1276, 'loadgen': 0.2123} statuses {'200': 5409} err 0
+[00:13:08] proxy-thruster rep 1: room_show_identity c=64 1371.4 rps p50 45.631 p99 78.079 cpu ms/req {'thrust': 0.6964, 'campfire': 1.9516, 'docker-proxy': 0.0956, 'loadgen': 0.1245} statuses {'200': 6907} err 0
+[00:13:14] proxy-thruster rep 1: messages_page c=1 243.5 rps p50 3.601 p99 8.463 cpu ms/req {'thrust': 0.2791, 'campfire': 3.7274, 'docker-proxy': 0.0328, 'loadgen': 0.0465} statuses {'200': 1218} err 0
+[00:13:19] proxy-thruster rep 1: messages_page c=16 1029.6 rps p50 15.271 p99 24.991 cpu ms/req {'thrust': 0.2848, 'campfire': 3.3152, 'docker-proxy': 0.031, 'loadgen': 0.0345} statuses {'200': 5161} err 0
+[00:13:24] proxy-thruster rep 1: messages_page c=64 1105.3 rps p50 56.511 p99 90.815 cpu ms/req {'thrust': 0.208, 'campfire': 3.2556, 'docker-proxy': 0.0341, 'loadgen': 0.0361} statuses {'200': 5578} err 0
+[00:13:30] proxy-thruster rep 1: sidebar c=1 1271.2 rps p50 0.771 p99 1.06 cpu ms/req {'thrust': 0.1337, 'campfire': 0.6638, 'docker-proxy': 0.0204, 'loadgen': 0.0187} statuses {'200': 6357} err 0
+[00:13:35] proxy-thruster rep 1: sidebar c=16 4452.6 rps p50 3.477 p99 6.623 cpu ms/req {'thrust': 0.1423, 'campfire': 0.6609, 'docker-proxy': 0.0251, 'loadgen': 0.0196} statuses {'200': 22274} err 0
+[00:13:40] proxy-thruster rep 1: sidebar c=64 4768.5 rps p50 13.143 p99 22.959 cpu ms/req {'thrust': 0.1373, 'campfire': 0.637, 'docker-proxy': 0.0259, 'loadgen': 0.0205} statuses {'200': 23895} err 0
+[00:13:46] proxy-thruster rep 1: post_message c=1 1047.2 rps p50 0.776 p99 11.727 cpu ms/req {'thrust': 0.1375, 'campfire': 0.7716, 'docker-proxy': 0.0134, 'loadgen': 0.0159} statuses {'200': 5236} err 0
+[00:13:51] proxy-thruster rep 1: post_message c=16 2159.8 rps p50 4.459 p99 21.023 cpu ms/req {'thrust': 0.1435, 'campfire': 0.7922, 'docker-proxy': 0.0185, 'loadgen': 0.0186} statuses {'200': 10805} err 0
+[00:13:56] proxy-thruster rep 1: post_message c=64 2254.3 rps p50 27.855 p99 47.839 cpu ms/req {'thrust': 0.1518, 'campfire': 0.7641, 'docker-proxy': 0.0212, 'loadgen': 0.0219} statuses {'200': 11333} err 0
+[00:14:20] proxy-thruster rep 1: cable 1000 ready 1000 tput 73.4 msg/s all p50 22.495 cpu us/delivery {'thrust': 13.27, 'campfire': 31.31, 'docker-proxy': 17.15, 'loadgen': 22.28} mem {'before': {'peak_anon_mb': 343.2}, 'connect': {'peak_anon_mb': 490.8, 'end_anon_mb': 490.8, 'peak_threads': 107, 'thrust_peak_anon_mb': 105.4, 'cgroup_peak_mb': 637.9}, 'connected': {'peak_anon_mb': 491.0, 'end_anon_mb': 491.0, 'peak_threads': 107, 'thrust_peak_anon_mb': 105.4, 'cgroup_peak_mb': 637.9}, 'paced': {'peak_anon_mb': 517.0, 'end_anon_mb': 511.5, 'peak_threads': 107, 'thrust_peak_anon_mb': 109.2, 'cgroup_peak_mb': 670.4}, 'paced_drained': {'peak_anon_mb': 511.5, 'end_anon_mb': 511.5, 'peak_threads': 107, 'thrust_peak_anon_mb': 109.2, 'cgroup_peak_mb': 661.2}, 'saturated': {'peak_anon_mb': 532.0, 'end_anon_mb': 532.0, 'peak_threads': 107, 'thrust_peak_anon_mb': 156.3, 'cgroup_peak_mb': 742.9}, 'saturated_posted': {'peak_anon_mb': 532.0, 'end_anon_mb': 532.0, 'peak_threads': 107, 'thrust_peak_anon_mb': 156.3, 'cgroup_peak_mb': 734.4}, 'saturated_drained': {'peak_anon_mb': 532.0, 'end_anon_mb': 532.0, 'peak_threads': 107, 'thrust_peak_anon_mb': 156.3, 'cgroup_peak_mb': 734.4}, 'done': {'peak_anon_mb': 532.0, 'end_anon_mb': 523.0, 'peak_threads': 107, 'thrust_peak_anon_mb': 156.3, 'cgroup_peak_mb': 734.4}}
+```
+date: 2026-09-27T00:12:17+0200
+host: 7.2.5-4-omarchy, 32 threads
+server cpus: 4-7; loadgen cpus: 0-3
+image: campfire-rust:perf-a654b08 sha256:82a2c82b7f7ff1d371c701e3d9f81b894f76c1120231f421a817d183748a54c3
+env: WEB_CONCURRENCY=3 RAILS_MAX_THREADS=5 JOB_CONCURRENCY=3
+routes: up,room_show,room_show_identity,messages_page,sidebar,post_message; concs: 1,16,64; secs: 5; cable: 1000; app env:
+```
+
+Reps per configuration: proxy-thruster 1. Cells: median [min–max]; (×) is the gain over proxy-thruster (>1 is better).
+Host load (1-min loadavg at start of each run): proxy-thruster 17.01
+
+### HTTP up
+
+| Metric | proxy-thruster |
+|---|---|
+| c=1 req/s | 4,167 |
+| c=1 p50 ms | 0.21 |
+| c=1 p99 ms | 1.10 |
+| c=16 req/s | 19,952 |
+| c=16 p50 ms | 0.73 |
+| c=16 p99 ms | 2.21 |
+| c=64 req/s | 18,005 |
+| c=64 p50 ms | 3.16 |
+| c=64 p99 ms | 9.84 |
+| c=1 campfire CPU ms/req | 0.083 |
+| c=1 thrust CPU ms/req | 0.13 |
+| c=1 docker-proxy CPU ms/req | 0.026 |
+| c=1 loadgen cores busy | 0.10 |
+| c=1 campfire cores busy | 0.34 |
+| c=16 campfire CPU ms/req | 0.055 |
+| c=16 thrust CPU ms/req | 0.096 |
+| c=16 docker-proxy CPU ms/req | 0.017 |
+| c=16 loadgen cores busy | 0.26 |
+| c=16 campfire cores busy | 1.10 |
+| c=64 campfire CPU ms/req | 0.056 |
+| c=64 thrust CPU ms/req | 0.12 |
+| c=64 docker-proxy CPU ms/req | 0.021 |
+| c=64 loadgen cores busy | 0.29 |
+| c=64 campfire cores busy | 1.00 |
+| avg response bytes | 103 |
+
+### HTTP room_show
+
+| Metric | proxy-thruster |
+|---|---|
+| c=1 req/s | 192 |
+| c=1 p50 ms | 4.82 |
+| c=1 p99 ms | 9.00 |
+| c=16 req/s | 824 |
+| c=16 p50 ms | 19.2 |
+| c=16 p99 ms | 32.2 |
+| c=64 req/s | 844 |
+| c=64 p50 ms | 73.8 |
+| c=64 p99 ms | 128 |
+| c=1 campfire CPU ms/req | 4.88 |
+| c=1 thrust CPU ms/req | 0.25 |
+| c=1 docker-proxy CPU ms/req | 0.052 |
+| c=1 loadgen cores busy | 0.010 |
+| c=1 campfire cores busy | 0.94 |
+| c=16 campfire CPU ms/req | 4.32 |
+| c=16 thrust CPU ms/req | 0.28 |
+| c=16 docker-proxy CPU ms/req | 0.044 |
+| c=16 loadgen cores busy | 0.040 |
+| c=16 campfire cores busy | 3.56 |
+| c=64 campfire CPU ms/req | 4.34 |
+| c=64 thrust CPU ms/req | 0.24 |
+| c=64 docker-proxy CPU ms/req | 0.047 |
+| c=64 loadgen cores busy | 0.040 |
+| c=64 campfire cores busy | 3.66 |
+| avg response bytes | 44,267 |
+
+### HTTP room_show_identity
+
+| Metric | proxy-thruster |
+|---|---|
+| c=1 req/s | 362 |
+| c=1 p50 ms | 2.61 |
+| c=1 p99 ms | 4.51 |
+| c=16 req/s | 1,080 |
+| c=16 p50 ms | 14.4 |
+| c=16 p99 ms | 27.5 |
+| c=64 req/s | 1,371 |
+| c=64 p50 ms | 45.6 |
+| c=64 p99 ms | 78.1 |
+| c=1 campfire CPU ms/req | 2.19 |
+| c=1 thrust CPU ms/req | 0.65 |
+| c=1 docker-proxy CPU ms/req | 0.11 |
+| c=1 loadgen cores busy | 0.080 |
+| c=1 campfire cores busy | 0.79 |
+| c=16 campfire CPU ms/req | 2.32 |
+| c=16 thrust CPU ms/req | 0.92 |
+| c=16 docker-proxy CPU ms/req | 0.13 |
+| c=16 loadgen cores busy | 0.23 |
+| c=16 campfire cores busy | 2.50 |
+| c=64 campfire CPU ms/req | 1.95 |
+| c=64 thrust CPU ms/req | 0.70 |
+| c=64 docker-proxy CPU ms/req | 0.096 |
+| c=64 loadgen cores busy | 0.17 |
+| c=64 campfire cores busy | 2.67 |
+| avg response bytes | 463,818 |
+
+### HTTP messages_page
+
+| Metric | proxy-thruster |
+|---|---|
+| c=1 req/s | 244 |
+| c=1 p50 ms | 3.60 |
+| c=1 p99 ms | 8.46 |
+| c=16 req/s | 1,030 |
+| c=16 p50 ms | 15.3 |
+| c=16 p99 ms | 25.0 |
+| c=64 req/s | 1,105 |
+| c=64 p50 ms | 56.5 |
+| c=64 p99 ms | 90.8 |
+| c=1 campfire CPU ms/req | 3.73 |
+| c=1 thrust CPU ms/req | 0.28 |
+| c=1 docker-proxy CPU ms/req | 0.033 |
+| c=1 loadgen cores busy | 0.010 |
+| c=1 campfire cores busy | 0.91 |
+| c=16 campfire CPU ms/req | 3.32 |
+| c=16 thrust CPU ms/req | 0.28 |
+| c=16 docker-proxy CPU ms/req | 0.031 |
+| c=16 loadgen cores busy | 0.040 |
+| c=16 campfire cores busy | 3.42 |
+| c=64 campfire CPU ms/req | 3.26 |
+| c=64 thrust CPU ms/req | 0.21 |
+| c=64 docker-proxy CPU ms/req | 0.034 |
+| c=64 loadgen cores busy | 0.040 |
+| c=64 campfire cores busy | 3.60 |
+| avg response bytes | 34,636 |
+
+### HTTP sidebar
+
+| Metric | proxy-thruster |
+|---|---|
+| c=1 req/s | 1,271 |
+| c=1 p50 ms | 0.77 |
+| c=1 p99 ms | 1.06 |
+| c=16 req/s | 4,453 |
+| c=16 p50 ms | 3.48 |
+| c=16 p99 ms | 6.62 |
+| c=64 req/s | 4,768 |
+| c=64 p50 ms | 13.1 |
+| c=64 p99 ms | 23.0 |
+| c=1 campfire CPU ms/req | 0.66 |
+| c=1 thrust CPU ms/req | 0.13 |
+| c=1 docker-proxy CPU ms/req | 0.020 |
+| c=1 loadgen cores busy | 0.020 |
+| c=1 campfire cores busy | 0.84 |
+| c=16 campfire CPU ms/req | 0.66 |
+| c=16 thrust CPU ms/req | 0.14 |
+| c=16 docker-proxy CPU ms/req | 0.025 |
+| c=16 loadgen cores busy | 0.090 |
+| c=16 campfire cores busy | 2.94 |
+| c=64 campfire CPU ms/req | 0.64 |
+| c=64 thrust CPU ms/req | 0.14 |
+| c=64 docker-proxy CPU ms/req | 0.026 |
+| c=64 loadgen cores busy | 0.10 |
+| c=64 campfire cores busy | 3.04 |
+| avg response bytes | 6,277 |
+
+### HTTP post_message
+
+| Metric | proxy-thruster |
+|---|---|
+| c=1 req/s | 1,047 |
+| c=1 p50 ms | 0.78 |
+| c=1 p99 ms | 11.7 |
+| c=16 req/s | 2,160 |
+| c=16 p50 ms | 4.46 |
+| c=16 p99 ms | 21.0 |
+| c=64 req/s | 2,254 |
+| c=64 p50 ms | 27.9 |
+| c=64 p99 ms | 47.8 |
+| c=1 campfire CPU ms/req | 0.77 |
+| c=1 thrust CPU ms/req | 0.14 |
+| c=1 docker-proxy CPU ms/req | 0.013 |
+| c=1 loadgen cores busy | 0.020 |
+| c=1 campfire cores busy | 0.81 |
+| c=16 campfire CPU ms/req | 0.79 |
+| c=16 thrust CPU ms/req | 0.14 |
+| c=16 docker-proxy CPU ms/req | 0.018 |
+| c=16 loadgen cores busy | 0.040 |
+| c=16 campfire cores busy | 1.71 |
+| c=64 campfire CPU ms/req | 0.76 |
+| c=64 thrust CPU ms/req | 0.15 |
+| c=64 docker-proxy CPU ms/req | 0.021 |
+| c=64 loadgen cores busy | 0.050 |
+| c=64 campfire cores busy | 1.72 |
+| avg response bytes | 2,005 |
+
+### Action Cable, 1000 clients
+
+| Metric | proxy-thruster |
+|---|---|
+| subscribed | 1,000 |
+| paced post→all p50 ms | 22.5 |
+| paced post→all p99 ms | 34.5 |
+| paced POST p50 ms | 25.4 |
+| max sustained msgs/s (to all) | 73.4 |
+| deliveries/s | 73,408 |
+| saturated post→all p50 ms | 47.7 |
+| campfire CPU µs/delivery | 31.3 |
+| thrust CPU µs/delivery | 13.3 |
+| docker-proxy CPU µs/delivery | 17.1 |
+| loadgen CPU µs/delivery | 22.3 |
+| RssAnon peak MB: before | 343 |
+| RssAnon peak MB: connected | 491 |
+| RssAnon peak MB: paced | 517 |
+| RssAnon peak MB: saturated | 532 |
+| RssAnon peak MB: saturated_posted | 532 |
+| RssAnon peak MB: saturated_drained | 532 |
+| thrust RssAnon peak MB (saturated) | 156 |
+| container memory.current peak MB (saturated) | 743 |
+| peak threads | 107 |
+
+done

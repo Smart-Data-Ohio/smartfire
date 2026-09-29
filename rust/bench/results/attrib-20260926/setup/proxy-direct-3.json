@@ -1,0 +1,728 @@
+{
+ "config": "proxy-direct",
+ "rep": 3,
+ "cold_start_s": 0.03,
+ "pids": {
+  "campfire": 299179,
+  "docker-proxy": 299272
+ },
+ "load_start": [
+  "9.28",
+  "10.86",
+  "13.31"
+ ],
+ "idle": {
+  "VmHWM": 39.69140625,
+  "VmRSS": 39.69140625,
+  "RssAnon": 10.8125,
+  "Threads": 7.0
+ },
+ "http": [
+  {
+   "avg_bytes": 103,
+   "conc": 1,
+   "errors": 0,
+   "gzip": true,
+   "latency": {
+    "max_ms": 0.79,
+    "mean_ms": 0.05,
+    "n": 99003,
+    "p50_ms": 0.046,
+    "p90_ms": 0.053,
+    "p99_ms": 0.126
+   },
+   "ok": 99003,
+   "path": "/up",
+   "rps": 19800.4,
+   "secs": 5.0,
+   "statuses": {
+    "200": 99003
+   },
+   "cpu_ms_per_req": {
+    "campfire": 0.0322,
+    "docker-proxy": 0.0082,
+    "loadgen": 0.0102
+   },
+   "cpu_cores": {
+    "campfire": 0.64,
+    "docker-proxy": 0.16,
+    "loadgen": 0.2
+   },
+   "route": "up"
+  },
+  {
+   "avg_bytes": 103,
+   "conc": 16,
+   "errors": 0,
+   "gzip": true,
+   "latency": {
+    "max_ms": 2.075,
+    "mean_ms": 0.17,
+    "n": 459810,
+    "p50_ms": 0.166,
+    "p90_ms": 0.262,
+    "p99_ms": 0.373
+   },
+   "ok": 459810,
+   "path": "/up",
+   "rps": 91953.5,
+   "secs": 5.0,
+   "statuses": {
+    "200": 459810
+   },
+   "cpu_ms_per_req": {
+    "campfire": 0.0405,
+    "docker-proxy": 0.0098,
+    "loadgen": 0.0106
+   },
+   "cpu_cores": {
+    "campfire": 3.73,
+    "docker-proxy": 0.9,
+    "loadgen": 0.97
+   },
+   "route": "up"
+  },
+  {
+   "avg_bytes": 103,
+   "conc": 64,
+   "errors": 0,
+   "gzip": true,
+   "latency": {
+    "max_ms": 10.639,
+    "mean_ms": 0.71,
+    "n": 447753,
+    "p50_ms": 0.668,
+    "p90_ms": 1.14,
+    "p99_ms": 1.641
+   },
+   "ok": 447753,
+   "path": "/up",
+   "rps": 89521.9,
+   "secs": 5.0,
+   "statuses": {
+    "200": 447753
+   },
+   "cpu_ms_per_req": {
+    "campfire": 0.0414,
+    "docker-proxy": 0.0103,
+    "loadgen": 0.0105
+   },
+   "cpu_cores": {
+    "campfire": 3.71,
+    "docker-proxy": 0.92,
+    "loadgen": 0.94
+   },
+   "route": "up"
+  },
+  {
+   "avg_bytes": 44280,
+   "conc": 1,
+   "errors": 0,
+   "gzip": true,
+   "latency": {
+    "max_ms": 5.887,
+    "mean_ms": 4.31,
+    "n": 1159,
+    "p50_ms": 4.231,
+    "p90_ms": 4.731,
+    "p99_ms": 5.223
+   },
+   "ok": 1159,
+   "path": "/rooms/486777696",
+   "rps": 231.7,
+   "secs": 5.0,
+   "statuses": {
+    "200": 1159
+   },
+   "cpu_ms_per_req": {
+    "campfire": 4.2278,
+    "docker-proxy": 0.0259,
+    "loadgen": 0.0346
+   },
+   "cpu_cores": {
+    "campfire": 0.98,
+    "docker-proxy": 0.01,
+    "loadgen": 0.01
+   },
+   "route": "room_show"
+  },
+  {
+   "avg_bytes": 44280,
+   "conc": 16,
+   "errors": 0,
+   "gzip": true,
+   "latency": {
+    "max_ms": 35.967,
+    "mean_ms": 17.43,
+    "n": 4599,
+    "p50_ms": 17.215,
+    "p90_ms": 23.167,
+    "p99_ms": 28.751
+   },
+   "ok": 4599,
+   "path": "/rooms/486777696",
+   "rps": 916.7,
+   "secs": 5.02,
+   "statuses": {
+    "200": 4599
+   },
+   "cpu_ms_per_req": {
+    "campfire": 4.0639,
+    "docker-proxy": 0.013,
+    "loadgen": 0.0203
+   },
+   "cpu_cores": {
+    "campfire": 3.72,
+    "docker-proxy": 0.01,
+    "loadgen": 0.02
+   },
+   "route": "room_show"
+  },
+  {
+   "avg_bytes": 44280,
+   "conc": 64,
+   "errors": 0,
+   "gzip": true,
+   "latency": {
+    "max_ms": 145.151,
+    "mean_ms": 69.42,
+    "n": 4627,
+    "p50_ms": 68.415,
+    "p90_ms": 96.575,
+    "p99_ms": 120.511
+   },
+   "ok": 4627,
+   "path": "/rooms/486777696",
+   "rps": 914.7,
+   "secs": 5.06,
+   "statuses": {
+    "200": 4627
+   },
+   "cpu_ms_per_req": {
+    "campfire": 4.1993,
+    "docker-proxy": 0.0238,
+    "loadgen": 0.0288
+   },
+   "cpu_cores": {
+    "campfire": 3.84,
+    "docker-proxy": 0.02,
+    "loadgen": 0.03
+   },
+   "route": "room_show"
+  },
+  {
+   "avg_bytes": 463818,
+   "conc": 1,
+   "errors": 0,
+   "gzip": false,
+   "latency": {
+    "max_ms": 3.429,
+    "mean_ms": 1.93,
+    "n": 2579,
+    "p50_ms": 1.892,
+    "p90_ms": 2.139,
+    "p99_ms": 2.485
+   },
+   "ok": 2579,
+   "path": "/rooms/486777696",
+   "rps": 515.6,
+   "secs": 5.0,
+   "statuses": {
+    "200": 2579
+   },
+   "cpu_ms_per_req": {
+    "campfire": 1.7798,
+    "docker-proxy": 0.0465,
+    "loadgen": 0.1502
+   },
+   "cpu_cores": {
+    "campfire": 0.92,
+    "docker-proxy": 0.02,
+    "loadgen": 0.08
+   },
+   "route": "room_show_identity"
+  },
+  {
+   "avg_bytes": 463818,
+   "conc": 16,
+   "errors": 0,
+   "gzip": false,
+   "latency": {
+    "max_ms": 18.127,
+    "mean_ms": 8.37,
+    "n": 9558,
+    "p50_ms": 8.207,
+    "p90_ms": 10.951,
+    "p99_ms": 13.567
+   },
+   "ok": 9558,
+   "path": "/rooms/486777696",
+   "rps": 1908.8,
+   "secs": 5.01,
+   "statuses": {
+    "200": 9558
+   },
+   "cpu_ms_per_req": {
+    "campfire": 1.809,
+    "docker-proxy": 0.0408,
+    "loadgen": 0.0875
+   },
+   "cpu_cores": {
+    "campfire": 3.45,
+    "docker-proxy": 0.08,
+    "loadgen": 0.17
+   },
+   "route": "room_show_identity"
+  },
+  {
+   "avg_bytes": 463818,
+   "conc": 64,
+   "errors": 0,
+   "gzip": false,
+   "latency": {
+    "max_ms": 74.175,
+    "mean_ms": 32.4,
+    "n": 9885,
+    "p50_ms": 31.951,
+    "p90_ms": 42.975,
+    "p99_ms": 53.919
+   },
+   "ok": 9885,
+   "path": "/rooms/486777696",
+   "rps": 1966.5,
+   "secs": 5.03,
+   "statuses": {
+    "200": 9885
+   },
+   "cpu_ms_per_req": {
+    "campfire": 1.7946,
+    "docker-proxy": 0.0425,
+    "loadgen": 0.0819
+   },
+   "cpu_cores": {
+    "campfire": 3.53,
+    "docker-proxy": 0.08,
+    "loadgen": 0.16
+   },
+   "route": "room_show_identity"
+  },
+  {
+   "avg_bytes": 34628,
+   "conc": 1,
+   "errors": 0,
+   "gzip": true,
+   "latency": {
+    "max_ms": 4.767,
+    "mean_ms": 3.38,
+    "n": 1480,
+    "p50_ms": 3.261,
+    "p90_ms": 3.773,
+    "p99_ms": 4.355
+   },
+   "ok": 1480,
+   "path": "/rooms/486777696/messages?before=933434569",
+   "rps": 295.9,
+   "secs": 5.0,
+   "statuses": {
+    "200": 1480
+   },
+   "cpu_ms_per_req": {
+    "campfire": 3.2703,
+    "docker-proxy": 0.027,
+    "loadgen": 0.0398
+   },
+   "cpu_cores": {
+    "campfire": 0.97,
+    "docker-proxy": 0.01,
+    "loadgen": 0.01
+   },
+   "route": "messages_page"
+  },
+  {
+   "avg_bytes": 34628,
+   "conc": 16,
+   "errors": 0,
+   "gzip": true,
+   "latency": {
+    "max_ms": 27.583,
+    "mean_ms": 13.95,
+    "n": 5740,
+    "p50_ms": 13.719,
+    "p90_ms": 18.191,
+    "p99_ms": 22.511
+   },
+   "ok": 5740,
+   "path": "/rooms/486777696/messages?before=933434569",
+   "rps": 1145.0,
+   "secs": 5.01,
+   "statuses": {
+    "200": 5740
+   },
+   "cpu_ms_per_req": {
+    "campfire": 3.1376,
+    "docker-proxy": 0.0157,
+    "loadgen": 0.0186
+   },
+   "cpu_cores": {
+    "campfire": 3.59,
+    "docker-proxy": 0.02,
+    "loadgen": 0.02
+   },
+   "route": "messages_page"
+  },
+  {
+   "avg_bytes": 34628,
+   "conc": 64,
+   "errors": 0,
+   "gzip": true,
+   "latency": {
+    "max_ms": 106.687,
+    "mean_ms": 52.95,
+    "n": 6053,
+    "p50_ms": 52.351,
+    "p90_ms": 69.695,
+    "p99_ms": 86.847
+   },
+   "ok": 6053,
+   "path": "/rooms/486777696/messages?before=933434569",
+   "rps": 1199.9,
+   "secs": 5.04,
+   "statuses": {
+    "200": 6053
+   },
+   "cpu_ms_per_req": {
+    "campfire": 3.1406,
+    "docker-proxy": 0.0182,
+    "loadgen": 0.0205
+   },
+   "cpu_cores": {
+    "campfire": 3.77,
+    "docker-proxy": 0.02,
+    "loadgen": 0.02
+   },
+   "route": "messages_page"
+  },
+  {
+   "avg_bytes": 6277,
+   "conc": 1,
+   "errors": 0,
+   "gzip": true,
+   "latency": {
+    "max_ms": 1.409,
+    "mean_ms": 0.58,
+    "n": 8570,
+    "p50_ms": 0.569,
+    "p90_ms": 0.65,
+    "p99_ms": 0.735
+   },
+   "ok": 8570,
+   "path": "/users/me/sidebar",
+   "rps": 1714.0,
+   "secs": 5.0,
+   "statuses": {
+    "200": 8570
+   },
+   "cpu_ms_per_req": {
+    "campfire": 0.5601,
+    "docker-proxy": 0.0093,
+    "loadgen": 0.0098
+   },
+   "cpu_cores": {
+    "campfire": 0.96,
+    "docker-proxy": 0.02,
+    "loadgen": 0.02
+   },
+   "route": "sidebar"
+  },
+  {
+   "avg_bytes": 6277,
+   "conc": 16,
+   "errors": 0,
+   "gzip": true,
+   "latency": {
+    "max_ms": 6.919,
+    "mean_ms": 2.6,
+    "n": 30816,
+    "p50_ms": 2.547,
+    "p90_ms": 3.497,
+    "p99_ms": 4.475
+   },
+   "ok": 30816,
+   "path": "/users/me/sidebar",
+   "rps": 6160.2,
+   "secs": 5.0,
+   "statuses": {
+    "200": 30816
+   },
+   "cpu_ms_per_req": {
+    "campfire": 0.6003,
+    "docker-proxy": 0.0101,
+    "loadgen": 0.0107
+   },
+   "cpu_cores": {
+    "campfire": 3.7,
+    "docker-proxy": 0.06,
+    "loadgen": 0.07
+   },
+   "route": "sidebar"
+  },
+  {
+   "avg_bytes": 6277,
+   "conc": 64,
+   "errors": 0,
+   "gzip": true,
+   "latency": {
+    "max_ms": 24.239,
+    "mean_ms": 10.04,
+    "n": 31787,
+    "p50_ms": 9.967,
+    "p90_ms": 13.487,
+    "p99_ms": 16.975
+   },
+   "ok": 31787,
+   "path": "/users/me/sidebar",
+   "rps": 6345.7,
+   "secs": 5.01,
+   "statuses": {
+    "200": 31787
+   },
+   "cpu_ms_per_req": {
+    "campfire": 0.5958,
+    "docker-proxy": 0.0104,
+    "loadgen": 0.0115
+   },
+   "cpu_cores": {
+    "campfire": 3.78,
+    "docker-proxy": 0.07,
+    "loadgen": 0.07
+   },
+   "route": "sidebar"
+  },
+  {
+   "avg_bytes": 2005,
+   "conc": 1,
+   "errors": 0,
+   "gzip": true,
+   "latency": {
+    "max_ms": 12.999,
+    "mean_ms": 0.81,
+    "n": 6167,
+    "p50_ms": 0.638,
+    "p90_ms": 0.707,
+    "p99_ms": 11.447
+   },
+   "ok": 6167,
+   "path": "POST /rooms/201306877/messages",
+   "rps": 1233.3,
+   "secs": 5.0,
+   "statuses": {
+    "200": 6167
+   },
+   "cpu_ms_per_req": {
+    "campfire": 0.7183,
+    "docker-proxy": 0.0114,
+    "loadgen": 0.0144
+   },
+   "cpu_cores": {
+    "campfire": 0.89,
+    "docker-proxy": 0.01,
+    "loadgen": 0.02
+   },
+   "route": "post_message"
+  },
+  {
+   "avg_bytes": 2006,
+   "conc": 16,
+   "errors": 0,
+   "gzip": true,
+   "latency": {
+    "max_ms": 36.831,
+    "mean_ms": 6.73,
+    "n": 11878,
+    "p50_ms": 3.813,
+    "p90_ms": 16.943,
+    "p99_ms": 22.367
+   },
+   "ok": 11878,
+   "path": "POST /rooms/201306877/messages",
+   "rps": 2374.2,
+   "secs": 5.0,
+   "statuses": {
+    "200": 11878
+   },
+   "cpu_ms_per_req": {
+    "campfire": 0.7695,
+    "docker-proxy": 0.0135,
+    "loadgen": 0.0164
+   },
+   "cpu_cores": {
+    "campfire": 1.83,
+    "docker-proxy": 0.03,
+    "loadgen": 0.04
+   },
+   "route": "post_message"
+  },
+  {
+   "avg_bytes": 2005,
+   "conc": 64,
+   "errors": 0,
+   "gzip": true,
+   "latency": {
+    "max_ms": 54.719,
+    "mean_ms": 26.72,
+    "n": 11962,
+    "p50_ms": 26.527,
+    "p90_ms": 32.255,
+    "p99_ms": 45.375
+   },
+   "ok": 11962,
+   "path": "POST /rooms/201306877/messages",
+   "rps": 2381.0,
+   "secs": 5.02,
+   "statuses": {
+    "200": 11962
+   },
+   "cpu_ms_per_req": {
+    "campfire": 0.775,
+    "docker-proxy": 0.0184,
+    "loadgen": 0.02
+   },
+   "cpu_cores": {
+    "campfire": 1.85,
+    "docker-proxy": 0.04,
+    "loadgen": 0.05
+   },
+   "route": "post_message"
+  }
+ ],
+ "cable": [
+  {
+   "clients": 1000,
+   "connect_secs": 0.19,
+   "failed": 0,
+   "latency": {
+    "all_clients": {
+     "max_ms": 41.439,
+     "mean_ms": 28.35,
+     "n": 30,
+     "p50_ms": 28.175,
+     "p90_ms": 32.927,
+     "p99_ms": 41.439
+    },
+    "complete": 30,
+    "messages": 30,
+    "per_client": {
+     "max_ms": 41.439,
+     "mean_ms": 12.12,
+     "n": 30000,
+     "p50_ms": 11.391,
+     "p90_ms": 21.631,
+     "p99_ms": 29.855
+    },
+    "post": {
+     "max_ms": 52.063,
+     "mean_ms": 37.81,
+     "n": 30,
+     "p50_ms": 37.855,
+     "p90_ms": 43.519,
+     "p99_ms": 52.063
+    }
+   },
+   "ready": 1000,
+   "subscriptions_per_client": 6,
+   "throughput": {
+    "all_clients": {
+     "max_ms": 139.903,
+     "mean_ms": 57.68,
+     "n": 907,
+     "p50_ms": 52.927,
+     "p90_ms": 93.631,
+     "p99_ms": 119.103
+    },
+    "complete": 907,
+    "delivered_msgs_per_sec": 60.4,
+    "drain_secs": 0.0,
+    "frames_per_sec": 60376.0,
+    "per_client": {
+     "max_ms": 139.903,
+     "mean_ms": 43.8,
+     "n": 907000,
+     "p50_ms": 41.247,
+     "p90_ms": 76.351,
+     "p99_ms": 104.959
+    },
+    "post": {
+     "max_ms": 169.983,
+     "mean_ms": 66.16,
+     "n": 907,
+     "p50_ms": 61.791,
+     "p90_ms": 104.959,
+     "p99_ms": 144.767
+    },
+    "posted": 907,
+    "posters": 4,
+    "posts_per_sec": 60.4
+   },
+   "memory_by_phase": {
+    "before": {
+     "peak_anon_mb": 366.6
+    },
+    "connect": {
+     "peak_anon_mb": 432.4,
+     "end_anon_mb": 432.4,
+     "peak_threads": 99
+    },
+    "connected": {
+     "peak_anon_mb": 513.6,
+     "end_anon_mb": 513.6,
+     "peak_threads": 99
+    },
+    "paced": {
+     "peak_anon_mb": 534.4,
+     "end_anon_mb": 534.4,
+     "peak_threads": 99
+    },
+    "paced_drained": {
+     "peak_anon_mb": 534.4,
+     "end_anon_mb": 534.4,
+     "peak_threads": 99
+    },
+    "saturated": {
+     "peak_anon_mb": 551.8,
+     "end_anon_mb": 551.8,
+     "peak_threads": 99
+    },
+    "saturated_posted": {
+     "peak_anon_mb": 551.8,
+     "end_anon_mb": 551.8,
+     "peak_threads": 99
+    },
+    "saturated_drained": {
+     "peak_anon_mb": 551.8,
+     "end_anon_mb": 551.8,
+     "peak_threads": 99
+    },
+    "done": {
+     "peak_anon_mb": 551.8,
+     "end_anon_mb": 547.4,
+     "peak_threads": 99
+    }
+   },
+   "cpu_secs": {
+    "campfire": 55.26,
+    "docker-proxy": 26.61,
+    "loadgen": 35.33
+   },
+   "cpu_us_per_delivery": {
+    "campfire": 58.98,
+    "docker-proxy": 28.4,
+    "loadgen": 37.71
+   }
+  }
+ ],
+ "load_end": [
+  "12.03",
+  "10.98",
+  "13.02"
+ ]
+}

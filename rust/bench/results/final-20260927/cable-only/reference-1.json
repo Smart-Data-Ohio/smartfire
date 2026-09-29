@@ -1,0 +1,328 @@
+{
+ "app": "reference",
+ "rep": 1,
+ "cold_start_ms": 2438,
+ "memory": {
+  "idle_current_mb": 302,
+  "idle_anon_mb": 280,
+  "peak_current_mb": 1240,
+  "peak_anon_mb": 1200,
+  "cgroup_peak_mb": 1242
+ },
+ "http": [],
+ "cable": [
+  {
+   "clients": 1000,
+   "connect_secs": 1.56,
+   "failed": 0,
+   "latency": {
+    "all_clients": {
+     "max_ms": 162.431,
+     "mean_ms": 87.29,
+     "n": 30,
+     "p50_ms": 77.311,
+     "p90_ms": 148.863,
+     "p99_ms": 162.431
+    },
+    "complete": 30,
+    "messages": 30,
+    "per_client": {
+     "max_ms": 162.431,
+     "mean_ms": 40.32,
+     "n": 30000,
+     "p50_ms": 37.279,
+     "p90_ms": 61.087,
+     "p99_ms": 123.903
+    },
+    "post": {
+     "max_ms": 174.591,
+     "mean_ms": 90.4,
+     "n": 30,
+     "p50_ms": 79.551,
+     "p90_ms": 156.927,
+     "p99_ms": 174.591
+    }
+   },
+   "ready": 1000,
+   "subscriptions_per_client": 6,
+   "throughput": {
+    "all_clients": {
+     "max_ms": 1210.367,
+     "mean_ms": 253.83,
+     "n": 218,
+     "p50_ms": 214.655,
+     "p90_ms": 428.799,
+     "p99_ms": 977.407
+    },
+    "complete": 218,
+    "delivered_msgs_per_sec": 14.4,
+    "drain_secs": 0.0,
+    "frames_per_sec": 14436.0,
+    "per_client": {
+     "max_ms": 1210.367,
+     "mean_ms": 175.8,
+     "n": 218000,
+     "p50_ms": 126.655,
+     "p90_ms": 347.135,
+     "p99_ms": 938.495
+    },
+    "post": {
+     "max_ms": 1182.719,
+     "mean_ms": 276.54,
+     "n": 218,
+     "p50_ms": 200.575,
+     "p90_ms": 571.903,
+     "p99_ms": 893.951
+    },
+    "posted": 218,
+    "posters": 4,
+    "posts_per_sec": 14.4
+   },
+   "process_memory": {
+    "connect": {
+     "roles": {
+      "other": {
+       "peak_pss_mb": 13.9,
+       "peak_anon_mb": 10.3,
+       "procs": 2
+      },
+      "thrust": {
+       "peak_pss_mb": 71.1,
+       "peak_anon_mb": 63.5,
+       "procs": 1
+      },
+      "redis": {
+       "peak_pss_mb": 7.8,
+       "peak_anon_mb": 3.4,
+       "procs": 1
+      },
+      "jobs": {
+       "peak_pss_mb": 145.7,
+       "peak_anon_mb": 338.4,
+       "procs": 4
+      },
+      "puma": {
+       "peak_pss_mb": 452.2,
+       "peak_anon_mb": 618.8,
+       "procs": 4
+      }
+     },
+     "peak_total_pss_mb": 690.5
+    },
+    "connected": {
+     "roles": {
+      "other": {
+       "peak_pss_mb": 13.8,
+       "peak_anon_mb": 10.3,
+       "procs": 2
+      },
+      "thrust": {
+       "peak_pss_mb": 72.6,
+       "peak_anon_mb": 65.0,
+       "procs": 1
+      },
+      "redis": {
+       "peak_pss_mb": 7.7,
+       "peak_anon_mb": 3.4,
+       "procs": 1
+      },
+      "jobs": {
+       "peak_pss_mb": 146.0,
+       "peak_anon_mb": 336.0,
+       "procs": 4
+      },
+      "puma": {
+       "peak_pss_mb": 454.7,
+       "peak_anon_mb": 621.3,
+       "procs": 4
+      }
+     },
+     "peak_total_pss_mb": 694.7
+    },
+    "paced": {
+     "roles": {
+      "other": {
+       "peak_pss_mb": 13.8,
+       "peak_anon_mb": 10.3,
+       "procs": 2
+      },
+      "thrust": {
+       "peak_pss_mb": 80.2,
+       "peak_anon_mb": 72.7,
+       "procs": 1
+      },
+      "redis": {
+       "peak_pss_mb": 7.9,
+       "peak_anon_mb": 3.6,
+       "procs": 1
+      },
+      "jobs": {
+       "peak_pss_mb": 224.7,
+       "peak_anon_mb": 351.2,
+       "procs": 4
+      },
+      "puma": {
+       "peak_pss_mb": 760.2,
+       "peak_anon_mb": 926.2,
+       "procs": 4
+      }
+     },
+     "peak_total_pss_mb": 1080.1
+    },
+    "paced_drained": {
+     "roles": {
+      "other": {
+       "peak_pss_mb": 13.8,
+       "peak_anon_mb": 10.3,
+       "procs": 2
+      },
+      "thrust": {
+       "peak_pss_mb": 80.2,
+       "peak_anon_mb": 72.7,
+       "procs": 1
+      },
+      "redis": {
+       "peak_pss_mb": 7.9,
+       "peak_anon_mb": 3.6,
+       "procs": 1
+      },
+      "jobs": {
+       "peak_pss_mb": 224.7,
+       "peak_anon_mb": 351.2,
+       "procs": 4
+      },
+      "puma": {
+       "peak_pss_mb": 739.8,
+       "peak_anon_mb": 905.7,
+       "procs": 4
+      }
+     },
+     "peak_total_pss_mb": 1066.3
+    },
+    "saturated": {
+     "roles": {
+      "other": {
+       "peak_pss_mb": 13.8,
+       "peak_anon_mb": 10.3,
+       "procs": 2
+      },
+      "thrust": {
+       "peak_pss_mb": 82.6,
+       "peak_anon_mb": 75.1,
+       "procs": 1
+      },
+      "redis": {
+       "peak_pss_mb": 8.3,
+       "peak_anon_mb": 4.0,
+       "procs": 1
+      },
+      "jobs": {
+       "peak_pss_mb": 271.9,
+       "peak_anon_mb": 382.3,
+       "procs": 4
+      },
+      "puma": {
+       "peak_pss_mb": 878.8,
+       "peak_anon_mb": 1029.6,
+       "procs": 4
+      }
+     },
+     "peak_total_pss_mb": 1255.0
+    },
+    "saturated_posted": {
+     "roles": {
+      "other": {
+       "peak_pss_mb": 13.8,
+       "peak_anon_mb": 10.3,
+       "procs": 2
+      },
+      "thrust": {
+       "peak_pss_mb": 82.6,
+       "peak_anon_mb": 75.1,
+       "procs": 1
+      },
+      "redis": {
+       "peak_pss_mb": 8.3,
+       "peak_anon_mb": 4.0,
+       "procs": 1
+      },
+      "jobs": {
+       "peak_pss_mb": 271.9,
+       "peak_anon_mb": 382.3,
+       "procs": 4
+      },
+      "puma": {
+       "peak_pss_mb": 868.2,
+       "peak_anon_mb": 1019.0,
+       "procs": 4
+      }
+     },
+     "peak_total_pss_mb": 1244.8
+    },
+    "saturated_drained": {
+     "roles": {
+      "other": {
+       "peak_pss_mb": 13.8,
+       "peak_anon_mb": 10.3,
+       "procs": 2
+      },
+      "thrust": {
+       "peak_pss_mb": 82.6,
+       "peak_anon_mb": 75.1,
+       "procs": 1
+      },
+      "redis": {
+       "peak_pss_mb": 8.3,
+       "peak_anon_mb": 4.0,
+       "procs": 1
+      },
+      "jobs": {
+       "peak_pss_mb": 271.9,
+       "peak_anon_mb": 382.3,
+       "procs": 4
+      },
+      "puma": {
+       "peak_pss_mb": 868.2,
+       "peak_anon_mb": 1019.0,
+       "procs": 4
+      }
+     },
+     "peak_total_pss_mb": 1244.8
+    },
+    "done": {
+     "roles": {
+      "other": {
+       "peak_pss_mb": 13.8,
+       "peak_anon_mb": 10.3,
+       "procs": 2
+      },
+      "thrust": {
+       "peak_pss_mb": 83.1,
+       "peak_anon_mb": 75.5,
+       "procs": 1
+      },
+      "redis": {
+       "peak_pss_mb": 8.3,
+       "peak_anon_mb": 4.0,
+       "procs": 1
+      },
+      "jobs": {
+       "peak_pss_mb": 272.0,
+       "peak_anon_mb": 382.3,
+       "procs": 4
+      },
+      "puma": {
+       "peak_pss_mb": 871.4,
+       "peak_anon_mb": 1022.1,
+       "procs": 4
+      }
+     },
+     "peak_total_pss_mb": 1248.1
+    }
+   }
+  }
+ ],
+ "upload": {},
+ "loadavg_start": "1.46 3.84 3.96 1/1432 817337",
+ "loadavg_end": "2.39 3.76 3.93 1/1584 819044"
+}

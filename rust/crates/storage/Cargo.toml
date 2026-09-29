@@ -1,0 +1,24 @@
+[package]
+name = "campfire_storage"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+jiff.workspace = true
+thiserror.workspace = true
+base64.workspace = true
+sha1.workspace = true
+hmac.workspace = true
+md-5.workspace = true
+rand.workspace = true
+tempfile.workspace = true
+
+[dev-dependencies]
+pbkdf2.workspace = true
+sha2.workspace = true
+hex.workspace = true

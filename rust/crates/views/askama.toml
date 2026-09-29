@@ -1,0 +1,5 @@
+# ERB::Util.html_escape-compatible escaping (&amp; &lt; &gt; &quot; &#39;) for every template
+# format that ERB would escape, so output bytes match the Rails views.
+[[escaper]]
+path = "crate::helpers::ErbEscaper"
+extensions = ["html", "svg", "json"]
