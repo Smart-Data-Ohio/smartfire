@@ -143,7 +143,7 @@ fn normalize_into(dom: &Dom, node: usize, out: &mut String) {
 // --- Deliberate differences ----------------------------------------------------------------------
 
 /// Pre-existing hardening differences: links rails_autolink inserted inside attribute values
-/// remain text and `name` attributes are dropped. Raw differences are counted and reported before
+/// remain text. Named anchors now match Rails. Raw differences are counted and reported before
 /// this historical comparison; the new Markdown corpus compares without any normalization.
 fn with_port_divergences(rails: &str) -> String {
     const INSERTED_LINK: &str = "<a target=\"_blank\" href=\"";
@@ -161,11 +161,6 @@ fn with_port_divergences(rails: &str) -> String {
             let text_end = text_start + rest[text_start..].find("</a>").unwrap();
             out.push_str(&rest[text_start..text_end]);
             rest = &rest[text_end + 4..];
-            continue;
-        }
-        if matches!(state, State::Tag) && rest.starts_with(" name=\"") {
-            let value_end = " name=\"".len() + rest[" name=\"".len()..].find('"').unwrap();
-            rest = &rest[value_end + 1..];
             continue;
         }
         match (&state, c) {
@@ -189,7 +184,7 @@ fn port_divergences_apply_to_attribute_values_only() {
         ),
         "<p title=\"a>b http://x.test/\">c > <a target=\"_blank\" href=\"http://y.test/\">y</a></p>"
     );
-    assert_eq!(with_port_divergences("<a name=\"x y\" title=\"name=\">n</a>"), "<a title=\"name=\">n</a>");
+    assert_eq!(with_port_divergences("<a name=\"x y\" title=\"name=\">n</a>"), "<a name=\"x y\" title=\"name=\">n</a>");
 }
 
 // --- Security assertions -------------------------------------------------------------------------
@@ -262,6 +257,9 @@ fn security_violations(html: &str, allow_style: bool) -> Vec<String> {
                 violations.push(format!("{attr} on <{name}> not in the allowlist"));
             }
             let lower = attr.to_lowercase();
+            if lower == "name" && name != "a" {
+                violations.push(format!("name on <{name}> can create DOM globals"));
+            }
             if lower.starts_with("on") {
                 violations.push(format!("{attr} attribute on <{name}>"));
             }
@@ -397,7 +395,7 @@ fn corpus_matches_rails() {
     }
 
     println!(
-        "Raw legacy presentation: {} cases, {} byte-identical, {} inherited hardening differences",
+        "Raw legacy presentation: {} cases, {} byte-identical, {} raw differences",
         cases.len(),
         cases.len() - raw_diffs.len(),
         raw_diffs.len()
@@ -407,6 +405,9 @@ fn corpus_matches_rails() {
     }
     if let Ok(path) = std::env::var("RICHTEXT_RAW_DIFF_OUTPUT") {
         std::fs::write(path, serde_json::to_string_pretty(&raw_diffs).unwrap()).unwrap();
+    }
+    if std::env::var("RICHTEXT_STRICT_PARITY").as_deref() == Ok("1") {
+        assert!(raw_diffs.is_empty(), "{} raw Rails differences (strict comparison)", raw_diffs.len());
     }
     let mut failed = false;
     for (kind, tally) in &tallies {
@@ -431,7 +432,7 @@ fn corpus_matches_rails() {
 }
 
 /// Historical assertion over hardened oracle outputs, not raw Rails output. Rails' autolink
-/// attribute-breakout and `name` differences are reported above and require a lead decision.
+/// attribute-breakout differences are reported above and await the approved Rails security fix.
 #[test]
 fn rails_outputs_with_inherited_hardening_pass_security_assertions() {
     let corpus = Corpus::load();

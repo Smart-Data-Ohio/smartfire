@@ -159,16 +159,48 @@ module Mutate
   end
 end
 
+# Error-message encoding is observable through the helper's logging rescue. Generate these
+# independently from JSON.parse in the pinned gem, including fixed-message and fragment errors.
+json_errors = []
+faults = ["\xff".b, "bad\xffend".b, ("x" * 31 + "\xffend").b, "bad\xff end".b, "bad\xff\x00end".b, "é\xffend".b]
+templates = [
+  ->(v) { %( {"_rails":{"data" "#{v}"}} ).b },
+  ->(v) { %( {"_rails":{"x":1,"data" "#{v}"}} ).b },
+  ->(v) { %( [1 "#{v}"] ).b },
+  ->(v) { %( {"_rails":1 "#{v}"} ).b },
+  ->(v) { v },
+  ->(v) { %( {"_rails":#{v}} ).b },
+  ->(v) { %( {"_rails":{"data":"unterminated#{v}} ).b },
+  ->(v) { %( {"_rails":1}#{v} ).b },
+  ->(v) { %( {"_rails":/*#{v} ).b },
+  ->(v) { %( {"_rails":{"data":"\\q#{v}"}} ).b },
+  ->(v) { %( {"_rails":{"data":"\\uXX#{v}"}} ).b },
+  ->(v) { %( {"_rails":{"data":"line\n#{v}"}} ).b }
+]
+templates.each_with_index do |template, t|
+  faults.each_with_index do |fault, f|
+    payload = template.call(fault).strip
+    begin
+      JSON.parse(payload)
+    rescue JSON::ParserError => e
+      json_errors << { name: "review JSON error #{t}/#{f}", payload: Base64.strict_encode64(payload), unloggable: !e.message.valid_encoding?, message: e.message.scrub }
+    end
+  end
+end
+review_cases = YAML.load_file("/tools/review-inputs.yml").fetch("cases") + json_errors.map do |probe|
+  { "name" => probe[:name], "body" => %(<action-text-attachment sgid="#{probe[:payload]}"></action-text-attachment>) }
+end
+
 random = Random.new(20240102)
 handwritten = YAML.load_file(INPUT).fetch("cases")
-fuzz_cases = Array.new(Integer(ENV.fetch("RICHTEXT_FUZZ_CASES", 400))) { |i| { "name" => "fuzz #{i}", "body" => Fuzz.body(random) } }
+fuzz_cases = Array.new(Integer(ENV.fetch("RICHTEXT_FUZZ_CASES", 5000))) { |i| { "name" => "fuzz #{i}", "body" => Fuzz.body(random) } }
 mutation_random = Random.new(20240103)
-mutation_cases = Array.new(Integer(ENV.fetch("RICHTEXT_MUTATION_CASES", 400))) do |i|
+mutation_cases = Array.new(Integer(ENV.fetch("RICHTEXT_MUTATION_CASES", 2000))) do |i|
   source = handwritten.sample(random: mutation_random)
   { "name" => "mutation #{i} of #{source["name"]}", "body" => source["body"], "host" => source["host"], "mutate" => true }
 end
 
-cases = (handwritten + fuzz_cases + mutation_cases).each_with_index.map do |c, index|
+cases = (handwritten + fuzz_cases + mutation_cases + review_cases).each_with_index.map do |c, index|
   body = expand(c.fetch("body"), users:, room:, deleted_sgid:)
   body = Mutate.apply(body, mutation_random) if c["mutate"]
   host = c["host"] || DEFAULT_HOST
@@ -240,4 +272,5 @@ expected = {
 }
 
 File.write(OUTPUT, JSON.pretty_generate(expected) + "\n")
+File.write("/corpus/json-errors.json", JSON.pretty_generate(json_errors) + "\n")
 puts "Wrote #{cases.size} cases to #{OUTPUT}"

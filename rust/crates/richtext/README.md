@@ -56,18 +56,26 @@ mise exec rust@1.98.1 -- cargo test -j 6 -p campfire_richtext -- --nocapture
 mise exec rust@1.98.1 -- cargo clippy -j 6 -p campfire_richtext --all-targets -- -D warnings
 ```
 
-The new corpus compares 4,184 cases byte-for-byte without normalization: the complete 652
+The new corpus compares 4,200 cases byte-for-byte without normalization: the complete 652
 CommonMark and 671 GFM examples, all gemoji aliases, brand aliases, normal/bot and preloaded mention contexts, source-length
 boundaries, attack inputs, presentation image/link rules, fixtures, and legacy editing. Four
 additional source-limit vectors come from Rails model validation, and the parser regression comes
-from Nokogiri. The independent XSS suite checks 768 outputs and detects planted defects.
+from Nokogiri. The independent XSS suite checks 768 outputs and detects planted defects. The legacy generator
+defaults to 5,000 fuzz and 2,000 mutation cases; 72 additional probes compare JSON parser-error
+encoding directly with json 2.21.2, including fixed messages and bounded raw-byte fragments.
 
-The inherited legacy corpus now comes from our fork (1,047 cases). Its historical test still
+The inherited legacy corpus now comes from our fork (7,322 cases). Its historical test still
 accounts for **pre-existing security differences**: the port never inserts auto-links into
-attributes and strips `name` attributes. It prints the raw byte-difference count and every affected
-case, before that historical comparison. Set `RICHTEXT_RAW_DIFF_OUTPUT=/tmp/ws5-diffs.json` to export
-the raw audit. Exact legacy parity for these cases requires a lead decision or a Rails fix; these
-exceptions are not part of the new Markdown corpus's zero-difference result.
+attributes. Named anchors retain Rails' escaped `name` attributes; image names remain blocked.
+The test prints the raw byte-difference count and every affected case before its historical
+comparison. Set `RICHTEXT_RAW_DIFF_OUTPUT=/tmp/ws5-diffs.json` to export
+the raw audit. Set `RICHTEXT_STRICT_PARITY=1` to assert that the raw audit is empty as well.
+At the original `11d8ad7c` pin, 324 cases await the approved Rails autolink security fix.
+One also has a trailing `>` serialized as `&gt;` by unsafe Rails autolinking; the historical
+comparison reports that byte difference, rather than adding another normalization.
+Against the actual fixed app at `82fbf994`, all 7,322 cases are byte-identical. That preview
+is not an accepted reference-pin advance: regenerate the default goldens after the lead bumps
+its pin. These pending cases are separate from the new Markdown corpus's zero-difference result.
 
 ## Source attribution
 

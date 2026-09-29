@@ -14,8 +14,8 @@ docker run --rm --name ws5-richtext-goldens --entrypoint "" \
   --env-file "$root/parity/.env.reference" \
   -e RAILS_LOG_LEVEL=error \
   -e DATABASE_URL=sqlite3:/tmp/richtext.sqlite3 \
-  -e RICHTEXT_FUZZ_CASES="${RICHTEXT_FUZZ_CASES:-400}" \
-  -e RICHTEXT_MUTATION_CASES="${RICHTEXT_MUTATION_CASES:-400}" \
+  -e RICHTEXT_FUZZ_CASES="${RICHTEXT_FUZZ_CASES:-5000}" \
+  -e RICHTEXT_MUTATION_CASES="${RICHTEXT_MUTATION_CASES:-2000}" \
   -e RICHTEXT_OUTPUT="/corpus/${RICHTEXT_OUTPUT:-expected.json}" \
   -v "$root/reference-tools/richtext:/tools:ro" \
   -v "$root/crates/richtext/tests/corpus:/corpus" \
