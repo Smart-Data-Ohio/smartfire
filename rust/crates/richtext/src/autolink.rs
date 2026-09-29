@@ -2,19 +2,17 @@
 //! `MessagesHelper#message_presentation` calls it. It works on the serialized HTML with regular
 //! expressions, so the exact serialization from the earlier steps matters.
 //!
-//! One deliberate difference closes a stored XSS in rails_autolink: the sanitized HTML is
-//! serialized with `<` and `>` escaped in attribute values. Nokogiri leaves them raw, so a URL after
-//! a `>` in a `title` looked like text to `auto_linked?`, and the `<a href="...">` inserted there
-//! closed the attribute and turned the rest of its value into markup. With them escaped, every `<`
-//! and `>` in the text is a tag's, so auto_link only ever inserts links between tags.
-
+//! Attribute ranges close a stored XSS in rails_autolink: Nokogiri leaves brackets raw inside
+//! attribute values, so a URL after a `>` looks like text to the gem's `auto_linked?` regexes.
+//! Replacements inside attributes are skipped explicitly, preserving benign serialization.
+//! The legacy corpus retains and reports this inherited security divergence from Rails.
 
 use regex::Regex;
 use std::sync::LazyLock;
 
 use crate::dom::ParseError;
 use crate::ruby::{html_escape, is_blank, url_encode};
-use crate::sanitizer::{SafeList, sanitize, sanitize_with_escaped_attribute_brackets};
+use crate::sanitizer::{SafeList, sanitize};
 
 /// `AUTO_LINK_RE`. Ruby's `\s` and `\w` are ASCII-only.
 static AUTO_LINK_RE: LazyLock<Regex> = LazyLock::new(|| {
@@ -25,9 +23,8 @@ static AUTO_LINK_RE: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 /// `AUTO_EMAIL_RE` without its lookbehind, which is checked separately.
-static AUTO_EMAIL_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\A[a-zA-Z0-9_.!#$%+-]\.?[a-zA-Z0-9_.!#$%&'*/=?^`{|}~+-]*@[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]+)+").unwrap()
-});
+static AUTO_EMAIL_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\A[a-zA-Z0-9_.!#$%+-]\.?[a-zA-Z0-9_.!#$%&'*/=?^`{|}~+-]*@[a-zA-Z0-9_-]+(?:\.[a-zA-Z0-9_-]+)+").unwrap());
 
 fn is_email_local_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || "_.!#$%&'*/=?^`{|}~+-".contains(c)
@@ -52,13 +49,20 @@ struct TagIndex {
     open_anchors: Vec<(usize, usize)>,
     /// Positions of `</a>` (`AUTO_LINK_CRE[3]`, in any case), ascending.
     close_anchors: Vec<usize>,
+    attribute_values: Vec<(usize, usize)>,
 }
 
 impl TagIndex {
     fn new(text: &str) -> Self {
         let bytes = text.as_bytes();
-        let mut index =
-            TagIndex { lts: Vec::new(), gts: Vec::new(), first_dangling_newline: None, open_anchors: Vec::new(), close_anchors: Vec::new() };
+        let mut index = TagIndex {
+            lts: Vec::new(),
+            gts: Vec::new(),
+            first_dangling_newline: None,
+            open_anchors: Vec::new(),
+            close_anchors: Vec::new(),
+            attribute_values: attribute_values(text),
+        };
         // The first `<` since the last `>`
         let mut unclosed_lt: Option<usize> = None;
         for (i, &b) in bytes.iter().enumerate() {
@@ -89,7 +93,9 @@ impl TagIndex {
 
     /// `auto_linked?(text[..start], text[end..])`: inside a tag, or inside an unclosed `<a>`.
     fn auto_linked(&self, start: usize, end: usize) -> bool {
-        (self.open_tag_at_line_end(start) && self.closes_tag(end)) || self.inside_anchor(start)
+        let before = self.attribute_values.partition_point(|&(s, _)| s <= start);
+        let in_attribute = before.checked_sub(1).is_some_and(|i| start < self.attribute_values[i].1);
+        in_attribute || (self.open_tag_at_line_end(start) && self.closes_tag(end)) || self.inside_anchor(start)
     }
 
     /// `left =~ /<[^>]+$/`
@@ -112,7 +118,9 @@ impl TagIndex {
     /// `left` isn't closed before `left` ends.
     fn inside_anchor(&self, start: usize) -> bool {
         let before = self.open_anchors.partition_point(|&(_, end)| end <= start);
-        let Some(&(_, anchor_end)) = before.checked_sub(1).map(|i| &self.open_anchors[i]) else { return false };
+        let Some(&(_, anchor_end)) = before.checked_sub(1).map(|i| &self.open_anchors[i]) else {
+            return false;
+        };
         let close = self.close_anchors.get(self.close_anchors.partition_point(|&p| p < anchor_end));
         !close.is_some_and(|&p| p + 4 <= start)
     }
@@ -163,9 +171,29 @@ pub fn auto_link(text: &str, sanitize_options: &SafeList) -> Result<String, Pars
     if is_blank(text) {
         return Ok(String::new());
     }
-    let text = sanitize_with_escaped_attribute_brackets(text, sanitize_options)?;
+    let text = sanitize(text, sanitize_options)?;
     let text = auto_link_urls(&text)?;
     auto_link_email_addresses(&text)
+}
+
+// Nokogiri serializes raw brackets inside quoted attributes. Track those ranges explicitly
+// so neither URL nor email replacement can turn an attribute value into live markup.
+fn attribute_values(html: &str) -> Vec<(usize, usize)> {
+    let mut values = Vec::new();
+    let mut in_tag = false;
+    let mut value_start = None;
+    for (i, c) in html.char_indices() {
+        match c {
+            '<' if value_start.is_none() => in_tag = true,
+            '>' if value_start.is_none() => in_tag = false,
+            '"' if in_tag => match value_start.take() {
+                Some(start) => values.push((start, i)),
+                None => value_start = Some(i + 1),
+            },
+            _ => {}
+        }
+    }
+    values
 }
 
 /// Ruby's `\p{Word}`, which is Unicode's word class (as the regex crate's `\w` is).
@@ -195,10 +223,11 @@ fn auto_link_urls(text: &str) -> Result<String, ParseError> {
             punctuation.push(c);
             brackets.remove(c);
             if let Some(opening) = opening_bracket(c)
-                && brackets.count(opening) > brackets.count(c) {
-                    href.push(punctuation.pop().unwrap());
-                    break;
-                }
+                && brackets.count(opening) > brackets.count(c)
+            {
+                href.push(punctuation.pop().unwrap());
+                break;
+            }
         }
         let mut trailing_gt = "";
         if let Some(stripped) = href.strip_suffix("&gt;") {
@@ -286,6 +315,10 @@ mod tests {
             let index = TagIndex::new(text);
             for start in (0..=text.len()).filter(|&i| text.is_char_boundary(i)) {
                 for end in (start..=text.len()).filter(|&i| text.is_char_boundary(i)) {
+                    if index.attribute_values.iter().any(|&(s, e)| s <= start && start < e) {
+                        assert!(index.auto_linked(start, end));
+                        continue;
+                    }
                     assert_eq!(
                         index.auto_linked(start, end),
                         auto_linked_by_regex(&text[..start], &text[end..]),

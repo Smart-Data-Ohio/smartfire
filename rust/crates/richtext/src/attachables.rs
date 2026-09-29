@@ -1,14 +1,14 @@
 //! Resolving `<action-text-attachment>` nodes to what they attach, and rendering each attachable's
-//! partial, as Action Text, Lexxy and Campfire's extensions do.
+//! partial, as Action Text and the Smartfire fork do.
 
 use base64::Engine;
 use regex::Regex;
 use std::sync::LazyLock;
 
-use crate::dom::{Dom, NodeId};
-use crate::ruby::{html_escape, is_blank, presence, strip, truncate};
-use crate::uri::{self, UriError};
 use crate::Error;
+use crate::dom::{Dom, NodeId};
+use crate::ruby::{html_escape, is_blank, presence, truncate};
+use crate::uri::{self, UriError};
 
 pub const MENTION_CONTENT_TYPE: &str = "application/vnd.campfire.mention";
 pub const OPENGRAPH_EMBED_CONTENT_TYPE: &str = "application/vnd.actiontext.opengraph-embed";
@@ -53,8 +53,8 @@ pub enum SignedLookup {
     Invalid,
 }
 
-/// The app's access to its records. rails_compat verifies signatures; this crate only needs the
-/// two lookups Action Text performs.
+/// Application inputs for record resolution and server-rendered paths/avatars. Signature
+/// verification and request-scoped preloading belong to the app; this crate stays DB-free.
 pub trait AttachableResolver {
     /// `GlobalID::Locator.locate_signed(sgid, for: "attachable")` (and, when that finds nothing,
     /// whether `SignedGlobalID.parse(sgid, for: "attachable")` still verifies). Campfire's only
@@ -63,6 +63,30 @@ pub trait AttachableResolver {
 
     /// `GlobalID.find(gid)` for a `gid://` URI string, with no signature involved.
     fn find_gid(&self, gid: &str) -> GidLookup;
+
+    /// `Message::MentionPreloader.preloaded_user_for`: request-scoped, server-loaded User
+    /// lookup by the SGID's unverified GID. This precedes both normal Action Text lookups.
+    /// Return None when no matching User is cached, including malformed payloads.
+    fn preloaded_user_for_sgid(&self, _sgid: &str) -> Option<MentionUser> {
+        None
+    }
+
+    /// `Embeds::ImageProxy.signed_path`: signing belongs to the application's verifier.
+    /// Fail closed until wired; never send a viewer directly to the remote embed image.
+    fn embed_image_path(&self, _url: &str) -> Result<String, Error> {
+        Err(Error::Raised("embed_image signer unavailable"))
+    }
+
+    /// The fork hides legacy OpenGraph cards once a first-class Twitter post row exists.
+    fn twitter_post_exists_for_url(&self, _url: &str) -> bool {
+        false
+    }
+
+    /// `avatar_image_tag(user, size: 48, aria: { hidden: true })`. Callers with bot icons
+    /// supply their server-rendered icon/emoji markup; normal users use the signed avatar URL.
+    fn mention_avatar_html(&self, user: &MentionUser) -> String {
+        default_mention_avatar(user)
+    }
 }
 
 /// Everything rendering needs from the request and the app.
@@ -86,13 +110,27 @@ pub enum Attachable {
     User(MentionUser),
     OpengraphEmbed(OpengraphEmbed),
     /// `ActionText::Attachables::ContentAttachment`
-    Content { content: String },
+    Content {
+        content: String,
+    },
     /// `ActionText::Attachables::RemoteImage`
-    RemoteImage { url: String, width: Option<String>, height: Option<String> },
+    RemoteImage {
+        url: String,
+        width: Option<String>,
+        height: Option<String>,
+    },
     /// Lexxy's `ActionText::Attachables::RemoteVideo`
-    RemoteVideo { url: String, content_type: String, width: Option<String>, height: Option<String>, filename: Option<String> },
+    RemoteVideo {
+        url: String,
+        content_type: String,
+        width: Option<String>,
+        height: Option<String>,
+        filename: Option<String>,
+    },
     /// `ActionText::Attachables::MissingAttachable`, remembering the model a still-valid SGID named
-    Missing { signed_model: Option<String> },
+    Missing {
+        signed_model: Option<String>,
+    },
 }
 
 impl Attachable {
@@ -114,16 +152,14 @@ pub struct Attachment {
 
 // --- Resolution --------------------------------------------------------------------------------
 
-static OPENGRAPH_CONTENT_TYPE_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"application/vnd.actiontext.opengraph-embed").unwrap());
+static OPENGRAPH_CONTENT_TYPE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"application/vnd.actiontext.opengraph-embed").unwrap());
 static IMAGE_CONTENT_TYPE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?m)^image(/.+|$)").unwrap());
-static VIDEO_CONTENT_TYPE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?m)^video(/.+|$)").unwrap());
 static MARSHALED_GID_RE: LazyLock<regex::bytes::Regex> =
     LazyLock::new(|| regex::bytes::Regex::new(r"(?-u)(gid://campfire/[^/]+/[0-9]+)").unwrap());
 
 /// Campfire's `ActionText::Attachment.from_node` (reference/lib/rails_ext/action_text_attachables.rb):
-/// an opengraph embed, else a User found through a possibly invalid SGID, else Action Text's own
-/// lookup (as extended by Lexxy).
+/// an opengraph embed, else a preloaded User, else a User found through a possibly invalid SGID,
+/// else Action Text's own lookup.
 pub fn attachment_from_node(dom: &Dom, node: NodeId, ctx: &RenderContext) -> Result<Attachment, Error> {
     let attachable = attachable_from_node(dom, node, ctx)?;
     Ok(Attachment { attachable, caption: presence(dom.attr(node, "caption")).map(str::to_string) })
@@ -133,42 +169,41 @@ fn attachable_from_node(dom: &Dom, node: NodeId, ctx: &RenderContext) -> Result<
     if let Some(embed) = opengraph_embed_from_node(dom, node, ctx)? {
         return Ok(Attachable::OpengraphEmbed(embed));
     }
+    if let Some(user) = dom.attr(node, "sgid").and_then(|sgid| ctx.resolver.preloaded_user_for_sgid(sgid)) {
+        return Ok(Attachable::User(user));
+    }
     if let Some(user) = attachable_from_possibly_expired_sgid(dom.attr(node, "sgid"), ctx)? {
         return Ok(Attachable::User(user));
     }
     Ok(action_text_attachable_from_node(dom, node, ctx))
 }
 
-/// `ActionText::Attachable.from_node`, with Lexxy's RemoteVideo fallback for missing attachables.
-/// `Content#attachables` (and so `Message#mentionees`) uses this directly, without Campfire's
-/// invalid-signature fallback.
+/// `ActionText::Attachable.from_node` from the fork (no Lexxy remote-video fallback).
+/// `Content#attachables` (and so `Message#mentionees`) uses this directly, with the request-scoped
+/// preload hook but without the uncached invalid-signature fallback.
 pub fn action_text_attachable_from_node(dom: &Dom, node: NodeId, ctx: &RenderContext) -> Attachable {
+    if let Some(user) = dom.attr(node, "sgid").and_then(|sgid| ctx.resolver.preloaded_user_for_sgid(sgid)) {
+        return Attachable::User(user);
+    }
     let signed = dom.attr(node, "sgid").map(|sgid| ctx.resolver.locate_signed(sgid)).unwrap_or(SignedLookup::Invalid);
     if let SignedLookup::User(user) = signed {
         return Attachable::User(user);
     }
     let content_type = dom.attr(node, "content-type");
     if let Some(content) = dom.attr(node, "content")
-        && content_type.is_some_and(|t| t.contains("html")) && !is_blank(content) {
-            return Attachable::Content { content: content.to_string() };
-        }
-    if let Some(url) = dom.attr(node, "url") {
-        if IMAGE_CONTENT_TYPE_RE.is_match(content_type.unwrap_or("")) {
-            return Attachable::RemoteImage {
-                url: url.to_string(),
-                width: dom.attr(node, "width").map(str::to_string),
-                height: dom.attr(node, "height").map(str::to_string),
-            };
-        }
-        if VIDEO_CONTENT_TYPE_RE.is_match(content_type.unwrap_or("")) {
-            return Attachable::RemoteVideo {
-                url: url.to_string(),
-                content_type: content_type.unwrap_or("").to_string(),
-                width: dom.attr(node, "width").map(str::to_string),
-                height: dom.attr(node, "height").map(str::to_string),
-                filename: dom.attr(node, "filename").map(str::to_string),
-            };
-        }
+        && content_type.is_some_and(|t| t.contains("html"))
+        && !is_blank(content)
+    {
+        return Attachable::Content { content: content.to_string() };
+    }
+    if let Some(url) = dom.attr(node, "url")
+        && IMAGE_CONTENT_TYPE_RE.is_match(content_type.unwrap_or(""))
+    {
+        return Attachable::RemoteImage {
+            url: url.to_string(),
+            width: dom.attr(node, "width").map(str::to_string),
+            height: dom.attr(node, "height").map(str::to_string),
+        };
     }
     Attachable::Missing {
         signed_model: match signed {
@@ -186,6 +221,9 @@ fn attachable_from_possibly_expired_sgid(sgid: Option<&str>, ctx: &RenderContext
     let Some(message) = sgid.split("--").collect::<Vec<_>>().into_iter().rev().skip_while(|f| f.is_empty()).last() else {
         return Ok(None);
     };
+    if is_blank(message) {
+        return Ok(None);
+    }
     let decoded = decode_base64(message)?;
     // Ruby's JSON parser takes the bytes as UTF-8 without validating what's inside strings
     let valid_utf8 = std::str::from_utf8(&decoded).is_ok();
@@ -204,14 +242,17 @@ fn attachable_from_possibly_expired_sgid(sgid: Option<&str>, ctx: &RenderContext
         Some(serde_json::Value::Object(map)) => Some(map),
         Some(_) => return Err(Error::Raised("TypeError: dig")),
     };
-    let truthy = |v: Option<&serde_json::Value>| v.filter(|v| !matches!(v, serde_json::Value::Null | serde_json::Value::Bool(false))).cloned();
+    let truthy =
+        |v: Option<&serde_json::Value>| v.filter(|v| !matches!(v, serde_json::Value::Null | serde_json::Value::Bool(false))).cloned();
     let gid: Option<String> = if let Some(data) = truthy(rails.and_then(|r| r.get("data"))) {
         // GlobalID.find of anything but a string finds nothing
         data.as_str().map(str::to_string)
     } else if let Some(message) = truthy(rails.and_then(|r| r.get("message"))) {
         // Rails 7 Marshal-dumped the GID. The signature isn't verified, so the dump can't be
         // safely loaded; the GID is matched out of its bytes instead.
-        let serde_json::Value::String(message) = message else { return Err(Error::Raised("NoMethodError: unpack1")) };
+        let serde_json::Value::String(message) = message else {
+            return Err(Error::Raised("NoMethodError: unpack1"));
+        };
         let bytes = decode_base64(&message)?;
         MARSHALED_GID_RE.find(&bytes).map(|m| String::from_utf8_lossy(m.as_bytes()).into_owned())
     } else {
@@ -243,54 +284,26 @@ fn decode_base64(message: &str) -> Result<Vec<u8>, Error> {
 
 /// `ActionText::Attachment::OpengraphEmbed.from_node`
 pub fn opengraph_embed_from_node(dom: &Dom, node: NodeId, ctx: &RenderContext) -> Result<Option<OpengraphEmbed>, Error> {
-    let Some(content_type) = dom.attr(node, "content-type") else { return Ok(None) };
+    let Some(content_type) = dom.attr(node, "content-type") else {
+        return Ok(None);
+    };
     if !OPENGRAPH_CONTENT_TYPE_RE.is_match(content_type) {
         return Ok(None);
     }
     let host = ctx.request_host.as_deref().unwrap_or("");
-    let embed = if presence(dom.attr(node, "filename")).is_some() {
-        OpengraphEmbed {
-            href: web_url(dom.attr(node, "href"), host)?,
-            url: web_url(dom.attr(node, "url"), host)?,
-            filename: dom.attr(node, "filename").map(str::to_string),
-            description: dom.attr(node, "caption").map(str::to_string),
-        }
-    } else {
-        embed_from_content(dom.attr(node, "content").unwrap_or(""), host)?
-    };
-    Ok(Some(embed))
-}
-
-/// `attributes_from_content`: the details Lexxy serializes as the embed's content markup.
-fn embed_from_content(content: &str, host: &str) -> Result<OpengraphEmbed, Error> {
-    // Rails parses this with Nokogiri::HTML (libxml2's HTML4 parser); html5ever agrees with it
-    // on the markup the embed partial and Lexxy produce.
-    let mut dom = Dom::new();
-    let fragment = dom.parse_fragment(content).map_err(Error::Parse)?;
-    let all = dom.descendants(fragment);
-    let with_class = |class: &str| all.iter().copied().find(|&n| has_class(&dom, n, class));
-    let title = with_class("og-embed__title");
-    let link = title.and_then(|t| dom.descendants(t).into_iter().find(|&n| dom.local_name(n) == Some("a")));
-    let image = all
-        .iter()
-        .copied()
-        .find(|&n| dom.local_name(n) == Some("img") && dom.ancestors(n).iter().any(|&a| has_class(&dom, a, "og-embed__image")));
-    let description = with_class("og-embed__description");
-    Ok(OpengraphEmbed {
-        href: web_url(link.and_then(|l| dom.attr(l, "href")), host)?,
-        url: web_url(image.and_then(|i| dom.attr(i, "src")), host)?,
-        filename: link.or(title).map(|n| strip(&dom.text_content(n)).to_string()),
-        description: description.map(|n| strip(&dom.text_content(n)).to_string()),
-    })
-}
-
-fn has_class(dom: &Dom, node: NodeId, class: &str) -> bool {
-    dom.attr(node, "class").is_some_and(|c| c.split([' ', '\t', '\n', '\r']).any(|token| token == class))
+    Ok(Some(OpengraphEmbed {
+        href: web_url(dom.attr(node, "href"), host)?,
+        url: web_url(dom.attr(node, "url"), host)?,
+        filename: dom.attr(node, "filename").map(str::to_string),
+        description: dom.attr(node, "caption").map(str::to_string),
+    }))
 }
 
 /// `web_url`: an absolute http(s) URL on a named host other than this Campfire's.
 pub fn web_url(value: Option<&str>, request_host: &str) -> Result<Option<String>, Error> {
-    let Some(value) = value.filter(|v| !is_blank(v)) else { return Ok(None) };
+    let Some(value) = value.filter(|v| !is_blank(v)) else {
+        return Ok(None);
+    };
     match uri::parse(value) {
         Err(UriError::InvalidUri) => Ok(None),
         Err(UriError::InvalidComponent) => Err(Error::Raised("URI::InvalidComponentError")),
@@ -342,14 +355,16 @@ impl OpengraphEmbed {
 /// renders a nested content attachment's own content (`ContentAttachment#to_html`).
 pub fn render_attachment(
     attachment: &Attachment,
+    ctx: &RenderContext,
     render_content: &dyn Fn(&str) -> Result<String, Error>,
 ) -> Result<String, Error> {
     let html = match &attachment.attachable {
-        Attachable::User(user) => render_mention(user),
-        Attachable::OpengraphEmbed(embed) => render_opengraph_embed(embed),
-        // Rails asks the SGID's model for its missing partial, which only models that include
-        // ActionText::Attachable as a concern have. User doesn't, so a mention of a deleted user
-        // raised and blanked the whole message; every missing attachable is Action Text's ☒ here.
+        Attachable::User(user) => render_mention_in_context(user, ctx),
+        Attachable::OpengraphEmbed(embed) => render_opengraph_embed(embed, ctx)?,
+        // A still-valid User SGID whose row is gone raises in the fork's missing-partial lookup.
+        Attachable::Missing { signed_model: Some(model) } if model == "User" => {
+            return Err(Error::Raised("NoMethodError: to_missing_attachable_partial_path"));
+        }
         Attachable::Missing { .. } => "☒".to_string(),
         Attachable::Content { content } => {
             format!("<figure class=\"attachment attachment--content\">\n  {}\n</figure>\n", render_content(content)?)
@@ -359,25 +374,28 @@ pub fn render_attachment(
             html.push_str(&image_tag(url, width.as_deref(), height.as_deref())?);
             html.push('\n');
             if let Some(caption) = &attachment.caption {
-                html.push_str(&format!("    <figcaption class=\"attachment__caption\">\n      {}\n    </figcaption>\n", html_escape(caption)));
+                html.push_str(&format!(
+                    "    <figcaption class=\"attachment__caption\">\n      {}\n    </figcaption>\n",
+                    html_escape(caption)
+                ));
             }
             html.push_str("</figure>\n");
             html
         }
         Attachable::RemoteVideo { url, content_type, width, height, .. } => {
-            let mut html = String::from("<figure class=\"attachment attachment--preview attachment--video\">\n  <video controls=\"controls\"");
+            let mut html =
+                String::from("<figure class=\"attachment attachment--preview attachment--video\">\n  <video controls=\"controls\"");
             for (name, value) in [("width", width), ("height", height)] {
                 if let Some(v) = value {
                     html.push_str(&format!(" {name}=\"{}\"", html_escape(v)));
                 }
             }
-            html.push_str(&format!(
-                ">\n    <source src=\"{}\" type=\"{}\">\n</video>",
-                html_escape(url),
-                html_escape(content_type)
-            ));
+            html.push_str(&format!(">\n    <source src=\"{}\" type=\"{}\">\n</video>", html_escape(url), html_escape(content_type)));
             if let Some(caption) = &attachment.caption {
-                html.push_str(&format!("    <figcaption class=\"attachment__caption\">\n      {}\n    </figcaption>\n", html_escape(caption)));
+                html.push_str(&format!(
+                    "    <figcaption class=\"attachment__caption\">\n      {}\n    </figcaption>\n",
+                    html_escape(caption)
+                ));
             }
             html.push_str("</figure>\n");
             html
@@ -387,19 +405,38 @@ pub fn render_attachment(
 }
 
 /// reference/app/views/users/_mention.html.erb, with `avatar_tag` (users/avatars_helper.rb).
+fn default_mention_avatar(user: &MentionUser) -> String {
+    format!("<img aria-hidden=\"true\" src=\"{}\" width=\"48\" height=\"48\" />", html_escape(&user.avatar_path))
+}
+
 pub fn render_mention(user: &MentionUser) -> String {
+    render_mention_with_avatar(user, &default_mention_avatar(user))
+}
+
+pub fn render_mention_in_context(user: &MentionUser, ctx: &RenderContext) -> String {
+    render_mention_with_avatar(user, &ctx.resolver.mention_avatar_html(user))
+}
+
+fn render_mention_with_avatar(user: &MentionUser, avatar: &str) -> String {
     format!(
-        "<span class=\"mention\" sgid=\"{}\"><a title=\"{}\" class=\"btn avatar\" data-turbo-frame=\"_top\" href=\"{}\"><img aria-hidden=\"true\" src=\"{}\" width=\"48\" height=\"48\" /></a> {}</span>\n",
+        "<div class=\"mention mention--user-{}\" sgid=\"{}\" data-user-id=\"{}\">\n  <a title=\"{}\" class=\"btn avatar\" data-turbo-frame=\"_top\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"{}/card\" href=\"{}\">{}</a>\n  <button name=\"button\" type=\"button\" class=\"profile-card-name\" data-action=\"click-&gt;profile-card#open\" data-profile-card-url=\"{}/card\">{}</button>\n</div>\n",
+        user.id,
         html_escape(&user.attachable_sgid),
+        user.id,
         html_escape(&user.title),
         html_escape(&user.user_path),
-        html_escape(&user.avatar_path),
+        html_escape(&user.user_path),
+        avatar,
+        html_escape(&user.user_path),
         html_escape(&user.name),
     )
 }
 
 /// reference/app/views/action_text/attachables/_opengraph_embed.html.erb
-pub fn render_opengraph_embed(embed: &OpengraphEmbed) -> String {
+pub fn render_opengraph_embed(embed: &OpengraphEmbed, ctx: &RenderContext) -> Result<String, Error> {
+    if embed.href.as_deref().is_some_and(|url| ctx.resolver.twitter_post_exists_for_url(url)) {
+        return Ok(String::new());
+    }
     let title = match (&embed.href, &embed.filename) {
         (Some(href), filename) => {
             let text = match filename {
@@ -412,19 +449,18 @@ pub fn render_opengraph_embed(embed: &OpengraphEmbed) -> String {
         (None, None) => String::new(),
     };
     let mut html = format!(
-        "<figure class=\"attachment attachment--content attachment--og\">\n  <actiontext-opengraph-embed>\n    <div class=\"og-embed gap {}\">\n      <div class=\"og-embed__content\">\n        <div class=\"og-embed__title\">\n          {}\n        </div>\n        <div class=\"og-embed__description\">{}</div>\n      </div>\n",
-        if embed.twitter_avatar() { "og-embed--twitter-avatar" } else { "" },
+        "<figure class=\"attachment attachment--content attachment--og\">\n  <actiontext-opengraph-embed>\n    <div class=\"og-embed gap\">\n      <div class=\"og-embed__content\">\n        <div class=\"og-embed__title\">\n          {}\n        </div>\n        <div class=\"og-embed__description\">{}</div>\n      </div>\n",
         title,
         html_escape(&truncate(embed.description.as_deref().unwrap_or(""), 560, "…")),
     );
     if let Some(url) = &embed.url {
         html.push_str(&format!(
             "        <div class=\"og-embed__image\">\n          <img src=\"{}\" class=\"image center\" alt=\"\">\n        </div>\n",
-            html_escape(url)
+            html_escape(&ctx.resolver.embed_image_path(url)?)
         ));
     }
     html.push_str("    </div>\n  </actiontext-opengraph-embed>\n</figure>\n");
-    html
+    Ok(html)
 }
 
 static ASSET_URI_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?mi)^[-a-z]+://|^(?:cid|data):|^//").unwrap());
@@ -457,10 +493,9 @@ pub fn attachment_plain_text(attachment: &Attachment) -> PlainTextRepresentation
         Attachable::OpengraphEmbed(_) => PlainTextRepresentation::Html(String::new()),
         Attachable::Content { content } => PlainTextRepresentation::Content(content.clone()),
         Attachable::RemoteImage { .. } => PlainTextRepresentation::Html(format!("[{}]", caption.unwrap_or_else(|| "Image".into()))),
-        Attachable::RemoteVideo { filename, .. } => PlainTextRepresentation::Html(format!(
-            "[{}]",
-            caption.or_else(|| filename.clone()).unwrap_or_else(|| "Video".into())
-        )),
+        Attachable::RemoteVideo { filename, .. } => {
+            PlainTextRepresentation::Html(format!("[{}]", caption.or_else(|| filename.clone()).unwrap_or_else(|| "Video".into())))
+        }
         Attachable::Missing { .. } => PlainTextRepresentation::Html(caption.unwrap_or_default()),
     }
 }

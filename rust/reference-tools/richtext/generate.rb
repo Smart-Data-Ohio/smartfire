@@ -4,7 +4,7 @@
 # For every stored body in inputs.yml it records what Rails produces for:
 #   presentation  MessagesHelper#message_presentation (rescued) and whether it raised
 #   plain_text    message.body.to_plain_text
-#   editable      the <lexxy-editor> value: editable_body + Lexxy's render_custom_attachments_in
+#   editable      Message::LegacyMarkdown.render of the canonical stored body
 #   mentioned     Message::Mentionee#mentioned_users (ids)
 #   filtered      TextMessagePresentationFilters.apply(...).to_html, for debugging
 
@@ -15,6 +15,8 @@ INPUT = ENV.fetch("RICHTEXT_INPUT", "/corpus/inputs.yml")
 OUTPUT = ENV.fetch("RICHTEXT_OUTPUT", "/corpus/expected.json")
 DEFAULT_HOST = "once.campfire.test"
 
+# Error logging is observable: invalid-encoding exception messages can make the helper
+# rescue raise. Preserve the production logger behavior rather than suppressing it.
 Rails.logger.level = :error
 ActiveRecord::Base.logger = nil
 
@@ -175,7 +177,7 @@ cases = (handwritten + fuzz_cases + mutation_cases).each_with_index.map do |c, i
   with_request(host) do |v|
     raw = outcome do
       v.auto_link ERB::Util.html_escape(ContentFilters::TextMessagePresentationFilters.apply(message.body.body)),
-        html: { target: "_blank" }, sanitize_options: { tags: MessagesHelper::AUTO_LINK_ALLOWED_TAGS, attributes: MessagesHelper::AUTO_LINK_ALLOWED_ATTRIBUTES }
+        html: { target: "_blank" }
     end
     {
       "name" => c.fetch("name"),
@@ -187,9 +189,11 @@ cases = (handwritten + fuzz_cases + mutation_cases).each_with_index.map do |c, i
       "presentation_raised" => raw["error"],
       "presentation_raised_message" => raw["message"],
       "plain_text" => outcome { message.body.to_plain_text },
-      "editable" => outcome { value = v.send(:render_custom_attachments_in, v.editable_body(message)); value&.to_s },
+      "editable" => outcome { Message::LegacyMarkdown.render(message.body.body.to_html) },
+      "canonical" => outcome { message.body.body.to_html },
       "mentioned" => outcome { message.send(:mentioned_users).map(&:id) },
-      "filtered" => outcome { ContentFilters::TextMessagePresentationFilters.apply(message.body.body).to_html }
+      "filtered" => outcome { ContentFilters::TextMessagePresentationFilters.apply(message.body.body).to_html },
+      "rendered" => outcome { ContentFilters::TextMessagePresentationFilters.apply(message.body.body).to_s }
     }
   end
 end
@@ -227,6 +231,10 @@ expected = {
   # SGIDs whose signature verifies for the attachable purpose (and haven't expired)
   "signed" => users.values.map { |u| { "sgid" => u.attachable_sgid, "model" => "User", "id" => u.id, "exists" => true } } +
     [ { "sgid" => deleted_sgid, "model" => "User", "id" => deleted.id, "exists" => false } ],
+  "embed_images" => cases.flat_map do |c|
+    html = c.dig("canonical", "ok").to_s
+    Nokogiri::HTML5.fragment(html).css("action-text-attachment").filter_map { |n| outcome { ActionText::Attachment::OpengraphEmbed.from_node(n)&.url }["ok"] }
+  end.uniq.to_h { |url| [url, Embeds::ImageProxy.signed_path(url)] },
   "cases" => cases,
   "web_urls" => web_url_results
 }
