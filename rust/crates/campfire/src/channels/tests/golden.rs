@@ -30,7 +30,7 @@ use serde_json::{Value, json};
 use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 
-use crate::channels::{self, Broadcasts, Cable, Deps, revocation};
+use crate::channels::{self, Broadcasts, Cable, Deps, sink};
 
 const GOLDEN: &str = "crates/campfire/src/channels/tests/golden/reference.json";
 /// How long a replay waits for a frame the recording says is coming.
@@ -279,7 +279,7 @@ struct CableSink {
 impl EventSink for CableSink {
     fn emit(&self, event: Event) {
         if let Some(server) = self.server.get() {
-            revocation::handle_event(server, &event);
+            sink::deliver(server, None, &event);
         }
     }
 }

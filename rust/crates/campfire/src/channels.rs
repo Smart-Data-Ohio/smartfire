@@ -14,6 +14,7 @@ mod read_rooms;
 pub mod revocation;
 mod room;
 mod room_messages;
+pub mod sink;
 mod typing_notifications;
 mod unread_rooms;
 

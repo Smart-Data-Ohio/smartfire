@@ -173,16 +173,37 @@ pub fn html_escape(value: &str) -> String {
     escaped
 }
 
+/// Markup that belongs to one browser session and must never be broadcast: a broadcast is
+/// rendered once and delivered to everyone on the stream. Rails renders broadcasts outside any
+/// request (`ApplicationController.render`), so its broadcasts carry no CSRF token (`form_with`
+/// and `button_to` omit the hidden field), no csrf meta tags and no CSP nonce. Returns what was
+/// found. A value typed by a user is HTML-escaped (`&quot;`), so it can't match.
+pub fn session_bound(html: &str) -> Option<&'static str> {
+    const MARKERS: [(&str, &str); 3] =
+        [(r#"name="authenticity_token""#, "a CSRF token"), (r#"name="csrf-token""#, "a CSRF meta tag"), (r#"name="csrf-param""#, "a CSRF meta tag")];
+    if let Some((_, what)) = MARKERS.iter().find(|(marker, _)| html.contains(marker)) {
+        return Some(what);
+    }
+    // `nonce=""` (no nonce, as Rails renders outside a request) is harmless; any value isn't.
+    html.match_indices(r#"nonce=""#).any(|(at, marker)| !html[at + marker.len()..].starts_with('"')).then_some("a CSP nonce")
+}
+
 /// `Turbo::StreamsChannel.broadcast_*_to`. Streamables are the stream name parts (GID params
 /// and symbols); blank ones are dropped and nothing is sent if none remain, as in
 /// `broadcast_stream_to`.
 impl<U: Send + Sync + 'static> Server<U> {
+    /// Refuses (logs an error and sends nothing) content that carries [`session_bound`] markup.
     pub fn broadcast_stream_to(&self, streamables: &[&str], content: &str) -> usize {
         let streamables: Vec<&str> = streamables.iter().copied().filter(|s| !s.trim().is_empty()).collect();
         if streamables.is_empty() {
             return 0;
         }
-        self.broadcast(&naming::stream_name_from(&streamables), content)
+        let stream = naming::stream_name_from(&streamables);
+        if let Some(what) = session_bound(content) {
+            tracing::error!(stream, "refusing to broadcast {what}: broadcasts go to every subscriber");
+            return 0;
+        }
+        self.broadcast(&stream, content)
     }
 
     pub fn broadcast_action_to(
@@ -255,6 +276,20 @@ mod tests {
             action_tag(Action::Update, Target::Targets("#a > b[data-x='1']"), None, &[]),
             r##"<turbo-stream action="update" targets="#a &gt; b[data-x=&#39;1&#39;]"><template></template></turbo-stream>"##
         );
+    }
+
+    #[test]
+    fn session_bound_markup() {
+        let form = r#"<form action="/x" method="post"><input type="hidden" name="authenticity_token" value="abc" autocomplete="off"></form>"#;
+        assert_eq!(session_bound(form), Some("a CSRF token"));
+        assert_eq!(session_bound(r#"<meta name="csrf-token" content="abc">"#), Some("a CSRF meta tag"));
+        assert_eq!(session_bound(r#"<meta name="csrf-param" content="authenticity_token">"#), Some("a CSRF meta tag"));
+        assert_eq!(session_bound(r#"<script nonce="r4nd0m">x()</script>"#), Some("a CSP nonce"));
+        // What `ApplicationController.render` gives in our Rails app: no token, no nonce.
+        assert_eq!(session_bound(r#"<form class="button_to" method="post" action="/y"><button type="submit">b</button></form>"#), None);
+        assert_eq!(session_bound(r#"<script nonce="">x()</script>"#), None);
+        // Typed by a user, and so escaped.
+        assert_eq!(session_bound("<p>name=&quot;authenticity_token&quot; nonce=&quot;x&quot;</p>"), None);
     }
 
     #[test]

@@ -17,11 +17,12 @@ use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
-use crate::channels::{self, Broadcasts, Cable, Deps, Partials, revocation};
+use crate::channels::{self, Broadcasts, Cable, Deps, Partials, sink};
 
 pub const SECRET_KEY_BASE: &str = "channels-test-secret-key-base";
 
-/// Routes `Event::DisconnectUser` to the cable server, as app core's sink does.
+/// Delivers the cable's events (`DisconnectUser`, `Broadcast`) with `channels::sink`, as the app's
+/// `Jobs` sink does.
 #[derive(Default)]
 struct CableSink {
     server: OnceLock<Cable>,
@@ -30,7 +31,7 @@ struct CableSink {
 impl EventSink for CableSink {
     fn emit(&self, event: Event) {
         if let Some(server) = self.server.get() {
-            revocation::handle_event(server, &event);
+            sink::deliver(server, None, &event);
         }
     }
 }

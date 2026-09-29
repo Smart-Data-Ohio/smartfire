@@ -326,6 +326,25 @@ async fn turbo_streams_channel_verifies_and_guards_stream_names() {
     client.assert_silent().await;
 }
 
+#[tokio::test]
+async fn broadcasts_carrying_session_bound_markup_are_refused() {
+    let app = start(test_config()).await;
+    let mut client = app.connect(1).await;
+    client.next_text().await;
+    let rooms = identifier(json!({ "channel": "Turbo::StreamsChannel", "signed_stream_name": "signed(rooms)" }));
+    client.subscribe(&rooms).await;
+    assert_eq!(client.next_text().await, confirm(&rooms));
+
+    let token = r#"<form><input type="hidden" name="authenticity_token" value="abc"></form>"#;
+    assert_eq!(app.server.broadcast_replace_to(&["rooms"], "room_1", token), 0);
+    assert_eq!(app.server.broadcast_append_to(&["rooms"], "rooms", r#"<script nonce="abc"></script>"#), 0);
+    client.assert_silent().await;
+
+    assert_eq!(app.server.broadcast_replace_to(&["rooms"], "room_1", "<form></form>"), 1);
+    let frame: Value = serde_json::from_str(&client.next_text().await).unwrap();
+    assert_eq!(frame["message"], r#"<turbo-stream action="replace" target="room_1"><template><form></form></template></turbo-stream>"#);
+}
+
 async fn http_get(url: &str, headers: &[(&str, &str)]) -> (u16, Option<String>, String) {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     let url = url.strip_prefix("http://").unwrap();

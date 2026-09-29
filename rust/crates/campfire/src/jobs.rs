@@ -10,13 +10,14 @@
 //!
 //! Handlers are looked up in a [`Registry`]. Core registers `RemoveBannedContent` and
 //! `PurgeBlob`; integrations register `PushMessage` and `DeliverWebhook` through
-//! `crate::integrations::register_jobs`. `DisconnectUser` is not a job in Rails (it's a
-//! synchronous Action Cable broadcast), so it goes straight to the cable server.
+//! `crate::integrations::register_jobs`. `DisconnectUser` and `Broadcast` are not jobs in Rails
+//! (they're synchronous Action Cable broadcasts), so they go straight to the cable server
+//! (`crate::channels::sink`).
 
 use std::collections::HashMap;
 use std::future::Future;
 use std::panic::AssertUnwindSafe;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, OnceLock, Weak};
 use std::time::Duration;
 
 use anyhow::anyhow;
@@ -26,7 +27,7 @@ use futures_util::future::BoxFuture;
 use tokio::sync::{Mutex, mpsc, watch};
 use tokio::task::JoinHandle;
 
-use crate::app::{App, Cable};
+use crate::app::{App, AppState, Cable};
 
 /// How many jobs of each kind may wait before new ones of that kind are dropped (and logged).
 pub const QUEUE_CAPACITY: usize = 1024;
@@ -52,7 +53,7 @@ impl JobKind {
             Event::DeliverWebhook { .. } => Some(JobKind::DeliverWebhook),
             Event::RemoveBannedContent { .. } => Some(JobKind::RemoveBannedContent),
             Event::PurgeBlob { .. } => Some(JobKind::PurgeBlob),
-            Event::DisconnectUser { .. } => None,
+            Event::DisconnectUser { .. } | Event::Broadcast(_) => None,
             // Domain jobs (`campfire_db::Job`) aren't dispatched yet: nothing emits them so far.
             Event::Job(_) => None,
         }
@@ -138,6 +139,8 @@ impl Work {
 pub struct Jobs {
     queues: Arc<HashMap<JobKind, mpsc::Sender<Work>>>,
     cable: Arc<OnceLock<Cable>>,
+    /// For the model broadcasts that render. Weak: the app holds the database, which holds this.
+    app: Arc<OnceLock<Weak<AppState>>>,
 }
 
 impl Jobs {
@@ -151,7 +154,7 @@ impl Jobs {
                 ((kind, sender), (kind, receiver))
             })
             .unzip();
-        (Self { queues: Arc::new(queues), cable: Arc::new(OnceLock::new()) }, Queue { receivers })
+        (Self { queues: Arc::new(queues), cable: Arc::new(OnceLock::new()), app: Arc::new(OnceLock::new()) }, Queue { receivers })
     }
 
     /// Enqueues best-effort work (`SomeJob.perform_later`). Dropped with an error log when its
@@ -172,18 +175,23 @@ impl Jobs {
     fn set_cable(&self, cable: Cable) {
         let _ = self.cable.set(cable);
     }
+
+    fn set_app(&self, app: &App) {
+        let _ = self.app.set(Arc::downgrade(app));
+    }
 }
 
 impl EventSink for Jobs {
     fn emit(&self, event: Event) {
         match (JobKind::of(&event), event) {
             (Some(kind), event) => self.enqueue(Work::Event(kind, event)),
-            // `ActionCable.server.remote_connections.where(current_user: user).disconnect`: a
-            // pub/sub broadcast in Rails, done right away. Before boot finishes there are no
-            // connections to disconnect.
-            (None, Event::DisconnectUser { user_id, reconnect }) => {
+            // `remote_connections.where(current_user:).disconnect` and the models' broadcasts:
+            // pub/sub broadcasts in Rails, done right away. Before boot finishes there are no
+            // connections to reach.
+            (None, event @ (Event::DisconnectUser { .. } | Event::Broadcast(_))) => {
                 if let Some(cable) = self.cable.get() {
-                    crate::channels::revocation::disconnect_user(cable, user_id, reconnect);
+                    let app = self.app.get().and_then(Weak::upgrade);
+                    crate::channels::sink::deliver(cable, app.as_ref(), &event);
                 }
             }
             (None, event) => tracing::warn!(?event, "not a job, dropping event"),
@@ -216,6 +224,7 @@ impl Runner {
 /// Starts performing queued jobs: `concurrency` workers for each kind of job.
 pub fn start(queue: Queue, app: App, registry: Registry, concurrency: usize) -> Runner {
     app.jobs.set_cable(app.cable.clone());
+    app.jobs.set_app(&app);
     let (stopping, _) = watch::channel(false);
     let registry = Arc::new(registry);
     let mut workers = Vec::new();
