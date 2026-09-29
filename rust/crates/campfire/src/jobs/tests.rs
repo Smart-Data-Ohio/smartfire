@@ -318,9 +318,9 @@ async fn the_periodic_loops_run_with_the_jobs() {
     let stale = insert_user(&app, "Stale", Some("BenderToken1"), None).await;
 
     let (ticked, mut ticks) = mpsc::unbounded_channel();
-    let mut loops = periodic::Loops::new(periodic::Intervals::from_lookup(|_| None).unwrap());
-    loops.periodic.task(periodic::clear_plaintext_bot_tokens_task());
-    loops.huddle.task(campfire_jobs::periodic::Task::new("reconcile", Duration::from_millis(20), move |_: App| {
+    let mut loops = periodic::Loops::new(periodic::Intervals::from_lookup(|_| None));
+    loops.periodic.as_mut().unwrap().task(periodic::clear_plaintext_bot_tokens_task());
+    loops.huddle.as_mut().unwrap().task(campfire_jobs::periodic::Task::new("reconcile", Duration::from_millis(20), move |_: App| {
         let ticked = ticked.clone();
         async move {
             let _ = ticked.send(());
@@ -346,13 +346,66 @@ async fn the_periodic_loops_run_with_the_jobs() {
 
 #[test]
 fn periodic_intervals_come_from_the_environment() {
-    let intervals = periodic::Intervals::from_lookup(|name| (name == "EVENT_REMINDERS_INTERVAL").then(|| "10".into())).unwrap();
+    let intervals = periodic::Intervals::from_lookup(|name| (name == "EVENT_REMINDERS_INTERVAL").then(|| "10".into()));
     assert_eq!(
         intervals,
-        periodic::Intervals { reminders: Duration::from_secs(10), retention: Duration::from_secs(86_400), huddle: Duration::from_secs(5) }
+        periodic::Intervals {
+            periodic: Some(periodic::PeriodicIntervals { reminders: Duration::from_secs(10), retention: Duration::from_secs(86_400) }),
+            huddle: Some(Duration::from_secs(5)),
+        }
     );
-    let error = periodic::Intervals::from_lookup(|name| (name == "HUDDLE_RECONCILE_INTERVAL").then(|| "0".into())).unwrap_err();
-    assert_eq!(error.to_string(), "HUDDLE_RECONCILE_INTERVAL must be a positive finite number");
+    let intervals = periodic::Intervals::from_lookup(|name| (name == "HUDDLE_RECONCILE_INTERVAL").then(|| "0.5".into()));
+    assert_eq!(intervals.huddle, Some(Duration::from_millis(500)));
+}
+
+/// An invalid interval disables the loop that reads it, as it aborts the Rails script that
+/// reads it: the error is logged, and jobs and the other loop keep running.
+#[tokio::test]
+async fn an_invalid_interval_disables_only_its_loop() {
+    let (booted, _dir) = app().await;
+    let app = booted.app.clone();
+    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    let (logs, _guard) = Logs::capture();
+
+    for (name, value) in [("EVENT_REMINDERS_INTERVAL", "0"), ("RETENTION_PRUNE_INTERVAL", "daily"), ("RETENTION_PRUNE_INTERVAL", "inf")] {
+        let intervals = periodic::Intervals::from_lookup(|wanted| (wanted == name).then(|| value.into()));
+        assert_eq!(intervals.periodic, None, "{name}={value}");
+        assert_eq!(intervals.huddle, Some(Duration::from_secs(5)), "{name}={value}");
+        let text = logs.text();
+        assert!(text.contains(&format!("ERROR campfire::jobs::periodic: Periodic disabled error={name} must be a positive finite number")), "{text}");
+    }
+    let intervals = periodic::Intervals::from_lookup(|name| (name == "HUDDLE_RECONCILE_INTERVAL").then(|| "-5".into()));
+    assert_eq!(intervals.huddle, None);
+    assert!(intervals.periodic.is_some());
+    let text = logs.text();
+    assert!(text.contains("Huddle reconciliation disabled error=HUDDLE_RECONCILE_INTERVAL must be a positive finite number"), "{text}");
+
+    // The huddle loop and the jobs run beside the disabled periodic loop.
+    let mut loops = periodic::Loops::new(periodic::Intervals::from_lookup(|name| (name == "RETENTION_PRUNE_INTERVAL").then(|| "0".into())));
+    assert!(loops.periodic.is_none());
+    let (ticked, mut ticks) = mpsc::unbounded_channel();
+    loops.huddle.as_mut().expect("the huddle loop runs").task(campfire_jobs::periodic::Task::new("reconcile", Duration::from_millis(20), move |_: App| {
+        let ticked = ticked.clone();
+        async move {
+            let _ = ticked.send(());
+            Ok(())
+        }
+    }));
+    let config = runner_config(&app.config);
+    let (_, ad_hoc) = Jobs::new(&registry(), &config).unwrap();
+    let runner = start(app.clone(), registry(), ad_hoc, config, loops);
+    tokio::time::timeout(Duration::from_secs(5), ticks.recv()).await.expect("the huddle loop ticks").unwrap();
+    app.db
+        .write(|tx| {
+            tx.emit_after_commit(Event::RemoveBannedContent { user_id: 404 });
+            Ok(())
+        })
+        .await
+        .unwrap();
+    wait_for(&app, "the job to run", |jobs| jobs.is_empty()).await;
+    runner.shutdown(Duration::from_secs(5)).await;
+    let logs = logs.text();
+    assert!(logs.contains(r#"discarded job="RemoveBannedContentJob""#), "{logs}");
 }
 
 // --- Latency ------------------------------------------------------------------------------------------

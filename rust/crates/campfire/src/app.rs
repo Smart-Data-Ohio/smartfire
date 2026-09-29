@@ -84,7 +84,7 @@ pub async fn boot(config: Config) -> anyhow::Result<Booted> {
     let registry = jobs::registry();
     let runner_config = jobs::runner_config(&config);
     let (jobs, ad_hoc) = jobs::Jobs::new(&registry, &runner_config)?;
-    let loops = jobs::periodic::Loops::new(jobs::periodic::Intervals::from_env()?);
+    let loops = jobs::periodic::Loops::new(jobs::periodic::Intervals::from_env());
     let rich_text = Arc::new(AppRichText::new(secrets.clone(), clock.clone()));
     let db = open_database(&config, clock.clone(), jobs.clone(), rich_text.clone()).await?;
 

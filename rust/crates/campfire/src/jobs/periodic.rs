@@ -17,7 +17,7 @@
 //! | stuck GitHub claims | 30 s | WS15 |
 //! | stuck Fizzy claims | 30 s | WS15 |
 //! | calendar push channels | 1 h (`Calendar::PushChannel::RENEW_INTERVAL`) | WS14 |
-//! | clear plaintext bot tokens | 24 h, its work once per process | ported ([`clear_plaintext_bot_tokens_task`]), not registered: see below |
+//! | clear plaintext bot tokens | 24 h, its work once per process | WS11 registers it; ported here ([`clear_plaintext_bot_tokens_task`]), see below |
 //! | retention prune | `RETENTION_PRUNE_INTERVAL` (24 h) | WS8 |
 //! | presence leases | 1 min | WS17 |
 //! | meeting status | 1 min | WS14 |
@@ -30,13 +30,18 @@
 //! The huddle reconciler's steps (overdue invitations, stale streams) belong to WS13, and are
 //! registered in [`huddle_reconciler`].
 //!
-//! Clearing plaintext bot tokens is ported but not registered yet. Production's rows were healed
-//! long ago by Rails' own `bin/periodic`, but the parity seed (`parity/seeds/default.rb`) still
-//! writes plaintext tokens that disagree with the digests, and the parity reference doesn't run
-//! `bin/periodic`: registered, it would re-key the seed's bots at boot, and the bot API's parity
-//! screens and seeded tests would fail on the port alone. It's registered once the seed (and the
-//! cable golden vectors that record its tokens) stop doing that, or the reference runs
-//! `bin/periodic` too.
+//! Clearing plaintext bot tokens is ported but not registered: WS11 owns the task and registers
+//! it. Production's rows were healed long ago by Rails' own `bin/periodic`, but the parity seed
+//! (`parity/seeds/default.rb`) still writes plaintext tokens that disagree with the digests, and
+//! the parity reference doesn't run `bin/periodic`: registered now, it would re-key the seed's
+//! bots at boot, and the bot API's parity screens and seeded tests would fail on the port alone.
+//! WS11 fixes the seed (no stale plaintext tokens), regenerates the cable golden vectors that
+//! record them, and then registers [`clear_plaintext_bot_tokens_task`] in [`periodic`].
+//!
+//! An invalid interval disables only the loop that reads it, as it aborts only the Rails process
+//! that reads it (`bin/periodic` for `EVENT_REMINDERS_INTERVAL` and `RETENTION_PRUNE_INTERVAL`,
+//! `bin/huddle-reconcile` for `HUDDLE_RECONCILE_INTERVAL`): the error is logged at boot, and the
+//! web server, cable, jobs and the other loop keep running.
 
 use std::time::Duration;
 
@@ -54,47 +59,60 @@ pub const BOT_TOKEN_CLEAR_INTERVAL: Duration = Duration::from_secs(24 * HOUR);
 /// `Huddle::Reconciler::DEFAULT_INTERVAL`
 pub const HUDDLE_RECONCILE_INTERVAL: Duration = Duration::from_secs(5);
 
-/// `bin/periodic`'s and `bin/huddle-reconcile`'s intervals, read at boot. An invalid one fails
-/// the boot, as it aborts those scripts.
+/// `bin/periodic`'s and `bin/huddle-reconcile`'s intervals, read at boot. A loop whose
+/// interval is invalid is `None`: disabled, as the script that reads it aborts.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Intervals {
+    pub periodic: Option<PeriodicIntervals>,
+    /// `HUDDLE_RECONCILE_INTERVAL`
+    pub huddle: Option<Duration>,
+}
+
+/// `bin/periodic`'s intervals.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PeriodicIntervals {
     /// `EVENT_REMINDERS_INTERVAL`: reminders, scheduled messages and poll closing.
     pub reminders: Duration,
     /// `RETENTION_PRUNE_INTERVAL`
     pub retention: Duration,
-    /// `HUDDLE_RECONCILE_INTERVAL`
-    pub huddle: Duration,
 }
 
 impl Intervals {
-    pub fn from_lookup(lookup: impl Fn(&str) -> Option<String>) -> anyhow::Result<Self> {
-        Ok(Self {
-            reminders: interval_from_env(&lookup, "EVENT_REMINDERS_INTERVAL", Duration::from_secs(30))?,
-            retention: interval_from_env(&lookup, "RETENTION_PRUNE_INTERVAL", Duration::from_secs(24 * HOUR))?,
-            huddle: interval_from_env(&lookup, "HUDDLE_RECONCILE_INTERVAL", HUDDLE_RECONCILE_INTERVAL)?,
-        })
+    /// Logs an error for each loop an invalid interval disables.
+    pub fn from_lookup(lookup: impl Fn(&str) -> Option<String>) -> Self {
+        let periodic = interval_from_env(&lookup, "EVENT_REMINDERS_INTERVAL", Duration::from_secs(30)).and_then(|reminders| {
+            let retention = interval_from_env(&lookup, "RETENTION_PRUNE_INTERVAL", Duration::from_secs(24 * HOUR))?;
+            Ok(PeriodicIntervals { reminders, retention })
+        });
+        let huddle = interval_from_env(&lookup, "HUDDLE_RECONCILE_INTERVAL", HUDDLE_RECONCILE_INTERVAL);
+        Self { periodic: enabled("Periodic", periodic), huddle: enabled("Huddle reconciliation", huddle) }
     }
 
-    pub fn from_env() -> anyhow::Result<Self> {
+    pub fn from_env() -> Self {
         Self::from_lookup(|name| std::env::var(name).ok())
     }
 }
 
-/// The loops [`super::start`] runs.
+fn enabled<T>(label: &str, interval: anyhow::Result<T>) -> Option<T> {
+    interval.inspect_err(|error| tracing::error!(%error, "{label} disabled")).ok()
+}
+
+/// The loops [`super::start`] runs; `None` when disabled.
 pub struct Loops {
-    pub periodic: Periodic<App>,
-    pub huddle: Periodic<App>,
+    pub periodic: Option<Periodic<App>>,
+    pub huddle: Option<Periodic<App>>,
 }
 
 impl Loops {
     pub fn new(intervals: Intervals) -> Self {
-        Self { periodic: periodic(intervals), huddle: huddle_reconciler(intervals) }
+        Self { periodic: intervals.periodic.map(periodic), huddle: intervals.huddle.map(huddle_reconciler) }
     }
 
     /// Runs each loop with tasks until `stopping`.
     pub(super) fn spawn(self, app: &App, stopping: &watch::Sender<bool>) -> Vec<JoinHandle<()>> {
         [self.periodic, self.huddle]
             .into_iter()
+            .flatten()
             .filter(|periodic| !periodic.is_empty())
             .map(|periodic| periodic.spawn(app.clone(), app.db.env().clock.clone(), stopping.subscribe()))
             .collect()
@@ -103,26 +121,26 @@ impl Loops {
 
 /// `Periodic::Runner`'s tasks that have been ported and registered (none yet: see the module's
 /// docs).
-pub fn periodic(_intervals: Intervals) -> Periodic<App> {
+pub fn periodic(_intervals: PeriodicIntervals) -> Periodic<App> {
     Periodic::new("Periodic")
 }
 
 /// `Task.new("clear plaintext bot tokens", BOT_TOKEN_CLEAR_INTERVAL, clear_bot_tokens_once)`.
-#[allow(dead_code, reason = "registered once the parity seed stops writing stale plaintext tokens (see the module's docs)")]
+#[allow(dead_code, reason = "WS11 registers it once the parity seed stops writing stale plaintext tokens (see the module's docs)")]
 pub fn clear_plaintext_bot_tokens_task() -> Task<App> {
     Task::once("clear plaintext bot tokens", BOT_TOKEN_CLEAR_INTERVAL, |app: App| async move { clear_plaintext_bot_tokens(&app.db).await.map(drop) })
 }
 
 /// `Huddle::Reconciler`'s steps, every `HUDDLE_RECONCILE_INTERVAL`, each isolated from the
 /// others' failures. None is ported yet.
-pub fn huddle_reconciler(_intervals: Intervals) -> Periodic<App> {
+pub fn huddle_reconciler(_interval: Duration) -> Periodic<App> {
     Periodic::new("Huddle reconciliation")
 }
 
 /// `Bots::ClearPlaintextTokens.run!`: for every user that still has a plaintext `bot_token`, the
 /// digest is recomputed from it and the plaintext nulled, one conditional update per row (a key
 /// reset between the read and the write wins). Returns how many rows it healed.
-#[allow(dead_code, reason = "registered once the parity seed stops writing stale plaintext tokens (see the module's docs)")]
+#[allow(dead_code, reason = "WS11 registers it once the parity seed stops writing stale plaintext tokens (see the module's docs)")]
 pub async fn clear_plaintext_bot_tokens(db: &Database) -> anyhow::Result<usize> {
     let tokens: Vec<(i64, String)> = db
         .read(|conn| {
