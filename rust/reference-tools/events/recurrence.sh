@@ -3,6 +3,8 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 STORE=${WS14E_STORE:-$ROOT/../.scratch/recurrence-reference}
 mkdir -p "$STORE/db" "$STORE/storage"
+# This generated oracle owns its disposable database.
+rm -f "$STORE/db/production.sqlite3" "$STORE/db/production.sqlite3-wal" "$STORE/db/production.sqlite3-shm"
 docker run --rm --name "ws14e-recurrence-$$" --cpus 2 --user "$(id -u):$(id -g)" \
   --env-file "$ROOT/parity/.env.reference" -e PARITY_REDIS=1 \
   -v "$(realpath "$STORE/db"):/rails/storage/db" \

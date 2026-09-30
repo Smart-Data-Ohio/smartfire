@@ -14,6 +14,7 @@ use crate::{
 
 pub mod attendance;
 pub mod changes;
+pub mod pusher;
 pub mod references;
 pub mod reminders;
 

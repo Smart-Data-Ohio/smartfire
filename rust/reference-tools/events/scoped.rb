@@ -43,6 +43,8 @@ add.call("cancel all",[rsvp.call(0,"jason","going"),cancel.call(0,"this_and_foll
 add.call("cancel twice",[cancel.call(1),cancel.call(1,"this_and_following")])
 add.call("cancel unknown defaults local",[cancel.call(1,"all")])
 add.call("repeat updates coalesce",[rsvp.call(0,"jason","going"),change.call(1,{starts_at:"2026-10-12 09:10:00",ends_at:"2026-10-12 10:10:00"}),change.call(0,{starts_at:"2026-10-05 09:10:00",ends_at:"2026-10-05 10:10:00"})])
+add.call("pending Meet retries once per updated occurrence",[change.call(1,{title:"Changed"})],{meet_link_requested:true})
+add.call("new Meet callbacks during extension",[rsvp.call(0,"jason","going"),change.call(0,{recurrence_until:"2026-11-09"})],{meet_link_requested:true})
 travel_to Time.utc(2026,9,22,12) do
   cases.each do |c|
     Event.destroy_all

@@ -247,3 +247,101 @@ async fn ws14e_event_jobs_commit_with_create_rsvp_and_reminder() {
         before
     );
 }
+
+/// A restarted real durable runner consumes WS17's exact ID contract. This adapter
+/// records source facts; WS17's own branch supplies Reminder policy and Web Push.
+#[tokio::test]
+async fn ws14e_reminder_survives_restart_and_rereads_recipients_at_delivery() {
+    use campfire_db::fixtures::{Options, identify, load, reference_dir};
+    use campfire_db::{CalendarEvent, NewCalendarEvent};
+    #[derive(Serialize, Deserialize)]
+    #[serde(transparent)]
+    struct Consumer(campfire_db::models::calendar_event::reminders::ReminderPushJob);
+    impl Job for Consumer {
+        const CLASS: &'static str = "Event::ReminderPushJob";
+    }
+    impl JobKind for Consumer {}
+    let (booted, _dir) = app().await;
+    let app = booted.app.clone();
+    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    let event = app
+        .db
+        .write(|tx| {
+            load(
+                tx.conn(),
+                &reference_dir(),
+                &Options {
+                    now: tx.now(),
+                    bcrypt_cost: 4,
+                },
+            )?;
+            let event = CalendarEvent::create(
+                tx,
+                NewCalendarEvent {
+                    room_id: identify("designers"),
+                    organizer_id: identify("david"),
+                    title: "Durable reminder".into(),
+                    time_zone: "UTC".into(),
+                    starts_at: Some(tx.now().since(jiff::SignedDuration::from_mins(10))),
+                    ..Default::default()
+                },
+            )?;
+            CalendarEvent::respond(tx, event.id, identify("jason"), "going", false)?;
+            Ok(event)
+        })
+        .await
+        .unwrap();
+    let event_id = event.id;
+    app.db
+        .write(move |tx| {
+            tx.conn().execute("DELETE FROM background_jobs", [])?;
+            CalendarEvent::dispatch_reminder(tx, event_id, tx.now())
+        })
+        .await
+        .unwrap();
+    let rows = jobs(&app);
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].class, "Event::ReminderPushJob");
+    assert_eq!(rows[0].queue, "default");
+    assert_eq!(rows[0].arguments, serde_json::json!({"event_id":event_id}));
+    app.db
+        .write(|tx| {
+            tx.conn().execute(
+                "DELETE FROM memberships WHERE room_id=? AND user_id=?",
+                rusqlite::params![identify("designers"), identify("jason")],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let (delivered, mut receive) = mpsc::unbounded_channel();
+    let mut registry = Registry::new();
+    registry.register(move |app: App, job: Consumer, _: Execution| {
+        let delivered = delivered.clone();
+        async move {
+            let now = app.db.env().now();
+            let source = app
+                .db
+                .read(move |conn| CalendarEvent::reminder_push_source(conn, job.0.event_id, now))
+                .await
+                .map_err(discard_missing)?;
+            let _ = delivered.send(source);
+            Ok(Outcome::Done)
+        }
+    });
+    let config = runner_config(&app.config);
+    let queue = JobQueue::new(&registry, &config).unwrap();
+    let runner = campfire_jobs::start(app.db.clone(), queue, registry, app.clone(), config);
+    let source = tokio::time::timeout(Duration::from_secs(10), receive.recv())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    assert_eq!(source.recipient_ids, vec![identify("david")]);
+    assert_eq!(
+        source.payload.body,
+        "Starts in 10 minutes: Durable reminder"
+    );
+    wait_for(&app, "completed reminder", |rows| rows.is_empty()).await;
+    runner.shutdown(Duration::from_secs(5)).await;
+}

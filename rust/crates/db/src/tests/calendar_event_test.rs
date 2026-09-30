@@ -657,6 +657,7 @@ fn event_scoped_operations_match_rails_vectors() {
             .as_str()
             .map(|s| Timestamp::parse_db(s).unwrap());
         a.recurrence_rule = input["recurrence_rule"].as_str().map(str::to_string);
+        a.meet_link_requested = input["meet_link_requested"].as_bool().unwrap_or(false);
         a.recurrence_until = Some(input["recurrence_until"].as_str().unwrap().parse().unwrap());
         let head = t.write(move |tx| CalendarEvent::create(tx, a));
         let mut ids = t
@@ -730,15 +731,16 @@ fn event_scoped_operations_match_rails_vectors() {
             .iter()
             .filter_map(|event| match event {
                 Event::Job(job) if job.class.starts_with("Calendar::") => {
-                    let value: SyncEntryJob =
-                        serde_json::from_value(job.arguments.clone()).unwrap();
-                    Some(json!([
-                        job.class,
-                        [
-                            ids.iter().position(|id| *id == value.event_id),
-                            value.user_id
-                        ]
-                    ]))
+                    let event = job.arguments["event_id"].as_i64().unwrap();
+                    let args = if job.class == "Calendar::MeetLinkJob" {
+                        json!([ids.iter().position(|id| *id == event)])
+                    } else {
+                        json!([
+                            ids.iter().position(|id| *id == event),
+                            job.arguments["user_id"]
+                        ])
+                    };
+                    Some(json!([job.class, args]))
                 }
                 _ => None,
             })
@@ -916,4 +918,172 @@ fn rematerialization_failure_restores_original_series_rows() {
     );
     assert_eq!(t.read(|c| head.series_events(c)), original);
     assert!(t.events().is_empty());
+}
+
+#[test]
+fn reminder_push_source_rechecks_membership_and_ignores_inbox_preferences() {
+    let t = frozen();
+    let event = create(&t);
+    respond(&t, event.id, "jason", "maybe", false);
+    let event_id = event.id;
+    t.write(move |tx| {
+        tx.conn().execute(
+            "UPDATE memberships SET involvement='nothing' WHERE room_id=? AND user_id=?",
+            params![id("designers"), id("jason")],
+        )?;
+        tx.conn().execute(
+            "UPDATE users SET inbox_preferences=? WHERE id=?",
+            params![r#"{"event_reminders":false}"#, id("jason")],
+        )?;
+        Ok(())
+    });
+    let source = t
+        .read(|c| CalendarEvent::reminder_push_source(c, event_id, t.now()))
+        .unwrap();
+    assert_eq!(source.recipient_ids, vec![id("david"), id("jason")]);
+    assert_eq!(source.payload.title, "Designers");
+    assert_eq!(
+        source.payload.body,
+        "Starts in 10 minutes: Planning session"
+    );
+    assert_eq!(
+        source.payload.path,
+        format!("/rooms/{}/events/{event_id}", id("designers"))
+    );
+    assert_eq!(source.payload.tag, format!("event-{event_id}"));
+    t.write(move |tx| {
+        tx.conn().execute(
+            "DELETE FROM memberships WHERE room_id=? AND user_id=?",
+            params![id("designers"), id("jason")],
+        )?;
+        Ok(())
+    });
+    assert_eq!(
+        t.read(|c| CalendarEvent::reminder_push_source(c, event_id, t.now()))
+            .unwrap()
+            .recipient_ids,
+        vec![id("david")]
+    );
+    assert!(
+        t.read(|c| CalendarEvent::reminder_push_source(
+            c,
+            event_id,
+            t.now().since(SignedDuration::from_mins(16))
+        ))
+        .is_none()
+    );
+}
+
+#[test]
+fn reminder_push_payload_and_staleness_match_rails_vectors() {
+    use serde_json::{Value, json};
+    let vectors: Vec<Value> =
+        serde_json::from_str(include_str!("../models/calendar_event/pusher.json")).unwrap();
+    for vector in vectors {
+        let t = frozen();
+        let mut a = attrs(&t);
+        a.room_id = id(vector["room"].as_str().unwrap());
+        a.starts_at = Some(t.now().since(SignedDuration::from_secs(
+            vector["offset"].as_i64().unwrap(),
+        )));
+        let event = t.write(move |tx| CalendarEvent::create(tx, a));
+        let source = t.read(|c| CalendarEvent::reminder_push_source(c, event.id, t.now()));
+        let actual = source
+            .map(|source| {
+                let mut payload = source.payload;
+                payload.path = format!("/rooms/{}/events/EVENT", event.room_id);
+                payload.tag = "event-EVENT".into();
+                json!(payload)
+            })
+            .unwrap_or(Value::Null);
+        assert_eq!(actual, vector["payload"], "{vector}");
+    }
+}
+
+#[test]
+fn scoped_calendar_sync_and_cancel_preserve_ws14g_argument_contracts() {
+    use crate::models::calendar_event::changes::EventChanges;
+    let t = frozen();
+    let head = series(&t);
+    respond(&t, head.id, "jason", "maybe", false);
+    let rows = t.read(|c| head.series_events(c));
+    let head_id = head.id;
+    t.write(move |tx|{
+        for user in [id("david"),id("jason")] {
+            tx.conn().execute("INSERT INTO google_accounts (user_id,email,created_at,updated_at) VALUES (?,?,?,?)",params![user,format!("{user}@example.test"),tx.now(),tx.now()])?;
+        }
+        for e in &rows {tx.conn().execute("INSERT INTO event_calendar_entries (event_id,user_id,google_event_id,created_at,updated_at) VALUES (?,?,?,?,?)",params![e.id,id("jason"),format!("remote-{}",e.id),tx.now(),tx.now()])?;}
+        Ok(())
+    });
+    t.sink.take();
+    t.write(move |tx| {
+        CalendarEvent::update_with_scope(
+            tx,
+            head_id,
+            EventChanges {
+                title: Some("Updated series".into()),
+                ..Default::default()
+            },
+            "this_and_following",
+            Some(id("david")),
+        )
+    });
+    let requests = t
+        .events()
+        .iter()
+        .filter_map(|e| match e {
+            Event::Job(j) if j.class == "Calendar::SyncEntryJob" => {
+                j.decode::<SyncEntryJob>().unwrap().ok()
+            }
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    let rows = t.read(|c| head.series_events(c));
+    assert_eq!(
+        requests
+            .iter()
+            .map(|j| (j.event_id, j.user_id))
+            .collect::<Vec<_>>(),
+        rows.iter()
+            .flat_map(|e| [(e.id, id("david")), (e.id, id("jason"))])
+            .collect::<Vec<_>>()
+    );
+    t.sink.take();
+    t.write(move |tx| {
+        CalendarEvent::cancel_with_scope(tx, head_id, "this_and_following", Some(id("david")))
+    });
+    let requests = t
+        .events()
+        .iter()
+        .filter_map(|e| match e {
+            Event::Job(j) if j.class == "Calendar::SyncEntryJob" => {
+                j.decode::<SyncEntryJob>().unwrap().ok()
+            }
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        requests
+            .iter()
+            .map(|j| (j.event_id, j.user_id))
+            .collect::<Vec<_>>(),
+        rows.iter().map(|e| (e.id, id("jason"))).collect::<Vec<_>>()
+    );
+    t.sink.take();
+    t.write(move |tx| CalendarEvent::find(tx.conn(), head_id)?.destroy(tx));
+    let remote = t
+        .events()
+        .iter()
+        .filter_map(|e| match e {
+            Event::Job(j) if j.class == "Calendar::RemoteDeleteJob" => Some(j.arguments.clone()),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        remote,
+        vec![serde_json::json!([
+            id("jason"),
+            format!("remote-{head_id}")
+        ])]
+    );
 }

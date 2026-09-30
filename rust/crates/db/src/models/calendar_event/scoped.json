@@ -4159,5 +4159,402 @@
         ]
       ]
     ]
+  },
+  {
+    "name": "pending Meet retries once per updated occurrence",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26",
+      "meet_link_requested": true
+    },
+    "steps": [
+      {
+        "kind": "update",
+        "index": 1,
+        "attrs": {
+          "title": "Changed"
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": false
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Changed",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Changed",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Changed",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": [
+      [
+        "Calendar::MeetLinkJob",
+        [
+          1
+        ]
+      ],
+      [
+        "Calendar::MeetLinkJob",
+        [
+          2
+        ]
+      ],
+      [
+        "Calendar::MeetLinkJob",
+        [
+          3
+        ]
+      ]
+    ]
+  },
+  {
+    "name": "new Meet callbacks during extension",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26",
+      "meet_link_requested": true
+    },
+    "steps": [
+      {
+        "kind": "rsvp",
+        "index": 0,
+        "user": "jason",
+        "response": "going"
+      },
+      {
+        "kind": "update",
+        "index": 0,
+        "attrs": {
+          "recurrence_until": "2026-11-09"
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": null
+      },
+      {
+        "value": false
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-11-09",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-11-09",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-11-09",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-11-09",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-11-02 09:00:00.000000",
+        "ends_at": "2026-11-02 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-11-09",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-11-09 09:00:00.000000",
+        "ends_at": "2026-11-09 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-11-09",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_update",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": [
+      [
+        "Calendar::SyncEntryJob",
+        [
+          0,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          1,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          2,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          3,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::MeetLinkJob",
+        [
+          0
+        ]
+      ],
+      [
+        "Calendar::MeetLinkJob",
+        [
+          1
+        ]
+      ],
+      [
+        "Calendar::MeetLinkJob",
+        [
+          2
+        ]
+      ],
+      [
+        "Calendar::MeetLinkJob",
+        [
+          3
+        ]
+      ],
+      [
+        "Calendar::MeetLinkJob",
+        [
+          4
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          4,
+          127326141
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          4,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::MeetLinkJob",
+        [
+          5
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          5,
+          127326141
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          5,
+          149087659
+        ]
+      ]
+    ]
   }
 ]
