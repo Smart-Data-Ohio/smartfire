@@ -98,7 +98,7 @@ mod tests {
         let html = app
             .db()
             .read(move |conn| {
-                let resolver = crate::controllers::presenters::DbResolver { conn, secrets: &secrets, now: jiff::Timestamp::now() };
+                let resolver = crate::controllers::presenters::DbResolver::new(conn, &secrets, jiff::Timestamp::now());
                 let embed = campfire_richtext::attachables::OpengraphEmbed {
                     href: Some("https://example.com/page".into()),
                     url: Some("https://example.com/image.png".into()),

@@ -1,0 +1,622 @@
+use crate::controllers::presenters::test_support::*;
+use campfire_db::{Message, NewMessage};
+use std::time::Duration;
+
+async fn app() -> TestApp {
+    let mut app = TestApp::boot().await.expect("pinned seed required");
+    app.booted.jobs.stop(Duration::from_secs(1)).await;
+    app
+}
+#[tokio::test]
+async fn ws15e_x_cards_are_visible_in_the_real_message_index() {
+    let app = app().await;
+    app.db()
+        .write(|tx| {
+            Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    markdown_source: Some("https://x.com/jack/status/131".into()),
+                    client_message_id: Some("ws15e-x-visible".into()),
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
+    let mut browser = app.david();
+    let response = browser.get(&format!("/rooms/{ALL_TALK}/messages")).await;
+    assert_eq!(response.status, axum::http::StatusCode::OK);
+    assert!(
+        response
+            .text()
+            .contains("<article class=\"x-post-card\" data-twitter-post=\"131\">")
+    );
+    assert!(response.text().contains("Loading post…"));
+}
+
+use super::*;
+use crate::integrations::twitter::{post::Post, references};
+use rusqlite::params;
+use serde_json::{Value, json};
+
+fn write_attributes(tx: &mut campfire_db::Tx<'_>, attrs: &Value) -> campfire_db::Result<Post> {
+    let post = Post::for_reference(
+        tx,
+        attrs["post_id"].as_str().unwrap(),
+        attrs["url"].as_str(),
+    )?;
+    let at = |name: &str| {
+        attrs[name]
+            .as_str()
+            .map(|s| campfire_db::Timestamp::from_jiff(s.parse().unwrap()))
+    };
+    tx.conn().execute("UPDATE twitter_posts SET author_name=?,author_handle=?,author_avatar_url=?,text=?,posted_at=?,replies=?,reposts=?,likes=?,media=?,quote=?,fetched_at=?,fetch_error=? WHERE id=?",
+        params![attrs["author_name"].as_str(),attrs["author_handle"].as_str(),attrs["author_avatar_url"].as_str(),attrs["text"].as_str(),at("posted_at"),attrs["replies"].as_i64(),attrs["reposts"].as_i64(),attrs["likes"].as_i64(),attrs["media"].to_string(),attrs["quote"].to_string(),at("fetched_at"),attrs["fetch_error"].as_str(),post.id])?;
+    Post::find(tx.conn(), post.id)
+}
+#[tokio::test]
+async fn ws15e_x_containers_match_pinned_rails_and_index_uses_card_facts() {
+    let app = app().await;
+    let vectors: Value = serde_json::from_str(include_str!(
+        "../../../../../../vectors/ws15e_twitter_cards.json"
+    ))
+    .unwrap();
+    for case in vectors["containers"].as_array().unwrap() {
+        let entries = case["cards"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|name| {
+                vectors["cards"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .find(|c| c["name"] == *name)
+                    .unwrap()
+                    .clone()
+            })
+            .collect::<Vec<_>>();
+        let key = case["client_id"].as_str().unwrap().to_owned();
+        let message = app.db().write(move |tx| {
+            let message = Message::create(tx, NewMessage {room_id: ALL_TALK,creator_id:DAVID,client_message_id:Some(key),markdown_source:Some("Body".into()),..Default::default()})?;
+            for entry in entries {
+                let post = write_attributes(tx, &entry["attributes"])?;
+                tx.conn().execute("INSERT INTO twitter_post_references (message_id,twitter_post_id,created_at,updated_at) VALUES (?,?,?3,?3)", params![message.id,post.id,tx.now()])?;
+            }
+            Ok(message)
+        }).await.unwrap();
+        let app2 = app.booted.app.clone();
+        let copy = message.clone();
+        let html = app
+            .db()
+            .read(move |c| container(&app2, c, &copy))
+            .await
+            .unwrap();
+        assert_eq!(html, case["html"].as_str().unwrap());
+        let mut browser = app.david();
+        let page = browser.get(&format!("/rooms/{ALL_TALK}/messages")).await;
+        assert_eq!(page.status, axum::http::StatusCode::OK);
+        assert!(page.text().contains(&html));
+        app.db().write(move |tx| message.destroy(tx)).await.unwrap();
+    }
+}
+fn legacy_body(id: &str) -> String {
+    format!(
+        "<div>Look at this: https://x.com/jack/status/{id}</div><action-text-attachment content-type=\"application/vnd.actiontext.opengraph-embed\" href=\"https://x.com/jack/status/{id}\" url=\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\" filename=\"jack (@jack)\" caption=\"just setting up my twttr\"></action-text-attachment>"
+    )
+}
+#[tokio::test]
+async fn ws15e_x_legacy_boxes_switch_to_cards_only_with_a_post_row_and_backfill() {
+    let app = app().await;
+    for (id, has_post) in [("20", true), ("201", false)] {
+        let message = app.db().write(move |tx| {
+            let message = Message::create(tx,NewMessage{room_id:ALL_TALK,creator_id:DAVID,client_message_id:Some(format!("ws15e-legacy-{id}")),body:Some(legacy_body(id)),..Default::default()})?;
+            if has_post {
+                let post = Post::for_message(tx.conn(),message.id)?.remove(0);
+                tx.conn().execute("UPDATE twitter_posts SET text='just setting up my twttr',fetched_at=? WHERE id=?",params![tx.now(),post.id])?;
+            } else {
+                tx.conn().execute("DELETE FROM twitter_post_references WHERE message_id=?",[message.id])?;
+                tx.conn().execute("DELETE FROM twitter_posts WHERE post_id=?",[id])?;
+            }
+            Ok(message)
+        }).await.unwrap();
+        let mut browser = app.david();
+        let page = browser.get(&format!("/rooms/{ALL_TALK}/messages")).await;
+        let html = page.text();
+        let start = html
+            .find(&format!("id=\"message_ws15e-legacy-{id}\""))
+            .unwrap();
+        let end = html[start..]
+            .find("<turbo-stream")
+            .unwrap_or(html.len() - start);
+        let html = &html[start..start + end];
+        if has_post {
+            assert!(!html.contains("og-embed"));
+            assert!(html.contains("x-post-card__text"));
+        } else {
+            assert!(html.contains("og-embed"));
+            assert!(!html.contains("x-post-card__text"));
+        }
+        app.db().write(move |tx| message.destroy(tx)).await.unwrap();
+    }
+    let message = app
+        .db()
+        .write(|tx| {
+            let message = Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    body: Some(legacy_body("202")),
+                    client_message_id: Some("ws15e-legacy-backfill".into()),
+                    ..Default::default()
+                },
+            )?;
+            tx.conn().execute(
+                "DELETE FROM twitter_post_references WHERE message_id=?",
+                [message.id],
+            )?;
+            tx.conn()
+                .execute("DELETE FROM twitter_posts WHERE post_id='202'", [])?;
+            let scanned = references::backfill(tx, false)?;
+            assert_eq!(scanned, 3, "two matching seed messages plus this legacy message");
+            assert_eq!(Post::for_message(tx.conn(), message.id)?[0].post_id, "202");
+            Ok(message)
+        })
+        .await
+        .unwrap();
+    let mut browser = app.david();
+    let page = browser.get(&format!("/rooms/{ALL_TALK}/messages")).await;
+    assert!(page.text().contains("Loading post…"));
+    let app2 = app.booted.app.clone();
+    app.db()
+        .read(move |c| {
+            let view = super::super::Presenter::new(c, &app2, None).message(&message)?;
+            if let campfire_views::messages::MessageContent::Text { html } = view.content {
+                assert!(!html.contains("og-embed"));
+            } else {
+                panic!("legacy text expected");
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+#[tokio::test]
+async fn ws15e_x_pending_render_recovers_once_and_suppression_does_not_hide_x() {
+    let app = app().await;
+    let (message, post_id) = app
+        .db()
+        .write(|tx| {
+            let message = Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    markdown_source: Some("https://x.com/jack/status/601".into()),
+                    ..Default::default()
+                },
+            )?;
+            let post = Post::for_message(tx.conn(), message.id)?.remove(0);
+            tx.conn().execute(
+                "UPDATE twitter_posts SET fetch_requested_at=NULL WHERE id=?",
+                [post.id],
+            )?;
+            tx.conn().execute(
+                "DELETE FROM background_jobs WHERE job_class='Twitter::FetchPostJob'",
+                [],
+            )?;
+            tx.conn().execute(
+                "UPDATE messages SET embeds_suppressed=1 WHERE id=?",
+                [message.id],
+            )?;
+            Ok((message, post.id))
+        })
+        .await
+        .unwrap();
+    for _ in 0..2 {
+        let mut browser = app.david();
+        let page = browser.get(&format!("/rooms/{ALL_TALK}/messages")).await;
+        assert_eq!(page.status, axum::http::StatusCode::OK);
+        assert!(page.text().contains("data-twitter-post=\"601\""));
+    }
+    app.db()
+        .read(move |c| {
+            assert_eq!(
+                c.query_row(
+                    "SELECT COUNT(*) FROM background_jobs WHERE job_class='Twitter::FetchPostJob'",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                1
+            );
+            assert!(Post::find(c, post_id)?.fetch_pending());
+            Ok(())
+        })
+        .await
+        .unwrap();
+    for failed in [false, true] {
+        app.db().write(move|tx|{
+            tx.conn().execute("UPDATE twitter_posts SET fetched_at=?,fetch_error=?,fetch_requested_at=NULL WHERE id=?",params![tx.now().ago(jiff::SignedDuration::from_hours(1)),if failed{Some("Failed")}else{None},post_id])?;
+            tx.conn().execute("DELETE FROM background_jobs WHERE job_class='Twitter::FetchPostJob'",[])?;
+            Ok(())
+        }).await.unwrap();
+        let mut browser = app.david();
+        let page = browser.get(&format!("/rooms/{ALL_TALK}/messages")).await;
+        assert_eq!(page.status, axum::http::StatusCode::OK);
+        app.db().read(|c|{assert_eq!(c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Twitter::FetchPostJob'",[],|r|r.get::<_,i64>(0))?,0);Ok(())}).await.unwrap();
+    }
+    app.db().write(move |tx| message.destroy(tx)).await.unwrap();
+}
+
+#[tokio::test]
+async fn ws15e_x_numeric_order_preloads_a_page_and_memoizes_both_existence_results() {
+    use campfire_richtext::AttachableResolver;
+    use rusqlite::hooks::{AuthAction, Authorization};
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+    let app = app().await;
+    let messages=app.db().write(|tx|{
+        (0..3).map(|_| Message::create(tx,NewMessage{room_id:ALL_TALK,creator_id:DAVID,markdown_source:Some("https://x.com/jack/status/502 https://x.com/jack/status/99 https://x.com/i/status/9999999999999999999999999 https://x.com/i/status/00001".into()),..Default::default()})).collect::<campfire_db::Result<Vec<_>>>()
+    }).await.unwrap();
+    let app2 = app.booted.app.clone();
+    app.db()
+        .read(move |c| {
+            let presenter = super::super::Presenter::new(c, &app2, None);
+            let views = presenter.messages(&messages)?;
+            let reads = Arc::new(AtomicUsize::new(0));
+            let observed = reads.clone();
+            c.authorizer(Some(move |context: rusqlite::hooks::AuthContext<'_>| {
+                if matches!(
+                    context.action,
+                    AuthAction::Read {
+                        table_name: "twitter_posts",
+                        ..
+                    }
+                ) {
+                    observed.fetch_add(1, Ordering::SeqCst);
+                }
+                Authorization::Allow
+            }));
+            for message in &messages {
+                assert_eq!(
+                    presenter
+                        .twitter_posts(message)?
+                        .iter()
+                        .map(|p| p.post_id.as_str())
+                        .collect::<Vec<_>>(),
+                    ["00001", "99", "502", "9999999999999999999999999"]
+                );
+            }
+            assert_eq!(
+                reads.load(Ordering::SeqCst),
+                0,
+                "preloaded page performs no per-message X SELECT"
+            );
+            let resolver = presenter.resolver();
+            assert!(resolver.twitter_post_exists_for_url("https://x.com/a/status/99"));
+            assert!(!resolver.twitter_post_exists_for_url("https://x.com/a/status/123456788876"));
+            assert!(reads.load(Ordering::SeqCst) > 0);
+            reads.store(0, Ordering::SeqCst);
+            for _ in 0..2 {
+                let resolver = presenter.resolver();
+                assert!(resolver.twitter_post_exists_for_url("https://x.com/b/status/99"));
+                assert!(
+                    !resolver.twitter_post_exists_for_url("https://x.com/c/status/123456788876")
+                );
+            }
+            assert_eq!(
+                reads.load(Ordering::SeqCst),
+                0,
+                "new resolvers reuse positive and negative request memo"
+            );
+            c.authorizer(None::<fn(rusqlite::hooks::AuthContext<'_>) -> Authorization>);
+            assert_eq!(views.len(), 3);
+            assert_eq!(presenter.pending_twitter_fetches().len(), 4);
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+async fn subscribe(
+    app: &TestApp,
+    message: &Message,
+) -> (
+    crate::channels::tests::support::Client,
+    tokio::task::JoinHandle<()>,
+) {
+    use crate::channels::tests::support::Client;
+    use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+    let listener = crate::integrations::test_support::ws15e_listener().await;
+    let addr = listener.local_addr().unwrap();
+    let router = app.booted.app.cable.router::<()>("/cable");
+    let serving = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let mut request = format!("ws://{addr}/cable").into_client_request().unwrap();
+    request
+        .headers_mut()
+        .insert("origin", format!("http://{addr}").parse().unwrap());
+    request.headers_mut().insert(
+        "sec-websocket-protocol",
+        "actioncable-v1-json".parse().unwrap(),
+    );
+    request
+        .headers_mut()
+        .insert("cookie", david_cookie().parse().unwrap());
+    let mut client = Client {
+        socket: tokio_tungstenite::connect_async(request).await.unwrap().0,
+    };
+    assert_eq!(client.next_text().await, r#"{"type":"welcome"}"#);
+    let room_id = message.room_id;
+    let room = app
+        .db()
+        .read(move |c| Room::find(c, room_id))
+        .await
+        .unwrap();
+    let stream = Stream::conversation(&room, message);
+    let signed =
+        rails_compat::turbo::signed_stream_name(&app.booted.app.secrets, &stream.streamables());
+    client
+        .confirm(&json!({"channel":"RoomMessagesChannel","signed_stream_name":signed}).to_string())
+        .await;
+    (client, serving)
+}
+#[tokio::test]
+async fn ws15e_x_broadcasts_commit_to_each_room_thread_target_and_leave_other_rooms_silent() {
+    use campfire_db::{ChannelThread, NewChannelThread};
+    let app = app().await;
+    let (root, thread, other, post) = app
+        .db()
+        .write(|tx| {
+            let root = Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    client_message_id: Some("ws15e-x-room".into()),
+                    markdown_source: Some("https://x.com/jack/status/107".into()),
+                    ..Default::default()
+                },
+            )?;
+            let thread = ChannelThread::create(
+                tx,
+                NewChannelThread {
+                    room_id: ALL_TALK,
+                    creator_id: DAVID,
+                    name: Some("X thread".into()),
+                    ..Default::default()
+                },
+            )?;
+            let thread = Message::create(
+                tx,
+                NewMessage {
+                    room_id: ALL_TALK,
+                    thread_id: Some(thread.id),
+                    creator_id: DAVID,
+                    client_message_id: Some("ws15e-x-thread".into()),
+                    markdown_source: Some("https://x.com/jack/status/107".into()),
+                    ..Default::default()
+                },
+            )?;
+            let other = Message::create(
+                tx,
+                NewMessage {
+                    room_id: QUIET_CORNER,
+                    creator_id: DAVID,
+                    markdown_source: Some("No references".into()),
+                    ..Default::default()
+                },
+            )?;
+            let post = Post::for_message(tx.conn(), root.id)?.remove(0);
+            Ok((root, thread, other, post))
+        })
+        .await
+        .unwrap();
+    let (mut root_client, root_server) = subscribe(&app, &root).await;
+    let (mut thread_client, thread_server) = subscribe(&app, &thread).await;
+    let (mut other_client, other_server) = subscribe(&app, &other).await;
+    let id = post.id;
+    app.db()
+        .write(move |tx| {
+            tx.conn().execute(
+                "UPDATE twitter_posts SET fetch_requested_at=NULL WHERE id=?",
+                [id],
+            )?;
+            assert!(Post::find(tx.conn(), id)?.claim_fetch(tx)?);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    root_client.assert_silent().await;
+    thread_client.assert_silent().await;
+    other_client.assert_silent().await;
+    let rollback = post.clone();
+    let result: campfire_db::Result<()> = app
+        .db()
+        .write(move |tx| {
+            rollback.save_error(tx, "rolled back")?;
+            Err(campfire_db::Error::Other("rollback".into()))
+        })
+        .await;
+    assert!(result.is_err());
+    root_client.assert_silent().await;
+    thread_client.assert_silent().await;
+    app.db()
+        .write(move |tx| {
+            post.save_card(
+                tx,
+                &crate::integrations::twitter::fetcher::Card {
+                    url: "https://x.com/jack/status/107".into(),
+                    author_name: Some("<script> & safe".into()),
+                    author_handle: Some("jack".into()),
+                    author_avatar_url: None,
+                    text: Some("Committed & safe @nasa".into()),
+                    posted_at: Some(tx.now()),
+                    replies: Some(18041),
+                    reposts: None,
+                    likes: None,
+                    media: json!([]),
+                    quote: None,
+                },
+            )
+        })
+        .await
+        .unwrap();
+    for (client, key) in [
+        (&mut root_client, "ws15e-x-room"),
+        (&mut thread_client, "ws15e-x-thread"),
+    ] {
+        let frame: Value = serde_json::from_str(&client.next_text().await).unwrap();
+        let html = frame["message"].as_str().unwrap();
+        assert!(html.contains("action=\"replace\""));
+        assert!(html.contains(&format!("target=\"twitter_cards_message_{key}\"")));
+        assert!(html.contains("maintain_scroll=\"true\""));
+        assert!(html.contains("Committed &amp; safe"));
+        assert!(html.contains("&lt;script&gt; &amp; safe"));
+        assert!(!html.contains("<script>"));
+        assert!(html.contains("18K replies"));
+        assert!(html.contains("x-post-card__logo"));
+        client.assert_silent().await;
+    }
+    other_client.assert_silent().await;
+    app.db()
+        .write(move |tx| Post::find(tx.conn(), id)?.save_error(tx, "Failed"))
+        .await
+        .unwrap();
+    for client in [&mut root_client, &mut thread_client] {
+        let frame: Value = serde_json::from_str(&client.next_text().await).unwrap();
+        assert!(
+            frame["message"]
+                .as_str()
+                .unwrap()
+                .contains("Couldn’t load this post.")
+        );
+        client.assert_silent().await;
+    }
+    other_client.assert_silent().await;
+    root_server.abort();
+    thread_server.abort();
+    other_server.abort();
+}
+
+#[tokio::test]
+async fn ws15e_x_render_and_broadcast_sibling_claims_rollback_if_enqueue_is_rejected() {
+    let app = app().await;
+    let (message,ids)=app.db().write(|tx| {
+        let message=Message::create(tx,NewMessage{room_id:ALL_TALK,creator_id:DAVID,markdown_source:Some("https://x.com/a/status/801 https://x.com/a/status/802".into()),..Default::default()})?;
+        let posts=Post::for_message(tx.conn(),message.id)?;
+        tx.conn().execute("DELETE FROM background_jobs WHERE job_class='Twitter::FetchPostJob'",[])?;
+        for post in &posts {tx.conn().execute("UPDATE twitter_posts SET fetch_requested_at=NULL WHERE id=?",[post.id])?;}
+        tx.conn().execute_batch("CREATE TEMP TRIGGER reject_x_render_job BEFORE INSERT ON background_jobs WHEN NEW.job_class='Twitter::FetchPostJob' BEGIN SELECT RAISE(ABORT,'reject X render'); END;")?;
+        Ok((message,posts.iter().map(|p|p.id).collect::<Vec<_>>()))
+    }).await.unwrap();
+    let mut browser = app.david();
+    let response = browser.get(&format!("/rooms/{ALL_TALK}/messages")).await;
+    assert_eq!(
+        response.status,
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    );
+    let first = ids[0];
+    let result = app
+        .db()
+        .write(move |tx| {
+            Post::find(tx.conn(), first)?.save_error(tx, "Failed before sibling enqueue")
+        })
+        .await;
+    assert!(result.is_err());
+    let check = ids.clone();
+    app.db()
+        .read(move |c| {
+            for id in check {
+                let post = Post::find(c, id)?;
+                assert!(post.fetch_pending());
+                assert!(c.query_row(
+                    "SELECT fetch_requested_at IS NULL FROM twitter_posts WHERE id=?",
+                    [id],
+                    |r| r.get::<_, bool>(0)
+                )?);
+            }
+            assert_eq!(
+                c.query_row(
+                    "SELECT COUNT(*) FROM background_jobs WHERE job_class='Twitter::FetchPostJob'",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                0
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    app.db()
+        .write(|tx| {
+            tx.conn()
+                .execute_batch("DROP TRIGGER reject_x_render_job")?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let response = browser.get(&format!("/rooms/{ALL_TALK}/messages")).await;
+    assert_eq!(response.status, axum::http::StatusCode::OK);
+    app.db()
+        .read(|c| {
+            assert_eq!(
+                c.query_row(
+                    "SELECT COUNT(*) FROM background_jobs WHERE job_class='Twitter::FetchPostJob'",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                2
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+    app.db().write(move |tx| message.destroy(tx)).await.unwrap();
+}
+
+#[tokio::test]
+async fn ws15e_x_bot_http_message_creates_reference_and_durable_fetch() {
+    let app = app().await;
+    let mut bot = app.anonymous();
+    let response = bot
+        .send(
+            Req::new(
+                axum::http::Method::POST,
+                &format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages"),
+            )
+            .header("content-type", "text/plain")
+            .body("bot says https://x.com/jack/status/134"),
+        )
+        .await;
+    assert_eq!(response.status, axum::http::StatusCode::CREATED);
+    app.db()
+        .read(|c| {
+            let message = Message::find(
+                c,
+                c.query_row("SELECT MAX(id) FROM messages", [], |r| r.get::<_, i64>(0))?,
+            )?;
+            assert_eq!(message.creator_id, BENDER);
+            assert_eq!(
+                Post::for_message(c, message.id)?
+                    .iter()
+                    .map(|p| p.post_id.as_str())
+                    .collect::<Vec<_>>(),
+                ["134"]
+            );
+            assert_eq!(
+                c.query_row(
+                    "SELECT COUNT(*) FROM background_jobs WHERE job_class='Twitter::FetchPostJob'",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                1
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+}

@@ -6,6 +6,7 @@ pub mod accounts;
 pub mod attachments;
 pub mod link_embeds;
 pub mod fizzy_cards;
+pub mod twitter_cards;
 pub mod page;
 pub mod pagination;
 pub mod rich_text;
@@ -131,6 +132,9 @@ pub struct Presenter<'a> {
     users: RefCell<HashMap<i64, User>>,
     room_names: RefCell<HashMap<i64, (Room, String)>>,
     link_fetches: RefCell<std::collections::BTreeSet<i64>>,
+    twitter_fetches: RefCell<std::collections::BTreeSet<i64>>,
+    twitter_posts: RefCell<HashMap<i64, Vec<crate::integrations::twitter::post::Post>>>,
+    twitter_existence: RefCell<HashMap<String, bool>>,
 }
 
 impl<'a> Presenter<'a> {
@@ -146,11 +150,14 @@ impl<'a> Presenter<'a> {
             users: RefCell::default(),
             room_names: RefCell::default(),
             link_fetches: RefCell::default(),
+            twitter_fetches: RefCell::default(),
+            twitter_posts: RefCell::default(),
+            twitter_existence: RefCell::default(),
         }
     }
 
     pub fn resolver(&self) -> DbResolver<'_> {
-        DbResolver { conn: self.conn, secrets: self.secrets, now: self.now }
+        DbResolver::with_twitter_cache(self.conn, self.secrets, self.now, &self.twitter_existence)
     }
 
     /// A read records stale cards; its caller claims/enqueues them on the writer after rendering.
@@ -162,6 +169,18 @@ impl<'a> Presenter<'a> {
 
     pub fn pending_link_fetches(&self) -> Vec<i64> {
         self.link_fetches.borrow().iter().copied().collect()
+    }
+
+    pub fn pending_twitter_fetches(&self) -> Vec<i64> { self.twitter_fetches.borrow().iter().copied().collect() }
+    pub fn twitter_posts(&self, message: &Message) -> Result<Vec<crate::integrations::twitter::post::Post>> {
+        if let Some(posts) = self.twitter_posts.borrow().get(&message.id) { return Ok(posts.clone()); }
+        let mut posts = crate::integrations::twitter::post::Post::for_message(self.conn, message.id)?;
+        crate::integrations::twitter::post::Post::order_cards(&mut posts);
+        self.twitter_posts.borrow_mut().insert(message.id, posts.clone());
+        Ok(posts)
+    }
+    pub fn request_twitter_fetch(&self, post: &crate::integrations::twitter::post::Post) {
+        if post.fetch_pending() { self.twitter_fetches.borrow_mut().insert(post.id); }
     }
 
     pub fn user(&self, id: i64) -> Result<User> {
@@ -232,6 +251,10 @@ impl<'a> Presenter<'a> {
     /// (`cache [ message, "presentation-v3" ]` wraps the whole partial, so Rails evaluates none of
     /// it on a hit), else its view.
     pub fn messages(&self, messages: &[Message]) -> Result<Vec<MessageItem>> {
+        let ids = messages.iter().map(|m| m.id).collect::<Vec<_>>();
+        let mut posts = crate::integrations::twitter::post::Post::for_messages(self.conn, &ids)?;
+        for posts in posts.values_mut() { crate::integrations::twitter::post::Post::order_cards(posts); }
+        self.twitter_posts.borrow_mut().extend(posts);
         messages.iter().map(|message| self.message_item(message)).collect()
     }
 

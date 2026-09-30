@@ -47,6 +47,10 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
             let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
             crate::controllers::presenters::fizzy_cards::broadcast_updates(app, event.card_id)
         }),
+        crate::integrations::twitter::post::CardUpdate::KIND => decode::<crate::integrations::twitter::post::CardUpdate>(request).and_then(|event| {
+            let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
+            crate::controllers::presenters::twitter_cards::broadcast_updates(app, event.post_id)
+        }),
         campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| messaging(cable, &broadcast)),
         kind => Err(anyhow::anyhow!("no handler for the {kind} broadcast")),
     };

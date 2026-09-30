@@ -8,7 +8,7 @@ use campfire_db::{Connection, Message, Room};
 use campfire_views::messages::{self, MessageComponents};
 
 pub fn components(presenter: &super::Presenter<'_>, message: &Message) -> campfire_db::Result<MessageComponents> {
-    let mut components = MessageComponents { fizzy_cards: super::fizzy_cards::frames(presenter.conn, message)?, ..Default::default() };
+    let mut components = MessageComponents { twitter_posts: super::twitter_cards::cards(presenter, message)?, fizzy_cards: super::fizzy_cards::frames(presenter.conn, message)?, ..Default::default() };
     if !message.embeds_suppressed {
         for reference in Reference::for_message(presenter.conn, message)? {
             presenter.request_link_fetch(&reference.embed);
@@ -42,8 +42,8 @@ pub fn components(presenter: &super::Presenter<'_>, message: &Message) -> campfi
 }
 
 /// Claims and durable job rows share this write. Rechecking TTL/claim handles concurrent views.
-pub async fn enqueue_render_fetches(app: &App, ids: Vec<i64>) -> campfire_db::Result<()> {
-    if ids.is_empty() {
+pub async fn enqueue_render_fetches(app: &App, ids: Vec<i64>, twitter_ids: Vec<i64>) -> campfire_db::Result<()> {
+    if ids.is_empty() && twitter_ids.is_empty() {
         return Ok(());
     }
     app.db
@@ -54,6 +54,13 @@ pub async fn enqueue_render_fetches(app: &App, ids: Vec<i64>) -> campfire_db::Re
                         crate::integrations::link_embed::store::request_fetch(tx, &embed)?;
                     }
                     Err(campfire_db::Error::RecordNotFound(_)) => {}
+                    Err(error) => return Err(error),
+                }
+            }
+            for id in twitter_ids {
+                match crate::integrations::twitter::post::Post::find(tx.conn(), id) {
+                    Ok(post) if post.fetch_pending() => { post.request_fetch(tx)?; }
+                    Ok(_) | Err(campfire_db::Error::RecordNotFound(_)) => {}
                     Err(error) => return Err(error),
                 }
             }

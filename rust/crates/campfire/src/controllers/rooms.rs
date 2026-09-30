@@ -192,7 +192,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
     let message_id = c.param_str("message_id").and_then(cast_integer);
     let request_host = Some(c.request.host());
     let cache_base_url = c.url_for("");
-    let (show, fetches) = c
+    let (show, fetches, twitter_fetches) = c
         .app()
         .db
         .read(move |conn| {
@@ -214,11 +214,11 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
                 join_code: Account::first(conn)?.map(|account| account.join_code).unwrap_or_default(),
                 messages_stream_name: rails_compat::turbo::signed_stream_name(&app.secrets, &[&room_gid, "messages"]),
             };
-            Ok((show, presenter.pending_link_fetches()))
+            Ok((show, presenter.pending_link_fetches(), presenter.pending_twitter_fetches()))
         })
         .await
         .map_err(db_error)?;
-    super::presenters::link_embeds::enqueue_render_fetches(c.app(), fetches)
+    super::presenters::link_embeds::enqueue_render_fetches(c.app(), fetches, twitter_fetches)
         .await
         .map_err(db_error)?;
     let response = page::framed_page!(c, StatusCode::OK, |ctx| campfire_views::rooms::Show { ctx, show: &show }).await?;

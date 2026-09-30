@@ -276,7 +276,7 @@ pub(crate) async fn canonicalize_body(app: &App, body: String, request_host: Opt
 /// Assigning a String to a rich text attribute stores the canonicalized content
 /// (`ActionText::Content.new(body, canonicalize: true).to_html`).
 pub(crate) fn canonical_body(conn: &campfire_db::Connection, app: &App, body: &str, request_host: Option<String>) -> String {
-    let resolver = DbResolver { conn, secrets: &app.secrets, now: app.clock.now() };
+    let resolver = DbResolver::new(conn, &app.secrets, app.clock.now());
     let ctx = resolver.render_context(request_host);
     Content::load(body, &ctx).map(|content| content.to_html()).unwrap_or_else(|_| body.to_string())
 }
@@ -459,18 +459,18 @@ pub(crate) async fn present<T: Send + 'static>(
     let app = c.app().clone();
     let request_host = Some(c.request.host());
     let cache_base_url = c.url_for("");
-    let (value, fetches) = c.app()
+    let (value, fetches, twitter_fetches) = c.app()
         .db
         .read(move |conn| {
             let mut presenter = Presenter::new(conn, &app, request_host);
             presenter.cache_base_url = Some(cache_base_url);
             // The Jbuilder partials (`json.cache!`) read the fragment cache on this thread.
             let value = campfire_views::fragment_cache::with(&app.fragment_cache, || f(&presenter))?;
-            Ok((value, presenter.pending_link_fetches()))
+            Ok((value, presenter.pending_link_fetches(), presenter.pending_twitter_fetches()))
         })
         .await
         .map_err(db_error)?;
-    super::presenters::link_embeds::enqueue_render_fetches(c.app(), fetches)
+    super::presenters::link_embeds::enqueue_render_fetches(c.app(), fetches, twitter_fetches)
         .await
         .map_err(db_error)?;
     Ok(value)
