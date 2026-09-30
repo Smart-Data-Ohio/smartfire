@@ -923,6 +923,10 @@ async fn google_sessions_rejection_log_names_reason_without_token_or_authorizati
     // This Tokio test uses the current-thread runtime. Keep capture installed
     // through router setup and all awaits, as the queue log tests do.
     let _capture = tracing::subscriber::set_default(subscriber);
+    // tracing-core's single-dispatch shortcut registers a callsite against the
+    // registering thread's subscriber. Parallel tests have no local subscriber;
+    // retain a second registrar so interest is computed from both live dispatches.
+    let _other_dispatch = tracing::Dispatch::new(tracing::subscriber::NoSubscriber::default());
     let (a, r) = app().await;
     let mut b = a.anonymous();
     b.get("/session/new").await;
