@@ -83,28 +83,7 @@ pub fn room_removal(cable: &Cable, broadcast: &RoomRemovalBroadcast, huddle_conf
 /// the public and internal LiveKit URLs name different endpoints. Read on every call, as Rails
 /// reads `ENV` on every call. (The huddle workstream owns the rest of `Huddle`.)
 pub fn huddle_configured(env: impl Fn(&str) -> Option<String>) -> bool {
-    const REQUIRED: [&str; 5] = ["LIVEKIT_URL", "LIVEKIT_INTERNAL_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET", "LIVEKIT_GATEWAY_SECRET"];
-    let values: Vec<String> = REQUIRED.iter().filter_map(|name| env(name).filter(|value| !value.trim().is_empty())).collect();
-    if values.len() != REQUIRED.len() {
-        return false;
-    }
-    match (endpoint_address(&values[0]), endpoint_address(&values[1])) {
-        (Some(public), Some(internal)) => public != internal,
-        _ => false,
-    }
-}
-
-/// `Huddle.endpoint_address`: `[host.downcase, port || default_port]`; `None` is the rescued
-/// `URI::InvalidURIError` (no host, or a scheme other than http, ws, https and wss).
-fn endpoint_address(value: &str) -> Option<(String, u16)> {
-    let uri = crate::security::ruby_uri::parse(value)?;
-    let default_port = match uri.scheme.as_deref()? {
-        "http" | "ws" => 80,
-        "https" | "wss" => 443,
-        _ => return None,
-    };
-    let host = uri.host.filter(|host| !host.trim().is_empty())?;
-    Some((host.to_ascii_lowercase(), uri.port.unwrap_or(default_port)))
+    crate::huddle::Config::from_lookup(env).configured()
 }
 
 pub(crate) fn template_free_broadcast(
@@ -134,6 +113,19 @@ mod tests {
 
     fn configured(vars: &[(&str, &str)]) -> bool {
         huddle_configured(|name| vars.iter().find(|(key, _)| *key == name).map(|(_, value)| value.to_string()))
+    }
+
+    #[test]
+    fn huddle_configuration_matches_ws13_rails_vectors() {
+        let vectors: serde_json::Value = serde_json::from_str(include_str!("../huddle/protocol_vectors.json")).unwrap();
+        for case in vectors["urls"].as_array().unwrap() {
+            let configured = huddle_configured(|name| Some(match name {
+                "LIVEKIT_URL" => case["public_url"].as_str().unwrap(),
+                "LIVEKIT_INTERNAL_URL" => case["internal_url"].as_str().unwrap(),
+                _ => "ws13-fixture-value",
+            }.to_string()));
+            assert_eq!(configured, case["configured"].as_bool().unwrap(), "{case}");
+        }
     }
 
     #[test]

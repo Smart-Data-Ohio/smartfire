@@ -18,18 +18,10 @@ pub const READ_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Clone, Default)]
 pub struct Config {
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "next WS13 slice: gateway configuration")
-    )]
     pub public_url: Option<String>,
     pub internal_url: Option<String>,
     pub api_key: Option<String>,
     pub api_secret: Option<String>,
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "next WS13 slice: gateway authentication")
-    )]
     pub gateway_secret: Option<String>,
 }
 
@@ -56,11 +48,6 @@ impl Config {
     pub fn admin_configured(&self) -> bool {
         self.internal_url.is_some() && self.signing_configured()
     }
-
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "next WS13 slice: gateway endpoints")
-    )]
     pub fn configured(&self) -> bool {
         if !self.admin_configured() || self.gateway_secret.is_none() {
             return false;
@@ -70,14 +57,6 @@ impl Config {
         matches!((public, internal), (Some(public), Some(internal)) if public != internal)
     }
 }
-
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "used by gateway configuration in the next WS13 slice"
-    )
-)]
 fn endpoint_address(value: &str) -> Option<(String, u64)> {
     let uri = uri::parse(value).ok()?;
     let default_port = match uri.scheme.as_deref()?.to_ascii_lowercase().as_str() {
