@@ -52,6 +52,27 @@ pub struct MeetingCache {
 }
 
 impl MeetingCache {
+    /// Calendar::MeetingCache#claim_broadcast!: the loaded object deliberately stays stale.
+    pub fn claim_broadcast(&self, tx: &mut crate::Tx<'_>, active: bool) -> Result<bool> {
+        Ok(tx.conn().execute(
+            "UPDATE calendar_meeting_caches SET in_meeting_broadcast=?,updated_at=? WHERE id=? AND (in_meeting_broadcast IS NULL OR in_meeting_broadcast!=?)",
+            rusqlite::params![active,tx.now(),self.id,active],
+        )? == 1)
+    }
+
+    /// WS14's push-throttle seam. The winner must enqueue the follow-up on this same Tx.
+    pub fn claim_refresh_followup(
+        &self,
+        tx: &mut crate::Tx<'_>,
+        now: Timestamp,
+        window: jiff::SignedDuration,
+    ) -> Result<bool> {
+        Ok(tx.conn().execute(
+            "UPDATE calendar_meeting_caches SET refresh_pending_at=?,updated_at=? WHERE id=? AND (refresh_pending_at IS NULL OR refresh_pending_at<=?)",
+            rusqlite::params![now,tx.now(),self.id,now.since(-window)],
+        )? == 1)
+    }
+
     fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
         let json = |name| -> rusqlite::Result<Value> {
             Ok(row
@@ -111,6 +132,9 @@ impl MeetingCache {
         Self::covering_ends(&self.busy_intervals, now)
             .next()
             .is_some()
+    }
+    pub fn in_ooo(&self, now: Timestamp) -> bool {
+        Self::covering_ends(&self.ooo_intervals, now).next().is_some()
     }
     pub fn ooo_end_covering(&self, now: Timestamp) -> Option<Timestamp> {
         Self::covering_ends(&self.ooo_intervals, now).max()

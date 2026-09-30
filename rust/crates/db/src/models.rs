@@ -7,6 +7,7 @@ pub mod active_storage;
 pub mod ban;
 pub mod boost;
 pub mod channel_thread;
+pub mod calendar_dispatch;
 pub mod direct_room;
 pub mod first_run;
 pub mod forwarder;

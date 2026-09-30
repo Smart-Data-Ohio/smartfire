@@ -52,27 +52,45 @@ impl UserStatusSettings {
     }
 
     pub fn announce_badge(&self, tx: &mut Tx<'_>) -> Result<()> {
+        Self::announce_badges_for(tx, std::slice::from_ref(self))
+    }
+
+    /// Dispatcher batches leases once, then emits every badge before any OOO notice.
+    pub fn announce_badges_for(tx: &mut Tx<'_>, users: &[Self]) -> Result<()> {
         use crate::models::workspace_presence_lease::Presence;
+        if users.is_empty() {
+            return Ok(());
+        }
         let now = tx.now();
-        let lease = WorkspacePresenceLease::presence_by_user_id(tx.conn(), &[self.user.id], now)?
-            .remove(&self.user.id)
-            .unwrap_or(Presence::Offline);
-        let presence = match self.effective_presence(lease) {
-            Presence::Online => "online",
-            Presence::Idle => "idle",
-            Presence::Offline => "offline",
-            Presence::Dnd => "dnd",
-        };
-        tx.emit_after_commit(Event::broadcast(&StatusBadgeBroadcast {
-            user_id: self.user.id,
-            presence: presence.into(),
-            status_text: self.status_text_display(now),
-        }));
+        let ids: Vec<_> = users.iter().map(|user| user.user.id).collect();
+        let leases = WorkspacePresenceLease::presence_by_user_id(tx.conn(), &ids, now)?;
+        for user in users {
+            let lease = leases
+                .get(&user.user.id)
+                .copied()
+                .unwrap_or(Presence::Offline);
+            let presence = match user.effective_presence(lease) {
+                Presence::Online => "online",
+                Presence::Idle => "idle",
+                Presence::Offline => "offline",
+                Presence::Dnd => "dnd",
+            };
+            tx.emit_after_commit(Event::broadcast(&StatusBadgeBroadcast {
+                user_id: user.user.id,
+                presence: presence.into(),
+                status_text: user.status_text_display(now),
+            }));
+        }
         Ok(())
     }
 
     pub fn announce_ooo(&self, tx: &mut Tx<'_>) -> Result<()> {
         self.announce_badge(tx)?;
+        self.announce_ooo_notice(tx);
+        Ok(())
+    }
+
+    pub fn announce_ooo_notice(&self, tx: &mut Tx<'_>) {
         let now = tx.now();
         tx.emit_after_commit(Event::broadcast(&OooNoticeBroadcast {
             user_id: self.user.id,
@@ -89,7 +107,6 @@ impl UserStatusSettings {
                 .clone()
                 .filter(|n| self.manual_ooo_active(now) && !n.chars().all(char::is_whitespace)),
         }));
-        Ok(())
     }
 
     pub fn save_status(&mut self, tx: &mut Tx<'_>) -> Result<()> {

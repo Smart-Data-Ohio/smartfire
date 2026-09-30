@@ -1180,79 +1180,79 @@
     {
       "file": "test/models/calendar/meeting_cache_test.rb",
       "test": "in_meeting? is true inside an interval, with an inclusive start and exclusive end",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
-      "evidence": null
+      "evidence": "campfire_db: calendar_dispatch_test (boundaries, malformed pairs, epochs, two-process claims and FK metadata)"
     },
     {
       "file": "test/models/calendar/meeting_cache_test.rb",
       "test": "in_meeting? is false without intervals",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
-      "evidence": null
+      "evidence": "campfire_db: calendar_dispatch_test (boundaries, malformed pairs, epochs, two-process claims and FK metadata)"
     },
     {
       "file": "test/models/calendar/meeting_cache_test.rb",
       "test": "in_meeting? ignores malformed pairs instead of raising",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
-      "evidence": null
+      "evidence": "campfire_db: calendar_dispatch_test (boundaries, malformed pairs, epochs, two-process claims and FK metadata)"
     },
     {
       "file": "test/models/calendar/meeting_cache_test.rb",
       "test": "quiet_window_epochs returns epoch windows and skips malformed pairs",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
-      "evidence": null
+      "evidence": "campfire_db: calendar_dispatch_test (boundaries, malformed pairs, epochs, two-process claims and FK metadata)"
     },
     {
       "file": "test/models/calendar/meeting_cache_test.rb",
       "test": "in_ooo? is true inside an OOO interval, with an inclusive start and exclusive end",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
-      "evidence": null
+      "evidence": "campfire_db: calendar_dispatch_test (boundaries, malformed pairs, epochs, two-process claims and FK metadata)"
     },
     {
       "file": "test/models/calendar/meeting_cache_test.rb",
       "test": "in_ooo? reads only the OOO intervals, not the busy ones",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
-      "evidence": null
+      "evidence": "campfire_db: calendar_dispatch_test (boundaries, malformed pairs, epochs, two-process claims and FK metadata)"
     },
     {
       "file": "test/models/calendar/meeting_cache_test.rb",
       "test": "ooo_end_covering returns the latest covering end",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
-      "evidence": null
+      "evidence": "campfire_db: calendar_dispatch_test (boundaries, malformed pairs, epochs, two-process claims and FK metadata)"
     },
     {
       "file": "test/models/calendar/meeting_cache_test.rb",
       "test": "ooo_end_covering is nil while uncovered",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
-      "evidence": null
+      "evidence": "campfire_db: calendar_dispatch_test (boundaries, malformed pairs, epochs, two-process claims and FK metadata)"
     },
     {
       "file": "test/models/calendar/meeting_cache_test.rb",
       "test": "ooo_window_epochs returns epoch windows and skips malformed pairs",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
-      "evidence": null
+      "evidence": "campfire_db: calendar_dispatch_test (boundaries, malformed pairs, epochs, two-process claims and FK metadata)"
     },
     {
       "file": "test/models/calendar/meeting_cache_test.rb",
       "test": "claim_broadcast! wins the first claim and each flip, and loses re-runs",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
-      "evidence": null
+      "evidence": "campfire_db: calendar_dispatch_test (boundaries, malformed pairs, epochs, two-process claims and FK metadata)"
     },
     {
       "file": "test/models/calendar/meeting_cache_test.rb",
       "test": "claim_broadcast! lets only one concurrent claimant win",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
-      "evidence": null
+      "evidence": "campfire_db: calendar_dispatch_test (boundaries, malformed pairs, epochs, two-process claims and FK metadata)"
     },
     {
       "file": "test/models/calendar/meeting_cache_test.rb",
@@ -1264,170 +1264,170 @@
     {
       "file": "test/models/calendar/meeting_cache_test.rb",
       "test": "the cache row references its member with a cascading foreign key",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
-      "evidence": null
+      "evidence": "campfire_db: calendar_dispatch_test (boundaries, malformed pairs, epochs, two-process claims and FK metadata)"
     },
     {
       "file": "test/models/calendar/meeting_dispatcher_test.rb",
       "test": "a meeting start broadcasts the badge",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/meeting_dispatcher_test.rb",
       "test": "a re-run with no flip broadcasts nothing",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/meeting_dispatcher_test.rb",
       "test": "a steady-state tick issues no claim write",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/meeting_dispatcher_test.rb",
       "test": "a meeting end broadcasts the badge",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/meeting_dispatcher_test.rb",
       "test": "a broadcast carries the meeting label",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/meeting_dispatcher_test.rb",
       "test": "a stale cache enqueues a refresh",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/meeting_dispatcher_test.rb",
       "test": "a missing cache enqueues a refresh without broadcasting",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/meeting_dispatcher_test.rb",
       "test": "a fresh cache enqueues nothing",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/meeting_dispatcher_test.rb",
       "test": "members who never opted in are ignored",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/meeting_dispatcher_test.rb",
       "test": "deactivated members are ignored",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/meeting_dispatcher_test.rb",
       "test": "one failing member does not stop the sweep",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/ooo_dispatcher_test.rb",
       "test": "a manual OOO start broadcasts the badge and the DM notice",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/ooo_dispatcher_test.rb",
       "test": "a re-run with no flip broadcasts nothing",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/ooo_dispatcher_test.rb",
       "test": "a steady-state tick issues no claim write",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/ooo_dispatcher_test.rb",
       "test": "an OOO end broadcasts and clears the manual columns",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/ooo_dispatcher_test.rb",
       "test": "the broadcasts carry the OOO label, the note, and the return date",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/ooo_dispatcher_test.rb",
       "test": "a calendar OOO start broadcasts the badge and the notice",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/ooo_dispatcher_test.rb",
       "test": "a stale OOO-only cache enqueues a refresh",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/ooo_dispatcher_test.rb",
       "test": "a member with both opt-ins refreshes through the meeting dispatcher only",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/ooo_dispatcher_test.rb",
       "test": "a missing cache enqueues a refresh without broadcasting",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/ooo_dispatcher_test.rb",
       "test": "members with neither a manual OOO nor the calendar opt-in are ignored",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/ooo_dispatcher_test.rb",
       "test": "deactivated members are ignored",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/calendar/ooo_dispatcher_test.rb",
       "test": "one failing member does not stop the sweep",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: statuses/calendar_tests (named two-tick socket replays and refresh INSERT failures); campfire_db: calendar_dispatch_test (SQLite update counts)"
     },
     {
       "file": "test/models/saved_item/reminder_pusher_test.rb",

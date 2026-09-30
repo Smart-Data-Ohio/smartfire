@@ -399,3 +399,6 @@ async fn ws17_failed_calendar_cache_reconciliation_rolls_back_status_and_sends_n
     );
     socket.assert_silent().await;
 }
+
+#[path = "calendar_tests.rs"]
+mod calendar;

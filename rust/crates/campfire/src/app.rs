@@ -87,6 +87,12 @@ pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Resu
 }
 
 pub(crate) async fn boot_with_network(config: Config, clock: SharedClock, subscription_network: crate::integrations::net::Network) -> anyhow::Result<Booted> {
+    boot_with_services(config, clock, subscription_network, jobs::periodic::Intervals::from_env()).await
+}
+
+/// Service dependencies, including which periodic hosts run beside HTTP. The Rails parity
+/// server does not run bin/periodic; its seeded HTTP tests invoke due tasks explicitly.
+pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subscription_network: crate::integrations::net::Network, intervals: jobs::periodic::Intervals) -> anyhow::Result<Booted> {
     config.storage.create_dirs()?;
     let secrets = Arc::new(Secrets::new(&config.secret_key_base));
     let crypto: SharedCrypto = Arc::new(RailsCrypto::new(secrets.clone()));
@@ -96,7 +102,7 @@ pub(crate) async fn boot_with_network(config: Config, clock: SharedClock, subscr
     let registry = jobs::registry();
     let runner_config = jobs::runner_config(&config);
     let (jobs, ad_hoc) = jobs::Jobs::new(&registry, &runner_config)?;
-    let loops = jobs::periodic::Loops::new(jobs::periodic::Intervals::from_env());
+    let loops = jobs::periodic::Loops::new(intervals);
     let rich_text = Arc::new(AppRichText::new(secrets.clone(), clock.clone()));
     // Mail's preflight and Message::create use the same room-aware, fallible renderer.
     mail.install_renderer(Arc::new({

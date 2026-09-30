@@ -6,7 +6,7 @@ Reference Rails `d7c7de92`; merged main `21a7332f` with merge commit `56aa9f62`.
 
 Earlier pushed slices (`7b9267a3`, `32b49aa4`, `76c34826`, `0adcae95`, `12c448d7`) provide typed notification policy, tagged Web Push with Smartfire subject and IP pinning, durable room/thread/saved/test push transport, presence leases/HTTP/pruner, validated dirty-tracked settings writes, status and notification PATCH, DND allowances, keyword-list replacement, cache reconciliation, manual OOO claims, and complete badge/OOO broadcast HTML. PWA worker/offline bytes are pinned. Existing Rails oracle vectors remain exercised by the full suites below.
 
-Profile/subscription/allowance slice pushed at `ba916992`; current keyword recording slice:
+Profile/subscription/allowance slice pushed at `ba916992`; keyword recording pushed at `fd411985`; current calendar dispatch slice:
 
 | Files | Change and verification |
 | --- | --- |
@@ -18,13 +18,16 @@ Profile/subscription/allowance slice pushed at `ba916992`; current keyword recor
 | `controllers/users/dnd_allowances.rs` | Repeated star remains one row; deterministic real UNIQUE-index failure at insert follows Rails' success redirect, in addition to existing concurrent HTTP requests. No mocks of the writer. |
 | `db/models/activity_item/message_recorder.rs`, message callback, `tests/message_activity_test.rs`, JSON oracle | Message-only recorder: flat scoped membership/keyword queries, policy winner, active-human/self exclusion, idempotent source rows, grouped followed-thread updates, unchanged read/handled state on repeated non-grouped recording. Thirty-one actual Rails callback/candidate vectors; all eleven keyword recorder titles and thirteen message-only recorder titles. Real SQLite trace checks stay flat at five versus thirty members. |
 | `campfire/controllers/messages/ws17_activity_tests.rs`, DB Cargo dev dependency | Full HTTP message callback records during DND; real rendered mentions win over keywords. Rejecting the activity INSERT rolls back message, FTS index and durable jobs. SQLite tracing is a test-only rusqlite feature. |
+| `db/models/calendar_dispatch.rs`, meeting cache claim methods, status broadcast batching; `campfire/jobs/periodic.rs` | Register meeting/OOO sweeps every minute. Match active scopes (including bots), inclusive 15-minute stale threshold, missing-cache handling, steady-state no-UPDATE/no-writer path and OOO-only refresh gating. Per-member refresh enqueue and claim share a writer transaction; an enqueue failure rolls back only that member and the sweep continues. Preserve expired-already-false manual columns as the pin does. All badges precede all notices, with one lease query. |
+| `db/tests/calendar_dispatch_test.rs`, `statuses/calendar_tests.rs`, calendar oracle | Twenty-five actual Rails two-tick vectors; all 11 meeting and 12 OOO named scenarios pass. Compare stored claims/manual columns, durable refresh rows, exact signed-stream HTML and actual SQLite UPDATE counts. Two independent database handles prove one winning boundary/one broadcast; corrupt cached timestamps isolate the bad member. Twelve of 13 cache titles pass; validated duplicate creation belongs to WS14 and remains deferred. |
+| `app.rs`, seeded HTTP test support | Inject periodic host intervals explicitly. Production reads the same environment intervals; seeded HTTP tests run no background periodic host, matching Rails' reference server. Durable queue and broadcasts remain real. This removes the observed race with an unrequested first periodic tick. Registration itself is tested and the sweeps are invoked explicitly. |
 | `reference-tools/ws17_profile_ui.rb`, regeneration script, verifier and injection runner | Actual pinned source/output verification; no Rails changes, output masks, allowlist changes or new ignores. |
 
 User/profile security, GitHub/inbox/voice settings and connected-service UI belong to WS9/WS11/WS12/WS13/WS14/WS15. The existing basic profile update path still needs those owners' callbacks. This slice adds only the owned appearance attributes, without claiming whole-profile parity.
 
 The pin's invalid status/notification render on a seeded confirmed-2FA user still produces HTTP 500 because Rails omits `@two_factor_devices`. Separate tests preserve that observed behavior; the named fixture replays explicitly use unconfirmed-credential fixture state and expect 422. Profile PATCH initializes those devices in Rails and its owned validation response is 422.
 
-`Calendar::MeetingRefreshJob { user_id: i64 }` is durable on the default queue, version 1, JSON `{ "user_id": ... }`. WS14 must register its fetch handler; until then it fails visibly as an unknown handler. Both opt-ins enqueue separately. No Google refresh success is faked. Typed status badge/OOO facts are emitted after commit and rendered in the cable sink. Rails emits events in order, but its worker pool delivers independent stream callbacks asynchronously; socket tests compare exact bytes/counts/order within each signed stream, while a separate domain test checks actual cross-stream event emission order.
+`Calendar::MeetingRefreshJob { user_id: i64 }` is durable on the default queue, version 1, JSON `{ "user_id": ... }`. WS14 must register its fetch handler; until then it fails visibly as an unknown handler. Status PATCH enqueues both opt-ins separately; a due tick refreshes both-opt-in members through the meeting sweep only. An overdue cache refreshes again on a later tick until WS14 updates it, matching Rails rather than adding queue deduplication. No Google refresh success is faked. Typed status badge/OOO facts are emitted after commit and rendered in the cable sink. Rails emits events in order, but its worker pool delivers independent stream callbacks asynchronously; socket tests compare exact bytes/counts/order within each signed stream, while a separate domain test checks actual cross-stream event emission order.
 
 ## WS13 shared transport/policy seam — exact signatures
 
@@ -50,6 +53,24 @@ WS13 builds invitation/join `PushPayload` and candidate room-membership facts. W
 Keep Rails' pusher scopes before delivery: visible/disconnected memberships, invitations exclude `nothing`, joins exclude `nothing` and `muted`; SQL-null exclusions follow Rails SQL rather than adding eligibility. Join also checks the huddle inbox preference and claims its ten-minute throttle only after policy and subscriptions permit an actual push. The dedicated durable huddle adapter/DTO and throttle-claim seam are **still outstanding**; the signatures above are the shared transport, not a claim that huddle push jobs are finished. WS13 owns payload/source construction, WS17 the gate/transport. `PushPayload::new` preserves supplied strings/tag without automatic truncation. Pool reads fresh badges and delivers through current VAPID and stored pinned endpoint IP. Preserve transactional claim/enqueue when connecting the source.
 
 
+
+
+## WS14 cache and dispatch seams
+
+```rust
+// campfire_db::models::calendar_dispatch
+pub async fn dispatch_meetings(db: &Database, now: Timestamp) -> Result<DispatchStats>;
+pub async fn dispatch_ooo(db: &Database, now: Timestamp) -> Result<DispatchStats>;
+// campfire_db::MeetingCache; claims deliberately do not reload the supplied cache
+pub fn claim_broadcast(&self, tx: &mut Tx, active: bool) -> Result<bool>;
+pub fn claim_refresh_followup(&self, tx: &mut Tx, now: Timestamp,
+                              window: jiff::SignedDuration) -> Result<bool>;
+// campfire_db::UserStatusSettings; pure typed facts, emitted after commit
+pub fn announce_badges_for(tx: &mut Tx, users: &[Self]) -> Result<()>;
+pub fn announce_ooo_notice(&self, tx: &mut Tx);
+```
+
+WS14 supplies/validates cache creation and fetch/update execution. A follow-up claim winner must enqueue on the same supplied writer transaction. Completed fetches clear `refresh_pending_at`. Due sweeps commit each member's claim/job first and then broadcast the collected winning snapshots, matching Rails' claims-before-broadcast batch order. No Google call or successful refresh handler is stubbed.
 
 ## Current verification
 
@@ -93,14 +114,34 @@ keyword-atomic: detected
 test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 384 filtered out; finished in 0.42s
 ```
 
+`python3 rust/reference-tools/ws17_regenerate_calendar_dispatch.py`
+
+```text
+pinned Rails source verified: 45 files match d7c7de92
+Rails calendar dispatch: 25 complete two-tick cases
+```
+
+`python3 rust/reference-tools/ws17_injections.py calendar`
+
+```text
+calendar-steady-write: detected
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 456 filtered out; finished in 0.08s
+calendar-racing-claim: detected
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 456 filtered out; finished in 0.40s
+calendar-duplicate-refresh: detected
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 409 filtered out; finished in 0.10s
+calendar-atomic: detected
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 409 filtered out; finished in 0.65s
+```
+
 `CAMPFIRE_TEST_REQUIRE_SEED=1 CABLE_TEST_PORT_RANGE=52400-52499 MAIL_TEST_PORT_RANGE=52400-52499 mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire_db -p campfire_jobs -p campfire_views -- --test-threads=4`
 
 ```text
-test result: ok. 448 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 34.70s
-test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.81s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.90s
-test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
-test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+test result: ok. 455 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 38.10s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.83s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.91s
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -110,28 +151,28 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 `CAMPFIRE_TEST_REQUIRE_SEED=1 CABLE_TEST_PORT_RANGE=52400-52499 MAIL_TEST_PORT_RANGE=52400-52499 mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire -- --test-threads=4`
 
 ```text
-test result: ok. 382 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 28.71s
+test result: ok. 407 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 37.48s
 ```
 
 `mise exec rust@1.98.1 -- cargo clippy --locked -j 4 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings`
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 9.46s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 25.52s
 ```
 
-The pre-change keyword callback failed with `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 439 filtered out; finished in 0.04s`. Three keyword injections remove mention priority, reset read/handled state on conflict, and commit before the callback write; all produce real failed tests. The pre-change appearance HTTP test failed on persisted `system` versus submitted `dark`: `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.48s`. Complete form comparison also failed before correcting dynamic zone labels; subscription content failed before correcting its exact leading/collection whitespace. The four committed injections remove the theme save, accept private DNS, remove unique-index rescue, and erase sound metadata; each must produce an actual failed test, not a compiler error. Sources are restored by the runner before final suites.
+The pre-change periodic registration test failed with `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 385 filtered out; finished in 0.00s`. Four calendar injections restore steady-state claim writes, remove the concurrent claim guard, duplicate both-opt-in refreshes, and commit before the refresh/claim; all produce actual failed tests. The pre-change keyword callback failed with `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 439 filtered out; finished in 0.04s`. Three keyword injections remove mention priority, reset read/handled state on conflict, and commit before the callback write; all produce real failed tests. The pre-change appearance HTTP test failed on persisted `system` versus submitted `dark`: `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.48s`. Complete form comparison also failed before correcting dynamic zone labels; subscription content failed before correcting its exact leading/collection whitespace. The four committed injections remove the theme save, accept private DNS, remove unique-index rescue, and erase sound metadata; each must produce an actual failed test, not a compiler error. Sources are restored by the runner before final suites.
 
 ## Precisely remaining
 
 1. Profile/UI integration stays partial: Smartfire's complete profile contains other owners' sections; sidebar/DM presence composition must connect to WS8b/WS13's full room templates and request-free broadcasts. Badge and OOO notice-line bytes and transport are already ported. Full page/browser/pixel parity and Rails rollback/readback rehearsal have not run. Appearance, subscription and allowance gaps above are closed.
 2. Message keyword recording is delivered. WS12 still owns generic/caller-authorized recording, work events, inbox queries/controllers/source rendering and access rules. `ActivityItem::record_message(tx: &mut Tx, message: &Message) -> Result<Vec<ActivityItem>>` is the minimal shared seam. WS11 must call it on a live stream finalize; WS16 must gate it for importing together with the existing message callback chain. This slice gates normal creation on non-streaming/non-system-note state; edits do not re-record.
-3. Meeting/OOO due sweeps, meeting conditional claims, stale refresh deduplication, periodic registration, expiration cleanup and concurrent dispatcher tests remain. WS14 owns Google execution at the documented job seam.
+3. Meeting/OOO due sweeps and conditional claims/broadcasts are delivered. WS14 owns validated cache creation (the one remaining cache title), Google fetch execution and refresh completion at the documented job seam.
 4. Event, board and huddle pushers/jobs, durable huddle DTO/throttle claim, recipient/source payload vectors and atomic claim/enqueue tests remain. WS12/14/13 supply sources/payloads; WS17 supplies policy and transport. Room handler audit remains.
 5. Remaining exact named scenarios below, largest files first; pure vector coverage is not claimed as a replay of every named sequence.
 
 ## Named scenario coverage by file
 
-347 selected exact Rails titles: **139 passed equivalent; 208 deferred**. `rust/plans/ws17-rails-test-inventory.json` records exact title, owner, status and Rust evidence. Additional profile/UI HTTP cases are outside this pre-existing selected inventory.
+347 selected exact Rails titles: **174 passed equivalent; 173 deferred**. `rust/plans/ws17-rails-test-inventory.json` records exact title, owner, status and Rust evidence. Additional profile/UI HTTP cases are outside this pre-existing selected inventory.
 
 | Rails file | Passed equivalent | Deferred |
 | --- | ---: | ---: |
@@ -143,10 +184,10 @@ The pre-change keyword callback failed with `test result: FAILED. 0 passed; 1 fa
 | `test/models/user/meeting_status_test.rb` | 0 | 14 |
 | `test/models/user/status_settings_test.rb` | 10 | 4 |
 | `test/models/workspace_presence_lease_test.rb` | 14 | 0 |
-| `test/models/calendar/meeting_cache_test.rb` | 0 | 13 |
+| `test/models/calendar/meeting_cache_test.rb` | 12 | 1 |
 | `test/models/huddle/join_pusher_test.rb` | 0 | 13 |
-| `test/models/calendar/ooo_dispatcher_test.rb` | 0 | 12 |
-| `test/models/calendar/meeting_dispatcher_test.rb` | 0 | 11 |
+| `test/models/calendar/ooo_dispatcher_test.rb` | 12 | 0 |
+| `test/models/calendar/meeting_dispatcher_test.rb` | 11 | 0 |
 | `test/services/activity_items/recorder_keyword_test.rb` | 11 | 0 |
 | `test/controllers/users/notification_settings_controller_test.rb` | 10 | 0 |
 | `test/integration/ooo_dm_notice_test.rb` | 0 | 10 |
@@ -281,42 +322,7 @@ The pre-change keyword callback failed with `test result: FAILED. 0 passed; 1 fa
 | `test/models/user/out_of_office_test.rb` | claiming an end keeps a manual OOO set racing the sweep | WS17 continuation |
 | `test/models/user/out_of_office_test.rb` | OOO quiets notifications unless the member keeps them on | WS17 continuation |
 | `test/models/user/out_of_office_test.rb` | deactivating clears the manual OOO columns | WS17 continuation |
-| `test/models/calendar/meeting_cache_test.rb` | in_meeting? is true inside an interval, with an inclusive start and exclusive end | WS17 continuation (claims/readers); WS14 (cache persistence/feed) |
-| `test/models/calendar/meeting_cache_test.rb` | in_meeting? is false without intervals | WS17 continuation (claims/readers); WS14 (cache persistence/feed) |
-| `test/models/calendar/meeting_cache_test.rb` | in_meeting? ignores malformed pairs instead of raising | WS17 continuation (claims/readers); WS14 (cache persistence/feed) |
-| `test/models/calendar/meeting_cache_test.rb` | quiet_window_epochs returns epoch windows and skips malformed pairs | WS17 continuation (claims/readers); WS14 (cache persistence/feed) |
-| `test/models/calendar/meeting_cache_test.rb` | in_ooo? is true inside an OOO interval, with an inclusive start and exclusive end | WS17 continuation (claims/readers); WS14 (cache persistence/feed) |
-| `test/models/calendar/meeting_cache_test.rb` | in_ooo? reads only the OOO intervals, not the busy ones | WS17 continuation (claims/readers); WS14 (cache persistence/feed) |
-| `test/models/calendar/meeting_cache_test.rb` | ooo_end_covering returns the latest covering end | WS17 continuation (claims/readers); WS14 (cache persistence/feed) |
-| `test/models/calendar/meeting_cache_test.rb` | ooo_end_covering is nil while uncovered | WS17 continuation (claims/readers); WS14 (cache persistence/feed) |
-| `test/models/calendar/meeting_cache_test.rb` | ooo_window_epochs returns epoch windows and skips malformed pairs | WS17 continuation (claims/readers); WS14 (cache persistence/feed) |
-| `test/models/calendar/meeting_cache_test.rb` | claim_broadcast! wins the first claim and each flip, and loses re-runs | WS17 continuation (claims/readers); WS14 (cache persistence/feed) |
-| `test/models/calendar/meeting_cache_test.rb` | claim_broadcast! lets only one concurrent claimant win | WS17 continuation (claims/readers); WS14 (cache persistence/feed) |
 | `test/models/calendar/meeting_cache_test.rb` | one cache per user | WS17 continuation (claims/readers); WS14 (cache persistence/feed) |
-| `test/models/calendar/meeting_cache_test.rb` | the cache row references its member with a cascading foreign key | WS17 continuation (claims/readers); WS14 (cache persistence/feed) |
-| `test/models/calendar/meeting_dispatcher_test.rb` | a meeting start broadcasts the badge | WS17 continuation |
-| `test/models/calendar/meeting_dispatcher_test.rb` | a re-run with no flip broadcasts nothing | WS17 continuation |
-| `test/models/calendar/meeting_dispatcher_test.rb` | a steady-state tick issues no claim write | WS17 continuation |
-| `test/models/calendar/meeting_dispatcher_test.rb` | a meeting end broadcasts the badge | WS17 continuation |
-| `test/models/calendar/meeting_dispatcher_test.rb` | a broadcast carries the meeting label | WS17 continuation |
-| `test/models/calendar/meeting_dispatcher_test.rb` | a stale cache enqueues a refresh | WS17 continuation |
-| `test/models/calendar/meeting_dispatcher_test.rb` | a missing cache enqueues a refresh without broadcasting | WS17 continuation |
-| `test/models/calendar/meeting_dispatcher_test.rb` | a fresh cache enqueues nothing | WS17 continuation |
-| `test/models/calendar/meeting_dispatcher_test.rb` | members who never opted in are ignored | WS17 continuation |
-| `test/models/calendar/meeting_dispatcher_test.rb` | deactivated members are ignored | WS17 continuation |
-| `test/models/calendar/meeting_dispatcher_test.rb` | one failing member does not stop the sweep | WS17 continuation |
-| `test/models/calendar/ooo_dispatcher_test.rb` | a manual OOO start broadcasts the badge and the DM notice | WS17 continuation |
-| `test/models/calendar/ooo_dispatcher_test.rb` | a re-run with no flip broadcasts nothing | WS17 continuation |
-| `test/models/calendar/ooo_dispatcher_test.rb` | a steady-state tick issues no claim write | WS17 continuation |
-| `test/models/calendar/ooo_dispatcher_test.rb` | an OOO end broadcasts and clears the manual columns | WS17 continuation |
-| `test/models/calendar/ooo_dispatcher_test.rb` | the broadcasts carry the OOO label, the note, and the return date | WS17 continuation |
-| `test/models/calendar/ooo_dispatcher_test.rb` | a calendar OOO start broadcasts the badge and the notice | WS17 continuation |
-| `test/models/calendar/ooo_dispatcher_test.rb` | a stale OOO-only cache enqueues a refresh | WS17 continuation |
-| `test/models/calendar/ooo_dispatcher_test.rb` | a member with both opt-ins refreshes through the meeting dispatcher only | WS17 continuation |
-| `test/models/calendar/ooo_dispatcher_test.rb` | a missing cache enqueues a refresh without broadcasting | WS17 continuation |
-| `test/models/calendar/ooo_dispatcher_test.rb` | members with neither a manual OOO nor the calendar opt-in are ignored | WS17 continuation |
-| `test/models/calendar/ooo_dispatcher_test.rb` | deactivated members are ignored | WS17 continuation |
-| `test/models/calendar/ooo_dispatcher_test.rb` | one failing member does not stop the sweep | WS17 continuation |
 | `test/models/event/reminder_pusher_test.rb` | pushes the reminder to going and maybe attendees who are still members | WS17 continuation (push); WS14 (event source) |
 | `test/models/event/reminder_pusher_test.rb` | push reminders ignore the event_reminders inbox switch | WS17 continuation (push); WS14 (event source) |
 | `test/models/event/reminder_pusher_test.rb` | the push body names the venue | WS17 continuation (push); WS14 (event source) |

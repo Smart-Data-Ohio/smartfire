@@ -9,7 +9,7 @@ use axum::body::Body;
 use axum::http::{HeaderMap, Method, Request, StatusCode, header};
 use tower::ServiceExt;
 
-use crate::app::{Booted, boot_with_network};
+use crate::app::{Booted, boot_with_services};
 use crate::config::Config;
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
@@ -138,7 +138,7 @@ impl TestApp {
             _ => None,
         })
         .unwrap();
-        Some(TestApp { booted: boot_with_network(config, seed_clock(), network).await.unwrap(), _dir: dir })
+        Some(TestApp { booted: boot_with_services(config, seed_clock(), network, crate::jobs::periodic::Intervals { periodic: None, huddle: None }).await.unwrap(), _dir: dir })
     }
 
     pub fn db(&self) -> &campfire_db::Database {
