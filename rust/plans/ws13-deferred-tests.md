@@ -1,6 +1,6 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 250 declarations now have complete assertion coverage mapped below. The other 298 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
+Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 256 declarations now have complete assertion coverage mapped below. The other 292 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
 
 ## Continued slice coverage (after merging WS19b)
 
@@ -29,12 +29,12 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/controllers/rooms/stage/streams_controller_test.rb` | 38 | 16 | 22 |
 | `test/models/huddle_invitation_test.rb` | 38 | 37 | 1 |
 | `test/controllers/rooms/huddles_controller_test.rb` | 36 | 0 | 36 |
-| `test/models/huddle/join_notifier_test.rb` | 33 | 32 | 1 |
+| `test/models/huddle/join_notifier_test.rb` | 33 | 33 | 0 |
 | `test/models/huddle_grant_test.rb` | 33 | 33 | 0 |
 | `test/system/huddles_test.rb` | 31 | 0 | 31 |
 | `test/controllers/internal/huddle_controller_test.rb` | 29 | 0 | 29 |
-| `test/models/rooms/stage_test.rb` | 27 | 23 | 4 |
-| `test/models/stream_test.rb` | 27 | 26 | 1 |
+| `test/models/rooms/stage_test.rb` | 27 | 27 | 0 |
+| `test/models/stream_test.rb` | 27 | 27 | 0 |
 | `test/controllers/rooms/stages_controller_test.rb` | 24 | 0 | 24 |
 | `test/controllers/rooms/stage/roles_controller_test.rb` | 20 | 16 | 4 |
 | `test/controllers/rooms/call_moderation_controller_test.rb` | 19 | 13 | 6 |
@@ -59,7 +59,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 4 | 0 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 4 | 0 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 2 | 0 |
-| **Total** | **548** | **250** | **298** |
+| **Total** | **548** | **256** | **292** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -383,13 +383,13 @@ Owner: WS13. Passed: all nine declarations, mapped to the 29-case Rails resolver
 
 ## test/models/huddle/join_notifier_test.rb
 
-Owner: WS13b. Partial: 32/33 complete declarations covered by `huddle_notifier_sequences_test.rs`, including two-device sighting jobs, late jobs, exact join/leave/ended JSON and rejoin timing. 33 pinned Rails sequences compare persisted state and actual subscription selection/throttle through unchanged WS17 seams. The fan-out preload/query-count assertion remains open; functional fan-out passes.
+Owner: WS13b. Passed: 33/33 declarations. The 33 notifier sequences compare exact notices, sighting jobs, subscriptions and throttle state. Actual SQLite tracing in `huddle_query_assertions_test.rs` verifies two shared user queries (bulk viewers and shared member names) and one ring query for both four- and eight-member groups. Cached inbox preferences avoid additional per-recipient user queries.
 
 - **Passed:** an in-call DM member is told when the peer joins, and the joiner is not
 - **Passed:** a member with no access to the room is told nothing
 - **Passed:** an out-of-call DM member gets the banner broadcast and one push
 - **Passed:** a group DM join toasts the insider and banners the outsider
-- join fan-out loads members and rings once no matter the group size
+- **Passed:** join fan-out loads members and rings once no matter the group size
 - **Passed:** a channel join toasts the insider and tells the outsider nothing
 - **Passed:** an out-of-call channel member gets no banner and no push
 - **Passed:** a voice room join toasts the insider and tells the outsider nothing
@@ -547,7 +547,7 @@ Owner: WS13b. Passed against nine pinned Rails lifecycle scenarios in `huddle_re
 
 ## test/models/rooms/stage_test.rb
 
-Owner: WS13b. Partial: 23/27 declarations passed. The extended domain lifecycle corpus covers succession, grants/stream endings, retained chat history, scope inclusion and message reachability. `Membership::create_default` reproduces Rails single-row listener defaults. Lock-order and preloaded live-stream query assertions remain open (four declarations).
+Owner: WS13b. Passed: 27/27 declarations. Domain lifecycle sequences cover succession, membership defaults and reachability. Actual SQLite tracing checks immediate transaction acquisition before the room read and last-host check for demotion and destruction. The per-instance `stage::StageRoom` association cache reproduces live/ended preload IDs and zero-query getters; unloaded reads execute one live-stream query.
 
 - **Passed:** type predicate
 - **Passed:** stage rooms are listed without directs but outside the voice scope
@@ -556,7 +556,7 @@ Owner: WS13b. Partial: 23/27 declarations passed. The extended domain lifecycle 
 - **Passed:** the creator becomes host even when they were not in the member list
 - **Passed:** members added later become listeners
 - **Passed:** the last host cannot be demoted
-- a host demotion checks for another host after locking the room in its transaction
+- **Passed:** a host demotion checks for another host after locking the room in its transaction
 - **Passed:** a host can step down once another host exists
 - **Passed:** non-stage rooms leave the stage columns nil
 - **Passed:** only listeners can raise a hand, and any promotion clears it
@@ -572,9 +572,9 @@ Owner: WS13b. Partial: 23/27 declarations passed. The extended domain lifecycle 
 - **Passed:** destroying the last host promotes the earliest remaining member without an administrator
 - **Passed:** destroying a host while another host remains ends nothing and promotes nobody
 - **Passed:** destroying a speaker ends only their own stream and grants
-- destroying the last host locks the room and checks for another host inside its transaction
-- live_stream reads the preloaded live stream without querying
-- live_stream is nil from the preloaded association once the stream has ended
+- **Passed:** destroying the last host locks the room and checks for another host inside its transaction
+- **Passed:** live_stream reads the preloaded live stream without querying
+- **Passed:** live_stream is nil from the preloaded association once the stream has ended
 - **Passed:** live_stream queries fresh when streams are not preloaded
 
 ## test/models/rooms/voice_test.rb
@@ -589,7 +589,7 @@ Owner: WS13b. Passed: 5/5 declarations. The extended domain lifecycle corpus add
 
 ## test/models/stream_test.rb
 
-Owner: WS13b. Partial: 26/27 declarations passed. Domain lifecycle sequences cover persistence. Six render declarations now compare complete pinned Rails badge/dot/personalized-panel/event bytes and destination counts over real WebSockets in `jobs/huddle_render_tests.rs`. Only the non-stage stream-query assertion remains open.
+Owner: WS13b. Passed: 27/27 declarations. Domain lifecycle sequences cover persistence; complete pinned Rails Turbo Stream bytes cover badges, dots, personalized panels and stop events over real sockets. Actual SQLite tracing verifies that non-stage grant revocation executes zero stream queries.
 
 - **Passed:** quality must be a known preset
 - **Passed:** started_at defaults to now
@@ -613,7 +613,7 @@ Owner: WS13b. Partial: 26/27 declarations passed. Domain lifecycle sequences cov
 - **Passed:** deactivating the presenter ends the stream
 - **Passed:** deactivating the presenter ends the stream even without grants
 - **Passed:** destroying the room destroys its streams
-- revoking a grant outside a stage room runs no stream queries
+- **Passed:** revoking a grant outside a stage room runs no stream queries
 - **Passed:** end_stale_live! ends streams whose presenter went quiet over thirty seconds ago
 - **Passed:** end_stale_live! ends streams whose presenter was never seen
 - **Passed:** end_stale_live! keeps streams with a recently seen presenter
