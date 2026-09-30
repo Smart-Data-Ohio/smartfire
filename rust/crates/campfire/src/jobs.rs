@@ -387,3 +387,5 @@ use crate::channels::sink::template_free_broadcast;
 mod tests;
 #[cfg(test)]
 mod huddle_render_tests;
+#[cfg(test)]
+mod huddle_neighbor_mention_test;

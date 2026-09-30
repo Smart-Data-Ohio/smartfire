@@ -3,6 +3,7 @@
 pub mod account;
 pub mod audit_log;
 pub mod activity_item;
+pub mod activity_mentions;
 pub mod active_storage;
 pub mod ban;
 pub mod boost;

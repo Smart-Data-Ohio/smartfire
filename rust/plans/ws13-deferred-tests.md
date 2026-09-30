@@ -1,6 +1,6 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 256 declarations now have complete assertion coverage mapped below. The other 292 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
+Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 257 declarations now have complete assertion coverage mapped below. The other 291 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
 
 ## Continued slice coverage (after merging WS19b)
 
@@ -27,7 +27,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | Rails file | Original | Assertions covered (passed) | Partial/deferred |
 | --- | ---: | ---: | ---: |
 | `test/controllers/rooms/stage/streams_controller_test.rb` | 38 | 16 | 22 |
-| `test/models/huddle_invitation_test.rb` | 38 | 37 | 1 |
+| `test/models/huddle_invitation_test.rb` | 38 | 38 | 0 |
 | `test/controllers/rooms/huddles_controller_test.rb` | 36 | 0 | 36 |
 | `test/models/huddle/join_notifier_test.rb` | 33 | 33 | 0 |
 | `test/models/huddle_grant_test.rb` | 33 | 33 | 0 |
@@ -59,7 +59,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 4 | 0 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 4 | 0 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 2 | 0 |
-| **Total** | **548** | **256** | **292** |
+| **Total** | **548** | **257** | **291** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -490,13 +490,13 @@ Owner: WS13b. Passed: 33/33 declarations. The grant sequence corpus covers domai
 
 ## test/models/huddle_invitation_test.rb
 
-Owner: WS13b. Partial: 37/38 complete declarations covered by 38 pinned Rails sequences in `huddle_invitation_sequences_test.rs`. Each step compares all grant/item attributes, huddle JSON and immediate push-job IDs. The disabled-items declaration retains its neighboring message-mention assertion for WS8/WS12; its banner and timeout assertions pass.
+Owner: WS13b. Passed: 38/38 declarations. Stateful sequences compare grant/item attributes, huddle JSON and immediate job IDs. `jobs/huddle_neighbor_mention_test.rs` closes the neighboring mention assertion using the real signed Rails Action Text attachment and actual message creation, including eleven recipient/visibility/thread guards and recorder idempotence. The small mention-recorder hook is shared with WS8/WS12; other inbox winners and grouping remain WS12 work.
 
 - **Passed:** issuing a grant in a one-to-one DM invites only the other participant
 - **Passed:** issuing a grant never schedules a delayed job
 - **Passed:** a quiet check silences the invitation payload but keeps the item
 - **Passed:** a recipient with notifications off or invisible gets no invitation
-- a recipient with huddle items switched off still gets the banner but no item
+- **Passed:** a recipient with huddle items switched off still gets the banner but no item
 - **Passed:** a switched-off user hears one banner across reissues inside the window and a fresh one after
 - **Passed:** a switched-off user is not rung again when the same session reissues its grant
 - **Passed:** channel huddles create no invitation

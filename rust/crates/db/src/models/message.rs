@@ -454,6 +454,7 @@ impl Message {
             // queues its broadcasts here; push persistence stays in this same transaction.
             message.create_in_index(tx)?;
             message.receive_in_conversation(tx)?;
+            crate::models::activity_mentions::record(tx, &message)?;
             crate::models::message_reference::sync(tx, &message)?;
             message.push_later_in_conversation(tx);
         }

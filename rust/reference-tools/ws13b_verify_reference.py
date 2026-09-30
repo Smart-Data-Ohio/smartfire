@@ -22,6 +22,12 @@ PATHS = [
     "app/jobs/huddle/broadcast_presence_job.rb", "app/services/huddle/reconciler.rb",
     "test/jobs/huddle/join_notice_job_test.rb", "test/jobs/huddle/push_invitation_job_test.rb",
     "test/jobs/huddle/broadcast_presence_job_test.rb", "test/services/huddle/reconciler_test.rb",
+    "app/views/rooms/huddles/_participants.html.erb", "app/views/rooms/stage/_live_badge.html.erb",
+    "app/views/rooms/stage/_live_dot.html.erb", "app/views/rooms/stage/_panel_body.html.erb",
+    "app/views/rooms/stage/_roster.html.erb", "app/views/rooms/stage/_controls.html.erb",
+    "app/views/rooms/stage/_stream_event.html.erb", "app/views/rooms/stage/_role_event.html.erb",
+    "app/views/users/_mention.html.erb", "app/helpers/users_helper.rb",
+    "app/services/activity_items/recorder.rb", "test/test_helpers/mention_test_helper.rb",
 ]
 image = os.environ.get("PARITY_IMAGE", "ws13-reference:d7c7de92")
 raw = subprocess.check_output(["docker", "run", "--rm", "--name", "ws13b-source-check", "--network", "none", "--entrypoint", "sha256sum", image, *[f"/rails/{path}" for path in PATHS]], text=True, cwd=ROOT)
