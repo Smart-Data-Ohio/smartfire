@@ -555,11 +555,13 @@ impl Message {
     /// (`destroyed_with_conversation?`). The search index entry goes after commit.
     ///
     /// Not ported (WS8): the dependents with destroy callbacks of their own (poll, pins, saved
-    /// items, the reference rows, Drive attachments). Their foreign keys have no `ON DELETE`, so
+    /// items, the other reference rows, Drive attachments). Their foreign keys have no `ON DELETE`, so
     /// destroying a message that has any fails with a constraint error rather than orphaning
     /// them. The quote card broadcasts aren't ported either.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         let now = tx.now();
+        // WS15e's small WS8a seam: destroy the callback-free LinkEmbed reference dependents.
+        tx.conn().execute_cached("DELETE FROM link_embed_references WHERE message_id = ?", [self.id])?;
         tx.conn().execute_cached(
             r#"UPDATE "messages" SET "reply_to_message_id" = NULL, "reply_target_deleted_at" = ?, "updated_at" = ? WHERE "messages"."reply_to_message_id" = ?"#,
             params![now, now, self.id],

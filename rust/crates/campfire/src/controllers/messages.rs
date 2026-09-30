@@ -17,8 +17,8 @@ use campfire_views::messages as views;
 use crate::active_storage::{self, keep_after_commit};
 use crate::app::{App, AppCtx};
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
-use crate::controllers::presenters::page::{self, Rendered, db_error};
 use crate::controllers::presenters::attachments::Assignment;
+use crate::controllers::presenters::page::{self, Rendered, db_error};
 use crate::controllers::presenters::{DbResolver, Presenter, cache_key_with_version, room_kind, storage_error};
 use crate::jobs::{WEBHOOK_HOLD, WebhookJob};
 
@@ -163,6 +163,7 @@ pub(crate) fn ensure_can_administer(c: &mut Ctx, message: &Message) -> Result<()
 #[derive(Debug, Default, Clone)]
 pub(crate) struct MessageParams {
     pub body: Option<String>,
+    pub markdown_source: Option<String>,
     /// `attachment=`: `None` when the key wasn't given.
     pub attachment: Option<Assignment>,
     pub client_message_id: Option<String>,
@@ -171,10 +172,11 @@ pub(crate) struct MessageParams {
 /// `params.require(:message).permit(:body, :attachment, :client_message_id)`
 fn message_params(c: &Ctx) -> Result<MessageParams> {
     let message = c.params.require("message")?;
-    let permitted = message.permit(&permit_keys(&["body", "attachment", "client_message_id"]));
+    let permitted = message.permit(&permit_keys(&["body", "attachment", "client_message_id", "markdown_source"]));
     let text = |key: &str| permitted.get(key).and_then(Param::as_str).map(str::to_string);
     Ok(MessageParams {
         body: text("body"),
+        markdown_source: text("markdown_source"),
         attachment: attachment_assignment(&permitted)?,
         client_message_id: text("client_message_id"),
     })
@@ -227,9 +229,10 @@ pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessagePara
         Some(Assignment::Invalid) => return Err(invalid_attachment()),
         _ => None,
     };
-    let body = match attributes.body {
-        Some(body) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
-        None => None,
+    let body = match (&attributes.markdown_source, attributes.body) {
+        (Some(source), _) => Some(canonicalize_markdown(c.app(), room_id, source.clone()).await?),
+        (None, Some(body)) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
+        (None, None) => None,
     };
     let (message, blob) = c
         .app()
@@ -247,6 +250,11 @@ pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessagePara
                     ..Default::default()
                 },
             )?;
+            assign_markdown_source(tx, &message, attributes.markdown_source.as_deref())?;
+            let message = Message::find(tx.conn(), message.id)?;
+            if !message.streaming {
+                crate::integrations::link_embed::sync_message(tx, &message, true)?;
+            }
             deliver_webhooks_to_bots(tx, &room, &message)?;
             Ok((message, blob))
         })
@@ -278,6 +286,46 @@ pub(crate) fn canonical_body(conn: &campfire_db::Connection, app: &App, body: &s
     let resolver = DbResolver { conn, secrets: &app.secrets, now: app.clock.now() };
     let ctx = resolver.render_context(request_host);
     Content::load(body, &ctx).map(|content| content.to_html()).unwrap_or_else(|_| body.to_string())
+}
+
+async fn canonicalize_markdown(app: &App, room_id: i64, source: String) -> Result<String> {
+    if source.chars().count() > campfire_richtext::markdown::SOURCE_LIMIT {
+        let mut errors = campfire_db::Errors::default();
+        errors.add("markdown_source", "is too long (maximum is 50000 characters)");
+        errors.into_result().map_err(db_error)?;
+    }
+    let app2 = app.clone();
+    app.db
+        .read(move |conn| {
+            crate::controllers::presenters::rich_text::render_markdown(conn, &app2.secrets, app2.clock.now(), room_id, &source)
+        })
+        .await
+        .map_err(db_error)
+}
+
+/// Minimal source assignment seam until WS8a owns all Message write callbacks.
+fn assign_markdown_source(tx: &mut campfire_db::Tx<'_>, message: &Message, source: Option<&str>) -> campfire_db::Result<bool> {
+    let mut errors = campfire_db::Errors::default();
+    if let Some(source) = source {
+        if source.chars().count() > campfire_richtext::markdown::SOURCE_LIMIT {
+            errors.add("markdown_source", "is too long (maximum is 50000 characters)");
+        }
+        if !message.streaming && source.chars().all(char::is_whitespace) {
+            let attached:bool=tx.conn().query_row("SELECT EXISTS(SELECT 1 FROM active_storage_attachments WHERE record_type='Message' AND record_id=?1 AND name='attachment') OR EXISTS(SELECT 1 FROM drive_attachments WHERE message_id=?1)",[message.id],|row| row.get(0))?;
+            if !attached {
+                errors.add("markdown_source", "can't be blank");
+            }
+        }
+    }
+    errors.into_result()?;
+    let changed = message.markdown_source.as_deref() != source;
+    if changed {
+        tx.conn().execute(
+            "UPDATE messages SET markdown_source=?1 WHERE id=?2",
+            rusqlite::params![source, message.id],
+        )?;
+    }
+    Ok(changed)
 }
 
 /// Assigning something that isn't an upload, a signed blob id, nil or "".
@@ -335,15 +383,20 @@ pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: Messag
         Some(_) => Some(None),
         None => None,
     };
-    let body = match attributes.body {
-        Some(body) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
-        None => None,
+    let body = match (&attributes.markdown_source, attributes.body) {
+        (Some(source), _) => Some(canonicalize_markdown(c.app(), message.room_id, source.clone()).await?),
+        (None, Some(body)) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
+        (None, None) => None,
     };
     let (id, blob) = c
         .app()
         .db
         .write(move |tx| {
             let mut message = message;
+            let source_changed = assign_markdown_source(tx, &message, attributes.markdown_source.as_deref())?;
+            let body_changed = body
+                .as_ref()
+                .is_some_and(|body| message.body_html(tx.conn()).ok().flatten().as_ref() != Some(body));
             if let Some(body) = body {
                 message.update_body(tx, &body)?;
             }
@@ -351,6 +404,13 @@ pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: Messag
             let blob = attachment.flatten().map(|staged| save_staged(tx, staged)).transpose()?;
             if attachment_given {
                 message.replace_attachment(tx, blob.as_ref().map(|blob| blob.id))?;
+            }
+            if source_changed {
+                message.touch(tx)?;
+            }
+            if !message.streaming && (source_changed || body_changed) {
+                let reloaded = Message::find(tx.conn(), message.id)?;
+                crate::integrations::link_embed::sync_message(tx, &reloaded, true)?;
             }
             Ok((message.id, blob))
         })
@@ -456,16 +516,21 @@ pub(crate) async fn present<T: Send + 'static>(
     let app = c.app().clone();
     let request_host = Some(c.request.host());
     let cache_base_url = c.url_for("");
-    c.app()
+    let (value, fetches) = c.app()
         .db
         .read(move |conn| {
             let mut presenter = Presenter::new(conn, &app, request_host);
             presenter.cache_base_url = Some(cache_base_url);
             // The Jbuilder partials (`json.cache!`) read the fragment cache on this thread.
-            campfire_views::fragment_cache::with(&app.fragment_cache, || f(&presenter))
+            let value = campfire_views::fragment_cache::with(&app.fragment_cache, || f(&presenter))?;
+            Ok((value, presenter.pending_link_fetches()))
         })
         .await
-        .map_err(db_error)
+        .map_err(db_error)?;
+    super::presenters::link_embeds::enqueue_render_fetches(c.app(), fetches)
+        .await
+        .map_err(db_error)?;
+    Ok(value)
 }
 
 /// `render action: :room_not_found` (inside the layout).

@@ -12,9 +12,9 @@
 mod document;
 mod entities;
 pub mod fetch;
-mod html;
+pub(super) mod html;
 pub mod location;
-mod metadata;
+pub(super) mod metadata;
 
 use std::sync::{Arc, LazyLock};
 use std::time::Duration;

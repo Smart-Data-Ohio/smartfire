@@ -828,7 +828,7 @@ pub fn cards(
     h::raw(format!(
         "{}<div id=\"{}\" class=\"{class}\">{}</div>\n",
         " ".repeat(indent),
-        message.dom_id(prefix),
+        h::escape(&message.dom_id(prefix)),
         bodies.concat()
     ))
 }

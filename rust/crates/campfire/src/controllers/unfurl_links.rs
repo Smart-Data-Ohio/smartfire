@@ -53,4 +53,42 @@ mod tests {
         let array = david.write(Req::new(Method::POST, "/unfurl_link").form(&[("url[]", "http://example.com")])).await;
         assert_eq!(array.status, StatusCode::NO_CONTENT);
     }
+
+    #[tokio::test]
+    async fn ws15e_composer_http_skips_special_cards_before_dns() {
+        use std::sync::Arc;
+        use crate::integrations::{net::Network,test_support::FakeResolver};
+        #[derive(Clone)]
+        struct NetworkAction(Network);
+        impl<'a> campfire_kit::ActionFn<'a> for NetworkAction {
+            type Fut=futures_util::future::BoxFuture<'a,campfire_kit::Result>;
+            fn call(&self,c: &'a mut campfire_kit::Ctx) -> Self::Fut {
+                c.set_current(self.0.clone());
+                Box::pin(crate::controllers::dispatch(c))
+            }
+        }
+        let mut app = TestApp::boot().await.expect("build parity seed");
+        app.booted.jobs.stop(std::time::Duration::from_secs(1)).await;
+        let resolver=Arc::new(FakeResolver::default());
+        let action=NetworkAction(Network { resolver:resolver.clone(),..Network::system() });
+        let kit=campfire_kit::Kit::new(campfire_kit::KitConfig::production(true),Arc::new(campfire_kit::RailsCrypto::new(app.booted.app.secrets.clone())),seed_clock(),app.booted.app.clone());
+        let methods=campfire_kit::get(action.clone()).merge(campfire_kit::post(action.clone()));
+        let routes=axum::Router::new().route("/{*path}",methods).route("/",campfire_kit::get(action));
+        app.booted.router=campfire_kit::app(routes,kit);
+        let request = |url: &str| Req::new(Method::POST, "/unfurl_link").form(&[("url", url)]);
+        assert_eq!(
+            app.anonymous()
+                .send(request("https://github.com/basecamp/once/pull/1"))
+                .await
+                .status,
+            StatusCode::FOUND
+        );
+        let mut david = app.david();
+        for url in ["https://github.com/basecamp/once/pull/1", "https://app.fizzy.do/123/cards/42"] {
+            let response = david.write(request(url)).await;
+            assert_eq!(response.status, StatusCode::NO_CONTENT);
+            assert!(response.body.is_empty());
+        }
+        assert!(resolver.lookups().is_empty());
+    }
 }

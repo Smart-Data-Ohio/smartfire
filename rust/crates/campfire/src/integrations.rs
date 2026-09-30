@@ -13,14 +13,12 @@
 //! plans/rust-conversion.md, "HTTP clients: three distinct policies"). Oracles for the tests
 //! (Ruby scripts run in the reference) live in testdata/oracle.
 
-mod jobs;
-pub mod net;
 pub mod image_proxy;
-// ReferenceSync's message-write seam awaits WS8a; keep its domain policies ready to consume.
-#[allow(dead_code)]
+mod jobs;
 pub mod link_embed;
 #[allow(dead_code)]
 pub mod linkedin;
+pub mod net;
 pub mod opengraph;
 pub mod search;
 pub mod web_push;

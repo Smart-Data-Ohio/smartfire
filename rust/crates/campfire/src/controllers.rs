@@ -41,6 +41,7 @@ pub mod accounts;
 pub mod autocompletable;
 pub mod csp_reports;
 pub mod first_runs;
+pub mod message_embed_suppressions;
 pub mod messages;
 pub mod presenters;
 pub mod pwa;
@@ -222,6 +223,7 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "searches#clear" => arc(searches::clear),
         "embeds/images#show" => arc(embeds::show),
         "unfurl_links#create" => arc(unfurl_links::create),
+        "message_embed_suppressions#create" => arc(message_embed_suppressions::create),
         "pwa#manifest" => arc(pwa::manifest),
         "pwa#service_worker" => arc(pwa::service_worker),
         "rails/health#show" => arc(health::show),

@@ -35,9 +35,14 @@ pub fn deliver(cable: &Cable, app: Option<&App>, event: &Event) -> bool {
 /// Runs the broadcast's handler. A broadcast that fails is logged and dropped: the model
 /// callbacks rescue and report it (`Rails.error.report(..., handled: true)`), so the ones after
 /// it still run.
-fn broadcast(cable: &Cable, _app: Option<&App>, request: &BroadcastRequest) {
+fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
     let result = match request.kind {
         RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, &broadcast, huddle_configured(env))),
+        crate::integrations::link_embed::store::CardUpdate::KIND => decode::<crate::integrations::link_embed::store::CardUpdate>(request)
+            .and_then(|event| {
+                let app = app.ok_or_else(|| anyhow::anyhow!("app not booted"))?;
+                crate::controllers::presenters::link_embeds::broadcast_updates(app, event.embed_id)
+            }),
         kind => Err(anyhow::anyhow!("no handler for the {kind} broadcast")),
     };
     if let Err(error) = result {

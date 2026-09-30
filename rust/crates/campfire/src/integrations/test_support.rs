@@ -149,6 +149,14 @@ impl FakeServer {
     }
 
     pub async fn start_tls(routes: Vec<Route>) -> Self {
+        Self::start_tls_on(routes, false).await
+    }
+
+    pub async fn start_tls_ws15e(routes: Vec<Route>) -> Self {
+        Self::start_tls_on(routes, true).await
+    }
+
+    async fn start_tls_on(routes: Vec<Route>, ws15e: bool) -> Self {
         use rustls::pki_types::pem::PemObject;
         use rustls::pki_types::{CertificateDer, PrivateKeyDer};
         let certs = vec![CertificateDer::from_pem_slice(include_bytes!("testdata/tls/server.pem")).unwrap()];
@@ -160,7 +168,7 @@ impl FakeServer {
             .with_no_client_auth()
             .with_single_cert(certs, key)
             .unwrap();
-        Self::start_with(routes, Some(tokio_rustls::TlsAcceptor::from(Arc::new(config))), false).await
+        Self::start_with(routes, Some(tokio_rustls::TlsAcceptor::from(Arc::new(config))), ws15e).await
     }
 
     pub async fn start_ws15e(routes: Vec<Route>) -> Self {

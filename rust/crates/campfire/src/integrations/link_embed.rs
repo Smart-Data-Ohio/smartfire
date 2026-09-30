@@ -1,5 +1,11 @@
-//! Generic link URL policy, independent of persistence and rendering.
+//! LinkEmbed domain: URL policy, persisted cache/references and transactional fetch requests.
+pub mod fetcher;
+pub mod metadata_parser;
+pub mod store;
 pub mod url_classifier;
+
+pub use fetcher::{FetchJob, perform};
+pub use store::{Embed, Reference, sync_message};
 
 use crate::integrations::linkedin;
 use serde::Serialize;

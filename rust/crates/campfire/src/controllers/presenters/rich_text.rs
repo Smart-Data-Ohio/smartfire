@@ -39,6 +39,65 @@ impl DbResolver<'_> {
     }
 }
 
+impl campfire_richtext::markdown::IconResolver for DbResolver<'_> {
+    fn find(&self, name: &str) -> Option<campfire_richtext::markdown::Icon> {
+        use campfire_richtext::markdown::{Icon, IconCatalog};
+        use campfire_views::{
+            helpers::AvatarIcon,
+            messages::reactions::{static_icon, static_icon_name},
+        };
+        use rusqlite::OptionalExtension;
+        let name = name.trim().to_lowercase();
+        let icon = static_icon(&name);
+        if let Some(AvatarIcon::Image { title, url, brand: true }) = icon {
+            return Some(Icon::Brand {
+                name: static_icon_name(&name).unwrap_or(name),
+                title,
+                url: Some(url),
+            });
+        }
+        let title: Option<String> = self
+            .conn
+            .query_row("SELECT title FROM workspace_icons WHERE name=?", [&name], |row| row.get(0))
+            .optional()
+            .ok()
+            .flatten();
+        if let Some(title) = title {
+            return Some(Icon::Custom {
+                url: format!("/icons/{name}"),
+                name,
+                title,
+            });
+        }
+        if let Some(AvatarIcon::Emoji { character, .. }) = icon {
+            return Some(Icon::Emoji(character));
+        }
+        IconCatalog::default().find(&name)
+    }
+}
+
+/// WS8a adapter: the existing WS5 renderer with real room members and icon catalog.
+pub fn render_markdown(
+    conn: &Connection,
+    secrets: &Secrets,
+    now: jiff::Timestamp,
+    room_id: i64,
+    source: &str,
+) -> campfire_db::Result<String> {
+    use campfire_richtext::markdown::{MentionResolver, RoomMember};
+    let resolver = DbResolver { conn, secrets, now };
+    let members = campfire_db::Room::find(conn, room_id)?
+        .users(conn)?
+        .iter()
+        .map(|user| RoomMember {
+            user: resolver.mention_user(user),
+            active: user.status == campfire_db::Status::Active,
+        })
+        .collect::<Vec<_>>();
+    let mentions = |name: &str| members.as_slice().unique_active_member(name);
+    campfire_richtext::markdown::render(source, &mentions, &resolver).map_err(|error| campfire_db::Error::Other(error.to_string()))
+}
+
 impl AttachableResolver for DbResolver<'_> {
     fn embed_image_path(&self, url: &str) -> Result<String, campfire_richtext::Error> {
         Ok(crate::integrations::image_proxy::signed_path(self.secrets, url))

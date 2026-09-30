@@ -129,7 +129,7 @@ async fn valid_image_content_type(net: &Network, image: Option<String>) -> Optio
 }
 
 /// `strip_tags` (Rails::HTML5::FullSanitizer): the text of the HTML5 fragment, serialized.
-fn strip_tags(html: &str) -> Result<String, UnfurlError> {
+pub(crate) fn strip_tags(html: &str) -> Result<String, UnfurlError> {
     if html.is_empty() {
         return Ok(String::new());
     }

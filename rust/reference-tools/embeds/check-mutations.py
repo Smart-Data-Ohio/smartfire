@@ -25,6 +25,10 @@ mutations = [
     ("linkedin.rs", 'allowed_urn_trailer(&text[urn.end()..])', 'true', "ws15e_linkedin_url_and_html_corpus_matches_rails"),
     ("opengraph.rs", 'if classifier {', 'if false && classifier {', "ws15e_composer_skips_github_and_fizzy_cards_without_dns"),
     ("net/http.rs", 'if timer.as_mut().poll(cx).is_ready()', 'if false && timer.as_mut().poll(cx).is_ready()', "ws15e_write_timeout_bounds_a_stalled_transport"),
+    ("link_embed/store.rs", 'tx.emit_after_commit(Event::job(&FetchJob { embed_id: embed.id }));', 'let _ = embed;', "ws15e_http_link_jobs_and_references_roll_back_with_rejected_enqueue"),
+    ("../controllers/message_embed_suppressions.rs", 'message.creator_id!=user_id || message.system_note || locked', 'message.system_note || locked', "ws15e_suppression_requires_membership_author_and_eligible_conversation"),
+    ("link_embed/store.rs", 'tx.emit_after_commit(Event::broadcast(&CardUpdate { embed_id: self.id }));', 'tx.emit_now(Event::broadcast(&CardUpdate { embed_id: self.id }));', "ws15e_link_card_broadcasts_only_after_commit_with_message_key_and_scroll"),
+    ("link_embed/fetcher.rs", '["image/jpeg", "image/png", "image/gif", "image/webp", "image/avif"]', '["image/jpeg", "image/png", "image/gif", "image/webp", "image/avif", "image/svg+xml"]', "ws15e_link_fetch_records_positive_negative_and_guarded_image_results"),
 ]
 for name, old, new, test in mutations:
     path = root / "crates/campfire/src/integrations" / name
