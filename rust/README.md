@@ -18,7 +18,10 @@ What changed on import:
   `parity/` compares the two apps, and `parity/screens.yml` has to grow to cover what Smartfire
   added. Until cutover, any difference from the Rails app is a bug.
 - CI runs from `.github/workflows/rust.yml` at the repository root. Upstream's image publishing
-  workflow wasn't brought over; deployment goes through our own GCP pipeline.
+  workflow wasn't brought over; deployment goes through our own GCP pipeline. Before testing,
+  CI builds or restores the `default` and `first_run` parity seeds from the Rails commit in
+  `parity/reference.sha` and validates them with Rails. Missing seeds fail tests when `CI` is
+  set; local tests may skip with a message. See [`parity/seeds/README.md`](parity/seeds/README.md).
 
 Everything below is upstream's README as imported: it describes their port against stock
 Campfire, including its numbers and its deliberate differences from Rails, which we inherit but
@@ -437,9 +440,6 @@ Deliberate:
   are, so `NOT`, `AND`, `OR` or `NEAR` in the wrong place is a 500. Each word is now matched as
   itself.
 - **`/rooms/directs/:id` redirects to the room** instead of answering 500.
-- **Edge's install instructions render.** With an EdgeHTML user agent (`Edge/`), Rails answers
-  profile and room pages with a 500 because the partial names an image that isn't there
-  (`install-edge.svg`); the Rust app ships it.
 - **New-ping suggestions appear.** The user picker for a new ping asks for JSON; in Rails it asks
   for anything, gets HTML, and never shows a suggestion.
 - **Autolinking can't break out of an attribute.** rails_autolink finds URLs and email addresses
