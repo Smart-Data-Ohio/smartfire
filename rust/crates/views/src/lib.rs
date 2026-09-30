@@ -13,6 +13,7 @@ pub mod sessions;
 pub mod first_runs;
 pub mod users;
 pub mod accounts;
+pub mod agents;
 pub mod welcome;
 pub mod pwa;
 pub mod autocompletable;

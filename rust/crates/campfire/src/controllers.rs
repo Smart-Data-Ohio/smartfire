@@ -38,6 +38,7 @@ use crate::active_storage;
 // Controller modules (one per Rails controller namespace), plus the presenters that map rows to
 // view models. Controller agents add their `pub mod` lines here.
 pub mod accounts;
+pub mod agents;
 pub mod autocompletable;
 pub mod csp_reports;
 pub mod first_runs;
@@ -148,6 +149,7 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "accounts/users#update" => arc(accounts::users::update),
         "accounts/users#destroy" => arc(accounts::users::destroy),
         "accounts/bots/keys#update" => arc(accounts::bots::keys::update),
+        "agents/directory#index" => arc(agents::directory::index),
         "accounts/bots#index" => arc(accounts::bots::index),
         "accounts/bots#create" => arc(accounts::bots::create),
         "accounts/bots#new" => arc(accounts::bots::new),
@@ -518,7 +520,7 @@ mod tests {
 
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
-        "welcome#show", "first_runs#show", "first_runs#create", "sessions/transfers#show",
+        "agents/directory#index", "welcome#show", "first_runs#show", "first_runs#create", "sessions/transfers#show",
         "sessions/transfers#update", "sessions#new", "sessions#create", "sessions#destroy",
         "content_security_policy_reports#create", "accounts/users#index", "accounts/users#update",
         "accounts/users#destroy", "accounts/bots/keys#update", "accounts/bots#index", "accounts/bots#create",

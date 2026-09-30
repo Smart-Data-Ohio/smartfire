@@ -647,3 +647,54 @@ async fn bot_edit_pages_follow_admin_owner_and_legacy_access() {
     }).await.unwrap();
     assert_eq!(count, 0);
 }
+
+#[tokio::test]
+async fn agent_directory_rejects_credentials_bots_and_unsigned_visitors() {
+    let Some(test) = boot_seed("default").await else { return };
+    let mut browser = test.browser("198.51.100.94");
+    assert_redirect(&browser.get("/agents").await, "http://campfire.test/session/new");
+    let secret = test.booted.app.db.write(|tx| {
+        let id = tx.conn().query_row("SELECT id FROM agents LIMIT 1", [], |r| r.get(0))?;
+        Ok(campfire_db::models::agent_credential::AgentCredential::create_with_secret(tx, id, "directory-denial", 127326141, None)?.1)
+    }).await.unwrap();
+    let authorization = format!("{} {}", "Bearer", secret);
+    let response = browser.request(Method::GET, "/agents", &[("authorization", &authorization)], None).await;
+    assert_eq!(response.status, StatusCode::FORBIDDEN);
+    let path = format!("/agents?bot_key={}", encode(&test.label("bot_keys.bender")));
+    assert_eq!(browser.get(&path).await.status, StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn agent_directory_lists_active_then_inactive_without_private_facts() {
+    let Some(test) = boot_seed("default").await else { return };
+    let bot_id: i64 = test.label("users.bender").parse().unwrap();
+    test.booted.app.db.write(move |tx| {
+        tx.conn().execute("UPDATE agents SET status='working', status_note='<working & now>', last_seen_at=?, webhook_signing_secret='private-directory-fixture' WHERE user_id=?", rusqlite::params![tx.now(), bot_id])?;
+        let suspended = campfire_db::User::create_bot(tx, "Aaron Suspended", None)?;
+        tx.conn().execute("INSERT INTO agents(user_id,owner_id,kind,suspended_at,created_at,updated_at) VALUES(?,?,'workspace',?,?,?)", rusqlite::params![suspended.id, 127326141, tx.now(), tx.now(), tx.now()])?;
+        Ok(())
+    }).await.unwrap();
+    let mut human = test.browser("198.51.100.95");
+    human.sign_in(&test.label("emails.kevin")).await;
+    let response = human.get("/agents").await;
+    assert_eq!(response.status, StatusCode::OK);
+    let html = response.text();
+    assert!(html.find("Bender Bot").unwrap() < html.find("Aaron Suspended").unwrap());
+    assert!(html.contains("Workspace agent, managed by David"));
+    assert!(html.contains("&lt;working &amp; now&gt;"));
+    assert!(html.contains("agent-status-badge--working"));
+    assert!(html.contains("last seen less than a minute ago"));
+    assert!(!html.contains("private-directory-fixture"));
+    test.booted.app.db.write(move |tx| {
+        tx.conn().execute("UPDATE users SET status=1 WHERE id=?", [bot_id])?;
+        Ok(())
+    }).await.unwrap();
+    assert!(!human.get("/agents").await.text().contains("Bender Bot"));
+}
+
+#[tokio::test]
+async fn agent_directory_bot_session_is_forbidden() {
+    let Some(app) = crate::controllers::presenters::test_support::TestApp::boot().await else { return };
+    let mut bot = app.sign_in(crate::controllers::presenters::test_support::BENDER).await;
+    assert_eq!(bot.get("/agents").await.status, StatusCode::FORBIDDEN);
+}

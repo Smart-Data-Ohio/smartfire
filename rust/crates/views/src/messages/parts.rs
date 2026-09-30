@@ -26,7 +26,7 @@ impl AgentStep {
             if ms < 1000 {
                 format!("{ms}ms")
             } else {
-                format!("{:.1}s", ms as f64 / 1000.0)
+                step_seconds(ms)
             }
         })
     }
@@ -40,6 +40,26 @@ impl AgentStep {
             .as_deref()
             .filter(|value| !h::is_blank(value))
     }
+}
+
+// Ruby sprintf rounds decimal ties to even. Scaling a large float before rounding
+// loses fractional seconds, so round its shortest decimal representation instead.
+fn step_seconds(ms: i64) -> String {
+    let value = ms as f64 / 1000.0;
+    // At this magnitude the float grid is 1/16s or coarser. Decimal half-ties
+    // are exactly representable; shortest strings can choose an adjacent tenth.
+    if value >= (1_u64 << 48) as f64 {
+        return format!("{value:.1}s");
+    }
+    let seconds = value.to_string();
+    let (whole, fraction) = seconds.split_once('.').unwrap_or((&seconds, ""));
+    let tenth = fraction.bytes().next().map_or(0, |digit| u64::from(digit - b'0'));
+    let round_up = fraction.as_bytes().get(1).is_some_and(|&digit| {
+        digit > b'5' || (digit == b'5' && (tenth % 2 == 1 || fraction.bytes().skip(2).any(|digit| digit != b'0')))
+    });
+    // Non-negative i64 milliseconds yield finite seconds below 1e16, fitting u64 tenths.
+    let tenths = whole.parse::<u64>().expect("finite step seconds") * 10 + tenth + u64::from(round_up);
+    format!("{}.{}s", tenths / 10, tenths % 10)
 }
 
 #[derive(Template)]
