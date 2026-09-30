@@ -178,6 +178,10 @@ impl Broadcasts {
         html: Option<&str>,
         maintain_scroll: bool,
     ) -> usize {
+        if html.is_some_and(campfire_views::helpers::request_forgery::has_token_slots) {
+            tracing::error!("refusing to broadcast an unresolved CSRF token slot");
+            return 0;
+        }
         let attributes = if maintain_scroll {
             MAINTAIN_SCROLL
         } else {

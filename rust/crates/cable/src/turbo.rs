@@ -29,7 +29,10 @@ impl StreamsChannel {
     }
 
     pub fn with_verifier(verifier: impl Fn(&str) -> Option<String> + Send + Sync + 'static) -> Self {
-        Self { verifier: Arc::new(verifier), guard: None }
+        Self {
+            verifier: Arc::new(verifier),
+            guard: None,
+        }
     }
 
     /// Rejects any subscription whose verified stream name `guarded` returns true for, before
@@ -49,10 +52,7 @@ impl StreamsChannel {
 
 /// `params[:signed_stream_name]` verified with `verifier`. A missing or `null` name is simply
 /// unverified; any other non-string makes `MessageVerifier#verified` raise.
-pub fn verified_stream_name_from_params(
-    params: &Params,
-    verifier: impl Fn(&str) -> Option<String>,
-) -> ChannelResult<Option<String>> {
+pub fn verified_stream_name_from_params(params: &Params, verifier: impl Fn(&str) -> Option<String>) -> ChannelResult<Option<String>> {
     match params.get("signed_stream_name") {
         None | Some(Value::Null) => Ok(None),
         Some(Value::String(signed)) => Ok(verifier(signed)),
@@ -146,7 +146,12 @@ pub fn action_tag(action: Action, target: Target<'_>, template: Option<&str>, at
 
 /// `turbo_stream_refresh_tag(request_id:)`.
 pub fn refresh_tag(request_id: Option<&str>) -> String {
-    action_tag(Action::Refresh, Target::None, None, &[("request-id", request_id.filter(|id| !id.is_empty()))])
+    action_tag(
+        Action::Refresh,
+        Target::None,
+        None,
+        &[("request-id", request_id.filter(|id| !id.is_empty()))],
+    )
 }
 
 fn push_attribute(tag: &mut String, name: &str, value: &str) {
@@ -173,19 +178,57 @@ pub fn html_escape(value: &str) -> String {
     escaped
 }
 
-/// Markup that belongs to one browser session and must never be broadcast: a broadcast is
-/// rendered once and delivered to everyone on the stream. Rails renders broadcasts outside any
-/// request (`ApplicationController.render`), so its broadcasts carry no CSRF token (`form_with`
-/// and `button_to` omit the hidden field), no csrf meta tags and no CSP nonce. Returns what was
-/// found. A value typed by a user is HTML-escaped (`&quot;`), so it can't match.
+/// Markup that belongs to a browser session and must never be shared by a broadcast.
+/// Inspect parsed HTML attributes, not text such as `<div>nonce="example"</div>`.
+/// Token fields and meta tags are forbidden; an empty nonce attribute is harmless.
 pub fn session_bound(html: &str) -> Option<&'static str> {
-    const MARKERS: [(&str, &str); 3] =
-        [(r#"name="authenticity_token""#, "a CSRF token"), (r#"name="csrf-token""#, "a CSRF meta tag"), (r#"name="csrf-param""#, "a CSRF meta tag")];
-    if let Some((_, what)) = MARKERS.iter().find(|(marker, _)| html.contains(marker)) {
-        return Some(what);
+    use html5ever::tendril::StrTendril;
+    use html5ever::tokenizer::{BufferQueue, StartTag, TagToken, Token, TokenSink, TokenSinkResult, Tokenizer, TokenizerOpts};
+    use std::cell::Cell;
+
+    #[derive(Default)]
+    struct Secrets(Cell<Option<&'static str>>);
+
+    impl TokenSink for Secrets {
+        type Handle = ();
+
+        fn process_token(&self, token: Token, _: u64) -> TokenSinkResult<()> {
+            if let TagToken(tag) = token
+                && tag.kind == StartTag
+            {
+                let attr = |name: &str| tag.attrs.iter().find(|a| a.name.local.as_ref() == name).map(|a| a.value.as_ref());
+                let reason = match (tag.name.as_ref(), attr("name")) {
+                    ("input", Some("authenticity_token")) => Some("a CSRF token"),
+                    ("meta", Some("csrf-token" | "csrf-param")) => Some("a CSRF meta tag"),
+                    ("meta", Some("csp-nonce")) if attr("content").is_some_and(|v| !v.is_empty()) => Some("a CSP nonce"),
+                    _ if attr("nonce").is_some_and(|v| !v.is_empty()) => Some("a CSP nonce"),
+                    _ => None,
+                };
+                if self.0.get().is_none() {
+                    self.0.set(reason);
+                }
+                // Text inside these elements cannot create token fields or nonce attributes.
+                use html5ever::tokenizer::states::RawKind;
+                match tag.name.as_ref() {
+                    "title" | "textarea" => return TokenSinkResult::RawData(RawKind::Rcdata),
+                    "style" | "xmp" | "iframe" | "noembed" | "noframes" => {
+                        return TokenSinkResult::RawData(RawKind::Rawtext);
+                    }
+                    "script" => return TokenSinkResult::RawData(RawKind::ScriptData),
+                    "plaintext" => return TokenSinkResult::Plaintext,
+                    _ => {}
+                }
+            }
+            TokenSinkResult::Continue
+        }
     }
-    // `nonce=""` (no nonce, as Rails renders outside a request) is harmless; any value isn't.
-    html.match_indices(r#"nonce=""#).any(|(at, marker)| !html[at + marker.len()..].starts_with('"')).then_some("a CSP nonce")
+
+    let tokenizer = Tokenizer::new(Secrets::default(), TokenizerOpts::default());
+    let input = BufferQueue::default();
+    input.push_back(StrTendril::from_slice(html));
+    let _ = tokenizer.feed(&input);
+    tokenizer.end();
+    tokenizer.sink.0.get()
 }
 
 /// `Turbo::StreamsChannel.broadcast_*_to`. Streamables are the stream name parts (GID params
@@ -249,7 +292,12 @@ mod tests {
     #[test]
     fn append_tag() {
         assert_eq!(
-            action_tag(Action::Append, Target::Target("messages_room_1"), Some("<div id=\"m\">Hi &amp; bye</div>"), &[]),
+            action_tag(
+                Action::Append,
+                Target::Target("messages_room_1"),
+                Some("<div id=\"m\">Hi &amp; bye</div>"),
+                &[]
+            ),
             r#"<turbo-stream action="append" target="messages_room_1"><template><div id="m">Hi &amp; bye</div></template></turbo-stream>"#
         );
     }
@@ -265,7 +313,12 @@ mod tests {
     #[test]
     fn attributes_come_before_action_and_are_not_dasherized() {
         assert_eq!(
-            action_tag(Action::Replace, Target::Target("presentation_message_1"), Some("x"), &[("maintain_scroll", Some("true"))]),
+            action_tag(
+                Action::Replace,
+                Target::Target("presentation_message_1"),
+                Some("x"),
+                &[("maintain_scroll", Some("true"))]
+            ),
             r#"<turbo-stream maintain_scroll="true" action="replace" target="presentation_message_1"><template>x</template></turbo-stream>"#
         );
     }
@@ -280,21 +333,62 @@ mod tests {
 
     #[test]
     fn session_bound_markup() {
-        let form = r#"<form action="/x" method="post"><input type="hidden" name="authenticity_token" value="abc" autocomplete="off"></form>"#;
+        let form =
+            r#"<form action="/x" method="post"><input type="hidden" name="authenticity_token" value="abc" autocomplete="off"></form>"#;
         assert_eq!(session_bound(form), Some("a CSRF token"));
         assert_eq!(session_bound(r#"<meta name="csrf-token" content="abc">"#), Some("a CSRF meta tag"));
-        assert_eq!(session_bound(r#"<meta name="csrf-param" content="authenticity_token">"#), Some("a CSRF meta tag"));
+        assert_eq!(
+            session_bound(r#"<meta name="csrf-param" content="authenticity_token">"#),
+            Some("a CSRF meta tag")
+        );
         assert_eq!(session_bound(r#"<script nonce="r4nd0m">x()</script>"#), Some("a CSP nonce"));
         // What `ApplicationController.render` gives in our Rails app: no token, no nonce.
-        assert_eq!(session_bound(r#"<form class="button_to" method="post" action="/y"><button type="submit">b</button></form>"#), None);
+        assert_eq!(
+            session_bound(r#"<form class="button_to" method="post" action="/y"><button type="submit">b</button></form>"#),
+            None
+        );
         assert_eq!(session_bound(r#"<script nonce="">x()</script>"#), None);
         // Typed by a user, and so escaped.
-        assert_eq!(session_bound("<p>name=&quot;authenticity_token&quot; nonce=&quot;x&quot;</p>"), None);
+        assert_eq!(
+            session_bound("<p>name=&quot;authenticity_token&quot; nonce=&quot;x&quot;</p>"),
+            None
+        );
+    }
+
+    #[test]
+    fn session_bound_checks_attributes_instead_of_text() {
+        for html in [
+            "<div>nonce=\"example\" name=\"authenticity_token\"</div>",
+            "<!-- <input name=authenticity_token value=secret> -->",
+            "<textarea><input name=authenticity_token></textarea>",
+            "<script>const example = '<input name=authenticity_token>';</script>",
+            "<p>&lt;script nonce=\"example\"&gt;</p>",
+            "<div title='nonce=\"example\"'>quoted attribute text</div>",
+        ] {
+            assert_eq!(session_bound(html), None, "{html}");
+        }
+        for html in [
+            "<INPUT VALUE='secret' NAME='authenticity_token'>",
+            "<input name=authenticity&#95;token value=secret>",
+            "<template><input name=authenticity_token value=secret></template>",
+        ] {
+            assert_eq!(session_bound(html), Some("a CSRF token"), "{html}");
+        }
+        for html in [
+            "<SCRIPT NONCE='secret'></SCRIPT>",
+            "<link nonce=secret>",
+            "<meta name=csp-nonce content=secret>",
+        ] {
+            assert_eq!(session_bound(html), Some("a CSP nonce"), "{html}");
+        }
     }
 
     #[test]
     fn refresh_tags() {
         assert_eq!(refresh_tag(None), r#"<turbo-stream action="refresh"></turbo-stream>"#);
-        assert_eq!(refresh_tag(Some("abc")), r#"<turbo-stream request-id="abc" action="refresh"></turbo-stream>"#);
+        assert_eq!(
+            refresh_tag(Some("abc")),
+            r#"<turbo-stream request-id="abc" action="refresh"></turbo-stream>"#
+        );
     }
 }

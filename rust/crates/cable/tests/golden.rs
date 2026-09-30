@@ -6,8 +6,8 @@
 //!
 //!   bash reference-tools/cable/record.sh
 //!
-//! Uses the pinned `ws7-reference:79b45383` image, a fresh database, port 47040, and
-//! `cargo -j 4`. Its container names start with `ws7-`; scratch stays in the worktree.
+//! Uses the pinned `ws7-reference:fec615be` image, a fresh database, port 47040, and
+//! `cargo -j 4`. Its container names start with `ws7-`; scratch stays in `/home/riels/.cache/rust-port/ws7/`.
 //!
 //! (The fixtures script starts a fresh session each time, because the script signs it out.)
 //!

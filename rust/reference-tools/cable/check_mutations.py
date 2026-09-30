@@ -24,6 +24,11 @@ MUTATIONS = [
     ("workspace idle expiry", CHANNELS + "workspace_presence.rs", "expire_idle_timed_out_session(tx, session_id, timeout)?;", "let _ = (session_id, timeout);", "reference_test::workspace_presence_heartbeat_destroys"),
     ("sign-out disconnect", "crates/campfire/src/concerns.rs", "            user.reset_remote_connections(tx);", "            let _ = user;", "hub_test::signing_out"),
     ("golden frame difference", CHANNELS + "tests/golden.rs", '"status_badge_agent_1", "<span>ready</span>"', '"wrong_target", "<span>ready</span>"', "golden::replays_reference_frames"),
+    ("nonce text false positive", "crates/cable/src/turbo.rs", "if let Some(what) = session_bound(content)", "if let Some(what) = session_bound(content).or_else(|| content.contains(\"nonce=\").then_some(\"a CSP nonce\"))", "hub_test::quote_text_post_delivers_to_socket"),
+    ("direct mute missing partial", "crates/campfire/src/controllers/rooms/involvements.rs", "direct_rooms: vec![(membership.id, html)]", "direct_rooms: { let _ = html; vec![] }", "hub_test::direct_mute_keeps_the_rendered_sidebar_row"),
+    ("repeated stream receivers", "crates/cable/src/channel.rs", ">= MAX_RECEIVERS_PER_STREAM", "> usize::MAX - MAX_RECEIVERS_PER_STREAM", "channels_test::performing_subscribed_bounds_stream_receivers"),
+    ("unresolved token slot", CHANNELS + "broadcasts.rs", "if html.is_some_and(campfire_views::helpers::request_forgery::has_token_slots)", "if false && html.is_some_and(campfire_views::helpers::request_forgery::has_token_slots)", "hub_test::unresolved_token_slots_never_reach_a_socket"),
+    ("real message partial", "crates/campfire/src/controllers/messages.rs", "message: Some(html)", "message: Some({ let _ = html; String::new() })", "hub_test::http_broadcasts_supply_real_nonempty_partials"),
 ]
 
 
@@ -44,7 +49,7 @@ def mutate(text, old, new):
 
 
 def main():
-    scratch = ROOT.parent / ".scratch/evidence/mutations"
+    scratch = Path(os.environ.get("WS7_SCRATCH", "/home/riels/.cache/rust-port/ws7")) / "evidence/mutations"
     scratch.mkdir(parents=True, exist_ok=True)
     for name, file, old, new, test in MUTATIONS:
         path = ROOT / file

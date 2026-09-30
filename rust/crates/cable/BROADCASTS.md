@@ -21,7 +21,7 @@ stream and partial must stay exactly as listed here.
   carry nothing session-bound. `campfire_cable::turbo::broadcast_stream_to` refuses (logs, returns
   0) any HTML with an `authenticity_token` field, a `csrf-token`/`csrf-param` meta tag, or a
   non-empty `nonce`. That matches our Rails, where `ApplicationController.render` emits no token
-  and a nil nonce. Current-user state is up to the renderer: never render with a viewer.
+  and a nil nonce. The guard parses element attributes, so ordinary text such as `nonce="example"` is broadcast. `Broadcasts::turbo` also rejects actual unresolved WS4 token slots using the renderer's process-specific marker. Current-user state is up to the renderer: never render with a viewer.
 - **Model callbacks.** A model in `campfire_db` can't reach the cable, so it emits
   `Event::Broadcast(BroadcastRequest)` from `after_commit`. Define a `#[derive(Serialize,
   Deserialize)]` struct implementing `campfire_db::Broadcast` (its `KIND` names the Ruby method),
@@ -52,7 +52,7 @@ the partials below need.
 
 There are 115 call sites in `app/`, `lib/` and `config/`, found with a search over `broadcast_{append,prepend,replace,update,remove,before,after,refresh,action,render}(_later)?_to`,
 `Turbo::StreamsChannel.broadcast_*`, `ActionCable.server.broadcast`, `*Channel.broadcast_to` and a
-bare `broadcast_to`. The brief says 140; direct enumeration at reference pin `79b45383` finds 115 primitive call sites. This discrepancy needs the lead's reconciliation; no extra sites have been invented. None use `_later`.
+bare `broadcast_to`. The lead and independent review confirmed 115 primitive call sites at reference pin `fec615be`; the brief's 140 figure was incorrect. None use `_later`.
 
 Notation: `append [room, :messages] → [room, :messages] (messages/message)` means
 `broadcast_append_to room, :messages, target: [room, :messages], partial: "messages/message"`. A
@@ -83,17 +83,17 @@ Notation: `append [room, :messages] → [room, :messages] (messages/message)` me
 
 | # | Site | Call | Owner | State |
 |---|---|---|---|---|
-| 11 | `:86` update | replace* `[@room, :messages]` → `[message, :presentation]` (messages/presentation) | WS8 | ported (`message_replace`) |
-| 12 | `:87` update | replace* `[@room, :messages]` → `[message, :meta]` (messages/meta) | WS8 | API ready (`message_part_replace(.., "meta", html)`; needs `messages/_meta`) |
-| 13 | `:92` update | replace* `[@room, :messages]` → `[message, :github_pr_cards]` (github/pull_requests/cards) | WS15 | API ready (`message_part_replace`) |
-| 14 | `:93` update | … `[message, :twitter_cards]` (twitter/posts/cards) | WS15 | API ready |
-| 15 | `:94` update | … `[message, :message_link_cards]` (messages/message_links/cards) | WS8 | API ready |
-| 16 | `:95` update | … `[message, :fizzy_cards]` (fizzy/cards/cards) | WS15 | API ready |
-| 17 | `:96` update | … `[message, :linkedin_cards]` (linkedin/posts/cards) | WS15 | API ready |
-| 18 | `:97` update | … `[message, :link_embed_cards]` (link_embeds/cards) | WS15 | API ready |
-| 19 | `:99` update | … `[message, :drive_attachments]` (messages/drive_attachments) | WS14 | API ready |
-| 20 | `:231` reply tombstones | replace* `[reply.conversation, :messages]` → `reply` (messages/message) | WS8 | waiting on its domain |
-| 21 | `:242` | cable → `user_<id>_unread_threads` `{threadId, roomId, refreshOnly: true}` | WS8 | waiting on its domain (`channel(&unread_threads::stream_name_for(id), ..)`) |
+| 11 | `:91` update | replace* `[@room, :messages]` → `[message, :presentation]` (messages/presentation) | WS8 | ported (`message_replace`) |
+| 12 | `:92` update | replace* `[@room, :messages]` → `[message, :meta]` (messages/meta) | WS8 | API ready (`message_part_replace(.., "meta", html)`; needs `messages/_meta`) |
+| 13 | `:97` update | replace* `[@room, :messages]` → `[message, :github_pr_cards]` (github/pull_requests/cards) | WS15 | API ready (`message_part_replace`) |
+| 14 | `:98` update | … `[message, :twitter_cards]` (twitter/posts/cards) | WS15 | API ready |
+| 15 | `:99` update | … `[message, :message_link_cards]` (messages/message_links/cards) | WS8 | API ready |
+| 16 | `:100` update | … `[message, :fizzy_cards]` (fizzy/cards/cards) | WS15 | API ready |
+| 17 | `:101` update | … `[message, :linkedin_cards]` (linkedin/posts/cards) | WS15 | API ready |
+| 18 | `:102` update | … `[message, :link_embed_cards]` (link_embeds/cards) | WS15 | API ready |
+| 19 | `:104` update | … `[message, :drive_attachments]` (messages/drive_attachments) | WS14 | API ready |
+| 20 | `:236` reply tombstones | replace* `[reply.conversation, :messages]` → `reply` (messages/message) | WS8 | waiting on its domain |
+| 21 | `:247` | cable → `user_<id>_unread_threads` `{threadId, roomId, refreshOnly: true}` | WS8 | waiting on its domain (`channel(&unread_threads::stream_name_for(id), ..)`) |
 
 ### Boosts
 
@@ -153,9 +153,9 @@ Notation: `append [room, :messages] → [room, :messages] (messages/message)` me
 | 58 | `…:42` | prepend `[user, :rooms]` → `stage_rooms` (users/sidebars/rooms/stage) | WS8/WS13 | API ready (logic ported; `Partials::sidebar_row` for stage rooms waits on the partial) |
 | 59 | `…:44` | prepend `[user, :rooms]` → `voice_rooms` (users/sidebars/rooms/voice) | WS8/WS13 | API ready, as #58 |
 | 60 | `…:46` | prepend `[user, :rooms]` → `board_rooms` (users/sidebars/rooms/board) | WS8/WS12 | API ready, as #58 |
-| 61 | `…:48` | prepend `[user, :rooms]` → `shared_rooms` (users/sidebars/rooms/shared) | WS8 | ported |
-| 62 | `…:59` | replace `[user, :rooms]` → `[room, :list]` (users/sidebars/rooms/direct), direct room's muted transition | WS8 | ported |
-| 63 | `…:62` | replace `[user, :rooms]` → `[room, :list]` (`row_partial_for(room)`, `unread:`), muted transition | WS8 | ported for shared rows; API ready for stage/voice/board rows |
+| 61 | `…:48` | prepend `[user, :rooms]` → `shared_rooms` (users/sidebars/rooms/shared) | WS8/WS6 | API ready (non-empty real partial delivered; fork membership/unread locals and markup remain partial) |
+| 62 | `…:59` | replace `[user, :rooms]` → `[room, :list]` (users/sidebars/rooms/direct), direct room's muted transition | WS8/WS6 | API ready (review fix supplies the non-empty real direct partial; complete fork row markup/muted class remains partial) |
+| 63 | `…:62` | replace `[user, :rooms]` → `[room, :list]` (`row_partial_for(room)`, `unread:`), muted transition | WS8/WS6 | API ready (shared row delivered but membership/unread locals remain partial; stage/voice/board partials absent) |
 | 64 | `app/controllers/rooms_controller.rb:87` join | prepend `[Current.user, :rooms]` → `shared_rooms` (users/sidebars/rooms/shared, `unread: false`) | WS8 | waiting on its domain (the join action isn't ported) |
 | 65 | `app/controllers/rooms_controller.rb:214` destroy | remove `:rooms` → `[room, :list]` | WS8 | ported (`room_remove`) |
 | 66 | `app/controllers/rooms/reads_controller.rb:9` | cable → `user_<id>_reads` `{room_id}` | WS8 | API ready (`broadcasts::read_room`; the controller isn't ported) |
@@ -233,8 +233,8 @@ Notation: `append [room, :messages] → [room, :messages] (messages/message)` me
 
 | State | Calls |
 |---|---|
-| ported | 18 (#1–3, 8, 10, 11, 48–51, 53, 54, 56, 57, 61, 62, 63 in part, 65) |
-| API ready | 15 (#7, 12–19, 52, 55, 58–60, 66) |
+| ported | 15 (#1–3, 8, 10, 11, 48–51, 53, 54, 56, 57, 65) |
+| API ready | 18 (#7, 12–19, 52, 55, 58–63, 66) |
 | waiting on its domain | 80 |
 | dead | 2 (#22, 23) |
 
@@ -268,17 +268,17 @@ Every primitive has a full source location here; call arguments and partials are
 | `app/controllers/message_embed_suppressions_controller.rb:47` | WS15 | waiting on its domain |
 | `app/controllers/messages/boosts_controller.rb:54` | WS8 | dead |
 | `app/controllers/messages/boosts_controller.rb:59` | WS8 | dead |
-| `app/controllers/messages_controller.rb:231` | WS8 | waiting on its domain |
-| `app/controllers/messages_controller.rb:242` | WS8 | waiting on its domain |
-| `app/controllers/messages_controller.rb:86` | WS8 | ported |
-| `app/controllers/messages_controller.rb:87` | WS8 | API ready |
-| `app/controllers/messages_controller.rb:92` | WS15 | API ready |
-| `app/controllers/messages_controller.rb:93` | WS15 | API ready |
-| `app/controllers/messages_controller.rb:94` | WS8 | API ready |
-| `app/controllers/messages_controller.rb:95` | WS15 | API ready |
-| `app/controllers/messages_controller.rb:96` | WS15 | API ready |
+| `app/controllers/messages_controller.rb:236` | WS8 | waiting on its domain |
+| `app/controllers/messages_controller.rb:247` | WS8 | waiting on its domain |
+| `app/controllers/messages_controller.rb:91` | WS8 | ported |
+| `app/controllers/messages_controller.rb:92` | WS8 | API ready |
 | `app/controllers/messages_controller.rb:97` | WS15 | API ready |
-| `app/controllers/messages_controller.rb:99` | WS14 | API ready |
+| `app/controllers/messages_controller.rb:98` | WS15 | API ready |
+| `app/controllers/messages_controller.rb:99` | WS8 | API ready |
+| `app/controllers/messages_controller.rb:100` | WS15 | API ready |
+| `app/controllers/messages_controller.rb:101` | WS15 | API ready |
+| `app/controllers/messages_controller.rb:102` | WS15 | API ready |
+| `app/controllers/messages_controller.rb:104` | WS14 | API ready |
 | `app/controllers/rooms/boards_controller.rb:71` | WS12 | waiting on its domain |
 | `app/controllers/rooms/boards_controller.rb:77` | WS12 | waiting on its domain |
 | `app/controllers/rooms/boards_controller.rb:80` | WS12 | waiting on its domain |
@@ -292,9 +292,9 @@ Every primitive has a full source location here; call arguments and partials are
 | `app/controllers/rooms/involvements_controller.rb:42` | WS8/WS13 | API ready |
 | `app/controllers/rooms/involvements_controller.rb:44` | WS8/WS13 | API ready |
 | `app/controllers/rooms/involvements_controller.rb:46` | WS8/WS12 | API ready |
-| `app/controllers/rooms/involvements_controller.rb:48` | WS8 | ported |
-| `app/controllers/rooms/involvements_controller.rb:59` | WS8 | ported |
-| `app/controllers/rooms/involvements_controller.rb:62` | WS8 | ported |
+| `app/controllers/rooms/involvements_controller.rb:48` | WS8/WS6 | API ready |
+| `app/controllers/rooms/involvements_controller.rb:59` | WS8/WS6 | API ready |
+| `app/controllers/rooms/involvements_controller.rb:62` | WS8/WS6 | API ready |
 | `app/controllers/rooms/opens_controller.rb:59` | WS8 | ported |
 | `app/controllers/rooms/opens_controller.rb:63` | WS8 | ported |
 | `app/controllers/rooms/opens_controller.rb:64` | WS8 | API ready |

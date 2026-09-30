@@ -1,12 +1,12 @@
 //! `ActionCable::Channel::Base`: one instance per subscription, driven by the connection.
 use std::sync::Arc;
 
+use futures_util::stream::{AbortHandle, AbortRegistration};
 use serde::Serialize;
 use serde_json::{Map, Value};
-use futures_util::stream::{AbortHandle, AbortRegistration};
 
 use crate::pubsub::Subscriber;
-use crate::{json, naming, protocol, Server};
+use crate::{Server, json, naming, protocol};
 
 pub type Params = Map<String, Value>;
 
@@ -124,6 +124,12 @@ impl<U: Send + Sync + 'static> Subscription<U> {
             return;
         }
         let broadcasting = broadcasting.into();
+        // Rails' recorded public `subscribed` action starts a second receiver. Preserve that
+        // wire behavior, but bound repeated calls instead of growing tasks without limit.
+        const MAX_RECEIVERS_PER_STREAM: usize = 2;
+        if self.streams.iter().filter(|(name, _)| *name == broadcasting).count() >= MAX_RECEIVERS_PER_STREAM {
+            return;
+        }
         // The hub wraps each broadcast for this identifier once, for every subscriber sharing it.
         let subscriber = self.server.hub().subscribe(&broadcasting, Some(self.encoded_identifier.clone()));
         let (handle, registration) = AbortHandle::new_pair();
@@ -176,7 +182,8 @@ impl<U: Send + Sync + 'static> Subscription<U> {
 
     /// Sends `{"identifier":...,"message":...}` to this subscriber only.
     pub fn transmit<T: Serialize + ?Sized>(&mut self, message: &T) {
-        self.transmissions.push(protocol::message(&self.encoded_identifier, &json::encode(message)));
+        self.transmissions
+            .push(protocol::message(&self.encoded_identifier, &json::encode(message)));
     }
 }
 

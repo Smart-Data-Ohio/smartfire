@@ -403,6 +403,7 @@ dependencies = [
  "base64 0.22.1",
  "flate2",
  "futures-util",
+ "html5ever 0.35.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper",
  "hyper-util",
  "rails_compat",

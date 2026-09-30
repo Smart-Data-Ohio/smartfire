@@ -10,8 +10,8 @@
 //!
 //!   bash reference-tools/cable/record.sh
 //!
-//! Uses the pinned `ws7-reference:79b45383` image, a fresh database, port 47040, and
-//! `cargo -j 4`. Its container names start with `ws7-`; scratch stays in the worktree.
+//! Uses the pinned `ws7-reference:fec615be` image, a fresh database, port 47040, and
+//! `cargo -j 4`. Its container names start with `ws7-`; scratch stays in `/home/riels/.cache/rust-port/ws7/`.
 //!
 //! Frames that reach one socket in one step by different paths (a confirmation and a broadcast)
 //! race in Rails, where the confirmation waits for Redis to acknowledge the subscription, so each

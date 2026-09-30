@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Record both cable goldens from a private, freshly initialized Rails instance.
-# Requires the pinned parity image (tag it as ws7-reference:79b45383 first).
+# Requires the pinned parity image (tag it as ws7-reference:fec615be first).
 set -euo pipefail
 
 RUST_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-SCRATCH=${WS7_SCRATCH:-$RUST_ROOT/../.scratch}
-IMAGE=${WS7_REFERENCE_IMAGE:-ws7-reference:79b45383}
+SCRATCH=${WS7_SCRATCH:-/home/riels/.cache/rust-port/ws7}
+IMAGE=${WS7_REFERENCE_IMAGE:-ws7-reference:fec615be}
 PORT=${WS7_REFERENCE_PORT:-47040}
 NAME=ws7-reference-$PORT
 [[ "$IMAGE" == ws7-* ]] || { echo "image must start with ws7-" >&2; exit 1; }
@@ -35,7 +35,10 @@ import subprocess
 import sys
 root, container = Path(sys.argv[1]), sys.argv[2]
 files = sorted(str(path.relative_to(root)) for path in (root / "app/channels").rglob("*.rb"))
-files += ["app/models/workspace_presence_lease.rb", "config/initializers/turbo_streams_authorization.rb"]
+files += ["app/models/workspace_presence_lease.rb", "config/initializers/turbo_streams_authorization.rb",
+          "app/controllers/messages_controller.rb", "app/helpers/messages_helper.rb",
+          "app/views/messages/boosts/_boost.html.erb", "app/views/messages/boosts/_reaction.html.erb",
+          "app/views/polls/_poll.html.erb"]
 actual = subprocess.check_output(["docker", "exec", container, "sha256sum", *["/rails/" + file for file in files]], text=True).splitlines()
 for file, line in zip(files, actual, strict=True):
     assert hashlib.sha256((root / file).read_bytes()).hexdigest() == line.split()[0], file

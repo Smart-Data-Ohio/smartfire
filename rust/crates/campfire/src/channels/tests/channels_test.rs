@@ -305,15 +305,17 @@ async fn the_stock_turbo_channel_refuses_room_message_streams_but_serves_the_roo
     );
 }
 
-// Public `subscribed` is an action in Ruby: performing it streams again.
+// Preserve the golden's second receiver, but bound further public callbacks.
 
 #[tokio::test]
-async fn performing_subscribed_streams_twice_like_ruby() {
+async fn performing_subscribed_bounds_stream_receivers() {
     let app = start().await;
     let unreads = identifier(json!({ "channel": "UnreadRoomsChannel" }));
     let mut client = app.connect("kevin").await;
     client.confirm(&unreads).await;
-    client.perform(&unreads, json!({ "action": "subscribed" })).await;
+    for _ in 0..32 {
+        client.perform(&unreads, json!({ "action": "subscribed" })).await;
+    }
     client.assert_silent().await;
 
     let broadcasts = app.broadcasts.clone();
@@ -323,4 +325,5 @@ async fn performing_subscribed_streams_twice_like_ruby() {
     let expected = delivery(&unreads, &format!(r#"{{"roomId":{}}}"#, id("bender_and_kevin")));
     assert_eq!(client.next_text().await, expected);
     assert_eq!(client.next_text().await, expected);
+    client.assert_silent().await;
 }
