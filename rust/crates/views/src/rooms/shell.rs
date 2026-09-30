@@ -32,6 +32,11 @@ pub struct Notices<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub notices: &'a [Notice],
 }
+impl Notices<'_> {
+    fn line(&self, user: &Notice) -> String {
+        NoticeLine { user }.render().expect("OOO notice line")
+    }
+}
 #[derive(Template)]
 #[template(path = "rooms/show/_invitation.html")]
 pub struct Invitation<'a> {
@@ -123,4 +128,10 @@ pub fn jump(ctx: &ViewContext, url: Option<&str>) -> h::Html {
             &label,
         ),
     }
+}
+
+#[derive(Template)]
+#[template(path = "rooms/shell/_ooo_line.html")]
+pub struct NoticeLine<'a> {
+    pub user: &'a Notice,
 }

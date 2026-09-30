@@ -74,7 +74,10 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
             })?;
             Ok(())
         }),
-        campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| messaging(cable, &broadcast)),
+        campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| {
+            if let Some(app)=app && super::room_composition::deliver(app,&broadcast)? {return Ok(());}
+            messaging(cable, &broadcast)
+        }),
         kind => Err(anyhow::anyhow!("no handler for the {kind} broadcast")),
     };
     if let Err(error) = result {

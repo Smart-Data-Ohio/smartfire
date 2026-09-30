@@ -9,5 +9,5 @@
   {%- if row.call.unread %}
     <span class="sidebar-item__status">New</span>
   {%- endif %}
-{% endfilter %}
-{{ "" }}
+{% endfilter %}{% if !collection %}
+{% endif %}{{ "" }}

@@ -91,12 +91,11 @@ pub fn mention_user(secrets: &Secrets, user: &User) -> MentionUser {
 
 /// `room_display_name(room, for_user:)`: a direct room is named after its other members.
 pub fn room_display_name(conn: &Connection, room: &Room, for_user: &User) -> campfire_db::Result<String> {
-    let names: Vec<String> = if room.direct() {
-        room.users(conn)?.into_iter().filter(|user| user.id != for_user.id).map(|user| user.name).collect()
+    if room.direct() {
+        Ok(room.direct_display_name(conn, Some(for_user), None)?.unwrap_or_default())
     } else {
-        Vec::new()
-    };
-    Ok(campfire_views::rooms::room_display_name(room.name.as_deref(), room.direct(), &names, Some(&for_user.name)))
+        Ok(room.name.clone().unwrap_or_default())
+    }
 }
 
 /// `Room.model_name.param_key` for the room's STI class.

@@ -1,8 +1,7 @@
 {% if !notices.is_empty() %}  <div id="ooo-notices" class="ooo-notices">
 {% for user in notices %}      {{ h::turbo_stream_from_streamables(ctx,[h::gid_param("User",user.id).as_str(),"ooo_notice"].as_slice()) }}
       <div id="ooo_notice_user_{{ user.id }}">
-        {% if let Some(date) = user.until_date %}  <p class="ooo-notice txt-small" role="status">{{ user.name }} is out of office until {{ date }}.{% if let Some(note) = user.note %} {{ note }}{% endif %}</p>
-{% endif %}
+        {{ self.line(user)|safe }}
       </div>
 {% endfor %}  </div>
 {% endif %}{{ "" }}

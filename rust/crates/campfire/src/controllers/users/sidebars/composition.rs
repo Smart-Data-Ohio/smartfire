@@ -186,3 +186,62 @@ fn direct_members(
     }
     Ok(grouped)
 }
+
+/// Controller broadcasts render shared rows without recipient membership state.
+pub(crate) fn neutral(app: &App, conn: &Connection, room: &Room) -> campfire_db::Result<Row> {
+    let legacy = presenters::Presenter::new(conn, app, None).sidebar_room(room);
+    let mut call = call_channels::row(app, conn, room)?;
+    call.membership = false;
+    call.can_delete = false;
+    Ok(Row {
+        id: room.id,
+        kind: presenters::accounts::room_param_key(room.room_type)
+            .trim_start_matches("rooms_")
+            .into(),
+        name: legacy.name,
+        raw_name: room.name.clone(),
+        category_row: false,
+        epoch: presenters::epoch_string(room.updated_at.jiff()),
+        members: Vec::new(),
+        call,
+    })
+}
+/// Member ids carry the Rails callback's avatar order. Labels sort independently.
+pub(crate) fn for_membership(
+    app: &App,
+    conn: &Connection,
+    membership: &Membership,
+    member_ids: Option<&[i64]>,
+) -> campfire_db::Result<Row> {
+    let room = Room::find(conn, membership.room_id)?;
+    let legacy = if room.direct() {
+        Some(presenters::Presenter::new(conn, app, None).sidebar_direct(membership)?)
+    } else {
+        None
+    };
+    let viewer = User::find(conn, membership.user_id)?;
+    let members = if !room.direct() {
+        Vec::new()
+    } else if let Some(ids) = member_ids {
+        ids.iter()
+            .map(|id| User::find(conn, *id))
+            .collect::<campfire_db::Result<Vec<_>>>()?
+    } else {
+        Membership::for_room(conn, room.id)?
+            .iter()
+            .map(|m| User::find(conn, m.user_id))
+            .collect::<campfire_db::Result<Vec<_>>>()?
+    };
+    let mut composed = row(
+        app,
+        conn,
+        &viewer,
+        membership,
+        &room,
+        &std::collections::BTreeMap::from([(room.id, members)]),
+    )?;
+    if let Some(legacy) = legacy {
+        composed.epoch = legacy.updated_at_epoch;
+    }
+    Ok(composed)
+}

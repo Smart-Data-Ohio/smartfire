@@ -56,8 +56,9 @@ def replace_body(source, marker, body):
 
 
 mutations = [
-    ("room-shell-invisible-notice-leaks", ROOT / "rust/crates/campfire/src/controllers/rooms/shell.rs", lambda s: replace_once(s, 'presence!="invisible"', 'presence!="never-invisible"'), "campfire", "room_shell_ooo_request_adapter_matches_recorded_calendar_and_manual_states"),
-    ("room-shell-scroll-threshold-corrupted", ROOT / "rust/crates/campfire/src/controllers/rooms/shell.rs", lambda s: replace_once(s, 'state.unread_count>5', 'state.unread_count>4'), "campfire", "room_shell_unread_pointer_matches_count_threshold_deleted_cursor_and_off_page_jump"),
+    ("room-row-callback-rendering-bypassed", Z, lambda s: replace_once(s, "super::room_composition::deliver(app,&broadcast)?", "false && super::room_composition::deliver(app,&broadcast)?"), "campfire", "composed_sidebar_ooo_after_commit_updates_and_clears_real_subscriptions"),
+    ("room-shell-invisible-notice-leaks", ROOT / "rust/crates/campfire/src/controllers/rooms/shell.rs", lambda s: replace_once(s, 'presence != "invisible"', 'presence != "never-invisible"'), "campfire", "room_shell_ooo_request_adapter_matches_recorded_calendar_and_manual_states"),
+    ("room-shell-scroll-threshold-corrupted", ROOT / "rust/crates/campfire/src/controllers/rooms/shell.rs", lambda s: replace_once(s, 'state.unread_count > 5', 'state.unread_count > 4'), "campfire", "room_shell_unread_pointer_matches_count_threshold_deleted_cursor_and_off_page_jump"),
 
     ("full-sidebar-request-composition-bypassed", ROOT / "rust/crates/campfire/src/controllers/users/sidebars.rs", lambda s: replace_once(s, "composition: Some(sidebar)", "composition: None"), "campfire", "full_sidebar_request_composes_workspace_destinations_and_profile_card_trigger"),
     ("full-sidebar-menu-viewer-flags-corrupted", ROOT / "rust/crates/views/src/users/sidebar.rs", lambda s: replace_once(s, '.data("menu_can_delete", self.call.can_delete)', '.data("menu_can_delete", false)'), "campfire", "full_sidebar_matches_seventeen_complete_post_fix_rails_renders"),

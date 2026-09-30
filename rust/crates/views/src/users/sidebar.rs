@@ -110,15 +110,27 @@ impl Row {
         )
     }
     pub fn render(&self, ctx: &ViewContext, configured: bool) -> String {
+        self.render_row(ctx, configured, false)
+    }
+    /// A standalone Rails partial has no collection separator after its root tag.
+    pub fn render_fragment(&self, ctx: &ViewContext, configured: bool) -> String {
+        self.render_row(ctx, configured, true)
+    }
+    fn render_row(&self, ctx: &ViewContext, configured: bool, collection: bool) -> String {
         if self.kind == "voice" || self.kind == "stage" {
-            return format!("{}\n", self.call.render(ctx));
+            let html = self.call.render(ctx);
+            return if collection {
+                html
+            } else {
+                format!("{html}\n")
+            };
         }
         if self.kind == "direct" {
             Direct {
                 ctx,
                 row: self,
                 configured,
-                collection: false,
+                collection,
             }
             .render()
         } else {
@@ -126,6 +138,7 @@ impl Row {
                 ctx,
                 row: self,
                 configured,
+                collection,
             }
             .render()
         }
@@ -277,6 +290,7 @@ impl Favorites<'_> {
 #[derive(Template)]
 #[template(path = "users/sidebars/composition/_shared.html")]
 struct Shared<'a> {
+    collection: bool,
     ctx: &'a ViewContext<'a>,
     row: &'a Row,
     configured: bool,
@@ -318,7 +332,8 @@ impl CategoryView<'_> {
                     Shared {
                         ctx: self.ctx,
                         row: r,
-                        configured: self.configured
+                        configured: self.configured,
+                        collection: false,
                     }
                     .render()
                     .unwrap()

@@ -53,36 +53,7 @@ pub(super) fn load(
             ))
         })?;
         for row in rows {
-            let (id, name, manual, note, presence, zone, calendar, intervals) = row?;
-            let zone = campfire_views::time::Zone::for_user(zone.as_deref());
-            let manual = manual.filter(|at| *at > now);
-            let calendar = if calendar {
-                super::super::presenters::runtime_chrome::epochs(
-                    intervals.as_deref().unwrap_or("[]"),
-                    &zone,
-                )
-                .into_iter()
-                .filter(|(start, end)| *start <= now.as_second() && now.as_second() < *end)
-                .map(|(_, end)| Timestamp::from_second(end))
-                .max()
-            } else {
-                None
-            };
-            let until = manual
-                .into_iter()
-                .chain(calendar)
-                .max()
-                .filter(|_| presence != "invisible");
-            state.notices.push(Notice {
-                id,
-                name,
-                until_date: until.map(|at| zone.format(at.jiff(), "%B %d, %Y")),
-                note: if until.is_some() && manual.is_some() {
-                    note.filter(|s| !campfire_richtext::ruby::is_blank(s))
-                } else {
-                    None
-                },
-            });
+            state.notices.push(notice_from_fields(row?, now));
         }
     }
     Ok(state)
@@ -116,4 +87,55 @@ fn first(
         .query_row(&sql, rusqlite::params_from_iter(values), |r| r.get(0))
         .optional()?;
     id.map(|id| Message::find(conn, id)).transpose()
+}
+
+type NoticeFields = (
+    i64,
+    String,
+    Option<Timestamp>,
+    Option<String>,
+    String,
+    Option<String>,
+    bool,
+    Option<String>,
+);
+fn notice_from_fields(row: NoticeFields, now: Timestamp) -> Notice {
+    let (id, name, manual, note, presence, zone, calendar, intervals) = row;
+    let zone = campfire_views::time::Zone::for_user(zone.as_deref());
+    let manual = manual.filter(|at| *at > now);
+    let calendar = if calendar {
+        super::super::presenters::runtime_chrome::epochs(
+            intervals.as_deref().unwrap_or("[]"),
+            &zone,
+        )
+        .into_iter()
+        .filter(|(start, end)| *start <= now.as_second() && now.as_second() < *end)
+        .map(|(_, end)| Timestamp::from_second(end))
+        .max()
+    } else {
+        None
+    };
+    let until = manual
+        .into_iter()
+        .chain(calendar)
+        .max()
+        .filter(|_| presence != "invisible");
+    Notice {
+        id,
+        name,
+        until_date: until.map(|at| zone.format(at.jiff(), "%B %d, %Y")),
+        note: if until.is_some() && manual.is_some() {
+            note.filter(|s| !campfire_richtext::ruby::is_blank(s))
+        } else {
+            None
+        },
+    }
+}
+pub(crate) fn notice(
+    conn: &Connection,
+    user_id: i64,
+    now: Timestamp,
+) -> campfire_db::Result<Notice> {
+    let row=conn.query_row_cached("SELECT users.id,users.name,users.ooo_until,users.ooo_note,users.presence_setting,users.time_zone,users.ooo_calendar_enabled,calendar_meeting_caches.ooo_intervals FROM users LEFT JOIN calendar_meeting_caches ON calendar_meeting_caches.user_id=users.id WHERE users.id=?",[user_id],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?,r.get(6)?,r.get(7)?)))?;
+    Ok(notice_from_fields(row, now))
 }

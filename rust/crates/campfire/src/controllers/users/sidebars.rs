@@ -1,5 +1,5 @@
 //! `Users::SidebarsController`: the complete per-viewer workspace sidebar.
-mod composition;
+pub(crate) mod composition;
 #[cfg(test)]
 mod tests;
 use crate::app::AppCtx;

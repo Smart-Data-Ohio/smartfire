@@ -21,6 +21,7 @@ pub mod revocation;
 mod room;
 mod room_messages;
 pub mod sink;
+mod room_composition;
 pub mod threads;
 mod typing_notifications;
 pub mod unread_threads;

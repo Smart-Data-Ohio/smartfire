@@ -17,6 +17,9 @@ pub struct Navigation {
     pub stage: Option<Stage>,
 }
 impl Navigation {
+    pub fn identity(&self, ctx: &ViewContext) -> String {
+        Identity { ctx, nav: self }.render().expect("room identity")
+    }
     pub fn render(&self, ctx: &ViewContext) -> String {
         Nav {
             ctx,

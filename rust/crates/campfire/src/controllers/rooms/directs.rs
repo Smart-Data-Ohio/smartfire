@@ -84,15 +84,13 @@ async fn broadcast_create_room(c: &Ctx, room: &Room) -> Result<()> {
     c.app()
         .db
         .read(move |conn| {
-            let presenter = Presenter::new(conn, &app, None);
             let account = Account::first(conn)?;
             let mut partials = Rendered::default();
             for membership in Membership::for_room(conn, room.id)? {
-                let direct = presenter.sidebar_direct(&membership)?;
+                let direct = crate::controllers::users::sidebars::composition::for_membership(&app,conn,&membership,None)?;
                 let html = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| {
-                    Ok::<_, askama::Error>(campfire_views::users::direct_room(ctx, &direct))
-                })
-                .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
+                    direct.render_fragment(ctx,app.config.huddle.configured())
+                });
                 partials.direct_rooms.push((membership.id, html));
             }
             app.broadcasts.direct_room_create(conn, &room, &partials)

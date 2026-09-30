@@ -30,7 +30,6 @@ pub mod involvements;
 pub mod opens;
 pub mod refreshes;
 
-use askama::Template;
 use campfire_db::{Account, Message, Room, RoomType, Timeline, User};
 use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode, halt};
 
@@ -194,16 +193,14 @@ pub(crate) async fn render_shared_room(c: &Ctx, room: &Room) -> Result<Rendered>
         .app()
         .db
         .read(move |conn| {
-            let presenter = Presenter::new(conn, &app, None);
-            let sidebar_room = presenter.sidebar_room(&room);
+            let sidebar_room = super::users::sidebars::composition::neutral(&app,conn,&room)?;
             let account = Account::first(conn)?;
-            Ok(page::render_detached_at(&app, account.as_ref(), &base_url, |_| {
-                campfire_views::users::SidebarSharedPartial { room: sidebar_room }.render()
+            Ok(page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| {
+                sidebar_room.render_fragment(ctx,app.config.huddle.configured())
             }))
         })
         .await
-        .map_err(db_error)?
-        .map_err(Error::internal)?;
+        .map_err(db_error)?;
     Ok(Rendered { shared_room: Some(html), ..Rendered::default() })
 }
 
@@ -257,8 +254,8 @@ mod tests;
 #[cfg(test)]
 mod call_page_tests;
 
-mod call_navigation;
-mod shell;
+pub(crate) mod call_navigation;
+pub(crate) mod shell;
 
 #[cfg(test)]
 mod stream_controller_tests;
@@ -282,3 +279,5 @@ mod room_composition_tests;
 mod room_shell_tests;
 #[cfg(test)]
 mod full_room_tests;
+#[cfg(test)]
+mod row_broadcast_tests;
