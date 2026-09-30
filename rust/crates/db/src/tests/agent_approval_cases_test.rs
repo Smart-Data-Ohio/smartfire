@@ -464,3 +464,18 @@ fn ws11r_approval_inbox_failure_retains_primary_record_like_rails() {
     println!("WS11R approval inbox failure: persisted approvals = {count}");
     assert_eq!(count, 1, "Rails retains the approval after its after_create_commit fails");
 }
+
+#[test]
+fn ws11_approval_inbox_fanout_owns_a_transaction_after_primary_commit() {
+    let t=setup();
+    t.write(|tx| {
+        tx.conn().execute_batch("CREATE TEMP TRIGGER ws11_reject_second_recipient BEFORE INSERT ON activity_items WHEN NEW.source_type='AgentApproval' AND EXISTS(SELECT 1 FROM activity_items WHERE source_type='AgentApproval' AND source_id=NEW.source_id) BEGIN SELECT RAISE(ABORT,'second recipient failure'); END")?;
+        Ok(())
+    });
+    assert!(t.try_write(create).is_err());
+    t.read(|c| {
+        assert_eq!(c.query_row("SELECT COUNT(*) FROM agent_approvals",[],|r|r.get::<_,i64>(0))?,1);
+        assert_eq!(c.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='AgentApproval'",[],|r|r.get::<_,i64>(0))?,0);
+        Ok(())
+    });
+}
