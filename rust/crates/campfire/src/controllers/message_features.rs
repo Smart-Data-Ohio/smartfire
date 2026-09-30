@@ -196,3 +196,5 @@ pub(crate) fn json_time(time: Timestamp) -> String {
 mod slash_tests;
 #[cfg(test)]
 mod links_files_tests;
+#[cfg(test)]
+mod reminder_tests;

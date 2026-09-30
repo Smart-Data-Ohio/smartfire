@@ -7,6 +7,7 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[3]
 FILES = [
+    "app/models/notifications/policy.rb", "app/models/user/status_settings.rb", "app/models/calendar/meeting_cache.rb", "lib/web_push/pool.rb", "lib/web_push/notification.rb",
     "app/controllers/rooms/message_links_controller.rb", "app/controllers/rooms/files_controller.rb", "app/helpers/message_links_helper.rb", "app/helpers/rooms_helper.rb", "app/views/rooms/message_links/show.html.erb", "app/views/messages/message_links/_card.html.erb", "app/views/messages/message_links/_private.html.erb", "app/views/messages/message_links/_cards.html.erb", "app/views/rooms/files/index.html.erb", "app/models/drive_attachment.rb",
     "app/controllers/rooms/slash_commands_controller.rb", "app/controllers/autocompletable/icons_controller.rb", "app/controllers/autocompletable/slash_commands_controller.rb", "app/controllers/autocompletable/users_controller.rb",
     "app/models/icons.rb", "app/models/sound.rb", "app/services/huddle.rb", "app/services/slash_commands/registry.rb", "app/services/slash_commands/dispatcher.rb", "app/services/slash_commands/handlers.rb",

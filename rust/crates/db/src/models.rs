@@ -75,3 +75,5 @@ pub mod message_rendering;
 // WS8bm2 listing/quote read adapters.
 pub mod room_files;
 pub mod message_quote;
+
+pub mod reminder_policy;

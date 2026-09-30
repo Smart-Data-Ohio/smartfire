@@ -322,3 +322,22 @@ WS8bm2 links/files Rails oracle: 15 Files sections; 5 quote HTTP responses; 2 qu
 WS8bm2 discrimination: 3 compiled regressions detected; sources restored
 WS8bm2 discrimination: 1 compiled regressions detected; sources restored
 ```
+
+## WS9 merge and reminder push boundary continuation
+
+Merged main `4278cb1e` with merge commit `4acb20fc`; resolved the route inventory and shared clock-helper conflicts by retaining both APIs. Locked metadata succeeded. The merged app run passed 573 tests with three existing ignores.
+
+New `db/models/reminder_policy.rs` implements only `Notifications::Policy(kind: :reminder)`: manual/presence DND, zone-local quiet hours, cached meeting quiet and manual/calendar OOO unless notifications are kept on. It matches 27 actual Rails cases, including inclusive/exclusive boundaries and malformed cached pairs. No sender exception applies. New `jobs/reminders.rs` registers the real durable reminder job, rechecks membership before policy or source data, discards vanished saved rows and hands the complete payload/tag/subscription set to an injectable queue boundary. SavedItem exposes the unchanged membership predicate and preserves the full Unicode room title, fixing the inherited room-push payload clamp on reminders.
+
+**WS17 send seam:** its tagged transport has not landed on this branch. Allowed pushes with subscriptions remain one durable job, rescheduled by sixty seconds until the enqueue boundary is wired. Suppressed and empty-subscription jobs finish; transport errors cannot acknowledge delivery. No physical push send is claimed. WS17 must replace the default callback with its tagged pool enqueue; the existing untagged pool is not used for reminder sends. This is explicitly partial runtime behavior pending that integration.
+
+Seven owned tests cover the real runner's suppressed completion/inbox preservation and pending send, exact Rails payload/tag/subscriptions, lost membership before policy/source reads, missing-row discard, rejected queue and full Unicode title. Failing-first the absent registry failed the real job; the old title clamp failed the new Unicode oracle. Four compiled regressions reject missing registration, expired/manual DND changes, membership ordering and tag loss.
+
+```text
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 576 filtered out; finished in 0.16s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 582 filtered out; finished in 0.10s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 576 filtered out; finished in 0.35s
+WS8bm2 reminder push Rails oracle: 27 policy cases; 2 captured real job payload/subscription handoffs; 3 fixture tables
+WS8bm2 discrimination: 4 compiled regressions detected; sources restored
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 18.73s
+```

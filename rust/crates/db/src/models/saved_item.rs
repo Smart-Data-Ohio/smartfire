@@ -225,6 +225,11 @@ impl SavedItem {
         Ok(())
     }
 
+    /// WS8bm2 reminder job checks membership before evaluating recipient policy.
+    pub fn reminder_room_member(&self, conn: &Connection) -> Result<bool> {
+        Self::room_member(conn, self.message_id, self.user_id)
+    }
+
     fn room_member(conn: &Connection, message_id: i64, user_id: i64) -> Result<bool> {
         sql::exists(
             conn,
@@ -312,7 +317,7 @@ impl SavedItem {
         let text = crate::models::channel_thread::truncate(&message.plain_text_body(conn, rich_text)?, 140, "...");
         Ok(Some(ReminderPush {
             user_id: item.user_id,
-            payload: PushPayload::fitted(title, format!("Reminder: {text}"), message_path(&message)),
+            payload: PushPayload { title, body: format!("Reminder: {text}"), path: message_path(&message) },
             tag: format!("saved-{}", item.id),
             subscriptions: PushSubscription::for_user(conn, item.user_id)?,
         }))
