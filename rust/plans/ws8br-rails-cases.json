@@ -10,125 +10,186 @@
       "declared_cases": [
         {
           "name": "index redirects to the user's last room",
-          "line": 7
+          "line": 7,
+          "rust_test": "controllers::rooms::rooms_rails_cases::index_redirects_to_the_users_last_room",
+          "rust_result": "passed"
         },
         {
           "name": "show",
-          "line": 12
+          "line": 12,
+          "rust_test": "controllers::rooms::rooms_rails_cases::show_case",
+          "rust_result": "passed"
         },
         {
           "name": "show renders collapsed work-thread guidance in the new-thread panel",
-          "line": 17
+          "line": 17,
+          "rust_result": "deferred",
+          "deferred_to": "WS8bm thread-panel rendering"
         },
         {
           "name": "shows records the last room visited in a cookie",
-          "line": 27
+          "line": 27,
+          "rust_test": "controllers::rooms::rooms_rails_cases::shows_records_the_last_room_visited_in_a_cookie",
+          "rust_result": "passed"
         },
         {
           "name": "show renders a link preview written by hand without its off-scheme image and link",
-          "line": 32
+          "line": 32,
+          "rust_result": "deferred",
+          "deferred_to": "WS8bm message renderer and WS15e embed provider"
         },
         {
           "name": "show renders a link preview written by hand without its image pointed at this Smartfire",
-          "line": 47
+          "line": 47,
+          "rust_result": "deferred",
+          "deferred_to": "WS8bm message renderer and WS15e embed provider"
         },
         {
           "name": "show renders an unfurled link preview",
-          "line": 63
+          "line": 63,
+          "rust_result": "deferred",
+          "deferred_to": "WS8bm message renderer and WS15e embed provider"
         },
         {
           "name": "show renders the unread divider above the first unread message on the page",
-          "line": 78
+          "line": 78,
+          "rust_result": "deferred",
+          "deferred_to": "WS8bm list seam; WS8br divider facts are covered separately"
         },
         {
           "name": "show keeps the last page when the first unread fell off it and links the pill to it",
-          "line": 93
+          "line": 93,
+          "rust_result": "deferred",
+          "deferred_to": "WS8bm full list integration; WS8br page/divider facts covered separately"
         },
         {
           "name": "destroy removes the room from everyone and enqueues its deletion",
-          "line": 110
+          "line": 110,
+          "rust_test": "controllers::rooms::rooms_rails_cases::destroy_removes_the_room_from_everyone_and_enqueues_its_deletion",
+          "rust_result": "passed"
         },
         {
           "name": "destroy stamps the sweep claim",
-          "line": 124
+          "line": 124,
+          "rust_test": "controllers::rooms::rooms_rails_cases::destroy_stamps_the_sweep_claim",
+          "rust_result": "passed"
         },
         {
           "name": "destroy succeeds when the queue is down and the sweep recovers the room",
-          "line": 133
+          "line": 133,
+          "rust_result": "deferred",
+          "deferred_to": "Lead decision 2 requires atomic queue rollback; native fault-injection coverage is separate"
         },
         {
           "name": "destroyed room is inaccessible while deletion is pending",
-          "line": 150
+          "line": 150,
+          "rust_test": "controllers::rooms::rooms_rails_cases::destroyed_room_is_inaccessible_while_deletion_is_pending",
+          "rust_result": "passed"
         },
         {
           "name": "destroy finishes through the enqueued job",
-          "line": 158
+          "line": 158,
+          "rust_test": "controllers::rooms::rooms_rails_cases::destroy_finishes_through_the_enqueued_job",
+          "rust_result": "passed"
         },
         {
           "name": "destroy only allowed for creators or those who can administer",
-          "line": 167
+          "line": 167,
+          "rust_test": "controllers::rooms::rooms_rails_cases::destroy_only_allowed_for_creators_or_those_who_can_administer",
+          "rust_result": "passed"
         },
         {
           "name": "destroy answers the sidebar menu with json and no redirect",
-          "line": 184
+          "line": 184,
+          "rust_test": "controllers::rooms::rooms_rails_cases::destroy_answers_the_sidebar_menu_with_json_and_no_redirect",
+          "rust_result": "passed"
         },
         {
           "name": "destroy announces the deleted room",
-          "line": 194
+          "line": 194,
+          "rust_test": "controllers::rooms::rooms_rails_cases::destroy_announces_the_deleted_room",
+          "rust_result": "passed"
         },
         {
           "name": "destroy of a group dm is refused for non-administrators",
-          "line": 201
+          "line": 201,
+          "rust_test": "controllers::rooms::rooms_rails_cases::destroy_of_a_group_dm_is_refused_for_non_administrators",
+          "rust_result": "passed"
         },
         {
           "name": "leave removes only your membership and the room keeps working",
-          "line": 212
+          "line": 212,
+          "rust_test": "controllers::rooms::rooms_rails_cases::leave_removes_only_your_membership_and_the_room_keeps_working",
+          "rust_result": "passed"
         },
         {
           "name": "leave answers the sidebar menu with json and no redirect",
-          "line": 233
+          "line": 233,
+          "rust_test": "controllers::rooms::rooms_rails_cases::leave_answers_the_sidebar_menu_with_json_and_no_redirect",
+          "rust_result": "passed"
         },
         {
           "name": "the last member out does not delete the room",
-          "line": 243
+          "line": 243,
+          "rust_test": "controllers::rooms::rooms_rails_cases::the_last_member_out_does_not_delete_the_room",
+          "rust_result": "passed"
         },
         {
           "name": "leave is rejected for non-members",
-          "line": 255
+          "line": 255,
+          "rust_test": "controllers::rooms::rooms_rails_cases::leave_is_rejected_for_non_members",
+          "rust_result": "passed"
         },
         {
           "name": "leave of a group dm through the room route keeps direct semantics",
-          "line": 265
+          "line": 265,
+          "rust_test": "controllers::rooms::rooms_rails_cases::leave_of_a_group_dm_through_the_room_route_keeps_direct_semantics",
+          "rust_result": "passed"
         },
         {
           "name": "show renders the join page for a non-member of an open room",
-          "line": 277
+          "line": 277,
+          "rust_test": "controllers::rooms::rooms_rails_cases::show_renders_the_join_page_for_a_non_member_of_an_open_room",
+          "rust_result": "passed"
         },
         {
           "name": "show still redirects non-members of private rooms",
-          "line": 289
+          "line": 289,
+          "rust_test": "controllers::rooms::rooms_rails_cases::show_still_redirects_non_members_of_private_rooms",
+          "rust_result": "passed"
         },
         {
           "name": "show still redirects non-members of deleted open rooms",
-          "line": 297
+          "line": 297,
+          "rust_test": "controllers::rooms::rooms_rails_cases::show_still_redirects_non_members_of_deleted_open_rooms",
+          "rust_result": "passed"
         },
         {
           "name": "join recreates the membership and returns to the room",
-          "line": 306
+          "line": 306,
+          "rust_test": "controllers::rooms::rooms_rails_cases::join_recreates_the_membership_and_returns_to_the_room",
+          "rust_result": "passed"
         },
         {
           "name": "join is refused for private rooms",
-          "line": 318
+          "line": 318,
+          "rust_test": "controllers::rooms::rooms_rails_cases::join_is_refused_for_private_rooms",
+          "rust_result": "passed"
         },
         {
           "name": "join of a room you already belong to returns to it",
-          "line": 328
+          "line": 328,
+          "rust_test": "controllers::rooms::rooms_rails_cases::join_of_a_room_you_already_belong_to_returns_to_it",
+          "rust_result": "passed"
         }
       ],
       "declared_count": 29,
       "rails_tests_run": 29,
       "rails_pass_count": 29,
-      "status": "full-file acceptance deferred",
+      "status": "22 source-declared cases individually executed in Rust; 7 deferred",
+      "rust_cases_run": 22,
+      "rust_pass_count": 22,
+      "rust_cases_deferred": 7,
       "rails_assertions": 153
     },
     {

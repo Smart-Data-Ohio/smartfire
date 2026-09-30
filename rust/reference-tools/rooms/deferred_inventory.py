@@ -106,6 +106,15 @@ if args.test_log:
           "destroy can't reach a room the member isn't in at all":'destroy_cant_reach_a_room_the_member_isnt_in_at_all'},
          {'a member can rename the group and everyone sees the compact system note':'WS8bm message-list rendering; HTTP rename/domain covered separately',
           'group DM notes cannot be edited or deleted':'WS8bm message edit/delete authorization'}),
+        ('test/controllers/rooms_controller_test.rb','rooms_rails_cases',
+         {"index redirects to the user's last room":'index_redirects_to_the_users_last_room','show':'show_case'},
+         {'show renders collapsed work-thread guidance in the new-thread panel':'WS8bm thread-panel rendering',
+          'show renders a link preview written by hand without its off-scheme image and link':'WS8bm message renderer and WS15e embed provider',
+          'show renders a link preview written by hand without its image pointed at this Smartfire':'WS8bm message renderer and WS15e embed provider',
+          'show renders an unfurled link preview':'WS8bm message renderer and WS15e embed provider',
+          'show renders the unread divider above the first unread message on the page':'WS8bm list seam; WS8br divider facts are covered separately',
+          'show keeps the last page when the first unread fell off it and links the pill to it':'WS8bm full list integration; WS8br page/divider facts covered separately',
+          'destroy succeeds when the queue is down and the sweep recovers the room':'Lead decision 2 requires atomic queue rollback; native fault-injection coverage is separate'}),
     ]
     for path,module,renamed,deferred in groups:
         file=next(row for row in result if row['file']==path)

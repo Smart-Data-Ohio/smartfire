@@ -9,7 +9,7 @@ const DESIGNERS: i64 = 654632876;
 async fn setup() -> TestApp {
     TestApp::boot_frozen().await.expect("seed required")
 }
-async fn group(app: &TestApp, ids: &[i64], creator: i64) -> i64 {
+pub(super) async fn group(app: &TestApp, ids: &[i64], creator: i64) -> i64 {
     let ids = ids.to_vec();
     app.db()
         .write(move |tx| {
@@ -20,7 +20,7 @@ async fn group(app: &TestApp, ids: &[i64], creator: i64) -> i64 {
         .await
         .unwrap()
 }
-async fn ids(app: &TestApp, id: i64) -> Vec<i64> {
+pub(super) async fn ids(app: &TestApp, id: i64) -> Vec<i64> {
     let mut ids = app
         .db()
         .read(move |conn| Room::find(conn, id)?.user_ids(conn))
@@ -95,7 +95,7 @@ fn edit(reply: &Reply, id: i64) {
         Some(format!("http://campfire.test/rooms/directs/{id}/edit").as_str())
     );
 }
-async fn note(app: &TestApp, id: i64) -> String {
+pub(super) async fn note(app: &TestApp, id: i64) -> String {
     let renderer = app.db().env().rich_text.clone();
     app.db()
         .read(move |conn| {
@@ -109,7 +109,7 @@ async fn note(app: &TestApp, id: i64) -> String {
         .await
         .unwrap()
 }
-async fn pending_destroy(app: &TestApp, id: i64) {
+pub(super) async fn pending_destroy(app: &TestApp, id: i64) {
     app.db().read(move|conn| {
         let room=Room::find(conn,id)?;
         assert!(room.deleted_at.is_some()); assert!(room.destroy_enqueued_at.is_some());

@@ -459,3 +459,6 @@ mod direct_rename_tests;
 
 #[cfg(test)]
 mod directs_rails_cases;
+
+#[cfg(test)]
+mod rooms_rails_cases;
