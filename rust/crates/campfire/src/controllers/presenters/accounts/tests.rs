@@ -611,10 +611,8 @@ async fn joins_with_the_join_code() {
         &browser.form("post", &path, &fields).await,
         "http://campfire.test/",
     );
-    assert_eq!(
-        browser.get("/users/me/profile").await.status,
-        StatusCode::OK
-    );
+    assert_redirect(&browser.get("/users/me/profile").await, "http://campfire.test/two_factor_setup");
+    assert_eq!(browser.get("/two_factor_setup").await.status, StatusCode::OK);
 
     // A taken email address goes to sign in instead.
     let mut other = test.browser("198.51.100.9");
@@ -653,13 +651,8 @@ async fn first_run_sets_up_the_account() {
         "http://campfire.test/",
     );
     assert_redirect(&browser.get("/first_run").await, "http://campfire.test/");
-    assert!(
-        browser
-            .get("/")
-            .await
-            .location()
-            .starts_with("http://campfire.test/rooms/")
-    );
+    assert_redirect(&browser.get("/").await, "http://campfire.test/two_factor_setup");
+    assert_eq!(browser.get("/two_factor_setup").await.status, StatusCode::OK);
 }
 
 // --- Account ---------------------------------------------------------------------------------------

@@ -10,7 +10,7 @@ cases=[
  ('pending-state-never-expires','crates/campfire/src/concerns/session_keys.rs','if to_i(expires_at) < now.as_second()','if false','challenge_pending_expires'),
  ('challenge-session-unverified','crates/campfire/src/concerns.rs','start_session(c, user, true).await','start_session(c, user, false).await','challenge_first_factor'),
  ('reauthentication-bypassed',ctrl,'async fn reauthenticated(c: &mut Ctx, user: &User) -> Result<bool> {','async fn reauthenticated(c: &mut Ctx, user: &User) -> Result<bool> { return Ok(true);','self_service_requires'),
- ('unverified-disable-allowed',ctrl,'if current_session(c).is_some_and(|s| s.two_factor_verified())','if true','disable_refuses'),
+ ('unverified-disable-allowed','crates/campfire/src/concerns.rs','|| session.two_factor_verified()','|| session.two_factor_verified() || endpoint == Some("two_factor/setups#destroy")','disable_refuses'),
  ('google-subject-ignored',ctrl,'if linked_subject(c, user.id).await?.as_deref() != Some(verified_subject)','if false','google_step_up'),
  ('google-owner-ignored',ctrl,'.filter(|user| user.id == flow_user_id)','.filter(|_| true)','google_step_up'),
  ('google-reusable','crates/campfire/src/concerns/session_keys.rs','session.remove(REAUTH_KEY)','session.get(REAUTH_KEY).cloned()','google_step_up'),

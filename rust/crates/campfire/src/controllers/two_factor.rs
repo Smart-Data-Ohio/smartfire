@@ -373,34 +373,6 @@ async fn remember_device(c: &mut Ctx, user_id: i64) -> Result<()> {
     )
 }
 
-/// Self-service needs a verified session even before global enrollment enforcement lands.
-async fn require_verified(c: &mut Ctx) -> Result<()> {
-    if current_session(c).is_some_and(|s| s.two_factor_verified()) {
-        return Ok(());
-    }
-    if enabled(c).await? {
-        concerns::terminate_current_session(c).await?;
-        if c.format()?
-            .is_some_and(|f| f.symbol == "html" || f.string.contains("html"))
-        {
-            return halt(c.redirect_to_with(
-                &c.url_for("/session/new"),
-                Redirect {
-                    alert: Some("Sign in again to verify two-step sign-in.".into()),
-                    ..Default::default()
-                },
-            )?);
-        }
-        halt(concerns::head(StatusCode::UNAUTHORIZED))
-    } else {
-        if c.format()?
-            .is_some_and(|f| f.symbol == "html" || f.string.contains("html"))
-        {
-            return halt(c.redirect_to(&c.url_for("/two_factor_setup"))?);
-        }
-        halt(concerns::head(StatusCode::FORBIDDEN))
-    }
-}
 async fn reauthenticated(c: &mut Ctx, user: &User) -> Result<bool> {
     if c.params.get("reauth").is_some_and(|p| p.is_present()) {
         let value = scalar(c, "reauth");
@@ -469,7 +441,6 @@ fn rate_rejection(c: &mut Ctx) -> Result {
 }
 pub async fn backup_create(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
-    require_verified(c).await?;
     let user = require_current_user(c)?.clone();
     if limited(c, "two_factor/backup_codes", "per-user", Some(user.id))? {
         return rate_rejection(c);
@@ -492,7 +463,6 @@ pub async fn backup_create(c: &mut Ctx) -> Result {
 }
 pub async fn setup_destroy(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
-    require_verified(c).await?;
     let user = require_current_user(c)?.clone();
     if limited(c, "two_factor/setups", "per-user-destroy", Some(user.id))? {
         return rate_rejection(c);
@@ -532,7 +502,6 @@ pub async fn device_destroy_all(c: &mut Ctx) -> Result {
 }
 async fn revoke_devices(c: &mut Ctx, all: bool) -> Result {
     concerns::before_actions(c, Before::default()).await?;
-    require_verified(c).await?;
     let user = require_current_user(c)?.clone();
     if limited(
         c,
@@ -568,7 +537,6 @@ async fn revoke_devices(c: &mut Ctx, all: bool) -> Result {
 
 pub async fn reauthentication_create(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
-    require_verified(c).await?;
     let id = require_current_user(c)?.id;
     if limited(c, "two_factor/reauthentications", "per-user", Some(id))? {
         return rate_rejection(c);

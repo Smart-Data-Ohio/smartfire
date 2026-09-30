@@ -31,8 +31,8 @@
 //!
 //! Our Rails app's `ApplicationController` also includes `SetTimeZone`, `SudoMode` and
 //! `TwoFactorEnforcement` (`require_two_factor_enrollment`). Sudo gates and the second-factor
-//! controllers are ported; global enrollment enforcement remains the next session/device slice.
-//! The session state they keep is in [`session_keys`].
+//! controllers and global enrollment enforcement are ported. The session state they keep is in
+//! [`session_keys`].
 //!
 //! Current attributes (`Current.user`, `Current.session`) live in the `Ctx` extensions; read them
 //! with [`current_user`] / [`current_session`].
@@ -200,6 +200,7 @@ pub async fn before_actions(c: &mut Ctx, before: Before) -> Result<()> {
         c.verify_authenticity_token()?;
     }
     allow_browser(c).await?;
+    enforce_two_factor_for_restored_session(c).await?;
     if before.authentication == Authentication::RequireUnauthenticated {
         restore_authentication(c).await?;
         redirect_signed_in_user_to_root(c)?;
@@ -311,7 +312,7 @@ pub async fn restore_authentication(c: &mut Ctx) -> Result<bool> {
         return Ok(false);
     }
     resume_session(c, session, user).await?;
-    enforce_two_factor_for_restored_session(c)?;
+    enforce_two_factor_for_restored_session(c).await?;
     Ok(true)
 }
 
@@ -327,12 +328,45 @@ pub fn session_expired(
     user.is_administrator() && session.last_active_at < now.ago(idle_timeout)
 }
 
-/// `enforce_two_factor_for_restored_session`, which `TwoFactorEnforcement` overrides with
-/// `require_two_factor_enrollment`. Sessions carry `two_factor_verified_at` now, but enforcing it
-/// is the next session/device slice. The new self-service controllers already reject unverified
-/// sessions locally; this hook still lets other restored sessions through.
-pub fn enforce_two_factor_for_restored_session(_c: &mut Ctx) -> Result<()> {
-    Ok(())
+/// `TwoFactorEnforcement#require_two_factor_enrollment`. The callback and every late restore
+/// share this gate. Verified sessions do not query the credential; key authentication is exempt.
+pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> {
+    let Some(session) = current_session(c) else { return Ok(()) };
+    let Some(user) = current_user(c) else { return Ok(()) };
+    if authenticated_by(c) != AuthenticatedBy::Session || !user.requires_two_factor() {
+        return Ok(());
+    }
+    // Use the trusted dispatcher endpoint, never query/body controller or action parameters.
+    let endpoint = c.current::<crate::controllers::MatchedRoute>().map(|r| r.endpoint);
+    if endpoint.is_some_and(|endpoint| {
+        let (controller, action) = endpoint.split_once('#').unwrap_or((endpoint, ""));
+        matches!(controller, "two_factor/challenges" | "pwa")
+            || (controller == "two_factor/setups" && matches!(action, "show" | "create"))
+            || (controller == "sessions" && action == "destroy")
+    }) || session.two_factor_verified() {
+        return Ok(());
+    }
+    let user = user.clone();
+    let enabled = c.app().db.read(move |conn| user.two_factor_enabled(conn)).await.map_err(Error::internal)?;
+    let html = c.format()?.is_some_and(|f| f.symbol == "html" || f.string.contains("html"));
+    if enabled {
+        terminate_current_session(c).await?;
+        if html {
+            return halt(c.redirect_to_with(&c.url_for("/session/new"), campfire_kit::Redirect {
+                alert: Some("Sign in again to verify two-step sign-in.".into()),
+                ..Default::default()
+            })?);
+        }
+        halt(head(StatusCode::UNAUTHORIZED))
+    } else if html {
+        if c.request.is_get() {
+            let url = c.request.url();
+            c.session().insert(session_keys::RETURN_TO_KEY, url);
+        }
+        halt(c.redirect_to(&c.url_for("/two_factor_setup"))?)
+    } else {
+        halt(head(StatusCode::FORBIDDEN))
+    }
 }
 
 /// `bot_authentication`: `params[:bot_key].present?` and a matching active bot.

@@ -563,12 +563,22 @@ fn json_time(db_time: &str) -> String {
     }
 }
 
-/// `ActiveStorageAuthentication#require_active_storage_authentication`: 401 without a session.
+/// `ActiveStorageAuthentication`: human sessions must have completed the second factor. These
+/// framework controllers do not restore a session or run application enrollment/idle callbacks.
 async fn require_active_storage_authentication(c: &mut Ctx) -> Result<()> {
-    if find_session_by_cookie(c).await?.is_none() {
-        return halt(head(StatusCode::UNAUTHORIZED));
+    if let Some(session) = find_session_by_cookie(c).await? {
+        if session.two_factor_verified() {
+            return Ok(());
+        }
+        let user_id = session.user_id;
+        let allowed = c.app().db.read(move |conn| {
+            Ok(campfire_db::User::find(conn, user_id)?.requires_two_factor())
+        }).await.map_err(Error::internal)?;
+        if !allowed {
+            return Ok(());
+        }
     }
-    Ok(())
+    halt(head(StatusCode::UNAUTHORIZED))
 }
 
 // --- Purging ---------------------------------------------------------------------------------------

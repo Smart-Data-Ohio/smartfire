@@ -465,5 +465,8 @@ mod two_factor_tests;
 
 #[cfg(test)]
 mod challenge_tests;
+
+#[cfg(test)]
+mod enforcement_tests;
 #[cfg(test)]
 mod tests;
