@@ -1,6 +1,6 @@
 //! `Users::BansController` (reference/app/controllers/users/bans_controller.rb).
 
-use campfire_kit::{Ctx, Error, Result, StatusCode};
+use campfire_kit::{Ctx, Error, Result};
 
 use super::find_user;
 use crate::app::AppCtx;
@@ -16,11 +16,9 @@ pub async fn create(c: &mut Ctx) -> Result {
     let audit = crate::controllers::two_factor::audit_context(c)?;
     c.app()
         .db
-        .write(move |tx| {
-            campfire_db::models::account_mutations::change_ban(tx, &mut user, true, &audit)
-        })
+        .write(move |tx| crate::authentication::set_user_banned(tx, &mut user, true, &audit))
         .await
-        .map_err(write_error)?;
+        .map_err(Error::internal)?;
     redirect_to_user(c, id)
 }
 
@@ -34,19 +32,10 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     let audit = crate::controllers::two_factor::audit_context(c)?;
     c.app()
         .db
-        .write(move |tx| {
-            campfire_db::models::account_mutations::change_ban(tx, &mut user, false, &audit)
-        })
+        .write(move |tx| crate::authentication::set_user_banned(tx, &mut user, false, &audit))
         .await
-        .map_err(write_error)?;
+        .map_err(Error::internal)?;
     redirect_to_user(c, id)
-}
-
-fn write_error(error: campfire_db::Error) -> Error {
-    match error {
-        campfire_db::Error::RecordInvalid(_) => Error::Status(StatusCode::UNPROCESSABLE_ENTITY),
-        error => Error::internal(error),
-    }
 }
 
 /// `redirect_to @user`

@@ -45,7 +45,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     let audit = crate::controllers::two_factor::audit_context(c)?;
     c.app()
         .db
-        .write(move |tx| campfire_db::models::account_mutations::change_role(tx, &mut user, role, &audit))
+        .write(move |tx| crate::authentication::update_role(tx, &mut user, role, &audit))
         .await
         .map_err(Error::internal)?;
     redirect_to_edit_account(c)
@@ -58,7 +58,11 @@ pub async fn destroy(c: &mut Ctx) -> Result {
     let mut user = set_user(c).await?;
     concerns::sudo::require_sudo_mode(c)?;
     let audit = crate::controllers::two_factor::audit_context(c)?;
-    c.app().db.write(move |tx| campfire_db::models::account_mutations::deactivate(tx, &mut user, &audit)).await.map_err(Error::internal)?;
+    c.app()
+        .db
+        .write(move |tx| crate::authentication::deactivate_user(tx, &mut user, &audit))
+        .await
+        .map_err(Error::internal)?;
     redirect_to_edit_account(c)
 }
 

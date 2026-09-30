@@ -142,6 +142,11 @@ pub async fn update(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
     let mut user = concerns::require_current_user(c)?.clone();
 
+    // Rails computes presence/key checks before strong parameters discard non-scalars.
+    let raw = c.params.require("user")?;
+    let password_changing = raw.get("password").is_some_and(|p| p.is_present());
+    let time_zone_submitted = raw.get("time_zone").is_some();
+    // `user_params.compact`: nil scalar values are dropped below.
     let mut permitted = permit_keys(&[
         "name",
         "avatar",
@@ -164,11 +169,6 @@ pub async fn update(c: &mut Ctx) -> Result {
         theme: compact_string(&params, "theme"),
         text_size: compact_string(&params, "text_size"),
         time_zone: compact_string(&params, "time_zone"),
-        zone_submitted: c
-            .params
-            .get("user")
-            .and_then(|p| p.get("time_zone"))
-            .is_some(),
         voice_mode: compact_string(&params, "voice_mode"),
         push_to_talk_key: compact_string(&params, "push_to_talk_key"),
         github_login: compact_string(&params, "github_login"),
@@ -177,7 +177,6 @@ pub async fn update(c: &mut Ctx) -> Result {
             .filter(|p| !p.is_null())
             .map(|p| p.to_json()),
     };
-    let password_changing = params.get("password").is_some_and(|p| p.is_present());
     // Rails checks the raw request before strong parameters discard non-scalars.
     let email_changing = c
         .params
@@ -200,15 +199,7 @@ pub async fn update(c: &mut Ctx) -> Result {
                 .map_err(Error::internal)?;
         if !confirmed {
             // Rails assigns the submitted non-secret attributes only to the error view.
-            if let Some(value) = compact_string(&params, "name") {
-                user.name = value;
-            }
-            if let Some(value) = compact_string(&params, "email_address") {
-                user.email_address = Some(value);
-            }
-            if let Some(value) = compact_string(&params, "bio") {
-                user.bio = Some(value);
-            }
+            assign_error_attributes(&mut user, &params);
             c.set_current(concerns::CurrentUser(user.clone()));
             return render_show(
                 c,
@@ -236,6 +227,8 @@ pub async fn update(c: &mut Ctx) -> Result {
         )
         .await?,
         bio: present("bio").map(Some),
+        time_zone: present("time_zone").map(Some),
+        time_zone_explicit: time_zone_submitted.then_some(true),
         ..UserChanges::default()
     };
     let avatar = match Assignment::from_params(&params, "avatar")? {
@@ -253,21 +246,12 @@ pub async fn update(c: &mut Ctx) -> Result {
 
     let avatar = avatar.stage(c.app()).await?;
     let preview_settings = settings.clone();
-    let mut preview = user.clone();
-    if let Some(name) = &changes.name {
-        preview.name = name.clone();
-    }
-    if let Some(email) = &changes.email_address {
-        preview.email_address = email.clone();
-    }
-    if let Some(bio) = &changes.bio {
-        preview.bio = bio.clone();
-    }
+    let mut error_user = user.clone();
+    assign_error_attributes(&mut error_user, &params);
     let pending = c
         .app()
         .db
         .write(move |tx| {
-            campfire_db::models::user::profile_settings::update(tx, user.id, settings)?;
             crate::authentication::update_profile(
                 tx,
                 &mut user,
@@ -276,17 +260,18 @@ pub async fn update(c: &mut Ctx) -> Result {
                 password_changing,
                 &audit,
             )?;
+            campfire_db::models::user::profile_settings::update(tx, user.id, settings)?;
             attachments::assign(tx, Record::user(user.id), "avatar", avatar)
         })
         .await;
     let pending = match pending {
         Ok(pending) => pending,
         Err(campfire_db::Error::RecordInvalid(errors)) => {
-            c.set_current(concerns::CurrentUser(preview.clone()));
+            c.set_current(concerns::CurrentUser(error_user.clone()));
             return render_show(
                 c,
                 StatusCode::UNPROCESSABLE_ENTITY,
-                preview,
+                error_user,
                 None,
                 Some((preview_settings, errors)),
             )
@@ -304,6 +289,19 @@ pub async fn update(c: &mut Ctx) -> Result {
             ..Redirect::default()
         },
     )
+}
+
+/// Submitted public attributes stay visible after a rejected save; passwords stay blank.
+fn assign_error_attributes(user: &mut campfire_db::User, params: &campfire_kit::ParamMap) {
+    if let Some(value) = compact_string(params, "name") {
+        user.name = value;
+    }
+    if let Some(value) = compact_string(params, "email_address") {
+        user.email_address = Some(value);
+    }
+    if let Some(value) = compact_string(params, "bio") {
+        user.bio = Some(value);
+    }
 }
 
 /// `user_params.compact` drops nil instead of coercing it to an empty string.

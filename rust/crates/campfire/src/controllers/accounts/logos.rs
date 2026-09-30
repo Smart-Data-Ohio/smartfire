@@ -65,7 +65,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
         .db
         .write(move |tx| {
             attachments::destroy(tx, Record::account(account.id), "logo")?;
-            campfire_db::models::account_mutations::record_logo_destroy(tx, &account, &audit)
+            crate::account_security::logo_removed(tx, &account, &audit)
         })
         .await
         .map_err(Error::internal)?;

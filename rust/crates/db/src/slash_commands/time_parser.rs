@@ -65,21 +65,27 @@ pub(crate) fn strip(text: &str) -> &str {
     text.trim_matches(|c: char| matches!(c, '\0' | '\t' | '\n' | '\x0b' | '\x0c' | '\r' | ' '))
 }
 pub(crate) fn known_zone(name: &str) -> Option<TimeZone> {
-    static ALIASES: OnceLock<std::collections::HashMap<String, String>> = OnceLock::new();
-    let aliases = ALIASES.get_or_init(|| {
-        serde_json::from_str(include_str!("../tests/ws8_slash_zones.json")).unwrap()
+    // ActiveSupport::TimeZone[] resolves its exact aliases or TZInfo's case-sensitive
+    // identifiers. Jiff alone accepts wrong-case names and additional host zones.
+    // Generated from pinned Rails by reference-tools/auth/round_four.rb.
+    #[derive(serde::Deserialize)]
+    struct Names {
+        identifiers: std::collections::HashSet<String>,
+        mapping: std::collections::HashMap<String, String>,
+    }
+    static NAMES: OnceLock<Names> = OnceLock::new();
+    let names = NAMES.get_or_init(|| {
+        serde_json::from_str(include_str!("../rails_time_zones.json")).expect("pinned Rails zones")
     });
-    // TZInfo accepts identifiers case-sensitively; Jiff's lookup also accepts wrong case.
-    static IDENTIFIERS: OnceLock<Vec<String>> = OnceLock::new();
-    let identifiers = IDENTIFIERS.get_or_init(|| serde_json::from_str(include_str!("rails_zone_identifiers.json")).unwrap());
-    let identifier = aliases.get(name).map(String::as_str).unwrap_or(name);
-    identifiers.binary_search_by(|value| value.as_str().cmp(identifier)).ok()?;
+    let identifier = names.mapping.get(name).map(String::as_str).unwrap_or(name);
+    if !names.identifiers.contains(identifier) {
+        return None;
+    }
     TimeZone::get(identifier).ok()
 }
 pub(crate) fn zone(name: &str) -> TimeZone {
     known_zone(name).unwrap_or(TimeZone::UTC)
 }
-
 pub(crate) fn local(
     date: Date,
     hour: i8,
@@ -468,24 +474,4 @@ fn parsed_offset(text: &str) -> Option<i32> {
         })
         .get(&token.split_whitespace().collect::<Vec<_>>().join(" "))
         .copied()
-}
-
-#[cfg(test)]
-mod zone_tests {
-    use super::*;
-
-    #[test]
-    fn identifier_and_named_zone_availability_matches_rails_with_exact_case() {
-        let identifiers: Vec<String> = serde_json::from_str(include_str!("rails_zone_identifiers.json")).unwrap();
-        let aliases: std::collections::HashMap<String, Option<String>> = serde_json::from_str(include_str!("rails_named_zones.json")).unwrap();
-        for name in &identifiers {
-            assert!(known_zone(name).is_some(), "{name}");
-        }
-        for (name, identifier) in aliases {
-            assert_eq!(known_zone(&name).is_some(), identifier.is_some(), "{name}");
-        }
-        for invalid in ["america/new_york", "pacific Time (US & Canada)", " America/New_York ", "Narnia", ""] {
-            assert!(known_zone(invalid).is_none(), "{invalid}");
-        }
-    }
 }

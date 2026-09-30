@@ -16,8 +16,6 @@ pub struct Changes {
     pub theme: Option<String>,
     pub text_size: Option<String>,
     pub time_zone: Option<String>,
-    /// Even a nil or non-scalar zone is an explicit choice in the raw request.
-    pub zone_submitted: bool,
     pub voice_mode: Option<String>,
     pub push_to_talk_key: Option<String>,
     pub github_login: Option<String>,
@@ -63,19 +61,7 @@ pub fn update(tx: &Tx<'_>, user: i64, changes: Changes) -> Result<()> {
             attrs.insert(key.into(), Value::String(value));
         }
     }
-    if let Some(zone) = changes.time_zone {
-        attrs.insert(
-            "time_zone".into(),
-            if is_blank(&zone) {
-                Value::Null
-            } else {
-                Value::String(zone)
-            },
-        );
-    }
-    if changes.zone_submitted {
-        attrs.insert("time_zone_explicit".into(), Value::Bool(true));
-    }
+    // Zone writes and the explicit-choice marker use WS9 UserChanges before this writer.
     if let Some(key) = changes.push_to_talk_key {
         let key = strip(&key);
         attrs.insert(

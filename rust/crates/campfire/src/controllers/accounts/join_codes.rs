@@ -12,7 +12,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     concerns::sudo::require_sudo_mode(c)?;
     let mut account = super::current_account(c).await?;
     let audit = crate::controllers::two_factor::audit_context(c)?;
-    c.app().db.write(move |tx| campfire_db::models::account_mutations::reset_join_code(tx, &mut account, &audit)).await.map_err(Error::internal)?;
+    c.app().db.write(move |tx| crate::account_security::reset_join_code(tx, &mut account, &audit)).await.map_err(Error::internal)?;
     let location = c.url_for(&campfire_routes::edit_account());
     c.redirect_to(&location)
 }

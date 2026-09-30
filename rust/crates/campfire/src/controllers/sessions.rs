@@ -79,7 +79,10 @@ async fn render_rejection(c: &mut Ctx, status: StatusCode) -> Result {
         "password",
         c.params
             .get("email_address")
-            .and_then(|p| p.to_s())
+            .map(|p| {
+                p.to_s()
+                    .unwrap_or_else(|| campfire_richtext::ruby::json_value_inspect(&p.to_json()))
+            })
             .unwrap_or_default(),
     )
     .await?;

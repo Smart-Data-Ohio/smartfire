@@ -478,6 +478,10 @@ mod admin_two_factor_tests;
 mod full_page_tests;
 #[cfg(test)]
 mod profile_security_tests;
+#[cfg(test)]
+mod round_three_security_tests;
+#[cfg(test)]
+mod round_four_security_tests;
 
 #[cfg(test)]
 mod tests;

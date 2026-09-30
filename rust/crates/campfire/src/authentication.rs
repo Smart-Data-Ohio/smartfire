@@ -56,6 +56,84 @@ pub fn update_profile(
     Ok(())
 }
 
+/// `Accounts::UsersController#update`: only a successful, changed role writes a row.
+pub fn update_role(
+    tx: &mut Tx<'_>,
+    user: &mut User,
+    role: campfire_db::Role,
+    context: &Context,
+) -> Result<()> {
+    let before = user.role;
+    user.update(
+        tx,
+        UserChanges {
+            role: Some(role),
+            ..Default::default()
+        },
+    )?;
+    if user.role != before {
+        AuditLog::record(
+            tx,
+            NewAuditLog {
+                action: "user.role.change".into(),
+                target: Some(Target::from(&*user)),
+                changes: Some(json!({"role": pair(json!(before.name()), json!(user.role.name()))})),
+                ..Default::default()
+            },
+            context,
+        )?;
+    }
+    Ok(())
+}
+
+/// `Accounts::UsersController#destroy`: snapshot the label before deactivation rewrites email.
+pub fn deactivate_user(tx: &mut Tx<'_>, user: &mut User, context: &Context) -> Result<()> {
+    let before = user.status;
+    let target = Target::from(&*user);
+    user.deactivate(tx)?;
+    AuditLog::record(
+        tx,
+        NewAuditLog {
+            action: "user.deactivate".into(),
+            target: Some(target),
+            changes: Some(json!({"status": pair(json!(before.name()), json!("deactivated"))})),
+            ..Default::default()
+        },
+        context,
+    )?;
+    Ok(())
+}
+
+/// `Users::BansController`: both actions accept every status; replays write no audit row.
+pub fn set_user_banned(
+    tx: &mut Tx<'_>,
+    user: &mut User,
+    banned: bool,
+    context: &Context,
+) -> Result<()> {
+    let before = user.status;
+    if banned {
+        user.ban(tx)?;
+    } else {
+        user.unban(tx)?;
+    }
+    if user.status != before {
+        AuditLog::record(
+            tx,
+            NewAuditLog {
+                action: if banned { "user.ban" } else { "user.unban" }.into(),
+                target: Some(Target::from(&*user)),
+                changes: Some(
+                    json!({"status": pair(json!(before.name()), json!(user.status.name()))}),
+                ),
+                ..Default::default()
+            },
+            context,
+        )?;
+    }
+    Ok(())
+}
+
 /// `Authentication#start_new_session_for` and `NewSignInAlert`: the durable mail decision is
 /// committed with the new session, device and inbox row. Pending first factors never call this.
 pub fn start_session(
