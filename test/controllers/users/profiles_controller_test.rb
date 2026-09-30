@@ -13,6 +13,15 @@ class Users::ProfilesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show gives the Edge install instructions to a browser identifying only as Edge" do
+    edge = "Edge/124.0.0.0"
+
+    get user_profile_url, headers: { "User-Agent" => edge }
+
+    assert_response :success
+    assert_select "details.pwa__instructions img[src*='install-edge']"
+  end
+
   test "update" do
     put user_profile_url, params: { user: { name: "John Doe", bio: "Acrobat" } }
 
