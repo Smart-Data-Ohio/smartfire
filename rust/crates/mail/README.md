@@ -39,8 +39,8 @@ and String#strip sets; ActiveSupport presence remains Unicode-aware where Rails 
 `Renderer::render` supplies the shared room-aware Markdown/mention renderer from WS5/WS8.
 `mail::State::install_renderer` installs it in the app. Until installed, valid room mail remains
 pending and its durable job reschedules without consuming retry attempts. Bounces and invalid
-tokens complete without a renderer. This is an
-integration gap on the WS3 base branch; inbound posting in the running app is partial.
+tokens complete without a renderer. The running app installs its shared AppRichText adapter at boot; a real durable routing test
+compares the resulting source, canonical body, plain text and creator with RoomMailbox.
 The crate's integration tests inject a simple rendering function and test the actual Message
 API, callbacks, SQLite transactions and files, not Markdown rendering.
 

@@ -282,3 +282,31 @@ async fn broadcast_frames_use_active_support_json_escaping() {
         )
     );
 }
+
+/// Rails-generated remove and real thread-unread frames must traverse the merged event sink.
+#[tokio::test]
+async fn ws8_model_frames_reach_subscribers_through_ws7_sink() {
+    use campfire_db::{Event, broadcasts::{Broadcast, Streamable}};
+    let app = start().await;
+    let mut client = app.connect("jason").await;
+    let golden: Value = serde_json::from_str(include_str!("../../ws8_runtime_vectors.json")).unwrap();
+    let remove = &golden["broadcasts"][0];
+    let user_id = remove["user_id"].as_i64().unwrap();
+    let own = user_gid(user_id).to_param();
+    turbo(&app, &mut client, &[&own, "rooms"]).await;
+    let unread = identifier(json!({"channel":"UnreadThreadsChannel"}));
+    client.confirm(&unread).await;
+    let event = Event::broadcast(&Broadcast::remove(
+        vec![Streamable::User(user_id), Streamable::Name("rooms".into())],
+        remove["target"].as_str().unwrap().into(),
+    ));
+    assert!(crate::channels::sink::deliver(&app.server, None, &event));
+    assert_eq!(turbo_stream(&client.next_text().await), remove["payload"]);
+    let row = &golden["broadcasts"][1];
+    let event = Event::broadcast(&Broadcast::Cable {
+        stream: row["stream"].as_str().unwrap().into(), payload: row["payload"].clone(),
+    });
+    assert!(crate::channels::sink::deliver(&app.server, None, &event));
+    assert_eq!(client.next_text().await, delivery(&unread, &row["payload"].to_string()));
+    client.assert_silent().await;
+}

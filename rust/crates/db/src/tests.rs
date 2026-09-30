@@ -1,15 +1,33 @@
 //! Ports of `reference/test/models/**`, run against the reference fixtures.
 
 mod account_test;
+mod audit_log_test;
 mod callbacks_test;
+mod channel_thread_test;
 mod differential_test;
+mod direct_room_test;
 mod first_run_test;
+mod forwarder_test;
 mod fixtures_test;
 mod membership_test;
+mod keyword_alert_test;
+mod message_edit_test;
+mod message_pin_test;
+mod message_reference_test;
 mod message_test;
+mod mail_merge_test;
+mod poll_test;
 mod push_test;
 mod room_test;
+mod room_delete_test;
+mod retention_test;
+mod rich_text_failure_test;
+mod round2_test;
+mod room_category_test;
+mod saved_item_test;
+mod scheduled_message_test;
 mod save_touches_test;
+mod search_query_test;
 mod session_test;
 mod user_test;
 
@@ -89,6 +107,22 @@ impl TestDb {
         self.sink.events()
     }
 
+    /// Another handle on the same database file, with its own writer connection, as a second
+    /// process (another Puma worker, the periodic runner) would have: for claims that must hold
+    /// across processes. It shares this one's clock and event sink.
+    pub fn another_process(&self) -> Database {
+        let env = Env {
+            clock: Arc::new(self.clock.clone()),
+            sink: Arc::new(self.sink.clone()),
+            rich_text: Arc::new(BasicRichText),
+            bcrypt_cost: 4,
+        };
+        let mut config = Config::new(self.db.path());
+        config.readers = 1;
+        config.prepare = false;
+        Database::open(config, env).unwrap()
+    }
+
     /// `travel_to Membership::Connectable::CONNECTION_TTL.from_now + 1`
     pub fn travel(&self, seconds: i64) {
         self.clock.travel(jiff::SignedDuration::from_secs(seconds));
@@ -103,3 +137,5 @@ pub const BENDER_TOKEN_DIGEST: &str = "eca7c1486ccaf098cc637f7f8e48cad465ac9f14a
 pub fn id(label: &str) -> i64 {
     identify(label)
 }
+
+mod slash_commands_test;

@@ -37,7 +37,6 @@ impl State {
         }
     }
     /// Called at boot by WS5/WS8 after the shared Markdown/mention renderer has landed.
-    #[allow(dead_code)]
     pub fn install_renderer(&self, renderer: Arc<dyn Renderer>) {
         *self.renderer.write().unwrap_or_else(|e| e.into_inner()) = Some(renderer);
     }
@@ -265,6 +264,41 @@ mod tests {
             .await
             .unwrap()
     }
+    #[tokio::test]
+    async fn ws8_mail_runtime_posts_with_shared_markdown_and_queue() {
+        let (b, _dir) = boot(true, true).await;
+        b.app.db.write(|tx| {
+            campfire_db::fixtures::load(tx.conn(), &campfire_db::fixtures::reference_dir(), &campfire_db::fixtures::Options { now: tx.now(), bcrypt_cost: 4 })
+        }).await.unwrap();
+        let room_id = campfire_db::fixtures::identify("designers");
+        let token = b.app.db.write(move |tx| Room::find(tx.conn(), room_id)?.regenerate_inbound_email_token(tx)).await.unwrap();
+        let g: serde_json::Value = serde_json::from_str(include_str!("../../db/src/tests/ws8_mail_merge_vectors.json")).unwrap();
+        let raw = g["mail"]["raw"].as_str().unwrap().replace("ws8-mail-merge-token", &token);
+        let id = inbound::accept(&b.app.db, b.app.storage.clone(), raw.into_bytes()).await.unwrap().unwrap();
+        let message = tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            loop {
+                let posted = b.app.db.read(move |conn| {
+                    let status: i64 = conn.query_row("SELECT status FROM action_mailbox_inbound_emails WHERE id=?", [id], |r| r.get(0))?;
+                    if status == inbound::Status::Delivered as i64 {
+                        let message_id = conn.query_row("SELECT id FROM messages WHERE markdown_source IS NOT NULL ORDER BY id DESC LIMIT 1", [], |r| r.get(0))?;
+                        Ok(Some(Message::find(conn, message_id)?))
+                    } else { Ok(None) }
+                }).await.unwrap();
+                if let Some(message) = posted { break message; }
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+        }).await.expect("durable RoutingJob must post with the boot-installed renderer");
+        let rich_text = b.app.db.env().rich_text.clone();
+        let saved = b.app.db.read(move |conn| Ok(serde_json::json!({
+            "source": message.markdown_source,
+            "body": message.body_html(conn)?,
+            "plain": message.plain_text_body(conn, &*rich_text)?,
+            "creator_name": User::find(conn, message.creator_id)?.name,
+        }))).await.unwrap();
+        for key in ["source", "body", "plain", "creator_name"] { assert_eq!(saved[key], g["mail"][key], "{key}"); }
+        b.jobs.shutdown(std::time::Duration::from_secs(1)).await;
+    }
+
     #[tokio::test]
     async fn ws10_relay_http_auth_matrix_without_parity_seed() {
         let (b, _dir) = boot(true, true).await;

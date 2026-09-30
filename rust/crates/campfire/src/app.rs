@@ -93,6 +93,14 @@ pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Resu
     let (jobs, ad_hoc) = jobs::Jobs::new(&registry, &runner_config)?;
     let loops = jobs::periodic::Loops::new(jobs::periodic::Intervals::from_env());
     let rich_text = Arc::new(AppRichText::new(secrets.clone(), clock.clone()));
+    // Mail's preflight and Message::create use the same room-aware, fallible renderer.
+    mail.install_renderer(Arc::new({
+        let rich_text = rich_text.clone();
+        move |conn: &campfire_db::Connection, room: &campfire_db::Room, source: &str| {
+            campfire_db::RichText::render_markdown(&*rich_text, conn, source, room.id)
+                .map_err(campfire_db::Error::Other)
+        }
+    }));
     let db = open_database(&config, clock.clone(), jobs.clone(), rich_text.clone()).await?;
 
     // config/puma.rb: `Membership.disconnect_all` when the server boots.

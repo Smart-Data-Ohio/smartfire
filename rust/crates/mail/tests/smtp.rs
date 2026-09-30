@@ -1,4 +1,4 @@
-//! A real SMTP peer in WS10's assigned port range. No live mail provider or seed is used.
+//! A real SMTP peer in the worker's configured port range. No live mail provider or seed is used.
 use campfire_mail::{
     config::Smtp,
     outbound::{self, User},
@@ -13,12 +13,16 @@ use tokio::{
 };
 
 async fn listener() -> TcpListener {
-    for port in 40000..40050 {
+    let range = std::env::var("MAIL_TEST_PORT_RANGE").unwrap_or_else(|_| "40000-40049".into());
+    let (first, last) = range.split_once('-').expect("MAIL_TEST_PORT_RANGE=start-end");
+    let first: u16 = first.parse().unwrap();
+    let last: u16 = last.parse().unwrap();
+    for port in first..=last {
         if let Ok(socket) = TcpListener::bind(("127.0.0.1", port)).await {
             return socket;
         }
     }
-    panic!("no free WS10 SMTP test port");
+    panic!("no free SMTP test port in {range}");
 }
 async fn peer(
     listener: TcpListener,

@@ -201,7 +201,7 @@ impl Membership {
     pub fn visible_with_ordered_room(conn: &Connection, user_id: i64) -> Result<Vec<(Self, Room)>> {
         query_all(
             conn,
-            &format!(r#"SELECT "memberships".*, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "memberships"."user_id" = ? AND "memberships"."involvement" != 'invisible' ORDER BY LOWER(rooms.name)"#, Room::PREFIXED_COLUMNS),
+            &format!(r#"SELECT "memberships".*, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? AND "memberships"."involvement" != 'invisible' ORDER BY LOWER(rooms.name)"#, Room::PREFIXED_COLUMNS),
             [user_id],
             |row| Ok((Self::from_row(row)?, Room::from_prefixed_row(row)?)),
         )
@@ -211,7 +211,7 @@ impl Membership {
     pub fn with_ordered_room(conn: &Connection, user_id: i64) -> Result<Vec<(Self, Room)>> {
         query_all(
             conn,
-            &format!(r#"SELECT "memberships".*, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "memberships"."user_id" = ? ORDER BY LOWER(rooms.name)"#, Room::PREFIXED_COLUMNS),
+            &format!(r#"SELECT "memberships".*, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? ORDER BY LOWER(rooms.name)"#, Room::PREFIXED_COLUMNS),
             [user_id],
             |row| Ok((Self::from_row(row)?, Room::from_prefixed_row(row)?)),
         )
@@ -221,7 +221,7 @@ impl Membership {
     pub fn count_without_direct_rooms(conn: &Connection, user_id: i64) -> Result<i64> {
         sql::count(
             conn,
-            r#"SELECT COUNT(*) FROM "memberships" INNER JOIN "rooms" "room" ON "room"."id" = "memberships"."room_id" WHERE "memberships"."user_id" = ? AND "room"."type" != 'Rooms::Direct'"#,
+            r#"SELECT COUNT(*) FROM "memberships" INNER JOIN "rooms" "room" ON "room"."id" = "memberships"."room_id" WHERE "room"."deleted_at" IS NULL AND "memberships"."user_id" = ? AND "room"."type" != 'Rooms::Direct'"#,
             [user_id],
         )
     }
@@ -267,6 +267,65 @@ impl Membership {
     }
 
     // Involvement and read state
+
+    // Sidebar organization (`Membership#room_category_belongs_to_user` and favorites).
+
+    fn validate_organization(&self, conn: &Connection, category_id: Option<i64>) -> Result<()> {
+        let mut errors = crate::Errors::default();
+        if Room::find_by_id(conn, self.room_id)?.is_none() { errors.add("room", "must exist"); }
+        if User::find_by_id(conn, self.user_id)?.is_none() { errors.add("user", "must exist"); }
+        if let Some(category) = category_id.map(|id| crate::RoomCategory::find_by_id(conn, id)).transpose()?.flatten()
+            && category.user_id != self.user_id { errors.add("room_category", "must belong to the member"); }
+        errors.into_result()
+    }
+
+    /// Assign/unassign; channel-only eligibility and ownership scoping belong to WS8b's HTTP
+    /// layer. Rails' model permits an assignment on any room type.
+    pub fn update_category(&mut self, tx: &mut Tx<'_>, category_id: Option<i64>) -> Result<()> {
+        self.validate_organization(tx.conn(), category_id)?;
+        if self.room_category_id != category_id {
+            tx.conn().execute_cached("UPDATE memberships SET room_category_id = ?, updated_at = ? WHERE id = ?", params![category_id, tx.now(), self.id])?;
+            self.reload(tx.conn())?;
+        }
+        Ok(())
+    }
+
+    pub fn favorited(&self) -> bool { self.favorite_position.is_some() }
+
+    pub fn favorites_for_user(conn: &Connection, user_id: i64) -> Result<Vec<Self>> {
+        query_all(conn, "SELECT * FROM memberships WHERE user_id = ? AND favorite_position IS NOT NULL ORDER BY favorite_position, id", [user_id], Self::from_row)
+    }
+
+    pub fn favorite(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        if self.favorited() { return Ok(()); }
+        let position = tx.conn().query_row_cached("SELECT COALESCE(MAX(favorite_position), -1) + 1 FROM memberships WHERE user_id = ? AND favorite_position IS NOT NULL", [self.user_id], |r| r.get::<_, i64>(0))?;
+        self.set_favorite_position(tx, Some(position))
+    }
+
+    pub fn unfavorite(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        self.set_favorite_position(tx, None)
+    }
+
+    fn set_favorite_position(&mut self, tx: &mut Tx<'_>, position: Option<i64>) -> Result<()> {
+        self.validate_organization(tx.conn(), self.room_category_id)?;
+        if self.favorite_position != position {
+            tx.conn().execute_cached("UPDATE memberships SET favorite_position = ?, updated_at = ? WHERE id = ?", params![position, tx.now(), self.id])?;
+            self.reload(tx.conn())?;
+        }
+        Ok(())
+    }
+
+    /// `move_favorite_to`: clamp to 0..other favorites, insert, compact; bulk updates stamp
+    /// every favorite's updated_at and bypass callbacks, exactly like Rails' update_all.
+    pub fn move_favorite_to(&mut self, tx: &mut Tx<'_>, position: i64) -> Result<()> {
+        if !self.favorited() { return Ok(()); }
+        let mut ids: Vec<_> = Self::favorites_for_user(tx.conn(), self.user_id)?.into_iter().map(|m| m.id).filter(|id| *id != self.id).collect();
+        ids.insert(position.clamp(0, ids.len() as i64) as usize, self.id);
+        for (position, id) in ids.into_iter().enumerate() {
+            tx.conn().execute_cached("UPDATE memberships SET favorite_position = ?, updated_at = ? WHERE id = ?", params![position as i64, tx.now(), id])?;
+        }
+        self.reload(tx.conn())
+    }
 
     pub fn involved_in(&self, involvement: Involvement) -> bool {
         self.involvement == Some(involvement)
@@ -320,7 +379,7 @@ impl Membership {
     /// subscriptions to this room are dropped, and a direct room recomputes its member key
     /// (`after_destroy_commit :refresh_direct_member_key`), in the order the callbacks are
     /// declared. Not yet ported, for the workstreams that own them: the huddle, agent and stream
-    /// revocations (`before_destroy`), the last stage host's successor, thread memberships and
+    /// revocations (`before_destroy`), the last stage host's successor and
     /// calendar syncs.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         tx.conn().execute_cached(
@@ -335,6 +394,8 @@ impl Membership {
                 tx.emit_after_commit(Event::broadcast(&broadcast));
             }
             User::find(tx.conn(), user_id)?.reset_remote_connections(tx);
+            // `remove_thread_membership` (WS8)
+            crate::models::ThreadMembership::delete_for_room_member(tx, room_id, user_id)?;
             if let Some(room) = Room::find_by_id(tx.conn(), room_id)?.filter(Room::direct) {
                 room.refresh_direct_member_key(tx)?;
             }

@@ -1,0 +1,290 @@
+{
+  "filters": [
+    {
+      "input": {
+        "paßword": "fixture-value"
+      },
+      "output": {
+        "paßword": "[FILTERED]"
+      }
+    },
+    {
+      "input": {
+        "paßword": "fixture-value",
+        "paẞword": "fixture-value",
+        "paſſword": "fixture-value",
+        "ſecret": "fixture-value",
+        "seßion": "fixture-value",
+        "ßession": "fixture-value",
+        "ßecret": "fixture-value",
+        "api_Key": "fixture-value",
+        "authorİzation": "fixture-value",
+        "authorızation": "fixture-value",
+        "authoﬃzation": "fixture-value",
+        "paßw": "fixture-value",
+        "seß": "fixture-value",
+        "ſession": "fixture-value",
+        "harmless": "fixture-value"
+      },
+      "output": {
+        "paßword": "[FILTERED]",
+        "paẞword": "[FILTERED]",
+        "paſſword": "[FILTERED]",
+        "ſecret": "[FILTERED]",
+        "seßion": "[FILTERED]",
+        "ßession": "fixture-value",
+        "ßecret": "fixture-value",
+        "api_Key": "[FILTERED]",
+        "authorİzation": "fixture-value",
+        "authorızation": "fixture-value",
+        "authoﬃzation": "fixture-value",
+        "paßw": "[FILTERED]",
+        "seß": "fixture-value",
+        "ſession": "[FILTERED]",
+        "harmless": "fixture-value"
+      }
+    },
+    {
+      "input": {
+        "nested": [
+          {
+            "paẞword": "fixture-value"
+          },
+          {
+            "harmless": "keep"
+          }
+        ]
+      },
+      "output": {
+        "nested": [
+          {
+            "paẞword": "[FILTERED]"
+          },
+          {
+            "harmless": "keep"
+          }
+        ]
+      }
+    }
+  ],
+  "search": [
+    {
+      "raw": "a＿b",
+      "tokens": [
+        "a＿b"
+      ],
+      "expression": "\"a＿b\"",
+      "clients": [
+        "adjacent"
+      ]
+    },
+    {
+      "raw": "a‿b",
+      "tokens": [
+        "a‿b"
+      ],
+      "expression": "\"a‿b\"",
+      "clients": [
+        "adjacent"
+      ]
+    },
+    {
+      "raw": "a⁀b",
+      "tokens": [
+        "a⁀b"
+      ],
+      "expression": "\"a⁀b\"",
+      "clients": [
+        "adjacent"
+      ]
+    },
+    {
+      "raw": "a⁔b",
+      "tokens": [
+        "a⁔b"
+      ],
+      "expression": "\"a⁔b\"",
+      "clients": [
+        "adjacent"
+      ]
+    },
+    {
+      "raw": "a︳b",
+      "tokens": [
+        "a︳b"
+      ],
+      "expression": "\"a︳b\"",
+      "clients": [
+        "adjacent"
+      ]
+    },
+    {
+      "raw": "a︴b",
+      "tokens": [
+        "a︴b"
+      ],
+      "expression": "\"a︴b\"",
+      "clients": [
+        "adjacent"
+      ]
+    },
+    {
+      "raw": "a﹍b",
+      "tokens": [
+        "a﹍b"
+      ],
+      "expression": "\"a﹍b\"",
+      "clients": [
+        "adjacent"
+      ]
+    },
+    {
+      "raw": "a﹎b",
+      "tokens": [
+        "a﹎b"
+      ],
+      "expression": "\"a﹎b\"",
+      "clients": [
+        "adjacent"
+      ]
+    },
+    {
+      "raw": "a﹏b",
+      "tokens": [
+        "a﹏b"
+      ],
+      "expression": "\"a﹏b\"",
+      "clients": [
+        "adjacent"
+      ]
+    },
+    {
+      "raw": "a_b",
+      "tokens": [
+        "a_b"
+      ],
+      "expression": "\"a_b\"",
+      "clients": [
+        "adjacent"
+      ]
+    },
+    {
+      "raw": "a b",
+      "tokens": [
+        "a",
+        "b"
+      ],
+      "expression": "\"a\" \"b\"",
+      "clients": [
+        "adjacent",
+        "separated"
+      ]
+    },
+    {
+      "raw": "a-b",
+      "tokens": [
+        "a",
+        "b"
+      ],
+      "expression": "\"a\" \"b\"",
+      "clients": [
+        "adjacent",
+        "separated"
+      ]
+    },
+    {
+      "raw": "a‍b",
+      "tokens": [
+        "a‍b"
+      ],
+      "expression": "\"a‍b\"",
+      "clients": [
+        "adjacent"
+      ]
+    },
+    {
+      "raw": "a‌b",
+      "tokens": [
+        "a‌b"
+      ],
+      "expression": "\"a‌b\"",
+      "clients": [
+        "adjacent"
+      ]
+    },
+    {
+      "raw": "a²b",
+      "tokens": [
+        "a",
+        "b"
+      ],
+      "expression": "\"a\" \"b\"",
+      "clients": [
+        "adjacent",
+        "separated"
+      ]
+    },
+    {
+      "raw": "a①b",
+      "tokens": [
+        "a",
+        "b"
+      ],
+      "expression": "\"a\" \"b\"",
+      "clients": [
+        "adjacent",
+        "separated"
+      ]
+    },
+    {
+      "raw": "aⒶb",
+      "tokens": [
+        "aⒶb"
+      ],
+      "expression": "\"aⒶb\"",
+      "clients": [
+        "adjacent"
+      ]
+    }
+  ],
+  "direct": [
+    {
+      "names": [
+        "Ø Upper",
+        "á Lower"
+      ],
+      "default": "Ø, á",
+      "preloaded": "á, Ø",
+      "viewer_default": "á Lower",
+      "viewer_preloaded": "á Lower"
+    },
+    {
+      "names": [
+        "é Lower",
+        "É Upper"
+      ],
+      "default": "É, é",
+      "preloaded": "é, É",
+      "viewer_default": "É Upper",
+      "viewer_preloaded": "É Upper"
+    },
+    {
+      "names": [
+        "ΟΣ Test",
+        "Οσ Test"
+      ],
+      "default": "ΟΣ, Οσ",
+      "preloaded": "ΟΣ, Οσ",
+      "viewer_default": "Οσ Test",
+      "viewer_preloaded": "Οσ Test"
+    }
+  ],
+  "saved": {
+    "source": "# hi",
+    "body": "<h1>hi</h1>"
+  },
+  "edited": {
+    "source": "# edited",
+    "body": "<h1>edited</h1>"
+  }
+}

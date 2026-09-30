@@ -11,6 +11,7 @@ mod integrations;
 mod jobs;
 mod mail;
 mod rich_text;
+mod messaging;
 mod security;
 
 /// jemalloc: the room page alone makes thousands of allocations per request, across as many
@@ -75,3 +76,6 @@ mod tests {
         assert_eq!(unsafe { std::ffi::CStr::from_ptr(thp) }, c"never");
     }
 }
+
+#[cfg(test)]
+mod slash_commands_tests;
