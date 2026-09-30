@@ -11,19 +11,21 @@ For the message-owned slot inside `rooms/show`, the additive entry point is:
 presenter.room_message_list(&messages, divider.message_id, divider.count)?
 ```
 
-WS8b-r's `room_shell::render_show` can supply this string as
+WS8b-r's `controllers::rooms::render_show` supplies this string as
 `ShellComponents::message_list`. Its `find_messages` owns room/anchor selection and its
 `unread_divider` owns membership cursors, counts, scroll/jump facts and read side effects.
-This method supplies the exact Rails list-slot indentation and divider bytes. It uses
+This method supplies the complete contents of Rails's messages container, including
+the empty invitation-expression line before the unread branch, its indentation and
+divider bytes. Mount the returned string verbatim; do not add that line again. It uses
 record IDs to find the divider position; it does not parse cached HTML. The per-viewer
 divider sits outside the shared message fragments. Missing or off-page divider IDs
 render the ordinary list without a marker.
 
 `room-list.rb` drives nine actual RoomsController requests, records their selected IDs
-and unread facts, and renders the list slot read directly from the pinned
-`rooms/show.html.erb`. The Rust test checks root-only anchor selection, WS8a's around
+and unread facts, and captures the actual rendered container in pinned
+`rooms/show.html.erb`, including the invitation boundary. The Rust test checks root-only anchor selection, WS8a's around
 windows and this adapter's bytes against those results. Full HTTP room-shell integration
-requires the lead's merge of WS8b-r and this hook; it is not claimed by that adapter test.
+requires the lead's owner merge and populated-card providers; it is not claimed by that adapter test.
 
 `UnreadDivider` and `RoomIndex` are additive views. `uncached_message` remains the
 individual/broadcast entry point. WS8b-m2 can continue extending message facts without
@@ -31,8 +33,10 @@ changing the existing callers.
 
 The message-owned Markdown composer is the additive, stable
 `campfire_views::messages::composer::Composer { ctx, facts, scheduled_control }`.
-WS8b-r can render it into the room shell's footer/composer slot. It does not call or
-replace the old Lexxy `rooms/show/_composer.html` template on this branch.
+Keep `Composer` for the inline pane. For the room's captured footer use the additive
+`messages::composer::FooterComposer { ctx, facts, scheduled_control }`, which shares
+the same markup and fields but reproduces Rails's `content_for :footer` whitespace.
+The old Lexxy `rooms/show/_composer.html` remains available to its existing callers.
 
 The merged shell must supply:
 
@@ -64,6 +68,23 @@ thread-only messages stream and emits a single live region. Reads do not join th
 The committed differential compares this full view with a fixed-token Rails renderer,
 with the actual Rails schedule child supplied as the explicit feature input; the HTTP
 check verifies windows, headers and live CSRF validity separately. No response mask is used.
+
+The lead's concrete schedule integration is in
+`reference-tools/messaging/owner-schedule-integration.patch`: it wires the named thread
+call site to M2's actual `ComposerButton`, switches WS8b-r's room footer to `FooterComposer`,
+and makes the complete pane comparison use the real child provider. Apply it after the
+owner merge. It is a patch because the feature module is absent from the WS8bm baseline;
+the worker branch still has an explicitly empty schedule call site.
+
+`owner-integration-check.py` reproduces an isolated merge with published shell
+`27990da2851f4c056db71c6b430c894307bc6bfe` (including its M2/WS11/WS17 inputs), applies
+that patch, builds seeds and checks actual room/anchor/unread/token behavior plus
+strict complete components and thread panes/show. It never merges main or the worker
+branch. This run passed all 11 targeted tests and 8 of 9 room components. It exits
+nonzero for the ninth: the Designers list's populated GitHub, Fizzy, link-embed and
+LinkedIn cards still require WS15g/WS15e providers. No mask or allowlist suppresses that
+difference. The whole live application layout, post-pin status popup and browser/system
+signoff remain separate owner/end-to-end work.
 
 ## Standalone thread show and PR integration
 
