@@ -58,6 +58,8 @@ pub struct Config {
     /// `config.x.admin_session_idle_timeout` (`config/initializers/session_lifetimes.rb`).
     pub admin_session_idle_timeout: jiff::SignedDuration,
     pub public_policy: crate::public_policy::PublicPolicy,
+    /// WS14g display seam: Google::Client.configured?, separate from Workspace sign-in.
+    pub profile_google_calendar_configured: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -90,7 +92,11 @@ impl StoragePaths {
 
     /// Where `prepare-backup` writes the snapshot: `storage/backups/<database file name>`.
     pub fn backup_file(&self) -> PathBuf {
-        self.backups.join(self.database.file_name().unwrap_or_else(|| "production.sqlite3".as_ref()))
+        self.backups.join(
+            self.database
+                .file_name()
+                .unwrap_or_else(|| "production.sqlite3".as_ref()),
+        )
     }
 }
 
@@ -106,12 +112,16 @@ impl Config {
         let secret_key_base = match present("SECRET_KEY_BASE") {
             Some(secret) => secret,
             None if present("SECRET_KEY_BASE_DUMMY").is_some() => dummy_secret(),
-            None => bail!("Missing `secret_key_base` for 'production' environment, set SECRET_KEY_BASE"),
+            None => {
+                bail!("Missing `secret_key_base` for 'production' environment, set SECRET_KEY_BASE")
+            }
         };
         let environment = present("RAILS_ENV").unwrap_or_else(|| "production".into());
 
-        let storage_root = present("CAMPFIRE_STORAGE_PATH").or_else(|| present("CAMPFIRE_STORAGE"))
-            .map(PathBuf::from).unwrap_or_else(|| PathBuf::from("storage"));
+        let storage_root = present("CAMPFIRE_STORAGE_PATH")
+            .or_else(|| present("CAMPFIRE_STORAGE"))
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("storage"));
         let mut storage = StoragePaths::new(storage_root, &environment);
         if let Some(database) = present("CAMPFIRE_DATABASE_PATH") {
             storage.database = database.into();
@@ -125,34 +135,64 @@ impl Config {
 
         let number = |name: &str, default: usize| -> anyhow::Result<usize> {
             match present(name) {
-                Some(value) => value.trim().parse().with_context(|| format!("{name}={value:?} is not a number")),
+                Some(value) => value
+                    .trim()
+                    .parse()
+                    .with_context(|| format!("{name}={value:?} is not a number")),
                 None => Ok(default),
             }
         };
 
         Ok(Self {
-            mail: campfire_mail::config::Config::from_map(&[
-                "SMTP_ADDRESS", "SMTP_PORT", "SMTP_DOMAIN", "SMTP_USER_NAME", "SMTP_PASSWORD",
-                "SMTP_AUTHENTICATION", "SMTP_ENABLE_STARTTLS", "MAILER_FROM", "APP_URL",
-                "INBOUND_EMAIL_DOMAIN", "INBOUND_EMAIL_AUTHSERV_ID", "RAILS_INBOUND_EMAIL_PASSWORD",
-            ].into_iter().filter_map(|name| get(name).map(|value| (name.to_owned(), value))).collect())?,
+            mail: campfire_mail::config::Config::from_map(
+                &[
+                    "SMTP_ADDRESS",
+                    "SMTP_PORT",
+                    "SMTP_DOMAIN",
+                    "SMTP_USER_NAME",
+                    "SMTP_PASSWORD",
+                    "SMTP_AUTHENTICATION",
+                    "SMTP_ENABLE_STARTTLS",
+                    "MAILER_FROM",
+                    "APP_URL",
+                    "INBOUND_EMAIL_DOMAIN",
+                    "INBOUND_EMAIL_AUTHSERV_ID",
+                    "RAILS_INBOUND_EMAIL_PASSWORD",
+                ]
+                .into_iter()
+                .filter_map(|name| get(name).map(|value| (name.to_owned(), value)))
+                .collect(),
+            )?,
             secret_key_base,
             vapid_public_key: present("VAPID_PUBLIC_KEY"),
             vapid_private_key: present("VAPID_PRIVATE_KEY"),
-            vapid_subject: present("VAPID_SUBJECT").unwrap_or_else(|| default_vapid_subject(present("TLS_DOMAIN"))),
+            vapid_subject: present("VAPID_SUBJECT")
+                .unwrap_or_else(|| default_vapid_subject(present("TLS_DOMAIN"))),
             disable_ssl: present("DISABLE_SSL").is_some(),
-            app_version: present("APP_VERSION").or_else(|| present("GIT_REVISION")).unwrap_or_else(|| "0".into()),
+            app_version: present("APP_VERSION")
+                .or_else(|| present("GIT_REVISION"))
+                .unwrap_or_else(|| "0".into()),
             git_revision: get("GIT_REVISION"),
             environment,
             storage,
             db_readers: number("RAILS_MAX_THREADS", 5)?.max(1),
             job_concurrency: number("JOB_CONCURRENCY", 2)?.max(1),
             log_level: present("RAILS_LOG_LEVEL").unwrap_or_else(|| "info".into()),
-            fragment_cache_bytes: number("CAMPFIRE_FRAGMENT_CACHE_MB", campfire_views::fragment_cache::DEFAULT_MAX_BYTES >> 20)?
-                .saturating_mul(1 << 20),
+            fragment_cache_bytes: number(
+                "CAMPFIRE_FRAGMENT_CACHE_MB",
+                campfire_views::fragment_cache::DEFAULT_MAX_BYTES >> 20,
+            )?
+            .saturating_mul(1 << 20),
             livekit_url: get("LIVEKIT_URL"),
-            admin_session_idle_timeout: admin_session_idle_timeout(get("ADMIN_SESSION_IDLE_TIMEOUT_DAYS")),
+            admin_session_idle_timeout: admin_session_idle_timeout(get(
+                "ADMIN_SESSION_IDLE_TIMEOUT_DAYS",
+            )),
             public_policy: crate::public_policy::PublicPolicy::from_lookup(&get),
+            profile_google_calendar_configured: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"]
+                .iter()
+                .all(|key| {
+                    get(key).is_some_and(|value| !campfire_richtext::ruby::is_blank(&value))
+                }),
         })
     }
 }
@@ -166,7 +206,12 @@ pub fn admin_session_idle_timeout(days: Option<String>) -> jiff::SignedDuration 
 
 /// The install's own HTTPS URL when it has a TLS domain; the project's otherwise.
 fn default_vapid_subject(tls_domains: Option<String>) -> String {
-    let domain = tls_domains.as_deref().and_then(|domains| domains.split(',').map(str::trim).find(|domain| !domain.is_empty()));
+    let domain = tls_domains.as_deref().and_then(|domains| {
+        domains
+            .split(',')
+            .map(str::trim)
+            .find(|domain| !domain.is_empty())
+    });
     match domain {
         Some(domain) => format!("https://{domain}"),
         None => "https://github.com/basecamp/once-campfire-rust".into(),
@@ -185,14 +230,23 @@ mod tests {
     use std::collections::HashMap;
 
     fn config(vars: &[(&str, &str)]) -> anyhow::Result<Config> {
-        let vars: HashMap<String, String> = vars.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect();
+        let vars: HashMap<String, String> = vars
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
         Config::from_lookup(|name| vars.get(name).cloned())
     }
 
     #[test]
     fn requires_a_secret_key_base() {
         assert!(config(&[]).is_err());
-        assert_eq!(config(&[("SECRET_KEY_BASE_DUMMY", "1")]).unwrap().secret_key_base.len(), 128);
+        assert_eq!(
+            config(&[("SECRET_KEY_BASE_DUMMY", "1")])
+                .unwrap()
+                .secret_key_base
+                .len(),
+            128
+        );
     }
 
     #[test]
@@ -201,37 +255,75 @@ mod tests {
         assert!(!config.disable_ssl);
         assert_eq!(config.app_version, "0");
         assert_eq!(config.git_revision, None);
-        assert_eq!(config.storage.database, PathBuf::from("storage/db/production.sqlite3"));
+        assert_eq!(
+            config.storage.database,
+            PathBuf::from("storage/db/production.sqlite3")
+        );
         assert_eq!(config.storage.files, PathBuf::from("storage/files"));
-        assert_eq!(config.storage.backup_file(), PathBuf::from("storage/backups/production.sqlite3"));
+        assert_eq!(
+            config.storage.backup_file(),
+            PathBuf::from("storage/backups/production.sqlite3")
+        );
         assert_eq!(config.fragment_cache_bytes, 32 * 1024 * 1024);
     }
 
     #[test]
     fn storage_alias_and_explicit_paths_have_one_precedence() {
-        let alias = config(&[("SECRET_KEY_BASE", "fixture"), ("CAMPFIRE_STORAGE", "/custom")]).unwrap();
-        assert_eq!(alias.storage.database, PathBuf::from("/custom/db/production.sqlite3"));
-        assert_eq!(alias.storage.backup_file(), PathBuf::from("/custom/backups/production.sqlite3"));
+        let alias = config(&[
+            ("SECRET_KEY_BASE", "fixture"),
+            ("CAMPFIRE_STORAGE", "/custom"),
+        ])
+        .unwrap();
+        assert_eq!(
+            alias.storage.database,
+            PathBuf::from("/custom/db/production.sqlite3")
+        );
+        assert_eq!(
+            alias.storage.backup_file(),
+            PathBuf::from("/custom/backups/production.sqlite3")
+        );
         let explicit = config(&[
-            ("SECRET_KEY_BASE", "fixture"), ("CAMPFIRE_STORAGE", "/ignored"), ("CAMPFIRE_STORAGE_PATH", "/root"),
-            ("CAMPFIRE_DATABASE_PATH", "/db/renamed.sqlite3"), ("CAMPFIRE_FILES_PATH", "/files"),
+            ("SECRET_KEY_BASE", "fixture"),
+            ("CAMPFIRE_STORAGE", "/ignored"),
+            ("CAMPFIRE_STORAGE_PATH", "/root"),
+            ("CAMPFIRE_DATABASE_PATH", "/db/renamed.sqlite3"),
+            ("CAMPFIRE_FILES_PATH", "/files"),
             ("CAMPFIRE_BACKUPS_PATH", "/snapshots"),
-        ]).unwrap();
-        assert_eq!(explicit.storage.database, PathBuf::from("/db/renamed.sqlite3"));
+        ])
+        .unwrap();
+        assert_eq!(
+            explicit.storage.database,
+            PathBuf::from("/db/renamed.sqlite3")
+        );
         assert_eq!(explicit.storage.files, PathBuf::from("/files"));
-        assert_eq!(explicit.storage.backup_file(), PathBuf::from("/snapshots/renamed.sqlite3"));
+        assert_eq!(
+            explicit.storage.backup_file(),
+            PathBuf::from("/snapshots/renamed.sqlite3")
+        );
     }
 
     #[test]
     fn fragment_cache_size_in_megabytes() {
-        let bytes = config(&[("SECRET_KEY_BASE", "abc"), ("CAMPFIRE_FRAGMENT_CACHE_MB", "64")]).unwrap().fragment_cache_bytes;
+        let bytes = config(&[
+            ("SECRET_KEY_BASE", "abc"),
+            ("CAMPFIRE_FRAGMENT_CACHE_MB", "64"),
+        ])
+        .unwrap()
+        .fragment_cache_bytes;
         assert_eq!(bytes, 64 * 1024 * 1024);
-        assert!(config(&[("SECRET_KEY_BASE", "abc"), ("CAMPFIRE_FRAGMENT_CACHE_MB", "lots")]).is_err());
+        assert!(
+            config(&[
+                ("SECRET_KEY_BASE", "abc"),
+                ("CAMPFIRE_FRAGMENT_CACHE_MB", "lots")
+            ])
+            .is_err()
+        );
     }
 
     #[test]
     fn admin_session_idle_timeout_matches_the_reference() {
-        let vectors: serde_json::Value = serde_json::from_str(include_str!("../../../vectors/kit_security.json")).unwrap();
+        let vectors: serde_json::Value =
+            serde_json::from_str(include_str!("../../../vectors/kit_security.json")).unwrap();
         for case in vectors["admin_idle_timeout"].as_array().unwrap() {
             let env = case["env"].as_str();
             let mut vars = vec![("SECRET_KEY_BASE", "abc")];
@@ -239,35 +331,76 @@ mod tests {
                 vars.push(("ADMIN_SESSION_IDLE_TIMEOUT_DAYS", env));
             }
             let timeout = config(&vars).unwrap().admin_session_idle_timeout;
-            assert_eq!(timeout.as_secs(), case["seconds"].as_i64().unwrap(), "{env:?}");
+            assert_eq!(
+                timeout.as_secs(),
+                case["seconds"].as_i64().unwrap(),
+                "{env:?}"
+            );
         }
     }
 
     #[test]
     fn version_falls_back_to_the_revision() {
-        let config = config(&[("SECRET_KEY_BASE", "abc"), ("APP_VERSION", ""), ("GIT_REVISION", "abc123")]).unwrap();
+        let config = config(&[
+            ("SECRET_KEY_BASE", "abc"),
+            ("APP_VERSION", ""),
+            ("GIT_REVISION", "abc123"),
+        ])
+        .unwrap();
         assert_eq!(config.app_version, "abc123");
         assert_eq!(config.git_revision.as_deref(), Some("abc123"));
     }
 
     #[test]
     fn disable_ssl_is_any_non_blank_value() {
-        assert!(config(&[("SECRET_KEY_BASE", "abc"), ("DISABLE_SSL", "false")]).unwrap().disable_ssl);
-        assert!(!config(&[("SECRET_KEY_BASE", "abc"), ("DISABLE_SSL", " ")]).unwrap().disable_ssl);
+        assert!(
+            config(&[("SECRET_KEY_BASE", "abc"), ("DISABLE_SSL", "false")])
+                .unwrap()
+                .disable_ssl
+        );
+        assert!(
+            !config(&[("SECRET_KEY_BASE", "abc"), ("DISABLE_SSL", " ")])
+                .unwrap()
+                .disable_ssl
+        );
     }
 
     #[test]
     fn vapid_keys_must_not_be_blank() {
-        let config = config(&[("SECRET_KEY_BASE", "abc"), ("VAPID_PUBLIC_KEY", ""), ("VAPID_PRIVATE_KEY", " ")]).unwrap();
-        assert_eq!((config.vapid_public_key, config.vapid_private_key), (None, None));
+        let config = config(&[
+            ("SECRET_KEY_BASE", "abc"),
+            ("VAPID_PUBLIC_KEY", ""),
+            ("VAPID_PRIVATE_KEY", " "),
+        ])
+        .unwrap();
+        assert_eq!(
+            (config.vapid_public_key, config.vapid_private_key),
+            (None, None)
+        );
     }
 
     #[test]
     fn vapid_subject_defaults_to_the_tls_domain() {
-        let subject = |vars: &[(&str, &str)]| config(&[&[("SECRET_KEY_BASE", "abc")], vars].concat()).unwrap().vapid_subject;
-        assert_eq!(subject(&[("VAPID_SUBJECT", "mailto:ops@example.com"), ("TLS_DOMAIN", "chat.example.com")]), "mailto:ops@example.com");
-        assert_eq!(subject(&[("TLS_DOMAIN", " , chat.example.com,other.example.com")]), "https://chat.example.com");
-        assert_eq!(subject(&[("VAPID_SUBJECT", " ")]), "https://github.com/basecamp/once-campfire-rust");
+        let subject = |vars: &[(&str, &str)]| {
+            config(&[&[("SECRET_KEY_BASE", "abc")], vars].concat())
+                .unwrap()
+                .vapid_subject
+        };
+        assert_eq!(
+            subject(&[
+                ("VAPID_SUBJECT", "mailto:ops@example.com"),
+                ("TLS_DOMAIN", "chat.example.com")
+            ]),
+            "mailto:ops@example.com"
+        );
+        assert_eq!(
+            subject(&[("TLS_DOMAIN", " , chat.example.com,other.example.com")]),
+            "https://chat.example.com"
+        );
+        assert_eq!(
+            subject(&[("VAPID_SUBJECT", " ")]),
+            "https://github.com/basecamp/once-campfire-rust"
+        );
     }
 
     #[test]
@@ -278,7 +411,10 @@ mod tests {
             ("CAMPFIRE_FILES_PATH", "/seed/storage"),
         ])
         .unwrap();
-        assert_eq!(config.storage.database, PathBuf::from("/rails/storage/db/production.sqlite3"));
+        assert_eq!(
+            config.storage.database,
+            PathBuf::from("/rails/storage/db/production.sqlite3")
+        );
         assert_eq!(config.storage.files, PathBuf::from("/seed/storage"));
     }
 }

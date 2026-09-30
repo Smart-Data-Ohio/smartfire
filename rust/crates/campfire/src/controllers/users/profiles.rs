@@ -130,6 +130,7 @@ async fn render_show(
         .map_err(Error::internal)?;
     // WS9 owns sign-in configuration and identity rows directly; WS14g completes Calendar.
     sections.google.sign_in_configured = google;
+    sections.google.calendar_configured = c.app().config.profile_google_calendar_configured;
     if google {
         sections.google.identity_email = c
             .app()
@@ -147,7 +148,9 @@ async fn render_show(
             .await
             .map_err(Error::internal)?;
     }
-    if let Some(fields) = status_preview { sections.status = fields; }
+    if let Some(fields) = status_preview {
+        sections.status = fields;
+    }
     if let Some(changes) = preview_settings {
         presenters::profile_sections::preview(&mut sections, &changes, &errors);
     }
@@ -346,6 +349,14 @@ fn compact_string(params: &campfire_kit::ParamMap, key: &str) -> Option<String> 
 
 /// Shared profile fallback for WS17's rejected status submissions.
 pub async fn render_status_error(c: &mut Ctx, fields: users::StatusFields) -> Result {
-    let user=concerns::require_current_user(c)?.clone();
-    render_show(c,StatusCode::UNPROCESSABLE_ENTITY,user,None,Some(fields),None).await
+    let user = concerns::require_current_user(c)?.clone();
+    render_show(
+        c,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        user,
+        None,
+        Some(fields),
+        None,
+    )
+    .await
 }

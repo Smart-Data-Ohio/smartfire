@@ -27,6 +27,53 @@ pub fn load(c: &Connection, id: i64, now: jiff::Timestamp) -> Result<ProfileSect
     fields.fizzy=c.query_row("SELECT fizzy_user_name,fizzy_account_name,disconnected_reason FROM fizzy_connected_accounts WHERE user_id=?",[id],|r| {
         let reason:Option<String>=r.get(2)?;Ok(if reason.as_deref().is_some_and(|s|!is_blank(s)){ConnectionPanel::Rejected{reason}}else{ConnectionPanel::Connected{name:r.get::<_,Option<String>>(0)?.unwrap_or_default(),workspace:r.get(1)?,app_token:false}})
     }).optional()?.unwrap_or_default();
+    // WS14g replaces this public metadata adapter with GoogleAccount display facts.
+    // The Rails template uses connected?/scopes, never usable?/decrypted credentials.
+    if let Some((email, scopes, reason)) = c
+        .query_row(
+            "SELECT email,scopes,disconnected_reason FROM google_accounts WHERE user_id=?",
+            [id],
+            |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, Option<String>>(1)?,
+                    r.get::<_, Option<String>>(2)?,
+                ))
+            },
+        )
+        .optional()?
+    {
+        let scopes = scopes.as_deref().unwrap_or("");
+        fields.google.account_exists = true;
+        fields.google.email = email;
+        fields.google.connected = reason.as_deref().is_none_or(is_blank);
+        fields.google.calendar = is_blank(scopes)
+            || scopes
+                .split(|c| matches!(c, ' ' | '\t' | '\n' | '\r' | '\u{000b}' | '\u{000c}'))
+                .any(|s| s == "https://www.googleapis.com/auth/calendar.events");
+        fields.google.drive = scopes
+            .split(|c| matches!(c, ' ' | '\t' | '\n' | '\r' | '\u{000b}' | '\u{000c}'))
+            .any(|s| s == "https://www.googleapis.com/auth/drive.file");
+    }
+    // WS17 replaces manual-only return dates with the shared effective Calendar/OOO reader.
+    let (meeting,calendar,until,zone)=c.query_row("SELECT meeting_status_enabled,ooo_calendar_enabled,ooo_until,time_zone FROM users WHERE id=?",[id],|r|Ok((r.get::<_,bool>(0)?,r.get::<_,bool>(1)?,r.get::<_,Option<campfire_db::Timestamp>>(2)?,r.get::<_,Option<String>>(3)?)))?;
+    fields.status.meeting_enabled = meeting;
+    fields.status.ooo_calendar_enabled = calendar;
+    if let Some(until) = until.filter(|t| t.jiff() > now) {
+        fields.status.manual_ooo = true;
+        fields.status.ooo_return = Some(
+            campfire_views::time::Zone::for_user(zone.as_deref()).format(until.jiff(), "%B %d, %Y"),
+        );
+    }
+    fields.status.fetch_error = c
+        .query_row(
+            "SELECT fetch_error FROM calendar_meeting_caches WHERE user_id=?",
+            [id],
+            |r| r.get::<_, Option<String>>(0),
+        )
+        .optional()?
+        .flatten()
+        .filter(|s| !is_blank(s));
     Ok(fields)
 }
 /// Submitted non-secret fields stay visible on Rails' failed-save page.

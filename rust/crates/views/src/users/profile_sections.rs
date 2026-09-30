@@ -36,6 +36,9 @@ pub struct StatusFields {
     pub ooo_note: Option<String>,
     pub ooo_return: Option<String>,
     pub manual_ooo: bool,
+    pub meeting_enabled: bool,
+    pub ooo_calendar_enabled: bool,
+    pub fetch_error: Option<String>,
     pub errors: std::collections::BTreeMap<String, Vec<String>>,
 }
 #[derive(Clone, Default)]
@@ -133,7 +136,11 @@ impl ProfileShow<'_> {
     pub(super) fn github_disabled(&self) -> Option<&str> {
         self.sections.github_verified.then_some("disabled")
     }
-    pub(super) fn switch_hidden(&self, key: impl AsRef<str>) -> h::Html {
+}
+
+/// Pure form helpers shared with owner-supplied status facts.
+pub trait ProfileFormFields {
+    fn switch_hidden(&self, key: impl AsRef<str>) -> h::Html {
         let key = key.as_ref();
         // Rails id:nil removes the default id; omit it rather than emitting an empty id.
         h::legacy_tag(
@@ -144,7 +151,7 @@ impl ProfileShow<'_> {
                 .value("0"),
         )
     }
-    pub(super) fn switch_input(
+    fn switch_input(
         &self,
         key: impl AsRef<str>,
         enabled: impl std::borrow::Borrow<bool>,
@@ -161,7 +168,7 @@ impl ProfileShow<'_> {
         }
         h::legacy_tag("input", a)
     }
-    pub(super) fn select(
+    fn select(
         &self,
         key: &str,
         selected: &str,
@@ -188,7 +195,7 @@ impl ProfileShow<'_> {
             &choices,
         )
     }
-    pub(super) fn time_input(&self, key: &str, value: Option<&str>) -> h::Html {
+    fn time_input(&self, key: &str, value: Option<&str>) -> h::Html {
         h::legacy_tag(
             "input",
             h::attrs()
@@ -200,6 +207,8 @@ impl ProfileShow<'_> {
         )
     }
 }
+
+impl ProfileFormFields for ProfileShow<'_> {}
 
 #[derive(Template)]
 #[template(path = "users/profiles/_google_calendar.html")]
@@ -266,5 +275,30 @@ impl GoogleCalendar {
             ),
             "Disconnect",
         )
+    }
+}
+
+#[derive(Template)]
+#[template(path = "users/profiles/_status.html")]
+pub struct StatusPanel<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub sections: ProfileSections,
+}
+impl ProfileFormFields for StatusPanel<'_> {}
+impl StatusPanel<'_> {
+    fn status_fields(&self) -> h::Html {
+        StatusFieldsView {
+            fields: self.sections.status.clone(),
+            id_prefix: "user".into(),
+        }
+        .html()
+    }
+}
+impl StatusFields {
+    pub fn error(&self, key: &str) -> Option<String> {
+        self.errors
+            .get(key)
+            .filter(|v| !v.is_empty())
+            .map(|v| h::to_sentence(v, " and "))
     }
 }

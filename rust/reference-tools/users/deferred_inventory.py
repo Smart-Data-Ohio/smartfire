@@ -70,6 +70,13 @@ covered.update({
         "agents can be messaged but not called", "inactive users show status without message actions", "card requires sign-in",
     },
     "controllers/users/profiles_controller_test.rb": {
+        "profile offers a connect button without an account", "profile shows the connected account with a disconnect button",
+        "profile offers a reconnect when Google rejected the connection", "profile offers Drive previews for a connected account without the Drive scope",
+        "profile shows Drive previews as enabled when the account has the Drive scope", "profile offers Drive previews again for the retired metadata grant",
+        "profile asks to reconnect when the grant lacks the calendar scope", "profile shows Disconnect for a partial grant with Drive still active",
+        "reconnect preserves a granted Drive scope", "reconnect without Drive requests the calendar scope only",
+        "profile links to connect for meeting status without an account", "profile offers the meeting toggle for a connected account",
+        "profile shows the meeting fetch notice when a refresh failed", "profile asks to reconnect for meeting status left on after disconnect",
         "show gives the Edge install instructions to a browser identifying only as Edge", "profile shows Google Calendar as not configured without credentials", "profile shows no Drive row when Google is not configured", "profile lists the quiet-during-meetings switch", "profile lists the notification switches with explanations", "profile lists the call settings with their defaults", "a github login cannot be claimed by a second user", "profile rejects non-boolean notification input", "profile rejects an unknown microphone mode", "DND switch reflects the effective state after a timed expiry", "DND switch stays on while a timer runs",
         "show", "update", "updates are limited to the current user", "linking a github login strips and downcases it",
         "profile saves the notification switches", "profile saves the call settings", "clearing a github login unlinks it",

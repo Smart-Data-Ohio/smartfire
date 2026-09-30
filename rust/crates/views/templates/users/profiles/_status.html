@@ -14,6 +14,24 @@
   <fieldset class="margin-none">
     <legend class="txt-large">Meetings</legend>
 {% if !sections.google.calendar_configured %}      <p class="txt-small margin-none">Google Calendar is not configured for this workspace</p>
+{% else if sections.google.connected && sections.google.calendar %}      <p class="txt-small margin-none">Show "In a meeting" beside your name while your Google Calendar says you're busy. Only free/busy times are read — never titles or attendees. A custom status or DND shows instead.</p>
+
+      <div class="flex align-start gap pad-block-half">
+        <label class="switch flex-item-no-shrink">
+          {{ self.switch_hidden("meeting_status_enabled") }}
+          {{ self.switch_input("meeting_status_enabled", sections.status.meeting_enabled) }}
+          <span class="switch__btn round"></span>
+          <span class="for-screen-reader">Show when I'm in a meeting</span>
+        </label>
+        <span>
+          <span class="txt-medium">Show when I'm in a meeting</span><br>
+          <span class="txt-small">Connected as {{ sections.google.email }}.</span>
+        </span>
+      </div>
+
+{% if let Some(error) = sections.status.fetch_error %}        <p class="txt-small margin-none">{{ error }}</p>
+{% endif %}{% else if sections.status.meeting_enabled %}      <p class="txt-small margin-none">Meeting status is on, but Google Calendar isn't connected. {{ h::link_to("#google-calendar-title", h::attrs(), "Reconnect below") }} to resume showing when you're in a meeting.</p>
+{% else %}      <p class="txt-small margin-none">Show "In a meeting" beside your name while your Google Calendar says you're busy. {{ h::link_to("#google-calendar-title", h::attrs(), "Connect Google Calendar") }} first — only free/busy times are read, never titles or attendees.</p>
 {% endif %}
     {{ h::profile_form_submit_button(ctx) }}
   </fieldset>
@@ -36,18 +54,38 @@
       {{ h::datetime_local_field_tag("user[ooo_until_custom]", None, h::attrs().class("input").id("user_ooo_until_custom")) }}
       <span class="txt-small">in your time zone</span>
     </div>
-
+{% if let Some(error) = sections.status.error("ooo_until") %}      <p class="txt-small margin-none" style="color: var(--color-negative)">Out of office {{ error }}.</p>
+{% endif %}
     <div class="flex align-center gap pad-block-half">
       {{ h::content_tag_text("label", h::attrs().class("txt-medium").attr("for", "user_ooo_note"), "Note") }}
       {{ h::legacy_tag("input", h::attrs().type_("text").name("user[ooo_note]").id("user_ooo_note").attr_opt("value", sections.status.ooo_note.as_deref()).class("input flex-item-grow").maxlength(140).placeholder("Back soon, slow to reply…").autocomplete("off")) }}
     </div>
-
+{% if let Some(error) = sections.status.error("ooo_note") %}      <p class="txt-small margin-none" style="color: var(--color-negative)">Note {{ error }}.</p>
+{% endif %}
     <div class="flex flex-wrap align-center gap pad-block-half">
       {{ h::profile_form_submit_button(ctx) }}
       {{ h::button_tag(h::attrs().name("user[clear_ooo]").value("1").class("btn txt-small"), "Clear out of office") }}
     </div>
 
 {% if !sections.google.calendar_configured %}      <p class="txt-small margin-none">Google Calendar is not configured for this workspace</p>
+{% else if sections.google.connected && sections.google.calendar %}      <p class="txt-small margin-none">Use out-of-office events from your Google Calendar: they mark you out for the event's span. Only the event type and times are read — never titles or details. When both apply, the later end shows; clearing above ends only the manual one.</p>
+
+      <div class="flex align-start gap pad-block-half">
+        <label class="switch flex-item-no-shrink">
+          {{ self.switch_hidden("ooo_calendar_enabled") }}
+          {{ self.switch_input("ooo_calendar_enabled", sections.status.ooo_calendar_enabled) }}
+          <span class="switch__btn round"></span>
+          <span class="for-screen-reader">Use my Google Calendar out-of-office</span>
+        </label>
+        <span>
+          <span class="txt-medium">Use my Google Calendar out-of-office</span><br>
+          <span class="txt-small">Connected as {{ sections.google.email }}.</span>
+        </span>
+      </div>
+
+{% if let Some(error) = sections.status.fetch_error %}        <p class="txt-small margin-none">{{ error }}</p>
+{% endif %}{% else if sections.status.ooo_calendar_enabled %}      <p class="txt-small margin-none">Calendar out-of-office is on, but Google Calendar isn't connected. {{ h::link_to("#google-calendar-title", h::attrs(), "Reconnect below") }} to resume showing it.</p>
+{% else %}      <p class="txt-small margin-none">Use out-of-office events from your Google Calendar to mark yourself out automatically. {{ h::link_to("#google-calendar-title", h::attrs(), "Connect Google Calendar") }} first — only the event type and times are read, never titles or details.</p>
 {% endif %}
     {{ h::profile_form_submit_button(ctx) }}
   </fieldset>
