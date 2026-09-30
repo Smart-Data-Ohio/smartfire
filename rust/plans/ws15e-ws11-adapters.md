@@ -68,3 +68,24 @@ Authenticated REST/MCP/controller/approval/webhook cases remain individually def
 WS15e report. Native domain tests are not credited as adapter authentication tests. In
 particular retain forged-token, room-only grant, suspension/deactivation, owner-only token,
 replay, no-write-before-approval and no-network-on-denial assertions when wiring these callers.
+
+## Owner lifecycle hooks (review follow-up)
+
+User::deactivate_with_audit / ban_with_audit suspend every unsuspended owned agent on
+that same writer, revoke all its grants and record agent.suspend with the request audit
+context. Direct inactive bot status changes also revoke the bot's own grants. Suspension
+queues quiet draft finalization after the enclosing commit; rollback must never finalize.
+The installed Message#broadcast_stream_final handler renders on the actual conversation.
+
+WS11 should replace/reuse the narrow db::models::user::lifecycle suspension primitive when
+its full Agent model lands, retaining validation, grant revocation, audit, idempotency and
+quiet finalization. User removal controllers already pass audit context. Agent model
+suspend!/kill-switch paths should share the same finalized-message broadcast descriptor.
+
+Fizzy reads, approval requests and execution independently reject inactive or missing
+recorded owners, protecting legacy rows that missed lifecycle callbacks. A truly unset
+owner retains the Rails 422/no-usable-account path; it grants no owner credential.
+Account disconnection is a SQL-only EventSink::disconnect_user_accounts callback on the
+User deactivation writer, with the real Fizzy/GitHub model validation. WS14g adds its
+Google/calendar hook there and its pretransaction remote channel stop in the controller.
+WS13 fills the stream/stage/huddle lifecycle callbacks in WS8, as flagged in the report.

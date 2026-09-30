@@ -527,3 +527,6 @@ mod ws15e_tests {
         assert!(error.get_ref().unwrap().downcast_ref::<WriteExpired>().is_some());
     }
 }
+
+#[cfg(test)]
+mod deadline_tests;

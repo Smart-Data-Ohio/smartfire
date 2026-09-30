@@ -137,3 +137,6 @@ fn validate(tx: &Tx<'_>, id: Option<i64>, user: i64, account: &str) -> Result<()
     }
     errors.into_result()
 }
+
+#[cfg(test)]
+mod tests;

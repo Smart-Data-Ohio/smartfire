@@ -542,3 +542,37 @@ async fn ws15e_review_owner_suspension_quietly_finalizes_only_after_commit() {
         Ok(())
     }).await.unwrap();
 }
+
+#[tokio::test]
+async fn ws15e_review_legacy_banned_owner_cannot_request_action() {
+    let app = app().await;
+    let (_,agent) = setup(&app,"comment").await;
+    let crypto = ArEncryption::new(&app.booted.app.secrets);
+    app.db().write(move |tx| {
+        tx.conn().execute("UPDATE users SET status=2 WHERE id=?",[DAVID])?;
+        let before:i64=tx.conn().query_row("SELECT COUNT(*) FROM agent_approvals",[],|r|r.get(0))?;
+        let result=super::super::agent_requests::create(tx,&crypto,agent,json!({"kind":"comment","account_id":"897362094","number":579,"body":"Legacy owner","external_id":"review-owner-inactive"}),None,&jiff::tz::TimeZone::UTC)?;
+        assert_eq!(result.status,403,"unsafe legacy owner cannot create approvals");
+        assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM agent_approvals",[],|r|r.get::<_,i64>(0))?,before);
+        Ok(())
+    }).await.unwrap();
+}
+
+#[tokio::test]
+async fn ws15e_review_invalid_owned_agent_blocks_deactivation_atomically() {
+    for mutation in ["status='unknown'", "description=printf('%0600d',1)", "daily_external_action_cap=0"] {
+        let app=app().await;
+        let (_,agent)=setup(&app,"comment").await;
+        let mutation=mutation.to_owned();
+        app.db().write(move |tx| {tx.conn().execute(&format!("UPDATE agents SET {mutation} WHERE id=?"),[agent])?;Ok(())}).await.unwrap();
+        let result=app.db().write(|tx|campfire_db::User::find(tx.conn(),DAVID)?.deactivate(tx)).await;
+        assert!(matches!(result,Err(campfire_db::Error::RecordInvalid(_))),"Rails Agent#suspend! runs update! validations");
+        app.db().read(move |c| {
+            assert!(campfire_db::User::find(c,DAVID)?.is_active());
+            assert!(Account::for_user(c,DAVID)?.unwrap().connected());
+            assert!(c.query_row("SELECT suspended_at IS NULL FROM agents WHERE id=?",[agent],|r|r.get::<_,bool>(0))?);
+            assert!(c.query_row("SELECT EXISTS(SELECT 1 FROM agent_grants WHERE agent_id=? AND revoked_at IS NULL)",[agent],|r|r.get::<_,bool>(0))?);
+            Ok(())
+        }).await.unwrap();
+    }
+}

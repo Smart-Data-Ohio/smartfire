@@ -139,7 +139,7 @@ pub fn create(
     credential: Option<i64>,
     zone: &TimeZone,
 ) -> Result<ReadResult> {
-    let state=tx.conn().query_row("SELECT g.owner_id,g.daily_external_action_cap,(g.suspended_at IS NULL AND u.status=0 AND EXISTS(SELECT 1 FROM agent_grants WHERE agent_id=g.id AND capability='external_action' AND room_id IS NULL AND revoked_at IS NULL)) FROM agents g JOIN users u ON u.id=g.user_id WHERE g.id=?",[agent],|r|Ok((r.get::<_,Option<i64>>(0)?,r.get::<_,Option<i64>>(1)?,r.get::<_,bool>(2)?))).optional()?;
+    let state=tx.conn().query_row("SELECT g.owner_id,g.daily_external_action_cap,(g.suspended_at IS NULL AND u.status=0 AND (g.owner_id IS NULL OR EXISTS(SELECT 1 FROM users owner WHERE owner.id=g.owner_id AND owner.status=0)) AND EXISTS(SELECT 1 FROM agent_grants WHERE agent_id=g.id AND capability='external_action' AND room_id IS NULL AND revoked_at IS NULL)) FROM agents g JOIN users u ON u.id=g.user_id WHERE g.id=?",[agent],|r|Ok((r.get::<_,Option<i64>>(0)?,r.get::<_,Option<i64>>(1)?,r.get::<_,bool>(2)?))).optional()?;
     let Some((owner, limit, true)) = state else {
         return Ok(ReadResult::fail(
             403,

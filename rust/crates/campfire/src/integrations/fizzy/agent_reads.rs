@@ -52,7 +52,7 @@ async fn access(
 ) -> campfire_db::Result<std::result::Result<Access, ReadResult>> {
     let crypto = ArEncryption::new(&app.secrets);
     app.db.write(move|tx| {
-        let state=tx.conn().query_row("SELECT g.owner_id,(g.suspended_at IS NULL AND u.status=0 AND EXISTS(SELECT 1 FROM agent_grants WHERE agent_id=g.id AND capability='fizzy' AND room_id IS NULL AND revoked_at IS NULL)) FROM agents g JOIN users u ON u.id=g.user_id WHERE g.id=?",[agent],|r|Ok((r.get::<_,Option<i64>>(0)?,r.get::<_,bool>(1)?))).optional()?;
+        let state=tx.conn().query_row("SELECT g.owner_id,(g.suspended_at IS NULL AND u.status=0 AND (g.owner_id IS NULL OR EXISTS(SELECT 1 FROM users owner WHERE owner.id=g.owner_id AND owner.status=0)) AND EXISTS(SELECT 1 FROM agent_grants WHERE agent_id=g.id AND capability='fizzy' AND room_id IS NULL AND revoked_at IS NULL)) FROM agents g JOIN users u ON u.id=g.user_id WHERE g.id=?",[agent],|r|Ok((r.get::<_,Option<i64>>(0)?,r.get::<_,bool>(1)?))).optional()?;
         let Some((owner,true))=state else {return Ok(Err(ReadResult::fail(403,"Forbidden: agent lacks fizzy capability")));};
         let Some(owner)=owner else {return Ok(Err(ReadResult::fail(422,"Agent has no owner recorded")));};
         let Some(account)=Account::for_user(tx.conn(),owner)? else {return Ok(Err(ReadResult::fail(422,"Agent owner has no usable Fizzy account")));};
