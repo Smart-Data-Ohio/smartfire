@@ -7,6 +7,8 @@ pub mod logos;
 pub mod users;
 #[cfg(test)]
 mod mutation_tests;
+#[cfg(test)]
+mod view_tests;
 
 use campfire_db::Account;
 use campfire_kit::{Ctx, Error, Param, Redirect, Result, StatusCode, format};

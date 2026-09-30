@@ -36,6 +36,10 @@ async fn setup_case(app: &TestApp, id: i64, setup: serde_json::Value) {
 }
 
 pub(super) fn render(app: &TestApp, f: impl FnOnce(&ViewContext) -> String) -> String {
+    render_with(app, |_| {}, f)
+}
+
+pub(crate) fn render_with(app: &TestApp, configure: impl FnOnce(&mut ViewContext), f: impl FnOnce(&ViewContext) -> String) -> String {
     struct Tokens;
     impl h::request_forgery::AuthenticityTokens for Tokens {
         fn global(&self) -> String {
@@ -48,7 +52,7 @@ pub(super) fn render(app: &TestApp, f: impl FnOnce(&ViewContext) -> String) -> S
     let asset = |name: &str| campfire_assets::asset_path(name);
     let signer =
         |parts: &[&str]| rails_compat::turbo::signed_stream_name(&app.booted.app.secrets, parts);
-    let ctx = ViewContext {
+    let mut ctx = ViewContext {
         current_user: Some(campfire_views::CurrentUser {
             id: DAVID,
             name: "David".into(),
@@ -80,6 +84,7 @@ pub(super) fn render(app: &TestApp, f: impl FnOnce(&ViewContext) -> String) -> S
         time_zone: campfire_views::time::Zone::utc(),
         chrome: Default::default(),
     };
+    configure(&mut ctx);
     h::request_forgery::rendering_with(
         h::request_forgery::RequestSecrets {
             tokens: Box::new(Tokens),

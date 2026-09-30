@@ -24,7 +24,7 @@ pub struct HelpContactPartial<'a> {
 
 /// `accounts/edit.html.erb`.
 #[derive(Template)]
-#[template(path = "accounts/edit.html", blocks = ["head", "content"])]
+#[template(path = "accounts/edit.html", blocks = ["head", "nav", "content", "footer"])]
 pub struct Edit<'a> {
     pub ctx: &'a ViewContext<'a>,
     /// `Current.account.id`: `form_with model: @account` posts to `/account.<id>` because the

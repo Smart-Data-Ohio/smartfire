@@ -13,7 +13,7 @@ pub mod tours;
 #[cfg(test)]
 mod preferences_tests;
 #[cfg(test)]
-mod people_tests;
+pub(crate) mod people_tests;
 #[cfg(test)]
 mod profile_settings_tests;
 pub mod sessions;
