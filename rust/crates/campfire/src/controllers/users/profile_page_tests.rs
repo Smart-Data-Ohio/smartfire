@@ -93,7 +93,6 @@ async fn whole_profile_matches_rails_seed_without_masks() {
         },
         voice_mode: Some(sections.voice_mode.clone()),
         push_to_talk_key: sections.push_to_talk_key.clone(),
-        ..Default::default()
     };
     let actual = h::request_forgery::rendering_with(
         h::request_forgery::RequestSecrets {

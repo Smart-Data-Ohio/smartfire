@@ -35,11 +35,11 @@ pub fn preview(
     changes: &campfire_db::models::user::profile_settings::Changes,
     errors: &campfire_db::Errors,
 ) {
-    if !fields.github_verified {
-        if let Some(login) = &changes.github_login {
-            let login = campfire_richtext::ruby::strip(login).to_lowercase();
-            fields.github_login = (!is_blank(&login)).then_some(login);
-        }
+    if !fields.github_verified
+        && let Some(login) = &changes.github_login
+    {
+        let login = campfire_richtext::ruby::strip(login).to_lowercase();
+        fields.github_login = (!is_blank(&login)).then_some(login);
     }
     if let Some(mode) = &changes.voice_mode {
         fields.voice_mode = if matches!(mode.as_str(), "voice_activity" | "push_to_talk") {
