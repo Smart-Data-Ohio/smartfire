@@ -201,6 +201,7 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "users/sessions#index" => arc(users::sessions::index),
         "users/sessions#destroy" => arc(users::sessions::destroy),
         "users/sessions#revoke_others" => arc(users::sessions::revoke_others),
+        "accounts/users/two_factor_resets#create" => arc(accounts::users::two_factor_resets::create),
         "users/push_subscriptions/test_notifications#create" => {
             arc(users::push_subscriptions::test_notifications::create)
         }

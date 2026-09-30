@@ -240,7 +240,7 @@ async fn revoke_others_preserves_current_and_noop_has_no_audit() {
     );
 }
 
-async fn socket(
+pub(crate) async fn socket(
     a: &TestApp,
     cookie: &str,
     addr: std::net::SocketAddr,

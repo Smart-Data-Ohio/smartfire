@@ -117,6 +117,24 @@ pub fn revoke_other_sessions(
     Ok(others.len())
 }
 
+pub fn reset_two_factor(tx: &mut Tx<'_>, user: &User, context: &Context) -> Result<()> {
+    user.reset_two_factor(tx)?;
+    for session in Session::for_user(tx.conn(), user.id)? {
+        session.destroy(tx)?;
+    }
+    user.reset_remote_connections(tx);
+    AuditLog::record(
+        tx,
+        NewAuditLog {
+            action: "two_factor.reset".into(),
+            target: Some(Target::from(user)),
+            ..Default::default()
+        },
+        context,
+    )?;
+    Ok(())
+}
+
 pub enum Enrollment {
     Enabled,
     Wrong,
