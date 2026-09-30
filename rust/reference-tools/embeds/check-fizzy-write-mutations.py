@@ -15,15 +15,17 @@ for index, (filename, old, new, test, key, case) in enumerate(mutants, 1):
     path = root / 'crates/campfire/src/controllers' / filename
     original = path.read_text()
     assert old in original
-    env[key] = case
-    env['FIZZY_API_BASE_URL'] = 'http://127.0.0.1:' + ('51597' if key.endswith('CONNECTION_CASE') else '51598')
+    # The message matrix hands each isolated child an already-bound ephemeral listener.
+    # Run that parent harness, including its locked case, rather than bypassing socket handoff.
+    if key.endswith('CONNECTION_CASE'):
+        env[key] = case
     try:
         path.write_text(original.replace(old, new, 1))
-        run = subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','-j','4','-p','campfire',test,'--','--nocapture'],cwd=root,env=env,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        run = subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','-j','2','-p','campfire',test,'--','--nocapture','--test-threads=8'],cwd=root,env=env,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
         (root.parent / '.scratch' / f'fizzy-write-mutation-{index}.log').write_text(run.stdout)
         assert run.returncode and 'test result: FAILED' in run.stdout, run.stdout[-3000:]
         print(f'{index} {filename} {case}: ' + next(line for line in run.stdout.splitlines() if line.startswith('test result:')),flush=True)
     finally:
         path.write_text(original)
-        del env[key]
+        env.pop(key, None)
 print(f'WS15e Fizzy write mutation checks: {len(mutants)} detected, 0 survived')
