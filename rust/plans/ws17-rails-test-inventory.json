@@ -2076,72 +2076,72 @@
     {
       "file": "test/integration/ooo_dm_notice_test.rb",
       "test": "a DM with an OOO member shows the notice above the composer",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: rooms/ws17_ooo_tests and statuses/calendar_tests (10 individual named HTTP/socket sequences; pinned complete wrapper bytes, viewer scoping, calendar invisibility and actual two-hour clock advance)"
     },
     {
       "file": "test/integration/ooo_dm_notice_test.rb",
       "test": "the notice escapes the member's note",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: rooms/ws17_ooo_tests and statuses/calendar_tests (10 individual named HTTP/socket sequences; pinned complete wrapper bytes, viewer scoping, calendar invisibility and actual two-hour clock advance)"
     },
     {
       "file": "test/integration/ooo_dm_notice_test.rb",
       "test": "the notice renders per viewer, never from a shared fragment",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: rooms/ws17_ooo_tests and statuses/calendar_tests (10 individual named HTTP/socket sequences; pinned complete wrapper bytes, viewer scoping, calendar invisibility and actual two-hour clock advance)"
     },
     {
       "file": "test/integration/ooo_dm_notice_test.rb",
       "test": "a group DM shows one line per OOO recipient",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: rooms/ws17_ooo_tests and statuses/calendar_tests (10 individual named HTTP/socket sequences; pinned complete wrapper bytes, viewer scoping, calendar invisibility and actual two-hour clock advance)"
     },
     {
       "file": "test/integration/ooo_dm_notice_test.rb",
       "test": "a channel shows no notice even while a member is out",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: rooms/ws17_ooo_tests and statuses/calendar_tests (10 individual named HTTP/socket sequences; pinned complete wrapper bytes, viewer scoping, calendar invisibility and actual two-hour clock advance)"
     },
     {
       "file": "test/integration/ooo_dm_notice_test.rb",
       "test": "a DM with nobody out shows no notice",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: rooms/ws17_ooo_tests and statuses/calendar_tests (10 individual named HTTP/socket sequences; pinned complete wrapper bytes, viewer scoping, calendar invisibility and actual two-hour clock advance)"
     },
     {
       "file": "test/integration/ooo_dm_notice_test.rb",
       "test": "an invisible member's manual OOO shows no notice",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: rooms/ws17_ooo_tests and statuses/calendar_tests (10 individual named HTTP/socket sequences; pinned complete wrapper bytes, viewer scoping, calendar invisibility and actual two-hour clock advance)"
     },
     {
       "file": "test/integration/ooo_dm_notice_test.rb",
       "test": "an invisible member's calendar OOO shows no notice",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: rooms/ws17_ooo_tests and statuses/calendar_tests (10 individual named HTTP/socket sequences; pinned complete wrapper bytes, viewer scoping, calendar invisibility and actual two-hour clock advance)"
     },
     {
       "file": "test/integration/ooo_dm_notice_test.rb",
       "test": "an invisible member's OOO flip broadcasts an emptied notice line",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: rooms/ws17_ooo_tests and statuses/calendar_tests (10 individual named HTTP/socket sequences; pinned complete wrapper bytes, viewer scoping, calendar invisibility and actual two-hour clock advance)"
     },
     {
       "file": "test/integration/ooo_dm_notice_test.rb",
       "test": "an OOO end broadcasts an emptied notice line",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: rooms/ws17_ooo_tests and statuses/calendar_tests (10 individual named HTTP/socket sequences; pinned complete wrapper bytes, viewer scoping, calendar invisibility and actual two-hour clock advance)"
     },
     {
       "file": "test/models/notifications/keyword_matcher_test.rb",

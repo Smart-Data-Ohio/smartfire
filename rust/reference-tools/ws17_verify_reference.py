@@ -8,6 +8,7 @@ root = Path(__file__).resolve().parents[2]
 pin = "d7c7de92"
 image = "triage-reference-d7c7de92:latest"
 files = [
+    "app/views/users/show.html.erb", "app/views/rooms/show/_ooo_notices.html.erb", "app/controllers/rooms_controller.rb",
     "config/initializers/web_push.rb", "config/initializers/vapid.rb",
     "lib/web_push/notification.rb", "lib/web_push/pool.rb",
     "app/models/push/subscription.rb", "app/models/room/message_pusher.rb",

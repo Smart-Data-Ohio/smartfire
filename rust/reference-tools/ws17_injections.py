@@ -153,6 +153,17 @@ cases += [
      "if enabled {", "if false && enabled {",
      "ws17_seeded_enabled_2fa_settings_errors_match_the_actual_rails_failure", "campfire"),
 ]
+cases += [
+    ("dm-viewer-scope", "rust/crates/campfire/src/controllers/presenters/status_settings.rs",
+     "users.id!=?", "users.id>=?",
+     "ws17_dm_ooo_renders_per_viewer_without_shared_fragment", "campfire"),
+    ("dm-streams-for-future-ooo", "rust/crates/campfire/src/controllers/presenters/status_settings.rs",
+     "AND users.role!=? ORDER BY", "AND users.role!=? AND users.ooo_until IS NOT NULL ORDER BY",
+     "ws17_dm_with_nobody_out_has_no_notice", "campfire"),
+    ("dm-profile-live-presence", "rust/crates/campfire/src/controllers/presenters/status_settings.rs",
+     "let presence = match presence {", "let presence = match campfire_db::models::workspace_presence_lease::Presence::Offline {",
+     "ws17_profile_mounts_live_badge_and_viewer_scoped_allowance_control", "campfire"),
+]
 if len(sys.argv)>1:
     cases=[case for case in cases if case[0].startswith(sys.argv[1])]
     assert cases, "no injection matches the supplied name prefix"

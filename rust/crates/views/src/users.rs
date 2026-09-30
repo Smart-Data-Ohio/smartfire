@@ -35,6 +35,27 @@ pub struct Show<'a> {
     pub user: UserSummary,
     /// `user.transfer_id`, for `users/profiles/_transfer` (shown to administrators).
     pub transfer_id: String,
+    pub profile_status: Option<statuses::ProfileStatus>,
+}
+
+impl Show<'_> {
+    fn status_section(&self, status: &statuses::ProfileStatus) -> h::Html {
+        h::raw(
+            statuses::ProfileStatusSection { status }
+                .render()
+                .expect("profile status"),
+        )
+    }
+    fn allowance(&self, status: &statuses::ProfileStatus) -> h::Html {
+        h::raw(
+            statuses::DndAllowance {
+                ctx: self.ctx,
+                status,
+            }
+            .render()
+            .expect("DND allowance"),
+        )
+    }
 }
 
 impl Page for Show<'_> {

@@ -3,6 +3,85 @@ use campfire_db::{Connection, Errors, Timestamp, UserStatusSettings};
 use campfire_views::users::{SettingsFormData, SettingsPerson};
 use rusqlite::OptionalExtension;
 
+/// RoomsController#show's uncached, ordered other active human DM members. No OOO filter:
+/// a member whose OOO begins later must already have a live stream mounted on this page.
+pub fn ooo_notice_members(
+    conn: &Connection,
+    secrets: &rails_compat::Secrets,
+    room: &campfire_db::Room,
+    viewer_id: i64,
+    now: Timestamp,
+) -> campfire_db::Result<Vec<campfire_views::users::statuses::OooNoticeMember>> {
+    if room.room_type != campfire_db::RoomType::Direct {
+        return Ok(Vec::new());
+    }
+    let mut q = conn.prepare("SELECT users.id FROM users INNER JOIN memberships ON memberships.user_id=users.id WHERE memberships.room_id=? AND users.id!=? AND users.status=? AND users.role!=? ORDER BY LOWER(users.name)")?;
+    let ids = q
+        .query_map(
+            rusqlite::params![
+                room.id,
+                viewer_id,
+                campfire_db::Status::Active,
+                campfire_db::Role::Bot
+            ],
+            |r| r.get::<_, i64>(0),
+        )?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    let mut users = UserStatusSettings::for_ids(conn, &ids)?;
+    Ok(ids
+        .into_iter()
+        .map(|id| {
+            let user = users.remove(&id).expect("batch includes selected user");
+            let gid = crate::channels::user_gid(id).to_param();
+            campfire_views::users::statuses::OooNoticeMember {
+                id,
+                name: user.user.name.clone(),
+                visible: user.ooo_status_visible(now),
+                until_date: user.ooo_until_date(now),
+                note: user
+                    .ooo_note
+                    .clone()
+                    .filter(|note| user.manual_ooo_active(now) && !note.trim().is_empty()),
+                stream_name: rails_compat::turbo::signed_stream_name(
+                    secrets,
+                    &[&gid, "ooo_notice"],
+                ),
+            }
+        })
+        .collect())
+}
+
+pub fn profile_status(
+    conn: &Connection,
+    secrets: &rails_compat::Secrets,
+    user_id: i64,
+    viewer_id: i64,
+    now: Timestamp,
+) -> campfire_db::Result<campfire_views::users::statuses::ProfileStatus> {
+    let user = UserStatusSettings::find(conn, user_id)?;
+    let leases = campfire_db::WorkspacePresenceLease::presence_by_user_id(conn, &[user_id], now)?;
+    let presence = user.effective_presence(
+        leases
+            .get(&user_id)
+            .copied()
+            .unwrap_or(campfire_db::models::workspace_presence_lease::Presence::Offline),
+    );
+    let presence = match presence {
+        campfire_db::models::workspace_presence_lease::Presence::Online => "online",
+        campfire_db::models::workspace_presence_lease::Presence::Idle => "idle",
+        campfire_db::models::workspace_presence_lease::Presence::Dnd => "dnd",
+        campfire_db::models::workspace_presence_lease::Presence::Offline => "offline",
+    };
+    let gid = crate::channels::user_gid(user_id).to_param();
+    Ok(campfire_views::users::statuses::ProfileStatus {
+        user_id,
+        stream_name: rails_compat::turbo::signed_stream_name(secrets, &[&gid, "status"]),
+        presence: presence.into(),
+        status_text: user.status_text_display(now),
+        dnd_allowed: campfire_db::DndAllowedUser::find(conn, viewer_id, user_id)?.is_some(),
+    })
+}
+
 pub fn forms(
     conn: &Connection,
     user: &UserStatusSettings,

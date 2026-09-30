@@ -123,6 +123,14 @@ impl TestApp {
     }
 
     pub async fn boot_with_network(network: crate::integrations::net::Network) -> Option<TestApp> {
+        Self::boot_with_clock_and_network(seed_clock(), network).await
+    }
+
+    pub async fn boot_with_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
+        Self::boot_with_clock_and_network(clock, crate::integrations::net::Network::system()).await
+    }
+
+    async fn boot_with_clock_and_network(clock: campfire_kit::SharedClock, network: crate::integrations::net::Network) -> Option<TestApp> {
         let seed = seed_dir("default")?;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("db")).unwrap();
@@ -138,7 +146,7 @@ impl TestApp {
             _ => None,
         })
         .unwrap();
-        Some(TestApp { booted: boot_with_services(config, seed_clock(), network, crate::jobs::periodic::Intervals { periodic: None, huddle: None }).await.unwrap(), _dir: dir })
+        Some(TestApp { booted: boot_with_services(config, clock, network, crate::jobs::periodic::Intervals { periodic: None, huddle: None }).await.unwrap(), _dir: dir })
     }
 
     pub fn db(&self) -> &campfire_db::Database {
