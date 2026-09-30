@@ -10,7 +10,7 @@ import subprocess
 root = Path(__file__).resolve().parents[2]
 scratch = root.parent / ".scratch/ws15g"
 scratch.mkdir(parents=True, exist_ok=True)
-env = dict(os.environ, CARGO_TARGET_DIR=str(root / "target"), TMPDIR=str(scratch))
+env = dict(os.environ, CI="1", CABLE_TEST_PORT_RANGE="51500-51549", CARGO_TARGET_DIR=str(root / "target"), TMPDIR=str(scratch))
 base = root / "crates/campfire/src/integrations/github"
 mutations = [
     ("oauth-state", "oauth.rs", "return false;", "return true;", "github_state_rejects", 3),
@@ -50,6 +50,14 @@ mutations = [
     ("subscription-member-authority", "../../controllers/github/subscriptions.rs", "if !user.can_administer(Some(room.creator_id), false)", "if false && !user.can_administer(Some(room.creator_id), false)", "github_subscription_http_security", 1),
     ("subscription-override-authority", "../../controllers/github/subscriptions.rs", "administrator_override: user.is_administrator()", "administrator_override: true", "github_subscription_http_status", 1),
     ("subscription-section-authority", "../../../../views/src/github/subscriptions.rs", "if !self.can_administer", "if false && !self.can_administer", "github_subscription_sections", 1),
+    ("connection-sudo", "../../controllers/github/connections.rs", "concerns::require_sudo_mode(c)?;", "", "github_connections_security", 1),
+    ("bot-link-admin", "../../controllers/github/connections.rs", "concerns::ensure_can_administer(c)?;", "", "github_connections_security", 1),
+    ("app-callback-state", "../../controllers/github/connections.rs", "if !oauth::valid_state(", "if false && !oauth::valid_state(", "github_connections_security", 1),
+    ("health-admin", "../../controllers/accounts/integrations_health.rs", "concerns::ensure_can_administer(c)?;", "", "integration_health_http_security", 1),
+    ("discuss-reference", "threads.rs", "parent.thread_id.is_some()||!tx.conn().query_row", "parent.thread_id.is_some()||false && !tx.conn().query_row", "github_discuss_security", 1),
+    ("human-write-own-token", "writes.rs", "accounts.write_client(token)", "accounts.write_client(String::from(\"fixture-wrong-token\"))", "github_write_http_results", 1),
+    ("deactivation-registration", "../../app.rs", "user_deactivation_hooks: vec![crate::integrations::github::accounts::on_user_deactivation]", "user_deactivation_hooks: vec![]", "github_user_and_bot_deactivation", 1),
+
 ]
 for name, filename, before, after, test_filter, expected_failures in mutations:
     path = base / filename
