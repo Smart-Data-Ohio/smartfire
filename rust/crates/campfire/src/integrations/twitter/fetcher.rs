@@ -98,20 +98,12 @@ impl From<HttpError> for Failure {
     }
 }
 async fn get(net: &Network, path: &str, timeouts: &Timeouts) -> Result<(u16, Vec<u8>), Failure> {
-    // Resolve the fixed API host once per connection attempt and pin the selected address.
-    let addresses = tokio::time::timeout(timeouts.open, net.resolver.lookup(API_HOST))
-        .await
-        .map_err(|_| HttpError::OpenTimeout)?
-        .map_err(|_| HttpError::Unresolvable(API_HOST.into()))?;
-    let ip = addresses
-        .into_iter()
-        .next()
-        .ok_or_else(|| HttpError::Unresolvable(API_HOST.into()))?;
+    // DNS, all address attempts and TLS share Net::HTTP's one open_timeout.
     let endpoint = Endpoint {
         https: true,
         host: API_HOST.into(),
         port: 443,
-        pinned_ip: Some(ip),
+        pinned_ip: None,
     };
     let request = Request::net_http(
         hyper::Method::GET,

@@ -1,5 +1,5 @@
 //! `app/models/fizzy/client.rb`. The configured origin is trusted (including self-hosted HTTP).
-//! Path IDs are checked before DNS. Each request resolves once and pins its connection.
+//! Path IDs are checked before DNS. The open budget includes DNS, TCP and TLS.
 use super::blank;
 use crate::integrations::net::{
     Network,
@@ -255,20 +255,11 @@ impl Client {
         let body = body.unwrap_or_default();
         for attempt in 0..=1 {
             let result = async {
-                let ip = self
-                    .network
-                    .resolver
-                    .lookup(host.trim_matches(['[', ']']))
-                    .await
-                    .map_err(|_| HttpError::Unresolvable(host.clone()))?
-                    .into_iter()
-                    .next()
-                    .ok_or_else(|| HttpError::Unresolvable(host.clone()))?;
                 let endpoint = Endpoint {
                     https,
                     host: host.clone(),
                     port,
-                    pinned_ip: Some(ip),
+                    pinned_ip: None,
                 };
                 let headers = vec![
                     ("Accept".into(), "application/json".into()),

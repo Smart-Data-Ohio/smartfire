@@ -1,6 +1,6 @@
 //! One HTTP/1.1 request over a fresh connection, the way `Net::HTTP` makes it: the connection
 //! goes to a pinned address when the caller has one (`http.ipaddr = ip`), TLS verifies the
-//! peer against the host name, `open_timeout` covers the connect and TLS handshake,
+//! peer against the host name, `open_timeout` covers DNS, every address attempt, TCP and the TLS handshake,
 //! `read_timeout` covers each read, and a body the client asked to be compressed
 //! (`Accept-Encoding: gzip;q=1.0,deflate;q=0.6,identity;q=0.3`) is inflated as it's read.
 

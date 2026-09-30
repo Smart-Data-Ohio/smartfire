@@ -303,3 +303,27 @@ async fn ws15e_x_claims_are_transactional_and_durable_missing_jobs_discard() {
     .unwrap();
     runner.shutdown(Duration::from_secs(1)).await;
 }
+
+#[tokio::test]
+async fn ws15e_review_x_dns_and_tcp_share_one_open_budget() {
+    use crate::integrations::net::{BoxFuture, Dialer, Resolver};
+    struct SlowDns(Arc<dyn Resolver>);
+    impl Resolver for SlowDns {
+        fn lookup<'a>(&'a self, host: &'a str) -> BoxFuture<'a, std::io::Result<Vec<std::net::IpAddr>>> {
+            Box::pin(async move { tokio::time::sleep(Duration::from_millis(120)).await; self.0.lookup(host).await })
+        }
+    }
+    struct SlowTcp(Arc<dyn Dialer>);
+    impl Dialer for SlowTcp {
+        fn connect(&self, addr: std::net::SocketAddr) -> BoxFuture<'_, std::io::Result<tokio::net::TcpStream>> {
+            Box::pin(async move { tokio::time::sleep(Duration::from_millis(120)).await; self.0.connect(addr).await })
+        }
+    }
+    let (server,mut net,_,_) = tls_server(Route::new("GET",API_HOST,"/i/status/123",200).body("{}")).await;
+    net.resolver = Arc::new(SlowDns(net.resolver.clone()));
+    net.dialer = Arc::new(SlowTcp(net.dialer.clone()));
+    let result = get(&net,"/i/status/123",&Timeouts {open:Duration::from_millis(200),..TIMEOUTS}).await;
+    eprintln!("REVIEW X combined open budget: received requests={}",server.received().len());
+    assert!(matches!(result,Err(Failure::Transport(HttpError::OpenTimeout))));
+    assert!(server.received().is_empty());
+}

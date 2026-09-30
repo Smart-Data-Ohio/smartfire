@@ -434,3 +434,25 @@ async fn ws15e_fizzy_transport_retries_match_real_pinned_rails() {
         task.abort();
     }
 }
+
+#[tokio::test]
+async fn ws15e_review_fizzy_dns_is_inside_open_timeout() {
+    use crate::integrations::net::{Resolver,BoxFuture};
+    struct SlowDns;
+    impl Resolver for SlowDns {
+        fn lookup<'a>(&'a self,_host:&'a str)->BoxFuture<'a,std::io::Result<Vec<std::net::IpAddr>>> {
+            Box::pin(async {tokio::time::sleep(std::time::Duration::from_millis(10500)).await;Ok(vec!["93.184.216.34".parse().unwrap()])})
+        }
+    }
+    let server=FakeServer::start_ws15e(vec![Route::new("GET","app.fizzy.do","/my/identity.json",200).body("{}")]).await;
+    let dialer=Arc::new(MappingDialer {public:["93.184.216.34".parse().unwrap()].into(),to:server.addr,dialed:Default::default()});
+    let mut net=network(Arc::new(FakeResolver::new([])),dialer);
+    net.resolver=Arc::new(SlowDns);
+    let client=client::Client::new(net,"fixture".into(),"http://app.fizzy.do");
+    let started=std::time::Instant::now();
+    let result=client.identity().await;
+    eprintln!("REVIEW Fizzy slow DNS: elapsed={:?} requests={} success={}",started.elapsed(),server.received().len(),result.is_ok());
+    assert!(result.is_err(),"Rails Net::HTTP open_timeout bounds TCPSocket DNS resolution at 10 seconds");
+    assert_eq!(result.unwrap_err().message,"Could not reach Fizzy (Open Timeout)");
+    assert!(server.received().is_empty());
+}
