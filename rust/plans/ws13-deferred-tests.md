@@ -1,6 +1,6 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 156 declarations now have complete assertion coverage mapped below. The other 392 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
+Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 188 declarations now have complete assertion coverage mapped below. The other 360 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
 
 ## Continued slice coverage (after merging WS19b)
 
@@ -18,7 +18,7 @@ Passed titles are backed jointly by those differential tests, the real HTTP/Cabl
 
 ## WS13b domain slices
 
-WS13b adds nine complete revocation, nineteen complete grant and thirty-seven complete invitation declarations. The invitation corpus retains 136 intermediate results across 38 sequences (one neighboring message assertion remains open). These use actual lifecycle methods and compare persisted rows from pinned Rails, with compiled regression tests for revocation, cleanup rollback, room switching, gateway role enforcement, participant sorting/deduplication and issuance timestamps. No production methods or WS17 seam signatures changed. The remaining assigned declarations are still partial/deferred; see `wave4/ws13b-report.md` for the precise handoff.
+WS13b adds nine complete revocation, nineteen complete grant and thirty-seven complete invitation and thirty-two complete join-notifier declarations. The invitation corpus retains 136 intermediate results across 38 sequences (one neighboring message assertion remains open). These use actual lifecycle methods and compare persisted rows from pinned Rails, with compiled regression tests for revocation, cleanup rollback, room switching, gateway role enforcement, participant sorting/deduplication and issuance timestamps. No production methods or WS17 seam signatures changed. The remaining assigned declarations are still partial/deferred; see `wave4/ws13b-report.md` for the precise handoff.
 
 ## Rails declaration coverage by file
 
@@ -29,7 +29,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/controllers/rooms/stage/streams_controller_test.rb` | 38 | 16 | 22 |
 | `test/models/huddle_invitation_test.rb` | 38 | 37 | 1 |
 | `test/controllers/rooms/huddles_controller_test.rb` | 36 | 0 | 36 |
-| `test/models/huddle/join_notifier_test.rb` | 33 | 0 | 33 |
+| `test/models/huddle/join_notifier_test.rb` | 33 | 32 | 1 |
 | `test/models/huddle_grant_test.rb` | 33 | 19 | 14 |
 | `test/system/huddles_test.rb` | 31 | 0 | 31 |
 | `test/controllers/internal/huddle_controller_test.rb` | 29 | 0 | 29 |
@@ -59,7 +59,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
-| **Total** | **548** | **156** | **392** |
+| **Total** | **548** | **188** | **360** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -383,41 +383,41 @@ Owner: WS13. Passed: all nine declarations, mapped to the 29-case Rails resolver
 
 ## test/models/huddle/join_notifier_test.rb
 
-Owner: WS13b. Deferred.
+Owner: WS13b. Partial: 32/33 complete declarations covered by `huddle_notifier_sequences_test.rs`, including two-device sighting jobs, late jobs, exact join/leave/ended JSON and rejoin timing. 33 pinned Rails sequences compare persisted state and actual subscription selection/throttle through unchanged WS17 seams. The fan-out preload/query-count assertion remains open; functional fan-out passes.
 
-- an in-call DM member is told when the peer joins, and the joiner is not
-- a member with no access to the room is told nothing
-- an out-of-call DM member gets the banner broadcast and one push
-- a group DM join toasts the insider and banners the outsider
+- **Passed:** an in-call DM member is told when the peer joins, and the joiner is not
+- **Passed:** a member with no access to the room is told nothing
+- **Passed:** an out-of-call DM member gets the banner broadcast and one push
+- **Passed:** a group DM join toasts the insider and banners the outsider
 - join fan-out loads members and rings once no matter the group size
-- a channel join toasts the insider and tells the outsider nothing
-- an out-of-call channel member gets no banner and no push
-- a voice room join toasts the insider and tells the outsider nothing
-- bots and deactivated members are told nothing
-- a bot join notifies nobody
-- a second device sighted while the first is listed enqueues no join notice
-- sightings from two devices before the job runs still notify once
-- a join job running after the joiner left notifies nobody
-- a viewer whose ring is still live gets no join notice
-- a viewer whose ring went stale gets the join notice again
-- a switched-off or hidden room stays silent for the outsider
-- an outsider with huddle invitations switched off still banners but gets no push
-- a muted room still banners the outsider but sends no push
-- a join after a recent in-call revoke is marked as a rejoin
-- a rejoin after the disconnect report cleared liveness is not marked
-- a join after a quiet revoke is not marked as a rejoin
-- a join after the rejoin window is not marked as a rejoin
-- a join ten seconds after the revoke is not marked as a rejoin
-- leaving toasts the members still in the call
-- revoking an in-call grant toasts the members still in the call
-- leaving tells out-of-call DM members so their banner drops the leaver
-- leaving a channel tells out-of-call members nothing
-- the last one out of a DM dismisses every other member's banner
-- the last one out of a channel dismisses nothing
-- leaving a call the grant was never in toasts nobody
-- revoking a quiet grant toasts nobody
-- leaving while another of the leaver's grants is still in toasts nobody
-- a leave report after a revocation does not toast twice
+- **Passed:** a channel join toasts the insider and tells the outsider nothing
+- **Passed:** an out-of-call channel member gets no banner and no push
+- **Passed:** a voice room join toasts the insider and tells the outsider nothing
+- **Passed:** bots and deactivated members are told nothing
+- **Passed:** a bot join notifies nobody
+- **Passed:** a second device sighted while the first is listed enqueues no join notice
+- **Passed:** sightings from two devices before the job runs still notify once
+- **Passed:** a join job running after the joiner left notifies nobody
+- **Passed:** a viewer whose ring is still live gets no join notice
+- **Passed:** a viewer whose ring went stale gets the join notice again
+- **Passed:** a switched-off or hidden room stays silent for the outsider
+- **Passed:** an outsider with huddle invitations switched off still banners but gets no push
+- **Passed:** a muted room still banners the outsider but sends no push
+- **Passed:** a join after a recent in-call revoke is marked as a rejoin
+- **Passed:** a rejoin after the disconnect report cleared liveness is not marked
+- **Passed:** a join after a quiet revoke is not marked as a rejoin
+- **Passed:** a join after the rejoin window is not marked as a rejoin
+- **Passed:** a join ten seconds after the revoke is not marked as a rejoin
+- **Passed:** leaving toasts the members still in the call
+- **Passed:** revoking an in-call grant toasts the members still in the call
+- **Passed:** leaving tells out-of-call DM members so their banner drops the leaver
+- **Passed:** leaving a channel tells out-of-call members nothing
+- **Passed:** the last one out of a DM dismisses every other member's banner
+- **Passed:** the last one out of a channel dismisses nothing
+- **Passed:** leaving a call the grant was never in toasts nobody
+- **Passed:** revoking a quiet grant toasts nobody
+- **Passed:** leaving while another of the leaver's grants is still in toasts nobody
+- **Passed:** a leave report after a revocation does not toast twice
 
 ## test/models/huddle/join_pusher_test.rb
 
