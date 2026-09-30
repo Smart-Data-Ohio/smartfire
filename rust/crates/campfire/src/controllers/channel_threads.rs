@@ -1,16 +1,96 @@
 //! ChannelThreadsController, ported in coherent endpoint slices.
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod page_tests;
 
-use campfire_db::{ChannelThread, Room, ThreadInvolvement, ThreadMembership};
+use askama::Template;
+use campfire_db::{ChannelThread, Message, Room, ThreadInvolvement, ThreadMembership, Timeline, Timestamp};
 use campfire_kit::{Ctx, Error, Result, StatusCode, format};
 use serde_json::{Value, json};
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
-use crate::controllers::{messages, presenters::page::db_error};
+use crate::controllers::{messages, presenters::page::{self, db_error}};
 
-/// An alive parent-room membership is sufficient to join, read or leave its thread. A thread
-/// membership is required only by read; browsing a thread never silently joins it.
+pub async fn index(c: &mut Ctx) -> Result {
+    before_actions(c, Before::default()).await?;
+    let (_, room) = concerns::set_room(c).await?;
+    if room.deleted_at.is_some() { return Err(Error::NotFound); }
+    let state = c.params.get("state").and_then(|value| value.to_s()).unwrap_or_default();
+    let (room_id, board, now) = (room.id, room.board(), Timestamp::from_jiff(c.now()));
+    let threads = c.app().db.read(move |conn| {
+        let threads = if state == "closed" { ChannelThread::effectively_closed_for_room(conn, room_id, now)? }
+            else { ChannelThread::for_room(conn, room_id)? };
+        Ok(threads.into_iter().filter(|thread| match state.as_str() {
+            "all" | "closed" => true,
+            "locked" => thread.locked_at.is_some(),
+            "work" | "working" => thread.work() && thread.work_status.as_deref() != Some("done"),
+            "done" | "completed" => thread.work_status.as_deref() == Some("done"),
+            _ => thread.closed_at.is_none() && thread.locked_at.is_none() && (board || thread.auto_archive_at() > now),
+        }).collect::<Vec<_>>())
+    }).await.map_err(db_error)?;
+    let viewer = require_current_user(c)?.clone();
+    let base = c.url_for("");
+    if c.format()? == Some(&format::JSON) { c.no_store(); }
+    if *c.respond_to(&[&format::HTML, &format::JSON])? == format::JSON {
+        let payload = messages::present(c, move |p| Ok(json!({"threads": threads.iter()
+            .map(|thread| messages::payload::thread(p, thread, &viewer, &base)).collect::<campfire_db::Result<Vec<_>>>()?}))).await?;
+        return render_json(c, StatusCode::OK, &payload);
+    }
+    let (room_name, rows) = messages::present(c, move |p| {
+        let rows = threads.iter().map(|thread| {
+            let owner = thread.work_owner_id.map(|id| p.user(id)).transpose()?;
+            let payload = messages::payload::thread(p, thread, &viewer, &base)?;
+            let owner_label = match &owner {
+                None => "Unassigned".into(),
+                Some(owner) if payload["work_owner_active"] == true => owner.name.clone(),
+                Some(owner) => format!("Owner unavailable ({})", owner.name),
+            };
+            Ok(campfire_views::channel_threads::ListRow { id: thread.id, name: thread.name.clone(),
+                status: thread.status(p.conn, Timestamp::from_jiff(p.now))?.name().into(),
+                message_count: thread.message_count(p.conn)?, work_label: work_status_label(thread.work_status.as_deref()).map(str::to_string),
+                owner_label, agent: owner.is_some_and(|owner| owner.is_bot()) })
+        }).collect::<campfire_db::Result<Vec<_>>>()?;
+        Ok((p.room_display_name(&room, Some(&viewer))?, rows))
+    }).await?;
+    page::titled_content(c, StatusCode::OK, &format!("Threads in {room_name}"), |ctx| campfire_views::channel_threads::Index { ctx, room_id, room_name: &room_name, threads: &rows }.render()).await
+}
+
+pub async fn show(c: &mut Ctx) -> Result {
+    before_actions(c, Before::default()).await?;
+    let (_, thread) = scope(c).await?;
+    let thread_id = thread.id;
+    let records = c.app().db.read(move |conn| Message::last_page(conn, Timeline::Thread(thread_id))).await.map_err(db_error)?;
+    if c.format()? == Some(&format::JSON) { c.no_store(); }
+    if *c.respond_to(&[&format::HTML, &format::JSON])? == format::JSON {
+        let viewer = require_current_user(c)?.clone();
+        let base = c.url_for("");
+        let payload = messages::present(c, move |p| {
+            let parent = thread.parent_message_id.map(|id| Message::find(p.conn, id)).transpose()?;
+            Ok(json!({"thread": messages::payload::thread_details(p, &thread, &viewer, &base)?,
+                "parent_message": parent.as_ref().map(|message| messages::payload::message(p, message, &viewer, &base)).transpose()?,
+                "messages": records.iter().map(|message| messages::payload::thread_message(p, message, &viewer, &base)).collect::<campfire_db::Result<Vec<_>>>()?}))
+        }).await?;
+        return render_json(c, StatusCode::OK, &payload);
+    }
+    let name = thread.name.clone();
+    let (parent, items, count, status) = messages::present(c, move |p| {
+        let parent = thread.parent_message_id.map(|id| Message::find(p.conn, id)).transpose()?.as_ref().map(|message| p.message_item(message)).transpose()?;
+        Ok((parent, p.messages(&records)?, thread.message_count(p.conn)?, thread.status(p.conn, Timestamp::from_jiff(p.now))?.name()))
+    }).await?;
+    // Work/board/PR sections are integration seams with WS12/WS15. The ordinary standalone
+    // thread uses the same stable collection entry point as the room's message list.
+    page::titled_content(c, StatusCode::OK, &name, |ctx| campfire_views::channel_threads::Show { ctx,
+        name: &name, status, count, parent: parent.as_ref(), messages: &items }.render()).await
+}
+
+fn work_status_label(status: Option<&str>) -> Option<&'static str> {
+    match status { Some("planned") => Some("Planned"), Some("in_progress") => Some("In progress"),
+        Some("blocked") => Some("Blocked"), Some("done") => Some("Done"), _ => None }
+}
+
+/// An alive parent-room membership scopes both the nested reads and membership actions. A
+/// thread membership is required only by read; browsing a thread never silently joins it.
 async fn scope(c: &mut Ctx) -> Result<(Room, ChannelThread)> {
     let (_, room) = concerns::set_room(c).await?;
     if room.deleted_at.is_some() { return Err(Error::NotFound); }

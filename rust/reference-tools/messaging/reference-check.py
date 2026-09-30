@@ -9,6 +9,9 @@ ROOT = Path(__file__).resolve().parents[3]
 FILES = [
     "app/controllers/messages_controller.rb",
     "app/controllers/channel_threads_controller.rb",
+    "app/views/channel_threads/index.html.erb",
+    "app/views/channel_threads/show.html.erb",
+    "app/models/work_thread_event.rb",
     "app/controllers/channel_thread_messages_controller.rb",
     "app/views/channel_thread_messages/index.html.erb",
     "app/views/channel_thread_messages/create.turbo_stream.erb",

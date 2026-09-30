@@ -79,4 +79,14 @@ check("nested-edit-stream", nested, "messages::rendered::broadcast_thread_edit(c
 check("bodyless-presentation", "rust/crates/campfire/src/controllers/presenters.rs",
       "if missing_body {", "if false && missing_body {",
       "controllers::messages::state_tests::complete_message_states_match_rails_on_cache_misses_and_hits")
-print("WS8bm continuation discrimination: 15 compiled regressions detected; sources restored", flush=True)
+check("thread-pages-bot", threads,
+      "pub async fn index(c: &mut Ctx) -> Result {\n    before_actions(c, Before::default()).await?;",
+      "pub async fn index(c: &mut Ctx) -> Result {\n    before_actions(c, Before::default().allow_bot_access()).await?;",
+      thread_tests + "thread_pages_deny_bot_keys_without_joining_the_browser")
+check("thread-list-stale", threads,
+      "(board || thread.auto_archive_at() > now)", "(board || true || thread.auto_archive_at() > now)",
+      "controllers::channel_threads::page_tests::thread_state_lists_and_standalone_reads_match_rails_bytes")
+check("work-event-note", "rust/crates/campfire/src/controllers/messages/payload.rs",
+      'event["note"] = note.into();', 'let _ = note;',
+      "controllers::channel_threads::page_tests::thread_state_lists_and_standalone_reads_match_rails_bytes")
+print("WS8bm continuation discrimination: 18 compiled regressions detected; sources restored", flush=True)

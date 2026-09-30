@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 
 use crate::controllers::presenters::{Presenter, Result, avatar_path};
 
-pub(super) fn message(p: &Presenter<'_>, message: &Message, viewer: &User, base: &str) -> Result<Value> {
+pub(crate) fn message(p: &Presenter<'_>, message: &Message, viewer: &User, base: &str) -> Result<Value> {
     let room = campfire_db::Room::find(p.conn, message.room_id)?;
     let mut body = json!({"plain_text": p.plain_text_body(message)?, "html": html(p, message)?});
     if let Some(source) = &message.markdown_source { body["markdown_source"] = source.clone().into(); }
@@ -151,6 +151,61 @@ pub(crate) fn thread(p: &Presenter<'_>, thread: &ChannelThread, viewer: &User, b
             "can_manage_work": thread.work() && work_manageable, "can_update_work_status": thread.work() && work_manageable,
             "can_assign_work": thread.work() && work_assignment, "can_remove_work": thread.work() && work_assignment && !room.board()}
     }))
+}
+
+/// ChannelThreadsController#show asks for these two additional read-only facts. Keep the
+/// ordinary thread/message payload entry points unchanged for the other feature workers.
+pub(crate) fn thread_details(p: &Presenter<'_>, record: &ChannelThread, viewer: &User, base: &str) -> Result<Value> {
+    let mut value = thread(p, record, viewer, base)?;
+    let room = record.room(p.conn)?;
+    let mut query = p.conn.prepare("SELECT user_id FROM memberships WHERE room_id = ?")?;
+    let ids = query.query_map([room.id], |row| row.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+    let (mut humans, mut agents) = (Vec::new(), Vec::new());
+    for id in ids {
+        let owner = p.user(id)?;
+        if !owner.is_active() { continue; }
+        let mut entry = user(p, &owner, base)?;
+        entry["active"] = true.into(); entry["human"] = (!owner.is_bot()).into(); entry["agent"] = owner.is_bot().into();
+        if owner.is_bot() {
+            if !agent_may_post(p, id, &room)? { continue; }
+            let (provider, description): (Option<String>, Option<String>) = p.conn.query_row(
+                "SELECT provider, description FROM agents WHERE user_id = ? AND suspended_at IS NULL LIMIT 1", [id],
+                |row| Ok((row.get(0)?, row.get(1)?)))?;
+            entry["provider"] = json!(provider); entry["description"] = json!(description);
+            entry.as_object_mut().expect("user payload").retain(|_, value| !value.is_null());
+            agents.push(entry);
+        } else { humans.push(entry); }
+    }
+    humans.sort_by_key(|entry| entry["name"].as_str().unwrap_or_default().to_lowercase());
+    agents.sort_by_key(|entry| entry["name"].as_str().unwrap_or_default().to_lowercase());
+    humans.extend(agents);
+    value["work_owner_options"] = humans.into();
+    let mut query = p.conn.prepare("SELECT id, event_type, created_at, actor_id, from_status, to_status, from_owner_id, from_owner_name, to_owner_id, to_owner_name, metadata FROM work_thread_events WHERE channel_thread_id = ? ORDER BY created_at DESC, id DESC")?;
+    let events = query.query_map([record.id], |row| Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?,
+        row.get::<_, Timestamp>(2)?, row.get::<_, Option<i64>>(3)?, row.get::<_, Option<String>>(4)?, row.get::<_, Option<String>>(5)?,
+        row.get::<_, Option<i64>>(6)?, row.get::<_, Option<String>>(7)?, row.get::<_, Option<i64>>(8)?, row.get::<_, Option<String>>(9)?, row.get::<_, Option<String>>(10)?)))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    let history = events.into_iter().map(|(id, kind, time, actor, before, after, from_id, from_name, to_id, to_name, metadata)| {
+        let mut event = json!({"id": id, "event_type": kind, "created_at": json_time(time.jiff()),
+            "actor": actor.map(|id| p.user(id).and_then(|user_record| user(p, &user_record, base))).transpose()?,
+            "before": {"status": before, "owner": owner_state(from_id, from_name)},
+            "after": {"status": after, "owner": owner_state(to_id, to_name)}});
+        event.as_object_mut().expect("event payload").retain(|_, value| !value.is_null());
+        if let Some(note) = metadata.as_deref().and_then(|text| serde_json::from_str::<Value>(text).ok())
+            .and_then(|value| value["note"].as_str().filter(|note| !note.trim().is_empty()).map(str::to_string)) {
+            event["note"] = note.into();
+        }
+        Ok(event)
+    }).collect::<Result<Vec<Value>>>()?;
+    value["work_history"] = history.into();
+    Ok(value)
+}
+
+fn owner_state(id: Option<i64>, name: Option<String>) -> Value {
+    if id.is_none() && name.as_deref().is_none_or(str::is_empty) { return Value::Null; }
+    let mut owner = json!({"id": id, "name": name});
+    owner.as_object_mut().expect("owner state").retain(|_, value| !value.is_null());
+    owner
 }
 
 fn agent_may_post(p: &Presenter<'_>, user: i64, room: &campfire_db::Room) -> Result<bool> {

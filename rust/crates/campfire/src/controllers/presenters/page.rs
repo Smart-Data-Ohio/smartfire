@@ -35,6 +35,15 @@ pub(crate) use framed_page;
 /// A content-only template: Rails wraps it in the application layout, or in turbo-rails'
 /// `layouts/turbo_rails/frame` when the request carries a `Turbo-Frame` header.
 pub async fn content(c: &mut Ctx, status: StatusCode, render: impl FnOnce(&ViewContext) -> askama::Result<String>) -> Result {
+    content_with_page_title(c, status, None, render).await
+}
+
+/// A content template that sets Rails' `@page_title` before the application layout renders.
+pub async fn titled_content(c: &mut Ctx, status: StatusCode, title: &str, render: impl FnOnce(&ViewContext) -> askama::Result<String>) -> Result {
+    content_with_page_title(c, status, Some(title), render).await
+}
+
+async fn content_with_page_title(c: &mut Ctx, status: StatusCode, title: Option<&str>, render: impl FnOnce(&ViewContext) -> askama::Result<String>) -> Result {
     use askama::Template;
 
     find_template(c, &campfire_kit::format::HTML)?;
@@ -42,7 +51,11 @@ pub async fn content(c: &mut Ctx, status: StatusCode, render: impl FnOnce(&ViewC
     let frame = c.is_turbo_frame_request();
     let html = layout.render(c, |ctx| {
         let content = h::raw(render(ctx)?);
-        if frame { FrameLayout { ctx, head: h::empty(), content }.render() } else { Application::new(ctx, content).render() }
+        if frame { FrameLayout { ctx, head: h::empty(), content }.render() } else {
+            let mut application = Application::new(ctx, content);
+            application.page_title = title.map(str::to_string);
+            application.render()
+        }
     })?;
     Ok(if frame { layout.frame(c, status, html) } else { layout.page(c, status, html) })
 }

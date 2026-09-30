@@ -76,3 +76,30 @@ async fn thread_membership_writes_reject_bot_keys_and_forged_csrf_without_rows()
     assert!(app.db().read(move |conn| ThreadMembership::find_by_thread_and_user(conn, id, DAVID)).await.unwrap().is_none());
     assert!(app.db().read(move |conn| ThreadMembership::find_by_thread_and_user(conn, id, BENDER)).await.unwrap().is_none());
 }
+
+#[tokio::test]
+async fn thread_pages_require_alive_parent_membership_and_nested_room_scope() {
+    let (app, _, id) = fixture().await;
+    let mut david = app.david();
+    assert_eq!(david.get(&format!("/rooms/{QUIET_CORNER}/threads/{id}.json")).await.status, StatusCode::NOT_FOUND);
+    let mut kevin = app.sign_in(KEVIN).await;
+    for path in [format!("/rooms/{ALL_TALK}/threads.json"), format!("/rooms/{ALL_TALK}/threads/{id}.json")] {
+        assert_eq!(kevin.get(&path).await.status, StatusCode::NOT_FOUND);
+    }
+    app.db().write(|tx| { tx.conn().execute("DELETE FROM memberships WHERE user_id = ? AND room_id = ?", (DAVID, ALL_TALK))?; Ok(()) }).await.unwrap();
+    assert_eq!(david.get(&format!("/rooms/{ALL_TALK}/threads.json")).await.status, StatusCode::NOT_FOUND);
+    let mut jason = app.sign_in(JASON).await;
+    app.db().write(|tx| { tx.conn().execute("UPDATE rooms SET deleted_at = ? WHERE id = ?", (tx.now(), ALL_TALK))?; Ok(()) }).await.unwrap();
+    assert_eq!(jason.get(&format!("/rooms/{ALL_TALK}/threads/{id}.json")).await.status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn thread_pages_deny_bot_keys_without_joining_the_browser() {
+    let (app, _, id) = fixture().await;
+    let mut bot = app.anonymous();
+    for path in [format!("/rooms/{ALL_TALK}/threads.json"), format!("/rooms/{ALL_TALK}/threads/{id}.json")] {
+        assert_eq!(bot.get(&format!("{path}?bot_key={BENDER_KEY}")).await.status, StatusCode::FORBIDDEN);
+        assert_eq!(app.david().get(&path).await.status, StatusCode::OK);
+    }
+    assert!(app.db().read(move |conn| ThreadMembership::find_by_thread_and_user(conn, id, DAVID)).await.unwrap().is_none());
+}

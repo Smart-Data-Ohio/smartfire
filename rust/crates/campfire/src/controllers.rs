@@ -187,6 +187,8 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "messages#show" => arc(messages::show),
         "messages#update" => arc(messages::update),
         "messages#destroy" => arc(messages::destroy),
+        "channel_threads#index" => arc(channel_threads::index),
+        "channel_threads#show" => arc(channel_threads::show),
         "channel_threads#join" => arc(channel_threads::join),
         "channel_threads#leave" => arc(channel_threads::leave),
         "channel_threads#read" => arc(channel_threads::read),
