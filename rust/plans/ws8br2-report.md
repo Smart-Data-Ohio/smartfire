@@ -83,7 +83,7 @@ Re-fetched origin/main and re-diffed the owned account/icon/audit/logo/onboardin
 
 ## Fresh-clone verification
 
-Cloned the pushed branch from GitHub into `.scratch/delivery-clone` at `a45b4a27f027f2229febce6a8b2753a11aa379fd`. No target, seed, media runtime, source archive or scratch fixture was copied from the working checkout. Prepared the archive, built both seeds and extracted media independently in the clone. Missing seeds are fatal under `CI=1`. Own target/TMPDIR; ports 52600–52649; no release profile. Metadata completed with the locked lockfile. The existing owned image has the pinned Rails revision.
+Cloned the pushed branch from GitHub into `.scratch/delivery-clone` at `a45b4a27f027f2229febce6a8b2753a11aa379fd`. No target, seed, media runtime, source archive or scratch fixture was copied from the working checkout. Prepared the archive, built both seeds and extracted media independently in the clone. Missing seeds are fatal under `CI=1`. Own target/TMPDIR; ports 52600–52649; no release profile. Metadata completed with the locked lockfile. The fresh clone later pulled documentation-only commits; `git diff a45b4a27 HEAD --name-only` contains only `rust/plans/ws8br2-report.md`. A final image check found a stale `GIT_REVISION=bf3095479a415b9c9131442fae369ac5ee2ebf0a` marker. Before correcting it, checked 2,074 Rails source, fixture, Gemfile/lockfile and runtime-bin files in the owned image against the fresh pinned archive; every file matched byte for byte. Only the non-runtime `bin/release` CLI is absent from the runtime image. Preserved the old tag as `ws8br2-reference:d7c7de92-oldmarker`, then derived a configuration-only image with the correct `GIT_REVISION`. No source or library bytes changed. The image check now passes; both seeds, both validators, all 19 oracles and the complete Rust suite were rerun after this correction.
 
 Commands below ran in the clone, except clone itself from the worktree. Logs live in the parent `.scratch/`. All cited validation commands were rerun this continuation.
 
@@ -99,9 +99,29 @@ CAMPFIRE_REFERENCE="$PWD/rust/parity/.ci/reference" PARITY_NAMESPACE=ws8br2-deli
 CAMPFIRE_REFERENCE="$PWD/rust/parity/.ci/reference" bash rust/reference-tools/users/run_oracles.sh
 ```
 
-Raw archive/seed/media and seed validator summaries (default, then first_run):
+The image-source check ran inside the owned image with the fresh pinned archive mounted read-only:
+
+```sh
+docker run --rm --network none -i --label parity.owner=ws8br2 --label parity.namespace=ws8br2-source --entrypoint ruby -v "$PWD/rust/parity/.ci/reference:/pin:ro" ws8br2-reference:d7c7de92 - <<'RUBY'
+require 'digest'
+paths = Dir.chdir('/pin') { Dir.glob('{app,config,db,lib,public,vendor,test,bin}/**/*', File::FNM_DOTMATCH).select { |path| File.file?(path) } }
+paths += %w[Gemfile Gemfile.lock .ruby-version]
+paths -= ['bin/release']
+paths.each do |path|
+  actual = File.join('/rails', path)
+  raise "missing image file: #{path}" unless File.file?(actual)
+  raise "source mismatch: #{path}" unless Digest::SHA256.file(actual).hexdigest == Digest::SHA256.file(File.join('/pin', path)).hexdigest
+end
+puts "WS8br2 image source verification: #{paths.length} Rails source/fixture/gem files match d7c7de9264c63015be398001d7a1094e7695a6db byte for byte; non-runtime bin/release omitted from image"
+RUBY
+docker image inspect --format '{{range .Config.Env}}{{println .}}{{end}}' ws8br2-reference:d7c7de92 | rg '^GIT_REVISION='
+```
+
+Raw image-source, archive/seed/media and seed validator summaries (default, then first_run):
 
 ```text
+WS8br2 image source verification: 2074 Rails source/fixture/gem files match d7c7de9264c63015be398001d7a1094e7695a6db byte for byte; non-runtime bin/release omitted from image
+GIT_REVISION=d7c7de9264c63015be398001d7a1094e7695a6db
 pin=d7c7de9264c63015be398001d7a1094e7695a6db
 image_key=rust-parity-image-v1-9259468407ef675b49c8961d58752d30a197f666305cd34b0f0295c7ae2e3fd5
 seed_key=rust-parity-seed-v1-3852c7ae11a6e7c2b05c7f0d4313709db82b16e79ba53ebb2cc33e948178c7c4
@@ -141,7 +161,7 @@ Rails named-zone oracle: 152 names, 2 unavailable; reference d7c7de92
 WS8br2 oracle verification: all 19 fresh files match byte for byte; no masks or normalization
 ```
 
-The following environment is applied to each Rust command and compiled-regression command:
+The Rust tests and compiled-regression checks use these seed, media, scratch and test-port settings; metadata and clippy require no runtime media:
 
 ```sh
 export CI=1
@@ -153,24 +173,24 @@ export CABLE_TEST_PORT_RANGE=52600-52649 MAIL_TEST_PORT_RANGE=52600-52649
 
 ```sh
 mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire -p campfire_db -p campfire_kit -- --test-threads=4 --nocapture
-mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire_views --test core -- --nocapture
+mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire_views --test core -- --test-threads=4 --nocapture
 mise exec rust@1.98.1 -- cargo clippy --locked -j 4 --manifest-path rust/Cargo.toml --workspace --exclude html5ever --all-targets -- -D warnings
 ```
 
 Raw test summaries, in order: app, database, kit unit, kit front/http/params/Rails integrations, database/kit doctests; views core; clippy:
 
 ```text
-test result: ok. 498 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 130.87s
-test result: ok. 445 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 70.93s
-test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
-test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.01s
-test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 498 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 93.46s
+test result: ok. 445 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 51.59s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.02s
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.34s
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 11s
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 6.45s
 ```
 
 All active tests passed. Existing ignores: app's reference-recording test, WS11 `manages_bots`, and push-latency measurement; four DB external Rails comparison/export/rollback tests; two kit example doctests. No new ignored tests. These external opt-in comparisons and browser execution are not represented as passing.
