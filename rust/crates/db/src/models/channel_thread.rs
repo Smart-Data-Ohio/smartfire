@@ -665,6 +665,11 @@ impl ChannelThread {
         for message in Message::in_thread(tx.conn(), self.id)? {
             message.destroy_with_conversation(tx)?;
         }
+        // WorkThreadEvent's dependent inbox rows must be destroyed before its FK cascade.
+        tx.conn().execute_cached(
+            "DELETE FROM activity_items WHERE source_type='WorkThreadEvent' AND source_id IN (SELECT id FROM work_thread_events WHERE channel_thread_id=?)",
+            [self.id],
+        )?;
         for sql in [
             r#"DELETE FROM "github_pull_request_threads" WHERE "channel_thread_id" = ?"#,
             r#"DELETE FROM "thread_memberships" WHERE "thread_id" = ?"#,

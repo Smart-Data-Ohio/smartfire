@@ -1,0 +1,339 @@
+{
+  "now": "2026-03-10 12:00:00",
+  "room_id": 699448326,
+  "setup_sql": "INSERT OR REPLACE INTO \"github_repository_subscriptions\" (\"id\",\"created_at\",\"created_by_id\",\"events\",\"owner\",\"reader_verified\",\"repo\",\"room_id\",\"updated_at\") VALUES (1,'2026-03-10 12:00:00',127326141,'[\"opened\",\"merged\",\"review_requested\",\"checks_failed\"]','rails',0,'rails',699448326,'2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"github_notifications\" (\"id\",\"created_at\",\"dedupe_key\",\"message_id\",\"subscription_id\",\"updated_at\") VALUES (1,'2026-03-10 12:00:00','ws8-delete',NULL,1,'2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"event_references\" (\"id\",\"created_at\",\"event_id\",\"message_id\",\"updated_at\") VALUES (1,'2026-03-10 12:00:00',439674038,935961889,'2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"event_references\" (\"id\",\"created_at\",\"event_id\",\"message_id\",\"updated_at\") VALUES (2,'2026-03-10 12:00:00',439674038,935961887,'2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"event_calendar_entries\" (\"id\",\"created_at\",\"event_id\",\"google_event_id\",\"last_error\",\"synced_at\",\"updated_at\",\"user_id\") VALUES (1,'2026-03-10 12:00:00',439674038,'ws8-calendar-copy',NULL,NULL,'2026-03-10 12:00:00',127326141);\nINSERT OR REPLACE INTO \"channel_threads\" (\"id\",\"auto_archive_after_minutes\",\"closed_at\",\"created_at\",\"creator_id\",\"last_activity_at\",\"locked_at\",\"messages_count\",\"name\",\"parent_message_id\",\"result_markdown\",\"result_updated_at\",\"result_updated_by_id\",\"room_id\",\"run_url\",\"updated_at\",\"work_owner_id\",\"work_status\",\"work_status_changed_at\") VALUES (1,4320,NULL,'2026-03-10 12:00:00',127326141,'2026-03-10 12:00:00',NULL,1,'Discussion',NULL,NULL,NULL,NULL,699448326,NULL,'2026-03-10 12:00:00',NULL,NULL,NULL);\nINSERT OR REPLACE INTO \"work_thread_events\" (\"id\",\"actor_id\",\"channel_thread_id\",\"created_at\",\"event_type\",\"from_owner_id\",\"from_owner_name\",\"from_status\",\"metadata\",\"to_owner_id\",\"to_owner_name\",\"to_status\",\"updated_at\") VALUES (1,127326141,1,'2026-03-10 12:00:00','work_update',NULL,NULL,NULL,NULL,NULL,NULL,'planned','2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"activity_items\" (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (1,'2026-03-10 12:00:00','work_update',NULL,NULL,1,'WorkThreadEvent','2026-03-10 12:00:00',149087659);\nINSERT OR REPLACE INTO \"activity_items\" (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (2,'2026-03-10 12:00:00','scheduled_message_dropped',NULL,NULL,1,'ScheduledMessage','2026-03-10 12:00:00',127326141);\nINSERT OR REPLACE INTO \"activity_items\" (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (3,'2026-03-10 12:00:00','event_invitation',NULL,NULL,439674038,'Event','2026-03-10 12:00:00',149087659);\nINSERT OR REPLACE INTO \"activity_items\" (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (4,'2026-03-10 12:00:00','huddle_missed',NULL,NULL,1,'HuddleGrant','2026-03-10 12:00:00',127326141);\nINSERT OR REPLACE INTO \"activity_items\" (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (5,'2026-03-10 12:00:00','agent_approval_request',NULL,NULL,1,'AgentApproval','2026-03-10 12:00:00',127326141);\nINSERT OR REPLACE INTO \"activity_items\" (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (6,'2026-03-10 12:00:00','agent_approval_request',NULL,NULL,1,'AgentApproval','2026-03-10 12:00:00',149087659);\nINSERT OR REPLACE INTO \"thread_memberships\" (\"id\",\"created_at\",\"involvement\",\"joined_at\",\"thread_id\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (1,'2026-03-10 12:00:00','mentions','2026-03-10 12:00:00',1,NULL,'2026-03-10 12:00:00',149087659);\nINSERT OR REPLACE INTO \"agent_approvals\" (\"id\",\"action\",\"agent_credential_id\",\"agent_id\",\"created_at\",\"decided_at\",\"decided_by_id\",\"decision_note\",\"expires_at\",\"external_id\",\"fizzy_connected_account_id\",\"fizzy_user_id\",\"fizzy_user_name\",\"github_account_id\",\"github_login\",\"payload\",\"room_id\",\"status\",\"summary\",\"updated_at\") VALUES (1,'github.comment',NULL,773018776,'2026-03-10 12:00:00',NULL,NULL,NULL,'2026-03-10 13:00:00',NULL,NULL,NULL,NULL,NULL,NULL,NULL,699448326,'pending','Preserved','2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"scheduled_messages\" (\"id\",\"claimed_at\",\"created_at\",\"drop_reason\",\"dropped_at\",\"markdown_source\",\"reply_to_message_id\",\"room_id\",\"send_at\",\"sent_at\",\"sent_message_id\",\"thread_id\",\"updated_at\",\"user_id\") VALUES (1,NULL,'2026-03-10 12:00:00','fixture','2026-03-10 12:00:00','Pending',NULL,699448326,'2026-03-10 13:00:00',NULL,NULL,1,'2026-03-10 12:00:00',127326141);\nINSERT OR REPLACE INTO \"messages\" (\"id\",\"action\",\"board_post_opener\",\"client_message_id\",\"created_at\",\"creator_id\",\"edited_at\",\"embeds_suppressed\",\"forward_note\",\"forwarded_at\",\"forwarded_from_message_id\",\"forwarded_markdown\",\"markdown_source\",\"reply_notify_author\",\"reply_target_deleted_at\",\"reply_to_message_id\",\"room_id\",\"stream_broadcast_at\",\"streaming\",\"streaming_updated_at\",\"system_note\",\"thread_id\",\"updated_at\") VALUES (935961887,0,0,'947051e9-674a-4250-8163-849a7651d65b','2026-03-10 12:00:00',127326141,NULL,0,NULL,NULL,NULL,0,'Root',1,NULL,NULL,699448326,NULL,0,NULL,0,NULL,'2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"messages\" (\"id\",\"action\",\"board_post_opener\",\"client_message_id\",\"created_at\",\"creator_id\",\"edited_at\",\"embeds_suppressed\",\"forward_note\",\"forwarded_at\",\"forwarded_from_message_id\",\"forwarded_markdown\",\"markdown_source\",\"reply_notify_author\",\"reply_target_deleted_at\",\"reply_to_message_id\",\"room_id\",\"stream_broadcast_at\",\"streaming\",\"streaming_updated_at\",\"system_note\",\"thread_id\",\"updated_at\") VALUES (935961888,0,0,'c44e0cfa-8c42-43fa-818e-d1f93bbf3212','2026-03-10 12:00:00',149087659,NULL,0,NULL,NULL,NULL,0,'Reply',1,NULL,NULL,699448326,NULL,0,NULL,0,1,'2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"messages\" (\"id\",\"action\",\"board_post_opener\",\"client_message_id\",\"created_at\",\"creator_id\",\"edited_at\",\"embeds_suppressed\",\"forward_note\",\"forwarded_at\",\"forwarded_from_message_id\",\"forwarded_markdown\",\"markdown_source\",\"reply_notify_author\",\"reply_target_deleted_at\",\"reply_to_message_id\",\"room_id\",\"stream_broadcast_at\",\"streaming\",\"streaming_updated_at\",\"system_note\",\"thread_id\",\"updated_at\") VALUES (935961889,0,0,'6e57fdc2-1bab-450a-99a3-4d4f21ddbecc','2026-03-10 12:00:00',127326141,NULL,0,NULL,NULL,NULL,0,'Scheduled an event: Meeting\n/rooms/699448326/events/439674038',1,NULL,NULL,699448326,NULL,0,NULL,0,NULL,'2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"agent_events\" (\"id\",\"actor_id\",\"agent_approval_id\",\"agent_credential_id\",\"agent_id\",\"chain_id\",\"created_at\",\"detail\",\"event_type\",\"hop\",\"message_id\",\"metadata\",\"outcome\",\"room_id\",\"webhook_attempts\",\"webhook_last_error\",\"webhook_next_attempt_at\",\"webhook_status\") VALUES (1,NULL,NULL,NULL,773018776,NULL,'2026-03-10 12:00:00',NULL,'mention',0,NULL,NULL,'pending',699448326,0,NULL,NULL,'none');\nINSERT OR REPLACE INTO \"streams\" (\"id\",\"created_at\",\"ended_at\",\"membership_id\",\"quality\",\"room_id\",\"started_at\",\"updated_at\",\"user_id\") VALUES (1,'2026-03-10 12:00:00',NULL,1021579653,'1080p15',699448326,'2026-03-10 12:00:00','2026-03-10 12:00:00',127326141);\nINSERT OR REPLACE INTO \"action_text_rich_texts\" (\"id\",\"body\",\"created_at\",\"name\",\"record_id\",\"record_type\",\"updated_at\") VALUES (935961887,'<p>Root</p>','2026-03-10 12:00:00','body',935961887,'Message','2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"action_text_rich_texts\" (\"id\",\"body\",\"created_at\",\"name\",\"record_id\",\"record_type\",\"updated_at\") VALUES (935961888,'<p>Reply</p>','2026-03-10 12:00:00','body',935961888,'Message','2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"action_text_rich_texts\" (\"id\",\"body\",\"created_at\",\"name\",\"record_id\",\"record_type\",\"updated_at\") VALUES (935961889,'<p>Scheduled an event: Meeting\n/rooms/699448326/events/439674038</p>','2026-03-10 12:00:00','body',935961889,'Message','2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"events\" (\"id\",\"cancelled_at\",\"created_at\",\"description\",\"ends_at\",\"meet_link\",\"meet_link_requested\",\"organizer_id\",\"recurrence_rule\",\"recurrence_until\",\"reminded_at\",\"room_id\",\"series_id\",\"starts_at\",\"time_zone\",\"title\",\"updated_at\",\"venue_room_id\") VALUES (439674038,NULL,'2026-03-10 12:00:00',NULL,NULL,NULL,0,127326141,NULL,NULL,NULL,699448326,NULL,'2026-03-12 12:00:00','UTC','Meeting','2026-03-10 12:00:00',NULL);\nINSERT OR REPLACE INTO \"rooms\" (\"id\",\"created_at\",\"creator_id\",\"deleted_at\",\"destroy_enqueued_at\",\"direct_member_key\",\"icon_name\",\"inbound_email_token\",\"name\",\"pins_changed_at\",\"type\",\"updated_at\") VALUES (699448326,'2026-03-10 12:00:00',127326141,NULL,NULL,NULL,NULL,NULL,'Destroy oracle',NULL,'Rooms::Stage','2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"agent_grants\" (\"id\",\"agent_id\",\"capability\",\"created_at\",\"granted_by_id\",\"revoked_at\",\"room_id\",\"updated_at\") VALUES (1,773018776,'read_messages','2026-03-10 12:00:00',127326141,NULL,699448326,'2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"users\" (\"id\",\"bio\",\"bot_token\",\"bot_token_digest\",\"created_at\",\"custom_status_emoji\",\"custom_status_expires_at\",\"custom_status_text\",\"dnd_enabled\",\"dnd_until\",\"email_address\",\"email_self_changed_at\",\"github_login\",\"google_email_link_allowed\",\"icon_name\",\"inbox_preferences\",\"meeting_dnd_enabled\",\"meeting_status_enabled\",\"name\",\"ooo_broadcast\",\"ooo_calendar_enabled\",\"ooo_note\",\"ooo_notify_enabled\",\"ooo_until\",\"password_digest\",\"presence_setting\",\"push_to_talk_key\",\"quiet_hours_enabled\",\"quiet_hours_end_minute\",\"quiet_hours_start_minute\",\"role\",\"status\",\"text_size\",\"theme\",\"time_zone\",\"time_zone_explicit\",\"tour_completed_at\",\"updated_at\",\"voice_mode\") VALUES (773523954,NULL,NULL,'e6ef439dd36c40cb0ad97953092b29851179e02a0831a0955887bc3ef7f4179d','2026-03-10 12:00:00',NULL,NULL,NULL,0,NULL,NULL,NULL,NULL,0,NULL,'{}',0,0,'GitHub',NULL,0,NULL,0,NULL,NULL,'auto',NULL,0,NULL,NULL,2,0,'default','system',NULL,0,NULL,'2026-03-10 12:00:00',NULL);\nINSERT OR REPLACE INTO \"event_attendances\" (\"id\",\"created_at\",\"event_id\",\"response\",\"updated_at\",\"user_id\") VALUES (937100614,'2026-03-10 12:00:00',439674038,'going','2026-03-10 12:00:00',127326141);\nINSERT OR REPLACE INTO \"huddle_cleanups\" (\"id\",\"attempts\",\"completed_at\",\"created_at\",\"enqueued_at\",\"huddle_grant_id\",\"identity\",\"last_attempted_at\",\"next_attempt_at\",\"operation\",\"room_name\",\"updated_at\") VALUES (1,0,NULL,'2026-03-10 12:00:00',NULL,1,'ws8-participant',NULL,NULL,'remove_participant','ws8-livekit-room','2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"memberships\" (\"id\",\"connected_at\",\"connections\",\"created_at\",\"favorite_position\",\"hand_raised_at\",\"involvement\",\"last_huddle_join_push_at\",\"last_read_message_id\",\"room_category_id\",\"room_id\",\"server_muted_at\",\"stage_role\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (1021579653,NULL,0,'2026-09-30 01:21:36.386',NULL,NULL,'mentions',NULL,935961889,NULL,699448326,NULL,'host',NULL,'2026-03-10 12:00:00',127326141);\nINSERT OR REPLACE INTO \"memberships\" (\"id\",\"connected_at\",\"connections\",\"created_at\",\"favorite_position\",\"hand_raised_at\",\"involvement\",\"last_huddle_join_push_at\",\"last_read_message_id\",\"room_category_id\",\"room_id\",\"server_muted_at\",\"stage_role\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (1021579654,NULL,0,'2026-09-30 01:21:36.386',NULL,NULL,'mentions',NULL,NULL,NULL,699448326,NULL,'listener','2026-03-10 12:00:00','2026-03-10 12:00:00',149087659);\nINSERT OR REPLACE INTO \"memberships\" (\"id\",\"connected_at\",\"connections\",\"created_at\",\"favorite_position\",\"hand_raised_at\",\"involvement\",\"last_huddle_join_push_at\",\"last_read_message_id\",\"room_category_id\",\"room_id\",\"server_muted_at\",\"stage_role\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (1021579655,NULL,0,'2026-03-10 12:00:00',NULL,NULL,'mentions',NULL,NULL,NULL,699448326,NULL,'listener',NULL,'2026-03-10 12:00:00',773523954);\nINSERT OR REPLACE INTO \"huddle_grants\" (\"id\",\"created_at\",\"identity\",\"last_issued_at\",\"last_seen_at\",\"membership_id\",\"revoked_at\",\"room_id\",\"room_name\",\"server_muted\",\"session_id\",\"stage_role\",\"updated_at\",\"user_id\") VALUES (1,'2026-03-10 12:00:00','ws8-participant',NULL,NULL,1021579653,NULL,699448326,'ws8-livekit-room',0,481019661,NULL,'2026-03-10 12:00:00',127326141);",
+  "begun": [
+    {
+      "sql": "SELECT deleted_at,direct_member_key FROM rooms WHERE id=699448326",
+      "rows": [
+        [
+          "2026-03-10 12:00:00",
+          null
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT id FROM memberships WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT revoked_at,updated_at FROM huddle_grants WHERE id=1",
+      "rows": [
+        [
+          "2026-03-10 12:00:00",
+          "2026-03-10 12:00:00"
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT revoked_at,updated_at FROM agent_grants WHERE room_id=699448326",
+      "rows": [
+        [
+          "2026-03-10 12:00:00",
+          "2026-03-10 12:00:00"
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT ended_at,updated_at FROM streams WHERE room_id=699448326",
+      "rows": [
+        [
+          "2026-03-10 12:00:00",
+          "2026-03-10 12:00:00"
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT operation,room_name,huddle_grant_id FROM huddle_cleanups WHERE room_name='ws8-livekit-room' ORDER BY id",
+      "rows": [
+        [
+          "remove_participant",
+          "ws8-livekit-room",
+          1
+        ],
+        [
+          "delete_room",
+          "ws8-livekit-room",
+          null
+        ]
+      ]
+    }
+  ],
+  "finished": [
+    {
+      "sql": "SELECT id FROM memberships WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM messages WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM channel_threads WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM scheduled_messages WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM events WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM huddle_grants WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM streams WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM github_repository_subscriptions WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM agent_grants WHERE room_id=699448326",
+      "rows": [
+        [
+          1
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT id FROM message_pins WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM board_tag_assignments WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM board_sla_rules WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM board_sla_nudges WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM board_stale_digests WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM rooms WHERE id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT room_id FROM agent_events WHERE id=1",
+      "rows": [
+        [
+          null
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT room_id FROM agent_approvals WHERE id=1",
+      "rows": [
+        [
+          null
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT huddle_grant_id,room_name,identity FROM huddle_cleanups WHERE room_name IN ('ws8-livekit-room','campfire-room-b0d6314411a8ffded9de669d532a6b53521411973832d696f3f73d5ce5f81761') ORDER BY id",
+      "rows": [
+        [
+          null,
+          "ws8-livekit-room",
+          "ws8-participant"
+        ],
+        [
+          null,
+          "ws8-livekit-room",
+          null
+        ],
+        [
+          null,
+          "campfire-room-b0d6314411a8ffded9de669d532a6b53521411973832d696f3f73d5ce5f81761",
+          null
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT id FROM event_calendar_entries WHERE event_id=439674038",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM event_attendances WHERE event_id=439674038",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM github_notifications WHERE subscription_id=1",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM activity_items WHERE (source_type='ScheduledMessage' AND source_id=1) OR (source_type='HuddleGrant' AND source_id=1) OR (source_type='WorkThreadEvent' AND source_id=1) OR (source_type='Event' AND source_id=439674038)",
+      "rows": []
+    }
+  ],
+  "calendar_jobs": [
+    [
+      127326141,
+      "ws8-calendar-copy"
+    ]
+  ],
+  "progress": [
+    {
+      "sql": "SELECT id FROM memberships WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM messages WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM channel_threads WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM scheduled_messages WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM events WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM huddle_grants WHERE room_id=699448326",
+      "rows": []
+    },
+    {
+      "sql": "SELECT id FROM streams WHERE room_id=699448326",
+      "rows": [
+        [
+          1
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT id FROM github_repository_subscriptions WHERE room_id=699448326",
+      "rows": [
+        [
+          1
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT id FROM agent_grants WHERE room_id=699448326",
+      "rows": [
+        [
+          1
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT id FROM rooms WHERE id=699448326",
+      "rows": [
+        [
+          699448326
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT room_id FROM agent_events WHERE id=1",
+      "rows": [
+        [
+          699448326
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT room_id FROM agent_approvals WHERE id=1",
+      "rows": [
+        [
+          699448326
+        ]
+      ]
+    }
+  ],
+  "live": {
+    "now": "2026-03-10 12:00:00",
+    "setup_sql": "INSERT OR REPLACE INTO \"rooms\" (\"id\",\"created_at\",\"creator_id\",\"deleted_at\",\"destroy_enqueued_at\",\"direct_member_key\",\"icon_name\",\"inbound_email_token\",\"name\",\"pins_changed_at\",\"type\",\"updated_at\") VALUES (699448327,'2026-03-10 12:00:00',127326141,NULL,NULL,NULL,NULL,NULL,'Live',NULL,'Rooms::Closed','2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"memberships\" (\"id\",\"connected_at\",\"connections\",\"created_at\",\"favorite_position\",\"hand_raised_at\",\"involvement\",\"last_huddle_join_push_at\",\"last_read_message_id\",\"room_category_id\",\"room_id\",\"server_muted_at\",\"stage_role\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (1021579656,NULL,0,'2026-09-30 01:21:36.968',NULL,NULL,'mentions',NULL,NULL,NULL,699448327,NULL,NULL,NULL,'2026-09-30 01:21:36.968',127326141);",
+    "room_id": 699448327,
+    "checks": [
+      {
+        "sql": "SELECT id,deleted_at,destroy_enqueued_at FROM rooms WHERE id=699448327",
+        "rows": [
+          [
+            699448327,
+            null,
+            null
+          ]
+        ]
+      }
+    ]
+  },
+  "recovery": {
+    "now": "2026-03-10 12:00:00",
+    "setup_sql": "INSERT OR REPLACE INTO \"rooms\" (\"id\",\"created_at\",\"creator_id\",\"deleted_at\",\"destroy_enqueued_at\",\"direct_member_key\",\"icon_name\",\"inbound_email_token\",\"name\",\"pins_changed_at\",\"type\",\"updated_at\") VALUES (699448327,'2026-03-10 12:00:00',127326141,NULL,NULL,NULL,NULL,NULL,'Live',NULL,'Rooms::Closed','2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"rooms\" (\"id\",\"created_at\",\"creator_id\",\"deleted_at\",\"destroy_enqueued_at\",\"direct_member_key\",\"icon_name\",\"inbound_email_token\",\"name\",\"pins_changed_at\",\"type\",\"updated_at\") VALUES (699448328,'2026-03-10 12:00:00',127326141,'2026-03-10 11:49:00',NULL,NULL,NULL,NULL,'unclaimed',NULL,'Rooms::Closed','2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"rooms\" (\"id\",\"created_at\",\"creator_id\",\"deleted_at\",\"destroy_enqueued_at\",\"direct_member_key\",\"icon_name\",\"inbound_email_token\",\"name\",\"pins_changed_at\",\"type\",\"updated_at\") VALUES (699448329,'2026-03-10 12:00:00',127326141,'2026-03-10 11:49:00','2026-03-10 11:49:00',NULL,NULL,NULL,'expired',NULL,'Rooms::Closed','2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"rooms\" (\"id\",\"created_at\",\"creator_id\",\"deleted_at\",\"destroy_enqueued_at\",\"direct_member_key\",\"icon_name\",\"inbound_email_token\",\"name\",\"pins_changed_at\",\"type\",\"updated_at\") VALUES (699448330,'2026-03-10 12:00:00',127326141,'2026-03-10 11:49:00','2026-03-10 11:51:00',NULL,NULL,NULL,'held',NULL,'Rooms::Closed','2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"rooms\" (\"id\",\"created_at\",\"creator_id\",\"deleted_at\",\"destroy_enqueued_at\",\"direct_member_key\",\"icon_name\",\"inbound_email_token\",\"name\",\"pins_changed_at\",\"type\",\"updated_at\") VALUES (699448331,'2026-03-10 12:00:00',127326141,'2026-03-10 11:50:00',NULL,NULL,NULL,NULL,'boundary_deleted',NULL,'Rooms::Closed','2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"rooms\" (\"id\",\"created_at\",\"creator_id\",\"deleted_at\",\"destroy_enqueued_at\",\"direct_member_key\",\"icon_name\",\"inbound_email_token\",\"name\",\"pins_changed_at\",\"type\",\"updated_at\") VALUES (699448332,'2026-03-10 12:00:00',127326141,'2026-03-10 11:49:00','2026-03-10 11:50:00',NULL,NULL,NULL,'boundary_claim',NULL,'Rooms::Closed','2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"huddle_cleanups\" (\"id\",\"attempts\",\"completed_at\",\"created_at\",\"enqueued_at\",\"huddle_grant_id\",\"identity\",\"last_attempted_at\",\"next_attempt_at\",\"operation\",\"room_name\",\"updated_at\") VALUES (4,0,NULL,'2026-03-10 12:00:00',NULL,NULL,NULL,NULL,NULL,'delete_room','campfire-room-d2a80f8394b803d46a09d4f563c4ab3f680e754212a408b4f5960e7692f8c385','2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"huddle_cleanups\" (\"id\",\"attempts\",\"completed_at\",\"created_at\",\"enqueued_at\",\"huddle_grant_id\",\"identity\",\"last_attempted_at\",\"next_attempt_at\",\"operation\",\"room_name\",\"updated_at\") VALUES (5,0,NULL,'2026-03-10 12:00:00',NULL,NULL,NULL,NULL,NULL,'delete_room','campfire-room-14e7865e10c7eff1020dbd511225608e64986f4be0587b14ce1da8ec725954ee','2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"huddle_cleanups\" (\"id\",\"attempts\",\"completed_at\",\"created_at\",\"enqueued_at\",\"huddle_grant_id\",\"identity\",\"last_attempted_at\",\"next_attempt_at\",\"operation\",\"room_name\",\"updated_at\") VALUES (6,0,NULL,'2026-03-10 12:00:00',NULL,NULL,NULL,NULL,NULL,'delete_room','campfire-room-7fc9c19ecd796360af6b444c152ab00d486d67874f7d8cc51ecf96097a0b9d0c','2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"huddle_cleanups\" (\"id\",\"attempts\",\"completed_at\",\"created_at\",\"enqueued_at\",\"huddle_grant_id\",\"identity\",\"last_attempted_at\",\"next_attempt_at\",\"operation\",\"room_name\",\"updated_at\") VALUES (7,0,NULL,'2026-03-10 12:00:00',NULL,NULL,NULL,NULL,NULL,'delete_room','campfire-room-dd46562c83362f488574b1d339f146b755fe8d276f2cf05012a0f4f703d01e1f','2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"huddle_cleanups\" (\"id\",\"attempts\",\"completed_at\",\"created_at\",\"enqueued_at\",\"huddle_grant_id\",\"identity\",\"last_attempted_at\",\"next_attempt_at\",\"operation\",\"room_name\",\"updated_at\") VALUES (8,0,NULL,'2026-03-10 12:00:00',NULL,NULL,NULL,NULL,NULL,'delete_room','campfire-room-9ae2900b5a49b117f3bd39cdd5d5322d32d2dcccdddbd9367662346faf3cba9d','2026-03-10 12:00:00');\nINSERT OR REPLACE INTO \"memberships\" (\"id\",\"connected_at\",\"connections\",\"created_at\",\"favorite_position\",\"hand_raised_at\",\"involvement\",\"last_huddle_join_push_at\",\"last_read_message_id\",\"room_category_id\",\"room_id\",\"server_muted_at\",\"stage_role\",\"unread_at\",\"updated_at\",\"user_id\") VALUES (1021579656,NULL,0,'2026-09-30 01:21:36.968',NULL,NULL,'mentions',NULL,NULL,NULL,699448327,NULL,NULL,NULL,'2026-09-30 01:21:36.968',127326141);",
+    "ids": [
+      699448328,
+      699448329
+    ],
+    "checks": [
+      {
+        "sql": "SELECT id,deleted_at,destroy_enqueued_at FROM rooms WHERE name IN ('unclaimed','expired','held','boundary_deleted','boundary_claim') ORDER BY id",
+        "rows": [
+          [
+            699448328,
+            "2026-03-10 11:49:00",
+            "2026-03-10 12:00:00"
+          ],
+          [
+            699448329,
+            "2026-03-10 11:49:00",
+            "2026-03-10 12:00:00"
+          ],
+          [
+            699448330,
+            "2026-03-10 11:49:00",
+            "2026-03-10 11:51:00"
+          ],
+          [
+            699448331,
+            "2026-03-10 11:50:00",
+            null
+          ],
+          [
+            699448332,
+            "2026-03-10 11:49:00",
+            "2026-03-10 11:50:00"
+          ]
+        ]
+      }
+    ],
+    "repeat_ids": [],
+    "expired_claim_count": 5
+  },
+  "readers": {
+    "all": [
+      104393281,
+      186869642,
+      201306877,
+      340026324,
+      486777696,
+      654632876,
+      699448325,
+      699448327
+    ],
+    "closed": [
+      486777696,
+      654632876,
+      699448327
+    ],
+    "original": 104393281
+  },
+  "huddle_secret": "fixture-secret",
+  "huddle_name": "campfire-room-b0d6314411a8ffded9de669d532a6b53521411973832d696f3f73d5ce5f81761"
+}

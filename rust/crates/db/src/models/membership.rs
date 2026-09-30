@@ -198,7 +198,7 @@ impl Membership {
     pub fn visible_with_ordered_room(conn: &Connection, user_id: i64) -> Result<Vec<(Self, Room)>> {
         query_all(
             conn,
-            &format!(r#"SELECT "memberships".*, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "memberships"."user_id" = ? AND "memberships"."involvement" != 'invisible' ORDER BY LOWER(rooms.name)"#, Room::PREFIXED_COLUMNS),
+            &format!(r#"SELECT "memberships".*, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? AND "memberships"."involvement" != 'invisible' ORDER BY LOWER(rooms.name)"#, Room::PREFIXED_COLUMNS),
             [user_id],
             |row| Ok((Self::from_row(row)?, Room::from_prefixed_row(row)?)),
         )
@@ -208,7 +208,7 @@ impl Membership {
     pub fn with_ordered_room(conn: &Connection, user_id: i64) -> Result<Vec<(Self, Room)>> {
         query_all(
             conn,
-            &format!(r#"SELECT "memberships".*, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "memberships"."user_id" = ? ORDER BY LOWER(rooms.name)"#, Room::PREFIXED_COLUMNS),
+            &format!(r#"SELECT "memberships".*, {} FROM "memberships" INNER JOIN "rooms" ON "rooms"."id" = "memberships"."room_id" WHERE "rooms"."deleted_at" IS NULL AND "memberships"."user_id" = ? ORDER BY LOWER(rooms.name)"#, Room::PREFIXED_COLUMNS),
             [user_id],
             |row| Ok((Self::from_row(row)?, Room::from_prefixed_row(row)?)),
         )
@@ -218,7 +218,7 @@ impl Membership {
     pub fn count_without_direct_rooms(conn: &Connection, user_id: i64) -> Result<i64> {
         sql::count(
             conn,
-            r#"SELECT COUNT(*) FROM "memberships" INNER JOIN "rooms" "room" ON "room"."id" = "memberships"."room_id" WHERE "memberships"."user_id" = ? AND "room"."type" != 'Rooms::Direct'"#,
+            r#"SELECT COUNT(*) FROM "memberships" INNER JOIN "rooms" "room" ON "room"."id" = "memberships"."room_id" WHERE "room"."deleted_at" IS NULL AND "memberships"."user_id" = ? AND "room"."type" != 'Rooms::Direct'"#,
             [user_id],
         )
     }

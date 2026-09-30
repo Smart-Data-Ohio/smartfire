@@ -140,6 +140,7 @@ impl Room {
         })
     }
 
+    /// Unscoped association/maintenance lookup, like Room.find. Access checks use find_for_user.
     pub fn find(conn: &Connection, id: i64) -> Result<Self> {
         Self::find_by_id(conn, id)?.or_not_found("Room")
     }
@@ -154,14 +155,14 @@ impl Room {
     }
 
     pub fn all(conn: &Connection) -> Result<Vec<Self>> {
-        query_all(conn, r#"SELECT * FROM "rooms""#, [], Self::from_row)
+        query_all(conn, r#"SELECT * FROM "rooms" WHERE "deleted_at" IS NULL"#, [], Self::from_row)
     }
 
     /// `Room.opens` / `closeds` / `directs` / `voices` / `boards` (and `where(type:)` for stages)
     pub fn of_type(conn: &Connection, room_type: RoomType) -> Result<Vec<Self>> {
         query_all(
             conn,
-            r#"SELECT * FROM "rooms" WHERE "rooms"."type" = ?"#,
+            r#"SELECT * FROM "rooms" WHERE "rooms"."deleted_at" IS NULL AND "rooms"."type" = ?"#,
             [room_type],
             Self::from_row,
         )
@@ -170,7 +171,7 @@ impl Room {
     pub fn count_of_type(conn: &Connection, room_type: RoomType) -> Result<i64> {
         sql::count(
             conn,
-            r#"SELECT COUNT(*) FROM "rooms" WHERE "rooms"."type" = ?"#,
+            r#"SELECT COUNT(*) FROM "rooms" WHERE "rooms"."deleted_at" IS NULL AND "rooms"."type" = ?"#,
             [room_type],
         )
     }
@@ -179,7 +180,7 @@ impl Room {
     pub fn original(conn: &Connection) -> Result<Option<Self>> {
         query_one(
             conn,
-            r#"SELECT * FROM "rooms" ORDER BY "rooms"."created_at" ASC LIMIT 1"#,
+            r#"SELECT * FROM "rooms" WHERE "rooms"."deleted_at" IS NULL ORDER BY "rooms"."created_at" ASC LIMIT 1"#,
             [],
             Self::from_row,
         )
@@ -471,28 +472,14 @@ impl Room {
         Ok(())
     }
 
-    /// `room.destroy`: memberships are deleted without callbacks, messages are destroyed. Upstream's
-    /// shape: our rooms are soft-deleted first (`begin_destroy!`) and destroyed in batches by
-    /// `Room::DestroyJob`, which clears many more dependents; neither is ported yet.
+    /// Room#destroy with its dependent callbacks; asynchronous deletion uses room_delete::perform.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
-        tx.conn().execute_cached(
-            r#"DELETE FROM "memberships" WHERE "memberships"."room_id" = ?"#,
-            [self.id],
-        )?;
-        for message in Message::for_room(tx.conn(), self.id)? {
-            message.destroy(tx)?;
-        }
-        tx.conn()
-            .execute_cached(r#"DELETE FROM "rooms" WHERE "rooms"."id" = ?"#, [self.id])?;
-        Ok(())
+        crate::models::room_delete::destroy(tx, self)
     }
 
-    /// Core mark/removal portion of `begin_destroy!`. The room-delete domain extends this with
-    /// grant/stream cleanup; the caller must enqueue the destroy in this same transaction.
+    /// Immediately revoke access and atomically request asynchronous destruction.
     pub fn begin_destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
-        tx.conn().execute_cached("UPDATE rooms SET deleted_at=?,direct_member_key=NULL,updated_at=? WHERE id=?",params![tx.now(),tx.now(),self.id])?;
-        tx.conn().execute_cached("DELETE FROM memberships WHERE room_id=?",[self.id])?;
-        Ok(())
+        crate::models::room_delete::begin_destroy(tx, self, &crate::models::room_delete::HuddleConfig::from_env())
     }
 
     // Memberships

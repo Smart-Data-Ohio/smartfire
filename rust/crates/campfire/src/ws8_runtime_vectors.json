@@ -71,6 +71,14 @@
     {
       "name": "poll closing",
       "seconds": 17
+    },
+    {
+      "name": "stuck rooms",
+      "seconds": 300
+    },
+    {
+      "name": "retention prune",
+      "seconds": 123
     }
   ],
   "broadcasts": [

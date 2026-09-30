@@ -271,3 +271,31 @@ fn source_edit_rolls_back_with_a_failed_quote_refresh_enqueue() {
         serde_json::json!({"source_message_id":source})
     );
 }
+
+#[test]
+fn room_mark_and_memberships_roll_back_with_a_failed_destroy_enqueue() {
+    let (h, _, room, _) = messaging_harness();
+    let before=h.db.read_blocking(move|c|Room::find(c,room)).unwrap();
+    reject_jobs(&h);
+    assert!(h.db.write_blocking(move|tx|Room::find(tx.conn(),room)?.begin_destroy(tx)).is_err());
+    assert_eq!(h.db.read_blocking(move|c|Room::find(c,room)).unwrap(),before);
+    assert_eq!(h.db.read_blocking(move|c|Ok(Room::find(c,room)?.memberships(c)?.len())).unwrap(),1);
+    assert!(h.jobs().is_empty());
+    restore_jobs(&h);
+    h.db.write_blocking(move|tx|Room::find(tx.conn(),room)?.begin_destroy(tx)).unwrap();
+    assert_eq!(h.jobs()[0].class,"Room::DestroyJob");
+}
+#[test]
+fn stuck_room_claim_rolls_back_with_a_failed_destroy_enqueue() {
+    let (h, _, room, _) = messaging_harness();
+    h.db.write_blocking(move|tx| {
+        tx.conn().execute_cached("UPDATE rooms SET deleted_at=?,destroy_enqueued_at=NULL WHERE id=?",rusqlite::params![tx.now().ago(jiff::SignedDuration::from_secs(601)),room])?; Ok(())
+    }).unwrap();
+    reject_jobs(&h);
+    assert!(h.db.write_blocking(|tx|campfire_db::models::room_delete::reenqueue_stuck(tx,600)).is_err());
+    assert!(h.db.read_blocking(move|c|Room::find(c,room)).unwrap().destroy_enqueued_at.is_none());
+    assert!(h.jobs().is_empty());
+    restore_jobs(&h);
+    assert_eq!(h.db.write_blocking(|tx|campfire_db::models::room_delete::reenqueue_stuck(tx,600)).unwrap(),1);
+    assert_eq!(h.jobs()[0].class,"Room::DestroyJob");
+}

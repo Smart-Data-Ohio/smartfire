@@ -751,3 +751,17 @@ fn ws8_template_free_broadcast_payloads_match_rails() {
         );
     }
 }
+
+#[tokio::test]
+async fn ws8_room_and_retention_workers_run_in_the_real_app() {
+    let (booted, _dir)=app().await; let app=booted.app.clone();
+    app.db.write(|tx| {
+        tx.emit_after_commit(Event::job(&campfire_db::models::room_delete::DestroyJob{room_id:999}));
+        tx.emit_after_commit(Event::job(&campfire_db::models::retention::PruneJob{}));
+        assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class IN ('Room::DestroyJob','Retention::PruneJob')",[],|r|r.get::<_,i64>(0))?,2);
+        Ok(())
+    }).await.unwrap();
+    let rows=wait_for(&app,"maintenance jobs",|r|r.is_empty() || r.iter().any(|r|r.status=="failed")).await;
+    assert!(rows.is_empty(),"{rows:?}");
+    booted.jobs.shutdown(Duration::from_secs(5)).await;
+}

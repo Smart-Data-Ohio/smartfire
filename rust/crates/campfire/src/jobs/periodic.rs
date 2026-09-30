@@ -119,8 +119,7 @@ impl Loops {
     }
 }
 
-/// Messaging tasks with domain implementations. Retention and stuck room deletion are WS8's
-/// next slice; notification delivery itself uses WS17's eventual policy/pusher adapters.
+/// Messaging tasks with domain implementations; notification policy is owned by WS17.
 pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
     let mut periodic = Periodic::new("Periodic");
     periodic.task(Task::new(
@@ -138,6 +137,14 @@ pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
         intervals.reminders,
         |app: App| async move { poll_closing(&app.db).await },
     ));
+    periodic.task(Task::new("stuck rooms", Duration::from_secs(5*MINUTE), |app: App| async move {
+        app.db.write(|tx|campfire_db::models::room_delete::reenqueue_stuck(tx,600)).await?;
+        Ok(())
+    }));
+    periodic.task(Task::new("retention prune", intervals.retention, |app: App| async move {
+        app.db.write(|tx| { tx.emit_after_commit(campfire_db::Event::job(&campfire_db::models::retention::PruneJob{})); Ok(()) }).await?;
+        Ok(())
+    }));
     periodic
 }
 async fn saved_item_reminders(db: &Database) -> anyhow::Result<()> {

@@ -1,0 +1,158 @@
+{
+  "now": "2024-03-10 12:00:00",
+  "setup_sql": "INSERT OR REPLACE INTO \"two_factor_setup_secrets\" (\"id\",\"created_at\",\"expires_at\",\"secret\",\"session_id\",\"updated_at\") VALUES (1,'2024-03-10 12:00:00','2024-03-10 11:59:59.999999','{\"p\":\"3XN+j3ox3NUWiK1h6HLd4875N5KmDXI99pUzkriEUOo=\",\"h\":{\"iv\":\"1D6pC8Dg2Ph+ptD7\",\"at\":\"plMpdyu72YqmxFbKsJ4Wcg==\",\"e\":\"QVNDSUktOEJJVA==\"}}',481019662,'2024-03-10 12:00:00');\nINSERT OR REPLACE INTO \"two_factor_setup_secrets\" (\"id\",\"created_at\",\"expires_at\",\"secret\",\"session_id\",\"updated_at\") VALUES (2,'2024-03-10 12:00:00','2024-03-10 12:00:00','{\"p\":\"62gOJfxCCb7PIw4fCg10r/Fp7R7yDg+WpiBYKLkh13M=\",\"h\":{\"iv\":\"SZL9pwASIDnAN6E5\",\"at\":\"ZtTA4MPJvi1+JUov53YeAg==\",\"e\":\"QVNDSUktOEJJVA==\"}}',481019663,'2024-03-10 12:00:00');\nINSERT OR REPLACE INTO \"two_factor_setup_secrets\" (\"id\",\"created_at\",\"expires_at\",\"secret\",\"session_id\",\"updated_at\") VALUES (3,'2024-03-10 12:00:00','2024-03-10 12:00:00.000001','{\"p\":\"F7o35hNurJkLNkebE4MIY9E15i9Mkip4HELbWAj/hbI=\",\"h\":{\"iv\":\"SBc4ZCqXODEUaw/S\",\"at\":\"DM79sUrqR2aDB2lKVmK9Wg==\",\"e\":\"QVNDSUktOEJJVA==\"}}',481019664,'2024-03-10 12:00:00');\nINSERT OR REPLACE INTO \"sessions\" (\"id\",\"created_at\",\"device_id\",\"ip_address\",\"last_active_at\",\"token\",\"two_factor_verified_at\",\"updated_at\",\"user_agent\",\"user_id\") VALUES (481019662,'2024-03-10 12:00:00',NULL,NULL,'2024-03-10 12:00:00','hyTbEow85rC3M8ghtpHzQUwf',NULL,'2024-03-10 12:00:00','ws8',149087659);\nINSERT OR REPLACE INTO \"sessions\" (\"id\",\"created_at\",\"device_id\",\"ip_address\",\"last_active_at\",\"token\",\"two_factor_verified_at\",\"updated_at\",\"user_agent\",\"user_id\") VALUES (481019663,'2024-03-10 12:00:00',NULL,NULL,'2024-03-10 12:00:00','c9bWC45ktcq7PVzUktPKvRx4',NULL,'2024-03-10 12:00:00','ws8',712064548);\nINSERT OR REPLACE INTO \"sessions\" (\"id\",\"created_at\",\"device_id\",\"ip_address\",\"last_active_at\",\"token\",\"two_factor_verified_at\",\"updated_at\",\"user_agent\",\"user_id\") VALUES (481019664,'2024-03-10 12:00:00',NULL,NULL,'2024-03-10 12:00:00','ZNR1cvkJPXFXT5f9Z451sy4V',NULL,'2024-03-10 12:00:00','ws8',773523953);\nINSERT OR REPLACE INTO \"fizzy_card_caches\" (\"id\",\"created_at\",\"fetch_error\",\"fetch_requested_at\",\"fetched_at\",\"fizzy_card_id\",\"payload\",\"updated_at\",\"user_id\") VALUES (1,'2024-03-10 12:00:00',NULL,NULL,NULL,1,NULL,'2024-03-09 11:59:59.999999',127326141);\nINSERT OR REPLACE INTO \"fizzy_card_caches\" (\"id\",\"created_at\",\"fetch_error\",\"fetch_requested_at\",\"fetched_at\",\"fizzy_card_id\",\"payload\",\"updated_at\",\"user_id\") VALUES (2,'2024-03-10 12:00:00',NULL,NULL,NULL,2,NULL,'2024-03-09 12:00:00',127326141);\nINSERT OR REPLACE INTO \"fizzy_card_caches\" (\"id\",\"created_at\",\"fetch_error\",\"fetch_requested_at\",\"fetched_at\",\"fizzy_card_id\",\"payload\",\"updated_at\",\"user_id\") VALUES (3,'2024-03-10 12:00:00',NULL,NULL,NULL,3,NULL,'2024-03-09 12:00:00.000001',127326141);\nINSERT OR REPLACE INTO \"two_factor_remembered_devices\" (\"id\",\"created_at\",\"expires_at\",\"ip_address\",\"last_used_at\",\"token_digest\",\"updated_at\",\"user_agent\",\"user_id\") VALUES (1,'2024-03-10 12:00:00','2024-03-10 11:59:59.999999','192.0.2.1','2024-03-10 12:00:00','8efb22ab29439d9f30f98b6126809dfc003cfe885e397be40dcd02733969f56b','2024-03-10 12:00:00','ws8',149087659);\nINSERT OR REPLACE INTO \"two_factor_remembered_devices\" (\"id\",\"created_at\",\"expires_at\",\"ip_address\",\"last_used_at\",\"token_digest\",\"updated_at\",\"user_agent\",\"user_id\") VALUES (2,'2024-03-10 12:00:00','2024-03-10 12:00:00','192.0.2.1','2024-03-10 12:00:00','61315f175727fcba1882ca3dfb6c246f88d2323c178c7fdb60b39f16e03a5b6f','2024-03-10 12:00:00','ws8',712064548);\nINSERT OR REPLACE INTO \"two_factor_remembered_devices\" (\"id\",\"created_at\",\"expires_at\",\"ip_address\",\"last_used_at\",\"token_digest\",\"updated_at\",\"user_agent\",\"user_id\") VALUES (3,'2024-03-10 12:00:00','2024-03-10 12:00:00.000001','192.0.2.1','2024-03-10 12:00:00','5f92de736f1f3601d54305a3011ea469561aef716e67647dba99cf0a426b7e20','2024-03-10 12:00:00','ws8',773523953);\nINSERT OR REPLACE INTO \"activity_items\" (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (1,'2024-03-10 12:00:00','huddle_missed',NULL,NULL,1,'HuddleGrant','2024-03-10 12:00:00',127326141);\nINSERT OR REPLACE INTO \"activity_items\" (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (2,'2024-03-10 12:00:00','huddle_missed',NULL,NULL,2,'HuddleGrant','2024-03-10 12:00:00',127326141);\nINSERT OR REPLACE INTO \"activity_items\" (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (3,'2024-03-10 12:00:00','huddle_missed',NULL,NULL,3,'HuddleGrant','2024-03-10 12:00:00',127326141);\nINSERT OR REPLACE INTO \"activity_items\" (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (4,'2024-03-10 12:00:00','mention',NULL,'2023-09-12 12:00:00',309456473,'Message','2023-09-12 11:59:59.999999',149087659);\nINSERT OR REPLACE INTO \"activity_items\" (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (5,'2024-03-10 12:00:00','mention',NULL,'2023-09-12 12:00:00',309456473,'Message','2023-09-12 12:00:00',712064548);\nINSERT OR REPLACE INTO \"activity_items\" (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (6,'2024-03-10 12:00:00','mention',NULL,'2023-09-12 12:00:00',309456473,'Message','2023-09-12 12:00:00.000001',773523953);\nINSERT OR REPLACE INTO \"activity_items\" (\"id\",\"created_at\",\"event_type\",\"handled_at\",\"read_at\",\"source_id\",\"source_type\",\"updated_at\",\"user_id\") VALUES (7,'2024-03-10 12:00:00','mention',NULL,NULL,309456473,'Message','2023-02-04 12:00:00',127326141);\nINSERT OR REPLACE INTO \"fizzy_cards\" (\"id\",\"account_id\",\"created_at\",\"number\",\"updated_at\") VALUES (1,'ws8','2024-03-10 12:00:00',1,'2024-03-10 12:00:00');\nINSERT OR REPLACE INTO \"fizzy_cards\" (\"id\",\"account_id\",\"created_at\",\"number\",\"updated_at\") VALUES (2,'ws8','2024-03-10 12:00:00',2,'2024-03-10 12:00:00');\nINSERT OR REPLACE INTO \"fizzy_cards\" (\"id\",\"account_id\",\"created_at\",\"number\",\"updated_at\") VALUES (3,'ws8','2024-03-10 12:00:00',3,'2024-03-10 12:00:00');\nINSERT OR REPLACE INTO \"agent_events\" (\"id\",\"actor_id\",\"agent_approval_id\",\"agent_credential_id\",\"agent_id\",\"chain_id\",\"created_at\",\"detail\",\"event_type\",\"hop\",\"message_id\",\"metadata\",\"outcome\",\"room_id\",\"webhook_attempts\",\"webhook_last_error\",\"webhook_next_attempt_at\",\"webhook_status\") VALUES (1,NULL,NULL,NULL,773018776,NULL,'2023-12-11 11:59:59.999999',NULL,'mention',0,NULL,NULL,'acknowledged',NULL,0,NULL,NULL,'none');\nINSERT OR REPLACE INTO \"agent_events\" (\"id\",\"actor_id\",\"agent_approval_id\",\"agent_credential_id\",\"agent_id\",\"chain_id\",\"created_at\",\"detail\",\"event_type\",\"hop\",\"message_id\",\"metadata\",\"outcome\",\"room_id\",\"webhook_attempts\",\"webhook_last_error\",\"webhook_next_attempt_at\",\"webhook_status\") VALUES (2,NULL,NULL,NULL,773018776,NULL,'2023-12-11 12:00:00',NULL,'mention',0,NULL,NULL,'acknowledged',NULL,0,NULL,NULL,'none');\nINSERT OR REPLACE INTO \"agent_events\" (\"id\",\"actor_id\",\"agent_approval_id\",\"agent_credential_id\",\"agent_id\",\"chain_id\",\"created_at\",\"detail\",\"event_type\",\"hop\",\"message_id\",\"metadata\",\"outcome\",\"room_id\",\"webhook_attempts\",\"webhook_last_error\",\"webhook_next_attempt_at\",\"webhook_status\") VALUES (3,NULL,NULL,NULL,773018776,NULL,'2023-12-11 12:00:00.000001',NULL,'mention',0,NULL,NULL,'acknowledged',NULL,0,NULL,NULL,'none');\nINSERT OR REPLACE INTO \"audit_logs\" (\"id\",\"action\",\"actor_id\",\"actor_label\",\"created_at\",\"details\",\"ip_address\",\"target_id\",\"target_label\",\"target_type\",\"updated_at\",\"user_agent\") VALUES (1,'user.ban',NULL,NULL,'2023-03-10 11:59:59.999999','{}',NULL,127326141,'David <david@37signals.com>','User','2023-03-10 11:59:59.999999',NULL);\nINSERT OR REPLACE INTO \"audit_logs\" (\"id\",\"action\",\"actor_id\",\"actor_label\",\"created_at\",\"details\",\"ip_address\",\"target_id\",\"target_label\",\"target_type\",\"updated_at\",\"user_agent\") VALUES (2,'user.ban',NULL,NULL,'2023-03-10 12:00:00','{}',NULL,127326141,'David <david@37signals.com>','User','2023-03-10 12:00:00',NULL);\nINSERT OR REPLACE INTO \"audit_logs\" (\"id\",\"action\",\"actor_id\",\"actor_label\",\"created_at\",\"details\",\"ip_address\",\"target_id\",\"target_label\",\"target_type\",\"updated_at\",\"user_agent\") VALUES (3,'user.ban',NULL,NULL,'2023-03-10 12:00:00.000001','{}',NULL,127326141,'David <david@37signals.com>','User','2023-03-10 12:00:00.000001',NULL);\nINSERT OR REPLACE INTO \"github_webhook_deliveries\" (\"id\",\"created_at\",\"delivery_guid\",\"event\",\"updated_at\") VALUES (1,'2024-02-25 11:59:59.999999','ws8--1',NULL,'2024-03-10 12:00:00');\nINSERT OR REPLACE INTO \"github_webhook_deliveries\" (\"id\",\"created_at\",\"delivery_guid\",\"event\",\"updated_at\") VALUES (2,'2024-02-25 12:00:00','ws8-0',NULL,'2024-03-10 12:00:00');\nINSERT OR REPLACE INTO \"github_webhook_deliveries\" (\"id\",\"created_at\",\"delivery_guid\",\"event\",\"updated_at\") VALUES (3,'2024-02-25 12:00:00.000001','ws8-1',NULL,'2024-03-10 12:00:00');\nINSERT OR REPLACE INTO \"rooms\" (\"id\",\"created_at\",\"creator_id\",\"deleted_at\",\"destroy_enqueued_at\",\"direct_member_key\",\"icon_name\",\"inbound_email_token\",\"name\",\"pins_changed_at\",\"type\",\"updated_at\") VALUES (699448326,'2024-03-10 12:00:00',127326141,'2024-03-10 10:59:00',NULL,NULL,NULL,NULL,'ws8-stuck',NULL,'Rooms::Closed','2024-03-10 12:00:00');\nINSERT OR REPLACE INTO \"huddle_cleanups\" (\"id\",\"attempts\",\"completed_at\",\"created_at\",\"enqueued_at\",\"huddle_grant_id\",\"identity\",\"last_attempted_at\",\"next_attempt_at\",\"operation\",\"room_name\",\"updated_at\") VALUES (1,0,'2024-03-03 11:59:59.999999','2024-03-10 12:00:00',NULL,NULL,NULL,NULL,NULL,'delete_room','ws8-done--1','2024-03-10 12:00:00');\nINSERT OR REPLACE INTO \"huddle_cleanups\" (\"id\",\"attempts\",\"completed_at\",\"created_at\",\"enqueued_at\",\"huddle_grant_id\",\"identity\",\"last_attempted_at\",\"next_attempt_at\",\"operation\",\"room_name\",\"updated_at\") VALUES (2,0,NULL,'2024-03-10 12:00:00',NULL,1,'ws8-retention--1',NULL,NULL,'remove_participant','ws8-retention-room','2024-03-10 12:00:00');\nINSERT OR REPLACE INTO \"huddle_cleanups\" (\"id\",\"attempts\",\"completed_at\",\"created_at\",\"enqueued_at\",\"huddle_grant_id\",\"identity\",\"last_attempted_at\",\"next_attempt_at\",\"operation\",\"room_name\",\"updated_at\") VALUES (3,0,'2024-03-03 12:00:00','2024-03-10 12:00:00',NULL,NULL,NULL,NULL,NULL,'delete_room','ws8-done-0','2024-03-10 12:00:00');\nINSERT OR REPLACE INTO \"huddle_cleanups\" (\"id\",\"attempts\",\"completed_at\",\"created_at\",\"enqueued_at\",\"huddle_grant_id\",\"identity\",\"last_attempted_at\",\"next_attempt_at\",\"operation\",\"room_name\",\"updated_at\") VALUES (4,0,NULL,'2024-03-10 12:00:00',NULL,2,'ws8-retention-0',NULL,NULL,'remove_participant','ws8-retention-room','2024-03-10 12:00:00');\nINSERT OR REPLACE INTO \"huddle_cleanups\" (\"id\",\"attempts\",\"completed_at\",\"created_at\",\"enqueued_at\",\"huddle_grant_id\",\"identity\",\"last_attempted_at\",\"next_attempt_at\",\"operation\",\"room_name\",\"updated_at\") VALUES (5,0,'2024-03-03 12:00:00.000001','2024-03-10 12:00:00',NULL,NULL,NULL,NULL,NULL,'delete_room','ws8-done-1','2024-03-10 12:00:00');\nINSERT OR REPLACE INTO \"huddle_cleanups\" (\"id\",\"attempts\",\"completed_at\",\"created_at\",\"enqueued_at\",\"huddle_grant_id\",\"identity\",\"last_attempted_at\",\"next_attempt_at\",\"operation\",\"room_name\",\"updated_at\") VALUES (6,0,NULL,'2024-03-10 12:00:00',NULL,3,'ws8-retention-1',NULL,NULL,'remove_participant','ws8-retention-room','2024-03-10 12:00:00');\nINSERT OR REPLACE INTO \"huddle_cleanups\" (\"id\",\"attempts\",\"completed_at\",\"created_at\",\"enqueued_at\",\"huddle_grant_id\",\"identity\",\"last_attempted_at\",\"next_attempt_at\",\"operation\",\"room_name\",\"updated_at\") VALUES (7,0,NULL,'2023-02-04 12:00:00',NULL,NULL,NULL,NULL,NULL,'delete_room','ws8-pending','2024-03-10 12:00:00');\nINSERT OR REPLACE INTO \"huddle_grants\" (\"id\",\"created_at\",\"identity\",\"last_issued_at\",\"last_seen_at\",\"membership_id\",\"revoked_at\",\"room_id\",\"room_name\",\"server_muted\",\"session_id\",\"stage_role\",\"updated_at\",\"user_id\") VALUES (1,'2024-03-10 12:00:00','ws8-retention--1',NULL,NULL,774341722,'2024-02-09 11:59:59.999999',486777696,'ws8-retention-room',0,481019661,NULL,'2024-03-10 12:00:00',127326141);\nINSERT OR REPLACE INTO \"huddle_grants\" (\"id\",\"created_at\",\"identity\",\"last_issued_at\",\"last_seen_at\",\"membership_id\",\"revoked_at\",\"room_id\",\"room_name\",\"server_muted\",\"session_id\",\"stage_role\",\"updated_at\",\"user_id\") VALUES (2,'2024-03-10 12:00:00','ws8-retention-0',NULL,NULL,774341722,'2024-02-09 12:00:00',486777696,'ws8-retention-room',0,481019661,NULL,'2024-03-10 12:00:00',127326141);\nINSERT OR REPLACE INTO \"huddle_grants\" (\"id\",\"created_at\",\"identity\",\"last_issued_at\",\"last_seen_at\",\"membership_id\",\"revoked_at\",\"room_id\",\"room_name\",\"server_muted\",\"session_id\",\"stage_role\",\"updated_at\",\"user_id\") VALUES (3,'2024-03-10 12:00:00','ws8-retention-1',NULL,NULL,774341722,'2024-02-09 12:00:00.000001',486777696,'ws8-retention-room',0,481019661,NULL,'2024-03-10 12:00:00',127326141);\nINSERT OR REPLACE INTO \"huddle_grants\" (\"id\",\"created_at\",\"identity\",\"last_issued_at\",\"last_seen_at\",\"membership_id\",\"revoked_at\",\"room_id\",\"room_name\",\"server_muted\",\"session_id\",\"stage_role\",\"updated_at\",\"user_id\") VALUES (4,'2023-02-04 12:00:00','ws8-active',NULL,NULL,774341722,NULL,486777696,'ws8-retention-room',0,481019661,NULL,'2024-03-10 12:00:00',127326141);",
+  "checks": [
+    {
+      "sql": "SELECT id FROM agent_events ORDER BY id",
+      "rows": [
+        [
+          2
+        ],
+        [
+          3
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT id FROM two_factor_remembered_devices ORDER BY id",
+      "rows": [
+        [
+          3
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT id FROM two_factor_setup_secrets ORDER BY id",
+      "rows": [
+        [
+          3
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT id FROM activity_items ORDER BY id",
+      "rows": [
+        [
+          2
+        ],
+        [
+          3
+        ],
+        [
+          5
+        ],
+        [
+          6
+        ],
+        [
+          7
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT id FROM github_webhook_deliveries ORDER BY id",
+      "rows": [
+        [
+          2
+        ],
+        [
+          3
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT id FROM huddle_cleanups ORDER BY id",
+      "rows": [
+        [
+          2
+        ],
+        [
+          3
+        ],
+        [
+          4
+        ],
+        [
+          5
+        ],
+        [
+          6
+        ],
+        [
+          7
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT id FROM audit_logs ORDER BY id",
+      "rows": [
+        [
+          2
+        ],
+        [
+          3
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT id FROM fizzy_card_caches ORDER BY id",
+      "rows": [
+        [
+          2
+        ],
+        [
+          3
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT id FROM huddle_grants ORDER BY id",
+      "rows": [
+        [
+          2
+        ],
+        [
+          3
+        ],
+        [
+          4
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT id,huddle_grant_id,room_name,identity FROM huddle_cleanups WHERE room_name='ws8-retention-room' ORDER BY id",
+      "rows": [
+        [
+          2,
+          null,
+          "ws8-retention-room",
+          "ws8-retention--1"
+        ],
+        [
+          4,
+          2,
+          "ws8-retention-room",
+          "ws8-retention-0"
+        ],
+        [
+          6,
+          3,
+          "ws8-retention-room",
+          "ws8-retention-1"
+        ]
+      ]
+    },
+    {
+      "sql": "SELECT destroy_enqueued_at FROM rooms WHERE id=699448326",
+      "rows": [
+        [
+          "2024-03-10 12:00:00"
+        ]
+      ]
+    }
+  ],
+  "room_jobs": [
+    699448326
+  ],
+  "audit_cutoff": "2023-03-10 12:00:00"
+}

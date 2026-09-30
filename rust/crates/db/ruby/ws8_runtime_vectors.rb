@@ -10,7 +10,7 @@ markdown=sources.map{|source|body=Message::Markdown.render(source,room:room);{so
 html=["<p>Hello</p>",'<action-text-attachment content-type="application/vnd.campfire.mention" sgid="bad" bad="drop"></action-text-attachment>', '<figure data-trix-attachment=\'{"content":"<b>x</b>","contentType":"text/html"}\' data-trix-attributes=\'{"caption":"caption"}\'></figure>',"<p>broken<div>markup</p></div>"]
 canonical=html.map{|body|{input:body,output:ActionText::Content.new(body).to_html}}
 runner=Periodic::Runner.new(reminders_interval:17,retention_interval:123)
-tasks=runner.instance_variable_get(:@tasks).select{|t|["saved item reminders","scheduled messages","poll closing"].include?(t.name)}.map{|t|{name:t.name,seconds:t.interval}}
+tasks=runner.instance_variable_get(:@tasks).select{|t|["saved item reminders","scheduled messages","poll closing","stuck rooms","retention prune"].include?(t.name)}.map{|t|{name:t.name,seconds:t.interval.to_i}}
 broadcasts=[{kind:"remove",stream:"gid://campfire/User/1:rooms",target:"list_rooms_direct_4",payload:ApplicationController.helpers.turbo_stream_action_tag(:remove,target:"list_rooms_direct_4")},{kind:"cable",stream:"user_1_unread_threads",payload:{threadId:4}}]
 File.write(ARGV.fetch(0),JSON.pretty_generate({markdown:markdown,canonical:canonical,tasks:tasks,broadcasts:broadcasts,custom:{id:icon.id,name:icon.name,title:icon.title}})+"\n")
 puts "WS8 runtime vectors: #{markdown.size} Markdown, #{canonical.size} canonicalization, #{tasks.size} periodic tasks, #{broadcasts.size} template-free broadcasts"

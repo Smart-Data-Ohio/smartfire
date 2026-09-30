@@ -56,3 +56,7 @@ pub use thread_membership::{ThreadInvolvement, ThreadMembership};
 pub use thread_tag::ThreadTag;
 pub use user::{NewUser, PasswordDigest, Role, Status, User, UserChanges};
 pub use webhook::Webhook;
+
+pub mod room_delete;
+
+pub mod retention;

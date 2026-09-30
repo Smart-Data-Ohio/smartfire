@@ -426,6 +426,7 @@ dependencies = [
  "crc32fast",
  "hex",
  "jiff",
+ "rails_compat",
  "rand 0.9.5",
  "regex",
  "rusqlite",
