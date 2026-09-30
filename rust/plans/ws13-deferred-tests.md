@@ -1,6 +1,16 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. 548 test declarations in 33 files are listed below. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. Protocol-level vector coverage of some internal-controller assertions does not count as porting their HTTP tests. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. System tests below are deferred until LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server.
+Status: partial. This catalogue retains 548 original test declarations in 33 files for traceability; some now have core coverage as described below. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. System tests below are deferred until LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server.
+
+## Continued slice coverage (after merging WS19b)
+
+The following have verified core coverage, while the original declarations remain individually listed below. Owners remain WS13 unless the original entry identifies WS17 transport or Notifications::Policy.
+
+- `controllers/internal_huddle_tests.rs`: original-token admission, case-insensitive Bearer scheme, expired/malformed rejection, secret enforcement on all three endpoints, configuration ordering, revoked/missing/removed grants, numeric-prefix IDs, record_seen=0, timestamp coercions, stale disconnect floors, no-store, exact authorization_payload, and HTTP enqueue rollback. 39 Rails request-response cases; additional signed-token shapes are validated by the existing 98-case protocol corpus. Running every protocol shape through HTTP and completing presence/notice assertions remain open.
+- `tests/huddle_grant_test.rs`: eligibility/current relationships, random identities and reuse, never reviving revoked grants, requested-room coordinates, three real unique conflicts, concurrent issuance, 10-second sightings and strict 20-second first-sighting boundary, first-sighting jobs, leave floors, membership/session/ban/room revocation, role boundaries/server mute, last-host guard, and synchronous last-active-stage-grant stream state. Post-issuance invitations and rendered revocation/leave/stream callbacks remain open.
+- `huddle_gateway_node.mjs`: all 16 existing gateway tests run through real Rust endpoints. Ordinary responses are not fabricated; denial injections revoke SQLite rows. Only the original explicit outage/stall/malformed-response injections remain at the proxy. The test-only Rust launcher is ignored by default because it needs Node and the pinned ws package; it was explicitly run successfully in this slice.
+
+The complete reconciler order, stream creation/staleness, host-departure succession, hands and moderation policies, invitation and join delivery, pushes, controllers and HTML are still open. Real LiveKit system declarations retain the LIVEKIT_SYSTEM_TESTS=1 reason.
 
 ## test/controllers/internal/huddle_controller_test.rb
 

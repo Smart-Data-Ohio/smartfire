@@ -312,7 +312,12 @@ fn huddle_liveness_touch_and_first_sighting_jobs_match_rails() {
             .collect();
         assert_eq!(serde_json::json!(jobs), case["jobs"]);
     }
-    let seen = db.now();
+    let seen = db.read(|conn| {
+        Ok(HuddleGrant::find_by_id(conn, id)?
+            .unwrap()
+            .last_seen_at
+            .unwrap())
+    });
     assert!(!db.write(move |tx| {
         HuddleGrant::find_by_id(tx.conn(), id)?
             .unwrap()

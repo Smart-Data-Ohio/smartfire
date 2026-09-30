@@ -114,13 +114,20 @@
       "updated_at": 1767268800
     },
     {
-      "at": 1767268850,
-      "last_seen": 1767268850,
+      "at": 1767268849,
+      "last_seen": 1767268849,
       "in_call": true,
       "jobs": [
         "presence",
         "join"
       ],
+      "updated_at": 1767268800
+    },
+    {
+      "at": 1767268850,
+      "last_seen": 1767268849,
+      "in_call": true,
+      "jobs": [],
       "updated_at": 1767268800
     }
   ]

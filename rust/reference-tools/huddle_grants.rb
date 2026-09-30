@@ -49,7 +49,7 @@ class HuddleGrantOracle
     jobs = []
     Huddle::BroadcastPresenceJob.define_singleton_method(:perform_later) { |id| jobs << "presence" }
     Huddle::JoinNoticeJob.define_singleton_method(:perform_later) { |id| jobs << "join" }
-    [0, 1, 9, 10, 29, 30, 50].each do |seconds|
+    [0, 1, 9, 10, 29, 30, 49, 50].each do |seconds|
       travel_back; travel_to Time.utc(2026, 1, 1, 12) + seconds
       jobs.clear
       grant.record_seen!
