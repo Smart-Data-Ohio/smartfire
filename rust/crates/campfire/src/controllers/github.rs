@@ -33,3 +33,6 @@ mod agent_tests;
 
 #[cfg(test)]
 mod fragment_tests;
+
+#[cfg(test)]
+mod room_card_tests;

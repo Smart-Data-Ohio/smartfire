@@ -1,13 +1,12 @@
 # WS15g Rails test coverage — partial
 
-Reference: `d7c7de92`. 426 Rails cases in 31 files: 342 mapped to Rust assertions; 84 explicitly deferred.
+Reference: `d7c7de92`. 426 Rails cases in 31 files: 356 mapped to Rust assertions; 70 explicitly deferred.
 
-These are domain and HTTP ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. The viewer-frame HTTP file is 13/15 covered, with exact successful bodies; relink/recovery stay deferred. Room subscription create/update/destroy and their role-gated edit sections are covered. PAT/App/bot connections are wired with 28 HTTP vectors. Human and bot deactivation disconnects the linked account in the real User transaction; the GitHub profile/bot sections are wired, with exact seed fragment bytes and real HTTP callers; manual profile login-edit policy remains deferred. The administrator health page is wired and its full body passes independently (the five health-controller cases are outside this filename inventory). Comments, reviews, review requests and write-actions frames now pass actual HTTP assertions and exact detached bytes. Log-capture and room-thread page cases remain deferred. Remaining room-page/controller/system parity and helper cache cases remain deferred. The Bearer-only GitHub agent approval endpoint now reuses WS11 authentication, grants, approvals, budgets and event delivery; all 21 original agent controller cases map to HTTP assertions. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
+These are domain and HTTP ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. The viewer-frame HTTP file is 13/15 covered, with exact successful bodies; relink/recovery stay deferred. Room subscription create/update/destroy and their role-gated edit sections are covered. PAT/App/bot connections are wired with 28 HTTP vectors. Human and bot deactivation disconnects the linked account in the real User transaction; the GitHub profile/bot sections are wired, with exact seed fragment bytes and real HTTP callers; manual profile login-edit policy remains deferred. The administrator health page is wired and its full body passes independently (the five health-controller cases are outside this filename inventory). Comments, reviews, review requests and write-actions frames now pass actual HTTP assertions and exact detached bytes. Log-capture and room-thread page cases remain deferred. Room-card integration is 14/16 covered through actual room requests and pinned full card-container bytes; constant-query preload and the open-room join page remain deferred. Other room-page/controller/system parity and helper cache cases remain deferred. The Bearer-only GitHub agent approval endpoint now reuses WS11 authentication, grants, approvals, budgets and event delivery; all 21 original agent controller cases map to HTTP assertions. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
 
 | Rails file | Cases passing grouped assertions | Deferred |
 |---|---:|---:|
 | `test/helpers/github_pull_requests_helper_test.rb` | 3/20 | 17 |
-| `test/integration/github_pr_cards_test.rb` | 0/16 | 16 |
 | `test/controllers/agents/github_action_delivery_test.rb` | 0/9 | 9 |
 | `test/integration/github_pr_threads_test.rb` | 0/9 | 9 |
 | `test/jobs/audit_log_github_execution_test.rb` | 0/6 | 6 |
@@ -17,6 +16,7 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 | `test/system/github_pr_write_actions_test.rb` | 0/3 | 3 |
 | `test/controllers/github/pull_request_threads_controller_test.rb` | 5/7 | 2 |
 | `test/controllers/rooms/github/pull_request_cards_controller_test.rb` | 13/15 | 2 |
+| `test/integration/github_pr_cards_test.rb` | 14/16 | 2 |
 | `test/jobs/github/fetch_pull_request_job_test.rb` | 20/22 | 2 |
 | `test/jobs/github/perform_agent_action_job_test.rb` | 34/36 | 2 |
 | `test/controllers/accounts/bots/github_connections_controller_test.rb` | 9/10 | 1 |
@@ -298,22 +298,22 @@ These are domain and HTTP ports grouped into Rust tests, not executions of the o
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| a message with a PR link renders the card | Deferred; WS15g continuation | — |
-| the card keeps the fetched repository name case | Deferred; WS15g continuation | — |
-| a message without a PR link renders no card | Deferred; WS15g continuation | — |
-| an unfetched public PR renders a loading card | Deferred; WS15g continuation | — |
-| a failed fetch renders an error card | Deferred; WS15g continuation | — |
-| a private PR renders only the empty lazy frame in the message HTML | Deferred; WS15g continuation | — |
-| a PR with unknown privacy is treated as private | Deferred; WS15g continuation | — |
-| rendering a stale card enqueues a refresh | Deferred; WS15g continuation | — |
-| a loaded card with no check data shows No checks | Deferred; WS15g continuation | — |
+| a message with a PR link renders the card | Mapped to grouped Rust assertions; WS15g | `github_room_cards_real_pages_match_pinned_rails_card_containers` |
+| the card keeps the fetched repository name case | Mapped to grouped Rust assertions; WS15g | `github_room_cards_real_pages_match_pinned_rails_card_containers` |
+| a message without a PR link renders no card | Mapped to grouped Rust assertions; WS15g | `github_room_cards_real_pages_match_pinned_rails_card_containers` |
+| an unfetched public PR renders a loading card | Mapped to grouped Rust assertions; WS15g | `github_room_cards_real_pages_match_pinned_rails_card_containers` |
+| a failed fetch renders an error card | Mapped to grouped Rust assertions; WS15g | `github_room_cards_real_pages_match_pinned_rails_card_containers` |
+| a private PR renders only the empty lazy frame in the message HTML | Mapped to grouped Rust assertions; WS15g | `github_room_cards_real_pages_match_pinned_rails_card_containers` |
+| a PR with unknown privacy is treated as private | Mapped to grouped Rust assertions; WS15g | `github_room_cards_real_pages_match_pinned_rails_card_containers` |
+| rendering a stale card enqueues a refresh | Mapped to grouped Rust assertions; WS15g | `github_room_refresh_claims_dedupe_many_messages_and_different_viewers` |
+| a loaded card with no check data shows No checks | Mapped to grouped Rust assertions; WS15g | `github_room_cards_real_pages_match_pinned_rails_card_containers` |
 | rendering a room page costs no extra queries per message with a PR link | Deferred; WS15g continuation | — |
-| one render enqueues a single refresh for one stale PR linked by many messages | Deferred; WS15g continuation | — |
-| repeat views by different users enqueue at most one refresh per PR per window | Deferred; WS15g continuation | — |
-| a fresh card does not enqueue a refresh on render | Deferred; WS15g continuation | — |
-| a non-member cannot see the card through the room | Deferred; WS15g continuation | — |
+| one render enqueues a single refresh for one stale PR linked by many messages | Mapped to grouped Rust assertions; WS15g | `github_room_refresh_claims_dedupe_many_messages_and_different_viewers` |
+| repeat views by different users enqueue at most one refresh per PR per window | Mapped to grouped Rust assertions; WS15g | `github_room_refresh_claims_dedupe_many_messages_and_different_viewers` |
+| a fresh card does not enqueue a refresh on render | Mapped to grouped Rust assertions; WS15g | `github_room_refresh_claims_dedupe_many_messages_and_different_viewers` |
+| a non-member cannot see the card through the room | Mapped to grouped Rust assertions; WS15g | `github_room_cards_security_redirects_nonmembers_without_card_data` |
 | the open-room join page leaks no card content to non-members | Deferred; WS15g continuation | — |
-| added routes never render card content to unauthorized callers | Deferred; WS15g continuation | — |
+| added routes never render card content to unauthorized callers | Mapped to grouped Rust assertions; WS15g | `webhook_security_rejects_bad_or_missing_signatures_before_parsing` |
 
 ## `test/integration/github_pr_threads_test.rb` (9 tests)
 
