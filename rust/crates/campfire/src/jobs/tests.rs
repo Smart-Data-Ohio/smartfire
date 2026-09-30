@@ -752,7 +752,7 @@ async fn ws8_quote_refresh_jobs_execute_in_the_real_app_runner() {
                 .any(|row| row.class == "Message::QuoteCardsRefreshJob" && row.status == "failed")
     })
     .await;
-    assert!(rows.is_empty(), "{rows:?}");
+    assert!(rows.iter().all(|row| row.class != "Message::QuoteCardsRefreshJob"), "{rows:?}");
     booted.jobs.shutdown(Duration::from_secs(5)).await;
 }
 

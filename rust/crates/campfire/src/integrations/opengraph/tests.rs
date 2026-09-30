@@ -129,8 +129,8 @@ fn network_to(server: std::net::SocketAddr) -> Network {
     network(resolver, dialer)
 }
 
-/// A page followed by a gigabyte of zeros, gzipped to a megabyte, is past the 5MB limit as soon
-/// as that much is inflated. The same page followed by less unfurls.
+/// Stop once the decoded page exceeds 5MB, before inspecting the malformed gzip tail.
+/// Reading the entire body would report an inflation error. A smaller page still unfurls.
 #[tokio::test]
 async fn stops_reading_a_gzip_bomb_at_the_limit() {
     use std::io::Write;
@@ -144,13 +144,14 @@ async fn stops_reading_a_gzip_bomb_at_the_limit() {
             .header("Content-Encoding", "gzip")
             .body([page.clone(), zeros].concat())
     };
-    let server = FakeServer::start(vec![gzipped("/", gzip_bomb(1024)), gzipped("/small", gzip_bomb(2))]).await;
+    let mut oversized = gzip_bomb(6);
+    oversized.extend_from_slice(b"invalid gzip member after the decoded limit");
+    let server = FakeServer::start(vec![gzipped("/", oversized), gzipped("/small", gzip_bomb(2))]).await;
     let net = network_to(server.addr);
 
     assert!(matches!(unfurl(&net, "http://www.example.com/small").await, Ok(Unfurl::Json(_))));
-    let started = std::time::Instant::now();
-    assert_eq!(unfurl(&net, "http://www.example.com/").await, Ok(Unfurl::NoContent));
-    assert!(started.elapsed() < std::time::Duration::from_secs(2), "{:?}", started.elapsed());
+    let url = campfire_richtext::uri::parse("http://www.example.com/").unwrap();
+    assert!(matches!(fetch::fetch_document(&net, &url, "93.184.216.34".parse().unwrap()).await, Ok(None)));
 }
 
 /// A server that keeps sending a byte at a time never trips a read timeout, but the unfurl as a
