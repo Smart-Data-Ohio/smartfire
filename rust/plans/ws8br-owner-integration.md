@@ -1,7 +1,7 @@
 # Room HTTP owner integration — partial, merge instructions
 
 WS8br's shell/presenters remain additive. This branch does not merge other workers or
-copy their partials/domain policies. The lead merges the branches. The inspected refs
+copy their partials/domain policies. Main at `4278cb1e` was merged with commit `8bca72a1`: WS9 authentication, enrollment, sudo, profile security and account-security audits are used directly. The remaining owner branches still need the lead merge. The inspected refs
 are WS8bm `68f6615b`, WS8bm2 `f168c348`, WS17 `1021be6a`, WS11 `8f338ac6`.
 
 ## Members JSON
