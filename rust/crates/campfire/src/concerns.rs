@@ -30,9 +30,8 @@
 //! ```
 //!
 //! Our Rails app's `ApplicationController` also includes `SetTimeZone`, `SudoMode` and
-//! `TwoFactorEnforcement` (`require_two_factor_enrollment`). The schema has their tables now, but
-//! the two-factor setup and challenge flows, remembered devices and the sudo screens they send
-//! people to aren't ported, so they aren't in the chain yet. The session state they keep is in
+//! `TwoFactorEnforcement` (`require_two_factor_enrollment`). Sudo gates and the second-factor
+//! controllers and global enrollment enforcement are ported. The session state they keep is in
 //! [`session_keys`].
 //!
 //! Current attributes (`Current.user`, `Current.session`) live in the `Ctx` extensions; read them
@@ -42,6 +41,8 @@
 
 pub mod platform;
 pub mod session_keys;
+pub mod sudo;
+pub mod two_factor;
 pub mod user_agent;
 
 use campfire_db::{Ban, Membership, NewSession, PasswordDigest, Room, Session, User};
@@ -134,30 +135,50 @@ pub enum Authentication {
 
 impl Default for Before {
     fn default() -> Self {
-        Self { authentication: Authentication::Required, deny_bots: true, deny_agent_tokens: true, forgery_protection: true }
+        Self {
+            authentication: Authentication::Required,
+            deny_bots: true,
+            deny_agent_tokens: true,
+            forgery_protection: true,
+        }
     }
 }
 
 impl Before {
     pub fn allow_unauthenticated_access(self) -> Self {
-        Self { authentication: Authentication::Skipped, ..self }
+        Self {
+            authentication: Authentication::Skipped,
+            ..self
+        }
     }
 
     pub fn require_unauthenticated_access(self) -> Self {
-        Self { authentication: Authentication::RequireUnauthenticated, ..self }
+        Self {
+            authentication: Authentication::RequireUnauthenticated,
+            ..self
+        }
     }
 
     pub fn allow_bot_access(self) -> Self {
-        Self { deny_bots: false, ..self }
+        Self {
+            deny_bots: false,
+            ..self
+        }
     }
 
     #[allow(dead_code)] // for the agent API controllers
     pub fn allow_agent_access(self) -> Self {
-        Self { deny_agent_tokens: false, ..self }
+        Self {
+            deny_agent_tokens: false,
+            ..self
+        }
     }
 
     pub fn skip_forgery_protection(self) -> Self {
-        Self { forgery_protection: false, ..self }
+        Self {
+            forgery_protection: false,
+            ..self
+        }
     }
 }
 
@@ -179,6 +200,7 @@ pub async fn before_actions(c: &mut Ctx, before: Before) -> Result<()> {
         c.verify_authenticity_token()?;
     }
     allow_browser(c).await?;
+    enforce_two_factor_for_restored_session(c).await?;
     if before.authentication == Authentication::RequireUnauthenticated {
         restore_authentication(c).await?;
         redirect_signed_in_user_to_root(c)?;
@@ -213,7 +235,12 @@ pub async fn reject_banned_ip(c: &mut Ctx) -> Result<()> {
         return Ok(());
     }
     let ip = c.request.remote_ip()?.to_string();
-    let banned = c.app().db.read(move |conn| Ban::banned(conn, &ip)).await.map_err(Error::internal)?;
+    let banned = c
+        .app()
+        .db
+        .read(move |conn| Ban::banned(conn, &ip))
+        .await
+        .map_err(Error::internal)?;
     if banned {
         return halt(head(StatusCode::TOO_MANY_REQUESTS));
     }
@@ -224,14 +251,23 @@ pub async fn reject_banned_ip(c: &mut Ctx) -> Result<()> {
 
 /// `Authentication::SessionLookup#find_session_by_cookie`
 pub async fn find_session_by_cookie(c: &Ctx) -> Result<Option<Session>> {
-    let Some(token) = c.cookies.signed("session_token") else { return Ok(None) };
-    c.app().db.read(move |conn| Session::find_by_token(conn, &token)).await.map_err(Error::internal)
+    let Some(token) = c.cookies.signed("session_token") else {
+        return Ok(None);
+    };
+    c.app()
+        .db
+        .read(move |conn| Session::find_by_token(conn, &token))
+        .await
+        .map_err(Error::internal)
 }
 
 /// `require_authentication`: `restore_authentication || bot_authentication ||
 /// agent_authentication || request_authentication`.
 pub async fn require_authentication(c: &mut Ctx) -> Result<()> {
-    if restore_authentication(c).await? || bot_authentication(c).await? || agent_authentication(c).await? {
+    if restore_authentication(c).await?
+        || bot_authentication(c).await?
+        || agent_authentication(c).await?
+    {
         return Ok(());
     }
     request_authentication(c).await
@@ -240,50 +276,109 @@ pub async fn require_authentication(c: &mut Ctx) -> Result<()> {
 /// `restore_authentication`: resume the session named by the `session_token` cookie, unless it
 /// has expired ([`session_expired`]), in which case it's destroyed and its cookie dropped.
 pub async fn restore_authentication(c: &mut Ctx) -> Result<bool> {
-    let Some(token) = c.cookies.signed("session_token") else { return Ok(false) };
+    let Some(token) = c.cookies.signed("session_token") else {
+        return Ok(false);
+    };
     let found = c
         .app()
         .db
         .read(move |conn| {
-            let Some(session) = Session::find_by_token(conn, &token)? else { return Ok(None) };
+            let Some(session) = Session::find_by_token(conn, &token)? else {
+                return Ok(None);
+            };
             let user = User::find_by_id(conn, session.user_id)?;
             Ok(Some((session, user)))
         })
         .await
         .map_err(Error::internal)?;
-    let Some((session, user)) = found else { return Ok(false) };
+    let Some((session, user)) = found else {
+        return Ok(false);
+    };
     let now = campfire_db::Timestamp::from_jiff(c.now());
-    if user.as_ref().is_some_and(|user| session_expired(&session, user, c.app().config.admin_session_idle_timeout, now)) {
-        c.app().db.write(move |tx| session.destroy(tx)).await.map_err(Error::internal)?;
+    if user.as_ref().is_some_and(|user| {
+        session_expired(
+            &session,
+            user,
+            c.app().config.admin_session_idle_timeout,
+            now,
+        )
+    }) {
+        c.app()
+            .db
+            .write(move |tx| session.destroy(tx))
+            .await
+            .map_err(Error::internal)?;
         c.cookies.delete("session_token");
         return Ok(false);
     }
     resume_session(c, session, user).await?;
-    enforce_two_factor_for_restored_session(c)?;
+    enforce_two_factor_for_restored_session(c).await?;
     Ok(true)
 }
 
 /// `Session#expired?`: administrators' sessions end after `ADMIN_SESSION_IDLE_TIMEOUT_DAYS`
 /// without activity (`config/initializers/session_lifetimes.rb`); members' never do. Checked when
 /// a request restores the session and when a cable connects.
-pub fn session_expired(session: &Session, user: &User, idle_timeout: jiff::SignedDuration, now: campfire_db::Timestamp) -> bool {
+pub fn session_expired(
+    session: &Session,
+    user: &User,
+    idle_timeout: jiff::SignedDuration,
+    now: campfire_db::Timestamp,
+) -> bool {
     user.is_administrator() && session.last_active_at < now.ago(idle_timeout)
 }
 
-/// `enforce_two_factor_for_restored_session`, which `TwoFactorEnforcement` overrides with
-/// `require_two_factor_enrollment`. Sessions carry `two_factor_verified_at` now, but enforcing it
-/// needs the enrollment and challenge flows it redirects to (not ported yet), so for now it lets
-/// every session through.
-pub fn enforce_two_factor_for_restored_session(_c: &mut Ctx) -> Result<()> {
-    Ok(())
+/// `TwoFactorEnforcement#require_two_factor_enrollment`. The callback and every late restore
+/// share this gate. Verified sessions do not query the credential; key authentication is exempt.
+pub async fn enforce_two_factor_for_restored_session(c: &mut Ctx) -> Result<()> {
+    let Some(session) = current_session(c) else { return Ok(()) };
+    let Some(user) = current_user(c) else { return Ok(()) };
+    if authenticated_by(c) != AuthenticatedBy::Session || !user.requires_two_factor() {
+        return Ok(());
+    }
+    // Use the trusted dispatcher endpoint, never query/body controller or action parameters.
+    let endpoint = c.current::<crate::controllers::MatchedRoute>().map(|r| r.endpoint);
+    if endpoint.is_some_and(|endpoint| {
+        let (controller, action) = endpoint.split_once('#').unwrap_or((endpoint, ""));
+        matches!(controller, "two_factor/challenges" | "pwa")
+            || (controller == "two_factor/setups" && matches!(action, "show" | "create"))
+            || (controller == "sessions" && action == "destroy")
+    }) || session.two_factor_verified() {
+        return Ok(());
+    }
+    let user = user.clone();
+    let enabled = c.app().db.read(move |conn| user.two_factor_enabled(conn)).await.map_err(Error::internal)?;
+    let html = c.format()?.is_some_and(|f| f.symbol == "html" || f.string.contains("html"));
+    if enabled {
+        terminate_current_session(c).await?;
+        if html {
+            return halt(c.redirect_to_with(&c.url_for("/session/new"), campfire_kit::Redirect {
+                alert: Some("Sign in again to verify two-step sign-in.".into()),
+                ..Default::default()
+            })?);
+        }
+        halt(head(StatusCode::UNAUTHORIZED))
+    } else if html {
+        if c.request.is_get() {
+            let url = c.request.url();
+            c.session().insert(session_keys::RETURN_TO_KEY, url);
+        }
+        halt(c.redirect_to(&c.url_for("/two_factor_setup"))?)
+    } else {
+        halt(head(StatusCode::FORBIDDEN))
+    }
 }
 
 /// `bot_authentication`: `params[:bot_key].present?` and a matching active bot.
 pub async fn bot_authentication(c: &mut Ctx) -> Result<bool> {
-    let Some(param) = c.params.get("bot_key").filter(|p| p.is_present()) else { return Ok(false) };
+    let Some(param) = c.params.get("bot_key").filter(|p| p.is_present()) else {
+        return Ok(false);
+    };
     // `params[:bot_key].strip` raises NoMethodError for a hash or array.
     let Some(bot_key) = param.as_str().map(|key| ruby_strip(key).to_string()) else {
-        return Err(Error::internal(anyhow::anyhow!("undefined method 'strip' for bot_key")));
+        return Err(Error::internal(anyhow::anyhow!(
+            "undefined method 'strip' for bot_key"
+        )));
     };
     // `params[:room_id]` for `authenticate_bot_reply_token`, compared `to_s`: nil is "", and a
     // hash or array never matches a signed room id.
@@ -299,8 +394,13 @@ pub async fn bot_authentication(c: &mut Ctx) -> Result<bool> {
             if let Some(bot) = User::authenticate_bot(conn, &bot_key)? {
                 return Ok(Some((bot, AuthenticatedBy::BotKey)));
             }
-            let Some(room_id) = room_id else { return Ok(None) };
-            Ok(authenticate_bot_reply_token(conn, &secrets, &bot_key, &room_id, now)?.map(|bot| (bot, AuthenticatedBy::BotReply)))
+            let Some(room_id) = room_id else {
+                return Ok(None);
+            };
+            Ok(
+                authenticate_bot_reply_token(conn, &secrets, &bot_key, &room_id, now)?
+                    .map(|bot| (bot, AuthenticatedBy::BotReply)),
+            )
         })
         .await
         .map_err(Error::internal)?;
@@ -324,10 +424,17 @@ fn authenticate_bot_reply_token(
     room_id: &str,
     now: jiff::Timestamp,
 ) -> campfire_db::Result<Option<User>> {
-    let Some(bot_id) = rails_compat::verifiers::bot_reply::verify(secrets, token, room_id, now) else { return Ok(None) };
+    let Some(bot_id) = rails_compat::verifiers::bot_reply::verify(secrets, token, room_id, now)
+    else {
+        return Ok(None);
+    };
     // Active Record casts the id: an integer, or a string of digits.
-    let bot_id = bot_id.as_i64().or_else(|| bot_id.as_str().and_then(|id| id.trim().parse().ok()));
-    let (Some(bot_id), Ok(room_id)) = (bot_id, room_id.parse::<i64>()) else { return Ok(None) };
+    let bot_id = bot_id
+        .as_i64()
+        .or_else(|| bot_id.as_str().and_then(|id| id.trim().parse().ok()));
+    let (Some(bot_id), Ok(room_id)) = (bot_id, room_id.parse::<i64>()) else {
+        return Ok(None);
+    };
     let bot = match User::find_active_bot(conn, bot_id) {
         Ok(bot) => bot,
         Err(campfire_db::Error::RecordNotFound(_)) => return Ok(None),
@@ -392,13 +499,18 @@ fn bounce_back_after_sign_in(c: &mut Ctx) -> Result<bool> {
         return Ok(false);
     }
     let format = c.format()?;
-    Ok(format.is_some_and(|format| (format.symbol == "html" || format.string.contains("html")) && format.symbol != "turbo_stream"))
+    Ok(format.is_some_and(|format| {
+        (format.symbol == "html" || format.string.contains("html"))
+            && format.symbol != "turbo_stream"
+    }))
 }
 
 /// `two_factor_pending_user`: the active user a still-valid pending second factor names.
 pub async fn two_factor_pending_user(c: &mut Ctx) -> Result<Option<User>> {
     let now = c.now();
-    let Some(user_id) = session_keys::two_factor_pending_user_id(c.session(), now) else { return Ok(None) };
+    let Some(user_id) = session_keys::two_factor_pending_user_id(c.session(), now) else {
+        return Ok(None);
+    };
     c.app()
         .db
         .read(move |conn| match User::find_active(conn, user_id) {
@@ -422,32 +534,62 @@ pub fn redirect_signed_in_user_to_root(c: &mut Ctx) -> Result<()> {
 /// `has_secure_password`'s `password=`, hashed on the blocking pool ahead of the write that saves
 /// it, so bcrypt (about 250 ms) holds neither an async thread nor the database writer.
 pub async fn password_digest(c: &Ctx, password: Option<String>) -> Result<Option<PasswordDigest>> {
-    let Some(password) = password else { return Ok(None) };
-    PasswordDigest::hash(password, c.app().db.env().bcrypt_cost).await.map(Some).map_err(Error::internal)
+    let Some(password) = password else {
+        return Ok(None);
+    };
+    PasswordDigest::hash(password, c.app().db.env().bcrypt_cost)
+        .await
+        .map(Some)
+        .map_err(Error::internal)
 }
 
 /// `User.active.authenticate_by(email_address:, password:)`: the user is looked up on a reader,
 /// and the password checked once the reader is released.
-pub async fn authenticate_by(c: &Ctx, email_address: String, password: String) -> Result<Option<User>> {
+pub async fn authenticate_by(
+    c: &Ctx,
+    email_address: String,
+    password: String,
+) -> Result<Option<User>> {
     // `authenticate_by` returns nil for a blank password before looking anything up.
     if password.is_empty() {
         return Ok(None);
     }
-    let candidate = c.app().db.read(move |conn| User::find_active_by_email_address(conn, &email_address)).await.map_err(Error::internal)?;
-    tokio::task::spawn_blocking(move || User::authenticated(candidate, &password)).await.map_err(Error::internal)
+    let candidate = c
+        .app()
+        .db
+        .read(move |conn| User::find_active_by_email_address(conn, &email_address))
+        .await
+        .map_err(Error::internal)?;
+    tokio::task::spawn_blocking(move || User::authenticated(candidate, &password))
+        .await
+        .map_err(Error::internal)
 }
 
 /// `start_new_session_for(user)`: drop the previous member's confirmations, make sure the browser
 /// has its `device_id`, start the session, and settle the CSRF token before any page renders (so
 /// concurrent first renders don't each start their own).
 ///
-/// Rails' `two_factor_verified:` defaults to false, and only the second-factor flows (not ported
-/// yet) pass true. It then sends `NewSignInAlert`, which isn't ported either.
+/// Rails' `two_factor_verified:` defaults to false; the completed challenge and remembered-device
+/// flows pass true through `start_new_verified_session_for`. Every real session records its
+/// device and alerts on a new device, using WS10's typed mail API when configured.
 pub async fn start_new_session_for(c: &mut Ctx, user: User) -> Result<Session> {
+    start_session(c, user, false).await
+}
+
+/// A completed second factor (or valid remembered device) creates a verified session.
+pub async fn start_new_verified_session_for(c: &mut Ctx, user: User) -> Result<Session> {
+    start_session(c, user, true).await
+}
+
+async fn start_session(c: &mut Ctx, user: User, two_factor_verified: bool) -> Result<Session> {
     session_keys::clear_confirmations(c.session());
     let device_id = ensure_device_cookie(c)?;
-    let (user_agent, ip) = (c.request.user_agent().map(str::to_string), c.request.remote_ip()?.to_string());
+    let (user_agent, ip) = (
+        c.request.user_agent().map(str::to_string),
+        c.request.remote_ip()?.to_string(),
+    );
     let user_id = user.id;
+    let notify = c.app().mail.config.security_configured();
     let session = c
         .app()
         .db
@@ -456,9 +598,9 @@ pub async fn start_new_session_for(c: &mut Ctx, user: User) -> Result<Session> {
                 user_agent: user_agent.as_deref(),
                 ip_address: Some(&ip),
                 device_id: Some(&device_id),
-                two_factor_verified: false,
+                two_factor_verified,
             };
-            Session::start_with(tx, user_id, attributes)
+            crate::authentication::start_session(tx, user_id, attributes, notify)
         })
         .await
         .map_err(Error::internal)?;
@@ -474,8 +616,14 @@ pub fn ensure_device_cookie(c: &mut Ctx) -> Result<String> {
     if let Some(device_id) = c.cookies.signed("device_id") {
         return Ok(device_id);
     }
-    let device_id: String = rand::random::<[u8; 16]>().iter().map(|byte| format!("{byte:02x}")).collect();
-    let cookie = Cookie::new(device_id.clone()).permanent().httponly().same_site(Some(SameSite::Lax));
+    let device_id: String = rand::random::<[u8; 16]>()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect();
+    let cookie = Cookie::new(device_id.clone())
+        .permanent()
+        .httponly()
+        .same_site(Some(SameSite::Lax));
     c.cookies.set_signed("device_id", cookie)?;
     Ok(device_id)
 }
@@ -489,7 +637,10 @@ pub fn ensure_device_cookie(c: &mut Ctx) -> Result<String> {
 async fn resume_session(c: &mut Ctx, session: Session, user: Option<User>) -> Result<()> {
     let refresh = session.needs_resume(campfire_db::Timestamp::from_jiff(c.now()));
     let session = if refresh {
-        let (user_agent, ip) = (c.request.user_agent().map(str::to_string), c.request.remote_ip()?.to_string());
+        let (user_agent, ip) = (
+            c.request.user_agent().map(str::to_string),
+            c.request.remote_ip()?.to_string(),
+        );
         c.app()
             .db
             .write(move |tx| {
@@ -507,12 +658,21 @@ async fn resume_session(c: &mut Ctx, session: Session, user: Option<User>) -> Re
 
 /// `authenticated_as(session)`: `Current.session = session` (which sets `Current.user` to
 /// `session.user`), `authenticated_by` session, and, with `set_cookie`, a fresh `session_token` cookie.
-async fn authenticated_as(c: &mut Ctx, session: Session, user: Option<User>, set_cookie: bool) -> Result<()> {
+async fn authenticated_as(
+    c: &mut Ctx,
+    session: Session,
+    user: Option<User>,
+    set_cookie: bool,
+) -> Result<()> {
     let user = match user {
         Some(user) => Some(user),
         None => {
             let user_id = session.user_id;
-            c.app().db.read(move |conn| User::find_by_id(conn, user_id)).await.map_err(Error::internal)?
+            c.app()
+                .db
+                .read(move |conn| User::find_by_id(conn, user_id))
+                .await
+                .map_err(Error::internal)?
         }
     };
     if set_cookie {
@@ -528,7 +688,10 @@ async fn authenticated_as(c: &mut Ctx, session: Session, user: Option<User>, set
 
 /// `cookies.signed.permanent[:session_token] = { value: session.token, httponly: true, same_site: :lax }`
 fn set_authentication_cookie(c: &mut Ctx, session: &Session) -> Result<()> {
-    let cookie = Cookie::new(session.token.clone()).permanent().httponly().same_site(Some(SameSite::Lax));
+    let cookie = Cookie::new(session.token.clone())
+        .permanent()
+        .httponly()
+        .same_site(Some(SameSite::Lax));
     c.cookies.set_signed("session_token", cookie)
 }
 
@@ -536,15 +699,23 @@ fn set_authentication_cookie(c: &mut Ctx, session: &Session) -> Result<()> {
 /// and disconnect the user's sockets (`reset_remote_connections`, errors only logged).
 pub async fn terminate_current_session(c: &mut Ctx) -> Result<()> {
     if let Some(session) = current_session(c).cloned() {
-        c.app().db.write(move |tx| session.destroy(tx)).await.map_err(Error::internal)?;
+        c.app()
+            .db
+            .write(move |tx| session.destroy(tx))
+            .await
+            .map_err(Error::internal)?;
     }
     c.reset_session();
     c.cookies.delete("session_token");
     if let Some(user) = current_user(c).cloned()
-        && let Err(error) = c.app().db.write(move |tx| {
-            user.reset_remote_connections(tx);
-            Ok(())
-        }).await
+        && let Err(error) = c
+            .app()
+            .db
+            .write(move |tx| {
+                user.reset_remote_connections(tx);
+                Ok(())
+            })
+            .await
     {
         tracing::warn!("Could not disconnect remote connections on sign out: {error}");
     }
@@ -594,7 +765,10 @@ pub fn require_sudo_mode(c: &mut Ctx) -> Result<()> {
 
 /// `deny_bots`: 403 for bot-key and bot-reply-token requests.
 pub fn deny_bots(c: &mut Ctx) -> Result<()> {
-    if matches!(authenticated_by(c), AuthenticatedBy::BotKey | AuthenticatedBy::BotReply) {
+    if matches!(
+        authenticated_by(c),
+        AuthenticatedBy::BotKey | AuthenticatedBy::BotReply
+    ) {
         return halt(head(StatusCode::FORBIDDEN));
     }
     Ok(())
@@ -640,19 +814,32 @@ async fn render_incompatible_browser(c: &mut Ctx) -> Result {
 
     let own_layout = c
         .current::<crate::controllers::MatchedRoute>()
-        .is_some_and(|route| route.endpoint.starts_with("messages#") || route.endpoint.starts_with("messages/by_bots#"));
-    use crate::controllers::presenters::view_context::{page_in_any_format, page_or_frame_in_any_format};
+        .is_some_and(|route| {
+            route.endpoint.starts_with("messages#")
+                || route.endpoint.starts_with("messages/by_bots#")
+        });
+    use crate::controllers::presenters::view_context::{
+        page_in_any_format, page_or_frame_in_any_format,
+    };
 
     // An explicit `render template:`, so no format lookup: a blocked browser gets this page for
     // /webmanifest.json, /service-worker.js or `Accept: application/json` alike (verified against
     // the reference), never a 406.
     let response = if own_layout {
-        page_in_any_format(c, StatusCode::OK, |ctx| IncompatibleBrowser { ctx }.render()).await?
-    } else {
-        page_or_frame_in_any_format(c, StatusCode::OK, |ctx| IncompatibleBrowser { ctx }.render(), |ctx| {
-            let page = IncompatibleBrowser { ctx };
-            campfire_views::layouts::frame(ctx, page.as_head(), page.as_content())
+        page_in_any_format(c, StatusCode::OK, |ctx| {
+            IncompatibleBrowser { ctx }.render()
         })
+        .await?
+    } else {
+        page_or_frame_in_any_format(
+            c,
+            StatusCode::OK,
+            |ctx| IncompatibleBrowser { ctx }.render(),
+            |ctx| {
+                let page = IncompatibleBrowser { ctx };
+                campfire_views::layouts::frame(ctx, page.as_head(), page.as_content())
+            },
+        )
         .await?
     };
     Ok(response.content_type(campfire_kit::response::HTML_UTF8))
@@ -680,7 +867,9 @@ pub fn remember_last_room_visited(c: &mut Ctx, room_id: i64) {
 /// `last_room_visited`: the `last_room` cookie's room if the user is in it, else
 /// `Current.user.rooms.original`.
 pub async fn last_room_visited(c: &Ctx) -> Result<Option<Room>> {
-    let Some(user_id) = current_user(c).map(|user| user.id) else { return Ok(None) };
+    let Some(user_id) = current_user(c).map(|user| user.id) else {
+        return Ok(None);
+    };
     // `find_by(id: cookies[:last_room])` casts the cookie like an integer column would.
     let last_room = c.cookies.get("last_room").and_then(cast_integer);
     c.app()
@@ -703,11 +892,16 @@ pub async fn last_room_visited(c: &Ctx) -> Result<Option<Room>> {
 /// otherwise. Returns the membership and its room.
 pub async fn set_room(c: &mut Ctx) -> Result<(Membership, Room)> {
     let user_id = require_current_user(c)?.id;
-    let Some(room_id) = c.param_str("room_id").and_then(cast_integer) else { return Err(Error::NotFound) };
+    let Some(room_id) = c.param_str("room_id").and_then(cast_integer) else {
+        return Err(Error::NotFound);
+    };
     c.app()
         .db
         .read(move |conn| {
-            let Some(membership) = Membership::find_by_room_and_user(conn, room_id, user_id)? else { return Ok(None) };
+            let Some(membership) = Membership::find_by_room_and_user(conn, room_id, user_id)?
+            else {
+                return Ok(None);
+            };
             let room = membership.room(conn)?;
             Ok(Some((membership, room)))
         })
@@ -725,7 +919,11 @@ pub async fn set_room(c: &mut Ctx) -> Result<(Membership, Room)> {
 /// the request format: that's `c.head`.)
 pub fn head(status: StatusCode) -> campfire_kit::Response {
     let response = campfire_kit::Response::new(status);
-    if matches!(status.as_u16(), 100..=199 | 204 | 205 | 304) { response } else { response.content_type("text/html") }
+    if matches!(status.as_u16(), 100..=199 | 204 | 205 | 304) {
+        response
+    } else {
+        response.content_type("text/html")
+    }
 }
 
 /// ActiveModel's integer cast of a string attribute value (`"12abc"` → 12, `"abc"` → nil).
@@ -748,13 +946,18 @@ pub fn ruby_to_i(value: &str) -> i64 {
         Some(b'+') => (false, &value[1..]),
         _ => (false, value),
     };
-    let rest = rest.strip_prefix("0d").or_else(|| rest.strip_prefix("0D")).unwrap_or(rest);
+    let rest = rest
+        .strip_prefix("0d")
+        .or_else(|| rest.strip_prefix("0D"))
+        .unwrap_or(rest);
     let mut number: i64 = 0;
     let mut previous_digit = false;
     for c in rest.chars() {
         match c {
             '0'..='9' => {
-                number = number.saturating_mul(10).saturating_add(i64::from(c as u8 - b'0'));
+                number = number
+                    .saturating_mul(10)
+                    .saturating_add(i64::from(c as u8 - b'0'));
                 previous_digit = true;
             }
             '_' if previous_digit => previous_digit = false,
@@ -803,10 +1006,17 @@ mod tests {
 
     #[test]
     fn before_builders() {
-        let before = Before::default().allow_bot_access().skip_forgery_protection();
+        let before = Before::default()
+            .allow_bot_access()
+            .skip_forgery_protection();
         assert_eq!(before.authentication, Authentication::Required);
         assert!(!before.deny_bots);
         assert!(!before.forgery_protection);
-        assert_eq!(Before::default().require_unauthenticated_access().authentication, Authentication::RequireUnauthenticated);
+        assert_eq!(
+            Before::default()
+                .require_unauthenticated_access()
+                .authentication,
+            Authentication::RequireUnauthenticated
+        );
     }
 }
