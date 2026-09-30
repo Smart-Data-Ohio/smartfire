@@ -14,6 +14,9 @@
 //! (Ruby scripts run in the reference) live in testdata/oracle.
 
 mod jobs;
+// The domain lands before its controller/job consumers (WS15g continuation).
+#[allow(dead_code)]
+pub mod github;
 pub mod net;
 pub mod opengraph;
 pub mod search;

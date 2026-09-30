@@ -164,6 +164,10 @@ impl FakeServer {
 
     async fn start_with(routes: Vec<Route>, tls: Option<tokio_rustls::TlsAcceptor>) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        Self::on_listener(routes, tls, listener).await
+    }
+
+    pub async fn on_listener(routes: Vec<Route>, tls: Option<tokio_rustls::TlsAcceptor>, listener: TcpListener) -> Self {
         let addr = listener.local_addr().unwrap();
         let received = Arc::new(Mutex::new(Vec::new()));
         let routes = Arc::new(routes);
@@ -297,13 +301,17 @@ pub struct TestDb {
 
 impl TestDb {
     pub fn new() -> Self {
-        use campfire_db::{BasicRichText, Config, Database, Env, NullSink, TestClock, fixtures};
+        Self::in_dir(Arc::new(campfire_db::TestClock::new()), &std::env::temp_dir())
+    }
+
+    pub fn in_dir(clock: Arc<dyn campfire_db::Clock>, directory: &std::path::Path) -> Self {
+        use campfire_db::{BasicRichText, Config, Database, Env, NullSink, fixtures};
         static COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        let path = std::env::temp_dir().join(format!("campfire-integrations-{}-{n}", std::process::id()));
+        let path = directory.join(format!("campfire-integrations-{}-{n}", std::process::id()));
         let _ = std::fs::remove_dir_all(&path);
         std::fs::create_dir_all(&path).unwrap();
-        let env = Env { clock: Arc::new(TestClock::new()), sink: Arc::new(NullSink), rich_text: Arc::new(BasicRichText), bcrypt_cost: 4 };
+        let env = Env { clock, sink: Arc::new(NullSink), rich_text: Arc::new(BasicRichText), bcrypt_cost: 4 };
         let mut config = Config::new(path.join("test.sqlite3"));
         config.environment = "test".into();
         let db = Database::open(config, env).unwrap();
