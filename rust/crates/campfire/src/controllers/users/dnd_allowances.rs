@@ -30,7 +30,8 @@ async fn change(c: &mut Ctx, create: bool) -> Result {
     if person.id == owner {
         return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
     }
-    c.app()
+    let result = c
+        .app()
         .db
         .write(move |tx| {
             if create {
@@ -40,8 +41,12 @@ async fn change(c: &mut Ctx, create: bool) -> Result {
             }
             Ok(())
         })
-        .await
-        .map_err(Error::internal)?;
+        .await;
+    if let Err(error) = result
+        && !error.is_record_not_unique()
+    {
+        return Err(Error::internal(error));
+    }
     let location = c.url_for(&campfire_routes::user(target));
     c.redirect_to_with(
         &location,
@@ -158,6 +163,57 @@ mod tests {
                 .await
                 .location(),
             Some("http://campfire.test/session/new")
+        );
+    }
+    #[tokio::test]
+    async fn ws17_starring_twice_stays_single_exception() {
+        let app = TestApp::boot().await.expect("parity seed");
+        let mut browser = app.david();
+        for _ in 0..2 {
+            assert_eq!(
+                browser
+                    .write(Req::new(Method::POST, &path(JASON)))
+                    .await
+                    .location(),
+                Some(format!("http://campfire.test/users/{JASON}").as_str())
+            );
+        }
+        assert_eq!(
+            app.db()
+                .read(|c| Ok(c.query_row(
+                    "SELECT COUNT(*) FROM dnd_allowed_users WHERE user_id=?",
+                    [DAVID],
+                    |r| r.get::<_, i64>(0)
+                )?))
+                .await
+                .unwrap(),
+            1
+        );
+    }
+    #[tokio::test]
+    async fn ws17_unique_index_losing_star_redirects_success() {
+        let app = TestApp::boot().await.expect("parity seed");
+        let mut browser = app.david();
+        app.db().write(|tx| {
+            DndAllowedUser::create(tx,KEVIN,JASON)?;
+            // Deterministic real SQLite UNIQUE failure at the loser's insert. Rails' named test
+            // stubs RecordNotUnique; this drives the same rescue through the HTTP/write stack.
+            tx.conn().execute_batch(&format!("CREATE TRIGGER ws17_losing_star BEFORE INSERT ON dnd_allowed_users WHEN NEW.user_id={DAVID} BEGIN INSERT INTO dnd_allowed_users(user_id,allowed_user_id,created_at,updated_at) SELECT user_id,allowed_user_id,created_at,updated_at FROM dnd_allowed_users WHERE user_id={KEVIN}; END;"))?;
+            Ok(())
+        }).await.unwrap();
+        assert_eq!(
+            browser
+                .write(Req::new(Method::POST, &path(JASON)))
+                .await
+                .location(),
+            Some(format!("http://campfire.test/users/{JASON}").as_str())
+        );
+        assert!(
+            app.db()
+                .read(|c| DndAllowedUser::find(c, KEVIN, JASON))
+                .await
+                .unwrap()
+                .is_some()
         );
     }
 }

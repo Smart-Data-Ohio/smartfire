@@ -9,8 +9,8 @@ use serde_json::Value;
 use crate::sql::{placeholders, query_all};
 use crate::{Result, Role, Status, Timestamp, User};
 
-mod writes;
 pub mod updates;
+mod writes;
 pub use writes::{clock_time_to_minutes, minutes_to_clock_time, replace_keyword_alerts};
 
 #[derive(Debug, Clone)]
@@ -69,9 +69,11 @@ impl MeetingCache {
         })
     }
 
-    /// MeetingCache#parse_pairs: malformed pairs are skipped; endpoints are inclusive/exclusive.
-    fn covering_ends(pairs: &Value, now: Timestamp) -> impl Iterator<Item = Timestamp> + '_ {
-        // Stored caches contain ISO8601 pairs only (Calendar::MeetingRefresh).
+    /// MeetingCache#parse_pairs keeps malformed pairs out without sorting or clipping.
+    pub fn parsed_pairs(
+        pairs: &Value,
+        now: Timestamp,
+    ) -> impl Iterator<Item = (Timestamp, Timestamp)> + '_ {
         pairs
             .as_array()
             .into_iter()
@@ -87,10 +89,22 @@ impl MeetingCache {
                             crate::slash_commands::time_parser::parse(v.as_str()?, "UTC", now)
                         })
                 };
-                let start = parse(pair.first()?)?;
-                let end = parse(pair.get(1)?)?;
-                (start <= now && now < end).then_some(end)
+                Some((parse(pair.first()?)?, parse(pair.get(1)?)?))
             })
+    }
+    fn covering_ends(pairs: &Value, now: Timestamp) -> impl Iterator<Item = Timestamp> + '_ {
+        Self::parsed_pairs(pairs, now)
+            .filter_map(move |(start, end)| (start <= now && now < end).then_some(end))
+    }
+    pub fn quiet_window_epochs(&self, now: Timestamp) -> Vec<(i64, i64)> {
+        Self::parsed_pairs(&self.busy_intervals, now)
+            .map(|(start, end)| (start.jiff().as_second(), end.jiff().as_second()))
+            .collect()
+    }
+    pub fn ooo_window_epochs(&self, now: Timestamp) -> Vec<(i64, i64)> {
+        Self::parsed_pairs(&self.ooo_intervals, now)
+            .map(|(start, end)| (start.jiff().as_second(), end.jiff().as_second()))
+            .collect()
     }
 
     pub fn in_meeting(&self, now: Timestamp) -> bool {

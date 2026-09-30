@@ -52,6 +52,10 @@ pub fn forms(
         .join("\n");
     let clock = campfire_db::models::user_status_settings::minutes_to_clock_time;
     Ok(SettingsFormData {
+        theme: user.theme.clone(),
+        text_size: user.text_size.clone(),
+        time_zone: user.time_zone.clone(),
+        time_zone_choices: campfire_views::users::profile_time_zone_choices(now.jiff()),
         presence_setting: user.presence_setting.clone(),
         custom_status_emoji: user.custom_status_emoji.clone(),
         custom_status_text: user.custom_status_text.clone(),

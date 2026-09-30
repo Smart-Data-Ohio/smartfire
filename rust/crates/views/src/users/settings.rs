@@ -14,6 +14,14 @@ pub struct SettingsPerson {
 
 #[derive(Clone, Debug, Default, Deserialize)]
 pub struct SettingsFormData {
+    #[serde(default)]
+    pub theme: String,
+    #[serde(default)]
+    pub text_size: String,
+    #[serde(default)]
+    pub time_zone: Option<String>,
+    #[serde(default)]
+    pub time_zone_choices: Vec<(String, String)>,
     pub presence_setting: String,
     pub custom_status_emoji: Option<String>,
     pub custom_status_text: Option<String>,
@@ -245,4 +253,94 @@ pub struct StatusForm<'a> {
 pub struct NotificationForm<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub data: &'a SettingsFormData,
+}
+
+#[derive(Template)]
+#[template(path = "users/profiles/_appearance.html")]
+pub struct AppearanceForm<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub data: &'a SettingsFormData,
+}
+
+impl SettingsFormData {
+    fn appearance_radio(&self, attribute: &str, value: &str, current: &str) -> h::Html {
+        self.field(
+            attribute,
+            h::legacy_tag(
+                "input",
+                h::attrs()
+                    .id(format!("user_{attribute}_{value}"))
+                    .type_("radio")
+                    .value(value)
+                    .attr("checked", value == current)
+                    .name(format!("user[{attribute}]")),
+            ),
+        )
+    }
+    fn zone_select(&self) -> h::Html {
+        let table = profile_zone_table();
+        let current = self
+            .time_zone
+            .as_deref()
+            .and_then(|zone| table["mapping"][zone].as_str());
+        let mut options =
+            h::content_tag_text("option", h::attrs().value(""), "Not set (use system)").0;
+        for (label, value) in &self.time_zone_choices {
+            options.push('\n');
+            options.push_str(
+                &h::content_tag_text(
+                    "option",
+                    h::attrs()
+                        .attr("selected", current == Some(value.as_str()))
+                        .value(value),
+                    label,
+                )
+                .0,
+            );
+        }
+        self.field(
+            "time_zone",
+            h::content_tag(
+                "select",
+                h::attrs()
+                    .class("input flex-item-grow")
+                    .id("user_time_zone")
+                    .name("user[time_zone]"),
+                &options,
+            ),
+        )
+    }
+}
+fn profile_zone_table() -> &'static serde_json::Value {
+    static TABLE: std::sync::LazyLock<serde_json::Value> = std::sync::LazyLock::new(|| {
+        serde_json::from_str(include_str!("profile_zones.json")).expect("pinned Rails zone choices")
+    });
+    &TABLE
+}
+
+/// Rails TimeZone#to_s uses TZInfo's current *base* UTC offset (including negative DST),
+/// rather than the total wall-clock offset. Vendored transitions come from the pinned image.
+pub fn profile_time_zone_choices(now: jiff::Timestamp) -> Vec<(String, String)> {
+    profile_zone_table()["choice_zones"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|zone| {
+            let mut offset = zone["initial"].as_i64().unwrap();
+            for change in zone["changes"].as_array().unwrap() {
+                if change[0].as_i64().unwrap() > now.as_second() {
+                    break;
+                }
+                offset = change[1].as_i64().unwrap();
+            }
+            let label = format!(
+                "(GMT{}{:02}:{:02}) {}",
+                if offset < 0 { "-" } else { "+" },
+                offset.abs() / 3600,
+                offset.abs() % 3600 / 60,
+                zone["name"].as_str().unwrap()
+            );
+            (label, zone["id"].as_str().unwrap().to_owned())
+        })
+        .collect()
 }

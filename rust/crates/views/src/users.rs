@@ -124,6 +124,9 @@ impl<'a> ProfileShow<'a> {
     fn notification_form(&self) -> h::Html {
         h::raw(NotificationForm { ctx: self.ctx, data: &self.settings }.render().expect("notification form renders"))
     }
+    fn appearance_form(&self) -> h::Html {
+        h::raw(AppearanceForm { ctx: self.ctx, data: &self.settings }.render().expect("appearance form renders"))
+    }
     /// `profile_form_with(@user, **params)`.
     fn profile_form(&self) -> h::FormWith {
         h::form_with(h::routes::user_profile()).model("user").method("patch").data("controller", "form")

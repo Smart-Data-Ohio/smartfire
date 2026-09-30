@@ -438,28 +438,28 @@
     {
       "file": "test/models/room/push_test.rb",
       "test": "deliver new message to other room users with push subscriptions",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/push_test.rs::deliver_new_message_to_other_room_users_with_push_subscriptions"
     },
     {
       "file": "test/models/room/push_test.rb",
       "test": "notifies subscribed users",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/push_test.rs::notifies_subscribed_users"
     },
     {
       "file": "test/models/room/push_test.rb",
       "test": "replies notify their author only when opted in",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/push_test.rs::ws17_replies_notify_only_opted_in_authors_and_merge_duplicate_scopes"
     },
     {
       "file": "test/models/room/push_test.rb",
       "test": "message pushes carry the room tag so notifications group per room",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/push_test.rs::payloads"
     },
@@ -473,70 +473,70 @@
     {
       "file": "test/models/room/push_test.rb",
       "test": "does not notify for connected rooms",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/push_test.rs::does_not_notify_for_connected_rooms"
     },
     {
       "file": "test/models/room/push_test.rb",
       "test": "does not notify for invisible rooms",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/push_test.rs::does_not_notify_for_invisible_rooms"
     },
     {
       "file": "test/models/room/push_test.rb",
       "test": "destroys invalid subscriptions",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/campfire/src/integrations/web_push/tests.rs::pushes_messages_and_destroys_expired_subscriptions"
     },
     {
       "file": "test/models/push/subscription_test.rb",
       "test": "valid subscription with permitted endpoint",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/push_test.rs::valid_subscription_with_permitted_endpoint"
     },
     {
       "file": "test/models/push/subscription_test.rb",
       "test": "rejects endpoint with non-https scheme",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/push_test.rs::rejects_endpoint_with_non_https_scheme"
     },
     {
       "file": "test/models/push/subscription_test.rb",
       "test": "rejects endpoint with non-permitted host",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/push_test.rs::rejects_endpoint_with_non_permitted_host"
     },
     {
       "file": "test/models/push/subscription_test.rb",
       "test": "rejects endpoint whose host only suffix-matches a permitted host",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/push_test.rs::rejects_endpoint_whose_host_only_suffix_matches_a_permitted_host"
     },
     {
       "file": "test/models/push/subscription_test.rb",
       "test": "rejects blank endpoint",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/push_test.rs::rejects_blank_endpoint"
     },
     {
       "file": "test/models/push/subscription_test.rb",
       "test": "rejects endpoint on a non-default port",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/push_test.rs::rejects_endpoint_on_a_non_default_port"
     },
     {
       "file": "test/models/push/subscription_test.rb",
       "test": "rejects endpoint that resolves to private IP",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/push_test.rs::rejects_endpoint_that_resolves_to_private_ip"
     },
@@ -564,7 +564,7 @@
     {
       "file": "test/models/push/subscription_test.rb",
       "test": "resolved_endpoint_ip returns the pinned public IP",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/push_test.rs::resolved_endpoint_ip_returns_the_pinned_public_ip"
     },
@@ -585,42 +585,42 @@
     {
       "file": "test/models/push/subscription_test.rb",
       "test": "delivery is skipped for a non-permitted host even when it resolves publicly",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/push_test.rs::delivery_is_skipped_for_a_non_permitted_host_or_port"
     },
     {
       "file": "test/models/push/subscription_test.rb",
       "test": "delivery is skipped for a permitted host on a non-default port",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/push_test.rs::delivery_is_skipped_for_a_non_permitted_host_or_port"
     },
     {
       "file": "test/models/push/subscription_test.rb",
       "test": "delivery sends with the pinned endpoint_ip",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/campfire/src/integrations/web_push/tests.rs::delivers_to_the_pinned_address_with_the_gems_headers"
     },
     {
       "file": "test/models/push/subscription_test.rb",
       "test": "the encoded message carries the notification tag for room grouping",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/campfire/src/integrations/web_push/tests.rs::encodes_the_message_like_json_generate"
     },
     {
       "file": "test/models/push/subscription_test.rb",
       "test": "accepts all permitted push service domains",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/push_test.rs::accepts_all_permitted_push_service_domains"
     },
     {
       "file": "test/lib/web_push/persistent_request_test.rb",
       "test": "pins delivery to endpoint_ip instead of re-resolving the host",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/campfire/src/integrations/web_push/tests.rs::delivers_to_the_pinned_address_with_the_gems_headers"
     },
@@ -634,210 +634,210 @@
     {
       "file": "test/models/workspace_presence_lease_test.rb",
       "test": "an unexpired lease backed by an existing session makes its user online",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_fresh_lease_is_online_and_has_a_uuid_and_90_second_ttl"
     },
     {
       "file": "test/models/workspace_presence_lease_test.rb",
       "test": "a stale lease does not make its user online",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_expiry_is_inclusive_and_reads_never_prune"
     },
     {
       "file": "test/models/workspace_presence_lease_test.rb",
       "test": "deleting one lease leaves a user online while another connection is live",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_deleting_one_connection_keeps_the_other_live"
     },
     {
       "file": "test/models/workspace_presence_lease_test.rb",
       "test": "a lease without its session does not make its user online",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_revoked_session_refresh_deletes_lease"
     },
     {
       "file": "test/models/workspace_presence_lease_test.rb",
       "test": "refresh deletes the lease when its session has been revoked",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_revoked_session_refresh_deletes_lease"
     },
     {
       "file": "test/models/workspace_presence_lease_test.rb",
       "test": "cannot establish or refresh presence for an inactive user",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_inactive_user_cannot_establish_or_refresh"
     },
     {
       "file": "test/models/workspace_presence_lease_test.rb",
       "test": "cannot establish a lease for another user's session",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_session_mismatch_is_absent_and_pruned"
     },
     {
       "file": "test/models/workspace_presence_lease_test.rb",
       "test": "online lookup rejects a lease whose session belongs to another user",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_session_mismatch_is_absent_and_pruned"
     },
     {
       "file": "test/models/workspace_presence_lease_test.rb",
       "test": "prune removes leases whose session belongs to another user",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_session_mismatch_is_absent_and_pruned"
     },
     {
       "file": "test/models/workspace_presence_lease_test.rb",
       "test": "prune removes expired leases in bounded batches",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_prune_has_bounded_batches"
     },
     {
       "file": "test/models/workspace_presence_lease_test.rb",
       "test": "a fresh lease reads online, then idle after ten quiet minutes",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_quiet_heartbeat_extends_only_expiry_and_active_heartbeat_restores_online"
     },
     {
       "file": "test/models/workspace_presence_lease_test.rb",
       "test": "an active heartbeat extends activity while a quiet one only extends the lease",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_quiet_heartbeat_extends_only_expiry_and_active_heartbeat_restores_online"
     },
     {
       "file": "test/models/workspace_presence_lease_test.rb",
       "test": "any active connection keeps the user online",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_any_recent_or_legacy_null_activity_keeps_user_online"
     },
     {
       "file": "test/models/workspace_presence_lease_test.rb",
       "test": "users without a lease are absent from the presence map",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/workspace_presence_lease_test.rs::ws17_absent_users_and_expired_leases_are_not_returned"
     },
     {
       "file": "test/channels/workspace_presence_channel_test.rb",
       "test": "subscribing establishes a server-owned presence lease",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/campfire/src/channels/tests/reference_test.rs::workspace_presence_subscribing_establishes_a_server_owned_presence_lease"
     },
     {
       "file": "test/channels/workspace_presence_channel_test.rb",
       "test": "unsubscribing deletes only this connection lease",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/campfire/src/channels/tests/reference_test.rs::workspace_presence_unsubscribing_deletes_only_this_connections_lease"
     },
     {
       "file": "test/channels/workspace_presence_channel_test.rb",
       "test": "heartbeat extends the lease",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/campfire/src/channels/tests/reference_test.rs::workspace_presence_heartbeat_extends_the_lease"
     },
     {
       "file": "test/channels/workspace_presence_channel_test.rb",
       "test": "heartbeat rejects and deletes presence after session revocation",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/campfire/src/channels/tests/reference_test.rs::workspace_presence_heartbeat_rejects_and_deletes_presence_after_session_revocation"
     },
     {
       "file": "test/channels/workspace_presence_channel_test.rb",
       "test": "heartbeat destroys an idle-timed-out administrator session and rejects",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/campfire/src/channels/tests/reference_test.rs::workspace_presence_heartbeat_destroys_an_idle_timed_out_administrator_session_and_rejects"
     },
     {
       "file": "test/channels/workspace_presence_channel_test.rb",
       "test": "heartbeat replaces a valid lease that was pruned",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/campfire/src/channels/tests/reference_test.rs::workspace_presence_heartbeat_replaces_a_valid_lease_that_was_pruned"
     },
     {
       "file": "test/channels/workspace_presence_channel_test.rb",
       "test": "rejects a subscription without a verified session",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/campfire/src/channels/tests/reference_test.rs::workspace_presence_rejects_a_subscription_without_a_session"
     },
     {
       "file": "test/controllers/users/presences_controller_test.rb",
       "test": "returns presence and custom status for workspace users",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/campfire/src/controllers/users/presences.rs::ws17_presence_http_bodies_match_rails_vectors"
     },
     {
       "file": "test/controllers/users/presences_controller_test.rb",
       "test": "an expired custom status reads as blank",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/campfire/src/controllers/users/presences.rs::ws17_presence_http_bodies_match_rails_vectors"
     },
     {
       "file": "test/controllers/users/presences_controller_test.rb",
       "test": "a presence lookup never prunes expired leases",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/campfire/src/controllers/users/presences.rs::ws17_presence_http_bodies_match_rails_vectors"
     },
     {
       "file": "test/controllers/users/presences_controller_test.rb",
       "test": "invisible members read offline",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/campfire/src/controllers/users/presences.rs::ws17_presence_http_bodies_match_rails_vectors"
     },
     {
       "file": "test/controllers/users/presences_controller_test.rb",
       "test": "returns the meeting label while in a meeting",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/campfire/src/controllers/users/presences.rs::ws17_presence_http_bodies_match_rails_vectors"
     },
     {
       "file": "test/controllers/users/presences_controller_test.rb",
       "test": "a custom status wins over the meeting label in the lookup",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/campfire/src/controllers/users/presences.rs::ws17_presence_http_bodies_match_rails_vectors"
     },
     {
       "file": "test/controllers/users/presences_controller_test.rb",
       "test": "returns the OOO label while out of office",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/campfire/src/controllers/users/presences.rs::ws17_presence_http_bodies_match_rails_vectors"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "defaults to automatic presence, no DND, and the system theme",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::defaults_to_automatic_presence_no_dnd_and_system_theme"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "rejects unknown presence, theme, and time zone values",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::ws17_status_settings_validations_match_rails_and_leave_rows_unchanged"
     },
@@ -851,7 +851,7 @@
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "the DND presence silences like the DND switch",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::the_dnd_presence_silences_like_the_dnd_switch_and_only_allows_the_allowed_sender"
     },
@@ -865,21 +865,21 @@
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "quiet hours need a start and an end while enabled",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::ws17_status_settings_validations_match_rails_and_leave_rows_unchanged"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "malformed quiet-hours input reads as blank",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::ws17_quiet_hours_virtual_setters_match_rails"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "quiet-hours input tolerates seconds",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::ws17_quiet_hours_virtual_setters_match_rails"
     },
@@ -893,28 +893,28 @@
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "custom status expiry presets resolve in the user's time zone",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::ws17_custom_status_and_ooo_presets_match_rails_zones_and_dst"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "an unknown custom status expiry raises",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::unknown_expiry_raises_and_blank_preserves_the_old_expiry"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "replacing keywords strips, dedupes, and caps the list",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::replacing_keywords_strips_dedupes_and_caps_the_list"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "replacing keywords past the cap fails with errors",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::replacing_keywords_strips_dedupes_and_caps_the_list"
     },
@@ -1432,28 +1432,28 @@
     {
       "file": "test/models/saved_item/reminder_pusher_test.rb",
       "test": "pushes the reminder to the saver with a message link",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/saved_item_test.rs::pushes_the_reminder_to_the_saver_with_a_message_link"
     },
     {
       "file": "test/models/saved_item/reminder_pusher_test.rb",
       "test": "no push goes out after the saver loses room access",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/saved_item_test.rs::no_push_goes_out_after_the_saver_loses_room_access"
     },
     {
       "file": "test/models/saved_item/reminder_pusher_test.rb",
       "test": "no push goes out while the saver is in Do Not Disturb",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/campfire/src/integrations/web_push/tests.rs::ws17_durable_thread_and_saved_reminder_jobs_apply_policy_and_deliver"
     },
     {
       "file": "test/models/saved_item/reminder_pusher_test.rb",
       "test": "a thread message reminder links into its thread",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/saved_item_test.rs::a_thread_message_reminder_links_into_its_thread"
     },
@@ -1677,317 +1677,317 @@
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "updates presence and the custom status with an expiry",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_updates_presence_and_the_custom_status_with_an_expiry"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "clears the custom status",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_clears_the_custom_status"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "rejects an unknown presence with errors",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_rejects_an_unknown_presence_with_errors"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "requires sign-in",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_statuses_requires_sign_in"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "opting into meeting status enqueues a first refresh",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_opting_into_meeting_status_enqueues_a_first_refresh"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "opting out of meeting status drops the cached intervals",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_opting_out_of_meeting_status_drops_the_cached_intervals"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "opting out while in a meeting broadcasts the cleared badge",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_opting_out_while_in_a_meeting_broadcasts_the_cleared_badge"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "opting out without cached intervals broadcasts nothing",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_opting_out_without_cached_intervals_broadcasts_nothing"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "saving other status settings leaves meeting refreshes alone",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_saving_other_status_settings_leaves_meeting_refreshes_alone"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "sets out of office with a preset and a note, and broadcasts it",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_sets_out_of_office_with_a_preset_and_a_note_and_broadcasts_it"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "sets out of office with a custom date and time in the member's zone",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_sets_out_of_office_with_a_custom_date_and_time_in_the_members_zone"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "rejects an unknown OOO preset without saving anything",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_rejects_an_unknown_ooo_preset_without_saving_anything"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "rejects a blank or past custom OOO end without saving anything",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_rejects_a_blank_or_past_custom_ooo_end_without_saving_anything"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "rejects an OOO note over 140 characters",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_rejects_an_ooo_note_over_140_characters"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "clears out of office early and broadcasts the cleared state",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_clears_out_of_office_early_and_broadcasts_the_cleared_state"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "clearing early ends only the manual OOO while calendar OOO covers",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_clearing_early_ends_only_the_manual_ooo_while_calendar_ooo_covers"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "edits the OOO note alone",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_edits_the_ooo_note_alone"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "opting into calendar OOO enqueues a first refresh",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_opting_into_calendar_ooo_enqueues_a_first_refresh"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "opting out of calendar OOO clears its intervals and broadcasts",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_opting_out_of_calendar_ooo_clears_its_intervals_and_broadcasts"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "opting out of calendar OOO keeps the row while meeting status is on",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_opting_out_of_calendar_ooo_keeps_the_row_while_meeting_status_is_on"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "opting out of meeting status keeps the row while calendar OOO is on",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_opting_out_of_meeting_status_keeps_the_row_while_calendar_ooo_is_on"
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
       "test": "saving other status settings leaves calendar OOO refreshes alone",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/statuses/tests.rs::ws17_saving_other_status_settings_leaves_calendar_ooo_refreshes_alone"
     },
     {
       "file": "test/controllers/users/dnd_allowances_controller_test.rb",
       "test": "starring and unstarring someone for DND",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/dnd_allowances.rs::ws17_starring_and_unstarring_someone_for_dnd"
     },
     {
       "file": "test/controllers/users/dnd_allowances_controller_test.rb",
       "test": "starring twice stays a single exception",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: ws17_starring_twice_stays_single_exception"
     },
     {
       "file": "test/controllers/users/dnd_allowances_controller_test.rb",
       "test": "a concurrent star reports success instead of an error",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: ws17_unique_index_losing_star_redirects_success"
     },
     {
       "file": "test/controllers/users/dnd_allowances_controller_test.rb",
       "test": "cannot star yourself",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/dnd_allowances.rs::ws17_allowances_reject_self_bots_inactive_missing_and_anonymous"
     },
     {
       "file": "test/controllers/users/dnd_allowances_controller_test.rb",
       "test": "cannot star a bot",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/dnd_allowances.rs::ws17_allowances_reject_self_bots_inactive_missing_and_anonymous"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "enables DND with quiet hours and keywords",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_enables_dnd_with_quiet_hours_and_keywords"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "disables DND and clears keywords",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_disables_dnd_and_clears_keywords"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "enables quiet-during-meetings",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_enables_quiet_during_meetings"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "toggles keep-notifying while out of office, defaulting to off",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_toggles_keep_notifying_while_out_of_office_defaulting_off"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "quiet hours without a window render errors",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_quiet_hours_without_a_window_render_errors_and_submitted_values"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "a failed save keeps the previous keywords",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_a_failed_save_keeps_the_previous_keywords"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "requires sign-in",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_notification_settings_requires_sign_in"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "enabling DND after a timed expiry starts it indefinitely",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_enabling_dnd_after_a_timed_expiry_starts_it_indefinitely"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "disabling DND clears a running timer",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_disabling_dnd_clears_a_running_timer"
     },
     {
       "file": "test/controllers/users/notification_settings_controller_test.rb",
       "test": "saving settings preserves a running DND timer",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/campfire/src/controllers/users/notification_settings.rs::ws17_saving_settings_preserves_a_running_dnd_timer"
     },
     {
       "file": "test/models/dnd_allowed_user_test.rb",
       "test": "allows starring another active person",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::allows_another_active_person_but_rejects_duplicates_self_bots_and_missing_people"
     },
     {
       "file": "test/models/dnd_allowed_user_test.rb",
       "test": "rejects duplicates, self-stars, and bots",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17",
       "evidence": "rust/crates/db/src/tests/status_settings_write_test.rs::allows_another_active_person_but_rejects_duplicates_self_bots_and_missing_people"
     },
     {
       "file": "test/controllers/users/push_subscriptions_controller_test.rb",
       "test": "create new push subscription",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: ws17_create_new_push_subscription"
     },
     {
       "file": "test/controllers/users/push_subscriptions_controller_test.rb",
       "test": "touch existing subscription",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: ws17_touch_existing_subscription"
     },
     {
       "file": "test/controllers/users/push_subscriptions_controller_test.rb",
       "test": "rejects subscription with non-permitted endpoint",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: ws17_rejects_subscription_with_non_permitted_endpoint"
     },
     {
       "file": "test/controllers/users/push_subscriptions_controller_test.rb",
       "test": "rejects subscription with endpoint resolving to a private IP",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: ws17_rejects_subscription_with_endpoint_resolving_to_private_ip"
     },
     {
       "file": "test/controllers/users/push_subscriptions_controller_test.rb",
       "test": "re-registering a legacy invalid subscription is rejected with 422",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: ws17_reregistering_legacy_invalid_subscription_is_rejected"
     },
     {
       "file": "test/controllers/users/push_subscriptions_controller_test.rb",
       "test": "destroy a push subscription via dev mode",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: ws17_destroy_push_subscription_via_dev_mode"
     },
     {
       "file": "test/system/service_worker_test.rb",
@@ -2146,21 +2146,21 @@
     {
       "file": "test/models/notifications/keyword_matcher_test.rb",
       "test": "matches case-insensitively",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::matches_case_insensitively"
     },
     {
       "file": "test/models/notifications/keyword_matcher_test.rb",
       "test": "matches on word boundaries only",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::matches_on_word_boundaries_only"
     },
     {
       "file": "test/models/notifications/keyword_matcher_test.rb",
       "test": "matches multi-word phrases",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::matches_multi_word_phrases"
     },
@@ -2174,28 +2174,28 @@
     {
       "file": "test/models/notifications/keyword_matcher_test.rb",
       "test": "returns every user with a match",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::returns_every_user_with_a_match"
     },
     {
       "file": "test/models/notifications/keyword_matcher_test.rb",
       "test": "overlapping phrases across users all match",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::overlapping_phrases_across_users_all_match"
     },
     {
       "file": "test/models/notifications/keyword_matcher_test.rb",
       "test": "nested phrases match the same user once",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::nested_phrases_match_the_same_user_once"
     },
     {
       "file": "test/models/notifications/keyword_matcher_test.rb",
       "test": "repeated phrases match every holder once",
-      "status": "ported-equivalent-rerun",
+      "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
       "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::repeated_phrases_match_every_holder_once"
     },
