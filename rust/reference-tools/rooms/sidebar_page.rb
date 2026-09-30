@@ -10,7 +10,7 @@ require "digest"
   "app/views/users/sidebars/_room_categories.html.erb" => "14d8fbd173e1a19c8b9279ff1f514ab4026f5536d233b6baea897b857bc3af10",
 }.each { |path, hash| raise "reference drift: #{path}" unless Digest::SHA256.file(Rails.root.join(path)).hexdigest == hash }
 require 'digest'
-raise 'reference drift' unless Digest::SHA256.file(Rails.root.join('app/views/users/sidebars/show.html.erb')).hexdigest == 'ac37bdb0e0fbdefd1a8ba583885d9d88f78955e741fefcc5233efafdfea165ff'
+raise 'reference drift' unless Digest::SHA256.file(Rails.root.join('app/views/users/sidebars/show.html.erb')).hexdigest == '6fd40c08b6f437ecefac5ab906511093234da3327dcb72c4cad131365ee2f8e8'
 class SidebarGoldenController < Users::SidebarsController
   def form_authenticity_token(form_options: {})
     action, method = form_options.values_at(:action, :method)

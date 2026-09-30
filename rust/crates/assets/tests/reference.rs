@@ -163,7 +163,7 @@ fn approved_status_assets_are_served_byte_identically_and_stay_in_strict_baselin
     let mapped = overridden();
     for (logical, bytes) in approved {
         assert!(!mapped.contains_key(logical), "approved file must receive the ordinary strict precompile comparison");
-        assert_eq!(get(&campfire_assets::asset_path(logical)).body.as_slice(), bytes, "{logical}: complete served bytes");
+        assert_eq!(get(&campfire_assets::asset_path(logical)).body, bytes, "{logical}: complete served bytes");
     }
 }
 
