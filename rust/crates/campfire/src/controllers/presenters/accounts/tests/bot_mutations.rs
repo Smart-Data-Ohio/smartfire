@@ -2,6 +2,135 @@
 use super::*;
 
 #[tokio::test]
+async fn administrator_saves_daily_caps_audit_pairs_and_rejects_zero_without_writes() {
+    let test = boot_seed("default").await.expect("default seed");
+    let bot: i64 = test.label("users.bender").parse().unwrap();
+    let mut admin = test.browser("198.51.100.161");
+    admin.sign_in(&test.label("emails.david")).await;
+    let path = format!("/account/bots/{bot}");
+    assert_redirect(
+        &admin
+            .form(
+                "patch",
+                &path,
+                &[
+                    ("user[name]", "Bender Bot"),
+                    ("agent[daily_message_cap]", "50"),
+                    ("agent[daily_board_post_cap]", "10"),
+                    ("agent[daily_external_action_cap]", "5"),
+                ],
+            )
+            .await,
+        "http://campfire.test/account/bots",
+    );
+    test.booted.app.db.read(move |conn| {
+        let agent = campfire_db::Agent::for_user(conn,bot)?.unwrap();
+        assert_eq!((agent.daily_message_cap,agent.daily_board_post_cap,agent.daily_external_action_cap),(Some(50),Some(10),Some(5)));
+        let details: serde_json::Value = conn.query_row("SELECT details FROM audit_logs WHERE action='agent.update' AND target_id=? ORDER BY id DESC LIMIT 1",[agent.id],|r|r.get(0))?;
+        for (field,cap) in [("daily_message_cap",50),("daily_board_post_cap",10),("daily_external_action_cap",5)] {
+            assert_eq!(details[field],serde_json::json!({"before":null,"after":cap}));
+        }
+        Ok(())
+    }).await.unwrap();
+    let response = admin
+        .form(
+            "patch",
+            &path,
+            &[
+                ("user[name]", "Must roll back"),
+                ("agent[daily_message_cap]", "0"),
+            ],
+        )
+        .await;
+    assert_eq!(
+        response.status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "{}",
+        response.text()
+    );
+    assert!(
+        response
+            .text()
+            .contains("Daily message cap must be greater than 0")
+    );
+    test.booted
+        .app
+        .db
+        .read(move |conn| {
+            assert_eq!(campfire_db::User::find(conn, bot)?.name, "Bender Bot");
+            assert_eq!(
+                campfire_db::Agent::for_user(conn, bot)?
+                    .unwrap()
+                    .daily_message_cap,
+                Some(50)
+            );
+            assert_eq!(
+                conn.query_row(
+                    "SELECT COUNT(*) FROM audit_logs WHERE action='agent.update'",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )?,
+                1
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn bot_update_ignores_role_owner_kind_and_unpermitted_credentials() {
+    let test = boot_seed("default").await.expect("default seed");
+    let bot: i64 = test.label("users.bender").parse().unwrap();
+    let mut admin = test.browser("198.51.100.162");
+    admin.sign_in(&test.label("emails.david")).await;
+    assert_redirect(
+        &admin
+            .form(
+                "patch",
+                &format!("/account/bots/{bot}"),
+                &[
+                    ("user[name]", "Permitted edit"),
+                    ("user[role]", "administrator"),
+                    ("user[bot_token]", "fixture-must-not-store"),
+                    ("agent[kind]", "personal"),
+                    ("agent[owner_id]", "712064548"),
+                    ("agent[webhook_signing_secret]", "fixture-must-not-store"),
+                ],
+            )
+            .await,
+        "http://campfire.test/account/bots",
+    );
+    test.booted
+        .app
+        .db
+        .read(move |conn| {
+            let user = campfire_db::User::find(conn, bot)?;
+            let agent = campfire_db::Agent::for_user(conn, bot)?.unwrap();
+            assert_eq!(user.name, "Permitted edit");
+            assert!(user.is_bot());
+            assert_eq!(agent.kind, campfire_db::AgentKind::Workspace);
+            assert_eq!(agent.owner_id, Some(127326141));
+            assert_eq!(
+                conn.query_row("SELECT bot_token FROM users WHERE id=?", [bot], |r| r
+                    .get::<_, Option<String>>(0))?,
+                None
+            );
+            assert_eq!(
+                conn.query_row(
+                    "SELECT webhook_signing_secret FROM agents WHERE id=?",
+                    [agent.id],
+                    |r| r.get::<_, Option<String>>(0)
+                )?,
+                None
+            );
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
 async fn create_requires_administrator_and_sudo() {
     let test = boot_seed("default").await.expect("default seed");
     let mut member = test.browser("198.51.100.201");

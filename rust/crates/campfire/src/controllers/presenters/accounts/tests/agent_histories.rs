@@ -270,6 +270,19 @@ async fn ledger_redacts_content_when_viewer_agent_membership_or_read_grant_is_mi
     test.booted
         .app
         .db
+        .write(move |tx| campfire_db::Room::find(tx.conn(), room)?.grant_to(tx, &[712064548]))
+        .await
+        .unwrap();
+    assert!(
+        owner
+            .get(&path)
+            .await
+            .text()
+            .contains("Ledger private content")
+    );
+    test.booted
+        .app
+        .db
         .write(move |tx| {
             tx.conn().execute(
                 "DELETE FROM memberships WHERE user_id=712064548 AND room_id=?",
@@ -298,6 +311,45 @@ async fn ledger_redacts_content_when_viewer_agent_membership_or_read_grant_is_mi
             )?;
             Ok(())
         })
+        .await
+        .unwrap();
+    assert!(
+        !admin
+            .get(&path)
+            .await
+            .text()
+            .contains("Ledger private content")
+    );
+    let read_grant = test
+        .booted
+        .app
+        .db
+        .write(move |tx| {
+            Ok(AgentGrant::create(
+                tx,
+                campfire_db::NewGrant {
+                    agent_id: id,
+                    capability: "read_messages".into(),
+                    room_id: Some(room),
+                    granted_by_id: 127326141,
+                    ..Default::default()
+                },
+            )?
+            .id)
+        })
+        .await
+        .unwrap();
+    assert!(
+        admin
+            .get(&path)
+            .await
+            .text()
+            .contains("Ledger private content")
+    );
+    test.booted
+        .app
+        .db
+        .write(move |tx| AgentGrant::find(tx.conn(), read_grant)?.unwrap().revoke(tx))
         .await
         .unwrap();
     assert!(
