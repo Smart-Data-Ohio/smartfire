@@ -5,12 +5,12 @@ use serde::{Serialize,Deserialize};
 use sha2::{Digest,Sha256};
 use subtle::ConstantTimeEq;
 
-// Positional Rails job arguments are JSON arrays; MeetingRefresh follows WS17's named payload.
-#[derive(Debug,Serialize,Deserialize)] pub struct SyncEntryJob(pub (i64,i64));
+// Argument names come from Rails. SyncEntry/MeetLink match WS14e; MeetingRefresh matches WS17.
+#[derive(Debug,Serialize,Deserialize)] pub struct SyncEntryJob {pub event_id:i64,pub user_id:i64}
 impl Job for SyncEntryJob { const CLASS:&'static str="Calendar::SyncEntryJob"; }
 #[derive(Debug,Serialize,Deserialize)] pub struct InboundSyncJob(pub (i64,));
 impl Job for InboundSyncJob { const CLASS:&'static str="Calendar::InboundSyncJob"; }
-#[derive(Debug,Serialize,Deserialize)] pub struct MeetLinkJob(pub (i64,));
+#[derive(Debug,Serialize,Deserialize)] pub struct MeetLinkJob {pub event_id:i64}
 impl Job for MeetLinkJob { const CLASS:&'static str="Calendar::MeetLinkJob"; }
 #[derive(Debug,Serialize,Deserialize)] pub struct WatchChannelJob(pub (i64,));
 impl Job for WatchChannelJob { const CLASS:&'static str="Calendar::WatchChannelJob"; }
