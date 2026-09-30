@@ -248,6 +248,155 @@ async fn ws14e_event_jobs_commit_with_create_rsvp_and_reminder() {
     );
 }
 
+/// Public WS14g APIs use the real queue; a late follower enqueue failure rolls
+/// back every response, and a Meet retry enqueue failure restores the old link.
+#[tokio::test]
+async fn calendar_api_durable_callbacks_coalesce_and_reject_atomically() {
+    use campfire_db::fixtures::{Options, identify, load, reference_dir};
+    use campfire_db::{CalendarEvent, EventAttendance, NewCalendarEvent};
+    let (booted, _dir) = app().await;
+    let app = booted.app.clone();
+    booted.jobs.shutdown(Duration::from_secs(5)).await;
+    app.db
+        .write(|tx| {
+            load(
+                tx.conn(),
+                &reference_dir(),
+                &Options {
+                    now: tx.now(),
+                    bcrypt_cost: 4,
+                },
+            )
+        })
+        .await
+        .unwrap();
+    let head = app
+        .db
+        .write(|tx| {
+            CalendarEvent::create(
+                tx,
+                NewCalendarEvent {
+                    room_id: identify("designers"),
+                    organizer_id: identify("david"),
+                    title: "Calendar API".into(),
+                    starts_at: Some(tx.now().since(jiff::SignedDuration::from_mins(10))),
+                    time_zone: "UTC".into(),
+                    recurrence_rule: Some("weekly".into()),
+                    recurrence_until: Some(
+                        tx.now()
+                            .jiff()
+                            .to_zoned(jiff::tz::TimeZone::UTC)
+                            .date()
+                            .checked_add(jiff::Span::new().days(14))
+                            .unwrap(),
+                    ),
+                    meet_link_requested: true,
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
+    let hid = head.id;
+    let rows = app.db.read(move |c| head.series_events(c)).await.unwrap();
+    let ids: Vec<_> = rows.iter().map(|e| e.id).collect();
+    app.db
+        .write(|tx| {
+            tx.conn().execute("DELETE FROM background_jobs", [])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let user = identify("jason");
+    app.db
+        .write(move |tx| {
+            let first = CalendarEvent::respond(tx, hid, user, "maybe", false)?;
+            assert_eq!(first.event_id, hid);
+            CalendarEvent::respond(tx, hid, user, "declined", true)?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let queued = jobs(&app);
+    assert_eq!(queued.len(), 3);
+    assert_eq!(
+        queued
+            .iter()
+            .map(|j| (j.class.as_str(), j.arguments.clone()))
+            .collect::<Vec<_>>(),
+        ids.iter()
+            .map(|eid| (
+                "Calendar::SyncEntryJob",
+                serde_json::json!({"event_id":eid,"user_id":user})
+            ))
+            .collect::<Vec<_>>()
+    );
+    let follower = ids[1];
+    app.db.write(move |tx| {
+        tx.conn().execute_batch(&format!("CREATE TRIGGER reject_api_follower BEFORE INSERT ON background_jobs WHEN NEW.job_class='Calendar::SyncEntryJob' AND json_extract(NEW.arguments,'$.event_id')={follower} AND json_extract(NEW.arguments,'$.user_id')={user} BEGIN SELECT RAISE(ABORT,'queue unavailable'); END"))?;
+        Ok(())
+    }).await.unwrap();
+    assert!(
+        app.db
+            .write(move |tx| CalendarEvent::respond(tx, hid, user, "going", false))
+            .await
+            .is_err()
+    );
+    assert_eq!(jobs(&app).len(), 3, "no partially inserted callback job");
+    for eid in ids {
+        let saved = app
+            .db
+            .read(move |c| EventAttendance::find_for(c, eid, user))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            saved.response, "declined",
+            "late follower failure must restore every response"
+        );
+    }
+    app.db
+        .write(move |tx| {
+            tx.conn()
+                .execute_batch("DROP TRIGGER reject_api_follower; DELETE FROM background_jobs;")?;
+            CalendarEvent::save_meet_link(
+                tx,
+                hid,
+                Some("https://meet.example.test/fixture".into()),
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(
+        jobs(&app).is_empty(),
+        "a populated link schedules no extra sync/provisioning"
+    );
+    app.db.write(|tx| {
+        tx.conn().execute_batch("CREATE TRIGGER reject_api_meet BEFORE INSERT ON background_jobs WHEN NEW.job_class='Calendar::MeetLinkJob' BEGIN SELECT RAISE(ABORT,'queue unavailable'); END")?;
+        Ok(())
+    }).await.unwrap();
+    let before = app
+        .db
+        .read(move |c| CalendarEvent::find(c, hid))
+        .await
+        .unwrap();
+    assert!(
+        app.db
+            .write(move |tx| CalendarEvent::save_meet_link(tx, hid, None))
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        app.db
+            .read(move |c| CalendarEvent::find(c, hid))
+            .await
+            .unwrap(),
+        before
+    );
+    assert!(jobs(&app).is_empty());
+}
+
 /// A restarted real durable runner consumes WS17's exact ID contract. This adapter
 /// records source facts; WS17's own branch supplies Reminder policy and Web Push.
 #[tokio::test]

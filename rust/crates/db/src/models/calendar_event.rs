@@ -455,9 +455,17 @@ impl CalendarEvent {
     pub(super) fn update_callbacks(&self, tx: &mut Tx<'_>) -> Result<()> {
         self.broadcast_cards(tx)?;
         if self.needs_meet_link() {
-            tx.emit_after_commit(SideEffect::job(&MeetLinkJob { event_id: self.id }));
+            tx.emit_record_job_once_if(
+                "events",
+                self.id,
+                &MeetLinkJob { event_id: self.id },
+                Some(Self::meet_link_callback_pending),
+            );
         }
         Ok(())
+    }
+    fn meet_link_callback_pending(conn: &Connection, id: i64) -> Result<bool> {
+        Ok(Self::find(conn, id)?.needs_meet_link())
     }
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         tx.savepoint(|tx| {

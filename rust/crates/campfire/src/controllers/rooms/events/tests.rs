@@ -590,3 +590,53 @@ async fn rescued_not_found_matches_rails_empty_bodies_and_headers() {
         );
     }
 }
+
+#[tokio::test]
+async fn calendar_api_meet_link_is_not_a_user_parameter() {
+    let Some(app) = TestApp::boot().await else {
+        return;
+    };
+    let e = event(&app).await;
+    let id = e.id;
+    let path = format!("/rooms/{ALL_TALK}/events/{id}");
+    let mut david = app.david();
+    let response = david
+        .write(Req::new(Method::PATCH, &path).form(&[
+            ("event[title]", "User edit"),
+            ("event[starts_at]", "2026-03-03T09:00"),
+            ("event[meet_link]", "https://meet.example.test/injected"),
+        ]))
+        .await;
+    assert_eq!(response.status, StatusCode::FOUND);
+    let saved = app
+        .db()
+        .read(move |c| CalendarEvent::find(c, id))
+        .await
+        .unwrap();
+    assert_eq!(saved.title, "User edit");
+    assert_eq!(saved.meet_link, e.meet_link);
+    app.db()
+        .write(move |tx| {
+            CalendarEvent::save_meet_link(tx, id, Some("https://meet.example.test/internal".into()))
+        })
+        .await
+        .unwrap();
+    let response = david
+        .write(
+            Req::new(Method::PATCH, &path).form(&[
+                ("event[starts_at]", "2026-03-03T09:00"),
+                ("event[meet_link]", "https://meet.example.test/injected"),
+            ]),
+        )
+        .await;
+    assert_eq!(response.status, StatusCode::FOUND);
+    assert_eq!(
+        app.db()
+            .read(move |c| CalendarEvent::find(c, id))
+            .await
+            .unwrap()
+            .meet_link
+            .as_deref(),
+        Some("https://meet.example.test/internal")
+    );
+}

@@ -252,6 +252,15 @@ async fn event_cards_and_activity_match_rails_over_real_sockets() {
         .await
         .unwrap();
     assert!(compare_stage(&mut member, &oracle[8]).await.is_empty());
+    app.db()
+        .write(move |tx| {
+            CalendarEvent::save_meet_link(tx, id, Some("https://meet.example.test/socket".into()))
+        })
+        .await
+        .unwrap();
+    let meet_link = compare_stage(&mut member, &oracle[9]).await;
+    assert_eq!(payload(organizer.next_text().await), meet_link[0]);
+    assert!(campfire_cable::turbo::session_bound(meet_link[0].as_str().unwrap()).is_none());
     outsider.assert_silent().await;
     member.assert_silent().await;
     organizer.assert_silent().await;

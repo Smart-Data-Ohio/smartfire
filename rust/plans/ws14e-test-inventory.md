@@ -312,9 +312,26 @@ Total named Rails tests inventoried: 221. Includes the Calendar entry model (WS1
 - `controller_time_and_parameter_casts_match_pinned_rails` compares 66 actual Rails private-method/model-cast states for create/update/prefill, including scalar/array/hash shapes, explicit offsets, fixed edit zones, DST gaps/folds, invalid dates, booleans, and Unicode prefill truncation.
 - `full_event_pages_match_pinned_rails_bytes` and `full_event_forms_match_pinned_rails_bytes` compare 92 complete Rails layouts. They do not assert database query bounds, browser behavior, or every named HTTP controller case.
 - `event_cards_and_activity_match_rails_over_real_sockets` compares nine Rails states: singleton/series invitations, title edit, silent RSVP, reminder claim, cancellation, distinct events referencing one message, repeated saves of one event, update-then-destroy. It also proves rollback silence, identical public card bytes for two viewers, and outsider stream denial. Full initial announcement Message append remains WS8b renderer integration on this old base.
-- Still deferred: callback/job coalescing for repeated event API calls in a wider outer transaction when Meet links are requested, and partial invitation failure among several recipients. Normal scoped Calendar callback vectors and queue atomicity are covered; these broader edge cases are not.
+- Still deferred: broader Event create/update callback ordering and instance-identity cases in a wider outer transaction, and partial invitation failure among several recipients. Attendance and internal Meet-link record callback coalescing are now covered by the WS14g API differential. Normal scoped Calendar callback vectors and queue atomicity are covered; these broader edge cases are not.
 - WS13 live stream reader is implemented for currently-live streams. Ended-stream full-layout bytes are covered; further WS13 HTTP/system integration remains for the end-to-end phase. WS17 production delivery/policy stays behind the live source and durable job seam. Streamed-message finalization still requires the WS11 lifecycle hook.
 
 - Rendering edge differentials additionally cover 0/2/3 going counts (Rails prints goings), 0/2 maybe counts, three single-character description lines, safe description HTML, an invalid Meet URI, viewer-private Calendar copies, ended-stage dots, and an empty index.
 
 - `rescued_not_found_matches_rails_empty_bodies_and_headers` compares 10 actual pinned Rails HTTP states, including malformed/missing IDs, wrong rooms, missing attendance events, and nonmember access with HTML/JSON Accept headers. Both controllers return an empty text/html 404 through their rescue, rather than the generic public error page.
+
+## WS14g public Event APIs (owner ruling continuation)
+
+Stable signatures and caller contract are in `plans/ws14e-calendar-api.md`.
+`CalendarEvent::respond(tx, event_id, user_id, response, apply_to_future)` returns
+EventAttendance; `CalendarEvent::save_meet_link(tx, event_id, Option<String>)`
+returns CalendarEvent and is absent from user params. The pinned direct API
+differential adds 18 response and 18 internal Meet-link states, including follower
+copy/rollback, unchanged timestamps, duplicate saves, response-then-destroy,
+normal validation, after-commit publication and conditional Meet callbacks.
+Three domain tests, real durable queue failure/coalescing, an HTTP parameter
+security test and the tenth real-socket state cover these contracts. These are
+additional API assertions; the 221 named-test rows and their 104 explicit
+deferrals above remain the acceptance inventory.
+
+Performance and system interaction checks remain assigned to the end-to-end
+phase. Pixel diff work is removed by the lead ruling and is not a deferral.

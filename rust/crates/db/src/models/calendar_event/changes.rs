@@ -93,6 +93,30 @@ fn rejection(attribute: &'static str, message: &'static str) -> Result<()> {
 }
 
 impl CalendarEvent {
+    /// Internal Calendar::MeetLink save, matching Event#update!(meet_link:).
+    /// Runs the normal persisted-event validations and update commit callbacks.
+    /// Deliberately absent from EventChanges and user strong parameters. Rails
+    /// validates the event, not this URL; the rendering layer filters unsafe URIs.
+    pub fn save_meet_link(tx: &mut Tx<'_>, id: i64, meet_link: Option<String>) -> Result<Self> {
+        tx.savepoint(|tx| {
+            let old = Self::find(tx.conn(), id)?;
+            old.validate_change(
+                tx.conn(),
+                &EventChanges::default().assign(&old),
+                SaveRules::default(),
+            )?;
+            if old.meet_link != meet_link {
+                tx.conn().execute(
+                    "UPDATE events SET meet_link=?,updated_at=? WHERE id=?",
+                    params![meet_link, tx.now(), id],
+                )?;
+            }
+            let saved = Self::find(tx.conn(), id)?;
+            saved.update_callbacks(tx)?;
+            Ok(saved)
+        })
+    }
+
     fn validate_change(
         &self,
         conn: &Connection,

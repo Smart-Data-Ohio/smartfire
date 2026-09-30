@@ -97,5 +97,14 @@
   {
     "kind": "update_then_destroy",
     "frames": []
+  },
+  {
+    "kind": "meet_link",
+    "frames": [
+      {
+        "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+        "payload": "<turbo-stream maintain_scroll=\"true\" action=\"replace\" target=\"event_cards_message_ws14e-announcement\"><template>  <div id=\"event_cards_message_ws14e-announcement\" class=\"event-cards\">\n      <article class=\"event-card event-card--cancelled\" data-event-card=\"8000000001\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n      <span class=\"event-card__state\">Cancelled</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/486777696/events/8000000001\">Changed &lt;&amp;&gt;</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-03-02T16:10:00Z\" data-local-time-target=\"datetime\">March 2, 2026 at 4:10 PM</time>\n  </p>\n\n\n    <p class=\"event-card__meet\"><a href=\"https://meet.example.test/socket\">Join Google Meet</a></p>\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_9000000001_event_8000000001\" src=\"/rooms/486777696/events/8000000001/attendance?message_id=9000000001\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n</template></turbo-stream>"
+      }
+    ]
   }
 ]

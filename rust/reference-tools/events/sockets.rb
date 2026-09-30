@@ -54,6 +54,9 @@ travel_to Time.utc(2026,3,2,16) do
     series.destroy!
   end
   out << {kind:'update_then_destroy',frames:frames.select{|f|f[:stream]=="user_#{jason.id}_activity"||f[:payload].is_a?(String)&&f[:payload].include?('event_cards_message_ws14e')}}
+  frames.clear
+  event.update!(meet_link: 'https://meet.example.test/socket')
+  out << {kind:'meet_link',frames:frames.select{|f|f[:payload].is_a?(String)&&f[:payload].include?('event_cards_message_ws14e-announcement')}}
   Current.reset
 end
 File.write('/rails/storage/db/event-sockets.json',JSON.pretty_generate(out)+"\n")

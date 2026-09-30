@@ -8,6 +8,8 @@ use crate::{
 use jiff::SignedDuration;
 use rusqlite::params;
 
+mod calendar_api_test;
+
 fn frozen() -> TestDb {
     TestDb::with_clock(
         TestClock::frozen_at(Timestamp::parse_db("2026-09-22 12:00:00").unwrap()),

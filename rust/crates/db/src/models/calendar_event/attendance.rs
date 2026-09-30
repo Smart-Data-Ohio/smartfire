@@ -1,7 +1,7 @@
 //! app/models/event_attendance.rb and Event#respond!.
 use super::{CalendarEvent, SyncEntryJob, member};
 use crate::sql::{query_all, query_one};
-use crate::{Errors, Event, Result, Timestamp, Tx, User};
+use crate::{Errors, Result, Timestamp, Tx, User};
 use rusqlite::{Connection, Row, params};
 
 pub const RESPONSES: [&str; 3] = ["going", "maybe", "declined"];
@@ -93,13 +93,18 @@ impl EventAttendance {
                 tx.conn().execute("INSERT INTO event_attendances (event_id,user_id,response,created_at,updated_at) VALUES (?,?,?,?,?)",params![event.id,user_id,response,now,now])?;
             }
         }
+        let saved = Self::find_for(tx.conn(), event.id, user_id)?.expect("saved attendance");
         if enqueue_sync && previous.is_none_or(|a| a.response != response) {
-            tx.emit_after_commit(Event::job(&SyncEntryJob {
-                event_id: event.id,
-                user_id,
-            }));
+            tx.emit_record_job_once(
+                "event_attendances",
+                saved.id,
+                &SyncEntryJob {
+                    event_id: event.id,
+                    user_id,
+                },
+            );
         }
-        Ok(Self::find_for(tx.conn(), event.id, user_id)?.expect("saved attendance"))
+        Ok(saved)
     }
 }
 impl CalendarEvent {
@@ -122,6 +127,10 @@ impl CalendarEvent {
         .into_iter()
         .collect())
     }
+    /// Event#respond!: a head response applies to all active future occurrences;
+    /// a follower stays local unless `apply_to_future`. Returns that occurrence's
+    /// attendance. Changed attendances enqueue SyncEntry once per record/commit;
+    /// queue rows commit atomically and publication waits for the writer commit.
     pub fn respond(
         tx: &mut Tx<'_>,
         event_id: i64,

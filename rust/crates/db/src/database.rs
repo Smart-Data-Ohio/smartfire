@@ -71,6 +71,12 @@ impl Env {
 type AfterCommitHook = Box<dyn FnOnce(&mut Tx<'_>) -> Result<()> + Send>;
 
 enum AfterCommit {
+    RecordJob {
+        table: &'static str,
+        id: i64,
+        event: Option<Event>,
+        condition: Option<fn(&Connection, i64) -> Result<bool>>,
+    },
     RecordBroadcast {
         table: &'static str,
         id: i64,
@@ -133,9 +139,46 @@ impl<'c> Tx<'c> {
         }
     }
 
+    /// A record's commit callback enqueues once, even if that record was saved
+    /// repeatedly. Persist surviving callbacks before COMMIT, so both the job
+    /// and its triggering write roll back on queue failure. Explicit job calls
+    /// outside record callbacks still use `emit_after_commit` without coalescing.
+    pub(crate) fn emit_record_job_once(
+        &mut self,
+        table: &'static str,
+        id: i64,
+        job: &impl crate::Job,
+    ) {
+        self.emit_record_job_once_if(table, id, job, None);
+    }
+
+    /// Conditional commit callbacks evaluate the surviving record at the end of
+    /// the writer transaction, as Rails evaluates a saved model at commit time.
+    pub(crate) fn emit_record_job_once_if(
+        &mut self,
+        table: &'static str,
+        id: i64,
+        job: &impl crate::Job,
+        condition: Option<fn(&Connection, i64) -> Result<bool>>,
+    ) {
+        let event = Event::job(job);
+        if !self.in_transaction {
+            self.emit_after_commit(event);
+        } else if !self.after_commit.iter().any(|queued| {
+            matches!(queued, AfterCommit::RecordJob { table: previous_table, id: previous_id, event: Some(previous), .. } if *previous_table == table && *previous_id == id && previous == &event)
+        }) {
+            self.after_commit.push(AfterCommit::RecordJob {
+                table,
+                id,
+                event: Some(event),
+                condition,
+            });
+        }
+    }
+
     /// Active Record runs a record's commit callback once per transaction. Keep
     /// the first registration's position for repeated descriptions of its frame.
-    /// This API accepts broadcasts only; durable job enqueues are never coalesced.
+    /// This API accepts broadcasts only; job callbacks use the separate job API.
     pub fn emit_broadcast_once(
         &mut self,
         table: &'static str,
@@ -243,12 +286,46 @@ pub fn run_write<T>(
             return Err(error);
         }
     };
+    let mut queue = std::mem::take(&mut tx.after_commit);
+    let persist_callbacks = (|| -> Result<()> {
+        for item in &mut queue {
+            if let AfterCommit::RecordJob {
+                table,
+                id,
+                event,
+                condition,
+            } = item
+            {
+                let survives = conn.query_row(
+                    &format!("SELECT EXISTS(SELECT 1 FROM {table} WHERE id=?)"),
+                    [*id],
+                    |r| r.get::<_, bool>(0),
+                )?;
+                let should_enqueue = survives
+                    && match condition {
+                        Some(test) => test(conn, *id)?,
+                        None => true,
+                    };
+                if should_enqueue {
+                    if let Some(event) = event {
+                        env.sink.persist(&tx, event)?;
+                    }
+                } else {
+                    *event = None;
+                }
+            }
+        }
+        Ok(())
+    })();
+    if let Err(error) = persist_callbacks {
+        let _ = conn.execute_batch("ROLLBACK TRANSACTION");
+        return Err(error);
+    }
     if let Err(error) = conn.execute_batch("COMMIT TRANSACTION") {
         let _ = conn.execute_batch("ROLLBACK TRANSACTION");
         return Err(error.into());
     }
 
-    let mut queue = std::mem::take(&mut tx.after_commit);
     let mut first_error = None;
     let mut after = Tx {
         conn,
@@ -259,6 +336,11 @@ pub fn run_write<T>(
     };
     for item in queue.drain(..) {
         match item {
+            AfterCommit::RecordJob { event, .. } => {
+                if let Some(event) = event {
+                    env.sink.emit(event);
+                }
+            }
             AfterCommit::Event(event) => env.sink.emit(event),
             AfterCommit::RecordBroadcast { table, id, event } => {
                 // A later destroy suppresses the record's earlier update callback.
