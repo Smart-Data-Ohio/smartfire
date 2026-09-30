@@ -224,12 +224,14 @@ pub async fn deliver_test_notification(
 }
 
 /// `Room::PushMessageJob#perform` / `Room::MessagePusher#push`: the payload goes to the
-/// subscriptions of everyone involved in everything, then to mentioned users involved in
-/// mentions. Badges are counted here; delivery happens on the pool.
+/// distinct union of eligible subscriptions, as one pool handoff. Badges are counted here;
+/// delivery happens on the pool.
 pub fn push_message(pool: &Pool, conn: &Connection, rich_text: &dyn RichText, message: &Message, now: Timestamp) -> campfire_db::Result<PushPayload> {
-    let (payload, everything, mentions) = PushSubscription::pushes_for(conn, rich_text, message, now)?;
-    pool.queue(conn, &payload, everything)?;
-    pool.queue(conn, &payload, mentions)?;
+    let (payload, mut subscriptions, mentions) = PushSubscription::pushes_for(conn, rich_text, message, now)?;
+    subscriptions.extend(mentions);
+    subscriptions.sort_by_key(|s| s.id);
+    subscriptions.dedup_by_key(|s| s.id);
+    pool.queue(conn, &payload, subscriptions)?;
     Ok(payload)
 }
 

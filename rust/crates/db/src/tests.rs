@@ -24,6 +24,7 @@ mod notification_policy_test;
 mod named_policy_test;
 mod named_calendar_status_test;
 mod notification_push_test;
+mod named_push_gating_test;
 mod status_settings_write_test;
 mod workspace_presence_lease_test;
 mod room_test;

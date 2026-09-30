@@ -368,58 +368,58 @@
     {
       "file": "test/models/notifications/push_gating_test.rb",
       "test": "room push skips a DND recipient but the inbox item is still recorded",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_push_gating_test (8 individual exact message/thread/reminder cases with actual callbacks, recipient scopes and inbox readback; unchanged pinned Ruby bodies passed 28 assertions)"
     },
     {
       "file": "test/models/notifications/push_gating_test.rb",
       "test": "room push skips a DND-presence recipient but the inbox item is still recorded",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_push_gating_test (8 individual exact message/thread/reminder cases with actual callbacks, recipient scopes and inbox readback; unchanged pinned Ruby bodies passed 28 assertions)"
     },
     {
       "file": "test/models/notifications/push_gating_test.rb",
       "test": "room push still reaches a starred sender's recipient during DND",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_push_gating_test (8 individual exact message/thread/reminder cases with actual callbacks, recipient scopes and inbox readback; unchanged pinned Ruby bodies passed 28 assertions)"
     },
     {
       "file": "test/models/notifications/push_gating_test.rb",
       "test": "room push skips a recipient inside quiet hours",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_push_gating_test (8 individual exact message/thread/reminder cases with actual callbacks, recipient scopes and inbox readback; unchanged pinned Ruby bodies passed 28 assertions)"
     },
     {
       "file": "test/models/notifications/push_gating_test.rb",
       "test": "thread push notifies followers with the thread payload",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_push_gating_test (8 individual exact message/thread/reminder cases with actual callbacks, recipient scopes and inbox readback; unchanged pinned Ruby bodies passed 28 assertions)"
     },
     {
       "file": "test/models/notifications/push_gating_test.rb",
       "test": "thread push skips a DND follower",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_push_gating_test (8 individual exact message/thread/reminder cases with actual callbacks, recipient scopes and inbox readback; unchanged pinned Ruby bodies passed 28 assertions)"
     },
     {
       "file": "test/models/notifications/push_gating_test.rb",
       "test": "a thread reply pushes its follower author but not an unfollowed one",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_push_gating_test (8 individual exact message/thread/reminder cases with actual callbacks, recipient scopes and inbox readback; unchanged pinned Ruby bodies passed 28 assertions)"
     },
     {
       "file": "test/models/notifications/push_gating_test.rb",
       "test": "reminder push skips a DND attendee",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_push_gating_test (8 individual exact message/thread/reminder cases with actual callbacks, recipient scopes and inbox readback; unchanged pinned Ruby bodies passed 28 assertions)"
     },
     {
       "file": "test/models/notifications/push_gating_test.rb",
@@ -466,9 +466,9 @@
     {
       "file": "test/models/room/push_test.rb",
       "test": "a forwarded note follows the mention push path while its snapshot does not",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: ws17_forwarded_note_uses_mention_push_while_snapshot_does_not (real forwarder/recorder/recipient query; original pinned Ruby body passed 6 assertions)"
     },
     {
       "file": "test/models/room/push_test.rb",
