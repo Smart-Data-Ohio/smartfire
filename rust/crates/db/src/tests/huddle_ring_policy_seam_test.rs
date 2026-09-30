@@ -16,6 +16,13 @@ fn run(name: &str) {
         .find(|v| v["name"] == name)
         .unwrap();
     let db = TestDb::new();
+    let grant_id = db.write(|tx| {
+        let caller = crate::fixtures::identify("david");
+        let room = crate::fixtures::identify("david_and_jason");
+        let session = crate::Session::start(tx, caller, None, None)?;
+        let member = crate::Membership::find_by_room_and_user(tx.conn(), room, caller)?.unwrap();
+        Ok(tx.conn().query_row("INSERT INTO huddle_grants(identity,room_name,session_id,user_id,membership_id,room_id,last_issued_at,created_at,updated_at) VALUES('ws13b-policy-source','ws13b-policy-room',?,?,?,?,?,?,?) RETURNING id",rusqlite::params![session.id,caller,member.id,room,tx.now(),tx.now(),tx.now()],|r|r.get::<_,i64>(0))?)
+    });
     for outcome in case["outcomes"].as_array().unwrap() {
         db.clock.travel_to(Timestamp::from_second(
             outcome["context"]["now"].as_i64().unwrap(),
@@ -25,10 +32,16 @@ fn run(name: &str) {
         let request = RingRequest {
             recipient_id: outcome["context"]["recipient"]["id"].as_i64().unwrap(),
             sender_id: outcome["sender_id"].as_i64().unwrap(),
+            grant_id: Some(grant_id),
             invitation,
         };
         let setup = outcome["setup_sql"].as_str().unwrap().to_owned();
-        db.write(move |tx| { tx.conn().execute_batch(&setup)?; Ok(()) });
+        let sender = outcome["sender_id"].as_i64().unwrap();
+        db.write(move |tx| {
+            tx.conn().execute_batch(&setup)?;
+            tx.conn().execute("UPDATE huddle_grants SET user_id=? WHERE id=?", rusqlite::params![sender, grant_id])?;
+            Ok(())
+        });
         let quiet = |recipient: &crate::UserStatusSettings| recipient.user.id == crate::fixtures::identify("jason");
         let override_check = outcome["context"]["quiet_override"].as_bool().unwrap()
             .then_some(&quiet as &dyn Fn(&crate::UserStatusSettings) -> bool);

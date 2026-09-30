@@ -19,6 +19,13 @@ async fn registered_ring_worker_uses_current_ws17_policy_and_exact_rails_frames(
     ))).await.expect("WS13b requires the parity seed");
     let app = test.booted.app.clone();
     let user = campfire_db::fixtures::identify("jason");
+    let grant_id = app.db.write(|tx| {
+        let caller = campfire_db::fixtures::identify("david");
+        let room = campfire_db::fixtures::identify("david_and_jason");
+        let session = Session::start(tx, caller, None, None)?;
+        let member = campfire_db::Membership::find_by_room_and_user(tx.conn(), room, caller)?.unwrap();
+        Ok(tx.conn().query_row("INSERT INTO huddle_grants(identity,room_name,session_id,user_id,membership_id,room_id,last_issued_at,created_at,updated_at) VALUES('ws13b-policy-source','ws13b-policy-room',?,?,?,?,?,?,?) RETURNING id",rusqlite::params![session.id,caller,member.id,room,tx.now(),tx.now(),tx.now()],|r|r.get::<_,i64>(0))?)
+    }).await.unwrap();
     let session = app.db.write(move |tx| Session::start_with(tx, user, campfire_db::NewSession {
         two_factor_verified: true, ..Default::default()
     })).await.unwrap();
@@ -57,9 +64,11 @@ async fn registered_ring_worker_uses_current_ws17_policy_and_exact_rails_frames(
             let sql = outcome["setup_sql"].as_str().unwrap().to_owned();
             let mut invitation = outcome["broadcast"]["payload"]["huddleInvitation"].clone();
             invitation.as_object_mut().unwrap().remove("silent");
-            let intent = RingRequest { recipient_id: user, sender_id: outcome["sender_id"].as_i64().unwrap(), invitation };
+            let sender = outcome["sender_id"].as_i64().unwrap();
+            let intent = RingRequest { recipient_id: user, sender_id: sender, grant_id:Some(grant_id), invitation };
             app.db.write(move |tx| {
                 tx.conn().execute_batch(&sql)?;
+                tx.conn().execute("UPDATE huddle_grants SET user_id=? WHERE id=?", rusqlite::params![sender, grant_id])?;
                 tx.emit_after_commit(Event::job(&intent));
                 Ok(())
             }).await.unwrap();

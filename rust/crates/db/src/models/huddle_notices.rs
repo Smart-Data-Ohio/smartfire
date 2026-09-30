@@ -242,6 +242,9 @@ pub fn call_ended(tx: &mut Tx<'_>, grant: &HuddleGrant) -> Result<()> {
     if others {
         return Ok(());
     }
+    // Rails sends rings synchronously, before this ended frame. Cancel Rust's
+    // pending started frames, including a claimed job retaining old arguments.
+    tx.conn().execute_cached("UPDATE background_jobs SET arguments=json_set(arguments,'$.cancelled',1) WHERE job_class='Notifications::HuddleRingJob' AND json_extract(arguments,'$.invitation.roomId')=? AND json_extract(arguments,'$.invitation.eventType')='huddle_started'", [room.id])?;
     let members = room_users(tx.conn(), room.id)?;
     let ids: Vec<i64> = query_all(
         tx.conn(),
