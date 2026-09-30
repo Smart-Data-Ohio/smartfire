@@ -47,7 +47,7 @@ impl Presenter<'_> {
     fn permalink(&self, message: &Message) -> String {
         let path = if let Some(thread) = message.thread_id {
             format!(
-                "/rooms/{}?thread={thread}&message_id={}",
+                "/rooms/{}?message_id={}&thread={thread}",
                 message.room_id, message.id
             )
         } else {
@@ -80,42 +80,40 @@ impl Presenter<'_> {
         let drive = message
             .drive_file_ids(self.conn)?
             .into_iter()
-            .map(|id| json!({"url":format!("https://drive.google.com/open?id={id}"),"file_id":id}))
+            .map(|id| json!({"file_id":id,"url":format!("https://drive.google.com/open?id={id}")}))
             .collect::<Vec<_>>();
-        let mut payload = json!({"id":message.id,"client_message_id":message.client_message_id,"created_at":json_time(message.created_at.jiff()),"updated_at":json_time(message.updated_at.jiff()),"body":body,"creator":self.user_payload(message.creator_id)?,"room":{"id":message.room_id,"icon_name":icon},"drive_attachments":drive,"url":self.permalink(message)});
-        if let Some(thread) = message.thread_id {
-            payload["thread_context"] =
-                self.bot_thread_payload(&ChannelThread::find(self.conn, thread)?)?;
-        }
-        if let Some(thread) = summary {
-            payload["thread_summary"] =
-                self.bot_thread_payload(&ChannelThread::find(self.conn, thread)?)?;
-        }
-        if message.forwarded() {
-            let mut forward = json!({"label":"Forwarded"});
+        let thread_context = message
+            .thread_id
+            .map(|id| self.bot_thread_payload(&ChannelThread::find(self.conn, id)?))
+            .transpose()?;
+        let thread_summary = summary
+            .map(|id| self.bot_thread_payload(&ChannelThread::find(self.conn, id)?))
+            .transpose()?;
+        let forwarded = message.forwarded().then(|| {
+            let mut value = json!({"label":"Forwarded"});
             if let Some(note) = &message.forward_note {
-                forward["note"] = note.clone().into();
+                value["note"] = note.clone().into();
             }
-            payload["forwarded"] = forward;
-        }
-        if message.streaming {
-            payload["streaming"] = true.into();
-        }
+            value
+        });
         let source = message
             .reply_to_message_id
             .map(|id| Message::find_by_id(self.conn, id))
             .transpose()?
             .flatten();
-        if source.is_some() || message.reply_target_deleted_at.is_some() {
-            let mut reply = if let Some(source) = &source {
-                json!({"id":source.id,"url":self.permalink(source),"creator":self.user_payload(source.creator_id)?,"body":{"plain_text":self.plain_text_body(source)?,"html":self.payload_html(source)?}})
+        let reply = if source.is_some() || message.reply_target_deleted_at.is_some() {
+            let mut value = if let Some(source) = &source {
+                json!({"id":source.id,"url":self.permalink(source),"deleted":false,"creator":self.user_payload(source.creator_id)?,"body":{"plain_text":self.plain_text_body(source)?,"html":self.payload_html(source)?}})
             } else {
-                json!({})
+                json!({"deleted":true})
             };
-            reply["deleted"] = source.is_none().into();
-            reply["notify_author"] = message.reply_notify_author.into();
-            payload["reply_to"] = reply;
-        }
+            value["notify_author"] = message.reply_notify_author.into();
+            Some(value)
+        } else {
+            None
+        };
+        let mut payload = json!({"id":message.id,"client_message_id":message.client_message_id,"created_at":json_time(message.created_at.jiff()),"updated_at":json_time(message.updated_at.jiff()),"body":body,"creator":self.user_payload(message.creator_id)?,"room":{"id":message.room_id,"icon_name":icon},"thread_context":thread_context,"thread_summary":thread_summary,"reply_to":reply,"forwarded":forwarded,"drive_attachments":drive,"streaming":message.streaming.then_some(true),"url":self.permalink(message)});
+        payload.as_object_mut().unwrap().retain(|_, v| !v.is_null());
         Ok(payload)
     }
     fn bot_thread_payload(&self, thread: &ChannelThread) -> Result<Value> {

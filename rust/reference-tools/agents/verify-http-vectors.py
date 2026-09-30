@@ -18,7 +18,7 @@ def check_dispatch(names, source):
 def main():
     root = Path(__file__).resolve().parents[2]
     scratch = Path(sys.argv[1]).resolve()
-    for kind, filename in [('HTTP', 'agent_http.json'), ('MCP', 'agent_mcp.json'), ('surface', 'agent_surface.json'), ('bot', 'agent_bot_http.json')]:
+    for kind, filename in [('HTTP', 'agent_http.json'), ('MCP', 'agent_mcp.json'), ('surface', 'agent_surface.json'), ('bot', 'agent_bot_http.json'), ('conversation', 'agent_conversation_http.json')]:
         expected = (root / 'vectors' / filename).read_bytes()
         actual = (scratch / filename).read_bytes()
         compare_vectors(actual, expected, filename)

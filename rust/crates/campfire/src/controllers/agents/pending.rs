@@ -44,6 +44,12 @@ pub async fn operation(
     operation: &str,
     args: Value,
 ) -> Result<ServiceResult> {
+    match operation {
+        "get_context" => return super::conversations::context(c,agent_id,args).await,
+        "post_message" => return super::conversations::post(c,agent_id,args).await,
+        "open_dm" => return super::conversations::dm(c,agent_id,args).await,
+        _ => {}
+    }
     let operation = operation.to_owned();
     c.app()
         .db

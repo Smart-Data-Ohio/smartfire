@@ -8,6 +8,7 @@ use super::presenters::page::db_error;
 pub mod mcp;
 pub mod approvals;
 pub mod pending;
+pub mod conversations;
 pub mod integrations;
 
 pub async fn me(c: &mut Ctx) -> Result {
