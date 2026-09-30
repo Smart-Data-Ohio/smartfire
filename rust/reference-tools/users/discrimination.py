@@ -11,6 +11,10 @@ scratch.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env.update(CI="1", TMPDIR=str(root.parent / ".scratch" / "tmp"))
 mutations = [
+    ("layout-future-window", "crates/campfire/src/controllers/presenters/layout_preferences.rs", "Some((start.as_second(), end.as_second()))", '((start.as_second()) <= 1772467200).then_some((start.as_second(), end.as_second()))', "layout_future_meeting_windows_before_start"),
+    ("layout-meeting-gate", "crates/campfire/src/controllers/presenters/layout_preferences.rs", "row.get::<_, bool>(6)? && row.get::<_, bool>(7)?", "true", "layout_meeting_status_off_sends_no_windows"),
+    ("layout-ooo-keep", "crates/campfire/src/controllers/presenters/layout_preferences.rs", "let keep_notifications: bool = row.get(10)?;", "let keep_notifications = false;", "layout_ooo_notifications_kept_sends_no_windows"),
+    ("layout-drive-scope", "crates/campfire/src/controllers/presenters/layout_preferences.rs", 'scope == "https://www.googleapis.com/auth/drive.file"', 'scope == "https://www.googleapis.com/auth/drive.metadata.readonly"', "layout_drive_previews_uses_exact_scope"),
     ("avatar-webp-size", "crates/campfire/src/controllers/users/avatars.rs", 'Variation::resize_to_limit(512, 512, Some("webp"))', 'Variation::resize_to_limit(256, 256, Some("webp"))', "uploaded_avatar_image_uses_rails_bytes_headers_and_freshness"),
     ("avatar-bmp-fallback", "crates/campfire/src/controllers/users/avatars.rs", "else if user.is_bot() {", "else if !user.is_bot() {", "unresizable_avatar_falls_back_to_rails_initials_bytes_and_headers"),
     ("sign-in-public-link", "crates/views/templates/sessions/new.html", 'h::link_to_text("Privacy Policy", &h::routes::privacy()', 'h::link_to_text("Privacy Policy", &h::routes::about()', "unconfigured_sign_in_links_all_public_pages_in_new_tabs"),
@@ -67,7 +71,7 @@ for name, relative, before, after, test in mutations:
     assert source.count(before) == 1, (name, "mutation anchor", source.count(before))
     try:
         path.write_text(source.replace(before, after))
-        run = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4", "-p", "campfire", test, "--", "--nocapture", "--test-threads=4"], cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        run = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-p", "campfire", test, "--", "--nocapture", "--test-threads=4"], cwd=root, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         (scratch / f"{name}.log").write_text(run.stdout)
         summaries = [line for line in run.stdout.splitlines() if line.startswith("test result:")]
         assert run.returncode == 101 and summaries and "FAILED" in summaries[-1] and f"::{test} ... FAILED" in run.stdout, (name, run.stdout[-4000:])

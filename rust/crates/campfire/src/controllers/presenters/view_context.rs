@@ -49,7 +49,8 @@ impl Layout {
         let secrets = app.secrets.clone();
         let user = concerns::current_user(c).cloned();
         let user_id = user.as_ref().map(|user| user.id);
-        let (account, has_logo, preferences) = app
+        let now = c.now();
+        let (account, has_logo, preferences, chrome) = app
             .db
             .read(move |conn| {
                 let account = Account::first(conn)?;
@@ -58,10 +59,10 @@ impl Layout {
                     None => false,
                 };
                 let preferences = match user_id {
-                    Some(user_id) => user_preferences(conn, user_id)?,
+                    Some(user_id) => user_preferences(conn, user_id, now)?,
                     None => UserPreferences::default(),
                 };
-                Ok((account, has_logo, preferences))
+                Ok((account, has_logo, preferences, chrome(conn, user_id)?))
             })
             .await
             .map_err(Error::internal)?;
@@ -69,14 +70,6 @@ impl Layout {
 
         let time_zone = Zone::for_user(preferences.time_zone.as_deref());
         let current_user = user.as_ref().map(|user| CurrentUser { preferences, ..current_user(&secrets, user) });
-        let chrome = Chrome {
-            service_worker_auto_register: true,
-            brand_icon_names: Vec::new(),
-            google_picker: None,
-            huddle_configured: false,
-            global_search_query: None,
-            recent_searches: Vec::new(),
-        };
         Ok(Self {
             current_user,
             account: account_summary(account.as_ref(), has_logo),
@@ -178,11 +171,10 @@ pub fn current_user(secrets: &rails_compat::Secrets, user: &User) -> CurrentUser
     }
 }
 
-/// The `users` columns the layout reads straight off `Current.user` (theme, text size, time zone,
-/// tour, voice settings). The settings other domains derive (notification sounds, Google Drive)
-/// stay at their defaults until their owners fill them in.
-fn user_preferences(conn: &campfire_db::Connection, user_id: i64) -> campfire_db::Result<UserPreferences> {
-    Ok(conn.query_row(
+/// Read persisted user preferences and the flagged read-only owner projections used by the
+/// actual request layout. No caller-supplied expected display facts are needed.
+pub(crate) fn user_preferences(conn: &campfire_db::Connection, user_id: i64, now: jiff::Timestamp) -> campfire_db::Result<UserPreferences> {
+    let mut preferences = conn.query_row(
         "SELECT theme, text_size, time_zone, time_zone_explicit, tour_completed_at IS NOT NULL, voice_mode, push_to_talk_key \
          FROM users WHERE id = ?",
         [user_id],
@@ -198,7 +190,24 @@ fn user_preferences(conn: &campfire_db::Connection, user_id: i64) -> campfire_db
                 ..UserPreferences::default()
             })
         },
-    )?)
+    )?;
+    super::layout_preferences::fill(conn, user_id, now, &mut preferences)?;
+    Ok(preferences)
+}
+
+/// Icons.client_icon_names and the viewer's ten ordered recent searches. WS14g's Picker,
+/// WS13's huddle configuration and WS8b-m's searches-controller query remain flagged inputs.
+pub(crate) fn chrome(conn: &campfire_db::Connection, user_id: Option<i64>) -> campfire_db::Result<Chrome> {
+    let mut chrome = Chrome {
+        service_worker_auto_register: true,
+        brand_icon_names: crate::rich_text::client_icon_names(conn)?,
+        ..Chrome::default()
+    };
+    if let Some(id) = user_id {
+        chrome.recent_searches = campfire_db::Search::ordered_for_user(conn, id)?.into_iter().take(10)
+            .map(|search| campfire_views::layouts::RecentSearch {id: search.id, query: search.query}).collect();
+    }
+    Ok(chrome)
 }
 
 /// `Current.account` for the layout: its name, `fresh_account_logo_path` and whether a logo is

@@ -94,6 +94,12 @@ covered.update({
         "agents can be messaged but not called", "inactive users show status without message actions", "card requires sign-in",
     },
     "controllers/users/profiles_controller_test.rb": {
+        "the layout sends meeting windows for the live sound gate", "the layout sends future meeting windows before the meeting starts",
+        "the layout sends no meeting windows without cached intervals", "the layout sends no meeting windows when meeting status itself is off",
+        "the layout sends OOO windows for the live sound gate", "the layout sends future calendar OOO windows before the OOO starts",
+        "the layout sends no OOO windows when keeping notifications while out", "the layout leaves sounds alone for meetings when quiet-during-meetings is off",
+        "layout carries the Drive previews meta tag only with the Drive scope", "the layout carries the theme, time zone, and sound state",
+        "the layout mutes sounds for the DND presence", "the layout sends the quiet-hours window and zone for the sound gate",
         "profile offers a connect button without an account", "profile shows the connected account with a disconnect button",
         "profile offers a reconnect when Google rejected the connection", "profile offers Drive previews for a connected account without the Drive scope",
         "profile shows Drive previews as enabled when the account has the Drive scope", "profile offers Drive previews again for the retired metadata grant",

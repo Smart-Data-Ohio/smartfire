@@ -48,6 +48,16 @@ struct Brand {
 const ICON_CONFIG: &str = include_str!("../vendor/icons.yml");
 static BRANDS: LazyLock<Vec<Brand>> =
     LazyLock::new(|| serde_yaml::from_str(ICON_CONFIG).expect("vendored config/icons.yml"));
+/// Icons.client_icon_names: canonical brands and their aliases in YAML order, then custom
+/// names in database name order. Read each request so uploads/removals reach the live layout.
+pub(crate) fn client_icon_names(conn: &Connection) -> campfire_db::Result<Vec<String>> {
+    let mut names = BRANDS.iter().flat_map(|brand| std::iter::once(&brand.name).chain(&brand.aliases))
+        .cloned().collect::<Vec<_>>();
+    names.extend(conn.prepare_cached("SELECT name FROM workspace_icons ORDER BY name")?
+        .query_map([], |row| row.get::<_, String>(0))?
+        .collect::<rusqlite::Result<Vec<_>>>()?);
+    Ok(names)
+}
 pub(crate) fn builtin_icon(name: &str) -> bool {
     let name=campfire_richtext::ruby::strip(name).trim_matches(':').trim().to_lowercase();
     BRANDS.iter().any(|b| b.name==name || b.aliases.contains(&name))

@@ -160,3 +160,6 @@ mod profile_security_tests;
 
 #[cfg(test)]
 mod ban_lifecycle_tests;
+
+#[cfg(test)]
+mod layout_preferences_tests;

@@ -12,6 +12,7 @@ pub mod page;
 pub mod pagination;
 pub mod rich_text;
 pub mod view_context;
+mod layout_preferences;
 #[cfg(test)]
 pub mod test_support;
 

@@ -1,7 +1,7 @@
 //! Complete profile renderer bytes. HTTP authorization and CSRF remain real in the route test.
 use crate::controllers::presenters::{self, test_support::*};
 use askama::Template;
-use campfire_views::{helpers as h, layouts, users};
+use campfire_views::{helpers as h, users};
 use serde_json::Value;
 struct Tokens;
 impl h::request_forgery::AuthenticityTokens for Tokens {
@@ -70,30 +70,15 @@ async fn whole_profile_matches_rails_seed_without_masks() {
         })
         .await
         .unwrap();
-    let searches = app
-        .db()
-        .read(|c| campfire_db::Search::ordered_for_user(c, DAVID))
-        .await
-        .unwrap();
+    let (preferences, chrome) = app.db().read(move |c| Ok((
+        presenters::view_context::user_preferences(c, DAVID, now)?,
+        presenters::view_context::chrome(c, Some(DAVID))?,
+    ))).await.unwrap();
     let v = vectors();
-    let prefs = &v["facts"];
     let summary = presenters::user_summary(&app.booted.app.secrets, &user);
     let transfer = presenters::accounts::transfer_id(&app.booted.app.secrets, DAVID, now);
     let mut current = presenters::view_context::current_user(&app.booted.app.secrets, &user);
-    current.preferences = layouts::UserPreferences {
-        theme: prefs["theme"].as_str().map(str::to_owned),
-        text_size: prefs["text_size"].as_str().map(str::to_owned),
-        time_zone: prefs["time_zone"].as_str().map(str::to_owned),
-        time_zone_explicit: prefs["time_zone_explicit"].as_bool().unwrap(),
-        tour_completed: prefs["tour_completed"].as_bool().unwrap(),
-        google_drive: prefs["google_drive"].as_bool().unwrap_or(false),
-        notification_sounds: layouts::NotificationSounds {
-            quiet_hours: Some((1320, 420)),
-            ..Default::default()
-        },
-        voice_mode: Some(sections.voice_mode.clone()),
-        push_to_talk_key: sections.push_to_talk_key.clone(),
-    };
+    current.preferences = preferences;
     let actual = h::request_forgery::rendering_with(
         h::request_forgery::RequestSecrets {
             tokens: Box::new(Tokens),
@@ -120,21 +105,7 @@ async fn whole_profile_matches_rails_seed_without_masks() {
                         .lines()
                         .find_map(|l| l.strip_prefix("VAPID_PUBLIC_KEY="))
                         .map(str::to_owned);
-                    ctx.chrome.recent_searches = searches
-                        .iter()
-                        .take(10)
-                        .map(|s| layouts::RecentSearch {
-                            id: s.id,
-                            query: s.query.clone(),
-                        })
-                        .collect();
-                    ctx.chrome.service_worker_auto_register = true;
-                    ctx.chrome.brand_icon_names = v["brand_icon_names"]
-                        .as_array()
-                        .unwrap()
-                        .iter()
-                        .map(|v| v.as_str().unwrap().into())
-                        .collect();
+                    ctx.chrome = chrome;
                     users::ProfileShow {
                         ctx: &ctx,
                         user: summary,
