@@ -500,5 +500,8 @@ mod members_rails_cases;
 mod refreshes_rails_cases;
 
 #[cfg(test)]
+mod sidebars_rails_cases;
+
+#[cfg(test)]
 #[path = "rooms/native_integration_tests.rs"]
 mod native_integration_tests;
