@@ -488,7 +488,12 @@ async fn ws11_key_rotation_requires_sudo_and_shows_the_key_once() {
     let value = html.split("aria-label=\"Bot key\"").next().unwrap();
     let new_key = value.rsplit("value=\"").next().unwrap().split('"').next().unwrap().to_string();
     assert_ne!(new_key, old_key);
-    let (new_valid, old_valid, plaintext, audit) = test.booted.app.db.read({let new_key=new_key.clone(); move |conn| Ok((
+    assert!(!html.contains(&old_key), "rotation response shows the retired key");
+    // Rails reveals it in this one response's input, copy button and curl URL.
+    assert_eq!(html.matches(&new_key).count(), 3, "all key controls must use the new key");
+    assert!(html.contains(&format!("data-copy-to-clipboard-content-value=\"{new_key}\"")));
+    assert!(html.contains(&format!("/rooms/ROOM_ID/{new_key}/messages")));
+    let (new_valid, old_valid, plaintext, audit) = test.booted.app.db.read({let new_key=new_key.clone(); let old_key=old_key.clone(); move |conn| Ok((
         campfire_db::User::authenticate_bot(conn,&new_key)?.is_some(),
         campfire_db::User::authenticate_bot(conn,&old_key)?.is_some(),
         conn.query_row("SELECT bot_token FROM users WHERE id=?",[bot_id],|r|r.get::<_,Option<String>>(0))?,
@@ -498,7 +503,18 @@ async fn ws11_key_rotation_requires_sudo_and_shows_the_key_once() {
     assert!(!old_valid);
     assert_eq!(plaintext,None);
     assert_eq!(audit,1);
-    assert!(!admin.get("/account/bots").await.text().contains(&new_key));
+    for page in [
+        "/account/bots".to_string(),
+        format!("/account/bots/{bot_id}/edit"),
+        format!("/account/bots/{bot_id}/credentials"),
+        format!("/account/bots/{bot_id}/grants"),
+    ] {
+        let response = admin.get(&page).await;
+        assert_eq!(response.status, StatusCode::OK, "{page}");
+        for secret in [&old_key, &new_key] {
+            assert!(!response.text().contains(secret), "{page} reveals a bot key after rotation");
+        }
+    }
 }
 
 #[tokio::test]
@@ -530,7 +546,10 @@ async fn manages_bots() {
     let key_action = format!("/account/bots/{bender}/key");
     edit.assert_button(&key_action, "put");
     admin.grant_sudo_access();
-    assert_eq!(admin.form("put", &key_action, &[]).await.status, StatusCode::OK);
+    let reset = admin.form("put", &key_action, &[]).await;
+    assert_eq!(reset.status, StatusCode::OK);
+    assert_eq!(reset.header("cache-control"), Some("no-store"));
+    assert!(!reset.text().contains(&test.label("bot_keys.bender")), "manages_bots still shows the retired key");
     assert!(!admin.get("/account/bots").await.text().contains(&test.label("bot_keys.bender")));
 
     admin.get(&format!("/account/bots/{bender}/edit")).await.assert_button(&action, "delete");
