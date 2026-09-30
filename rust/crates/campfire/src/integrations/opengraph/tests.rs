@@ -311,3 +311,27 @@ async fn ws15e_retries_header_eof_once_unless_a_deadline_is_armed() {
         server.abort();
     }
 }
+
+#[tokio::test]
+async fn ws15e_composer_skips_github_and_fizzy_cards_without_dns() {
+    let page = r#"<meta property="og:title" content="Title"><meta property="og:description" content="Description">"#;
+    let server = FakeServer::start_ws15e(vec![
+        Route::new("GET", "github.com", "/acme/repo/pull/12", 200).header("Content-Type", "text/html").body(page),
+        Route::new("GET", "app.fizzy.do", "/account/cards/12", 200).header("Content-Type", "text/html").body(page),
+    ])
+    .await;
+    let resolver = Arc::new(FakeResolver::new([("github.com", vec!["93.184.216.34"]), ("app.fizzy.do", vec!["93.184.216.34"])]));
+    let dialer = Arc::new(MappingDialer {
+        public: HashSet::from(["93.184.216.34".parse().unwrap()]),
+        to: server.addr,
+        dialed: Mutex::new(Vec::new()),
+    });
+    let net = network(resolver.clone(), dialer);
+    for url in ["https://github.com/acme/repo/pull/12", "https://app.fizzy.do/account/cards/12"] {
+        // Plain transport to the fake server suffices to prove the skip; a TLS failure
+        // would also return no content, but would still resolve and connect.
+        assert_eq!(unfurl(&net, url).await.unwrap(), Unfurl::NoContent);
+    }
+    assert_eq!(resolver.lookups(), Vec::<String>::new());
+    assert!(server.received().is_empty());
+}

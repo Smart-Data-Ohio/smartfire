@@ -16,6 +16,11 @@
 mod jobs;
 pub mod net;
 pub mod image_proxy;
+// ReferenceSync's message-write seam awaits WS8a; keep its domain policies ready to consume.
+#[allow(dead_code)]
+pub mod link_embed;
+#[allow(dead_code)]
+pub mod linkedin;
 pub mod opengraph;
 pub mod search;
 pub mod web_push;

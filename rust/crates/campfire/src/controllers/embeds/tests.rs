@@ -178,3 +178,21 @@ async fn ws15e_image_proxy_denies_ssrf_and_dns_failures_before_fetching() {
     assert_eq!(response.status, campfire_kit::StatusCode::BAD_GATEWAY);
     assert_eq!(server.received().len(), 2);
 }
+
+#[tokio::test]
+async fn ws15e_room_message_embeds_render_signed_proxy_urls() {
+    let app = TestApp::boot().await.expect("build the parity seed before this test");
+    app.db().write(|tx| {
+        campfire_db::Message::create(tx, campfire_db::NewMessage {
+            room_id: ALL_TALK, creator_id: DAVID, client_message_id: Some("ws15e-embed-proxy".into()),
+            body: Some(r#"<div class="trix-content"><p>https://example.com/page</p><action-text-attachment content-type="application/vnd.actiontext.opengraph-embed" href="https://example.com/page" url="https://images.example.com/room-photo.png" filename="Example" caption="A page"></action-text-attachment></div>"#.into()),
+            attachment_blob_id: None, thread_id: None, system_note: false, streaming: false,
+        })?;
+        Ok(())
+    }).await.unwrap();
+    let response = app.david().get(&format!("/rooms/{ALL_TALK}")).await;
+    assert_eq!(response.status, campfire_kit::StatusCode::OK);
+    let html = String::from_utf8(response.body).unwrap();
+    assert!(html.contains(&path(&app, "https://images.example.com/room-photo.png")));
+    assert!(!html.contains("https://images.example.com/room-photo.png"));
+}

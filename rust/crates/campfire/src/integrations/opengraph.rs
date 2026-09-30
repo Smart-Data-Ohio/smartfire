@@ -1,10 +1,11 @@
 //! Link unfurling: `UnfurlLinksController#create` (reference/app/controllers/unfurl_links_controller.rb)
 //! over `Opengraph::Metadata`, `Location`, `Fetch` and `Document` (reference/app/models/opengraph).
 //!
-//! Every address is resolved through the private network guard and pinned, every redirect is
-//! re-checked, and documents are capped at 5MB and 10 responses.
+//! Every address is guarded and pinned, every redirect is re-checked, and documents
+//! are capped at 5MB. OpenGraph defaults to ten redirects after the initial request.
 //!
-//! Unlike Rails, which gives each connect and read 60 seconds, an unfurl has 10 seconds in all
+//! The inherited composer concurrency cap bounds work; our fork uses explicit 5s operation
+//! timeouts. The composer has 10 seconds in all
 //! and each connect or read 5, at most 16 run at once, and parsing runs off the async workers:
 //! the endpoint is open to any signed-in user and fetches pages they choose.
 
@@ -48,6 +49,12 @@ pub enum UnfurlError {
 /// The action after `params.require(:url)` (a missing or blank `url` is the controller's 400).
 /// One that runs out of time unfurls nothing.
 pub async fn unfurl(net: &Network, url: &str) -> Result<Unfurl, UnfurlError> {
+    let fizzy_base = std::env::var("FIZZY_API_BASE_URL").unwrap_or_else(|_| "https://app.fizzy.do".to_string());
+    let classifier = crate::integrations::link_embed::url_classifier::github_pr_url(url)
+        || crate::integrations::link_embed::url_classifier::fizzy_card_url(url, &fizzy_base);
+    if classifier {
+        return Ok(Unfurl::NoContent);
+    }
     unfurl_within(net, url, UNFURL_DEADLINE).await
 }
 

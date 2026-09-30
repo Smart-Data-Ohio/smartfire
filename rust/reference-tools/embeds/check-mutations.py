@@ -20,6 +20,10 @@ mutations = [
     ("../controllers/embeds.rs", 'before_actions(c, Before::default()).await?;', '', "ws15e_image_proxy_requires_sign_in_and_rejects_invalid_signatures"),
     ("../controllers/embeds.rs", 'let Some(url) = image_proxy::verified_url(&c.app().secrets, signed, c.now()) else {', 'let Some(url) = Some("http://images.example.com/image.png".to_string()) else {', "ws15e_image_proxy_requires_sign_in_and_rejects_invalid_signatures"),
     ("../controllers/presenters/rich_text.rs", 'Ok(crate::integrations::image_proxy::signed_path(self.secrets, url))', 'Err(campfire_richtext::Error::Raised("embed_image signer unavailable"))', "ws15e_rendered_embed_html_matches_rails_and_uses_the_proxy"),
+    ("link_embed/url_classifier.rs", 'if urls.len() == 3', 'if urls.len() == 4', "ws15e_link_url_policy_matches_rails"),
+    ("link_embed/url_classifier.rs", 'suppressed.contains(&normalized)', 'false', "ws15e_link_url_policy_matches_rails"),
+    ("linkedin.rs", 'allowed_urn_trailer(&text[urn.end()..])', 'true', "ws15e_linkedin_url_and_html_corpus_matches_rails"),
+    ("opengraph.rs", 'if classifier {', 'if false && classifier {', "ws15e_composer_skips_github_and_fizzy_cards_without_dns"),
     ("net/http.rs", 'if timer.as_mut().poll(cx).is_ready()', 'if false && timer.as_mut().poll(cx).is_ready()', "ws15e_write_timeout_bounds_a_stalled_transport"),
 ]
 for name, old, new, test in mutations:
