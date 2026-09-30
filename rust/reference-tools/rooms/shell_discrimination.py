@@ -22,3 +22,5 @@ def reject(name,path,old,new,package,test):
     print(f'Room shell discrimination: compiled {name} mutation rejected; source restored',flush=True)
 reject('visible-list-placeholder',root/'crates/views/src/rooms.rs','.unwrap_or_else(h::empty)','.unwrap_or_else(||h::raw("Empty room"))',['-p','campfire_views','--test','room_shell'],'empty_room_shell_regions_match_rails')
 reject('scroll-threshold',root/'crates/campfire/src/controllers/presenters/room_shell.rs','count > 5','count >= 5',['-p','campfire','--bin','campfire'],'unread_shell_facts_match_rails_pointer_cases')
+
+reject('unread-pill-label',root/'crates/views/src/rooms.rs','"Jump to unread"','"Read more"',['-p','campfire_views','--test','room_shell'],'unread_jump_controls_match_rails')

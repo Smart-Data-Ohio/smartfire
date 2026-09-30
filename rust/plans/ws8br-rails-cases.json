@@ -1,0 +1,2613 @@
+{
+  "reference": "d7c7de92",
+  "note": "These are source declarations, not dynamically expanded Rails tests. Equivalent Rust subsets are reported separately; no full-file Rails acceptance is claimed.",
+  "files": [
+    {
+      "file": "test/controllers/rooms_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "95395b50bc1e8324f48035603b9ec7b54bbcfb072d63ba76638b8ede4e9540f3",
+      "declared_cases": [
+        {
+          "name": "index redirects to the user's last room",
+          "line": 7
+        },
+        {
+          "name": "show",
+          "line": 12
+        },
+        {
+          "name": "show renders collapsed work-thread guidance in the new-thread panel",
+          "line": 17
+        },
+        {
+          "name": "shows records the last room visited in a cookie",
+          "line": 27
+        },
+        {
+          "name": "show renders a link preview written by hand without its off-scheme image and link",
+          "line": 32
+        },
+        {
+          "name": "show renders a link preview written by hand without its image pointed at this Smartfire",
+          "line": 47
+        },
+        {
+          "name": "show renders an unfurled link preview",
+          "line": 63
+        },
+        {
+          "name": "show renders the unread divider above the first unread message on the page",
+          "line": 78
+        },
+        {
+          "name": "show keeps the last page when the first unread fell off it and links the pill to it",
+          "line": 93
+        },
+        {
+          "name": "destroy removes the room from everyone and enqueues its deletion",
+          "line": 110
+        },
+        {
+          "name": "destroy stamps the sweep claim",
+          "line": 124
+        },
+        {
+          "name": "destroy succeeds when the queue is down and the sweep recovers the room",
+          "line": 133
+        },
+        {
+          "name": "destroyed room is inaccessible while deletion is pending",
+          "line": 150
+        },
+        {
+          "name": "destroy finishes through the enqueued job",
+          "line": 158
+        },
+        {
+          "name": "destroy only allowed for creators or those who can administer",
+          "line": 167
+        },
+        {
+          "name": "destroy answers the sidebar menu with json and no redirect",
+          "line": 184
+        },
+        {
+          "name": "destroy announces the deleted room",
+          "line": 194
+        },
+        {
+          "name": "destroy of a group dm is refused for non-administrators",
+          "line": 201
+        },
+        {
+          "name": "leave removes only your membership and the room keeps working",
+          "line": 212
+        },
+        {
+          "name": "leave answers the sidebar menu with json and no redirect",
+          "line": 233
+        },
+        {
+          "name": "the last member out does not delete the room",
+          "line": 243
+        },
+        {
+          "name": "leave is rejected for non-members",
+          "line": 255
+        },
+        {
+          "name": "leave of a group dm through the room route keeps direct semantics",
+          "line": 265
+        },
+        {
+          "name": "show renders the join page for a non-member of an open room",
+          "line": 277
+        },
+        {
+          "name": "show still redirects non-members of private rooms",
+          "line": 289
+        },
+        {
+          "name": "show still redirects non-members of deleted open rooms",
+          "line": 297
+        },
+        {
+          "name": "join recreates the membership and returns to the room",
+          "line": 306
+        },
+        {
+          "name": "join is refused for private rooms",
+          "line": 318
+        },
+        {
+          "name": "join of a room you already belong to returns to it",
+          "line": 328
+        }
+      ],
+      "declared_count": 29,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/rooms/opens_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "619938ea224c067b8c761dae00d8e87323d4b5314f3c90121e363c0d0ee0755a",
+      "declared_cases": [
+        {
+          "name": "show redirects to get general show",
+          "line": 7
+        },
+        {
+          "name": "new",
+          "line": 12
+        },
+        {
+          "name": "create",
+          "line": 17
+        },
+        {
+          "name": "create forbidden by non-admin when account restricts creation to admins",
+          "line": 26
+        },
+        {
+          "name": "only admins or creators can update",
+          "line": 35
+        },
+        {
+          "name": "update",
+          "line": 46
+        },
+        {
+          "name": "update with an icon normalizes the shortcode",
+          "line": 56
+        },
+        {
+          "name": "update clears the icon with a blank shortcode",
+          "line": 63
+        },
+        {
+          "name": "create with an unknown icon re-renders the new form",
+          "line": 72
+        },
+        {
+          "name": "update with an unknown icon re-renders the edit form",
+          "line": 81
+        },
+        {
+          "name": "a plain member cannot set an icon",
+          "line": 91
+        },
+        {
+          "name": "update ignores unpermitted keys",
+          "line": 100
+        },
+        {
+          "name": "update a closed room to be open",
+          "line": 111
+        },
+        {
+          "name": "a direct room can't be promoted to open by its creator",
+          "line": 116
+        },
+        {
+          "name": "a direct room can't be promoted to open by an administrator either",
+          "line": 126
+        }
+      ],
+      "declared_count": 15,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/rooms/closeds_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "833e3e691a86d9bb6b1f1db2f494b4e24e9cc0947c26d0ee35521a8780461865",
+      "declared_cases": [
+        {
+          "name": "show redirects to get general show",
+          "line": 7
+        },
+        {
+          "name": "new",
+          "line": 12
+        },
+        {
+          "name": "create",
+          "line": 17
+        },
+        {
+          "name": "create forbidden by non-admin when account restricts creation to admins",
+          "line": 31
+        },
+        {
+          "name": "update with membership revisions",
+          "line": 40
+        },
+        {
+          "name": "update an open room to be closed",
+          "line": 52
+        },
+        {
+          "name": "only admins or creators can update",
+          "line": 57
+        },
+        {
+          "name": "updating the icon replaces sidebar rows and headers for members only",
+          "line": 68
+        },
+        {
+          "name": "create with an unknown icon re-renders the new form",
+          "line": 91
+        },
+        {
+          "name": "update with an unknown icon re-renders the edit form without revising members",
+          "line": 100
+        },
+        {
+          "name": "a direct room can't be converted to closed and have its participants revised",
+          "line": 115
+        },
+        {
+          "name": "remove yourself",
+          "line": 127
+        }
+      ],
+      "declared_count": 12,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/rooms/directs_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "2d9881791b7c3c6ae3583ff4b95382587c65b8dbb47e4aafe64d9ac5f4f189de",
+      "declared_cases": [
+        {
+          "name": "new lists starred people first with a star marker",
+          "line": 7
+        },
+        {
+          "name": "new renders a client-side filter instead of the autocomplete picker",
+          "line": 23
+        },
+        {
+          "name": "create",
+          "line": 34
+        },
+        {
+          "name": "create only once per user set",
+          "line": 43
+        },
+        {
+          "name": "create opens a group DM for several people and reuses it",
+          "line": 50
+        },
+        {
+          "name": "create rejects more members than the cap",
+          "line": 66
+        },
+        {
+          "name": "create with start_huddle lands in the room ready to ring",
+          "line": 77
+        },
+        {
+          "name": "create ignores deactivated and banned users",
+          "line": 83
+        },
+        {
+          "name": "create caps user_ids before querying",
+          "line": 96
+        },
+        {
+          "name": "a member can rename the group and everyone sees the compact system note",
+          "line": 107
+        },
+        {
+          "name": "group DM notes cannot be edited or deleted",
+          "line": 126
+        },
+        {
+          "name": "rename is rejected for one-to-one DMs and by non-members",
+          "line": 142
+        },
+        {
+          "name": "a member can add people up to the cap",
+          "line": 154
+        },
+        {
+          "name": "adding members rejects one-to-one DMs, the overflow, and non-members",
+          "line": 164
+        },
+        {
+          "name": "adding members caps user_ids before querying",
+          "line": 184
+        },
+        {
+          "name": "leaving removes only your membership and the group keeps working",
+          "line": 197
+        },
+        {
+          "name": "the last member out destroys the group",
+          "line": 215
+        },
+        {
+          "name": "leave is rejected for non-members",
+          "line": 227
+        },
+        {
+          "name": "a non-member cannot read the group",
+          "line": 237
+        },
+        {
+          "name": "a removed member loses access to the group",
+          "line": 245
+        },
+        {
+          "name": "destroy only allowed for all room users",
+          "line": 254
+        },
+        {
+          "name": "destroy can't reach a closed room the member didn't create",
+          "line": 271
+        },
+        {
+          "name": "destroy can't reach an open room the member didn't create",
+          "line": 281
+        },
+        {
+          "name": "destroy can't reach a room the member isn't in at all",
+          "line": 291
+        },
+        {
+          "name": "a member cannot delete a group DM",
+          "line": 301
+        },
+        {
+          "name": "the non-admin creator cannot delete a group DM through the generic room route",
+          "line": 312
+        },
+        {
+          "name": "an administrator can delete a group DM",
+          "line": 323
+        },
+        {
+          "name": "the group settings hide the delete button from non-administrators",
+          "line": 334
+        },
+        {
+          "name": "one-to-one DM settings still offer deletion to members",
+          "line": 348
+        }
+      ],
+      "declared_count": 29,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/rooms/involvements_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "c0bc50135bffaa94b832be332ed727f80f7594fc89ea51a6e0599d9dad03fdf5",
+      "declared_cases": [
+        {
+          "name": "show",
+          "line": 7
+        },
+        {
+          "name": "update involvement sends turbo update when becoming visible and when going invisible",
+          "line": 12
+        },
+        {
+          "name": "updating involvement does not send turbo update changing visible states",
+          "line": 28
+        },
+        {
+          "name": "becoming visible again prepends a voice room into the voice section",
+          "line": 37
+        },
+        {
+          "name": "becoming visible again prepends a stage room into the stage section",
+          "line": 53
+        },
+        {
+          "name": "becoming visible again prepends a board into the boards section",
+          "line": 69
+        },
+        {
+          "name": "updating involvement does not send turbo update for direct rooms",
+          "line": 85
+        },
+        {
+          "name": "a non-admin can update their room involvement",
+          "line": 94
+        }
+      ],
+      "declared_count": 8,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/rooms/refreshes_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "058081a6b40e99433bbd59599d811d93059337a5bfe3045972e524de960b2725",
+      "declared_cases": [
+        {
+          "name": "refresh includes new messages since the last known",
+          "line": 7
+        },
+        {
+          "name": "refresh includes pin and unpin changes since the last sync",
+          "line": 32
+        },
+        {
+          "name": "refresh with no changes is a quiet 204",
+          "line": 61
+        },
+        {
+          "name": "refreshing a room the user no longer belongs to is a quiet 404",
+          "line": 72
+        }
+      ],
+      "declared_count": 4,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/rooms/reads_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "3c4855636c126c008387061a75cda0928e37dd479e48dafde2034e211b15a2c4",
+      "declared_cases": [
+        {
+          "name": "create marks the room read and advances the unread pointer",
+          "line": 9
+        },
+        {
+          "name": "create broadcasts on the reads stream",
+          "line": 21
+        },
+        {
+          "name": "destroy marks the room unread starting at the message",
+          "line": 28
+        },
+        {
+          "name": "destroy at the first message leaves a null pointer",
+          "line": 41
+        },
+        {
+          "name": "destroy broadcasts on the unread stream",
+          "line": 52
+        },
+        {
+          "name": "destroy rejects messages outside the room",
+          "line": 61
+        },
+        {
+          "name": "read state of a room the user cannot access is not found",
+          "line": 69
+        }
+      ],
+      "declared_count": 7,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/rooms/members_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "53c4805396787b926a1578a459de000f45dd30ac33b53d138869c4ae9c8e2a85",
+      "declared_cases": [
+        {
+          "name": "returns active room members with presence and status fields",
+          "line": 7
+        },
+        {
+          "name": "flags bots so the picker can exclude them from huddles",
+          "line": 32
+        },
+        {
+          "name": "returns the meeting label for members in a meeting",
+          "line": 41
+        },
+        {
+          "name": "returns the OOO label for members out of office",
+          "line": 54
+        },
+        {
+          "name": "reports idle and do-not-disturb presence",
+          "line": 70
+        },
+        {
+          "name": "does not return inactive users",
+          "line": 93
+        },
+        {
+          "name": "does not expose members of an inaccessible room",
+          "line": 102
+        },
+        {
+          "name": "starred is per viewer and never leaks between viewers",
+          "line": 112
+        },
+        {
+          "name": "requires authentication",
+          "line": 133
+        },
+        {
+          "name": "reports a bot with a checked-in agent as online",
+          "line": 142
+        },
+        {
+          "name": "reports a bot as offline until its agent checks in",
+          "line": 152
+        },
+        {
+          "name": "reports a bot with a suspended agent as offline",
+          "line": 161
+        },
+        {
+          "name": "revoked sessions immediately make a member offline",
+          "line": 172
+        }
+      ],
+      "declared_count": 13,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/rooms/categories_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "901b216b5e3b6db3fd953b4185db08bfd3294469f4ecddf24cf818a68f97ec63",
+      "declared_cases": [
+        {
+          "name": "update assigns the channel to the category",
+          "line": 10
+        },
+        {
+          "name": "update with a blank category unassigns the channel",
+          "line": 16
+        },
+        {
+          "name": "update rejects another user's category",
+          "line": 24
+        },
+        {
+          "name": "update rejects rooms that are not channels",
+          "line": 33
+        },
+        {
+          "name": "categories in a room the user cannot access are not found",
+          "line": 40
+        }
+      ],
+      "declared_count": 5,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/rooms/favorites_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "5527bd4ad36f42792f54db2ad719dbdb0be4724a6ef98673dc6cdec13a95660f",
+      "declared_cases": [
+        {
+          "name": "create favourites the room at the end",
+          "line": 9
+        },
+        {
+          "name": "create is idempotent",
+          "line": 19
+        },
+        {
+          "name": "destroy unfavourites the room",
+          "line": 28
+        },
+        {
+          "name": "update moves the favourite to an absolute position",
+          "line": 37
+        },
+        {
+          "name": "update clamps out-of-range positions",
+          "line": 48
+        },
+        {
+          "name": "favourites in a room the user cannot access are not found",
+          "line": 56
+        }
+      ],
+      "declared_count": 6,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/rooms/inbound_email_addresses_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "7f0a2071a6a696f04b5fa27a677e9d929de25abce4aec7653db43c1250ba423e",
+      "declared_cases": [
+        {
+          "name": "an administrator can create the room address",
+          "line": 7
+        },
+        {
+          "name": "the creator can rotate the address",
+          "line": 16
+        },
+        {
+          "name": "a plain member is forbidden",
+          "line": 26
+        },
+        {
+          "name": "a non-member gets a 404",
+          "line": 35
+        },
+        {
+          "name": "direct rooms never have an address",
+          "line": 44
+        },
+        {
+          "name": "board rooms never have an address",
+          "line": 52
+        },
+        {
+          "name": "the edit page shows the address once created",
+          "line": 62
+        },
+        {
+          "name": "the edit page explains the missing domain",
+          "line": 75
+        }
+      ],
+      "declared_count": 8,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/room_categories_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "61d83bbfc13034fdc7605752e7ab9511bf509cd2efbeb48fb8595b22370df8f2",
+      "declared_cases": [
+        {
+          "name": "index lists only the user's categories in order",
+          "line": 7
+        },
+        {
+          "name": "create adds a category at the end",
+          "line": 17
+        },
+        {
+          "name": "create with a blank name changes nothing and reloads the sidebar",
+          "line": 31
+        },
+        {
+          "name": "update renames and collapses",
+          "line": 38
+        },
+        {
+          "name": "destroy deletes the category and unassigns its rooms",
+          "line": 49
+        },
+        {
+          "name": "another user's categories are not found",
+          "line": 61
+        }
+      ],
+      "declared_count": 6,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/public_pages_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "4bfd944e29a9e4352dffbf675ef4d96672f0e88f27e5758e30daa19b7216ae91",
+      "declared_cases": [
+        {
+          "name": "about renders signed-out with stable title and navigation",
+          "line": 21
+        },
+        {
+          "name": "privacy renders signed-out with Google disclosures",
+          "line": 34
+        },
+        {
+          "name": "privacy discloses picker-only Drive previews",
+          "line": 47
+        },
+        {
+          "name": "terms renders signed-out with software-license framing",
+          "line": 57
+        },
+        {
+          "name": "public pages never redirect to sign-in and set no session cookie",
+          "line": 67
+        },
+        {
+          "name": "public pages ignore the modern-browser gate, even for crawlers",
+          "line": 76
+        },
+        {
+          "name": "public pages render without OAuth configured",
+          "line": 87
+        },
+        {
+          "name": "public pages disclose no private state, credentials, or scripts",
+          "line": 97
+        },
+        {
+          "name": "public pages allow zoom and honor color schemes",
+          "line": 115
+        },
+        {
+          "name": "non-HTML formats expose nothing",
+          "line": 123
+        },
+        {
+          "name": "wildcard Accept header receives the HTML page",
+          "line": 137
+        },
+        {
+          "name": "HEAD requests succeed",
+          "line": 146
+        },
+        {
+          "name": "unconfigured installation uses generic wording without env names",
+          "line": 154
+        },
+        {
+          "name": "configured installation names the operator and contact",
+          "line": 165
+        },
+        {
+          "name": "operator name is escaped and malicious contact email is dropped",
+          "line": 180
+        },
+        {
+          "name": "public pages open in a new tab so following them never disturbs the current tab",
+          "line": 193
+        },
+        {
+          "name": "sign-in page links the public pages without OAuth",
+          "line": 204
+        },
+        {
+          "name": "sign-in page keeps public links beside Google sign-in when configured",
+          "line": 213
+        }
+      ],
+      "declared_count": 18,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/first_runs_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "7b3cbfa187ecc228a8eca972bd6d45830dfe2ece4560b2ee6a6b5cbdc76ad768",
+      "declared_cases": [
+        {
+          "name": "new is permitted when no other users exit",
+          "line": 9
+        },
+        {
+          "name": "new is not permitted when account exist",
+          "line": 14
+        },
+        {
+          "name": "create",
+          "line": 21
+        },
+        {
+          "name": "create is not vulnerable to race conditions",
+          "line": 33
+        }
+      ],
+      "declared_count": 4,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/welcome_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "bf72e4d54a907bc46f27d805733c8cbb8f11aa72217f23215575236c9223086b",
+      "declared_cases": [
+        {
+          "name": "redirects to the first created visible room the user has access to",
+          "line": 7
+        },
+        {
+          "name": "redirects to the last room visited, if we have one",
+          "line": 13
+        }
+      ],
+      "declared_count": 2,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/switchers_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "2162820c377e594c84c0ed478ebbd337e9732062ff3655602cf271328eca7738",
+      "declared_cases": [
+        {
+          "name": "show returns the user's rooms, people and recent threads",
+          "line": 7
+        },
+        {
+          "name": "show never includes rooms the user cannot access",
+          "line": 32
+        },
+        {
+          "name": "show links people to their existing DM",
+          "line": 47
+        },
+        {
+          "name": "show requires sign-in",
+          "line": 60
+        },
+        {
+          "name": "show costs a constant number of queries as rooms, people and threads grow",
+          "line": 67
+        }
+      ],
+      "declared_count": 5,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/users_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "14819cebf6dd56bb331cc17a7122af6d6eacb8b8211c02ae75622d672ecf35a5",
+      "declared_cases": [
+        {
+          "name": "show",
+          "line": 7
+        },
+        {
+          "name": "profile message buttons carry the accessible name",
+          "line": 13
+        },
+        {
+          "name": "bot profile links to capability grants for admins",
+          "line": 28
+        },
+        {
+          "name": "bot profile links to capability grants for the agent owner",
+          "line": 37
+        },
+        {
+          "name": "bot profile hides capability grants from anyone else",
+          "line": 47
+        },
+        {
+          "name": "bot profile shows agent identity, status, rooms, and grants to a member",
+          "line": 56
+        },
+        {
+          "name": "bot profile shows the 24-hour activity line to the owner",
+          "line": 80
+        },
+        {
+          "name": "bot profile shows the 24-hour activity line to an admin",
+          "line": 93
+        },
+        {
+          "name": "bot profile hides the 24-hour activity line from another member",
+          "line": 103
+        },
+        {
+          "name": "bot profile hides rooms the viewer is not a member of",
+          "line": 112
+        },
+        {
+          "name": "suspended agent profile shows Suspended",
+          "line": 123
+        },
+        {
+          "name": "bot without an agent keeps the minimal profile",
+          "line": 133
+        },
+        {
+          "name": "new",
+          "line": 145
+        },
+        {
+          "name": "new does not allow a signed in user",
+          "line": 150
+        },
+        {
+          "name": "new requires a join code",
+          "line": 157
+        },
+        {
+          "name": "create",
+          "line": 162
+        },
+        {
+          "name": "creating a new user with an existing email address will redirect to login screen",
+          "line": 174
+        },
+        {
+          "name": "index lists active members with presence and selection",
+          "line": 182
+        },
+        {
+          "name": "index lists starred people first with a star marker",
+          "line": 203
+        },
+        {
+          "name": "index requires sign-in",
+          "line": 220
+        }
+      ],
+      "declared_count": 20,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/users/sidebars_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "2752c988d92cf8cb54c3919c01746198343617ff7117a4d8c45fac998f6c2fea",
+      "declared_cases": [
+        {
+          "name": "show",
+          "line": 21
+        },
+        {
+          "name": "unread directs",
+          "line": 29
+        },
+        {
+          "name": "unread other",
+          "line": 36
+        },
+        {
+          "name": "quiet rows keep the room name as their exact link text",
+          "line": 44
+        },
+        {
+          "name": "channel row shows the live huddle stack with names and count",
+          "line": 54
+        },
+        {
+          "name": "board row shows the live huddle stack with names and count",
+          "line": 73
+        },
+        {
+          "name": "direct row shows the live huddle stack when the peer is in the call",
+          "line": 92
+        },
+        {
+          "name": "quiet rows keep an empty stack target with no visible presence",
+          "line": 106
+        },
+        {
+          "name": "direct row re-renders when a participant joins",
+          "line": 119
+        },
+        {
+          "name": "group direct rooms render member names and a huddle stack",
+          "line": 147
+        },
+        {
+          "name": "direct rows keep avatar card triggers as siblings of the room link",
+          "line": 161
+        },
+        {
+          "name": "no channel or DM stacks without huddle configuration",
+          "line": 181
+        },
+        {
+          "name": "sidebar query count does not grow with quiet channels, DMs, boards, and stages",
+          "line": 193
+        },
+        {
+          "name": "sidebar query count does not grow with group DMs, named or not",
+          "line": 215
+        }
+      ],
+      "declared_count": 14,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/users/tours_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "f68f94a2b13820bcd9377d6cc8476a521ebe13dee1e6c81272590112e9332c9e",
+      "declared_cases": [
+        {
+          "name": "update stamps the tour as completed",
+          "line": 4
+        },
+        {
+          "name": "update is idempotent",
+          "line": 13
+        },
+        {
+          "name": "update requires sign-in",
+          "line": 26
+        },
+        {
+          "name": "room pages carry the tour shell for members who never completed it",
+          "line": 32
+        },
+        {
+          "name": "room pages skip auto-start once the tour completed",
+          "line": 43
+        }
+      ],
+      "declared_count": 5,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/users/profiles_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "8e5a8289671b7651bcaf0a1382dd4447a999a15a907ada273c7c996a0ce74464",
+      "declared_cases": [
+        {
+          "name": "show",
+          "line": 9
+        },
+        {
+          "name": "show gives the Edge install instructions to a browser identifying only as Edge",
+          "line": 15
+        },
+        {
+          "name": "update",
+          "line": 24
+        },
+        {
+          "name": "updates are limited to the current user",
+          "line": 33
+        },
+        {
+          "name": "profile shows Google Calendar as not configured without credentials",
+          "line": 39
+        },
+        {
+          "name": "profile offers a connect button without an account",
+          "line": 48
+        },
+        {
+          "name": "profile links to connect for meeting status without an account",
+          "line": 55
+        },
+        {
+          "name": "profile offers the meeting toggle for a connected account",
+          "line": 63
+        },
+        {
+          "name": "profile shows the meeting fetch notice when a refresh failed",
+          "line": 73
+        },
+        {
+          "name": "profile asks to reconnect for meeting status left on after disconnect",
+          "line": 85
+        },
+        {
+          "name": "profile lists the quiet-during-meetings switch",
+          "line": 94
+        },
+        {
+          "name": "the layout sends meeting windows for the live sound gate",
+          "line": 102
+        },
+        {
+          "name": "the layout sends future meeting windows before the meeting starts",
+          "line": 116
+        },
+        {
+          "name": "the layout sends no meeting windows without cached intervals",
+          "line": 127
+        },
+        {
+          "name": "the layout sends no meeting windows when meeting status itself is off",
+          "line": 137
+        },
+        {
+          "name": "the layout sends OOO windows for the live sound gate",
+          "line": 148
+        },
+        {
+          "name": "the layout sends future calendar OOO windows before the OOO starts",
+          "line": 157
+        },
+        {
+          "name": "the layout sends no OOO windows when keeping notifications while out",
+          "line": 168
+        },
+        {
+          "name": "the layout leaves sounds alone for meetings when quiet-during-meetings is off",
+          "line": 177
+        },
+        {
+          "name": "profile shows the connected account with a disconnect button",
+          "line": 189
+        },
+        {
+          "name": "profile offers a reconnect when Google rejected the connection",
+          "line": 198
+        },
+        {
+          "name": "profile offers Drive previews for a connected account without the Drive scope",
+          "line": 208
+        },
+        {
+          "name": "profile shows Drive previews as enabled when the account has the Drive scope",
+          "line": 220
+        },
+        {
+          "name": "profile offers Drive previews again for the retired metadata grant",
+          "line": 229
+        },
+        {
+          "name": "profile shows no Drive row when Google is not configured",
+          "line": 238
+        },
+        {
+          "name": "profile asks to reconnect when the grant lacks the calendar scope",
+          "line": 247
+        },
+        {
+          "name": "profile shows Disconnect for a partial grant with Drive still active",
+          "line": 258
+        },
+        {
+          "name": "reconnect preserves a granted Drive scope",
+          "line": 269
+        },
+        {
+          "name": "reconnect without Drive requests the calendar scope only",
+          "line": 280
+        },
+        {
+          "name": "layout carries the Drive previews meta tag only with the Drive scope",
+          "line": 290
+        },
+        {
+          "name": "linking a github login strips and downcases it",
+          "line": 303
+        },
+        {
+          "name": "a github login cannot be claimed by a second user",
+          "line": 310
+        },
+        {
+          "name": "profile lists the notification switches with explanations",
+          "line": 320
+        },
+        {
+          "name": "profile saves the notification switches",
+          "line": 331
+        },
+        {
+          "name": "profile rejects non-boolean notification input",
+          "line": 349
+        },
+        {
+          "name": "DND switch reflects the effective state after a timed expiry",
+          "line": 356
+        },
+        {
+          "name": "DND switch stays on while a timer runs",
+          "line": 365
+        },
+        {
+          "name": "profile lists the call settings with their defaults",
+          "line": 374
+        },
+        {
+          "name": "profile saves the call settings",
+          "line": 382
+        },
+        {
+          "name": "profile rejects an unknown microphone mode",
+          "line": 391
+        },
+        {
+          "name": "clearing a github login unlinks it",
+          "line": 398
+        },
+        {
+          "name": "changing email requires the current password",
+          "line": 407
+        },
+        {
+          "name": "changing email with a wrong current password is refused",
+          "line": 416
+        },
+        {
+          "name": "a new password cannot stand in for the current one",
+          "line": 424
+        },
+        {
+          "name": "changing email with the current password records a self-change",
+          "line": 432
+        },
+        {
+          "name": "other profile edits and case-only email edits need no password and record nothing",
+          "line": 442
+        },
+        {
+          "name": "profile asks for the current password only when the account has one",
+          "line": 450
+        },
+        {
+          "name": "update saves the theme and time zone",
+          "line": 459
+        },
+        {
+          "name": "update saves the text size",
+          "line": 467
+        },
+        {
+          "name": "an IANA time zone round-trips through the form",
+          "line": 474
+        },
+        {
+          "name": "a legacy Rails time zone name still shows selected",
+          "line": 489
+        },
+        {
+          "name": "choosing a time zone or Not set records an explicit choice",
+          "line": 497
+        },
+        {
+          "name": "the layout marks an explicit Not set so the browser skips detection",
+          "line": 509
+        },
+        {
+          "name": "update rejects an unknown theme or time zone",
+          "line": 517
+        },
+        {
+          "name": "the layout carries the theme, time zone, and sound state",
+          "line": 532
+        },
+        {
+          "name": "the layout mutes sounds for the DND presence",
+          "line": 545
+        },
+        {
+          "name": "the layout sends the quiet-hours window and zone for the sound gate",
+          "line": 554
+        }
+      ],
+      "declared_count": 57,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/users/avatars_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "7bc9c2dca4f563a427a2efb6a20712eb31770bcb65310cf55f8b3eb104e65b03",
+      "declared_cases": [
+        {
+          "name": "show initials",
+          "line": 7
+        },
+        {
+          "name": "show image",
+          "line": 12
+        },
+        {
+          "name": "show initials when image cannot be resized",
+          "line": 20
+        },
+        {
+          "name": "show image with invalid token responds 404",
+          "line": 28
+        }
+      ],
+      "declared_count": 4,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/users/cards_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "3d814cf70fe76721f69cf9437ab87ed081eef99361b4d26496ec93f7c4ee845c",
+      "declared_cases": [
+        {
+          "name": "card shows identity, presence, role, and actions for a peer",
+          "line": 7
+        },
+        {
+          "name": "offline peers read offline",
+          "line": 25
+        },
+        {
+          "name": "card shows the presence dot and custom status badge",
+          "line": 32
+        },
+        {
+          "name": "your own card offers editing your profile instead",
+          "line": 45
+        },
+        {
+          "name": "agents can be messaged but not called",
+          "line": 56
+        },
+        {
+          "name": "inactive users show status without message actions",
+          "line": 68
+        },
+        {
+          "name": "card requires sign-in",
+          "line": 79
+        }
+      ],
+      "declared_count": 7,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/users/bans_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "96f49421c50f1b0c3c7725ae591b54ce358566b248e0c0b2caf9797542838f46",
+      "declared_cases": [
+        {
+          "name": "create bans user and creates ban records from sessions",
+          "line": 8
+        },
+        {
+          "name": "create destroys user sessions",
+          "line": 22
+        },
+        {
+          "name": "create succeeds when the user has a pending two-factor setup secret",
+          "line": 31
+        },
+        {
+          "name": "create enqueues RemoveBannedContentJob",
+          "line": 44
+        },
+        {
+          "name": "RemoveBannedContentJob deletes messages",
+          "line": 52
+        },
+        {
+          "name": "non-admins cannot ban users",
+          "line": 64
+        },
+        {
+          "name": "destroy removes ban records and sets user to active",
+          "line": 72
+        },
+        {
+          "name": "non-admins cannot unban users",
+          "line": 88
+        }
+      ],
+      "declared_count": 8,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/users/time_zones_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "0cbecc9478c587a0a33d3831f057a37511ff6bbaf1b3f19575e18ba478f0820e",
+      "declared_cases": [
+        {
+          "name": "detects the browser zone when none is saved",
+          "line": 7
+        },
+        {
+          "name": "a hand-picked zone wins over later detections",
+          "line": 15
+        },
+        {
+          "name": "detection never overwrites an explicit choice, not even Not set",
+          "line": 24
+        },
+        {
+          "name": "an unknown zone is ignored",
+          "line": 33
+        }
+      ],
+      "declared_count": 4,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/accounts_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "e5c7d46d75fa0ec421cc4a1f08ee139969c30ed3f96b8e94c79657b04f0ea879",
+      "declared_cases": [
+        {
+          "name": "edit",
+          "line": 7
+        },
+        {
+          "name": "edit groups administrators separately from members with a divider",
+          "line": 12
+        },
+        {
+          "name": "update",
+          "line": 44
+        },
+        {
+          "name": "non-admins cannot update",
+          "line": 53
+        }
+      ],
+      "declared_count": 4,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/accounts/users_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "a92ecd773684bc76c8f3c03870183d86fa8f892e15c40bae38c9784025c69827",
+      "declared_cases": [
+        {
+          "name": "update",
+          "line": 8
+        },
+        {
+          "name": "destroy",
+          "line": 17
+        },
+        {
+          "name": "non-admins cannot perform actions",
+          "line": 26
+        }
+      ],
+      "declared_count": 3,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/accounts/icons_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "0dfee703ecbbd37b2788d469b129c0e0d27885d87bfc947e7f7c41cca9c15b1a",
+      "declared_cases": [
+        {
+          "name": "index lists icons with previews shortcodes titles and uploaders",
+          "line": 7
+        },
+        {
+          "name": "create uploads an icon",
+          "line": 19
+        },
+        {
+          "name": "create renders validation errors inline",
+          "line": 38
+        },
+        {
+          "name": "create reports a name that raced past validation as taken",
+          "line": 53
+        },
+        {
+          "name": "destroy removes the icon and its blob",
+          "line": 70
+        },
+        {
+          "name": "members get forbidden on list create and delete",
+          "line": 82
+        }
+      ],
+      "declared_count": 6,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/accounts/audit_logs_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "29feccc89a88a20e2b8332a8747fe3c0354b4506756bfcf48f8d86387a0cba58",
+      "declared_cases": [
+        {
+          "name": "admins can browse the log",
+          "line": 12
+        },
+        {
+          "name": "members are forbidden",
+          "line": 24
+        },
+        {
+          "name": "visitors are sent to sign in",
+          "line": 31
+        },
+        {
+          "name": "visitors cannot export CSV",
+          "line": 37
+        },
+        {
+          "name": "members cannot export CSV",
+          "line": 43
+        },
+        {
+          "name": "filtering by actor matches names and emails in labels",
+          "line": 50
+        },
+        {
+          "name": "filtering by action and target type",
+          "line": 61
+        },
+        {
+          "name": "unknown filter values are ignored",
+          "line": 77
+        },
+        {
+          "name": "filtering by date range",
+          "line": 87
+        },
+        {
+          "name": "paging walks older entries",
+          "line": 103
+        },
+        {
+          "name": "CSV export carries headers and the filtered rows",
+          "line": 122
+        },
+        {
+          "name": "CSV export neutralizes formula injection",
+          "line": 141
+        },
+        {
+          "name": "past the export cap the page warns and the CSV filename says truncated",
+          "line": 155
+        },
+        {
+          "name": "within the export cap there is no truncation notice",
+          "line": 172
+        },
+        {
+          "name": "CSV export neutralizes formula injection in request columns",
+          "line": 190
+        }
+      ],
+      "declared_count": 15,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/accounts/custom_styles_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "6ab446fb2b15995a072c28df17acf01221d8926a8b75e82f2a88be37ca5dde23",
+      "declared_cases": [
+        {
+          "name": "edit",
+          "line": 8
+        },
+        {
+          "name": "update",
+          "line": 13
+        },
+        {
+          "name": "non-admins cannot update",
+          "line": 22
+        }
+      ],
+      "declared_count": 3,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/accounts/logos_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "17f5b8b6b1968b84466bd1cc32aa2757fc7a8547bd75a750402061049f3bd56e",
+      "declared_cases": [
+        {
+          "name": "show stock",
+          "line": 8
+        },
+        {
+          "name": "show stock small size",
+          "line": 13
+        },
+        {
+          "name": "show custom",
+          "line": 18
+        },
+        {
+          "name": "show custom small size",
+          "line": 25
+        },
+        {
+          "name": "show stock when custom logo cannot be resized",
+          "line": 32
+        },
+        {
+          "name": "destroy",
+          "line": 39
+        }
+      ],
+      "declared_count": 6,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/accounts/join_codes_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "aceeeeea663ef058632b77bd510eab2d9a93f2841ceb15fd41690f77b2b009f9",
+      "declared_cases": [
+        {
+          "name": "create new join code",
+          "line": 8
+        },
+        {
+          "name": "only administrators can create new join codes",
+          "line": 15
+        }
+      ],
+      "declared_count": 2,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/workspace_icons_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "4ac04cdee73c722d9917efaf5e8448024cfc0ca7a83736ad2d9846a83d342952",
+      "declared_cases": [
+        {
+          "name": "serves an SVG with the documented headers",
+          "line": 7
+        },
+        {
+          "name": "serves a PNG without the SVG-only headers",
+          "line": 22
+        },
+        {
+          "name": "supports conditional GETs with the blob checksum",
+          "line": 36
+        },
+        {
+          "name": "returns not found for unknown names",
+          "line": 45
+        },
+        {
+          "name": "returns not found for signed-out users",
+          "line": 53
+        },
+        {
+          "name": "unenrolled sessions are sent to setup instead of served the icon",
+          "line": 59
+        },
+        {
+          "name": "stale enrolled sessions are signed out instead of served the icon",
+          "line": 67
+        }
+      ],
+      "declared_count": 7,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/pwa_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "22444ee1d7991b115990c5bd0a4d4328ad94efe182ee53634f1e8840bf363bed",
+      "declared_cases": [
+        {
+          "name": "service worker serves as JavaScript with the fetch and notification handlers",
+          "line": 4
+        },
+        {
+          "name": "service worker caches static assets only",
+          "line": 15
+        },
+        {
+          "name": "notification clicks focus an existing window before opening a new one",
+          "line": 29
+        },
+        {
+          "name": "offline shell renders signed-out with reconnect behavior",
+          "line": 40
+        },
+        {
+          "name": "service worker fetch and notification logic",
+          "line": 50
+        }
+      ],
+      "declared_count": 5,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/qr_code_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "cc3f67ebb9d1b89e56a1f3cb8a959f4211637e42eec3ec1c766ab1eb4184c81a",
+      "declared_cases": [
+        {
+          "name": "show renders a QR code as a cacheable SVG image",
+          "line": 4
+        }
+      ],
+      "declared_count": 1,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/controllers/unfurl_links_controller_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "0a7d5635e76141248c0ef1d5b2782131861d63a0aeb13894c02864c77b66d40e",
+      "declared_cases": [
+        {
+          "name": "create",
+          "line": 7
+        },
+        {
+          "name": "create strips markup from the title and description",
+          "line": 20
+        },
+        {
+          "name": "create with missing opengraph meta tags",
+          "line": 32
+        },
+        {
+          "name": "create returns no content when the title and description are only a markup tag",
+          "line": 39
+        },
+        {
+          "name": "create for a GitHub PR URL returns no content (PR cards render instead)",
+          "line": 54
+        },
+        {
+          "name": "create for a Fizzy card URL returns no content (Fizzy cards render instead)",
+          "line": 59
+        },
+        {
+          "name": "create with a missing URL",
+          "line": 64
+        },
+        {
+          "name": "create for twitter.com",
+          "line": 71
+        },
+        {
+          "name": "create for x.com",
+          "line": 79
+        }
+      ],
+      "declared_count": 9,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/audit_log_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "4c4f18a8de747fd26f6ce881f095ba8e85b4d1fe08642ccbe4835002c411eb7c",
+      "declared_cases": [
+        {
+          "name": "admin browses filters and exports the audit log",
+          "line": 12
+        },
+        {
+          "name": "audit log stays usable at phone width",
+          "line": 36
+        }
+      ],
+      "declared_count": 2,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/channel_members_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "4ec15c976acd9a9d9fcf667926fdc6fb2f2b19e9e12f80436fec7e87bf68ca9a",
+      "declared_cases": [
+        {
+          "name": "members are online across channels and go offline after signing out",
+          "line": 21
+        },
+        {
+          "name": "a bot with a checked-in agent shows online in the member panel",
+          "line": 49
+        },
+        {
+          "name": "closing one tab keeps a member online until their last tab closes",
+          "line": 63
+        },
+        {
+          "name": "the member panel follows channel access and remains usable on a phone",
+          "line": 82
+        }
+      ],
+      "declared_count": 4,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/channel_navigation_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "a680b134fca80bf1d6756cab551416d0729928df3bfb44d00a4407135dfc275b",
+      "declared_cases": [
+        {
+          "name": "switching channels hides the progress bar and lands without a reload",
+          "line": 10
+        },
+        {
+          "name": "browser back returns to the previous channel without a reload",
+          "line": 34
+        },
+        {
+          "name": "slow back and forward restores never flash the channel loader",
+          "line": 53
+        },
+        {
+          "name": "canceling a channel visit does not suppress the next page loader",
+          "line": 78
+        },
+        {
+          "name": "shared message links also navigate without a channel loader",
+          "line": 95
+        },
+        {
+          "name": "channel switch from the mobile drawer closes the drawer without a reload",
+          "line": 110
+        },
+        {
+          "name": "non-room visits still show the progress bar",
+          "line": 130
+        }
+      ],
+      "declared_count": 7,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/first_run_tour_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "4a553c1fccf9c3d8d93c50ed330096b7aaa875bea4c7027b28172457d94e46bf",
+      "declared_cases": [
+        {
+          "name": "a new member is walked through the tour by keyboard and finishing persists",
+          "line": 7
+        },
+        {
+          "name": "escape skips the tour and it never auto-starts again",
+          "line": 44
+        },
+        {
+          "name": "the tour restarts from the help menu",
+          "line": 58
+        },
+        {
+          "name": "members who completed the tour never see it auto-start",
+          "line": 72
+        }
+      ],
+      "declared_count": 4,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/icons_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "962b46ae49199e55932e7a71519704c4c20ef03d33125c4941bdf24242eaacad",
+      "declared_cases": [
+        {
+          "name": "colon autocomplete inserts a brand shortcode that renders in both themes",
+          "line": 19
+        },
+        {
+          "name": "room icon picker sets an icon that shows in the sidebar and header",
+          "line": 47
+        },
+        {
+          "name": "icon rooms suppress the search arrow marker",
+          "line": 67
+        },
+        {
+          "name": "lobehub brand icons render visibly in both themes",
+          "line": 80
+        }
+      ],
+      "declared_count": 4,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/keyboard_shortcuts_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "ce7e3f8c7498b747d0710668df99b2f550d8e3ca93af87b2b32a8673985c2c47",
+      "declared_cases": [
+        {
+          "name": "? opens the shortcut sheet everywhere except while typing",
+          "line": 8
+        },
+        {
+          "name": "? while typing stays in the composer",
+          "line": 28
+        },
+        {
+          "name": "ctrl+k fires while typing and inserts no link markup",
+          "line": 37
+        },
+        {
+          "name": "alt+up and alt+down move between rooms",
+          "line": 49
+        },
+        {
+          "name": "alt+shift+arrows jump between unread rooms",
+          "line": 65
+        },
+        {
+          "name": "escape marks the current room read",
+          "line": 78
+        },
+        {
+          "name": "escape while typing leaves the room unread",
+          "line": 88
+        },
+        {
+          "name": "escape with a menu open closes the menu instead of marking read",
+          "line": 99
+        },
+        {
+          "name": "escape with the huddle theater open yields to the theater instead of marking read",
+          "line": 111
+        },
+        {
+          "name": "escape in full screen leaves the room unread",
+          "line": 148
+        },
+        {
+          "name": "alt+arrows while typing stay in the room",
+          "line": 189
+        },
+        {
+          "name": "ctrl+k ignores IME composition",
+          "line": 204
+        },
+        {
+          "name": "ctrl+k does not open over an open modal dialog",
+          "line": 216
+        },
+        {
+          "name": "ctrl+k still toggles the switcher closed",
+          "line": 231
+        }
+      ],
+      "declared_count": 14,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/member_select_mode_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "5053aa72827e1950b60704b3d74286c1062fd5666636bc5594d68cbeb5826b46",
+      "declared_cases": [
+        {
+          "name": "member rows render without checkboxes and stay inline on desktop and phone",
+          "line": 17
+        },
+        {
+          "name": "a plain click opens the profile card outside selection mode and toggles inside it",
+          "line": 37
+        },
+        {
+          "name": "ctrl-click and cmd-click toggle members, and dropping to zero exits the mode",
+          "line": 56
+        },
+        {
+          "name": "ctrl-shift-click selects a range across groups and skips your own row",
+          "line": 76
+        },
+        {
+          "name": "ctrl-shift-click on a checked checkbox adds the range instead of clearing it",
+          "line": 104
+        },
+        {
+          "name": "a plain click opens the profile card again after the selected member leaves",
+          "line": 121
+        },
+        {
+          "name": "esc and the exit button leave selection mode with the panel open",
+          "line": 135
+        },
+        {
+          "name": "the exit button returns focus to the last-touched row",
+          "line": 152
+        },
+        {
+          "name": "the exit button falls back to the first row when the last-touched row is gone",
+          "line": 161
+        },
+        {
+          "name": "unchecking the last box returns focus to that row",
+          "line": 175
+        },
+        {
+          "name": "esc closes the mobile drawer when only a departed member's hidden selection remains",
+          "line": 184
+        },
+        {
+          "name": "esc on desktop leaves a departed member's hidden selection alone",
+          "line": 205
+        },
+        {
+          "name": "esc with the row menu open closes only the menu",
+          "line": 222
+        },
+        {
+          "name": "the selection count is announced through a dedicated status element",
+          "line": 238
+        },
+        {
+          "name": "space toggles the focused row without opening the profile card",
+          "line": 254
+        },
+        {
+          "name": "selection, mode, and anchor survive a presence re-render",
+          "line": 268
+        },
+        {
+          "name": "the star row menu works in and out of selection mode",
+          "line": 283
+        },
+        {
+          "name": "a phone long-press enters selection mode, then taps toggle and Message submits the set",
+          "line": 310
+        }
+      ],
+      "declared_count": 18,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/mobile_layout_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "1397e2d10e2f98eef646ebe49b8c57471e5a65328318ce205ac44fbc8c2757ca",
+      "declared_cases": [
+        {
+          "name": "the profile page fits phone widths without scrolling sideways",
+          "line": 47
+        },
+        {
+          "name": "headers outside the workspace shell stay opaque over scrolled content",
+          "line": 60
+        },
+        {
+          "name": "headers outside the workspace shell never cover the page or its scrollbar",
+          "line": 84
+        },
+        {
+          "name": "pages outside the workspace shell show no drawer toggle that opens nothing",
+          "line": 113
+        },
+        {
+          "name": "every drawer destination has one toggle that opens the drawer on itself",
+          "line": 123
+        }
+      ],
+      "declared_count": 5,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/motion_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "5c88aad84b6fe9f518e3512cf33c0c40854bad5a59f9f722c400b5bb5b2235d7",
+      "declared_cases": [
+        {
+          "name": "motion is off by default in the test environment",
+          "line": 18
+        },
+        {
+          "name": "mobile drawer animates in, lands in place, and returns focus with motion on",
+          "line": 25
+        },
+        {
+          "name": "member selection mode moves no rows and resizes nothing",
+          "line": 72
+        },
+        {
+          "name": "people directory bar shifts no rows when toggling",
+          "line": 102
+        },
+        {
+          "name": "people directory bar stays stuck while scrolling",
+          "line": 118
+        },
+        {
+          "name": "room menu measures at full scale when clamping to the viewport edge",
+          "line": 148
+        },
+        {
+          "name": "mobile drawer keeps the room list scroll position across close and reopen",
+          "line": 176
+        },
+        {
+          "name": "mobile drawer reveals a current room far down the list on first open",
+          "line": 240
+        },
+        {
+          "name": "mobile drawer reopens on the current room when it is already in view",
+          "line": 259
+        }
+      ],
+      "declared_count": 9,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/people_group_dms_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "4e4e8311e972e3eb75eb8014d21add10f17fef1e8c6e00c51fd2baf778b8b35f",
+      "declared_cases": [
+        {
+          "name": "clicking a message author opens their profile card and Message lands in the DM",
+          "line": 7
+        },
+        {
+          "name": "the profile card opens by keyboard, traps focus, and returns it on Esc",
+          "line": 26
+        },
+        {
+          "name": "Esc with a closed profile card stays unhandled for later listeners",
+          "line": 42
+        },
+        {
+          "name": "the sidebar avatar trigger opens the profile card by keyboard",
+          "line": 61
+        },
+        {
+          "name": "multi-selecting three people in the directory lands in their group DM",
+          "line": 71
+        },
+        {
+          "name": "the member panel multi-select starts a huddle with exactly that set",
+          "line": 89
+        },
+        {
+          "name": "shift-click extends the checkbox range",
+          "line": 111
+        },
+        {
+          "name": "long-press selects a row on touch",
+          "line": 125
+        },
+        {
+          "name": "agents are selectable for messages but excluded from huddles",
+          "line": 153
+        },
+        {
+          "name": "start huddle keeps agents in the DM but out of the call",
+          "line": 166
+        },
+        {
+          "name": "the new-DM picker filters as you type with no suggestion bubble or submit button",
+          "line": 180
+        },
+        {
+          "name": "picker selections survive filtering and Message starts the DM",
+          "line": 212
+        },
+        {
+          "name": "Enter in the picker filter selects the single visible match",
+          "line": 242
+        },
+        {
+          "name": "clicking a picker row toggles it while the name still opens the profile card",
+          "line": 273
+        },
+        {
+          "name": "the new-DM picker does not overflow at phone width",
+          "line": 287
+        },
+        {
+          "name": "group members rename, add, and leave with system notes in the timeline",
+          "line": 309
+        },
+        {
+          "name": "starting a group huddle rings every other member",
+          "line": 340
+        },
+        {
+          "name": "Esc closes only the profile card inside the mobile member panel",
+          "line": 360
+        },
+        {
+          "name": "Tab cycles within the profile card opened from the member panel",
+          "line": 384
+        }
+      ],
+      "declared_count": 19,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/quick_switcher_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "37760d50e96277757bbc68562dfadc689c51ae9a28bff33c1219ec85404c79d3",
+      "declared_cases": [
+        {
+          "name": "keyboard-only room jump filters and opens with enter",
+          "line": 9
+        },
+        {
+          "name": "arrow keys move the active option",
+          "line": 20
+        },
+        {
+          "name": "escape closes the switcher",
+          "line": 43
+        },
+        {
+          "name": "empty query leads with recent rooms",
+          "line": 51
+        },
+        {
+          "name": "choosing a person without a DM opens a new one",
+          "line": 62
+        }
+      ],
+      "declared_count": 5,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/room_header_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "9f96490cfd89f400c3ca736c7f1a56b8a4b85509a721661f8b3361e83e44a050",
+      "declared_cases": [
+        {
+          "name": "phone header keeps members, call, search and More with the rest in the menu",
+          "line": 17
+        },
+        {
+          "name": "tablet header keeps notifications and settings visible with the rest in the menu",
+          "line": 70
+        },
+        {
+          "name": "desktop header is unchanged with no More button",
+          "line": 111
+        },
+        {
+          "name": "every phone overflow menu item works",
+          "line": 139
+        },
+        {
+          "name": "the overflow menu scrolls within a landscape phone viewport",
+          "line": 236
+        },
+        {
+          "name": "opening threads from the menu returns focus to More on close",
+          "line": 278
+        },
+        {
+          "name": "the overflow menu is keyboard accessible and closes on outside tap",
+          "line": 298
+        },
+        {
+          "name": "the overflow dot lights for unread threads, not pins, and the pins badge hides at zero",
+          "line": 327
+        },
+        {
+          "name": "the tour restarts from the overflow menu on phones",
+          "line": 375
+        }
+      ],
+      "declared_count": 9,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/service_worker_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "8f16fcce87f015abd7df2040b219dfd22bd2cf159c36197061b10bba74d52482",
+      "declared_cases": [
+        {
+          "name": "the worker caches static assets and never authenticated responses",
+          "line": 9
+        },
+        {
+          "name": "the offline shell renders with working retry behavior",
+          "line": 26
+        }
+      ],
+      "declared_count": 2,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/sidebar_organize_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "db6a1bba4f7576a3ace15dd368e3b44e195bc2b45c82d32bc9aa7a4b7fc76286",
+      "declared_cases": [
+        {
+          "name": "favouriting from the room menu moves the room to Favourites",
+          "line": 7
+        },
+        {
+          "name": "favourites reorder from the keyboard with move up and down",
+          "line": 23
+        },
+        {
+          "name": "favourites reorder with drag and drop",
+          "line": 44
+        },
+        {
+          "name": "muted rooms dim and stay quiet until mentioned",
+          "line": 59
+        },
+        {
+          "name": "channel categories organize, collapse and persist",
+          "line": 84
+        },
+        {
+          "name": "categories rename and delete",
+          "line": 114
+        }
+      ],
+      "declared_count": 6,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/sidebar_room_menu_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "9c0d3bec0dcace257050f5a0064bdb9605954727d25da632c6056ba2cb7fbd7a",
+      "declared_cases": [
+        {
+          "name": "an admin deletes a channel from the room menu",
+          "line": 4
+        },
+        {
+          "name": "the creator sees Delete on their own room but not on others",
+          "line": 22
+        },
+        {
+          "name": "a plain member does not see Delete",
+          "line": 36
+        },
+        {
+          "name": "Cancel and Escape keep the room",
+          "line": 44
+        },
+        {
+          "name": "deleting the room you are in navigates you home",
+          "line": 66
+        },
+        {
+          "name": "Delete is offered on every room kind for admins",
+          "line": 82
+        },
+        {
+          "name": "a group dm shows Delete only for admins",
+          "line": 107
+        },
+        {
+          "name": "one-to-one dms follow the server delete rule",
+          "line": 124
+        },
+        {
+          "name": "Delete is reachable by arrow keys",
+          "line": 139
+        },
+        {
+          "name": "deleting from the long-press menu on phones",
+          "line": 158
+        },
+        {
+          "name": "a member leaves an open channel and rejoins through the join page",
+          "line": 183
+        },
+        {
+          "name": "leaving a private channel warns about being re-added",
+          "line": 208
+        },
+        {
+          "name": "leaving the room you are in sends you home",
+          "line": 228
+        },
+        {
+          "name": "the last member out leaves the room behind for no one to lose",
+          "line": 243
+        },
+        {
+          "name": "Leave is offered on every room kind and never deletes",
+          "line": 256
+        },
+        {
+          "name": "a member leaves a group dm from the menu",
+          "line": 291
+        }
+      ],
+      "declared_count": 16,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/starred_people_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "e0bf85e61e95d1fb2aaed591c00db9bbc840d369af9d342afe60e45b0a5520a8",
+      "declared_cases": [
+        {
+          "name": "starring from the profile card floats the person into a Starred group",
+          "line": 18
+        },
+        {
+          "name": "the member row menu stars and unstars, by mouse and keyboard",
+          "line": 43
+        },
+        {
+          "name": "Escape still dismisses the row menu after the profile card takes focus",
+          "line": 87
+        },
+        {
+          "name": "the Starred group works on a phone",
+          "line": 108
+        }
+      ],
+      "declared_count": 4,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/timezone_detection_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "87adca55105eef19aa613cbf02d77bbd273058fc89cb38071fabff8472424737",
+      "declared_cases": [
+        {
+          "name": "the browser does not report its zone without a CSRF token",
+          "line": 4
+        },
+        {
+          "name": "the browser reports its detected zone once",
+          "line": 17
+        }
+      ],
+      "declared_count": 2,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/unread_divider_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "006147f6e9ffb9066a4e82e8b50e841f150ce7c079047833efcf560f93546a1e",
+      "declared_cases": [
+        {
+          "name": "few unread render the divider above the first new message and keep the bottom scroll",
+          "line": 8
+        },
+        {
+          "name": "many unread scroll the room to the divider",
+          "line": 23
+        },
+        {
+          "name": "the jump pill shows while the divider is off-screen and returns to it",
+          "line": 48
+        },
+        {
+          "name": "unread older than the last page keeps the last page and the pill links to the first unread",
+          "line": 73
+        },
+        {
+          "name": "mark unread from the message menu points the divider at that message",
+          "line": 97
+        }
+      ],
+      "declared_count": 5,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/unread_rooms_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "f900f9573626e923c07d0d97be3b094862702cc77b90d0543e3f4a04689c81c5",
+      "declared_cases": [
+        {
+          "name": "sending messages between two users",
+          "line": 7
+        },
+        {
+          "name": "channel and DM rows keep exactly one unread badge next to the huddle stack",
+          "line": 27
+        }
+      ],
+      "declared_count": 2,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/workspace_icons_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "267dd93d33c92276ffc2d07627a891eba9fc7c05cb96db185686c7593596882a",
+      "declared_cases": [
+        {
+          "name": "upload post in both themes then delete falls back to the shortcode",
+          "line": 16
+        }
+      ],
+      "declared_count": 1,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/browser_launch_profile_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "d51ffa34fd957572a6e86d50dda7a3464a2a10d3299ce43ff4c8a8774dd26adf",
+      "declared_cases": [
+        {
+          "name": "the browser launches with a managed profile under the worker TMPDIR",
+          "line": 11
+        }
+      ],
+      "declared_count": 1,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    },
+    {
+      "file": "test/system/content_security_policy_test.rb",
+      "reference_file_present": true,
+      "source_sha256": "7294e7e68948b0ba5a2757997cc36fb73f919aed17aaaadfd0e6e771e3e3e06a",
+      "declared_cases": [
+        {
+          "name": "signing in through the real login form lands on the signed-in page",
+          "line": 54
+        },
+        {
+          "name": "sign-in, a room, markdown, the Drive picker composer, and the huddle panel raise no violations",
+          "line": 81
+        },
+        {
+          "name": "a Turbo visit to the event form fills the time zone with no violations",
+          "line": 115
+        },
+        {
+          "name": "a forced inline script without the nonce is blocked and reported",
+          "line": 137
+        },
+        {
+          "name": "room, huddle, stage, board, search, settings, and the profile card raise no violations",
+          "line": 153
+        }
+      ],
+      "declared_count": 5,
+      "rails_tests_run": 0,
+      "rails_pass_count": 0,
+      "status": "full-file acceptance deferred"
+    }
+  ]
+}

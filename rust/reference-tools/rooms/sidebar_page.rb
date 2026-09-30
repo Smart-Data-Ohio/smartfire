@@ -58,6 +58,9 @@ ActiveRecord::Base.transaction do
   room.memberships.find_by!(user:david).update!(room_category:first)
   shared=Rooms::Open.create_for({name:'Starred',creator:david},users:[david])
   shared.memberships.find_by!(user:david).update!(favorite_position:1)
+  david.memberships.joins(:room).where(rooms: {type: ['Rooms::Board','Rooms::Voice','Rooms::Stage']}).order(:id).each.with_index do |m,i|
+    m.update!(favorite_position:i+3,unread_at:Time.current,involvement:'muted')
+  end
   render_state.call('organized_admin',david)
   Current.account.settings.restrict_room_creation_to_administrators=true
   Current.account.save!

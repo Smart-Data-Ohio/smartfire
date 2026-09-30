@@ -54,7 +54,7 @@ fn view(row: &serde_json::Value) -> rooms::ShowView {
             poll_builder: text("poll_builder"),
             ..Default::default()
         },
-        scroll_to_unread_divider: Some(false),
+        scroll_to_unread_divider: row["scroll_to_unread_divider"].as_bool(),
         jump_to_unread_url: None,
         unread_divider_message_id: None,
         unread_count: 0,
@@ -146,4 +146,38 @@ fn message_list_seam_renders_the_empty_collection_or_supplied_owner_output() {
         .unwrap()
         .contains("<div id=\"owned-message\">WS8b-m</div>\n")
     );
+}
+
+#[test]
+fn unread_jump_controls_match_rails() {
+    let asset = |name: &str| campfire_assets::asset_path(name);
+    let signer = |_: &[&str]| String::new();
+    let ctx = common::context(&asset, &signer);
+    for row in fixtures() {
+        let mut show = view(&row);
+        show.unread_divider_message_id = Some(101);
+        let local = rooms::Show {
+            ctx: &ctx,
+            show: &show,
+        }
+        .as_content()
+        .render()
+        .unwrap();
+        assert!(
+            local.contains(row["jump_buttons"]["divider"].as_str().unwrap()),
+            "divider jump bytes"
+        );
+        show.jump_to_unread_url = Some(format!("/rooms/{}?message_id=101", show.room.id));
+        let linked = rooms::Show {
+            ctx: &ctx,
+            show: &show,
+        }
+        .as_content()
+        .render()
+        .unwrap();
+        assert!(
+            linked.contains(row["jump_buttons"]["link"].as_str().unwrap()),
+            "off-page link bytes"
+        );
+    }
 }

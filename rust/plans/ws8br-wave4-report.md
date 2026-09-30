@@ -1,82 +1,57 @@
-WS8br wave 4 report — PARTIAL, continued after WS19b
+# WS8br Wave 4 — PARTIAL
 
-Branch: `rust/ws8br-rooms-http`. Worktree: `/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8br`. Assigned base: `bb6c5d78`. Rails oracle: `d7c7de92`. Latest implementation SHA: `c11a0ac6b2a040fd416e2f062886b96464226af2`, pushed and synchronized with origin. No PR. This requested external report is the only worktree-location exception; the identical tracked mirror is `rust/plans/ws8br-wave4-report.md`.
+Branch `rust/ws8br-rooms-http`; assigned worktree `rust-ws8br`; Rails pin `d7c7de92`. Main remains `21a7332f2d3c324f0862cdf448baf17a84395aa0`, already merged with merge commit `9f356e2f`. Latest pushed implementation is `213eca45dc010de5eadeeedb36e3d366d1686d01`, following the sidebar slice `7e037a45`. The following coverage/report commit includes the additional favorite-kind and unread-control goldens. Earlier HTTP/switcher/header work remains delivered. No PR or deployment.
 
-The ordered work is still PARTIAL at priority 1. The switcher, shared/direct row partials, recipient header identity and group directory delivery are implemented and verified. The complete room shell, full header actions, sidebar section layout and message-list integration are unfinished. Prior room HTTP slices remain included. Priorities 2–5 have not been completed. No production, full-page, browser, pixel or complete Rails-suite parity claim.
+**What changed this continuation, by file**
 
-**Pushed slices**
+- `views/src/users/sidebar.rs`, `templates/users/sidebars/show.html`, `_room_categories.html`, `_room_menu.html`, `rooms/_shared.html`, `_direct_placeholder.html`, `_empty_venue_children.html`: full workspace/sidebar layout, navigation/profile tools, mixed favorites, channels/boards/voice/stage/direct sections, own categories with order/collapse/empty/forms, menu and placeholder DMs. Five complete Rails frames include every seeded favorite kind and muted/unread rows. Venue mount defaults match Rails' empty children even when LiveKit is unconfigured; configured children remain WS13 inputs.
+- `campfire/src/controllers/presenters/accounts.rs`, `users/sidebars.rs`, `users/sidebars_tests.rs`: partition favorites before original sections; preload direct users in one membership-order query; preserve recipient role/cache facts. Three seeded database compositions match complete Rails frame bytes. Custom workspace icon lookups can still add per-row queries; constant overall query-count parity is not claimed.
+- `campfire/src/controllers/rooms/involvements.rs`, `rooms.rs`, `presenters/page.rs`, `channels/tests/directory_test.rs`: shared visibility/mute rows now carry the recipient's membership/menu and correct optional unread local. Six actual HTTP changes match six actual socket frames, with another user's stream silent. Existing direct directory rename/clear/leave/add frame coverage is retained.
+- `views/src/rooms.rs`, `templates/rooms/show.html`, `show/_nav.html`, `_header_overflow.html`, `_member_panel.html`, `_invitation.html`, `involvements/_bell.html`: room-workspace body/sidebar region, first-paint preloads, full unconfigured channel/DM header controls/overflow, member panel, accessible message-area wrapper, jump controls and corrected Smartfire invitation name. Four empty-room fixtures compare six regions each; both jump controls compare Rails bytes. Footer/thread owner regions are supplied Rails fragments, so their pass-through does not prove their Rust internals.
+- `campfire/src/controllers/presenters/room_shell.rs`, `presenters.rs`, `rooms.rs`: root-only anchored pagination and read-only unread facts. Eight Rails cases cover read rooms, three/five/six unread, off-page boundaries, legacy stamps, deleted pointers and absent boundaries. More than five scrolls; five does not. No domain/schema change.
+- `rooms/tests.rs`: preserve the 40/41 root-page assertions separately from the authorized empty-list placeholder, and exercise the legacy tokenless boost in the real pagination response. `messages/tests.rs`: minimal cross-owner test touch, moving only the forged-host fragment probe's URI to the actual pagination endpoint; every cache-poisoning assertion remains. No WS8b-m renderer internals were edited.
+- `views/tests/{sidebar,room_shell}.rs`, `views/tests/golden/{sidebar,rooms}`, `vectors/room_shell_unread.json`, `reference-tools/rooms/{sidebar_page,involvement,shell,unread_shell}.rb`, discrimination scripts: pinned Rails full-byte oracles, compiled regressions and regeneration tools. No normalization or masks/allowlists changed.
+- `plans/ws8br-rails-cases.json`, `reference-tools/rooms/deferred_inventory.py`: all 57 scoped Rails controller/system files grouped by file, with 495 source-declared names and lines, hashes, and explicit zero Rails execution/pass counts. Source declarations are not dynamically expanded Minitest counts.
 
-| SHA | Delivered slice |
-| --- | --- |
-| `e71bfa10` | Room access/group-delete authorization and durable begin_destroy. |
-| `86e90895` | Own-user categories, favorites, involvement read clearing and inbound-token rotation. |
-| `43b56f72` | Active capped group selection, rename/add/leave, post-commit audit timing and reuse behavior. |
-| `26f598b9` | First partial report. Its old main/bot-failure status is superseded here. |
-| `9f356e2fa00ff70ffdca3bd4aaf76916ce77557e` | Explicit merge commit of origin/main `21a7332f2d3c324f0862cdf448baf17a84395aa0` (WS19b). No conflicts. |
-| `fd26f86980b61ce6107f4413c4f6c4a536d03c5b` | Scoped quick-switcher JSON and pinned Rails oracle. |
-| `00c401dc`, `5f469aee10d5c3e9ff036b1748ed9e6db64437c3` | Rails sidebar rows and cache keys; immediate follow-up boxes the enlarged row enum to fix clippy. The first row commit was pushed before that clippy issue was fixed; the branch now passes. |
-| `c11a0ac6b2a040fd416e2f062886b96464226af2` | Recipient header identity, model directory partial delivery, actual socket bytes, seeded group ordering and Ruby word splitting. |
+**Seam and parity limits**
 
-**What changed, by file (paths relative to rust/)**
+`rooms::room_message_list(ctx, &ShowView)` is the stable entry point. `ShowView.shell.message_list` accepts trusted owner-rendered HTML; absent it, the default is zero bytes, matching Rails' empty collection. The original message data and unread facts remain available to WS8b-m. `ShellComponents` carries page-local message-template, composer, thread, pin, poll, huddle-header and OOO inputs. These inputs are not read from request params or put into a shared cache/broadcast.
 
-| Files | Behavior and evidence |
-| --- | --- |
-| `crates/campfire/src/concerns.rs` | Pending-deleted RoomScoped membership endpoints reject access. |
-| `crates/campfire/src/controllers.rs` | Routes prior room/category/favorite/inbound/group actions and `switchers#show`; routing assertions include them. |
-| `controllers/rooms.rs`, `rooms/{opens,closeds,directs,involvements}.rs` under `crates/campfire/src/` | Channel conversion scopes, group-delete guards, transactional durable destruction, JSON/redirect behavior, shared leave, active capped direct selection, rename/add/leave and audit after domain commit. Shared creation rows now render with ViewContext. |
-| `controllers/room_categories.rs`, `rooms/{categories,favorites,inbound_email_addresses}.rs` | Own-user category CRUD/assignment, favorite ordering/idempotence and WS10 token rotation with Rails guards. |
-| `controllers/rooms/{parity_tests,tests}.rs` | Eighteen discriminating room regressions and corrected pending-delete/required-parameter expectations. |
-| `controllers/switchers.rs`, `controllers/presenters/switcher.rs` | Thin authorized JSON action; five scoped SQL queries; ordered typed JSON fields; current room visibility, people, existing pair URLs and latest fifteen threads. Full peer names in switcher group rows deliberately follow this controller's Ruby rather than the custom/sidebar group label. |
-| `controllers/presenters/{accounts,rooms_directory}.rs`, `controllers/presenters.rs` | Row menu facts come from the membership's own viewer. Resolve room icons before rendering. Avatar order follows Membership order; label order follows Ruby naming. Header identities call WS8a's existing direct_display_name, including its SQL LOWER ordering. RoomView carries the header DTO. |
-| `controllers/users/sidebars{,_tests}.rs` | Real HTTP role-cache invalidation, complete seeded-group row bytes and four Rails word-splitting cases. Full sidebar collection partition still needs porting. |
-| `controllers/presenters/test_support.rs` | Frozen boot clock for byte goldens; existing ticking seed clock remains the normal test default. |
-| `crates/views/src/users{,/sidebar,/summary}.rs`, `templates/users/sidebars/rooms/_{shared,direct}.html` | Full shared/direct row markup, icons, separate avatar card buttons, muted/unread/menu/favorite/category facts, solo/pair/group labels and first-three avatar preview. Cached direct page rows partition membership version, administrator role and participant IDs. Single-row broadcasts bypass the page collection cache, as Rails does. Huddle HTML has an explicit WS13 seam. |
-| `crates/views/src/rooms{,/header}.rs`, `templates/rooms/show/_{header_identity,nav}.html` | Exact recipient header identity and real replacement DOM target in the room page. The rest of nav remains inherited and unfinished. |
-| `crates/campfire/src/channels{,/sink,/rooms_directory}.rs` | Register only DirectSidebar and RoomHeader model partials; read committed data and render without actor/request/session state, then publish through WS7's guarded Turbo API. Unowned message/poll/pin partials remain at WS8b-m's seam. Template-free frames retain their existing path. |
-| `crates/campfire/src/channels/tests/{hub_test,directory_test}.rs` | Actual HTTP writes and real sockets compare 31 complete Rails recipient frames; headers also occur verbatim on each member's room page. Check unrelated recipient silence, outsider/bot guards, newcomer prepend and leaver removal before disconnect. |
-| `crates/views/tests/{sidebar,room_header}.rs`, `tests/support/context.rs`, `tests/golden/{sidebar/rows,rooms/directory}.json` | Fifteen complete row goldens and fourteen header goldens, with no HTML normalization. Administrator/participant cache mutations and nonce leaks are rejected. |
-| `reference-tools/rooms/{http,switcher,sidebar,directory}.rb`, `source-hashes.json`, `vectors/{rooms_http,switcher}.json` | Actual pinned Rails responses/partials/callbacks. Relevant source hashes guard drift. Goldens come from Rails only; final outputs byte-match tracked files. |
-| `reference-tools/rooms/{discrimination,sidebar_discrimination,directory_discrimination,switcher_discrimination,check_workspace}.py` | Compiled assertion-level wrong implementations with source restored in finally; duplicate TOML key validation. The original-controller probe has a tiny render-context API shim so old controllers compile against the new row DTO; original authorization/mutation logic is unchanged. |
+The live page currently uses that requested empty main list and inherited composer/template fallbacks. WS8b-m has not supplied its list/composer/thread/pin/poll adapter. The full populated room page is therefore **not** byte/pixel accepted. Four shell fixtures lend Rails' owner fragments and explicitly choose empty OOO state; they prove the surrounding composition, not normal DM OOO behavior. WS17 must provide those viewer-specific notices; WS13 configured huddle/stage children and WS12 board pages remain their owners. The new header overflow is verified for channels/DMs; complete stage/board page integration is not claimed.
 
-**Design and boundaries**
+Sidebar rows/cache keys retain membership version, participant IDs and recipient administrator role; request forms remain uncached and keep request tokens. Broadcast fragments remain token/nonce free. The valid bot guard is end-to-end tested; valid agent-token acceptance/denial still needs WS9/WS11 integration. The shared `UserSummary::first_name` vertical-tab discrepancy remains for the users slice; own direct-row labels already match Ruby's whitespace split.
 
-No model or schema changes. Controllers reuse WS8a/WS10. Durable deletion is atomic with enqueue; audit happens after that commit, exactly as the actual Rails HTTP failure probe observes. Redis/sweep equivalence remains a separate WS3/WS8a acceptance question.
+**Verification — commands rerun and raw summaries**
 
-The reference generic/direct inaccessible-room guard redirects to root with an alert (302); RoomScoped nested endpoints use 404. The new directory oracle confirms anonymous 302, valid bot-key 403 and signed-in outsider 302 to `http://campfire.test/`. Do not replace these with a blanket 404 claim. The sidebar pair-delete menu intentionally follows Rails' creator/admin helper even where its pair-delete endpoint allows any member.
-
-The seeded four-person group exposed different user-join versus Membership association orders. The rendering adapter preserves Rails Membership order for avatars, using membership id order; direct labels sort separately. The WS8a descriptor's member_ids select members, while the renderer orders them through the fresh Membership association. WS8a's descriptor-level ordering remains an owner follow-up if it is intended as a fully ordered public contract; no domain implementation was edited. Ruby word splitting includes vertical tab and excludes NBSP; the new labels match the four Rails vectors.
-
-Only group directory frames are claimed: rename, clear name, leave and add, including new-member prepend and removal-before-disconnect. Rendered system-note message append delivery remains WS8b-m. Header identity is byte-tested for channel, voice, stage, board, icon, pair, solo, group and ten-person group cases; full WS13/WS12 pages and header controls are not claimed.
-
-Huddle rows are verified against the unconfigured reference. Cache separation accepts owner-supplied trusted participant HTML/IDs, but production configured-huddle participant loading/rendering remains WS13 integration work. No message/list/composer/thread/pin/poll/search template internals, frontend assets, masks, allowlists or pixel thresholds were edited.
-
-**Verification: final reruns and raw summary lines**
-
-Commands ran from the worktree root, except metadata from its `rust/` directory. Rust 1.98.1, four jobs, local target/temp directories, WS8br Docker prefix and ports 52100–52199. Both default and first_run reference seeds are present. `CI=1` makes missing real app seeds fail; seeded app tests had zero failures. The synthetic `missing_seed_may_skip_locally` unit test intentionally prints a local-skip note for an empty temporary test directory; it is not a skipped seeded app test.
-
-After the merge, locked metadata was rerun from `rust/` (exit 0, intentionally no output):
+Commands below ran from the assigned worktree, except metadata from `rust/`. Rust 1.98.1, four jobs, its own target/temp directories and WS8br ports. Both previously built pinned `default` and `first_run` seeds are present. CI=1 requires real app seeds; no seeded test silently skipped. Three explicit ignores remain: reference recorder, push-latency measurement and `manages_bots` awaiting WS11. No new ignore.
 
 ```bash
-TMPDIR="$PWD/../.scratch" CARGO_TARGET_DIR="$PWD/target" mise exec rust@1.98.1 -- cargo metadata --locked --format-version 1 > /dev/null
+TMPDIR="$PWD/../.scratch" CARGO_TARGET_DIR="$PWD/target" mise exec rust@1.98.1 -- cargo metadata --locked --format-version 1 >/dev/null
 ```
 
-All fifteen Cargo manifests parse without duplicate keys, including workspace dependency keys. No Cargo.lock or Cargo.toml changes.
+Exit 0, no output.
 
 ```bash
 python3 rust/reference-tools/rooms/check_workspace.py > .scratch/metadata-duplicates.log
+python3 rust/reference-tools/rooms/deferred_inventory.py > .scratch/deferred-inventory.log
 ```
 
 ```text
 Cargo TOML duplicate-key check: all manifests parse; no duplicate workspace dependency keys
+Rails deferred inventory: 57 files, 495 source-declared cases; 0 Rails tests run, 0 Rails passes claimed
 ```
 
-Actual Rails oracle reruns (all exit 0; each output was validated and byte-compared with the tracked JSON):
+Each oracle below exited 0; its stdout was validated as JSON and byte-compared with its tracked vector/golden. The new oracle scripts assert matching source hashes. No Rails templates/helpers were patched.
 
 ```bash
-PARITY_NAMESPACE=ws8br PARITY_IMAGE=ws8br-reference-d7c7de92 PARITY_OWNER=ws8br rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze -e RAILS_LOG_LEVEL=fatal rust/reference-tools/rooms/http.rb > .scratch/rooms_http.json 2> .scratch/rails-room-http-summary.log
+PARITY_NAMESPACE=ws8br PARITY_IMAGE=ws8br-reference-d7c7de92 PARITY_OWNER=ws8br rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze -e RAILS_LOG_LEVEL=fatal rust/reference-tools/rooms/http.rb > .scratch/rooms_http.json 2> .scratch/rooms_http-oracle.log
 PARITY_NAMESPACE=ws8br PARITY_IMAGE=ws8br-reference-d7c7de92 PARITY_OWNER=ws8br rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze -e RAILS_LOG_LEVEL=fatal rust/reference-tools/rooms/switcher.rb > .scratch/switcher.json 2> .scratch/switcher-oracle.log
 PARITY_NAMESPACE=ws8br PARITY_IMAGE=ws8br-reference-d7c7de92 PARITY_OWNER=ws8br rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze -e RAILS_LOG_LEVEL=fatal rust/reference-tools/rooms/sidebar.rb > .scratch/sidebar.json 2> .scratch/sidebar-oracle.log
 PARITY_NAMESPACE=ws8br PARITY_IMAGE=ws8br-reference-d7c7de92 PARITY_OWNER=ws8br rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze -e RAILS_LOG_LEVEL=fatal rust/reference-tools/rooms/directory.rb > .scratch/directory.json 2> .scratch/directory-oracle.log
+PARITY_NAMESPACE=ws8br PARITY_IMAGE=ws8br-reference-d7c7de92 PARITY_OWNER=ws8br rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze -e RAILS_LOG_LEVEL=fatal rust/reference-tools/rooms/sidebar_page.rb > .scratch/sidebar-page.json 2> .scratch/sidebar-page-oracle.log
+PARITY_NAMESPACE=ws8br PARITY_IMAGE=ws8br-reference-d7c7de92 PARITY_OWNER=ws8br rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze -e RAILS_LOG_LEVEL=fatal rust/reference-tools/rooms/involvement.rb > .scratch/involvement.json 2> .scratch/involvement-oracle.log
+PARITY_NAMESPACE=ws8br PARITY_IMAGE=ws8br-reference-d7c7de92 PARITY_OWNER=ws8br rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze -e RAILS_LOG_LEVEL=fatal rust/reference-tools/rooms/shell.rb > .scratch/shell.json 2> .scratch/shell-oracle.log
+PARITY_NAMESPACE=ws8br PARITY_IMAGE=ws8br-reference-d7c7de92 PARITY_OWNER=ws8br rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze -e RAILS_LOG_LEVEL=fatal rust/reference-tools/rooms/unread_shell.rb > .scratch/unread-shell.json 2> .scratch/unread-shell-oracle.log
 ```
 
 ```text
@@ -84,39 +59,55 @@ Rails room HTTP oracle: 47 cases; reference d7c7de92
 Rails switcher oracle: 2 byte payloads, 2 auth responses; reference d7c7de92
 Rails sidebar rows: 15 byte goldens; reference d7c7de92
 Rails room directory: 14 header goldens, 31 recipient frames; reference d7c7de92
+Rails sidebar page: 5 complete frame goldens; reference d7c7de92
+Rails involvement: 6 HTTP transitions, 6 recipient frames; reference d7c7de92
+Rails room shell: 4 empty-room region goldens; reference d7c7de92
+Rails unread shell: 8 pointer and divider cases; reference d7c7de92
 ```
 
-Failing-first/discrimination reruns (scripts exit 0; nested compiled cargo tests intentionally fail assertions, not compilation):
+Failing-first evidence: the new complete-frame/shell comparisons initially failed before port corrections. The reproducible scripts below compile wrong implementations and require assertion failures, then restore source. They reject inherited room authorization/state, transactional auditing, unmapped switcher/bot guards, cache/nonce leaks, actor headers, association order, Unicode splitting, category collapse, favorite duplication, recipient-less broadcasts, visible empty-list markup, wrong unread threshold and altered jump labels. Script exit 0 means the wrong implementation was rejected; FAILED lines are deliberate.
 
 ```bash
 python3 rust/reference-tools/rooms/discrimination.py > .scratch/discrimination-summary.log 2>&1
 python3 rust/reference-tools/rooms/switcher_discrimination.py > .scratch/switcher-discrimination-summary.log 2>&1
 python3 rust/reference-tools/rooms/sidebar_discrimination.py > .scratch/sidebar-discrimination-summary.log 2>&1
 python3 rust/reference-tools/rooms/directory_discrimination.py > .scratch/directory-discrimination-summary.log 2>&1
+python3 rust/reference-tools/rooms/sidebar_page_discrimination.py > .scratch/sidebar-page-discrimination-summary.log 2>&1
+python3 rust/reference-tools/rooms/shell_discrimination.py > .scratch/shell-discrimination-summary.log 2>&1
 ```
 
 ```text
-test result: FAILED. 1 passed; 17 failed; 0 ignored; 0 measured; 314 filtered out; finished in 0.72s
-WS8br discrimination: 17 HTTP regressions rejected bb6c5d78; 1 existing guard passed; source restored
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 335 filtered out; finished in 0.39s
+test result: FAILED. 2 passed; 17 failed; 0 ignored; 0 measured; 316 filtered out; finished in 0.73s
+WS8br discrimination: 17 HTTP regressions rejected bb6c5d78; 1 existing guard and 1 independent unread-presenter test passed; source restored
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 338 filtered out; finished in 0.46s
 WS8br audit discrimination: compiled transactional-audit regression rejected; source restored
-test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 332 filtered out; finished in 0.39s
+test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 335 filtered out; finished in 0.38s
 Switcher discrimination: compiled unmapped action rejected by all four regressions; source restored
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
 Sidebar discrimination: compiled cache-key mutation rejected; source restored
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
 Sidebar discrimination: compiled request-nonce mutation rejected; source restored
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 335 filtered out; finished in 0.41s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 338 filtered out; finished in 0.44s
 Directory discrimination: compiled unscoped-access mutation rejected; source restored
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 335 filtered out; finished in 1.72s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 338 filtered out; finished in 1.69s
 Directory discrimination: compiled actor-header mutation rejected; source restored
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 335 filtered out; finished in 0.40s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 338 filtered out; finished in 0.40s
 Directory discrimination: compiled user-join-order mutation rejected; source restored
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 335 filtered out; finished in 0.00s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 338 filtered out; finished in 0.00s
 Directory discrimination: compiled unicode-whitespace mutation rejected; source restored
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.01s
+Sidebar page discrimination: compiled collapse mutation rejected; source restored
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 338 filtered out; finished in 0.08s
+Sidebar page discrimination: compiled favorite-partition mutation rejected; source restored
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 338 filtered out; finished in 0.43s
+Sidebar page discrimination: compiled recipient-membership mutation rejected; source restored
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+Room shell discrimination: compiled visible-list-placeholder mutation rejected; source restored
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 338 filtered out; finished in 0.08s
+Room shell discrimination: compiled scroll-threshold mutation rejected; source restored
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+Room shell discrimination: compiled unread-pill-label mutation rejected; source restored
 ```
-
-Fourteen row byte comparisons rejected the inherited templates before porting. The header seam initially failed all fourteen goldens; the final full-byte comparisons and compiled actor-header mutation provide the header parity evidence. The actual directory socket regression compiled and failed because its partial handler was missing, while the existing guards passed. A new seeded-group HTTP assertion failed against the user-join adapter; Ruby word-splitting failed against the inherited first-name implementation. The reproducible mutations above re-prove the security/cache/name/order failures on the final implementation. The inherited unmapped switcher fails all four final tests, including the valid bot-key guard. No compiler error is treated as failing-first evidence.
 
 Final seeded app suite (exit 0):
 
@@ -125,22 +116,21 @@ CI=1 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CABLE_TEST_PORT_
 ```
 
 ```text
-test result: ok. 333 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 28.51s
+test result: ok. 336 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 28.16s
 ```
 
-Three explicit ignores: `channels::tests::golden::record_reference` (reference recorder), `jobs::tests::push_latency` (measurement), and `controllers::presenters::accounts::tests::manages_bots` (WS11, inherited from the requested WS19b merge). No new ignore or acceptance relaxation. The old one-failure bot status in the first report is superseded.
-
-Final views suite (exit 0; 36 unit, 28 shared-core, one header and four sidebar tests, plus zero doctests):
+Views suite: 73 passed, zero failed/ignored; raw lines below (exit 0).
 
 ```bash
-TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire_views > .scratch/views-final.log 2>&1
+TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CABLE_TEST_PORT_RANGE=52100-52149 MAIL_TEST_PORT_RANGE=52100-52149 mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire_views > .scratch/views-final.log 2>&1
 ```
 
 ```text
-test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
 test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
@@ -151,88 +141,96 @@ TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CABLE_TEST_PORT_RANGE
 ```
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 9.83s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.38s
 ```
 
-Full workspace tests, complete Rails Minitest suites, browser/screenshots, accessibility/pixel comparisons and full response error-body/flash/Turbo acceptance were not run. These commands were rerun; the lines above are copied from their final logs.
+No full workspace test run, full Rails Minitest run, browser/system/pixel or accessibility acceptance is claimed. The synthetic missing-seed unit test's deliberate local-skip log is not a skipped seeded app test.
 
-**Rails test inventory: ported subsets and precise deferred ownership**
+**Verified Rust regressions grouped by file**
 
-Every path below is under `test/controllers/`. “Subset” means related HTTP/state assertions were ported into the room HTTP probes and new switcher/sidebar/directory regressions or corrected existing tests; it does not mean the whole file is complete. No unchanged upstream test passing is treated as proof of the Smartfire fork's complete behavior.
+These are actual current passing tests; they are not complete Rails-file pass counts.
 
-| Rails file | Delivered subset; deferred work and owner |
-| --- | --- |
-| `rooms_controller_test.rb` | Subset: pending deletion/job/JSON, generic group deletion guard, leave/JSON, retained room, access after deletion. Header identity and its per-recipient target are now byte-tested; defer the rest of show/shell, nonmember open-room join preview and join, notices byte checks, job execution/sweep infrastructure and full audit/broadcast UI — WS8br, with WS8a/WS3 queue contract review. Link-preview/message-body assertions — WS8b-m/WS15e. |
-| `rooms/opens_controller_test.rb` | Subset: cannot convert voice/stage/board. Defer full CRUD, icon/emoji inputs, invalid forms, membership/audit/broadcast and HTML assertions — WS8br. |
-| `rooms/closeds_controller_test.rb` | Subset: cannot convert voice/stage/board and inaccessible private room guard. Defer full CRUD, icon/emoji inputs, invalid forms, membership/audit/broadcast and HTML assertions — WS8br. |
-| `rooms/directs_controller_test.rb` | Subset: active capped creation/reuse/huddle redirect, >10 rejection, rename/add/leave note text, last leave, pair widening/nonmember guards, group deletion permissions. Directory rename/clear/leave/add frames are now byte-tested; defer starred/client-filter picker, settings/delete-button HTML, invalid rename 422 form state, add overflow/no-op/query-count assertions, removed-member read and exact stream/flash bytes — WS8br. Immutable/rendered system-note message assertions — WS8b-m. |
-| `rooms/involvements_controller_test.rb` | Subset: required parameter, muted read state and JSON success. Defer exact visibility streams/header/sidebar HTML and full enum/format cases — WS8br; voice/stage rendering — WS13; boards — WS12. |
-| `rooms/refreshes_controller_test.rb` | Deferred entire fork re-diff, including empty 204 and response JSON — WS8br; pins/message facts — WS8b-m. |
-| `rooms/reads_controller_test.rb` | Deferred unread/read endpoints and broadcasts — WS8br, coordinating notification/presence facts with WS17. |
-| `rooms/members_controller_test.rb` | Deferred fork members JSON/UI — WS8br; presence facts WS17, bot/agent facts WS11. |
-| `rooms/categories_controller_test.rb` | Subset: assignment/unassignment, own category, foreign category/membership access, non-channel 422. Defer exhaustive malformed params/formats and byte acceptance — WS8br. |
-| `rooms/favorites_controller_test.rb` | Subset: append/idempotence/remove/reorder/clamp/private membership. Defer exhaustive malformed params/formats and sidebar browser/byte acceptance — WS8br. |
-| `rooms/inbound_email_addresses_controller_test.rb` | Subset: token rotation, emailable and creator/admin/member guards, exact redirect. Defer missing relay-domain UI, edit form, browser flow and full notice bytes — WS8br on WS10 domain. |
-| `room_categories_controller_test.rb` | Subset: scoped ordered index, create append, update collapse/rename, invalid name no-op, destroy/unassign, foreign ownership; extra actual-app boolean-name cast. Defer broader type-coercion matrix and sidebar HTML — WS8br. |
-| `public_pages_controller_test.rb` | Deferred entire fork re-diff and golden acceptance — WS8br. |
-| `first_runs_controller_test.rb` | Deferred entire fork re-diff/acceptance — WS8br; first_run seed did run upstream integration coverage. |
-| `welcome_controller_test.rb` | Deferred entire fork re-diff/acceptance — WS8br. |
-| `switchers_controller_test.rb` | Re-diffed the fork controller. Subset: signed-in/bot guards, room/people/thread scopes, kinds, flags, latest-15 limit, group labels and two complete JSON byte goldens. Defer browser quick-switcher acceptance and the exhaustive input/format matrix — WS8br. |
-| `users_controller_test.rb` | Deferred entire fork re-diff/acceptance — WS8br. |
-| `users/sidebars_controller_test.rb` | Subset: 15 full row goldens, own-recipient menu permissions, administrator/participant cache separation, HTTP seeded-group association order, Ruby whitespace labels and 31 directory frames. Defer full page/section bytes, category collapse/order, favorite partition, all involvement/read streams and constant page query-count tests — WS8br; configured huddle stacks — WS13. |
-| `users/tours_controller_test.rb` | Deferred first-run tour endpoints and browser acceptance — WS8br. |
-| `users/profiles_controller_test.rb` | Deferred profile fork re-diff/acceptance — WS8br; sudo/session gates coordinate with WS9. |
-| `users/avatars_controller_test.rb` | Deferred upload/initials SVG/default avatar fork re-diff and byte acceptance — WS8br. |
-| `users/cards_controller_test.rb` | Deferred user cards fork re-diff/acceptance — WS8br; presence/status facts WS17. |
-| `users/bans_controller_test.rb` | Deferred ban fork re-diff/acceptance — WS8br. |
-| `users/time_zones_controller_test.rb` | Deferred timezone fork re-diff/acceptance — WS8br. |
-| `accounts_controller_test.rb` | Deferred account fork re-diff/acceptance — WS8br; auth/sudo gates WS9. |
-| `accounts/users_controller_test.rb` | Deferred admin user list/edit fork re-diff/acceptance — WS8br; bots/agents WS11. |
-| `accounts/icons_controller_test.rb` | Deferred icon library/admin UI fork re-diff/acceptance — WS8br. |
-| `accounts/audit_logs_controller_test.rb` | Deferred audit-log filtering and page fork re-diff/acceptance — WS8br (WS8a domain reused). |
-| `accounts/custom_styles_controller_test.rb` | Subset: non-admin denied existing admin page. Defer full CSS/admin page fork re-diff/acceptance — WS8br; sudo gates WS9. |
-| `accounts/logos_controller_test.rb` | Deferred logos fork re-diff/acceptance — WS8br. |
-| `accounts/join_codes_controller_test.rb` | Deferred join-code fork re-diff/acceptance — WS8br; sudo gates WS9. |
-| `workspace_icons_controller_test.rb` | Deferred workspace-icon fork re-diff/acceptance — WS8br. |
-| `pwa_controller_test.rb` | Deferred PWA fork re-diff/acceptance — WS8br. |
-| `qr_code_controller_test.rb` | Deferred QR fork re-diff/acceptance — WS8br. |
-| `unfurl_links_controller_test.rb` | Deferred existing unfurl controller fork re-diff — WS8br; new embeds and their behavior remain WS15e, untouched here. |
+| Rust file | Passing tests |
+| --- | ---: |
+| `campfire/src/controllers/rooms/parity_tests.rs` | 19 |
+| `campfire/src/controllers/rooms/tests.rs` | 16 |
+| `campfire/src/controllers/users/sidebars_tests.rs` | 4 |
+| `campfire/src/controllers/switchers.rs` | 4 |
+| `campfire/src/channels/tests/directory_test.rs` | 3 |
+| `views/tests/sidebar.rs` | 5 |
+| `views/tests/room_shell.rs` | 3 |
+| `views/tests/room_header.rs` | 1 |
 
-Scoped system files below are ALL deferred; no system file was ported or run by this worker. Paths are under `test/system/`:
+**Deferred Rails cases grouped by file**
 
-| File | Owner / boundary |
-| --- | --- |
-| `audit_log_test.rb` | WS8br audit UI. |
-| `channel_members_test.rb` | WS8br member UI; WS17 presence, WS11 bots. |
-| `channel_navigation_test.rb` | WS8br room shell/navigation. |
-| `first_run_tour_test.rb` | WS8br. |
-| `icons_test.rb` | WS8br. |
-| `keyboard_shortcuts_test.rb` | WS8br shell/switcher; WS8b-m composer/message shortcuts. |
-| `member_select_mode_test.rb` | WS8br group/channel selection. |
-| `mobile_layout_test.rb` | WS8br shell/sidebar; WS8b-m message/composer internals. |
-| `motion_test.rb` | WS8br shell; WS6 shared templates/assets. |
-| `people_group_dms_test.rb` | WS8br group settings/member flow; WS8b-m rendered system notes. |
-| `quick_switcher_test.rb` | WS8br. |
-| `room_header_test.rb` | WS8br; WS13 huddle/voice/stage integrations. |
-| `service_worker_test.rb` | WS8br PWA; shared assets WS6. |
-| `sidebar_organize_test.rb` | WS8br categories/favorites. |
-| `sidebar_room_menu_test.rb` | WS8br. |
-| `starred_people_test.rb` | WS8br starred picker/profile presentation. |
-| `timezone_detection_test.rb` | WS8br. |
-| `unread_divider_test.rb` | WS8br room shell; WS8b-m list insertion. |
-| `unread_rooms_test.rb` | WS8br sidebar/header; WS17 notification facts. |
-| `workspace_icons_test.rb` | WS8br. |
-| `browser_launch_profile_test.rb` | Shared browser/UI coverage WS6, integrate with WS8br pages. |
-| `content_security_policy_test.rb` | Shared security WS4, integrate with WS8br pages. |
+The complete case names and source lines are in `rust/plans/ws8br-rails-cases.json`. Zero full-file Rails execution/pass counts are claimed; equivalent Rust subsets are described below. Every scoped system/browser file remains deferred. Counts refer to source declarations, not inheritance or dynamic test expansion.
 
-Message/composer/thread/pin/poll/search system files remain WS8b-m; huddle/voice/stage remain WS13; boards WS12; events WS14; status/DND/notification settings remain WS17; auth/sudo/2FA/sessions WS9; bots/agents WS11; embed-specific system files WS15e/WS15g. This slice changes none of their internals.
+| Rails file | Declared cases | Rails passes | Delivered subset / deferred owner |
+| --- | ---: | ---: | --- |
+| `test/controllers/rooms_controller_test.rb` | 29 | 0 | Delivered Rust subsets: deletion/job/leave/access guards, shell regions with owner inputs, root pagination, eight unread-pointer cases, jump pills and header/directory bytes. Deferred: open nonmember preview/join, full live-page bytes with WS8b-m/WS17 inputs, unread/read browser flows, error/flash matrices and remaining controller cases — WS8br; message internals — WS8b-m. |
+| `test/controllers/rooms/opens_controller_test.rb` | 15 | 0 | Subset: cannot convert voice/stage/board. Defer full CRUD, icon/emoji inputs, invalid forms, membership/audit/broadcast and HTML assertions — WS8br. |
+| `test/controllers/rooms/closeds_controller_test.rb` | 12 | 0 | Subset: cannot convert voice/stage/board and inaccessible private room guard. Defer full CRUD, icon/emoji inputs, invalid forms, membership/audit/broadcast and HTML assertions — WS8br. |
+| `test/controllers/rooms/directs_controller_test.rb` | 29 | 0 | Subset: active capped creation/reuse/huddle redirect, >10 rejection, rename/add/leave note text, last leave, pair widening/nonmember guards, group deletion permissions. Directory rename/clear/leave/add frames are now byte-tested; defer starred/client-filter picker, settings/delete-button HTML, invalid rename 422 form state, add overflow/no-op/query-count assertions, removed-member read and exact stream/flash bytes — WS8br. Immutable/rendered system-note message assertions — WS8b-m. |
+| `test/controllers/rooms/involvements_controller_test.rb` | 8 | 0 | Delivered Rust subsets: parameter/mute/read/JSON behavior plus six exact per-user HTTP-to-socket transitions. Deferred: exhaustive enum/format cases, every venue transition and browser acceptance — WS8br with WS13/WS12. |
+| `test/controllers/rooms/refreshes_controller_test.rb` | 4 | 0 | Deferred entire fork re-diff, including empty 204 and response JSON — WS8br; pins/message facts — WS8b-m. |
+| `test/controllers/rooms/reads_controller_test.rb` | 7 | 0 | Deferred unread/read endpoints and broadcasts — WS8br, coordinating notification/presence facts with WS17. |
+| `test/controllers/rooms/members_controller_test.rb` | 13 | 0 | Deferred fork members JSON/UI — WS8br; presence facts WS17, bot/agent facts WS11. |
+| `test/controllers/rooms/categories_controller_test.rb` | 5 | 0 | Subset: assignment/unassignment, own category, foreign category/membership access, non-channel 422. Defer exhaustive malformed params/formats and byte acceptance — WS8br. |
+| `test/controllers/rooms/favorites_controller_test.rb` | 6 | 0 | Delivered Rust subsets: scoped/idempotent/reordered writes and full favorite section bytes for all six room kinds. Deferred: malformed formats/params and browser acceptance — WS8br. |
+| `test/controllers/rooms/inbound_email_addresses_controller_test.rb` | 8 | 0 | Subset: token rotation, emailable and creator/admin/member guards, exact redirect. Defer missing relay-domain UI, edit form, browser flow and full notice bytes — WS8br on WS10 domain. |
+| `test/controllers/room_categories_controller_test.rb` | 6 | 0 | Delivered Rust subsets: scoped mutations and full category form/ordering/collapse/empty byte states. Deferred: broader coercions/formats and browser acceptance — WS8br. |
+| `test/controllers/public_pages_controller_test.rb` | 18 | 0 | Deferred entire fork re-diff and golden acceptance — WS8br. |
+| `test/controllers/first_runs_controller_test.rb` | 4 | 0 | Deferred entire fork re-diff/acceptance — WS8br; first_run seed did run upstream integration coverage. |
+| `test/controllers/welcome_controller_test.rb` | 2 | 0 | Deferred entire fork re-diff/acceptance — WS8br. |
+| `test/controllers/switchers_controller_test.rb` | 5 | 0 | Re-diffed the fork controller. Subset: signed-in/bot guards, room/people/thread scopes, kinds, flags, latest-15 limit, group labels and two complete JSON byte goldens. Defer browser quick-switcher acceptance and the exhaustive input/format matrix — WS8br. |
+| `test/controllers/users_controller_test.rb` | 20 | 0 | Deferred entire fork re-diff/acceptance — WS8br. |
+| `test/controllers/users/sidebars_controller_test.rb` | 14 | 0 | Delivered Rust subsets: complete frames, every favorite room kind, ordered/empty/collapsed categories, restricted creation, own permissions, direct/group rows, recipient involvement frames and cache separation. Deferred: constant SQL query-count acceptance, configured WS13 children and browser/system acceptance — WS8br/WS13. |
+| `test/controllers/users/tours_controller_test.rb` | 5 | 0 | Deferred first-run tour endpoints and browser acceptance — WS8br. |
+| `test/controllers/users/profiles_controller_test.rb` | 57 | 0 | Deferred profile fork re-diff/acceptance — WS8br; sudo/session gates coordinate with WS9. |
+| `test/controllers/users/avatars_controller_test.rb` | 4 | 0 | Deferred upload/initials SVG/default avatar fork re-diff and byte acceptance — WS8br. |
+| `test/controllers/users/cards_controller_test.rb` | 7 | 0 | Deferred user cards fork re-diff/acceptance — WS8br; presence/status facts WS17. |
+| `test/controllers/users/bans_controller_test.rb` | 8 | 0 | Deferred ban fork re-diff/acceptance — WS8br. |
+| `test/controllers/users/time_zones_controller_test.rb` | 4 | 0 | Deferred timezone fork re-diff/acceptance — WS8br. |
+| `test/controllers/accounts_controller_test.rb` | 4 | 0 | Deferred account fork re-diff/acceptance — WS8br; auth/sudo gates WS9. |
+| `test/controllers/accounts/users_controller_test.rb` | 3 | 0 | Deferred admin user list/edit fork re-diff/acceptance — WS8br; bots/agents WS11. |
+| `test/controllers/accounts/icons_controller_test.rb` | 6 | 0 | Deferred icon library/admin UI fork re-diff/acceptance — WS8br. |
+| `test/controllers/accounts/audit_logs_controller_test.rb` | 15 | 0 | Deferred audit-log filtering and page fork re-diff/acceptance — WS8br (WS8a domain reused). |
+| `test/controllers/accounts/custom_styles_controller_test.rb` | 3 | 0 | Subset: non-admin denied existing admin page. Defer full CSS/admin page fork re-diff/acceptance — WS8br; sudo gates WS9. |
+| `test/controllers/accounts/logos_controller_test.rb` | 6 | 0 | Deferred logos fork re-diff/acceptance — WS8br. |
+| `test/controllers/accounts/join_codes_controller_test.rb` | 2 | 0 | Deferred join-code fork re-diff/acceptance — WS8br; sudo gates WS9. |
+| `test/controllers/workspace_icons_controller_test.rb` | 7 | 0 | Deferred workspace-icon fork re-diff/acceptance — WS8br. |
+| `test/controllers/pwa_controller_test.rb` | 5 | 0 | Deferred PWA fork re-diff/acceptance — WS8br. |
+| `test/controllers/qr_code_controller_test.rb` | 1 | 0 | Deferred QR fork re-diff/acceptance — WS8br. |
+| `test/controllers/unfurl_links_controller_test.rb` | 9 | 0 | Deferred existing unfurl controller fork re-diff — WS8br; new embeds and their behavior remain WS15e, untouched here. |
+| `test/system/audit_log_test.rb` | 2 | 0 | WS8br audit UI. |
+| `test/system/channel_members_test.rb` | 4 | 0 | WS8br member UI; WS17 presence, WS11 bots. |
+| `test/system/channel_navigation_test.rb` | 7 | 0 | WS8br room shell/navigation. |
+| `test/system/first_run_tour_test.rb` | 4 | 0 | WS8br. |
+| `test/system/icons_test.rb` | 4 | 0 | WS8br. |
+| `test/system/keyboard_shortcuts_test.rb` | 14 | 0 | WS8br shell/switcher; WS8b-m composer/message shortcuts. |
+| `test/system/member_select_mode_test.rb` | 18 | 0 | WS8br group/channel selection. |
+| `test/system/mobile_layout_test.rb` | 5 | 0 | WS8br shell/sidebar; WS8b-m message/composer internals. |
+| `test/system/motion_test.rb` | 9 | 0 | WS8br shell; WS6 shared templates/assets. |
+| `test/system/people_group_dms_test.rb` | 19 | 0 | WS8br group settings/member flow; WS8b-m rendered system notes. |
+| `test/system/quick_switcher_test.rb` | 5 | 0 | WS8br. |
+| `test/system/room_header_test.rb` | 9 | 0 | WS8br; WS13 huddle/voice/stage integrations. |
+| `test/system/service_worker_test.rb` | 2 | 0 | WS8br PWA; shared assets WS6. |
+| `test/system/sidebar_organize_test.rb` | 6 | 0 | WS8br categories/favorites. |
+| `test/system/sidebar_room_menu_test.rb` | 16 | 0 | WS8br. |
+| `test/system/starred_people_test.rb` | 4 | 0 | WS8br starred picker/profile presentation. |
+| `test/system/timezone_detection_test.rb` | 2 | 0 | WS8br. |
+| `test/system/unread_divider_test.rb` | 5 | 0 | WS8br room shell; WS8b-m list insertion. |
+| `test/system/unread_rooms_test.rb` | 2 | 0 | WS8br sidebar/header; WS17 notification facts. |
+| `test/system/workspace_icons_test.rb` | 1 | 0 | WS8br. |
+| `test/system/browser_launch_profile_test.rb` | 1 | 0 | Shared browser/UI coverage WS6, integrate with WS8br pages. |
+| `test/system/content_security_policy_test.rb` | 5 | 0 | Shared security WS4, integrate with WS8br pages. |
 
-**Precise remaining work, in the requested order**
+**Precisely remaining, in the requested order**
 
-1. Finish priority 1 before users/account/public work: the room-workspace body/head/preloads, complete nav/actions/overflow/bell, member panel, unread divider/jump/scroll state, invitation and safe nonmember open-room preview/join. Wire WS8b-m's actual message-list/composer/thread/pin/poll rendering through its API without editing internals. That message-list renderer is not yet present on this branch, and the shell still uses inherited list/composer integration. Finish full sidebar workspace navigation/profile tools/room menu, favorite section mixing every room kind, categorized/uncategorized channel partition, collapse/order/empty/category forms, placeholder DMs and all visibility/involvement/unread/read states. Shared visibility/read broadcasts still need the membership/unread locals. Constant page query-count parity is not claimed: the current sidebar adapter still performs per-room reads. Coordinate actual voice/stage/huddle/board row renderers and configured participant/cache facts with WS13/WS12. Add full-page/state goldens and browser acceptance; current row/header bytes and directory frames are only subsets.
-2. Re-diff and finish users, profiles, avatar upload/default initials SVG, cards, bans and time zones. Port the controller/browser cases in the inventory, including banned states and sudo/session gates with WS9. Presence/status facts remain WS17.
-3. Re-diff every inherited account controller and finish the admin user list, audit-log filtering/page, custom styles, logos, icon library/workspace icons and join codes. Coordinate sudo with WS9 and bot/agent facts with WS11. Existing upstream app tests are not full fork acceptance.
-4. Finish public pages, welcome, first run, first-run tour, inbound-address browser acceptance and existing PWA/QR/unfurl re-diff. The pinned inbound controller redirects to `/rooms/:id/edit` although its generic Rails edit action is missing; preserve the observed response and raise that reference browser-flow gap with the lead rather than silently fixing Rails.
-5. Finish deferred Rails cases and the input/format/coercion/error-body/flash/Turbo matrix. Open/closed CRUD icon/emoji/invalid forms/audit/callbacks, direct picker/starred/invalid rename/overflow/no-op/member removal/query counts, refresh/read/member endpoints, leave RecordNotDestroyed rescue and durable job execution/sweep acceptance remain. The inherited directs#show redirect still differs from the pinned Rails missing-@room error and needs explicit re-diff under the frozen-behavior rule. Prove valid agent-token denial after WS11/WS9 authentication is integrated; Before::default alone is not end-to-end proof. Run every deferred browser/system file and complete the full acceptance matrix.
+1. Priority 1 remains partial: integrate WS8b-m's list/composer/template/thread/pin/poll output; WS17 OOO and WS13 configured venue/huddle/header facts; WS12 board pages. Finish owned nonmember open-room preview/join, full live room-page/sidebar byte and browser acceptance, query-count checks, every read/unread/visibility route/stream and applicable venue state. The full sidebar's requested layout/organization and tested recipient rows are delivered; configured features and browser behavior are not fully accepted.
+2. Users/profiles/avatars/default initials SVG/cards/bans/time zones: re-diff and complete all fork controllers/pages and browser cases, including banned users and the shared first-name split; coordinate WS9 sudo/session and WS17 status/presence. None of this priority's fork acceptance was newly delivered here.
+3. Account pages and re-diff: admin users, audit-log filtering/page, custom styles, logos, account/workspace icon libraries, join codes and every inherited controller. Coordinate WS9 and WS11. Existing upstream passes are not complete fork acceptance.
+4. Public pages, welcome, first run/tour, inbound-email address browser acceptance; PWA/QR/existing unfurl re-diff. The pinned inbound controller's `/rooms/:id/edit` redirect reaches a missing generic Rails action; keep the observed response and report that browser-flow gap rather than changing Rails.
+5. The inventory's unclaimed Rails cases: complete open/closed CRUD/forms/icons/audit/broadcasts, direct picker/starred/settings/invalid rename/overflow/no-op/removed-member behavior, refresh/read/member endpoints, leave failure rescue, exact error bodies/flash/formats/Turbo responses and durable destroy execution/sweep acceptance. Re-diff inherited directs#show against the pinned missing-@room behavior. Prove valid agent-token denial when WS9/WS11 auth lands. All 22 scoped browser/system files remain deferred.
 
-No deploy or cutover claim. Stop point: coherent pushed recipient header/directory slice, with the full scoped work explicitly partial.
+Stop point: two pushed implementation slices plus their expanded state coverage and this report. Full WS8br scope is PARTIAL; no broad parity or cutover claim.
