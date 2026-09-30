@@ -374,17 +374,36 @@ impl Message {
     /// `ChannelThread#receive` for thread messages, which here mark nothing unread and push
     /// nothing.
     pub fn create(tx: &mut Tx<'_>, attributes: NewMessage) -> Result<Self> {
+        Self::create_content(tx, attributes, None)
+    }
+
+    /// The Markdown renderer is supplied by the owning domain; source and rendered body commit
+    /// together, before the normal Message callbacks (RoomMailbox uses this entry point).
+    pub fn create_markdown(tx: &mut Tx<'_>, attributes: NewMessage, source: &str) -> Result<Self> {
+        let mut errors = Errors::default();
+        if source.chars().count() > 50_000 {
+            errors.add("markdown_source", "is too long (maximum is 50000 characters)");
+        }
+        if !attributes.streaming && source.trim().is_empty() && attributes.attachment_blob_id.is_none() {
+            errors.add("markdown_source", "can't be blank");
+        }
+        errors.into_result()?;
+        Self::create_content(tx, attributes, Some(source))
+    }
+
+    fn create_content(tx: &mut Tx<'_>, attributes: NewMessage, source: Option<&str>) -> Result<Self> {
         Self::validate(tx.conn(), &attributes)?.into_result()?;
         let now = tx.now();
         let client_message_id = attributes.client_message_id.unwrap_or_else(sql::uuid);
         // `before_save :touch_streaming_activity, if: :streaming?`
         let streaming_updated_at = attributes.streaming.then_some(now);
         let id: i64 = tx.conn().query_row_cached(
-            r#"INSERT INTO "messages" ("client_message_id", "created_at", "creator_id", "room_id", "streaming", "streaming_updated_at", "system_note", "thread_id", "updated_at") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#,
+            r#"INSERT INTO "messages" ("client_message_id", "created_at", "creator_id", "markdown_source", "room_id", "streaming", "streaming_updated_at", "system_note", "thread_id", "updated_at") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING "id""#,
             params![
                 client_message_id,
                 now,
                 attributes.creator_id,
+                source,
                 attributes.room_id,
                 attributes.streaming,
                 streaming_updated_at,

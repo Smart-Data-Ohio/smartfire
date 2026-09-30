@@ -1,0 +1,44 @@
+[
+  {
+    "label": "alternative",
+    "raw": "From: outside@example.com\r\nTo: room-token@mail.test\r\nSubject: Review alternative\r\nMIME-Version: 1.0\r\nContent-Type: multipart/alternative; boundary=alt\r\n\r\n--alt\r\nContent-Type: text/html\r\n\r\n<p>HTML fallback</p>\r\n--alt\r\nContent-Type: text/plain\r\n\r\nPlain preferred\r\n--alt--\r\n",
+    "source": "From outside@example.com\n\n**Review alternative**\n\nPlain preferred",
+    "filename": null,
+    "bytes": null
+  },
+  {
+    "label": "mixed",
+    "raw": "From: outside@example.com\r\nTo: room-token@mail.test\r\nSubject: Review mixed\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=mix\r\n\r\n--mix\r\nContent-Type: text/plain\r\n\r\nMain body\r\n--mix\r\nContent-Type: text/plain\r\nContent-Disposition: attachment; filename=notes.txt\r\nContent-Transfer-Encoding: base64\r\n\r\nTm90ZXM=\r\n--mix--\r\n",
+    "source": "From outside@example.com\n\n**Review mixed**\n\nMain body\n\nAttached files: notes.txt",
+    "filename": "notes.txt",
+    "bytes": "Tm90ZXM="
+  },
+  {
+    "label": "nested",
+    "raw": "From: outside@example.com\r\nTo: room-token@mail.test\r\nSubject: Review nested\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=mix\r\n\r\n--mix\r\nContent-Type: multipart/alternative; boundary=alt\r\n\r\n--alt\r\nContent-Type: text/html\r\n\r\n<p>HTML fallback</p>\r\n--alt\r\nContent-Type: text/plain\r\n\r\nNested plain\r\n--alt--\r\n--mix\r\nContent-Type: text/plain; name=notes.txt\r\nContent-Disposition: attachment; filename=notes.txt\r\n\r\nNotes\r\n--mix--\r\n",
+    "source": "From outside@example.com\n\n**Review nested**\n\nNested plain\n\nAttached files: notes.txt",
+    "filename": "notes.txt",
+    "bytes": "Tm90ZXM="
+  },
+  {
+    "label": "html_related",
+    "raw": "From: outside@example.com\r\nTo: room-token@mail.test\r\nSubject: Review html_related\r\nMIME-Version: 1.0\r\nContent-Type: multipart/related; boundary=rel\r\n\r\n--rel\r\nContent-Type: text/html\r\n\r\n<div>HTML<br>Body</div>\r\n--rel\r\nContent-Type: text/plain\r\nContent-Disposition: inline; filename=notes.txt\r\n\r\nNotes\r\n--rel--\r\n",
+    "source": "From outside@example.com\n\n**Review html_related**\n\nHTML\nBody\n\nAttached files: notes.txt",
+    "filename": "notes.txt",
+    "bytes": "Tm90ZXM="
+  },
+  {
+    "label": "qp",
+    "raw": "From: outside@example.com\r\nTo: room-token@mail.test\r\nSubject: Review qp\r\nMIME-Version: 1.0\r\nContent-Type: multipart/alternative; boundary=alt\r\n\r\n--alt\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\nRen=C3=A9e\r\n--alt--\r\n",
+    "source": "From outside@example.com\n\n**Review qp**\n\nRenée",
+    "filename": null,
+    "bytes": null
+  },
+  {
+    "label": "unnamed_attachment",
+    "raw": "From: outside@example.com\r\nTo: room-token@mail.test\r\nSubject: Review unnamed_attachment\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=mix\r\n\r\n--mix\r\nContent-Type: text/plain\r\nContent-Disposition: attachment; filename=notes.txt\r\n\r\nAttached notes\r\n--mix\r\nContent-Type: text/plain\r\n\r\nBody second\r\n--mix--\r\n",
+    "source": "From outside@example.com\n\n**Review unnamed_attachment**\n\nBody second\n\nAttached files: notes.txt",
+    "filename": "notes.txt",
+    "bytes": "QXR0YWNoZWQgbm90ZXM="
+  }
+]

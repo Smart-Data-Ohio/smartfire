@@ -148,6 +148,7 @@ pub fn registry() -> Registry {
     registry.register(purge_blob);
     // Room::PushMessageJob and Bot::WebhookJob
     crate::integrations::register_jobs(&mut registry);
+    crate::mail::register(&mut registry);
     registry
 }
 
