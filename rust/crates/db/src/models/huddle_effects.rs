@@ -12,3 +12,37 @@ impl Broadcast for Presence {
 pub fn broadcast_presence(tx: &mut Tx<'_>, room_id: i64) {
     tx.emit_after_commit(Event::broadcast(&Presence { room_id }));
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StreamChanged {
+    pub room_id: i64,
+}
+impl Broadcast for StreamChanged {
+    const KIND: &'static str = "Stream#broadcast_stream_changed";
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StreamStopped {
+    pub room_id: i64,
+    pub user_id: i64,
+}
+impl Broadcast for StreamStopped {
+    const KIND: &'static str = "Stream#broadcast_stream_stopped_event";
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StageRoster {
+    pub room_id: i64,
+}
+impl Broadcast for StageRoster {
+    const KIND: &'static str = "Stage#broadcast_roster";
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RoleEvent {
+    pub room_id: i64,
+    pub membership_id: i64,
+}
+impl Broadcast for RoleEvent {
+    const KIND: &'static str = "Stage#broadcast_role_event_to_member";
+}

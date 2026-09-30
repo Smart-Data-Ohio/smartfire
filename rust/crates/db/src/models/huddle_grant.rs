@@ -272,23 +272,9 @@ impl HuddleGrant {
         room_id: i64,
         membership_id: i64,
     ) -> Result<()> {
-        let qualities: Vec<String> = query_all(
-            tx.conn(),
-            "SELECT quality FROM streams WHERE room_id=? AND membership_id=? AND ended_at IS NULL",
-            params![room_id, membership_id],
-            |r| r.get(0),
-        )?;
-        for quality in qualities {
-            if !["720p15", "1080p15", "1080p30"].contains(&quality.as_str()) {
-                let mut errors = Errors::default();
-                errors.add("quality", "is not included in the list");
-                errors.into_result()?;
-            }
-        }
-        let now = tx.now();
-        tx.conn().execute_cached("UPDATE streams SET ended_at=?,updated_at=? WHERE room_id=? AND membership_id=? AND ended_at IS NULL", params![now, now, room_id, membership_id])?;
-        Ok(())
+        super::stream::Stream::end_for_membership(tx, room_id, membership_id)
     }
+
     fn revoke_scope(
         tx: &mut Tx<'_>,
         column: &str,

@@ -201,3 +201,157 @@ async fn huddle_presence_reaches_real_sockets_and_rolled_back_revocation_stays_s
         .unwrap()
         .unwrap();
 }
+
+#[tokio::test]
+async fn stage_stream_callbacks_reach_real_sockets_and_rollback_stays_silent() {
+    use campfire_db::models::stream::Stream;
+    use campfire_db::{CachedStatements, Room};
+    let Some(test) = TestApp::boot().await else {
+        return;
+    };
+    let app = test.booted.app.clone();
+    let membership=app.db.write(|tx| {
+        tx.conn().execute_cached("UPDATE rooms SET type='Rooms::Stage' WHERE id=?",[ALL_TALK])?;
+        tx.conn().execute_cached("UPDATE memberships SET stage_role=CASE WHEN user_id=? THEN 'host' ELSE 'listener' END WHERE room_id=?",rusqlite::params![DAVID,ALL_TALK])?;
+        Ok(Membership::find_by_room_and_user(tx.conn(),ALL_TALK,DAVID)?.unwrap().id)
+    }).await.unwrap();
+    let listener = super::tests::support::bind_listener().await;
+    let addr = listener.local_addr().unwrap();
+    let (stop, stopping) = tokio::sync::oneshot::channel::<()>();
+    let router = test.booted.router.clone();
+    let serving = tokio::spawn(async move {
+        axum::serve(listener, router)
+            .with_graceful_shutdown(async {
+                let _ = stopping.await;
+            })
+            .await
+            .unwrap()
+    });
+    let mut request = format!("ws://{addr}/cable").into_client_request().unwrap();
+    request
+        .headers_mut()
+        .insert("origin", format!("http://{addr}").parse().unwrap());
+    request
+        .headers_mut()
+        .insert("cookie", david_cookie().parse().unwrap());
+    request.headers_mut().insert(
+        "sec-websocket-protocol",
+        "actioncable-v1-json".parse().unwrap(),
+    );
+    let (mut socket, _) = tokio_tungstenite::connect_async(request).await.unwrap();
+    assert_eq!(next(&mut socket).await["type"], "welcome");
+    let room = app
+        .db
+        .read(|conn| Room::find(conn, ALL_TALK))
+        .await
+        .unwrap();
+    for (channel, stream) in [
+        (
+            "Turbo::StreamsChannel",
+            super::broadcasts::Stream::user_rooms(DAVID),
+        ),
+        (
+            "RoomMessagesChannel",
+            super::broadcasts::Stream::room_messages(&room),
+        ),
+    ] {
+        subscribe(
+            &mut socket,
+            channel,
+            rails_compat::turbo::signed_stream_name(&app.secrets, &stream.streamables()),
+        )
+        .await;
+    }
+    let stream = app
+        .db
+        .write(move |tx| Stream::create(tx, ALL_TALK, membership, DAVID, "1080p15", None))
+        .await
+        .unwrap();
+    for phase in ["start", "end"] {
+        let presenter = app.clone();
+        let stage = app
+            .db
+            .read(move |conn| {
+                super::huddle_effects::stage_model(&presenter, conn, ALL_TALK, membership)
+            })
+            .await
+            .unwrap();
+        for (partial, prefix) in [
+            ("live_badge", "stage_live_badge"),
+            ("live_dot", "sidebar_stage_live"),
+            ("venue_live_dot", "event_stage_live"),
+            ("panel_body", "stage_panel"),
+        ] {
+            let frame = next(&mut socket).await;
+            let actual = frame["message"].as_str().unwrap();
+            let expected = campfire_cable::turbo::action_tag(
+                campfire_cable::turbo::Action::Replace,
+                campfire_cable::turbo::Target::Target(&stage.dom_id(prefix)),
+                Some(&stage.render(partial)),
+                &[],
+            );
+            assert_eq!(actual, expected, "{phase} {partial}");
+            assert!(campfire_cable::turbo::session_bound(actual).is_none());
+            assert!(!campfire_views::helpers::request_forgery::has_token_slots(
+                actual
+            ));
+        }
+        if phase == "start" {
+            let id = stream.id;
+            let failed = app
+                .db
+                .write(move |tx| -> campfire_db::Result<()> {
+                    Stream::find_by_id(tx.conn(), id)?
+                        .unwrap()
+                        .end(tx, Some(DAVID + 1))?;
+                    Err(campfire_db::Error::Other("WS13 rollback".into()))
+                })
+                .await;
+            assert!(failed.is_err());
+            assert!(
+                tokio::time::timeout(Duration::from_millis(150), socket.next())
+                    .await
+                    .is_err()
+            );
+            app.db
+                .write(move |tx| {
+                    Stream::find_by_id(tx.conn(), id)?
+                        .unwrap()
+                        .end(tx, Some(DAVID + 1))
+                        .map(|_| ())
+                })
+                .await
+                .unwrap();
+        }
+    }
+    let frame = next(&mut socket).await;
+    assert!(
+        frame["message"]
+            .as_str()
+            .unwrap()
+            .contains("data-huddle-stream-kind=\"stream-stopped\"")
+    );
+    let id = stream.id;
+    app.db
+        .write(move |tx| {
+            Stream::find_by_id(tx.conn(), id)?
+                .unwrap()
+                .end(tx, Some(DAVID + 1))
+                .map(|_| ())
+        })
+        .await
+        .unwrap();
+    assert!(
+        tokio::time::timeout(Duration::from_millis(150), socket.next())
+            .await
+            .is_err(),
+        "repeat end broadcast"
+    );
+    socket.close(None).await.unwrap();
+    test.booted.jobs.shutdown(Duration::from_secs(2)).await;
+    let _ = stop.send(());
+    tokio::time::timeout(Duration::from_secs(3), serving)
+        .await
+        .unwrap()
+        .unwrap();
+}

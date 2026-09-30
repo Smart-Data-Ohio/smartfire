@@ -25,6 +25,12 @@ N = ROOT / "rust/crates/db/src/models/huddle_notices.rs"
 V = ROOT / "rust/crates/db/src/models/huddle_invitations.rs"
 T = ROOT / "rust/crates/db/src/models/huddle_stream_liveness.rs"
 M = ROOT / "rust/crates/db/src/models/membership.rs"
+S = ROOT / "rust/crates/db/src/models/stream.rs"
+A = ROOT / "rust/crates/db/src/models/stage.rs"
+U = ROOT / "rust/crates/db/src/models/user.rs"
+W = ROOT / "rust/crates/views/src/huddle_stage.rs"
+C = ROOT / "rust/crates/db/src/models/call_moderation.rs"
+P = ROOT / "rust/crates/db/src/models/stage_streams.rs"
 
 
 def replace_once(source, before, after):
@@ -44,6 +50,20 @@ def replace_body(source, marker, body):
 
 
 mutations = [
+    ("moderation-enqueue-failure-swallowed", C, lambda s: replace_once(s,"target.set_server_muted(tx, true, config)?","target.set_server_muted(tx, true, config).unwrap_or(false)"),"campfire_db","moderation_enqueue_failure_rolls_back_mute_revocation_stream_and_frames"),
+
+    ("stream-start-seen-bypassed", P, lambda s: replace_once(s,"if !seen {","if false && !seen {"),"campfire","stage_stream_start_requires_role_host_unmuted_and_seen_grant"),
+    ("stream-stale-stop-protection-bypassed", P, lambda s: replace_once(s,"requested_id.is_none_or(|id| id == s.id.to_string())","requested_id.is_none_or(|_|true)"),"campfire","stage_stream_http_start_conflict_and_stale_stop_preserve_the_new_presenter"),
+
+    ("stream-quality-bypassed", S, lambda s: replace_body(s,"fn validate_quality(","Ok(())"),"campfire_db","stream_lifecycle_and_host_departure_match_twenty_rails_scenarios"),
+    ("stream-committed-callback-bypassed", S, lambda s: replace_body(s,"fn broadcast_changed(",""),"campfire","stage_stream_callbacks_reach_real_sockets_and_rollback_stays_silent"),
+    ("stream-explicit-stopped-bypassed", S, lambda s: replace_once(s,"ended_by.is_some_and(|actor| actor != self.user_id)","ended_by.is_some_and(|_|false)"),"campfire_db","stream_lifecycle_and_host_departure_match_twenty_rails_scenarios"),
+    ("stage-admin-successor-bypassed", A, lambda s: replace_once(s,"user.is_active() && user.is_administrator()","false && user.is_active() && user.is_administrator()"),"campfire_db","stream_lifecycle_and_host_departure_match_twenty_rails_scenarios"),
+    ("stage-succession-note-noisy", A, lambda s: replace_once(s,"system_note: true","system_note:false"),"campfire_db","stream_lifecycle_and_host_departure_match_twenty_rails_scenarios"),
+    ("stream-user-without-grant-left-live", U, lambda s: replace_once(s,"super::stream::Stream::end_for_user(tx,self.id)?;",""),"campfire_db","stream_lifecycle_and_host_departure_match_twenty_rails_scenarios"),
+    ("stage-forms-visible-to-listeners", W, lambda s: replace_body(s,"fn can_manage(","true"),"campfire_views","stage_fragments_match_four_hundred_rails_renders"),
+    ("moderation-administrator-rank-bypassed", C, lambda s: replace_once(s,"target_user.is_administrator() && !user.is_administrator()","false && target_user.is_administrator() && !user.is_administrator()"),"campfire","call_moderation_security_denies_rank_self_and_outsiders_before_any_write"),
+
     ("issuance-callback-bypassed", V, lambda s: replace_body(s,"pub(crate) fn after_issued(","Ok(())"), "campfire_db", "issuance_invitations_match_forty_nine_rails_scenarios"),
     ("issuance-banned-caller", G, lambda s: replace_once(s,"JOIN users u ON u.id=s.user_id AND u.status=0 AND u.role!=2","JOIN users u ON u.id=s.user_id AND u.role!=2"),"campfire_db","issuance_invitations_match_forty_nine_rails_scenarios"),
     ("issuance-bot-caller", G, lambda s: replace_once(s,"JOIN users u ON u.id=s.user_id AND u.status=0 AND u.role!=2","JOIN users u ON u.id=s.user_id AND u.status=0"),"campfire_db","issuance_invitations_match_forty_nine_rails_scenarios"),
@@ -95,13 +115,17 @@ mutations = [
     ("cleanup-worker-bypassed", J, lambda s: replace_body(s, "async fn cleanup(", "Ok(Outcome::Done)"), "campfire", "huddle::tests::cleanup_background_queue_and_http_enqueue_rollback"),
 ]
 
-if len(sys.argv) > 1:
-    selected = set(sys.argv[1:])
-    assert selected <= {mutation[0] for mutation in mutations}, selected
-    mutations = [mutation for mutation in mutations if mutation[0] in selected]
-
 environment = dict(os.environ, TMPDIR=str(ROOT / ".scratch"), CARGO_TARGET_DIR=str(ROOT / "rust/target"),
                    CI="1", CABLE_TEST_PORT_RANGE="52300-52349", MAIL_TEST_PORT_RANGE="52350-52399")
+if len(sys.argv)>1:
+    if sys.argv[1]=="--only":
+        assert len(sys.argv)==3, "usage: --only REGEX"
+        mutations=[entry for entry in mutations if re.search(sys.argv[2],entry[0])]
+        assert mutations
+    else:
+        selected=set(sys.argv[1:])
+        assert selected <= {entry[0] for entry in mutations},selected
+        mutations=[entry for entry in mutations if entry[0] in selected]
 for name, path, mutate, package, test in mutations:
     original = path.read_text()
     try:

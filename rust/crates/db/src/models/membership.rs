@@ -378,9 +378,8 @@ impl Membership {
     /// (`broadcast_room_removal_to_user`), then the user's sockets reconnect, so their
     /// subscriptions to this room are dropped, and a direct room recomputes its member key
     /// (`after_destroy_commit :refresh_direct_member_key`), in the order the callbacks are
-    /// declared. Not yet ported, for the workstreams that own them: the huddle, agent and stream
-    /// revocations (`before_destroy`), the last stage host's successor and
-    /// calendar syncs.
+    /// declared. Huddle revocation, stream endings and last-host succession run synchronously.
+    /// Agent revocation and calendar syncs belong to their owning workstreams.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
         crate::models::huddle_grant::HuddleGrant::revoke_for_membership(tx, self.id, &crate::models::room_delete::HuddleConfig::from_env())?;
         crate::models::huddle_grant::HuddleGrant::end_streams_for_membership(tx, self.room_id, self.id)?;
@@ -388,6 +387,9 @@ impl Membership {
             r#"DELETE FROM "memberships" WHERE "memberships"."id" = ?"#,
             [self.id],
         )?;
+        if self.stage_role == Some(StageRole::Host) {
+            super::stage::host_departed(tx,self.room_id,self.user_id,&super::room_delete::HuddleConfig::from_env())?;
+        }
         let (user_id, room_id) = (self.user_id, self.room_id);
         tx.after_commit(move |tx| {
             // `dom_id(room, :list)` raises for a room that's gone, which the callback rescues.
@@ -460,13 +462,13 @@ impl Membership {
         self.reload(tx.conn())
     }
 
-    pub fn server_mute(&mut self, tx: &mut Tx<'_>) -> Result<bool> { self.set_server_muted(tx, true) }
-    pub fn server_unmute(&mut self, tx: &mut Tx<'_>) -> Result<bool> { self.set_server_muted(tx, false) }
-    fn set_server_muted(&mut self, tx: &mut Tx<'_>, muted: bool) -> Result<bool> {
+    pub fn server_mute(&mut self, tx: &mut Tx<'_>) -> Result<bool> { self.set_server_muted(tx, true, &super::room_delete::HuddleConfig::from_env()) }
+    pub fn server_unmute(&mut self, tx: &mut Tx<'_>) -> Result<bool> { self.set_server_muted(tx, false, &super::room_delete::HuddleConfig::from_env()) }
+    pub fn set_server_muted(&mut self, tx: &mut Tx<'_>, muted: bool, config: &super::room_delete::HuddleConfig) -> Result<bool> {
         if self.server_muted_at.is_some() == muted { return Ok(false); }
         let at = muted.then(|| tx.now());
         self.validate_call_attributes(tx.conn(), self.stage_role, self.hand_raised_at, at)?;
-        crate::models::huddle_grant::HuddleGrant::revoke_for_membership(tx, self.id, &crate::models::room_delete::HuddleConfig::from_env())?;
+        crate::models::huddle_grant::HuddleGrant::revoke_for_membership(tx, self.id, config)?;
         tx.conn().execute_cached("UPDATE memberships SET server_muted_at=?,updated_at=? WHERE id=?", params![at, tx.now(), self.id])?;
         self.reload(tx.conn())?;
         Ok(true)

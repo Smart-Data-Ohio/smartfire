@@ -18,6 +18,7 @@ pub mod pwa;
 pub mod autocompletable;
 pub mod rooms;
 pub mod huddle;
+pub mod huddle_stage;
 pub mod messages;
 pub mod searches;
 
