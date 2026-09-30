@@ -24,7 +24,8 @@ module BoardAutomations
         {
           title: nudge.room.name,
           body: push_body(thread),
-          path: Rails.application.routes.url_helpers.room_path(nudge.room, thread: thread.id)
+          path: Rails.application.routes.url_helpers.room_path(nudge.room, thread: thread.id),
+          tag: "board-nudge-#{thread.id}"
         }
       end
 

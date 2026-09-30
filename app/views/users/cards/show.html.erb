@@ -41,6 +41,7 @@
     <div class="profile-card__actions">
       <% if @user == Current.user %>
         <%= link_to "Edit profile", user_profile_path, class: "btn btn--reversed full-width", data: { turbo_frame: "_top" } %>
+        <%= link_to "Set a status", edit_user_status_path, class: "btn full-width" %>
       <% elsif @user.active? %>
         <%= button_to "Message", rooms_directs_path, params: { user_ids: [ @user.id ] },
               class: "btn btn--reversed full-width", form: { data: { turbo_frame: "_top" } } %>
