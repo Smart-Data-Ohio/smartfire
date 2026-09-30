@@ -202,3 +202,5 @@ mod reminder_tests;
 mod quote_integration_tests;
 #[cfg(test)]
 mod root_cache_tests;
+#[cfg(test)]
+mod panel_tests;

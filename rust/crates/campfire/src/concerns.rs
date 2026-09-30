@@ -446,7 +446,8 @@ fn authenticate_bot_reply_token(
 /// `agent_authentication`: an `Authorization: Bearer` secret authenticates its agent's user, and
 /// an unknown secret, or an inactive agent's, is a 401 that ends the chain.
 ///
-/// `AgentCredential` and `Agent` aren't ported yet (the tables are), so every secret is unknown:
+/// WS11_AGENT_AUTHENTICATION_SEAM: credential lookup and valid-token authorization
+/// belong to WS11. `AgentCredential` and `Agent` aren't ported yet (the tables are), so every secret is unknown:
 /// agents get the 401
 /// Rails gives a revoked token rather than being taken for signed-out browsers.
 pub async fn agent_authentication(c: &mut Ctx) -> Result<bool> {

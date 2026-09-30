@@ -29,6 +29,8 @@
     </turbo-frame>
 
     <div class="rooms position-relative flex flex-column gap">
+      {# WS8bm2 destination mount; the workspace shell remains with WS8b-r. #}
+      {% include "users/sidebars/_message_tools.html" %}
       <div id="shared_rooms" contents data-controller="sorted-list">
 {% for room in other_memberships %}          {% include "users/sidebars/rooms/_shared.html" %}{% endfor %}      </div>
 

@@ -212,6 +212,9 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
             let original = Room::original(conn)?.is_some_and(|original| original.id == room.id);
             let room_gid = crate::channels::room_gid(&room).to_param();
             Ok(campfire_views::rooms::ShowView {
+                // WS8bm2 pin-header mount. The lazy frame retains its own room gate.
+                pin_count: Some(campfire_db::MessagePin::count_for_room(conn, room.id)?),
+                pin_param_key: Some(campfire_db::broadcasts::room_param_key(room.room_type)),
                 room: presenter.room_view(&room, &user)?,
                 updated_at: room.updated_at.jiff(),
                 user: user_view(&app.secrets, &user),

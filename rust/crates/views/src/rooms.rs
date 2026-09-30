@@ -65,6 +65,11 @@ impl RoomView {
 /// What `rooms/show` shows.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct ShowView {
+    /// WS8bm2 room-header seam; the owning shell supplies the authorized count.
+    #[serde(default)]
+    pub pin_count: Option<i64>,
+    #[serde(default)]
+    pub pin_param_key: Option<String>,
     pub room: RoomView,
     /// `room.updated_at`, the refresh controller's `loaded_at`.
     pub updated_at: Timestamp,
@@ -99,6 +104,13 @@ impl Page for Show<'_> {
 }
 
 impl Show<'_> {
+    fn pin_panel(&self) -> h::Html {
+        self.show.pin_count.map(|count| {
+            crate::pins::PanelPartial { ctx:self.ctx,room_id:self.show.room.id,
+                room_param_key:self.show.pin_param_key.as_deref().unwrap_or(self.show.room.kind.param_key()),count }
+                .render().expect("pin panel renders")
+        }).map(h::raw).unwrap_or_else(||h::raw(String::new()))
+    }
     fn loaded_at(&self) -> i64 {
         epoch_ms(self.show.updated_at)
     }

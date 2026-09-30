@@ -45,6 +45,23 @@ pub struct CountPartial {
     pub room_param_key: String,
     pub count: i64,
 }
+#[derive(Template)]
+#[template(path = "rooms/pins/_panel.html")]
+pub struct PanelPartial<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub room_id: i64,
+    pub room_param_key: &'a str,
+    pub count: i64,
+}
+impl PanelPartial<'_> {
+    pub fn dom_id(&self, prefix: &str) -> String {
+        format!("{prefix}_{}_{}", self.room_param_key, self.room_id)
+    }
+    pub fn count_html(&self) -> h::Html {
+        h::raw(CountPartial { room_id:self.room_id,room_param_key:self.room_param_key.into(),count:self.count }
+            .render().expect("pin count renders"))
+    }
+}
 impl CountPartial {
     pub fn dom_id(&self) -> String {
         format!("pins_count_{}_{}", self.room_param_key, self.room_id)
