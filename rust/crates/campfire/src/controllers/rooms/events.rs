@@ -8,6 +8,23 @@ use campfire_kit::{Ctx, Error, Redirect, Result, StatusCode, halt};
 use campfire_views::events::{Attendance, AttendanceView};
 
 async fn set_event(c: &mut Ctx) -> Result<CalendarEvent> {
+    let room = scheduled_room(c).await?;
+    let user_id = require_current_user(c)?.id;
+    let Some(id) = c
+        .param_str("event_id")
+        .or_else(|| c.param_str("id"))
+        .and_then(cast_integer)
+    else {
+        return Err(Error::NotFound);
+    };
+    c.app()
+        .db
+        .read(move |conn| CalendarEvent::find_visible(conn, room.id, id, user_id))
+        .await
+        .map_err(db_error)
+}
+
+async fn scheduled_room(c: &mut Ctx) -> Result<campfire_db::Room> {
     before_actions(c, Before::default()).await?;
     let (_, room) = concerns::set_room(c).await?;
     // The shared RoomScoped adapter on this base predates soft deletion.
@@ -18,15 +35,43 @@ async fn set_event(c: &mut Ctx) -> Result<CalendarEvent> {
     if !user.is_active() || user.is_bot() {
         return halt(concerns::head(StatusCode::FORBIDDEN));
     }
-    let user_id = user.id;
-    let Some(id) = c.param_str("event_id").and_then(cast_integer) else {
-        return Err(Error::NotFound);
-    };
-    c.app()
+    Ok(room)
+}
+pub async fn index(c: &mut Ctx) -> Result {
+    let room = scheduled_room(c).await?;
+    let user = require_current_user(c)?.clone();
+    let now = c.app().db.env().now();
+    let view = c
+        .app()
         .db
-        .read(move |conn| CalendarEvent::find_visible(conn, room.id, id, user_id))
+        .read(move |conn| crate::controllers::presenters::events::index(conn, &room, &user, now))
         .await
-        .map_err(db_error)
+        .map_err(db_error)?;
+    page::framed_page!(c, StatusCode::OK, |ctx| {
+        campfire_views::events::pages::Index { ctx, view: &view }
+    })
+    .await
+}
+pub async fn show(c: &mut Ctx) -> Result {
+    let event = set_event(c).await?;
+    let user = require_current_user(c)?.clone();
+    let view = c
+        .app()
+        .db
+        .read(move |conn| {
+            crate::controllers::presenters::events::show(
+                conn,
+                &campfire_db::Room::find(conn, event.room_id)?,
+                &user,
+                &event,
+            )
+        })
+        .await
+        .map_err(db_error)?;
+    page::framed_page!(c, StatusCode::OK, |ctx| {
+        campfire_views::events::pages::Show { ctx, view: &view }
+    })
+    .await
 }
 
 fn present(value: Option<&str>) -> Option<&str> {

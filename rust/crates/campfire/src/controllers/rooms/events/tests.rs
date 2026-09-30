@@ -201,3 +201,23 @@ async fn event_cards_refresh_after_an_event_edit_through_the_message_cache() {
     assert!(html.contains(&format!("response_for_message_{}_event_{id}", message.id)));
     assert!(campfire_cable::turbo::session_bound(&html).is_none());
 }
+
+#[tokio::test]
+async fn event_pages_scope_members_bots_and_the_series_index() {
+    let Some(app) = TestApp::boot().await else {
+        return;
+    };
+    let head = event(&app).await;
+    let path = format!("/rooms/{ALL_TALK}/events/{}", head.id);
+    let mut kevin = app.sign_in(KEVIN).await;
+    assert_eq!(kevin.get(&path).await.status, StatusCode::NOT_FOUND);
+    let mut bot = app.sign_in(BENDER).await;
+    assert_eq!(bot.get(&path).await.status, StatusCode::FORBIDDEN);
+    let mut david = app.david();
+    let shown = david.get(&path).await;
+    assert_eq!(shown.status, StatusCode::OK);
+    assert!(shown.text().contains("Part of a series: repeats weekly"));
+    let indexed = david.get(&format!("/rooms/{ALL_TALK}/events")).await;
+    assert_eq!(indexed.status, StatusCode::OK);
+    assert_eq!(indexed.text().matches("3 occurrences remaining").count(), 1);
+}

@@ -201,7 +201,9 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "users/sessions#index" => arc(users::sessions::index),
         "users/sessions#destroy" => arc(users::sessions::destroy),
         "users/sessions#revoke_others" => arc(users::sessions::revoke_others),
-        "accounts/users/two_factor_resets#create" => arc(accounts::users::two_factor_resets::create),
+        "accounts/users/two_factor_resets#create" => {
+            arc(accounts::users::two_factor_resets::create)
+        }
         "users/push_subscriptions/test_notifications#create" => {
             arc(users::push_subscriptions::test_notifications::create)
         }
@@ -225,6 +227,8 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "messages/boosts#create" => arc(messages::boosts::create),
         "messages/boosts#new" => arc(messages::boosts::new),
         "messages/boosts#destroy" => arc(messages::boosts::destroy),
+        "rooms/events#index" => arc(rooms::events::index),
+        "rooms/events#show" => arc(rooms::events::show),
         "rooms/events/attendances#show" => arc(rooms::events::attendance_show),
         "rooms/events/attendances#update" => arc(rooms::events::attendance_update),
         "rooms/refreshes#show" => arc(rooms::refreshes::show),
@@ -677,6 +681,8 @@ mod tests {
         "messages/boosts#create",
         "messages/boosts#new",
         "messages/boosts#destroy",
+        "rooms/events#index",
+        "rooms/events#show",
         "rooms/events/attendances#show",
         "rooms/events/attendances#update",
         "rooms/refreshes#show",
