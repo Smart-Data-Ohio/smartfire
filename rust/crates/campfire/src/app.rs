@@ -498,3 +498,9 @@ mod google_tests;
 
 #[cfg(test)]
 mod google_webhook_tests;
+
+#[cfg(test)]
+mod google_api_tests;
+
+#[cfg(test)]
+mod google_connection_tests;

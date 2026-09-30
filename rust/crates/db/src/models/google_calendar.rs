@@ -48,7 +48,7 @@ impl PushChannel {
         Ok(tx.conn().execute("UPDATE calendar_push_channels SET last_message_number=?,last_notification_at=? WHERE id=? AND last_message_number<?",rusqlite::params![number,tx.now(),self.id,number])?==1)
     }
 }
-fn message_number(value:&str)->Result<i64> {
+pub fn message_number(value:&str)->Result<i64> {
     // String#to_i accepts underscores between decimal digits, and stops at other suffixes.
     let value=value.trim_start_matches(|c:char|c.is_ascii_whitespace());
     let (negative,value)=if let Some(v)=value.strip_prefix('-'){(true,v)}else{(false,value.strip_prefix('+').unwrap_or(value))};

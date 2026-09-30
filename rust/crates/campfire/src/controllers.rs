@@ -43,6 +43,7 @@ pub mod csp_reports;
 pub mod first_runs;
 pub mod google_sign_in;
 pub mod google_calendar;
+pub mod google_connections;
 pub mod messages;
 pub mod presenters;
 pub mod pwa;
@@ -156,6 +157,9 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "first_runs#create" => arc(first_runs::create),
         "sessions/transfers#show" => arc(sessions::transfers::show),
         "sessions/transfers#update" => arc(sessions::transfers::update),
+        "google/connections#connect" => arc(google_connections::connect),
+        "google/connections#callback" => arc(google_connections::callback),
+        "google/connections#destroy" => arc(google_connections::destroy),
         "sessions/google#create" => arc(google_sign_in::create),
         "sessions/google#callback" => arc(google_sign_in::callback),
         "users/google_sign_in_links#create" => arc(google_sign_in::link),
