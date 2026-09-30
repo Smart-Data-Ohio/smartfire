@@ -73,3 +73,7 @@ impl SidebarData {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "sidebars_tests.rs"]
+mod tests;

@@ -470,30 +470,18 @@ impl<'a> Presenter<'a> {
             param_key: room_kind(room.room_type).param_key().to_string(),
             name: room.name.clone().unwrap_or_default(),
             unread: false,
+            menu:accounts::room_menu(room,None,None,0,None),
+            icon:accounts::resolve_room_icon(self.conn,room.icon_name.as_deref()),
+            huddle_participants:None,
         }
     }
 
     /// `users/sidebars/rooms/_direct` locals for `membership`.
     pub fn sidebar_direct(&self, membership: &Membership) -> Result<campfire_views::users::SidebarDirect> {
-        let room = Room::find(self.conn, membership.room_id)?;
-        let users = room.users(self.conn)?;
-        let mut members: Vec<User> = users.iter().filter(|u| u.id != membership.user_id).cloned().collect();
-        if members.is_empty() {
-            members.push(self.user(membership.user_id)?);
-        }
-        Ok(campfire_views::users::SidebarDirect {
-            room_id: room.id,
-            unread: membership.unread(),
-            updated_at_epoch: epoch_string(room.updated_at.jiff()),
-            members: members.iter().map(|user| self.user_summary(user)).collect(),
-            membership_id: membership.id,
-            membership_updated_at: membership.updated_at.jiff(),
-        })
+        let room = Room::find(self.conn,membership.room_id)?;
+        accounts::sidebar_direct(self.conn,self.secrets,membership,&room)
     }
 
-    pub fn user_summary(&self, user: &User) -> campfire_views::users::UserSummary {
-        user_summary(self.secrets, user)
-    }
 }
 
 /// A `User` row as the users views see it.

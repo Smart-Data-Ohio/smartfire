@@ -42,6 +42,9 @@ pub struct UserSummary {
 }
 
 impl UserSummary {
+    pub fn sidebar_profile_button_attrs(&self) -> h::Attrs {
+        h::attrs().type_("button").class("avatar profile-card-avatar").aria("label",format!("View profile of {}",self.name)).merge(h::profile_card_trigger(self.id,false))
+    }
     pub fn active(&self) -> bool { self.status == Status::Active }
     pub fn banned(&self) -> bool { self.status == Status::Banned }
     pub fn deactivated(&self) -> bool { self.status == Status::Deactivated }

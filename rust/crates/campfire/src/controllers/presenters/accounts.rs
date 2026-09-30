@@ -17,7 +17,7 @@ use campfire_views::users::{
 use campfire_views::Platform;
 use rails_compat::Secrets;
 use rails_compat::global_id::{self, GlobalId};
-use rusqlite::params;
+use rusqlite::{params, OptionalExtension};
 
 use super::{attachments, epoch_string, to_fs_number, user_summary};
 
@@ -153,10 +153,10 @@ pub fn sidebar(conn: &Connection, secrets: &Secrets, user: &User) -> campfire_db
     let direct_memberships = direct
         .iter()
         .map(|(membership, room)| {
-            // `cache membership` wraps the whole partial: on a hit Rails loads none of its members.
-            Ok(match campfire_views::users::cached_direct_room_fragment(membership.id, membership.updated_at.jiff()) {
-                Some(html) => SidebarDirectItem::Fragment(html),
-                None => SidebarDirectItem::View(sidebar_direct(conn, secrets, membership, room)?),
+            let row=sidebar_direct(conn,secrets,membership,room)?;
+            Ok(match campfire_views::users::cached_direct_room_fragment(&row) {
+                Some(html)=>SidebarDirectItem::Fragment(html),
+                None=>SidebarDirectItem::View(row),
             })
         })
         .collect::<campfire_db::Result<_>>()?;
@@ -168,6 +168,9 @@ pub fn sidebar(conn: &Connection, secrets: &Secrets, user: &User) -> campfire_db
             param_key: room_param_key(room.room_type).to_string(),
             name: room.name.clone().unwrap_or_default(),
             unread: membership.unread(),
+            menu:room_menu(room,Some(membership),Some(user),0,None),
+            icon:resolve_room_icon(conn,room.icon_name.as_deref()),
+            huddle_participants:None,
         })
         .collect();
 
@@ -183,11 +186,16 @@ pub fn sidebar_direct(conn: &Connection, secrets: &Secrets, membership: &Members
         own = User::find(conn, membership.user_id)?;
         members.push(&own);
     }
+    let members: Vec<UserSummary> = members.into_iter().map(|user| user_summary(secrets,user)).collect();
+    let label = sidebar_direct_label(room.name.as_deref(), &members);
+    let viewer=User::find(conn,membership.user_id)?;
     Ok(SidebarDirect {
         room_id: room.id,
         unread: membership.unread(),
         updated_at_epoch: epoch_string(room.updated_at.jiff()),
-        members: members.into_iter().map(|user| user_summary(secrets, user)).collect(),
+        menu:room_menu(room,Some(membership),Some(&viewer),users.len(),Some(label.clone())),
+        label,members,viewer_administrator:viewer.is_administrator(),
+        huddle_participants:None,participant_ids:None,
         membership_id: membership.id,
         membership_updated_at: membership.updated_at.jiff(),
     })
@@ -304,4 +312,39 @@ pub fn string_attribute(params: &campfire_kit::ParamMap, key: &str) -> Option<Op
         return None;
     }
     Some(params.get(key).and_then(|param| param.to_s()))
+}
+
+/// Room-menu metadata must use the recipient, never the actor's Current.user.
+pub fn room_menu(room: &Room, membership: Option<&Membership>, viewer: Option<&User>, direct_member_count: usize, label: Option<String>) -> campfire_views::users::RoomMenu {
+    let group = room.direct() && (direct_member_count>2 || room.name.as_deref().is_some_and(|n|!campfire_richtext::ruby::is_blank(n)));
+    campfire_views::users::RoomMenu {
+        menu_categorizable:matches!(room.room_type,RoomType::Open|RoomType::Closed),
+        menu_favorited:membership.is_some_and(Membership::favorited),
+        menu_favorite_position:membership.and_then(|m|m.favorite_position),
+        menu_muted:membership.is_some_and(|m|m.involved_in(campfire_db::Involvement::Muted)),
+        menu_default_involvement:room.default_involvement().into(),
+        menu_category_id:membership.and_then(|m|m.room_category_id),
+        menu_can_delete:viewer.is_some_and(|u|u.is_administrator() || (!group && room.creator_id==u.id)),
+        menu_can_leave:membership.is_some(),
+        menu_leave_url:if room.direct(){format!("/rooms/directs/{}/leave",room.id)}else{format!("/rooms/{}/leave",room.id)},
+        menu_open_room:room.open(),menu_direct_room:room.direct(),menu_room_label:label.or_else(||room.name.clone()),
+    }
+}
+
+pub fn sidebar_direct_label(name: Option<&str>, members: &[UserSummary]) -> String {
+    if let Some(name)=name.filter(|s|!campfire_richtext::ruby::is_blank(s)){return name.into();}
+    if members.len()<=1 {return members.first().map(UserSummary::first_name).unwrap_or_default().to_string();}
+    let mut names: Vec<&str>=members.iter().map(|m|m.name.as_str()).collect();
+    names.sort_by_key(|n|n.to_lowercase());
+    let label=names.iter().take(3).map(|n|n.split_whitespace().next().unwrap_or_default()).collect::<Vec<_>>().join(", ");
+    if names.len()>3 {format!("{label} +{}",names.len()-3)}else{label}
+}
+
+pub fn resolve_room_icon(conn: &Connection, name: Option<&str>) -> Option<campfire_views::helpers::AvatarIcon> {
+    use campfire_views::{helpers::AvatarIcon,messages::reactions::static_icon};
+    let name=name?;
+    let icon=static_icon(name);
+    if matches!(icon,Some(AvatarIcon::Image{brand:true,..})){return icon;}
+    let title: Option<String>=conn.query_row("SELECT title FROM workspace_icons WHERE name=?",[name],|row|row.get(0)).optional().ok().flatten();
+    title.map(|title|AvatarIcon::Image{title,url:format!("/icons/{name}"),brand:false}).or(icon)
 }

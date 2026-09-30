@@ -1,3 +1,8 @@
-{% filter link_to_room(room.id, h::attrs().id(h::dom_id(room.param_key.as_str(), room.id, Some("list"))).data("sorted_list_name", room.name.as_str()).style("--column-gap: 0.5em").class(room.class_names())) %}
-  <span class="overflow-ellipsis">{{ room.name }}</span>
-{% endfilter %}
+{% filter link_to_room(room.id, room.link_attrs()) %}
+{% let room_icon = h::icon_avatar_tag(ctx, room.icon.as_ref(), 24, h::attrs()) %}  <span class="sidebar-item__icon{% if room.icon.is_some() %} sidebar-item__icon--custom{% endif %}" aria-hidden="true">{{ room_icon }}</span>
+  <span class="sidebar-item__label overflow-ellipsis">{{ room.name }}</span>
+{% if let Some(participants) = room.huddle_participants %}    <span class="voice-room__trailing">
+      {{ h::raw(participants.as_str()) }}
+    </span>
+{% endif %}{% if room.unread %}    <span class="sidebar-item__status">New</span>
+{% endif %}{% endfilter %}

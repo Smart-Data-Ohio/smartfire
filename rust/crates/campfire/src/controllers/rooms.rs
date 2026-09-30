@@ -247,8 +247,8 @@ pub(crate) async fn render_shared_room(c: &Ctx, room: &Room) -> Result<Rendered>
             let presenter = Presenter::new(conn, &app, None);
             let sidebar_room = presenter.sidebar_room(&room);
             let account = Account::first(conn)?;
-            Ok(page::render_detached_at(&app, account.as_ref(), &base_url, |_| {
-                campfire_views::users::SidebarSharedPartial { room: sidebar_room }.render()
+            Ok(page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| {
+                campfire_views::users::SidebarSharedPartial { ctx,room: sidebar_room }.render()
             }))
         })
         .await
