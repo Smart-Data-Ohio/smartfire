@@ -71,5 +71,7 @@ travel_to(Time.utc(2026, 9, 30, 12)) do
     "", " ", "1", "12abc", "+12", "-12", "001", "010", "08", "0x10", "0b10", "0o10", "0d10", "1_2", "1__2", "_12", "12_", "0x_10", " 12 ", "1.0", "0_10", "0x", "9223372036854775808", "-9223372036854775808", "12\n", "\u00a012"].map do |input|
     { input:, output: Integer(input, exception: false) }
   end
-  puts JSON.generate({ integer_coercions: coercions, reference: "d7c7de92", now: base.iso8601, policies: policy_vectors, statuses: status_vectors })
+  task = Periodic::Runner.new.instance_variable_get(:@tasks).find { |t| t.name == "presence leases" }
+  presence_task = { name: task.name, seconds: task.interval.to_i }
+  puts JSON.generate({ presence_task:, integer_coercions: coercions, reference: "d7c7de92", now: base.iso8601, policies: policy_vectors, statuses: status_vectors })
 end

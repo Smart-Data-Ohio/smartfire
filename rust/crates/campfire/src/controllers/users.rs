@@ -4,6 +4,7 @@
 pub mod avatars;
 pub mod bans;
 pub mod profiles;
+pub mod presences;
 pub mod push_subscriptions;
 pub mod sidebars;
 

@@ -11,8 +11,17 @@ import subprocess
 root = Path(__file__).resolve().parents[2]
 scratch = root / ".scratch"
 scratch.mkdir(exist_ok=True)
-env = dict(os.environ, TMPDIR=str(scratch), CARGO_TARGET_DIR=str(root / "rust/target"))
+env = dict(os.environ, TMPDIR=str(scratch), CARGO_TARGET_DIR=str(root / "rust/target"),
+           CABLE_TEST_PORT_RANGE="52400-52449", MAIL_TEST_PORT_RANGE="52400-52449")
 cases = [
+    ("policy-quiet-gate", "notification_policy.rs",
+     "(!recipient.quiet_for_push(self.now) || self.dnd_exception)",
+     "true",
+     "ws17_policy_matches_rails_combinations"),
+    ("reply-recipient", "push_subscription.rs",
+     "Some(id) if message.reply_notify_author",
+     "Some(id) if false",
+     "ws17_replies_notify_only_opted_in_authors_and_merge_duplicate_scopes"),
     ("expired-status", "user_status_settings.rs",
      "self.custom_status_expires_at.is_some_and(|until| until <= now)",
      "self.custom_status_expires_at.is_some_and(|_| false)",
@@ -21,9 +30,30 @@ cases = [
      "let rows: Vec<(i64, Option<Timestamp>)>",
      'conn.execute("DELETE FROM workspace_presence_leases WHERE expires_at < ?", [now])?;\n        let rows: Vec<(i64, Option<Timestamp>)>',
      "ws17_expiry_is_inclusive_and_reads_never_prune"),
+    ("valid-presence", "workspace_presence_lease.rs",
+     "if !Self::identity_valid(tx.conn(), user_id, session_id)?",
+     "if true",
+     "tests::workspace_presence_lease_test::"),
+    ("ghost-presence", "workspace_presence_lease.rs",
+     "let sql = format!(",
+     "return Ok(ids.iter().map(|id| (*id, Presence::Online)).collect());\n        let sql = format!(",
+     "ws17_absent_users_and_expired_leases_are_not_returned"),
 ]
-for name, filename, original, broken, test in cases:
-    source = root / "rust/crates/db/src/models" / filename
+cases = [(name, f"rust/crates/db/src/models/{filename}", original, broken, test, "campfire_db")
+         for name, filename, original, broken, test in cases]
+cases += [
+    ("presence-http-body", "rust/crates/campfire/src/controllers/users/presences.rs",
+     'json!({"presences":presences})', 'json!({"presences":[]})',
+     "ws17_presence_http_bodies_match_rails_vectors", "campfire"),
+    ("web-push-tag", "rust/crates/campfire/src/integrations/web_push.rs",
+     '"tag": self.tag', '"tag": null',
+     "encodes_the_message_like_json_generate", "campfire"),
+    ("service-worker-bytes", "rust/crates/campfire/src/controllers/pwa.rs",
+     "pwa::SERVICE_WORKER_JS", '"/* wrong bytes */"',
+     "ws17_service_worker_is_served_byte_identical_to_rails", "campfire"),
+]
+for name, filename, original, broken, test, package in cases:
+    source = root / filename
     text = source.read_text()
     # Formatting may place a newline after the receiver in the expiry guard.
     if original not in text and name == "expired-status":
@@ -37,7 +67,7 @@ for name, filename, original, broken, test in cases:
         with log.open("w") as output:
             result = subprocess.run([
                 "mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4",
-                "--manifest-path", "rust/Cargo.toml", "-p", "campfire_db", test, "--", "--test-threads=4",
+                "--manifest-path", "rust/Cargo.toml", "-p", package, test, "--", "--test-threads=4",
             ], cwd=root, env=env, stdout=output, stderr=subprocess.STDOUT, check=False)
     finally:
         source.write_text(text)

@@ -51,7 +51,7 @@ impl PushPayload {
     pub fn new(title: String, body: String, path: String, tag: Option<String>) -> Self {
         Self { title, body, path, tag }
     }
-    /// A payload cut to fit a push message, as [`PushSubscription::payload_for`] cuts the room's.
+    /// Legacy explicit truncation helper. Smartfire's production pushers use [`Self::new`].
     pub fn fitted(title: String, body: String, path: String) -> Self {
         Self {
             title: truncate_json_string(title, MAX_PAYLOAD_TITLE_BYTES),

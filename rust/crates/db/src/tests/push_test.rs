@@ -40,6 +40,24 @@ fn ws17_room_push_respects_out_of_office() {
     assert_eq!(deliveries(&t, "designers", "Quiet please".into()), 1);
 }
 
+#[test]
+fn ws17_replies_notify_only_opted_in_authors_and_merge_duplicate_scopes() {
+    let t=TestDb::new();
+    t.write(|tx|Membership::find(tx.conn(),id("jason_designers"))?.update_involvement(tx,crate::Involvement::Mentions));
+    let source=t.write(|tx|Message::create(tx,NewMessage {room_id:id("designers"),creator_id:id("jason"),body:Some("Original".into()),..Default::default()}));
+    let send=|notify,body:String|t.write(move|tx|Message::create(tx,NewMessage {room_id:id("designers"),creator_id:id("david"),body:Some(body),reply_to_message_id:Some(source.id),reply_notify_author:Some(notify),..Default::default()}));
+    let recipients=|message:&Message|t.read(|c|Ok(PushSubscription::pushes_for(c,&BasicRichText,message,t.now())?.1));
+    assert_eq!(recipients(&send(false,"Quiet reply".into())).len(),1);
+    assert_eq!(recipients(&send(true,"Reply".into())).len(),2);
+    let message=send(true,format!("Reply {}",mention_attachment_for(id("jason"))));
+    assert_eq!(recipients(&message).len(),2);
+    t.write(|tx|Membership::find(tx.conn(),id("jason_designers"))?.update_involvement(tx,crate::Involvement::Everything));
+    assert_eq!(recipients(&message).len(),2,"everything + mention + reply must send once per device");
+    t.write(|tx|Membership::find(tx.conn(),id("jason_designers"))?.update_involvement(tx,crate::Involvement::Muted));
+    assert_eq!(recipients(&send(true,"Muted reply".into())).len(),1);
+    assert_eq!(recipients(&message).len(),2,"muted rooms still push mentions");
+}
+
 /// How many deliveries `Room::MessagePusher#push` would queue for a new message.
 fn deliveries(t: &TestDb, room: &str, body: String) -> usize {
     let attributes = NewMessage {

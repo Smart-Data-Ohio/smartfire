@@ -719,7 +719,10 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
         .tasks()
         .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
         .collect();
-    assert_eq!(serde_json::json!(tasks), golden["tasks"]);
+    let ws17: serde_json::Value = serde_json::from_str(include_str!("../../../db/src/tests/ws17_vectors.json")).unwrap();
+    let mut expected = golden["tasks"].as_array().unwrap().clone();
+    expected.push(ws17["presence_task"].clone());
+    assert_eq!(serde_json::json!(tasks), serde_json::json!(expected));
 }
 
 #[tokio::test]

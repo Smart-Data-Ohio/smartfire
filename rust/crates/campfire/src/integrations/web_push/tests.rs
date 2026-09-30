@@ -15,7 +15,7 @@ const PUBLIC_IP: &str = "142.250.185.206";
 const VAPID_PUBLIC_KEY: &str = "BEYXTBB5_jNhNzXDmx5KEU55Vbbd-u--Lk9rM5OFQvUkPIBwZJ9QzAq0zdEzFw6yTV8cTriz_qYBVicY02_VxTQ=";
 const VAPID_PRIVATE_KEY: &str = "qfXLHghuG1rSHZUVo9SscNRI-0EIHRbIrfeGCqbAwak=";
 /// `WebPush::Notification#vapid_identification`, which the gem's vectors were made with.
-const REFERENCE_SUBJECT: &str = "mailto:support@37signals.com";
+const REFERENCE_SUBJECT: &str = "mailto:support@smartdata.net";
 
 fn expected() -> serde_json::Value {
     serde_json::from_str(include_str!("../testdata/web_push_expected.json")).unwrap()
@@ -83,7 +83,7 @@ async fn push_service(status: u16, reason: &str) -> PushService {
 }
 
 fn notification(subscription: PushSubscription) -> Notification {
-    Notification { title: "t".into(), body: "b".into(), path: "/".into(), badge: 0, subscription }
+    Notification { title: "t".into(), body: "b".into(), path: "/".into(), tag: None, badge: 0, subscription }
 }
 
 #[test]
@@ -93,6 +93,7 @@ fn encodes_the_message_like_json_generate() {
         title: "Designers <&> \"quotes\" é 😀".into(),
         body: "Kevin: line\nbreak\ttab \u{2028} \u{1f} / \\ ".into(),
         path: "/rooms/1".into(),
+        tag: Some("room-1".into()),
         badge: 3,
         subscription: PushSubscription::new(1, None, None, None, None),
     };
@@ -107,6 +108,7 @@ fn the_longest_payload_fits_a_push_message() {
         title: "\"".repeat(MAX_PAYLOAD_TITLE_BYTES / 2),
         body: "\u{1}".repeat(MAX_PAYLOAD_BODY_BYTES / 6),
         path: format!("/rooms/{}", i64::MIN),
+        tag: None,
         badge: i64::MIN,
         subscription: receiver.subscription(1, "https://fcm.googleapis.com/fcm/send/abc"),
     };
@@ -234,7 +236,7 @@ async fn raises_what_the_gem_raises() {
     let subscription = receiver.subscription(1, "https://fcm.googleapis.com/fcm/send/abc");
     for (status, reason, kind, invalidates) in [
         (410, "Gone", "WebPush::ExpiredSubscription", true),
-        (404, "Not Found", "WebPush::InvalidSubscription", true),
+        (404, "Not Found", "WebPush::InvalidSubscription", false),
         (403, "Forbidden", "WebPush::Unauthorized", false),
         (400, "UnauthorizedRegistration", "WebPush::Unauthorized", false),
         (400, "Bad Request", "WebPush::ResponseError", false),
@@ -250,7 +252,7 @@ async fn raises_what_the_gem_raises() {
 }
 
 #[tokio::test]
-async fn only_the_subscriptions_own_faults_invalidate_it() {
+async fn invalidation_matches_the_rails_openssl_rescue() {
     // A key that isn't a point on the curve (as in the fixtures) can never be delivered to.
     let service = push_service(201, "Created").await;
     let bad_key = PushSubscription::new(1, Some("https://fcm.googleapis.com/fcm/send/abc"), Some("dGVzdF9rZXk"), Some("dGVzdF9hdXRo"), None);
@@ -261,7 +263,7 @@ async fn only_the_subscriptions_own_faults_invalidate_it() {
     let untrusted = Network { tls: crate::integrations::net::tls_config(rustls::RootCertStore::empty()), ..service.net.clone() };
     let receiver = Receiver::new();
     let error = notification(receiver.subscription(1, "https://fcm.googleapis.com/fcm/send/abc")).deliver(&untrusted, &vapid()).await.unwrap_err();
-    assert_eq!((error.class_name(), error.invalidates_subscription()), ("OpenSSL::SSL::SSLError", false));
+    assert_eq!((error.class_name(), error.invalidates_subscription()), ("OpenSSL::SSL::SSLError", true));
 
     let blank = PushSubscription::new(1, Some("https://fcm.googleapis.com/fcm/send/abc"), Some(""), Some("dGVzdF9hdXRo"), None);
     let error = notification(blank).deliver(&service.net, &vapid()).await.unwrap_err();
@@ -276,7 +278,7 @@ async fn test_notification() {
     deliver_test_notification(&service.net, &vapid(), &subscription, 4, "http://example.com/users/me/push_subscriptions").await.unwrap();
 
     let message: serde_json::Value = serde_json::from_str(&receiver.open(&service.server.received()[0].body)).unwrap();
-    assert_eq!(message["title"], "Campfire Test");
+    assert_eq!(message["title"], "Smartfire Test");
     assert!(uuid::Uuid::parse_str(message["options"]["body"].as_str().unwrap()).is_ok());
     assert_eq!(message["options"]["icon"], "/account/logo");
     assert_eq!(message["options"]["data"], serde_json::json!({ "path": "http://example.com/users/me/push_subscriptions", "badge": 4 }));
@@ -366,8 +368,71 @@ fn expected_endpoint_suffix(_t: &TestDb, id: i64) -> String {
     format!("/fcm/send/{label}")
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn ws17_durable_thread_and_saved_reminder_jobs_apply_policy_and_deliver() {
+    use crate::app::AppState;
+    use crate::controllers::presenters::test_support::{TestApp, ALL_TALK, DAVID, JASON};
+    use campfire_db::{ChannelThread, ThreadMembership, ThreadInvolvement, Message, NewMessage, NewChannelThread, SavedItem, NewSavedItem};
+    let test = TestApp::boot().await.expect("WS17 requires the Rails parity seed");
+    let original = test.booted.app.clone();
+    test.booted.jobs.shutdown(Duration::from_secs(5)).await;
+    let service = push_service(201, "Created").await;
+    let receiver = Receiver::new();
+    let subscription = receiver.subscription(1,"https://fcm.googleapis.com/fcm/send/ws17");
+    let db = original.db.clone();
+    db.write(move |tx| {
+        tx.conn().execute("UPDATE push_subscriptions SET endpoint=?,p256dh_key=?,auth_key=? WHERE user_id=?",rusqlite::params![subscription.endpoint,subscription.p256dh_key,subscription.auth_key,JASON])?;
+        tx.conn().execute("UPDATE users SET dnd_enabled=1 WHERE id=?",[JASON])?;
+        Ok(())
+    }).await.unwrap();
+    let pool = Pool::new(service.net.clone(),vapid(),|_|Ok::<_,String>(()));
+    let app = Arc::new(AppState {
+        config:original.config.clone(),secrets:original.secrets.clone(),clock:original.clock.clone(),
+        db:db.clone(),storage:original.storage.clone(),cable:original.cable.clone(),broadcasts:original.broadcasts.clone(),
+        jobs:original.jobs.clone(),mail:crate::mail::State::new(original.mail.config.clone()),web_push:Some(pool.clone()),fragment_cache:original.fragment_cache.clone(),
+    });
+    let thread_id = db.write(|tx| {
+        let thread=ChannelThread::create(tx,NewChannelThread {room_id:ALL_TALK,creator_id:DAVID,name:Some("WS17 pushes".into()),..Default::default()})?;
+        ThreadMembership::join(tx,thread.id,JASON)?.update_involvement(tx,ThreadInvolvement::Everything)?;
+        Ok(thread.id)
+    }).await.unwrap();
+    let create = move |tx: &mut campfire_db::Tx<'_>| {
+        let message=Message::create(tx,NewMessage {room_id:ALL_TALK,creator_id:DAVID,thread_id:Some(thread_id),body:Some("Hello from the durable queue".into()),..Default::default()})?;
+        let item=SavedItem::create(tx,NewSavedItem {user_id:JASON,message_id:message.id,..Default::default()})?;
+        tx.conn().execute("UPDATE saved_items SET remind_at=? WHERE id=?",rusqlite::params![tx.now(),item.id])?;
+        let now=tx.now();
+        assert!(SavedItem::dispatch_reminder(tx,item.id,now)?);
+        Ok((message.id,item.id))
+    };
+    db.write(create).await.unwrap();
+    let count_jobs = |db: campfire_db::Database| async move {
+        db.read(|c|Ok(c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class IN ('ChannelThread::PushMessageJob','SavedItem::ReminderPushJob')",[],|r|r.get::<_,i64>(0))?)).await.unwrap()
+    };
+    assert_eq!(count_jobs(db.clone()).await,2);
+    let runner=campfire_jobs::start(db.clone(),app.jobs.queue.clone(),crate::jobs::registry(),app.clone(),crate::jobs::runner_config(&app.config));
+    let wait = || async {
+        tokio::time::timeout(Duration::from_secs(5),async { while count_jobs(db.clone()).await != 0 { tokio::time::sleep(Duration::from_millis(10)).await; } }).await.unwrap();
+    };
+    wait().await;
+    assert!(service.server.received().is_empty(),"DND must suppress both jobs");
+    db.write(|tx| {tx.conn().execute("UPDATE users SET dnd_enabled=0 WHERE id=?",[JASON])?;Ok(())}).await.unwrap();
+    let (message_id,item_id)=db.write(create).await.unwrap();
+    wait().await;
+    pool.shutdown().await;
+    runner.shutdown(Duration::from_secs(5)).await;
+    let received=service.server.received();
+    let subscriptions=db.read(|c|PushSubscription::for_user(c,JASON)).await.unwrap().len();
+    assert_eq!(received.len(),2*subscriptions);
+    let payloads=received.iter().map(|request|serde_json::from_str::<serde_json::Value>(&receiver.open(&request.body)).unwrap()).collect::<Vec<_>>();
+    for value in payloads {
+        assert_eq!(value["options"]["data"]["path"],format!("/rooms/{ALL_TALK}?message_id={message_id}&thread={thread_id}"));
+        if value["title"]=="WS17 pushes" { assert_eq!(value["options"]["tag"],format!("room-{ALL_TALK}")); }
+        else { assert_eq!(value["options"]["tag"],format!("saved-{item_id}")); assert_eq!(value["options"]["body"],"Reminder: Hello from the durable queue"); }
+    }
+}
+
 #[tokio::test]
-async fn the_pool_keeps_subscriptions_it_failed_to_reach() {
+async fn the_pool_invalidates_tls_failures_like_rails() {
     let service = push_service(201, "Created").await;
     let untrusted = Network { tls: crate::integrations::net::tls_config(rustls::RootCertStore::empty()), ..service.net.clone() };
     let destroyed = Arc::new(Mutex::new(Vec::new()));
@@ -378,7 +443,7 @@ async fn the_pool_keeps_subscriptions_it_failed_to_reach() {
     });
     pool.deliver_later(notification(Receiver::new().subscription(1, "https://fcm.googleapis.com/fcm/send/abc")));
     pool.shutdown().await;
-    assert!(destroyed.lock().unwrap().is_empty());
+    assert_eq!(*destroyed.lock().unwrap(), vec![1]);
 }
 
 #[tokio::test]

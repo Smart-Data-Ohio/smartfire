@@ -40,6 +40,7 @@ pub struct Notification {
     pub title: String,
     pub body: String,
     pub path: String,
+    pub tag: Option<String>,
     pub badge: i64,
     pub subscription: PushSubscription,
 }
@@ -51,6 +52,7 @@ impl Notification {
             title: payload.title.clone(),
             body: payload.body.clone(),
             path: payload.path.clone(),
+            tag: payload.tag.clone(),
             badge: subscription.badge(conn)?,
             subscription: subscription.clone(),
         })
@@ -60,7 +62,7 @@ impl Notification {
     pub fn encoded_message(&self) -> String {
         serde_json::json!({
             "title": self.title,
-            "options": { "body": self.body, "icon": ICON_PATH, "data": { "path": self.path, "badge": self.badge } }
+            "options": { "body": self.body, "icon": ICON_PATH, "tag": self.tag, "data": { "path": self.path, "badge": self.badge } }
         })
         .to_string()
     }
@@ -110,12 +112,10 @@ pub enum DeliveryError {
 }
 
 impl DeliveryError {
-    /// Whether the subscription can never be delivered to, so the pool destroys it.
-    /// `WebPush::Pool#deliver` also destroys it for a 410 and any `OpenSSL::OpenSSLError`,
-    /// which includes TLS failures and a bad VAPID key; those say nothing about the
-    /// subscription, and a 404 does (RFC 8030, section 7.3).
+    /// Match our WebPush::Pool#deliver rescue: expired (410) or OpenSSL errors.
+    /// A 404 is logged and retained; TLS errors invalidate, exactly as in Rails.
     pub fn invalidates_subscription(&self) -> bool {
-        matches!(self, DeliveryError::SubscriptionGone { .. } | DeliveryError::InvalidSubscriptionKey(_))
+        matches!(self, DeliveryError::SubscriptionGone { status: 410, .. } | DeliveryError::InvalidSubscriptionKey(_) | DeliveryError::Tls(_))
     }
 
     /// The Ruby exception class, for the pool's log line.
@@ -212,7 +212,8 @@ pub async fn deliver_test_notification(
     path: &str,
 ) -> Result<(), DeliveryError> {
     let notification = Notification {
-        title: "Campfire Test".into(),
+        title: "Smartfire Test".into(),
+        tag: Some("test-notification".into()),
         body: uuid::Uuid::new_v4().to_string(),
         path: path.to_string(),
         badge,
