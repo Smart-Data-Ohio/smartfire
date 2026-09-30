@@ -5,6 +5,92 @@
   "file_id": 935962060,
   "thread_id": 9,
   "child_id": 935962061,
+  "recipients": [
+    {
+      "user_id": 127326141,
+      "channels": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "allowed": true
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82OTk0NDgzMjY:messages",
+          "allowed": true
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkRpcmVjdC8xODY4Njk2NDI:messages",
+          "allowed": true
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "allowed": true
+        }
+      ]
+    },
+    {
+      "user_id": 149087659,
+      "channels": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "allowed": true
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82OTk0NDgzMjY:messages",
+          "allowed": false
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkRpcmVjdC8xODY4Njk2NDI:messages",
+          "allowed": true
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "allowed": true
+        }
+      ]
+    },
+    {
+      "user_id": 712064548,
+      "channels": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "allowed": false
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82OTk0NDgzMjY:messages",
+          "allowed": true
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkRpcmVjdC8xODY4Njk2NDI:messages",
+          "allowed": false
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "allowed": false
+        }
+      ]
+    },
+    {
+      "user_id": 394959859,
+      "channels": [
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC80ODY3Nzc2OTY:messages",
+          "allowed": true
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkNsb3NlZC82OTk0NDgzMjY:messages",
+          "allowed": false
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvUm9vbXM6OkRpcmVjdC8xODY4Njk2NDI:messages",
+          "allowed": false
+        },
+        {
+          "stream": "Z2lkOi8vY2FtcGZpcmUvQ2hhbm5lbFRocmVhZC85:messages",
+          "allowed": true
+        }
+      ]
+    }
+  ],
   "rows": [
     {
       "name": "multiple_and_reopened",
