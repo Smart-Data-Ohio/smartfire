@@ -156,33 +156,41 @@ async fn review_drive_null_response_keeps_rails_production_500() {
         true,
     )
     .await;
-    let r = Recorded::new(vec![]);
-    r.answer(200, Value::Null);
-    support::install(&a, r).await;
-    let mut browser = a.david();
-    let response = browser
-        .send(
-            Req::new(Method::GET, "/google/drive/files/1AbcDefGhIjKlMnOpQrSt")
-                .header("accept", "text/html"),
-        )
-        .await;
-    assert_eq!(
-        response.status,
-        StatusCode::INTERNAL_SERVER_ERROR,
-        "Rails raises NoMethodError for a null file response; actual body: {}",
-        response.text()
-    );
-    assert_eq!(
-        response.body.as_slice(),
-        campfire_assets::serve(&campfire_assets::StaticRequest {
-            method: "GET",
-            path: "/500.html",
-            ..Default::default()
-        })
-        .unwrap()
-        .body
-        .as_ref()
-    );
+    let v: Value =
+        serde_json::from_str(include_str!("../../../../vectors/google_drive_null.json")).unwrap();
+    for case in v["cases"].as_array().unwrap() {
+        let r = Recorded::new(vec![]);
+        r.answer(200, Value::Null);
+        support::install(&a, r.clone()).await;
+        let mut browser = a.david();
+        let response = browser
+            .send(
+                Req::new(Method::GET, case["path"].as_str().unwrap()).header("accept", "text/html"),
+            )
+            .await;
+        assert_eq!(
+            response.status.as_u16(),
+            case["status"].as_u64().unwrap() as u16,
+            "{case}"
+        );
+        assert_eq!(response.status, StatusCode::INTERNAL_SERVER_ERROR);
+        assert!(case["body_is_production_500"].as_bool().unwrap());
+        assert_eq!(
+            response.body.as_slice(),
+            campfire_assets::serve(&campfire_assets::StaticRequest {
+                method: "GET",
+                path: "/500.html",
+                ..Default::default()
+            })
+            .unwrap()
+            .body
+            .as_ref()
+        );
+        assert_eq!(
+            r.calls.lock().unwrap().len(),
+            case["google_calls"].as_u64().unwrap() as usize
+        );
+    }
 }
 
 fn boundaries() -> Value {

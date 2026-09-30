@@ -19,5 +19,10 @@ vectors=JSON.parse(File.read(File.join(ENV.fetch('PARITY_WORK'),'vectors/campfir
 cookie=vectors.fetch('sessions').find { |s|s['user_name']=='David' }.fetch('cookie_header')
 session=ActionDispatch::Integration::Session.new(Rails.application)
 session.host! 'campfire.test'
-session.get '/google/drive/files/1AbcDefGhIjKlMnOpQrSt', headers:{'Cookie'=>cookie,'Accept'=>'text/html'}
-puts JSON.generate({reference:'d7c7de92',status:session.response.status,google_calls:calls.size,body_is_production_500:session.response.body==File.read(Rails.root.join('public/500.html'))})
+cases = ['/google/drive/files/1AbcDefGhIjKlMnOpQrSt','/google/drive/files'].map do |path|
+  before=calls.size
+  session.get path,headers:{'Cookie'=>cookie,'Accept'=>'text/html'}
+  {path:,status:session.response.status,google_calls:calls.size-before,
+    body_is_production_500:session.response.body==File.read(Rails.root.join('public/500.html'))}
+end
+puts JSON.generate({reference:'d7c7de92',cases:})
