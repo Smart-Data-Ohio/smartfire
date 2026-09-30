@@ -55,9 +55,40 @@ pub fn seed_clock() -> campfire_kit::SharedClock {
     std::sync::Arc::new(SeedClock { start: SEED_NOW.parse().unwrap(), booted: std::time::Instant::now() })
 }
 
-fn seed_dir() -> Option<PathBuf> {
-    let dir = Path::new(ROOT).join("parity/.seed/default");
-    dir.join("db/production.sqlite3").exists().then_some(dir)
+pub fn seed_dir(name: &str) -> Option<PathBuf> {
+    find_seed(Path::new(ROOT), name, std::env::var_os("CI").is_some())
+}
+
+fn find_seed(root: &Path, name: &str, ci: bool) -> Option<PathBuf> {
+    let dir = root.join("parity/.seed").join(name);
+    if dir.join("db/production.sqlite3").is_file() {
+        return Some(dir);
+    }
+    assert!(!ci, "CI requires parity/.seed/{name}; run parity/bin/seed build {name} before the tests");
+    eprintln!("skipping locally: parity/.seed/{name} isn't built (parity/bin/seed build {name})");
+    None
+}
+
+#[test]
+#[should_panic(expected = "CI requires parity/.seed/default")]
+fn missing_seed_fails_in_ci() {
+    let root = tempfile::tempdir().unwrap();
+    find_seed(root.path(), "default", true);
+}
+
+#[test]
+fn missing_seed_may_skip_locally() {
+    let root = tempfile::tempdir().unwrap();
+    assert!(find_seed(root.path(), "default", false).is_none());
+}
+
+#[test]
+fn built_seed_is_found_in_ci() {
+    let root = tempfile::tempdir().unwrap();
+    let seed = root.path().join("parity/.seed/default");
+    std::fs::create_dir_all(seed.join("db")).unwrap();
+    std::fs::write(seed.join("db/production.sqlite3"), []).unwrap();
+    assert_eq!(find_seed(root.path(), "default", true), Some(seed));
 }
 
 fn parity_env(name: &str) -> Option<String> {
@@ -86,12 +117,9 @@ pub struct TestApp {
 }
 
 impl TestApp {
-    /// `None` (and a note) when the seed hasn't been built.
+    /// `None` (and a note) locally when the seed hasn't been built; fails in CI.
     pub async fn boot() -> Option<TestApp> {
-        let Some(seed) = seed_dir() else {
-            eprintln!("skipping: parity/.seed/default isn't built (parity/bin/seed build default)");
-            return None;
-        };
+        let seed = seed_dir("default")?;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("db")).unwrap();
         std::fs::copy(seed.join("db/production.sqlite3"), dir.path().join("db/production.sqlite3")).unwrap();

@@ -334,8 +334,11 @@ impl<W: AsyncWrite + Unpin> Writer<W> {
 
     /// Writes `frames` as text messages, in order, in as few writes as the socket takes.
     pub async fn send(&mut self, frames: &[Frame]) -> io::Result<()> {
+        self.send_frames(frames.iter()).await
+    }
+
+    pub(crate) async fn send_frames<'a>(&mut self, frames: impl Iterator<Item = &'a Frame>) -> io::Result<()> {
         let payloads: Vec<(bool, &[u8])> = frames
-            .iter()
             .map(|frame| match self.deflate.then(|| frame.deflated()).flatten() {
                 Some(deflated) => (true, deflated),
                 None => (false, frame.as_str().as_bytes()),
@@ -343,7 +346,7 @@ impl<W: AsyncWrite + Unpin> Writer<W> {
             .collect();
         let headers: Vec<([u8; 10], usize)> =
             payloads.iter().map(|(compressed, payload)| header(OP_TEXT, *compressed, payload.len())).collect();
-        let mut slices: Vec<IoSlice<'_>> = Vec::with_capacity(frames.len() * 2);
+        let mut slices: Vec<IoSlice<'_>> = Vec::with_capacity(payloads.len() * 2);
         for ((header, len), (_, payload)) in headers.iter().zip(&payloads) {
             slices.push(IoSlice::new(&header[..*len]));
             slices.push(IoSlice::new(payload));
