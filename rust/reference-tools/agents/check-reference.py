@@ -20,6 +20,11 @@ files = [
     'app/models/membership.rb', 'app/models/user.rb', 'app/models/boost.rb',
     'app/services/agents/event_polling.rb', 'app/services/agents/service_result.rb',
     'app/services/agents/posting.rb', 'app/services/agents/budgets.rb', 'app/models/agent_budget_notice.rb',
+    'app/models/agent_approval.rb', 'app/services/agents/approvals.rb',
+    'app/models/agent_step.rb', 'app/services/agents/steps.rb',
+    'app/models/agent_slash_command.rb', 'app/services/agents/slash_commands.rb',
+    'app/services/slash_commands/dispatcher.rb', 'app/models/activity_item.rb',
+    'app/services/agents/working_presence.rb', 'app/models/channel_thread.rb', 'app/services/agents/context_builder.rb', 'app/services/agents/direct_messages.rb', 'app/models/message.rb', 'app/models/message/broadcasts.rb', 'app/models/user/bannable.rb',
 ]
 command = ['docker', 'run', '--rm', '--name', 'ws11-reference-source-check', '--entrypoint', 'sha256sum',
            'triage-reference-d7c7de92', *['/rails/' + file for file in files]]

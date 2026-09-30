@@ -106,21 +106,58 @@ pub fn prepare_for_user(
 
 /// Explicit request lookup preserves AR's IN/blank binding policy separately from the
 /// string that is assigned to the saved row. Legacy bots ignore the client id entirely.
-pub fn prepare_for_user_with_lookup(tx:&mut Tx<'_>,user_id:i64,room_id:i64,stored:Option<&str>,lookup:&client_ids::Lookup)->Result<Option<PostingCheck>> {
-    let Some(agent_id)=query_one(tx.conn(),"SELECT id FROM agents WHERE user_id=? LIMIT 1",[user_id],|r|r.get::<_,i64>(0))? else {return Ok(None);};
+pub fn prepare_for_user_with_lookup(
+    tx: &mut Tx<'_>,
+    user_id: i64,
+    room_id: i64,
+    stored: Option<&str>,
+    lookup: &client_ids::Lookup,
+) -> Result<Option<PostingCheck>> {
+    let Some(agent_id) = query_one(
+        tx.conn(),
+        "SELECT id FROM agents WHERE user_id=? LIMIT 1",
+        [user_id],
+        |r| r.get::<_, i64>(0),
+    )?
+    else {
+        return Ok(None);
+    };
     match lookup {
-        client_ids::Lookup::Attribute=>return prepare(tx,agent_id,room_id,stored).map(Some),
-        client_ids::Lookup::InvalidParameters=>return Err(Error::Other("can't cast ActionController::Parameters".into())),
-        client_ids::Lookup::Values(values)=>{
+        client_ids::Lookup::Attribute => return prepare(tx, agent_id, room_id, stored).map(Some),
+        client_ids::Lookup::InvalidParameters => {
+            return Err(Error::Other(
+                "can't cast ActionController::Parameters".into(),
+            ));
+        }
+        client_ids::Lookup::Values(values) => {
             if !values.is_empty() {
-                let mut binds=vec![rusqlite::types::Value::Integer(room_id),rusqlite::types::Value::Integer(user_id)];
+                let mut binds = vec![
+                    rusqlite::types::Value::Integer(room_id),
+                    rusqlite::types::Value::Integer(user_id),
+                ];
                 binds.extend(values.iter().cloned().map(rusqlite::types::Value::Text));
-                let sql=format!("SELECT * FROM messages WHERE room_id=? AND creator_id=? AND client_message_id IN ({}) LIMIT 1",crate::sql::placeholders(values.len()));
-                if let Some(message)=query_one(tx.conn(),&sql,rusqlite::params_from_iter(binds),Message::from_row)? {return Ok(Some(PostingCheck::Replay(Box::new(message))));}
+                let sql = format!(
+                    "SELECT * FROM messages WHERE room_id=? AND creator_id=? AND client_message_id IN ({}) LIMIT 1",
+                    crate::sql::placeholders(values.len())
+                );
+                if let Some(message) = query_one(
+                    tx.conn(),
+                    &sql,
+                    rusqlite::params_from_iter(binds),
+                    Message::from_row,
+                )? {
+                    return Ok(Some(PostingCheck::Replay(Box::new(message))));
+                }
             }
         }
     }
-    Ok(Some(if let Some(payload)=check_budget(tx,agent_id,Cap::Messages)? {PostingCheck::Budget(payload)} else {PostingCheck::Allowed}))
+    Ok(Some(
+        if let Some(payload) = check_budget(tx, agent_id, Cap::Messages)? {
+            PostingCheck::Budget(payload)
+        } else {
+            PostingCheck::Allowed
+        },
+    ))
 }
 
 /// Check an existing client id before budget. The caller saves in the same writer transaction.
@@ -221,7 +258,13 @@ pub fn check_budget(tx: &mut Tx<'_>, agent_id: i64, cap: Cap) -> Result<Option<V
 }
 
 /// Agents::Budgets.usage, using the caller's Date.current.all_day window.
-pub fn usage(conn: &crate::Connection, agent_id: i64, user_id: i64, cap: Cap, window: &DailyWindow) -> Result<i64> {
+pub fn usage(
+    conn: &crate::Connection,
+    agent_id: i64,
+    user_id: i64,
+    cap: Cap,
+    window: &DailyWindow,
+) -> Result<i64> {
     let (sql, owner) = match cap {
         Cap::Messages => (
             "SELECT COUNT(*) FROM messages WHERE creator_id=? AND created_at BETWEEN ? AND ? AND board_post_opener=0",
@@ -237,5 +280,142 @@ pub fn usage(conn: &crate::Connection, agent_id: i64, user_id: i64, cap: Cap, wi
         ),
     };
     Ok(conn.query_row_cached(sql, params![owner, window.start, window.end], |r| r.get(0))?)
+}
 
+/// Preserve absent versus unusable Drive input; HTTP adapters own raw JSON casts.
+#[derive(Debug, Clone, Default)]
+pub enum DriveInput {
+    #[default]
+    Absent,
+    Invalid,
+    Ids(Vec<String>),
+}
+#[derive(Debug)]
+pub enum PostResult {
+    Posted(Box<Message>),
+    Denied(super::agent_service::ServiceResult),
+}
+
+/// Agents::Posting. Caller supplies authenticated room membership and post grant.
+/// This additive service keeps the existing canonical `post` signature intact.
+pub fn post_service(
+    tx: &mut Tx<'_>,
+    agent_id: i64,
+    mut a: NewMessage,
+    drive: DriveInput,
+) -> Result<PostResult> {
+    use super::agent_service::{ServiceResult, invalid};
+    let thread = if let Some(id) = a.thread_id {
+        let Some(thread) =
+            crate::ChannelThread::find_by_id(tx.conn(), id)?.filter(|t| t.room_id == a.room_id)
+        else {
+            return Ok(PostResult::Denied(ServiceResult::fail(
+                "Thread not found",
+                404,
+            )));
+        };
+        if thread.locked_at.is_some() {
+            return Ok(PostResult::Denied(ServiceResult::fail(
+                "This thread is locked",
+                422,
+            )));
+        }
+        Some(thread)
+    } else {
+        if let Some(id) = a.reply_to_message_id {
+            let target = Message::find_by_id(tx.conn(), id)?
+                .filter(|m| m.room_id == a.room_id && m.thread_id.is_none());
+            if target.is_none() {
+                return Err(Error::RecordNotFound("Message"));
+            }
+        }
+        None
+    };
+    match prepare(tx, agent_id, a.room_id, a.client_message_id.as_deref())? {
+        PostingCheck::Replay(message) => return Ok(PostResult::Posted(message)),
+        PostingCheck::Budget(payload) => {
+            return Ok(PostResult::Denied(ServiceResult::budget(payload)));
+        }
+        PostingCheck::Allowed => {}
+    }
+    match drive {
+        DriveInput::Absent => {}
+        DriveInput::Ids(ids) if ids.iter().all(|id| super::message::valid_drive_file_id(id)) => {
+            a.drive_file_ids = ids;
+        }
+        _ => {
+            let mut errors = crate::Errors::default();
+            errors.add("drive_attachments", "includes an invalid file id");
+            return Ok(PostResult::Denied(invalid(errors)));
+        }
+    }
+    if a.markdown_source.is_some() {
+        a.body = None;
+    }
+    a.creator_id =
+        tx.conn()
+            .query_row("SELECT user_id FROM agents WHERE id=?", [agent_id], |r| {
+                r.get(0)
+            })?;
+    let message = match tx.savepoint(|tx| {
+        if let Some(mut thread) = thread {
+            thread.post_message(tx, a.creator_id, a)
+        } else {
+            Message::create(tx, a)
+        }
+    }) {
+        Ok(message) => message,
+        Err(Error::RecordInvalid(errors)) => return Ok(PostResult::Denied(invalid(errors))),
+        Err(error) => return Err(error),
+    };
+    broadcast_create(tx, &message)?;
+    super::bot_webhook_fanout::deliver(tx, &message)?;
+    // Attachment analysis/thumbnail processing is supplied by the storage/app owner.
+    Ok(PostResult::Posted(Box::new(message)))
+}
+
+pub fn broadcast_create(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
+    use crate::broadcasts::{Broadcast, Partial, conversation_messages, dom_id, room_dom_id};
+    let room = crate::Room::find(tx.conn(), message.room_id)?;
+    let target = message.thread_id.map_or_else(
+        || room_dom_id(&room, Some("messages")),
+        |id| dom_id("channel_thread", id, Some("messages")),
+    );
+    tx.emit_after_commit(crate::Event::broadcast(&Broadcast::append(
+        conversation_messages(tx.conn(), message)?,
+        target,
+        Partial::Message {
+            message_id: message.id,
+        },
+    )));
+    if message.thread_id.is_none() && !message.system_note {
+        broadcast_unread_room(tx, message)?;
+    }
+    Ok(())
+}
+
+pub fn broadcast_unread_room(tx: &mut Tx<'_>, message: &Message) -> Result<()> {
+    use crate::broadcasts::Broadcast;
+    let memberships = crate::Room::find(tx.conn(), message.room_id)?.memberships(tx.conn())?;
+    let mentions = if memberships
+        .iter()
+        .any(|m| m.involvement == Some(crate::Involvement::Muted))
+    {
+        message
+            .mentionees(tx.conn(), tx.rich_text())?
+            .into_iter()
+            .map(|u| u.id)
+            .collect::<Vec<_>>()
+    } else {
+        Vec::new()
+    };
+    for m in memberships {
+        if m.involvement != Some(crate::Involvement::Muted) || mentions.contains(&m.user_id) {
+            tx.emit_after_commit(crate::Event::broadcast(&Broadcast::Cable {
+                stream: format!("user_{}_unread_rooms", m.user_id),
+                payload: json!({"roomId":message.room_id}),
+            }));
+        }
+    }
+    Ok(())
 }
