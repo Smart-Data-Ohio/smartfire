@@ -1,0 +1,43 @@
+{
+  "reference_pin": "d7c7de92",
+  "timeouts": [
+    {
+      "name": "oauth",
+      "write_timeout": 10
+    },
+    {
+      "name": "revoke",
+      "write_timeout": 10
+    },
+    {
+      "name": "write",
+      "write_timeout": 60
+    },
+    {
+      "name": "read",
+      "write_timeout": 60
+    }
+  ],
+  "errors": [
+    {
+      "name": "oauth",
+      "class": "Net::WriteTimeout",
+      "message": "Could not reach GitHub (Write Timeout)"
+    },
+    {
+      "name": "write",
+      "class": "Net::WriteTimeout",
+      "message": "Could not reach GitHub (Write Timeout)"
+    },
+    {
+      "name": "oauth",
+      "class": "EOFError",
+      "message": "Could not reach GitHub (Eof Error)"
+    },
+    {
+      "name": "write",
+      "class": "EOFError",
+      "message": "Could not reach GitHub (Eof Error)"
+    }
+  ]
+}

@@ -42,22 +42,34 @@ pub fn is_blank(s: &str) -> bool {
 mod tests {
     use super::*;
 
-    /// test/models/opengraph/document_test.rb
-    #[test]
-    fn extracts_opengraph_tags() {
-        let expected = vec![
+    fn expected(description: &str) -> Vec<(&'static str, String)> {
+        vec![
             ("title", "Hey!".to_string()),
             ("url", "https://example.com".to_string()),
             ("image", "https://example.com/image.png".to_string()),
-            ("description", "desc..".to_string()),
-        ];
-        let html = "<html><head><meta property=\"og:url\" content=\"https://example.com\"><meta property=\"og:title\" content=\"Hey!\"><meta property=\"og:description\" content=\"desc..\"><meta property=\"og:image\" content=\"https://example.com/image.png\"></head></html>";
-        assert_eq!(opengraph_attributes(Some(html.as_bytes())), expected);
-        assert_eq!(opengraph_attributes(Some(html.replace("property=", "name=").as_bytes())), expected);
+            ("description", description.to_string()),
+        ]
+    }
 
+    /// test/models/opengraph/document_test.rb: property attributes.
+    #[test]
+    fn extracts_opengraph_tags() {
+        let html = "<html><head><meta property=\"og:url\" content=\"https://example.com\"><meta property=\"og:title\" content=\"Hey!\"><meta property=\"og:description\" content=\"desc..\"><meta property=\"og:image\" content=\"https://example.com/image.png\"></head></html>";
+        assert_eq!(opengraph_attributes(Some(html.as_bytes())), expected("desc.."));
+    }
+
+    /// test/models/opengraph/document_test.rb: name attributes.
+    #[test]
+    fn ws15e_rails_document_name_attributes() {
+        let html = r#"<html><head><meta name="og:url" content="https://example.com"><meta name="og:title" content="Hey!"><meta name="og:description" content="desc.."><meta name="og:image" content="https://example.com/image.png"></head></html>"#;
+        assert_eq!(opengraph_attributes(Some(html.as_bytes())), expected("desc.."));
+    }
+
+    /// test/models/opengraph/document_test.rb: absent encoding with non-UTF8 characters.
+    #[test]
+    fn ws15e_rails_document_absent_encoding() {
         let html = "<html><head><meta name=\"og:url\" content=\"https://example.com\"><meta name=\"og:title\" content=\"Hey!\"><meta name=\"og:description\" content=\"Hello â\u{0080}\u{0099}World\"><meta name=\"og:image\" content=\"https://example.com/image.png\"></head></html>";
-        let attributes = opengraph_attributes(Some(html.as_bytes()));
-        assert_eq!(attributes[3], ("description", "Hello World".to_string()));
+        assert_eq!(opengraph_attributes(Some(html.as_bytes())), expected("Hello World"));
         assert!(opengraph_attributes(None).is_empty());
     }
 

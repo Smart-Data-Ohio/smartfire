@@ -116,7 +116,7 @@ async fn post(net: &Network, url: &str, payload: String) -> Result<(u16, Option<
     let mut request = http::Request::net_http(hyper::Method::POST, http::request_uri(&uri), Some(uri_host), headers).transport(true, &endpoint);
     request.body = payload.into_bytes();
 
-    let timeouts = Timeouts { open: ENDPOINT_TIMEOUT, read: ENDPOINT_TIMEOUT };
+    let timeouts = Timeouts { open: ENDPOINT_TIMEOUT, read: ENDPOINT_TIMEOUT, write: http::NET_HTTP_DEFAULT_TIMEOUT };
     let response = http::exchange(net, &endpoint, request, &timeouts).await.map_err(WebhookError::Http)?;
     let (status, content_type) = (response.status, response.content_type());
     let body = match response.read_body(MAX_REPLY_SIZE).await.map_err(WebhookError::Http)? {

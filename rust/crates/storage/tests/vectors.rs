@@ -2,8 +2,8 @@
 //!
 //! Set `CAMPFIRE_STORAGE_VECTORS=/path/to/storage.json` to check against another run (e.g. one
 //! generated on a host whose libvips/ffmpeg match the local ones). Processed media is compared
-//! byte for byte only when the local libvips/ffmpeg versions match the ones that produced the
-//! vectors; otherwise the mismatch is reported and the byte checks are skipped.
+//! byte for byte when the local libvips/ffmpeg versions match the ones that produced the
+//! vectors. CI requires that environment; locally a mismatch prints an explicit skip reason.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -226,35 +226,32 @@ CREATE UNIQUE INDEX index_active_storage_variant_records_uniqueness ON active_st
 "#;
 
 struct Comparison {
-    compare_images: bool,
-    compare_video: bool,
     mismatches: Vec<String>,
     identical: Vec<String>,
 }
 
 impl Comparison {
-    fn new(versions: &J) -> Self {
+    fn new(versions: &J) -> Option<Self> {
         let local_vips = campfire_storage::vips::version();
         let local_ffmpeg = ffmpeg_version();
-        let compare_images = versions["libvips"] == local_vips.as_str();
-        let compare_video = compare_images && versions["ffmpeg"] == local_ffmpeg.as_str();
-        if !compare_images || !compare_video {
-            eprintln!(
-                "skipping byte comparisons that depend on versions: vectors have libvips {} / {}, local libvips {local_vips} / {local_ffmpeg}",
+        if versions["libvips"] != local_vips.as_str() || versions["ffmpeg"] != local_ffmpeg.as_str() {
+            let reason = format!(
+                "pinned media required: expected libvips {} / ffmpeg {}, found libvips {local_vips} / ffmpeg {local_ffmpeg}",
                 versions["libvips"], versions["ffmpeg"]
             );
+            assert!(std::env::var_os("CI").is_none(), "pipeline_matches_the_reference: {reason}");
+            eprintln!("skipping pipeline_matches_the_reference locally: {reason}");
+            return None;
         }
-        Self { compare_images, compare_video, mismatches: vec![], identical: vec![] }
+        Some(Self { mismatches: vec![], identical: vec![] })
     }
 
-    /// Row fields that don't depend on processing output always match; checksum, size and
-    /// dimensions of processed media only when the versions match.
-    fn blob(&mut self, label: &str, actual: &Blob, expected: &J, processed: bool, video: bool) {
+    /// Every row, metadata and byte assertion runs in the pinned processing environment.
+    fn blob(&mut self, label: &str, actual: &Blob, expected: &J, _processed: bool, _video: bool) {
         assert_eq!(actual.filename.raw(), expected["filename"], "{label} filename");
         assert_eq!(actual.content_type.as_deref(), expected["content_type"].as_str(), "{label} content_type");
         assert_eq!(actual.service_name, expected["service_name"], "{label} service_name");
-        let compare = !processed || if video { self.compare_video } else { self.compare_images };
-        if compare {
+        {
             assert_eq!(actual.metadata.encode(), expected["metadata"].as_str().unwrap(), "{label} metadata");
             if actual.checksum.as_deref() == expected["checksum"].as_str() && actual.byte_size == expected["byte_size"].as_i64().unwrap() {
                 self.identical.push(label.to_string());
@@ -269,19 +266,21 @@ impl Comparison {
 }
 
 fn ffmpeg_version() -> String {
-    let output = std::process::Command::new("ffmpeg").arg("-version").output().unwrap();
-    String::from_utf8_lossy(&output.stdout).lines().next().unwrap_or("").trim().to_string()
+    match std::process::Command::new("ffmpeg").arg("-version").output() {
+        Ok(output) => String::from_utf8_lossy(&output.stdout).lines().next().unwrap_or("").trim().to_string(),
+        Err(error) => format!("unavailable ({error})"),
+    }
 }
 
 #[test]
 fn pipeline_matches_the_reference() {
     let vectors = vectors();
+    let Some(mut comparison) = Comparison::new(&vectors["versions"]) else { return };
     let files = vectors_path().parent().unwrap().join("storage");
     let root = tempfile::tempdir().unwrap();
     let storage = Storage::new(DiskService::new(root.path(), "local"), Arc::new(verifier()));
     let conn = Connection::open_in_memory().unwrap();
     conn.execute_batch(SCHEMA).unwrap();
-    let mut comparison = Comparison::new(&vectors["versions"]);
 
     let check_variant = |comparison: &mut Comparison, conn: &Connection, source: &Blob, v: &J, image: Blob, video: bool| {
         let label = v["label"].as_str().unwrap();
