@@ -449,6 +449,70 @@ mod tests {
         assert_eq!(e.webhook_status, "delivered");
         assert_eq!(e.webhook_attempts, 1);
     }
+
+    #[tokio::test]
+    async fn ws11_approval_queue_failure_rolls_back_decision_ledger_and_inbox() {
+        use campfire_db::{AgentApproval, NewApproval};
+        let test=TestApp::boot().await.expect("default seed");
+        let db=test.db();
+        let approval=db.write(|tx| {
+            let agent_id=tx.conn().query_row("SELECT id FROM agents WHERE user_id=?",[BENDER],|r|r.get(0))?;
+            AgentApproval::create(tx,NewApproval {agent_id,action:"deploy".into(),summary:"Ship".into(),..Default::default()})
+        }).await.unwrap();
+        let id=approval.id;
+        db.write(|tx| {
+            tx.conn().execute_batch("CREATE TRIGGER ws11_reject_decision_webhook BEFORE INSERT ON background_jobs WHEN NEW.job_class='Agent::EventWebhookJob' BEGIN SELECT RAISE(ABORT,'WS11 rejected decision webhook'); END;")?;
+            Ok(())
+        }).await.unwrap();
+        let failed=db.write(move |tx| {
+            let mut approval=AgentApproval::find(tx.conn(),id)?.unwrap();
+            let user=User::find(tx.conn(),DAVID)?;
+            assert!(approval.decide(tx,"approved",&user,None)?.is_empty());
+            Ok(())
+        }).await;
+        assert!(failed.is_err(),"durable queue insertion must be part of settlement");
+        db.read(move |c| {
+            assert_eq!(AgentApproval::find(c,id)?.unwrap().status,"pending");
+            let events:i64=c.query_row("SELECT COUNT(*) FROM agent_events WHERE agent_approval_id=?",[id],|r|r.get(0))?;
+            let handled:i64=c.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='AgentApproval' AND source_id=? AND handled_at IS NOT NULL",[id],|r|r.get(0))?;
+            assert_eq!((events,handled),(0,0));Ok(())
+        }).await.unwrap();
+        db.write(|tx| {tx.conn().execute_batch("DROP TRIGGER ws11_reject_decision_webhook")?;Ok(())}).await.unwrap();
+        db.write(move |tx| {
+            let mut approval=AgentApproval::find(tx.conn(),id)?.unwrap();let user=User::find(tx.conn(),DAVID)?;
+            assert!(approval.decide(tx,"approved",&user,None)?.is_empty());Ok(())
+        }).await.unwrap();
+        db.read(move |c| {
+            assert_eq!(AgentApproval::find(c,id)?.unwrap().status,"approved");
+            let event= c.query_row("SELECT id FROM agent_events WHERE agent_approval_id=?",[id],|r|r.get::<_,i64>(0))?;
+            let jobs:i64=c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Agent::EventWebhookJob' AND json_extract(arguments,'$.event_id')=?",[event],|r|r.get(0))?;
+            assert_eq!(jobs,1);Ok(())
+        }).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn ws11_slash_queue_failure_rolls_back_the_invocation() {
+        use campfire_db::{AgentSlashCommand,NewAgentSlashCommand};
+        let test=TestApp::boot().await.expect("default seed");let db=test.db();
+        db.write(|tx| {
+            let agent_id=tx.conn().query_row("SELECT id FROM agents WHERE user_id=?",[BENDER],|r|r.get(0))?;
+            tx.conn().execute("DELETE FROM agent_grants WHERE agent_id=?",[agent_id])?;
+            Room::find(tx.conn(),ALL_TALK)?.grant_to(tx,&[BENDER])?;
+            AgentSlashCommand::create(tx,NewAgentSlashCommand {agent_id,room_id:ALL_TALK,name:"inspect".into(),..Default::default()})?;
+            tx.conn().execute_batch("CREATE TRIGGER ws11_reject_slash_webhook BEFORE INSERT ON background_jobs WHEN NEW.job_class='Agent::EventWebhookJob' BEGIN SELECT RAISE(ABORT,'WS11 rejected slash webhook'); END;")?;
+            Ok(())
+        }).await.unwrap();
+        let failed=db.write(|tx| {
+            let context=campfire_db::slash_commands::Context {user_id:DAVID,room_id:ALL_TALK,thread_id:None,huddles_configured:false};
+            let result=campfire_db::slash_commands::dispatch(tx,&context,"/inspect queue")?;
+            assert_eq!(result.kind,"ephemeral");Ok(())
+        }).await;
+        assert!(failed.is_err(),"invocation and webhook queue insertion must commit together");
+        db.read(|c| {
+            let count:i64=c.query_row("SELECT COUNT(*) FROM agent_events WHERE event_type='slash_command'",[],|r|r.get(0))?;
+            assert_eq!(count,0);Ok(())
+        }).await.unwrap();
+    }
 }
 
 #[cfg(test)]

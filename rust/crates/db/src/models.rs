@@ -1,12 +1,18 @@
 //! One module per model under `reference/app/models`.
 
 pub mod account;
+pub mod agent;
 pub mod agent_access;
 pub mod agent_profile;
+pub mod agent_approval;
+pub mod agent_approvals;
+pub mod agent_service;
+pub mod agent_slash_command;
 pub mod agent_credential;
 pub mod agent_grant;
 pub mod agent_delivery;
 pub mod agent_event_access;
+pub mod agent_event_polling;
 pub mod agent_payloads;
 pub mod agent_posting;
 pub mod audit_log;
@@ -74,3 +80,6 @@ pub use workspace_presence_lease::WorkspacePresenceLease;
 
 pub use agent_credential::{AgentCredential, NewCredential};
 pub use agent_grant::{AgentGrant, NewGrant};
+pub use agent_approval::{AgentApproval, NewApproval};
+pub use agent::{Agent,AgentChanges,AgentKind,NewAgent};
+pub use agent_slash_command::{AgentSlashCommand,NewAgentSlashCommand};

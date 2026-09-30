@@ -149,7 +149,7 @@ fn approval_payload(conn: &Connection, id: i64) -> Result<Option<Value>> {
         },
     )
 }
-fn compact(mut value: Value) -> Value {
+pub(crate) fn compact(mut value: Value) -> Value {
     if let Some(map) = value.as_object_mut() {
         map.retain(|_, v| !v.is_null());
     }
@@ -162,7 +162,7 @@ pub fn rails_json(value: &Value) -> String {
         .replace('>', "\\u003e")
         .replace('&', "\\u0026")
 }
-fn json_time(time: Timestamp) -> String {
+pub(crate) fn json_time(time: Timestamp) -> String {
     format!(
         "{}.{:03}Z",
         time.jiff().strftime("%Y-%m-%dT%H:%M:%S"),
