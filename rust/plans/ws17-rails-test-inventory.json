@@ -1992,65 +1992,65 @@
     {
       "file": "test/system/service_worker_test.rb",
       "test": "the worker caches static assets and never authenticated responses",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "python3 rust/reference-tools/ws17_browser.py (real Chromium against the native HTTP app/private rebuilt Rails seed; original selectors/actions, actual persisted readback, live sounds, CSS/media/phone, two viewers and cache inventory)"
     },
     {
       "file": "test/system/service_worker_test.rb",
       "test": "the offline shell renders with working retry behavior",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "python3 rust/reference-tools/ws17_browser.py (real Chromium against the native HTTP app/private rebuilt Rails seed; original selectors/actions, actual persisted readback, live sounds, CSS/media/phone, two viewers and cache inventory)"
     },
     {
       "file": "test/system/status_notifications_test.rb",
       "test": "setting presence and a custom status",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "python3 rust/reference-tools/ws17_browser.py (real Chromium against the native HTTP app/private rebuilt Rails seed; original selectors/actions, actual persisted readback, live sounds, CSS/media/phone, two viewers and cache inventory)"
     },
     {
       "file": "test/system/status_notifications_test.rb",
       "test": "enabling DND mutes sounds and persists quiet hours",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "python3 rust/reference-tools/ws17_browser.py (real Chromium against the native HTTP app/private rebuilt Rails seed; original selectors/actions, actual persisted readback, live sounds, CSS/media/phone, two viewers and cache inventory)"
     },
     {
       "file": "test/system/status_notifications_test.rb",
       "test": "chat sounds follow the live quiet-hours window without a reload",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "python3 rust/reference-tools/ws17_browser.py (real Chromium against the native HTTP app/private rebuilt Rails seed; original selectors/actions, actual persisted readback, live sounds, CSS/media/phone, two viewers and cache inventory)"
     },
     {
       "file": "test/system/status_notifications_test.rb",
       "test": "switching the theme applies without a reload flash",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "python3 rust/reference-tools/ws17_browser.py (real Chromium against the native HTTP app/private rebuilt Rails seed; original selectors/actions, actual persisted readback, live sounds, CSS/media/phone, two viewers and cache inventory)"
     },
     {
       "file": "test/system/status_notifications_test.rb",
       "test": "switching the text size rescales the page",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "python3 rust/reference-tools/ws17_browser.py (real Chromium against the native HTTP app/private rebuilt Rails seed; original selectors/actions, actual persisted readback, live sounds, CSS/media/phone, two viewers and cache inventory)"
     },
     {
       "file": "test/system/status_notifications_test.rb",
       "test": "button icons follow the manual theme, not the OS",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "python3 rust/reference-tools/ws17_browser.py (real Chromium against the native HTTP app/private rebuilt Rails seed; original selectors/actions, actual persisted readback, live sounds, CSS/media/phone, two viewers and cache inventory)"
     },
     {
       "file": "test/system/status_notifications_test.rb",
       "test": "the status form works at phone width",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "python3 rust/reference-tools/ws17_browser.py (real Chromium against the native HTTP app/private rebuilt Rails seed; original selectors/actions, actual persisted readback, live sounds, CSS/media/phone, two viewers and cache inventory)"
     },
     {
       "file": "test/system/meeting_status_test.rb",
@@ -2069,9 +2069,9 @@
     {
       "file": "test/system/out_of_office_test.rb",
       "test": "set OOO until tomorrow, badge and DM notice show for another user, then clear it",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "python3 rust/reference-tools/ws17_browser.py (real Chromium against the native HTTP app/private rebuilt Rails seed; original selectors/actions, actual persisted readback, live sounds, CSS/media/phone, two viewers and cache inventory)"
     },
     {
       "file": "test/integration/ooo_dm_notice_test.rb",

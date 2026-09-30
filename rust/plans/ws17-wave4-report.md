@@ -26,6 +26,7 @@ Profile/subscription/allowance slice pushed at `ba916992`; keyword recording pus
 | `db/tests/named_policy_test.rs`, `notification_policy.rs`; named policy oracle, pinned declarations and regeneration | Largest remaining file first: 52 individually named Rust tests. Run the unchanged pinned Ruby test declarations/setup/private helpers/assertions under an isolated fixture/clock host, not rewritten case tables: all 52 Ruby cases and 133 original assertions pass. Capture 82 constructor observations, then replay actual persisted recipient/cache/allowance state and decisions in Rust. A real SQLite trace asserts zero policy queries and one batched allowance query (zero without sender). Dynamic kind parsing rejects unknown strings with the pin's exact error message. |
 | `db/tests/named_calendar_status_test.rs`, `user_status_settings.rs`; pinned OOO/meeting declarations and oracle | Next largest deferred files: all 22 OOO and 14 meeting-status titles, each an individual named Rust test. The unchanged Ruby bodies run 98 original assertions; replay all 199 operations in order on one real DB/clock per case, checking both loaded and persisted attributes before/after every call. Cache creation is source setup SQL at the WS14 seam. Match failed-save retention, expired settings, racing/repeated claims, presets, zones, quiet/label precedence and deactivation. Add the separate pure visibility/quiet/date readers and a loaded-settings deactivation wrapper that clears the owned OOO attributes with the real User write. |
 | `views/users/statuses.rs`, uncached OOO wrapper, profile status/allowance partials, room/user presenters and controllers | Mount the complete pinned OOO wrapper for every other active human DM member, including blank/off members so future OOO can update live. Exact name ordering, viewer scoping, escaped note, calendar invisibility and signed streams. Add the live profile badge and viewer-scoped DND controls. Nine complete wrapper strings, three profile status sections and both full allowance forms are byte-identical to actual pinned Rails. All 10 named DM integration cases pass over seeded HTTP/real sockets, including an actual two-hour shared clock advance. Three injections fail assertions. |
+| `reference-tools/ws17_browser.py`, `ws17_browser.mjs` | Ten individually named Chromium scenarios: 7 status notifications, 1 OOO and 2 service worker. Real forms, actual persisted readback, live Audio replacement exactly as the original test, computed CSS under opposite OS theme, 390px viewport, two Rails-issued user cookies and actual browser CacheStorage. Isolated private seed copy and native server on owned 52471; no source/controller stubs or output masks. Wait for observable CSS completion after the Turbo render. Google fetch/browser execution stays WS14-owned. |
 | `reference-tools/ws17_profile_ui.rb`, regeneration script, verifier and injection runner | Actual pinned source/output verification; no Rails changes, output masks, allowlist changes or new ignores. |
 
 User/profile security, GitHub/inbox/voice settings and connected-service UI belong to WS9/WS11/WS12/WS13/WS14/WS15. The existing basic profile update path still needs those owners' callbacks. This slice adds only the owned appearance attributes, without claiming whole-profile parity.
@@ -56,6 +57,7 @@ pub fn push(&self) -> bool;
 WS13 builds invitation/join `PushPayload` and candidate room-membership facts. WS17's shared transport is available now. Before `Pool::queue`, preload settings once and evaluate `NotificationPolicy` with current time and the actual sender's DND allowances. Invitation uses `NotificationKind::Huddle`; join uses **`NotificationKind::HuddleJoin` with the recipient's actual `room_involvement`** (missing membership is `None`, a present SQL-null involvement is `Some(None)`). Other unused policy inputs are false/None. Join with missing, invisible, nothing or muted membership is suppressed. `Pool::queue` itself applies no policy or recipient-scope filtering.
 
 Keep Rails' pusher scopes before delivery: visible/disconnected memberships, invitations exclude `nothing`, joins exclude `nothing` and `muted`; SQL-null exclusions follow Rails SQL rather than adding eligibility. Join also checks the huddle inbox preference and claims its ten-minute throttle only after policy and subscriptions permit an actual push. The dedicated durable huddle gate/delivery adapter is now available below; the shared transport signatures remain unchanged. WS13 still connects its source jobs/lifecycle and payload construction to this adapter. WS13 owns payload/source construction, WS17 the gate/transport. `PushPayload::new` preserves supplied strings/tag without automatic truncation. Pool reads fresh badges and delivers through current VAPID and stored pinned endpoint IP. Preserve transactional claim/enqueue when connecting the source.
+
 
 
 
@@ -112,6 +114,22 @@ workspace dependency keys: 75 unique; 0 duplicates (strict TOML parse)
 ```
 
 All commands run in this worktree, own `rust/target`, pinned toolchain and `-j 4`. Seeded app tests require the built default/first-run seeds, not a silent local skip. Existing app ignores are main's cable recording/latency tests and WS11's `manages_bots`; no new ignore was added. DB's three existing oracle/export ignores require their dedicated external environment.
+
+`python3 rust/reference-tools/ws17_browser.py`
+
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.94s
+test/system/status_notifications_test.rb: 7 passed; 0 failed
+test/system/out_of_office_test.rb: 1 passed; 0 failed
+test/system/service_worker_test.rb: 2 passed; 0 failed
+WS17 Chromium: 10 passed; 0 failed
+```
+
+`mise exec rust@1.98.1 -- cargo clippy --locked -j 4 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings`
+
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.50s
+```
 
 `python3 rust/reference-tools/ws17_regenerate_dm_profile.py`
 
@@ -308,7 +326,7 @@ The three new named status injections retain stale loaded OOO on deactivation, l
 
 ## Precisely remaining
 
-1. Profile/UI integration stays partial: Smartfire's complete profile contains other owners' sections; sidebar presence composition must connect to WS8b/WS13's full room templates and request-free broadcasts. Profile badge and uncached DM OOO composition, line bytes and transport are now ported. Full page/browser/pixel parity and Rails rollback/readback rehearsal have not run. Appearance, subscription and allowance gaps above are closed.
+1. Profile/UI integration stays partial: Smartfire's complete profile contains other owners' sections; sidebar presence composition must connect to WS8b/WS13's full room templates and request-free broadcasts. Profile badge and uncached DM OOO composition, line bytes and transport are now ported. The 10 owned browser scenarios now pass; full-page/pixel parity and Rails rollback/readback rehearsal remain pending. Appearance, subscription and allowance gaps above are closed.
 2. Message keyword recording is delivered. WS12 still owns generic/caller-authorized recording, work events, inbox queries/controllers/source rendering and access rules. `ActivityItem::record_message(tx: &mut Tx, message: &Message) -> Result<Vec<ActivityItem>>` is the minimal shared seam. WS11 must call it on a live stream finalize; WS16 must gate it for importing together with the existing message callback chain. This slice gates normal creation on non-streaming/non-system-note state; edits do not re-record.
 3. Meeting/OOO due sweeps and conditional claims/broadcasts are delivered. WS14 owns validated cache creation (the one remaining cache title), Google fetch execution and refresh completion at the documented job seam.
 4. Event/board pushers, registered durable jobs and the huddle policy/throttle/durable-delivery adapter are delivered. WS12/14 must connect their source claims/callbacks to the documented ID jobs; WS13 must connect invitation/join source jobs and payloads to the adapter. Four named invitation-source job titles remain deferred to WS13. Room handler audit remains. Huddle fan-out batching against the eventual WS13 notifier still needs owner integration/performance verification.
@@ -316,7 +334,7 @@ The three new named status injections retain stale loaded OOO on deactivation, l
 
 ## Named scenario coverage by file
 
-347 selected exact Rails titles: **299 passed equivalent; 48 deferred**. `rust/plans/ws17-rails-test-inventory.json` records exact title, owner, status and Rust evidence. Additional profile/UI HTTP cases are outside this pre-existing selected inventory.
+347 selected exact Rails titles: **309 passed equivalent; 38 deferred**. `rust/plans/ws17-rails-test-inventory.json` records exact title, owner, status and Rust evidence. Additional profile/UI HTTP cases are outside this pre-existing selected inventory.
 
 | Rails file | Passed equivalent | Deferred |
 | --- | ---: | ---: |
@@ -341,7 +359,7 @@ The three new named status injections retain stale loaded OOO on deactivation, l
 | `test/models/room/push_test.rb` | 7 | 1 |
 | `test/channels/workspace_presence_channel_test.rb` | 7 | 0 |
 | `test/controllers/users/presences_controller_test.rb` | 7 | 0 |
-| `test/system/status_notifications_test.rb` | 0 | 7 |
+| `test/system/status_notifications_test.rb` | 7 | 0 |
 | `test/controllers/users/push_subscriptions_controller_test.rb` | 6 | 0 |
 | `test/controllers/users/dnd_allowances_controller_test.rb` | 5 | 0 |
 | `test/jobs/huddle/push_invitation_job_test.rb` | 0 | 4 |
@@ -350,8 +368,8 @@ The three new named status injections retain stale loaded OOO on deactivation, l
 | `test/lib/web_push/persistent_request_test.rb` | 1 | 1 |
 | `test/models/dnd_allowed_user_test.rb` | 2 | 0 |
 | `test/system/meeting_status_test.rb` | 0 | 2 |
-| `test/system/service_worker_test.rb` | 0 | 2 |
-| `test/system/out_of_office_test.rb` | 0 | 1 |
+| `test/system/service_worker_test.rb` | 2 | 0 |
+| `test/system/out_of_office_test.rb` | 1 | 0 |
 
 ## Every deferred exact title and owner
 
@@ -374,13 +392,6 @@ The three new named status injections retain stale loaded OOO on deactivation, l
 | `test/services/activity_items/recorder_test.rb` | work assigned by an agent honors the recipient's agent_work switch | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
 | `test/services/activity_items/recorder_test.rb` | work events notify followed thread members | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
 | `test/services/activity_items/recorder_test.rb` | work updates for one thread collapse into a single item | WS17 continuation (keyword integration); WS12 (full recorder/lifecycle) |
-| `test/system/status_notifications_test.rb` | button icons follow the manual theme, not the OS | WS17 continuation |
-| `test/system/status_notifications_test.rb` | chat sounds follow the live quiet-hours window without a reload | WS17 continuation |
-| `test/system/status_notifications_test.rb` | enabling DND mutes sounds and persists quiet hours | WS17 continuation |
-| `test/system/status_notifications_test.rb` | setting presence and a custom status | WS17 continuation |
-| `test/system/status_notifications_test.rb` | switching the text size rescales the page | WS17 continuation |
-| `test/system/status_notifications_test.rb` | switching the theme applies without a reload flash | WS17 continuation |
-| `test/system/status_notifications_test.rb` | the status form works at phone width | WS17 continuation |
 | `test/models/push/subscription_test.rb` | delivery is skipped when the endpoint no longer resolves to a public IP | WS17 continuation |
 | `test/models/push/subscription_test.rb` | endpoint resolution is deferred from the enqueue path to the delivery worker | WS17 continuation |
 | `test/models/push/subscription_test.rb` | rejects endpoint that resolves to link-local IP (AWS IMDS) | WS17 continuation |
@@ -399,9 +410,6 @@ The three new named status injections retain stale loaded OOO on deactivation, l
 | `test/models/notifications/keyword_matcher_test.rb` | treats phrases literally, not as patterns | WS17 continuation |
 | `test/system/meeting_status_test.rb` | opting in shows In a meeting for a stubbed busy interval, then clears after it ends | WS17 continuation |
 | `test/system/meeting_status_test.rb` | the profile links to connect without a Google account | WS17 continuation |
-| `test/system/service_worker_test.rb` | the offline shell renders with working retry behavior | WS17 continuation |
-| `test/system/service_worker_test.rb` | the worker caches static assets and never authenticated responses | WS17 continuation |
 | `test/lib/web_push/persistent_request_test.rb` | ignores proxy env so the pin can't be routed through a re-resolving proxy | WS17 continuation |
 | `test/models/calendar/meeting_cache_test.rb` | one cache per user | WS17 continuation (claims/readers); WS14 (cache persistence/feed) |
 | `test/models/room/push_test.rb` | a forwarded note follows the mention push path while its snapshot does not | WS17 continuation |
-| `test/system/out_of_office_test.rb` | set OOO until tomorrow, badge and DM notice show for another user, then clear it | WS17 continuation |
