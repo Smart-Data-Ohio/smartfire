@@ -8,6 +8,7 @@ import re
 import argparse
 parser=argparse.ArgumentParser()
 parser.add_argument('--test-log',type=Path,help='raw cargo test output for the named one-to-one Rust Rails cases')
+parser.add_argument('--rails-log',type=Path,help='raw per-file output from check_controller_files.py')
 args=parser.parse_args()
 root=Path(__file__).resolve().parents[3]
 reference=Path(os.environ.get('CAMPFIRE_REFERENCE',root))
@@ -106,5 +107,15 @@ if args.test_log:
     file.update(rust_cases_run=len(file['declared_cases']),rust_pass_count=len(file['declared_cases']),status='all eight source-declared cases ported to individually executed Rust tests')
     print(f"Rails case port receipts: {file['file']}: {file['rust_pass_count']} Rust cases passed, 0 deferred; 0 Rails Minitest executions")
     output['note']='Source declarations are not dynamically expanded Rails tests. The inbound-email file has one individually executed Rust test per declaration, with receipts from the supplied raw cargo log; remaining full-file case mappings are deferred. No Rails Minitest execution claimed.'
+if args.rails_log:
+    text=args.rails_log.read_text()
+    receipts=re.findall(r'^(test/controllers/[^\n]+)\n([0-9]+) runs, ([0-9]+) assertions, 0 failures, 0 errors, 0 skips$',text,re.M)
+    assert len(receipts)==14,'missing per-file Rails receipts'
+    by_file={entry['file']:entry for entry in result}
+    for path,runs,assertions in receipts:
+        entry=by_file[path]
+        entry.update(rails_tests_run=int(runs),rails_pass_count=int(runs),rails_assertions=int(assertions))
+    output['note']='Source declarations are distinct from actual executions. Rails reference passes are recorded per file from the supplied raw log; they do not imply Rust case completion. Named Rust ports require their own cargo receipts.'
+    print(f'Rails controller reference receipts: {len(receipts)} files, {sum(int(row[1]) for row in receipts)} passes, 0 failures, 0 errors, 0 skips; reference only')
 (root/'rust/plans/ws8br-rails-cases.json').write_text(json.dumps(output,indent=2)+'\n')
-print(f'Rails deferred inventory: {len(result)} files, {sum(r["declared_count"] for r in result)} source-declared cases; 0 Rails tests run, 0 Rails passes claimed')
+print(f'Rails deferred inventory: {len(result)} files, {sum(r["declared_count"] for r in result)} source-declared cases; {sum(r["rails_tests_run"] for r in result)} Rails tests run, {sum(r["rails_pass_count"] for r in result)} Rails reference passes; Rust mappings separate')

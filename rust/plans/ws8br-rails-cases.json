@@ -1,6 +1,6 @@
 {
   "reference": "d7c7de92",
-  "note": "Source declarations are not dynamically expanded Rails tests. The inbound-email file has one individually executed Rust test per declaration, with receipts from the supplied raw cargo log; remaining full-file case mappings are deferred. No Rails Minitest execution claimed.",
+  "note": "Source declarations are distinct from actual executions. Rails reference passes are recorded per file from the supplied raw log; they do not imply Rust case completion. Named Rust ports require their own cargo receipts.",
   "files": [
     {
       "file": "test/controllers/rooms_controller_test.rb",
@@ -126,9 +126,10 @@
         }
       ],
       "declared_count": 29,
-      "rails_tests_run": 0,
-      "rails_pass_count": 0,
-      "status": "full-file acceptance deferred"
+      "rails_tests_run": 29,
+      "rails_pass_count": 29,
+      "status": "full-file acceptance deferred",
+      "rails_assertions": 153
     },
     {
       "file": "test/controllers/rooms/opens_controller_test.rb",
@@ -198,9 +199,10 @@
         }
       ],
       "declared_count": 15,
-      "rails_tests_run": 0,
-      "rails_pass_count": 0,
-      "status": "full-file acceptance deferred"
+      "rails_tests_run": 15,
+      "rails_pass_count": 15,
+      "status": "full-file acceptance deferred",
+      "rails_assertions": 55
     },
     {
       "file": "test/controllers/rooms/closeds_controller_test.rb",
@@ -258,9 +260,10 @@
         }
       ],
       "declared_count": 12,
-      "rails_tests_run": 0,
-      "rails_pass_count": 0,
-      "status": "full-file acceptance deferred"
+      "rails_tests_run": 12,
+      "rails_pass_count": 12,
+      "status": "full-file acceptance deferred",
+      "rails_assertions": 68
     },
     {
       "file": "test/controllers/rooms/directs_controller_test.rb",
@@ -386,9 +389,10 @@
         }
       ],
       "declared_count": 29,
-      "rails_tests_run": 0,
-      "rails_pass_count": 0,
-      "status": "full-file acceptance deferred"
+      "rails_tests_run": 29,
+      "rails_pass_count": 29,
+      "status": "full-file acceptance deferred",
+      "rails_assertions": 167
     },
     {
       "file": "test/controllers/rooms/involvements_controller_test.rb",
@@ -430,9 +434,10 @@
         }
       ],
       "declared_count": 8,
-      "rails_tests_run": 0,
-      "rails_pass_count": 0,
-      "status": "full-file acceptance deferred"
+      "rails_tests_run": 8,
+      "rails_pass_count": 8,
+      "status": "full-file acceptance deferred",
+      "rails_assertions": 63
     },
     {
       "file": "test/controllers/rooms/refreshes_controller_test.rb",
@@ -458,9 +463,10 @@
         }
       ],
       "declared_count": 4,
-      "rails_tests_run": 0,
-      "rails_pass_count": 0,
-      "status": "full-file acceptance deferred"
+      "rails_tests_run": 4,
+      "rails_pass_count": 4,
+      "status": "full-file acceptance deferred",
+      "rails_assertions": 24
     },
     {
       "file": "test/controllers/rooms/reads_controller_test.rb",
@@ -498,9 +504,10 @@
         }
       ],
       "declared_count": 7,
-      "rails_tests_run": 0,
-      "rails_pass_count": 0,
-      "status": "full-file acceptance deferred"
+      "rails_tests_run": 7,
+      "rails_pass_count": 7,
+      "status": "full-file acceptance deferred",
+      "rails_assertions": 25
     },
     {
       "file": "test/controllers/rooms/members_controller_test.rb",
@@ -562,9 +569,10 @@
         }
       ],
       "declared_count": 13,
-      "rails_tests_run": 0,
-      "rails_pass_count": 0,
-      "status": "full-file acceptance deferred"
+      "rails_tests_run": 13,
+      "rails_pass_count": 13,
+      "status": "full-file acceptance deferred",
+      "rails_assertions": 57
     },
     {
       "file": "test/controllers/rooms/categories_controller_test.rb",
@@ -594,9 +602,10 @@
         }
       ],
       "declared_count": 5,
-      "rails_tests_run": 0,
-      "rails_pass_count": 0,
-      "status": "full-file acceptance deferred"
+      "rails_tests_run": 5,
+      "rails_pass_count": 5,
+      "status": "full-file acceptance deferred",
+      "rails_assertions": 13
     },
     {
       "file": "test/controllers/rooms/favorites_controller_test.rb",
@@ -630,9 +639,10 @@
         }
       ],
       "declared_count": 6,
-      "rails_tests_run": 0,
-      "rails_pass_count": 0,
-      "status": "full-file acceptance deferred"
+      "rails_tests_run": 6,
+      "rails_pass_count": 6,
+      "status": "full-file acceptance deferred",
+      "rails_assertions": 21
     },
     {
       "file": "test/controllers/rooms/inbound_email_addresses_controller_test.rb",
@@ -690,11 +700,12 @@
         }
       ],
       "declared_count": 8,
-      "rails_tests_run": 0,
-      "rails_pass_count": 0,
+      "rails_tests_run": 8,
+      "rails_pass_count": 8,
       "status": "all eight source-declared cases ported to individually executed Rust tests",
       "rust_cases_run": 8,
-      "rust_pass_count": 8
+      "rust_pass_count": 8,
+      "rails_assertions": 26
     },
     {
       "file": "test/controllers/room_categories_controller_test.rb",
@@ -728,9 +739,10 @@
         }
       ],
       "declared_count": 6,
-      "rails_tests_run": 0,
-      "rails_pass_count": 0,
-      "status": "full-file acceptance deferred"
+      "rails_tests_run": 6,
+      "rails_pass_count": 6,
+      "status": "full-file acceptance deferred",
+      "rails_assertions": 26
     },
     {
       "file": "test/controllers/audit_log/rooms_audit_test.rb",
@@ -972,9 +984,10 @@
         }
       ],
       "declared_count": 5,
-      "rails_tests_run": 0,
-      "rails_pass_count": 0,
-      "status": "full-file acceptance deferred"
+      "rails_tests_run": 5,
+      "rails_pass_count": 5,
+      "status": "full-file acceptance deferred",
+      "rails_assertions": 33
     },
     {
       "file": "test/controllers/users_controller_test.rb",
@@ -1132,9 +1145,10 @@
         }
       ],
       "declared_count": 14,
-      "rails_tests_run": 0,
-      "rails_pass_count": 0,
-      "status": "full-file acceptance deferred"
+      "rails_tests_run": 14,
+      "rails_pass_count": 14,
+      "status": "full-file acceptance deferred",
+      "rails_assertions": 76
     },
     {
       "file": "test/controllers/users/tours_controller_test.rb",
