@@ -14,6 +14,7 @@
 //! (Ruby scripts run in the reference) live in testdata/oracle.
 
 mod jobs;
+pub mod action_claims;
 // Account, fetcher and notifier consumers remain staged (WS15g continuation).
 #[allow(dead_code)]
 pub mod github;

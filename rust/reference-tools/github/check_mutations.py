@@ -21,6 +21,8 @@ mutations = [
     ("webhook-signature", "webhooks.rs", "!rails_compat::webhook::verify_github_signature(secret, raw, signature)", "false && !rails_compat::webhook::verify_github_signature(secret, raw, signature)", "webhook_security_", 2),
     ("webhook-secret", "../../controllers/github/webhooks.rs", "return Ok(c.head(StatusCode::SERVICE_UNAVAILABLE));", "return Ok(c.head(StatusCode::OK));", "webhook_security_missing_or_blank_secret", 1),
     ("webhook-dedupe", "webhooks.rs", "if inserted == 0 {\n        return Ok(false);", "if inserted == 0 {\n        return Ok(true);", "webhook_concurrent_duplicates_claim_and_enqueue_once", 1),
+    ("claim-first-winner", "../action_claims.rs", '''"json_extract(agent_events.metadata, '$.status') = 'running'"''', '"1"', "github_claim_sweep_and_late_finish", 1),
+    ("claim-cutoff", "../action_claims.rs", "created_at < ?", "created_at <= ?", "github_claim_sweep_fails_only_overdue", 1),
 ]
 for name, filename, before, after, test_filter, expected_failures in mutations:
     path = base / filename

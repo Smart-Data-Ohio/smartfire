@@ -1,8 +1,8 @@
 # WS15g Rails test coverage — partial
 
-Reference: `d7c7de92`. 426 Rails cases in 31 files: 61 mapped to Rust assertions; 365 explicitly deferred.
+Reference: `d7c7de92`. 426 Rails cases in 31 files: 65 mapped to Rust assertions; 361 explicitly deferred.
 
-These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion and transactional enqueue are covered. Job handlers, card broadcasts and view/system parity, other HTTP controllers, PR persistence/fetch, notifications/subscriptions, agent actions and sweep wiring remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam. No coverage or parity allowlist has been added.
+These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue and the shared stuck-claim sweep with runtime periodic registration are covered. Job handlers, card broadcasts and view/system parity, other HTTP controllers, PR persistence/fetch, notifications/subscriptions and agent write actions remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
 
 ## `test/controllers/accounts/bots/github_connections_controller_test.rb` (10 tests)
 
@@ -409,10 +409,10 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | completion rows are unique per agent and approval | Deferred; WS15g continuation | — |
 | a failed run is not retried by a second run | Deferred; WS15g continuation | — |
 | a missing approval and a non-github approval are silent no-ops | Deferred; WS15g continuation | — |
-| a running claim older than 15 minutes is marked failed by the sweeper | Deferred; WS15g continuation | — |
-| a claim the sweep already failed is not rewritten by a late finish | Deferred; WS15g continuation | — |
-| a claim finished while the sweep runs keeps its result | Deferred; WS15g continuation | — |
-| a fresh running claim is left alone by the sweeper | Deferred; WS15g continuation | — |
+| a running claim older than 15 minutes is marked failed by the sweeper | Mapped to grouped Rust assertions; WS15g | `github_claim_persisted_outcomes_and_audits_match_pinned_rails` |
+| a claim the sweep already failed is not rewritten by a late finish | Mapped to grouped Rust assertions; WS15g | `github_claim_sweep_and_late_finish_keep_the_first_outcome_and_enqueue_once` |
+| a claim finished while the sweep runs keeps its result | Mapped to grouped Rust assertions; WS15g | `github_claim_sweep_and_late_finish_keep_the_first_outcome_and_enqueue_once` |
+| a fresh running claim is left alone by the sweeper | Mapped to grouped Rust assertions; WS15g | `github_claim_sweep_fails_only_overdue_running_claims_and_preserves_metadata` |
 | an approved action posts with the owner's app token when available | Deferred; WS15g continuation | — |
 | an owner PAT never overrides the agent account | Deferred; WS15g continuation | — |
 

@@ -305,13 +305,17 @@ impl TestDb {
     }
 
     pub fn in_dir(clock: Arc<dyn campfire_db::Clock>, directory: &std::path::Path) -> Self {
-        use campfire_db::{BasicRichText, Config, Database, Env, NullSink, fixtures};
+        use campfire_db::{BasicRichText, Env, NullSink};
+        Self::with_env(Env { clock, sink: Arc::new(NullSink), rich_text: Arc::new(BasicRichText), bcrypt_cost: 4 }, directory)
+    }
+
+    pub fn with_env(env: campfire_db::Env, directory: &std::path::Path) -> Self {
+        use campfire_db::{Config, Database, fixtures};
         static COUNTER: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         let path = directory.join(format!("campfire-integrations-{}-{n}", std::process::id()));
         let _ = std::fs::remove_dir_all(&path);
         std::fs::create_dir_all(&path).unwrap();
-        let env = Env { clock, sink: Arc::new(NullSink), rich_text: Arc::new(BasicRichText), bcrypt_cost: 4 };
         let mut config = Config::new(path.join("test.sqlite3"));
         config.environment = "test".into();
         let db = Database::open(config, env).unwrap();

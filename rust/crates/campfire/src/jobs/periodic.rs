@@ -119,10 +119,15 @@ impl Loops {
     }
 }
 
-/// `Periodic::Runner`'s tasks that have been ported and registered (none yet: see the module's
-/// docs).
+/// `Periodic::Runner`'s tasks that have been ported and registered.
 pub fn periodic(_intervals: PeriodicIntervals) -> Periodic<App> {
-    Periodic::new("Periodic")
+    use crate::integrations::action_claims;
+    let mut periodic = Periodic::new("Periodic");
+    periodic.task(Task::new("stuck GitHub claims", action_claims::SWEEP_INTERVAL, |app: App| async move {
+        action_claims::recover_stuck_claims(&app.db, action_claims::GITHUB, app.db.env().now()).await;
+        Ok(())
+    }));
+    periodic
 }
 
 /// `Task.new("clear plaintext bot tokens", BOT_TOKEN_CLEAR_INTERVAL, clear_bot_tokens_once)`.
