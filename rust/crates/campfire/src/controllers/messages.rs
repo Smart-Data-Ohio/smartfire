@@ -388,7 +388,7 @@ pub(crate) async fn broadcast_create(c: &Ctx, room: &Room, message: &Message) ->
             let account = campfire_db::Account::first(conn)?;
             let html = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| views::message(ctx, &view));
             let partials = Rendered { message: Some(html), ..Rendered::default() };
-            app.broadcasts.message_create(conn, &room, &message, &partials)
+            app.broadcasts.message_create(conn, &room, &message, &partials, &*app.db.env().rich_text)
         })
         .await
         .map_err(db_error)

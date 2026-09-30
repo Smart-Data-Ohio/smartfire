@@ -131,7 +131,7 @@ async fn broadcast_to_members(c: &Ctx, room: &Room, update: bool) -> Result<()> 
         .db
         .read(move |conn| {
             if update {
-                broadcasts.closed_room_update(conn, &room, &partials)
+                broadcasts.closed_room_update(conn, &room, &partials, None)
             } else {
                 broadcasts.closed_room_create(conn, &room, &partials)
             }

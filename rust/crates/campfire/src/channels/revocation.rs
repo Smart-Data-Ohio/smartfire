@@ -20,16 +20,3 @@ use super::{Cable, user_gid};
 pub fn disconnect_user(server: &Cable, user_id: i64, reconnect: bool) -> usize {
     server.disconnect(&user_gid(user_id).to_string(), reconnect)
 }
-
-/// Handles the events that belong to the cable server; returns false for the rest. (The app's
-/// `Jobs` sink does this itself, alongside enqueuing jobs.)
-#[cfg(test)]
-pub fn handle_event(server: &Cable, event: &campfire_db::Event) -> bool {
-    match *event {
-        campfire_db::Event::DisconnectUser { user_id, reconnect } => {
-            disconnect_user(server, user_id, reconnect);
-            true
-        }
-        _ => false,
-    }
-}

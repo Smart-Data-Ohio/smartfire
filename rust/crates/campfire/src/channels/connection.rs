@@ -1,12 +1,13 @@
 //! `ApplicationCable::Connection` (reference/app/channels/application_cable/connection.rb):
 //! `current_user` from the signed `session_token` cookie (`Authentication::SessionLookup`), or
 //! `reject_unauthorized_connection`. An expired session (`Session#expired?`) is destroyed and
-//! rejected.
+//! rejected, and so is a session that never completed a required second factor
+//! (`user.requires_two_factor? && !session.two_factor_verified?`, where only active humans require
+//! one).
 //!
-//! Rails also rejects a session that never completed a required second factor
-//! (`user.requires_two_factor? && !session.two_factor_verified?`). Sessions carry that state now,
-//! but the HTTP side doesn't enforce it until the two-factor flows are ported, and the two gates
-//! go in together: a gate here alone would refuse every browser signed in through the port.
+//! Until the two-factor flows are ported, the port's own sign-in starts unverified sessions
+//! (`start_new_session_for`), so browsers signed in through the port get no cable connection; ones
+//! signed in through Rails (verified sessions) do.
 use campfire_cable::{Authenticate, ConnectRequest};
 use campfire_db::{Database, Session, User};
 use campfire_kit::{CookieJar, SharedClock, SharedCrypto};
@@ -59,15 +60,23 @@ impl Authenticate<CableUser> for SessionAuthenticator {
             }
             return None;
         }
-        Some(CableUser { id: user.id, name: user.name })
+        if requires_two_factor(&user) && !session.two_factor_verified() {
+            return None;
+        }
+        Some(CableUser { id: user.id, name: user.name, role: user.role, status: user.status, session_id: session.id })
     }
+}
+
+/// `User::TwoFactor#requires_two_factor?`: `active? && !bot?`.
+fn requires_two_factor(user: &User) -> bool {
+    user.is_active() && !user.is_bot()
 }
 
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
 
-    use campfire_db::{NewUser, Role, TestClock, Timestamp};
+    use campfire_db::{NewSession, NewUser, Role, TestClock, Timestamp};
     use campfire_kit::testing::crypto;
     use campfire_kit::FrozenClock;
 
@@ -89,7 +98,8 @@ mod tests {
         db.write(move |tx| {
             let attributes = NewUser { name: format!("{role:?} {idle}"), email_address: None, password_digest: None, role, bio: None, bot_token_digest: None };
             let user = User::create(tx, attributes)?;
-            let session = Session::start(tx, user.id, Some("test"), Some("8.8.8.8"))?;
+            let attributes = NewSession { user_agent: Some("test"), ip_address: Some("8.8.8.8"), two_factor_verified: true, ..Default::default() };
+            let session = Session::start_with(tx, user.id, attributes)?;
             tx.conn().execute("UPDATE sessions SET last_active_at = ? WHERE id = ?", rusqlite::params![Timestamp::from_second(NOW - idle), session.id])?;
             Ok(session)
         })

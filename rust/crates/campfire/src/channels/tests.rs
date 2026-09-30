@@ -2,8 +2,11 @@
 //! reference/test/channels drives them through ActionCable::Channel::TestCase), plus a replay of
 //! frames recorded from the reference app (`golden`).
 
+mod authorization_test;
 mod broadcasts_test;
 mod channels_test;
 mod golden;
+mod hub_test;
+mod reference_test;
 mod revocation_test;
 pub mod support;
