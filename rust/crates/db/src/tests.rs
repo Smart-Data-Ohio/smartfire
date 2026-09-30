@@ -13,6 +13,7 @@ mod agent_context_test;
 mod agent_direct_messages_test;
 mod agent_lifecycle_test;
 mod agent_cleanup_test;
+mod agent_user_removal_test;
 mod agent_streaming_test;
 mod agent_delivery_test;
 mod agent_event_access_test;
