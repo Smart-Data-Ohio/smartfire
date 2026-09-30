@@ -77,3 +77,5 @@ pub mod google_account;
 pub mod google_drive_link;
 
 pub mod google_connection;
+
+pub mod drive_recipients;

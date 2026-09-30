@@ -504,3 +504,6 @@ mod google_api_tests;
 
 #[cfg(test)]
 mod google_connection_tests;
+
+#[cfg(test)]
+mod google_drive_tests;

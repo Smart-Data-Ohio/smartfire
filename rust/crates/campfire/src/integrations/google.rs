@@ -1,6 +1,7 @@
 //! Google identity and opt-in Calendar/Drive integrations.
 pub mod api;
 pub mod client;
+pub mod drive;
 pub mod sign_in;
 use crate::app::AppCtx;
 use campfire_kit::{Ctx, Response, Result};
@@ -9,6 +10,7 @@ use std::sync::{Arc, RwLock};
 pub struct State(
     Arc<RwLock<Arc<sign_in::SignIn>>>,
     Arc<RwLock<Arc<api::Api>>>,
+    Arc<drive::State>,
 );
 impl Default for State {
     fn default() -> Self {
@@ -18,10 +20,14 @@ impl Default for State {
                 crate::integrations::net::Network::system(),
             )))),
             Arc::new(RwLock::new(Arc::new(api::Api::default()))),
+            Arc::new(drive::State::default()),
         )
     }
 }
 impl State {
+    pub fn drive(&self) -> &drive::State {
+        &self.2
+    }
     pub fn api(&self) -> Arc<api::Api> {
         self.1.read().unwrap_or_else(|e| e.into_inner()).clone()
     }

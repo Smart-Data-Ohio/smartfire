@@ -44,6 +44,7 @@ pub mod first_runs;
 pub mod google_sign_in;
 pub mod google_calendar;
 pub mod google_connections;
+pub mod google_drive;
 pub mod messages;
 pub mod presenters;
 pub mod pwa;
@@ -157,6 +158,10 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "first_runs#create" => arc(first_runs::create),
         "sessions/transfers#show" => arc(sessions::transfers::show),
         "sessions/transfers#update" => arc(sessions::transfers::update),
+        "google/drive_files#index" => arc(google_drive::index),
+        "google/drive_files#show" => arc(google_drive::show),
+        "rooms/drive_recipients#index" => arc(google_drive::recipients),
+        "rooms/drive_recipients#validate" => arc(google_drive::validate_recipients),
         "google/connections#connect" => arc(google_connections::connect),
         "google/connections#callback" => arc(google_connections::callback),
         "google/connections#destroy" => arc(google_connections::destroy),
