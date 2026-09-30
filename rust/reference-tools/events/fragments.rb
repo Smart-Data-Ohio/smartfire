@@ -35,6 +35,20 @@ head=room.events.create!(organizer:user,title:"Series",starts_at:Time.utc(2026,1
     Current.reset
   end
 end
+[[0,0],[2,2],[3,0]].each do |going,maybe|
+  EventAttendance.where(event:head).delete_all
+  people=[:david,:jason,:jz,:kevin].map{|label|User.find(ActiveRecord::FixtureSet.identify(label))}
+  (people.take(going).map{|u|[u,'going']}+people.drop(going).take(maybe).map{|u|[u,'maybe']}).each do |u,response|
+    EventAttendance.insert_all!([{event_id:head.id,user_id:u.id,response:,created_at:Time.current,updated_at:Time.current}])
+  end
+  head=Event.find(head.id);Current.user=user
+  response=head.response_for(user)
+  output[:attendances] << {event_id:head.id,room_id:room.id,message_id:'601',current_response:response,going:,maybe:,respondable:true,cancelled:false,apply_to_future:true,alert:nil,html:renderer.render(template:'rooms/events/attendances/show',layout:false,assigns:{event:head,room:,message_id:'601',frame_id:"response_for_message_601_event_#{head.id}",current_response:response})}
+  Current.reset
+end
+EventAttendance.where(event:head).delete_all
+EventAttendance.insert_all!([{event_id:head.id,user_id:user.id,response:'going',created_at:Time.current,updated_at:Time.current}])
+head=Event.find(head.id)
 head.update_column(:cancelled_at,Time.utc(2026,9,20))
 Current.user=user
 output[:attendances]<<{event_id:head.id,room_id:room.id,message_id:nil,current_response:"going",going:1,maybe:0,respondable:false,cancelled:true,apply_to_future:true,alert:nil,html:renderer.render(template:"rooms/events/attendances/show",layout:false,assigns:{event:head,room:,message_id:nil,frame_id:"response_for_message__event_#{head.id}",current_response:"going"})}

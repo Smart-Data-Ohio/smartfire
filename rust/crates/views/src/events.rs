@@ -96,7 +96,7 @@ impl AttendanceView {
         )
     }
     pub fn going_count(&self) -> String {
-        format!("{} going", self.going)
+        pages::plural(self.going, "going")
     }
     pub fn maybe_count(&self) -> String {
         format!(

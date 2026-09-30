@@ -517,3 +517,38 @@ async fn event_create_keeps_commit_after_announcement_failure_and_jobs_reject_at
         0
     );
 }
+
+#[tokio::test]
+async fn descriptions_and_private_calendar_copies_match_rails() {
+    let Some(app) = TestApp::boot().await else {
+        return;
+    };
+    let e = event(&app).await;
+    let id = e.id;
+    app.db().write(move|tx| {
+        tx.conn().execute("UPDATE events SET description=?,meet_link='javascript:alert(1)' WHERE id=?",rusqlite::params!["a\nb\nc\n\n<script>bad</script><b>safe</b>",id])?;
+        tx.conn().execute("INSERT INTO event_calendar_entries(event_id,user_id,google_event_id,created_at,updated_at) VALUES (?,?,'private-copy',?,?)",rusqlite::params![id,DAVID,tx.now(),tx.now()])?;Ok(())
+    }).await.unwrap();
+    let expected: serde_json::Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../views/tests/golden/event-pages.json"
+    )))
+    .unwrap();
+    let description = expected[0]["view"]["event"]["description_html"]
+        .as_str()
+        .unwrap();
+    let path = format!("/rooms/{ALL_TALK}/events/{id}");
+    let mut david = app.david();
+    let shown = david.get(&path).await;
+    assert_eq!(shown.status, StatusCode::OK);
+    assert!(
+        shown.text().contains(description),
+        "description must match Rails simple_format bytes"
+    );
+    assert!(shown.text().contains("Added to your Google Calendar"));
+    assert!(!shown.text().contains("javascript:alert"));
+    let mut jason = app.sign_in(JASON).await;
+    let hidden = jason.get(&path).await;
+    assert_eq!(hidden.status, StatusCode::OK);
+    assert!(!hidden.text().contains("Added to your Google Calendar"));
+}

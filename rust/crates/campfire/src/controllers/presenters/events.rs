@@ -157,10 +157,32 @@ fn simple_format(text: &str) -> Result<String> {
     .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
     let text = sanitized.replace("\r\n", "\n").replace('\r', "\n");
     let split = regex::Regex::new("\\n\\n+").unwrap();
-    let breaks = regex::Regex::new("([^\\n]\\n)([^\\n])").unwrap();
-    Ok(split
-        .split(&text)
-        .map(|p| format!("<p>{}</p>", breaks.replace_all(p, "${1}<br />${2}")))
+    let mut paragraphs = split.split(&text).collect::<Vec<_>>();
+    while paragraphs.last().is_some_and(|p| p.is_empty()) {
+        paragraphs.pop();
+    }
+    if paragraphs.is_empty() || campfire_richtext::ruby::is_blank(&text) {
+        return Ok("<p></p>".into());
+    }
+    Ok(paragraphs
+        .into_iter()
+        .map(|p| {
+            let chars = p.chars().collect::<Vec<_>>();
+            let mut body = String::new();
+            for (i, c) in chars.iter().enumerate() {
+                body.push(*c);
+                // Ruby's lookahead does not consume the next character, so a\nb\nc
+                // inserts both breaks even when each line contains one character.
+                if *c == '\n'
+                    && i > 0
+                    && chars[i - 1] != '\n'
+                    && chars.get(i + 1).is_some_and(|next| *next != '\n')
+                {
+                    body.push_str("<br />");
+                }
+            }
+            format!("<p>{body}</p>")
+        })
         .collect::<Vec<_>>()
         .join("\n\n"))
 }

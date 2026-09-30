@@ -219,8 +219,8 @@ Pinned reference: `d7c7de92`. Covered means the named scenario has a discriminat
 | `test/controllers/rooms/events_controller_test.rb:489` — cancelled events cannot be edited | Covered: `event_create_update_cancel_keep_zone_and_calendar_jobs` |
 | `test/controllers/rooms/events_controller_test.rb:500` — non-organizers cannot cancel | Covered: `event_write_controller_security_and_validation` |
 | `test/controllers/rooms/events_controller_test.rb:509` — the organizer can cancel and cancelling twice is a no-op | Covered: `event_create_update_cancel_keep_zone_and_calendar_jobs; event_scoped_operations_match_rails_vectors` |
-| `test/controllers/rooms/events_controller_test.rb:521` — show notes the Google Calendar copy when an entry exists for the viewer | Deferred: WS14e continuation |
-| `test/controllers/rooms/events_controller_test.rb:533` — show hides another member's Google Calendar copy | Deferred: WS14e continuation |
+| `test/controllers/rooms/events_controller_test.rb:521` — show notes the Google Calendar copy when an entry exists for the viewer | Covered: `descriptions_and_private_calendar_copies_match_rails`; `full_event_pages_match_pinned_rails_bytes` |
+| `test/controllers/rooms/events_controller_test.rb:533` — show hides another member's Google Calendar copy | Covered: `descriptions_and_private_calendar_copies_match_rails`; `full_event_pages_match_pinned_rails_bytes` |
 | `test/controllers/rooms/events_controller_test.rb:541` — a member can create an event with a venue | Deferred: WS14e continuation |
 | `test/controllers/rooms/events_controller_test.rb:553` — the organizer can set and clear the venue | Deferred: WS14e continuation |
 | `test/controllers/rooms/events_controller_test.rb:571` — create rejects a text channel venue | Deferred: WS14e continuation |
@@ -233,11 +233,11 @@ Pinned reference: `d7c7de92`. Covered means the named scenario has a discriminat
 | `test/controllers/rooms/events_controller_test.rb:672` — show names the venue without a link for non-members | Covered: `full_event_pages_match_pinned_rails_bytes` |
 | `test/controllers/rooms/events_controller_test.rb:686` — index rows show the venue | Covered: `full_event_pages_match_pinned_rails_bytes` |
 | `test/controllers/rooms/events_controller_test.rb:697` — show renders the live dot for a stage venue with a live stream | Covered: `full_event_pages_match_pinned_rails_bytes (live stage venue)` |
-| `test/controllers/rooms/events_controller_test.rb:711` — show renders no live pip for a stage venue with an ended stream | Deferred: WS14e continuation |
+| `test/controllers/rooms/events_controller_test.rb:711` — show renders no live pip for a stage venue with an ended stream | Covered: `full_event_pages_match_pinned_rails_bytes` (ended stream full-layout bytes) |
 | `test/controllers/rooms/events_controller_test.rb:725` — show hides the live dot from members who do not belong to the stage venue | Covered: `full_event_pages_match_pinned_rails_bytes (nonmember JZ)` |
 | `test/controllers/rooms/events_controller_test.rb:745` — show never renders a live dot for a voice venue | Covered: `full_event_pages_match_pinned_rails_bytes` |
 | `test/controllers/rooms/events_controller_test.rb:755` — index rows render the live dot for a live stage venue | Covered: `full_event_pages_match_pinned_rails_bytes` |
-| `test/controllers/rooms/events_controller_test.rb:768` — index rows render no live pip for a stage venue with an ended stream | Deferred: WS14e continuation |
+| `test/controllers/rooms/events_controller_test.rb:768` — index rows render no live pip for a stage venue with an ended stream | Covered: `full_event_pages_match_pinned_rails_bytes` (ended stream full-layout bytes) |
 | `test/controllers/rooms/events_controller_test.rb:782` — index rows never render a live dot for a voice venue | Covered: `full_event_pages_match_pinned_rails_bytes` |
 | `test/controllers/rooms/events_controller_test.rb:792` — index issues the same queries regardless of event count when venues are shared | Deferred: end-to-end phase (WS14e with WS19/lead), per lead ruling |
 | `test/controllers/rooms/events_controller_test.rb:826` — show and index omit the Where line without a venue | Covered: `full_event_pages_match_pinned_rails_bytes` |
@@ -310,7 +310,9 @@ Total named Rails tests inventoried: 221. Includes the Calendar entry model (WS1
 
 - The three lead rulings are covered by `event_after_commit_rejection_keeps_rails_rows`, `event_announcement_uses_rails_configured_origin`, `event_nil_series_start_matches_rails_failure_without_writes`, `event_create_keeps_commit_after_announcement_failure_and_jobs_reject_atomically`, and `persisted_series_nil_start_returns_rails_public_500_and_writes_nothing`. The nil-start request test covers head/middle/last with this_event/this_and_following/all; body equality uses pinned public/500.html.
 - `controller_time_and_parameter_casts_match_pinned_rails` compares 66 actual Rails private-method/model-cast states for create/update/prefill, including scalar/array/hash shapes, explicit offsets, fixed edit zones, DST gaps/folds, invalid dates, booleans, and Unicode prefill truncation.
-- `full_event_pages_match_pinned_rails_bytes` and `full_event_forms_match_pinned_rails_bytes` compare 60 complete Rails layouts. They do not assert database query bounds, browser behavior, or every named HTTP controller case.
+- `full_event_pages_match_pinned_rails_bytes` and `full_event_forms_match_pinned_rails_bytes` compare 92 complete Rails layouts. They do not assert database query bounds, browser behavior, or every named HTTP controller case.
 - `event_cards_and_activity_match_rails_over_real_sockets` compares nine Rails states: singleton/series invitations, title edit, silent RSVP, reminder claim, cancellation, distinct events referencing one message, repeated saves of one event, update-then-destroy. It also proves rollback silence, identical public card bytes for two viewers, and outsider stream denial. Full initial announcement Message append remains WS8b renderer integration on this old base.
 - Still deferred: callback/job coalescing for repeated event API calls in a wider outer transaction when Meet links are requested, and partial invitation failure among several recipients. Normal scoped Calendar callback vectors and queue atomicity are covered; these broader edge cases are not.
-- WS13 live stream reader is implemented for currently-live streams. Additional ended-stream fixture/HTTP cases remain named above. WS17 production delivery/policy stays behind the live source and durable job seam. Streamed-message finalization still requires the WS11 lifecycle hook.
+- WS13 live stream reader is implemented for currently-live streams. Ended-stream full-layout bytes are covered; further WS13 HTTP/system integration remains for the end-to-end phase. WS17 production delivery/policy stays behind the live source and durable job seam. Streamed-message finalization still requires the WS11 lifecycle hook.
+
+- Rendering edge differentials additionally cover 0/2/3 going counts (Rails prints goings), 0/2 maybe counts, three single-character description lines, safe description HTML, an invalid Meet URI, viewer-private Calendar copies, ended-stage dots, and an empty index.

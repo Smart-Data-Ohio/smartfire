@@ -24,22 +24,40 @@ travel_to Time.utc(2026,9,22,12) do
   voice=Rooms::Voice.create!(creator:david,name:'Calls & chat');voice.memberships.create!(user:david)
   stage=Rooms::Stage.create!(creator:david,name:'Presentation <&>');membership=stage.memberships.create!(user:david,stage_role:'host')
   Stream.create!(room:stage,membership:,user:david,quality:'720p15')
-  events=[room.events.create!(organizer:david,title:'Planning <&>',starts_at:Time.utc(2026,10,5,9),ends_at:Time.utc(2026,10,5,10),time_zone:'Eastern Time (US & Canada)',description:"One line\nsecond line\n\n<script>bad</script><b>safe</b>"),room.events.create!(organizer:david,title:'Repeating',starts_at:Time.utc(2026,10,6,9),time_zone:'UTC',recurrence_rule:'weekly',recurrence_until:Date.new(2026,10,20),venue:stage),room.events.create!(organizer:david,title:'Past',starts_at:Time.utc(2026,9,20,9),time_zone:'UTC',venue:voice)]
+  events=[room.events.create!(organizer:david,title:'Planning <&>',starts_at:Time.utc(2026,10,5,9),ends_at:Time.utc(2026,10,5,10),time_zone:'Eastern Time (US & Canada)',description:"a\nb\nc\n\n<script>bad</script><b>safe</b>"),room.events.create!(organizer:david,title:'Repeating',starts_at:Time.utc(2026,10,6,9),time_zone:'UTC',recurrence_rule:'weekly',recurrence_until:Date.new(2026,10,20),venue:stage),room.events.create!(organizer:david,title:'Past',starts_at:Time.utc(2026,9,20,9),time_zone:'UTC',venue:voice)]
   events[0].respond!(jason,'maybe');events[0].update_column(:meet_link,'https://meet.google.com/a?x=1&y=2')
   events << room.events.create!(organizer:david,title:'Cancelled',starts_at:Time.utc(2026,10,7,9),time_zone:'UTC');events.last.cancel!(actor:david)
+  ['initial','ended_and_copied'].each do |scenario|
+    if scenario=='ended_and_copied'
+      Stream.where(room:stage).update_all(ended_at:Time.current)
+      events[0].update_column(:meet_link,'javascript:alert(1)')
+      EventCalendarEntry.create!(event:events[0],user:david,google_event_id:'private-calendar-copy')
+    end
   [david,jason].each do |u|
     ['UTC','Hawaii'].each do |zone|
       Time.use_zone(zone) do
         Current.user=u
         events.map{|e|Event.find(e.id)}.flat_map{|e| e.series? ? e.series_events.to_a : [e]}.each do |e|
           html=renderer.render(template:'rooms/events/show',assigns:{room:,event:e,attendances:e.attendances.includes(:user).order(:response,:id),current_response:e.response_for(u)})
-          out << {kind:'show',user:u.name,zone:,view:{room_name:room.name,event:event_fact(e,u)},html:}
+          out << {kind:'show',scenario:,user:u.name,zone:,view:{room_name:room.name,event:event_fact(e,u)},html:}
         end
         upcoming=room.events.upcoming.soonest_first.to_a;counts=upcoming.select(&:series?).group_by(&:series_id).transform_values(&:size)
         seen=[];upcoming=upcoming.select{|e| !e.series? || !seen.include?(e.series_id) && seen.push(e.series_id)}
         count_by_id=upcoming.select(&:series?).to_h{|e|[e.id,counts[e.series_id]]};past=room.events.past.ordered.to_a;cancelled=room.events.cancelled.ordered.to_a
         html=renderer.render(template:'rooms/events/index',assigns:{room:,upcoming_events:upcoming,past_events:past,cancelled_events:cancelled,series_counts:count_by_id})
-        out << {kind:'index',user:u.name,zone:,view:{room_id:room.id,room_name:room.name,upcoming:upcoming.map{|e|event_fact(e,u,remaining:count_by_id[e.id])},past:past.map{|e|event_fact(e,u)},cancelled:cancelled.map{|e|event_fact(e,u)}},html:}
+        out << {kind:'index',scenario:,user:u.name,zone:,view:{room_id:room.id,room_name:room.name,upcoming:upcoming.map{|e|event_fact(e,u,remaining:count_by_id[e.id])},past:past.map{|e|event_fact(e,u)},cancelled:cancelled.map{|e|event_fact(e,u)}},html:}
+        Current.reset
+      end
+    end
+  end
+  end
+  empty=Rooms::Closed.create!(creator:david,name:'Empty <&>')
+  [david,jason].each do |u|
+    ['UTC','Hawaii'].each do |zone|
+      Time.use_zone(zone) do
+        Current.user=u
+        html=renderer.render(template:'rooms/events/index',assigns:{room:empty,upcoming_events:[],past_events:[],cancelled_events:[],series_counts:{}})
+        out << {kind:'index',scenario:'empty',user:u.name,zone:,view:{room_id:empty.id,room_name:empty.name,upcoming:[],past:[],cancelled:[]},html:}
         Current.reset
       end
     end
