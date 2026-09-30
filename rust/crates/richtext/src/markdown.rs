@@ -232,25 +232,34 @@ fn restore_mentions(dom: &mut Dom, root: NodeId, tokens: &[(String, String)], pa
         }
         let skip = skipped(dom, node, &["a", "code", "pre"]);
         let mut replacements = Vec::new();
+        // Nokogiri coalesces adjacent inserted text nodes. Keep unresolved mentions in the
+        // same text run: shortcode expansion must not see its preceding space as a blank tail.
+        let mut pending_text = String::new();
         let mut cursor = 0;
         for c in pattern.captures_iter(&text) {
             let m = c.get(0).unwrap();
             if cursor < m.start() {
-                replacements.push(dom.create_text(&text[cursor..m.start()]));
+                pending_text.push_str(&text[cursor..m.start()]);
             }
             let (token, name) = &tokens[c[1].parse::<usize>().unwrap()];
             let user = if skip { None } else { users.get(name).and_then(Option::as_ref) };
-            let new = match user {
+            match user {
                 Some(user) => {
-                    dom.create_element("action-text-attachment", &[("sgid", &user.attachable_sgid), ("content-type", MENTION_CONTENT_TYPE)])
+                    if !pending_text.is_empty() {
+                        replacements.push(dom.create_text(&pending_text));
+                        pending_text.clear();
+                    }
+                    replacements.push(dom.create_element("action-text-attachment", &[("sgid", &user.attachable_sgid), ("content-type", MENTION_CONTENT_TYPE)]));
                 }
-                None => dom.create_text(token),
-            };
-            replacements.push(new);
+                None => pending_text.push_str(token),
+            }
             cursor = m.end();
         }
         if !is_blank(&text[cursor..]) {
-            replacements.push(dom.create_text(&text[cursor..]));
+            pending_text.push_str(&text[cursor..]);
+        }
+        if !pending_text.is_empty() {
+            replacements.push(dom.create_text(&pending_text));
         }
         dom.replace_with_nodes(node, &replacements);
     }

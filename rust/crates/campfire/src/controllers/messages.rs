@@ -27,7 +27,7 @@ use crate::jobs::{WEBHOOK_HOLD, WebhookJob};
 /// `index` (`layout false`): the page before/after a message, or the last page; 204 when empty.
 pub async fn index(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    let (_, room) = concerns::set_room(c).await?;
+    let room = set_root_room(c).await?;
     let messages = find_paged_messages(c, &room).await?;
     if messages.is_empty() {
         return Ok(c.head(StatusCode::NO_CONTENT));
@@ -57,8 +57,8 @@ const TEMPLATE_DIGEST_INDEX: &str = "messages/index";
 /// `create`: `set_room` runs inside the action, and a room that's gone renders `room_not_found`.
 pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    let room = match concerns::set_room(c).await {
-        Ok((_, room)) => room,
+    let room = match set_root_room(c).await {
+        Ok(room) => room,
         Err(Error::NotFound) => return render_room_not_found(c).await,
         Err(error) => return Err(error),
     };
@@ -91,7 +91,7 @@ pub async fn create(c: &mut Ctx) -> Result {
 
 pub async fn show(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    let (_, room) = concerns::set_room(c).await?;
+    let room = set_root_room(c).await?;
     let message = set_message(c, &room).await?;
     c.respond_to(&[&format::HTML])?;
     let view = present(c, move |presenter| presenter.message(&message)).await?;
@@ -100,9 +100,9 @@ pub async fn show(c: &mut Ctx) -> Result {
 
 pub async fn edit(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    let (_, room) = concerns::set_room(c).await?;
+    let room = set_root_room(c).await?;
     let message = set_message(c, &room).await?;
-    ensure_can_administer(c, &message)?;
+    ensure_can_edit(c, &message)?;
     c.respond_to(&[&format::HTML])?;
     let edit = present(c, move |presenter| {
         Ok(views::EditView { editable_body_html: presenter.editable_body(&message)?, message: presenter.message(&message)? })
@@ -113,9 +113,9 @@ pub async fn edit(c: &mut Ctx) -> Result {
 
 pub async fn update(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    let (_, room) = concerns::set_room(c).await?;
+    let room = set_root_room(c).await?;
     let message = set_message(c, &room).await?;
-    ensure_can_administer(c, &message)?;
+    ensure_can_edit(c, &message)?;
     let attributes = message_params(c)?;
     let message = update_message(c, message, attributes).await?;
     broadcast_replace(c, &room, &message).await?;
@@ -132,9 +132,9 @@ pub async fn update(c: &mut Ctx) -> Result {
 
 pub async fn destroy(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    let (_, room) = concerns::set_room(c).await?;
+    let room = set_root_room(c).await?;
     let message = set_message(c, &room).await?;
-    ensure_can_administer(c, &message)?;
+    ensure_can_delete(c, &message)?;
     destroy_message(c, &room, &message).await?;
 
     c.respond_to(&[&format::TURBO_STREAM])?;
@@ -144,11 +144,57 @@ pub async fn destroy(c: &mut Ctx) -> Result {
 
 // --- Before-actions and params --------------------------------------------------------------------
 
+/// `RoomScoped`: a membership in an alive room, including during deferred deletion.
+async fn set_root_room(c: &mut Ctx) -> Result<Room> {
+    let (_, room) = concerns::set_room(c).await?;
+    if room.deleted_at.is_some() {
+        return Err(Error::NotFound);
+    }
+    Ok(room)
+}
+
+/// Preview renders the normal Markdown presentation without persisting any rows.
+pub async fn preview(c: &mut Ctx) -> Result {
+    before_actions(c, Before::default()).await?;
+    let room = set_root_room(c).await?;
+    let message = c.params.require("message")?;
+    let permitted = message.permit(&permit_keys(&["markdown_source"]));
+    let source = permitted.get("markdown_source").ok_or_else(|| Error::ParameterMissing("markdown_source".into()))?;
+    let source = source.as_str().ok_or_else(|| Error::internal(anyhow::anyhow!("markdown_source has no length")))?.to_owned();
+    if source.chars().count() > campfire_db::message::SOURCE_LIMIT {
+        let body = campfire_views::helpers::to_rails_json(&serde_json::json!({"error": "Markdown is limited to 50,000 characters"}));
+        return Ok(c.render(StatusCode::UNPROCESSABLE_ENTITY, &format::JSON, body));
+    }
+    let (app, request_host) = (c.app().clone(), Some(c.request.host()));
+    let html = c.app().db.read(move |conn| {
+        let body = app.db.env().rich_text.render_markdown(conn, &source, room.id).map_err(campfire_db::Error::Other)?;
+        let resolver = DbResolver { conn, secrets: &app.secrets, now: app.clock.now() };
+        crate::rich_text::markdown_presentation(conn, &body, &resolver.render_context(request_host)).map_err(campfire_db::Error::Other)
+    }).await.map_err(db_error)?;
+    let body = campfire_views::helpers::to_rails_json(&serde_json::json!({"html": html}));
+    Ok(c.render(StatusCode::OK, &format::JSON, body))
+}
+
+fn ensure_can_edit(c: &mut Ctx, message: &Message) -> Result<()> {
+    if message.system_note || require_current_user(c)?.id != message.creator_id {
+        return halt(concerns::head(StatusCode::FORBIDDEN));
+    }
+    Ok(())
+}
+
+fn ensure_can_delete(c: &mut Ctx, message: &Message) -> Result<()> {
+    let user = require_current_user(c)?;
+    if message.system_note || (user.id != message.creator_id && !user.is_administrator()) {
+        return halt(concerns::head(StatusCode::FORBIDDEN));
+    }
+    Ok(())
+}
+
 /// `@room.messages.find(params[:id])`
 pub(crate) async fn set_message(c: &mut Ctx, room: &Room) -> Result<Message> {
     let Some(id) = c.param_str("id").and_then(cast_integer) else { return Err(Error::NotFound) };
     let room_id = room.id;
-    c.app().db.read(move |conn| Message::find_in_room(conn, room_id, id)).await.map_err(db_error)
+    c.app().db.read(move |conn| Message::find_in(conn, Timeline::Room(room_id), id)).await.map_err(db_error)
 }
 
 /// `head :forbidden unless Current.user.can_administer?(@message)`
@@ -476,3 +522,6 @@ async fn render_room_not_found(c: &mut Ctx) -> Result {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod http_tests;

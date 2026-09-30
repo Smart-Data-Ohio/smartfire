@@ -179,6 +179,7 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "autocompletable/users#index" => arc(autocompletable::users::index),
         "messages#index" => arc(messages::index),
         "messages#create" => arc(messages::create),
+        "messages#preview" => arc(messages::preview),
         "messages#edit" => arc(messages::edit),
         "messages#show" => arc(messages::show),
         "messages#update" => arc(messages::update),

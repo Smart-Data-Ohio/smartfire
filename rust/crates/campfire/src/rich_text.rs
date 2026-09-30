@@ -81,6 +81,11 @@ fn icons(conn: &Connection) -> Result<IconCatalog, String> {
     Ok(icons)
 }
 
+/// `MessagesHelper#markdown_message_presentation`, using the same icon catalog as writes.
+pub(crate) fn markdown_presentation(conn: &Connection, body: &str, ctx: &RenderContext<'_>) -> Result<String, String> {
+    markdown::presentation(body, ctx, &icons(conn)?, None).map_err(|error| error.to_string())
+}
+
 impl RichText for AppRichText {
     fn render_markdown(
         &self,
