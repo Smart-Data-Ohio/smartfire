@@ -68,8 +68,10 @@ async fn undeclared_actions() {
     assert_eq!(david.get("/rooms/new").await.status, StatusCode::NOT_FOUND);
     assert_eq!(david.get(&format!("/rooms/{ALL_TALK}/edit")).await.status, StatusCode::NOT_FOUND);
     let direct = david.get(&format!("/rooms/directs/{DIRECT_DAVID_JASON}")).await;
-    assert_eq!(direct.status, StatusCode::FOUND);
-    assert!(direct.header("location").unwrap().ends_with(&format!("/rooms/{DIRECT_DAVID_JASON}")));
+    // Our fork inherits show without set_room; the pinned callback failure replaces
+    // the upstream redirect (see vectors/room_coercions.json).
+    assert_eq!(direct.status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(direct.location(), None);
     let reply = david.write(Req::new(Method::DELETE, &format!("/rooms/opens/{HQ}"))).await;
     assert_eq!(reply.status, StatusCode::INTERNAL_SERVER_ERROR);
 }

@@ -11,15 +11,11 @@ use crate::concerns::{Before, before_actions, require_current_user};
 use crate::controllers::presenters::page::{self, Rendered, db_error};
 use crate::controllers::presenters::{Presenter, user_view};
 
-/// `show`: the room page, which checks membership. Rails inherits RoomsController#show without
-/// setting `@room`, so `remember_last_room_visited` raises (a 500).
+/// The pinned namespace inherits show without setting `@room`, so the last-room callback
+/// raises. The working, membership-scoped page route is `/rooms/:id`.
 pub async fn show(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    let id = c
-        .param_str("id")
-        .and_then(crate::concerns::cast_integer)
-        .ok_or(Error::NotFound)?;
-    redirect_to_room(c, id)
+    Err(Error::internal(anyhow::anyhow!("undefined method 'id' for nil")))
 }
 
 pub async fn new(c: &mut Ctx) -> Result {

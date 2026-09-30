@@ -3,7 +3,7 @@
 //! (`super::destroy_without_room`).
 
 use campfire_db::{Room, RoomType, User};
-use campfire_kit::{Ctx, Result, StatusCode};
+use campfire_kit::{Ctx, Error, Result, StatusCode};
 use campfire_views::rooms::{ClosedFormView, ClosedsEdit, ClosedsNew, FormRoom};
 
 use super::{
@@ -133,7 +133,14 @@ pub async fn update(c: &mut Ctx) -> Result {
 
 /// `broadcast_create_room` / `broadcast_update_room`: the shared-room partial, rendered once, to
 /// every member's own rooms stream.
-async fn broadcast_to_members(c: &Ctx, room: &Room, update: bool) -> Result<()> {
+async fn broadcast_to_members(c: &mut Ctx, room: &Room, update: bool) -> Result<()> {
+    // The fork renders these partials through the request's lookup context. With no HTML
+    // format available (including JSON and Turbo-only requests), Rails raises MissingTemplate
+    // after the domain and audit commits, before publishing any controller row/header.
+    let formats = c.formats()?;
+    if !formats.contains(&&campfire_kit::format::HTML) && !formats.contains(&&campfire_kit::format::ALL) {
+        return Err(Error::internal(anyhow::anyhow!("Missing partial users/sidebars/rooms/shared for requested format")));
+    }
     let partials = render_shared_room(c, room).await?;
     let header = if update { Some(super::render_shared_header(c, room).await?) } else { None };
     let (broadcasts, room) = (c.app().broadcasts.clone(), room.clone());

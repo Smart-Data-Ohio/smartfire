@@ -261,16 +261,34 @@ pub(crate) fn redirect_to_room(c: &mut Ctx, room_id: i64) -> Result {
 pub(crate) fn room_name_param(c: &Ctx) -> Result<Option<Option<String>>> {
     let room = c.params.require("room")?;
     let permitted = room.permit(&campfire_kit::permit_keys(&["name"]));
-    Ok(permitted.get("name").map(|name| name.as_str().map(str::to_string)))
+    // ActiveModel::Type::String uses "t"/"f" for booleans; nil remains nil, and a
+    // collection rejected by permit is absent (so updates leave the old value alone).
+    Ok(permitted.get("name").map(|name| match name {
+        campfire_kit::Param::Null => None,
+        campfire_kit::Param::Bool(true) => Some("t".into()),
+        campfire_kit::Param::Bool(false) => Some("f".into()),
+        value => value.to_s(),
+    }))
 }
 
 /// `params.fetch(:user_ids, [])` as ids `User.where(id:)` can match.
 pub(crate) fn user_ids_param(c: &Ctx) -> Vec<i64> {
-    match c.param("user_ids") {
-        Some(campfire_kit::Param::Array(values)) => values.iter().filter_map(|v| v.as_str()).filter_map(cast_integer).collect(),
-        Some(value) => value.as_str().and_then(cast_integer).into_iter().collect(),
-        None => Vec::new(),
+    fn collect(value: &campfire_kit::Param, ids: &mut Vec<i64>) {
+        match value {
+            // Active Record's array predicate flattens arrays, without flattening hashes.
+            campfire_kit::Param::Array(values) => for value in values { collect(value, ids); },
+            campfire_kit::Param::Str(value) => ids.extend(cast_integer(value)),
+            campfire_kit::Param::Number(value) => {
+                if let Some(id) = value.as_i64() { ids.push(id); }
+                else if let Some(id) = value.as_f64().filter(|id| *id >= i64::MIN as f64 && *id < -(i64::MIN as f64)) { ids.push(id as i64); }
+            }
+            campfire_kit::Param::Bool(value) => ids.push(i64::from(*value)),
+            _ => {},
+        }
     }
+    let mut ids = Vec::new();
+    if let Some(value) = c.param("user_ids") { collect(value, &mut ids); }
+    ids
 }
 
 /// `User.where(id: ids)`, as ids of existing users (in id order, like the query).
@@ -379,3 +397,6 @@ mod join_tests;
 
 #[cfg(test)]
 mod channel_audits_tests;
+
+#[cfg(test)]
+mod coercions_tests;

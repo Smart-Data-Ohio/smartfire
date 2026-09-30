@@ -1,6 +1,6 @@
 # WS8br Wave 4 — PARTIAL
 
-Branch `rust/ws8br-rooms-http`, assigned worktree `rust-ws8br`, Rails pin `d7c7de92`. Received base `c4849d54`; main `21a7332f` is already merged through `9f356e2f`. Pushed read/quiet-refresh slice: `9a5fcea5`. Pushed join/preview slice: `e015d50e`. This continuation also ports channel creation/revision auditing and header callbacks. No PR or deployment.
+Branch `rust/ws8br-rooms-http`, assigned worktree `rust-ws8br`, Rails pin `d7c7de92`. Received base `c4849d54`; main `21a7332f` is already merged through `9f356e2f`. Pushed read/quiet-refresh slice: `9a5fcea5`. Pushed join/preview slice: `e015d50e`. Pushed channel audit/header slice: `8bdb43ec`. This continuation also ports channel name/member-ID casts, request-dependent partial failures and the inherited direct-show callback failure. No PR or deployment.
 
 ## Ownership and retained work
 
@@ -27,6 +27,11 @@ Earlier pushed work remains: room authorization/soft-delete/durable enqueue, gro
 - `rooms.rs`: small request-independent shared-header rendering helper; open update sends row then header globally, closed update sends rows then headers to retained members only. Presenter/layout APIs remain unchanged.
 - `channel_audits_tests.rs`, `channels/tests/channel_audits_test.rs`, `channel_audits.rb`, vector and discriminator: three HTTP tests plus one real socket test verify actor/target/labels/details/IP, no-op auditing, forbidden update stability, post-commit outages, eight Rails HTTP transitions, 27 exact recipient HTML deliveries and the removed session's ordered disconnect. The audit comparison explicitly supplies the same proxy IP as Rails; the test helper otherwise has no peer address.
 - Deferred inventory also includes the mixed `audit_log/rooms_audit_test.rb`: room cases WS8br, account cases WS8br2.
+
+- `rooms.rs`: permitted scalar room names follow Active Model String casts (`t`/`f`, nil, numbers); unpermitted arrays/hashes are absent on update. Closed member IDs follow integer casts and nested-array predicates without flattening hashes. Nil name versus empty-string HTML/data attribute bytes remain a broader presenter acceptance gap.
+- `rooms/closeds.rs`: request format governs the shared HTML partial lookup. JSON/XML/Turbo-only requests fail with 500 after domain/audit commits, before controller rows/headers; HTML, mixed JSON/HTML and wildcard succeed, matching the pinned Rails bug.
+- `rooms/directs.rs`: namespace show inherits a missing `@room` callback at the pin and returns 500 after auth; the generic member-scoped room page remains working. Anonymous users still redirect and bot keys still receive 403.
+- `coercions_tests.rs`, `coercions.rb`, `room_coercions.json`, discriminator: five HTTP tests compare 16 creates, 16 updates, eight ID casts, six partial formats and four direct-show callback failures against real Rails. They also verify persisted membership/audit state after rendering failure, plus generic page access guards.
 
 No schema, Rails source, mask, parity allowlist, message-list/composer internals or owner-rendered partial changed. No new ignored test.
 
@@ -115,6 +120,27 @@ test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out
 Channel header discrimination: compiled missing-header socket regression rejected; source restored
 ```
 
+coercion-oracle:
+
+```bash
+PARITY_NAMESPACE=ws8br PARITY_IMAGE=ws8br-reference-d7c7de92 PARITY_OWNER=ws8br rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze -e RAILS_LOG_LEVEL=fatal rust/reference-tools/rooms/coercions.rb > .scratch/room-coercions.json 2> .scratch/room-coercions-oracle.log
+```
+
+```text
+Rails room coercion oracle: 16 create casts, 16 update casts, 4 direct-show callbacks, 6 partial formats, 8 ID casts; reference d7c7de92
+```
+
+coercion-discrimination:
+
+```bash
+python3 rust/reference-tools/rooms/coercions_discrimination.py > .scratch/coercions-discrimination-summary.log 2>&1
+```
+
+```text
+test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 354 filtered out; finished in 0.49s
+Coercion discrimination: five compiled HTTP regressions rejected 8bdb43ec; source restored
+```
+
 app:
 
 ```bash
@@ -122,7 +148,7 @@ CI=1 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CABLE_TEST_PORT_
 ```
 
 ```text
-test result: ok. 351 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 32.29s
+test result: ok. 356 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 31.56s
 ```
 
 views:
@@ -132,8 +158,8 @@ TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1
 ```
 
 ```text
-test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
-test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
@@ -148,10 +174,10 @@ TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1
 ```
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 10.39s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.69s
 ```
 
-The oracle exited 0 and its output is byte-identical to the tracked vector. The discrimination command exits 0 only when all five compiled HTTP tests fail; these include the nonmember guard. App/views/clippy exit 0. No full workspace test run, full Rails Minitest run, browser/system/pixel acceptance or complete room parity is claimed.
+All four oracles exited 0 and their outputs are byte-identical to tracked vectors. The discriminators require compiled assertion failures: reads 5, join 4, audits 3 plus header socket 1, coercions 5. Auth and nonmember guards are included. App/views/clippy exit 0. No full workspace test run, full Rails Minitest run, browser/system/pixel acceptance or complete room parity is claimed.
 
 ## Cases grouped by file
 
@@ -162,10 +188,10 @@ The oracle exited 0 and its output is byte-identical to the tracked vector. The 
 | `rooms/reads_controller_test.rb` | 7 | All seven behaviors covered by five HTTP tests and one socket test; malformed parameter matrix and venue-specific writes remain. |
 | `rooms/refreshes_controller_test.rb` | 4 | Quiet 204 and lost-membership 404 covered; changed-message full bytes and pin count/list integration remain WS8b-m/WS8br. |
 | `rooms_controller_test.rb` | 29 | Previous delete/leave/guard/pagination/unread subsets retained; Six join/preview declarations now covered by four HTTP tests and one socket test; complete page, exact errors/flash and leave-failure rescue remain. |
-| `rooms/opens_controller_test.rb` | 15 | Conversion/access subsets retained; icons, invalid forms and complete CRUD/form acceptance remain; creation audit and unconfigured row/header callbacks are now covered. |
+| `rooms/opens_controller_test.rb` | 15 | Conversion/access subsets retained; icons, invalid forms and complete CRUD/form acceptance remain; scalar/member-ID casts and request partial formats, creation audit and unconfigured row/header callbacks are now covered. |
 | `rooms/closeds_controller_test.rb` | 12 | Conversion/access subsets retained; icons, invalid forms and complete CRUD/form acceptance remain; creation/membership audit and unconfigured row/header callbacks are now covered. |
 | `audit_log/rooms_audit_test.rb` | 17 | Room creation, actual membership diff/no-op, actor/target and committed audit failures covered here; direct/leave subsets retained. Invalid-icon no-audit case remains; five account cases belong to WS8br2. |
-| `rooms/directs_controller_test.rb` | 29 | Previous cap/reuse/rename/add/leave/delete and directory-frame subsets retained; picker/settings/invalid rename/overflow/no-op/show callback/removed-member acceptance remain. |
+| `rooms/directs_controller_test.rb` | 29 | Previous cap/reuse/rename/add/leave/delete and directory-frame subsets retained; picker/settings/invalid rename/overflow/no-op/removed-member acceptance remain; inherited show failure and auth gates now covered. |
 | `rooms/involvements_controller_test.rb` | 8 | Six HTTP transitions with exact recipient rows retained; exhaustive format/enum/venue/browser cases remain. |
 | `rooms/members_controller_test.rb` | 13 | Endpoint remains unported; WS17 presence and WS11 agents must supply facts, WS8br owns response/auth/cache integration. |
 | `rooms/categories_controller_test.rb` | 5 | Scoped assignment subset retained; exhaustive malformed/format and browser acceptance remain. |
@@ -176,7 +202,7 @@ The oracle exited 0 and its output is byte-identical to the tracked vector. The 
 | `users/sidebars_controller_test.rb` | 14 | Complete frames/recipient state/cache subsets retained; query-count/configured-owner/browser acceptance remains. |
 | `unfurl_links_controller_test.rb` | 9 | Existing upstream re-diff remains WS8br; embed behavior WS15e. |
 
-Current own Rust counts: channel audit HTTP 3, channel callback socket 1, join HTTP 4, join socket 1, join views 1, reads HTTP 5, reads socket 1, room parity 19, inherited room tests 16, sidebar controller 4, switcher 4, directory socket 3, sidebar views 5, shell views 3, header views 1. Full browser files remain deferred; transferred users/account/public/tour/PWA/QR files belong to WS8br2 as the machine-readable inventory records.
+Current own Rust counts: channel coercion HTTP 5, channel audit HTTP 3, channel callback socket 1, join HTTP 4, join socket 1, join views 1, reads HTTP 5, reads socket 1, room parity 19, inherited room tests 16, sidebar controller 4, switcher 4, directory socket 3, sidebar views 5, shell views 3, header views 1. Full browser files remain deferred; transferred users/account/public/tour/PWA/QR files belong to WS8br2 as the machine-readable inventory records.
 
 ## Precisely remaining, requested order
 
