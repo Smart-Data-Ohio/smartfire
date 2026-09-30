@@ -1,82 +1,240 @@
 # WS8br Wave 4 — PARTIAL
 
-Branch `rust/ws8br-rooms-http`; worktree `/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8br`; Rails reference `d7c7de92`. Main `4278cb1e7a4529d5e2ecee51fccf69be6ed45257` is merged with merge commit `8bca72a1`. Six coherent slices are pushed through implementation/test SHA **`e2c63fa0b06afdab99b1baefbb913a4067ff04ac`**. The final report commit changes documentation only; the final reply gives its pushed SHA.
+Branch `rust/ws8br-rooms-http`; worktree `/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8br`; Rails pin `d7c7de92`. Main `4278cb1e` was already merged in `8bca72a1`. This continuation pushes fifteen implementation/test/merge slices through Rust verification SHA **`b9cae0e00b3840712cf8e705c8b66a4fdf95a41d`**, followed by diagnostic-only **`c46d7f77eed9c6fd57f83ea0021f596277c8b370`**. The final report commit changes documentation only; its pushed SHA is in the final reply.
 
-This continuation completes the DM browser flow and adds individual Rust execution mappings for the largest unblocked room controller files. Members, pins refresh and full native room-page acceptance remain partial because their owning branches are not merged here. No owner policy/partial was copied, no fake offline/status/pin result was added, and no mask, allowlist or ignore was added or loosened. Previous delivered forms, shell/sidebar/header, CRUD, reads, categories, favorites, involvement and inbound-address work remains in this branch and ran in the fresh-clone suite; previous receipts are in report history at `8d921b27`.
+Members JSON and pin refresh now call the real owner implementations. The room HTTP page mounts the native owner list, composer, schedule control and pending template. **Full native byte acceptance remains partial: the strict comparator still rejects all nine complete component regions.** There are **146 of 161 controller declarations individually mapped and passed**, including 62 newly mapped this continuation; **15 remain**. The fresh-clone app suite has zero failures, and workspace tests and clippy pass. No browser/system acceptance was run this continuation; the requested end-to-end phase remains inventoried.
 
-## Changes by coherent slice and file
+## Coherent pushed slices
 
-- **`8bca72a1` — merge WS9.** Merged main with two parents, preserving this worker's additive room views/routes and WS9's authentication, enrollment, sudo, profile/security, two-factor, session and audit code. Resolved conflicts in `controllers.rs`, `presenters/test_support.rs`, `views/src/users.rs` and `users/summary.rs`. WS9's `before_actions` is used directly; `boot_frozen` wrappers now call the merged WS9 `boot_with_clock` helpers. The existing soft-delete room guard remains. Locked metadata and all Cargo manifest duplicate-key checks passed after the merge. Initial seeded app verification was `470 passed; 0 failed; 3 ignored`.
-- **`1a01c1dd` — actual DM browser acceptance.** Added `reference-tools/rooms/dm_browser.{py,mjs}`; reused an extracted `run_browser` in `inbound_browser.py`. `browser.Dockerfile` uses only tracked parity process configuration on the pinned Rails image: two worker queues rather than the old image's extra production processes. No Ruby application source changed. Chromium runs the same picker/create/settings flow against separately seeded Rails and native servers. It checks case-insensitive filtering, Enter, selection surviving hidden candidates, clear, real submitted member IDs, group creation, valid rename, overlong 422 with attempted value, reload, group reuse, the huddle-start redirect and Escape. The persisted settings member section is checked explicitly. A wrong submitted candidate ID must fail that acceptance. These are behavior checks, not a full room-page pixel claim.
-- **`8783791e` — directs case mappings.** Added `controllers/rooms/directs_rails_cases.rs` and `directs_cases_discrimination.py`: 27 separately executed ports of the 29 source declarations. Covers candidate/star ordering, create/reuse/group cap, huddle location, active users, rename/add/leave/privacy/delete controls and the real durable destroy job. Test-only `rusqlite` feature `limits` in `crates/campfire/Cargo.toml` lowers the actual writer's SQLite variable limit: an uncapped HTTP candidate query then fails, proving the first-ten cap occurs before SQL. No database/domain behavior changed. Two message-owned cases remain named below.
-- **`4eec7ab9` — generic rooms case mappings.** Added `rooms_rails_cases.rs` and `rooms_cases_discrimination.py`: 22 separately executed ports of 29 declarations. Covers last-room redirect/cookie, membership and open preview, joining, ordinary/group-DM leaving, HTML/JSON deletion/flash, sweep claims and job completion. A real authenticated cable subscription checks the exact global remove frame and no extra frame. Seven cases remain named below, including the fixed atomic-queue decision conflict.
-- **`7a9dac83` — opens case mappings.** Added `opens_rails_cases.rs` and `opens_cases_discrimination.py`: all 15 declarations. Covers real global prepend/row/header streams, creation/admin gates, icon normalization/clearing/422 rollback, permitted params, closed-to-open conversion and direct-room exclusion. Open conversion asserts Rails' actual `User.active` grant callback plus retained existing members; the larger parity seed has an already-associated banned person, so the controller fixture's assumption that every person is active cannot be copied literally.
-- **`e2c63fa0` — closeds case mappings.** Added `closeds_rails_cases.rs` and `closeds_cases_discrimination.py`: all 12 declarations. Reused a test-only signed cable helper from `opens_rails_cases.rs`. Checks one real prepend per new member, row and icon-bearing header replacements for each remaining member, outsider silence (including Bender), creation/update gates, membership revisions, open-to-closed conversion, unknown-icon rollback before membership revision, direct conversion exclusion and self-removal followed by access loss. The source's show test intentionally calls the open namespace for a closed room, and the Rust test preserves that behavior.
+| Commit | Change |
+|---|---|
+| `567425ff` | Merge WS17 `41dbe4bd` for real presence/status/OOO/reminder facts. |
+| `7aad9674` | Merge WS11 `18c9219c` for actual agents and working presence. |
+| `fc117fbc` | Merge WS8bm `b14759da` for list/composer/pending-template seams. |
+| `4ce15b36` | Merge WS8bm2 `d24317e8` for pin, schedule and quote factories. |
+| `39642d8f` | Reconcile app service fields, controller registration and test initializers across those owners. |
+| `670b1cbe` | Register the one real WS17 saved-item reminder transport; remove the merged duplicate runtime placeholder. Retain the standalone M2 transport-boundary test module only under `cfg(test)`. |
+| `4e7b4112` | Real members JSON, all 13 Rails declarations, bot denial and six complete Rails HTTP body/header goldens. |
+| `fe682835` | Actual owner pin count/list refresh streams, all four Rails declarations and populated/empty rendering plus request-token ownership. |
+| `27990da2` | Mount actual native list/composer/schedule/pending-template bytes in the shell; verify roots, around anchors, warm per-viewer dividers and request tokens. Add a strict failing Rails region comparison. |
+| `3e779615` | Fix four composite integration failures: preload domain DM naming without queries, set search icons inside shared cache misses, use the actual quote-card broadcast renderer, and wait for only the quote job while asserting unrelated future retention work survives. |
+| `286ee6eb` | Map five supported declarations from the largest remaining sidebar file; retain nine huddle/query cases explicitly. |
+| `2900850f` | Map all eight involvement and seven reads declarations through HTTP and live per-user Cable. Correct voice/stage/board sidebar row identity to the full STI key. |
+| `2a9f16c3` | Map all six favorites, six category CRUD, five category assignments, and four functional switcher declarations. |
+| `e993b656` | Resolve four of the older nine deferred cases: DM note rendering and immutable edit/delete, in-page unread divider and off-page unread jump. All 29 direct declarations now map. |
+| `b9cae0e0` | Move merged periodic tests after production items and compile the pin test regex once; no behavior/deadline change. |
+| `c46d7f77` | Correct strict comparison diagnostics to measure UTF-8 byte lengths; keep the nine failures explicit. Rust source is unchanged from `b9cae0e0`. |
 
-`controllers/rooms.rs` registers the test modules only. `reference-tools/rooms/deferred_inventory.py` and `plans/ws8br-rails-cases.json` map individual source declarations to actual cargo pass receipts, separately from Rails baseline receipts. `plans/ws8br-owner-integration.md` documents the remaining adapter work and direct WS9 usage. Existing presenters, views and owner fragment hooks keep their fields/entry points; WS8br2's users/accounts/public/tour work is untouched.
+The four owner merges are merge commits, with locked metadata and duplicate-key checks after each. No WS8br2 branch or user/profile/avatar/account/public/tour implementation was added. Its layouts/presenters remain available with their existing entry points. Message/pin partial internals and pin policy were not ported into the shell.
 
-## Exact shell inputs and owner seams
+## Members and refresh behavior
 
-`controllers/rooms::render_show` currently selects and passes these facts into the existing `Presenter`/`ShowView`; it **does not yet invoke the unmerged WS8bm message-list factory**:
+Members authenticate via WS9, emit empty JSON 401, deny bots, and scope alive rooms to the viewer. Active members are ordered by SQLite `LOWER(name), id`. WS17 `UserStatusSettings::for_ids` and `WorkspacePresenceLease::presence_by_user_id` supply status and effective presence; WS11 `Agent::for_user` and `working_presence_text` supply agent facts. Stars are live and viewer-scoped. The exact ordered fields are `id`, `name`, `avatar_url`, `bot`, `online`, `presence`, `status`, `starred`. Six actual Rails HTTP goldens cover three rooms and two viewers, including headers and full JSON bytes. Ruby's observed Rack ETag is retained alongside its no-store/no-cache headers; the controller's comment saying not ETagged does not describe the actual Rack response. No local fake offline/default-agent policy or presence TTL is introduced.
 
-1. Reader connection, app state, request host, verified request origin `cache_base_url = c.url_for("")`, and `app.fragment_cache` around message presentation.
-2. Root `Message` rows from `room_shell::find_messages(conn, room.id, message_id)`: 40 on the last page; around a same-room root anchor, up to 40 before + anchor + 40 after (81 total). Foreign, missing and thread anchors fall back to the last page.
-3. Current membership `last_read_message_id`/`unread_at` yields `unread_divider_message_id: Option<i64>`, `unread_count: i64`, `scroll_to_unread_divider: bool` (in-page count above five) and an out-of-page `jump_to_unread_url`. These viewer facts must not enter shared message cache keys.
-4. `ShowView.room`: ID, STI-derived kind, persisted name, viewer display name, resolved header identity and involvement. `ShowView.user`: ID, name, title and fresh signed avatar URL. Selected `MessageItem`s; room `updated_at`; invitation `Room::original == room && !Message::paged`; account join code; SHA1-keyed signed `[room_gid, "messages"]` stream name.
-5. Request `ViewContext`: viewer/admin/bot/preferences, account, assets, verified URL/referrer/last-room, time zone, flash and chrome. Normal page rendering lends the request CSRF token and CSP nonce; broadcast contexts stay detached.
+Refresh obtains pins only through the WS8bm2 list seam. Its real count/list factories supply streams after message append/replacements. Empty output is compared as complete Rails HTTP bytes. Populated rendering uses the same fixed request-secret instrumentation as Rails, while a separate actual HTTP Unpin token is accepted only for the current viewer. No response normalization is used.
 
-The inspected WS8bm entry point is `Presenter::room_message_list(&[Message], divider_id: Option<i64>, unread_count: i64) -> Result<String>`. The adapter should call it inside `fragment_cache::with(&app.fragment_cache, ...)` and assign the returned trusted bytes to `ShowView.shell.message_list = Some(...)`.
+## Exactly what the shell passes
 
-`ShellComponents` accepts `message_list`, `composer`, `message_template` as `Option<String>` (supplied empty output is distinct from missing output), plus trusted string `thread_panel`, `pins_panel`, `poll_builder`, `huddle_header`, `ooo_notices`. `campfire_views::rooms::room_message_list(ctx, show)` returns the supplied bytes verbatim or the authorized zero-byte Rails empty-room placeholder. Current HTTP creates `ShellComponents::default()`, so native full list/composer acceptance is unclaimed. The fallback composer receives `room = &show.room` and request `ViewContext`, with no separate `user` local. The client message template receives `user = &show.user`. A completed owner composer factory, with its request-bound tokens, still needs reconciliation at merge.
+`controllers/rooms::render_show` supplies the native owner entry points with:
 
-WS8bm2's inspected pins API is `controllers::rooms::pins::list(conn, app, room)` with its `CountPartial` and `ListPartial`. Refresh must wrap those bytes in replace streams for `pins_count_<room_param_key>_<id>` and `pins_list_<room_param_key>_<id>`, preserving STI keys. Current refresh selects new roots, updated roots excluding the new IDs, and returns 204 when both are empty and pins did not advance; pin-only refresh still has 200 with no count/list streams. No pin querying/order/excerpt/policy is owned here.
+1. A reader connection, actual merged app state, request host, verified request origin
+   as `cache_base_url`, and the app's shared fragment store.
+2. Root `Message` records from `room_shell::find_messages`: last 40, or up to 40 before
+   a same-room root anchor plus the anchor plus 40 after (81 total). Foreign, missing,
+   and thread anchors fall back to the last page. Their original IDs, timestamps,
+   client IDs, creators, content and owner feature records are not replaced.
+3. The current membership's `last_read_message_id` and `unread_at` produce
+   `divider.message_id: Option<i64>` and `divider.count: i64`. The exact call is
+   `presenter.room_message_list(&messages, divider.message_id, divider.count)` under
+   `fragment_cache::with(&app.fragment_cache, ...)`. Its returned string is assigned
+   unchanged to `ShowView.shell.message_list = Some(list)`. Viewer dividers remain
+   outside the shared per-message cache.
+4. `ShowView.room`: ID, owner `RoomKind` (Open/Closed/Direct; voice/stage/board currently
+   use Closed until their screen-owner integration), persisted name, viewer display name, resolved
+   header identity and involvement. `ShowView.user`: ID, name, title and fresh signed
+   avatar URL. The same selected `MessageItem`s identify cached fragments. Other
+   inputs are room `updated_at`, the original-room/unpaged invitation predicate,
+   account join code, signed `[room_gid, "messages"]` stream name, divider scroll/jump
+   facts, and WS17's real per-viewer OOO notice members.
+5. Request `ViewContext`: viewer/admin/bot/preferences, account, assets, verified URL,
+   referrer/last-room, time zone, flash and chrome. The layout lends actual request
+   CSRF and CSP values. Broadcast contexts remain detached.
 
-Members still resolve to the existing 501 route pending the actual WS17/WS11 adapter. It must call WS17 `UserStatusSettings::for_ids`, `WorkspacePresenceLease::presence_by_user_id`, `effective_presence` and `status_text_display`, plus WS11 `Agent::for_user`/`working_presence_text`. Then emit only Rails' member keys, live viewer stars and absolute fresh avatars with no-store/auth/room-access behavior. Do not substitute empty status or all-offline defaults. Exact adapter instructions and the inspected owner refs are in `ws8br-owner-integration.md`; those refs are inspection evidence, not merged implementations. A dependency-merge question was left pending; no permission was inferred from elapsed time.
+`presenter.composer_facts(&room, &viewer, None, drive_flow)` supplies WS8bm's root
+composer with room ID/kind, viewer-relative domain display name, `thread: None`, the
+static slash-command registry followed by room-scoped agent slash commands, and the
+Drive flow. Drive consent scopes currently select `None` or `Metadata`; the unresolved
+WS14 Picker availability input is explicitly `false`, so configured `Share` acceptance
+is still pending.
 
-## Rails files and native pass receipts
+Inside the request rendering scope, `room_native::components` renders:
 
-The 14 pinned Rails controller files ran independently with source SHA guards: **161 runs/passes, zero failures/errors/skips**. Those are reference executions, not Rust completion. The committed inventory lists all 58 relevant controller/system files, 512 declared source cases, exact names/lines/hashes, ownership and supplied run receipts.
+- WS8bm2 `scheduled_messages::ComposerButton { ctx, room_id, thread_id: None }`, passed
+  as the trusted `scheduled_control` argument to WS8bm `composer::Composer`.
+- WS8bm `channel_threads::PendingTemplate { ctx, user: &show.user }`.
 
-| Rails file | Rails reference passes | Individually mapped Rust passes | Explicit deferred cases |
-|---|---:|---:|---:|
-| `rooms/directs_controller_test.rb` | 29 | 27 | 2 |
-| `rooms_controller_test.rb` | 29 | 22 | 7 |
-| `rooms/opens_controller_test.rb` | 15 | 15 | 0 |
-| `rooms/closeds_controller_test.rb` | 12 | 12 | 0 |
-| `rooms/inbound_email_addresses_controller_test.rb` | 8 | 8 | 0 |
+Those returned bytes become `shell.composer = Some(...)` and
+`shell.message_template = Some(...)`. The actual HTTP page mounts all three native
+components; it does not inject Rails message/composer fragments. Request tests check
+selected roots, around-anchor roots, schedule controls, real viewer token ownership,
+and different unread boundaries on warm shared fragments.
 
-Nine explicit named deferrals in those mapped files:
+`ShellComponents` also retains `thread_panel`, `pins_panel`, `poll_builder`,
+`huddle_header`, and `ooo_notices` slots. A full owner panel entry point is not present
+for all of these. In particular, WS8bm2 currently supplies pin count/list factories,
+not a complete pins-panel factory; WS8bm supplies no root thread-panel factory.
+WS13 huddle and WS14 configured Picker facts also remain integration work. Do not
+reimplement those partials or provider policies in this shell.
 
-- Directs: “a member can rename the group and everyone sees the compact system note” (WS8bm list rendering; rename/domain already covered); “group DM notes cannot be edited or deleted” (WS8bm message authorization).
-- Rooms: collapsed work-thread guidance (WS8bm); three link-preview render cases (WS8bm with WS15e); two full unread-divider/list cases (WS8bm integration, WS8br cursor/page facts already covered); “destroy succeeds when the queue is down and the sweep recovers the room” (lead decision 2 instead requires atomic enqueue rollback, already exercised through native HTTP fault injection).
+## Pin refresh
 
-Next unmapped room controller files, largest first: `users/sidebars` 14 (WS13 live huddle/participants and other owner facts); `rooms/members` 13 (WS17/WS11); `rooms/involvements` 8; `rooms/reads` 7; `rooms/favorites` 6; `room_categories` 6; `rooms/categories` 5; `switchers` 5; `rooms/refreshes` 4 (WS8bm/WS8bm2 integration). These are **68 source declarations in nine files**, still unclaimed as individual ports even where grouped HTTP coverage exists.
+Root creation/update windows and pin-change timestamps are selected by the refresh
+controller. A quiet refresh returns 204 before format negotiation. Only when pins
+changed, it calls WS8bm2 `controllers::rooms::pins::list(conn, app, room)` and stores
+that actual `pins::List` in `RefreshView.pins`.
 
-Also remaining: the 17 mixed room/account audit declarations (room subset WS8br, account subset WS8br2); existing unfurl-controller re-diff coordinated with WS15e; the full owned system-file matrix in the JSON. Largest system files are group DMs 19, member selection 18, sidebar room menu 16, keyboard 14, motion/header 9 each, navigation 7, sidebar organization 6, mobile/switcher/unread/CSP 5 each, channel members 4, unread rooms 2 and browser launch 1. The new real DM/inbound browser probes are not claimed as full Minitest system-file executions. Split users/profiles/avatars/cards/bans/time zones/accounts/public/welcome/first-run/tour/PWA/QR remain WS8br2. Message/composer/thread logic remains WS8bm, pins/polls WS8bm2, huddle WS13, status/OOO WS17, agents WS11, board/star policy WS12.
+`RefreshShow` renders the owner `CountPartial` and `ListPartial` with its current
+`ViewContext`, after message append/replace streams. Targets are
+`pins_count_<room_param_key>_<id>` and `pins_list_<room_param_key>_<id>`; full STI keys
+are preserved. Ordering, excerpts, pin/unpin policy and durable events stay in WS8bm2.
+The empty refresh is byte-identical to Rails. Populated owner rendering is compared
+with fixed request secrets; the separate real HTTP response's Unpin token is verified
+for its viewer and rejected for another viewer. No response bytes are normalized.
 
-## Reproducible fresh-clone verification
+## Native acceptance still fails explicitly
 
-Fresh clone `.scratch/fresh-continue7/repo` was created with `git clone --no-local --single-branch --branch rust/ws8br-rooms-http . .scratch/fresh-continue7/repo`, with no copied target, node_modules, seeds or worker scratch fixtures. Its own default and first-run seeds were built using the tracked seed tooling from our pinned Rails image; Playwright dependencies/browser were installed there. The clone was fast-forwarded to the pushed closed-room slice before the final suite. CI=1 makes missing seeds fail. All test/build commands below use this clone's own target and TMPDIR, with test sockets in 52100–52149 and browser servers 52150/52151 (internal 52152). The final documentation-only commit can be fast-forwarded without changing the tested Rust/fixtures.
+Fresh-clone native root-selection capture passes, then the separate strict comparison exits **1**. No Rails owner HTML is substituted into the native page; no mask, allowlist, ignored app case or widened deadline hides these differences.
 
-From the fresh-clone root:
-
-```sh
-PARITY_NAMESPACE=ws8br-fresh7-seed PARITY_OWNER=ws8br PARITY_IMAGE=ws8br-reference-d7c7de92 rust/parity/bin/seed build default first_run
-mise exec rust@1.98.1 -- cargo metadata --locked --format-version 1 --manifest-path rust/Cargo.toml >/dev/null
-python3 rust/reference-tools/rooms/check_workspace.py
-CI=1 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CABLE_TEST_PORT_RANGE=52100-52149 MAIL_TEST_PORT_RANGE=52100-52149 mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml --workspace --no-fail-fast -- --test-threads=1
-CI=1 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo clippy --locked -j4 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings
-CI=1 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo build --locked -j4 --manifest-path rust/Cargo.toml -p campfire --bin campfire
-npm ci --prefix rust/parity
-npm exec --prefix rust/parity -- playwright install chromium
-CARGO_TARGET_DIR="$PWD/rust/target" python3 rust/reference-tools/rooms/dm_browser.py
-CARGO_TARGET_DIR="$PWD/rust/target" python3 rust/reference-tools/rooms/dm_browser.py --inject-selection-drift
-CARGO_TARGET_DIR="$PWD/rust/target" python3 rust/reference-tools/rooms/inbound_browser.py
-PARITY_IMAGE=ws8br-reference-d7c7de92 python3 rust/reference-tools/rooms/check_controller_files.py
-PARITY_IMAGE=ws8br-reference-d7c7de92 python3 rust/reference-tools/rooms/check_controller_files.py --inject-source-drift
+```text
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1017 filtered out; finished in 0.60s
+FAIL room 654632876 message_list: Rust 286281 bytes, Rails 288823 bytes
+FAIL room 654632876 composer: Rust 10372 bytes, Rails 10373 bytes
+FAIL room 654632876 pending_template: Rust 1448 bytes, Rails 1449 bytes
+FAIL room 186869642 message_list: Rust 19541 bytes, Rails 19547 bytes
+FAIL room 186869642 composer: Rust 10368 bytes, Rails 10369 bytes
+FAIL room 186869642 pending_template: Rust 1448 bytes, Rails 1449 bytes
+FAIL room 699448329 message_list: Rust 6553 bytes, Rails 6559 bytes
+FAIL room 699448329 composer: Rust 8595 bytes, Rails 8596 bytes
+FAIL room 699448329 pending_template: Rust 1463 bytes, Rails 1464 bytes
+Native room component acceptance: 0 exact matches; 9 differences; no masks
 ```
 
-Each command was run this continuation; metadata exited 0 with intentionally no stdout. npm ci reported no vulnerabilities, Chromium installation exited 0 using Playwright's Ubuntu fallback (host OS warning). Raw seed/check/browser/build/clippy summaries:
+The Designers list lacks the unmerged WS15 GitHub/Fizzy/LinkedIn/link-embed provider integration and has caller whitespace differences. The pair/group list differences are caller whitespace; composer/pending-template regions also differ in owner caller whitespace/final newline. Artifacts are under `/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8br/.scratch/fresh-continue8/repo/.scratch/native-components-diff/`, with actual, expected and unified diffs per complete region. Reconciliation belongs in the owner entry points/callers; partial internals remain untouched. Complete pins/thread panels, poll builder, WS13 huddle/venue inputs and WS14 configured Picker availability also remain integrations; the current venue `RoomKind` fallback is stated above. Full-page/browser/pixel parity is not claimed.
+
+## Per-file controller receipts
+
+These counts are source declarations individually mapped to named Rust tests, separate from the actual Rails Minitest runs. Two extra members regressions and one extra pin-refresh regression also pass; they do not inflate source mapping counts.
+
+| File | Declarations | Rust mapped passes | Remaining | Rails reference runs |
+|---|---:|---:|---:|---:|
+| `test/controllers/rooms/directs_controller_test.rb` | 29 | 29 | 0 | 29 |
+| `test/controllers/rooms_controller_test.rb` | 29 | 24 | 5 | 29 |
+| `test/controllers/rooms/opens_controller_test.rb` | 15 | 15 | 0 | 15 |
+| `test/controllers/users/sidebars_controller_test.rb` | 14 | 5 | 9 | 14 |
+| `test/controllers/rooms/members_controller_test.rb` | 13 | 13 | 0 | 13 |
+| `test/controllers/rooms/closeds_controller_test.rb` | 12 | 12 | 0 | 12 |
+| `test/controllers/rooms/inbound_email_addresses_controller_test.rb` | 8 | 8 | 0 | 8 |
+| `test/controllers/rooms/involvements_controller_test.rb` | 8 | 8 | 0 | 8 |
+| `test/controllers/rooms/reads_controller_test.rb` | 7 | 7 | 0 | 7 |
+| `test/controllers/room_categories_controller_test.rb` | 6 | 6 | 0 | 6 |
+| `test/controllers/rooms/favorites_controller_test.rb` | 6 | 6 | 0 | 6 |
+| `test/controllers/rooms/categories_controller_test.rb` | 5 | 5 | 0 | 5 |
+| `test/controllers/switchers_controller_test.rb` | 5 | 4 | 1 | 5 |
+| `test/controllers/rooms/refreshes_controller_test.rb` | 4 | 4 | 0 | 4 |
+| **Total** | **161** | **146** | **15** | **161** |
+
+`rust/plans/ws8br-rails-cases.json` records each source name, line, hash, native selector/pass or exact deferral reason. The inventory validates fresh-clone cargo receipts including libtest timings; it does not infer a pass from a source declaration. The broader 58-file/512-declaration browser/controller inventory retains ownership handoffs to WS8br2 and other workers.
+
+## Exactly what remains
+
+`test/controllers/users/sidebars_controller_test.rb`:
+
+- channel row shows the live huddle stack with names and count — WS13 huddle grant/presence integration and full-request query instrumentation.
+- board row shows the live huddle stack with names and count — WS13 huddle grant/presence integration and full-request query instrumentation.
+- direct row shows the live huddle stack when the peer is in the call — WS13 huddle grant/presence integration and full-request query instrumentation.
+- quiet rows keep an empty stack target with no visible presence — WS13 huddle grant/presence integration and full-request query instrumentation.
+- direct row re-renders when a participant joins — WS13 huddle grant/presence integration and full-request query instrumentation.
+- group direct rooms render member names and a huddle stack — WS13 huddle grant/presence integration and full-request query instrumentation.
+- no channel or DM stacks without huddle configuration — WS13 huddle grant/presence integration and full-request query instrumentation.
+- sidebar query count does not grow with quiet channels, DMs, boards, and stages — WS13 huddle grant/presence integration and full-request query instrumentation.
+- sidebar query count does not grow with group DMs, named or not — WS13 huddle grant/presence integration and full-request query instrumentation.
+
+`test/controllers/rooms_controller_test.rb`:
+
+- show renders collapsed work-thread guidance in the new-thread panel — WS8bm thread-panel rendering.
+- show renders a link preview written by hand without its off-scheme image and link — WS8bm message renderer and WS15e embed provider.
+- show renders a link preview written by hand without its image pointed at this Smartfire — WS8bm message renderer and WS15e embed provider.
+- show renders an unfurled link preview — WS8bm message renderer and WS15e embed provider.
+- destroy succeeds when the queue is down and the sweep recovers the room — Lead decision 2 requires atomic queue rollback; native fault-injection coverage is separate.
+
+`test/controllers/switchers_controller_test.rb`:
+
+- show costs a constant number of queries as rooms, people and threads grow — Full-request query instrumentation; existing pure read-model budget tests do not claim this HTTP case.
+
+Of the original nine deferred declarations, four are resolved and five remain in `rooms_controller_test.rb`. The queue-down Rails declaration conflicts with fixed lead decision 2 requiring atomic queue rollback; existing native queue fault-injection coverage remains separate and is not mislabeled as a port of that source case.
+
+Browser/system acceptance waits for the end-to-end phase. Keep DM picker/create/settings/huddle flows, inbound-email address reveal/enable/regenerate/disable and non-admin denial, full room list/composer/panels, per-viewer unread state, navigation/header/sidebar/switcher, accessibility, motion, responsive layout and configured huddle/venue states inventoried. The previously delivered DM and inbound browser probes remain tracked but are not claimed as rerun here.
+
+## Failing-first discrimination and integration failures
+
+Before implementation, the meaningful members route run rejected 14 tests (including authorization); pin refresh rejected its two new pin-dependent regressions; native list/composer mounting rejected three tests. Canonical raw logs are `.scratch/members-before.log`, `.scratch/pin-refresh-before.log` and `.scratch/native-before.log`. The new controller mappings additionally execute compiled dispatch-removal regressions, restored in `finally`. Their seven groups reject all 41 newly mapped declarations in those groups. The four newly unblocked cases reject compiled missing adapters as well.
+
+Commands actually executed in this continuation, with the two profile variables set to `0` (compiler jobs and harness threads remain four):
+
+```sh
+python3 rust/reference-tools/rooms/controller_mapping_discrimination.py sidebars
+python3 rust/reference-tools/rooms/controller_mapping_discrimination.py involvements
+python3 rust/reference-tools/rooms/controller_mapping_discrimination.py reads
+python3 rust/reference-tools/rooms/controller_mapping_discrimination.py favorites
+python3 rust/reference-tools/rooms/controller_mapping_discrimination.py room_categories
+python3 rust/reference-tools/rooms/controller_mapping_discrimination.py categories
+python3 rust/reference-tools/rooms/controller_mapping_discrimination.py switchers
+python3 rust/reference-tools/rooms/deferred_cases_discrimination.py
+```
+
+Raw summaries:
+
+```text
+test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 973 filtered out; finished in 1.73s
+Controller mapping discrimination: sidebars compiled dispatch removal rejected; source restored
+test result: FAILED. 0 passed; 8 failed; 0 ignored; 0 measured; 985 filtered out; finished in 2.93s
+Controller mapping discrimination: involvements compiled dispatch removal rejected; source restored
+test result: FAILED. 0 passed; 7 failed; 0 ignored; 0 measured; 986 filtered out; finished in 1.74s
+Controller mapping discrimination: reads compiled dispatch removal rejected; source restored
+test result: FAILED. 0 passed; 6 failed; 0 ignored; 0 measured; 1008 filtered out; finished in 1.79s
+Controller mapping discrimination: favorites compiled dispatch removal rejected; source restored
+test result: FAILED. 0 passed; 6 failed; 0 ignored; 0 measured; 1008 filtered out; finished in 1.60s
+Controller mapping discrimination: room_categories compiled dispatch removal rejected; source restored
+test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 1009 filtered out; finished in 1.11s
+Controller mapping discrimination: categories compiled dispatch removal rejected; source restored
+test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 1010 filtered out; finished in 1.28s
+Controller mapping discrimination: switchers compiled dispatch removal rejected; source restored
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 1016 filtered out; finished in 0.88s
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 1016 filtered out; finished in 1.17s
+Deferred case discrimination: four compiled missing-adapter regressions rejected; source restored
+```
+
+The first complete composite app run exposed four failures, all resolved before the fresh clone. They were merge/test integration issues, not claimed inherited or timing flakes. The quote test's 10-second wait erroneously required an unrelated job scheduled an hour ahead to disappear; the corrected predicate waits only for the quote class and still asserts that future retention job is present. Its timeout was not widened. The fresh-clone run has no failure or timing flake to report.
+
+## Fresh-clone verification and reproducibility
+
+Fresh clone `/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8br/.scratch/fresh-continue8/repo` was created with `git clone --no-local --single-branch --branch rust/ws8br-rooms-http . .scratch/fresh-continue8/repo`. It received the pushed lint-only commit before any seed/build; later it fast-forwarded only the UTF-8 diagnostic script. All Rust source remains exactly the tested `b9cae0e0` tree. No canonical seed, build target, node_modules, captured response or scratch fixture was copied in. The seeds were independently built from tracked tooling and the pinned Rails image. The only untracked checkout state afterwards is generated `.scratch/` output. Failure artifacts and prior logs are retained in canonical scratch; only its regenerable compiler target was cleaned to make space.
+
+From that fresh clone, these commands were rerun:
+
+```sh
+PARITY_NAMESPACE=ws8br-fresh8-seed PARITY_OWNER=ws8br PARITY_IMAGE=ws8br-reference-d7c7de92 rust/parity/bin/seed build default first_run
+mise exec rust@1.98.1 -- cargo metadata --locked --format-version 1 --manifest-path rust/Cargo.toml >/dev/null
+python3 rust/reference-tools/rooms/check_workspace.py
+CI=1 TMPDIR="$PWD/.scratch" CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_TARGET_DIR="$PWD/rust/target" CABLE_TEST_PORT_RANGE=52100-52149 MAIL_TEST_PORT_RANGE=52100-52149 RUSTC_BOOTSTRAP=1 mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml --workspace --no-fail-fast -- --test-threads=4 -Z unstable-options --report-time
+CI=1 TMPDIR="$PWD/.scratch" CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo clippy --locked -j4 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings
+CI=1 TMPDIR="$PWD/.scratch" CARGO_PROFILE_TEST_DEBUG=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_TARGET_DIR="$PWD/rust/target" CABLE_TEST_PORT_RANGE=52100-52149 MAIL_TEST_PORT_RANGE=52100-52149 RUSTC_BOOTSTRAP=1 mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire --bin campfire native_component_capture_matches_rails_root_selection -- --test-threads=4 --nocapture
+python3 rust/reference-tools/rooms/native_components_check.py --capture-log .scratch/native-capture.log
+```
+
+Workspace tests exit 0; clippy exits 0; metadata exits 0 with intentionally no stdout; the final strict diagnostic exits 1 as reported above. Rust is still stable `1.98.1`; `RUSTC_BOOTSTRAP` enables libtest's timing report, without changing implementation features, deadlines or concurrency. Debug symbols alone are disabled for disk space. Aggregate of the 58 raw harness summaries is 2360 passes, zero failures, ten existing ignores. The app's two ignores remain the reference recorder and push-latency measurement; WS11's bot-management test now executes.
+
+Raw seed/manifest/clippy output:
 
 ```text
 seed: building default
@@ -84,161 +242,104 @@ seed: default -> parity/.seed/default (6.1M)
 seed: building first_run
 seed: first_run -> parity/.seed/first_run (1.5M)
 Cargo TOML duplicate-key check: all manifests parse; no duplicate workspace dependency keys
-found 0 vulnerabilities
-BEWARE: your OS is not officially supported by Playwright; downloading fallback build for ubuntu24.04-x64.
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 24.96s
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 11.81s
-DM browser acceptance: 2 targets passed; filter, Enter, hidden selection, clear, real create, rename, invalid name, reload, reuse, huddle redirect and Escape match
-DM browser discrimination: wrong submitted member ID rejected by persisted settings acceptance
-Inbound-email browser acceptance: 2 targets passed; create, confirm rotation, Rails 302-to-404 redirect, flash, reload and direct-room exclusion match
-Rails controller source-pin injection: wrong hash rejected before tests
-Fresh-clone workspace: 56 targets; 1634 passed; 0 failed; 11 ignored
+    Finished `dev` profile [unoptimized] target(s) in 38.33s
 ```
 
-One repeated DM browser run at `e2c63fa0` timed out on the **Rails reference** while waiting for the reused-group Start huddle POST, before native acceptance began. The same script passed unchanged on retry, including native acceptance and wrong-ID rejection. No timeout, assertion or app code was relaxed. This remains observed browser-harness intermittency, not a claimed fix; the complete system-file acceptance is still deferred. The failed execution is retained in `.scratch/fresh-continue7/dm-browser-final-first.log`:
+Raw workspace test summary lines, including doc-test harnesses:
 
 ```text
-page.waitForResponse: Timeout 30000ms exceeded while waiting for event "response"
-```
-
-All 56 raw workspace target summaries (including zero-test doctest targets):
-
-```text
-test result: ok. 546 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 588.26s
+test result: ok. 1016 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 161.99s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.07s
-test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 43.16s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.47s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.64s
 test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
-test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.49s
-test result: ok. 445 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 198.92s
-test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.54s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.36s
-test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.86s
-test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.26s
-test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.09s
+test result: ok. 697 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 63.83s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.65s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.01s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.01s
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
-test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 14.25s
-test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.47s
-test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.52s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 31.93s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.43s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.34s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 21.18s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.13s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.72s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.45s
-test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.73s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.69s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.65s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.55s
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
 test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
-test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.93s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 11.92s
 test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.33s
-test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.86s
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.53s
+test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.34s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.69s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.33s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
 
-All 11 ignores are pre-existing, listed explicitly below; no seed-dependent test silently skipped:
+Logs: `/home/riels/Projects/SD-Labs/Campfire/.claude/worktrees/rust-ws8br/.scratch/fresh-continue8/repo/.scratch/workspace-tests.log`, `workspace-clippy.log`, `seed-build.log`, `native-capture.log` and `native-comparison.log`.
 
-```text
-test channels::tests::golden::record_reference ... ignored, needs a running reference app; see the module docs
-test controllers::presenters::accounts::tests::manages_bots ... ignored, WS11: resetting Bender's bot key leaves the original seeded key visible in the account bot list
-test jobs::tests::push_latency ... ignored, a measurement, not a test
-test record_reference ... ignored, needs a running reference app; see the module docs
-test tests::differential_test::scenario_matches_ruby ... ignored, needs CAMPFIRE_RUBY_SCENARIO_DB, the reference app's database after scenario.rb
-test tests::fixtures_test::export_database_for_rails ... ignored, writes a database to CAMPFIRE_EXPORT_DB for the Rails rollback check
-test tests::fixtures_test::fixtures_match_ruby_row_for_row ... ignored, needs CAMPFIRE_RUBY_FIXTURES_DB, a database the reference app filled with `db:fixtures:load` at CAMPFIRE_FIXTURES_NOW
-test tests::two_factor_rollback_test::read_rails_rollback_changes ... ignored, requires Rails to mutate the rollback fixture; run reference-tools/auth/rollback.sh
-test export_for_rails ... ignored, exports a database for the Rails rollback check; requires CAMPFIRE_MAIL_EXPORT_DIR
-test crates/kit/src/error.rs - error::halt (line 91) ... ignored
-test crates/kit/src/lib.rs - (line 7) ... ignored
-```
+## Runtime inventory
 
-The initial fresh-clone full run with four test threads hit the unchanged richtext hardening test's five-second wall-clock threshold (5.636s); an isolated retry also took 5.677s. No source, threshold or ignore changed. A separate freshly seeded clone detached at exactly main `4278cb1e` passed that same isolated test in 1.91s; the unchanged worker clone then passed in 1.91s. The final serial full suite above passed it as well. This is an observed timing failure/recovery, not a claim that main fails. Logs remain under `.scratch/fresh-continue7/{workspace-before-opens,hardening-retry,hardening-final-retry}.log` and `.scratch/fresh-main-4278/hardening.log`.
+The fresh-clone app harness took **161.99 s** with four test threads. This is verification under the current shared-host load, not a controlled speed comparison with the previously reported 588 s. The slowest app tests are:
 
-The isolated comparison command was run in both clones:
+- `channels::tests::golden::replays_reference_frames`: 20.917 s.
+- `app::admin_two_factor_tests::self_service_limits_use_ip_and_user_windows_and_remembered_actions_share_a_bucket`: 13.492 s.
+- `app::round_four_security_tests::profile_zone_case_and_alias_validation_matches_rails_without_partial_writes`: 12.153 s.
+- `channels::tests::support::until_closed_bounds_a_socket_that_keeps_pinging`: 10.124 s.
+- `app::profile_security_tests::profile_guard_fields_errors_and_security_writes_match_pinned_rails`: 9.586 s.
+
+The slowest owned room tests are:
+
+- `controllers::rooms::closeds_rails_cases::updating_the_icon_replaces_sidebar_rows_and_headers_for_members_only`: 2.172 s.
+- `controllers::rooms::involvements_rails_cases::update_involvement_sends_turbo_update_when_becoming_visible_and_when_going_invisible`: 1.880 s.
+- `controllers::rooms::involvements_rails_cases::updating_involvement_does_not_send_turbo_update_changing_visible_states`: 1.606 s.
+- `controllers::rooms::involvements_rails_cases::updating_involvement_does_not_send_turbo_update_for_direct_rooms`: 1.554 s.
+- `controllers::rooms::closeds_rails_cases::create_case`: 1.446 s.
+
+None of the room tests individually dominates the app run. Outside the app harness, the existing Cable `concurrent_cutoff_drops_later_publications` test took 42.639 s, and DB slash-command Ruby differentials took about 34 s each. Coverage, test concurrency and timing thresholds were not reduced or widened.
+
+## Pinned Rails and inventory commands
+
+From the canonical worktree, both were rerun after the implementation slices:
 
 ```sh
-CI=1 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire_richtext --test hardening deeply_nested_content_attachments_render_quickly -- --exact --test-threads=1
+python3 rust/reference-tools/rooms/check_controller_files.py
+python3 rust/reference-tools/rooms/deferred_inventory.py --test-log .scratch/fresh-continue8/repo/.scratch/workspace-tests.log --rails-log .scratch/controller-reference-current.log
 ```
 
-Raw chronological timing receipts:
-
-```text
-test result: FAILED. 9 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.82s
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 5.94s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 1.91s
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 1.91s
-```
-
-## Failing-first discrimination and per-file raw receipts
-
-From the canonical worktree, each committed discrimination script compiled a deliberately incorrect real controller, exercised HTTP/SQLite/cable, required a test failure and restored its exact source in `finally`. Mutation checks were sequential; normal verification followed restoration. An accidentally overlapping normal check was stopped and rerun after restoration; it is not counted as a pass. A broad formatter invocation was reverted before final verification, leaving only this slice's intended test changes.
-
-```sh
-python3 rust/reference-tools/rooms/directs_cases_discrimination.py
-python3 rust/reference-tools/rooms/rooms_cases_discrimination.py
-python3 rust/reference-tools/rooms/opens_cases_discrimination.py
-python3 rust/reference-tools/rooms/closeds_cases_discrimination.py
-CI=1 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CABLE_TEST_PORT_RANGE=52100-52149 MAIL_TEST_PORT_RANGE=52100-52149 mise exec rust@1.98.1 -- cargo test --locked -j4 --manifest-path rust/Cargo.toml -p campfire rails_cases -- --test-threads=1
-python3 rust/reference-tools/rooms/deferred_inventory.py --test-log .scratch/ws9-rails-case-ports-final.log --rails-log .scratch/ws9-rails-controller-files.log
-```
-
-The mutations relaxed group/room creation and update/private-room authorization, removed the first-ten cap before a real SQL query, and accepted unknown icons. All eight were rejected by the named native tests. The browser ID mutation and wrong Rails source hash were also rejected. Raw discrimination summaries:
-
-```text
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 499 filtered out; finished in 0.54s
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 499 filtered out; finished in 0.50s
-Direct Rails case discrimination: group authorization and uncapped real SQL rejected; source restored
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 521 filtered out; finished in 0.72s
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 521 filtered out; finished in 0.53s
-Room Rails case discrimination: administrator and private-room membership mutants rejected; source restored
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 536 filtered out; finished in 1.88s
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 536 filtered out; finished in 2.11s
-Open-room Rails case discrimination: creation authorization and unknown-icon validation mutants rejected; source restored
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 548 filtered out; finished in 0.40s
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 548 filtered out; finished in 0.41s
-Closed-room Rails case discrimination: creation and update authorization mutants rejected; source restored
-```
-
-Raw normal cargo/per-file mapping receipts:
-
-```text
-test result: ok. 84 passed; 0 failed; 0 ignored; 0 measured; 465 filtered out; finished in 19.94s
-Rails case port receipts: test/controllers/rooms/inbound_email_addresses_controller_test.rb: 8 Rust cases passed, 0 deferred; Rails reference executions recorded separately
-Rails case port receipts: test/controllers/rooms/directs_controller_test.rb: 27 Rust cases passed, 2 deferred; Rails reference executions recorded separately
-Rails case port receipts: test/controllers/rooms_controller_test.rb: 22 Rust cases passed, 7 deferred; Rails reference executions recorded separately
-Rails case port receipts: test/controllers/rooms/opens_controller_test.rb: 15 Rust cases passed, 0 deferred; Rails reference executions recorded separately
-Rails case port receipts: test/controllers/rooms/closeds_controller_test.rb: 12 Rust cases passed, 0 deferred; Rails reference executions recorded separately
-Rails controller reference receipts: 14 files, 161 passes, 0 failures, 0 errors, 0 skips; reference only
-Rails deferred inventory: 58 files, 512 source-declared cases; 161 Rails tests run, 161 Rails reference passes; Rust mappings separate
-```
-
-Raw pinned Rails file receipts (again, reference counts only):
+The reference tool verifies all fourteen controller source hashes at `d7c7de92`, runs each actual Rails file separately, and preserves its failure exit status. These are reference executions, not a claim of full Rust case completion. Raw per-file Rails summaries:
 
 ```text
 test/controllers/rooms_controller_test.rb
@@ -272,14 +373,25 @@ test/controllers/users/sidebars_controller_test.rb
 WS8br Rails controller reference: 14 files passed; reference counts only
 ```
 
-Final raw logs are under `.scratch/fresh-continue7/`: `seed.log`, `workspace-keys-final.log`, `workspace-tests-final.log`, `clippy-final.log`, `build-final.log`, `npm-ci-final.log`, `chromium-final.log`, `dm-browser-final.log`, `dm-browser-discrimination-final.log`, `inbound-browser-final.log`, `rails-controller-files-final.log`, `rails-source-injection-final.log`. Canonical discrimination/normal/inventory logs use the filenames cited above. Log files are evidence, never test fixture dependencies; the JSON pass map is committed. Only the inactive canonical `rust/target` cache was cleaned afterward to free space; sources, seeds, logs and the fresh-clone target were preserved.
+Raw mapping/inventory receipts:
 
-## Precisely remaining, requested order
+```text
+Rails case port receipts: test/controllers/rooms/inbound_email_addresses_controller_test.rb: 8 Rust cases passed, 0 deferred; Rails reference executions recorded separately
+Rails case port receipts: test/controllers/rooms/directs_controller_test.rb: 29 Rust cases passed, 0 deferred; Rails reference executions recorded separately
+Rails case port receipts: test/controllers/rooms_controller_test.rb: 24 Rust cases passed, 5 deferred; Rails reference executions recorded separately
+Rails case port receipts: test/controllers/rooms/opens_controller_test.rb: 15 Rust cases passed, 0 deferred; Rails reference executions recorded separately
+Rails case port receipts: test/controllers/rooms/closeds_controller_test.rb: 12 Rust cases passed, 0 deferred; Rails reference executions recorded separately
+Rails case port receipts: test/controllers/rooms/members_controller_test.rb: 13 Rust cases passed, 0 deferred; Rails reference executions recorded separately
+Rails case port receipts: test/controllers/rooms/refreshes_controller_test.rb: 4 Rust cases passed, 0 deferred; Rails reference executions recorded separately
+Rails case port receipts: test/controllers/users/sidebars_controller_test.rb: 5 Rust cases passed, 9 deferred; Rails reference executions recorded separately
+Rails case port receipts: test/controllers/rooms/involvements_controller_test.rb: 8 Rust cases passed, 0 deferred; Rails reference executions recorded separately
+Rails case port receipts: test/controllers/rooms/reads_controller_test.rb: 7 Rust cases passed, 0 deferred; Rails reference executions recorded separately
+Rails case port receipts: test/controllers/rooms/favorites_controller_test.rb: 6 Rust cases passed, 0 deferred; Rails reference executions recorded separately
+Rails case port receipts: test/controllers/room_categories_controller_test.rb: 6 Rust cases passed, 0 deferred; Rails reference executions recorded separately
+Rails case port receipts: test/controllers/rooms/categories_controller_test.rb: 5 Rust cases passed, 0 deferred; Rails reference executions recorded separately
+Rails case port receipts: test/controllers/switchers_controller_test.rb: 4 Rust cases passed, 1 deferred; Rails reference executions recorded separately
+Rails controller reference receipts: 14 files, 161 passes, 0 failures, 0 errors, 0 skips; reference only
+Rails deferred inventory: 58 files, 512 source-declared cases; 161 Rails tests run, 161 Rails reference passes; Rust mappings separate
+```
 
-1. **Members JSON:** merge actual WS17/WS11 APIs, implement the native route and verify all 13 individual Rails cases, ordering/presence/status/agent precedence/stars/absolute avatars/no-store/authorization. Currently 501; no fabricated facts.
-2. **Pins refresh:** call WS8bm2's list/count partial seams; assert populated and pin-only refresh streams with exact STI targets. Pin logic and partial internals stay with WS8bm2.
-3. **DM completion:** the real browser workflow and 27 owned direct-controller cases are delivered; the two message-owned note-render/edit/delete cases and the complete 19-case group-DM/18-case member-selection system matrices remain. Additional overflow/no-op/format/fault permutations remain unclaimed as exhaustive acceptance.
-4. **Full native room page:** wire the actual WS8bm list and completed composer/template factories using the exact inputs above, mount the WS8bm2/WS13/WS17 owner fragments, then run the full seeded HTTP/layout/list/composer and browser/pixel matrix for each viewer/unread/around state. Existing lent-owner-fragment shell goldens prove only the surrounding shell.
-5. **Remaining mappings:** 68 declarations across the nine controller files listed largest-first, nine named deferrals, mixed audit and the listed system matrix. Users/accounts/public/tour/PWA/QR remain transferred to WS8br2; existing unfurl re-diff needs WS15e coordination.
-
-No PR or deployment. Work stops at six coherent pushed slices with owner integration explicitly partial.
+Report mirror: `rust/plans/ws8br-wave4-report.md`. Required external report: `/home/riels/Projects/SD-Labs/Campfire/.claude/delegation/rust-port/wave4/ws8br-report.md`.

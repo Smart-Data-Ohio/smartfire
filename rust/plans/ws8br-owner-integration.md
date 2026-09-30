@@ -1,94 +1,107 @@
-# Room HTTP owner integration — partial, merge instructions
+# Room owner integration contract — native adapters mounted, byte acceptance partial
 
-WS8br's shell/presenters remain additive. This branch does not merge other workers or
-copy their partials/domain policies. Main at `4278cb1e` was merged with commit `8bca72a1`: WS9 authentication, enrollment, sudo, profile security and account-security audits are used directly. The remaining owner branches still need the lead merge. The inspected refs
-are WS8bm `68f6615b`, WS8bm2 `f168c348`, WS17 `1021be6a`, WS11 `8f338ac6`.
+Main `4278cb1e` is already merged. This continuation merges the actual WS17
+`41dbe4bd`, WS11 `18c9219c`, WS8bm `b14759da` and WS8bm2 `d24317e8` code with
+merge commits. WS9 authentication and request concerns remain the main implementations.
+WS8br2 is not merged or implemented here. Its presenter entry points and shell fields
+remain stable.
 
 ## Members JSON
 
-`rooms/members#index` still needs the owner facts and route adapter. Never substitute
-all-offline, empty status or absent-agent defaults. After owner merges, the adapter:
+`rooms/members#index` authenticates through WS9, returns empty 401 for an unsigned
+JSON request, denies bot credentials, and finds an alive room through the viewer's
+membership. It reads active room users in SQLite `LOWER(name), id` order, then invokes
+WS17 `UserStatusSettings::for_ids` and `WorkspacePresenceLease::presence_by_user_id`.
+Status text and effective presence come from those owner objects. WS11 `Agent::for_user`
+and `working_presence_text` supply agent state: a checked-in, unsuspended agent is
+online; its working text, nonblank note, or humanized status supplies the label.
+There is no locally implemented presence TTL or agent policy.
 
-1. Authenticates JSON requests with empty 401 (HTML uses the existing session redirect),
-   denies bots through `Before`, and resolves an alive membership-scoped room with 404.
-2. Loads only active room members, ordered by SQLite `LOWER(users.name), users.id`.
-3. Calls WS17 `UserStatusSettings::for_ids(conn, &ids)` and
-   `WorkspacePresenceLease::presence_by_user_id(conn, &ids, now)` on the same reader.
-   Calls `effective_presence(lease_state)` and `status_text_display(now)` on those settings.
-4. Calls WS11 `Agent::for_user(conn, id)` and `working_presence_text(now)` for associated
-   bots. Online is last-seen present and suspended absent, with status precedence
-   working-presence text, nonblank status note, humanized status.
-5. Reads `user_stars` scoped to the current viewer live on each request. Uses the shared
-   fresh avatar URL helper with the verified request origin. Returns only `id`, `name`,
-   `avatar_url`, `bot`, `online`, `presence`, `status`, `starred`. Uses Rails' no-store
-   headers; no shared fragment cache/ETag and no membership or lease writes.
+Stars are read live, scoped to the viewer. Avatar URLs use the fresh signed-avatar
+helper and verified request origin. The JSON field order is exactly `id`, `name`,
+`avatar_url`, `bot`, `online`, `presence`, `status`, `starred`. Headers include Rails'
+no-store/no-cache policy and its observed Rack-generated ETag (SHA256 of the actual
+JSON, first 32 hex characters). The six complete HTTP goldens include headers and
+bytes for three rooms and two viewers; no membership or presence write occurs.
 
-These owner APIs are absent from WS8br's base. The picker in this branch reads only
-association existence and persisted star flags; it does not implement their policies.
+## Exact room shell inputs
 
-## Exactly what the shell currently supplies
+`controllers/rooms::render_show` supplies the native owner entry points with:
 
-`controllers/rooms::render_show` supplies WS8bm's presenter with:
+1. A reader connection, actual merged app state, request host, verified request origin
+   as `cache_base_url`, and the app's shared fragment store.
+2. Root `Message` records from `room_shell::find_messages`: last 40, or up to 40 before
+   a same-room root anchor plus the anchor plus 40 after (81 total). Foreign, missing,
+   and thread anchors fall back to the last page. Their original IDs, timestamps,
+   client IDs, creators, content and owner feature records are not replaced.
+3. The current membership's `last_read_message_id` and `unread_at` produce
+   `divider.message_id: Option<i64>` and `divider.count: i64`. The exact call is
+   `presenter.room_message_list(&messages, divider.message_id, divider.count)` under
+   `fragment_cache::with(&app.fragment_cache, ...)`. Its returned string is assigned
+   unchanged to `ShowView.shell.message_list = Some(list)`. Viewer dividers remain
+   outside the shared per-message cache.
+4. `ShowView.room`: ID, owner `RoomKind` (Open/Closed/Direct; voice/stage/board currently
+   use Closed until their screen-owner integration), persisted name, viewer display name, resolved
+   header identity and involvement. `ShowView.user`: ID, name, title and fresh signed
+   avatar URL. The same selected `MessageItem`s identify cached fragments. Other
+   inputs are room `updated_at`, the original-room/unpaged invitation predicate,
+   account join code, signed `[room_gid, "messages"]` stream name, divider scroll/jump
+   facts, and WS17's real per-viewer OOO notice members.
+5. Request `ViewContext`: viewer/admin/bot/preferences, account, assets, verified URL,
+   referrer/last-room, time zone, flash and chrome. The layout lends actual request
+   CSRF and CSP values. Broadcast contexts remain detached.
 
-- The reader connection, app state, request host and `cache_base_url` from the verified
-  request origin; `app.fragment_cache` scopes message presentation.
-- Root room `Message` records selected by `room_shell::find_messages(conn, room.id,
-  message_id)`: up to 40 last-page rows, or up to 40 before + anchor + 40 after
-  (81 rows) when the anchor is a root in the same room. Foreign/missing/thread anchors
-  fall back to the last page.
-- `divider.message_id: Option<i64>` and `divider.count: i64`, derived from the current
-  user's membership and its `last_read_message_id`/`unread_at` cursors. Out-of-page
-  dividers give a jump URL; in-page count above five enables scroll. These facts do not
-  belong in shared message fragment keys.
-- `ShowView.room` (ID, STI-derived kind, persisted name, viewer display name, resolved
-  header identity, involvement), `ShowView.user` (ID, name, title, fresh signed avatar
-  URL), selected `MessageItem`s, room updated-at timestamp, original-room invitation
-  predicate, account join code and the SHA1-keyed signed room/messages stream name.
-- Request `ViewContext`: current viewer/admin/bot/preferences, account identity, assets,
-  URL/referrer/last-room, time zone, flash, chrome; request-bound CSRF and CSP nonce are
-  lent by the normal page renderer. Broadcasts use detached contexts instead.
+`presenter.composer_facts(&room, &viewer, None, drive_flow)` supplies WS8bm's root
+composer with room ID/kind, viewer-relative domain display name, `thread: None`, the
+static slash-command registry followed by room-scoped agent slash commands, and the
+Drive flow. Drive consent scopes currently select `None` or `Metadata`; the unresolved
+WS14 Picker availability input is explicitly `false`, so configured `Share` acceptance
+is still pending.
 
-The stable list call on WS8bm is:
+Inside the request rendering scope, `room_native::components` renders:
 
-```rust
-let message_list = campfire_views::fragment_cache::with(&app.fragment_cache, || {
-    presenter.room_message_list(&messages, divider.message_id, divider.count)
-})?;
-// Assign Some(message_list) to ShowView.shell.message_list.
-```
+- WS8bm2 `scheduled_messages::ComposerButton { ctx, room_id, thread_id: None }`, passed
+  as the trusted `scheduled_control` argument to WS8bm `composer::Composer`.
+- WS8bm `channel_threads::PendingTemplate { ctx, user: &show.user }`.
 
-`ShellComponents` accepts trusted owner-rendered strings for `message_list`, `composer`,
-`message_template`, `thread_panel`, `pins_panel`, `poll_builder`, `huddle_header` and
-`ooo_notices`. The first three use `Option<String>` to distinguish supplied empty output
-from the current fallback. `rooms::room_message_list(ctx, show)` returns supplied bytes
-verbatim, or the authorized zero-byte empty-room placeholder. Current HTTP still uses
-`ShellComponents::default()`: this is not full native list/composer acceptance.
+Those returned bytes become `shell.composer = Some(...)` and
+`shell.message_template = Some(...)`. The actual HTTP page mounts all three native
+components; it does not inject Rails message/composer fragments. Request tests check
+selected roots, around-anchor roots, schedule controls, real viewer token ownership,
+and different unread boundaries on warm shared fragments.
 
-The current composer fallback is passed `room = &show.room` and request `ViewContext`
-through `rooms/show/_composer`; it has no explicit `user` local. The current viewer is
-in the context; `ShowView.user` is supplied separately to the client message template.
-The owner has not supplied a completed controller-level
-composer factory. The inspected WS8bm report explicitly defers composer parity. The
-lead must reconcile this factory and its request tokens, plus WS13 huddle/voice facts,
-WS17 OOO notices and WS8bm2 poll/pin mounting. Complete region goldens lending Rails
-owner fragments prove the surrounding shell only, not these implementations.
+`ShellComponents` also retains `thread_panel`, `pins_panel`, `poll_builder`,
+`huddle_header`, and `ooo_notices` slots. A full owner panel entry point is not present
+for all of these. In particular, WS8bm2 currently supplies pin count/list factories,
+not a complete pins-panel factory; WS8bm supplies no root thread-panel factory.
+WS13 huddle and WS14 configured Picker facts also remain integration work. Do not
+reimplement those partials or provider policies in this shell.
 
-## Refresh and pins
+## Pin refresh
 
-The current refresh controller selects root `page_created_since` records, then
-`page_updated_since` excluding the new IDs. It returns 204 before format negotiation
-when both are empty and `room.pins_changed_at <= since` (or nil). Otherwise it presents
-message items under the app cache. `RefreshView` currently lacks pin output: a pin-only
-refresh does not yet carry the required count/list streams.
+Root creation/update windows and pin-change timestamps are selected by the refresh
+controller. A quiet refresh returns 204 before format negotiation. Only when pins
+changed, it calls WS8bm2 `controllers::rooms::pins::list(conn, app, room)` and stores
+that actual `pins::List` in `RefreshView.pins`.
 
-After WS8bm2 merges, call its `controllers::rooms::pins::list(conn, app, room)` seam.
-Render its `pins::CountPartial` and `pins::ListPartial`, and wrap those trusted bytes in
-replace streams targeting `pins_count_<room_param_key>_<id>` and
-`pins_list_<room_param_key>_<id>`. Preserve STI param keys for voice/stage/board rooms.
-Do not query pin rows/order/excerpts here or reimplement pin/unpin/note/broadcast policy.
-Do not put request CSRF values in detached pin broadcasts. WS8bm2 owns those partials.
+`RefreshShow` renders the owner `CountPartial` and `ListPartial` with its current
+`ViewContext`, after message append/replace streams. Targets are
+`pins_count_<room_param_key>_<id>` and `pins_list_<room_param_key>_<id>`; full STI keys
+are preserved. Ordering, excerpts, pin/unpin policy and durable events stay in WS8bm2.
+The empty refresh is byte-identical to Rails. Populated owner rendering is compared
+with fixed request secrets; the separate real HTTP response's Unpin token is verified
+for its viewer and rejected for another viewer. No response bytes are normalized.
 
-Remaining acceptance: real configured members JSON/no-store/authorization; populated
-refresh plus pin-only/count/list streams; merged full room HTTP/layout/list/composer
-bytes, browser behavior and pixels, including unread/around and each viewer. The new
-14-file Rails reference receipt proves the oracle runs, not these deferred Rust cases.
+## Acceptance boundary
+
+The strict native comparison checks three seeded room root collections and all nine
+complete list/composer/pending-template regions. It deliberately exits nonzero on
+any difference, with no masks, allowlists, ignored app cases or substituted fragments.
+Current reconciliation needs owner caller whitespace and the missing WS15 provider
+card integration for the populated Designers list. The app suite proves native
+mounting and controller behavior, not byte-identical full-page acceptance.
+
+Browser/system acceptance is inventoried for the end-to-end phase. Previously shipped
+DM and inbound-email probes remain tracked, but are not rerun or claimed in this
+continuation. The controller source inventory distinguishes named native passes from
+actual pinned Rails Minitest runs and from unexecuted browser declarations.

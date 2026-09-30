@@ -53,14 +53,14 @@
         {
           "name": "show renders the unread divider above the first unread message on the page",
           "line": 78,
-          "rust_result": "deferred",
-          "deferred_to": "WS8bm list seam; WS8br divider facts are covered separately"
+          "rust_test": "controllers::rooms::rooms_rails_cases::show_renders_the_unread_divider_above_the_first_unread_message_on_the_page",
+          "rust_result": "passed"
         },
         {
           "name": "show keeps the last page when the first unread fell off it and links the pill to it",
           "line": 93,
-          "rust_result": "deferred",
-          "deferred_to": "WS8bm full list integration; WS8br page/divider facts covered separately"
+          "rust_test": "controllers::rooms::rooms_rails_cases::show_keeps_the_last_page_when_the_first_unread_fell_off_it_and_links_the_pill_to_it",
+          "rust_result": "passed"
         },
         {
           "name": "destroy removes the room from everyone and enqueues its deletion",
@@ -186,10 +186,11 @@
       "declared_count": 29,
       "rails_tests_run": 29,
       "rails_pass_count": 29,
-      "status": "22 source-declared cases individually executed in Rust; 7 deferred",
-      "rust_cases_run": 22,
-      "rust_pass_count": 22,
-      "rust_cases_deferred": 7,
+      "status": "24 source-declared cases individually executed in Rust; 5 deferred",
+      "rust_cases_run": 24,
+      "rust_pass_count": 24,
+      "rust_cases_deferred": 5,
+      "rust_extra_tests": [],
       "rails_assertions": 153
     },
     {
@@ -296,6 +297,7 @@
       "rust_cases_run": 15,
       "rust_pass_count": 15,
       "rust_cases_deferred": 0,
+      "rust_extra_tests": [],
       "rails_assertions": 55
     },
     {
@@ -384,6 +386,7 @@
       "rust_cases_run": 12,
       "rust_pass_count": 12,
       "rust_cases_deferred": 0,
+      "rust_extra_tests": [],
       "rails_assertions": 68
     },
     {
@@ -449,14 +452,14 @@
         {
           "name": "a member can rename the group and everyone sees the compact system note",
           "line": 107,
-          "rust_result": "deferred",
-          "deferred_to": "WS8bm message-list rendering; HTTP rename/domain covered separately"
+          "rust_test": "controllers::rooms::directs_rails_cases::a_member_can_rename_the_group_and_everyone_sees_the_compact_system_note",
+          "rust_result": "passed"
         },
         {
           "name": "group DM notes cannot be edited or deleted",
           "line": 126,
-          "rust_result": "deferred",
-          "deferred_to": "WS8bm message edit/delete authorization"
+          "rust_test": "controllers::rooms::directs_rails_cases::group_dm_notes_cannot_be_edited_or_deleted",
+          "rust_result": "passed"
         },
         {
           "name": "rename is rejected for one-to-one DMs and by non-members",
@@ -570,10 +573,11 @@
       "declared_count": 29,
       "rails_tests_run": 29,
       "rails_pass_count": 29,
-      "status": "27 source-declared cases individually executed in Rust; 2 deferred",
-      "rust_cases_run": 27,
-      "rust_pass_count": 27,
-      "rust_cases_deferred": 2,
+      "status": "29 source-declared cases individually executed in Rust; 0 deferred",
+      "rust_cases_run": 29,
+      "rust_pass_count": 29,
+      "rust_cases_deferred": 0,
+      "rust_extra_tests": [],
       "rails_assertions": 167
     },
     {
@@ -584,41 +588,61 @@
       "declared_cases": [
         {
           "name": "show",
-          "line": 7
+          "line": 7,
+          "rust_test": "controllers::rooms::involvements_rails_cases::show_case",
+          "rust_result": "passed"
         },
         {
           "name": "update involvement sends turbo update when becoming visible and when going invisible",
-          "line": 12
+          "line": 12,
+          "rust_test": "controllers::rooms::involvements_rails_cases::update_involvement_sends_turbo_update_when_becoming_visible_and_when_going_invisible",
+          "rust_result": "passed"
         },
         {
           "name": "updating involvement does not send turbo update changing visible states",
-          "line": 28
+          "line": 28,
+          "rust_test": "controllers::rooms::involvements_rails_cases::updating_involvement_does_not_send_turbo_update_changing_visible_states",
+          "rust_result": "passed"
         },
         {
           "name": "becoming visible again prepends a voice room into the voice section",
-          "line": 37
+          "line": 37,
+          "rust_test": "controllers::rooms::involvements_rails_cases::becoming_visible_again_prepends_a_voice_room_into_the_voice_section",
+          "rust_result": "passed"
         },
         {
           "name": "becoming visible again prepends a stage room into the stage section",
-          "line": 53
+          "line": 53,
+          "rust_test": "controllers::rooms::involvements_rails_cases::becoming_visible_again_prepends_a_stage_room_into_the_stage_section",
+          "rust_result": "passed"
         },
         {
           "name": "becoming visible again prepends a board into the boards section",
-          "line": 69
+          "line": 69,
+          "rust_test": "controllers::rooms::involvements_rails_cases::becoming_visible_again_prepends_a_board_into_the_boards_section",
+          "rust_result": "passed"
         },
         {
           "name": "updating involvement does not send turbo update for direct rooms",
-          "line": 85
+          "line": 85,
+          "rust_test": "controllers::rooms::involvements_rails_cases::updating_involvement_does_not_send_turbo_update_for_direct_rooms",
+          "rust_result": "passed"
         },
         {
           "name": "a non-admin can update their room involvement",
-          "line": 94
+          "line": 94,
+          "rust_test": "controllers::rooms::involvements_rails_cases::a_non_admin_can_update_their_room_involvement",
+          "rust_result": "passed"
         }
       ],
       "declared_count": 8,
       "rails_tests_run": 8,
       "rails_pass_count": 8,
-      "status": "full-file acceptance deferred",
+      "status": "8 source-declared cases individually executed in Rust; 0 deferred",
+      "rust_cases_run": 8,
+      "rust_pass_count": 8,
+      "rust_cases_deferred": 0,
+      "rust_extra_tests": [],
       "rails_assertions": 63
     },
     {
@@ -629,25 +653,39 @@
       "declared_cases": [
         {
           "name": "refresh includes new messages since the last known",
-          "line": 7
+          "line": 7,
+          "rust_test": "controllers::rooms::refreshes_rails_cases::refresh_includes_new_messages_since_the_last_known",
+          "rust_result": "passed"
         },
         {
           "name": "refresh includes pin and unpin changes since the last sync",
-          "line": 32
+          "line": 32,
+          "rust_test": "controllers::rooms::refreshes_rails_cases::refresh_includes_pin_and_unpin_changes_since_the_last_sync",
+          "rust_result": "passed"
         },
         {
           "name": "refresh with no changes is a quiet 204",
-          "line": 61
+          "line": 61,
+          "rust_test": "controllers::rooms::refreshes_rails_cases::refresh_with_no_changes_is_a_quiet_204",
+          "rust_result": "passed"
         },
         {
           "name": "refreshing a room the user no longer belongs to is a quiet 404",
-          "line": 72
+          "line": 72,
+          "rust_test": "controllers::rooms::refreshes_rails_cases::refreshing_a_room_the_user_no_longer_belongs_to_is_a_quiet_404",
+          "rust_result": "passed"
         }
       ],
       "declared_count": 4,
       "rails_tests_run": 4,
       "rails_pass_count": 4,
-      "status": "full-file acceptance deferred",
+      "status": "4 source-declared cases individually executed in Rust; 0 deferred",
+      "rust_cases_run": 4,
+      "rust_pass_count": 4,
+      "rust_cases_deferred": 0,
+      "rust_extra_tests": [
+        "pin_only_refresh_matches_rails_bytes_and_request_token_ownership"
+      ],
       "rails_assertions": 24
     },
     {
@@ -658,37 +696,55 @@
       "declared_cases": [
         {
           "name": "create marks the room read and advances the unread pointer",
-          "line": 9
+          "line": 9,
+          "rust_test": "controllers::rooms::reads_rails_cases::create_marks_the_room_read_and_advances_the_unread_pointer",
+          "rust_result": "passed"
         },
         {
           "name": "create broadcasts on the reads stream",
-          "line": 21
+          "line": 21,
+          "rust_test": "controllers::rooms::reads_rails_cases::create_broadcasts_on_the_reads_stream",
+          "rust_result": "passed"
         },
         {
           "name": "destroy marks the room unread starting at the message",
-          "line": 28
+          "line": 28,
+          "rust_test": "controllers::rooms::reads_rails_cases::destroy_marks_the_room_unread_starting_at_the_message",
+          "rust_result": "passed"
         },
         {
           "name": "destroy at the first message leaves a null pointer",
-          "line": 41
+          "line": 41,
+          "rust_test": "controllers::rooms::reads_rails_cases::destroy_at_the_first_message_leaves_a_null_pointer",
+          "rust_result": "passed"
         },
         {
           "name": "destroy broadcasts on the unread stream",
-          "line": 52
+          "line": 52,
+          "rust_test": "controllers::rooms::reads_rails_cases::destroy_broadcasts_on_the_unread_stream",
+          "rust_result": "passed"
         },
         {
           "name": "destroy rejects messages outside the room",
-          "line": 61
+          "line": 61,
+          "rust_test": "controllers::rooms::reads_rails_cases::destroy_rejects_messages_outside_the_room",
+          "rust_result": "passed"
         },
         {
           "name": "read state of a room the user cannot access is not found",
-          "line": 69
+          "line": 69,
+          "rust_test": "controllers::rooms::reads_rails_cases::read_state_of_a_room_the_user_cannot_access_is_not_found",
+          "rust_result": "passed"
         }
       ],
       "declared_count": 7,
       "rails_tests_run": 7,
       "rails_pass_count": 7,
-      "status": "full-file acceptance deferred",
+      "status": "7 source-declared cases individually executed in Rust; 0 deferred",
+      "rust_cases_run": 7,
+      "rust_pass_count": 7,
+      "rust_cases_deferred": 0,
+      "rust_extra_tests": [],
       "rails_assertions": 25
     },
     {
@@ -699,61 +755,94 @@
       "declared_cases": [
         {
           "name": "returns active room members with presence and status fields",
-          "line": 7
+          "line": 7,
+          "rust_test": "controllers::rooms::members_rails_cases::returns_active_room_members_with_presence_and_status_fields",
+          "rust_result": "passed"
         },
         {
           "name": "flags bots so the picker can exclude them from huddles",
-          "line": 32
+          "line": 32,
+          "rust_test": "controllers::rooms::members_rails_cases::flags_bots_so_the_picker_can_exclude_them_from_huddles",
+          "rust_result": "passed"
         },
         {
           "name": "returns the meeting label for members in a meeting",
-          "line": 41
+          "line": 41,
+          "rust_test": "controllers::rooms::members_rails_cases::returns_the_meeting_label_for_members_in_a_meeting",
+          "rust_result": "passed"
         },
         {
           "name": "returns the OOO label for members out of office",
-          "line": 54
+          "line": 54,
+          "rust_test": "controllers::rooms::members_rails_cases::returns_the_ooo_label_for_members_out_of_office",
+          "rust_result": "passed"
         },
         {
           "name": "reports idle and do-not-disturb presence",
-          "line": 70
+          "line": 70,
+          "rust_test": "controllers::rooms::members_rails_cases::reports_idle_and_do_not_disturb_presence",
+          "rust_result": "passed"
         },
         {
           "name": "does not return inactive users",
-          "line": 93
+          "line": 93,
+          "rust_test": "controllers::rooms::members_rails_cases::does_not_return_inactive_users",
+          "rust_result": "passed"
         },
         {
           "name": "does not expose members of an inaccessible room",
-          "line": 102
+          "line": 102,
+          "rust_test": "controllers::rooms::members_rails_cases::does_not_expose_members_of_an_inaccessible_room",
+          "rust_result": "passed"
         },
         {
           "name": "starred is per viewer and never leaks between viewers",
-          "line": 112
+          "line": 112,
+          "rust_test": "controllers::rooms::members_rails_cases::starred_is_per_viewer_and_never_leaks_between_viewers",
+          "rust_result": "passed"
         },
         {
           "name": "requires authentication",
-          "line": 133
+          "line": 133,
+          "rust_test": "controllers::rooms::members_rails_cases::requires_authentication",
+          "rust_result": "passed"
         },
         {
           "name": "reports a bot with a checked-in agent as online",
-          "line": 142
+          "line": 142,
+          "rust_test": "controllers::rooms::members_rails_cases::reports_a_bot_with_a_checked_in_agent_as_online",
+          "rust_result": "passed"
         },
         {
           "name": "reports a bot as offline until its agent checks in",
-          "line": 152
+          "line": 152,
+          "rust_test": "controllers::rooms::members_rails_cases::reports_a_bot_as_offline_until_its_agent_checks_in",
+          "rust_result": "passed"
         },
         {
           "name": "reports a bot with a suspended agent as offline",
-          "line": 161
+          "line": 161,
+          "rust_test": "controllers::rooms::members_rails_cases::reports_a_bot_with_a_suspended_agent_as_offline",
+          "rust_result": "passed"
         },
         {
           "name": "revoked sessions immediately make a member offline",
-          "line": 172
+          "line": 172,
+          "rust_test": "controllers::rooms::members_rails_cases::revoked_sessions_immediately_make_a_member_offline",
+          "rust_result": "passed"
         }
       ],
       "declared_count": 13,
       "rails_tests_run": 13,
       "rails_pass_count": 13,
-      "status": "full-file acceptance deferred",
+      "status": "13 source-declared cases individually executed in Rust; 0 deferred",
+      "rust_cases_run": 13,
+      "rust_pass_count": 13,
+      "rust_cases_deferred": 0,
+      "rust_extra_tests": [
+        "complete_member_json_matches_rails_for_each_viewer_and_room",
+        "member_reads_deny_bot_credentials"
+      ],
       "rails_assertions": 57
     },
     {
@@ -764,29 +853,43 @@
       "declared_cases": [
         {
           "name": "update assigns the channel to the category",
-          "line": 10
+          "line": 10,
+          "rust_test": "controllers::rooms::categories_rails_cases::update_assigns_the_channel_to_the_category",
+          "rust_result": "passed"
         },
         {
           "name": "update with a blank category unassigns the channel",
-          "line": 16
+          "line": 16,
+          "rust_test": "controllers::rooms::categories_rails_cases::update_with_a_blank_category_unassigns_the_channel",
+          "rust_result": "passed"
         },
         {
           "name": "update rejects another user's category",
-          "line": 24
+          "line": 24,
+          "rust_test": "controllers::rooms::categories_rails_cases::update_rejects_another_user_s_category",
+          "rust_result": "passed"
         },
         {
           "name": "update rejects rooms that are not channels",
-          "line": 33
+          "line": 33,
+          "rust_test": "controllers::rooms::categories_rails_cases::update_rejects_rooms_that_are_not_channels",
+          "rust_result": "passed"
         },
         {
           "name": "categories in a room the user cannot access are not found",
-          "line": 40
+          "line": 40,
+          "rust_test": "controllers::rooms::categories_rails_cases::categories_in_a_room_the_user_cannot_access_are_not_found",
+          "rust_result": "passed"
         }
       ],
       "declared_count": 5,
       "rails_tests_run": 5,
       "rails_pass_count": 5,
-      "status": "full-file acceptance deferred",
+      "status": "5 source-declared cases individually executed in Rust; 0 deferred",
+      "rust_cases_run": 5,
+      "rust_pass_count": 5,
+      "rust_cases_deferred": 0,
+      "rust_extra_tests": [],
       "rails_assertions": 13
     },
     {
@@ -797,33 +900,49 @@
       "declared_cases": [
         {
           "name": "create favourites the room at the end",
-          "line": 9
+          "line": 9,
+          "rust_test": "controllers::rooms::favorites_rails_cases::create_favourites_the_room_at_the_end",
+          "rust_result": "passed"
         },
         {
           "name": "create is idempotent",
-          "line": 19
+          "line": 19,
+          "rust_test": "controllers::rooms::favorites_rails_cases::create_is_idempotent",
+          "rust_result": "passed"
         },
         {
           "name": "destroy unfavourites the room",
-          "line": 28
+          "line": 28,
+          "rust_test": "controllers::rooms::favorites_rails_cases::destroy_unfavourites_the_room",
+          "rust_result": "passed"
         },
         {
           "name": "update moves the favourite to an absolute position",
-          "line": 37
+          "line": 37,
+          "rust_test": "controllers::rooms::favorites_rails_cases::update_moves_the_favourite_to_an_absolute_position",
+          "rust_result": "passed"
         },
         {
           "name": "update clamps out-of-range positions",
-          "line": 48
+          "line": 48,
+          "rust_test": "controllers::rooms::favorites_rails_cases::update_clamps_out_of_range_positions",
+          "rust_result": "passed"
         },
         {
           "name": "favourites in a room the user cannot access are not found",
-          "line": 56
+          "line": 56,
+          "rust_test": "controllers::rooms::favorites_rails_cases::favourites_in_a_room_the_user_cannot_access_are_not_found",
+          "rust_result": "passed"
         }
       ],
       "declared_count": 6,
       "rails_tests_run": 6,
       "rails_pass_count": 6,
-      "status": "full-file acceptance deferred",
+      "status": "6 source-declared cases individually executed in Rust; 0 deferred",
+      "rust_cases_run": 6,
+      "rust_pass_count": 6,
+      "rust_cases_deferred": 0,
+      "rust_extra_tests": [],
       "rails_assertions": 21
     },
     {
@@ -888,6 +1007,7 @@
       "rust_cases_run": 8,
       "rust_pass_count": 8,
       "rust_cases_deferred": 0,
+      "rust_extra_tests": [],
       "rails_assertions": 26
     },
     {
@@ -898,33 +1018,49 @@
       "declared_cases": [
         {
           "name": "index lists only the user's categories in order",
-          "line": 7
+          "line": 7,
+          "rust_test": "controllers::rooms::room_categories_rails_cases::index_lists_only_the_user_s_categories_in_order",
+          "rust_result": "passed"
         },
         {
           "name": "create adds a category at the end",
-          "line": 17
+          "line": 17,
+          "rust_test": "controllers::rooms::room_categories_rails_cases::create_adds_a_category_at_the_end",
+          "rust_result": "passed"
         },
         {
           "name": "create with a blank name changes nothing and reloads the sidebar",
-          "line": 31
+          "line": 31,
+          "rust_test": "controllers::rooms::room_categories_rails_cases::create_with_a_blank_name_changes_nothing_and_reloads_the_sidebar",
+          "rust_result": "passed"
         },
         {
           "name": "update renames and collapses",
-          "line": 38
+          "line": 38,
+          "rust_test": "controllers::rooms::room_categories_rails_cases::update_renames_and_collapses",
+          "rust_result": "passed"
         },
         {
           "name": "destroy deletes the category and unassigns its rooms",
-          "line": 49
+          "line": 49,
+          "rust_test": "controllers::rooms::room_categories_rails_cases::destroy_deletes_the_category_and_unassigns_its_rooms",
+          "rust_result": "passed"
         },
         {
           "name": "another user's categories are not found",
-          "line": 61
+          "line": 61,
+          "rust_test": "controllers::rooms::room_categories_rails_cases::another_user_s_categories_are_not_found",
+          "rust_result": "passed"
         }
       ],
       "declared_count": 6,
       "rails_tests_run": 6,
       "rails_pass_count": 6,
-      "status": "full-file acceptance deferred",
+      "status": "6 source-declared cases individually executed in Rust; 0 deferred",
+      "rust_cases_run": 6,
+      "rust_pass_count": 6,
+      "rust_cases_deferred": 0,
+      "rust_extra_tests": [],
       "rails_assertions": 26
     },
     {
@@ -1147,29 +1283,43 @@
       "declared_cases": [
         {
           "name": "show returns the user's rooms, people and recent threads",
-          "line": 7
+          "line": 7,
+          "rust_test": "controllers::rooms::switchers_rails_cases::show_returns_the_user_s_rooms_people_and_recent_threads",
+          "rust_result": "passed"
         },
         {
           "name": "show never includes rooms the user cannot access",
-          "line": 32
+          "line": 32,
+          "rust_test": "controllers::rooms::switchers_rails_cases::show_never_includes_rooms_the_user_cannot_access",
+          "rust_result": "passed"
         },
         {
           "name": "show links people to their existing DM",
-          "line": 47
+          "line": 47,
+          "rust_test": "controllers::rooms::switchers_rails_cases::show_links_people_to_their_existing_dm",
+          "rust_result": "passed"
         },
         {
           "name": "show requires sign-in",
-          "line": 60
+          "line": 60,
+          "rust_test": "controllers::rooms::switchers_rails_cases::show_requires_sign_in",
+          "rust_result": "passed"
         },
         {
           "name": "show costs a constant number of queries as rooms, people and threads grow",
-          "line": 67
+          "line": 67,
+          "rust_result": "deferred",
+          "deferred_to": "Full-request query instrumentation; existing pure read-model budget tests do not claim this HTTP case"
         }
       ],
       "declared_count": 5,
       "rails_tests_run": 5,
       "rails_pass_count": 5,
-      "status": "full-file acceptance deferred",
+      "status": "4 source-declared cases individually executed in Rust; 1 deferred",
+      "rust_cases_run": 4,
+      "rust_pass_count": 4,
+      "rust_cases_deferred": 1,
+      "rust_extra_tests": [],
       "rails_assertions": 33
     },
     {
@@ -1272,65 +1422,97 @@
       "declared_cases": [
         {
           "name": "show",
-          "line": 21
+          "line": 21,
+          "rust_test": "controllers::rooms::sidebars_rails_cases::show_case",
+          "rust_result": "passed"
         },
         {
           "name": "unread directs",
-          "line": 29
+          "line": 29,
+          "rust_test": "controllers::rooms::sidebars_rails_cases::unread_directs",
+          "rust_result": "passed"
         },
         {
           "name": "unread other",
-          "line": 36
+          "line": 36,
+          "rust_test": "controllers::rooms::sidebars_rails_cases::unread_other",
+          "rust_result": "passed"
         },
         {
           "name": "quiet rows keep the room name as their exact link text",
-          "line": 44
+          "line": 44,
+          "rust_test": "controllers::rooms::sidebars_rails_cases::quiet_rows_keep_the_room_name_as_their_exact_link_text",
+          "rust_result": "passed"
         },
         {
           "name": "channel row shows the live huddle stack with names and count",
-          "line": 54
+          "line": 54,
+          "rust_result": "deferred",
+          "deferred_to": "WS13 huddle grant/presence integration and full-request query instrumentation"
         },
         {
           "name": "board row shows the live huddle stack with names and count",
-          "line": 73
+          "line": 73,
+          "rust_result": "deferred",
+          "deferred_to": "WS13 huddle grant/presence integration and full-request query instrumentation"
         },
         {
           "name": "direct row shows the live huddle stack when the peer is in the call",
-          "line": 92
+          "line": 92,
+          "rust_result": "deferred",
+          "deferred_to": "WS13 huddle grant/presence integration and full-request query instrumentation"
         },
         {
           "name": "quiet rows keep an empty stack target with no visible presence",
-          "line": 106
+          "line": 106,
+          "rust_result": "deferred",
+          "deferred_to": "WS13 huddle grant/presence integration and full-request query instrumentation"
         },
         {
           "name": "direct row re-renders when a participant joins",
-          "line": 119
+          "line": 119,
+          "rust_result": "deferred",
+          "deferred_to": "WS13 huddle grant/presence integration and full-request query instrumentation"
         },
         {
           "name": "group direct rooms render member names and a huddle stack",
-          "line": 147
+          "line": 147,
+          "rust_result": "deferred",
+          "deferred_to": "WS13 huddle grant/presence integration and full-request query instrumentation"
         },
         {
           "name": "direct rows keep avatar card triggers as siblings of the room link",
-          "line": 161
+          "line": 161,
+          "rust_test": "controllers::rooms::sidebars_rails_cases::direct_rows_keep_avatar_card_triggers_as_siblings_of_the_room_link",
+          "rust_result": "passed"
         },
         {
           "name": "no channel or DM stacks without huddle configuration",
-          "line": 181
+          "line": 181,
+          "rust_result": "deferred",
+          "deferred_to": "WS13 huddle grant/presence integration and full-request query instrumentation"
         },
         {
           "name": "sidebar query count does not grow with quiet channels, DMs, boards, and stages",
-          "line": 193
+          "line": 193,
+          "rust_result": "deferred",
+          "deferred_to": "WS13 huddle grant/presence integration and full-request query instrumentation"
         },
         {
           "name": "sidebar query count does not grow with group DMs, named or not",
-          "line": 215
+          "line": 215,
+          "rust_result": "deferred",
+          "deferred_to": "WS13 huddle grant/presence integration and full-request query instrumentation"
         }
       ],
       "declared_count": 14,
       "rails_tests_run": 14,
       "rails_pass_count": 14,
-      "status": "full-file acceptance deferred",
+      "status": "5 source-declared cases individually executed in Rust; 9 deferred",
+      "rust_cases_run": 5,
+      "rust_pass_count": 5,
+      "rust_cases_deferred": 9,
+      "rust_extra_tests": [],
       "rails_assertions": 76
     },
     {
