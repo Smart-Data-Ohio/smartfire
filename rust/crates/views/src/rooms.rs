@@ -228,6 +228,26 @@ pub struct ClosedFormView {
     pub unselected_users: Vec<UserView>,
 }
 
+#[derive(Template)]
+#[template(path = "rooms/opens/_user.html")]
+struct OpenFormUser<'a> { ctx: &'a ViewContext<'a>, form: &'a OpenFormView, user: &'a UserView }
+#[derive(Template)]
+#[template(path = "rooms/closeds/_user.html")]
+struct ClosedFormUser<'a> { ctx: &'a ViewContext<'a>, form: &'a ClosedFormView, user: &'a UserView, selected: bool }
+impl OpenFormView {
+    /// Rails collection rendering indents the first partial only, then concatenates bytes.
+    pub fn user_list(&self, ctx: &ViewContext)->h::Html {
+        h::raw(self.users.iter().map(|user| OpenFormUser {ctx,form:self,user}.render().expect("open form user renders")).collect::<String>())
+    }
+}
+impl ClosedFormView {
+    pub fn selected_list(&self, ctx: &ViewContext)->h::Html { self.user_list(ctx, &self.selected_users, true) }
+    pub fn unselected_list(&self, ctx: &ViewContext)->h::Html { self.user_list(ctx, &self.unselected_users, false) }
+    fn user_list(&self, ctx: &ViewContext, users: &[UserView], selected: bool)->h::Html {
+        h::raw(users.iter().map(|user| ClosedFormUser {ctx,form:self,user,selected}.render().expect("closed form user renders")).collect::<String>())
+    }
+}
+
 /// `rooms/opens/new`.
 #[derive(Template)]
 #[template(path = "rooms/opens/new.html", blocks = ["head", "content"])]
