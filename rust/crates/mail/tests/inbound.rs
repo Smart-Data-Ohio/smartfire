@@ -12,6 +12,163 @@ use campfire_mail::{
 use campfire_storage::{DiskService, Storage, Verifier};
 use std::{sync::Arc, time::Duration};
 
+fn review_fixture(key: &str) -> String {
+    let corpus: serde_json::Value =
+        serde_json::from_str(include_str!("../../../vectors/mail/reference.json")).unwrap();
+    corpus["review"][key].as_str().unwrap().to_owned()
+}
+
+#[tokio::test]
+async fn review_deep_mime_parses_without_abort() {
+    let raw = review_fixture("deep_mime_raw");
+    assert_eq!(raw.len(), 134754);
+    println!("fixture bytes: {}", raw.len());
+    let result = tokio::task::spawn_blocking(move || Email::parse(raw.as_bytes()))
+        .await
+        .unwrap();
+    assert_eq!(result.unwrap().body, "Hello");
+}
+
+#[tokio::test]
+async fn review_routing_replay_does_not_duplicate_message() {
+    let h = Harness::new().await;
+    let raw = review_fixture("replay_raw").replace(
+        "room-token@mail.test",
+        &format!("room-{}@mail.test", h.token),
+    );
+    let id = inbound::accept(&h.db, h.storage.clone(), raw.into_bytes())
+        .await
+        .unwrap()
+        .unwrap();
+    for _ in 0..2 {
+        let routed = inbound::route(
+            &h.db,
+            h.storage.clone(),
+            h.config.clone(),
+            h.throttle.clone(),
+            Some(Arc::new(render)),
+            id,
+        )
+        .await
+        .unwrap();
+        println!("routing result: {routed:?}");
+    }
+    let count =
+        h.db.read(|c| {
+            Ok(c.query_row(
+                "SELECT COUNT(*) FROM messages WHERE markdown_source LIKE '%Once only%'",
+                [],
+                |r| r.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    assert_eq!(count, 1, "routing replay duplicated the email");
+}
+
+#[tokio::test]
+async fn review_deep_mime_bounces_without_posting() {
+    let h = Harness::new().await;
+    let id = inbound::accept(
+        &h.db,
+        h.storage.clone(),
+        review_fixture("deep_mime_raw").into_bytes(),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    assert_eq!(
+        inbound::route(
+            &h.db,
+            h.storage.clone(),
+            h.config.clone(),
+            h.throttle.clone(),
+            Some(Arc::new(render)),
+            id
+        )
+        .await
+        .unwrap(),
+        Routed::Bounced
+    );
+    let (status, count) =
+        h.db.read(move |c| {
+            Ok((
+                c.query_row(
+                    "SELECT status FROM action_mailbox_inbound_emails WHERE id = ?",
+                    [id],
+                    |r| r.get::<_, i64>(0),
+                )?,
+                c.query_row(
+                    "SELECT COUNT(*) FROM messages WHERE markdown_source IS NOT NULL",
+                    [],
+                    |r| r.get::<_, i64>(0),
+                )?,
+            ))
+        })
+        .await
+        .unwrap();
+    assert_eq!((status, count), (Status::Bounced as i64, 0));
+}
+
+#[tokio::test]
+async fn concurrent_routing_replays_post_and_enqueue_once() {
+    let h = Harness::new().await;
+    let id = inbound::accept(
+        &h.db,
+        h.storage.clone(),
+        h.raw("outside@example.com", &[], "Replay", "Once only"),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    let route = || {
+        inbound::route(
+            &h.db,
+            h.storage.clone(),
+            h.config.clone(),
+            h.throttle.clone(),
+            Some(Arc::new(render)),
+            id,
+        )
+    };
+    let (first, second) = tokio::join!(route(), route());
+    let results = [first.unwrap(), second.unwrap()];
+    assert_eq!(
+        results
+            .iter()
+            .filter(|r| matches!(r, Routed::Posted(_)))
+            .count(),
+        1
+    );
+    assert_eq!(
+        results
+            .iter()
+            .filter(|r| **r == Routed::AlreadyRouted)
+            .count(),
+        1
+    );
+    let counts =
+        h.db.read(|c| {
+            [
+                "Smartfire::EmailMessageCreatedJob",
+                "ActionMailbox::IncinerationJob",
+            ]
+            .map(|class| {
+                c.query_row(
+                    "SELECT COUNT(*) FROM background_jobs WHERE job_class = ?",
+                    [class],
+                    |r| r.get::<_, i64>(0),
+                )
+            })
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(Into::into)
+        })
+        .await
+        .unwrap();
+    assert_eq!(counts, [1, 1]);
+}
+
 struct Sink {
     queue: JobQueue,
     record: RecordingSink,
@@ -892,6 +1049,29 @@ async fn committed_attachment_survives_an_after_commit_callback_failure() {
     assert_eq!(
         std::fs::read(h.storage.service.path_for(&blob.key)).unwrap(),
         b"file-bytes"
+    );
+    assert_eq!(
+        h.db.read(move |c| Ok(c.query_row(
+            "SELECT status FROM action_mailbox_inbound_emails WHERE id = ?",
+            [id],
+            |r| r.get::<_, i64>(0)
+        )?))
+        .await
+        .unwrap(),
+        Status::Delivered as i64
+    );
+    assert_eq!(
+        inbound::route(
+            &h.db,
+            h.storage.clone(),
+            h.config.clone(),
+            h.throttle.clone(),
+            Some(Arc::new(render)),
+            id
+        )
+        .await
+        .unwrap(),
+        Routed::AlreadyRouted
     );
 }
 

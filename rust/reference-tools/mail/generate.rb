@@ -1,4 +1,5 @@
 require 'json'
+require_relative 'review_fixtures'
 require 'active_support/testing/time_helpers'
 include ActiveSupport::Testing::TimeHelpers
 ENV['INBOUND_EMAIL_AUTHSERV_ID'] = 'mx.mail.test'
@@ -10,6 +11,12 @@ headers = [['=?UTF-8?B?bXgubWFpbC50ZXN0?=; dkim=pass header.d=example.com'], ['m
   headers << ["mx.mail.test; #{method}=#{result} (comment) #{prop}=#{domain}"]
 end
 ['mx.mail.test (comment); dkim=pass header.d=example.com', ' MX.MAIL.TEST ; DKIM = pass header.d=EXAMPLE.COM', 'mx.mail.test; dkim=pass(foo) header.d=example.com', 'mx.mail.test; dkim=pass xheader.d=example.com', 'mx.mail.test; dkim=pass header.d =example.com'].each { |h| headers << [h] }
+whitespace = [0, 9, 10, 11, 12, 13, 32, 0x85, 0xa0, 0x1680, 0x2000, 0x2007, 0x2028, 0x202f, 0x205f, 0x3000].map do |codepoint|
+  char = codepoint.chr(Encoding::UTF_8)
+  ["#{char}mx.mail.test; dkim=pass header.d=example.com", "mx.mail.test;#{char}dkim=pass header.d=example.com", "mx.mail.test; dkim=#{char}pass header.d=example.com", "mx.mail.test; dkim=pass#{char}header.d=example.com", "mx.mail.test; dkim=pass header.d=example.com#{char}evil.test"].each { |h| headers << [h] }
+  {value: char, stripped: "#{char}text#{char}".strip, blank: char.blank?, integer: "#{char}25suffix".to_i}
+end
+['mx.mail.test; dkim=pass (header.d=example.com) header.d=attacker.test', 'mx.mail.test; dkim=pass reason="header.d=example.com test" header.d=attacker.test'].each { |h| headers << [h] }
 rng = Random.new(10)
 100.times do
   headers << ["#{['mx.mail.test', 'foreign.test'].sample(random: rng)}; #{['dkim', 'dmarc', 'spf'].sample(random: rng)}=#{['pass','fail'].sample(random: rng)} #{['header.d','header.from','smtp.mailfrom','smtp.helo'].sample(random: rng)}=#{['example.com','evil.test'].sample(random: rng)}"]
@@ -18,7 +25,7 @@ auth = headers.map do |fields|
   source = (["From: person@example.com", "To: room-token@mail.test"] + fields.map { |h| "Authentication-Results: #{h}" } + ['', 'Hello']).join("\r\n")
   parsed = Mail.read_from_string(source)
   mailbox.define_singleton_method(:mail) { parsed }
-  { headers: fields, authserv_id: ENV['INBOUND_EMAIL_AUTHSERV_ID'], address: 'person@example.com', expected: mailbox.send(:authenticated_sender?, 'person@example.com') }
+  { headers: fields, parsed_headers: parsed.header.fields.select { |f| f.name.casecmp?('Authentication-Results') }.map { |f| f.value.to_s }, authserv_id: ENV['INBOUND_EMAIL_AUTHSERV_ID'], address: 'person@example.com', expected: mailbox.send(:authenticated_sender?, 'person@example.com') }
 end
 JSON.parse(File.read('/tools/corpus/public-auth-headers.json')).each do |sample|
   ENV['INBOUND_EMAIL_AUTHSERV_ID'] = sample.fetch('authserv_id')
@@ -36,7 +43,7 @@ JSON.parse(File.read('/tools/corpus/public-email-html.json')).each do |sample|
 end
 messages = []
 travel_to Time.utc(2026, 9, 29, 12, 30) do
-  ['Kevin', 'A <B> & "C"', 'Renée'].each do |name|
+  ['Kevin', 'A <B> & "C"', 'Renée', "John\tSmith", 'Doe, John', 'A(B)C', 'A[B]C', 'A\\B', 'John "Smith"', '"John Smith"', 'Jöhn, "Doe"', ' Kevin ', 'Kevin  Smith', 'A' * 80, 'Renée ' * 12, "A\u00a0B", 'é' * 40].each do |name|
     user = Struct.new(:name, :email_address).new(name, 'kevin@example.com')
     session = Struct.new(:device_description).new('Chrome on macOS')
     item = Struct.new(:user, :source, :created_at).new(user, session, Time.current)
@@ -58,10 +65,12 @@ basic = ActionController::HttpAuthentication::Basic
 credential = basic.encode_credentials('actionmailbox', 'fixture-mail-password')
 token = credential.split(' ', 2).last
 shapes = [nil, '', 'Basic', credential, credential.downcase.sub(token.downcase, token), "basic #{token}", "Basic\t#{token}", " Basic  #{token}", "Basic #{token.delete('=')}", "Basic #{token}!", "Basic #{token.delete('=')}A", "Basic #{token[0, 8]}!!#{token[8..]}", "Bearer #{token}", "Basic invalid", basic.encode_credentials('wrong-user', 'fixture-mail-password'), basic.encode_credentials('actionmailbox', 'wrong-password')]
+whitespace.each { |sample| shapes << "Basic#{sample.fetch(:value)}#{token}" }
 relay = shapes.map do |authorization|
   request = Struct.new(:authorization).new(authorization)
   expected = !!basic.authenticate(request) { |user, password| user.to_s == 'actionmailbox' && password.to_s == 'fixture-mail-password' }
   {authorization: authorization, expected: expected}
 end
-File.write('/out/reference.json', JSON.pretty_generate({auth: auth, html: html, messages: messages, cram: cram, relay: relay}) + "\n")
+review = {deep_mime_raw: Ws10ReviewFixtures.nested_mail(2000), replay_raw: Ws10ReviewFixtures.replay_mail}
+File.write('/out/reference.json', JSON.pretty_generate({auth: auth, html: html, messages: messages, cram: cram, relay: relay, whitespace: whitespace, review: review}) + "\n")
 puts "mail reference: #{auth.size} authentication headers, #{html.size} HTML cases, #{messages.size} MIME messages"

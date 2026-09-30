@@ -1,4 +1,5 @@
 //! Active Mailbox ingress storage, status callbacks, RoomMailbox and BounceMailbox.
+use crate::ruby::{blank, strip};
 use crate::{
     config::Config,
     jobs::{IncinerationJob, MessageCreated, RoutingJob},
@@ -61,8 +62,7 @@ pub async fn accept(
         .ok()
         .and_then(|(headers, _)| headers.get_first_value("Message-ID"))
         .map(|value| {
-            value
-                .trim()
+            strip(&value)
                 .trim_start_matches('<')
                 .trim_end_matches('>')
                 .to_owned()
@@ -170,6 +170,18 @@ pub enum Routed {
     Bounced,
     Posted(i64),
     WaitingForRenderer,
+    AlreadyRouted,
+}
+fn already_routed(conn: &Connection, id: i64) -> campfire_db::Result<bool> {
+    let status = conn
+        .query_row(
+            "SELECT status FROM action_mailbox_inbound_emails WHERE id = ?",
+            [id],
+            |row| row.get::<_, i64>(0),
+        )
+        .optional()?
+        .ok_or(campfire_db::Error::RecordNotFound(RECORD_TYPE))?;
+    Ok(matches!(status, 2..=4))
 }
 fn find_room(conn: &Connection, token: &str) -> campfire_db::Result<Option<Room>> {
     let id = conn.query_row("SELECT id FROM rooms WHERE inbound_email_token = ? AND deleted_at IS NULL AND type NOT IN ('Rooms::Direct', 'Rooms::Board') LIMIT 1", [token], |r| r.get::<_, i64>(0)).optional()?;
@@ -277,12 +289,18 @@ pub async fn route(
 ) -> anyhow::Result<Routed> {
     let key = db
         .write(move |tx| {
+            if already_routed(tx.conn(), id)? {
+                return Ok(None);
+            }
             set_status(tx, id, Status::Processing)?;
             let attachment = Attachment::find_for(tx.conn(), RECORD_TYPE, id, "raw_email")?
                 .ok_or(campfire_db::Error::RecordNotFound("raw_email"))?;
-            Ok(attachment.blob(tx.conn())?.key)
+            Ok(Some(attachment.blob(tx.conn())?.key))
         })
         .await?;
+    let Some(key) = key else {
+        return Ok(Routed::AlreadyRouted);
+    };
     let raw_storage = storage.clone();
     let parsed = tokio::task::spawn_blocking(move || {
         Email::parse(&std::fs::read(raw_storage.service.path_for(&key))?)
@@ -294,7 +312,7 @@ pub async fn route(
             && let Some(file) = email
                 .files
                 .iter()
-                .find(|f| !f.filename.trim().is_empty() && f.verdict == Verdict::Ok)
+                .find(|f| !blank(&f.filename) && f.verdict == Verdict::Ok)
                 .cloned()
         {
             Some(
@@ -312,6 +330,11 @@ pub async fn route(
         };
         let routed = db
             .write(move |tx| {
+                // Two workers may have read Processing before either posted. The serialized
+                // writer checks again, with the post and terminal status in this transaction.
+                if already_routed(tx.conn(), id)? {
+                    return Ok(Routed::AlreadyRouted);
+                }
                 let routed = post(
                     tx,
                     &email,
@@ -348,8 +371,14 @@ pub async fn route(
     }
     .await;
     if result.is_err() {
-        db.write(move |tx| set_status(tx, id, Status::Failed))
-            .await?;
+        db.write(move |tx| {
+            // An after-commit callback error must not reset a successfully committed route.
+            if !already_routed(tx.conn(), id)? {
+                set_status(tx, id, Status::Failed)?;
+            }
+            Ok(())
+        })
+        .await?;
     }
     result
 }

@@ -1,43 +1,40 @@
 //! RoomMailbox's deliberately narrow Authentication-Results and Nokogiri HTML5 contracts.
+use crate::ruby::{blank, regex_space, strip};
 use campfire_richtext::dom::{Dom, NodeData, NodeId};
 use mailparse::{MailAddr, MailHeaderMap, ParsedMail};
 use regex::Regex;
 use std::sync::LazyLock;
 
 pub fn authenticated_sender(headers: &[String], authserv_id: Option<&str>, address: &str) -> bool {
-    let Some(authserv_id) = authserv_id.filter(|s| !s.trim().is_empty()) else {
+    let Some(authserv_id) = authserv_id.filter(|s| !blank(s)) else {
         return false;
     };
     let domain = address.rsplit('@').next().unwrap_or("").to_lowercase();
-    if domain.trim().is_empty() {
+    if blank(&domain) {
         return false;
     }
-    let Some(header) = headers.iter().find(|h| {
-        h.split(';')
-            .next()
-            .unwrap_or("")
-            .trim()
-            .eq_ignore_ascii_case(authserv_id)
-    }) else {
+    let Some(header) = headers
+        .iter()
+        .find(|h| strip(h.split(';').next().unwrap_or("")).eq_ignore_ascii_case(authserv_id))
+    else {
         return false;
     };
     static PROPERTIES: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"(?i)(header\.d|header\.from|smtp\.mailfrom)=([^\s;()]+)").unwrap()
+        Regex::new(r"(?i)(header\.d|header\.from|smtp\.mailfrom)=([^\x09-\x0d ;()]+)").unwrap()
     });
     header.split(';').skip(1).any(|clause| {
-        let Some((method, rest)) = clause.trim().split_once('=') else {
+        let Some((method, rest)) = strip(clause).split_once('=') else {
             return false;
         };
-        if !rest
-            .trim()
-            .split(|c: char| c.is_whitespace() || c == '(')
+        if !strip(rest)
+            .split(|c: char| regex_space(c) || c == '(')
             .next()
             .unwrap_or("")
             .eq_ignore_ascii_case("pass")
         {
             return false;
         }
-        let property = match method.trim().to_lowercase().as_str() {
+        let property = match strip(method).to_lowercase().as_str() {
             "dkim" => "header.d",
             "dmarc" => "header.from",
             "spf" => "smtp.mailfrom",
@@ -95,10 +92,7 @@ pub fn html_to_text(html: &str) -> anyhow::Result<String> {
     text(&dom, root, &mut out);
     static SPACE: LazyLock<Regex> = LazyLock::new(|| Regex::new("[ \\t]+\\n").unwrap());
     static LINES: LazyLock<Regex> = LazyLock::new(|| Regex::new("\\n{3,}").unwrap());
-    Ok(LINES
-        .replace_all(&SPACE.replace_all(&out, "\n"), "\n\n")
-        .trim()
-        .to_owned())
+    Ok(strip(&LINES.replace_all(&SPACE.replace_all(&out, "\n"), "\n\n")).to_owned())
 }
 
 pub const MAX_ATTACHMENT_BYTES: usize = 10 * 1024 * 1024;
@@ -167,9 +161,130 @@ fn addresses(mail: &ParsedMail<'_>, key: &str) -> Vec<mailparse::SingleInfo> {
         })
         .collect()
 }
+
+fn authentication_values(raw: &[u8]) -> Vec<String> {
+    // Mail::Header applies Utilities.to_crlf before splitting fields. Mailparse strips
+    // leading bare CR while parsing a field, so rebuild the physical fields first.
+    let mut normalized = Vec::with_capacity(raw.len());
+    let mut index = 0;
+    while index < raw.len() {
+        if raw[index] == b'\r' {
+            normalized.push(b'\n');
+            if raw.get(index + 1) == Some(&b'\n') {
+                index += 1;
+            }
+        } else {
+            normalized.push(raw[index]);
+        }
+        index += 1;
+    }
+    let mut fields: Vec<Vec<u8>> = Vec::new();
+    for line in normalized.split(|b| *b == b'\n') {
+        if matches!(line.first(), Some(b' ' | b'\t'))
+            && let Some(field) = fields.last_mut()
+        {
+            field.extend_from_slice(b"\r\n");
+            field.extend_from_slice(line);
+        } else if !line.is_empty() {
+            fields.push(line.to_vec());
+        }
+    }
+    fields
+        .iter()
+        .filter_map(|field| mailparse::parse_header(field).ok())
+        .filter(|(header, _)| {
+            header
+                .get_key_ref()
+                .eq_ignore_ascii_case("Authentication-Results")
+        })
+        // RoomMailbox reads field.value, not field.decoded. Keep encoded words and
+        // Unicode whitespace intact; Mail::Field.split applies Ruby String#strip.
+        .map(|(header, _)| strip(&String::from_utf8_lossy(header.get_value_raw())).to_owned())
+        .collect()
+}
+
+/// Mail 2.9.1 splits multipart bodies lazily and has no numeric depth limit. Mailparse's
+/// eager recursive tree can exhaust the process stack before Action Mailbox routes a bounce.
+/// Keep the same delimiter traversal on an explicit stack; only leaves enter parse_mail.
+fn mime_leaves(raw: &[u8]) -> anyhow::Result<(ParsedMail<'_>, Vec<ParsedMail<'_>>, bool)> {
+    fn shallow(raw: &[u8]) -> anyhow::Result<(ParsedMail<'_>, usize)> {
+        let (_, body) = mailparse::parse_headers(raw)?;
+        Ok((mailparse::parse_mail(&raw[..body])?, body))
+    }
+    fn boundary_at(raw: &[u8], start: usize, boundary: &[u8]) -> Option<usize> {
+        raw[start..]
+            .windows(boundary.len())
+            .enumerate()
+            .find_map(|(offset, candidate)| {
+                let index = start + offset;
+                (candidate == boundary && (index == start || raw[index - 1] == b'\n'))
+                    .then_some(index)
+            })
+    }
+    fn part_ranges<'a>(raw: &'a [u8], body: usize, boundary: &str) -> Vec<&'a [u8]> {
+        let boundary = format!("--{boundary}");
+        let Some(first) = boundary_at(raw, body, boundary.as_bytes()) else {
+            return Vec::new();
+        };
+        let mut cursor = first + boundary.len();
+        let mut parts = Vec::new();
+        while let Some(start) = raw[cursor..]
+            .iter()
+            .position(|b| *b == b'\n')
+            .map(|offset| cursor + offset + 1)
+        {
+            let next = boundary_at(raw, start, boundary.as_bytes());
+            let mut end = next.unwrap_or(raw.len());
+            if next.is_some() && end > start && raw[end - 1] == b'\n' {
+                end -= 1;
+                if end > start && raw[end - 1] == b'\r' {
+                    end -= 1;
+                }
+            }
+            parts.push(&raw[start..end]);
+            cursor = next.map_or(raw.len(), |index| index + boundary.len());
+            if cursor + 2 > raw.len() || raw[cursor..].starts_with(b"--") {
+                break;
+            }
+        }
+        parts
+    }
+    let (root, _) = shallow(raw)?;
+    let mut stack = vec![(raw, false)];
+    let mut leaves = Vec::new();
+    let mut multipart = false;
+    while let Some((part, digest)) = stack.pop() {
+        let (head, body) = shallow(part)?;
+        let children = if head.ctype.mimetype.starts_with("multipart/") {
+            head.ctype
+                .params
+                .get("boundary")
+                .map(|b| part_ranges(part, body, b))
+                .unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+        if part.as_ptr() == raw.as_ptr() && part.len() == raw.len() {
+            multipart = !children.is_empty();
+        }
+        if children.is_empty() {
+            // No children means parse_mail cannot recurse, including a malformed multipart
+            // without a delimiter. Preserve multipart/digest's default MIME type.
+            let mut leaf = mailparse::parse_mail(part)?;
+            if digest && leaf.headers.get_first_value("Content-Type").is_none() {
+                leaf.ctype.mimetype = "message/rfc822".into();
+            }
+            leaves.push(leaf);
+        } else {
+            let digest = head.ctype.mimetype == "multipart/digest";
+            stack.extend(children.into_iter().rev().map(|part| (part, digest)));
+        }
+    }
+    Ok((root, leaves, multipart))
+}
 impl Email {
     pub fn parse(raw: &[u8]) -> anyhow::Result<Self> {
-        let mail = mailparse::parse_mail(raw)?;
+        let (mail, leaves, multipart) = mime_leaves(raw)?;
         let recipients = ["To", "Cc", "Bcc"]
             .iter()
             .flat_map(|h| addresses(&mail, h))
@@ -177,20 +292,9 @@ impl Email {
             .collect();
         let from = addresses(&mail, "From").into_iter().next();
         let mut files = Vec::new();
-        fn parts<'a>(mail: &'a ParsedMail<'a>, leaves: &mut Vec<&'a ParsedMail<'a>>) {
-            if mail.subparts.is_empty() {
-                leaves.push(mail);
-            } else {
-                for part in &mail.subparts {
-                    parts(part, leaves);
-                }
-            }
-        }
-        let mut leaves = Vec::new();
-        parts(&mail, &mut leaves);
         let mut plain = None;
         let mut html = None;
-        for part in leaves {
+        for part in &leaves {
             let d = part.get_content_disposition();
             let name = d
                 .params
@@ -228,8 +332,12 @@ impl Email {
             plain
         } else if let Some(html) = html {
             html_to_text(&html)?
-        } else if mail.subparts.is_empty() {
-            mail.get_body()?
+        } else if !multipart {
+            leaves
+                .first()
+                .map(|p| p.get_body())
+                .transpose()?
+                .unwrap_or_default()
         } else {
             String::new()
         };
@@ -237,21 +345,17 @@ impl Email {
             recipients,
             from: from
                 .as_ref()
-                .map(|s| s.addr.trim().to_owned())
-                .filter(|s| !s.is_empty()),
+                .map(|s| strip(&s.addr).to_owned())
+                .filter(|s| !blank(s)),
             sender_name: from
                 .and_then(|s| s.display_name)
-                .map(|s| s.trim().to_owned())
-                .filter(|s| !s.is_empty()),
+                .map(|s| strip(&s).to_owned())
+                .filter(|s| !blank(s)),
             subject: mail.headers.get_first_value("Subject").unwrap_or_default(),
-            body: body
-                .replace("\r\n", "\n")
-                .replace('\r', "\n")
-                .trim()
-                .to_owned(),
-            auth_headers: mail.headers.get_all_values("Authentication-Results"),
+            body: strip(&body.replace("\r\n", "\n").replace('\r', "\n")).to_owned(),
+            auth_headers: authentication_values(mail.raw_bytes),
             message_id: mail.headers.get_first_value("Message-ID").map(|s| {
-                s.trim()
+                strip(&s)
                     .trim_start_matches('<')
                     .trim_end_matches('>')
                     .to_owned()
@@ -264,8 +368,8 @@ impl Email {
         self.recipients
             .iter()
             .find_map(|a| TOKEN.captures(a))
-            .map(|c| c[1].trim().to_owned())
-            .filter(|s| !s.is_empty())
+            .map(|c| strip(&c[1]).to_owned())
+            .filter(|s| !blank(s))
     }
     pub fn sender_display(&self) -> String {
         match (&self.sender_name, &self.from) {
@@ -278,31 +382,31 @@ impl Email {
         let names = self
             .files
             .iter()
-            .filter(|f| !f.filename.trim().is_empty())
+            .filter(|f| !blank(strip(&f.filename)))
             .map(|f| {
                 let reason = match f.verdict {
-                    Verdict::Ok => return f.filename.trim().to_owned(),
+                    Verdict::Ok => return strip(&f.filename).to_owned(),
                     Verdict::TooBig => "over the 10 MB limit",
                     Verdict::Disallowed => "file type not allowed",
                 };
-                format!("{} (not attached: {reason})", f.filename.trim())
+                format!("{} (not attached: {reason})", strip(&f.filename))
             })
             .collect::<Vec<_>>();
         (!names.is_empty()).then(|| format!("Attached files: {}", names.join(", ")))
     }
     pub fn source(&self, member: bool) -> Option<String> {
         let note = self.attachment_note();
-        if self.subject.trim().is_empty() && self.body.trim().is_empty() && note.is_none() {
+        if blank(&self.subject) && blank(&self.body) && note.is_none() {
             return None;
         }
         let mut parts = Vec::new();
         if !member {
             parts.push(format!("From {}", self.sender_display()));
         }
-        if !self.subject.trim().is_empty() {
+        if !blank(&self.subject) {
             parts.push(format!("**{}**", self.subject));
         }
-        if !self.body.trim().is_empty() {
+        if !blank(&self.body) {
             parts.push(self.body.clone());
         }
         if let Some(note) = note {

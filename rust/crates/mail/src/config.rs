@@ -1,4 +1,5 @@
 //! config/initializers/{outbound_mail,default_url_options}.rb and Room's inbound ENV.
+use crate::ruby::{blank, regex_space};
 use base64::{
     Engine as _, alphabet,
     engine::{DecodePaddingMode, GeneralPurpose, GeneralPurposeConfig},
@@ -39,7 +40,7 @@ impl Config {
         Self::from_map(&std::env::vars().collect())
     }
     pub fn from_map(values: &HashMap<String, String>) -> anyhow::Result<Self> {
-        let get = |key| values.get(key).filter(|s| !s.trim().is_empty()).cloned();
+        let get = |key| values.get(key).filter(|s| !blank(s)).cloned();
         let app_url = get("APP_URL").map(|origin| {
             let uri = url::Url::parse(&origin)?;
             anyhow::ensure!(matches!(uri.scheme(), "http" | "https") && uri.host_str().is_some() && uri.username().is_empty() && uri.password().is_none() && uri.query().is_none() && uri.fragment().is_none() && uri.path() == "/", "APP_URL must be an http or https origin without credentials, a path, query, or fragment");
@@ -75,7 +76,7 @@ impl Config {
     }
 }
 fn ruby_to_i(s: &str) -> i64 {
-    let s = s.trim_start();
+    let s = s.trim_start_matches(regex_space);
     let n = s
         .char_indices()
         .skip(usize::from(s.starts_with(['+', '-'])))
@@ -94,18 +95,12 @@ pub fn relay_auth(config: &Config, authorization: Option<&str>) -> RelayAuth {
     if config.domain.is_none() {
         return RelayAuth::Disabled;
     }
-    let Some(password) = config
-        .ingress_password
-        .as_deref()
-        .filter(|s| !s.trim().is_empty())
-    else {
+    let Some(password) = config.ingress_password.as_deref().filter(|s| !blank(s)) else {
         return RelayAuth::MissingPassword;
     };
     // Rails uses String#split(" ", 2) and permissive Base64.decode64, not strict_decode64.
     let decoded = authorization.and_then(|a| {
-        let mut parts = a
-            .trim_start_matches(|c: char| c.is_ascii_whitespace())
-            .splitn(2, |c: char| c.is_ascii_whitespace());
+        let mut parts = a.trim_start_matches(regex_space).splitn(2, regex_space);
         if !parts.next()?.eq_ignore_ascii_case("Basic") {
             return None;
         }

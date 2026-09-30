@@ -1,5 +1,6 @@
 //! SecurityMailer, TwoFactorMailer, and the Mail gem's multipart/alternative wire format.
 use crate::config::{Config, Smtp};
+use crate::ruby::{blank, strip};
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use lettre::{
     AsyncSmtpTransport, AsyncTransport, Tokio1Executor,
@@ -44,23 +45,53 @@ fn layout(body: &str) -> String {
     include_str!("../templates/layout.html").replace("<%= yield %>", body)
 }
 fn address_with_name(user: &User) -> String {
-    if user.name.trim().is_empty() || user.name == user.email {
+    if blank(&user.name) || user.name == user.email {
         return user.email.clone();
     }
-    let name = if !user.name.is_ascii() {
-        format!("=?UTF-8?B?{}?=", STANDARD.encode(&user.name))
-    } else if user.name.chars().any(|c| {
-        matches!(
-            c,
-            '(' | ')' | '<' | '>' | '@' | ',' | ';' | ':' | '\\' | '"' | '.' | '[' | ']'
-        )
+    // Mail::Utilities.dquote first unquotes an already quoted phrase; Mail::Address
+    // reparses the formatted address and strips leading/trailing ASCII whitespace.
+    let mut name = strip(&user.name).to_owned();
+    if let Some(quoted) = name.strip_prefix('"').and_then(|s| s.strip_suffix('"')) {
+        let mut chars = quoted.chars();
+        let mut unquoted = String::new();
+        while let Some(c) = chars.next() {
+            if c == '\\' {
+                unquoted.push(chars.next().unwrap_or(c));
+            } else {
+                unquoted.push(c);
+            }
+        }
+        name = unquoted;
+    }
+    let name = if !name.is_ascii() {
+        // Mail::Encodings.each_base64_chunk_byterange caps payloads at 60 encoded
+        // bytes (45 source bytes), preserving UTF-8 character boundaries.
+        let mut chunks = Vec::new();
+        let mut start = 0;
+        for (index, c) in name.char_indices() {
+            if index + c.len_utf8() - start > 45 {
+                chunks.push(format!(
+                    "=?UTF-8?B?{}?=",
+                    STANDARD.encode(&name.as_bytes()[start..index])
+                ));
+                start = index;
+            }
+        }
+        chunks.push(format!(
+            "=?UTF-8?B?{}?=",
+            STANDARD.encode(&name.as_bytes()[start..])
+        ));
+        chunks.join(" ")
+    } else if name.chars().any(|c| {
+        c.is_ascii_control()
+            || matches!(
+                c,
+                '(' | ')' | '<' | '>' | '@' | ',' | ';' | ':' | '\\' | '"' | '.' | '[' | ']'
+            )
     }) {
-        format!(
-            "\"{}\"",
-            user.name.replace('\\', "\\\\").replace('"', "\\\"")
-        )
+        format!("\"{}\"", name.replace('\\', "\\\\").replace('"', "\\\""))
     } else {
-        user.name.clone()
+        name
     };
     format!("{name} <{}>", user.email)
 }
@@ -114,7 +145,7 @@ fn crlf(s: &str) -> String {
         .replace('\r', "\n")
         .replace('\n', "\r\n")
 }
-/// Ruby String#pack('M'): soft breaks after 73 bytes, never inside an =XX escape.
+/// Ruby String#pack('M'): append an atom, then soft-break once the column exceeds 72.
 fn quoted_printable(s: &str) -> String {
     let mut out = String::new();
     let mut column = 0;
@@ -133,12 +164,12 @@ fn quoted_printable(s: &str) -> String {
             } else {
                 format!("={b:02X}")
             };
-            if column + atom.len() > 73 {
+            out.push_str(&atom);
+            column += atom.len();
+            if column > 72 {
                 out.push_str("=\r\n");
                 column = 0;
             }
-            out.push_str(&atom);
-            column += atom.len();
         }
         if terminated {
             out.push_str("\r\n");
@@ -172,11 +203,33 @@ impl Message {
             self.from, self.to, self.subject
         );
         for (content_type, body) in [("text/plain", &self.text), ("text/html", &self.html)] {
-            let (encoding, body) = if body.is_ascii() && body.lines().all(|l| l.len() <= 998) {
-                ("7bit", crlf(body))
-            } else {
-                ("quoted-printable", quoted_printable(body))
-            };
+            let (encoding, body) =
+                if body.is_ascii() && body.split_inclusive('\n').all(|l| l.len() <= 998) {
+                    ("7bit", crlf(body))
+                } else {
+                    // Mail::TransferEncoding chooses the lowest-cost 7-bit-safe encoding;
+                    // QP wins ties. Base64 costs 4/3, QP costs 3 per unsafe byte, 1 otherwise.
+                    let unsafe_bytes = body
+                        .bytes()
+                        .filter(|b| !matches!(b, b'\t' | b'\n' | b'\r' | 0x20..=0x3c | 0x3e..=0x7e))
+                        .count();
+                    if unsafe_bytes * 6 > body.len() {
+                        let encoded = STANDARD.encode(body);
+                        let wrapped = encoded
+                            .as_bytes()
+                            .chunks(60)
+                            .map(|line| {
+                                format!(
+                                    "{}\r\n",
+                                    std::str::from_utf8(line).expect("base64 is ASCII")
+                                )
+                            })
+                            .collect::<String>();
+                        ("base64", wrapped)
+                    } else {
+                        ("quoted-printable", quoted_printable(body))
+                    }
+                };
             raw.push_str(&format!("\r\n--{boundary}\r\nContent-Type: {content_type};\r\n charset=UTF-8\r\nContent-Transfer-Encoding: {encoding}\r\n\r\n{body}"));
         }
         raw.push_str(&format!("\r\n--{boundary}--\r\n"));

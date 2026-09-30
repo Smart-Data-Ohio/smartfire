@@ -4,11 +4,40 @@ use campfire_mail::{
     parse::authenticated_sender,
 };
 #[test]
+fn review_non_ascii_authentication_whitespace_is_rejected() {
+    let corpus: serde_json::Value =
+        serde_json::from_str(include_str!("../../../vectors/mail/reference.json")).unwrap();
+    let case = corpus["auth"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|case| case["headers"][0] == "mx.mail.test; dkim=pass\u{00a0}header.d=example.com")
+        .unwrap();
+    assert_eq!(case["expected"], false);
+    let header = case["headers"][0].as_str().unwrap();
+    assert!(!authenticated_sender(
+        &[header.into()],
+        Some("mx.mail.test"),
+        "member@example.com"
+    ));
+    let raw = format!(
+        "From: member@example.com\r\nTo: room-token@mail.test\r\nAuthentication-Results: {header}\r\n\r\nHello"
+    );
+    let email = campfire_mail::parse::Email::parse(raw.as_bytes()).unwrap();
+    assert!(!authenticated_sender(
+        &email.auth_headers,
+        Some("mx.mail.test"),
+        "member@example.com"
+    ));
+}
+#[test]
 fn trusted_relay_authentication_matches_rails_corpus() {
     let corpus: serde_json::Value =
         serde_json::from_str(include_str!("../../../vectors/mail/reference.json")).unwrap();
     for case in corpus["auth"].as_array().unwrap() {
-        let headers = case["headers"]
+        let headers = case
+            .get("parsed_headers")
+            .unwrap_or(&case["headers"])
             .as_array()
             .unwrap()
             .iter()
@@ -120,6 +149,9 @@ fn parsed_mail_authentication_headers_match_rails_corpus() {
             case["address"].as_str().unwrap()
         );
         let email = campfire_mail::parse::Email::parse(raw.as_bytes()).unwrap();
+        if let Some(expected) = case.get("parsed_headers") {
+            assert_eq!(serde_json::json!(email.auth_headers), *expected, "{case}");
+        }
         assert_eq!(
             authenticated_sender(
                 &email.auth_headers,

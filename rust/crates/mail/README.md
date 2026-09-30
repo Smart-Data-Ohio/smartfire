@@ -22,6 +22,15 @@ mailers intentionally preserve their different Rails From defaults.
 Inbound acceptance atomically saves the record, blob attachment and routing job. Status
 updates schedule 30-day incineration, which checks Rails' end-of-day eligibility and emits
 a purge job. Duplicate `(message_id, message_checksum)` acceptance does not post again.
+Routing replays return `Routed::AlreadyRouted` for a terminal record. The serialized writer
+rechecks status in the transaction that creates the post and commits the terminal status,
+so concurrent routes and an error after commit cannot create another post or enqueue.
+
+MIME parts use an explicit parsing stack. The reference Mail 2.9.1 gem has no numeric
+depth cap and splits bodies lazily; its 2,000-part no-room fixture bounces without a post.
+Rust matches that outcome without recursive parsing. `reference-tools/mail/check-review.sh`
+checks the fixture against Rails. Authentication follows Ruby's ASCII regex whitespace
+and String#strip sets; ActiveSupport presence remains Unicode-aware where Rails uses it.
 
 `Renderer::render` supplies the shared room-aware Markdown/mention renderer from WS5/WS8.
 `mail::State::install_renderer` installs it in the app. Until installed, valid room mail remains
@@ -43,6 +52,8 @@ Generate our own oracle with `CAMPFIRE_REFERENCE=/absolute/reference rust/refere
 It calls our Ruby mailboxes and mailers in the Rails reference image. Message IDs and MIME
 boundaries are injected before serialization, rather than masking serialized output. Dates
 are fixed. Tests compare the whole MIME bytes, plus authentication and HTML text corpora.
+The oracle includes 34 full messages covering display-name specials, tabs, quotes, commas,
+Unicode and long encoded words, plus 579 authentication cases and whitespace coercions.
 The corpus includes sanitized structures from 32 public real-email HTML parts and two
 archived Authentication-Results fields; provenance and redaction rules live under
 `reference-tools/mail/corpus/`. Modern mail-client coverage remains limited.
