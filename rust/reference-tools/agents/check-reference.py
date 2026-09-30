@@ -24,7 +24,7 @@ files = [
     'app/models/agent_step.rb', 'app/services/agents/steps.rb',
     'app/models/agent_slash_command.rb', 'app/services/agents/slash_commands.rb',
     'app/services/slash_commands/dispatcher.rb', 'app/models/activity_item.rb',
-    'app/services/agents/working_presence.rb',
+    'app/services/agents/working_presence.rb', 'app/models/channel_thread.rb', 'app/services/agents/context_builder.rb',
 ]
 command = ['docker', 'run', '--rm', '--name', 'ws11-reference-source-check', '--entrypoint', 'sha256sum',
            'triage-reference-d7c7de92', *['/rails/' + file for file in files]]

@@ -7,6 +7,7 @@ pub mod agent_api_pending;
 pub mod agent_approval;
 pub mod agent_approvals;
 pub mod agent_service;
+pub mod agent_context;
 pub mod agent_slash_command;
 pub mod agent_step;
 pub mod agent_working_presence;
