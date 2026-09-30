@@ -29,8 +29,7 @@ pub type Body = Cow<'static, [u8]>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StaticResponse {
     pub status: u16,
-    /// In the order Rack builds them. Names are as Rack spells them ("Cache-Control" comes
-    /// from the app's config); HTTP/1.1 and HTTP/2 treat them case-insensitively.
+    /// In the order Rack builds them, using Rack's lowercase header names.
     pub headers: Vec<(&'static str, String)>,
     /// Empty for HEAD requests.
     pub body: Body,
@@ -116,7 +115,7 @@ fn serve_file(
     let mut headers: Vec<(&'static str, String)> = vec![
         ("last-modified", last_modified.to_string()),
         ("content-type", String::new()), // replaced by the content headers below
-        ("Cache-Control", CACHE_CONTROL.to_string()),
+        ("cache-control", CACHE_CONTROL.to_string()),
     ];
     let mut status = 200;
     let mut body: Body = Body::Borrowed(file);
@@ -360,6 +359,7 @@ fn mime_type(extname: &[u8]) -> Option<&'static str> {
         ".ttf" => "font/ttf",
         ".txt" => "text/plain",
         ".wav" => "audio/x-wav",
+        ".wasm" => "application/wasm",
         ".webm" => "video/webm",
         ".webp" => "image/webp",
         ".woff" => "font/woff",
