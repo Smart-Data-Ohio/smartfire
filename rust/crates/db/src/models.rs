@@ -13,7 +13,9 @@ pub mod room;
 pub mod search;
 pub mod session;
 pub mod sound;
+pub mod two_factor;
 pub mod user;
+pub mod user_device;
 pub mod webhook;
 pub mod workspace_presence_lease;
 
@@ -30,6 +32,8 @@ pub use room::{Room, RoomType};
 pub use search::Search;
 pub use session::{NewSession, Session};
 pub use sound::Sound;
+pub use two_factor::{ChallengeFailure, TwoFactorBackupCode, TwoFactorCredential, TwoFactorRememberedDevice, TwoFactorSetupSecret};
 pub use user::{NewUser, PasswordDigest, Role, Status, User, UserChanges};
+pub use user_device::{DeviceSignIn, UserDevice};
 pub use webhook::Webhook;
 pub use workspace_presence_lease::WorkspacePresenceLease;

@@ -10,8 +10,12 @@ pub const ISSUER: &str = "Smartfire";
 pub const STEP_SECONDS: i64 = 30;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
-#[error("invalid TOTP secret or time")]
-pub struct InvalidTotp;
+pub enum InvalidTotp {
+    #[error("invalid TOTP secret")]
+    Secret,
+    #[error("invalid TOTP time")]
+    Time,
+}
 
 /// ROTP generates 20 random bytes, which encode to 32 uniformly random base32 symbols.
 pub fn generate_secret() -> String {
@@ -43,11 +47,11 @@ pub fn verify_code(
     let key = decode_base32(secret)?;
     let start = unix_seconds
         .checked_sub(STEP_SECONDS)
-        .ok_or(InvalidTotp)?
+        .ok_or(InvalidTotp::Time)?
         .div_euclid(STEP_SECONDS);
     let end = unix_seconds
         .checked_add(STEP_SECONDS)
-        .ok_or(InvalidTotp)?
+        .ok_or(InvalidTotp::Time)?
         .div_euclid(STEP_SECONDS);
     let mut matched = None;
     for step in start..=end {
@@ -56,7 +60,7 @@ pub fn verify_code(
         }
         let generated = code_for_step(&key, step)?;
         if bool::from(code.as_bytes().ct_eq(generated.as_bytes())) {
-            matched = Some(step.checked_mul(STEP_SECONDS).ok_or(InvalidTotp)?);
+            matched = Some(step.checked_mul(STEP_SECONDS).ok_or(InvalidTotp::Time)?);
         }
     }
     Ok(matched)
@@ -101,7 +105,7 @@ fn decode_base32(secret: &str) -> Result<Vec<u8>, InvalidTotp> {
         let value = BASE32
             .iter()
             .position(|byte| char::from(*byte) == c)
-            .ok_or(InvalidTotp)?;
+            .ok_or(InvalidTotp::Secret)?;
         buffer = (buffer << 5) | value as u32;
         bits += 5;
         if bits >= 8 {
@@ -113,7 +117,7 @@ fn decode_base32(secret: &str) -> Result<Vec<u8>, InvalidTotp> {
 }
 
 fn code_for_step(key: &[u8], step: i64) -> Result<String, InvalidTotp> {
-    let counter = u64::try_from(step).map_err(|_| InvalidTotp)?;
+    let counter = u64::try_from(step).map_err(|_| InvalidTotp::Time)?;
     let mut mac = Hmac::<Sha1>::new_from_slice(key).expect("HMAC accepts any key length");
     mac.update(&counter.to_be_bytes());
     let digest = mac.finalize().into_bytes();

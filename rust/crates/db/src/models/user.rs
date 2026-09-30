@@ -489,6 +489,7 @@ impl User {
             r#"DELETE FROM "sessions" WHERE "sessions"."user_id" = ?"#,
             [self.id],
         )?;
+        conn.execute_cached("DELETE FROM user_devices WHERE user_id = ?", [self.id])?;
         let email = self.deactivated_email_address();
         self.update(
             tx,

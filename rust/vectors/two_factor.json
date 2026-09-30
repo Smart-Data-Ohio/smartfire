@@ -1529,8 +1529,8 @@
       "uri": "otpauth://totp/Smartfire:a~%2Ab%40example.com?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Smartfire"
     }
   ],
-  "credential_ciphertext": "{\"p\":\"QQuQO7Q0YzuykHNhBj0cCUyyy+sdOQU8dmRluW5U45o=\",\"h\":{\"iv\":\"9husP27wtShxQ9Bb\",\"at\":\"62PqtRHAu7y9hLp2CM1RGg==\",\"e\":\"QVNDSUktOEJJVA==\"}}",
-  "setup_ciphertext": "{\"p\":\"tuaazB6eU87Ac+scWCaZKneWjN9Mys7wy74VgAU42yI=\",\"h\":{\"iv\":\"ZYG5ZLucEj8B1JOD\",\"at\":\"dWv1Tm1ar6pMlmxURrkrQw==\",\"e\":\"QVNDSUktOEJJVA==\"}}",
+  "credential_ciphertext": "{\"p\":\"4m/wZzN+ID7U77+2fnC+RgURk2D7juL2VO8WFATbITg=\",\"h\":{\"iv\":\"BC+nE4x2uEREgW5B\",\"at\":\"U7RkAS0HfMJHnnmTp3/rzQ==\",\"e\":\"QVNDSUktOEJJVA==\"}}",
+  "setup_ciphertext": "{\"p\":\"dHxG4SXE00EwIUxXswOeX7bIkfnbefagt34SYoJryF8=\",\"h\":{\"iv\":\"Iq8fT43yJPlMfVRJ\",\"at\":\"M7pjg1gb/m1ZxKB0sEssrg==\",\"e\":\"QVNDSUktOEJJVA==\"}}",
   "remember": {
     "token": "ws9-fixture-remember-token",
     "raw": "eyJfcmFpbHMiOnsibWVzc2FnZSI6IkluZHpPUzFtYVhoMGRYSmxMWEpsYldWdFltVnlMWFJ2YTJWdUlnPT0iLCJleHAiOiIyMDI2LTAxLTMxVDEyOjAwOjAwLjAwMFoiLCJwdXIiOiJjb29raWUudHdvX2ZhY3Rvcl9yZW1lbWJlciJ9fQ==--9676c4cc9d5a8ee90c44c761973a39a006f10e9a",
