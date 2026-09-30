@@ -357,3 +357,56 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 418 filtered out; fi
 ```
 
 Fresh-clone full app validation and workspace clippy follow below after completion.
+
+### Fresh-clone multipart verification
+
+Tested implementation: `0c48c8d7c08d889880845ddfe4b62e241db0e4e0`. Cloned the committed branch
+under `.scratch/multipart-startup/fresh` with `--no-hardlinks`, using its own Cargo target and
+copies of the same built `default` and `first_run` seeds. The Rails pin remains
+`d7c7de9264c63015be398001d7a1094e7695a6db`.
+
+Fresh build and each test command use `CARGO_BUILD_JOBS=2` and the machine-wide rustc wrapper
+from `~/.cargo/config.toml`; no throttle override was used. The fresh build completed in
+10m 49s including queue time. Removed the three inactive legacy fresh-clone target directories
+before this build, leaving only one extra target directory. Scratch and temporary files are
+on disk inside the assigned worktree.
+
+Three consecutive full app runs used eight test threads and eight private low-memory Python
+CPU workers, with cleanup in `finally`. The command from the fresh clone's `rust/` was:
+
+```sh
+CI=true CARGO_BUILD_JOBS=2 CABLE_TEST_PORT_RANGE=53300-53349 MAIL_TEST_PORT_RANGE=53300-53349 mise exec rust@1.98.1 -- cargo test --locked -j 2 -p campfire -- --nocapture --test-threads 8
+```
+
+`TMPDIR` was the absolute worktree path `.scratch/multipart-startup/tmp`. One-minute load
+at run start/end was 22.76/37.98, 37.98/34.53 and 34.53/31.10.
+
+**0/3 runs failed; 1,248 test invocations passed; nine invocations were explicitly ignored.**
+The same three pre-existing manual/measurement tests were ignored in each run. No seeded
+integration test skipped; a passed helper intentionally prints the local missing-seed message.
+All three ownership/error/panic regressions ran normally in each full suite. No retry,
+replacement run, killed test process or readiness timeout occurred in this verification.
+
+Raw full app lines:
+
+```text
+test result: ok. 416 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 100.40s
+test result: ok. 416 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 79.57s
+test result: ok. 416 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 69.20s
+```
+
+Fresh-clone CI clippy exited zero, with two build jobs and the same compiler throttle:
+
+```sh
+CI=true CARGO_BUILD_JOBS=2 mise exec rust@1.98.1 -- cargo clippy --locked -j 2 --workspace --exclude html5ever --all-targets -- -D warnings
+```
+
+```text
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 22s
+```
+
+Raw logs, the deterministic before-fix failure, JSON summaries and driver are preserved in
+`rust/target/deflake/multipart-startup-0c48c8d7/`. The extra fresh-clone target was deleted after
+verification; all test/load/compiler processes had finished. The branch now has three full
+passing app runs on the listener-ownership fix; the earlier startup failure was repaired
+rather than accepted or replaced.
