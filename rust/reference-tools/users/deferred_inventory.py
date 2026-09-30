@@ -66,10 +66,10 @@ covered.update({
         "create bans user and creates ban records from sessions", "create destroys user sessions", "non-admins cannot ban users",
         "destroy removes ban records and sets user to active", "non-admins cannot unban users",
     },
-    "controllers/accounts_controller_test.rb": {"update", "non-admins cannot update"},
+    "controllers/accounts_controller_test.rb": {"edit","update", "non-admins cannot update"},
     # The original destroy case removes David, an agent owner: it still needs WS11.
     "controllers/accounts/users_controller_test.rb": {"update", "non-admins cannot perform actions"},
-    "controllers/accounts/custom_styles_controller_test.rb": {"update", "non-admins cannot update"},
+    "controllers/accounts/custom_styles_controller_test.rb": {"edit","update", "non-admins cannot update"},
     "controllers/accounts/join_codes_controller_test.rb": {"create new join code", "only administrators can create new join codes"},
 })
 rows = []

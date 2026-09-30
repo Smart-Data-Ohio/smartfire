@@ -14,8 +14,10 @@ def render_account(viewer,template,assigns={},partial:false)
   controller=AccountViewsGoldenController.new
   controller.set_request!(ActionDispatch::Request.new(AccountViewsGoldenController.renderer.new(http_host:"campfire.test",https:false,"rack.session"=>{},"action_dispatch.content_security_policy_nonce_generator"=>->(_){"NONCE"}).send(:env_for_request)))
   controller.set_response!(ActionDispatch::Response.new)
-  html=controller.render_to_string(**(partial ? {partial:template,locals:assigns} : {template:template,layout:false,assigns:assigns}))
-  {html:html,nav:controller.view_context.content_for(:nav).to_s,footer:controller.view_context.content_for(:footer).to_s,last_room_id:controller.send(:last_room_visited)&.id,app_version:Rails.application.config.app_version}
+  view=controller.view_context
+  view.assign(assigns.stringify_keys)
+  html=view.render(**(partial ? {partial:template,locals:assigns} : {template:template,layout:false}))
+  {html:html,nav:view.content_for(:nav).to_s,footer:view.content_for(:footer).to_s,last_room_id:controller.send(:last_room_visited)&.id,app_version:Rails.application.config.app_version}
 ensure
   Current.reset
 end

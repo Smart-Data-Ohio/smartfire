@@ -58,8 +58,8 @@ async fn account_member_rows_match_google_security_role_and_inactive_rails_contr
             }
             if setup["two_factor"] == true {
                 tx.conn().execute("DELETE FROM two_factor_credentials WHERE user_id=?",[id])?;
-                // Rendering only reads confirmed_at. No authentication is performed with this fixture row.
-                tx.conn().execute("INSERT INTO two_factor_credentials(user_id,secret,confirmed_at,created_at,updated_at) VALUES (?,NULL,?,?,?)",rusqlite::params![id,tx.now(),tx.now(),tx.now()])?;
+                // Reuse valid seed ciphertext; this case only reads the enrollment state.
+                tx.conn().execute("INSERT INTO two_factor_credentials(user_id,secret,confirmed_at,created_at,updated_at) SELECT ?,secret,?,?,? FROM two_factor_credentials WHERE user_id!=? LIMIT 1",rusqlite::params![id,tx.now(),tx.now(),tx.now(),id])?;
             }
             Ok(())
         }).await.unwrap();
@@ -78,7 +78,7 @@ async fn account_settings_body_navigation_and_footer_match_pinned_rails() {
         let secrets = app.booted.app.secrets.clone();
         let (account, administrators, members) = app.db().read(move |conn| {
             let summaries = presenters::accounts::account_users(conn,viewer==DAVID)?.iter().map(|user| presenters::account_user_summary(conn,&secrets,user)).collect::<campfire_db::Result<Vec<_>>>()?;
-            let (admins,members) = summaries.into_iter().partition(|user|user.administrator());
+            let (admins,members): (Vec<_>,Vec<_>) = summaries.into_iter().partition(|user|user.administrator());
             Ok((Account::first(conn)?.unwrap(),admins,members))
         }).await.unwrap();
         for block in ["content","nav","footer"] {
