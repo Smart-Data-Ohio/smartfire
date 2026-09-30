@@ -171,6 +171,30 @@ pub fn notification(
     }
     Ok(200)
 }
+/// `PushChannel.watch_for!` saves a fresh identity only after Google's watch succeeds.
+pub fn replace_watch(
+    tx: &mut Tx<'_>,
+    user_id: i64,
+    channel_id: &str,
+    digest: &str,
+    resource_id: Option<&str>,
+    expires: Option<crate::Timestamp>,
+) -> Result<()> {
+    let mut errors = crate::Errors::default();
+    if User::find_by_id(tx.conn(), user_id)?.is_none() {
+        errors.add("user", "must exist");
+    }
+    if campfire_richtext::ruby::is_blank(channel_id) {
+        errors.add("channel_id", "can't be blank");
+    }
+    if campfire_richtext::ruby::is_blank(digest) {
+        errors.add("token_digest", "can't be blank");
+    }
+    errors.into_result()?;
+    tx.conn().execute("INSERT INTO calendar_push_channels(user_id,channel_id,token_digest,resource_id,expires_at,last_message_number,created_at,updated_at) VALUES(?,?,?,?,?,0,?,?) ON CONFLICT(user_id) DO UPDATE SET channel_id=excluded.channel_id,token_digest=excluded.token_digest,resource_id=excluded.resource_id,expires_at=excluded.expires_at,last_message_number=0,last_error=NULL,updated_at=excluded.updated_at",rusqlite::params![user_id,channel_id,digest,resource_id,expires,tx.now(),tx.now()])?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -198,28 +222,4 @@ mod tests {
         assert!(!c.token_matches("wrong"));
         assert!(!c.token_matches(" "));
     }
-}
-
-/// `PushChannel.watch_for!` saves a fresh identity only after Google's watch succeeds.
-pub fn replace_watch(
-    tx: &mut Tx<'_>,
-    user_id: i64,
-    channel_id: &str,
-    digest: &str,
-    resource_id: Option<&str>,
-    expires: Option<crate::Timestamp>,
-) -> Result<()> {
-    let mut errors = crate::Errors::default();
-    if User::find_by_id(tx.conn(), user_id)?.is_none() {
-        errors.add("user", "must exist");
-    }
-    if campfire_richtext::ruby::is_blank(channel_id) {
-        errors.add("channel_id", "can't be blank");
-    }
-    if campfire_richtext::ruby::is_blank(digest) {
-        errors.add("token_digest", "can't be blank");
-    }
-    errors.into_result()?;
-    tx.conn().execute("INSERT INTO calendar_push_channels(user_id,channel_id,token_digest,resource_id,expires_at,last_message_number,created_at,updated_at) VALUES(?,?,?,?,?,0,?,?) ON CONFLICT(user_id) DO UPDATE SET channel_id=excluded.channel_id,token_digest=excluded.token_digest,resource_id=excluded.resource_id,expires_at=excluded.expires_at,last_message_number=0,last_error=NULL,updated_at=excluded.updated_at",rusqlite::params![user_id,channel_id,digest,resource_id,expires,tx.now(),tx.now()])?;
-    Ok(())
 }
