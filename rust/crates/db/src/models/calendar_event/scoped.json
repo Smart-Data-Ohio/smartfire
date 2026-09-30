@@ -1,0 +1,4163 @@
+[
+  {
+    "name": "local title",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "update",
+        "index": 1,
+        "attrs": {
+          "title": "Changed"
+        },
+        "scope": "this_event"
+      }
+    ],
+    "results": [
+      {
+        "value": false
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Changed",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "default scope",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "update",
+        "index": 1,
+        "attrs": {
+          "title": "Changed"
+        },
+        "scope": "bogus"
+      }
+    ],
+    "results": [
+      {
+        "value": false
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Changed",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "following title",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "update",
+        "index": 1,
+        "attrs": {
+          "title": "Changed",
+          "description": "Details"
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": false
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Changed",
+        "description": "Details",
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Changed",
+        "description": "Details",
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Changed",
+        "description": "Details",
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "following move onto next slot",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "update",
+        "index": 1,
+        "attrs": {
+          "starts_at": "2026-10-19 09:00:00",
+          "ends_at": "2026-10-19 10:00:00"
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": true
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-11-02 09:00:00.000000",
+        "ends_at": "2026-11-02 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "entire series onto next slot",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "update",
+        "index": 0,
+        "attrs": {
+          "starts_at": "2026-10-12 09:00:00",
+          "ends_at": "2026-10-12 10:00:00"
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": true
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-11-02 09:00:00.000000",
+        "ends_at": "2026-11-02 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "earlier following move",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "update",
+        "index": 2,
+        "attrs": {
+          "starts_at": "2026-10-18 09:00:00",
+          "ends_at": "2026-10-18 10:00:00"
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": true
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-18 09:00:00.000000",
+        "ends_at": "2026-10-18 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-25 09:00:00.000000",
+        "ends_at": "2026-10-25 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "local between neighbours",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "update",
+        "index": 1,
+        "attrs": {
+          "starts_at": "2026-10-13 09:00:00",
+          "ends_at": "2026-10-13 10:00:00"
+        },
+        "scope": "this_event"
+      }
+    ],
+    "results": [
+      {
+        "value": true
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-13 09:00:00.000000",
+        "ends_at": "2026-10-13 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "local past neighbour",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "update",
+        "index": 1,
+        "attrs": {
+          "starts_at": "2026-10-20 09:00:00",
+          "ends_at": "2026-10-20 10:00:00"
+        },
+        "scope": "this_event"
+      }
+    ],
+    "results": [
+      {
+        "errors": [
+          [
+            "starts_at",
+            "must stay between the neighbouring occurrences in its series"
+          ]
+        ]
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "previous bound this_event",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "update",
+        "index": 1,
+        "attrs": {
+          "starts_at": "2026-10-05 09:00:00"
+        },
+        "scope": "this_event"
+      }
+    ],
+    "results": [
+      {
+        "errors": [
+          [
+            "starts_at",
+            "must stay between the neighbouring occurrences in its series"
+          ]
+        ]
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "previous bound this_and_following",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "update",
+        "index": 1,
+        "attrs": {
+          "starts_at": "2026-10-05 09:00:00"
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "errors": [
+          [
+            "starts_at",
+            "must stay between the neighbouring occurrences in its series"
+          ]
+        ]
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "head time guard",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "update",
+        "index": 0,
+        "attrs": {
+          "starts_at": "2026-10-05 09:30:00"
+        },
+        "scope": "this_event"
+      }
+    ],
+    "results": [
+      {
+        "errors": [
+          [
+            "starts_at",
+            "moves the whole series: choose This and following or the entire series"
+          ]
+        ]
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "follower rule guard",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "update",
+        "index": 1,
+        "attrs": {
+          "recurrence_rule": "daily"
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "errors": [
+          [
+            "recurrence_rule",
+            "can only be changed from the first event in the series using This and following"
+          ]
+        ]
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "head local rule guard",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "update",
+        "index": 0,
+        "attrs": {
+          "recurrence_rule": "daily"
+        },
+        "scope": "this_event"
+      }
+    ],
+    "results": [
+      {
+        "errors": [
+          [
+            "recurrence_rule",
+            "can only be changed from the first event in the series using This and following"
+          ]
+        ]
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "head remove rule",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "update",
+        "index": 0,
+        "attrs": {
+          "recurrence_rule": ""
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "errors": [
+          [
+            "recurrence_rule",
+            "can't be removed from a repeating event"
+          ]
+        ]
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "only start preserves follower duration",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "update",
+        "index": 1,
+        "attrs": {
+          "starts_at": "2026-10-12 09:30:00"
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": true
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:30:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:30:00.000000",
+        "ends_at": "2026-10-19 10:30:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:30:00.000000",
+        "ends_at": "2026-10-26 10:30:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "only end extends follower duration",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "update",
+        "index": 1,
+        "attrs": {
+          "ends_at": "2026-10-12 11:00:00"
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": true
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 11:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 11:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 11:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "remove ends",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "update",
+        "index": 1,
+        "attrs": {
+          "ends_at": null
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": true
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": null,
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": null,
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": null,
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "add ends",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": null,
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "update",
+        "index": 1,
+        "attrs": {
+          "ends_at": "2026-10-12 10:00:00"
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": true
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": null,
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "extend copies responses",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "rsvp",
+        "index": 0,
+        "user": "jason",
+        "response": "going"
+      },
+      {
+        "kind": "update",
+        "index": 0,
+        "attrs": {
+          "recurrence_until": "2026-11-09"
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": null
+      },
+      {
+        "value": false
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-11-09",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-11-09",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-11-09",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-11-09",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-11-02 09:00:00.000000",
+        "ends_at": "2026-11-02 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-11-09",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-11-09 09:00:00.000000",
+        "ends_at": "2026-11-09 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-11-09",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_update",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": [
+      [
+        "Calendar::SyncEntryJob",
+        [
+          0,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          1,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          2,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          3,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          4,
+          127326141
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          4,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          5,
+          127326141
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          5,
+          149087659
+        ]
+      ]
+    ]
+  },
+  {
+    "name": "protect distinct RSVP",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "rsvp",
+        "index": 0,
+        "user": "jason",
+        "response": "going"
+      },
+      {
+        "kind": "rsvp",
+        "index": 2,
+        "user": "jason",
+        "response": "declined"
+      },
+      {
+        "kind": "update",
+        "index": 0,
+        "attrs": {
+          "recurrence_rule": "daily",
+          "recurrence_until": "2026-10-06"
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": null
+      },
+      {
+        "value": null
+      },
+      {
+        "value": false
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "daily",
+        "until": "2026-10-06",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      null,
+      {
+        "starts_at": "2026-10-06 09:00:00.000000",
+        "ends_at": "2026-10-06 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "daily",
+        "until": "2026-10-06",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "declined"
+          ]
+        ]
+      },
+      null
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_update",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": [
+      [
+        "Calendar::SyncEntryJob",
+        [
+          0,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          1,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          2,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          3,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          2,
+          149087659
+        ]
+      ]
+    ]
+  },
+  {
+    "name": "cancel excess protected",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "rsvp",
+        "index": 0,
+        "user": "jason",
+        "response": "going"
+      },
+      {
+        "kind": "rsvp",
+        "index": 1,
+        "user": "jason",
+        "response": "declined"
+      },
+      {
+        "kind": "rsvp",
+        "index": 2,
+        "user": "jz",
+        "response": "going"
+      },
+      {
+        "kind": "update",
+        "index": 0,
+        "attrs": {
+          "recurrence_rule": "daily",
+          "recurrence_until": "2026-10-06"
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": null
+      },
+      {
+        "value": null
+      },
+      {
+        "value": null
+      },
+      {
+        "value": false
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "daily",
+        "until": "2026-10-06",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-06 09:00:00.000000",
+        "ends_at": "2026-10-06 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "daily",
+        "until": "2026-10-06",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "declined"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "daily",
+        "until": "2026-10-06",
+        "cancelled": true,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ],
+          [
+            773523953,
+            "going"
+          ]
+        ]
+      },
+      null
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_update",
+        true,
+        true
+      ],
+      [
+        149087659,
+        2,
+        "event_cancelled",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_update",
+        true,
+        true
+      ],
+      [
+        773523953,
+        2,
+        "event_cancelled",
+        true,
+        true
+      ]
+    ],
+    "jobs": [
+      [
+        "Calendar::SyncEntryJob",
+        [
+          0,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          1,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          2,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          3,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          1,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          2,
+          773523953
+        ]
+      ]
+    ]
+  },
+  {
+    "name": "cancelled keeps slot",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "rsvp",
+        "index": 0,
+        "user": "jason",
+        "response": "going"
+      },
+      {
+        "kind": "rsvp",
+        "index": 2,
+        "user": "jz",
+        "response": "going"
+      },
+      {
+        "kind": "cancel",
+        "index": 1,
+        "scope": "this_event"
+      },
+      {
+        "kind": "update",
+        "index": 0,
+        "attrs": {
+          "recurrence_until": "2026-10-12"
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": null
+      },
+      {
+        "value": null
+      },
+      {
+        "value": true
+      },
+      {
+        "value": false
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-12",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-12",
+        "cancelled": true,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-12",
+        "cancelled": true,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ],
+          [
+            773523953,
+            "going"
+          ]
+        ]
+      },
+      null
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_update",
+        true,
+        true
+      ],
+      [
+        149087659,
+        1,
+        "event_cancelled",
+        true,
+        true
+      ],
+      [
+        149087659,
+        2,
+        "event_cancelled",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_update",
+        true,
+        true
+      ],
+      [
+        773523953,
+        2,
+        "event_cancelled",
+        true,
+        true
+      ]
+    ],
+    "jobs": [
+      [
+        "Calendar::SyncEntryJob",
+        [
+          0,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          1,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          2,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          3,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          2,
+          773523953
+        ]
+      ]
+    ]
+  },
+  {
+    "name": "shrink keeps cancelled beyond range",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "rsvp",
+        "index": 0,
+        "user": "jason",
+        "response": "going"
+      },
+      {
+        "kind": "rsvp",
+        "index": 3,
+        "user": "jason",
+        "response": "declined"
+      },
+      {
+        "kind": "cancel",
+        "index": 2,
+        "scope": "this_event"
+      },
+      {
+        "kind": "update",
+        "index": 0,
+        "attrs": {
+          "recurrence_until": "2026-10-12"
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": null
+      },
+      {
+        "value": null
+      },
+      {
+        "value": true
+      },
+      {
+        "value": false
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-12",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      null,
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-12",
+        "cancelled": true,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-12",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "declined"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_update",
+        true,
+        true
+      ],
+      [
+        149087659,
+        2,
+        "event_cancelled",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": [
+      [
+        "Calendar::SyncEntryJob",
+        [
+          0,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          1,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          2,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          3,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          3,
+          149087659
+        ]
+      ]
+    ]
+  },
+  {
+    "name": "monthly parking collision",
+    "input": {
+      "starts_at": "2027-01-31 10:00:00",
+      "ends_at": "2027-01-31 11:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2027-03-07"
+    },
+    "steps": [
+      {
+        "kind": "rsvp",
+        "index": 0,
+        "user": "jason",
+        "response": "going"
+      },
+      {
+        "kind": "rsvp",
+        "index": 5,
+        "user": "jason",
+        "response": "declined"
+      },
+      {
+        "kind": "update",
+        "index": 0,
+        "attrs": {
+          "recurrence_rule": "monthly",
+          "recurrence_until": "2027-07-31"
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": null
+      },
+      {
+        "value": null
+      },
+      {
+        "value": false
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2027-01-31 10:00:00.000000",
+        "ends_at": "2027-01-31 11:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "monthly",
+        "until": "2027-07-31",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2027-03-31 10:00:00.000000",
+        "ends_at": "2027-03-31 11:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "monthly",
+        "until": "2027-07-31",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2027-04-30 10:00:00.000000",
+        "ends_at": "2027-04-30 11:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "monthly",
+        "until": "2027-07-31",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2027-05-31 10:00:00.000000",
+        "ends_at": "2027-05-31 11:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "monthly",
+        "until": "2027-07-31",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2027-06-30 10:00:00.000000",
+        "ends_at": "2027-06-30 11:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "monthly",
+        "until": "2027-07-31",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2027-02-28 10:00:00.000000",
+        "ends_at": "2027-02-28 11:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "monthly",
+        "until": "2027-07-31",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "declined"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2027-07-31 10:00:00.000000",
+        "ends_at": "2027-07-31 11:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "monthly",
+        "until": "2027-07-31",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_update",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": [
+      [
+        "Calendar::SyncEntryJob",
+        [
+          0,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          1,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          2,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          3,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          4,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          5,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          5,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          6,
+          127326141
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          6,
+          149087659
+        ]
+      ]
+    ]
+  },
+  {
+    "name": "cancel local",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "rsvp",
+        "index": 0,
+        "user": "jason",
+        "response": "going"
+      },
+      {
+        "kind": "cancel",
+        "index": 1,
+        "scope": "this_event"
+      }
+    ],
+    "results": [
+      {
+        "value": null
+      },
+      {
+        "value": true
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": true,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        149087659,
+        1,
+        "event_cancelled",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": [
+      [
+        "Calendar::SyncEntryJob",
+        [
+          0,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          1,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          2,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          3,
+          149087659
+        ]
+      ]
+    ]
+  },
+  {
+    "name": "cancel following",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "rsvp",
+        "index": 0,
+        "user": "jason",
+        "response": "going"
+      },
+      {
+        "kind": "rsvp",
+        "index": 2,
+        "user": "jz",
+        "response": "maybe"
+      },
+      {
+        "kind": "cancel",
+        "index": 1,
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": null
+      },
+      {
+        "value": null
+      },
+      {
+        "value": true
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": true,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": true,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ],
+          [
+            773523953,
+            "maybe"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": true,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        149087659,
+        1,
+        "event_cancelled",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        1,
+        "event_cancelled",
+        true,
+        true
+      ]
+    ],
+    "jobs": [
+      [
+        "Calendar::SyncEntryJob",
+        [
+          0,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          1,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          2,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          3,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          2,
+          773523953
+        ]
+      ]
+    ]
+  },
+  {
+    "name": "cancel all",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "rsvp",
+        "index": 0,
+        "user": "jason",
+        "response": "going"
+      },
+      {
+        "kind": "cancel",
+        "index": 0,
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": null
+      },
+      {
+        "value": true
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": true,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": true,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": true,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": true,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_cancelled",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        false,
+        false
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        false,
+        false
+      ]
+    ],
+    "jobs": [
+      [
+        "Calendar::SyncEntryJob",
+        [
+          0,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          1,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          2,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          3,
+          149087659
+        ]
+      ]
+    ]
+  },
+  {
+    "name": "cancel twice",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "cancel",
+        "index": 1,
+        "scope": "this_event"
+      },
+      {
+        "kind": "cancel",
+        "index": 1,
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": true
+      },
+      {
+        "value": false
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": true,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "cancel unknown defaults local",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "cancel",
+        "index": 1,
+        "scope": "all"
+      }
+    ],
+    "results": [
+      {
+        "value": true
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:00:00.000000",
+        "ends_at": "2026-10-05 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:00:00.000000",
+        "ends_at": "2026-10-12 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": true,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:00:00.000000",
+        "ends_at": "2026-10-19 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:00:00.000000",
+        "ends_at": "2026-10-26 10:00:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": []
+  },
+  {
+    "name": "repeat updates coalesce",
+    "input": {
+      "starts_at": "2026-10-05 09:00:00",
+      "ends_at": "2026-10-05 10:00:00",
+      "recurrence_rule": "weekly",
+      "recurrence_until": "2026-10-26"
+    },
+    "steps": [
+      {
+        "kind": "rsvp",
+        "index": 0,
+        "user": "jason",
+        "response": "going"
+      },
+      {
+        "kind": "update",
+        "index": 1,
+        "attrs": {
+          "starts_at": "2026-10-12 09:10:00",
+          "ends_at": "2026-10-12 10:10:00"
+        },
+        "scope": "this_and_following"
+      },
+      {
+        "kind": "update",
+        "index": 0,
+        "attrs": {
+          "starts_at": "2026-10-05 09:10:00",
+          "ends_at": "2026-10-05 10:10:00"
+        },
+        "scope": "this_and_following"
+      }
+    ],
+    "results": [
+      {
+        "value": null
+      },
+      {
+        "value": true
+      },
+      {
+        "value": true
+      }
+    ],
+    "rows": [
+      {
+        "starts_at": "2026-10-05 09:10:00.000000",
+        "ends_at": "2026-10-05 10:10:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-12 09:20:00.000000",
+        "ends_at": "2026-10-12 10:20:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-19 09:20:00.000000",
+        "ends_at": "2026-10-19 10:20:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      },
+      {
+        "starts_at": "2026-10-26 09:20:00.000000",
+        "ends_at": "2026-10-26 10:20:00.000000",
+        "title": "Planning session",
+        "description": null,
+        "rule": "weekly",
+        "until": "2026-10-26",
+        "cancelled": false,
+        "responses": [
+          [
+            127326141,
+            "going"
+          ],
+          [
+            149087659,
+            "going"
+          ]
+        ]
+      }
+    ],
+    "items": [
+      [
+        149087659,
+        0,
+        "event_update",
+        true,
+        true
+      ],
+      [
+        149087659,
+        1,
+        "event_update",
+        false,
+        false
+      ],
+      [
+        712064548,
+        0,
+        "event_invitation",
+        true,
+        true
+      ],
+      [
+        773523953,
+        0,
+        "event_invitation",
+        true,
+        true
+      ]
+    ],
+    "jobs": [
+      [
+        "Calendar::SyncEntryJob",
+        [
+          0,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          1,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          2,
+          149087659
+        ]
+      ],
+      [
+        "Calendar::SyncEntryJob",
+        [
+          3,
+          149087659
+        ]
+      ]
+    ]
+  }
+]

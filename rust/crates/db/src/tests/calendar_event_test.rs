@@ -617,3 +617,303 @@ fn references_follow_message_edits_and_reject_other_rooms() {
         0
     );
 }
+
+fn vector_changes(a: &serde_json::Value) -> crate::models::calendar_event::changes::EventChanges {
+    use crate::models::calendar_event::changes::EventChanges;
+    EventChanges {
+        title: a.get("title").map(|v| v.as_str().unwrap().into()),
+        description: a.get("description").map(|v| v.as_str().map(str::to_string)),
+        starts_at: a
+            .get("starts_at")
+            .map(|v| v.as_str().map(|s| Timestamp::parse_db(s).unwrap())),
+        ends_at: a
+            .get("ends_at")
+            .map(|v| v.as_str().map(|s| Timestamp::parse_db(s).unwrap())),
+        time_zone: a.get("time_zone").map(|v| v.as_str().unwrap().into()),
+        venue_room_id: a.get("venue_room_id").map(|v| v.as_i64()),
+        recurrence_rule: a
+            .get("recurrence_rule")
+            .map(|v| v.as_str().map(str::to_string)),
+        recurrence_until: a
+            .get("recurrence_until")
+            .map(|v| v.as_str().map(|s| s.parse().unwrap())),
+        meet_link_requested: a.get("meet_link_requested").map(|v| v.as_bool().unwrap()),
+    }
+}
+
+#[test]
+fn event_scoped_operations_match_rails_vectors() {
+    use serde_json::{Value, json};
+    let cases: Vec<Value> =
+        serde_json::from_str(include_str!("../models/calendar_event/scoped.json")).unwrap();
+    for case in cases {
+        let t = frozen();
+        let input = &case["input"];
+        let mut a = attrs(&t);
+        a.starts_at = input["starts_at"]
+            .as_str()
+            .map(|s| Timestamp::parse_db(s).unwrap());
+        a.ends_at = input["ends_at"]
+            .as_str()
+            .map(|s| Timestamp::parse_db(s).unwrap());
+        a.recurrence_rule = input["recurrence_rule"].as_str().map(str::to_string);
+        a.recurrence_until = Some(input["recurrence_until"].as_str().unwrap().parse().unwrap());
+        let head = t.write(move |tx| CalendarEvent::create(tx, a));
+        let mut ids = t
+            .read(|c| head.series_events(c))
+            .into_iter()
+            .map(|e| e.id)
+            .collect::<Vec<_>>();
+        t.sink.take();
+        for (step, expected) in case["steps"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip(case["results"].as_array().unwrap())
+        {
+            let event = ids[step["index"].as_u64().unwrap() as usize];
+            let scope = step["scope"].as_str().unwrap_or("").to_string();
+            let changes = vector_changes(&step["attrs"]);
+            let result = match step["kind"].as_str().unwrap() {
+                "rsvp" => {
+                    let user = id(step["user"].as_str().unwrap());
+                    let response = step["response"].as_str().unwrap().to_string();
+                    t.try_write(move |tx| {
+                        CalendarEvent::respond(tx, event, user, &response, false)
+                            .map(|_| Value::Null)
+                    })
+                }
+                "update" => t.try_write(move |tx| {
+                    CalendarEvent::update_with_scope(tx, event, changes, &scope, Some(id("david")))
+                        .map(Value::Bool)
+                }),
+                "cancel" => t.try_write(move |tx| {
+                    CalendarEvent::cancel_with_scope(tx, event, &scope, Some(id("david")))
+                        .map(Value::Bool)
+                }),
+                _ => unreachable!(),
+            };
+            let actual = match result {
+                Ok(value) => json!({"value":value}),
+                Err(Error::RecordInvalid(errors)) => json!({"errors":errors.0}),
+                Err(error) => panic!("{}: {error}", case["name"]),
+            };
+            assert_eq!(actual, *expected, "{} step {step}", case["name"]);
+        }
+        let current = t.read(|c| head.series_events(c));
+        for e in &current {
+            if !ids.contains(&e.id) {
+                ids.push(e.id);
+            }
+        }
+        let stamp = |ts: Timestamp| ts.jiff().strftime("%Y-%m-%d %H:%M:%S.%6f").to_string();
+        let rows=ids.iter().map(|event|{
+            t.read(|c|match CalendarEvent::find(c,*event) {
+                Ok(e)=>{
+                    let mut responses=EventAttendance::for_event(c,e.id)?;
+                    responses.sort_by_key(|a|a.user_id);
+                    Ok(json!({"starts_at":stamp(e.starts_at),"ends_at":e.ends_at.map(stamp),"title":e.title,"description":e.description,"rule":e.recurrence_rule,"until":e.recurrence_until.unwrap().to_string(),"cancelled":e.cancelled(),"responses":responses.iter().map(|a|json!([a.user_id,a.response])).collect::<Vec<_>>()}))
+                },
+                Err(Error::RecordNotFound(_))=>Ok(Value::Null),
+                Err(error)=>Err(error),
+            })
+        }).collect::<Vec<_>>();
+        assert_eq!(json!(rows), case["rows"], "{} rows", case["name"]);
+        let items=t.read(|c|{
+            let mut stmt=c.prepare("SELECT user_id,source_id,event_type,read_at IS NULL,handled_at IS NULL FROM activity_items WHERE source_type='Event' ORDER BY user_id,source_id")?;
+            let values=stmt.query_map([],|r|Ok((r.get::<_,i64>(0)?,r.get::<_,i64>(1)?,r.get::<_,String>(2)?,r.get::<_,bool>(3)?,r.get::<_,bool>(4)?)))?.collect::<rusqlite::Result<Vec<_>>>()?;
+            Ok(values.into_iter().filter_map(|(u,s,e,r,h)|ids.iter().position(|id|*id==s).map(|index|json!([u,index,e,r,h]))).collect::<Vec<_>>())
+        });
+        assert_eq!(json!(items), case["items"], "{} items", case["name"]);
+        let jobs = t
+            .events()
+            .iter()
+            .filter_map(|event| match event {
+                Event::Job(job) if job.class.starts_with("Calendar::") => {
+                    let value: SyncEntryJob =
+                        serde_json::from_value(job.arguments.clone()).unwrap();
+                    Some(json!([
+                        job.class,
+                        [
+                            ids.iter().position(|id| *id == value.event_id),
+                            value.user_id
+                        ]
+                    ]))
+                }
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(json!(jobs), case["jobs"], "{} jobs", case["name"]);
+    }
+}
+
+#[test]
+fn event_scoped_placement_failure_rolls_back_parking_and_jobs() {
+    use crate::models::calendar_event::changes::EventChanges;
+    let t = frozen();
+    let head = series(&t);
+    let before = t.read(|c| head.series_events(c));
+    let victim = before[2].id;
+    let expected = before.clone();
+    t.write(move |tx|{
+        tx.conn().execute_batch(&format!("CREATE TRIGGER reject_event_placement BEFORE UPDATE ON events WHEN OLD.id={victim} AND OLD.series_id IS NULL AND NEW.series_id IS NOT NULL BEGIN SELECT RAISE(ABORT,'placement failed'); END"))?;
+        Ok(())
+    });
+    t.sink.take();
+    let head_id = head.id;
+    assert!(
+        t.try_write(move |tx| CalendarEvent::update_with_scope(
+            tx,
+            head_id,
+            EventChanges {
+                starts_at: Some(Some(
+                    before[0]
+                        .starts_at
+                        .since(SignedDuration::from_hours(24 * 7))
+                )),
+                ends_at: Some(Some(
+                    before[0]
+                        .starts_at
+                        .since(SignedDuration::from_hours(24 * 7))
+                        .since(SignedDuration::from_hours(1))
+                )),
+                ..Default::default()
+            },
+            "this_and_following",
+            Some(id("david"))
+        ))
+        .is_err()
+    );
+    assert_eq!(t.read(|c| head.series_events(c)), expected);
+    assert!(t.events().is_empty());
+}
+
+#[test]
+fn scoped_recurrence_guards_do_not_escape_the_operation() {
+    use crate::models::calendar_event::changes::EventChanges;
+    let t = frozen();
+    let head = series(&t);
+    let event = head.id;
+    t.write(move |tx| {
+        CalendarEvent::update_with_scope(
+            tx,
+            event,
+            EventChanges {
+                recurrence_until: Some(Some("2026-10-13".parse().unwrap())),
+                ..Default::default()
+            },
+            "this_and_following",
+            Some(id("david")),
+        )
+    });
+    let result = t.try_write(move |tx| {
+        CalendarEvent::update(
+            tx,
+            event,
+            EventChanges {
+                recurrence_rule: Some(Some("daily".into())),
+                ..Default::default()
+            },
+        )
+    });
+    assert!(
+        matches!(result,Err(Error::RecordInvalid(errors)) if errors.on("recurrence_rule")==["can only be changed from the first event in the series using This and following"])
+    );
+    let result = t.try_write(move |tx| {
+        CalendarEvent::update(
+            tx,
+            event,
+            EventChanges {
+                starts_at: Some(Some(head.starts_at.since(SignedDuration::from_mins(5)))),
+                ..Default::default()
+            },
+        )
+    });
+    assert!(
+        matches!(result,Err(Error::RecordInvalid(errors)) if errors.on("starts_at")==["moves the whole series: choose This and following or the entire series"])
+    );
+}
+
+#[test]
+fn series_notifications_replace_read_updates_and_rearm_every_reminder() {
+    use crate::models::calendar_event::changes::EventChanges;
+    let t = frozen();
+    let head = series(&t);
+    let events = t.read(|c| head.series_events(c));
+    respond(&t, head.id, "jason", "going", false);
+    let future = events[1].id;
+    t.write(move |tx| {
+        let item = ActivityItem::refresh_unread(tx, id("jason"), "Event", future, "event_update")?;
+        tx.conn().execute(
+            "UPDATE activity_items SET read_at=? WHERE id=?",
+            params![tx.now(), item.id],
+        )?;
+        tx.conn().execute(
+            "UPDATE memberships SET involvement='nothing' WHERE room_id=? AND user_id=?",
+            params![id("designers"), id("jason")],
+        )?;
+        tx.conn().execute(
+            "UPDATE events SET reminded_at=? WHERE series_id=?",
+            params![tx.now(), head.id],
+        )?;
+        CalendarEvent::update_with_scope(
+            tx,
+            head.id,
+            EventChanges {
+                starts_at: Some(Some(head.starts_at.since(SignedDuration::from_mins(5)))),
+                ..Default::default()
+            },
+            "this_and_following",
+            Some(id("david")),
+        )?;
+        Ok(())
+    });
+    assert!(item(&t, future, "jason").unwrap().handled_at.is_some());
+    assert_eq!(
+        item(&t, head.id, "jason").unwrap().event_type,
+        "event_update"
+    );
+    assert!(
+        t.read(|c| head.series_events(c))
+            .iter()
+            .all(|e| e.reminded_at.is_none())
+    );
+}
+
+#[test]
+fn rematerialization_failure_restores_original_series_rows() {
+    use crate::models::calendar_event::changes::EventChanges;
+    let t = frozen();
+    let mut a = attrs(&t);
+    a.starts_at = Timestamp::parse_db("2027-01-31 10:00:00");
+    a.ends_at = Timestamp::parse_db("2027-01-31 11:00:00");
+    a.recurrence_rule = Some("weekly".into());
+    a.recurrence_until = Some("2027-03-07".parse().unwrap());
+    let head = t.write(move |tx| CalendarEvent::create(tx, a));
+    let original = t.read(|c| head.series_events(c));
+    respond(&t, head.id, "jason", "going", false);
+    respond(&t, original.last().unwrap().id, "jason", "declined", false);
+    let victim = original[4].id;
+    t.write(move |tx|{
+        tx.conn().execute_batch(&format!("CREATE TRIGGER reject_rematerialization BEFORE UPDATE ON events WHEN OLD.id={victim} AND OLD.series_id IS NULL AND NEW.series_id IS NOT NULL BEGIN SELECT RAISE(ABORT,'rematerialization failed'); END"))?;
+        Ok(())
+    });
+    t.sink.take();
+    let event = head.id;
+    assert!(
+        t.try_write(move |tx| CalendarEvent::update_with_scope(
+            tx,
+            event,
+            EventChanges {
+                recurrence_rule: Some(Some("monthly".into())),
+                recurrence_until: Some(Some("2027-07-31".parse().unwrap())),
+                ..Default::default()
+            },
+            "this_and_following",
+            Some(id("david"))
+        ))
+        .is_err()
+    );
+    assert_eq!(t.read(|c| head.series_events(c)), original);
+    assert!(t.events().is_empty());
+}

@@ -52,7 +52,7 @@ impl EventAttendance {
     pub(super) fn record_organizer(tx: &mut Tx<'_>, event: &CalendarEvent) -> Result<Self> {
         Self::save_response(tx, event, event.organizer_id, "going", false)
     }
-    fn save_response(
+    pub(super) fn save_response(
         tx: &mut Tx<'_>,
         event: &CalendarEvent,
         user_id: i64,

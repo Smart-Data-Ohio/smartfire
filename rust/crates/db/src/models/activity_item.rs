@@ -135,6 +135,17 @@ impl ActivityItem {
         Ok(())
     }
 
+    /// Event lifecycle handling reads an unread item as well as marking it handled.
+    /// app/models/activity_item.rb#mark_handled!
+    pub fn mark_handled(&self, tx: &mut Tx<'_>) -> Result<()> {
+        tx.conn().execute_cached(
+            "UPDATE activity_items SET read_at=COALESCE(read_at,?), handled_at=?, updated_at=? WHERE id=?",
+            params![tx.now(), tx.now(), tx.now(), self.id],
+        )?;
+        Self::broadcast_change(tx, self.user_id, self.id)?;
+        Ok(())
+    }
+
     /// `has_many :activity_items, as: :source, dependent: :destroy`
     pub(crate) fn destroy_for_source(tx: &Tx<'_>, source_type: &str, source_id: i64) -> Result<()> {
         tx.conn().execute_cached(

@@ -72,54 +72,54 @@ Pinned reference: `d7c7de92`. Covered means the named scenario has a discriminat
 | `test/models/event/recurrence_test.rb:155` — the end date must be after the start date | Covered: `recurrence_range_cap_and_blank_rule_match_rails` |
 | `test/models/event/recurrence_test.rb:169` — the end date must be at most one year after the start date | Covered: `recurrence_range_cap_and_blank_rule_match_rails` |
 | `test/models/event/recurrence_test.rb:186` — unknown rules are rejected and blank rules normalize to nil | Covered: `event_validations_match_rails_messages; recurrence_range_cap_and_blank_rule_match_rails` |
-| `test/models/event/recurrence_test.rb:201` — recurrence fields cannot be changed through plain update | Deferred: WS14e continuation |
+| `test/models/event/recurrence_test.rb:201` — recurrence fields cannot be changed through plain update | Covered: `scoped_recurrence_guards_do_not_escape_the_operation` |
 | `test/models/event/recurrence_test.rb:225` — recurrence fields cannot be changed by injecting the guard flag | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:236` — the recurrence guard does not persist past a scoped update | Deferred: WS14e continuation |
+| `test/models/event/recurrence_test.rb:236` — the recurrence guard does not persist past a scoped update | Covered: `scoped_recurrence_guards_do_not_escape_the_operation` |
 | `test/models/event/recurrence_test.rb:249` — a series sends one invitation per invitee, attached to the first event | Covered: `series_materializes_organizer_attendance_one_invitation_and_one_announcement` |
 | `test/models/event/recurrence_test.rb:264` — a response on the first event is copied to every future occurrence | Covered: `head_response_copies_and_follower_response_stays_local_until_requested` |
 | `test/models/event/recurrence_test.rb:275` — a response on a later occurrence stays local without the checkbox | Covered: `head_response_copies_and_follower_response_stays_local_until_requested` |
 | `test/models/event/recurrence_test.rb:286` — apply to all future copies the response to that occurrence and every later one | Covered: `head_response_copies_and_follower_response_stays_local_until_requested` |
 | `test/models/event/recurrence_test.rb:299` — copying a response overwrites distinct later responses but skips cancelled occurrences | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:313` — this event leaves its siblings untouched | Deferred: WS14e continuation |
+| `test/models/event/recurrence_test.rb:313` — this event leaves its siblings untouched | Covered: `event_scoped_operations_match_rails_vectors (local title)` |
 | `test/models/event/recurrence_test.rb:336` — this event on the head accepts the form's unchanged rule values | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:350` — this event is the default scope | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:360` — this and following shifts later occurrences by the same offset and copies the title | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:380` — moving an occurrence later shifts every original follower by the same offset | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:398` — moving an occurrence onto its head's slot is rejected in either scope | Deferred: WS14e continuation |
+| `test/models/event/recurrence_test.rb:350` — this event is the default scope | Covered: `event_scoped_operations_match_rails_vectors (default scope)` |
+| `test/models/event/recurrence_test.rb:360` — this and following shifts later occurrences by the same offset and copies the title | Covered: `event_scoped_operations_match_rails_vectors (following title and following move)` |
+| `test/models/event/recurrence_test.rb:380` — moving an occurrence later shifts every original follower by the same offset | Covered: `event_scoped_operations_match_rails_vectors (following move onto next slot)` |
+| `test/models/event/recurrence_test.rb:398` — moving an occurrence onto its head's slot is rejected in either scope | Covered: `event_scoped_operations_match_rails_vectors (previous bound both scopes)` |
 | `test/models/event/recurrence_test.rb:416` — moving an occurrence before its previous sibling is rejected in either scope | Deferred: WS14e continuation |
 | `test/models/event/recurrence_test.rb:436` — a single-occurrence edit past the next sibling is rejected but this and following allows it | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:460` — a re-time between the neighbouring occurrences still passes | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:475` — moving an occurrence earlier with this and following never touches previous occurrences | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:491` — this and following can shift an occurrence exactly onto the next active slot | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:506` — this and following can shift the head exactly onto the next active slot | Deferred: WS14e continuation |
+| `test/models/event/recurrence_test.rb:460` — a re-time between the neighbouring occurrences still passes | Covered: `event_scoped_operations_match_rails_vectors (local between neighbours)` |
+| `test/models/event/recurrence_test.rb:475` — moving an occurrence earlier with this and following never touches previous occurrences | Covered: `event_scoped_operations_match_rails_vectors (earlier following move)` |
+| `test/models/event/recurrence_test.rb:491` — this and following can shift an occurrence exactly onto the next active slot | Covered: `event_scoped_operations_match_rails_vectors (following move onto next slot)` |
+| `test/models/event/recurrence_test.rb:506` — this and following can shift the head exactly onto the next active slot | Covered: `event_scoped_operations_match_rails_vectors (entire series onto next slot)` |
 | `test/models/event/recurrence_test.rb:520` — series slots are unique among uncancelled occurrences | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:539` — a starts-only change preserves later durations and an ends-only change extends them | Deferred: WS14e continuation |
+| `test/models/event/recurrence_test.rb:539` — a starts-only change preserves later durations and an ends-only change extends them | Covered: `event_scoped_operations_match_rails_vectors (only start and only end)` |
 | `test/models/event/recurrence_test.rb:561` — a following time change sends one update per attendee and replaces earlier updates | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:593` — a series update replaces read-but-unhandled updates on other occurrences | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:624` — a following title-only edit is silent but still copies the title | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:638` — rule changes are rejected away from the first event with this and following | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:663` — extending the end date reuses matching occurrences and copies responses to new ones | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:684` — a rule change moves occurrences with distinct responses onto the new pattern's slots | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:710` — shortening weekly to daily cancels distinct occurrences beyond the new slots | Deferred: WS14e continuation |
+| `test/models/event/recurrence_test.rb:593` — a series update replaces read-but-unhandled updates on other occurrences | Covered: `series_notifications_replace_read_updates_and_rearm_every_reminder` |
+| `test/models/event/recurrence_test.rb:624` — a following title-only edit is silent but still copies the title | Covered: `event_scoped_operations_match_rails_vectors (following title)` |
+| `test/models/event/recurrence_test.rb:638` — rule changes are rejected away from the first event with this and following | Covered: `event_scoped_operations_match_rails_vectors (follower rule guard)` |
+| `test/models/event/recurrence_test.rb:663` — extending the end date reuses matching occurrences and copies responses to new ones | Covered: `event_scoped_operations_match_rails_vectors (extend copies responses)` |
+| `test/models/event/recurrence_test.rb:684` — a rule change moves occurrences with distinct responses onto the new pattern's slots | Covered: `event_scoped_operations_match_rails_vectors (protect distinct RSVP)` |
+| `test/models/event/recurrence_test.rb:710` — shortening weekly to daily cancels distinct occurrences beyond the new slots | Covered: `event_scoped_operations_match_rails_vectors (cancel excess protected)` |
 | `test/models/event/recurrence_test.rb:739` — a declined attendee gets no cancellation item when an excess occurrence is cancelled | Deferred: WS14e continuation |
 | `test/models/event/recurrence_test.rb:761` — a rule change with a time change re-times kept occurrences by the same offset | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:783` — shrinking the series moves distinct occurrences onto the remaining slots and leaves cancelled ones | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:806` — shrinking the series destroys regenerable occurrences beyond the new end | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:821` — a cancelled occurrence keeps its slot when the series shrinks | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:847` — rematerialization can move a protected occurrence onto another planned mover's slot | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:876` — a failure during rematerialization placement leaves every row with its original series and time | Deferred: WS14e continuation |
+| `test/models/event/recurrence_test.rb:783` — shrinking the series moves distinct occurrences onto the remaining slots and leaves cancelled ones | Covered: `event_scoped_operations_match_rails_vectors (shrink keeps cancelled beyond range)` |
+| `test/models/event/recurrence_test.rb:806` — shrinking the series destroys regenerable occurrences beyond the new end | Covered: `event_scoped_operations_match_rails_vectors (protect distinct RSVP and cancelled keeps slot)` |
+| `test/models/event/recurrence_test.rb:821` — a cancelled occurrence keeps its slot when the series shrinks | Covered: `event_scoped_operations_match_rails_vectors (cancelled keeps slot)` |
+| `test/models/event/recurrence_test.rb:847` — rematerialization can move a protected occurrence onto another planned mover's slot | Covered: `event_scoped_operations_match_rails_vectors (monthly parking collision)` |
+| `test/models/event/recurrence_test.rb:876` — a failure during rematerialization placement leaves every row with its original series and time | Covered: `rematerialization_failure_restores_original_series_rows` |
 | `test/models/event/recurrence_test.rb:915` — series order puts uncancelled occurrences first at equal times | Deferred: WS14e continuation |
 | `test/models/event/recurrence_test.rb:932` — a rule change beyond the cap is rejected and leaves the series alone | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:949` — cancelling this event touches only that occurrence | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:960` — cancelling this and following sends one item per attendee on the earliest occurrence | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:981` — cancelling the series from the first event cancels every occurrence | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:996` — cancelling an already cancelled occurrence is a no-op | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:1007` — cancel and update scopes default to this event for unknown values | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:1018` — a single-occurrence time edit of the head is rejected | Deferred: WS14e continuation |
+| `test/models/event/recurrence_test.rb:949` — cancelling this event touches only that occurrence | Covered: `event_scoped_operations_match_rails_vectors (cancel local)` |
+| `test/models/event/recurrence_test.rb:960` — cancelling this and following sends one item per attendee on the earliest occurrence | Covered: `event_scoped_operations_match_rails_vectors (cancel following)` |
+| `test/models/event/recurrence_test.rb:981` — cancelling the series from the first event cancels every occurrence | Covered: `event_scoped_operations_match_rails_vectors (cancel all)` |
+| `test/models/event/recurrence_test.rb:996` — cancelling an already cancelled occurrence is a no-op | Covered: `event_scoped_operations_match_rails_vectors (cancel twice)` |
+| `test/models/event/recurrence_test.rb:1007` — cancel and update scopes default to this event for unknown values | Covered: `event_scoped_operations_match_rails_vectors (unknown scopes)` |
+| `test/models/event/recurrence_test.rb:1018` — a single-occurrence time edit of the head is rejected | Covered: `event_scoped_operations_match_rails_vectors (head time guard)` |
 | `test/models/event/recurrence_test.rb:1033` — a head-only series can still be re-timed through this and following | Deferred: WS14e continuation |
 | `test/models/event/recurrence_test.rb:1051` — a single-occurrence description edit of the head still succeeds | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:1061` — a plain update of the head start time is rejected | Deferred: WS14e continuation |
-| `test/models/event/recurrence_test.rb:1073` — a follower save failure clears the scoped flags and rolls the transaction back | Deferred: WS14e continuation |
+| `test/models/event/recurrence_test.rb:1061` — a plain update of the head start time is rejected | Covered: `scoped_recurrence_guards_do_not_escape_the_operation` |
+| `test/models/event/recurrence_test.rb:1073` — a follower save failure clears the scoped flags and rolls the transaction back | Covered: `event_scoped_placement_failure_rolls_back_parking_and_jobs` |
 
 ## test/models/event/reference_sync_test.rb (9)
 
