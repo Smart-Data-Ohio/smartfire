@@ -746,7 +746,14 @@ async fn ws8_quote_refresh_jobs_execute_in_the_real_app_runner() {
                 .any(|row| row.class == "Message::QuoteCardsRefreshJob" && row.status == "failed")
     })
     .await;
-    assert!(rows.is_empty(), "{rows:?}");
+    // WS3/WS8a verification touch: the booted app's periodic retention job can run
+    // alongside this request. Assert completion of the quote job we enqueued;
+    // its failed row must still fail this check.
+    assert!(
+        rows.iter()
+            .all(|row| row.class != "Message::QuoteCardsRefreshJob"),
+        "{rows:?}"
+    );
     booted.jobs.shutdown(Duration::from_secs(5)).await;
 }
 
