@@ -78,11 +78,14 @@ release lock around it, and taking that lock again inside the container would
 deadlock. Busy database pages are retried; failed snapshots preserve the last
 complete backup and return nonzero.
 
-`net.smartdata.campfire.runtime=rust` identifies a Rust image. The release
-dispatcher performs a read-only label lookup before freeze/cutover. Unlabelled
-images retain the original Rails rehearsal and process checks; unknown labels
-fail. The committed command baseline covers those decision points exactly; the
-dispatcher label inspection is additive. A Rust candidate must read the exact
+`net.smartdata.campfire.runtime=rust` identifies a Rust image. Preflight validates
+the candidate and current image labels once and records both runtimes. Freeze,
+rehearsal and cutover use that record without inspecting image metadata again.
+Legacy preflight records without runtime fields were written by the script
+that only supported Rails and therefore mean Rails. Unlabelled images retain
+the original Rails rehearsal and process checks; unknown labels fail preflight.
+The unchanged committed Rails traces match with the dispatcher included.
+A Rust candidate must read the exact
 deployed migration set on a frozen copy mounted read-only, then the previous
 Rails image must boot and serve `/up` on another copy. Both containers have no
 network and the same 768 MB cap. Rust never runs a migration in this path.

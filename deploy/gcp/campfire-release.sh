@@ -255,6 +255,19 @@ image_runtime() {
   esac
 }
 
+# Runtime metadata is validated before freeze, never queried during later phases.
+recorded_runtime() {
+  local field="$1" runtime
+  # Records without runtime fields came from the pre-change script, which only
+  # supported Rails releases. Their runtime is therefore Rails, not a guess.
+  runtime="$(read_json_field "$(state_path preflight-result.json)" \
+    "if has(\"$field\") then .${field} else \"rails\" end")"
+  case "$runtime" in
+    rails|rust) printf '%s' "$runtime" ;;
+    *) die "unknown recorded Campfire runtime '$runtime' for $field" ;;
+  esac
+}
+
 # --------------------------------------------------------------- state I/O ---
 
 state_path() { printf '%s/%s' "$STATE_DIR" "$1"; }
@@ -936,12 +949,17 @@ phase_preflight() {
   registry_login
   log "registry: pulling $IMAGE_REF"
   docker pull --quiet "$IMAGE_REF" >/dev/null
-  local pulled_arch pulled_os image_mb volume_mb
+  local pulled_arch pulled_os image_mb volume_mb target_runtime current_runtime
   pulled_arch="$(docker image inspect "$IMAGE_REF" --format '{{.Architecture}}')"
   pulled_os="$(docker image inspect "$IMAGE_REF" --format '{{.Os}}')"
   [ "$pulled_os/$pulled_arch" = "linux/amd64" ] \
     || die "pulled image is $pulled_os/$pulled_arch, expected linux/amd64"
   log "registry: pulled linux/amd64 image"
+
+  # Like the image validation above, inspection failure fails preflight before
+  # anything is frozen. Preflight's existing inspections have no retry loop.
+  target_runtime="$(image_runtime "$IMAGE_REF")"
+  current_runtime="$(image_runtime "$current_image")"
 
   # Now that the real sizes are known, size the requirement properly: the
   # storage volume is archived once and copied once more for the rehearsal.
@@ -990,8 +1008,10 @@ phase_preflight() {
     --arg mountpoint "$mountpoint" \
     --arg current_image "$current_image" \
     --arg current_revision "$(image_git_revision "$current_image")" \
+    --arg current_runtime "$current_runtime" \
     --arg target_image "$IMAGE_REF" \
     --arg target_revision "$(image_git_revision "$IMAGE_REF")" \
+    --arg target_runtime "$target_runtime" \
     --arg once_version "$(once version 2>/dev/null || echo unknown)" \
     --argjson free_mb "$free_mb" \
     --argjson volume_mb "$volume_mb" \
@@ -999,8 +1019,8 @@ phase_preflight() {
     --argjson env_keys "$(once_settings "$container" | jq -c '.envKeys')" \
     '{phase:$phase, at:$at, release_label:$label, container:$container, app_host:$app_host,
       volume:$volume, volume_mountpoint:$mountpoint, current_image:$current_image,
-      current_revision:$current_revision, target_image:$target_image,
-      target_revision:$target_revision, once_version:$once_version, free_disk_mb:$free_mb,
+      current_revision:$current_revision, current_runtime:$current_runtime, target_image:$target_image,
+      target_revision:$target_revision, target_runtime:$target_runtime, once_version:$once_version, free_disk_mb:$free_mb,
       volume_mb:$volume_mb, image_mb:$image_mb, env_keys:$env_keys}' \
     | write_state preflight-result.json
 
@@ -1179,6 +1199,7 @@ phase_freeze() {
 # This is deploy/README.md steps 4 and 5, and it happens before the live
 # application is touched so a bad migration never reaches production data.
 rehearse_migration() {
+  CANDIDATE_RUNTIME="$(recorded_runtime target_runtime)"
   # A resumed run must not inherit a rehearsal performed against a different
   # candidate: that would vouch for a migration nobody ran.
   if have_state_file rehearsal-result.json \
@@ -1253,7 +1274,7 @@ rehearse_migration() {
 rehearse_rust() {
   local previous_image status=0 prefix="${CAMPFIRE_RUST_REHEARSAL_PREFIX:-campfire-rehearsal}"
   previous_image="$(read_json_field "$(state_path preflight-result.json)" '.current_image')"
-  [ "$(image_runtime "$previous_image")" = rails ] || die "pre-cutover Rust rehearsal requires a previous Rails image"
+  [ "$(recorded_runtime current_runtime)" = rails ] || die "pre-cutover Rust rehearsal requires a previous Rails image"
   rm -rf "$SCRATCH_DIR"
   install -d -o 1000 -g 1000 -m 0700 "$SCRATCH_DIR" "$SCRATCH_DIR/db" "$SCRATCH_DIR/rollback" "$SCRATCH_DIR/rollback/db"
   install -m 0600 -o 1000 -g 1000 "$(state_path before.sqlite3)" "$SCRATCH_DIR/db/production.sqlite3"
@@ -1815,7 +1836,7 @@ main() {
   case "${1:-}" in
     freeze|cutover)
       require_image
-      CANDIDATE_RUNTIME="$(image_runtime "$IMAGE_REF")"
+      CANDIDATE_RUNTIME="$(recorded_runtime target_runtime)"
       ;;
   esac
   run_phase "$@"
