@@ -3,6 +3,8 @@ use campfire_views::{
     AccountSummary, Platform, ViewContext, helpers as h, layouts, users::statuses::*,
 };
 use serde_json::Value;
+#[path = "../../../test-support/asset_goldens.rs"]
+mod asset_goldens;
 struct Tokens;
 impl h::request_forgery::AuthenticityTokens for Tokens {
     fn global(&self) -> String {
@@ -15,7 +17,7 @@ impl h::request_forgery::AuthenticityTokens for Tokens {
 #[test]
 fn ws17_dm_wrapper_profile_badges_and_allowance_controls_match_pinned_rails_bytes() {
     let golden: Value = serde_json::from_str(include_str!("golden/ws17-dm-profile.json")).unwrap();
-    let asset = |name: &str| golden["assets"][name].as_str().unwrap().into();
+    let asset = |name: &str| campfire_assets::asset_path(name);
     let signer = |_: &[&str]| String::new();
     let ctx = ViewContext {
         current_user: None,
@@ -48,7 +50,7 @@ fn ws17_dm_wrapper_profile_badges_and_allowance_controls_match_pinned_rails_byte
             std::fs::write(format!("{dir}/{name}.actual"), &actual).unwrap();
             std::fs::write(format!("{dir}/{name}.expected"), expected).unwrap();
         }
-        assert_eq!(actual, expected, "{name}");
+        assert!(asset_goldens::compare(name, &actual, expected), "{name}");
     };
     for row in golden["rows"].as_array().unwrap() {
         let members: Vec<OooNoticeMember> = serde_json::from_value(row["members"].clone()).unwrap();
