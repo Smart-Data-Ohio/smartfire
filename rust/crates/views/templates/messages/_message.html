@@ -21,13 +21,13 @@
           {{ crate::messages::parts::steps(&message.details.agent_steps) }}
           {% if let Some(poll) = message.details.poll %}{{ crate::messages::parts::poll(ctx, poll) }}{% endif %}
           {% include "messages/_drive_attachments.html" %}
-          {{ crate::messages::cards(message, "github_pr_cards", "github-pr-cards", 0, &message.components.github_cards) }}
+          {{ crate::message_providers::github_cards(ctx, message) }}
           {{ crate::messages::cards(message, "twitter_cards", "x-post-cards", 2, &message.components.twitter_cards) }}
           {{ crate::messages::event_cards(message) }}
           {{ crate::message_links::cards(ctx, message) }}
           {{ crate::messages::cards(message, "fizzy_cards", "fizzy-cards", 0, &message.components.fizzy_cards) }}
-          {{ crate::messages::cards(message, "linkedin_cards", "linkedin-post-cards", 2, &message.components.linkedin_cards) }}
-          {{ crate::messages::cards(message, "link_embed_cards", "link-embed-cards", 2, &message.components.link_embed_cards) }}
+          {{ crate::message_providers::embed_cards(ctx, message, true) }}
+          {{ crate::message_providers::embed_cards(ctx, message, false) }}
           {% include "messages/boosts/_boosts.html" %}
           {% include "messages/_thread_indicator.html" %}
         </div>

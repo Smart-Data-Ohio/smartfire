@@ -1,0 +1,139 @@
+//! Provider composition from actual pinned Rails rows; no provider transport is mocked.
+use super::quote_integration_tests::app_rows;
+use crate::controllers::presenters::{Presenter, page, test_support::*};
+use campfire_db::Message;
+use serde_json::Value;
+fn oracle() -> Value {
+    serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/providers.json"
+    ))
+    .unwrap()
+}
+#[tokio::test]
+async fn populated_github_and_embed_containers_match_actual_rails() {
+    let app = app_rows(oracle()["rows"].clone()).await;
+    let runtime = app.booted.app.clone();
+    app.db()
+        .read(move |conn| {
+            for case in oracle()["cases"].as_array().unwrap() {
+                let message = Message::find(conn, case["message_id"].as_i64().unwrap())?;
+                let p = Presenter::new(conn, &runtime, None)
+                    .preload_search(std::slice::from_ref(&message))?;
+                let view = p.message(&message)?;
+                let html =
+                    page::render_detached_at(&runtime, None, "http://campfire.test", |ctx| {
+                        match case["kind"].as_str().unwrap() {
+                            "github" => campfire_views::message_providers::github_cards(ctx, &view),
+                            "linkedin" => {
+                                campfire_views::message_providers::embed_cards(ctx, &view, true)
+                            }
+                            "embed" => {
+                                campfire_views::message_providers::embed_cards(ctx, &view, false)
+                            }
+                            _ => unreachable!(),
+                        }
+                    });
+                assert_eq!(html.0, case["html"].as_str().unwrap(), "{}", case["label"]);
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+#[tokio::test]
+async fn shared_provider_cards_expose_no_private_content_or_session_values() {
+    let app = app_rows(oracle()["rows"].clone()).await;
+    for user in [DAVID, KEVIN] {
+        let response = app
+            .sign_in(user)
+            .await
+            .get(&format!("/rooms/{QUIET_CORNER}/messages"))
+            .await;
+        assert_eq!(response.status, axum::http::StatusCode::OK);
+        let text = response.text();
+        assert!(!text.contains("PRIVATE TITLE"));
+        assert!(!text.contains("UNKNOWN TITLE"));
+        assert!(text.contains("Title &lt;&amp;&gt; &quot;quoted&quot;"));
+        assert!(text.contains("#my-fragment"));
+        // Ordinary request forms are allowed; provider fragments themselves cannot carry tokens.
+        for case in oracle()["cases"].as_array().unwrap() {
+            if case["label"] == "reply" {
+                continue;
+            }
+            let html = case["html"].as_str().unwrap();
+            assert!(text.contains(html), "{}", case["label"]);
+            assert!(!html.contains("authenticity_token"));
+            assert!(!html.contains("nonce="));
+        }
+    }
+}
+
+#[tokio::test]
+async fn preloaded_provider_cards_render_with_zero_queries_for_one_or_many_messages() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+    let app = app_rows(oracle()["rows"].clone()).await;
+    let runtime = app.booted.app.clone();
+    app.db()
+        .read(move |conn| {
+            let messages = oracle()["cases"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|c| Message::find(conn, c["message_id"].as_i64().unwrap()))
+                .collect::<campfire_db::Result<Vec<_>>>()?;
+            for rows in [&messages[..1], &messages[..]] {
+                let p = Presenter::new(conn, &runtime, None).preload_search(rows)?;
+                conn.flush_prepared_statement_cache();
+                let count = Arc::new(AtomicUsize::new(0));
+                let observed = count.clone();
+                conn.authorizer(Some(move |ctx: rusqlite::hooks::AuthContext<'_>| {
+                    if matches!(ctx.action, rusqlite::hooks::AuthAction::Select) {
+                        observed.fetch_add(1, Ordering::SeqCst);
+                    }
+                    rusqlite::hooks::Authorization::Allow
+                }));
+                for message in rows {
+                    let view = p.message(message)?;
+                    page::render_detached_at(&runtime, None, "http://campfire.test", |ctx| {
+                        campfire_views::message_providers::github_cards(ctx, &view);
+                        campfire_views::message_providers::embed_cards(ctx, &view, true);
+                        campfire_views::message_providers::embed_cards(ctx, &view, false);
+                    });
+                }
+                conn.authorizer(
+                    None::<fn(rusqlite::hooks::AuthContext<'_>) -> rusqlite::hooks::Authorization>,
+                );
+                assert_eq!(count.load(Ordering::SeqCst), 0);
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+}
+#[tokio::test]
+async fn warm_public_card_fragments_refresh_without_touching_the_message() {
+    let app = app_rows(oracle()["rows"].clone()).await;
+    let path = format!("/rooms/{QUIET_CORNER}/messages");
+    let initial = app.david().get(&path).await;
+    assert!(
+        initial
+            .text()
+            .contains("Title &lt;&amp;&gt; &quot;quoted&quot;")
+    );
+    app.db().write(|tx| {
+        tx.conn().execute("UPDATE github_pull_requests SET title='Fresh public PR',updated_at='2026-03-02 16:00:01' WHERE repo='repo-1'",[])?;
+        tx.conn().execute("UPDATE link_embeds SET title='Fresh generic embed',updated_at='2026-03-02 16:00:01' WHERE normalized_url='https://page.example.test/post'",[])?;
+        Ok(())
+    }).await.unwrap();
+    let updated = app.david().get(&path).await;
+    assert!(updated.text().contains("Fresh public PR"));
+    assert!(updated.text().contains("Fresh generic embed"));
+    assert!(
+        updated
+            .text()
+            .contains("https://page.example.test/post#my-fragment")
+    );
+}

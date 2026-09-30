@@ -135,6 +135,8 @@ pub struct MessageDetails {
 pub struct MessageComponents {
     /// Expanded Rails composite facts, built from preloads in the request's zone.
     pub cache_key: Option<String>,
+    pub provider_github: Option<Vec<crate::message_providers::GithubEntry>>,
+    pub provider_embeds: Option<Vec<crate::message_providers::EmbedEntry>>,
     pub quote_references: Option<Vec<crate::message_links::Reference>>,
     pub github_cards: Vec<String>,
     pub twitter_cards: Vec<String>,

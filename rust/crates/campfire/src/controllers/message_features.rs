@@ -181,3 +181,6 @@ mod root_cache_tests;
 mod panel_tests;
 #[cfg(test)]
 mod date_tests;
+
+#[cfg(test)]
+mod provider_tests;

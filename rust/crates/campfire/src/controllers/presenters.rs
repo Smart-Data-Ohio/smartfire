@@ -7,6 +7,7 @@ pub mod attachments;
 pub mod page;
 pub mod pagination;
 pub mod rich_text;
+mod provider_cards;
 pub mod view_context;
 #[cfg(test)]
 pub mod test_support;
@@ -306,6 +307,7 @@ impl<'a> Presenter<'a> {
         })
     }
 
+    // WS8bm2 public-provider composition; provider owners retain fetch and per-viewer endpoints.
     fn quote_components(&self, message: &Message) -> Result<campfire_views::messages::MessageComponents> {
         let data = self.search_preloads.as_ref().expect("rendering details loaded");
         let references = data.records.quotes.get(&message.id).into_iter().flatten()
@@ -331,6 +333,8 @@ impl<'a> Presenter<'a> {
         };
         Ok(campfire_views::messages::MessageComponents {
             cache_key: Some(self.message_cache_key(message)?), quote_references: Some(references),
+            provider_github: Some(provider_cards::github(&data.records,message)),
+            provider_embeds: Some(provider_cards::embeds(&data.records,message)),
             github_cards: data.records.private_prs.get(&message.id).into_iter().flatten()
                 .map(|id| frame(*id,"github/pull_requests","github_pull_request","github-pr-card-frame","    ")).collect(),
             fizzy_cards: data.records.fizzy_cards.get(&message.id).into_iter().flatten()

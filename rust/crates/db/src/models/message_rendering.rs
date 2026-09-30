@@ -1,4 +1,6 @@
 //! Page-scoped reads for Message.with_rendering_details. No HTML or viewer state.
+pub mod providers;
+
 use crate::models::poll::{Poll, PollOption, PollVote};
 use crate::{Boost, Message, Result, Room, Timestamp, User};
 use rusqlite::{Connection, Row, params_from_iter};
@@ -59,6 +61,7 @@ pub struct RenderingUser {
 }
 #[derive(Default)]
 pub struct RenderingRecords {
+    pub providers: providers::Providers,
     pub cache: HashMap<i64, CacheDetails>,
     pub pr_thread_stamps: HashMap<i64, Timestamp>,
     pub private_prs: HashMap<i64, Vec<i64>>,
@@ -108,6 +111,7 @@ impl RenderingRecords {
             return Ok(data);
         }
         let ids: Vec<_> = messages.iter().map(|m| m.id).collect();
+        data.providers = providers::Providers::load(conn, &ids)?;
         // WS8bm2 root cache seam. These association reads are bounded by the page,
         // and cache invalidation must include public and private provider rows alike.
         for (message, stamp) in rows(conn, "WITH page AS (SELECT id FROM messages WHERE id IN ($ids))

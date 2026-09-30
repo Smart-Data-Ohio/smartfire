@@ -40,6 +40,13 @@ def check(name, relative, old, new, test):
         source.write_text(original)
 
 
+check("provider-private-content", "rust/crates/campfire/src/controllers/presenters/provider_cards.rs",
+      "if card.private != Some(false)", "if false",
+      "controllers::message_features::provider_tests::shared_provider_cards_expose_no_private_content_or_session_values")
+check("provider-reference-url", "rust/crates/db/src/models/message_rendering/providers.rs",
+      "EmbedCard { url,normalized_url", "EmbedCard { url: normalized_url.clone(),normalized_url",
+      "controllers::message_features::provider_tests::populated_github_and_embed_containers_match_actual_rails")
+
 check("quote-inline-privacy", "rust/crates/campfire/src/controllers/presenters.rs",
       "source.room_id == message.room_id", "true",
       "controllers::message_features::quote_integration_tests::cross_room_quote_renders_lazy_without_source_facts")

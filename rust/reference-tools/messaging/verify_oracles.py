@@ -12,7 +12,7 @@ SCRATCH.mkdir(parents=True, exist_ok=True)
 ENV = dict(os.environ, PARITY_NAMESPACE="ws8bm2", PARITY_OWNER="ws8bm2",
            PARITY_RUNTIME="docker", PARITY_IMAGE="ws8bm2-reference:d7c7de92")
 NAMES = ["features", "saved", "scheduled", "search", "preloads", "slash", "links_files",
-         "reminder_push", "quote_integration", "root_cache", "panels", "date_inputs"]
+         "reminder_push", "quote_integration", "root_cache", "panels", "date_inputs", "providers"]
 for name in NAMES:
     storage = Path(tempfile.mkdtemp(prefix=f"{name}-", dir=SCRATCH))
     shutil.copytree(ROOT / "rust/parity/.seed/default", storage, dirs_exist_ok=True)
