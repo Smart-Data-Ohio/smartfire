@@ -229,7 +229,8 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "turbo/native/navigation#resume" => arc(turbo_native::resume),
         "turbo/native/navigation#refresh" => arc(turbo_native::refresh),
         // `config.action_mailbox.ingress = :relay`: the other ingresses aren't configured. The
-        // relay one is WS10's (inbound email) and stays unported until then.
+        // relay endpoint is wired to WS10 below.
+        "action_mailbox/ingresses/relay/inbound_emails#create" => arc(crate::mail::relay),
         "action_mailbox/ingresses/postmark/inbound_emails#create"
         | "action_mailbox/ingresses/sendgrid/inbound_emails#create"
         | "action_mailbox/ingresses/mandrill/inbound_emails#health_check"

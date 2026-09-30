@@ -330,6 +330,19 @@ impl User {
 
     /// `User.create!`: inserts, then grants memberships to every open room after commit.
     pub fn create(tx: &mut Tx<'_>, attributes: NewUser) -> Result<Self> {
+        Self::create_with_open_room_grant(tx, attributes, true)
+    }
+
+    /// User.create_bot!(skip_open_room_grant: true), used by RoomMailbox.
+    pub fn create_email_bot(tx: &mut Tx<'_>) -> Result<Self> {
+        let token = generate_bot_token();
+        Self::create_with_open_room_grant(tx, NewUser {
+            name: "Email".into(), role: Role::Bot,
+            bot_token_digest: Some(digest_bot_token(&token)), ..Default::default()
+        }, false)
+    }
+
+    fn create_with_open_room_grant(tx: &mut Tx<'_>, attributes: NewUser, grant: bool) -> Result<Self> {
         let now = tx.now();
         let password_digest = attributes.password_digest.map(PasswordDigest::into_string);
         let id: i64 = tx.conn().query_row_cached(
@@ -347,7 +360,7 @@ impl User {
             ],
             |r| r.get(0),
         )?;
-        tx.after_commit(move |tx| grant_membership_to_open_rooms(tx, id));
+        if grant { tx.after_commit(move |tx| grant_membership_to_open_rooms(tx, id)); }
         Self::find(tx.conn(), id)
     }
 

@@ -38,11 +38,25 @@ pub fn deliver(cable: &Cable, app: Option<&App>, event: &Event) -> bool {
 fn broadcast(cable: &Cable, _app: Option<&App>, request: &BroadcastRequest) {
     let result = match request.kind {
         RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, &broadcast, huddle_configured(env))),
+        campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| messaging(cable, &broadcast)),
         kind => Err(anyhow::anyhow!("no handler for the {kind} broadcast")),
     };
     if let Err(error) = result {
         tracing::warn!(kind = request.kind, %error, "broadcast failed");
     }
+}
+
+/// WS8 domain frames share WS7's publisher and conservative Turbo guard. Rendering these
+/// partial descriptions belongs to WS8b; template-free frames are delivered now.
+fn messaging(cable: &Cable, broadcast: &campfire_db::broadcasts::Broadcast) -> anyhow::Result<()> {
+    use campfire_db::broadcasts::Broadcast;
+    let (stream, payload) = template_free_broadcast(broadcast)
+        .ok_or_else(|| anyhow::anyhow!("WS8b partial rendering is not registered: {broadcast:?}"))?;
+    match broadcast {
+        Broadcast::Cable { .. } => { cable.broadcast(&stream, &payload); }
+        Broadcast::Turbo(_) => { cable.broadcast_stream_to(&[&stream], payload.as_str().expect("Turbo frame is a string")); }
+    }
+    Ok(())
 }
 
 fn decode<B: Broadcast>(request: &BroadcastRequest) -> anyhow::Result<B> {
@@ -91,6 +105,27 @@ fn endpoint_address(value: &str) -> Option<(String, u16)> {
     };
     let host = uri.host.filter(|host| !host.trim().is_empty())?;
     Some((host.to_ascii_lowercase(), uri.port.unwrap_or(default_port)))
+}
+
+pub(crate) fn template_free_broadcast(
+    broadcast: &campfire_db::broadcasts::Broadcast,
+) -> Option<(String, serde_json::Value)> {
+    use campfire_db::broadcasts::{Broadcast, TurboAction};
+    match broadcast {
+        Broadcast::Cable { stream, payload } => Some((stream.clone(), payload.clone())),
+        Broadcast::Turbo(frame)
+            if frame.action == TurboAction::Remove && frame.partial.is_none() =>
+        {
+            let html = campfire_cable::turbo::action_tag(
+                campfire_cable::turbo::Action::Remove,
+                campfire_cable::turbo::Target::Target(&frame.target),
+                None,
+                &[],
+            );
+            Some((broadcast.stream_name(), serde_json::Value::String(html)))
+        }
+        _ => None,
+    }
 }
 
 #[cfg(test)]

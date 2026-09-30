@@ -37,6 +37,7 @@ pub struct AppState {
     pub cable: Cable,
     pub broadcasts: channels::Broadcasts,
     pub jobs: jobs::Jobs,
+    pub mail: crate::mail::State,
     /// `config.x.web_push_pool`; `None` when Web Push is off (no valid VAPID keys).
     pub web_push: Option<crate::integrations::web_push::Pool>,
     pub github_read: crate::integrations::github::client::ReadClient,
@@ -93,11 +94,20 @@ pub(crate) async fn boot_with_github_read(config: Config, clock: SharedClock, gi
     let crypto: SharedCrypto = Arc::new(RailsCrypto::new(secrets.clone()));
 
     // The job classes first: the database's sink enqueues them on their queues.
+    let mail = crate::mail::State::new(config.mail.clone());
     let registry = jobs::registry();
     let runner_config = jobs::runner_config(&config);
     let (jobs, ad_hoc) = jobs::Jobs::new(&registry, &runner_config)?;
     let loops = jobs::periodic::Loops::new(jobs::periodic::Intervals::from_env());
     let rich_text = Arc::new(AppRichText::new(secrets.clone(), clock.clone()));
+    // Mail's preflight and Message::create use the same room-aware, fallible renderer.
+    mail.install_renderer(Arc::new({
+        let rich_text = rich_text.clone();
+        move |conn: &campfire_db::Connection, room: &campfire_db::Room, source: &str| {
+            campfire_db::RichText::render_markdown(&*rich_text, conn, source, room.id)
+                .map_err(campfire_db::Error::Other)
+        }
+    }));
     let db = open_database(&config, clock.clone(), jobs.clone(), rich_text.clone()).await?;
 
     // config/puma.rb: `Membership.disconnect_all` when the server boots.
@@ -135,6 +145,7 @@ pub(crate) async fn boot_with_github_read(config: Config, clock: SharedClock, gi
         broadcasts: channels::Broadcasts::new(cable.clone()),
         cable,
         jobs,
+        mail,
         web_push,
         github_read,
         fragment_cache,
@@ -266,7 +277,7 @@ impl campfire_db::Clock for DbClock {
 
 // --- Commands --------------------------------------------------------------------------------------
 
-const USAGE: &str = "usage: campfire [server|backup]";
+const USAGE: &str = "usage: campfire [server|backup|db-check [--immutable] DATABASE|db-migrate DATABASE MIGRATIONS_DIR|verify-additive-sqlite-migration BEFORE AFTER]";
 
 /// The binary's entry point.
 ///
@@ -275,9 +286,10 @@ const USAGE: &str = "usage: campfire [server|backup]";
 /// - `campfire backup`: the ONCE `pre-backup` hook (`script/admin/prepare-backup`): snapshot the
 ///   live database into `storage/backups/` with SQLite's online backup API.
 ///
-/// The ONCE `post-restore` hook stays the reference's shell script (`hooks/post-restore`): copy
+/// The ONCE `post-restore` hook (`ops/post-restore`) follows the reference: copy
 /// `storage/backups/<env>.sqlite3` over `storage/db/<env>.sqlite3` and delete its `-wal` and
-/// `-shm` files; the next boot's `db:prepare` picks it up.
+/// `-shm` files; the next boot checks the schema. Rust leaves Redis persistence for the lead's
+/// explicit cutover step and supports the app's storage overrides.
 pub fn run() -> anyhow::Result<()> {
     let command = std::env::args().nth(1);
     if matches!(command.as_deref(), Some("-h" | "--help")) {
