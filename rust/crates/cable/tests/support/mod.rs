@@ -95,6 +95,19 @@ impl Channel<User> for RoomChannel {
             }
             "echo" => sub.transmit(data),
             "receive" => sub.transmit(&json!({ "received": data })),
+            "broadcast_then_disconnect" => {
+                // The connection is inside this callback: both broadcast streams and its
+                // internal disconnect are ready together when it returns to select!.
+                for i in 0..70 {
+                    sub.broadcast_to(&[self.room.as_ref().unwrap()], &i);
+                    sub.server().broadcast_remove_to(&["rooms"], &format!("room_{i}"));
+                }
+                let reconnect = data["reconnect"].as_bool().unwrap();
+                sub.server().disconnect(&sub.current_user().connection_identifier(), reconnect);
+                // A later publication must not extend the drain past the disconnect.
+                sub.broadcast_to(&[self.room.as_ref().unwrap()], &"after disconnect");
+                sub.server().broadcast_remove_to(&["rooms"], "after_disconnect");
+            }
             _ => return Ok(false),
         }
         Ok(true)

@@ -40,11 +40,83 @@ jobs:
     permissions:
       contents: read
     timeout-minutes: 90
+    env:
+      CI: "true"
+      RUST_CI_IMAGE: campfire-toolchain
+      RUST_CI_CONTAINER_PREFIX: campfire-ci
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Test parity cache identities
+        run: python3 -m unittest discover -s rust/parity -p test_ci_seed.py
+
+      - name: Prepare pinned Rails reference
+        id: parity
+        shell: bash
+        run: |
+          echo "started=$(date +%s)" >> "$GITHUB_OUTPUT"
+          rust/parity/bin/ci-seed prepare >> "$GITHUB_OUTPUT"
+
+      # Exact keys only: a seed from a different Rails pin, image input or seed script
+      # is never reused. PRs can read trusted caches but cannot save either cache.
+      - name: Restore reference image
+        id: reference-cache
+        # zizmor: ignore[cache-poisoning] -- loaded only for tests; PRs cannot save it or publish anything
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: rust/parity/.ci/image
+          key: ${{ steps.parity.outputs.image_key }}-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Restore parity seeds
+        id: seed-cache
+        # zizmor: ignore[cache-poisoning] -- PRs cannot save it; Rails validates every restored seed
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            rust/parity/.seed/default
+            rust/parity/.seed/first_run
+          key: ${{ steps.parity.outputs.seed_key }}-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Build or load pinned reference image
+        run: rust/parity/bin/ci-seed image
+
+      - name: Build parity seeds
+        if: ${{ steps.seed-cache.outputs.cache-hit != 'true' }}
+        run: rust/parity/bin/ci-seed build
+
+      - name: Validate parity seeds with Rails
+        run: rust/parity/bin/ci-seed validate
+
+      - name: Prove parity gates reject missing or corrupt inputs
+        run: python3 -m unittest discover -s rust/parity -p test_ci_seed_docker.py
+
+      # Only pushes to main save these caches; PRs and other branches only restore.
+      - name: Save reference image
+        if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main') && steps.reference-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: rust/parity/.ci/image
+          key: ${{ steps.parity.outputs.image_key }}-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Save parity seeds
+        if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main') && steps.seed-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            rust/parity/.seed/default
+            rust/parity/.seed/first_run
+          key: ${{ steps.parity.outputs.seed_key }}-${{ runner.os }}-${{ runner.arch }}
+
+      - name: Summarize parity setup time
+        env:
+          STARTED: ${{ steps.parity.outputs.started }}
+          IMAGE_HIT: ${{ steps.reference-cache.outputs.cache-hit }}
+          SEED_HIT: ${{ steps.seed-cache.outputs.cache-hit }}
+        run: |
+          echo "Parity setup: $(($(date +%s) - STARTED))s (image cache: ${IMAGE_HIT:-false}; seed cache: ${SEED_HIT:-false})" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -99,6 +171,20 @@ jobs:
           bash rust/ci/cargo.sh test --locked -p campfire_db --doc --no-fail-fast 2>&1 |
             tee "$RUNNER_TEMP/db-doc.log"
 
+      # Capture all failures and keep running the rest of the suite; the explicit gate
+      # below then makes missing seeds and failed app tests fail the job.
+      - name: Tests (seed-dependent campfire)
+        id: app-tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          status=0
+          bash rust/ci/cargo.sh nextest run --locked --workspace --exclude html5ever \
+            --profile ci --no-fail-fast -E 'package(campfire)' 2>&1 |
+            tee "$RUNNER_TEMP/campfire-nextest.log" || status=$?
+          cp rust/target/nextest/ci/junit.xml "$RUNNER_TEMP/campfire-junit.xml"
+          exit "$status"
+
       # NON-BLOCKING until the rest of the port catches up with our Rails app. Database tests are
       # gated above; reference failures still fail this step and are counted in the summary.
       - name: Tests (non-blocking)
@@ -107,7 +193,7 @@ jobs:
         shell: bash
         run: |
           bash rust/ci/cargo.sh nextest run --locked --workspace --exclude html5ever \
-            --profile ci --no-fail-fast -E 'not package(campfire_db)' 2>&1 |
+            --profile ci --no-fail-fast -E 'not package(campfire_db) and not package(campfire)' 2>&1 |
             tee "$RUNNER_TEMP/nextest.log"
 
       - name: Doctests (non-blocking)
@@ -123,13 +209,19 @@ jobs:
         if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
         env:
           TMPDIR: ${{ runner.temp }}
-          TEST_OUTCOME: ${{ steps.tests.outcome }}
+          TEST_OUTCOME: ${{ steps.tests.outcome == 'success' && steps.app-tests.outcome == 'success' && 'success' || 'failure' }}
           DOC_OUTCOME: ${{ steps.doctests.outcome }}
         run: |
           python3 -m unittest discover -s rust/ci -p 'test_*.py'
           python3 rust/ci/summarize-tests.py \
-            --junit "$RUNNER_TEMP/db-junit.xml" --junit rust/target/nextest/ci/junit.xml \
+            --junit "$RUNNER_TEMP/db-junit.xml" --junit "$RUNNER_TEMP/campfire-junit.xml" --junit rust/target/nextest/ci/junit.xml \
             --doc-log "$RUNNER_TEMP/db-doc.log" --doc-log "$RUNNER_TEMP/workspace-doc.log"
+
+      - name: Gate seed-dependent tests
+        if: ${{ !cancelled() && steps.app-tests.outcome != 'success' }}
+        run: |
+          echo '::error::Seed-dependent campfire tests failed; see the campfire nextest log.'
+          exit 1
 
       - name: Save cargo registry and target
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.cargo-cache.outputs.cache-hit != 'true' }}

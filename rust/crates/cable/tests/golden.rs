@@ -6,8 +6,9 @@
 //!
 //!   bash reference-tools/cable/record.sh
 //!
-//! Uses the pinned `ws7-reference:fec615be` image, a fresh database, port 47040, and
+//! Re-recording uses the current `ws7-reference:d7c7de92` image, a fresh database, port 47040, and
 //! `cargo -j 4`. Its container names start with `ws7-`; scratch stays in `/home/riels/.cache/rust-port/ws7/`.
+//! The checked-in recording was produced at `fec615be`; #151 changed only the Edge install image path.
 //!
 //! (The fixtures script starts a fresh session each time, because the script signs it out.)
 //!

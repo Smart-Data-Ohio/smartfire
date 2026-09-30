@@ -3,5 +3,7 @@ target/
 /parity/out
 /parity/.seed
 /parity/.native
+/parity/.ci
 /.claude
 /.cargo-home
+__pycache__/
