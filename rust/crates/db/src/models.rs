@@ -2,6 +2,8 @@
 
 pub mod account;
 pub mod agent_access;
+pub mod agent_credential;
+pub mod agent_grant;
 pub mod agent_delivery;
 pub mod agent_payloads;
 pub mod agent_posting;
@@ -67,3 +69,6 @@ pub mod room_delete;
 
 pub mod retention;
 pub use workspace_presence_lease::WorkspacePresenceLease;
+
+pub use agent_credential::{AgentCredential, NewCredential};
+pub use agent_grant::{AgentGrant, NewGrant};
