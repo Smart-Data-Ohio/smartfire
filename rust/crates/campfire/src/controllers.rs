@@ -46,6 +46,7 @@ pub mod presenters;
 pub mod pwa;
 pub mod qr_code;
 pub mod rooms;
+pub mod room_categories;
 pub mod searches;
 pub mod sessions;
 pub mod unfurl_links;
@@ -194,6 +195,15 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "messages/boosts#new" => arc(messages::boosts::new),
         "messages/boosts#destroy" => arc(messages::boosts::destroy),
         "rooms/refreshes#show" => arc(rooms::refreshes::show),
+        "room_categories#index" => arc(room_categories::index),
+        "room_categories#create" => arc(room_categories::create),
+        "room_categories#update" => arc(room_categories::update),
+        "room_categories#destroy" => arc(room_categories::destroy),
+        "rooms/categories#update" => arc(rooms::categories::update),
+        "rooms/favorites#create" => arc(rooms::favorites::create),
+        "rooms/favorites#update" => arc(rooms::favorites::update),
+        "rooms/favorites#destroy" => arc(rooms::favorites::destroy),
+        "rooms/inbound_email_addresses#create" => arc(rooms::inbound_email_addresses::create),
         "rooms/involvements#show" => arc(rooms::involvements::show),
         "rooms/involvements#update" => arc(rooms::involvements::update),
         "rooms#index" => arc(rooms::index),
@@ -518,6 +528,8 @@ mod tests {
 
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
+        "room_categories#index", "room_categories#create", "room_categories#update", "room_categories#destroy",
+        "rooms/categories#update", "rooms/favorites#create", "rooms/favorites#update", "rooms/favorites#destroy", "rooms/inbound_email_addresses#create",
         "welcome#show", "first_runs#show", "first_runs#create", "sessions/transfers#show",
         "sessions/transfers#update", "sessions#new", "sessions#create", "sessions#destroy",
         "content_security_policy_reports#create", "accounts/users#index", "accounts/users#update",

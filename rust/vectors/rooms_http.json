@@ -31,6 +31,80 @@
       "status": 302,
       "location": "http://campfire.test/"
     },
+    "category_create": {
+      "status": 302,
+      "location": "http://campfire.test/users/me/sidebar"
+    },
+    "category_update": {
+      "status": 302,
+      "location": "http://campfire.test/users/me/sidebar"
+    },
+    "category_state": {
+      "name": "Squad",
+      "collapsed": true,
+      "position": 1
+    },
+    "category_list": {
+      "status": 200,
+      "json": [
+        {
+          "id": 2,
+          "name": "Squad"
+        }
+      ]
+    },
+    "category_invalid": {
+      "status": 302,
+      "location": "http://campfire.test/users/me/sidebar"
+    },
+    "category_invalid_state": "Squad",
+    "category_cross_user": {
+      "status": 404,
+      "json": {
+        "status": 404,
+        "error": "Not Found"
+      }
+    },
+    "category_assignment": {
+      "status": 200
+    },
+    "direct_category_assignment": {
+      "status": 422
+    },
+    "inbound_rotation": {
+      "status": 302,
+      "location": "http://campfire.test/rooms/486777696/edit"
+    },
+    "direct_inbound": {
+      "status": 404
+    },
+    "favorite_create": {
+      "status": 200
+    },
+    "favorite_repeat": {
+      "status": 200
+    },
+    "favorite_move": {
+      "status": 200
+    },
+    "favorite_state": 0,
+    "favorite_destroy": {
+      "status": 200
+    },
+    "mute_json": {
+      "status": 200
+    },
+    "mute_state": {
+      "unread": false,
+      "pointer": true
+    },
+    "missing_involvement": {
+      "status": 400,
+      "json": {
+        "status": 400,
+        "error": "Bad Request"
+      }
+    },
     "deleted_involvement": {
       "status": 404,
       "json": {

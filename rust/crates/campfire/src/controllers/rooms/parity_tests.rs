@@ -184,3 +184,352 @@ async fn parity_closed_and_direct_nonmembers_cannot_mutate_or_read_settings() {
         );
     }
 }
+
+async fn category(app: &TestApp, user: i64, name: &'static str) -> i64 {
+    app.db()
+        .write(move |tx| Ok(campfire_db::RoomCategory::create(tx, user, name, 1, false)?.id))
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn parity_category_crud_is_scoped_and_preserves_validation_behavior() {
+    let app = app().await;
+    app.db()
+        .write(|tx| {
+            for category in campfire_db::RoomCategory::ordered_for_user(tx.conn(), DAVID)? {
+                category.destroy(tx)?;
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let theirs = category(&app, JASON, "Theirs").await;
+    let mut david = app.david();
+    let create = david
+        .write(Req::new(Method::POST, "/room_categories").form(&[
+            ("room_category[name]", "Team"),
+            ("room_category[position]", "99"),
+        ]))
+        .await;
+    assert_eq!(
+        create.location(),
+        Some("http://campfire.test/users/me/sidebar")
+    );
+    let mine = app
+        .db()
+        .read(|conn| {
+            Ok(campfire_db::RoomCategory::ordered_for_user(conn, DAVID)?
+                .last()
+                .unwrap()
+                .id)
+        })
+        .await
+        .unwrap();
+    let update = david
+        .write(
+            Req::new(Method::PATCH, &format!("/room_categories/{mine}")).form(&[
+                ("room_category[name]", "Squad"),
+                ("room_category[collapsed]", "true"),
+            ]),
+        )
+        .await;
+    assert_eq!(update.status, StatusCode::FOUND);
+    let row = app
+        .db()
+        .read(move |conn| campfire_db::RoomCategory::find(conn, mine))
+        .await
+        .unwrap();
+    assert_eq!(
+        (row.name.as_str(), row.collapsed, row.position),
+        ("Squad", true, 1)
+    );
+    let list = david.get("/room_categories.json").await;
+    assert_eq!(list.json(), serde_json::json!([{"id":mine,"name":"Squad"}]));
+    for method in [Method::PATCH, Method::DELETE] {
+        let reply = david
+            .write(
+                Req::new(method, &format!("/room_categories/{theirs}"))
+                    .form(&[("room_category[name]", "stolen")]),
+            )
+            .await;
+        assert_eq!(reply.status, StatusCode::NOT_FOUND);
+    }
+    let invalid = david
+        .write(
+            Req::new(Method::PATCH, &format!("/room_categories/{mine}"))
+                .form(&[("room_category[name]", "")]),
+        )
+        .await;
+    assert_eq!(
+        invalid.status,
+        StatusCode::FOUND,
+        "invalid Rails update reloads sidebar"
+    );
+    assert_eq!(
+        app.db()
+            .read(move |conn| Ok(campfire_db::RoomCategory::find(conn, mine)?.name))
+            .await
+            .unwrap(),
+        "Squad"
+    );
+    let invalid = david
+        .write(Req::new(Method::POST, "/room_categories").form(&[("room_category[name]", "")]))
+        .await;
+    assert_eq!(invalid.status, StatusCode::FOUND);
+    assert_eq!(
+        app.db()
+            .read(|conn| Ok(campfire_db::RoomCategory::ordered_for_user(conn, DAVID)?.len()))
+            .await
+            .unwrap(),
+        1
+    );
+}
+
+#[tokio::test]
+async fn parity_category_assignment_owns_category_and_requires_channel_membership() {
+    let app = app().await;
+    let mine = category(&app, DAVID, "Team").await;
+    let theirs = category(&app, JASON, "Theirs").await;
+    let mut david = app.david();
+    let path = format!("/rooms/{ALL_TALK}/category_assignment.json");
+    assert_eq!(
+        david
+            .write(
+                Req::new(Method::PATCH, &path).form(&[("room_category_id", &theirs.to_string())])
+            )
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        david
+            .write(
+                Req::new(
+                    Method::PATCH,
+                    &format!("/rooms/{DIRECT_DAVID_JASON}/category_assignment.json")
+                )
+                .form(&[("room_category_id", &mine.to_string())])
+            )
+            .await
+            .status,
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+    assert_eq!(
+        david
+            .write(Req::new(Method::PATCH, &path).form(&[("room_category_id", &mine.to_string())]))
+            .await
+            .status,
+        StatusCode::OK
+    );
+    let row = app
+        .db()
+        .read(|conn| Membership::find_by_room_and_user(conn, ALL_TALK, DAVID))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(row.room_category_id, Some(mine));
+    assert_eq!(
+        david
+            .write(Req::new(
+                Method::DELETE,
+                &format!("/room_categories/{mine}")
+            ))
+            .await
+            .status,
+        StatusCode::FOUND
+    );
+    assert!(
+        app.db()
+            .read(
+                |conn| Ok(Membership::find_by_room_and_user(conn, ALL_TALK, DAVID)?
+                    .unwrap()
+                    .room_category_id
+                    .is_none())
+            )
+            .await
+            .unwrap()
+    );
+    assert_eq!(
+        app.sign_in(KEVIN)
+            .await
+            .write(Req::new(Method::PATCH, &path))
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+}
+
+#[tokio::test]
+async fn parity_favorites_append_reorder_clamp_and_are_private() {
+    let app = app().await;
+    app.db()
+        .write(|tx| {
+            tx.conn().execute_cached(
+                "UPDATE memberships SET favorite_position=NULL WHERE user_id=?",
+                [DAVID],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut david = app.david();
+    for id in [ALL_TALK, QUIET_CORNER, DIRECT_DAVID_JASON, ALL_TALK] {
+        assert_eq!(
+            david
+                .write(Req::new(
+                    Method::POST,
+                    &format!("/rooms/{id}/favorite.json")
+                ))
+                .await
+                .status,
+            StatusCode::OK
+        );
+    }
+    assert_eq!(
+        david
+            .write(
+                Req::new(
+                    Method::PATCH,
+                    &format!("/rooms/{DIRECT_DAVID_JASON}/favorite.json")
+                )
+                .form(&[("position", "-20")])
+            )
+            .await
+            .status,
+        StatusCode::OK
+    );
+    let rows = app
+        .db()
+        .read(|conn| Membership::favorites_for_user(conn, DAVID))
+        .await
+        .unwrap();
+    assert_eq!(
+        rows.iter()
+            .map(|m| (m.room_id, m.favorite_position))
+            .collect::<Vec<_>>(),
+        vec![
+            (DIRECT_DAVID_JASON, Some(0)),
+            (ALL_TALK, Some(1)),
+            (QUIET_CORNER, Some(2))
+        ]
+    );
+    assert_eq!(
+        david
+            .write(
+                Req::new(
+                    Method::PATCH,
+                    &format!("/rooms/{DIRECT_DAVID_JASON}/favorite.json")
+                )
+                .form(&[("position", "99")])
+            )
+            .await
+            .status,
+        StatusCode::OK
+    );
+    assert_eq!(
+        david
+            .write(Req::new(
+                Method::DELETE,
+                &format!("/rooms/{ALL_TALK}/favorite.json")
+            ))
+            .await
+            .status,
+        StatusCode::OK
+    );
+    assert_eq!(
+        app.sign_in(KEVIN)
+            .await
+            .write(Req::new(
+                Method::POST,
+                &format!("/rooms/{ALL_TALK}/favorite.json")
+            ))
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+}
+
+#[tokio::test]
+async fn parity_muting_clears_unread_and_json_does_not_redirect() {
+    let app = app().await;
+    app.db().write(|tx| { tx.conn().execute_cached("UPDATE memberships SET unread_at=?,last_read_message_id=NULL WHERE user_id=? AND room_id=?", (tx.now(), DAVID, ALL_TALK))?; Ok(()) }).await.unwrap();
+    let mut david = app.david();
+    let path = format!("/rooms/{ALL_TALK}/involvement.json");
+    let reply = david
+        .write(Req::new(Method::PATCH, &path).form(&[("involvement", "muted")]))
+        .await;
+    assert_eq!(reply.status, StatusCode::OK);
+    let row = app
+        .db()
+        .read(|conn| Membership::find_by_room_and_user(conn, ALL_TALK, DAVID))
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(!row.unread());
+    assert!(row.last_read_message_id.is_some());
+    let missing = david.write(Req::new(Method::PATCH, &path)).await;
+    assert_eq!(missing.status, StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn parity_inbound_address_rotation_requires_emailable_room_and_admin_or_creator() {
+    let app = app().await;
+    let mut david = app.david();
+    let path = format!("/rooms/{ALL_TALK}/inbound_email_address");
+    for _ in 0..2 {
+        assert_eq!(
+            david.write(Req::new(Method::POST, &path)).await.location(),
+            Some(format!("http://campfire.test/rooms/{ALL_TALK}/edit").as_str())
+        );
+    }
+    assert!(
+        app.db()
+            .read(|conn| Ok(Room::find(conn, ALL_TALK)?.inbound_email_token.is_some()))
+            .await
+            .unwrap()
+    );
+    assert_eq!(
+        david
+            .write(Req::new(
+                Method::POST,
+                &format!("/rooms/{DIRECT_DAVID_JASON}/inbound_email_address")
+            ))
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        app.sign_in(KEVIN)
+            .await
+            .write(Req::new(Method::POST, &path))
+            .await
+            .status,
+        StatusCode::NOT_FOUND
+    );
+    let id = app
+        .db()
+        .write(|tx| {
+            Ok(Room::create_for(
+                tx,
+                RoomType::Closed,
+                Some("secret"),
+                JASON,
+                &[DAVID, JASON, KEVIN],
+            )?
+            .id)
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        app.sign_in(KEVIN)
+            .await
+            .write(Req::new(
+                Method::POST,
+                &format!("/rooms/{id}/inbound_email_address")
+            ))
+            .await
+            .status,
+        StatusCode::FORBIDDEN
+    );
+}

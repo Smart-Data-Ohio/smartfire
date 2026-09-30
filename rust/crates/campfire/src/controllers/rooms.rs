@@ -7,6 +7,9 @@
 //! So the actions they inherit from here but don't list (`destroy` for opens/closeds, `show` for
 //! directs) run without `set_room` and raise on the nil `@room`, as in the reference.
 
+pub mod categories;
+pub mod favorites;
+pub mod inbound_email_addresses;
 pub mod closeds;
 pub mod directs;
 pub mod involvements;

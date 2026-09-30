@@ -181,11 +181,11 @@ async fn involvement_is_shown_and_changed() {
     let invalid = david.write(Req::new(Method::PATCH, &format!("/rooms/{ALL_TALK}/involvement")).form(&[("involvement", "loud")])).await;
     assert_eq!(invalid.status, StatusCode::INTERNAL_SERVER_ERROR);
 
-    // A missing (or blank) involvement is stored as nil, like the enum casts it.
+    // Our fork requires a nonblank involvement.
     let missing = david.write(Req::new(Method::PATCH, &format!("/rooms/{ALL_TALK}/involvement"))).await;
-    assert_eq!(missing.status, StatusCode::FOUND);
+    assert_eq!(missing.status, StatusCode::BAD_REQUEST);
     let membership = app.db().read(|conn| Membership::find_by_room_and_user(conn, ALL_TALK, DAVID)).await.unwrap().unwrap();
-    assert_eq!(membership.involvement, None);
+    assert_eq!(membership.involvement, Some(campfire_db::Involvement::Invisible));
 }
 
 #[tokio::test]

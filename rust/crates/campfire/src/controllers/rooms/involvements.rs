@@ -40,6 +40,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         .write(move |tx| {
             let mut membership = membership;
             membership.update_involvement(tx, involvement)?;
+            if membership.involved_in(Involvement::Muted) { membership.read(tx)?; }
             Ok(membership)
         })
         .await
@@ -70,17 +71,17 @@ pub async fn update(c: &mut Ctx) -> Result {
     };
     c.app().broadcasts.involvement_change(&room, &membership, previous, &partials);
 
-    let url = c.url_for(&campfire_routes::room_involvement(room.id));
-    c.redirect_to(&url)
+    match c.respond_to(&[&campfire_kit::format::HTML, &campfire_kit::format::JSON])? {
+        f if *f == campfire_kit::format::JSON => Ok(c.head(StatusCode::OK)),
+        _ => c.redirect_to(&c.url_for(&campfire_routes::room_involvement(room.id))),
+    }
 }
 
 /// `params[:involvement]` as the enum casts it: a blank value (missing, "", "  ", `[]`) is stored
 /// as nil, anything that isn't one of the values raises ArgumentError ('... is not a valid
 /// involvement'). Verified against the reference with `update!(involvement: "")`.
 fn involvement_param(c: &Ctx) -> Result<Option<Involvement>> {
-    let Some(param) = c.param("involvement").filter(|param| !param.is_blank()) else {
-        return Ok(None);
-    };
+    let param = c.params.require("involvement")?;
     param
         .as_str()
         .and_then(Involvement::from_name)
