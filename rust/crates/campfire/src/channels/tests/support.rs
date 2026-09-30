@@ -179,13 +179,16 @@ impl TestApp {
     pub async fn leases(&self) -> Vec<WorkspacePresenceLease> {
         self.db
             .read(|conn| {
+                // Unsubscribe may delete a lease between these two queries. Read both from
+                // one snapshot so the assertion observes a consistent list.
+                let snapshot = conn.unchecked_transaction()?;
                 let mut statement =
-                    conn.prepare(r#"SELECT "id" FROM "workspace_presence_leases" ORDER BY "id""#)?;
+                    snapshot.prepare(r#"SELECT "id" FROM "workspace_presence_leases" ORDER BY "id""#)?;
                 let ids: Vec<i64> = statement
                     .query_map([], |row| row.get(0))?
                     .collect::<rusqlite::Result<_>>()?;
                 ids.into_iter()
-                    .map(|id| Ok(WorkspacePresenceLease::find_by_id(conn, id)?.expect("listed")))
+                    .map(|id| Ok(WorkspacePresenceLease::find_by_id(&snapshot, id)?.expect("listed")))
                     .collect()
             })
             .await
