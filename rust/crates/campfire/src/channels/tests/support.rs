@@ -177,19 +177,7 @@ impl TestApp {
 
     /// Every workspace presence lease, oldest first.
     pub async fn leases(&self) -> Vec<WorkspacePresenceLease> {
-        self.db
-            .read(|conn| {
-                let mut statement =
-                    conn.prepare(r#"SELECT "id" FROM "workspace_presence_leases" ORDER BY "id""#)?;
-                let ids: Vec<i64> = statement
-                    .query_map([], |row| row.get(0))?
-                    .collect::<rusqlite::Result<_>>()?;
-                ids.into_iter()
-                    .map(|id| Ok(WorkspacePresenceLease::find_by_id(conn, id)?.expect("listed")))
-                    .collect()
-            })
-            .await
-            .unwrap()
+        self.db.read(|conn| read_leases(conn, || {})).await.unwrap()
     }
 
     pub async fn session_exists(&self, session_id: i64) -> bool {
@@ -356,6 +344,64 @@ impl TestApp {
             .await
             .unwrap()
     }
+}
+
+fn read_leases(
+    conn: &campfire_db::Connection,
+    after_listing: impl FnOnce(),
+) -> campfire_db::Result<Vec<WorkspacePresenceLease>> {
+    // Keep enumeration and lookup in the same WAL snapshot while unsubscribe deletes rows.
+    let snapshot = conn.unchecked_transaction()?;
+    let conn = &snapshot;
+    let ids: Vec<i64> = conn
+        .prepare(r#"SELECT "id" FROM "workspace_presence_leases" ORDER BY "id""#)?
+        .query_map([], |row| row.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    after_listing();
+    ids.into_iter()
+        .map(|id| Ok(WorkspacePresenceLease::find_by_id(conn, id)?.expect("listed")))
+        .collect()
+}
+
+#[tokio::test]
+async fn lease_inspection_retains_its_snapshot_during_unsubscribe() {
+    let app = start().await;
+    let session = app.session_for("kevin", true).await;
+    let lease = app
+        .db
+        .write(move |tx| WorkspacePresenceLease::establish(tx, id("kevin"), session.id))
+        .await
+        .unwrap()
+        .unwrap();
+    let (listed, listing) = tokio::sync::oneshot::channel();
+    let (resume, resumed) = tokio::sync::oneshot::channel();
+    let db = app.db.clone();
+    let read = tokio::spawn(async move {
+        db.read(move |conn| {
+            read_leases(conn, || {
+                listed.send(()).unwrap();
+                resumed.blocking_recv().unwrap();
+            })
+        })
+        .await
+        .unwrap()
+    });
+    listing.await.unwrap();
+    // Commit a real WAL write between enumeration and row lookup, as unsubscribe does.
+    assert_eq!(
+        app.sql(
+            "DELETE FROM workspace_presence_leases WHERE id = ?",
+            vec![lease.id.into()]
+        )
+        .await,
+        1
+    );
+    resume.send(()).unwrap();
+    let snapshot = read.await.unwrap();
+    assert_eq!(snapshot.len(), 1);
+    assert_eq!(snapshot[0].id, lease.id);
+    assert_eq!(snapshot[0].connection_id, lease.connection_id);
+    assert!(app.leases().await.is_empty());
 }
 
 /// Stand-in partials that name what they render, so frames show which partial and record.

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Reproduce WS10's historical fec615be MIME-depth calibration, retaining its measured inputs.
+# Current parity CI uses parity/reference.sha instead; the recorded calibration is not a new pin.
 set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 REFERENCE_ROOT=${CAMPFIRE_REFERENCE:-$(dirname "$ROOT")}
