@@ -1,5 +1,9 @@
 //! Public pages inherit ActionController::Base, bypassing the workspace callback chain.
 
+#[cfg(test)]
+#[path = "public_pages/sign_in_google_tests.rs"]
+mod sign_in_google_tests;
+
 use crate::app::AppCtx;
 use campfire_kit::{Ctx, Error, Result, StatusCode, format};
 use campfire_views::{

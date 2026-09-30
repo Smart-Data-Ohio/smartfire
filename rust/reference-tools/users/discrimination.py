@@ -11,6 +11,9 @@ scratch.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
 env.update(CI="1", TMPDIR=str(root.parent / ".scratch" / "tmp"))
 mutations = [
+    ("sign-in-display-route", "crates/views/templates/sessions/_google_sign_in.html", "h::routes::session_google().as_str()", "h::routes::session().as_str()", "configured_sign_in_keeps_public_links_and_matches_complete_rails_bodies"),
+    ("sign-in-display-token", "crates/views/templates/sessions/_google_sign_in.html", 'h::attrs().method("post").class("btn center")', 'h::attrs().method("post").class("btn center").attr("authenticity_token", false)', "configured_sign_in_keeps_public_links_and_matches_complete_rails_bodies"),
+    ("sign-in-display-credentials", "crates/campfire/src/config.rs", "if google_client_configured {", "if true {", "configured_sign_in_keeps_public_links_and_matches_complete_rails_bodies"),
     ("ooo-start-boundary", "crates/campfire/src/controllers/presenters/layout_preferences.rs", "start <= now && now < end", "start < now && now < end", "calendar_start_boundary"),
     ("ooo-end-boundary", "crates/campfire/src/controllers/presenters/layout_preferences.rs", "start <= now && now < end", "start <= now && now <= end", "calendar_end_boundary"),
     ("ooo-overlap-end", "crates/campfire/src/controllers/presenters/profile_sections.rs", "manual_end.into_iter().chain(calendar_end).max()", "manual_end.into_iter().chain(calendar_end).min()", "calendar_later_end"),
