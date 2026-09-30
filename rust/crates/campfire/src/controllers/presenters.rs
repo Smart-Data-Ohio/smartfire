@@ -338,7 +338,9 @@ impl<'a> Presenter<'a> {
 
     /// `message.content_type`, with what `message_presentation` shows for it.
     fn content(&self, message: &Message, plain_text: &str) -> Result<MessageContent> {
-        let body = message.body_html(self.conn)?.unwrap_or_default();
+        let stored_body = message.body_html(self.conn)?;
+        let missing_body = stored_body.is_none();
+        let body = stored_body.unwrap_or_default();
         let resolver = self.resolver();
         let ctx = resolver.render_context(self.request_host.clone());
         // `message_tag` evaluates `message.plain_text_body` first; where that raises, it rescues
@@ -365,6 +367,9 @@ impl<'a> Presenter<'a> {
                 text: sound.text.map(str::to_string),
             }));
         }
+        // Drive-only messages can have no ActionText body. Rails' message_presentation
+        // rescues the nil content and returns an empty string, without a trix wrapper.
+        if missing_body { return Ok(MessageContent::Text { html: String::new() }); }
         if message.markdown() || message.forwarded_markdown {
             return Ok(match crate::rich_text::markdown_presentation(self.conn, &body, &ctx) {
                 Ok(html) => MessageContent::Text { html },

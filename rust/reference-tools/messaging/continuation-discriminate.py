@@ -71,4 +71,12 @@ check("nested-thread-room", nested, "if thread.room_id != room_id", "if false &&
 check("nested-message-scope", nested, "Message::find_in(conn, Timeline::Thread(thread_id), id)",
       "{ let _ = thread_id; Message::find(conn, id) }",
       nested_tests + "nested_reads_require_alive_membership_and_both_thread_and_message_scope")
-print("WS8bm continuation discrimination: 12 compiled regressions detected; sources restored", flush=True)
+check("nested-edit-author", nested, "messages::ensure_can_edit(c, &message)?;", "// removed author gate",
+      "controllers::channel_thread_messages::write_tests::nested_writes_enforce_author_admin_notes_scope_and_csrf_before_changes")
+check("nested-edit-stream", nested, "messages::rendered::broadcast_thread_edit(c, &room, &message, drive_given)",
+      "messages::rendered::broadcast_edit(c, &room, &message, drive_given)",
+      "channels::tests::hub_test::message_parity::thread_writes_publish_rails_bytes_on_the_correct_streams_without_retry_frames")
+check("bodyless-presentation", "rust/crates/campfire/src/controllers/presenters.rs",
+      "if missing_body {", "if false && missing_body {",
+      "controllers::messages::state_tests::complete_message_states_match_rails_on_cache_misses_and_hits")
+print("WS8bm continuation discrimination: 15 compiled regressions detected; sources restored", flush=True)

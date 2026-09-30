@@ -28,7 +28,8 @@ pub(crate) fn create_state(tx: &mut Tx<'_>, row: &Value) -> campfire_db::Result<
         system_note: input["system_note"].as_bool().unwrap_or(false), streaming: input["streaming"].as_bool().unwrap_or(false),
         action: input["action"].as_bool().unwrap_or(false), forwarded_markdown: input["forwarded_markdown"].as_bool().unwrap_or(false),
         forwarded_at: text("forwarded_at").map(|_| tx.now()), forwarded_from_message_id: input["forwarded_from_message_id"].as_i64(),
-        forward_note: text("forward_note"), reply_to_message_id: input["reply_to_message_id"].as_i64(), ..Default::default() })?;
+        forward_note: text("forward_note"), reply_to_message_id: input["reply_to_message_id"].as_i64(),
+        drive_file_ids: input["drive_file_ids"].as_array().map(|ids| ids.iter().map(|id| id.as_str().unwrap().to_owned()).collect()).unwrap_or_default(), ..Default::default() })?;
     assert_eq!(message.id, row["id"].as_i64().unwrap());
     match name {
         "deleted_reply" => Message::find(tx.conn(), oracle()["source_id"].as_i64().unwrap())?.destroy(tx)?,

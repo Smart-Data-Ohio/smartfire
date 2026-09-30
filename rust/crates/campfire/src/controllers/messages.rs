@@ -224,14 +224,14 @@ pub async fn preview(c: &mut Ctx) -> Result {
     Ok(c.render(StatusCode::OK, &format::JSON, body))
 }
 
-fn ensure_can_edit(c: &mut Ctx, message: &Message) -> Result<()> {
+pub(crate) fn ensure_can_edit(c: &mut Ctx, message: &Message) -> Result<()> {
     if message.system_note || require_current_user(c)?.id != message.creator_id {
         return halt(concerns::head(StatusCode::FORBIDDEN));
     }
     Ok(())
 }
 
-fn ensure_can_delete(c: &mut Ctx, message: &Message) -> Result<()> {
+pub(crate) fn ensure_can_delete(c: &mut Ctx, message: &Message) -> Result<()> {
     let user = require_current_user(c)?;
     if message.system_note || (user.id != message.creator_id && !user.is_administrator()) {
         return halt(concerns::head(StatusCode::FORBIDDEN));
@@ -282,6 +282,11 @@ fn message_params(c: &Ctx) -> Result<MessageParams> {
 
 /// Additional parameters shared by the root create and human edit endpoints.
 async fn root_create_params(c: &Ctx, room: &Room) -> Result<MessageParams> {
+    human_message_params(c, Some(room)).await
+}
+
+/// Threads let the model validate their reply target; roots first scope it to root_messages.
+pub(crate) async fn human_message_params(c: &Ctx, root_room: Option<&Room>) -> Result<MessageParams> {
     let message = c.params.require("message")?;
     if message.as_hash().is_none() {
         return Err(Error::internal(anyhow::anyhow!("message parameters do not support permit")));
@@ -295,9 +300,11 @@ async fn root_create_params(c: &Ctx, room: &Room) -> Result<MessageParams> {
         attributes.body = None;
     }
     if let Some(value) = permitted.get("reply_to_message_id").filter(|value| value.is_present()) {
-        let id = value.to_s().as_deref().and_then(cast_integer).ok_or(Error::NotFound)?;
-        let room_id = room.id;
-        attributes.reply_to_message_id = Some(c.app().db.read(move |conn| Message::find_in(conn, Timeline::Room(room_id), id)).await.map_err(db_error)?.id);
+        attributes.reply_to_message_id = if let Some(room) = root_room {
+            let id = value.to_s().as_deref().and_then(cast_integer).ok_or(Error::NotFound)?;
+            let room_id = room.id;
+            Some(c.app().db.read(move |conn| Message::find_in(conn, Timeline::Room(room_id), id)).await.map_err(db_error)?.id)
+        } else { Some(value.to_s().as_deref().and_then(cast_integer).unwrap_or(0)) };
     }
     if let Some(value) = permitted.get("reply_notify_author") {
         if value.is_null() || value.as_str() == Some("") {
@@ -327,7 +334,11 @@ async fn root_create_params(c: &Ctx, room: &Room) -> Result<MessageParams> {
 
 /// `assign_attributes` + `save!` on the human edit endpoint. Bot updates keep their own seam.
 async fn update_root_message(c: &Ctx, room: &Room, message: Message) -> Result<Message> {
-    let attributes = root_create_params(c, room).await?;
+    update_human_message(c, Some(room), None, message).await
+}
+
+pub(crate) async fn update_human_message(c: &Ctx, root_room: Option<&Room>, thread_id: Option<i64>, message: Message) -> Result<Message> {
+    let attributes = human_message_params(c, root_room).await?;
     let params = c.params.require("message")?;
     let scalar = params.permit(&permit_keys(&["client_message_id", "reply_to_message_id", "reply_notify_author"]));
     let attachment = match attributes.attachment {
@@ -351,6 +362,10 @@ async fn update_root_message(c: &Ctx, room: &Room, message: Message) -> Result<M
     let app = c.app().clone();
     let host = Some(c.request.host());
     let (id, blob) = c.app().db.write(move |tx| {
+        if let Some(thread) = thread_id
+            && campfire_db::ChannelThread::find(tx.conn(), thread)?.locked_at.is_some() {
+            return Err(campfire_db::Error::Other(campfire_db::channel_thread::LOCKED_MESSAGE.into()));
+        }
         let mut message = message;
         let mut changes = changes;
         if preserve {
@@ -464,6 +479,10 @@ pub(crate) fn paging_anchor(conn: &campfire_db::Connection, timeline: Timeline, 
 /// `@room.messages.create!` and, in its transaction, `deliver_webhooks_to_bots`: the webhook
 /// jobs are held until the caller has broadcast the message ([`release_webhooks`]).
 pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessageParams) -> Result<Message> {
+    create_message_into(c, room, None, attributes).await
+}
+
+pub(crate) async fn create_message_into(c: &Ctx, room: &Room, thread: Option<campfire_db::ChannelThread>, attributes: MessageParams) -> Result<Message> {
     let creator_id = require_current_user(c)?.id;
     let room_id = room.id;
     let room = room.clone();
@@ -481,9 +500,7 @@ pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessagePara
         .db
         .write(move |tx| {
             let blob = attachment.map(|staged| save_staged(tx, staged)).transpose()?;
-            let message = Message::create(
-                tx,
-                NewMessage {
+            let attributes = NewMessage {
                     room_id,
                     creator_id,
                     client_message_id: attributes.client_message_id,
@@ -494,9 +511,13 @@ pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessagePara
                     body,
                     attachment_blob_id: blob.as_ref().map(|blob| blob.id),
                     ..Default::default()
-                },
-            )?;
-            deliver_webhooks_to_bots(tx, &room, &message)?;
+                };
+            let message = if let Some(mut thread) = thread { thread.post_message(tx, creator_id, attributes)? }
+                else {
+                    let message = Message::create(tx, attributes)?;
+                    deliver_webhooks_to_bots(tx, &room, &message)?;
+                    message
+                };
             Ok((message, blob))
         })
         .await

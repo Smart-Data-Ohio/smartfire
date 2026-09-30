@@ -28,7 +28,8 @@ inputs = [
     forwarded_at: Time.current, forwarded_from_message_id: source.id, forward_note: "@[David]\n<note> & safe" }],
   ["reply", { markdown_source: "Reply", reply_to_message_id: source.id }],
   ["deleted_reply", { markdown_source: "Deleted reply", reply_to_message_id: source.id }],
-  ["steps", { markdown_source: "Agent steps", creator_id: bot.id }]
+  ["steps", { markdown_source: "Agent steps", creator_id: bot.id }],
+  ["drive_only", { drive_file_ids: ["abcdefghij"] }]
 ]
 steps = [
   { name: "<pending>", status: "pending", duration_ms: 0, input_summary: " ", output_summary: nil },
@@ -38,7 +39,9 @@ steps = [
 ]
 renderer = ApplicationController.renderer.new(http_host: "campfire.test", https: false)
 rows = inputs.map do |name, attributes|
-  message = room.root_messages.create!(attributes.merge(creator_id: attributes.fetch(:creator_id, user.id), client_message_id: "states-#{name}"))
+  message = room.root_messages.build(attributes.except(:drive_file_ids).merge(creator_id: attributes.fetch(:creator_id, user.id), client_message_id: "states-#{name}"))
+  Array(attributes[:drive_file_ids]).each { |file_id| message.drive_attachments.build(file_id:) }
+  message.save!
   source.destroy! if name == "deleted_reply"
   steps.each { |step| AgentStep.create!(step.merge(agent:, message:)) } if name == "steps"
   message.reload

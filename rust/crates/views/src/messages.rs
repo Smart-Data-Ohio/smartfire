@@ -801,6 +801,14 @@ pub struct CreateStream<'a> {
     pub room_kind: RoomKind,
 }
 
+#[derive(Template)]
+#[template(path = "channel_thread_messages/create.turbo_stream.html")]
+pub struct ThreadCreateStream<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub message: &'a MessageView,
+    pub thread_id: i64,
+}
+
 /// `messages/destroy.turbo_stream`, also what `Message#broadcast_remove` sends.
 #[derive(Template)]
 #[template(path = "messages/destroy.turbo_stream.html")]

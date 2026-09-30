@@ -8,6 +8,14 @@ use crate::channels::broadcasts::{Stream, message_dom_id};
 use crate::controllers::presenters::{Presenter, page::{self, db_error}};
 
 pub async fn broadcast_edit(c: &Ctx, room: &Room, message: &Message, drive_given: bool) -> Result<()> {
+    broadcast_edit_in(c, room, message, drive_given, false).await
+}
+
+pub async fn broadcast_thread_edit(c: &Ctx, room: &Room, message: &Message, drive_given: bool) -> Result<()> {
+    broadcast_edit_in(c, room, message, drive_given, true).await
+}
+
+async fn broadcast_edit_in(c: &Ctx, room: &Room, message: &Message, drive_given: bool, thread_scoped: bool) -> Result<()> {
     let (app, room, message, base) = (c.app().clone(), room.clone(), message.clone(), page::renderer_base_url(c));
     c.app().db.read(move |conn| {
         let view = Presenter::new(conn, &app, None).message(&message)?;
@@ -26,7 +34,12 @@ pub async fn broadcast_edit(c: &Ctx, room: &Room, message: &Message, drive_given
             if drive_given { parts.push(("drive_attachments", views::DriveAttachmentsPartial { ctx, message: &view }.render()?)); }
             Ok::<_, askama::Error>(parts)
         }).map_err(|error| campfire_db::Error::Other(error.to_string()))?;
-        for (part, html) in parts { app.broadcasts.message_part_replace(&room, &message, part, &html); }
+        for (part, html) in parts {
+            if thread_scoped {
+                app.broadcasts.turbo(&Stream::conversation(&room, &message), campfire_cable::turbo::Action::Replace,
+                    &message_dom_id(&message, Some(part)), Some(&html), true);
+            } else { app.broadcasts.message_part_replace(&room, &message, part, &html); }
+        }
         Ok(())
     }).await.map_err(db_error)
 }

@@ -138,3 +138,36 @@ async fn all_owned_message_states_publish_the_actual_rails_append_replace_remove
         client.assert_silent().await;
     }
 }
+
+#[tokio::test]
+async fn thread_writes_publish_rails_bytes_on_the_correct_streams_without_retry_frames() {
+    use crate::controllers::channel_thread_messages::write_tests::{oracle, seed, prepare, request};
+    let clock = Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
+    let hub = boot_with_test_clock(clock.clone()).await.unwrap();
+    hub.app.db().write(seed).await.unwrap();
+    let thread = oracle()["thread_id"].as_i64().unwrap();
+    let mut browser = hub.app.david();
+    for row in oracle()["rows"].as_array().unwrap() {
+        let name = row["name"].as_str().unwrap().to_owned();
+        hub.app.db().write(move |tx| prepare(tx, &name)).await.unwrap();
+        clock.set(row["time"].as_str().unwrap().parse().unwrap());
+        let (mut client, streams) = subscriber(&hub, Some(thread)).await;
+        let response = browser.write(request(row)).await;
+        assert_eq!(response.status.as_u16(), row["status"].as_u64().unwrap() as u16, "{}: {}", row["name"], response.text());
+        for expected in row["frames"].as_array().unwrap().iter().filter(|frame| streams.iter().any(|stream| frame["stream"] == *stream)) {
+            let stream = expected["stream"].as_str().unwrap();
+            let expected_channel = if stream.ends_with(":messages") {
+                identifier(json!({"channel": "RoomMessagesChannel", "signed_stream_name": rails_compat::turbo::signed_stream_name(&hub.app.booted.app.secrets, &[stream])}))
+            } else { identifier(json!({"channel": if stream.ends_with("unread_threads") { "UnreadThreadsChannel" } else { "UnreadRoomsChannel" }})) };
+            let actual: Value = serde_json::from_str(&client.next_text().await).unwrap();
+            assert_eq!(actual["identifier"], expected_channel, "{}/stream", row["name"]);
+            if actual["message"] != expected["payload"] {
+                crate::controllers::presenters::test_support::rails_mismatch(
+                    actual["message"].as_str().unwrap_or(&actual["message"].to_string()),
+                    expected["payload"].as_str().unwrap_or(&expected["payload"].to_string()), row["name"].as_str().unwrap());
+            }
+            if let Some(html) = actual["message"].as_str() { assert_eq!(campfire_cable::turbo::session_bound(html), None); }
+        }
+        client.assert_silent().await;
+    }
+}
