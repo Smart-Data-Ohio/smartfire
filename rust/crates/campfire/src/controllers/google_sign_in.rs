@@ -140,6 +140,7 @@ async fn verified(
         .await
 }
 async fn rejected(c: &mut Ctx, reason: &str) -> Result {
+    tracing::warn!("Google sign-in rejected: {reason}");
     super::sessions::record_sign_in_failure(c, "google", String::new()).await?;
     let message=match reason {
         "wrong_domain"=>format!("Google sign-in is only available for {}. Other email addresses can sign in with email and password.",domain_list(c)),
@@ -186,9 +187,19 @@ async fn complete_sign_in(c: &mut Ctx, claims: Map<String, Value>) -> Result {
         .app()
         .db
         .write(move |tx| {
-            crate::authentication::begin_google_session(tx, &claims, campfire_db::NewSession {
-                user_agent: agent.as_deref(), ip_address: Some(&ip), device_id: Some(&device_id), two_factor_verified: false,
-            }, remember.as_deref(), notify, &context)
+            crate::authentication::begin_google_session(
+                tx,
+                &claims,
+                campfire_db::NewSession {
+                    user_agent: agent.as_deref(),
+                    ip_address: Some(&ip),
+                    device_id: Some(&device_id),
+                    two_factor_verified: false,
+                },
+                remember.as_deref(),
+                notify,
+                &context,
+            )
         })
         .await;
     let (user, session) = match result {
@@ -256,6 +267,11 @@ async fn step_up(c: &mut Ctx, flow: &Value, purpose: &str) -> Result {
             );
         }
         Err(GoogleError::Rejected(reason)) => {
+            match purpose {
+                "link" => tracing::warn!("Google link rejected: {reason}"),
+                "sudo" => tracing::warn!("Google sudo confirmation rejected: {reason}"),
+                _ => tracing::warn!("Google re-auth rejected: {reason}"),
+            }
             return redirect(
                 c,
                 path,
@@ -302,6 +318,7 @@ async fn step_up(c: &mut Ctx, flow: &Value, purpose: &str) -> Result {
             match result {
                 Ok(()) => redirect(c, path, &format!("Google sign-in linked to {email}."), true),
                 Err(campfire_db::Error::GoogleSignInRejected(reason)) => {
+                    tracing::warn!("Google link rejected: {reason}");
                     redirect(c, path, &link_alert(c, reason), false)
                 }
                 Err(error) => Err(Error::internal(error)),
