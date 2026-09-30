@@ -81,8 +81,9 @@ impl TokenSink for Sink {
     }
 }
 
-/// The CSRF meta tags and hidden token fields Rails renders. This app protects against forgery by
-/// `Sec-Fetch-Site` instead, so its pages have none (all are void elements: no end tag to drop).
+/// The CSRF meta tags and hidden token fields Rails renders. Their values are per request, and the
+/// views only render them inside a request's render (`request_forgery::rendering_with`), so they're
+/// left out of the comparison (all are void elements: no end tag to drop).
 fn is_forgery_token(tag: &str, attrs: &[(String, String)]) -> bool {
     let named = |name: &str| attrs.iter().any(|(k, v)| k == "name" && v == name);
     (tag == "input" && named("authenticity_token")) || (tag == "meta" && (named("csrf-token") || named("csrf-param")))

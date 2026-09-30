@@ -10,7 +10,9 @@ pub const TABLE: &str = "background_jobs";
 
 /// Waiting for its `run_at`, or due.
 pub const READY: &str = "ready";
-/// Claimed by a runner (`claimed_by`), under a lease until `lease_expires_at`.
+/// Claimed by a runner (`claimed_by`), under a lease until `lease_expires_at`. Once a job has
+/// been claimed its `lease_expires_at` stays set whatever happens to it next (the lease of its
+/// last execution), so a NULL one means it has never been claimed.
 pub const RUNNING: &str = "running";
 /// Failed for good: out of attempts, or an error that isn't retried. Kept for inspection
 /// ([`crate::inspect`]) until retried or deleted by hand.
@@ -100,6 +102,21 @@ pub(crate) fn next_run_at(conn: &Connection, queue: &str) -> Result<Option<Times
         .flatten())
 }
 
+/// Makes `queue`'s `class` jobs whose argument at `path` is `value`, and that are still in their
+/// initial hold, due now. A job is in its initial hold while it's waiting (`ready`), not yet due,
+/// and has never been claimed (no `lease_expires_at`, and no attempts). Anything else is left
+/// alone: a job whose hold ran out is due already, and one that has been claimed is its runner's
+/// (running, waiting out a retry's backoff or a rerun's wait, or failed).
+pub(crate) fn make_due(conn: &Connection, queue: &str, class: &str, path: &str, value: i64, now: Timestamp) -> Result<usize> {
+    Ok(conn
+        .prepare_cached(
+            r#"UPDATE "background_jobs" SET "run_at" = ?5, "updated_at" = ?5
+                WHERE "status" = 'ready' AND "queue_name" = ?1 AND "job_class" = ?2 AND "run_at" > ?5
+                  AND "lease_expires_at" IS NULL AND "attempts" = 0 AND json_extract("arguments", ?3) = ?4"#,
+        )?
+        .execute(params![queue, class, path, value, now])?)
+}
+
 /// Deletes a job `runner` still holds: it's done, or discarded.
 pub(crate) fn delete(conn: &Connection, id: i64, runner: &str) -> Result<bool> {
     Ok(conn.prepare_cached(r#"DELETE FROM "background_jobs" WHERE "id" = ?1 AND "status" = 'running' AND "claimed_by" = ?2"#)?.execute(params![id, runner])? == 1)
@@ -111,7 +128,7 @@ pub(crate) fn reschedule(conn: &Connection, id: i64, runner: &str, run_at: Times
     Ok(conn
         .prepare_cached(
             r#"UPDATE "background_jobs"
-                  SET "status" = 'ready', "run_at" = ?3, "claimed_by" = NULL, "lease_expires_at" = NULL,
+                  SET "status" = 'ready', "run_at" = ?3, "claimed_by" = NULL,
                       "last_error" = coalesce(?4, "last_error"), "attempts" = CASE WHEN ?5 THEN 0 ELSE "attempts" END, "updated_at" = ?6
                 WHERE "id" = ?1 AND "status" = 'running' AND "claimed_by" = ?2"#,
         )?
@@ -124,7 +141,7 @@ pub(crate) fn fail(conn: &Connection, id: i64, runner: &str, error: &str, now: T
     Ok(conn
         .prepare_cached(
             r#"UPDATE "background_jobs"
-                  SET "status" = 'failed', "failed_at" = ?3, "last_error" = ?4, "claimed_by" = NULL, "lease_expires_at" = NULL, "updated_at" = ?3
+                  SET "status" = 'failed', "failed_at" = ?3, "last_error" = ?4, "claimed_by" = NULL, "updated_at" = ?3
                 WHERE "id" = ?1 AND "status" = 'running' AND "claimed_by" = ?2"#,
         )?
         .execute(params![id, runner, now, truncate(error)])?
@@ -151,14 +168,17 @@ pub(crate) struct Orphan {
     pub attempts: u32,
 }
 
-/// Running jobs whose lease has expired, other than `runner`'s own (which it's still performing).
-pub(crate) fn orphans(conn: &Connection, runner: &str, now: Timestamp) -> Result<Vec<Orphan>> {
+/// Running jobs whose lease has expired, other than those `runner` is still `performing`: its
+/// own claims whose execution is over (their outcome couldn't be written) are orphans too.
+pub(crate) fn orphans(conn: &Connection, runner: &str, performing: &[i64], now: Timestamp) -> Result<Vec<Orphan>> {
+    let performing = serde_json::to_string(performing).expect("ids serialize");
     let mut statement = conn.prepare_cached(
         r#"SELECT "id", "queue_name", "job_class", "attempts" FROM "background_jobs"
-            WHERE "status" = 'running' AND "lease_expires_at" <= ?1 AND "claimed_by" IS NOT ?2 ORDER BY "id""#,
+            WHERE "status" = 'running' AND "lease_expires_at" <= ?1
+              AND NOT ("claimed_by" IS ?2 AND "id" IN (SELECT "value" FROM json_each(?3))) ORDER BY "id""#,
     )?;
     let orphans = statement
-        .query_map(params![now, runner], |row| Ok(Orphan { id: row.get(0)?, queue: row.get(1)?, class: row.get(2)?, attempts: row.get(3)? }))?
+        .query_map(params![now, runner, performing], |row| Ok(Orphan { id: row.get(0)?, queue: row.get(1)?, class: row.get(2)?, attempts: row.get(3)? }))?
         .collect::<rusqlite::Result<Vec<_>>>()?;
     Ok(orphans)
 }
@@ -168,11 +188,11 @@ pub(crate) fn orphans(conn: &Connection, runner: &str, now: Timestamp) -> Result
 pub(crate) fn recover(conn: &Connection, id: i64, retry: bool, error: &str, now: Timestamp) -> Result<bool> {
     let sql = if retry {
         r#"UPDATE "background_jobs"
-              SET "status" = 'ready', "run_at" = ?2, "claimed_by" = NULL, "lease_expires_at" = NULL, "last_error" = ?3, "updated_at" = ?2
+              SET "status" = 'ready', "run_at" = ?2, "claimed_by" = NULL, "last_error" = ?3, "updated_at" = ?2
             WHERE "id" = ?1 AND "status" = 'running' AND "lease_expires_at" <= ?2"#
     } else {
         r#"UPDATE "background_jobs"
-              SET "status" = 'failed', "failed_at" = ?2, "claimed_by" = NULL, "lease_expires_at" = NULL, "last_error" = ?3, "updated_at" = ?2
+              SET "status" = 'failed', "failed_at" = ?2, "claimed_by" = NULL, "last_error" = ?3, "updated_at" = ?2
             WHERE "id" = ?1 AND "status" = 'running' AND "lease_expires_at" <= ?2"#
     };
     Ok(conn.prepare_cached(sql)?.execute(params![id, now, error])? == 1)
@@ -184,7 +204,7 @@ pub(crate) fn release(conn: &Connection, runner: &str, now: Timestamp) -> Result
     Ok(conn
         .prepare_cached(
             r#"UPDATE "background_jobs"
-                  SET "status" = 'ready', "run_at" = ?2, "claimed_by" = NULL, "lease_expires_at" = NULL,
+                  SET "status" = 'ready', "run_at" = ?2, "claimed_by" = NULL,
                       "attempts" = max("attempts" - 1, 0), "updated_at" = ?2
                 WHERE "status" = 'running' AND "claimed_by" = ?1"#,
         )?

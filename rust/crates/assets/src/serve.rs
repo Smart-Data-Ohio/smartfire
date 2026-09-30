@@ -5,8 +5,10 @@
 use crate::embedded;
 use std::borrow::Cow;
 
-/// The last `config.public_file_server.headers` assignment in production.rb wins.
-const CACHE_CONTROL: &str = "public, max-age=2592000";
+/// `config.public_file_server.headers` in production.rb: `"public, max-age=#{1.minute.to_i},
+/// stale-while-revalidate=#{5.minutes.to_i}"`, so 404.html and friends stay correctable. (The
+/// app marks digest-stamped assets immutable on top of this.)
+const CACHE_CONTROL: &str = "public, max-age=60, stale-while-revalidate=300";
 
 /// Rack::Files::MULTIPART_BOUNDARY
 const MULTIPART_BOUNDARY: &str = "AaB03x";

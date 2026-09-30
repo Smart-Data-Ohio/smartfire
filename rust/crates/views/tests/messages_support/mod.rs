@@ -122,7 +122,8 @@ impl Golden {
     }
 }
 
-/// The reference's token stream without the CSRF tags and fields Rails renders (this app has none),
+/// The reference's token stream without the CSRF tags and fields Rails renders (per request, and
+/// only rendered here inside a request's render),
 /// with the text around a dropped tag merged as the tokenizer would have merged it.
 fn without_forgery_tokens(expected: Vec<String>) -> Vec<String> {
     let is_token = |t: &str| {
@@ -398,7 +399,7 @@ fn start_tag(html: &str, start: usize) -> (String, String, usize) {
             attrs.push((key, value));
         }
     }
-    // Rails renders forgery tokens; this app doesn't (forgery protection is by `Sec-Fetch-Site`).
+    // Forgery tokens are per request, and these renders have none (see `request_forgery`).
     let named = |value: &str| attrs.iter().any(|(k, v)| k == "name" && v == value);
     if (name == "input" && named("authenticity_token")) || (name == "meta" && (named("csrf-token") || named("csrf-param"))) {
         return (String::new(), name, i);

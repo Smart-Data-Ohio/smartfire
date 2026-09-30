@@ -76,9 +76,14 @@ pub struct Booted {
 /// Boots the app from `config`: prepares the database, restores the reference's boot-time
 /// side effects, and builds the HTTP stack. Must run inside a Tokio runtime.
 pub async fn boot(config: Config) -> anyhow::Result<Booted> {
+    boot_with_clock(config, campfire_kit::clock::from_env()?).await
+}
+
+/// [`boot`] with its clock given rather than read from `CAMPFIRE_FROZEN_TIME`: the seeded tests
+/// run at the parity seed's instant, as the reference does (`parity/seeds/README.md`).
+pub async fn boot_with_clock(config: Config, clock: SharedClock) -> anyhow::Result<Booted> {
     config.storage.create_dirs()?;
     let secrets = Arc::new(Secrets::new(&config.secret_key_base));
-    let clock = campfire_kit::clock::from_env()?;
     let crypto: SharedCrypto = Arc::new(RailsCrypto::new(secrets.clone()));
 
     // The job classes first: the database's sink enqueues them on their queues.
@@ -99,11 +104,20 @@ pub async fn boot(config: Config) -> anyhow::Result<Booted> {
     ));
 
     let cable_config = campfire_cable::Config { assume_ssl: !config.disable_ssl, ..campfire_cable::Config::default() };
-    let deps = channels::Deps { db: db.clone(), secrets: secrets.clone(), crypto: crypto.clone(), clock: clock.clone() };
+    let deps = channels::Deps {
+        db: db.clone(),
+        secrets: secrets.clone(),
+        crypto: crypto.clone(),
+        clock: clock.clone(),
+        admin_session_idle_timeout: config.admin_session_idle_timeout,
+    };
     let cable = channels::server(deps, cable_config);
 
     let mut kit_config = KitConfig::production(config.disable_ssl);
     kit_config.error_pages = error_pages();
+    kit_config.default_headers = crate::security::default_headers();
+    kit_config.content_security_policy = Some(Arc::new(crate::security::content_security_policy(config.livekit_url.clone())));
+    campfire_kit::param_filter::install(crate::security::parameter_filter());
 
     let fragment_cache = FragmentCache::new(config.fragment_cache_bytes);
     let web_push = crate::integrations::web_push_pool(&config, &db);
@@ -146,6 +160,10 @@ fn router(app: &App, kit: Kit) -> Router {
     let dispatch = || axum::routing::any(campfire_kit::action(dispatch_with_fragment_cache));
     let routes = Router::new()
         .merge(app.cable.router::<Kit>(campfire_cable::protocol::DEFAULT_MOUNT_PATH))
+        // `post "csp_reports"`: an `ActionController::API`, outside the ApplicationController
+        // routes, which reads its own body after its rate limit.
+        .route("/csp_reports", axum::routing::post(campfire_kit::unparsed_action(controllers::csp_reports::create)))
+        .route("/csp_reports.{format}", axum::routing::post(campfire_kit::unparsed_action(controllers::csp_reports::create)))
         .route("/", dispatch())
         .route("/{*path}", dispatch())
         .layer(axum::middleware::from_fn(public_files));
@@ -176,6 +194,7 @@ fn static_response(request: &axum::extract::Request) -> Option<axum::response::R
         range: header(axum::http::header::RANGE),
         if_modified_since: header(axum::http::header::IF_MODIFIED_SINCE),
     })?;
+    let immutable = immutable_asset(request.uri().path(), served.status);
     let mut response = axum::response::Response::new(axum::body::Body::from(served.body.into_owned()));
     *response.status_mut() = axum::http::StatusCode::from_u16(served.status).unwrap_or(axum::http::StatusCode::OK);
     response.extensions_mut().insert(campfire_kit::deflater::StaticFile);
@@ -186,7 +205,21 @@ fn static_response(request: &axum::extract::Request) -> Option<axum::response::R
             response.headers_mut().append(name, value);
         }
     }
+    if immutable {
+        response.headers_mut().insert(axum::http::header::CACHE_CONTROL, axum::http::HeaderValue::from_static(IMMUTABLE_CACHE_CONTROL));
+    }
     Some(response)
+}
+
+/// `RailsExt::ImmutableAssetHeaders::IMMUTABLE_CACHE_CONTROL`: `"public, immutable, max-age=#{1.year.to_i}"`.
+const IMMUTABLE_CACHE_CONTROL: &str = "public, immutable, max-age=31556952";
+
+/// `RailsExt::ImmutableAssetHeaders` (reference/lib/rails_ext/immutable_asset_headers.rb), which
+/// wraps `ActionDispatch::Static`: a digest-stamped asset the static server found (200 or 304) can
+/// never change, so it's cached as immutable. Anything else under `/assets/` falls through to the
+/// app's 404 and stays correctable.
+fn immutable_asset(path: &str, status: u16) -> bool {
+    path.starts_with("/assets/") && matches!(status, 200 | 304)
 }
 
 /// The error pages kit renders (`ActionDispatch::PublicExceptions`), from the embedded `public/`.
@@ -265,7 +298,8 @@ fn init_logging(config: &Config) {
     let front = if campfire_kit::front::FrontConfig::from_env().debug { "debug" } else { "info" };
     let default = format!("{level},thruster={front},campfire_kit::front={front}");
     let filter = tracing_subscriber::EnvFilter::try_from_env("CAMPFIRE_LOG").unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(default));
-    let _ = tracing_subscriber::fmt().with_env_filter(filter).try_init();
+    // `LogScrubbingFormatter`: bot keys in paths never reach the log.
+    let _ = tracing_subscriber::fmt().with_env_filter(filter).with_writer(crate::security::ScrubbingStdout).try_init();
 }
 
 /// How long in-flight requests and running jobs get after SIGTERM/SIGINT. Jobs still waiting
@@ -344,5 +378,7 @@ fn copy_database(source: &std::path::Path, target: &std::path::Path) -> anyhow::
     }
 }
 
+#[cfg(test)]
+mod security_tests;
 #[cfg(test)]
 mod tests;

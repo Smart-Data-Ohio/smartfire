@@ -10,6 +10,8 @@ html5ever = { path = "vendor/html5ever" }
 serde_json.workspace = true
 base64.workspace = true
 regex.workspace = true
+comrak.workspace = true
+rand.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]

@@ -13,7 +13,7 @@
 </button>        </div>
       {%- else %}
         <div class="composer--edit composer--rich-text">
-          <form id="{{ message.dom_id("form") }}" data-controller="form" data-action="lexxy:file-accept-&gt;form#preventAttachment keydown.esc-&gt;form#cancel keydown.ctrl+enter-&gt;form#submit:prevent keydown.meta+enter-&gt;form#submit:prevent" action="{{ message.path() }}" accept-charset="UTF-8" method="post"><input type="hidden" name="_method" value="patch" />
+          <form id="{{ message.dom_id("form") }}" data-controller="form" data-action="lexxy:file-accept-&gt;form#preventAttachment keydown.esc-&gt;form#cancel keydown.ctrl+enter-&gt;form#submit:prevent keydown.meta+enter-&gt;form#submit:prevent" action="{{ message.path() }}" accept-charset="UTF-8" method="post"><input type="hidden" name="_method" value="patch" />{{ crate::helpers::token_tag(&message.path().to_string(), "patch") }}
             <div class="full-width input input--actor min-width fill-white">
               <lexxy-editor rows="1" class="input lexxy-content" aria-multiline="true" aria-label="Edit message" autofocus="autofocus" permitted-attachment-types="application/vnd.campfire.mention application/vnd.actiontext.opengraph-embed" data-action="lexxy:change-&gt;typing-notifications#start keydown-&gt;composer#submitByKeyboard:capture" data-direct-upload-url="{{ ctx.url("/rails/active_storage/direct_uploads") }}" data-blob-url-template="{{ ctx.url("/rails/active_storage/blobs/redirect/:signed_id/:filename") }}" id="message_body" input="message_body_trix_input_{{ message.dom_id("") }}" name="message[body]" value="{{ edit.editable_body_html }}">
                 <lexxy-prompt trigger="@" name="mention" src="{{ crate::rooms::mention_prompt_src(*message.room_id) }}" remote-filtering="true" empty-results="No matches"></lexxy-prompt>
@@ -40,6 +40,6 @@
         <span class="for-screen-reader">Close editor and discard changes</span>
 </a>    </div>
 
-    <form id="{{ message.dom_id("delete_form") }}" data-turbo-frame="{{ message.dom_id("edit") }}" action="{{ message.path() }}" accept-charset="UTF-8" method="post"><input type="hidden" name="_method" value="delete" />{#- form_with without a block leaves the form open; the parser closes it at </div> #}
+    <form id="{{ message.dom_id("delete_form") }}" data-turbo-frame="{{ message.dom_id("edit") }}" action="{{ message.path() }}" accept-charset="UTF-8" method="post"><input type="hidden" name="_method" value="delete" />{{ crate::helpers::token_tag(&message.path().to_string(), "delete") }}{#- form_with without a block leaves the form open; the parser closes it at </div> #}
   </div>
 </turbo-frame>

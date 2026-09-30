@@ -53,6 +53,10 @@ pub struct Config {
     /// The fragment store's limit in bytes (`CAMPFIRE_FRAGMENT_CACHE_MB`).
     pub fragment_cache_bytes: usize,
     pub mail: campfire_mail::config::Config,
+    /// `LIVEKIT_URL`, whose origin the Content Security Policy allows to connect.
+    pub livekit_url: Option<String>,
+    /// `config.x.admin_session_idle_timeout` (`config/initializers/session_lifetimes.rb`).
+    pub admin_session_idle_timeout: jiff::SignedDuration,
 }
 
 #[derive(Debug, Clone)]
@@ -144,8 +148,17 @@ impl Config {
             log_level: present("RAILS_LOG_LEVEL").unwrap_or_else(|| "info".into()),
             fragment_cache_bytes: number("CAMPFIRE_FRAGMENT_CACHE_MB", campfire_views::fragment_cache::DEFAULT_MAX_BYTES >> 20)?
                 .saturating_mul(1 << 20),
+            livekit_url: get("LIVEKIT_URL"),
+            admin_session_idle_timeout: admin_session_idle_timeout(get("ADMIN_SESSION_IDLE_TIMEOUT_DAYS")),
         })
     }
+}
+
+/// `ENV.fetch("ADMIN_SESSION_IDLE_TIMEOUT_DAYS", "7").to_i` days, and 7 for anything under one.
+pub fn admin_session_idle_timeout(days: Option<String>) -> jiff::SignedDuration {
+    let days = crate::concerns::ruby_to_i(days.as_deref().unwrap_or("7"));
+    let days = if days < 1 { 7 } else { days };
+    jiff::SignedDuration::from_hours(days.saturating_mul(24))
 }
 
 /// The install's own HTTPS URL when it has a TLS domain; the project's otherwise.
@@ -196,6 +209,20 @@ mod tests {
         let bytes = config(&[("SECRET_KEY_BASE", "abc"), ("CAMPFIRE_FRAGMENT_CACHE_MB", "64")]).unwrap().fragment_cache_bytes;
         assert_eq!(bytes, 64 * 1024 * 1024);
         assert!(config(&[("SECRET_KEY_BASE", "abc"), ("CAMPFIRE_FRAGMENT_CACHE_MB", "lots")]).is_err());
+    }
+
+    #[test]
+    fn admin_session_idle_timeout_matches_the_reference() {
+        let vectors: serde_json::Value = serde_json::from_str(include_str!("../../../vectors/kit_security.json")).unwrap();
+        for case in vectors["admin_idle_timeout"].as_array().unwrap() {
+            let env = case["env"].as_str();
+            let mut vars = vec![("SECRET_KEY_BASE", "abc")];
+            if let Some(env) = env {
+                vars.push(("ADMIN_SESSION_IDLE_TIMEOUT_DAYS", env));
+            }
+            let timeout = config(&vars).unwrap().admin_session_idle_timeout;
+            assert_eq!(timeout.as_secs(), case["seconds"].as_i64().unwrap(), "{env:?}");
+        }
     }
 
     #[test]

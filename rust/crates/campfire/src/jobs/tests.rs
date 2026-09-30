@@ -12,6 +12,7 @@ async fn app_in(dir: &std::path::Path) -> Booted {
     let config = Config::from_lookup(|name| match name {
         "SECRET_KEY_BASE_DUMMY" => Some("1".into()),
         "CAMPFIRE_STORAGE_PATH" => Some(root.clone()),
+        "DISABLE_SSL" => Some("true".into()), // plain HTTP requests, for the controller tests
         _ => None,
     })
     .unwrap();
@@ -115,6 +116,189 @@ async fn job_events_are_enqueued_with_their_write() {
             (PUSH_QUEUE.to_string(), "Room::PushMessageJob".to_string(), serde_json::json!({"room_id": 3, "message_id": 2}), "ready".to_string()),
         ]
     );
+}
+
+/// Runs `f` in a write while a trigger rejects every new `background_jobs` row.
+async fn rejecting_jobs<T: Send + 'static>(app: &App, f: impl FnOnce(&mut Tx<'_>) -> campfire_db::Result<T> + Send + 'static) -> campfire_db::Result<T> {
+    const TRIGGER: &str = "CREATE TRIGGER ws3_reject_jobs BEFORE INSERT ON background_jobs BEGIN SELECT RAISE(ABORT, 'jobs rejected'); END";
+    app.db.write(|tx| Ok(tx.conn().execute_batch(TRIGGER)?)).await.unwrap();
+    let result = app.db.write(f).await;
+    app.db.write(|tx| Ok(tx.conn().execute_batch("DROP TRIGGER ws3_reject_jobs")?)).await.unwrap();
+    result
+}
+
+fn count(app: &App, sql: &'static str) -> i64 {
+    app.db.read_blocking(move |conn| Ok(conn.query_row(sql, [], |row| row.get(0))?)).unwrap()
+}
+
+/// The classes of the queued jobs, which are then cleared.
+async fn take_jobs(app: &App) -> Vec<String> {
+    let classes = jobs(app).into_iter().map(|job| job.class).collect();
+    app.db.write(|tx| Ok(tx.conn().execute_batch("DELETE FROM background_jobs")?)).await.unwrap();
+    classes
+}
+
+/// Every path that enqueues one of the migrated jobs, through the app's real sink, writes the
+/// job's row in the write's own transaction: when the row can't be written the write fails and
+/// none of it commits; when it can, the row commits with the write.
+#[tokio::test]
+async fn a_job_that_cant_be_enqueued_fails_the_write_that_asks_for_it() {
+    use campfire_db::{Message, NewMessage, NewUser, Room, RoomType, User};
+
+    let (booted, _dir) = app().await;
+    let app = booted.app.clone();
+    booted.jobs.shutdown(Duration::from_secs(5)).await; // leave the rows be
+    let (storage, now) = (app.storage.clone(), app.clock.now());
+    let (author, bot, room, blob) = app
+        .db
+        .write(move |tx| {
+            let author = User::create(tx, NewUser { name: "Author".into(), ..Default::default() })?;
+            let bot = User::create_bot(tx, "Bender", Some("https://example.com/hook"))?;
+            let room = Room::create_for(tx, RoomType::Closed, Some("Jobs"), author.id, &[author.id, bot.id])?;
+            let blob = storage
+                .create_and_upload(tx.conn(), b"hello", campfire_storage::Filename::new("hello.txt"), None, now)
+                .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
+            Ok((author.id, bot.id, room.id, blob.id))
+        })
+        .await
+        .unwrap();
+    take_jobs(&app).await;
+    let post = move |attachment_blob_id| move |tx: &mut Tx<'_>| {
+        Message::create(tx, NewMessage { room_id: room, creator_id: author, body: Some("<div>Hi</div>".into()), attachment_blob_id, ..Default::default() }).map(|message| message.id)
+    };
+
+    // Message#receive_in_conversation → Room#push_later
+    assert!(rejecting_jobs(&app, post(None)).await.is_err(), "posting a message");
+    assert_eq!(count(&app, "SELECT count(*) FROM messages"), 0);
+    let message = app.db.write(post(Some(blob))).await.unwrap();
+    assert_eq!(count(&app, "SELECT count(*) FROM messages"), 1);
+    assert_eq!(take_jobs(&app).await, ["Room::PushMessageJob"]);
+
+    // User::Bot#deliver_webhook_later
+    let webhook = move |tx: &mut Tx<'_>| User::find(tx.conn(), bot)?.deliver_webhook_later(tx, message);
+    assert!(rejecting_jobs(&app, webhook).await.is_err(), "a webhook");
+    app.db.write(webhook).await.unwrap();
+    assert_eq!(take_jobs(&app).await, ["Bot::WebhookJob"]);
+
+    // Message#destroy → the attachment's `dependent: :purge_later`
+    let destroy = move |tx: &mut Tx<'_>| Message::find(tx.conn(), message)?.destroy(tx);
+    assert!(rejecting_jobs(&app, destroy).await.is_err(), "destroying a message");
+    assert_eq!(count(&app, "SELECT count(*) FROM messages"), 1);
+    app.db.write(destroy).await.unwrap();
+    assert_eq!(count(&app, "SELECT count(*) FROM messages"), 0);
+    assert_eq!(take_jobs(&app).await, ["ActiveStorage::PurgeJob"]);
+
+    // User::Bannable#ban → apply_ban
+    let ban = move |tx: &mut Tx<'_>| User::find(tx.conn(), author)?.ban(tx);
+    assert!(rejecting_jobs(&app, ban).await.is_err(), "a ban");
+    assert_eq!(count(&app, "SELECT count(*) FROM users WHERE status = 0"), 2, "nobody banned");
+    app.db.write(ban).await.unwrap();
+    assert_eq!(take_jobs(&app).await, ["RemoveBannedContentJob"]);
+}
+
+/// A browser on the booted app's router: a cookie jar, Chrome, and Rails' CSRF tokens.
+struct Browser {
+    router: axum::Router,
+    cookies: std::collections::BTreeMap<String, String>,
+    secrets: Arc<rails_compat::Secrets>,
+}
+
+impl Browser {
+    fn new(router: &axum::Router, secrets: Arc<rails_compat::Secrets>) -> Self {
+        Self { router: router.clone(), cookies: Default::default(), secrets }
+    }
+
+    async fn get(&mut self, path: &str) -> (axum::http::StatusCode, String) {
+        self.send(axum::http::Request::get(path).header("accept", "text/html"), String::new()).await
+    }
+
+    async fn post(&mut self, path: &str, accept: &str, fields: &[(&str, &str)]) -> (axum::http::StatusCode, String) {
+        let body = fields.iter().map(|(k, v)| format!("{}={}", campfire_views::helpers::url::cgi_escape(k), campfire_views::helpers::url::cgi_escape(v))).collect::<Vec<_>>().join("&");
+        let session = self.cookies.get(campfire_kit::session::SESSION_KEY).expect("a page established the browser's session");
+        let token = crate::controllers::presenters::test_support::masked_session_token(&self.secrets, session).expect("the page gave the session a CSRF token");
+        let request = axum::http::Request::post(path)
+            .header(campfire_kit::csrf::HEADER, token)
+            .header("accept", accept)
+            .header("content-type", "application/x-www-form-urlencoded");
+        self.send(request, body).await
+    }
+
+    async fn send(&mut self, request: axum::http::request::Builder, body: String) -> (axum::http::StatusCode, String) {
+        use tower::ServiceExt as _;
+        let cookie = self.cookies.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join("; ");
+        let request = request
+            .header("host", "campfire.test")
+            .header("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
+            .header("cookie", cookie)
+            .body(axum::body::Body::from(body))
+            .unwrap();
+        let response = self.router.clone().oneshot(request).await.unwrap();
+        for cookie in response.headers().get_all("set-cookie") {
+            let (name, value) = cookie.to_str().unwrap().split(';').next().unwrap().split_once('=').unwrap();
+            self.cookies.insert(name.to_string(), value.to_string());
+        }
+        let status = response.status();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        (status, String::from_utf8_lossy(&body).into_owned())
+    }
+}
+
+/// Posting a message through `MessagesController#create` enqueues its push and its bots'
+/// webhooks in the message's own transaction: a webhook that can't be enqueued fails the post
+/// with nothing committed. Committed, the webhooks are held until the message has been broadcast,
+/// then released; if releasing them fails (as if the process died), they're delivered when the
+/// hold runs out rather than lost.
+#[tokio::test]
+async fn a_posted_message_and_its_webhooks_commit_together() {
+    use campfire_db::{FirstRun, PasswordDigest, Room, RoomType, User};
+
+    let (booted, _dir) = app().await;
+    let (app, router) = (booted.app.clone(), booted.router.clone());
+    booted.jobs.shutdown(Duration::from_secs(5)).await; // leave the rows be
+    let digest = PasswordDigest::create("secret123456", 4).unwrap();
+    let room = app
+        .db
+        .write(move |tx| {
+            let person = FirstRun::create(tx, "Person", "person@example.com", digest)?;
+            let bot = User::create_bot(tx, "Bender", Some("https://example.com/hook"))?;
+            Ok(Room::create_for(tx, RoomType::Direct, None, person.id, &[person.id, bot.id])?.id)
+        })
+        .await
+        .unwrap();
+    take_jobs(&app).await;
+    let mut browser = Browser::new(&router, app.secrets.clone());
+    let (status, body) = browser.get("/session/new").await;
+    assert_eq!(status, axum::http::StatusCode::OK, "sign-in page: {body}");
+    let (status, body) = browser.post("/session", "text/html", &[("email_address", "person@example.com"), ("password", "secret123456")]).await;
+    assert_eq!(status, axum::http::StatusCode::FOUND, "signed in: {body}");
+    let path = format!("/rooms/{room}/messages");
+    let post = |n: &'static str| [("message[body]", "<p>Hello bot</p>"), ("message[client_message_id]", n)];
+    let messages = || count(&app, "SELECT count(*) FROM messages");
+
+    const REJECT: &str = "CREATE TRIGGER ws3_reject_webhooks BEFORE INSERT ON background_jobs WHEN NEW.job_class = 'Bot::WebhookJob' BEGIN SELECT RAISE(ABORT, 'webhooks rejected'); END";
+    app.db.write(|tx| Ok(tx.conn().execute_batch(REJECT)?)).await.unwrap();
+    let (status, _) = browser.post(&path, "text/vnd.turbo-stream.html", &post("rejected")).await;
+    assert!(status.is_server_error(), "{status}");
+    assert_eq!((messages(), jobs(&app).len()), (0, 0), "the message rolled back with its webhook");
+    app.db.write(|tx| Ok(tx.conn().execute_batch("DROP TRIGGER ws3_reject_webhooks")?)).await.unwrap();
+
+    let (status, body) = browser.post(&path, "text/vnd.turbo-stream.html", &post("posted")).await;
+    assert_eq!(status, axum::http::StatusCode::OK, "{body}");
+    assert_eq!(messages(), 1);
+    let now = app.db.env().now();
+    let mut queued: Vec<_> = jobs(&app).into_iter().map(|job| (job.class, job.run_at <= now)).collect();
+    queued.sort();
+    assert_eq!(queued, [("Bot::WebhookJob".to_string(), true), ("Room::PushMessageJob".to_string(), true)], "released once broadcast");
+    take_jobs(&app).await;
+
+    const KEEP_HELD: &str = "CREATE TRIGGER ws3_keep_webhooks_held BEFORE UPDATE OF run_at ON background_jobs WHEN NEW.job_class = 'Bot::WebhookJob' BEGIN SELECT RAISE(ABORT, 'release rejected'); END";
+    app.db.write(|tx| Ok(tx.conn().execute_batch(KEEP_HELD)?)).await.unwrap();
+    let (status, body) = browser.post(&path, "text/vnd.turbo-stream.html", &post("held")).await;
+    assert_eq!(status, axum::http::StatusCode::OK, "{body}");
+    assert_eq!(messages(), 2);
+    let webhook = jobs(&app).into_iter().find(|job| job.class == "Bot::WebhookJob").expect("the webhook is queued");
+    let held = webhook.run_at.as_microsecond() - app.db.env().now().as_microsecond();
+    assert!(held > 60_000_000 && held <= WEBHOOK_HOLD.as_micros() as i64, "held for {held} µs");
 }
 
 // --- The handlers --------------------------------------------------------------------------------------
@@ -270,6 +454,68 @@ async fn shutdown_performs_the_queued_ad_hoc_jobs_and_then_takes_no_more() {
     let mut ns: Vec<i64> = std::iter::from_fn(|| performed_rx.try_recv().ok()).collect();
     ns.sort();
     assert_eq!(ns, [1, 2, 3, 4, 5]);
+}
+
+/// Records whether a task finished, or was dropped (aborted) before it did.
+#[derive(Clone, Default)]
+struct Fate {
+    finished: Arc<std::sync::atomic::AtomicBool>,
+    dropped: Arc<std::sync::atomic::AtomicBool>,
+}
+
+struct DropFlag(Arc<std::sync::atomic::AtomicBool>);
+
+impl Drop for DropFlag {
+    fn drop(&mut self) {
+        self.0.store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+}
+
+impl Fate {
+    /// Sleeps 250 ms, after reporting it started.
+    fn work(&self, started: mpsc::UnboundedSender<()>) -> impl Future<Output = anyhow::Result<()>> + Send + use<> {
+        let (finished, guard) = (self.finished.clone(), DropFlag(self.dropped.clone()));
+        async move {
+            let _guard = guard;
+            let _ = started.send(());
+            tokio::time::sleep(Duration::from_millis(250)).await;
+            finished.store(true, std::sync::atomic::Ordering::SeqCst);
+            Ok(())
+        }
+    }
+
+    fn get(&self) -> (bool, bool) {
+        (self.finished.load(std::sync::atomic::Ordering::SeqCst), self.dropped.load(std::sync::atomic::Ordering::SeqCst))
+    }
+}
+
+/// Periodic tasks and ad hoc jobs still running when the grace period ends are aborted, and gone
+/// by the time shutdown returns: none carries on detached.
+#[tokio::test]
+async fn shutdown_aborts_what_outlasts_the_grace_period() {
+    let (booted, _dir) = app().await;
+    let app = booted.app.clone();
+    booted.jobs.shutdown(Duration::from_secs(5)).await;
+
+    let (periodic_fate, ad_hoc_fate) = (Fate::default(), Fate::default());
+    let (started, mut starts) = mpsc::unbounded_channel();
+    let mut loops = periodic::Loops::new(periodic::Intervals::from_lookup(|_| None));
+    let (fate, started_by_task) = (periodic_fate.clone(), started.clone());
+    loops.periodic.as_mut().unwrap().task(campfire_jobs::periodic::Task::new("slow", Duration::from_secs(60), move |_: App| fate.work(started_by_task.clone())));
+    let config = runner_config(&app.config);
+    let (jobs, ad_hoc) = Jobs::new(&registry(), &config).unwrap();
+    let runner = start(app.clone(), registry(), ad_hoc, config, loops);
+    jobs.perform_later("Slow", ad_hoc_fate.work(started));
+    for _ in 0..2 {
+        tokio::time::timeout(Duration::from_secs(5), starts.recv()).await.expect("started").unwrap();
+    }
+
+    runner.shutdown(Duration::from_millis(20)).await;
+    assert_eq!(periodic_fate.get(), (false, true), "the periodic task was aborted");
+    assert_eq!(ad_hoc_fate.get(), (false, true), "the ad hoc job was aborted");
+    tokio::time::sleep(Duration::from_millis(400)).await;
+    assert_eq!(periodic_fate.get(), (false, true), "and didn't carry on");
+    assert_eq!(ad_hoc_fate.get(), (false, true), "and didn't carry on");
 }
 
 // --- Periodic -------------------------------------------------------------------------------------------

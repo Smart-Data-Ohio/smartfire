@@ -7,7 +7,7 @@ use campfire_kit::{Ctx, Param, Response, Result, StatusCode, format, halt, permi
 use campfire_views::messages::json;
 
 use super::{
-    MessageParams, attachment_assignment, broadcast_create, broadcast_replace, create_message, deliver_webhooks_to_bots, destroy_message,
+    MessageParams, attachment_assignment, broadcast_create, broadcast_replace, create_message, destroy_message, release_webhooks,
     ensure_can_administer, find_paged_messages, present, set_message, update_message,
 };
 use crate::app::AppCtx;
@@ -41,7 +41,7 @@ pub async fn create(c: &mut Ctx) -> Result {
     let attributes = message_params(c)?;
     let message = create_message(c, &room, attributes).await?;
     broadcast_create(c, &room, &message).await?;
-    deliver_webhooks_to_bots(c, &room, &message).await?;
+    release_webhooks(c, &message).await;
 
     let location = c.url_for(&campfire_routes::message(message.id));
     c.head_with_location(StatusCode::CREATED, &location)

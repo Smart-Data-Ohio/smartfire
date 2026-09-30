@@ -15,6 +15,7 @@ use std::sync::LazyLock;
 
 use campfire_db::{Account, User};
 use campfire_kit::{Ctx, Error, Response, Result, StatusCode, format};
+use campfire_views::helpers::request_forgery::{self, RequestSecrets};
 use campfire_views::{AccountSummary, CurrentUser, Platform, ViewContext};
 
 use crate::app::AppCtx;
@@ -66,8 +67,11 @@ impl Layout {
     }
 
     /// Renders with a `ViewContext` for this request. The flash is read (and so swept at the end
-    /// of the request) the way the layout's `flash[:notice]` / `flash[:alert]` read it.
+    /// of the request) the way the layout's `flash[:notice]` / `flash[:alert]` read it. The
+    /// templates get this request's authenticity tokens and CSP nonce (`csrf_meta_tags`, forms,
+    /// `csp_meta_tag` and the importmap tags), which puts the CSRF token in the session.
     pub fn render(&self, c: &mut Ctx, render: impl FnOnce(&ViewContext) -> askama::Result<String>) -> Result<String> {
+        let secrets = RequestSecrets { tokens: Box::new(KitTokens(c.authenticity_tokens())), csp_nonce: c.content_security_policy_nonce() };
         let flash_notice = c.flash().notice().map(str::to_string);
         let flash_alert = c.flash().alert().map(str::to_string);
         let base_url = c.url_for("");
@@ -94,7 +98,7 @@ impl Layout {
             last_room_visited_id: self.last_room_visited_id,
             app_version: self.app_version.clone(),
         };
-        render(&ctx).map_err(Error::internal)
+        request_forgery::rendering_with(secrets, || render(&ctx)).map_err(Error::internal)
     }
 
     /// A page rendered in the application layout: `text/html`, plus the `Link` preload header
@@ -109,6 +113,19 @@ impl Layout {
     /// A page rendered in turbo-rails' frame layout (no stylesheets, so no `Link` header).
     pub fn frame(&self, c: &mut Ctx, status: StatusCode, html: String) -> Response {
         c.render(status, &format::HTML, html)
+    }
+}
+
+/// The kit's tokens for the views' `form_authenticity_token`.
+struct KitTokens(campfire_kit::csrf::AuthenticityTokens);
+
+impl request_forgery::AuthenticityTokens for KitTokens {
+    fn global(&self) -> String {
+        self.0.global()
+    }
+
+    fn for_form(&self, action: &str, method: &str) -> String {
+        self.0.for_form(action, method)
     }
 }
 

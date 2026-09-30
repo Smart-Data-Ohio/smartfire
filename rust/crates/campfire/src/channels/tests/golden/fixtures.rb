@@ -18,6 +18,9 @@ message = room.messages.find_by(client_message_id: "channels-golden-1") ||
 
 cookie = ->(user) do
   session = user.sessions.start!(user_agent: "golden", ip_address: "8.8.8.8")
+  # Our app rejects cable connections from people whose session hasn't completed the second
+  # factor (ApplicationCable::Connection, TwoFactorEnforcement).
+  session.mark_two_factor_verified!
   request = ActionDispatch::Request.new(Rails.application.env_config.merge("HTTP_HOST" => "127.0.0.1", "rack.input" => StringIO.new))
   request.cookie_jar.signed[:session_token] = session.token
   "session_token=#{CGI.escape(request.cookie_jar[:session_token])}"

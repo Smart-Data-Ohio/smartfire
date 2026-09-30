@@ -567,17 +567,26 @@ impl Room {
     }
 
     /// `room.receive(message)`, from the message's `after_create_commit`: marks members
-    /// unread, then enqueues the push. A system note does neither.
+    /// unread. A system note doesn't. Its `push_later` is [`Room::push_later`], called in the
+    /// message's transaction.
     pub(crate) fn receive(tx: &mut Tx<'_>, room_id: i64, message: &Message) -> Result<()> {
         if message.system_note {
             return Ok(());
         }
-        Self::unread_memberships(tx, room_id, message)?;
-        tx.emit_after_commit(Event::PushMessage {
-            room_id,
-            message_id: message.id,
-        });
-        Ok(())
+        Self::unread_memberships(tx, room_id, message)
+    }
+
+    /// `push_later(message)`, the rest of `room.receive(message)`: `Room::PushMessageJob`. Rails
+    /// enqueues it after commit; here its row is written in the message's transaction, so the
+    /// message and its push commit (or roll back) together, and the runner is woken after
+    /// commit. A system note isn't pushed.
+    pub(crate) fn push_later(tx: &mut Tx<'_>, room_id: i64, message: &Message) {
+        if !message.system_note {
+            tx.emit_after_commit(Event::PushMessage {
+                room_id,
+                message_id: message.id,
+            });
+        }
     }
 
     /// `unread_memberships(message)` (`app/models/room.rb`): visible, disconnected members other

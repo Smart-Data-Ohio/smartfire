@@ -438,6 +438,8 @@ impl Message {
                 committed.create_in_index(tx)?;
                 committed.receive_in_conversation(tx)
             });
+            // Queued after the hook, so the runner is woken once the members are unread.
+            message.push_later_in_conversation(tx);
         }
         Ok(message)
     }
@@ -627,6 +629,16 @@ impl Message {
             return Ok(());
         }
         Room::receive(tx, self.room_id, self)
+    }
+
+    /// The push job `receive_in_conversation` enqueues, written in the message's transaction
+    /// (see [`Room::push_later`]).
+    fn push_later_in_conversation(&self, tx: &mut Tx<'_>) {
+        if self.thread_id.is_some() {
+            // `ChannelThread::PushMessageJob`: `ChannelThread` isn't ported yet.
+            return;
+        }
+        Room::push_later(tx, self.room_id, self);
     }
 
     /// `create_in_index`: never for a system note.

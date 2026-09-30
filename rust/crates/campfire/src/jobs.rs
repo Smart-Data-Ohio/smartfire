@@ -84,6 +84,11 @@ impl JobKind for WebhookJob {
     const QUEUE: &'static str = WEBHOOKS_QUEUE;
 }
 
+/// How long a posted message's webhooks wait for the post to be broadcast before they're due
+/// anyway (see `controllers::messages::create_message`): long enough for the slowest attachment
+/// processing, so only a process that dies mid-request waits it out.
+pub const WEBHOOK_HOLD: Duration = Duration::from_secs(5 * 60);
+
 /// `RemoveBannedContentJob.perform_later(user)`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RemoveBannedContentJob {
@@ -201,6 +206,10 @@ impl Jobs {
 impl EventSink for Jobs {
     fn persist(&self, tx: &Tx<'_>, event: &Event) -> campfire_db::Result<()> {
         if let Some(request) = request_for(event) {
+            if !tx.in_transaction() {
+                // From an after-commit hook: the row commits on its own, not with the write.
+                tracing::warn!(job = request.class, "enqueued after commit, outside its write's transaction");
+            }
             let id = self.queue.enqueue(tx, &request)?;
             tracing::debug!(job = request.class, id, "enqueued");
         }
@@ -234,19 +243,27 @@ pub struct Runner {
 }
 
 impl Runner {
-    /// Stops the periodic loops (a task in progress finishes), then the durable runner (running
-    /// jobs get `grace` to finish; the rest stay queued for the next process), then the ad hoc
-    /// workers (they perform what's queued, up to `grace`).
+    /// Stops the periodic loops (a task in progress gets `grace` to finish), then the durable
+    /// runner (running jobs get `grace` to finish; the rest stay queued for the next process),
+    /// then the ad hoc workers (they perform what's queued, up to `grace`). Whatever outlasts its
+    /// grace period is aborted, and gone by the time this returns.
     pub async fn shutdown(self, grace: Duration) {
         let _ = self.periodic_stopping.send(true);
-        if tokio::time::timeout(grace, futures_util::future::join_all(self.periodic)).await.is_err() {
-            tracing::warn!("periodic tasks still running at shutdown were abandoned");
-        }
+        join_or_abort(self.periodic, grace, "periodic tasks still running at shutdown were aborted").await;
         self.durable.shutdown(grace).await;
         let _ = self.ad_hoc_stopping.send(true);
-        if tokio::time::timeout(grace, futures_util::future::join_all(self.ad_hoc)).await.is_err() {
-            tracing::warn!("jobs still running at shutdown were abandoned");
-        }
+        join_or_abort(self.ad_hoc, grace, "ad hoc jobs still running at shutdown were aborted").await;
+    }
+}
+
+/// Waits up to `grace` for `tasks`, then aborts the ones still running and waits for them to go.
+async fn join_or_abort(tasks: Vec<JoinHandle<()>>, grace: Duration, abandoned: &str) {
+    let aborts: Vec<_> = tasks.iter().map(JoinHandle::abort_handle).collect();
+    let mut all = std::pin::pin!(futures_util::future::join_all(tasks));
+    if tokio::time::timeout(grace, all.as_mut()).await.is_err() {
+        tracing::warn!("{abandoned}");
+        aborts.iter().for_each(tokio::task::AbortHandle::abort);
+        all.await;
     }
 }
 
