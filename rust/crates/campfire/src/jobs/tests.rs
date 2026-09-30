@@ -728,10 +728,11 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     });
     let tasks: Vec<_> = periodic
         .tasks()
-        .filter(|task| task.name() != "event reminders")
         .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
         .collect();
-    assert_eq!(serde_json::json!(tasks), golden["tasks"]);
+    let mut expected = golden["tasks"].as_array().unwrap().clone();
+    expected.insert(0, serde_json::json!({"name":"event reminders","seconds":17}));
+    assert_eq!(serde_json::json!(tasks), serde_json::json!(expected));
     let events = periodic.tasks().find(|task| task.name() == "event reminders").unwrap();
     assert_eq!(events.interval(), Duration::from_secs(17));
 }
