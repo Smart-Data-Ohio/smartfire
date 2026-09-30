@@ -65,7 +65,7 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
             })?;
             Ok(())
         }),
-        campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| messaging(cable, &broadcast)),
+        campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| messaging(cable, app, &broadcast)),
         kind => Err(anyhow::anyhow!("no handler for the {kind} broadcast")),
     };
     if let Err(error) = result {
@@ -73,10 +73,30 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
     }
 }
 
-/// WS8 domain frames share WS7's publisher and conservative Turbo guard. Rendering these
-/// partial descriptions belongs to WS8b; template-free frames are delivered now.
-fn messaging(cable: &Cable, broadcast: &campfire_db::broadcasts::Broadcast) -> anyhow::Result<()> {
+/// WS8 domain frames share WS7's publisher and conservative Turbo guard.
+/// Stream replacements render after commit with no request/session context.
+fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcasts::Broadcast) -> anyhow::Result<()> {
     use campfire_db::broadcasts::Broadcast;
+    if let Broadcast::Turbo(frame) = broadcast
+        && frame.action == campfire_db::broadcasts::TurboAction::Replace
+        && let Some(campfire_db::broadcasts::Partial::MessageReplace {message_id}) = &frame.partial
+    {
+        let app=app.ok_or_else(||anyhow::anyhow!("app not booted"))?;
+        let copy=app.clone();let message_id=*message_id;
+        let html=app.db.read_blocking(move|conn| {
+            let message=campfire_db::Message::find(conn,message_id)?;
+            let view=crate::controllers::presenters::Presenter::new(conn,&copy,None).message(&message)?;
+            Ok(crate::controllers::presenters::page::render_detached(&copy,None,|ctx|campfire_views::messages::message(ctx,&view)))
+        })?;
+        if campfire_views::helpers::request_forgery::has_token_slots(&html) {
+            anyhow::bail!("refusing unresolved CSRF token slots in a message replacement");
+        }
+        let streamables:Vec<_>=frame.streamables.iter().map(|s|s.to_param()).collect();
+        let streamables:Vec<_>=streamables.iter().map(String::as_str).collect();
+        let attrs:&[(&str,Option<&str>)]=if frame.maintain_scroll {&[("maintain_scroll",Some("true"))]} else {&[]};
+        cable.broadcast_action_to(&streamables,Action::Replace,Target::Target(&frame.target),Some(&html),attrs);
+        return Ok(());
+    }
     let (stream, payload) = template_free_broadcast(broadcast)
         .ok_or_else(|| anyhow::anyhow!("WS8b partial rendering is not registered: {broadcast:?}"))?;
     match broadcast {

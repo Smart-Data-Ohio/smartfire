@@ -48,10 +48,10 @@ async fn count(t: &TestApp) -> i64 {
 async fn last(t: &TestApp) -> Message {
     t.db()
         .read(|c| {
-            Ok(Message::find(
+            Message::find(
                 c,
                 c.query_row("SELECT MAX(id) FROM messages", [], |r| r.get(0))?,
-            )?)
+            )
         })
         .await
         .unwrap()

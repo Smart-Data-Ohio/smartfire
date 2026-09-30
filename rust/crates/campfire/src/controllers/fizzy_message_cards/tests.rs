@@ -10,6 +10,10 @@ use campfire_db::{ChannelThread, Message, NewChannelThread, NewMessage};
 use rails_compat::ar_encryption::ArEncryption;
 use serde_json::json;
 
+fn case_port() -> u16 {
+    std::env::var("WS15E_FIZZY_MESSAGE_CASE_PORT").ok().map(|p|p.parse().expect("case port")).unwrap_or(51598)
+}
+
 #[tokio::test]
 async fn ws15e_fizzy_message_creation_http_matrix() {
     if let Ok(case) = std::env::var("WS15E_FIZZY_MESSAGE_CASE") {
@@ -41,7 +45,7 @@ async fn ws15e_fizzy_message_creation_http_matrix() {
                 "--nocapture",
             ])
             .env("WS15E_FIZZY_MESSAGE_CASE", case)
-            .env("FIZZY_API_BASE_URL", "http://127.0.0.1:51598")
+            .env("FIZZY_API_BASE_URL", format!("http://127.0.0.1:{}",case_port()))
             .output()
             .await
             .unwrap();
@@ -147,12 +151,18 @@ async fn run(case: &str) {
             .unwrap();
     }
     if case == "direct_bots" {
-        app.db().write(move|tx| {tx.conn().execute("INSERT OR IGNORE INTO memberships (room_id,user_id,created_at,updated_at) VALUES (?,?,?,?)",rusqlite::params![room_id,BENDER,tx.now(),tx.now()])?;Ok(())}).await.unwrap();
+        app.db().write(move|tx| {
+            // This case checks legacy Bot::WebhookJob fanout. Bender is now an
+            // agent-backed bot and correctly uses Agent::DeliveryJob instead.
+            let bot=campfire_db::User::create_bot(tx,"Fizzy legacy webhook bot",Some("https://bots.example/hook"))?;
+            campfire_db::Room::find(tx.conn(),room_id)?.grant_to(tx,&[bot.id])?;
+            Ok(())
+        }).await.unwrap();
     }
     if case == "enqueue_rollback" {
         app.db().write(|tx| {tx.conn().execute_batch("CREATE TRIGGER ws15e_reject_fizzy BEFORE INSERT ON background_jobs WHEN NEW.job_class='Fizzy::FetchCardJob' BEGIN SELECT RAISE(ABORT,'queue rejected'); END;")?;Ok(())}).await.unwrap();
     }
-    let base = "http://127.0.0.1:51598/897362094/cards/580".to_owned();
+    let base = format!("http://127.0.0.1:{}/897362094/cards/580",case_port());
     let url = if case == "long_reply" {
         format!("https://example.com/{}", "x".repeat(60000))
     } else {
@@ -173,7 +183,7 @@ async fn run(case: &str) {
         "new_rejected" => 401,
         _ => 200,
     };
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:51598")
+    let listener = tokio::net::TcpListener::bind(("127.0.0.1",case_port()))
         .await
         .unwrap();
     let server = FakeServer::on_listener(
