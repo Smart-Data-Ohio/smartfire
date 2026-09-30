@@ -2,11 +2,61 @@
 //! `test/models/push/subscription_test.rb` (validation and endpoint pinning).
 
 use super::*;
-use crate::models::push_subscription::{MAX_PAYLOAD_BODY_BYTES, PushSubscription};
+use crate::models::push_subscription::{PushSubscription};
 use crate::rich_text::mention_attachment_for;
 use crate::{Membership, Message, NewMessage};
 
 const WEB_PUSH_PUBLIC_TEST_IP: &str = "142.250.185.206";
+
+// WS17 regressions: these run through the actual room-recipient query, not a policy mock.
+#[test]
+fn ws17_room_push_respects_dnd_and_non_allowed_sender() {
+    let t = TestDb::new();
+    t.write(|tx| {
+        tx.conn().execute("UPDATE users SET dnd_enabled=1 WHERE id=?", [id("jason")])?;
+        Ok(())
+    });
+    assert_eq!(deliveries(&t, "designers", "Quiet please".into()), 1);
+}
+
+#[test]
+fn ws17_room_push_respects_quiet_hours() {
+    let t = TestDb::new();
+    t.clock.travel_to(crate::Timestamp::parse_db("2026-03-08 07:15:00").unwrap());
+    t.write(|tx| {
+        tx.conn().execute("UPDATE users SET quiet_hours_enabled=1, quiet_hours_start_minute=180, quiet_hours_end_minute=240, time_zone='America/New_York' WHERE id=?", [id("jason")])?;
+        Ok(())
+    });
+    assert_eq!(deliveries(&t, "designers", "Quiet please".into()), 1);
+}
+
+#[test]
+fn ws17_room_push_respects_out_of_office() {
+    let t = TestDb::new();
+    t.write(|tx| {
+        tx.conn().execute("UPDATE users SET ooo_until=? WHERE id=?", rusqlite::params![tx.now().since(jiff::SignedDuration::from_hours(1)), id("jason")])?;
+        Ok(())
+    });
+    assert_eq!(deliveries(&t, "designers", "Quiet please".into()), 1);
+}
+
+#[test]
+fn ws17_replies_notify_only_opted_in_authors_and_merge_duplicate_scopes() {
+    let t=TestDb::new();
+    t.write(|tx|Membership::find(tx.conn(),id("jason_designers"))?.update_involvement(tx,crate::Involvement::Mentions));
+    let source=t.write(|tx|Message::create(tx,NewMessage {room_id:id("designers"),creator_id:id("jason"),body:Some("Original".into()),..Default::default()}));
+    let send=|notify,body:String|t.write(move|tx|Message::create(tx,NewMessage {room_id:id("designers"),creator_id:id("david"),body:Some(body),reply_to_message_id:Some(source.id),reply_notify_author:Some(notify),..Default::default()}));
+    let recipients=|message:&Message|t.read(|c|Ok(PushSubscription::pushes_for(c,&BasicRichText,message,t.now())?.1));
+    assert_eq!(recipients(&send(false,"Quiet reply".into())).len(),1);
+    assert_eq!(recipients(&send(true,"Reply".into())).len(),2);
+    let message=send(true,format!("Reply {}",mention_attachment_for(id("jason"))));
+    assert_eq!(recipients(&message).len(),2);
+    t.write(|tx|Membership::find(tx.conn(),id("jason_designers"))?.update_involvement(tx,crate::Involvement::Everything));
+    assert_eq!(recipients(&message).len(),2,"everything + mention + reply must send once per device");
+    t.write(|tx|Membership::find(tx.conn(),id("jason_designers"))?.update_involvement(tx,crate::Involvement::Muted));
+    assert_eq!(recipients(&send(true,"Muted reply".into())).len(),1);
+    assert_eq!(recipients(&message).len(),2,"muted rooms still push mentions");
+}
 
 /// How many deliveries `Room::MessagePusher#push` would queue for a new message.
 fn deliveries(t: &TestDb, room: &str, body: String) -> usize {
@@ -115,7 +165,7 @@ fn payloads() {
 }
 
 #[test]
-fn long_payloads_are_cut_short_to_fit_a_push_message() {
+fn long_payloads_are_preserved_like_rails() {
     let t = TestDb::new();
     let body = format!("{}\"{}", "é".repeat(1000), "x".repeat(2000));
     let attributes = NewMessage {
@@ -128,11 +178,8 @@ fn long_payloads_are_cut_short_to_fit_a_push_message() {
     let room = t.read(|c| message.room(c));
     let payload = t.read(|c| PushSubscription::payload_for(c, &BasicRichText, &room, &message));
 
-    let json_len = |text: &str| serde_json::to_string(text).unwrap().len() - 2;
-    assert!(payload.body.starts_with("David: éé"));
-    assert!(payload.body.ends_with("xx…"));
-    assert!(json_len(&payload.body) <= MAX_PAYLOAD_BODY_BYTES);
-    assert!(json_len(&payload.body) > MAX_PAYLOAD_BODY_BYTES - 4);
+    assert_eq!(payload.body, format!("David: {}\"{}", "é".repeat(1000), "x".repeat(2000)));
+    assert_eq!(payload.tag, Some(format!("room-{}", room.id)));
 }
 
 fn build(endpoint: &str) -> PushSubscription {

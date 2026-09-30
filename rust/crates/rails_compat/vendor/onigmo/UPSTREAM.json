@@ -1,0 +1,122 @@
+{
+  "repository": "https://github.com/ruby/ruby",
+  "revision": "2b0b7728dc7f0561c35c3d8c4489945c94b783ad",
+  "ruby": "3.4.10",
+  "unicode": "15.0.0",
+  "files": [
+    {
+      "file": "regcomp.c",
+      "upstream": "regcomp.c",
+      "upstream_sha256": "b102b618d7e14c12226762e1ab0122240f67c2c4b984468d67302b758904ed53",
+      "sha256": "b102b618d7e14c12226762e1ab0122240f67c2c4b984468d67302b758904ed53"
+    },
+    {
+      "file": "regenc.c",
+      "upstream": "regenc.c",
+      "upstream_sha256": "54a950b65df5a6286638d6335cf0611e16d673a6a54cfa904b9255ff5cee8796",
+      "sha256": "54a950b65df5a6286638d6335cf0611e16d673a6a54cfa904b9255ff5cee8796"
+    },
+    {
+      "file": "regerror.c",
+      "upstream": "regerror.c",
+      "upstream_sha256": "989ef51477b8ef7765912c99bcdd587f248e414380ef184f4b847ad681ada652",
+      "sha256": "989ef51477b8ef7765912c99bcdd587f248e414380ef184f4b847ad681ada652"
+    },
+    {
+      "file": "regexec.c",
+      "upstream": "regexec.c",
+      "upstream_sha256": "12e2f7e93e6838a8caf412c0e40d183814f5b7712ad11f70495aa7c85d955a7e",
+      "sha256": "12e2f7e93e6838a8caf412c0e40d183814f5b7712ad11f70495aa7c85d955a7e"
+    },
+    {
+      "file": "regparse.c",
+      "upstream": "regparse.c",
+      "upstream_sha256": "e3b39e1c3702dd317c48d96e114d3b3be329e30d066e7982edf5e8d374c9376e",
+      "sha256": "e3b39e1c3702dd317c48d96e114d3b3be329e30d066e7982edf5e8d374c9376e"
+    },
+    {
+      "file": "regsyntax.c",
+      "upstream": "regsyntax.c",
+      "upstream_sha256": "33ecdefc455364b40de16b84d62f87bb19506108975175fa386fe825582ed83c",
+      "sha256": "33ecdefc455364b40de16b84d62f87bb19506108975175fa386fe825582ed83c"
+    },
+    {
+      "file": "regint.h",
+      "upstream": "regint.h",
+      "upstream_sha256": "a2cee89a3b76fa76440649aec1a11ac35d719c73a3c49027a77e3becee4be34d",
+      "sha256": "a2cee89a3b76fa76440649aec1a11ac35d719c73a3c49027a77e3becee4be34d"
+    },
+    {
+      "file": "regenc.h",
+      "upstream": "regenc.h",
+      "upstream_sha256": "2cd21d41e337fd00d35e1d69dfd36af016c01e202881548b2ff28feaa77cac38",
+      "sha256": "2cd21d41e337fd00d35e1d69dfd36af016c01e202881548b2ff28feaa77cac38"
+    },
+    {
+      "file": "regparse.h",
+      "upstream": "regparse.h",
+      "upstream_sha256": "49d44bc46a9025e4b263016a49e213f24d4b8e9a004141077699a22c9d2bea38",
+      "sha256": "49d44bc46a9025e4b263016a49e213f24d4b8e9a004141077699a22c9d2bea38"
+    },
+    {
+      "file": "st.c",
+      "upstream": "st.c",
+      "upstream_sha256": "62011b4a6ed7a22fbee147799a9d04ab8f65ff5e1d04c7961d49138bbcd36f5b",
+      "sha256": "62011b4a6ed7a22fbee147799a9d04ab8f65ff5e1d04c7961d49138bbcd36f5b"
+    },
+    {
+      "file": "COPYING",
+      "upstream": "COPYING",
+      "upstream_sha256": "967586d538a28955ec2541910cf63c5ac345fcdea94bfb1f1705a1f6eb36bcbb",
+      "sha256": "967586d538a28955ec2541910cf63c5ac345fcdea94bfb1f1705a1f6eb36bcbb"
+    },
+    {
+      "file": "BSDL",
+      "upstream": "BSDL",
+      "upstream_sha256": "36a9a6e7347214bbba599a412617204e65bff065dcbe5c46f5cb454c80de9eb0",
+      "sha256": "36a9a6e7347214bbba599a412617204e65bff065dcbe5c46f5cb454c80de9eb0"
+    },
+    {
+      "file": "onigmo.h",
+      "upstream": "include/ruby/onigmo.h",
+      "upstream_sha256": "e00264947e29b44fd77f303a718bc1b52bc0c4ba519a556dadcd11a00e7039ef",
+      "sha256": "e00264947e29b44fd77f303a718bc1b52bc0c4ba519a556dadcd11a00e7039ef"
+    },
+    {
+      "file": "st.h",
+      "upstream": "include/ruby/st.h",
+      "upstream_sha256": "f9e103b94d5478a5461ae5d7d54d57e6fe8fa549473ba7d437a7287a27294c07",
+      "sha256": "4982533740eebc54a89dce5483199252b864d1fcba72615bae695dd949650e1e"
+    },
+    {
+      "file": "ascii.c",
+      "upstream": "enc/ascii.c",
+      "upstream_sha256": "6993065aac01ebb06b45e191fd76fea4e47d9773c29f2f6ae73923c25ab93681",
+      "sha256": "6993065aac01ebb06b45e191fd76fea4e47d9773c29f2f6ae73923c25ab93681"
+    },
+    {
+      "file": "utf_8.c",
+      "upstream": "enc/utf_8.c",
+      "upstream_sha256": "fee81280950388d535ee1edd49c309108b43d409dd9037fa34fee4ddf23d56b3",
+      "sha256": "fee81280950388d535ee1edd49c309108b43d409dd9037fa34fee4ddf23d56b3"
+    },
+    {
+      "file": "unicode.c",
+      "upstream": "enc/unicode.c",
+      "upstream_sha256": "40f0add42f3838673ed8ef30b0c790f7ae7435881b6a8eac9e607a88bb9b0a2d",
+      "sha256": "40f0add42f3838673ed8ef30b0c790f7ae7435881b6a8eac9e607a88bb9b0a2d"
+    },
+    {
+      "file": "casefold.h",
+      "upstream": "enc/unicode/15.0.0/casefold.h",
+      "upstream_sha256": "5504400958c3aa7db603647ad1262c0f4b3c4c8294ceaac8e040566a95ff4cf3",
+      "sha256": "5504400958c3aa7db603647ad1262c0f4b3c4c8294ceaac8e040566a95ff4cf3"
+    },
+    {
+      "file": "name2ctype.h",
+      "upstream": "enc/unicode/15.0.0/name2ctype.h",
+      "upstream_sha256": "a93935e6e4ba07e9e7929f7e1049990a8b4bc686283a1cde620234215d9053ec",
+      "sha256": "a93935e6e4ba07e9e7929f7e1049990a8b4bc686283a1cde620234215d9053ec"
+    }
+  ]
+}

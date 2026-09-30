@@ -9,7 +9,7 @@ use axum::body::Body;
 use axum::http::{HeaderMap, Method, Request, StatusCode, header};
 use tower::ServiceExt;
 
-use crate::app::{Booted, boot_with_clock};
+use crate::app::{Booted, boot_with_services};
 use crate::config::Config;
 
 const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
@@ -129,6 +129,10 @@ impl TestApp {
         Self::boot_with_clock(seed_clock()).await
     }
 
+    pub async fn boot_with_network(network: crate::integrations::net::Network) -> Option<TestApp> {
+        Self::boot_seed_with_services("default", seed_clock(), network, &[]).await
+    }
+
     pub async fn boot_with_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
         Self::boot_with_clock_and_env(clock, &[]).await
     }
@@ -137,14 +141,31 @@ impl TestApp {
         clock: campfire_kit::SharedClock,
         extra: &[(&str, &str)],
     ) -> Option<TestApp> {
-        Self::boot_seed_with_clock_and_env("default", clock, extra).await
+        Self::boot_seed_with_services(
+            "default",
+            clock,
+            crate::integrations::net::Network::system(),
+            extra,
+        )
+        .await
     }
 
     pub async fn boot_seed(name: &str) -> Option<TestApp> {
-        Self::boot_seed_with_clock_and_env(name, seed_clock(), &[]).await
+        Self::boot_seed_with_services(
+            name,
+            seed_clock(),
+            crate::integrations::net::Network::system(),
+            &[],
+        )
+        .await
     }
 
-    async fn boot_seed_with_clock_and_env(name: &str, clock: campfire_kit::SharedClock, extra: &[(&str, &str)]) -> Option<TestApp> {
+    async fn boot_seed_with_services(
+        name: &str,
+        clock: campfire_kit::SharedClock,
+        network: crate::integrations::net::Network,
+        extra: &[(&str, &str)],
+    ) -> Option<TestApp> {
         let seed = seed_dir(name)?;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("db")).unwrap();
@@ -168,7 +189,17 @@ impl TestApp {
         })
         .unwrap();
         Some(TestApp {
-            booted: boot_with_clock(config, clock).await.unwrap(),
+            booted: boot_with_services(
+                config,
+                clock,
+                network,
+                crate::jobs::periodic::Intervals {
+                    periodic: None,
+                    huddle: None,
+                },
+            )
+            .await
+            .unwrap(),
             _dir: dir,
         })
     }
