@@ -742,3 +742,6 @@ mod case_tests;
 
 #[cfg(test)]
 mod webhook_cases;
+
+#[cfg(test)]
+mod recovery_cases;

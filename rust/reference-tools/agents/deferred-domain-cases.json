@@ -138,25 +138,6 @@
       ]
     },
     {
-      "rails_file": "test/models/agent/delivery_recovery_test.rb",
-      "owner": "WS11 domain",
-      "remaining_named_case_ports": [
-        "a stranded pending row gets recovered",
-        "a stranded row with attempts remaining but some spent gets recovered",
-        "a fresh pending row is left alone",
-        "an exhausted pending row past its grace is marked failed",
-        "a recently exhausted pending row is left alone",
-        "settled webhook rows are left alone",
-        "a 429 with Retry-After 600 is not re-posted by the sweeper before 600 seconds",
-        "the sweeper does not overwrite a Retry-After stored after its read",
-        "a recovery pass keeps going past an enqueue failure",
-        "a job with a stale attempt number exits without posting",
-        "a scheduled retry records its next attempt in the future",
-        "the sweeper recovers a stranded pending delivery for a webhook-enabled agent",
-        "the sweeper leaves a fresh pending delivery alone"
-      ]
-    },
-    {
       "rails_file": "test/models/agent_budgets_test.rb",
       "owner": "WS11 domain",
       "remaining_named_case_ports": [

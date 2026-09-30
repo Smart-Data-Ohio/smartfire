@@ -912,6 +912,64 @@
           "rust": "ws11_stream_case_link_references_sync_only_at_finalize"
         }
       ]
+    },
+    {
+      "rails_file": "test/models/agent/delivery_recovery_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/recovery_cases.rs",
+      "cases": [
+        {
+          "rails": "a stranded pending row gets recovered",
+          "rust": "ws11_recovery_case_old_pending_recovered"
+        },
+        {
+          "rails": "a stranded row with attempts remaining but some spent gets recovered",
+          "rust": "ws11_recovery_case_spent_attempts_recovered"
+        },
+        {
+          "rails": "a fresh pending row is left alone",
+          "rust": "ws11_recovery_case_fresh_pending_left_alone"
+        },
+        {
+          "rails": "an exhausted pending row past its grace is marked failed",
+          "rust": "ws11_recovery_case_exhausted_old_null_and_scheduled_fail"
+        },
+        {
+          "rails": "a recently exhausted pending row is left alone",
+          "rust": "ws11_recovery_case_exhausted_recent_left_pending"
+        },
+        {
+          "rails": "settled webhook rows are left alone",
+          "rust": "ws11_recovery_case_settled_rows_left_alone"
+        },
+        {
+          "rails": "a 429 with Retry-After 600 is not re-posted by the sweeper before 600 seconds",
+          "rust": "ws11_recovery_case_retry_after_never_reposted_early"
+        },
+        {
+          "rails": "the sweeper does not overwrite a Retry-After stored after its read",
+          "rust": "ws11_recovery_case_snapshot_cannot_overwrite_new_retry_after"
+        },
+        {
+          "rails": "a recovery pass keeps going past an enqueue failure",
+          "rust": "ws11_recovery_case_enqueue_failure_keeps_recovering"
+        },
+        {
+          "rails": "a job with a stale attempt number exits without posting",
+          "rust": "ws11_recovery_case_stale_attempt_exits_without_post"
+        },
+        {
+          "rails": "a scheduled retry records its next attempt in the future",
+          "rust": "ws11_recovery_case_scheduled_retry_records_future"
+        },
+        {
+          "rails": "the sweeper recovers a stranded pending delivery for a webhook-enabled agent",
+          "rust": "ws11_recovery_case_stranded_pending_delivery_recovered"
+        },
+        {
+          "rails": "the sweeper leaves a fresh pending delivery alone",
+          "rust": "ws11_recovery_case_fresh_pending_delivery_left_alone"
+        }
+      ]
     }
   ],
   "boundary_deferred": {
