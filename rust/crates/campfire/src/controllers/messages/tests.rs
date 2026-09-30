@@ -14,6 +14,68 @@ const PNG: &[u8] = &[
 
 const TURBO_STREAM_ACCEPT: &str = "text/vnd.turbo-stream.html, text/html, application/xhtml+xml";
 
+// WS11: security regressions through the real router, database and verifier.
+#[tokio::test]
+async fn ws11_reply_token_only_creates_messages() {
+    let app = TestApp::boot().await.expect("build the default parity seed");
+    let token = rails_compat::verifiers::bot_reply::token_for(
+        &app.booted.app.secrets, BENDER, ALL_TALK, app.booted.app.clock.now(),
+    );
+    let base = format!("/rooms/{ALL_TALK}/{token}/messages");
+    let mut bot = app.anonymous();
+    let created = bot.send(Req::new(Method::POST, &base).body("Reply token message")).await;
+    assert_eq!(created.status, StatusCode::CREATED);
+    let id: i64 = created.location().unwrap().rsplit('/').next().unwrap().parse().unwrap();
+    let oracle: serde_json::Value = serde_json::from_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../vectors/agents_bot_contract.json"))).unwrap();
+    for (index, (method, path)) in [
+        (Method::GET, base.clone()),
+        (Method::PUT, format!("{base}/{id}")),
+        (Method::DELETE, format!("{base}/{id}")),
+        (Method::POST, format!("{base}/{id}/boosts")),
+        (Method::DELETE, format!("{base}/{id}/boosts/0")),
+    ].into_iter().enumerate() {
+        let response = bot.send(Req::new(method.clone(), &path).body("Forbidden")).await;
+        let expected = StatusCode::from_u16(oracle["reply_denials"][index]["status"].as_u64().unwrap() as u16).unwrap();
+        assert_eq!(response.status, expected, "{method} {path}");
+    }
+    let saved = app.db().read(move |conn| Message::find(conn, id)?.body_html(conn)).await.unwrap();
+    assert!(saved.unwrap().contains("Reply token message"));
+}
+
+#[tokio::test]
+async fn ws11_bot_cannot_manage_system_notes() {
+    let app = TestApp::boot().await.expect("build the default parity seed");
+    let note = app.db().write(|tx| Message::create(tx, campfire_db::NewMessage {
+        room_id: ALL_TALK, creator_id: BENDER, body: Some("System note".into()),
+        system_note: true, ..Default::default()
+    })).await.unwrap();
+    let mut bot = app.anonymous();
+    let path = format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages/{}", note.id);
+    for method in [Method::PUT, Method::DELETE] {
+        assert_eq!(bot.send(Req::new(method, &path).body("Changed")).await.status, StatusCode::FORBIDDEN);
+    }
+    assert!(app.db().read(move |conn| Message::find(conn, note.id)).await.is_ok());
+}
+
+#[tokio::test]
+async fn ws11_bot_pagination_counts_only_root_messages() {
+    let app = TestApp::boot().await.expect("build the default parity seed");
+    let count = messages_in(&app, ALL_TALK).await.len();
+    let reply = app.db().write(|tx| {
+        let mut thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread {
+            room_id: ALL_TALK, creator_id: DAVID, name: Some("Bot pagination".into()), ..Default::default()
+        })?;
+        thread.post_message(tx, DAVID, campfire_db::NewMessage { body: Some("Thread reply".into()), ..Default::default() })
+    }).await.unwrap();
+    let mut bot = app.anonymous();
+    let base = format!("/rooms/{ALL_TALK}/{BENDER_KEY}/messages");
+    let page = bot.get(&base).await;
+    assert_eq!(page.status, StatusCode::OK);
+    assert_eq!(page.header("x-total-count"), Some(count.to_string().as_str()));
+    assert!(page.json().as_array().unwrap().iter().all(|m| m["id"] != reply.id));
+    assert_eq!(bot.get(&format!("{base}?before={}", reply.id)).await.status, StatusCode::NOT_FOUND);
+}
+
 async fn messages_in(app: &TestApp, room_id: i64) -> Vec<Message> {
     let mut messages = app.db().read(move |conn| Message::for_room(conn, room_id)).await.unwrap();
     messages.sort_by_key(|m| (m.created_at, m.id));

@@ -237,6 +237,11 @@ impl Message {
         query_one(conn, &sql, [room_id, id], Self::from_row)?.or_not_found("Message")
     }
 
+    /// `room.root_messages.count` (bot API pagination excludes replies).
+    pub fn count_roots_in_room(conn: &Connection, room_id: i64) -> Result<i64> {
+        sql::count(conn, r#"SELECT COUNT(*) FROM "messages" WHERE "room_id" = ? AND "thread_id" IS NULL"#, [room_id])
+    }
+
     /// `room.messages.count`
     pub fn count_in_room(conn: &Connection, room_id: i64) -> Result<i64> {
         sql::count(

@@ -1,0 +1,41 @@
+{
+  "reference_pin": "d7c7de92",
+  "reply_denials": [
+    {
+      "method": "get",
+      "status": 403
+    },
+    {
+      "method": "put",
+      "status": 403
+    },
+    {
+      "method": "delete",
+      "status": 403
+    },
+    {
+      "method": "post",
+      "status": 403
+    },
+    {
+      "method": "delete",
+      "status": 404
+    }
+  ],
+  "system_note_denials": [
+    {
+      "method": "put",
+      "status": 403
+    },
+    {
+      "method": "delete",
+      "status": 403
+    }
+  ],
+  "root_page": {
+    "status": 200,
+    "total": 133,
+    "expected_total": 133,
+    "excludes_reply": true
+  }
+}

@@ -20,6 +20,7 @@ fn before() -> Before {
 
 pub async fn index(c: &mut Ctx) -> Result {
     before_actions(c, before()).await?;
+    deny_bot_reply_token(c)?;
     let room = set_room(c).await?;
     let messages = find_paged_messages(c, &room).await?;
     set_pagination_headers(c, &room, &messages).await?;
@@ -37,6 +38,9 @@ pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, before()).await?;
     let room = set_room(c).await?;
     ensure_body_or_attachment_present(c)?;
+    if room.board() {
+        return Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY));
+    }
     // MessagesController#create
     let attributes = message_params(c)?;
     let message = create_message(c, &room, attributes).await?;
@@ -49,9 +53,10 @@ pub async fn create(c: &mut Ctx) -> Result {
 
 pub async fn update(c: &mut Ctx) -> Result {
     before_actions(c, before()).await?;
+    deny_bot_reply_token(c)?;
     let room = set_room(c).await?;
     let message = set_message(c, &room).await?;
-    ensure_can_administer(c, &message)?;
+    ensure_can_manage_bot_message(c, &message)?;
     // MessagesController#update
     let attributes = message_params(c)?;
     let message = update_message(c, message, attributes).await?;
@@ -67,11 +72,27 @@ pub async fn update(c: &mut Ctx) -> Result {
 
 pub async fn destroy(c: &mut Ctx) -> Result {
     before_actions(c, before()).await?;
+    deny_bot_reply_token(c)?;
     let room = set_room(c).await?;
     let message = set_message(c, &room).await?;
-    ensure_can_administer(c, &message)?;
+    ensure_can_manage_bot_message(c, &message)?;
     destroy_message(c, &room, &message).await?;
     Ok(c.head(StatusCode::NO_CONTENT))
+}
+
+/// `deny_bot_reply_token`: a short-lived webhook reply token authenticates create only.
+pub(crate) fn deny_bot_reply_token(c: &Ctx) -> Result<()> {
+    if concerns::authenticated_by(c) == concerns::AuthenticatedBy::BotReply {
+        return halt(concerns::head(StatusCode::FORBIDDEN));
+    }
+    Ok(())
+}
+
+fn ensure_can_manage_bot_message(c: &mut Ctx, message: &Message) -> Result<()> {
+    if message.system_note {
+        return halt(concerns::head(StatusCode::FORBIDDEN));
+    }
+    ensure_can_administer(c, message)
 }
 
 /// `set_room`: `Current.user.rooms.find_by(id: params[:room_id])`, else `head :not_found`.
@@ -124,7 +145,7 @@ async fn set_pagination_headers(c: &mut Ctx, room: &Room, messages: &[Message]) 
         .app()
         .db
         .read(move |conn| {
-            let count = Message::count_in_room(conn, room_id)?;
+            let count = Message::count_roots_in_room(conn, room_id)?;
             let next_page = match (first, last) {
                 (Some(_), Some(last)) if after => {
                     Message::exists_after(conn, Timeline::Room(room_id), &last)?.then_some(("after", last.id))

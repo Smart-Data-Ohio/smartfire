@@ -17,7 +17,7 @@
 //! | stuck GitHub claims | 30 s | WS15 |
 //! | stuck Fizzy claims | 30 s | WS15 |
 //! | calendar push channels | 1 h (`Calendar::PushChannel::RENEW_INTERVAL`) | WS14 |
-//! | clear plaintext bot tokens | 24 h, its work once per process | WS11 registers it; ported here ([`clear_plaintext_bot_tokens_task`]), see below |
+//! | clear plaintext bot tokens | 24 h, its work once per process | registered ([`clear_plaintext_bot_tokens_task`]) |
 //! | retention prune | `RETENTION_PRUNE_INTERVAL` (24 h) | WS8 |
 //! | presence leases | 1 min | WS17 |
 //! | meeting status | 1 min | WS14 |
@@ -30,13 +30,8 @@
 //! The huddle reconciler's steps (overdue invitations, stale streams) belong to WS13, and are
 //! registered in [`huddle_reconciler`].
 //!
-//! Clearing plaintext bot tokens is ported but not registered: WS11 owns the task and registers
-//! it. Production's rows were healed long ago by Rails' own `bin/periodic`, but the parity seed
-//! (`parity/seeds/default.rb`) still writes plaintext tokens that disagree with the digests, and
-//! the parity reference doesn't run `bin/periodic`: registered now, it would re-key the seed's
-//! bots at boot, and the bot API's parity screens and seeded tests would fail on the port alone.
-//! WS11 fixes the seed (no stale plaintext tokens), regenerates the cable golden vectors that
-//! record them, and then registers [`clear_plaintext_bot_tokens_task`] in [`periodic`].
+//! The plaintext scrub runs once per process, retrying failures. Parity seeds store only
+//! digests, so booting the scheduler preserves their deterministic test keys.
 //!
 //! An invalid interval disables only the loop that reads it, as it aborts only the Rails process
 //! that reads it (`bin/periodic` for `EVENT_REMINDERS_INTERVAL` and `RETENTION_PRUNE_INTERVAL`,
@@ -122,6 +117,7 @@ impl Loops {
 /// Messaging tasks with domain implementations; notification policy is owned by WS17.
 pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
     let mut periodic = Periodic::new("Periodic");
+    periodic.task(clear_plaintext_bot_tokens_task());
     periodic.task(Task::new(
         "saved item reminders",
         intervals.reminders,
@@ -194,7 +190,6 @@ pub(super) async fn poll_closing(db: &Database) -> anyhow::Result<()> {
 }
 
 /// `Task.new("clear plaintext bot tokens", BOT_TOKEN_CLEAR_INTERVAL, clear_bot_tokens_once)`.
-#[allow(dead_code, reason = "WS11 registers it once the parity seed stops writing stale plaintext tokens (see the module's docs)")]
 pub fn clear_plaintext_bot_tokens_task() -> Task<App> {
     Task::once("clear plaintext bot tokens", BOT_TOKEN_CLEAR_INTERVAL, |app: App| async move { clear_plaintext_bot_tokens(&app.db).await.map(drop) })
 }
@@ -208,7 +203,6 @@ pub fn huddle_reconciler(_interval: Duration) -> Periodic<App> {
 /// `Bots::ClearPlaintextTokens.run!`: for every user that still has a plaintext `bot_token`, the
 /// digest is recomputed from it and the plaintext nulled, one conditional update per row (a key
 /// reset between the read and the write wins). Returns how many rows it healed.
-#[allow(dead_code, reason = "WS11 registers it once the parity seed stops writing stale plaintext tokens (see the module's docs)")]
 pub async fn clear_plaintext_bot_tokens(db: &Database) -> anyhow::Result<usize> {
     let tokens: Vec<(i64, String)> = db
         .read(|conn| {

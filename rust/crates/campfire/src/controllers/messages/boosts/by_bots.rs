@@ -8,7 +8,7 @@ use campfire_views::messages::json;
 use super::{broadcast_create, create_boost, destroy_boost, set_boost};
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
-use crate::controllers::messages::by_bots::{is_blank, raw_request_body};
+use crate::controllers::messages::by_bots::{deny_bot_reply_token, is_blank, raw_request_body};
 use crate::controllers::messages::present;
 use crate::controllers::presenters::page::db_error;
 
@@ -19,6 +19,7 @@ fn before() -> Before {
 pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, before()).await?;
     let message = set_message(c).await?;
+    deny_bot_reply_token(c)?;
     // ensure_content_present
     let content = raw_request_body(c);
     if is_blank(&content) {
@@ -43,6 +44,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
         Err(Error::NotFound) => return Ok(concerns::head(StatusCode::NOT_FOUND)),
         Err(error) => return Err(error),
     };
+    deny_bot_reply_token(c)?;
     destroy_boost(c, &message, boost).await?;
     Ok(c.head(StatusCode::NO_CONTENT))
 }
