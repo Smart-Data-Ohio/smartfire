@@ -43,7 +43,7 @@ fn install(conn: &crate::Connection, statements: Statements) -> usize {
     let result = unsafe {
         rusqlite::ffi::sqlite3_trace_v2(
             db,
-            rusqlite::ffi::SQLITE_TRACE_STMT as u32,
+            rusqlite::ffi::SQLITE_TRACE_STMT,
             Some(capture),
             context.cast(),
         )
