@@ -1,5 +1,10 @@
 # Full, unnormalized sidebar bytes from the pinned app. Tokens are lent to both renderers.
 require 'json'
+require "digest"
+{
+  "app/controllers/users/sidebars_controller.rb" => "a5816989380845cdd31e9abb2b75106629ccbfde1ee1c4edea1ab51a90381341",
+  "app/views/users/sidebars/_room_categories.html.erb" => "14d8fbd173e1a19c8b9279ff1f514ab4026f5536d233b6baea897b857bc3af10",
+}.each { |path, hash| raise "reference drift: #{path}" unless Digest::SHA256.file(Rails.root.join(path)).hexdigest == hash }
 require 'digest'
 raise 'reference drift' unless Digest::SHA256.file(Rails.root.join('app/views/users/sidebars/show.html.erb')).hexdigest == 'ac37bdb0e0fbdefd1a8ba583885d9d88f78955e741fefcc5233efafdfea165ff'
 class SidebarGoldenController < Users::SidebarsController

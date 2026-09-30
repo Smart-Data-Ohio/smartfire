@@ -29,6 +29,7 @@ try:
             # render context, leaving all old authorization and mutation logic unchanged.
             source = source.replace(b'&base_url, |_| {', b'&base_url, |ctx| {')
             source = source.replace(b'SidebarSharedPartial { room: sidebar_room }', b'SidebarSharedPartial { ctx, room: sidebar_room }')
+            source = source.replace(b'Ok(campfire_views::rooms::ShowView {', b'Ok(campfire_views::rooms::ShowView { shell: Default::default(), scroll_to_unread_divider: None, jump_to_unread_url: None, unread_divider_message_id: None, unread_count: 0,')
             source += b"\n#[cfg(test)]\nmod parity_tests;\n"
         (rust / path).write_bytes(source)
     result = subprocess.run(command, cwd=rust, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -38,9 +39,9 @@ try:
     if summary:
         print(summary.group())
     assert result.returncode != 0 and summary, "must fail assertions, not compilation"
-    assert "17 failed" in summary.group() and "1 passed" in summary.group(), output[-5000:]
+    assert "17 failed" in summary.group() and "2 passed" in summary.group(), output[-5000:]
     assert "error: could not compile" not in output, "compilation is not discrimination"
-    print("WS8br discrimination: 17 HTTP regressions rejected bb6c5d78; 1 existing guard passed; source restored")
+    print("WS8br discrimination: 17 HTTP regressions rejected bb6c5d78; 1 existing guard and 1 independent unread-presenter test passed; source restored")
     for path, content in saved.items():
         (rust / path).write_bytes(content)
     path = "crates/campfire/src/controllers/rooms.rs"

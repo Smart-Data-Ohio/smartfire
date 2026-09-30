@@ -34,6 +34,8 @@ pub fn mention_prompt_src(room_id: i64) -> String {
 /// A persisted room.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct RoomView {
+    #[serde(default = "default_involvement")]
+    pub involvement: String,
     pub id: i64,
     pub kind: RoomKind,
     pub name: Option<String>,
@@ -44,6 +46,7 @@ pub struct RoomView {
 }
 
 impl RoomView {
+    pub fn is_stage(&self)->bool { self.header.as_ref().is_some_and(|h|h.param_key=="rooms_stage") }
     pub fn header_html(&self, ctx: &ViewContext) -> h::Html {
         let fallback;
         let header = match &self.header {
@@ -85,6 +88,16 @@ impl RoomView {
 /// What `rooms/show` shows.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct ShowView {
+    #[serde(default)]
+    pub shell: ShellComponents,
+    #[serde(default)]
+    pub scroll_to_unread_divider: Option<bool>,
+    #[serde(default)]
+    pub jump_to_unread_url: Option<String>,
+    #[serde(default)]
+    pub unread_divider_message_id: Option<i64>,
+    #[serde(default)]
+    pub unread_count:i64,
     pub room: RoomView,
     /// `room.updated_at`, the refresh controller's `loaded_at`.
     pub updated_at: Timestamp,
@@ -102,23 +115,31 @@ pub struct ShowView {
 
 /// `rooms/show`.
 #[derive(Template)]
-#[template(path = "rooms/show.html", blocks = ["head", "content"])]
+#[template(path = "rooms/show.html", blocks = ["head", "content", "nav", "member_panel", "thread_panel", "footer"])]
 pub struct Show<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub show: &'a ShowView,
 }
 
 impl Page for Show<'_> {
+    fn has_sidebar(&self)->bool { true }
     fn page_title(&self) -> Option<String> {
         Some(self.show.room.display_name.clone())
     }
 
     fn body_class(&self) -> Option<&str> {
-        Some("sidebar")
+        Some("sidebar room-workspace")
     }
 }
 
 impl Show<'_> {
+    fn multi_select_bar(&self)->h::Html { h::raw(crate::shared::MultiSelectBar{exit_button:true}.render().expect("member selection bar renders")) }
+
+    fn jump_to_unread(&self,url:Option<&str>)->h::Html {
+        let label=h::image_tag(self.ctx,"arrow-up.svg",h::attrs().aria_hidden().size(20)).0+&h::content_tag_text("span",h::attrs(),"Jump to unread").0;
+        let attrs=h::attrs().id("jump-to-unread").class("message-area__jump-to-unread btn");
+        match url { Some(url)=>h::link_to(url,attrs,&label),None=>h::content_tag("button",attrs.data("action","messages#jumpToUnread").attr("hidden",true),&label) }
+    }
     fn loaded_at(&self) -> i64 {
         epoch_ms(self.show.updated_at)
     }
@@ -366,4 +387,24 @@ mod filters {
         let layout = FormLayout { ctx, room, can_administer: *can_administer, kind, content: content.to_string() };
         Ok(Html::from(askama::filters::Safe(layout.render()?)))
     }
+}
+
+fn default_involvement()->String { "mentions".into() }
+/// Trusted output supplied by WS8b-m (and WS13/WS17 for configured header/OOO children).
+/// These fragments are page inputs, never a shared fragment cache or broadcast payload.
+#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
+pub struct ShellComponents {
+    pub pins_panel:String,
+    pub thread_panel:String,
+    pub huddle_header:String,
+    pub ooo_notices:String,
+    pub poll_builder:String,
+    pub message_template:Option<String>,
+    pub composer:Option<String>,
+    pub message_list:Option<String>,
+}
+/// Stable WS8b-m entry point. Until its list adapter lands, an empty collection emits zero
+/// bytes, exactly as Rails' `render partial: "messages/message", collection: []` does.
+pub fn room_message_list(_ctx:&ViewContext, show:&ShowView)->h::Html {
+    show.shell.message_list.as_ref().map(|html|h::raw(html.clone())).unwrap_or_else(h::empty)
 }

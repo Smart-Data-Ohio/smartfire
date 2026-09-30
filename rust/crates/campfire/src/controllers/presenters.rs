@@ -4,6 +4,7 @@
 
 pub mod accounts;
 pub mod rooms_directory;
+pub mod room_shell;
 pub mod switcher;
 pub mod attachments;
 pub mod page;
@@ -183,6 +184,7 @@ impl<'a> Presenter<'a> {
     pub fn room_view(&self, room: &Room, for_user: &User) -> Result<RoomView> {
         let header = rooms_directory::header(self.conn, room, for_user)?;
         Ok(RoomView {
+            involvement: campfire_db::Membership::find_by_room_and_user(self.conn,room.id,for_user.id)?.and_then(|m|m.involvement).map(|i|i.name().to_string()).unwrap_or_else(||room.default_involvement().to_string()),
             id: room.id,
             kind: room_kind(room.room_type),
             name: room.name.clone(),

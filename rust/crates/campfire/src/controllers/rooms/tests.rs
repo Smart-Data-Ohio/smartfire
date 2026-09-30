@@ -15,7 +15,9 @@ async fn show_renders_the_room_and_remembers_it() {
     let html = reply.text();
     assert!(html.contains("<title>All Talk</title>"), "{html}");
     assert!(html.contains(r#"<meta name="current-room-id" content="486777696">"#));
-    assert_eq!(html.matches(r#"data-controller="reply""#).count(), 40, "the last page");
+    assert_eq!(html.matches(r#"data-controller="reply""#).count(), 0, "authorized empty list placeholder until WS8b-m adapter lands");
+    let messages=app.db().read(|conn|crate::controllers::presenters::room_shell::find_messages(conn,ALL_TALK,None)).await.unwrap();
+    assert_eq!(messages.len(),40,"the shell gathers the last page for its owner");
     assert!(reply.headers.get_all("set-cookie").iter().any(|c| c.to_str().unwrap().starts_with(&format!("last_room={ALL_TALK}"))));
     assert_eq!(reply.header("x-version"), Some("parity"));
 }
@@ -31,7 +33,10 @@ async fn show_at_a_message_pages_around_it() {
     let reply = app.david().get(&format!("/rooms/{ALL_TALK}/@{}", first.id)).await;
     assert_eq!(reply.status, StatusCode::OK);
     // The first message and the 40 after it.
-    assert_eq!(reply.text().matches(r#"data-controller="reply""#).count(), 41);
+    assert_eq!(reply.text().matches(r#"data-controller="reply""#).count(), 0,"authorized empty list placeholder");
+    let messages=app.db().read(move |conn|crate::controllers::presenters::room_shell::find_messages(conn,ALL_TALK,Some(first.id))).await.unwrap();
+    assert_eq!(messages.len(),41,"root anchor gathers the first message and forty after it");
+    assert_eq!(messages.first().unwrap().id,first.id);
 }
 
 #[tokio::test]
@@ -308,8 +313,14 @@ async fn room_pages_carry_only_their_own_viewers_session_bound_values() {
         .unwrap();
     // The existing seed's boosts are all counted reactions. Add one free-text boost to this
     // test's private database so the legacy delete form's tokenlessness is still exercised.
-    let newest_id = newest.id;
-    app.db().write(move |tx| campfire_db::Boost::create(tx, newest_id, DAVID, "Hello")).await.unwrap();
+    let latest_id = newest.id;
+    let boost_id=app.db().read(move |conn| {
+        let latest=campfire_db::Message::find(conn,latest_id)?;
+        Ok(campfire_db::Message::page_before(conn,campfire_db::Timeline::Room(ALL_TALK),&latest)?.last().unwrap().id)
+    }).await.unwrap();
+    // Exercise the legacy tokenless form in the owned pagination endpoint while the shell's
+    // main list uses the explicitly authorized empty placeholder.
+    app.db().write(move |tx| campfire_db::Boost::create(tx, boost_id, DAVID, "Hello")).await.unwrap();
     let room = format!("/rooms/{ALL_TALK}");
     let older = format!("/rooms/{ALL_TALK}/messages?before={}", newest.id);
     let mut david = app.sign_in(DAVID).await;

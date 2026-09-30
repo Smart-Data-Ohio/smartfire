@@ -858,3 +858,24 @@ async fn parity_category_name_uses_active_model_string_cast() {
     let name = app.db().read(|conn| Ok(campfire_db::RoomCategory::ordered_for_user(conn, DAVID)?.last().unwrap().name.clone())).await.unwrap();
     assert_eq!(serde_json::json!(name), oracle()["cases"]["category_false_name_state"]);
 }
+
+#[tokio::test]
+async fn unread_shell_facts_match_rails_pointer_cases() {
+    let app=TestApp::boot_frozen().await.expect("seed required");
+    let cases:Vec<serde_json::Value>=serde_json::from_str(include_str!("../../../../../vectors/room_shell_unread.json")).unwrap();
+    for case in cases {
+        let name=case["name"].as_str().unwrap().to_string();
+        let stamp=case["unread_at"].as_str().map(|t|campfire_db::Timestamp::from_jiff(t.parse::<jiff::Timestamp>().unwrap()));
+        let pointer=case["last_read_message_id"].as_i64();
+        app.db().write(move |tx| { tx.conn().execute("UPDATE memberships SET unread_at=?,last_read_message_id=? WHERE room_id=486777696 AND user_id=127326141",rusqlite::params![stamp,pointer])?;Ok(()) }).await.unwrap();
+        let result=app.db().read(|conn| {
+            let membership=campfire_db::Membership::find_by_room_and_user(conn,486777696,127326141)?.unwrap();
+            let messages=crate::controllers::presenters::room_shell::find_messages(conn,486777696,None)?;
+            crate::controllers::presenters::room_shell::unread_divider(conn,&membership,&messages)
+        }).await.unwrap();
+        assert_eq!(result.message_id,case["divider"].as_i64(),"{name}");
+        assert_eq!(result.count,case["count"].as_i64().unwrap(),"{name}");
+        assert_eq!(result.scroll,case["scroll"].as_bool(),"{name}");
+        assert_eq!(result.jump_url.as_deref(),case["jump_url"].as_str(),"{name}");
+    }
+}

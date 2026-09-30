@@ -282,15 +282,15 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
         .app()
         .db
         .read(move |conn| {
-            let messages = match message_id.map(|id| Message::find_by_id(conn, id)).transpose()?.flatten() {
-                Some(message) if message.room_id == room.id => Message::page_around(conn, Timeline::Room(room.id), &message)?,
-                _ => Message::last_page(conn, Timeline::Room(room.id))?,
-            };
+            let messages = super::presenters::room_shell::find_messages(conn,room.id,message_id)?;
+            let membership=campfire_db::Membership::find_by_room_and_user(conn,room.id,user.id)?.ok_or(campfire_db::Error::RecordNotFound("Membership"))?;
+            let divider=super::presenters::room_shell::unread_divider(conn,&membership,&messages)?;
             let mut presenter = Presenter::new(conn, &app, request_host);
             presenter.cache_base_url = Some(cache_base_url);
             let original = Room::original(conn)?.is_some_and(|original| original.id == room.id);
             let room_gid = crate::channels::room_gid(&room).to_param();
             Ok(campfire_views::rooms::ShowView {
+                shell:Default::default(),scroll_to_unread_divider:divider.scroll,jump_to_unread_url:divider.jump_url,unread_divider_message_id:divider.message_id,unread_count:divider.count,
                 room: presenter.room_view(&room, &user)?,
                 updated_at: room.updated_at.jiff(),
                 user: user_view(&app.secrets, &user),

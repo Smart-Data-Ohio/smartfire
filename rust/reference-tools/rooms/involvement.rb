@@ -1,4 +1,8 @@
 require 'json'
+require "digest"
+{
+  "app/controllers/rooms/involvements_controller.rb" => "23a1d4390c398b4f3c428e182401796ea337d701b182ed708d9a18aba3f13e45",
+}.each { |path, hash| raise "reference drift: #{path}" unless Digest::SHA256.file(Rails.root.join(path)).hexdigest == hash }
 user=User.find(127326141)
 session=user.sessions.create!(two_factor_verified_at:Time.current)
 request=ActionDispatch::Request.new(Rails.application.env_config.merge('HTTP_HOST'=>'campfire.test','rack.input'=>StringIO.new))
