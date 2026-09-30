@@ -251,6 +251,7 @@ impl Room {
         creator_id: i64,
         direct_member_key: Option<&str>,
     ) -> Result<Self> {
+        if room_type == RoomType::Direct { crate::models::direct_room::validate_name(name)?; }
         let now = tx.now();
         let id: i64 = tx.conn().query_row_cached(
             r#"INSERT INTO "rooms" ("created_at", "creator_id", "direct_member_key", "name", "type", "updated_at") VALUES (?, ?, ?, ?, ?, ?) RETURNING "id""#,
@@ -437,6 +438,7 @@ impl Room {
             errors.add("type", "can't be changed for a direct room");
             return errors.into_result();
         }
+        if self.direct() { crate::models::direct_room::validate_name(name.as_ref().unwrap_or(&self.name).as_deref())?; }
         if name.is_none() && room_type.is_none() {
             return Ok(());
         }
@@ -482,6 +484,14 @@ impl Room {
         }
         tx.conn()
             .execute_cached(r#"DELETE FROM "rooms" WHERE "rooms"."id" = ?"#, [self.id])?;
+        Ok(())
+    }
+
+    /// Core mark/removal portion of `begin_destroy!`. The room-delete domain extends this with
+    /// grant/stream cleanup; the caller must enqueue the destroy in this same transaction.
+    pub fn begin_destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
+        tx.conn().execute_cached("UPDATE rooms SET deleted_at=?,direct_member_key=NULL,updated_at=? WHERE id=?",params![tx.now(),tx.now(),self.id])?;
+        tx.conn().execute_cached("DELETE FROM memberships WHERE room_id=?",[self.id])?;
         Ok(())
     }
 

@@ -135,6 +135,13 @@ check("sent schedule") do
 end
 pending = ScheduledMessage.find_by!(markdown_source: "Pending hello")
 check("pending schedule") { pending.pending? && pending.sendable? && ScheduledMessage.owned_by(david).include?(pending) }
+group = Rooms::Direct.find_by!(name: "Rust Group")
+check("group mutations") do
+  group.users.pluck(:name).sort == %w[ David JZ Jason ].sort &&
+    group.direct_member_key == Rooms::Direct.member_key_for(group.user_ids) &&
+    group.messages.where(system_note: true).ordered.map(&:plain_text_body) ==
+      [ "renamed the group to Rust Group", "added JZ to the group", "left the group" ]
+end
 check("quote references") { Message.find_by!(client_message_id: "rust-quote").referenced_messages.to_a == [ pinned ] }
 dropped = ScheduledMessage.find_by!(markdown_source: "Dropped hello")
 check("dropped schedule") do

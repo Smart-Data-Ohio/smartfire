@@ -90,6 +90,10 @@ pub enum Partial {
     PinsList { room_id: i64 },
     /// `messages/message_links/_cards` with `message:` (the quoting message).
     QuoteCards { message_id: i64 },
+    /// `users/sidebars/rooms/direct`, with explicit recipient-specific member ids.
+    DirectSidebar { membership_id: i64, member_ids: Vec<i64> },
+    /// `rooms/show/header_identity`, rendered for this recipient only.
+    RoomHeader { room_id: i64, for_user_id: i64 },
 }
 
 /// `dom_id(record, prefix)`

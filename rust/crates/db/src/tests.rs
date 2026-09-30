@@ -4,6 +4,7 @@ mod account_test;
 mod callbacks_test;
 mod channel_thread_test;
 mod differential_test;
+mod direct_room_test;
 mod first_run_test;
 mod forwarder_test;
 mod fixtures_test;

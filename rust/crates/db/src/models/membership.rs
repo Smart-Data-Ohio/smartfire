@@ -383,6 +383,11 @@ impl Membership {
         )?;
         let (user_id, room_id) = (self.user_id, self.room_id);
         tx.after_commit(move |tx| {
+            if let Some(room) = Room::find_by_id(tx.conn(),room_id)? {
+                tx.emit_after_commit(crate::Event::Broadcast(crate::broadcasts::Broadcast::remove(
+                    vec![crate::broadcasts::Streamable::User(user_id),crate::broadcasts::Streamable::Name("rooms")],
+                    crate::broadcasts::room_dom_id(&room,Some("list")))));
+            }
             User::find(tx.conn(), user_id)?.reset_remote_connections(tx);
             // `remove_thread_membership` (WS8)
             crate::models::ThreadMembership::delete_for_room_member(tx, room_id, user_id)?;
