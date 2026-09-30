@@ -1,0 +1,226 @@
+{
+  "reference_pin": "d7c7de92",
+  "results": {
+    "required": {
+      "status": 422,
+      "payload": null,
+      "error": "message_id or thread_id is required"
+    },
+    "missing_message": {
+      "status": 404,
+      "payload": null,
+      "error": "Message not found"
+    },
+    "missing_thread": {
+      "status": 404,
+      "payload": null,
+      "error": "Thread not found"
+    },
+    "root": {
+      "status": 200,
+      "payload": {
+        "message": {
+          "id": 900080001,
+          "creator": {
+            "id": 127326141,
+            "name": "David",
+            "preserved": "yes",
+            "agent": false,
+            "human": true
+          },
+          "streaming": false
+        },
+        "thread": null,
+        "root_message": null,
+        "messages": [
+          {
+            "id": 900080001,
+            "creator": {
+              "id": 127326141,
+              "name": "David",
+              "preserved": "yes",
+              "agent": false,
+              "human": true
+            },
+            "streaming": false
+          }
+        ],
+        "authors": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "agent": false,
+            "human": true
+          }
+        ],
+        "room": {
+          "id": 900080020,
+          "name": "Context room",
+          "purpose": null
+        }
+      },
+      "error": null
+    },
+    "thread": {
+      "status": 200,
+      "payload": {
+        "message": null,
+        "thread": {
+          "id": 900080010,
+          "name": "Context",
+          "status": "active",
+          "room_id": 900080020,
+          "parent_message_id": 900080001
+        },
+        "root_message": {
+          "id": 900080001,
+          "creator": {
+            "id": 127326141,
+            "name": "David",
+            "preserved": "yes",
+            "agent": false,
+            "human": true
+          },
+          "streaming": false
+        },
+        "messages": [
+          {
+            "id": 900080003,
+            "creator": {
+              "id": 394959859,
+              "name": "Bender Bot",
+              "preserved": "yes",
+              "agent": true,
+              "human": false
+            },
+            "streaming": false
+          },
+          {
+            "id": 900080004,
+            "creator": {
+              "id": 127326141,
+              "name": "David",
+              "preserved": "yes",
+              "agent": false,
+              "human": true
+            },
+            "streaming": true
+          }
+        ],
+        "authors": [
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "agent": true,
+            "human": false
+          },
+          {
+            "id": 127326141,
+            "name": "David",
+            "agent": false,
+            "human": true
+          }
+        ],
+        "room": {
+          "id": 900080020,
+          "name": "Context room",
+          "purpose": null
+        }
+      },
+      "error": null
+    },
+    "trigger": {
+      "status": 200,
+      "payload": {
+        "message": {
+          "id": 900080003,
+          "creator": {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "preserved": "yes",
+            "agent": true,
+            "human": false
+          },
+          "streaming": false
+        },
+        "thread": {
+          "id": 900080010,
+          "name": "Context",
+          "status": "active",
+          "room_id": 900080020,
+          "parent_message_id": 900080001
+        },
+        "root_message": {
+          "id": 900080001,
+          "creator": {
+            "id": 127326141,
+            "name": "David",
+            "preserved": "yes",
+            "agent": false,
+            "human": true
+          },
+          "streaming": false
+        },
+        "messages": [
+          {
+            "id": 900080002,
+            "creator": {
+              "id": 127326141,
+              "name": "David",
+              "preserved": "yes",
+              "agent": false,
+              "human": true
+            },
+            "streaming": false
+          },
+          {
+            "id": 900080003,
+            "creator": {
+              "id": 394959859,
+              "name": "Bender Bot",
+              "preserved": "yes",
+              "agent": true,
+              "human": false
+            },
+            "streaming": false
+          }
+        ],
+        "authors": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "agent": false,
+            "human": true
+          },
+          {
+            "id": 394959859,
+            "name": "Bender Bot",
+            "agent": true,
+            "human": false
+          }
+        ],
+        "room": {
+          "id": 900080020,
+          "name": "Context room",
+          "purpose": null
+        }
+      },
+      "error": null
+    },
+    "mismatch": {
+      "status": 422,
+      "payload": null,
+      "error": "Message is not in the given thread"
+    },
+    "revoked_mismatch": {
+      "status": 403,
+      "payload": null,
+      "error": "Forbidden: agent lacks read_messages capability"
+    },
+    "nonmember_mismatch": {
+      "status": 404,
+      "payload": null,
+      "error": "Message not found"
+    }
+  }
+}
