@@ -6,7 +6,8 @@ import subprocess
 
 root = Path(__file__).resolve().parents[2]
 env = os.environ.copy()
-env.update(CI='1', TMPDIR=str(root.parent / '.scratch'), CARGO_TARGET_DIR=str(root / '.scratch/target'), FIZZY_API_BASE_URL='http://127.0.0.1:51597')
+env.update(CI='1', TMPDIR=str(root.parent / '.scratch'), FIZZY_API_BASE_URL='http://127.0.0.1:51597')
+env.setdefault('CARGO_TARGET_DIR', str(root / '.scratch/target'))
 mutants = [
     ('fizzy_connections.rs', 'concerns::require_sudo_mode(c)?;', '', 'ws15e_fizzy_connection_http_matrix', 'WS15E_FIZZY_CONNECTION_CASE', 'sudo'),
     ('fizzy_message_cards.rs', '.is_some_and(|t| t.locked_at.is_some())', '.is_some_and(|_| false)', 'ws15e_fizzy_message_creation_http_matrix', 'WS15E_FIZZY_MESSAGE_CASE', 'locked'),
