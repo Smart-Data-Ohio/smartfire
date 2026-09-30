@@ -38,6 +38,7 @@ use crate::active_storage;
 // Controller modules (one per Rails controller namespace), plus the presenters that map rows to
 // view models. Controller agents add their `pub mod` lines here.
 pub mod accounts;
+pub mod agents;
 pub mod autocompletable;
 pub mod csp_reports;
 pub mod first_runs;
@@ -51,6 +52,9 @@ pub mod sessions;
 pub mod unfurl_links;
 pub mod users;
 pub mod welcome;
+
+#[cfg(test)]
+mod agent_http_tests;
 
 /// Anything that can serve a route: every `async fn(&mut Ctx) -> Result` qualifies.
 pub trait Action: Send + Sync + 'static {
@@ -185,6 +189,12 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "messages#destroy" => arc(messages::destroy),
         "messages/boosts/by_bots#create" => arc(messages::boosts::by_bots::create),
         "messages/boosts/by_bots#destroy" => arc(messages::boosts::by_bots::destroy),
+        "agents/events#index" => arc(agents::events),
+        "agents/events#ack" => arc(agents::ack),
+        "agents/steps#create" => arc(agents::create_step),
+        "agents/steps#update" => arc(agents::update_step),
+        "agents/slash_commands#create" => arc(agents::register_command),
+        "agents/slash_commands#destroy" => arc(agents::unregister_command),
         "messages/by_bots#index" => arc(messages::by_bots::index),
         "messages/by_bots#create" => arc(messages::by_bots::create),
         "messages/by_bots#update" => arc(messages::by_bots::update),

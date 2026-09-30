@@ -1,0 +1,295 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "event_envelope",
+      "method": "get",
+      "path": "/agents/events?envelope=1",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 200,
+      "response": {
+        "events": [
+          {
+            "id": 900000001,
+            "event_type": "github_action_completed",
+            "outcome": "delivered",
+            "created_at": "2026-03-02T16:00:00.000Z",
+            "github_action": {
+              "action": "github.comment",
+              "status": "done"
+            }
+          }
+        ],
+        "next_since": 900000002
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "x-smartfire-next-since": "900000002"
+      }
+    },
+    {
+      "name": "event_array",
+      "method": "get",
+      "path": "/agents/events",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 200,
+      "response": [
+        {
+          "id": 900000001,
+          "event_type": "github_action_completed",
+          "outcome": "delivered",
+          "created_at": "2026-03-02T16:00:00.000Z",
+          "github_action": {
+            "action": "github.comment",
+            "status": "done"
+          }
+        }
+      ],
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "x-smartfire-next-since": "900000002"
+      }
+    },
+    {
+      "name": "event_dropped_cursor",
+      "method": "get",
+      "path": "/agents/events?since=900000001&limit=1&envelope=1",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 200,
+      "response": {
+        "events": [],
+        "next_since": 900000002
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "x-smartfire-next-since": "900000002"
+      }
+    },
+    {
+      "name": "event_ack",
+      "method": "post",
+      "path": "/agents/events/900000001/ack",
+      "body": "{}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 200,
+      "response": {
+        "id": 900000001,
+        "outcome": "acknowledged"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "event_ack_replay",
+      "method": "post",
+      "path": "/agents/events/900000001/ack",
+      "body": "{}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 200,
+      "response": {
+        "id": 900000001,
+        "outcome": "acknowledged"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "event_ack_missing",
+      "method": "post",
+      "path": "/agents/events/0/ack",
+      "body": "{}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 404,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "agent_human_endpoint",
+      "method": "get",
+      "path": "/rooms.json",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 403,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "unknown_credential",
+      "method": "get",
+      "path": "/agents/events",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-unknown",
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "revoked_credential",
+      "method": "get",
+      "path": "/agents/events",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "expired_credential",
+      "method": "get",
+      "path": "/agents/events",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "missing_grant",
+      "method": "get",
+      "path": "/agents/events",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 403,
+      "response": {
+        "error": "Forbidden: agent lacks read_messages capability"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "step_no_parent",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{\"name\":\"Inspect\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "error": "Exactly one of message_id or thread_id is required"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "step_missing",
+      "method": "patch",
+      "path": "/agents/steps/0",
+      "body": "{\"name\":\"Inspect\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 404,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "slash_nonmember",
+      "method": "post",
+      "path": "/rooms/201306877/agents/slash_commands",
+      "body": "{\"name\":\"inspect\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 404,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "slash_missing_grant",
+      "method": "post",
+      "path": "/rooms/486777696/agents/slash_commands",
+      "body": "{\"name\":\"inspect\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 403,
+      "response": {
+        "error": "Forbidden: agent lacks post_messages capability"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "slash_invalid",
+      "method": "post",
+      "path": "/rooms/486777696/agents/slash_commands",
+      "body": "{\"name\":\"123\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "error": "Name is invalid"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "slash_missing",
+      "method": "delete",
+      "path": "/rooms/486777696/agents/slash_commands/absent",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 404,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "event_rate_overflow",
+      "method": "get",
+      "path": "/agents/events",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    }
+  ]
+}

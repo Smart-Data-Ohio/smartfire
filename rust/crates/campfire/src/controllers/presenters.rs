@@ -432,6 +432,12 @@ impl<'a> Presenter<'a> {
         fragment_cache::try_fetch_value(key, || self.render_message_json(message, base_url))
     }
 
+    /// WS8bm seam for MessagePayloadHelper's request-specific JSON. This must
+    /// never reuse the cached Jbuilder payload (reply/thread access is per user).
+    pub fn agent_message_payload(&self, _message: &Message) -> Result<serde_json::Value> {
+        Err(campfire_db::Error::Other("MessagePayloadHelper is not yet ported".into()))
+    }
+
     fn render_message_json(&self, message: &Message, base_url: &str) -> Result<MessageJson> {
         Ok(MessageJson {
             id: message.id,
