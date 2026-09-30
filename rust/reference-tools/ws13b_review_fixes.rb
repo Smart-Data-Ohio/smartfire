@@ -54,15 +54,21 @@ class WS13bReviewFixes
        after_mutation: @frames.map { |frame| frame[:huddleInvitation].slice(:eventType, :state) },
        ring_job_enqueued: @job_classes.include?("Notifications::HuddleRingJob")}
     end
-    failures = %w[create reuse].map do |operation|
+    failures = %w[create reuse group].map do |operation|
       setup
+      target = ""
+      if operation == "group"
+        kevin = User.find(ActiveRecord::FixtureSet.identify("kevin"))
+        @room.memberships.create!(user: kevin, involvement: "everything")
+        target = " AND NEW.user_id=#{kevin.id}"
+      end
       if operation == "reuse"
         issue
         ActivityItem.delete_all
         travel 180
       end
       @jobs.clear
-      ActiveRecord::Base.connection.execute("CREATE TRIGGER reject_huddle_item BEFORE INSERT ON activity_items WHEN NEW.event_type='huddle_started' BEGIN SELECT RAISE(ABORT,'review invitation failure'); END")
+      ActiveRecord::Base.connection.execute("CREATE TRIGGER reject_huddle_item BEFORE INSERT ON activity_items WHEN NEW.event_type='huddle_started'#{target} BEGIN SELECT RAISE(ABORT,'review invitation failure'); END")
       begin
         issue
         raise "expected invitation failure"

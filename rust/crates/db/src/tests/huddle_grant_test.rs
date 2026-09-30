@@ -583,3 +583,68 @@ fn huddle_never_seen_disconnect_is_silent_and_keeps_authorization() {
         Ok(())
     });
 }
+
+fn review_direct_setup(db: &TestDb) -> (i64, i64, i64) {
+    db.write(|tx| {
+        let room = crate::fixtures::identify("david_and_jason");
+        let user = crate::fixtures::identify("david");
+        let membership = Membership::find_by_room_and_user(tx.conn(), room, user)?.unwrap();
+        let session = Session::start(tx, user, None, None)?;
+        Ok((room, membership.id, session.id))
+    })
+}
+
+fn review_invitation_insert_failure(operation: &str) {
+    let oracle: serde_json::Value = serde_json::from_str(include_str!("ws13b_review_fixes.json")).unwrap();
+    for case in oracle["failures"].as_array().unwrap().iter().filter(|case| case["operation"] == operation) {
+        let db = TestDb::new();
+        db.clock.travel_to(Timestamp::parse_db("2026-01-01 12:00:00").unwrap());
+        let (room, membership, session) = review_direct_setup(&db);
+        let group_recipient = crate::fixtures::identify("kevin");
+        if operation == "group" {
+            db.write(move |tx| {
+                Membership::create_default(tx, room, group_recipient)?;
+                Ok(())
+            });
+        }
+        if case["operation"] == "reuse" {
+            db.write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config()));
+            db.write(|tx| Ok(tx.conn().execute("DELETE FROM activity_items WHERE source_type='HuddleGrant'", [])?));
+            db.travel(180);
+        }
+        db.sink.take();
+        let trigger = if operation == "group" {
+            format!("CREATE TRIGGER reject_huddle_item BEFORE INSERT ON activity_items WHEN NEW.event_type='huddle_started' AND NEW.user_id={group_recipient} BEGIN SELECT RAISE(ABORT,'review invitation failure'); END")
+        } else {
+            "CREATE TRIGGER reject_huddle_item BEFORE INSERT ON activity_items WHEN NEW.event_type='huddle_started' BEGIN SELECT RAISE(ABORT,'review invitation failure'); END".to_string()
+        };
+        db.write(move |tx| Ok(tx.conn().execute_batch(&trigger)?));
+        assert!(db.try_write(move |tx| HuddleGrant::issue(tx, session, membership, room, &config())).is_err());
+        let pushes = db.sink.take().iter().filter(|event| event.as_job::<crate::models::huddle_notices::PushInvitationJob>().is_some()).count();
+        assert_eq!(serde_json::json!(pushes), case["push_jobs"]);
+        db.read(move |conn| {
+            let count: i64 = conn.query_row("SELECT COUNT(*) FROM huddle_grants WHERE session_id=?", [session], |r| r.get(0))?;
+            assert_eq!(serde_json::json!(count), case["grants"], "{}: Rails commits issuance before invitation failure", case["operation"]);
+            let issued: Timestamp = conn.query_row("SELECT last_issued_at FROM huddle_grants WHERE session_id=?", [session], |r| r.get(0))?;
+            let expected: jiff::Timestamp = case["last_issued_at"].as_str().unwrap().parse().unwrap();
+            assert_eq!(issued, Timestamp::from_jiff(expected));
+            let count: i64 = conn.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='HuddleGrant'", [], |r| r.get(0))?;
+            assert_eq!(serde_json::json!(count), case["items"]);
+            Ok(())
+        });
+    }
+}
+
+#[test]
+fn ws13b_review_invitation_insert_failure_keeps_committed_new_grant() {
+    review_invitation_insert_failure("create");
+}
+#[test]
+fn ws13b_review_invitation_insert_failure_keeps_committed_reissuance() {
+    review_invitation_insert_failure("reuse");
+}
+
+#[test]
+fn ws13b_review_later_recipient_failure_keeps_earlier_invitation_committed() {
+    review_invitation_insert_failure("group");
+}

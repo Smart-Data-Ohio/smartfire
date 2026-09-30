@@ -113,8 +113,8 @@ impl HuddleGrant {
         }
         errors.into_result()
     }
-    /// Re-read all coordinates under SQLite's immediate write transaction. Invitation
-    /// writes and their durable policy requests commit atomically with issuance.
+    /// Re-read coordinates under SQLite's immediate transaction. Rails' issue!
+    /// commits the grant before after_issued! creates or refreshes invitations.
     pub fn issue(
         tx: &mut Tx<'_>,
         session_id: i64,
@@ -133,8 +133,12 @@ impl HuddleGrant {
                 continue;
             }
             let (grant, previous_issue) = result?;
-            crate::models::huddle_invitations::after_issued(tx, &grant, previous_issue)?;
-            crate::models::huddle_effects::broadcast_presence(tx, grant.room_id);
+            let issued = grant.clone();
+            tx.after_commit(move |tx| {
+                crate::models::huddle_invitations::after_issued(tx, &issued, previous_issue)?;
+                crate::models::huddle_effects::broadcast_presence(tx, issued.room_id);
+                Ok(())
+            });
             return Ok(grant);
         }
         unreachable!()

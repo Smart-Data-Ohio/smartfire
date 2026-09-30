@@ -131,10 +131,12 @@ async fn huddle_in_process_loop_resolves_invitations_without_livekit_admin_confi
     let Some(test)=TestApp::boot().await else{return;};
     test.booted.jobs.shutdown(Duration::from_secs(2)).await;
     let app=test.booted.app.clone();
-    let (item,stream)=app.db.write(|tx| {
+    let grant=app.db.write(|tx| {
         let session=campfire_db::Session::start(tx,DAVID,None,None)?;
         let member=campfire_db::Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,DAVID)?.unwrap();
-        let grant=HuddleGrant::issue(tx,session.id,member.id,member.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13-fixture-value".into()),admin_configured:false})?;
+        HuddleGrant::issue(tx,session.id,member.id,member.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13-fixture-value".into()),admin_configured:false})
+    }).await.unwrap();
+    let (item,stream)=app.db.write(move |tx| {
         let item=tx.conn().query_row("SELECT id FROM activity_items WHERE source_type='HuddleGrant' AND source_id=?",[grant.id],|r|r.get::<_,i64>(0))?;
         tx.conn().execute("UPDATE activity_items SET created_at=? WHERE id=?",rusqlite::params![tx.now().ago(jiff::SignedDuration::from_secs(46)),item])?;
         let stage=campfire_db::Room::create_for(tx,campfire_db::RoomType::Stage,Some("WS13 loop stage"),DAVID,&[DAVID])?;
@@ -157,23 +159,25 @@ async fn huddle_in_process_loop_resolves_invitations_without_livekit_admin_confi
 }
 
 #[tokio::test]
-async fn huddle_issuance_enqueue_failure_rolls_back_the_grant_and_invitation() {
+async fn huddle_invitation_enqueue_failure_keeps_grant_and_rolls_back_invitation() {
     use crate::controllers::presenters::test_support::{TestApp,DAVID,DIRECT_DAVID_JASON};
     use campfire_db::models::huddle_grant::HuddleGrant;
-    let Some(test)=TestApp::boot().await else {return;};
-    test.booted.jobs.shutdown(Duration::from_secs(2)).await;
-    let app=test.booted.app;
-    let (session,member)=app.db.write(|tx| {
-        let session=campfire_db::Session::start(tx,DAVID,None,None)?;
-        let member=campfire_db::Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,DAVID)?.unwrap();
-        tx.conn().execute_batch("CREATE TRIGGER ws13_reject_ring BEFORE INSERT ON background_jobs WHEN NEW.job_class='Notifications::HuddleRingJob' BEGIN SELECT RAISE(ABORT,'ws13 reject ring intent'); END")?;
-        Ok((session.id,member.id))
-    }).await.unwrap();
-    let failed=app.db.write(move |tx|HuddleGrant::issue(tx,session,member,DIRECT_DAVID_JASON,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13-fixture-value".into()),admin_configured:false})).await;
-    assert!(failed.is_err());
-    assert_eq!(app.db.read(move |conn|Ok(conn.query_row("SELECT COUNT(*) FROM huddle_grants WHERE session_id=?",[session],|r|r.get::<_,i64>(0))?)).await.unwrap(),0);
-    assert_eq!(app.db.read(|conn|Ok(conn.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='HuddleGrant'",[],|r|r.get::<_,i64>(0))?)).await.unwrap(),0);
-    assert!(!jobs(&app).iter().any(|j|j.class=="Notifications::HuddleRingJob" || j.class=="Huddle::PushInvitationJob"));
+    for class in ["Notifications::HuddleRingJob", "Huddle::PushInvitationJob"] {
+        let Some(test)=TestApp::boot().await else {return;};
+        test.booted.jobs.shutdown(Duration::from_secs(2)).await;
+        let app=test.booted.app;
+        let (session,member)=app.db.write(move |tx| {
+            let session=campfire_db::Session::start(tx,DAVID,None,None)?;
+            let member=campfire_db::Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,DAVID)?.unwrap();
+            tx.conn().execute_batch(&format!("CREATE TRIGGER ws13_reject_invitation_job BEFORE INSERT ON background_jobs WHEN NEW.job_class='{class}' BEGIN SELECT RAISE(ABORT,'ws13 reject invitation job'); END"))?;
+            Ok((session.id,member.id))
+        }).await.unwrap();
+        let failed=app.db.write(move |tx|HuddleGrant::issue(tx,session,member,DIRECT_DAVID_JASON,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13-fixture-value".into()),admin_configured:false})).await;
+        assert!(failed.is_err());
+        assert_eq!(app.db.read(move |conn|Ok(conn.query_row("SELECT COUNT(*) FROM huddle_grants WHERE session_id=?",[session],|r|r.get::<_,i64>(0))?)).await.unwrap(),1);
+        assert_eq!(app.db.read(|conn|Ok(conn.query_row("SELECT COUNT(*) FROM activity_items WHERE source_type='HuddleGrant'",[],|r|r.get::<_,i64>(0))?)).await.unwrap(),0);
+        assert!(!jobs(&app).iter().any(|j|j.class=="Notifications::HuddleRingJob" || j.class=="Huddle::PushInvitationJob"));
+    }
 }
 
 #[tokio::test]

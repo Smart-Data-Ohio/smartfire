@@ -125,6 +125,14 @@
       "items": 0,
       "last_issued_at": "2026-01-01T12:03:00Z",
       "push_jobs": 0
+    },
+    {
+      "operation": "group",
+      "error": "ActiveRecord::StatementInvalid",
+      "grants": 1,
+      "items": 1,
+      "last_issued_at": "2026-01-01T12:00:00Z",
+      "push_jobs": 1
     }
   ],
   "times": [

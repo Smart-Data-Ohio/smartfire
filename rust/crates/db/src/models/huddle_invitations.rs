@@ -103,9 +103,10 @@ fn current_ring(tx: &Tx<'_>, request: &RingRequest) -> Result<Option<RingRequest
             invitation:serde_json::json!({"activityItemId":0,"eventType":"huddle_started","state":"unread","roomId":room.id,"roomName":room.direct_display_name(tx.conn(),Some(&viewer),None)?,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.name,"readPath":"","handledPath":""}) }
     };
     let grant = HuddleGrant::find_by_id(tx.conn(), current.grant_id.unwrap())?.unwrap();
-    let Some(room) = Room::find_by_id(tx.conn(), grant.room_id)?.filter(|r| r.deleted_at.is_none()) else { return Ok(None); };
+    let Some(room) = Room::find_by_id(tx.conn(), grant.room_id)? else { return Ok(None); };
     let Some(member) = crate::Membership::find_by_room_and_user(tx.conn(), room.id, viewer.id)? else { return Ok(None); };
     if current.invitation["eventType"] == "huddle_started" && current.invitation["state"] == "unread" {
+        if room.deleted_at.is_some() { return Ok(None); }
         if matches!(member.involvement, Some(crate::Involvement::Nothing | crate::Involvement::Invisible)) { return Ok(None); }
         // Group rings belong to the call: another live participant keeps them
         // going after the starter leaves (HuddleGrant#others_in_call?).
@@ -165,6 +166,8 @@ pub(crate) fn enqueue_item_ring(tx: &mut Tx<'_>, id: i64) -> Result<bool> {
     Ok(true)
 }
 
+/// Rails runs this after issuance commits. Each item mutation and its durable
+/// jobs commit together; a later recipient failing keeps earlier items intact.
 pub(crate) fn after_issued(
     tx: &mut Tx<'_>,
     grant: &HuddleGrant,
@@ -177,7 +180,10 @@ pub(crate) fn after_issued(
         |r| r.get::<_, i64>(0),
     )?;
     for id in open {
-        ActivityItem::find(tx.conn(), id)?.mark_handled(tx)?;
+        crate::database::run_write(tx.conn(), tx.env(), |tx| {
+            ActivityItem::find(tx.conn(), id)?.mark_handled(tx)?;
+            Ok(())
+        })?;
     }
     let dedup = tx.now().ago(SignedDuration::from_secs(120));
     if previous_issue.is_some_and(|at|at>=dedup) || tx.conn().query_row_cached("SELECT EXISTS(SELECT 1 FROM huddle_grants WHERE room_id=? AND user_id=? AND id!=? AND created_at>=?)",params![grant.room_id,grant.user_id,grant.id,dedup],|r|r.get::<_,bool>(0))? { return Ok(()); }
@@ -192,53 +198,66 @@ pub(crate) fn after_issued(
         User::from_row,
     )?;
     for recipient in recipients {
-        let in_call = tx.conn().query_row_cached("SELECT EXISTS(SELECT 1 FROM huddle_grants WHERE room_id=? AND user_id=? AND last_seen_at>?)",params![room.id,recipient.id,tx.now().ago(SignedDuration::from_secs(20))],|r|r.get::<_,bool>(0))?;
-        let recent = tx.conn().query_row_cached("SELECT EXISTS(SELECT 1 FROM activity_items ai JOIN huddle_grants g ON g.id=ai.source_id WHERE ai.source_type='HuddleGrant' AND ai.event_type IN ('huddle_started','huddle_missed') AND ai.user_id=? AND g.room_id=? AND ai.created_at>=?)",params![recipient.id,room.id,dedup],|r|r.get::<_,bool>(0))?;
-        if in_call || recent {
-            continue;
+        crate::database::run_write(tx.conn(), tx.env(), |tx| {
+            invite_recipient(tx, grant, &room, &recipient, dedup)
+        })?;
+    }
+    Ok(())
+}
+
+fn invite_recipient(
+    tx: &mut Tx<'_>,
+    grant: &HuddleGrant,
+    room: &Room,
+    recipient: &User,
+    dedup: Timestamp,
+) -> Result<()> {
+    let in_call = tx.conn().query_row_cached("SELECT EXISTS(SELECT 1 FROM huddle_grants WHERE room_id=? AND user_id=? AND last_seen_at>?)",params![room.id,recipient.id,tx.now().ago(SignedDuration::from_secs(20))],|r|r.get::<_,bool>(0))?;
+    let recent = tx.conn().query_row_cached("SELECT EXISTS(SELECT 1 FROM activity_items ai JOIN huddle_grants g ON g.id=ai.source_id WHERE ai.source_type='HuddleGrant' AND ai.event_type IN ('huddle_started','huddle_missed') AND ai.user_id=? AND g.room_id=? AND ai.created_at>=?)",params![recipient.id,room.id,dedup],|r|r.get::<_,bool>(0))?;
+    if in_call || recent {
+        return Ok(());
+    }
+    if !huddle_notices::invitations_enabled(tx.conn(), recipient.id)? {
+        let caller = User::find(tx.conn(), grant.user_id)?;
+        let name = room.direct_display_name(tx.conn(), Some(&recipient), None)?;
+        tx.emit_after_commit(Event::job(&RingRequest {recipient_id:recipient.id,sender_id:caller.id,grant_id:Some(grant.id),invitation:serde_json::json!({"activityItemId":0,"eventType":"huddle_started","state":"unread","roomId":room.id,"roomName":name,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.name,"readPath":"","handledPath":""})}));
+        return Ok(());
+    }
+    let owned = ActivityItem::find_by_user_and_source(
+        tx.conn(),
+        recipient.id,
+        "HuddleGrant",
+        grant.id,
+    )?;
+    let item = if let Some(item) = owned {
+        if item.handled_at.is_none()
+            && item.event_type == "huddle_started"
+            && item.created_at >= dedup
+        {
+            return Ok(());
         }
-        if !huddle_notices::invitations_enabled(tx.conn(), recipient.id)? {
-            let caller = User::find(tx.conn(), grant.user_id)?;
-            let name = room.direct_display_name(tx.conn(), Some(&recipient), None)?;
-            tx.emit_after_commit(Event::job(&RingRequest {recipient_id:recipient.id,sender_id:caller.id,grant_id:Some(grant.id),invitation:serde_json::json!({"activityItemId":0,"eventType":"huddle_started","state":"unread","roomId":room.id,"roomName":name,"roomPath":format!("/rooms/{}",room.id),"callerName":caller.name,"readPath":"","handledPath":""})}));
-            continue;
-        }
-        let owned = ActivityItem::find_by_user_and_source(
-            tx.conn(),
-            recipient.id,
-            "HuddleGrant",
-            grant.id,
-        )?;
-        let item = if let Some(item) = owned {
-            if item.handled_at.is_none()
-                && item.event_type == "huddle_started"
-                && item.created_at >= dedup
-            {
-                continue;
+        refresh(tx, &item, grant.id)?
+    } else {
+        let attempt = tx.conn().query_row_cached("SELECT ai.id FROM activity_items ai JOIN huddle_grants g ON g.id=ai.source_id WHERE ai.source_type='HuddleGrant' AND ai.event_type IN ('huddle_started','huddle_missed') AND ai.user_id=? AND g.room_id=? AND g.user_id=? AND ai.handled_at IS NULL AND ai.created_at>=? ORDER BY ai.created_at DESC LIMIT 1",params![recipient.id,room.id,grant.user_id,tx.now().ago(SignedDuration::from_secs(600))],|r|r.get::<_,i64>(0)).optional()?;
+        if let Some(id) = attempt {
+            let item = ActivityItem::find(tx.conn(), id)?;
+            if item.handled_at.is_some() || item.created_at >= dedup {
+                return Ok(());
             }
             refresh(tx, &item, grant.id)?
         } else {
-            let attempt = tx.conn().query_row_cached("SELECT ai.id FROM activity_items ai JOIN huddle_grants g ON g.id=ai.source_id WHERE ai.source_type='HuddleGrant' AND ai.event_type IN ('huddle_started','huddle_missed') AND ai.user_id=? AND g.room_id=? AND g.user_id=? AND ai.handled_at IS NULL AND ai.created_at>=? ORDER BY ai.created_at DESC LIMIT 1",params![recipient.id,room.id,grant.user_id,tx.now().ago(SignedDuration::from_secs(600))],|r|r.get::<_,i64>(0)).optional()?;
-            if let Some(id) = attempt {
-                let item = ActivityItem::find(tx.conn(), id)?;
-                if item.handled_at.is_some() || item.created_at >= dedup {
-                    continue;
-                }
-                refresh(tx, &item, grant.id)?
-            } else {
-                ActivityItem::refresh_unread(
-                    tx,
-                    recipient.id,
-                    "HuddleGrant",
-                    grant.id,
-                    "huddle_started",
-                )?
-            }
-        };
-        tx.emit_after_commit(Event::job(&PushInvitationJob {
-            activity_item_id: item.id,
-        }));
-    }
+            ActivityItem::refresh_unread(
+                tx,
+                recipient.id,
+                "HuddleGrant",
+                grant.id,
+                "huddle_started",
+            )?
+        }
+    };
+    tx.emit_after_commit(Event::job(&PushInvitationJob {
+        activity_item_id: item.id,
+    }));
     Ok(())
 }
 

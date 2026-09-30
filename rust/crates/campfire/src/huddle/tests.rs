@@ -479,10 +479,12 @@ async fn resolver_failure_preserves_prior_items_and_does_not_stop_cleanup() {
     let app=TestApp::boot().await.expect("WS13 needs the parity seed");
     let db=app.booted.app.db.clone();
     app.booted.jobs.shutdown(Duration::from_secs(2)).await;
-    let (first,second,cleanup,stream)=db.write(|tx| {
+    let grant=db.write(|tx| {
         let session=campfire_db::Session::start(tx,DAVID,None,None)?;
         let member=campfire_db::Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,DAVID)?.unwrap();
-        let grant=HuddleGrant::issue(tx,session.id,member.id,member.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13-fixture-value".into()),admin_configured:false})?;
+        HuddleGrant::issue(tx,session.id,member.id,member.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13-fixture-value".into()),admin_configured:false})
+    }).await.unwrap();
+    let (first,second,cleanup,stream)=db.write(move |tx| {
         let first=campfire_db::ActivityItem::find_by_user_and_source(tx.conn(),JASON,"HuddleGrant",grant.id)?.unwrap().id;
         let second=campfire_db::ActivityItem::refresh_unread(tx,KEVIN,"HuddleGrant",grant.id,"huddle_started")?.id;
         tx.conn().execute("UPDATE activity_items SET created_at=? WHERE id IN (?,?)",rusqlite::params![tx.now().ago(jiff::SignedDuration::from_secs(120)),first,second])?;
@@ -619,10 +621,12 @@ async fn one_huddle_pass_runs_all_three_phases_in_rails_order() {
         .expect("WS13b requires the parity seed");
     let db = app.booted.app.db.clone();
     app.booted.jobs.shutdown(Duration::from_secs(2)).await;
-    let cleanup=db.write(|tx| {
+    let grant=db.write(|tx| {
         let session=campfire_db::Session::start(tx,DAVID,None,None)?;
         let member=campfire_db::Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,DAVID)?.unwrap();
-        let grant=HuddleGrant::issue(tx,session.id,member.id,member.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13b-fixture-value".into()),admin_configured:false})?;
+        HuddleGrant::issue(tx,session.id,member.id,member.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13b-fixture-value".into()),admin_configured:false})
+    }).await.unwrap();
+    let cleanup=db.write(move |tx| {
         let item=campfire_db::ActivityItem::find_by_user_and_source(tx.conn(),JASON,"HuddleGrant",grant.id)?.unwrap().id;
         tx.conn().execute("UPDATE activity_items SET created_at=? WHERE id=?",rusqlite::params![tx.now().ago(jiff::SignedDuration::from_secs(120)),item])?;
         let stream=stage_stream_state_fixture(tx,"1080p15")?;
