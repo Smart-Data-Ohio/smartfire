@@ -437,7 +437,7 @@ pub(crate) async fn find_paged_messages(c: &Ctx, room: &Room) -> Result<Vec<Mess
         .map_err(db_error)
 }
 
-fn paging_anchor(conn: &campfire_db::Connection, timeline: Timeline, value: &Param) -> campfire_db::Result<Message> {
+pub(crate) fn paging_anchor(conn: &campfire_db::Connection, timeline: Timeline, value: &Param) -> campfire_db::Result<Message> {
     if let Param::Array(values) = value {
         // ActiveRecord find(array) first resolves every id, then pagination raises because the
         // resulting Array has no created_at. Unknown ids still raise RecordNotFound first.

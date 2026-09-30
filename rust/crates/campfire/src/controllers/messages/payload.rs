@@ -45,7 +45,14 @@ pub(super) fn message(p: &Presenter<'_>, message: &Message, viewer: &User, base:
     Ok(result)
 }
 
-pub(super) fn actions(p: &Presenter<'_>, message: &Message, viewer: &User, base: &str) -> Result<Value> {
+/// Nested thread reads suppress only the root's thread-summary field.
+pub(crate) fn thread_message(p: &Presenter<'_>, record: &Message, viewer: &User, base: &str) -> Result<Value> {
+    let mut payload = message(p, record, viewer, base)?;
+    payload.as_object_mut().expect("message payload is an object").remove("thread_summary");
+    Ok(payload)
+}
+
+pub(crate) fn actions(p: &Presenter<'_>, message: &Message, viewer: &User, base: &str) -> Result<Value> {
     let saved = SavedItem::find_by_user_and_message(p.conn, viewer.id, message.id)?;
     let summary = ChannelThread::find_by_parent_message(p.conn, message.id)?;
     let locked = message.thread_id.map(|id| ChannelThread::find(p.conn, id)).transpose()?.is_some_and(|thread| thread.locked_at.is_some());

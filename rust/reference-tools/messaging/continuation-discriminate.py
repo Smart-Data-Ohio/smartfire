@@ -64,4 +64,11 @@ check("forward-note-bytes", "rust/crates/campfire/src/controllers/presenters.rs"
 check("agent-step-order", "rust/crates/campfire/src/controllers/presenters.rs",
       "ORDER BY position, id", "ORDER BY position DESC, id DESC",
       "channels::tests::hub_test::message_parity::all_owned_message_states_publish_the_actual_rails_append_replace_remove_bytes")
-print("WS8bm continuation discrimination: 10 compiled regressions detected; sources restored", flush=True)
+nested = "rust/crates/campfire/src/controllers/channel_thread_messages.rs"
+nested_tests = "controllers::channel_thread_messages::tests::"
+check("nested-thread-room", nested, "if thread.room_id != room_id", "if false && thread.room_id != room_id",
+      nested_tests + "nested_reads_require_alive_membership_and_both_thread_and_message_scope")
+check("nested-message-scope", nested, "Message::find_in(conn, Timeline::Thread(thread_id), id)",
+      "{ let _ = thread_id; Message::find(conn, id) }",
+      nested_tests + "nested_reads_require_alive_membership_and_both_thread_and_message_scope")
+print("WS8bm continuation discrimination: 12 compiled regressions detected; sources restored", flush=True)
