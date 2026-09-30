@@ -22,6 +22,7 @@ pub struct Location<'n> {
     parsed_url: Option<Uri>,
     resolved_ip: Option<Option<IpAddr>>,
     options: fetch::FetchOptions,
+    pub errors: campfire_db::Errors,
 }
 
 impl<'n> Location<'n> {
@@ -32,14 +33,21 @@ impl<'n> Location<'n> {
 
     pub fn new_with_options(net: &'n Network, url: Option<&str>, options: fetch::FetchOptions) -> Self {
         let parsed_url = url.and_then(|url| uri::parse(url).ok());
-        Self { net, url: url.map(str::to_string), parsed_url, resolved_ip: None, options }
+        Self { net, url: url.map(str::to_string), parsed_url, resolved_ip: None, options, errors: Default::default() }
     }
 
     /// `valid?`: both validations run, so the host is resolved even for a non-http URL.
     pub async fn is_valid(&mut self) -> bool {
+        self.errors.0.clear();
         let http = self.parsed_url.as_ref().is_some_and(Uri::is_http);
         let public = self.resolved_ip().await.is_some();
-        http && public
+        if !http {
+            self.errors.add("url", "is invalid");
+        }
+        if !public {
+            self.errors.add("url", "is not public");
+        }
+        self.errors.is_empty()
     }
 
     /// `resolved_ip`: `PrivateNetworkGuard.resolve(parsed_url.host) rescue nil`, memoized.
@@ -100,3 +108,7 @@ impl<'n> Location<'n> {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "rails_location_tests.rs"]
+mod rails_tests;
