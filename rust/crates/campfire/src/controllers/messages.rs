@@ -414,6 +414,22 @@ pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -
             .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
             let partials = Rendered { message_presentation: Some(html), ..Rendered::default() };
             app.broadcasts.message_replace(&room, &message, &partials);
+            let replacements = page::render_detached_at(&app, account.as_ref(), &base_url, |ctx| -> askama::Result<_> {
+                Ok([
+                    ("meta", views::MetaPartial {ctx, message: &view}.render()?),
+                    // WS15g/WS8b provide the existing MessageComponents loop bodies for these
+                    // two containers. The empty replacements still remove cards after edits.
+                    ("github_pr_cards", views::cards(&view, "github_pr_cards", "github-pr-cards", 0, &view.components.github_cards).0),
+                    ("twitter_cards", campfire_views::twitter::cards(ctx, &view).0),
+                    ("message_link_cards", views::cards(&view, "message_link_cards", "message-link-cards", 0, &view.components.message_link_cards).0),
+                    ("fizzy_cards", views::cards(&view, "fizzy_cards", "fizzy-cards", 0, &view.components.fizzy_cards).0),
+                    ("linkedin_cards", views::cards(&view, "linkedin_cards", "linkedin-post-cards", 2, &view.components.linkedin_cards).0),
+                    ("link_embed_cards", views::cards(&view, "link_embed_cards", "link-embed-cards", 2, &view.components.link_embed_cards).0),
+                ])
+            }).map_err(|e| campfire_db::Error::Other(e.to_string()))?;
+            for (part, html) in replacements {
+                app.broadcasts.message_part_replace(&room, &message, part, &html);
+            }
             Ok(())
         })
         .await

@@ -687,6 +687,14 @@ pub struct PresentationPartial<'a> {
     pub message: &'a MessageView,
 }
 
+/// `messages/_meta`, replaced by the real message edit caller.
+#[derive(Template)]
+#[template(path = "messages/_meta.html")]
+pub struct MetaPartial<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub message: &'a MessageView,
+}
+
 /// `messages/_unrenderable`.
 #[derive(Template)]
 #[template(path = "messages/_unrenderable.html")]
