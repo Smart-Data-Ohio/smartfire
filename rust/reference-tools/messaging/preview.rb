@@ -30,5 +30,24 @@ rows = sources.map do |source|
   { source: source, status: browser.response.status, json: JSON.parse(browser.response.body) }
 end
 raise "Preview wrote messages" unless Message.count == before
-File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", room_id: room.id, previews: rows) + "\n")
+create_inputs = [
+  { markdown_source: "" },
+  { markdown_source: "é" * 50_001 },
+  { markdown_source: "safe", drive_file_ids: "scalar-file-id" },
+  { markdown_source: "safe", drive_file_ids: ["invalid!"] },
+  { markdown_source: "safe", drive_file_ids: ["\u00a0abcdefghij\u00a0"] },
+  { markdown_source: "safe", drive_file_ids: ["abcdefghij", { invalid: "value" }] }
+]
+creates = create_inputs.map do |input|
+  browser.post "/rooms/#{room.id}/messages.json", params: { message: input }, headers: { "Cookie" => cookie }, as: :json
+  { input: input, status: browser.response.status, json: JSON.parse(browser.response.body) }
+end
+raise "Invalid create wrote messages" unless Message.count == before
+casts = [nil, false, true, 0, 42, 1.5, "", " text "].map do |value|
+  probe = Message.new(client_message_id: value, markdown_source: value)
+  { value: value, client_message_id: probe.client_message_id, markdown_source: probe.markdown_source }
+end
+File.write(ARGV.fetch(0), JSON.pretty_generate(reference: "d7c7de92", room_id: room.id, previews: rows, invalid_creates: creates, scalar_casts: casts) + "\n")
 puts "WS8bm preview oracle: #{rows.size} real Rails HTTP responses; 0 messages written"
+puts "WS8bm invalid-create oracle: #{creates.size} real Rails HTTP responses; 0 messages written"
+puts "WS8bm scalar-cast oracle: #{casts.size} actual Rails model assignments"

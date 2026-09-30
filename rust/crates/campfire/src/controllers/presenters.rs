@@ -354,6 +354,12 @@ impl<'a> Presenter<'a> {
                 text: sound.text.map(str::to_string),
             }));
         }
+        if message.markdown() || message.forwarded_markdown {
+            return Ok(match crate::rich_text::markdown_presentation(self.conn, &body, &ctx) {
+                Ok(html) => MessageContent::Text { html },
+                Err(_) => MessageContent::Unrenderable,
+            });
+        }
         Ok(match campfire_richtext::present_message(&body, &ctx) {
             Presentation::Html(html) => MessageContent::Text { html },
             Presentation::Unrenderable => MessageContent::Unrenderable,

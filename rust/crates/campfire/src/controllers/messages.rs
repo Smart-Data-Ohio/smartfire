@@ -57,15 +57,34 @@ const TEMPLATE_DIGEST_INDEX: &str = "messages/index";
 /// `create`: `set_room` runs inside the action, and a room that's gone renders `room_not_found`.
 pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
-    let room = match set_root_room(c).await {
-        Ok(room) => room,
-        Err(Error::NotFound) => return render_room_not_found(c).await,
-        Err(error) => return Err(error),
+    match create_action(c).await {
+        Err(Error::NotFound) => render_room_not_found(c).await,
+        Err(error) => render_record_invalid(c, error),
+        response => response,
+    }
+}
+
+async fn create_action(c: &mut Ctx) -> Result {
+    let room = set_root_room(c).await?;
+    if c.params.get("message").is_some_and(|value| !matches!(value, Param::Null | Param::Hash(_))) {
+        return Err(Error::internal(anyhow::anyhow!("message parameters do not support dig")));
+    }
+    // Rails checks retries before validating or staging the new payload.
+    let client_id = c.params.get("message").and_then(|message| message.get("client_message_id")).filter(|value| value.is_present()).and_then(string_column);
+    let (room_id, creator_id) = (room.id, require_current_user(c)?.id);
+    let duplicate = match client_id {
+        Some(id) => c.app().db.read(move |conn| Message::find_duplicate(conn, room_id, creator_id, &id)).await.map_err(db_error)?,
+        None => None,
     };
-    let attributes = message_params(c)?;
-    let message = create_message(c, &room, attributes).await?;
-    broadcast_create(c, &room, &message).await?;
-    release_webhooks(c, &message).await;
+    let message = if let Some(duplicate) = duplicate {
+        duplicate
+    } else {
+        let attributes = root_create_params(c, &room).await?;
+        let message = create_message(c, &room, attributes).await?;
+        broadcast_create(c, &room, &message).await?;
+        release_webhooks(c, &message).await;
+        message
+    };
 
     // The message partial comes out of the fragment cache `broadcast_create` just filled
     // (`cache [ message, "presentation-v3" ]`), so it's the request-less rendering: no CSRF
@@ -212,6 +231,10 @@ pub(crate) struct MessageParams {
     /// `attachment=`: `None` when the key wasn't given.
     pub attachment: Option<Assignment>,
     pub client_message_id: Option<String>,
+    pub markdown_source: Option<String>,
+    pub reply_to_message_id: Option<i64>,
+    pub reply_notify_author: Option<bool>,
+    pub drive_file_ids: Vec<String>,
 }
 
 /// `params.require(:message).permit(:body, :attachment, :client_message_id)`
@@ -223,7 +246,86 @@ fn message_params(c: &Ctx) -> Result<MessageParams> {
         body: text("body"),
         attachment: attachment_assignment(&permitted)?,
         client_message_id: text("client_message_id"),
+        ..Default::default()
     })
+}
+
+/// Root create's additional fork parameters. The update path remains a separate porting slice.
+async fn root_create_params(c: &Ctx, room: &Room) -> Result<MessageParams> {
+    let message = c.params.require("message")?;
+    if message.as_hash().is_none() {
+        return Err(Error::internal(anyhow::anyhow!("message parameters do not support permit")));
+    }
+    let mut attributes = message_params(c)?;
+    let permitted = message.permit(&permit_keys(&["markdown_source", "client_message_id", "reply_to_message_id", "reply_notify_author"]));
+    let text = |key: &str| permitted.get(key).and_then(string_column);
+    attributes.markdown_source = text("markdown_source");
+    attributes.client_message_id = text("client_message_id");
+    if attributes.markdown_source.is_some() {
+        attributes.body = None;
+    }
+    if let Some(value) = permitted.get("reply_to_message_id").filter(|value| value.is_present()) {
+        let id = value.to_s().as_deref().and_then(cast_integer).ok_or(Error::NotFound)?;
+        let room_id = room.id;
+        attributes.reply_to_message_id = Some(c.app().db.read(move |conn| Message::find_in(conn, Timeline::Room(room_id), id)).await.map_err(db_error)?.id);
+    }
+    if let Some(value) = permitted.get("reply_notify_author") {
+        if value.is_null() || value.as_str() == Some("") {
+            return Err(Error::internal(anyhow::anyhow!("reply_notify_author violates NOT NULL")));
+        }
+        attributes.reply_notify_author = Some(!matches!(value.to_s().as_deref(), Some("false" | "FALSE" | "f" | "F" | "0" | "off" | "OFF")));
+    }
+    if let Some(raw) = message.get("drive_file_ids") {
+        let Param::Array(ids) = raw else { return Err(invalid_drive_file_ids()) };
+        for id in ids {
+            let Some(id) = id.to_s() else { return Err(invalid_drive_file_ids()) };
+            // Ruby String#strip removes ASCII whitespace and NUL, not Unicode spaces.
+            let id = id.trim_matches([' ', '\t', '\r', '\n', '\x0b', '\x0c', '\0']);
+            if id.chars().all(char::is_whitespace) {
+                continue;
+            }
+            if !campfire_db::message::valid_drive_file_id(id) {
+                return Err(invalid_drive_file_ids());
+            }
+            if !attributes.drive_file_ids.iter().any(|stored| stored == id) {
+                attributes.drive_file_ids.push(id.to_owned());
+            }
+        }
+    }
+    Ok(attributes)
+}
+
+fn invalid_drive_file_ids() -> Error {
+    let mut errors = campfire_db::Errors::default();
+    errors.add("drive_attachments", "includes an invalid file id");
+    db_error(campfire_db::Error::RecordInvalid(errors))
+}
+
+/// Active Record string/text column assignment (verified by the Rails model probes).
+fn string_column(value: &Param) -> Option<String> {
+    match value {
+        Param::Null => None,
+        Param::Bool(true) => Some("t".into()),
+        Param::Bool(false) => Some("f".into()),
+        value => value.to_s(),
+    }
+}
+
+fn render_record_invalid(c: &mut Ctx, error: Error) -> Result {
+    let Error::Internal(error) = error else { return Err(error) };
+    let Some(campfire_db::Error::RecordInvalid(errors)) = error.downcast_ref::<campfire_db::Error>() else {
+        return Err(Error::Internal(error));
+    };
+    if c.format()? == Some(&format::JSON) {
+        let mut by_attribute = serde_json::Map::new();
+        for (attribute, message) in &errors.0 {
+            by_attribute.entry((*attribute).to_owned()).or_insert_with(|| serde_json::json!([])).as_array_mut().unwrap().push(message.clone().into());
+        }
+        let body = campfire_views::helpers::to_rails_json(&serde_json::json!({"errors": by_attribute}));
+        Ok(c.render(StatusCode::UNPROCESSABLE_ENTITY, &format::JSON, body))
+    } else {
+        Ok(c.head(StatusCode::UNPROCESSABLE_ENTITY))
+    }
 }
 
 /// What assigning the permitted `attachment` does: an upload replaces the attachment, nil or ""
@@ -288,6 +390,10 @@ pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessagePara
                     room_id,
                     creator_id,
                     client_message_id: attributes.client_message_id,
+                    markdown_source: attributes.markdown_source,
+                    reply_to_message_id: attributes.reply_to_message_id,
+                    reply_notify_author: attributes.reply_notify_author,
+                    drive_file_ids: attributes.drive_file_ids,
                     body,
                     attachment_blob_id: blob.as_ref().map(|blob| blob.id),
                     ..Default::default()
