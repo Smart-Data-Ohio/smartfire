@@ -1,7 +1,7 @@
 # WS14g Rails test ledger (partial)
 
 Source: this checkout at Rails pin `d7c7de92`. Named declarations are listed individually. A domain property exercised by a native test does not claim its HTTP/browser case is ported. Outside-slice cases have a named owner; consult that owner's report for completion.
-Path-glob ledger: 48 files; 611 named cases; 34 ported domain/API cases; 577 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
+Path-glob ledger: 48 files; 611 named cases; 117 ported domain/API/controller cases; 494 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
 
 
 The 70 signed Google ID-token vectors also run through the local TLS fake. Those cases are not added to these Rails declaration counts.
@@ -49,71 +49,70 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/controllers/google/connections_controller_test.rb
 
-- **Deferred** — connect redirects to Google with the right scope and a state — WS14g continuation.
-- **Deferred** — connect requires sign-in — WS14g continuation.
-- **Deferred** — connect with features[]=drive requests Calendar plus the per-file Drive scope — WS14g continuation.
-- **Deferred** — connect without features requests only the Calendar scope — WS14g continuation.
-- **Deferred** — callback with a bad state redirects to the profile with an alert — WS14g continuation.
-- **Deferred** — callback with a connection failure redirects without storing — WS14g continuation.
-- **Deferred** — callback without the calendar scope stores the grant but does not claim a connection — WS14g continuation.
-- **Deferred** — callback keeps the calendar scope when Drive is granted alongside — WS14g continuation.
-- **Deferred** — callback success stores the account and enqueues syncs for upcoming going/maybe attendances — WS14g continuation.
-- **Deferred** — callback stores the granted scope string — WS14g continuation.
-- **Deferred** — callback without a scope string leaves scopes unset — WS14g continuation.
-- **Deferred** — callback without a scope string keeps previously stored scopes — WS14g continuation.
-- **Deferred** — callback clears a previous disconnected reason on reconnect — WS14g continuation.
-- **Deferred** — callback with a denied grant redirects without storing — WS14g continuation.
-- **Deferred** — callback with a failed exchange redirects without storing — WS14g continuation.
-- **Deferred** — callback without an id_token redirects without storing — WS14g continuation.
-- **Deferred** — callback with an id_token for another client redirects without storing — WS14g continuation.
-- **Deferred** — disconnect clears local state without waiting on Google, then cleans up remotely — WS14g continuation.
-- **Deferred** — disconnect without readable tokens skips cleanup but still disconnects — WS14g continuation.
-- **Deferred** — disconnect drops the meeting cache — WS14g continuation.
-- **Deferred** — disconnect while in a meeting broadcasts the cleared badge — WS14g continuation.
-- **Deferred** — callback enqueues a meeting refresh for members who left meeting status on — WS14g continuation.
-- **Deferred** — callback enqueues no meeting refresh without the opt-in — WS14g continuation.
-- **Deferred** — disconnect without a connection still redirects — WS14g continuation.
-- **Deferred** — disconnect clears the organizer's stored Meet links but keeps the request — WS14g continuation.
-- **Deferred** — disconnect leaves another organizer's Meet links alone — WS14g continuation.
-- **Deferred** — disconnect only touches the current user's entries — WS14g continuation.
-- **Deferred** — routes 404 when GOOGLE_CLIENT_ID is unset — WS14g continuation.
-
+- **Ported** — connect redirects to Google with the right scope and a state — `app::google_connection_tests::google_connection_authorize_parameters_configuration_and_sign_in_guards`.
+- **Ported** — connect requires sign-in — `app::google_connection_tests::google_connection_authorize_parameters_configuration_and_sign_in_guards`.
+- **Ported** — connect with features[]=drive requests Calendar plus the per-file Drive scope — `app::google_connection_tests::google_connection_authorize_parameters_configuration_and_sign_in_guards`.
+- **Ported** — connect without features requests only the Calendar scope — `app::google_connection_tests::google_connection_authorize_parameters_configuration_and_sign_in_guards`.
+- **Ported** — callback with a bad state redirects to the profile with an alert — `app::google_connection_tests::google_connection_failed_exchanges_and_invalid_id_tokens_never_store_grants`.
+- **Ported** — callback with a connection failure redirects without storing — `app::google_connection_tests::google_connection_failed_exchanges_and_invalid_id_tokens_never_store_grants`.
+- **Ported** — callback without the calendar scope stores the grant but does not claim a connection — `app::google_connection_tests::google_connection_without_calendar_stores_grant_without_audit_or_jobs`.
+- **Partial** — callback keeps the calendar scope when Drive is granted alongside — WS14g connection/domain/consumer implementation exists; this named case needs its remaining event/attendance, producer or remote cleanup assertions.
+- **Partial** — callback success stores the account and enqueues syncs for upcoming going/maybe attendances — WS14g connection/domain/consumer implementation exists; this named case needs its remaining event/attendance, producer or remote cleanup assertions.
+- **Ported** — callback stores the granted scope string — `app::google_connection_tests::google_connection_scope_retention_and_reconnect_clear_disconnected_reason`.
+- **Ported** — callback without a scope string leaves scopes unset — `app::google_connection_tests::google_connection_scope_retention_and_reconnect_clear_disconnected_reason`.
+- **Ported** — callback without a scope string keeps previously stored scopes — `app::google_connection_tests::google_connection_scope_retention_and_reconnect_clear_disconnected_reason`.
+- **Ported** — callback clears a previous disconnected reason on reconnect — `app::google_connection_tests::google_connection_scope_retention_and_reconnect_clear_disconnected_reason`.
+- **Ported** — callback with a denied grant redirects without storing — `app::google_connection_tests::google_connection_failed_exchanges_and_invalid_id_tokens_never_store_grants`.
+- **Ported** — callback with a failed exchange redirects without storing — `app::google_connection_tests::google_connection_failed_exchanges_and_invalid_id_tokens_never_store_grants`.
+- **Ported** — callback without an id_token redirects without storing — `app::google_connection_tests::google_connection_failed_exchanges_and_invalid_id_tokens_never_store_grants`.
+- **Ported** — callback with an id_token for another client redirects without storing — `app::google_connection_tests::google_connection_failed_exchanges_and_invalid_id_tokens_never_store_grants`.
+- **Partial** — disconnect clears local state without waiting on Google, then cleans up remotely — WS14g connection/domain/consumer implementation exists; this named case needs its remaining event/attendance, producer or remote cleanup assertions.
+- **Ported** — disconnect without readable tokens skips cleanup but still disconnects — `app::google_connection_tests::google_connection_unreadable_disconnect_drops_cache_preserves_flags_and_other_grants`.
+- **Ported** — disconnect drops the meeting cache — `app::google_connection_tests::google_connection_unreadable_disconnect_drops_cache_preserves_flags_and_other_grants`.
+- **Deferred** — disconnect while in a meeting broadcasts the cleared badge — WS14g integration with WS17 status/OOO broadcast claims; cache removal is ported, the cleared badge broadcast remains absent.
+- **Partial** — callback enqueues a meeting refresh for members who left meeting status on — WS14g connection/domain/consumer implementation exists; this named case needs its remaining event/attendance, producer or remote cleanup assertions.
+- **Partial** — callback enqueues no meeting refresh without the opt-in — WS14g connection/domain/consumer implementation exists; this named case needs its remaining event/attendance, producer or remote cleanup assertions.
+- **Ported** — disconnect without a connection still redirects — `app::google_connection_tests::google_connection_unreadable_disconnect_drops_cache_preserves_flags_and_other_grants`.
+- **Partial** — disconnect clears the organizer's stored Meet links but keeps the request — WS14g connection/domain/consumer implementation exists; this named case needs its remaining event/attendance, producer or remote cleanup assertions.
+- **Partial** — disconnect leaves another organizer's Meet links alone — WS14g connection/domain/consumer implementation exists; this named case needs its remaining event/attendance, producer or remote cleanup assertions.
+- **Partial** — disconnect only touches the current user's entries — WS14g connection/domain/consumer implementation exists; this named case needs its remaining event/attendance, producer or remote cleanup assertions.
+- **Ported** — routes 404 when GOOGLE_CLIENT_ID is unset — `app::google_connection_tests::google_connection_authorize_parameters_configuration_and_sign_in_guards`.
 ## test/controllers/google/drive_files_controller_test.rb
 
-- **Deferred** — show renders the file JSON for a connected account with the Drive scope — WS14g continuation.
-- **Deferred** — show maps MIME types to kinds — WS14g continuation.
-- **Deferred** — show is 404 with an empty body without an account — WS14g continuation.
-- **Deferred** — show is 404 with an empty body for a disconnected account — WS14g continuation.
-- **Deferred** — show is 404 with an empty body without the Drive scope — WS14g continuation.
-- **Deferred** — show is 404 with an empty body for the retired metadata grant — WS14g continuation.
-- **Deferred** — show is 404 with an empty body when Google answers 403 or 404 — WS14g continuation.
-- **Deferred** — show is 404 with an empty body for a malformed id — WS14g continuation.
-- **Deferred** — show is 503 on a Google transport failure — WS14g continuation.
-- **Deferred** — show requires sign-in — WS14g continuation.
-- **Deferred** — show caches the file for five minutes per viewer — WS14g continuation.
-- **Deferred** — show never reuses another viewer\'s cache entry — WS14g continuation.
-- **Deferred** — index lists recent files when q is blank — WS14g continuation.
-- **Deferred** — index treats whitespace-only q as a recent list — WS14g continuation.
-- **Deferred** — index searches by name with quote and backslash escaping — WS14g continuation.
-- **Deferred** — index trims q and caps it at 100 characters — WS14g continuation.
-- **Deferred** — index maps unknown MIME types to file — WS14g continuation.
-- **Deferred** — index is 404 with an empty body without Drive consent — WS14g continuation.
-- **Deferred** — index is 404 with an empty body for a disconnected account — WS14g continuation.
-- **Deferred** — index is 404 when signed out — WS14g continuation.
-- **Deferred** — index is 502 when Google fails — WS14g continuation.
-- **Deferred** — index is 404 when Drive answers forbidden — WS14g continuation.
-- **Deferred** — index is 404 when the refresh fails with invalid_grant — WS14g continuation.
-- **Deferred** — index refreshes an expired access token before listing — WS14g continuation.
-- **Deferred** — index throttles each user to 30 lists per minute — WS14g continuation.
-- **Deferred** — index never caches results — WS14g continuation.
-- **Deferred** — show throttles each user to 60 views per minute — WS14g continuation.
-- **Deferred** — show is 503 on a connection failure — WS14g continuation.
-- **Deferred** — show is 503 when Google rate limits — WS14g continuation.
-- **Deferred** — show is 404 with an empty body for an unreadable token — WS14g continuation.
-- **Deferred** — index is 404 with an empty body for an unreadable token — WS14g continuation.
-- **Deferred** — index is 502 on a connection failure — WS14g continuation.
-- **Deferred** — index rejects an unenrolled session instead of listing files — WS14g continuation.
-- **Deferred** — index terminates a stale enrolled session — WS14g continuation.
+- **Ported** — show renders the file JSON for a connected account with the Drive scope — `app::google_drive_tests::google_drive_file_json_and_all_mime_kinds_match_rails`.
+- **Ported** — show maps MIME types to kinds — `app::google_drive_tests::google_drive_file_json_and_all_mime_kinds_match_rails`.
+- **Partial** — show is 404 with an empty body without an account — WS14g; endpoint implementation and coalesced tests exist in `app/google_drive_tests.rs`; retain the missing full Rails assertion or router-level expiry/user-budget scenario.
+- **Ported** — show is 404 with an empty body for a disconnected account — `app::google_drive_tests::google_drive_dead_unreadable_or_calendar_only_accounts_do_not_call_google`.
+- **Ported** — show is 404 with an empty body without the Drive scope — `app::google_drive_tests::google_drive_dead_unreadable_or_calendar_only_accounts_do_not_call_google`.
+- **Partial** — show is 404 with an empty body for the retired metadata grant — WS14g; endpoint implementation and coalesced tests exist in `app/google_drive_tests.rs`; retain the missing full Rails assertion or router-level expiry/user-budget scenario.
+- **Ported** — show is 404 with an empty body when Google answers 403 or 404 — `app::google_drive_tests::google_drive_transport_quota_and_forbidden_fail_with_rails_statuses`.
+- **Ported** — show is 404 with an empty body for a malformed id — `app::google_drive_tests::google_drive_requires_viewer_grant_and_valid_id_and_has_distinct_anonymous_behavior`.
+- **Partial** — show is 503 on a Google transport failure — WS14g; endpoint implementation and coalesced tests exist in `app/google_drive_tests.rs`; retain the missing full Rails assertion or router-level expiry/user-budget scenario.
+- **Ported** — show requires sign-in — `app::google_drive_tests::google_drive_requires_viewer_grant_and_valid_id_and_has_distinct_anonymous_behavior`.
+- **Partial** — show caches the file for five minutes per viewer — WS14g; endpoint implementation and coalesced tests exist in `app/google_drive_tests.rs`; retain the missing full Rails assertion or router-level expiry/user-budget scenario.
+- **Ported** — show never reuses another viewer\'s cache entry — `app::google_drive_tests::google_drive_viewer_inaccessible_file_is_empty_404_and_never_reuses_other_viewer_cache`.
+- **Partial** — index lists recent files when q is blank — WS14g; endpoint implementation and coalesced tests exist in `app/google_drive_tests.rs`; retain the missing full Rails assertion or router-level expiry/user-budget scenario.
+- **Ported** — index treats whitespace-only q as a recent list — `app::google_drive_tests::google_drive_index_refreshes_expired_access_and_invalid_grant_disconnects`.
+- **Ported** — index searches by name with quote and backslash escaping — `app::google_drive_tests::google_drive_lists_never_cache_trim_and_cap_terms_and_return_502_on_failure`.
+- **Ported** — index trims q and caps it at 100 characters — `app::google_drive_tests::google_drive_lists_never_cache_trim_and_cap_terms_and_return_502_on_failure`.
+- **Ported** — index maps unknown MIME types to file — `app::google_drive_tests::google_drive_file_json_and_all_mime_kinds_match_rails`.
+- **Ported** — index is 404 with an empty body without Drive consent — `app::google_drive_tests::google_drive_dead_unreadable_or_calendar_only_accounts_do_not_call_google`.
+- **Ported** — index is 404 with an empty body for a disconnected account — `app::google_drive_tests::google_drive_dead_unreadable_or_calendar_only_accounts_do_not_call_google`.
+- **Ported** — index is 404 when signed out — `app::google_drive_tests::google_drive_requires_viewer_grant_and_valid_id_and_has_distinct_anonymous_behavior`.
+- **Ported** — index is 502 when Google fails — `app::google_drive_tests::google_drive_lists_never_cache_trim_and_cap_terms_and_return_502_on_failure`.
+- **Ported** — index is 404 when Drive answers forbidden — `app::google_drive_tests::google_drive_transport_quota_and_forbidden_fail_with_rails_statuses`.
+- **Ported** — index is 404 when the refresh fails with invalid_grant — `app::google_drive_tests::google_drive_index_refreshes_expired_access_and_invalid_grant_disconnects`.
+- **Ported** — index refreshes an expired access token before listing — `app::google_drive_tests::google_drive_index_refreshes_expired_access_and_invalid_grant_disconnects`.
+- **Partial** — index throttles each user to 30 lists per minute — WS14g; endpoint implementation and coalesced tests exist in `app/google_drive_tests.rs`; retain the missing full Rails assertion or router-level expiry/user-budget scenario.
+- **Ported** — index never caches results — `app::google_drive_tests::google_drive_lists_never_cache_trim_and_cap_terms_and_return_502_on_failure`.
+- **Partial** — show throttles each user to 60 views per minute — WS14g; endpoint implementation and coalesced tests exist in `app/google_drive_tests.rs`; retain the missing full Rails assertion or router-level expiry/user-budget scenario.
+- **Partial** — show is 503 on a connection failure — WS14g; endpoint implementation and coalesced tests exist in `app/google_drive_tests.rs`; retain the missing full Rails assertion or router-level expiry/user-budget scenario.
+- **Ported** — show is 503 when Google rate limits — `app::google_drive_tests::google_drive_transport_quota_and_forbidden_fail_with_rails_statuses`.
+- **Ported** — show is 404 with an empty body for an unreadable token — `app::google_drive_tests::google_drive_dead_unreadable_or_calendar_only_accounts_do_not_call_google`.
+- **Ported** — index is 404 with an empty body for an unreadable token — `app::google_drive_tests::google_drive_dead_unreadable_or_calendar_only_accounts_do_not_call_google`.
+- **Partial** — index is 502 on a connection failure — WS14g; endpoint implementation and coalesced tests exist in `app/google_drive_tests.rs`; retain the missing full Rails assertion or router-level expiry/user-budget scenario.
+- **Ported** — index rejects an unenrolled session instead of listing files — `app::google_drive_tests::google_drive_index_rejects_unenrolled_and_stale_enrolled_sessions_before_http`.
+- **Ported** — index terminates a stale enrolled session — `app::google_drive_tests::google_drive_index_rejects_unenrolled_and_stale_enrolled_sessions_before_http`.
 
 ## test/controllers/messages_drive_attachments_test.rb
 
@@ -173,56 +172,56 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 ## test/controllers/sessions/google_controller_test.rb
 
 - **Partial** — login page offers Google sign-in with the mark, domains, and password note — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — login page hides the Google button when credentials are missing — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — login page hides the Google button when domains are explicitly empty — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — login page hides the Google button when credentials are missing — `app::google_tests::google_sessions_configured_page_and_disabled_credentials_or_domains_keep_password_login`.
+- **Ported** — login page hides the Google button when domains are explicitly empty — `app::google_tests::google_sessions_configured_page_and_disabled_credentials_or_domains_keep_password_login`.
 - **Partial** — start redirects to Google with identity-only scope, nonce, and PKCE — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — start requires CSRF protection — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — start and callback 404 when Google credentials are missing — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — start and callback 404 when sign-in domains are explicitly empty — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — signed-in users are sent home instead of starting or finishing Google sign-in — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — first-run setup cannot be bypassed through Google sign-in — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — start requires CSRF protection — `app::google_tests::google_sessions_csrf_pkce_and_signed_in_guards_match_rails`.
+- **Ported** — start and callback 404 when Google credentials are missing — `app::google_tests::google_sessions_configured_page_and_disabled_credentials_or_domains_keep_password_login`.
+- **Ported** — start and callback 404 when sign-in domains are explicitly empty — `app::google_tests::google_sessions_configured_page_and_disabled_credentials_or_domains_keep_password_login`.
+- **Ported** — signed-in users are sent home instead of starting or finishing Google sign-in — `app::google_tests::google_sessions_csrf_pkce_and_signed_in_guards_match_rails`.
+- **Ported** — first-run setup cannot be bypassed through Google sign-in — `app::google_tests::google_sessions_first_run_cannot_be_bypassed`.
 - **Partial** — new smartdata.net user is auto-provisioned as an ordinary member — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
 - **Partial** — new cnbssoftware.com user is auto-provisioned as an ordinary member — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
 - **Partial** — existing account links by verified email, preserving id, history, role, and password — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
 - **Partial** — subsequent logins resolve the immutable subject across email changes — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — post-auth return destination survives the Google round trip — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — post-auth return destination survives the Google round trip — `app::google_tests::google_sessions_secondary_domains_multi_audience_and_return_path_provision_only_identity`.
 - **Partial** — external Google account is rejected while password sign-in still works — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — missing hd is rejected: the email suffix alone proves nothing — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — spoofed hd with an external email domain is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — allowed email with an external hd is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — Google-only user cannot sign in with a password — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — missing hd is rejected: the email suffix alone proves nothing — `app::google_tests::google_sessions_claim_rejections_preserve_all_rows_and_audit_each_attempt`.
+- **Ported** — spoofed hd with an external email domain is rejected — `app::google_tests::google_sessions_claim_rejections_preserve_all_rows_and_audit_each_attempt`.
+- **Ported** — allowed email with an external hd is rejected — `app::google_tests::google_sessions_claim_rejections_preserve_all_rows_and_audit_each_attempt`.
+- **Ported** — Google-only user cannot sign in with a password — `app::google_tests::google_sessions_secondary_domains_multi_audience_and_return_path_provision_only_identity`.
 - **Partial** — deactivated user with a retained identity is rejected, never revived — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
 - **Partial** — deactivated predecessor without an identity is not recreated — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — banned user is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — bot user is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — agent user is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — ambiguous duplicate emails are rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — a different subject cannot link onto an already-linked user — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — malformed id_token is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — id_token signed by the wrong key is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — expired id_token is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — id_token for another audience is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — multi-audience id_token requires a matching azp — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — multi-audience id_token with a matching azp succeeds — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — id_token with a wrong azp is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — id_token from an unknown issuer is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — id_token with a missing or wrong nonce is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — id_token with a missing or unverified email is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — id_token with a missing subject is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — id_token with a non-RS256 algorithm is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — unknown signing key refetches once and still fails closed — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — banned user is rejected — `app::google_tests::google_sessions_ineligible_users_and_ambiguous_emails_never_create_identity_or_session`.
+- **Ported** — bot user is rejected — `app::google_tests::google_sessions_ineligible_users_and_ambiguous_emails_never_create_identity_or_session`.
+- **Ported** — agent user is rejected — `app::google_tests::google_sessions_ineligible_users_and_ambiguous_emails_never_create_identity_or_session`.
+- **Ported** — ambiguous duplicate emails are rejected — `app::google_tests::google_sessions_ineligible_users_and_ambiguous_emails_never_create_identity_or_session`.
+- **Ported** — a different subject cannot link onto an already-linked user — `app::google_tests::google_sessions_ineligible_users_and_ambiguous_emails_never_create_identity_or_session`.
+- **Ported** — malformed id_token is rejected — `app::google_tests::google_sessions_malformed_signature_algorithm_and_unknown_key_fail_closed_through_router`.
+- **Ported** — id_token signed by the wrong key is rejected — `app::google_tests::google_sessions_malformed_signature_algorithm_and_unknown_key_fail_closed_through_router`.
+- **Ported** — expired id_token is rejected — `app::google_tests::google_sessions_claim_rejections_preserve_all_rows_and_audit_each_attempt`.
+- **Ported** — id_token for another audience is rejected — `app::google_tests::google_sessions_claim_rejections_preserve_all_rows_and_audit_each_attempt`.
+- **Ported** — multi-audience id_token requires a matching azp — `app::google_tests::google_sessions_claim_rejections_preserve_all_rows_and_audit_each_attempt`.
+- **Ported** — multi-audience id_token with a matching azp succeeds — `app::google_tests::google_sessions_secondary_domains_multi_audience_and_return_path_provision_only_identity`.
+- **Ported** — id_token with a wrong azp is rejected — `app::google_tests::google_sessions_claim_rejections_preserve_all_rows_and_audit_each_attempt`.
+- **Ported** — id_token from an unknown issuer is rejected — `app::google_tests::google_sessions_claim_rejections_preserve_all_rows_and_audit_each_attempt`.
+- **Ported** — id_token with a missing or wrong nonce is rejected — `app::google_tests::google_sessions_claim_rejections_preserve_all_rows_and_audit_each_attempt`.
+- **Ported** — id_token with a missing or unverified email is rejected — `app::google_tests::google_sessions_claim_rejections_preserve_all_rows_and_audit_each_attempt`.
+- **Ported** — id_token with a missing subject is rejected — `app::google_tests::google_sessions_claim_rejections_preserve_all_rows_and_audit_each_attempt`.
+- **Ported** — id_token with a non-RS256 algorithm is rejected — `app::google_tests::google_sessions_malformed_signature_algorithm_and_unknown_key_fail_closed_through_router`.
+- **Ported** — unknown signing key refetches once and still fails closed — `app::google_tests::google_sessions_malformed_signature_algorithm_and_unknown_key_fail_closed_through_router`.
 - **Partial** — key rotation succeeds through a bounded refetch — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
 - **Partial** — callback with a forged or missing state is rejected without contacting Google — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — callback with an expired flow is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — callback with an expired flow is rejected — `app::google_tests::google_sessions_cancel_missing_code_expired_and_replaced_flow_do_not_contact_google`.
 - **Partial** — callback state cannot be replayed — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — cancelled grant redirects without signing in — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — callback without a code is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — failed code exchange sends PKCE and fails without signing in — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — token exchange without an id_token fails without signing in — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — token endpoint outage fails closed with a retry message — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — token endpoint connection failure fails closed with a retry message — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — signing key outage fails closed with a retry message — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
-- **Partial** — rejection logs carry no tokens or codes — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Ported** — cancelled grant redirects without signing in — `app::google_tests::google_sessions_cancel_missing_code_expired_and_replaced_flow_do_not_contact_google`.
+- **Ported** — callback without a code is rejected — `app::google_tests::google_sessions_cancel_missing_code_expired_and_replaced_flow_do_not_contact_google`.
+- **Ported** — failed code exchange sends PKCE and fails without signing in — `app::google_tests::google_sessions_denied_missing_token_and_transport_outages_have_exact_notices`.
+- **Ported** — token exchange without an id_token fails without signing in — `app::google_tests::google_sessions_denied_missing_token_and_transport_outages_have_exact_notices`.
+- **Ported** — token endpoint outage fails closed with a retry message — `app::google_tests::google_sessions_denied_missing_token_and_transport_outages_have_exact_notices`; real router/SQLite and recorded transport. Timeout/refused transport errors share the client's `Unavailable` type; real socket timeout coverage is in `sign_in::tests`.
+- **Ported** — token endpoint connection failure fails closed with a retry message — `app::google_tests::google_sessions_denied_missing_token_and_transport_outages_have_exact_notices`; real router/SQLite and recorded transport. Timeout/refused transport errors share the client's `Unavailable` type; real socket timeout coverage is in `sign_in::tests`.
+- **Ported** — signing key outage fails closed with a retry message — `app::google_tests::google_sessions_denied_missing_token_and_transport_outages_have_exact_notices`; real router/SQLite and recorded transport. Timeout/refused transport errors share the client's `Unavailable` type; real socket timeout coverage is in `sign_in::tests`.
+- **Ported** — rejection logs carry no tokens or codes — `app::google_tests::google_sessions_rejection_log_names_reason_without_token_or_authorization_code`.
 - **Partial** — authorization code is filtered from logs — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
 - **Partial** — Google sign-in creates no Calendar/Drive connection and stores no tokens — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
 - **Partial** — Calendar connection is never treated as login identity — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
@@ -819,6 +818,10 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## Continuation coverage and remaining seams
 
-The callback is installed at boot and its provisioning/link/sign-in writes share one immediate transaction. Eight native request tests cover first and returning sign-in, bad state/nonce/audience/domain/expiry, enrolled/remembered-device handoff, self-link ownership, fresh reauth/sudo, mismatched sudo subject, administrator trust no-ops, and session-insert rollback. Existing WS9 confirmation tests also run with the adapter installed. These coalesce Rails cases; partial entries above remain explicit until their complete Rails assertions are represented.
+Connection controllers and Google API refresh/revoke are implemented with recorded Rails fixtures. SyncEntry, RemoteDelete, WatchChannel, DisconnectCleanup and MeetingRefresh now have registered consumers; deterministic entry IDs/payloads, interval sets, cache completion, throttle claims, cleanup ordering and channel replacement have native coverage. MeetLink and InboundSync remain WS14g work: they must use WS14e's validated Event.update/attendance response callbacks once the integration seam is available, rather than write Event rows directly. Job payload declarations remain matched to Rails and WS14e/WS17.
 
-The connection model has four native tests for encrypted columns, Rails-written ciphertext, expiry/scope predicates, reconnect preservation, unreadable-token disconnection, and cleanup snapshots. The connection controllers and HTTP refresh/revoke remain deferred. Calendar webhook handlers enqueue durable rows but downstream Calendar handlers remain deferred. Job argument names come from Rails; SyncEntry and MeetLink use WS14e's documented named payloads, RemoteDelete retains WS8's tuple, and MeetingRefresh uses WS17's named user_id payload. WS14e has pushed its producers; their handlers are still outstanding here. Drive URL parsing is implemented; Drive metadata endpoints, recipients, attachment controller wiring and HTML remain deferred. Existing Message Drive attachment validation/save/touch/cascade code stays owned by WS8 and was not duplicated.
+The Google profile connection and sign-in panels are byte-identical for seven connection and three identity states; Drive chips are exact for empty and populated attachments. Complete page composition and visual comparisons still need work with WS6/WS19. The profile renderer now reads Calendar connection and login identity separately. Metadata/search and human room recipients are implemented; valid agent-token authorization depends on WS11's base authentication seam. Message attachment submission remains with WS8b-m/m2 and WS11-api: Rails permits authorized message writers to submit IDs without a Google grant. Existing Message validation/save/touch/cascade code is reused.
+
+Ten additional coalesced session tests cover the largest controller file. Four further connection controller tests cover authorize guards/parameter shapes, exact rejection notices with no grant/audit/job writes, granted/omitted scope retention and reconnect, and unreadable-token disconnect with cache removal, retained flags and isolated entries/grants. Cases left Partial still need their complete original assertions; deactivation/ban races, account history/password preservation, rotation over HTTP, authenticated replay, full configured pages, some audits and admin controls remain individually assigned above. Other Calendar/Drive files retain Partial/Deferred where the exact named case is not yet mapped; native representative tests are not a claim that all 611 declarations are done.
+
+Retry bookkeeping note: Calendar handlers preserve eight Google attempts and five inherited SQLite busy attempts. The shared durable runner counts total executions; Rails keeps exception-handler-specific counters when error classes alternate. That remaining queue contract belongs with WS3 integration. Cleanup exhaustion now completes after logging, matching the Rails retry block; the separate Rails.error reporting subscriber integration remains unfinished.

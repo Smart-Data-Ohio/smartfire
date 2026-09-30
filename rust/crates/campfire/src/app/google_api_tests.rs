@@ -17,12 +17,15 @@ use hyper::Method;
 use rails_compat::ar_encryption::ArEncryption;
 use serde_json::{Value, json};
 use std::{
-    collections::VecDeque,
+    collections::{BTreeMap, VecDeque},
     sync::{Arc, Mutex},
 };
+type Responses = VecDeque<(u16, Vec<u8>)>;
+type TargetedResponses = BTreeMap<(String, String), Responses>;
 pub struct Recorded {
-    pub answers: Mutex<VecDeque<(u16, Vec<u8>)>>,
+    pub answers: Mutex<Responses>,
     pub calls: Mutex<Vec<Value>>,
+    targeted_answers: Mutex<TargetedResponses>,
     failures: std::sync::atomic::AtomicUsize,
 }
 impl Recorded {
@@ -30,6 +33,7 @@ impl Recorded {
         Arc::new(Self {
             answers: Mutex::new(answers.into()),
             calls: Mutex::new(vec![]),
+            targeted_answers: Mutex::new(BTreeMap::new()),
             failures: std::sync::atomic::AtomicUsize::new(0),
         })
     }
@@ -41,6 +45,15 @@ impl Recorded {
         self.answers
             .lock()
             .unwrap()
+            .push_back((status, serde_json::to_vec(&body).unwrap()));
+    }
+    /// Concurrent job consumers must not consume an OAuth endpoint's recorded response.
+    pub fn answer_for(&self, method: Method, target: &str, status: u16, body: Value) {
+        self.targeted_answers
+            .lock()
+            .unwrap()
+            .entry((method.to_string(), target.into()))
+            .or_default()
             .push_back((status, serde_json::to_vec(&body).unwrap()));
     }
 }
@@ -76,12 +89,18 @@ impl Client for Recorded {
             {
                 return Err(Unavailable);
             }
-            Ok(self
-                .answers
+            if let Some(answer) = self
+                .targeted_answers
                 .lock()
                 .unwrap()
-                .pop_front()
-                .expect("unrecorded Google call; network prohibited"))
+                .get_mut(&(method.to_string(), target.into()))
+                .and_then(VecDeque::pop_front)
+            {
+                return Ok(answer);
+            }
+            Ok(self.answers.lock().unwrap().pop_front().unwrap_or_else(|| {
+                panic!("unrecorded Google call: {method} {host}{target}; network prohibited")
+            }))
         })
     }
 }
