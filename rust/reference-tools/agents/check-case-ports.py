@@ -6,6 +6,7 @@ import re
 import subprocess
 ROOT = Path(__file__).resolve().parents[3]
 mapping = json.loads((Path(__file__).parent / 'case-ports.json').read_text())
+counts = {}
 for group in mapping['files']:
     source = subprocess.check_output(['git', 'show', mapping['reference_pin'] + ':' + group['rails_file']], cwd=ROOT, text=True)
     assert (ROOT / group['rails_file']).read_text() == source, group['rails_file']
@@ -17,5 +18,9 @@ for group in mapping['files']:
     ports = re.findall(r'^(?:async )?fn (ws11_\w+)\(', rust, re.M)
     expected_ports = [case['rust'] for case in group['cases']]
     assert all(port in ports for port in expected_ports), group['rust_file']
-    print(f"WS11 named ports: {group['rails_file']}: {len(expected_ports)} mapped cases; {len(names)-len(mapped)} unmapped case names")
-print(f"WS11 source case files: {len(mapping['files'])} pinned Git files matched; 0 checkout mismatches")
+    total, prior = counts.get(group['rails_file'], (len(names), set()))
+    assert not prior.intersection(mapped), group['rails_file']
+    counts[group['rails_file']] = (total, prior.union(mapped))
+for file, (total, mapped) in counts.items():
+    print(f'WS11 named ports: {file}: {len(mapped)} mapped cases; {total-len(mapped)} unmapped case names')
+print(f'WS11 source case files: {len(counts)} pinned Git files matched; 0 checkout mismatches')

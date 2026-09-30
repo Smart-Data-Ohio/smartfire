@@ -20,6 +20,7 @@ mod agent_credential_cases_test;
 mod agent_grant_cases_test;
 mod agent_user_removal_test;
 mod agent_streaming_test;
+mod agent_streaming_cases_test;
 mod agent_delivery_test;
 mod agent_delivery_cases_test;
 mod agent_event_access_test;

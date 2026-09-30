@@ -514,11 +514,96 @@
           "rust": "ws11_private_guard_case_resolve_raises_unresolvable_not_violation_when_the_host_resolves_to_nothing"
         }
       ]
+    },
+    {
+      "rails_file": "test/models/message_streaming_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_streaming_cases_test.rs",
+      "cases": [
+        {
+          "rails": "a streaming create fires no side effects",
+          "rust": "ws11_stream_case_create_fires_no_side_effects"
+        },
+        {
+          "rails": "finalizing a thread stream fans out no legacy webhook",
+          "rust": "ws11_stream_case_thread_finalize_fans_out_no_legacy_webhook"
+        },
+        {
+          "rails": "finalizing a thread stream sends no unread-room broadcast",
+          "rust": "ws11_stream_case_thread_finalize_sends_no_unread_room_broadcast"
+        },
+        {
+          "rails": "stream broadcasts coalesce to about four per second",
+          "rust": "ws11_stream_case_broadcasts_coalesce_four_per_second"
+        },
+        {
+          "rails": "a trailing broadcast stays quiet once a newer broadcast lands",
+          "rust": "ws11_stream_case_trailing_quiet_after_newer_broadcast"
+        },
+        {
+          "rails": "a trailing broadcast stays quiet after finalize",
+          "rust": "ws11_stream_case_trailing_quiet_after_finalize"
+        },
+        {
+          "rails": "starting and appending stamp the stream's last activity",
+          "rust": "ws11_stream_case_start_append_and_replace_stamp_last_activity"
+        },
+        {
+          "rails": "an append after a finalize is refused and leaves the final alone",
+          "rust": "ws11_stream_case_append_or_replace_after_finalize_refused"
+        },
+        {
+          "rails": "a finalized stream can never resume",
+          "rust": "ws11_stream_case_finalized_stream_never_resumes"
+        },
+        {
+          "rails": "the overdue sweep query uses the streaming activity index",
+          "rust": "ws11_stream_case_sweep_uses_streaming_activity_index"
+        },
+        {
+          "rails": "finalize skips side effects for a suspended agent",
+          "rust": "ws11_stream_case_suspended_agent_finalize_quiet"
+        },
+        {
+          "rails": "finalize skips side effects for a deactivated agent",
+          "rust": "ws11_stream_case_deactivated_agent_finalize_quiet"
+        },
+        {
+          "rails": "finalize clears the streaming agent's working presence",
+          "rust": "ws11_stream_case_finalize_clears_working_presence"
+        },
+        {
+          "rails": "a stream may start empty and require no body until finalize",
+          "rust": "ws11_stream_case_empty_start_and_finalize_allowed"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/message_streaming_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_streaming/case_tests.rs",
+      "cases": [
+        {
+          "rails": "overdue streams finalize from the sweep, fresh ones stay streaming",
+          "rust": "ws11_stream_case_sweep_finalizes_overdue_not_fresh"
+        },
+        {
+          "rails": "the sweep keys on inactivity, not creation",
+          "rust": "ws11_stream_case_sweep_keys_on_inactivity_not_creation"
+        },
+        {
+          "rails": "the sweep skips streams in locked threads until unlock",
+          "rust": "ws11_stream_case_sweep_skips_locked_thread_until_unlock"
+        },
+        {
+          "rails": "the sweep finalizes a suspended agent's streams quietly",
+          "rust": "ws11_stream_case_sweep_suspended_agent_quiet"
+        }
+      ]
     }
   ],
   "boundary_deferred": {
     "test/models/agent_credential_test.rb": "The unknown/blank secret case runs against the str domain input. Conversion of absent HTTP credentials (Rails nil.to_s) remains with WS11-api.",
     "test/models/agent_test.rb": "The badge/directory HTML and absence of secrets in rendered HTML remain WS11-ui cases (two unmapped names). The reset-lock comparison checks the actual serialized writer transaction instead of a Ruby method spy.",
-    "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8."
+    "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8.",
+    "test/models/message_streaming_test.rb": "18 domain and production-sweep cases compared; five actual rendered start/trailing, activity and link-reference cases await their peer adapters. Never-resume checks the same validation through persistence instead of Rails valid?."
   }
 }

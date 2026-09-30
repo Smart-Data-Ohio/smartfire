@@ -621,12 +621,25 @@ impl Message {
         self.thread_id.is_some() && !self.system_note && !self.streaming
     }
 
+    /// Rails validates the saved false -> true transition on every update.
+    /// Compare the persisted row, so a stale or manually edited model cannot
+    /// bypass the stream's irreversible finalization claim.
+    fn validate_streaming_state(&self, conn: &Connection) -> Result<()> {
+        if self.streaming && !Self::find(conn, self.id)?.streaming {
+            let mut errors = Errors::default();
+            errors.add("streaming", "cannot resume once finalized");
+            return errors.into_result();
+        }
+        Ok(())
+    }
+
     /// `before_save :touch_streaming_activity, if: :streaming?`: every save while streaming
     /// restarts the finalize sweep's inactivity clock. That's a saved change, so it touches the
     /// room too (`belongs_to :room, touch: true`), even when nothing else changed. (`touch` isn't
     /// a save, so boosts don't restart the clock.) `save_touches_test` holds each save path to
     /// Rails' answer.
     fn touch_streaming_activity(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        self.validate_streaming_state(tx.conn())?;
         if !self.streaming {
             return Ok(());
         }
@@ -707,6 +720,7 @@ impl Message {
     /// in this transaction (Rails' `after_update_commit :update_in_index` is moved here so a
     /// failed renderer cannot leave a partially processed write).
     fn save_changes(&mut self, tx: &mut Tx<'_>, changes: MessageChanges, stamp_edited: bool) -> Result<()> {
+        self.validate_streaming_state(tx.conn())?;
         let conn = tx.conn();
         let content_changes = stamp_edited && self.body_content_will_change(conn, tx.rich_text(), &changes)?;
         let markdown_source =

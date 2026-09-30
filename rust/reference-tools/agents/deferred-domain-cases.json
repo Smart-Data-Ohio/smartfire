@@ -5,7 +5,8 @@
   "boundary_deferred": {
     "test/models/agent_credential_test.rb": "The unknown/blank secret case runs against the str domain input. Conversion of absent HTTP credentials (Rails nil.to_s) remains with WS11-api.",
     "test/models/agent_test.rb": "The badge/directory HTML and absence of secrets in rendered HTML remain WS11-ui cases (two unmapped names). The reset-lock comparison checks the actual serialized writer transaction instead of a Ruby method spy.",
-    "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8."
+    "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8.",
+    "test/models/message_streaming_test.rb": "18 domain and production-sweep cases compared; five actual rendered start/trailing, activity and link-reference cases await their peer adapters. Never-resume checks the same validation through persistence instead of Rails valid?."
   },
   "files": [
     {
@@ -109,28 +110,10 @@
       "rails_file": "test/models/message_streaming_test.rb",
       "owner": "WS11 finalization; WS12 activity; WS14/15 external reference sync",
       "remaining_named_case_ports": [
-        "a streaming create fires no side effects",
         "stream start broadcasts the append without the unread broadcast",
         "finalize fires every side effect exactly once",
-        "finalizing a thread stream fans out no legacy webhook",
-        "finalizing a thread stream sends no unread-room broadcast",
         "appends re-render without firing side effects",
-        "stream broadcasts coalesce to about four per second",
         "a coalesced update sends a trailing broadcast with the final text",
-        "a trailing broadcast stays quiet once a newer broadcast lands",
-        "a trailing broadcast stays quiet after finalize",
-        "overdue streams finalize from the sweep, fresh ones stay streaming",
-        "the sweep keys on inactivity, not creation",
-        "starting and appending stamp the stream's last activity",
-        "an append after a finalize is refused and leaves the final alone",
-        "a finalized stream can never resume",
-        "the overdue sweep query uses the streaming activity index",
-        "the sweep skips streams in locked threads until unlock",
-        "finalize skips side effects for a suspended agent",
-        "the sweep finalizes a suspended agent's streams quietly",
-        "finalize skips side effects for a deactivated agent",
-        "finalize clears the streaming agent's working presence",
-        "a stream may start empty and require no body until finalize",
         "link references sync at finalize, not while streaming"
       ]
     },

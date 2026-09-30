@@ -186,3 +186,6 @@ mod tests {
             .unwrap();
     }
 }
+
+#[cfg(test)]
+mod case_tests;
