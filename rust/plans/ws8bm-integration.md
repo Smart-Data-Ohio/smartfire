@@ -48,8 +48,9 @@ The merged shell must supply:
   `Presenter::composer_drive_flow(viewer, share_picker_available)` reads only that grant.
 - WS8b-m2's rendered `scheduled_messages::ComposerButton { ctx, room_id, thread_id }`
   as trusted `scheduled_control: helpers::Html`. This branch does not implement that
-  feature or copy its template. The content controller currently passes an empty child;
-  the lead must wire this provider after merging M2 to complete full HTTP pane bytes.
+  feature or copy its template. The content controller's explicitly flagged
+  `render_thread_schedule_control(ctx, room_id, thread_id)` currently returns an empty child;
+  wire the provider at this call site after merging M2 to complete full HTTP pane bytes.
 
 For the optimistic client message template, mount the additive
 `channel_threads::PendingTemplate { ctx, user: presenter.user_view(viewer.id)? }`.
@@ -84,5 +85,6 @@ after the lead's owner merge, resolve `github_pr_thread_pull_request(thread)` th
 WS15g's `campfire_views::github::thread_header(ctx, room_id, thread_id, card)` with the proper
 request context. Do not treat an empty PR slot as acceptance of a populated PR thread.
 
-Work and board HTML show routes return an authorized 501 pending WS12; their JSON read
-details retain the existing API. No work/board shell or control policy is implemented here.
+Work and board HTML show and pane content routes return an authorized 501 pending WS12;
+their JSON show read details retain the existing API. No work/board shell or control policy
+is implemented here.

@@ -133,12 +133,15 @@ async fn work_and_board_html_remain_authorized_ws12_seams() {
     let (app, _, threads) = fixture().await;
     assert_eq!(app.sign_in(KEVIN).await.get(&format!("/rooms/{ALL_TALK}/threads/{}", threads[5])).await.status, StatusCode::NOT_FOUND);
     assert_eq!(app.david().get(&format!("/rooms/{ALL_TALK}/threads/{}", threads[5])).await.status, StatusCode::NOT_IMPLEMENTED);
+    assert_eq!(app.sign_in(KEVIN).await.get(&format!("/rooms/{ALL_TALK}/threads/{}/content", threads[5])).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(app.david().get(&format!("/rooms/{ALL_TALK}/threads/{}/content", threads[5])).await.status, StatusCode::NOT_IMPLEMENTED);
     let (room, thread) = app.db().write(|tx| {
         let room = campfire_db::Room::create_for(tx, campfire_db::RoomType::Board, Some("Board seam"), DAVID, &[DAVID])?;
         let thread = ChannelThread::create(tx, NewChannelThread {room_id: room.id, creator_id: DAVID, name: Some("Board post".into()), work_status: Some("planned".into()), ..Default::default()})?;
         Ok((room.id, thread.id))
     }).await.unwrap();
     assert_eq!(app.david().get(&format!("/rooms/{room}/threads/{thread}")).await.status, StatusCode::NOT_IMPLEMENTED);
+    assert_eq!(app.david().get(&format!("/rooms/{room}/threads/{thread}/content")).await.status, StatusCode::NOT_IMPLEMENTED);
 }
 
 #[tokio::test]
