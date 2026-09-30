@@ -543,6 +543,8 @@ impl User {
         conn.execute_cached("DELETE FROM user_devices WHERE user_id = ?", [self.id])?;
         lifecycle::deactivate(tx, self.id, context)?;
         let email = self.deactivated_email_address();
+        // app/models/user.rb: manual OOO cannot survive account deactivation.
+        conn.execute_cached("UPDATE users SET ooo_until=NULL, ooo_note=NULL, ooo_broadcast=NULL WHERE id=?", [self.id])?;
         self.update(
             tx,
             UserChanges {
@@ -723,12 +725,9 @@ impl User {
     /// Rails `email_change_requested?`: strip, then Unicode `casecmp?`. The submitted
     /// value is still saved verbatim; only the security check uses this comparison.
     pub fn email_change_requested(&self, submitted: &str) -> bool {
-        use caseless::Caseless;
         use campfire_richtext::ruby::strip;
-        !strip(submitted).chars().default_case_fold().eq(
-            strip(self.email_address.as_deref().unwrap_or(""))
-                .chars()
-                .default_case_fold(),
+        rails_compat::unicode::fold(strip(submitted)) != rails_compat::unicode::fold(
+            strip(self.email_address.as_deref().unwrap_or("")),
         )
     }
 
