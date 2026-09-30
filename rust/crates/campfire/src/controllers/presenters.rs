@@ -336,6 +336,7 @@ impl<'a> Presenter<'a> {
             provider_github: Some(provider_cards::github(&data.records,message)),
             provider_embeds: Some(provider_cards::embeds(&data.records,message)),
             provider_events: Some(provider_cards::events(&data.records,message)),
+            twitter_posts: provider_cards::twitter(&data.records,message),
             github_cards: data.records.private_prs.get(&message.id).into_iter().flatten()
                 .map(|id| frame(*id,"github/pull_requests","github_pull_request","github-pr-card-frame","    ")).collect(),
             fizzy_cards: data.records.fizzy_cards.get(&message.id).into_iter().flatten()

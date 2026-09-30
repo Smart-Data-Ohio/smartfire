@@ -168,3 +168,6 @@ pub struct Platform {
 
 pub mod room_files;
 pub mod message_links;
+
+// WS15e published X partials, mounted by WS8bm2 without fetch/write ownership.
+pub mod twitter;

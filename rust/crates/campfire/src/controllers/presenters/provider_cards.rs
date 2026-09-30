@@ -136,3 +136,28 @@ pub(super) fn events(
         })
         .collect()
 }
+
+pub(super) fn twitter(
+    data: &RenderingRecords,
+    message: &Message,
+) -> Vec<campfire_views::twitter::Card> {
+    let present = |s: &Option<String>| {
+        s.as_ref()
+            .filter(|s| !campfire_richtext::ruby::is_blank(s))
+            .cloned()
+    };
+    data.twitter_posts.get(&message.id).into_iter().flatten().map(|post| {
+        static URL:LazyLock<Regex>=LazyLock::new(||Regex::new(r"https?://(?:www\.|mobile\.)?(?:twitter\.com|x\.com)/(?:i/(?:web/)?status/|(?P<handle>[A-Za-z0-9_]{1,15})/status(?:es)?/)(?P<id>[0-9]{1,25})\b").unwrap());
+        let display_handle=present(&post.author_handle).or_else(||post.url.as_deref().and_then(|url|URL.captures(url)).and_then(|c|c.name("handle").map(|h|h.as_str().to_owned())));
+        campfire_views::twitter::Card {
+            post_id:post.post_id.clone(),
+            view_url:present(&post.url).unwrap_or_else(||format!("https://x.com/i/status/{}",post.post_id)),
+            display_name:present(&post.author_name).unwrap_or_else(||display_handle.as_ref().map_or_else(||"Post on X".into(),|h|format!("@{h}"))),
+            profile_url:display_handle.as_ref().map(|h|format!("https://x.com/{h}")),display_handle,
+            author_avatar_url:post.author_avatar_url.clone(),text:post.text.clone(),posted_at:post.posted_at.map(|t|t.jiff()),
+            replies:post.replies,reposts:post.reposts,likes:post.likes,media:post.media.clone(),quote:post.quote.clone(),
+            fetched_at:post.fetched_at.map(|t|t.jiff()),fetch_error:post.fetch_error.clone(),
+            logo_url:Some("icons/brands/x.svg".into()),
+        }
+    }).collect()
+}

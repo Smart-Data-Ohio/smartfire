@@ -179,3 +179,65 @@ async fn populated_event_cards_match_actual_rails_without_viewer_attendance_stat
         .await
         .unwrap();
 }
+
+fn twitter_oracle() -> Value {
+    serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/twitter_preloads.json"
+    ))
+    .unwrap()
+}
+#[tokio::test]
+async fn preloaded_x_cards_match_actual_rails_numeric_order_and_warm_refresh() {
+    let app = app_rows(twitter_oracle()["rows"].clone()).await;
+    let runtime = app.booted.app.clone();
+    app.db()
+        .read(move |conn| {
+            let messages = twitter_oracle()["cases"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|case| Message::find(conn, case["message_id"].as_i64().unwrap()))
+                .collect::<campfire_db::Result<Vec<_>>>()?;
+            let p = Presenter::new(conn, &runtime, None).preload_search(&messages)?;
+            conn.flush_prepared_statement_cache();
+            let count = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+            let observed = count.clone();
+            conn.authorizer(Some(move |ctx: rusqlite::hooks::AuthContext<'_>| {
+                if matches!(ctx.action, rusqlite::hooks::AuthAction::Select) {
+                    observed.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                }
+                rusqlite::hooks::Authorization::Allow
+            }));
+            for (message, case) in messages
+                .iter()
+                .zip(twitter_oracle()["cases"].as_array().unwrap())
+            {
+                let view = p.message(message)?;
+                let html =
+                    page::render_detached_at(&runtime, None, "http://campfire.test", |ctx| {
+                        campfire_views::twitter::cards(ctx, &view).0
+                    });
+                assert_eq!(html, case["html"].as_str().unwrap(), "{}", case["label"]);
+            }
+            conn.authorizer(
+                None::<fn(rusqlite::hooks::AuthContext<'_>) -> rusqlite::hooks::Authorization>,
+            );
+            assert_eq!(count.load(std::sync::atomic::Ordering::SeqCst), 0);
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let path = format!("/rooms/{QUIET_CORNER}/messages");
+    let initial = app.david().get(&path).await;
+    for case in twitter_oracle()["cases"].as_array().unwrap() {
+        assert!(initial.text().contains(case["html"].as_str().unwrap()));
+    }
+    app.db().write(|tx| {tx.conn().execute("UPDATE twitter_posts SET text='Fresh X cached card',updated_at='2026-03-02 16:00:01' WHERE post_id='90071992547409931'",[])?;Ok(())}).await.unwrap();
+    assert!(
+        app.david()
+            .get(&path)
+            .await
+            .text()
+            .contains("Fresh X cached card")
+    );
+}

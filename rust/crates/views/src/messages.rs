@@ -141,6 +141,7 @@ pub struct MessageComponents {
     pub quote_references: Option<Vec<crate::message_links::Reference>>,
     pub github_cards: Vec<String>,
     pub twitter_cards: Vec<String>,
+    pub twitter_posts: Vec<crate::twitter::Card>,
     pub event_cards: Vec<String>,
     pub message_link_cards: Vec<String>,
     pub fizzy_cards: Vec<String>,

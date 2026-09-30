@@ -1,6 +1,7 @@
 //! Page-scoped reads for Message.with_rendering_details. No HTML or viewer state.
 pub mod providers;
 pub mod event_cards;
+pub mod twitter;
 
 use crate::models::poll::{Poll, PollOption, PollVote};
 use crate::{Boost, Message, Result, Room, Timestamp, User};
@@ -63,6 +64,7 @@ pub struct RenderingUser {
 #[derive(Default)]
 pub struct RenderingRecords {
     pub providers: providers::Providers,
+    pub twitter_posts: HashMap<i64,Vec<twitter::Post>>,
     pub event_cards: HashMap<i64,Vec<event_cards::EventCard>>,
     pub cache: HashMap<i64, CacheDetails>,
     pub pr_thread_stamps: HashMap<i64, Timestamp>,
@@ -115,6 +117,7 @@ impl RenderingRecords {
         let ids: Vec<_> = messages.iter().map(|m| m.id).collect();
         data.providers = providers::Providers::load(conn, &ids)?;
         data.event_cards=event_cards::load(conn,&ids)?;
+        data.twitter_posts=twitter::load(conn,&ids)?;
         // WS8bm2 root cache seam. These association reads are bounded by the page,
         // and cache invalidation must include public and private provider rows alike.
         for (message, stamp) in rows(conn, "WITH page AS (SELECT id FROM messages WHERE id IN ($ids))

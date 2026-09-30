@@ -40,6 +40,9 @@ def check(name, relative, old, new, test):
         source.write_text(original)
 
 
+check("x-identity-order", "rust/crates/db/src/models/message_rendering/twitter.rs",
+      "a.len().cmp(&b.len()).then_with(|| a.cmp(b))", "b.len().cmp(&a.len()).then_with(|| b.cmp(a))",
+      "controllers::message_features::provider_tests::preloaded_x_cards_match_actual_rails_numeric_order_and_warm_refresh")
 check("event-meet-scheme", "rust/crates/campfire/src/controllers/presenters/provider_cards.rs",
       "meet_link,", "meet_link: card.meet_link.clone(),",
       "controllers::message_features::provider_tests::populated_event_cards_match_actual_rails_without_viewer_attendance_state")

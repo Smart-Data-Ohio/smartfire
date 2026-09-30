@@ -7,6 +7,7 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[3]
 FILES = [
+    "app/models/twitter/post.rb", "app/models/twitter/post_url.rb", "app/helpers/twitter/posts_helper.rb", "app/views/twitter/posts/_card.html.erb", "app/views/twitter/posts/_cards.html.erb",
     "app/views/rooms/events/_cards.html.erb", "app/views/rooms/events/_card.html.erb", "app/helpers/rooms/events_helper.rb", "app/models/event.rb",
     "app/views/github/pull_requests/_card.html.erb", "app/models/github/pull_request.rb",
     "app/views/link_embeds/_cards.html.erb", "app/views/link_embeds/_card.html.erb", "app/helpers/link_embeds_helper.rb", "app/models/link_embed.rb", "app/models/link_embed_reference.rb",

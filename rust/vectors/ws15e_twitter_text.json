@@ -1,0 +1,318 @@
+{
+  "reference": "d7c7de92",
+  "format": [
+    {
+      "text": "#Ⅷ #² #½ #क् #ᢅ #a‌ #𝟟 #_",
+      "format": "<a href=\"https://x.com/hashtag/%E2%85%A7\" target=\"_blank\" rel=\"noopener noreferrer\">#Ⅷ</a> #² #½ <a href=\"https://x.com/hashtag/%E0%A4%95\" target=\"_blank\" rel=\"noopener noreferrer\">#क</a>् <a href=\"https://x.com/hashtag/%E1%A2%85\" target=\"_blank\" rel=\"noopener noreferrer\">#ᢅ</a> <a href=\"https://x.com/hashtag/a\" target=\"_blank\" rel=\"noopener noreferrer\">#a</a>‌ <a href=\"https://x.com/hashtag/%F0%9D%9F%9F\" target=\"_blank\" rel=\"noopener noreferrer\">#𝟟</a> <a href=\"https://x.com/hashtag/_\" target=\"_blank\" rel=\"noopener noreferrer\">#_</a>",
+      "plain": "#Ⅷ #² #½ #क् #ᢅ #a‌ #𝟟 #_",
+      "clamp": false
+    },
+    {
+      "text": "<b>hi</b>\nbye",
+      "format": "&lt;b&gt;hi&lt;/b&gt;<br>bye",
+      "plain": "&lt;b&gt;hi&lt;/b&gt;<br>bye",
+      "clamp": false
+    },
+    {
+      "text": "Hi @jack, see https://x.com/a/status/1! #news",
+      "format": "Hi <a href=\"https://x.com/jack\" target=\"_blank\" rel=\"noopener noreferrer\">@jack</a>, see <a href=\"https://x.com/a/status/1\" target=\"_blank\" rel=\"noopener noreferrer\">https://x.com/a/status/1</a>! <a href=\"https://x.com/hashtag/news\" target=\"_blank\" rel=\"noopener noreferrer\">#news</a>",
+      "plain": "Hi @jack, see https://x.com/a/status/1! #news",
+      "clamp": false
+    },
+    {
+      "text": "mail a@b.co or visit https://x.com/@jack#frag",
+      "format": "mail a@b.co or visit <a href=\"https://x.com/@jack#frag\" target=\"_blank\" rel=\"noopener noreferrer\">https://x.com/@jack#frag</a>",
+      "plain": "mail a@b.co or visit https://x.com/@jack#frag",
+      "clamp": false
+    },
+    {
+      "text": "it's <3 (https://x.com/a/status/2).",
+      "format": "it&#39;s &lt;3 (<a href=\"https://x.com/a/status/2\" target=\"_blank\" rel=\"noopener noreferrer\">https://x.com/a/status/2</a>).",
+      "plain": "it&#39;s &lt;3 (https://x.com/a/status/2).",
+      "clamp": false
+    },
+    {
+      "text": "a<b>\n@c",
+      "format": "a&lt;b&gt;<br><a href=\"https://x.com/c\" target=\"_blank\" rel=\"noopener noreferrer\">@c</a>",
+      "plain": "a&lt;b&gt;<br>@c",
+      "clamp": false
+    },
+    {
+      "text": "short",
+      "format": "short",
+      "plain": "short",
+      "clamp": false
+    },
+    {
+      "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "format": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "plain": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "clamp": false
+    },
+    {
+      "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "format": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "plain": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "clamp": true
+    },
+    {
+      "text": "line\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\n",
+      "format": "line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>",
+      "plain": "line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>",
+      "clamp": false
+    },
+    {
+      "text": "line\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\n",
+      "format": "line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>",
+      "plain": "line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>",
+      "clamp": true
+    },
+    {
+      "text": " #中文 #é #á #١٢ #💥 ",
+      "format": " <a href=\"https://x.com/hashtag/%E4%B8%AD%E6%96%87\" target=\"_blank\" rel=\"noopener noreferrer\">#中文</a> <a href=\"https://x.com/hashtag/%C3%A9\" target=\"_blank\" rel=\"noopener noreferrer\">#é</a> <a href=\"https://x.com/hashtag/a\" target=\"_blank\" rel=\"noopener noreferrer\">#a</a>́ <a href=\"https://x.com/hashtag/%D9%A1%D9%A2\" target=\"_blank\" rel=\"noopener noreferrer\">#١٢</a> #💥 ",
+      "plain": " #中文 #é #á #١٢ #💥 ",
+      "clamp": false
+    },
+    {
+      "text": "é@jack a@b _@c .@jack @0123456789abcdef @shorté",
+      "format": "é<a href=\"https://x.com/jack\" target=\"_blank\" rel=\"noopener noreferrer\">@jack</a> a@b _@c .<a href=\"https://x.com/jack\" target=\"_blank\" rel=\"noopener noreferrer\">@jack</a> @0123456789abcdef @shorté",
+      "plain": "é@jack a@b _@c .@jack @0123456789abcdef @shorté",
+      "clamp": false
+    },
+    {
+      "text": "https://a.test/x?x=1&y=2,;!? @a_ #a_b",
+      "format": "<a href=\"https://a.test/x?x=1&amp;y=2\" target=\"_blank\" rel=\"noopener noreferrer\">https://a.test/x?x=1&amp;y=2</a>,;!? <a href=\"https://x.com/a_\" target=\"_blank\" rel=\"noopener noreferrer\">@a_</a> <a href=\"https://x.com/hashtag/a_b\" target=\"_blank\" rel=\"noopener noreferrer\">#a_b</a>",
+      "plain": "https://a.test/x?x=1&amp;y=2,;!? @a_ #a_b",
+      "clamp": false
+    },
+    {
+      "text": "\r\n@a\r #b\t https://a.test/a).",
+      "format": "<br><a href=\"https://x.com/a\" target=\"_blank\" rel=\"noopener noreferrer\">@a</a>\r <a href=\"https://x.com/hashtag/b\" target=\"_blank\" rel=\"noopener noreferrer\">#b</a>\t <a href=\"https://a.test/a\" target=\"_blank\" rel=\"noopener noreferrer\">https://a.test/a</a>).",
+      "plain": "<br>@a\r #b\t https://a.test/a).",
+      "clamp": false
+    },
+    {
+      "text": "https://a.test/ahttps://b.test/b!",
+      "format": "<a href=\"https://a.test/ahttps://b.test/b\" target=\"_blank\" rel=\"noopener noreferrer\">https://a.test/ahttps://b.test/b</a>!",
+      "plain": "https://a.test/ahttps://b.test/b!",
+      "clamp": false
+    },
+    {
+      "text": "https://a.test/one @two #space",
+      "format": "<a href=\"https://a.test/one @two\" target=\"_blank\" rel=\"noopener noreferrer\">https://a.test/one @two</a> <a href=\"https://x.com/hashtag/space\" target=\"_blank\" rel=\"noopener noreferrer\">#space</a>",
+      "plain": "https://a.test/one @two #space",
+      "clamp": false
+    },
+    {
+      "text": "&#39; &amp; <script>bad</script> \"quote\"",
+      "format": "&amp;<a href=\"https://x.com/hashtag/39\" target=\"_blank\" rel=\"noopener noreferrer\">#39</a>; &amp;amp; &lt;script&gt;bad&lt;/script&gt; &quot;quote&quot;",
+      "plain": "&amp;#39; &amp;amp; &lt;script&gt;bad&lt;/script&gt; &quot;quote&quot;",
+      "clamp": false
+    },
+    {
+      "text": null,
+      "format": "",
+      "plain": "",
+      "clamp": false
+    }
+  ],
+  "extract": [
+    {
+      "text": "see https://x.com/jack/status/20 please",
+      "refs": [
+        {
+          "handle": "jack",
+          "post_id": "20"
+        }
+      ],
+      "matches": true
+    },
+    {
+      "text": "http://twitter.com/jack/status/20",
+      "refs": [
+        {
+          "handle": "jack",
+          "post_id": "20"
+        }
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://www.twitter.com/jack/status/20",
+      "refs": [
+        {
+          "handle": "jack",
+          "post_id": "20"
+        }
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://mobile.x.com/jack/statuses/20",
+      "refs": [
+        {
+          "handle": "jack",
+          "post_id": "20"
+        }
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://x.com/i/status/20",
+      "refs": [
+        {
+          "handle": null,
+          "post_id": "20"
+        }
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://x.com/i/web/status/20",
+      "refs": [
+        {
+          "handle": null,
+          "post_id": "20"
+        }
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://x.com/jack/status/20/photo/1?s=20&t=abc#frag",
+      "refs": [
+        {
+          "handle": "jack",
+          "post_id": "20"
+        }
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://x.com/user1/status/1 https://x.com/user2/status/2 https://x.com/user3/status/3 https://x.com/user4/status/4 https://x.com/user5/status/5 https://x.com/user6/status/6 again https://x.com/other/status/2",
+      "refs": [
+        {
+          "handle": "user1",
+          "post_id": "1"
+        },
+        {
+          "handle": "user2",
+          "post_id": "2"
+        },
+        {
+          "handle": "user3",
+          "post_id": "3"
+        },
+        {
+          "handle": "user4",
+          "post_id": "4"
+        }
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://x.com/0123456789abcdef/status/20",
+      "refs": [],
+      "matches": false
+    },
+    {
+      "text": "https://x.com/home https://x.com/jack/status/abc ftp://x.com/jack/status/20",
+      "refs": [],
+      "matches": false
+    },
+    {
+      "text": "https://x.com/a/status/9999999999999999999999999",
+      "refs": [
+        {
+          "handle": "a",
+          "post_id": "9999999999999999999999999"
+        }
+      ],
+      "matches": true
+    },
+    {
+      "text": "https://x.com/a/status/99999999999999999999999999",
+      "refs": [],
+      "matches": false
+    },
+    {
+      "text": "https://x.com/a/status/12é",
+      "refs": [],
+      "matches": false
+    },
+    {
+      "text": "HTTPS://X.COM/A/status/12",
+      "refs": [],
+      "matches": false
+    },
+    {
+      "text": null,
+      "refs": [],
+      "matches": false
+    }
+  ],
+  "non_code": [
+    {
+      "html": "<p>see <code>https://x.com/jack/status/21</code> and https://x.com/jack/status/22</p><pre><code>https://x.com/jack/status/23</code></pre><p><a href=\"https://x.com/jack/status/24\">the post</a></p>",
+      "text": "see  and https://x.com/jack/status/22\nthe post\n\nhttps://x.com/jack/status/24",
+      "refs": [
+        {
+          "handle": "jack",
+          "post_id": "22"
+        },
+        {
+          "handle": "jack",
+          "post_id": "24"
+        }
+      ]
+    },
+    {
+      "html": "<div>see https://x.com/jack/status/25<br>thanks</div><p>also https://x.com/jack/status/26</p><p>for this</p>",
+      "text": "see https://x.com/jack/status/25\nthanks\nalso https://x.com/jack/status/26\nfor this\n",
+      "refs": [
+        {
+          "handle": "jack",
+          "post_id": "25"
+        },
+        {
+          "handle": "jack",
+          "post_id": "26"
+        }
+      ]
+    },
+    {
+      "html": "<p>&amp; <a href=\"https://x.com/a/status/3?x=1&amp;y=2\">label</a></p>",
+      "text": "& label\n\nhttps://x.com/a/status/3?x=1&y=2",
+      "refs": [
+        {
+          "handle": "a",
+          "post_id": "3"
+        }
+      ]
+    },
+    {
+      "html": "<table><tr><td>https://x.com/a/status/1</td><td>thanks</td></tr></table>",
+      "text": "https://x.com/a/status/1\nthanks\n\n\n",
+      "refs": [
+        {
+          "handle": "a",
+          "post_id": "1"
+        }
+      ]
+    },
+    {
+      "html": "<code><a href=\"https://x.com/a/status/1\">hidden</a></code><a href=\"https://x.com/b/status/2\">visible</a>",
+      "text": "visible\nhttps://x.com/b/status/2",
+      "refs": [
+        {
+          "handle": "b",
+          "post_id": "2"
+        }
+      ]
+    },
+    {
+      "html": null,
+      "text": "",
+      "refs": []
+    }
+  ]
+}
