@@ -21,7 +21,14 @@ seed = root / "parity/.seed/default"
 picker_mode = sys.argv[1:] == ["--picker"]
 status_mode = sys.argv[1:] == ["--status"]
 pwa_mode = sys.argv[1:] == ["--pwa"]
-assert not sys.argv[1:] or picker_mode or status_mode or pwa_mode, "expected --picker, --status, --pwa or no arguments"
+audit_mode = sys.argv[1:] == ["--audit"]
+assert not sys.argv[1:] or picker_mode or status_mode or pwa_mode or audit_mode, "expected --picker, --status, --pwa, --audit or no arguments"
+if audit_mode:
+    setup_env = os.environ.copy()
+    setup_env.pop("LD_LIBRARY_PATH", None)
+    setup_env.update(PARITY_NAMESPACE="ws8br2-browser", PARITY_OWNER="ws8br2", PARITY_RUNTIME="docker", PARITY_IMAGE="ws8br2-reference:d7c7de92-status-2e20b24c")
+    subprocess.run([str(root / "parity/bin/seed"), "build", "ws8br2_browser_audit"], env=setup_env, check=True)
+    seed = root / "parity/.seed/ws8br2_browser_audit"
 browser_seed = None
 if picker_mode:
     browser_seed = root / f"parity/.seed/ws8br2-browser-{os.getpid()}"
@@ -83,7 +90,7 @@ try:
             subprocess.run(["docker", "run", "--rm", "--network", "host", "--label", "parity.owner=ws8br2",
                             "-v", f"{root.parent}:/work:ro", "-e", f"WS8BR2_BROWSER_URL=http://127.0.0.1:{port}",
                             "-e", f"WS8BR2_BROWSER_LABELS=/work/rust/parity/.seed/{seed.name}/labels.json", image,
-                            "node", "/work/rust/reference-tools/users/" + ("browser_pwa.mjs" if pwa_mode else "browser_picker.mjs" if picker_mode else "browser_status.mjs" if status_mode else "browser_people.mjs")], check=True)
+                            "node", "/work/rust/reference-tools/users/" + ("browser_audit.mjs" if audit_mode else "browser_pwa.mjs" if pwa_mode else "browser_picker.mjs" if picker_mode else "browser_status.mjs" if status_mode else "browser_people.mjs")], check=True)
 finally:
     if server is not None:
         server.terminate()
