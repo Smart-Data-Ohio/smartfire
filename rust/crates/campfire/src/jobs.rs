@@ -151,6 +151,7 @@ pub fn registry() -> Registry {
     messaging::register(&mut registry);
     // Room::PushMessageJob and Bot::WebhookJob
     crate::integrations::register_jobs(&mut registry);
+    crate::mail::register(&mut registry);
     registry
 }
 

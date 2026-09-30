@@ -52,6 +52,7 @@ pub struct Config {
     pub log_level: String,
     /// The fragment store's limit in bytes (`CAMPFIRE_FRAGMENT_CACHE_MB`).
     pub fragment_cache_bytes: usize,
+    pub mail: campfire_mail::config::Config,
     /// `LIVEKIT_URL`, whose origin the Content Security Policy allows to connect.
     pub livekit_url: Option<String>,
     /// `config.x.admin_session_idle_timeout` (`config/initializers/session_lifetimes.rb`).
@@ -128,6 +129,11 @@ impl Config {
         };
 
         Ok(Self {
+            mail: campfire_mail::config::Config::from_map(&[
+                "SMTP_ADDRESS", "SMTP_PORT", "SMTP_DOMAIN", "SMTP_USER_NAME", "SMTP_PASSWORD",
+                "SMTP_AUTHENTICATION", "SMTP_ENABLE_STARTTLS", "MAILER_FROM", "APP_URL",
+                "INBOUND_EMAIL_DOMAIN", "INBOUND_EMAIL_AUTHSERV_ID", "RAILS_INBOUND_EMAIL_PASSWORD",
+            ].into_iter().filter_map(|name| get(name).map(|value| (name.to_owned(), value))).collect())?,
             secret_key_base,
             vapid_public_key: present("VAPID_PUBLIC_KEY"),
             vapid_private_key: present("VAPID_PRIVATE_KEY"),

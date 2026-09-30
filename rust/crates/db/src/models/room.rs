@@ -631,6 +631,27 @@ impl Room {
         Ok(())
     }
 
+    /// app/models/room.rb: token rotation is independent of whether inbound email is configured.
+    pub fn regenerate_inbound_email_token(&mut self, tx: &Tx<'_>) -> Result<String> {
+        // `update!` validates the existing direct name too; rotation changes neither type nor icon.
+        if self.direct() {
+            crate::models::direct_room::validate_name(self.name.as_deref())?;
+        }
+        loop {
+            let token = hex::encode(rand::random::<[u8; 16]>());
+            match tx.conn().execute_cached(
+                "UPDATE rooms SET inbound_email_token = ?, updated_at = ? WHERE id = ?",
+                params![token, tx.now(), self.id],
+            ) {
+                Ok(_) => { self.inbound_email_token = Some(token.clone()); self.updated_at = tx.now(); return Ok(token); }
+                Err(rusqlite::Error::SqliteFailure(error, _)) if error.extended_code == rusqlite::ffi::SQLITE_CONSTRAINT_UNIQUE => continue,
+                Err(error) => return Err(error.into()),
+            }
+        }
+    }
+
+    pub fn emailable(&self) -> bool { !self.direct() && !self.board() }
+
     pub fn open(&self) -> bool {
         self.room_type == RoomType::Open
     }

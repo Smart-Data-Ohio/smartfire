@@ -467,6 +467,12 @@ impl Message {
         Ok(message)
     }
 
+    /// RoomMailbox's Markdown entry point; all validation, rendering and callbacks use `create`.
+    pub fn create_markdown(tx: &mut Tx<'_>, mut attributes: NewMessage, source: &str) -> Result<Self> {
+        attributes.markdown_source = Some(source.to_owned());
+        Self::create(tx, attributes)
+    }
+
     /// `render_markdown_body`: the body a Markdown source renders to, when it's within the
     /// limit (a longer one fails validation instead); otherwise the body given.
     fn rendered_body(tx: &Tx<'_>, attributes: &NewMessage) -> Result<Option<String>> {
