@@ -326,10 +326,17 @@ async fn ws17_rejected_profile_layout_metadata_matches_loaded_unsaved_rails_valu
         let html = response.text();
         for (name, fragment) in row["metadata"].as_object().unwrap() {
             let fragment = fragment.as_str().unwrap();
-            assert!(
-                html.contains(fragment),
-                "{theme}/{size} {name}: expected {fragment:?}"
-            );
+            if name == "time_zone" && fragment.trim().is_empty() {
+                assert!(
+                    !html.contains("name=\"current-user-time-zone\""),
+                    "{theme}/{size}: Rails omits time-zone metadata on this rejection"
+                );
+            } else {
+                assert!(
+                    html.contains(fragment),
+                    "{theme}/{size} {name}: expected {fragment:?}"
+                );
+            }
         }
         assert_eq!(appearance(&app).await, before);
     }
@@ -375,15 +382,14 @@ async fn ws17_invalid_notification_form_layout_keeps_unsaved_sound_gate() {
             .contains(vectors["notification_error_sounds"].as_str().unwrap())
     );
     assert!(!response.text().contains("name=\"quiet-hours\""));
-    assert_eq!(
-        app.db()
+    assert!(
+        !app.db()
             .read(|conn| Ok(conn.query_row(
                 "SELECT dnd_enabled FROM users WHERE id=?",
                 [DAVID],
                 |r| r.get::<_, bool>(0)
             )?))
             .await
-            .unwrap(),
-        false
+            .unwrap()
     );
 }
