@@ -510,6 +510,10 @@ pub(super) fn parse_datetime(
     }
     value
         .parse::<jiff::civil::DateTime>()
+        // ActiveModel::Type::DateTime falls back to Date._parse. This named-
+        // month form is in the pinned HTTP corpus; the wider grammar and raw
+        // non-time/multiparameter values still need WS11's input seam.
+        .or_else(|_| jiff::civil::DateTime::strptime("%d %b %Y %H:%M:%S", &value))
         .ok()?
         .to_zoned(zone.tz().clone())
         .ok()

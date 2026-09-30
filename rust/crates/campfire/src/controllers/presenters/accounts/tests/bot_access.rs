@@ -561,6 +561,80 @@ async fn credential_local_expiry_uses_the_viewer_time_zone() {
     );
 }
 #[tokio::test]
+async fn credential_string_expiry_matches_pinned_rails_in_both_viewer_zones() {
+    let corpus: serde_json::Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../vectors/bot-input-contract.json"
+    )))
+    .unwrap();
+    let test = boot_seed("default").await.expect("default seed");
+    let viewer: i64 = test.label("users.david").parse().unwrap();
+    let mut admin = test.browser("198.51.100.232");
+    admin.sign_in(&test.label("emails.david")).await;
+    admin.grant_sudo_access();
+    let path = format!("/account/bots/{}/credentials", test.label("users.bender"));
+    let mut checked = 0;
+    for (index, row) in corpus["expiry"].as_array().unwrap().iter().enumerate() {
+        let Some(input) = row["input"].as_str() else {
+            continue;
+        };
+        let zone = row["zone"].as_str().unwrap().to_owned();
+        test.booted
+            .app
+            .db
+            .write(move |tx| {
+                tx.conn().execute(
+                    "UPDATE users SET time_zone=? WHERE id=?",
+                    rusqlite::params![zone, viewer],
+                )?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let name = format!("Expiry contract {index}");
+        let created = admin
+            .form(
+                "post",
+                &path,
+                &[
+                    ("agent_credential[name]", &name),
+                    ("agent_credential[expires_at]", input),
+                ],
+            )
+            .await;
+        assert_eq!(
+            created.status,
+            StatusCode::CREATED,
+            "{} / {input:?}",
+            row["zone"]
+        );
+        let actual = test
+            .booted
+            .app
+            .db
+            .read(move |conn| {
+                let value: Option<campfire_db::Timestamp> = conn.query_row(
+                    "SELECT expires_at FROM agent_credentials WHERE name=?",
+                    [name],
+                    |r| r.get(0),
+                )?;
+                Ok(value.map(|v| v.jiff()))
+            })
+            .await
+            .unwrap();
+        let expected = row["value"]
+            .as_str()
+            .map(|s| s.parse::<jiff::Timestamp>().unwrap());
+        assert_eq!(actual, expected, "{} / {input:?}", row["zone"]);
+        checked += 1;
+    }
+    assert_eq!(
+        checked, 28,
+        "every committed string case must reach the HTTP/domain stack"
+    );
+}
+
+#[tokio::test]
 async fn concurrent_grant_creation_writes_one_grant_and_audit() {
     let test = boot_seed("default").await.expect("default seed");
     let mut first = test.browser("198.51.100.232");
