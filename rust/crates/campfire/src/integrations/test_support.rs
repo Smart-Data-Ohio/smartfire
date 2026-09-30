@@ -170,10 +170,6 @@ impl FakeServer {
         (server, roots)
     }
 
-    pub async fn start_tls_with(routes: Vec<Route>, cert: &[u8], key: &[u8]) -> Self {
-        Self::start_tls_with_ports(routes, cert, key, None).await
-    }
-
     pub async fn start_tls_with_ports(routes: Vec<Route>, cert: &[u8], key: &[u8], ports: Option<std::ops::RangeInclusive<u16>>) -> Self {
         use rustls::pki_types::pem::PemObject;
         use rustls::pki_types::{CertificateDer, PrivateKeyDer};

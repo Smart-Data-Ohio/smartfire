@@ -146,8 +146,12 @@ impl TestApp {
     /// Consumer fixture tests must not race an unrelated initial periodic sweep.
     /// This still starts the real durable runner with its normal worker counts.
     pub async fn boot_without_periodic() -> Option<TestApp> {
+        Self::boot_without_periodic_with_clock(seed_clock()).await
+    }
+
+    pub async fn boot_without_periodic_with_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
         Self::boot_with_loops(
-            seed_clock(),
+            clock,
             &[],
             Some(crate::jobs::periodic::Loops {
                 periodic: None,

@@ -31,7 +31,11 @@ async fn account(c: &Ctx) -> Result<Option<GoogleAccount>> {
         .await
         .map_err(Error::internal)
 }
-fn file_json(file: &Value) -> Value {
+fn file_json(file: &Value) -> Result<Value> {
+    if file.is_null() {
+        // Rails file_json indexes nil outside the Google error rescue.
+        return Err(Error::Status(StatusCode::INTERNAL_SERVER_ERROR));
+    }
     let kind = match file["mimeType"].as_str() {
         Some("application/vnd.google-apps.document") => "document",
         Some("application/vnd.google-apps.spreadsheet") => "spreadsheet",
@@ -41,7 +45,9 @@ fn file_json(file: &Value) -> Value {
         Some("application/pdf") => "pdf",
         _ => "file",
     };
-    json!({"id":file["id"],"name":file["name"],"kind":kind,"modified_at":file["modifiedTime"],"owner":file["owners"].get(0).map(|o|&o["displayName"]),"url":file["webViewLink"]})
+    Ok(
+        json!({"id":file["id"],"name":file["name"],"kind":kind,"modified_at":file["modifiedTime"],"owner":file["owners"].get(0).map(|o|&o["displayName"]),"url":file["webViewLink"]}),
+    )
 }
 pub async fn show(c: &mut Ctx) -> Result {
     concerns::before_actions(c, Before::default()).await?;
@@ -82,7 +88,7 @@ pub async fn show(c: &mut Ctx) -> Result {
                     .drive()
                     .cache(account.user_id, &id, now(c), file.clone());
             }
-            c.json(StatusCode::OK, &file_json(&file))
+            c.json(StatusCode::OK, &file_json(&file)?)
         }
         Err(api::Error::NotFound(_) | api::Error::Unauthorized(_)) => {
             Ok(c.head(StatusCode::NOT_FOUND))
@@ -127,9 +133,13 @@ pub async fn index(c: &mut Ctx) -> Result {
         .await
     {
         Ok(result) => {
+            if result.is_null() {
+                return Err(Error::Status(StatusCode::INTERNAL_SERVER_ERROR));
+            }
             let files = result["files"]
                 .as_array()
-                .map(|a| a.iter().map(file_json).collect::<Vec<_>>())
+                .map(|a| a.iter().map(file_json).collect::<Result<Vec<_>>>())
+                .transpose()?
                 .unwrap_or_default();
             c.json(StatusCode::OK, &json!({"files":files}))
         }

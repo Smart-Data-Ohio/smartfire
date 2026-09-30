@@ -243,8 +243,13 @@ impl Api {
             if let Some(mut account) = credentials.account.clone() {
                 let enc = ArEncryption::new(secrets);
                 let access = access.clone();
-                db.write(move |tx| account.refresh_access(tx, &enc, access.as_deref(), expiry))
-                    .await?;
+                credentials.account = Some(
+                    db.write(move |tx| {
+                        account.refresh_access(tx, &enc, access.as_deref(), expiry)?;
+                        Ok(account)
+                    })
+                    .await?,
+                );
             }
             credentials.tokens.access_token = access;
             credentials.tokens.access_token_expires_at = Some(expiry.jiff());

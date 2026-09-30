@@ -546,3 +546,6 @@ mod google_test_support;
 #[cfg(test)]
 #[path = "../../../test-support/asset_goldens.rs"]
 pub(crate) mod asset_goldens;
+
+#[cfg(test)]
+mod google_review_tests;

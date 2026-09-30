@@ -199,16 +199,46 @@ impl GoogleAccount {
         expires_at: Timestamp,
     ) -> Result<()> {
         Self::validate(tx, self.user_id, &self.email)?;
-        if self.access_token(enc).ok().as_ref() == Some(&token.map(str::to_owned))
-            && self.access_token_expires_at == Some(expires_at)
-        {
+        // Active Record compares plaintext to this instance's snapshot. A delayed
+        // refresh may change only expiry, so it must not overwrite a newer token.
+        let access_changed =
+            self.access_token(enc).ok().as_ref() != Some(&token.map(str::to_owned));
+        let expiry_changed = self.access_token_expires_at != Some(expires_at);
+        if !access_changed && !expiry_changed {
             return Ok(());
         }
-        let token = token.map(|s| enc.encrypt(s));
         let now = tx.now();
-        tx.conn().execute("UPDATE google_accounts SET access_token=?,access_token_expires_at=?,updated_at=? WHERE id=?",params![token,expires_at,now,self.id])?;
-        self.access_token = token;
-        self.access_token_expires_at = Some(expires_at);
+        let encrypted = access_changed
+            .then(|| token.map(|s| enc.encrypt(s)))
+            .flatten();
+        let mut columns = Vec::new();
+        let mut values: Vec<&dyn rusqlite::ToSql> = Vec::new();
+        if access_changed {
+            columns.push("access_token=?");
+            values.push(&encrypted);
+        }
+        if expiry_changed {
+            columns.push("access_token_expires_at=?");
+            values.push(&expires_at);
+        }
+        if self.updated_at != now {
+            columns.push("updated_at=?");
+            values.push(&now);
+        }
+        values.push(&self.id);
+        tx.conn().execute(
+            &format!(
+                "UPDATE google_accounts SET {} WHERE id=?",
+                columns.join(",")
+            ),
+            rusqlite::params_from_iter(values),
+        )?;
+        if access_changed {
+            self.access_token = encrypted;
+        }
+        if expiry_changed {
+            self.access_token_expires_at = Some(expires_at);
+        }
         self.updated_at = now;
         Ok(())
     }
