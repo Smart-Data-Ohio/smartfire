@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[3]
 OUT = ROOT / ".scratch/auth/profile-security-proof"
 BASE = "008fe4892feb742e32c76e23169ce0ecdcd8dddf"
 FILES = [
+    "rust/crates/db/src/slash_commands.rs",
     "rust/crates/db/src/models/user.rs",
     "rust/crates/campfire/src/authentication.rs",
     "rust/crates/campfire/src/controllers/users/profiles.rs",

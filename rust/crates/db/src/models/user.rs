@@ -397,7 +397,13 @@ impl User {
         // `User::StatusSettings`: blank Not set normalizes to nil; unknown zones fail save.
         let zone = changes.time_zone
             .map(|zone| zone.filter(|value| !campfire_richtext::ruby::is_blank(value)));
-        if zone.as_ref().and_then(|zone| zone.as_deref())
+        let current_zone: Option<String> = tx.conn().query_row(
+            "SELECT time_zone FROM users WHERE id=?", [self.id], |r| r.get(0),
+        )?;
+        // Rails validates the effective zone on every save, including an unchanged
+        // persisted value; no other field or security marker may bypass that validation.
+        if zone.as_ref().unwrap_or(&current_zone).as_deref()
+            .filter(|name| !campfire_richtext::ruby::is_blank(name))
             .is_some_and(|name| crate::slash_commands::time_parser::known_zone(name).is_none())
         {
             let mut errors = crate::Errors::default();
@@ -434,15 +440,10 @@ impl User {
         }
         // These profile preferences are not part of the compact User projection. Compare
         // stored values so an unchanged assignment doesn't touch updated_at (Rails dirty tracking).
-        if let Some(zone) = zone {
-            let current: Option<String> = tx.conn().query_row(
-                "SELECT time_zone FROM users WHERE id=?",
-                [self.id],
-                |r| r.get(0),
-            )?;
-            if zone != current {
-                sets.push(("time_zone", Box::new(zone)));
-            }
+        if let Some(zone) = zone
+            && zone != current_zone
+        {
+            sets.push(("time_zone", Box::new(zone)));
         }
         if let Some(explicit) = changes.time_zone_explicit {
             let current: Option<bool> = tx.conn().query_row(

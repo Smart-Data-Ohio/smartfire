@@ -2,7 +2,7 @@
 # Clone only committed branch state; rebuild seeds and use this clone's own Cargo target.
 set -euo pipefail
 SOURCE=$(cd "$(dirname "$0")/../../.." && pwd)
-CLONE=${1:-$SOURCE/.scratch/round-three-clean-clone}
+CLONE=${1:-$SOURCE/.scratch/round-four-clean-clone}
 [ ! -e "$CLONE" ] || { echo "fresh-clone: destination already exists: $CLONE" >&2; exit 1; }
 branch=$(git -C "$SOURCE" branch --show-current)
 git clone --local --no-hardlinks --branch "$branch" "$SOURCE" "$CLONE"
@@ -33,14 +33,20 @@ bash rust/reference-tools/auth/round-three.sh > .scratch/verification/rails-roun
 cat .scratch/verification/rails-round-three.log
 bash rust/reference-tools/auth/profile-security.sh > .scratch/verification/rails-profile.log 2>&1
 cat .scratch/verification/rails-profile.log
-git diff --exit-code -- rust/vectors/profile_security.json rust/vectors/round_three_security.json
+bash rust/reference-tools/auth/round-four.sh > .scratch/verification/rails-round-four.log 2>&1
+cat .scratch/verification/rails-round-four.log
+git diff --exit-code -- rust/vectors/profile_security.json rust/vectors/round_three_security.json rust/vectors/round_four_security.json rust/crates/db/src/rails_time_zones.json
 [ ! -e rust/target ]
 echo 'fresh-clone: rust/target absent before suite; no artifact directory prepared'
-cargo test --manifest-path rust/Cargo.toml --locked -j 4 -p campfire -p campfire_db -p campfire_views -p rails_compat \
-    -- --test-threads=4 > .scratch/verification/tests.log 2>&1
+cargo test --manifest-path rust/Cargo.toml --locked -j 4 --workspace --exclude html5ever \
+    -- --test-threads=4 --nocapture > .scratch/verification/tests.log 2>&1
 rg '^test result:' .scratch/verification/tests.log
+# Expose version-gated media subchecks and optional-fixture skips, if any.
+rg '(SKIPPED|skipping byte comparisons|seed not found|missing parity seed)' .scratch/verification/tests.log || true
 [ -f rust/target/campfire_session_keys_rust_output.json ]
 echo 'fresh-clone: session-keys test created its artifact directory and output'
+bash rust/reference-tools/auth/round-four-rollback.sh > .scratch/verification/zone-rollback.log 2>&1
+rg '^(test result:|WS9)' .scratch/verification/zone-rollback.log
 bash rust/reference-tools/auth/profile-rollback.sh > .scratch/verification/profile-rollback.log 2>&1
 rg '^(test result:|WS9)' .scratch/verification/profile-rollback.log
 bash rust/reference-tools/auth/rollback.sh > .scratch/verification/auth-rollback.log 2>&1

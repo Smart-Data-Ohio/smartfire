@@ -56,17 +56,23 @@ pub async fn update(c: &mut Ctx) -> Result {
     let params = c.params.require("account")?.permit(&[Permit::from("name"), Permit::from("logo"), Permit::AnyHash("settings".into())]);
     let name = params.get("name").and_then(Param::to_s);
     let settings: Option<Vec<(String, String)>> = params.get("settings").and_then(Param::as_hash).map(|settings| {
-        settings.iter().map(|(key, value)| (key.clone(), value.to_s().unwrap_or_default())).collect()
+        settings.iter().map(|(key, value)| (key.clone(), value.to_s().unwrap_or_else(|| campfire_richtext::ruby::json_value_inspect(&value.to_json())))).collect()
     });
     let logo = Assignment::from_params(&params, "logo")?.stage(c.app()).await?;
+    let audit = super::two_factor::audit_context(c)?;
 
     let pending = c
         .app()
         .db
         .write(move |tx| {
+            let before = account.clone();
+            let before_logo = attachments::attached_blob(tx.conn(), "Account", account.id, "logo")?.is_some();
             let settings: Option<Vec<(&str, &str)>> = settings.as_ref().map(|s| s.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect());
             account.update(tx, name.as_deref(), None, settings.as_deref())?;
-            attachments::assign(tx, Record::account(account.id), "logo", logo)
+            let pending = attachments::assign(tx, Record::account(account.id), "logo", logo)?;
+            let after_logo = attachments::attached_blob(tx.conn(), "Account", account.id, "logo")?.is_some();
+            crate::account_security::settings_changed(tx, &before, &account, before_logo, after_logo, &audit)?;
+            Ok(pending)
         })
         .await
         .map_err(Error::internal)?;

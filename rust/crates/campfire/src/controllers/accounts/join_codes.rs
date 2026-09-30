@@ -11,7 +11,8 @@ pub async fn create(c: &mut Ctx) -> Result {
     concerns::ensure_can_administer(c)?;
     concerns::sudo::require_sudo_mode(c)?;
     let mut account = super::current_account(c).await?;
-    c.app().db.write(move |tx| account.reset_join_code(tx)).await.map_err(Error::internal)?;
+    let audit = crate::controllers::two_factor::audit_context(c)?;
+    c.app().db.write(move |tx| crate::account_security::reset_join_code(tx, &mut account, &audit)).await.map_err(Error::internal)?;
     let location = c.url_for(&campfire_routes::edit_account());
     c.redirect_to(&location)
 }

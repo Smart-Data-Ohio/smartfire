@@ -8,6 +8,7 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[3]
 BASE = "d336ca787be68c73f1e82e342fef25051ed1ad48"
 FILES = [
+    "rust/crates/db/src/slash_commands.rs",
     "rust/crates/db/src/models/user.rs",
     "rust/crates/campfire/src/authentication.rs",
     "rust/crates/campfire/src/controllers/users/profiles.rs",

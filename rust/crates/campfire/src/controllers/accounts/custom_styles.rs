@@ -24,10 +24,16 @@ pub async fn update(c: &mut Ctx) -> Result {
     let mut account = super::current_account(c).await?;
     concerns::sudo::require_sudo_mode(c)?;
     let params = c.params.require("account")?.permit(&permit_keys(&["custom_styles"]));
-    let custom_styles = params.contains_key("custom_styles").then(|| params.get("custom_styles").and_then(Param::to_s));
+    // ActiveModel::Type::String retains nil and casts booleans to "t"/"f".
+    let custom_styles = params.get("custom_styles").map(|value| match value {
+        Param::Null => None,
+        Param::Bool(value) => Some(if *value { "t" } else { "f" }.into()),
+        value => value.to_s(),
+    });
+    let audit = crate::controllers::two_factor::audit_context(c)?;
     c.app()
         .db
-        .write(move |tx| account.update(tx, None, custom_styles.as_ref().map(|styles| styles.as_deref()), None))
+        .write(move |tx| crate::account_security::update_styles(tx, &mut account, custom_styles.as_ref().map(|styles| styles.as_deref()), &audit))
         .await
         .map_err(Error::internal)?;
     let location = c.url_for(&campfire_routes::edit_account_custom_styles());

@@ -480,6 +480,8 @@ mod full_page_tests;
 mod profile_security_tests;
 #[cfg(test)]
 mod round_three_security_tests;
+#[cfg(test)]
+mod round_four_security_tests;
 
 #[cfg(test)]
 mod tests;
