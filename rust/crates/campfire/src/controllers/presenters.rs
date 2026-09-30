@@ -82,12 +82,16 @@ pub fn user_view(secrets: &Secrets, user: &User) -> UserView {
 
 impl campfire_views::helpers::IconSource for Presenter<'_> {
     fn resolve_avatar_icon(&self, name: &str) -> Option<campfire_views::helpers::AvatarIcon> {
+        resolve_avatar_icon(self.conn, name)
+    }
+}
+
+pub fn resolve_avatar_icon(conn: &Connection, name: &str) -> Option<campfire_views::helpers::AvatarIcon> {
         use campfire_views::{helpers::AvatarIcon, messages::reactions::static_icon};
         let icon = static_icon(name);
         if matches!(icon, Some(AvatarIcon::Image { brand: true, .. })) { return icon; }
-        let custom: Option<String> = self.conn.query_row("SELECT title FROM workspace_icons WHERE name = ?1", [name], |row| row.get(0)).optional().ok().flatten();
+        let custom: Option<String> = conn.query_row("SELECT title FROM workspace_icons WHERE name = ?1", [name], |row| row.get(0)).optional().ok().flatten();
         custom.map(|title| AvatarIcon::Image { title, url: format!("/icons/{name}"), brand: false }).or(icon)
-    }
 }
 
 /// `users/_user.json.jbuilder` (`json.cache! user`).

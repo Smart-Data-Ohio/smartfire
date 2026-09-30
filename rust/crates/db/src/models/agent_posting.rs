@@ -179,23 +179,7 @@ pub fn check_budget(tx: &mut Tx<'_>, agent_id: i64, cap: Cap) -> Result<Option<V
     )?;
     let Some(limit) = limit else { return Ok(None) };
     let window = daily_window(tx.now(), &zone(tx, user_id)?)?;
-    let (sql, owner) = match cap {
-        Cap::Messages => (
-            "SELECT COUNT(*) FROM messages WHERE creator_id=? AND created_at BETWEEN ? AND ? AND board_post_opener=0",
-            user_id,
-        ),
-        Cap::BoardPosts => (
-            "SELECT COUNT(*) FROM channel_threads WHERE creator_id=? AND created_at BETWEEN ? AND ? AND room_id IN (SELECT id FROM rooms WHERE type='Rooms::Board')",
-            user_id,
-        ),
-        Cap::ExternalActions => (
-            "SELECT COUNT(*) FROM agent_approvals WHERE agent_id=? AND created_at BETWEEN ? AND ?",
-            agent_id,
-        ),
-    };
-    let usage: i64 =
-        tx.conn()
-            .query_row_cached(sql, params![owner, window.start, window.end], |r| r.get(0))?;
+    let usage = usage(tx.conn(), agent_id, user_id, cap, &window)?;
     if usage < limit {
         return Ok(None);
     }
@@ -234,4 +218,24 @@ pub fn check_budget(tx: &mut Tx<'_>, agent_id: i64, cap: Cap) -> Result<Option<V
     Ok(Some(
         json!({"error":format!("Daily {} budget exceeded ({limit}/day)", cap.noun()), "cap":cap.name(), "limit":limit, "retry_after":window.retry_after}),
     ))
+}
+
+/// Agents::Budgets.usage, using the caller's Date.current.all_day window.
+pub fn usage(conn: &crate::Connection, agent_id: i64, user_id: i64, cap: Cap, window: &DailyWindow) -> Result<i64> {
+    let (sql, owner) = match cap {
+        Cap::Messages => (
+            "SELECT COUNT(*) FROM messages WHERE creator_id=? AND created_at BETWEEN ? AND ? AND board_post_opener=0",
+            user_id,
+        ),
+        Cap::BoardPosts => (
+            "SELECT COUNT(*) FROM channel_threads WHERE creator_id=? AND created_at BETWEEN ? AND ? AND room_id IN (SELECT id FROM rooms WHERE type='Rooms::Board')",
+            user_id,
+        ),
+        Cap::ExternalActions => (
+            "SELECT COUNT(*) FROM agent_approvals WHERE agent_id=? AND created_at BETWEEN ? AND ?",
+            agent_id,
+        ),
+    };
+    Ok(conn.query_row_cached(sql, params![owner, window.start, window.end], |r| r.get(0))?)
+
 }

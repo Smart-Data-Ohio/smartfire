@@ -7,10 +7,10 @@ use campfire_kit::{Ctx, Error, Param, ParamMap, Result, StatusCode, format, perm
 use campfire_views::accounts;
 
 use crate::app::AppCtx;
-use crate::controllers::presenters::page::framed_page;
 use crate::concerns::{self, Before, cast_integer};
-use crate::controllers::presenters::attachments::{self, Assignment, Record};
 use crate::controllers::presenters;
+use crate::controllers::presenters::attachments::{self, Assignment, Record};
+use crate::controllers::presenters::page::framed_page;
 
 /// `@bots = User.active_bots.ordered`
 pub async fn index(c: &mut Ctx) -> Result {
@@ -20,16 +20,29 @@ pub async fn index(c: &mut Ctx) -> Result {
     let bots: Vec<_> = c
         .app()
         .db
-        .read(move |conn| User::active_bots_ordered(conn)?.iter().map(|bot| presenters::accounts::bot(conn, &secrets, bot)).collect())
+        .read(move |conn| {
+            User::active_bots_ordered(conn)?
+                .iter()
+                .map(|bot| presenters::accounts::bot(conn, &secrets, bot))
+                .collect()
+        })
         .await
         .map_err(Error::internal)?;
-    framed_page!(c, StatusCode::OK, |ctx| accounts::BotsIndex { ctx, bots: bots.clone() }).await
+    framed_page!(c, StatusCode::OK, |ctx| accounts::BotsIndex {
+        ctx,
+        bots: bots.clone()
+    })
+    .await
 }
 
 pub async fn new(c: &mut Ctx) -> Result {
     before(c).await?;
     c.respond_to(&[&format::HTML])?;
-    framed_page!(c, StatusCode::OK, |ctx| accounts::BotsNew { ctx, bot: accounts::BotForm::default() }).await
+    framed_page!(c, StatusCode::OK, |ctx| accounts::BotsNew {
+        ctx,
+        bot: accounts::BotForm::default()
+    })
+    .await
 }
 
 /// `User.create_bot! bot_params`
@@ -37,10 +50,14 @@ pub async fn create(c: &mut Ctx) -> Result {
     before(c).await?;
     let params = bot_params(c)?;
     // users.name is NOT NULL.
-    let name = params.get("name").and_then(Param::to_s).ok_or_else(|| Error::internal(anyhow::anyhow!("NOT NULL constraint failed: users.name")))?;
+    let name = params.get("name").and_then(Param::to_s).ok_or_else(|| {
+        Error::internal(anyhow::anyhow!("NOT NULL constraint failed: users.name"))
+    })?;
     // `create_webhook!(url: webhook_url) if webhook_url`: any non-nil value, "" included.
     let webhook_url = params.get("webhook_url").and_then(Param::to_s);
-    let avatar = Assignment::from_params(&params, "avatar")?.stage(c.app()).await?;
+    let avatar = Assignment::from_params(&params, "avatar")?
+        .stage(c.app())
+        .await?;
     let pending = c
         .app()
         .db
@@ -55,12 +72,54 @@ pub async fn create(c: &mut Ctx) -> Result {
 }
 
 pub async fn edit(c: &mut Ctx) -> Result {
-    before(c).await?;
+    concerns::before_actions(c, Before::default()).await?;
     let bot = set_bot(c).await?;
+    let viewer = crate::concerns::require_current_user(c)?;
+    if !viewer.is_administrator() {
+        let (bot_id, viewer_id) = (bot.id, viewer.id);
+        let manages = c
+            .app()
+            .db
+            .read(move |conn| {
+                Ok(
+                    campfire_db::models::agent_profile::AgentProfile::for_user(conn, bot_id)?
+                        .is_some_and(|agent| agent.owner_id == Some(viewer_id)),
+                )
+            })
+            .await
+            .map_err(Error::internal)?;
+        if !manages {
+            return Ok(c.head(StatusCode::FORBIDDEN));
+        }
+    }
+    let viewer_id = viewer.id;
+    let time_zone = c
+        .app()
+        .db
+        .read(move |conn| {
+            Ok(conn.query_row(
+                "SELECT time_zone FROM users WHERE id=?",
+                [viewer_id],
+                |row| row.get::<_, Option<String>>(0),
+            )?)
+        })
+        .await
+        .map_err(Error::internal)?;
+    let zone = campfire_views::time::Zone::for_user(time_zone.as_deref());
     c.respond_to(&[&format::HTML])?;
-    let (storage, base_url, bot_id) = (c.app().storage.clone(), c.url_for(""), bot.id);
-    let form = c.app().db.read(move |conn| presenters::accounts::bot_form(conn, &storage, &base_url, &bot)).await.map_err(Error::internal)?;
-    framed_page!(c, StatusCode::OK, |ctx| accounts::BotsEdit { ctx, bot_id, bot: form.clone() }).await
+    let (app, base_url, bot_id) = (c.app().clone(), c.url_for(""), bot.id);
+    let form = c
+        .app()
+        .db
+        .read(move |conn| presenters::accounts::bot_form(conn, &app, &base_url, &bot, &zone))
+        .await
+        .map_err(Error::internal)?;
+    framed_page!(c, StatusCode::OK, |ctx| accounts::BotsEdit {
+        ctx,
+        bot_id,
+        bot: form.clone()
+    })
+    .await
 }
 
 /// `@bot.update_bot! bot_params`: the webhook first, then the bot, in one transaction.
@@ -68,9 +127,14 @@ pub async fn update(c: &mut Ctx) -> Result {
     before(c).await?;
     let mut bot = set_bot(c).await?;
     let params = bot_params(c)?;
-    let changes = UserChanges { name: params.get("name").and_then(Param::to_s), ..UserChanges::default() };
+    let changes = UserChanges {
+        name: params.get("name").and_then(Param::to_s),
+        ..UserChanges::default()
+    };
     let webhook_url = params.get("webhook_url").and_then(Param::to_s);
-    let avatar = Assignment::from_params(&params, "avatar")?.stage(c.app()).await?;
+    let avatar = Assignment::from_params(&params, "avatar")?
+        .stage(c.app())
+        .await?;
     let pending = c
         .app()
         .db
@@ -88,7 +152,11 @@ pub async fn update(c: &mut Ctx) -> Result {
 pub async fn destroy(c: &mut Ctx) -> Result {
     before(c).await?;
     let mut bot = set_bot(c).await?;
-    c.app().db.write(move |tx| bot.deactivate(tx)).await.map_err(Error::internal)?;
+    c.app()
+        .db
+        .write(move |tx| bot.deactivate(tx))
+        .await
+        .map_err(Error::internal)?;
     redirect_to_bots(c)
 }
 
@@ -104,7 +172,10 @@ async fn set_bot(c: &Ctx) -> Result<User> {
 }
 
 pub(crate) async fn find_active_bot(c: &Ctx, key: &str) -> Result<User> {
-    let id = c.param_str(key).and_then(cast_integer).ok_or(Error::NotFound)?;
+    let id = c
+        .param_str(key)
+        .and_then(cast_integer)
+        .ok_or(Error::NotFound)?;
     c.app()
         .db
         .read(move |conn| match User::find_active_bot(conn, id) {
@@ -119,7 +190,9 @@ pub(crate) async fn find_active_bot(c: &Ctx, key: &str) -> Result<User> {
 
 /// `params.require(:user).permit(:name, :avatar, :webhook_url)`
 fn bot_params(c: &Ctx) -> Result<ParamMap> {
-    Ok(c.params.require("user")?.permit(&permit_keys(&["name", "avatar", "webhook_url"])))
+    Ok(c.params
+        .require("user")?
+        .permit(&permit_keys(&["name", "avatar", "webhook_url"])))
 }
 
 fn redirect_to_bots(c: &mut Ctx) -> Result {

@@ -4,6 +4,7 @@ use campfire_views::{AccountSummary, CurrentUser, Platform, ViewContext, helpers
 use serde_json::Value;
 
 mod review;
+mod bots_ui;
 
 fn fixture(path: &str) -> String {
     std::fs::read_to_string(format!(

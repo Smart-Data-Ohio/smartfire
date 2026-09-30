@@ -40,6 +40,7 @@ pub struct FormWith {
     html: Attrs,
     authenticity_token: bool,
     multipart: Rc<Cell<bool>>,
+    error_fields: Vec<String>,
 }
 
 pub fn form_with(url: impl std::fmt::Display) -> FormWith {
@@ -53,10 +54,17 @@ pub fn form_with(url: impl std::fmt::Display) -> FormWith {
         html: attrs(),
         authenticity_token: true,
         multipart: Rc::new(Cell::new(false)),
+        error_fields: Vec::new(),
     }
 }
 
 impl FormWith {
+    /// ActiveModelHelper's field_error_proc wraps inputs and labels with model errors.
+    pub fn errors(mut self, fields: &[String]) -> Self {
+        self.error_fields = fields.to_vec();
+        self
+    }
+
     /// Rails PR #148 uses `authenticity_token: false` in shared message fragments.
     pub fn authenticity_token(mut self, include: bool) -> Self {
         self.authenticity_token = include;
@@ -115,6 +123,7 @@ impl FormWith {
         FormBuilder {
             object_name: self.object_name.clone().unwrap_or_default(),
             multipart: self.multipart.clone(),
+            error_fields: self.error_fields.clone(),
         }
     }
 
@@ -169,6 +178,10 @@ impl FormWith {
         self.builder().input_field("text", method, value, options)
     }
 
+    pub fn number_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
+        self.builder().input_field("number", method, value, options)
+    }
+
     pub fn email_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
         self.builder().input_field("email", method, value, options)
     }
@@ -184,7 +197,7 @@ impl FormWith {
         let builder = self.builder();
         let mut options = options;
         options.fetch_or_set("for", Some(builder.tag_id(method).into()));
-        super::tag::content_tag_text("label", &options, text)
+        builder.wrap_error(method, super::tag::content_tag_text("label", &options, text))
     }
 
     pub fn url_field(&self, method: &str, value: Option<&str>, options: Attrs) -> Html {
@@ -240,9 +253,16 @@ impl FormWith {
 struct FormBuilder {
     object_name: String,
     multipart: Rc<Cell<bool>>,
+    error_fields: Vec<String>,
 }
 
 impl FormBuilder {
+    fn wrap_error(&self, method: &str, field: Html) -> Html {
+        if self.error_fields.iter().any(|name| name == method) {
+            content_tag("div", attrs().class("field_with_errors"), &field.0)
+        } else { field }
+    }
+
     /// `Tags::Base#tag_name`; a model-less `form_with` names fields after the method alone.
     fn tag_name(&self, method: &str) -> String {
         if self.object_name.is_empty() {
@@ -286,7 +306,8 @@ impl FormBuilder {
             options.fetch_or_set("value", value.map(Into::into));
         }
         self.add_default_name_and_id(method, &mut options);
-        legacy_tag("input", &options)
+        let field = legacy_tag("input", &options);
+        if field_type == "hidden" { field } else { self.wrap_error(method, field) }
     }
 
     /// `Tags::TextArea#render`: the value is the element's content, after a newline.
@@ -296,7 +317,7 @@ impl FormBuilder {
             Some(value) => escape(&value_to_string(&value)),
             None => value.map(escape).unwrap_or_default(),
         };
-        content_tag("textarea", &options, &content)
+        self.wrap_error(method, content_tag("textarea", &options, &content))
     }
 
     /// `Tags::CheckBox#render`: a hidden unchecked value, then the checkbox.

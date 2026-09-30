@@ -2,6 +2,7 @@
 
 pub mod account;
 pub mod agent_access;
+pub mod agent_profile;
 pub mod agent_credential;
 pub mod agent_grant;
 pub mod agent_delivery;

@@ -5,7 +5,9 @@
     {{ h::link_back_to(ctx, h::routes::account_bots()) }}
   </div>
 {% endblock %}
-{% block content %}<section class="panel txt-align-center flex flex-column gap">
+{% block content %}
+
+<section class="panel txt-align-center flex flex-column gap">
   <div class="pad-inline-double center">
     <h1 class="margin-none">Copy the key for {{ bot_name }} now</h1>
     <p class="margin-none-block-start">It will not be shown again. Generate a new key if it is lost.</p>
@@ -21,8 +23,7 @@
         {% filter button_to_copy_to_clipboard(bot_key) %}
           {{ h::image_tag(ctx, "copy-paste.svg", h::attrs().aria_hidden().size(20)) }}
           <span class="for-screen-reader">Copy bot key</span>
-        {% endfilter %}
-      </div>
+{% endfilter %}      </div>
     </div>
 
     <p class="txt-small">Post with <code>curl -d 'Hello!' {{ ctx.url(h::routes::room_bot_messages("ROOM_ID", bot_key).as_str()) }}</code>.</p>

@@ -607,3 +607,43 @@ async fn qr_codes_and_the_pwa() {
     let worker = browser.get("/service-worker.js").await;
     assert_eq!((worker.status, worker.header("content-type")), (StatusCode::OK, Some("text/javascript; charset=utf-8")));
 }
+
+#[tokio::test]
+async fn bot_edit_pages_follow_admin_owner_and_legacy_access() {
+    let Some(test) = boot_seed("default").await else { return };
+    let bot_id: i64 = test.label("users.bender").parse().unwrap();
+    let owner_id: i64 = test.label("users.kevin").parse().unwrap();
+    test.booted.app.db.write(move |tx| {
+        tx.conn().execute("UPDATE agents SET owner_id=? WHERE user_id=?", [owner_id, bot_id])?;
+        Ok(())
+    }).await.unwrap();
+    let mut owner = test.browser("198.51.100.91");
+    owner.sign_in(&test.label("emails.kevin")).await;
+    let edit = format!("/account/bots/{bot_id}/edit");
+    let response = owner.get(&edit).await;
+    assert_eq!(response.status, StatusCode::OK);
+    assert!(response.text().contains("name=\"agent[provider]\""));
+    assert!(response.text().contains("disabled=\"disabled\""));
+    assert!(!response.text().contains("Delete this chat bot"));
+    assert!(!response.text().contains("Generate a new key"));
+    assert_eq!(owner.get("/account/bots").await.status, StatusCode::FORBIDDEN);
+    assert_eq!(owner.get("/account/bots/999999999/edit").await.status, StatusCode::NOT_FOUND);
+
+    let mut member = test.browser("198.51.100.92");
+    member.sign_in(&test.label("emails.jz")).await;
+    assert_eq!(member.get(&edit).await.status, StatusCode::FORBIDDEN);
+    let legacy_id = test.booted.app.db.write(|tx| {
+        Ok(campfire_db::User::create_bot(tx, "Legacy UI fixture", None)?.id)
+    }).await.unwrap();
+    let legacy = format!("/account/bots/{legacy_id}/edit");
+    assert_eq!(owner.get(&legacy).await.status, StatusCode::FORBIDDEN);
+    let mut admin = test.browser("198.51.100.93");
+    admin.sign_in(&test.label("emails.david")).await;
+    let response = admin.get(&legacy).await;
+    assert_eq!(response.status, StatusCode::OK);
+    assert!(!response.text().contains("name=\"agent[provider]\""));
+    let count = test.booted.app.db.read(move |conn| {
+        Ok(conn.query_row("SELECT COUNT(*) FROM agents WHERE user_id=?", [legacy_id], |row| row.get::<_, i64>(0))?)
+    }).await.unwrap();
+    assert_eq!(count, 0);
+}
