@@ -25,7 +25,9 @@ registerHooks({
     source = replaceOne(source, '  const state = {', `  const fixtureResponse = await fetch(process.env.WS13_FIXTURE_CONTROL + "/start", { method: "POST" });
   assert.equal(fixtureResponse.status, 200);
   const fixture = await fixtureResponse.json();
-  const rustFetch = async (request, response, body) => {
+  const rustRequests = new Set();
+  const rustFetch = (request, response, body) => {
+    const pending = (async () => {
     const upstream = await fetch(fixture.url + request.url, { method: request.method,
       headers: { "content-type": "application/json", "x-huddle-gateway-secret": request.headers["x-huddle-gateway-secret"] ?? "",
         ...(request.headers.authorization ? { authorization: request.headers.authorization } : {}) },
@@ -33,6 +35,10 @@ registerHooks({
     assert.equal(upstream.headers.get("cache-control"), "no-store");
     response.writeHead(upstream.status, {"content-type": upstream.headers.get("content-type") ?? "application/json"});
     response.end(await upstream.text());
+    })();
+    rustRequests.add(pending);
+    pending.finally(() => rustRequests.delete(pending));
+    return pending;
   };
   const revoke = async () => {
     assert.equal((await fetch(fixture.url + "/__ws13/revoke", {method: "POST"})).status, 200);
@@ -67,6 +73,7 @@ registerHooks({
       const port = await listen(probe); await closeServer(probe); return port;
     }\n`;
     source = replaceOne(source, '      await closeServer(livekit);', `      await closeServer(livekit);
+      await Promise.all([...rustRequests]);
       const persisted = await (await fetch(fixture.url + "/__ws13/state")).json();
       if (state.leftPosts.length && state.leftStatus === 200 && state.upstreamConnections === 1) assert.equal(persisted.seen, null);
       if (!state.active || state.authorizeStatus === 403 || state.grantCheckStatus === 403) assert.equal(persisted.revoked, true);

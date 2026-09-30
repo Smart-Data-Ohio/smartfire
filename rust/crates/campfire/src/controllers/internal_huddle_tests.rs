@@ -469,11 +469,17 @@ async fn start_node_fixture() -> String {
 async fn huddle_gateway_own_node_suite_against_rust_endpoints() {
     use axum::{Json, Router, routing::post};
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
-    let module = root.join(".scratch/node-deps/node_modules/ws/wrapper.mjs");
-    assert!(
-        module.exists(),
-        "install the gateway's pinned ws dependency into .scratch/node-deps before this test"
-    );
+    // Build from the committed gateway lockfile in this test's own temporary directory.
+    // A clean checkout must not rely on the worker's untracked .scratch/node-deps.
+    let dependencies = tempfile::Builder::new().prefix("ws13-gateway-").tempdir().unwrap();
+    for file in ["package.json", "package-lock.json"] {
+        std::fs::copy(root.join("script/livekit-gateway").join(file), dependencies.path().join(file)).unwrap();
+    }
+    let install = tokio::process::Command::new("npm")
+        .args(["ci", "--ignore-scripts", "--no-audit", "--no-fund"])
+        .current_dir(dependencies.path()).kill_on_drop(true).output().await.unwrap();
+    assert!(install.status.success(), "gateway dependency install failed: {}", String::from_utf8_lossy(&install.stderr));
+    let module = dependencies.path().join("node_modules/ws/wrapper.mjs");
     let listener = bind_fixture().await;
     let control = format!("http://{}", listener.local_addr().unwrap());
     let server = tokio::spawn(async move {
