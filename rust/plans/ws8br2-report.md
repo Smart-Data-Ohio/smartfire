@@ -91,7 +91,18 @@ Main merge occurred only after #168 was merged; its asset-fingerprint helper is 
 | WS6 / WS8b-r / WS14g / WS17 | Request-time `Layout::load` currently leaves owner chrome at defaults. Fill brand/recent-search/Drive/huddle/meeting/OOO/sound-window facts. Full profile golden supplies actual seed/render facts, as shared WS9/core goldens do; live HTTP profile HTML with all owner defaults is not claimed byte-identical. |
 | WS8b-m / WS8b-r / WS13 / WS17 | Room `show.shell.message_list` is not populated by this branch, and `/rooms/:id/members.json` remains 501. Message-author and member-panel card/focus/group/huddle/timeline cases remain deferred. Standalone directory and sidebar coverage does not close those room-specific criteria. |
 
-Other partial boundaries: broader Ruby `Date.parse` partial/relative grammar is unproved; SVG parser is Expat rather than Nokogiri/libxml2, so XML syntax/encoding beyond the committed cases is unproved; uploaded avatar variants, tours, timezone browser reporting, icon/audit browser flows and service-worker event execution remain deferred. Independent review of `a37883d6` has not been represented as completed; no findings were relayed during this continuation.
+Other partial boundaries: broader Ruby `Date.parse` partial/relative grammar is unproved; SVG parser is Expat rather than Nokogiri/libxml2, so XML syntax/encoding beyond the committed cases is unproved; uploaded avatar variants, tours, timezone browser reporting, icon/audit browser flows and service-worker event execution remain deferred. Astra’s independent review of `a37883d6` completed: no authorization bypass; 19/19 oracle files matched; Rails read back Rust rows and both logo variants; profile sections were present; 5/5 deliberate mutations were detected. The lead relayed two P2 gaps in shared attachment code on main, pending `rust/durable-attachment-analysis`.
+
+## Review findings pending the shared attachment fix
+
+The lead relayed Astra’s two P2 findings in shared `crates/campfire/src/controllers/presenters/attachments.rs`:
+
+- `ActiveStorage::AnalyzeJob` uses an in-memory queue and is not durable. Attachment analysis can be lost on process exit; the shared fix must persist its job atomically with the attachment write.
+- Assigning an existing blob by signed blob ID fails: icon upload returns 422 and logo upload returns 500, while Rails returns 302. Normal multipart-upload coverage does not prove this assignment path.
+
+Both are owned by `rust/durable-attachment-analysis`; no fix is authored here. Do not merge main until the lead requests it after that fix lands. Then add icon/logo HTTP regressions on top, including signed-ID assignment and analysis-job durability/rollback. These gaps are additional review findings, not removed from the original 194-case mapping or counted as covered.
+
+The updated common rule excludes browser screenshot/pixel diffs. The remaining list contains interaction, HTTP/state and DOM behavior checks only; theme/visibility criteria use behavior checks without screenshot comparisons. Board-only drift `541c0f69` / `8952bed4` belongs to WS12; this branch does not share their board-page partials and keeps its existing pin/ten-file status overlay.
 
 ## Fresh-clone verification
 
