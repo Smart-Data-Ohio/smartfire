@@ -53,6 +53,52 @@ fn identity_validations_match_presence_association_and_unique_subject_and_user()
         Ok(())
     });
 }
+
+#[test]
+fn one_save_uses_one_timestamp_even_when_the_clock_advances_between_reads() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicI64, Ordering},
+    };
+    struct AdvancingClock(AtomicI64);
+    impl crate::Clock for AdvancingClock {
+        fn now(&self) -> Timestamp {
+            Timestamp::from_microsecond(self.0.fetch_add(1, Ordering::SeqCst))
+        }
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let mut config = crate::Config::new(dir.path().join("test.sqlite3"));
+    config.environment = "test".into();
+    let env = crate::Env {
+        clock: Arc::new(AdvancingClock(AtomicI64::new(1_800_000_000_000_000))),
+        ..Default::default()
+    };
+    let db = crate::Database::open(config, env).unwrap();
+    db.write_blocking(|tx| {
+        let user = user(tx, "clock@smartdata.net")?;
+        let mut identity = GoogleIdentity::create(
+            tx,
+            user.id,
+            "clock-sub",
+            "clock@smartdata.net",
+            "smartdata.net",
+        )?;
+        assert_eq!(
+            identity.created_at, identity.updated_at,
+            "one insert timestamp"
+        );
+        identity.update_claims(tx, "new-clock@smartdata.net", "smartdata.net")?;
+        assert_eq!(
+            GoogleIdentity::for_user(tx.conn(), user.id)?
+                .unwrap()
+                .updated_at,
+            identity.updated_at,
+            "loaded timestamp matches persisted save"
+        );
+        Ok(())
+    })
+    .unwrap();
+}
 fn user(tx: &mut Tx<'_>, email: &str) -> Result<User> {
     User::create(
         tx,

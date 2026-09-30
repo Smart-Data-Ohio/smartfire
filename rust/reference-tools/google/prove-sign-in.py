@@ -44,3 +44,7 @@ source = identity.read_text()
 check("email-trust-bypass", identity, source.replace("if !allowed || changed.is_some()", "if false && (!allowed || changed.is_some())"),
     "campfire_db", "models::google_identity::tests::security_", "expected admin_link_required")
 print("Google sign-in security discrimination: 3 mutations rejected", flush=True)
+source = identity.read_text()
+check("timestamp-split", identity, source.replace("params![user_id,subject,email,domain,now,now]", "params![user_id,subject,email,domain,now,tx.now()]"),
+    "campfire_db", "one_save_uses_one_timestamp", "one insert timestamp")
+print("Google identity timestamp discrimination: 1 mutation rejected", flush=True)

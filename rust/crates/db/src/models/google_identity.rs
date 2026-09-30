@@ -76,20 +76,22 @@ impl GoogleIdentity {
             errors.add("user", "must exist");
         }
         errors.into_result()?;
+        let now = tx.now();
         tx.conn().execute("INSERT INTO google_identities(user_id,subject,email,domain,created_at,updated_at) VALUES(?,?,?,?,?,?)",
-            params![user_id,subject,email,domain,tx.now(),tx.now()])?;
+            params![user_id,subject,email,domain,now,now])?;
         Ok(Self::for_user(tx.conn(), user_id)?.expect("inserted identity"))
     }
     fn update_claims(&mut self, tx: &Tx<'_>, email: &str, domain: &str) -> Result<()> {
         // Active Record partial updates leave updated_at alone when neither claim changed.
         if self.email != email || self.domain.as_deref() != Some(domain) {
+            let now = tx.now();
             tx.conn().execute(
                 "UPDATE google_identities SET email=?,domain=?,updated_at=? WHERE id=?",
-                params![email, domain, tx.now(), self.id],
+                params![email, domain, now, self.id],
             )?;
             self.email = email.into();
             self.domain = Some(domain.into());
-            self.updated_at = tx.now();
+            self.updated_at = now;
         }
         Ok(())
     }
