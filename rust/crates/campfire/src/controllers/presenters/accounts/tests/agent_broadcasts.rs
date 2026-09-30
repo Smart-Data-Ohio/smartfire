@@ -183,6 +183,201 @@ async fn receive(socket: &mut Socket) -> Value {
         }
     }
 }
+
+/// Rails Agents::Steps.broadcast_parent replaces the complete message, in its
+/// conversation, even when message.updated_at and a warmed fragment do not change.
+#[tokio::test]
+async fn message_step_callbacks_replace_current_message_in_room_and_thread_without_cached_tokens() {
+    use crate::channels::broadcasts::Stream;
+    use campfire_db::models::agent_step::{self, AgentStepChanges, NewAgentStep};
+    let test = boot_seed("default").await.expect("default seed");
+    let bot: i64 = test.label("users.bender").parse().unwrap();
+    let viewer: i64 = test.label("users.david").parse().unwrap();
+    let room_id: i64 = test.label("rooms.watercooler").parse().unwrap();
+    let listener = crate::channels::tests::support::bind_listener().await;
+    let address = listener.local_addr().unwrap();
+    let router = test.booted.router.clone();
+    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    for in_thread in [false, true] {
+        let (agent_id, message) = test
+            .booted
+            .app
+            .db
+            .write(move |tx| {
+                let agent = campfire_db::Agent::for_user(tx.conn(), bot)?.unwrap();
+                let thread_id = if in_thread {
+                    Some(
+                        campfire_db::ChannelThread::create(
+                            tx,
+                            campfire_db::NewChannelThread {
+                                room_id,
+                                creator_id: viewer,
+                                name: Some("Message step conversation".into()),
+                                ..Default::default()
+                            },
+                        )?
+                        .id,
+                    )
+                } else {
+                    None
+                };
+                let message = campfire_db::Message::create_markdown(
+                    tx,
+                    campfire_db::NewMessage {
+                        room_id,
+                        creator_id: bot,
+                        thread_id,
+                        ..Default::default()
+                    },
+                    "Message carrying structured progress",
+                )?;
+                Ok((agent.id, message))
+            })
+            .await
+            .unwrap();
+        let message_id = message.id;
+        let target = format!("message_{}", message.client_message_id);
+        let warm = test
+            .booted
+            .app
+            .db
+            .read({
+                let app = test.booted.app.clone();
+                let message = message.clone();
+                move |conn| {
+                    let view = crate::controllers::presenters::Presenter::new(conn, &app, None)
+                        .message(&message)?;
+                    let account = campfire_db::Account::first(conn)?;
+                    Ok(crate::controllers::presenters::page::render_detached(
+                        &app,
+                        account.as_ref(),
+                        |ctx| campfire_views::messages::message(ctx, &view),
+                    ))
+                }
+            })
+            .await
+            .unwrap();
+        assert!(!warm.contains("Inspect &lt;message&gt;"));
+        let room = test
+            .booted
+            .app
+            .db
+            .read(move |conn| campfire_db::Room::find(conn, room_id))
+            .await
+            .unwrap();
+        let stream = Stream::conversation(&room, &message);
+        let signed = rails_compat::turbo::signed_stream_name(
+            &test.booted.app.secrets,
+            &stream.streamables(),
+        );
+        let identifier =
+            json!({"channel":"RoomMessagesChannel","signed_stream_name":signed}).to_string();
+        let mut socket = activity_socket(&test, address, viewer).await;
+        socket
+            .send(Message::Text(
+                json!({"command":"subscribe","identifier":identifier})
+                    .to_string()
+                    .into(),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(receive(&mut socket).await["type"], "confirm_subscription");
+        let id = test
+            .booted
+            .app
+            .db
+            .write(move |tx| {
+                let result = agent_step::create(
+                    tx,
+                    agent_id,
+                    NewAgentStep {
+                        message_id: Some(message_id),
+                        name: "Inspect <message>".into(),
+                        input_summary: Some("Safe & escaped".into()),
+                        ..Default::default()
+                    },
+                )?;
+                assert!(result.is_ok(), "{:?}", result.error);
+                Ok(result.payload.unwrap()["id"].as_i64().unwrap())
+            })
+            .await
+            .unwrap();
+        let frame = receive(&mut socket).await;
+        let html = frame["message"].as_str().unwrap();
+        assert!(
+            html.starts_with(&format!(
+                "<turbo-stream action=\"replace\" target=\"{target}\">"
+            )),
+            "{html}"
+        );
+        assert!(html.contains("Message carrying structured progress"));
+        assert!(html.contains("Inspect &lt;message&gt;"));
+        assert!(html.contains("Safe &amp; escaped"));
+        for private in [
+            "authenticity_token",
+            "csrf-token",
+            "__CAMPFIRE_CSRF",
+            "<script",
+        ] {
+            assert!(!html.contains(private), "message callback leaked {private}");
+        }
+        test.booted
+            .app
+            .db
+            .write(move |tx| {
+                let result = agent_step::update(
+                    tx,
+                    agent_id,
+                    id,
+                    AgentStepChanges {
+                        status: Some("done".into()),
+                        duration_ms: Some(Some(1050)),
+                        output_summary: Some(Some("Current <result>".into())),
+                        ..Default::default()
+                    },
+                )?;
+                assert!(result.is_ok());
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let updated = receive(&mut socket).await;
+        let html = updated["message"].as_str().unwrap();
+        assert!(html.contains("agent-steps__step--done"));
+        assert!(html.contains("1.0s"));
+        assert!(html.contains("Current &lt;result&gt;"));
+        assert!(
+            test.booted
+                .app
+                .db
+                .write(move |tx| -> campfire_db::Result<()> {
+                    agent_step::update(
+                        tx,
+                        agent_id,
+                        id,
+                        AgentStepChanges {
+                            status: Some("failed".into()),
+                            ..Default::default()
+                        },
+                    )?;
+                    Err(campfire_db::Error::Other(
+                        "rollback message step test".into(),
+                    ))
+                })
+                .await
+                .is_err()
+        );
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(250), socket.next())
+                .await
+                .is_err(),
+            "rolled-back message callback reached the socket"
+        );
+        socket.close(None).await.unwrap();
+    }
+    server.abort();
+}
+
 #[tokio::test]
 async fn status_callback_replaces_badge_then_directory_over_live_socket_after_commit() {
     let test = boot_seed("default").await.expect("default seed");

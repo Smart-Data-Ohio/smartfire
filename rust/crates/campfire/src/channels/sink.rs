@@ -61,16 +61,37 @@ fn agent_steps(
     change: &campfire_db::models::agent_step::StepParentChange,
 ) -> anyhow::Result<()> {
     use askama::Template;
-    if change.message_id.is_some() {
-        // Whole-message replacement is WS8bm's shared message broadcast renderer.
-        return Err(anyhow::anyhow!(
-            "WS8bm message rendering is not registered for agent steps"
-        ));
+    let app = app.ok_or_else(|| anyhow::anyhow!("Agent step rendering requires the booted app"))?;
+    if let Some(id) = change.message_id {
+        let Some((room, message)) = app.db.read_blocking(|conn| {
+            let Some(message) = campfire_db::Message::find_by_id(conn, id)? else {
+                return Ok(None);
+            };
+            Ok(Some((
+                campfire_db::Room::find(conn, message.room_id)?,
+                message,
+            )))
+        })?
+        else {
+            return Ok(());
+        };
+        let Some(html) = crate::controllers::messages::rendered::domain_partial(
+            app,
+            &campfire_db::broadcasts::Partial::Message { message_id: id },
+        )?
+        else {
+            return Ok(());
+        };
+        app.broadcasts.replace(
+            &super::broadcasts::Stream::conversation(&room, &message),
+            &super::broadcasts::message_dom_id(&message, None),
+            &html,
+        );
+        return Ok(());
     }
     let Some(id) = change.thread_id else {
         return Ok(());
     };
-    let app = app.ok_or_else(|| anyhow::anyhow!("Agent step rendering requires the booted app"))?;
     let steps=app.db.read_blocking(|conn| {
         if campfire_db::ChannelThread::find_by_id(conn,id)?.is_none(){return Ok(None);}
         let mut statement=conn.prepare("SELECT name,status,duration_ms,input_summary,output_summary FROM agent_steps WHERE channel_thread_id=? ORDER BY position,id")?;

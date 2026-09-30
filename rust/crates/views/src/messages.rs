@@ -572,6 +572,14 @@ pub fn cached_message(ctx: &ViewContext, message: &MessageView) -> crate::helper
     askama::filters::Safe(self::message(ctx, message))
 }
 
+/// WS8bm's complete-message callback renderer. A child step changes without
+/// touching message.updated_at, so callbacks must bypass the warmed fragment.
+pub fn uncached_message(ctx: &ViewContext, message: &MessageView) -> String {
+    MessagePartial { ctx, message }
+        .render()
+        .expect("messages/_message renders")
+}
+
 /// [`cached_message`] for a [`MessageItem`]: a fragment found up front goes out as it is, with
 /// this render's tokens in its slots.
 pub fn cached_message_item<'a>(

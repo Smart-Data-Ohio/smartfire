@@ -5,6 +5,7 @@
 
 pub mod boosts;
 pub mod by_bots;
+pub mod rendered;
 
 use askama::Template;
 use campfire_db::{Job as _, Message, NewMessage, Room, Timeline};

@@ -9,6 +9,7 @@ root = Path(__file__).resolve().parents[3]
 sink = root / "crates/campfire/src/channels/sink.rs"
 history = root / "crates/campfire/src/controllers/presenters/agents/history.rs"
 decisions = root / "crates/campfire/src/controllers/agent_approvals.rs"
+rendered = root / "crates/campfire/src/controllers/messages/rendered.rs"
 cases = [
     ("activity", sink, "cable.broadcast(&stream, &payload);",
      'if !stream.ends_with("_activity") { cable.broadcast(&stream, &payload); }',
@@ -21,6 +22,14 @@ cases = [
      "decode(request).and_then(|broadcast| agent_steps(app, &broadcast))",
      "decode::<campfire_db::models::agent_step::StepParentChange>(request).map(|_| ())",
      "thread_step_callback_renders_ordered_steps_and_updates_over_live_socket"),
+    ("message-steps", sink,
+     "if let Some(id) = change.message_id {",
+     "if change.message_id.is_some() { return Ok(()); }\n    if let Some(id) = change.message_id {",
+     "message_step_callbacks_replace_current_message_in_room_and_thread_without_cached_tokens"),
+    ("message-cache", rendered,
+     "views::uncached_message(ctx, &view)",
+     "views::message(ctx, &view)",
+     "message_step_callbacks_replace_current_message_in_room_and_thread_without_cached_tokens"),
     ("ledger", history,
      '&& agent.can(conn, "read_messages", Some(message.room_id))?',
      "&& true",
