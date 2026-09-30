@@ -503,3 +503,130 @@ async fn the_pool_drops_deliveries_past_its_queue() {
 
 #[path = "ws17_delivery_tests.rs"]
 mod ws17_delivery;
+
+#[tokio::test(flavor = "multi_thread")]
+async fn ws17_endpoint_resolution_is_deferred_until_notification_delivery() {
+    let service = push_service(201, "Created").await;
+    let t = tokio::task::spawn_blocking(TestDb::new).await.unwrap();
+    let receiver = Receiver::new();
+    let mut sub = receiver.subscription(1, "https://fcm.googleapis.com/fcm/send/abc");
+    sub.user_id = TestDb::id("david");
+    let built =
+        t.db.read(move |conn| {
+            Notification::build(
+                conn,
+                &sub,
+                &campfire_db::PushPayload::new(
+                    "t".into(),
+                    "b".into(),
+                    "/".into(),
+                    Some("room-1".into()),
+                ),
+            )
+        })
+        .await
+        .unwrap();
+    assert!(
+        service.resolver.lookups().is_empty(),
+        "serial notification construction must not resolve DNS"
+    );
+    assert_eq!(
+        built.deliver(&service.net, &vapid()).await.unwrap(),
+        Some(201)
+    );
+    assert_eq!(service.resolver.lookups(), ["fcm.googleapis.com"]);
+    assert_eq!(
+        receiver.open(&service.server.received()[0].body),
+        built.encoded_message()
+    );
+}
+#[tokio::test]
+async fn ws17_delivery_is_skipped_after_endpoint_becomes_private() {
+    let service = push_service(201, "Created").await;
+    let receiver = Receiver::new();
+    let sub = receiver.subscription(1, "https://fcm.googleapis.com/fcm/send/abc123");
+    assert!(sub.validate(&|_| Some(PUBLIC_IP.to_string())).0.is_empty());
+    let notification = notification(sub);
+    service.resolver.set(
+        "fcm.googleapis.com",
+        vec![vec!["10.0.0.5".parse().unwrap()]],
+    );
+    assert_eq!(
+        notification.deliver(&service.net, &vapid()).await.unwrap(),
+        None
+    );
+    assert_eq!(service.resolver.lookups(), ["fcm.googleapis.com"]);
+    assert!(service.dialer.dialed.lock().unwrap().is_empty());
+    assert!(service.server.received().is_empty());
+}
+#[tokio::test]
+async fn ws17_pinned_delivery_ignores_all_proxy_environment_keys() {
+    // Isolate environment mutation from the other tests and Tokio threads.
+    if std::env::var_os("WS17_PROXY_CHILD").is_none() {
+        let output=std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["--exact","integrations::web_push::tests::ws17_pinned_delivery_ignores_all_proxy_environment_keys"])
+            .env("WS17_PROXY_CHILD","1")
+            .envs(["http_proxy","https_proxy","HTTP_PROXY","HTTPS_PROXY"].map(|key|(key,"http://proxy.internal:3128")))
+            .output().unwrap();
+        assert!(
+            output.status.success(),
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(String::from_utf8_lossy(&output.stdout).contains("1 passed; 0 failed"));
+        return;
+    }
+    let service = push_service(201, "Created").await;
+    let receiver = Receiver::new();
+    let notification =
+        notification(receiver.subscription(1, "https://fcm.googleapis.com/fcm/send/abc"));
+    assert_eq!(
+        notification.deliver(&service.net, &vapid()).await.unwrap(),
+        Some(201)
+    );
+    assert_eq!(service.resolver.lookups(), ["fcm.googleapis.com"]);
+    assert_eq!(
+        *service.dialer.dialed.lock().unwrap(),
+        [format!("{PUBLIC_IP}:443").parse().unwrap()]
+    );
+    assert_eq!(
+        receiver.open(&service.server.received()[0].body),
+        notification.encoded_message()
+    );
+}
+
+async fn named_endpoint_validation(addresses: Vec<std::net::IpAddr>) {
+    let service = push_service(201, "Created").await;
+    service.resolver.set("fcm.googleapis.com", vec![addresses]);
+    let sub = Receiver::new().subscription(1, "https://fcm.googleapis.com/fcm/send/abc123");
+    // Compose the exact real private-network guard/model seam used by registration.
+    let host = sub.resolved_endpoint_ip(&|host| Some(host.into())).unwrap();
+    let resolved = crate::integrations::net::guard::resolve(service.net.resolver.as_ref(), &host)
+        .await
+        .ok()
+        .map(|ip| ip.to_string());
+    assert!(resolved.is_none());
+    let errors = sub.validate(&|_| resolved.clone());
+    assert!(!errors.0.is_empty());
+    assert!(
+        errors
+            .on("endpoint")
+            .contains(&"resolves to a private or invalid IP address")
+    );
+    assert!(sub.resolved_endpoint_ip(&|_| resolved.clone()).is_none());
+    assert_eq!(service.resolver.lookups(), ["fcm.googleapis.com"]);
+    assert!(service.dialer.dialed.lock().unwrap().is_empty());
+}
+#[tokio::test]
+async fn ws17_rejects_endpoint_resolving_to_loopback_ip() {
+    named_endpoint_validation(vec!["127.0.0.1".parse().unwrap()]).await;
+}
+#[tokio::test]
+async fn ws17_rejects_endpoint_resolving_to_link_local_ip() {
+    named_endpoint_validation(vec!["169.254.169.254".parse().unwrap()]).await;
+}
+#[tokio::test]
+async fn ws17_empty_endpoint_resolution_rejects_without_raising() {
+    named_endpoint_validation(vec![]).await;
+}

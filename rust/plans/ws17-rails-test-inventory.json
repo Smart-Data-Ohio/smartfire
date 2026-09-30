@@ -543,23 +543,23 @@
     {
       "file": "test/models/push/subscription_test.rb",
       "test": "rejects endpoint that resolves to loopback IP",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: web_push/tests (five individually named real Guard/model validation and constructor/delivery sequences; explicit loopback/link-local/empty DNS, deferred lookup, fresh private resolution and no TCP dial)"
     },
     {
       "file": "test/models/push/subscription_test.rb",
       "test": "rejects endpoint that resolves to link-local IP (AWS IMDS)",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: web_push/tests (five individually named real Guard/model validation and constructor/delivery sequences; explicit loopback/link-local/empty DNS, deferred lookup, fresh private resolution and no TCP dial)"
     },
     {
       "file": "test/models/push/subscription_test.rb",
       "test": "rejects endpoint whose host resolves to nothing without raising",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: web_push/tests (five individually named real Guard/model validation and constructor/delivery sequences; explicit loopback/link-local/empty DNS, deferred lookup, fresh private resolution and no TCP dial)"
     },
     {
       "file": "test/models/push/subscription_test.rb",
@@ -571,16 +571,16 @@
     {
       "file": "test/models/push/subscription_test.rb",
       "test": "endpoint resolution is deferred from the enqueue path to the delivery worker",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: web_push/tests (five individually named real Guard/model validation and constructor/delivery sequences; explicit loopback/link-local/empty DNS, deferred lookup, fresh private resolution and no TCP dial)"
     },
     {
       "file": "test/models/push/subscription_test.rb",
       "test": "delivery is skipped when the endpoint no longer resolves to a public IP",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: web_push/tests (five individually named real Guard/model validation and constructor/delivery sequences; explicit loopback/link-local/empty DNS, deferred lookup, fresh private resolution and no TCP dial)"
     },
     {
       "file": "test/models/push/subscription_test.rb",
@@ -622,14 +622,14 @@
       "test": "pins delivery to endpoint_ip instead of re-resolving the host",
       "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
-      "evidence": "rust/crates/campfire/src/integrations/web_push/tests.rs::delivers_to_the_pinned_address_with_the_gems_headers"
+      "evidence": "campfire: ws17_pinned_delivery_ignores_all_proxy_environment_keys (isolated child process sets all four proxy keys; actual TLS delivery, exact pinned TCP address and decrypted JSON)"
     },
     {
       "file": "test/lib/web_push/persistent_request_test.rb",
       "test": "ignores proxy env so the pin can't be routed through a re-resolving proxy",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire: ws17_pinned_delivery_ignores_all_proxy_environment_keys (isolated child process sets all four proxy keys; actual TLS delivery, exact pinned TCP address and decrypted JSON)"
     },
     {
       "file": "test/models/workspace_presence_lease_test.rb",
@@ -844,9 +844,9 @@
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "DND is manual-only outside quiet hours",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: status_settings_write_test (four exact remaining named reader sequences with real saves/reloads/advancing clocks; original pinned Ruby bodies passed 17 assertions)"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
@@ -858,9 +858,9 @@
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "quiet hours cover an overnight window in the user's time zone",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: status_settings_write_test (four exact remaining named reader sequences with real saves/reloads/advancing clocks; original pinned Ruby bodies passed 17 assertions)"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
@@ -886,9 +886,9 @@
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "an expired custom status reads as blank",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: status_settings_write_test (four exact remaining named reader sequences with real saves/reloads/advancing clocks; original pinned Ruby bodies passed 17 assertions)"
     },
     {
       "file": "test/models/user/status_settings_test.rb",
@@ -921,9 +921,9 @@
     {
       "file": "test/models/user/status_settings_test.rb",
       "test": "effective presence folds the manual setting over the lease state",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: status_settings_write_test (four exact remaining named reader sequences with real saves/reloads/advancing clocks; original pinned Ruby bodies passed 17 assertions)"
     },
     {
       "file": "test/models/user/meeting_status_test.rb",
@@ -2148,70 +2148,70 @@
       "test": "matches case-insensitively",
       "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
-      "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::matches_case_insensitively"
+      "evidence": "campfire_db: keyword_alert_test (all ten exact named matcher cases, including literal/blank-only/line-break/Unicode assertions; original pinned bodies passed 18 assertions)"
     },
     {
       "file": "test/models/notifications/keyword_matcher_test.rb",
       "test": "matches on word boundaries only",
       "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
-      "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::matches_on_word_boundaries_only"
+      "evidence": "campfire_db: keyword_alert_test (all ten exact named matcher cases, including literal/blank-only/line-break/Unicode assertions; original pinned bodies passed 18 assertions)"
     },
     {
       "file": "test/models/notifications/keyword_matcher_test.rb",
       "test": "matches multi-word phrases",
       "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
-      "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::matches_multi_word_phrases"
+      "evidence": "campfire_db: keyword_alert_test (all ten exact named matcher cases, including literal/blank-only/line-break/Unicode assertions; original pinned bodies passed 18 assertions)"
     },
     {
       "file": "test/models/notifications/keyword_matcher_test.rb",
       "test": "treats phrases literally, not as patterns",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: keyword_alert_test (all ten exact named matcher cases, including literal/blank-only/line-break/Unicode assertions; original pinned bodies passed 18 assertions)"
     },
     {
       "file": "test/models/notifications/keyword_matcher_test.rb",
       "test": "returns every user with a match",
       "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
-      "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::returns_every_user_with_a_match"
+      "evidence": "campfire_db: keyword_alert_test (all ten exact named matcher cases, including literal/blank-only/line-break/Unicode assertions; original pinned bodies passed 18 assertions)"
     },
     {
       "file": "test/models/notifications/keyword_matcher_test.rb",
       "test": "overlapping phrases across users all match",
       "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
-      "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::overlapping_phrases_across_users_all_match"
+      "evidence": "campfire_db: keyword_alert_test (all ten exact named matcher cases, including literal/blank-only/line-break/Unicode assertions; original pinned bodies passed 18 assertions)"
     },
     {
       "file": "test/models/notifications/keyword_matcher_test.rb",
       "test": "nested phrases match the same user once",
       "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
-      "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::nested_phrases_match_the_same_user_once"
+      "evidence": "campfire_db: keyword_alert_test (all ten exact named matcher cases, including literal/blank-only/line-break/Unicode assertions; original pinned bodies passed 18 assertions)"
     },
     {
       "file": "test/models/notifications/keyword_matcher_test.rb",
       "test": "repeated phrases match every holder once",
       "status": "ported-equivalent",
       "owner": "WS17 / inherited WS7-WS8 as identified by evidence",
-      "evidence": "rust/crates/db/src/tests/keyword_alert_test.rs::repeated_phrases_match_every_holder_once"
+      "evidence": "campfire_db: keyword_alert_test (all ten exact named matcher cases, including literal/blank-only/line-break/Unicode assertions; original pinned bodies passed 18 assertions)"
     },
     {
       "file": "test/models/notifications/keyword_matcher_test.rb",
       "test": "ignores blank phrases and blank text",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: keyword_alert_test (all ten exact named matcher cases, including literal/blank-only/line-break/Unicode assertions; original pinned bodies passed 18 assertions)"
     },
     {
       "file": "test/models/notifications/keyword_matcher_test.rb",
       "test": "a phrase matches across a line break and not inside a longer Unicode word",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: keyword_alert_test (all ten exact named matcher cases, including literal/blank-only/line-break/Unicode assertions; original pinned bodies passed 18 assertions)"
     },
     {
       "file": "test/services/activity_items/recorder_keyword_test.rb",

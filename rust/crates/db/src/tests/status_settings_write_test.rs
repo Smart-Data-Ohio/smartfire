@@ -493,3 +493,73 @@ fn finding_or_creating_an_allowance_is_idempotent_and_removal_is_scoped() {
             .is_some()
     );
 }
+
+// Remaining named StatusSettings sequences use a real writer and an advancing fixture clock.
+#[test]
+fn ws17_dnd_is_manual_only_outside_quiet_hours() {
+    let t = TestDb::new();
+    assert!(!settings(&t).dnd_active(t.now()));
+    t.write(|tx| {
+        let mut user = Settings::find(tx.conn(), id("david"))?;
+        user.dnd_enabled = true;
+        user.save(tx)
+    });
+    assert!(settings(&t).dnd_active(t.now()));
+}
+#[test]
+fn ws17_quiet_hours_cover_an_overnight_window_in_the_users_time_zone() {
+    let t = TestDb::new();
+    t.write(|tx| {
+        let mut user = Settings::find(tx.conn(), id("david"))?;
+        user.time_zone = Some("Pacific Time (US & Canada)".into());
+        user.quiet_hours_enabled = true;
+        user.quiet_hours_start_minute = clock_time_to_minutes("22:00");
+        user.quiet_hours_end_minute = clock_time_to_minutes("07:00");
+        user.save(tx)
+    });
+    t.clock.travel_to(stamp("2026-09-23T06:30:00Z"));
+    assert!(settings(&t).quiet_hours_active(t.now()));
+    assert!(settings(&t).dnd_active(t.now()));
+    t.clock.travel_to(stamp("2026-09-23T16:00:00Z"));
+    assert!(!settings(&t).quiet_hours_active(t.now()));
+    assert!(!settings(&t).dnd_active(t.now()));
+}
+#[test]
+fn ws17_an_expired_custom_status_reads_as_blank() {
+    let t = TestDb::new();
+    t.write(|tx| {
+        let mut user = Settings::find(tx.conn(), id("david"))?;
+        user.custom_status_emoji = Some("🚂".into());
+        user.custom_status_text = Some("On a train".into());
+        user.custom_status_expires_at = Some(tx.now().since(SignedDuration::from_hours(1)));
+        user.save(tx)
+    });
+    assert_eq!(
+        settings(&t).custom_status_display(t.now()).as_deref(),
+        Some("🚂 On a train")
+    );
+    t.travel(2 * 60 * 60);
+    assert!(settings(&t).custom_status_display(t.now()).is_none());
+}
+#[test]
+fn ws17_effective_presence_folds_the_manual_setting_over_the_lease_state() {
+    use crate::models::workspace_presence_lease::Presence::*;
+    let t = TestDb::new();
+    for lease in [Online, Idle, Offline] {
+        assert_eq!(settings(&t).effective_presence(lease), lease);
+    }
+    t.write(|tx| {
+        let mut user = Settings::find(tx.conn(), id("david"))?;
+        user.presence_setting = "dnd".into();
+        user.save(tx)
+    });
+    for (lease, expected) in [(Online, Dnd), (Idle, Dnd), (Offline, Offline)] {
+        assert_eq!(settings(&t).effective_presence(lease), expected);
+    }
+    t.write(|tx| {
+        let mut user = Settings::find(tx.conn(), id("david"))?;
+        user.presence_setting = "invisible".into();
+        user.save(tx)
+    });
+    assert_eq!(settings(&t).effective_presence(Online), Offline);
+}
