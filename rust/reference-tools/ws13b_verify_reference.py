@@ -18,6 +18,10 @@ PATHS = [
     "test/models/stream_test.rb", "test/models/rooms/stage_test.rb", "test/models/rooms/voice_test.rb",
     "app/models/notifications/policy.rb", "app/models/huddle/ring_policy.rb",
     "test/models/huddle/join_pusher_test.rb", "test/models/huddle/ring_policy_test.rb",
+    "app/jobs/huddle/join_notice_job.rb", "app/jobs/huddle/push_invitation_job.rb",
+    "app/jobs/huddle/broadcast_presence_job.rb", "app/services/huddle/reconciler.rb",
+    "test/jobs/huddle/join_notice_job_test.rb", "test/jobs/huddle/push_invitation_job_test.rb",
+    "test/jobs/huddle/broadcast_presence_job_test.rb", "test/services/huddle/reconciler_test.rb",
 ]
 image = os.environ.get("PARITY_IMAGE", "ws13-reference:d7c7de92")
 raw = subprocess.check_output(["docker", "run", "--rm", "--name", "ws13b-source-check", "--network", "none", "--entrypoint", "sha256sum", image, *[f"/rails/{path}" for path in PATHS]], text=True, cwd=ROOT)

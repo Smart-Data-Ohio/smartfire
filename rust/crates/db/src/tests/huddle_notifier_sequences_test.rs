@@ -172,10 +172,8 @@ fn run(number: i64, test: &str) {
                 } else if let Some(job) = e.as_job::<JoinNoticeJob>() {
                     pending.push(job.grant_id);
                     job.grant_id
-                } else if let Some(job) = e.as_job::<PresenceJob>() {
-                    job.grant_id
                 } else {
-                    return None;
+                    e.as_job::<PresenceJob>()?.grant_id
                 };
                 Some(json!({"class":job.class,"id":id,"delayed":job.wait.is_some()}))
             })

@@ -144,10 +144,16 @@ pub(crate) async fn perform(
 
 pub(crate) async fn reconcile(db: &Database, service: RoomService) -> anyhow::Result<usize> {
     if let Err(error) = resolve_invitations(db).await {
-        tracing::error!(%error,"Huddle invitation resolution failed");
+        tracing::error!(
+            "{}",
+            reconciliation_failure_message("invitation resolution", &error)
+        );
     }
     if let Err(error) = end_stale_streams(db).await {
-        tracing::error!(%error,"Huddle stream reconciliation failed");
+        tracing::error!(
+            "{}",
+            reconciliation_failure_message("stream reconciliation", &error)
+        );
     }
     if !service.admin_configured() {
         return Ok(0);
@@ -165,6 +171,19 @@ pub(crate) async fn reconcile(db: &Database, service: RoomService) -> anyhow::Re
         }
     }
     Ok(completed)
+}
+
+/// The Rails reconciler logs the exception class, never its message or SQL.
+/// Preserve its observable class names for the corresponding Rust model errors.
+pub(crate) fn reconciliation_failure_message(phase: &str, error: &campfire_db::Error) -> String {
+    let class = match error {
+        error if error.is_record_not_unique() => "ActiveRecord::RecordNotUnique",
+        campfire_db::Error::RecordInvalid(_) => "ActiveRecord::RecordInvalid",
+        campfire_db::Error::RecordNotFound(_) => "ActiveRecord::RecordNotFound",
+        campfire_db::Error::Sqlite(_) => "ActiveRecord::StatementInvalid",
+        _ => "StandardError",
+    };
+    format!("Huddle {phase} failed: {class}")
 }
 
 async fn resolve_invitations(db: &Database) -> campfire_db::Result<()> {

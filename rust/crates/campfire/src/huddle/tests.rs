@@ -472,6 +472,7 @@ async fn huddle_reconciler_ends_a_quiet_presenter_without_admin_configuration() 
 
 #[tokio::test]
 async fn resolver_failure_preserves_prior_items_and_does_not_stop_cleanup() {
+    let (logs, _guard) = Ws13bLogs::capture();
     use campfire_db::models::{huddle_cleanup::{HuddleCleanup,Operation},huddle_grant::HuddleGrant};
     use crate::controllers::presenters::test_support::{TestApp,DAVID,JASON,KEVIN,DIRECT_DAVID_JASON};
     let app=TestApp::boot().await.expect("WS13 needs the parity seed");
@@ -500,6 +501,7 @@ async fn resolver_failure_preserves_prior_items_and_does_not_stop_cleanup() {
         Ok(())
     }).await.unwrap();
     assert_eq!(server.received.lock().unwrap().len(),1);
+    logs.assert_oracle("resolver_sql_failure");
 }
 
 fn stage_stream_state_fixture(tx:&mut campfire_db::Tx<'_>,quality:&str)->campfire_db::Result<i64> {
@@ -511,6 +513,7 @@ fn stage_stream_state_fixture(tx:&mut campfire_db::Tx<'_>,quality:&str)->campfir
 
 #[tokio::test]
 async fn huddle_stale_stream_failure_preserves_prior_ends_and_does_not_stop_cleanup() {
+    let (logs, _guard) = Ws13bLogs::capture();
     use campfire_db::models::huddle_cleanup::{HuddleCleanup,Operation};
     let app=crate::controllers::presenters::test_support::TestApp::boot().await.expect("WS13 needs the parity seed");
     let db=app.booted.app.db.clone();
@@ -530,6 +533,142 @@ async fn huddle_stale_stream_failure_preserves_prior_ends_and_does_not_stop_clea
         Ok(())
     }).await.unwrap();
     assert_eq!(server.received.lock().unwrap().len(),1);
+    logs.assert_oracle("stream_validation_failure");
+}
+
+// A thread-local subscriber captures the actual process reconciler's messages.
+// The SQLite triggers above remain real failures; no phase is mocked in Rust.
+struct Ws13bLogs(Arc<Mutex<Vec<u8>>>);
+struct Ws13bLogWriter(Arc<Mutex<Vec<u8>>>);
+impl std::io::Write for Ws13bLogWriter {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        self.0.lock().unwrap().extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+impl Ws13bLogs {
+    fn capture() -> (Self, tracing::subscriber::DefaultGuard) {
+        let bytes = Arc::new(Mutex::new(Vec::new()));
+        let writer = bytes.clone();
+        let subscriber = tracing_subscriber::fmt()
+            .with_ansi(false)
+            .with_target(false)
+            .with_level(false)
+            .without_time()
+            .with_writer(move || Ws13bLogWriter(writer.clone()))
+            .finish();
+        (Self(bytes), tracing::subscriber::set_default(subscriber))
+    }
+    fn assert_oracle(&self, name: &str) {
+        let vectors: Value =
+            serde_json::from_str(include_str!("huddle_job_contract_vectors.json")).unwrap();
+        let row = vectors["reconciler"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["name"] == name)
+            .unwrap();
+        let bytes = self.0.lock().unwrap();
+        let text = String::from_utf8_lossy(&bytes);
+        let messages: Vec<_> = text
+            .lines()
+            .filter(|line| {
+                line.starts_with("Huddle invitation resolution failed:")
+                    || line.starts_with("Huddle stream reconciliation failed:")
+            })
+            .collect();
+        assert_eq!(serde_json::json!(messages), row["logs"], "{text}");
+    }
+}
+
+#[test]
+fn reconciler_standard_error_messages_match_the_rails_oracle() {
+    let vectors: Value =
+        serde_json::from_str(include_str!("huddle_job_contract_vectors.json")).unwrap();
+    for (name, phase) in [
+        ("resolver_failure", "invitation resolution"),
+        ("stream_failure", "stream reconciliation"),
+    ] {
+        let row = vectors["reconciler"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["name"] == name)
+            .unwrap();
+        let message = crate::jobs::huddle::reconciliation_failure_message(
+            phase,
+            &campfire_db::Error::Other("boom".into()),
+        );
+        assert_eq!(serde_json::json!([message]), row["logs"]);
+    }
+}
+
+#[tokio::test]
+async fn one_huddle_pass_runs_all_three_phases_in_rails_order() {
+    use crate::controllers::presenters::test_support::{DAVID, DIRECT_DAVID_JASON, JASON, TestApp};
+    use campfire_db::models::{
+        huddle_cleanup::{HuddleCleanup, Operation},
+        huddle_grant::HuddleGrant,
+    };
+    let app = TestApp::boot()
+        .await
+        .expect("WS13b requires the parity seed");
+    let db = app.booted.app.db.clone();
+    app.booted.jobs.shutdown(Duration::from_secs(2)).await;
+    let cleanup=db.write(|tx| {
+        let session=campfire_db::Session::start(tx,DAVID,None,None)?;
+        let member=campfire_db::Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,DAVID)?.unwrap();
+        let grant=HuddleGrant::issue(tx,session.id,member.id,member.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13b-fixture-value".into()),admin_configured:false})?;
+        let item=campfire_db::ActivityItem::find_by_user_and_source(tx.conn(),JASON,"HuddleGrant",grant.id)?.unwrap().id;
+        tx.conn().execute("UPDATE activity_items SET created_at=? WHERE id=?",rusqlite::params![tx.now().ago(jiff::SignedDuration::from_secs(120)),item])?;
+        let stream=stage_stream_state_fixture(tx,"1080p15")?;
+        let cleanup=HuddleCleanup::create(tx,Operation::DeleteRoom,"ws13b-all-phases",None,None,false)?.id;
+        tx.conn().execute_batch(&format!("CREATE TABLE ws13b_phase_order(seq INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL);
+            CREATE TRIGGER ws13b_invitation_phase AFTER UPDATE ON activity_items WHEN NEW.id={item} AND OLD.event_type='huddle_started' AND NEW.event_type='huddle_missed' BEGIN INSERT INTO ws13b_phase_order(name) VALUES('invitations'); END;
+            CREATE TRIGGER ws13b_stream_order BEFORE UPDATE ON streams WHEN NEW.id={stream} AND NEW.ended_at IS NOT NULL AND (SELECT event_type FROM activity_items WHERE id={item})!='huddle_missed' BEGIN SELECT RAISE(ABORT,'ws13b stream ran first'); END;
+            CREATE TRIGGER ws13b_stream_phase AFTER UPDATE ON streams WHEN NEW.id={stream} AND OLD.ended_at IS NULL AND NEW.ended_at IS NOT NULL BEGIN INSERT INTO ws13b_phase_order(name) VALUES('streams'); END;
+            CREATE TRIGGER ws13b_cleanup_order BEFORE UPDATE ON huddle_cleanups WHEN NEW.id={cleanup} AND NEW.attempts>OLD.attempts AND (SELECT ended_at FROM streams WHERE id={stream}) IS NULL BEGIN SELECT RAISE(ABORT,'ws13b cleanup ran first'); END;
+            CREATE TRIGGER ws13b_cleanup_phase AFTER UPDATE ON huddle_cleanups WHEN NEW.id={cleanup} AND NEW.attempts>OLD.attempts BEGIN INSERT INTO ws13b_phase_order(name) VALUES('cleanup'); END;"))?;
+        Ok(cleanup)
+    }).await.unwrap();
+    let server = Server::start(404, Duration::ZERO).await;
+    assert_eq!(
+        crate::jobs::huddle::reconcile(&db, RoomService::new(config(&server.url)))
+            .await
+            .unwrap(),
+        1
+    );
+    let phases = db
+        .read(|conn| {
+            let mut statement = conn.prepare("SELECT name FROM ws13b_phase_order ORDER BY seq")?;
+            Ok(statement
+                .query_map([], |r| r.get::<_, String>(0))?
+                .collect::<std::result::Result<Vec<_>, _>>()?)
+        })
+        .await
+        .unwrap();
+    let vectors: Value =
+        serde_json::from_str(include_str!("huddle_job_contract_vectors.json")).unwrap();
+    assert_eq!(serde_json::json!(phases), vectors["reconciler"][0]["calls"]);
+    assert!(
+        db.read(move |conn| Ok(HuddleCleanup::find_by_id(conn, cleanup)?
+            .unwrap()
+            .completed_at
+            .is_some()))
+            .await
+            .unwrap()
+    );
+    assert_eq!(server.received.lock().unwrap().len(), 1);
+    assert_eq!(
+        crate::jobs::huddle::reconcile(&db, RoomService::new(config(&server.url)))
+            .await
+            .unwrap(),
+        0
+    );
+    assert_eq!(server.received.lock().unwrap().len(), 1);
 }
 
 #[tokio::test]

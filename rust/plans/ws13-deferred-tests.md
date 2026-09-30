@@ -1,6 +1,6 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 216 declarations now have complete assertion coverage mapped below. The other 332 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
+Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 230 declarations now have complete assertion coverage mapped below. The other 318 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
 
 ## Continued slice coverage (after merging WS19b)
 
@@ -18,7 +18,7 @@ Passed titles are backed jointly by those differential tests, the real HTTP/Cabl
 
 ## WS13b domain slices
 
-WS13b adds nine complete revocation, nineteen complete grant and thirty-seven complete invitation and thirty-two complete join-notifier declarations, plus eleven stage, six stream, three voice and eight join-pusher declarations. The invitation corpus retains 136 intermediate results across 38 sequences (one neighboring message assertion remains open). These use actual lifecycle methods and compare persisted rows from pinned Rails, with compiled regression tests for revocation, cleanup rollback, room switching, gateway role enforcement, participant sorting/deduplication and issuance timestamps. The single-row membership creation path now reproduces pinned Rails listener defaults, association errors and commit behavior; WS17 seam signatures remain unchanged. The remaining assigned declarations are still partial/deferred; see `wave4/ws13b-report.md` for the precise handoff.
+WS13b adds nine complete revocation, nineteen complete grant and thirty-seven complete invitation and thirty-two complete join-notifier declarations, plus eleven stage, six stream, three voice and eight join-pusher declarations, all ten job declarations and all four reconciler declarations. The invitation corpus retains 136 intermediate results across 38 sequences (one neighboring message assertion remains open). These use actual lifecycle methods and compare persisted rows from pinned Rails, with compiled regression tests for revocation, cleanup rollback, room switching, gateway role enforcement, participant sorting/deduplication and issuance timestamps. The single-row membership creation path now reproduces pinned Rails listener defaults, association errors and commit behavior; WS17 seam signatures remain unchanged. The remaining assigned declarations are still partial/deferred; see `wave4/ws13b-report.md` for the precise handoff.
 
 ## Rails declaration coverage by file
 
@@ -55,11 +55,11 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/system/huddle_presence_test.rb` | 6 | 0 | 6 |
 | `test/integration/huddle_presence_test.rb` | 5 | 0 | 5 |
 | `test/models/rooms/voice_test.rb` | 5 | 5 | 0 |
-| `test/jobs/huddle/join_notice_job_test.rb` | 4 | 0 | 4 |
-| `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
-| `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
-| `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
-| **Total** | **548** | **216** | **332** |
+| `test/jobs/huddle/join_notice_job_test.rb` | 4 | 4 | 0 |
+| `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 4 | 0 |
+| `test/services/huddle/reconciler_test.rb` | 4 | 4 | 0 |
+| `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 2 | 0 |
+| **Total** | **548** | **230** | **318** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -344,28 +344,28 @@ Owner: WS13. Deferred.
 
 ## test/jobs/huddle/broadcast_presence_job_test.rb
 
-Owner: WS13b. Deferred.
+Owner: WS13b. Passed: both declarations. `presence_job_fanout_and_missing_room_match_rails_counts` executes the registered durable worker with two real WebSockets, comparing all three pinned Rails stream counts and target fragments; missing grants and missing rooms emit no frames.
 
-- broadcasts the room's current stacks
-- missing grants and rooms stay silent
+- **Passed:** broadcasts the room's current stacks
+- **Passed:** missing grants and rooms stay silent
 
 ## test/jobs/huddle/join_notice_job_test.rb
 
-Owner: WS13b. Deferred.
+Owner: WS13b. Passed: all four declarations. The 33 notifier sequences compare exact first/repeat-sighting enqueue IDs and perform real join callbacks; registered-worker tests verify persisted WS17 payload jobs, room-member notices and successful missing-grant discard.
 
-- a first sighting enqueues the join notice alongside the presence broadcast
-- a repeat sighting enqueues no join notice
-- performing the job notifies the room's members
-- a missing grant is ignored
+- **Passed:** a first sighting enqueues the join notice alongside the presence broadcast
+- **Passed:** a repeat sighting enqueues no join notice
+- **Passed:** performing the job notifies the room's members
+- **Passed:** a missing grant is ignored
 
 ## test/jobs/huddle/push_invitation_job_test.rb
 
-Owner: WS13b with WS17 for transport/policy integration. Deferred.
+Owner: WS13b with WS17 for transport/policy integration. Passed: all four job declarations up to the retained seam. Four actual pinned Rails job cases map to `huddle_invitation_job_test.rs`, with registered-worker persistence/missing-source tests. Recipient-only payloads and off/connected subscription scopes match; transport remains WS17.
 
-- pushes the invitation to the recipient only
-- an opted-out recipient gets no push subscriptions
-- a connected recipient gets no push
-- missing invitations are ignored
+- **Passed:** pushes the invitation to the recipient only
+- **Passed:** an opted-out recipient gets no push subscriptions
+- **Passed:** a connected recipient gets no push
+- **Passed:** missing invitations are ignored
 
 ## test/models/huddle/invitation_resolver_test.rb
 
@@ -621,12 +621,12 @@ Owner: WS13b. Partial: 20/27 declarations passed. The extended domain lifecycle 
 
 ## test/services/huddle/reconciler_test.rb
 
-Owner: WS13b. Deferred.
+Owner: WS13b. Passed: all four declarations. Actual process tests compare pinned Rails phase order using SQLite triggers and a LiveKit HTTP fixture, quiet-presenter ending, per-row commits, failure continuation and exception-class-only logs. The Rails corpus retains normal, StandardError, SQL and validation-error cases.
 
-- one pass resolves overdue invitations, ends stale streams, and reconciles cleanup
-- a resolver failure is logged and does not stop cleanup reconciliation
-- a stale-stream failure is logged and does not stop cleanup reconciliation
-- one pass ends a quiet presenter's live stream
+- **Passed:** one pass resolves overdue invitations, ends stale streams, and reconciles cleanup
+- **Passed:** a resolver failure is logged and does not stop cleanup reconciliation
+- **Passed:** a stale-stream failure is logged and does not stop cleanup reconciliation
+- **Passed:** one pass ends a quiet presenter's live stream
 
 ## test/system/huddle_audio_test.rb
 
