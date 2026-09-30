@@ -138,6 +138,7 @@ async fn preview_matches_real_rails_http_without_writing() {
             "source prefix: {:?}",
             row["source"].as_str().unwrap().chars().take(40).collect::<String>()
         );
+        assert_eq!(reply.text(), row["json_text"].as_str().unwrap());
     }
     let after = app
         .db()

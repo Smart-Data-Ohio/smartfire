@@ -27,7 +27,7 @@ before = Message.count
 rows = sources.map do |source|
   browser.post "/rooms/#{room.id}/messages/preview", params: { message: { markdown_source: source } },
     headers: { "Cookie" => cookie }, as: :json
-  { source: source, status: browser.response.status, json: JSON.parse(browser.response.body) }
+  { source: source, status: browser.response.status, json: JSON.parse(browser.response.body), json_text: browser.response.body }
 end
 raise "Preview wrote messages" unless Message.count == before
 create_inputs = [

@@ -51,7 +51,7 @@ check("preview-sanitization", "crate::rich_text::markdown_presentation(conn, &bo
 check("preview-csrf", "pub async fn preview(c: &mut Ctx) -> Result {\n    before_actions(c, Before::default()).await?;",
       "pub async fn preview(c: &mut Ctx) -> Result {\n    before_actions(c, Before::default().skip_forgery_protection()).await?;",
       "preview_rejects_cross_site_submissions_without_a_csrf_token")
-check("create-markdown", "markdown_source: attributes.markdown_source", "markdown_source: None",
+check("create-markdown", "markdown_source: attributes.markdown_source,", "markdown_source: None,",
       "root_create_preserves_markdown_numeric_client_id_and_deduplicates_retries")
 check("create-dedup", "if let Some(duplicate) = duplicate {", "if let Some(duplicate) = duplicate.filter(|_| false) {",
       "root_create_preserves_markdown_numeric_client_id_and_deduplicates_retries")
@@ -68,4 +68,6 @@ check("markdown-fragments", "if message.markdown() || message.forwarded_markdown
       "markdown_message_fragments_match_real_rails_records_and_cache_hits", ROOT / "rust/crates/campfire/src/controllers/presenters.rs")
 check("mention-shortcode-whitespace", "None => pending_text.push_str(token),", "None => pending_text = format!(\"{}{}\", pending_text.trim_end(), token),",
       "preview_matches_real_rails_http_without_writing", ROOT / "rust/crates/richtext/src/markdown.rs")
-print("WS8bm discrimination: 16 compiled regressions detected; sources restored", flush=True)
+check("preview-json-escaping", 'serde_json::to_string(&serde_json::json!({"html": html})).map_err(Error::internal)?',
+      'campfire_views::helpers::to_rails_json(&serde_json::json!({"html": html}))', "preview_matches_real_rails_http_without_writing")
+print("WS8bm discrimination: 17 compiled regressions detected; sources restored", flush=True)

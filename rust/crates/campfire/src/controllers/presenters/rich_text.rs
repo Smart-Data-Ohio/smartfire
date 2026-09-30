@@ -40,6 +40,11 @@ impl DbResolver<'_> {
 }
 
 impl AttachableResolver for DbResolver<'_> {
+    fn embed_image_path(&self, url: &str) -> Result<String, campfire_richtext::Error> {
+        let signed = rails_compat::verifiers::embed_image::sign(self.secrets, url);
+        Ok(format!("/embeds/image/{}", campfire_routes::escape(&signed, false)))
+    }
+
     fn locate_signed(&self, sgid: &str) -> SignedLookup {
         let Some(gid) = global_id::locate_signed(self.secrets, sgid, ATTACHABLE_PURPOSE, self.now) else {
             return SignedLookup::Invalid;

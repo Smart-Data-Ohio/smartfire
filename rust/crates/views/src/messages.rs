@@ -8,6 +8,7 @@ pub mod reactions;
 pub mod support;
 
 use askama::Template;
+use crate::helpers::filters;
 use campfire_routes as routes;
 use jiff::Timestamp;
 use serde::Deserialize;
@@ -662,6 +663,8 @@ fn boost_digest() -> &'static str {
 }
 
 /// `messages/index`: the page of messages the client fetches while scrolling (no layout).
+/// WS8b-r's room-shell entry point stays `Index { ctx, messages: &[MessageItem] }`.
+/// Build items with `Presenter::messages`; the cache-aware `cached_message_item` renders each.
 #[derive(Template)]
 #[template(path = "messages/index.html")]
 pub struct Index<'a> {
@@ -699,8 +702,22 @@ pub struct RoomNotFound;
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct EditView {
     pub message: MessageView,
-    /// The editor's `value`: `editable_body(message)` as HTML, from the richtext crate.
+    /// Message#editable_markdown_source. The field name predates the Markdown edit form.
     pub editable_body_html: String,
+}
+
+impl EditView {
+    /// DriveAttachment#url always uses this prefix; only ids are submitted by the edit form.
+    pub fn drive_file_id<'a>(&self, url: &'a str) -> &'a str {
+        url.strip_prefix("https://drive.google.com/open?id=").expect("DriveAttachment URL")
+    }
+}
+
+/// The shared message actions menu rendered once per page by the layout.
+#[derive(Template)]
+#[template(path = "messages/_actions.html")]
+pub struct ActionsMenu<'a> {
+    pub ctx: &'a ViewContext<'a>,
 }
 
 /// `messages/edit`.

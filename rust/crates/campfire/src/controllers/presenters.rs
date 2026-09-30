@@ -414,22 +414,30 @@ impl<'a> Presenter<'a> {
     /// `message.body.to_s`: the stored rich text rendered inside its layout.
     pub fn body_html(&self, message: &Message) -> Result<String> {
         let Some(body) = message.body_html(self.conn)? else { return Ok(String::new()) };
-        let resolver = self.resolver();
-        let ctx = resolver.render_context(self.request_host.clone());
-        Ok(campfire_richtext::Content::load(&body, &ctx)
-            .and_then(|content| content.to_rendered_html_with_layout(&ctx))
-            .unwrap_or_default())
+        Ok(self.render_body_html(&body).unwrap_or_default())
     }
 
-    /// `editable_body(message)` as the editor's `value`.
-    pub fn editable_body(&self, message: &Message) -> Result<String> {
-        let body = message.body_html(self.conn)?.unwrap_or_default();
+    /// Fallible ActionText::Content#to_s for human payloads and legacy conversion.
+    pub fn rendered_body_html(&self, message: &Message) -> Result<String> {
+        let Some(body) = message.body_html(self.conn)? else { return Ok(String::new()) };
+        self.render_body_html(&body)
+    }
+
+    fn render_body_html(&self, body: &str) -> Result<String> {
         let resolver = self.resolver();
         let ctx = resolver.render_context(self.request_host.clone());
-        // An `Err` is where the edit page raises in Rails (a missing attachment, say).
-        campfire_richtext::editable_value(&body, &ctx)
-            .map(Option::unwrap_or_default)
-            .map_err(|error| campfire_db::Error::Other(format!("editable_body raised: {error}")))
+        campfire_richtext::Content::load(body, &ctx)
+            .and_then(|content| content.to_rendered_html_with_layout(&ctx))
+            .map_err(|error| campfire_db::Error::Other(error.to_string()))
+    }
+
+    /// Message#editable_markdown_source passes rendered Content, not Content#to_html.
+    pub fn editable_markdown_source(&self, message: &Message) -> Result<String> {
+        if let Some(source) = &message.markdown_source { return Ok(source.clone()) }
+        let body = self.rendered_body_html(message)?;
+        let resolver = self.resolver();
+        campfire_richtext::legacy_markdown::render(&body, &resolver.render_context(self.request_host.clone()))
+            .map_err(|error| campfire_db::Error::Other(error.to_string()))
     }
 
     /// `messages/_message.json.jbuilder` (`json.cache! message`).

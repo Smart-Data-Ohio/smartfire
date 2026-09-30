@@ -5,6 +5,9 @@
 
 pub mod boosts;
 pub mod by_bots;
+mod payload;
+#[cfg(test)]
+mod root_tests;
 
 use askama::Template;
 use campfire_db::{Job as _, Message, NewMessage, Role, Room, Status, Timeline};
@@ -124,7 +127,7 @@ pub async fn edit(c: &mut Ctx) -> Result {
     ensure_can_edit(c, &message)?;
     c.respond_to(&[&format::HTML])?;
     let edit = present(c, move |presenter| {
-        Ok(views::EditView { editable_body_html: presenter.editable_body(&message)?, message: presenter.message(&message)? })
+        Ok(views::EditView { editable_body_html: presenter.editable_markdown_source(&message)?, message: presenter.message(&message)? })
     })
     .await?;
     page::content_in_application_layout(c, StatusCode::OK, |ctx| views::Edit { ctx, edit: &edit }.render()).await
@@ -135,18 +138,37 @@ pub async fn update(c: &mut Ctx) -> Result {
     let room = set_root_room(c).await?;
     let message = set_message(c, &room).await?;
     ensure_can_edit(c, &message)?;
-    let attributes = message_params(c)?;
-    let message = update_message(c, message, attributes).await?;
+    let message = match update_root_message(c, &room, message).await {
+        Ok(message) => message,
+        Err(error) => return render_record_invalid(c, error),
+    };
     broadcast_replace(c, &room, &message).await?;
 
-    // respond_to html: redirect; json: `render :show`, which has no JSON template here.
     match c.respond_to(&[&format::HTML, &format::JSON])? {
-        f if *f == format::JSON => Err(Error::internal(anyhow::anyhow!("Missing template messages/show"))),
+        f if *f == format::JSON => {
+            let viewer = require_current_user(c)?.clone();
+            let base = c.url_for("");
+            let data = present(c, move |presenter| payload::message(presenter, &message, &viewer, &base)).await?;
+            // This human `render json:` response leaves HTML entities raw (root Rails oracle).
+            Ok(c.render(StatusCode::OK, &format::JSON, serde_json::to_string(&data).map_err(Error::internal)?))
+        }
         _ => {
             let url = c.url_for(&campfire_routes::room_message(room.id, message.id));
             c.redirect_to(&url)
         }
     }
+}
+
+/// The actions menu reads viewer capabilities and saved/reaction state on every request.
+pub async fn actions(c: &mut Ctx) -> Result {
+    before_actions(c, Before::default()).await?;
+    let room = set_root_room(c).await?;
+    let message = set_message(c, &room).await?;
+    let viewer = require_current_user(c)?.clone();
+    let base = c.url_for("");
+    c.set_header("cache-control", "no-store");
+    let data = present(c, move |presenter| payload::actions(presenter, &message, &viewer, &base)).await?;
+    Ok(c.render(StatusCode::OK, &format::JSON, serde_json::to_string(&serde_json::json!({"actions": data})).map_err(Error::internal)?))
 }
 
 pub async fn destroy(c: &mut Ctx) -> Result {
@@ -190,7 +212,7 @@ pub async fn preview(c: &mut Ctx) -> Result {
         let resolver = DbResolver { conn, secrets: &app.secrets, now: app.clock.now() };
         crate::rich_text::markdown_presentation(conn, &body, &resolver.render_context(request_host)).map_err(campfire_db::Error::Other)
     }).await.map_err(db_error)?;
-    let body = campfire_views::helpers::to_rails_json(&serde_json::json!({"html": html}));
+    let body = serde_json::to_string(&serde_json::json!({"html": html})).map_err(Error::internal)?;
     Ok(c.render(StatusCode::OK, &format::JSON, body))
 }
 
@@ -250,7 +272,7 @@ fn message_params(c: &Ctx) -> Result<MessageParams> {
     })
 }
 
-/// Root create's additional fork parameters. The update path remains a separate porting slice.
+/// Additional parameters shared by the root create and human edit endpoints.
 async fn root_create_params(c: &Ctx, room: &Room) -> Result<MessageParams> {
     let message = c.params.require("message")?;
     if message.as_hash().is_none() {
@@ -293,6 +315,54 @@ async fn root_create_params(c: &Ctx, room: &Room) -> Result<MessageParams> {
         }
     }
     Ok(attributes)
+}
+
+/// `assign_attributes` + `save!` on the human edit endpoint. Bot updates keep their own seam.
+async fn update_root_message(c: &Ctx, room: &Room, message: Message) -> Result<Message> {
+    let attributes = root_create_params(c, room).await?;
+    let params = c.params.require("message")?;
+    let scalar = params.permit(&permit_keys(&["client_message_id", "reply_to_message_id", "reply_notify_author"]));
+    let attachment = match attributes.attachment {
+        Some(Assignment::Invalid) => return Err(invalid_attachment()),
+        Some(Assignment::Create(upload)) => Some(Some(upload.stage(c.app()).await?)),
+        Some(_) => Some(None),
+        None => None,
+    };
+    let changes = campfire_db::MessageChanges {
+        clear_markdown_source: attributes.markdown_source.is_none(),
+        markdown_source: attributes.markdown_source,
+        body: attributes.body,
+        client_message_id: scalar.get("client_message_id").map(string_column),
+        reply_to_message_id: scalar.get("reply_to_message_id").map(|_| attributes.reply_to_message_id),
+        reply_notify_author: attributes.reply_notify_author,
+        drive_file_ids: params.get("drive_file_ids").map(|_| attributes.drive_file_ids),
+        ..Default::default()
+    };
+    let preserve = !message.markdown() && changes.markdown_source.as_ref().is_some_and(|source| !source.chars().all(char::is_whitespace));
+    let id = message.id;
+    let app = c.app().clone();
+    let host = Some(c.request.host());
+    let (id, blob) = c.app().db.write(move |tx| {
+        let mut message = message;
+        let mut changes = changes;
+        if preserve {
+            let body = Presenter::new(tx.conn(), &app, host).rendered_body_html(&message)?;
+            changes.legacy_attachment_snapshot = Some(campfire_richtext::legacy_markdown::non_mention_attachments(&body)
+                .map_err(|error| campfire_db::Error::Other(error.to_string()))?);
+        }
+        let attachment_given = attachment.is_some();
+        let blob = attachment.flatten().map(|staged| save_staged(tx, staged)).transpose()?;
+        if attachment_given { message.replace_attachment(tx, blob.as_ref().map(|blob| blob.id))?; }
+        message.edit(tx, changes)?;
+        Ok((id, blob))
+    }).await.map_err(db_error)?;
+    if let Some(blob) = blob.filter(|blob| !blob.is_analyzed()) {
+        let app = c.app().clone();
+        c.app().jobs.perform_later("ActiveStorage::AnalyzeJob", async move {
+            analyze_attachment(&app, blob).await.map(drop).map_err(|error| anyhow::anyhow!("{error:?}"))
+        });
+    }
+    c.app().db.read(move |conn| Message::find(conn, id)).await.map_err(db_error)
 }
 
 fn invalid_drive_file_ids() -> Error {
