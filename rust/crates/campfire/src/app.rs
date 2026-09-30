@@ -111,10 +111,12 @@ pub(crate) async fn boot_with_services(config: Config, clock: SharedClock, subsc
 }
 
 /// Injects the fixed-host GitHub client for runtime acceptance tests.
+#[cfg(test)]
 pub(crate) async fn boot_with_github_read(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient) -> anyhow::Result<Booted> {
     boot_with_github_network(config, clock, github_read, crate::integrations::net::Network::system()).await
 }
 
+#[cfg(test)]
 pub(crate) async fn boot_with_github_network(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_network: crate::integrations::net::Network) -> anyhow::Result<Booted> {
     let github_app = crate::integrations::github::client::AppClient::with_network(
         std::env::var("GITHUB_APP_CLIENT_ID").ok(),
@@ -124,6 +126,7 @@ pub(crate) async fn boot_with_github_network(config: Config, clock: SharedClock,
     boot_with_github_clients(config, clock, github_read, github_app, github_network).await
 }
 
+#[cfg(test)]
 pub(crate) async fn boot_with_github_clients(config: Config, clock: SharedClock, github_read: crate::integrations::github::client::ReadClient, github_app: crate::integrations::github::client::AppClient, github_network: crate::integrations::net::Network) -> anyhow::Result<Booted> {
     boot_with_all_services(config, clock, github_read, github_app, github_network, crate::integrations::net::Network::system(), jobs::periodic::Intervals::from_env()).await
 }
