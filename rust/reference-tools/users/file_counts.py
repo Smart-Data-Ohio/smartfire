@@ -6,6 +6,7 @@ import sys
 
 log = Path(sys.argv[1]).read_text()
 files = {
+    "controllers::users::profile_sections_tests": ("controllers/users/profile_sections_tests.rs", 7),
     "controllers::users::joining_tests": ("controllers/users/joining_tests.rs", 2),
     "controllers::users::profile_page_tests": ("controllers/users/profile_page_tests.rs", 5),
     "controllers::first_runs::tests": ("controllers/first_runs/tests.rs", 3),
@@ -22,4 +23,4 @@ for prefix, (file, expected) in files.items():
     results = re.findall(r"^test " + re.escape(prefix) + r"::[^\s]+ \.\.\. (ok|FAILED|ignored)", log, re.M)
     assert len(results) == expected and all(result == "ok" for result in results), (file, results)
     print(f"{file}: {len(results)} passed; 0 failed; 0 ignored")
-print("WS8br2 file accounting: 59 executed Rust groups; 14 audit HTML/nav/CSV cases, 15 date parses, 39 icon validations, 3 icon bodies/navs, 9 logo PNG responses; 13 card bodies, 2 directories, 31 profile PATCH cases, 4 appearance bodies, 23 account/ban cases, 9 individual exactly-one audit checks, 13 account rows, 2 account bodies/navs/footers, 2 invites, 2 CSS bodies; 1 agent-owner case explicitly deferred")
+print("WS8br2 file accounting: 66 executed Rust groups; 7 Google Calendar fragments; 14 audit HTML/nav/CSV cases, 15 date parses, 39 icon validations, 3 icon bodies/navs, 9 logo PNG responses; 13 card bodies, 2 directories, 31 profile PATCH cases, 4 appearance bodies, 23 account/ban cases, 9 individual exactly-one audit checks, 13 account rows, 2 account bodies/navs/footers, 2 invites, 2 CSS bodies; 1 agent-owner case explicitly deferred")

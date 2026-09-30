@@ -47,11 +47,17 @@ pub struct NotificationFields {
     pub keywords: String,
     pub allowed_people: Vec<(i64, String)>,
 }
-#[derive(Clone, Default)]
+#[derive(Clone, Default, serde::Deserialize)]
+#[serde(default)]
 pub struct GooglePanel {
     pub sign_in_configured: bool,
     pub identity_email: Option<String>,
     pub calendar_configured: bool,
+    pub account_exists: bool,
+    pub connected: bool,
+    pub calendar: bool,
+    pub drive: bool,
+    pub email: String,
 }
 #[derive(Clone, Default)]
 pub enum ConnectionPanel {
@@ -189,6 +195,74 @@ impl ProfileShow<'_> {
                 .attr_opt("value", value)
                 .type_("time")
                 .name(format!("user[{key}]")),
+        )
+    }
+}
+
+#[derive(Template)]
+#[template(path = "users/profiles/_google_calendar.html")]
+pub struct GoogleCalendar {
+    pub sections: ProfileSections,
+}
+#[derive(Template)]
+#[template(path = "users/profiles/_github_connection.html")]
+struct GithubConnection {
+    sections: ProfileSections,
+}
+impl ProfileShow<'_> {
+    pub(super) fn google_calendar(&self) -> h::Html {
+        h::raw(
+            GoogleCalendar {
+                sections: self.sections.clone(),
+            }
+            .render()
+            .unwrap(),
+        )
+    }
+    pub(super) fn github_connection(&self) -> h::Html {
+        // WS15g integration (PR #167, rust/ws15g-github): replace this fallback with
+        // campfire_views::github::connections::profile(&Connection).
+        // Map linked/usable/login/reason/app_token/app_configured from WS15g's domain;
+        // never infer token usability here or read decrypted credentials.
+        h::raw(
+            GithubConnection {
+                sections: self.sections.clone(),
+            }
+            .render()
+            .unwrap(),
+        )
+    }
+}
+impl GoogleCalendar {
+    fn connect(&self, label: &str, drive: impl std::borrow::Borrow<bool>) -> h::Html {
+        let form = h::button_to_form(
+            "/google/connect",
+            h::attrs().method("post").class("btn"),
+            h::attrs().data("turbo", false),
+            label,
+        );
+        if *drive.borrow() {
+            let field = h::legacy_tag(
+                "input",
+                h::attrs().type_("hidden").name("features[]").value("drive"),
+            );
+            h::raw(format!(
+                "{}{field}</form>",
+                form.0.strip_suffix("</form>").unwrap()
+            ))
+        } else {
+            form
+        }
+    }
+    fn disconnect(&self) -> h::Html {
+        h::button_to_form(
+            "/google/connection",
+            h::attrs().method("delete").class("btn btn--negative"),
+            h::attrs().data(
+                "turbo_confirm",
+                "Disconnect Google Calendar? Your published event entries will be removed.",
+            ),
+            "Disconnect",
         )
     }
 }

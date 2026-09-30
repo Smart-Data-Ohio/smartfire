@@ -147,3 +147,6 @@ mod profile_page_tests;
 
 #[cfg(test)]
 mod joining_tests;
+
+#[cfg(test)]
+mod profile_sections_tests;

@@ -1,4 +1,4 @@
-{% let form = h::form_with("/users/me/notification_settings").model("user").method("patch").data("controller", "form").class("flex flex-column gap") %}{% filter form_with(form) %}
+{# WS17 owns this section, push settings, effective policy, and its update controller. #}{% let form = h::form_with("/users/me/notification_settings").model("user").method("patch").data("controller", "form").class("flex flex-column gap") %}{% filter form_with(form) %}
   <fieldset class="margin-none">
     <legend class="txt-large">Do not disturb</legend>
     <p class="txt-small margin-none">While DND is on, push notifications and sounds stay silent. Your inbox still records everything.</p>
