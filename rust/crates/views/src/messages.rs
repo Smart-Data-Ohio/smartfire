@@ -6,6 +6,7 @@ pub mod parts;
 pub mod presentation;
 pub mod reactions;
 pub mod support;
+pub mod composer;
 
 use askama::Template;
 use crate::helpers::filters;

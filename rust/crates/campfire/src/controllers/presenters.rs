@@ -196,6 +196,29 @@ impl<'a> Presenter<'a> {
         })
     }
 
+    /// Inputs to the message-owned composer; Drive availability is resolved by its owner.
+    pub fn composer_facts(&self, room: &Room, viewer: &User, thread: Option<&campfire_db::ChannelThread>, drive: campfire_views::messages::composer::DriveFlow) -> Result<campfire_views::messages::composer::Facts> {
+        let mut slash_commands = campfire_db::slash_commands::registry().into_iter().map(|command| command.name).collect::<Vec<_>>();
+        slash_commands.extend(self.conn.prepare("SELECT name FROM agent_slash_commands WHERE room_id = ? ORDER BY name, id")?
+            .query_map([room.id], |row| row.get::<_, String>(0))?.collect::<std::result::Result<Vec<_>, _>>()?);
+        Ok(campfire_views::messages::composer::Facts { room_id: room.id, room_kind: room_kind(room.room_type), room_name: self.room_display_name(room, Some(viewer))?,
+            thread: thread.map(|thread| campfire_views::messages::composer::Thread {id: thread.id, name: thread.name.clone()}), slash_commands, drive })
+    }
+
+    pub fn thread_steps(&self, id: i64) -> Result<Vec<campfire_views::messages::parts::AgentStep>> {
+        Ok(self.conn.prepare("SELECT name, status, duration_ms, input_summary, output_summary FROM agent_steps WHERE channel_thread_id = ? ORDER BY position, id")?
+            .query_map([id], |row| Ok(campfire_views::messages::parts::AgentStep {name: row.get(0)?, status: row.get(1)?, duration_ms: row.get(2)?, input_summary: row.get(3)?, output_summary: row.get(4)?}))?
+            .collect::<std::result::Result<Vec<_>, _>>()?)
+    }
+
+    /// Read the consent flag only. The Google owner supplies Picker configuration/availability.
+    pub fn composer_drive_flow(&self, viewer: &User, share_picker_available: bool) -> Result<campfire_views::messages::composer::DriveFlow> {
+        use campfire_views::messages::composer::DriveFlow;
+        if share_picker_available { return Ok(DriveFlow::Share); }
+        let scopes = self.conn.query_row("SELECT scopes FROM google_accounts WHERE user_id = ? LIMIT 1", [viewer.id], |row| row.get::<_, Option<String>>(0)).optional()?.flatten();
+        Ok(if scopes.is_some_and(|scopes| scopes.split_whitespace().any(|scope| scope == "https://www.googleapis.com/auth/drive.file")) { DriveFlow::Metadata } else { DriveFlow::None })
+    }
+
     /// `message.room` with `room_display_name(message.room, for_user: nil)`.
     fn room_and_name(&self, room_id: i64) -> Result<(Room, String)> {
         if let Some(entry) = self.room_names.borrow().get(&room_id) {

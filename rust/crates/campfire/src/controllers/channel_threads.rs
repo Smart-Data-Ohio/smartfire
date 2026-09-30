@@ -7,6 +7,8 @@ mod writes;
 pub use writes::{create, destroy, new, update};
 #[cfg(test)]
 pub(crate) mod write_tests;
+#[cfg(test)]
+mod content_tests;
 
 use askama::Template;
 use campfire_db::{ChannelThread, Message, Room, ThreadInvolvement, ThreadMembership, Timeline, Timestamp};
@@ -78,6 +80,30 @@ pub async fn show(c: &mut Ctx) -> Result {
         return render_json(c, StatusCode::OK, &payload);
     }
     render_standalone(c, thread, records, StatusCode::OK).await
+}
+
+pub async fn content(c: &mut Ctx) -> Result {
+    before_actions(c, Before::default()).await?;
+    let (room, thread) = scope(c).await?;
+    let id = thread.id;
+    let anchor = c.params.get("message_id").filter(|value| value.is_present()).cloned();
+    let (records, anchor) = c.app().db.read(move |conn| {
+        let anchor = anchor.as_ref().map(|value| messages::paging_anchor(conn, Timeline::Thread(id), value)).transpose()?;
+        let records = if let Some(anchor) = &anchor { Message::page_around(conn, Timeline::Thread(id), anchor)? } else { Message::last_page(conn, Timeline::Thread(id))? };
+        Ok((records, anchor.map(|message| message.id)))
+    }).await.map_err(db_error)?;
+    // Rails' explicit partial render has no JSON template and raises MissingTemplate.
+    if c.format()? == Some(&format::JSON) { return Err(Error::internal(anyhow::anyhow!("Missing thread conversation JSON partial"))); }
+    c.no_store();
+    let viewer = require_current_user(c)?.clone();
+    let updated_at = room.updated_at.jiff();
+    let (messages, user, steps, composer) = messages::present(c, move |p| Ok((p.messages(&records)?, p.user_view(viewer.id)?, p.thread_steps(id)?,
+        p.composer_facts(&room, &viewer, Some(&thread), p.composer_drive_flow(&viewer, false)?)?))).await?;
+    // WS8b-m2 supplies the scheduled child after the lead merges its feature branch.
+    let scheduled_control = campfire_views::helpers::empty();
+    c.set_header("x-thread-content-at-latest", if anchor.is_none() {"true"} else {"false"});
+    page::bare(c, StatusCode::OK, &format::HTML, |ctx| campfire_views::channel_threads::Conversation {ctx, thread_id: id,
+        room_updated_at: updated_at, anchor, messages: &messages, user: &user, steps: &steps, composer: &composer, scheduled_control: &scheduled_control}.render()).await
 }
 
 async fn render_standalone(c: &mut Ctx, thread: ChannelThread, records: Vec<Message>, response_status: StatusCode) -> Result {

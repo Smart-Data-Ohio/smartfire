@@ -28,3 +28,38 @@ requires the lead's merge of WS8b-r and this hook; it is not claimed by that ada
 `UnreadDivider` and `RoomIndex` are additive views. `uncached_message` remains the
 individual/broadcast entry point. WS8b-m2 can continue extending message facts without
 changing the existing callers.
+
+The message-owned Markdown composer is the additive, stable
+`campfire_views::messages::composer::Composer { ctx, facts, scheduled_control }`.
+WS8b-r can render it into the room shell's footer/composer slot. It does not call or
+replace the old Lexxy `rooms/show/_composer.html` template on this branch.
+
+The merged shell must supply:
+
+- Its normal request `ViewContext`, with verified `base_url`, current viewer, asset resolver,
+  signed-stream signer, and request CSRF tokens lent through `Layout::render`.
+- `Facts.room_id`, `room_kind`, and the viewer's `room_name` (direct-room display name);
+  `thread: None` for the room composer, or `Some(Thread { id, name })` for a pane.
+- The complete built-in command names followed by ordered room agent-command names.
+  `Presenter::composer_facts(room, viewer, thread, drive)` supplies these read-only facts;
+  WS8b-m2 retains the slash/autocomplete endpoints and command execution.
+- `DriveFlow::Share` when the Google owner resolves enhanced Picker availability;
+  otherwise `Metadata` for a stored drive.file grant or `None`. The additive
+  `Presenter::composer_drive_flow(viewer, share_picker_available)` reads only that grant.
+- WS8b-m2's rendered `scheduled_messages::ComposerButton { ctx, room_id, thread_id }`
+  as trusted `scheduled_control: helpers::Html`. This branch does not implement that
+  feature or copy its template. The content controller currently passes an empty child;
+  the lead must wire this provider after merging M2 to complete full HTTP pane bytes.
+
+For the optimistic client message template, mount the additive
+`channel_threads::PendingTemplate { ctx, user: presenter.user_view(viewer.id)? }`.
+Its bytes match the pinned Markdown `messages/_template`; the previous foundation
+Lexxy template remains available to its existing callers.
+
+`channel_threads::Conversation` also requires `thread_id`, the parent room's
+`updated_at`, the scoped optional anchor ID, selected message items, viewer `UserView`,
+ordered thread agent-step facts, composer facts and the schedule child. It signs the
+thread-only messages stream and emits a single live region. Reads do not join the viewer.
+The committed differential compares this full view with a fixed-token Rails renderer,
+with the actual Rails schedule child supplied as the explicit feature input; the HTTP
+check verifies windows, headers and live CSRF validity separately. No response mask is used.
