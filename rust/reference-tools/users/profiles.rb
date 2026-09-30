@@ -15,7 +15,7 @@ session.cookies["session_token"]=request.cookie_jar[:session_token]
 session.get "/account/edit"
 ActiveSupport::IsolatedExecutionState.clear
 token=Nokogiri::HTML(session.response.body).at_css('meta[name="csrf-token"]')["content"]
-initial={theme:"system",text_size:"default",time_zone:nil,time_zone_explicit:false,voice_mode:nil,push_to_talk_key:nil,inbox_preferences:nil,github_login:nil}
+initial={name:"David",bio:nil,theme:"system",text_size:"default",time_zone:nil,time_zone_explicit:false,voice_mode:nil,push_to_talk_key:nil,inbox_preferences:nil,github_login:nil}
 cases=[
  ["appearance",{theme:"dark",time_zone:"America/New_York"}],
  ["text_size",{text_size:"larger"}], ["legacy_zone",{time_zone:"Pacific Time (US & Canada)"}],
@@ -37,7 +37,10 @@ cases=[
  ["duplicate_login",{github_login:"shared-login"},{},false,nil,true],
  ["persisted_invalid_settings",{name:"must not save"},{theme:"neon"}],
  ["inbox_array",{inbox_preferences:[{agent_work:false}]}],
- ["inbox_scalar",{inbox_preferences:"wrong"}]
+ ["inbox_scalar",{inbox_preferences:"wrong"}],
+ ["inbox_all_keys",{inbox_preferences:{github_review_requests:"0",agent_approvals:"0",agent_work:"1",event_reminders:"0",huddle_invitations:"0"}}],
+ ["core_profile",{name:"John Doe",bio:"Acrobat"}],
+ ["foreign_name",{name:"John Doe",bio:"Acrobat"}]
 ].map do |name,params,before,connected,reason,duplicate|
  user.update_columns(**initial,**(before || {}),updated_at:1.hour.ago)
  GithubConnectedAccount.where(user_id:user.id).delete_all
@@ -45,10 +48,10 @@ cases=[
    GithubConnectedAccount.insert_all!([{user_id:user.id,github_login:"verified",access_token:"ws8br2-fixture",disconnected_reason:reason,created_at:Time.current,updated_at:Time.current}])
  end
  User.find(149087659).update_columns(github_login: duplicate ? "shared-login" : nil)
- path=name=="foreign_path" ? "/users/149087659/profile" : "/users/me/profile"
+ path=%w[foreign_path foreign_name].include?(name) ? "/users/149087659/profile" : "/users/me/profile"
  session.patch path,params:{user:params},as: :json,headers:{"X-CSRF-Token"=>token,"Accept"=>"text/html"}
  ActiveSupport::IsolatedExecutionState.clear
- state=user.reload.attributes.slice(*initial.keys.map(&:to_s)).merge("name"=>user.name,"updated_at"=>user.updated_at.iso8601(6))
+ state=user.reload.attributes.slice(*initial.keys.map(&:to_s)).merge("other_name"=>User.find(149087659).name,"updated_at"=>user.updated_at.iso8601(6))
  {name:name,path:path,params:params,before:before || {},connection:!!connected,reason:reason,duplicate:!!duplicate,status:session.response.status,state:state}
 end
 puts JSON.pretty_generate(reference:"d7c7de92",profiles:cases)

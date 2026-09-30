@@ -90,6 +90,14 @@ async fn manual_timezone_choice_is_rendered_and_blocks_browser_detection() {
         .await
         .unwrap();
     assert_eq!(zone.as_deref(), Some("America/New_York"));
+    let clear=browser.write(Req::new(Method::PATCH,"/users/me/profile").form(&[("user[time_zone]","")])).await;
+    assert_eq!(clear.status,StatusCode::FOUND);
+    let profile=browser.get("/users/me/profile").await;
+    assert_eq!(profile.status,StatusCode::OK);
+    assert!(profile.text().contains("<meta name=\"current-user-time-zone\" content=\"\""));
+    let detected=browser.write(Req::new(Method::PATCH,"/users/me/time_zone").form(&[("time_zone","Europe/London")])).await;
+    assert_eq!(detected.status,StatusCode::OK);
+    assert_eq!(app.db().read(|conn|campfire_db::User::saved_time_zone(conn,DAVID)).await.unwrap(),None);
 }
 
 #[tokio::test]
@@ -154,7 +162,7 @@ async fn manual_profile_settings_match_pinned_rails_patch_vectors() {
         let setup = case.clone();
         app.db().write(move |tx|{
             let case=&setup;
-            tx.conn().execute("UPDATE users SET theme='system',text_size='default',time_zone=NULL,time_zone_explicit=0,voice_mode=NULL,push_to_talk_key=NULL,inbox_preferences=NULL,github_login=NULL,updated_at='2026-03-02 15:00:00' WHERE id=?",[DAVID])?;
+            tx.conn().execute("UPDATE users SET name='David',bio=NULL,theme='system',text_size='default',time_zone=NULL,time_zone_explicit=0,voice_mode=NULL,push_to_talk_key=NULL,inbox_preferences=NULL,github_login=NULL,updated_at='2026-03-02 15:00:00' WHERE id=?",[DAVID])?;
             tx.conn().execute("DELETE FROM github_connected_accounts WHERE user_id=?",[DAVID])?;
             if let Some(before)=case["before"].as_object() {
                 for (key,value) in before {
@@ -184,12 +192,13 @@ async fn manual_profile_settings_match_pinned_rails_patch_vectors() {
             case["name"]
         );
         let state=app.db().read(|conn| {
-            let mut stmt=conn.prepare("SELECT theme,text_size,time_zone,time_zone_explicit,voice_mode,push_to_talk_key,inbox_preferences,github_login,name,updated_at FROM users WHERE id=?")?;
+            let other_name:String=conn.query_row("SELECT name FROM users WHERE id=?",[JASON],|r|r.get(0))?;
+            let mut stmt=conn.prepare("SELECT theme,text_size,time_zone,time_zone_explicit,voice_mode,push_to_talk_key,inbox_preferences,github_login,name,updated_at,bio FROM users WHERE id=?")?;
             let state=stmt.query_row([DAVID],|r|{
                 let text=|i| r.get::<_,Option<String>>(i);
                 let raw:Option<String>=text(6)?;
                 let updated:campfire_db::Timestamp=r.get(9)?;
-                Ok(serde_json::json!({"theme":text(0)?,"text_size":text(1)?,"time_zone":text(2)?,"time_zone_explicit":r.get::<_,bool>(3)?,"voice_mode":text(4)?,"push_to_talk_key":text(5)?,"inbox_preferences":raw.map(|s|serde_json::from_str::<serde_json::Value>(&s).unwrap()),"github_login":text(7)?,"name":text(8)?,"updated_at":updated.jiff().strftime("%Y-%m-%dT%H:%M:%S%.6fZ").to_string()}))
+                Ok(serde_json::json!({"theme":text(0)?,"text_size":text(1)?,"time_zone":text(2)?,"time_zone_explicit":r.get::<_,bool>(3)?,"voice_mode":text(4)?,"push_to_talk_key":text(5)?,"inbox_preferences":raw.map(|s|serde_json::from_str::<serde_json::Value>(&s).unwrap()),"github_login":text(7)?,"name":text(8)?,"bio":text(10)?,"other_name":other_name,"updated_at":updated.jiff().strftime("%Y-%m-%dT%H:%M:%S%.6fZ").to_string()}))
             })?;
             Ok(state)
         }).await.unwrap();
