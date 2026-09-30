@@ -181,14 +181,18 @@ impl Drop for Server {
 
 impl Server {
     async fn start(status: u16, delay: Duration) -> Self {
-        let mut listener = None;
-        for port in 52300..=52399 {
-            if let Ok(bound) = TcpListener::bind(("127.0.0.1", port)).await {
-                listener = Some(bound);
-                break;
+        let listener = if std::env::var_os("CABLE_TEST_PORT_RANGE").is_some() {
+            crate::channels::tests::support::bind_listener().await
+        } else {
+            let mut listener = None;
+            for port in 52300..=52399 {
+                if let Ok(bound) = TcpListener::bind(("127.0.0.1", port)).await {
+                    listener = Some(bound);
+                    break;
+                }
             }
-        }
-        let listener = listener.expect("no free WS13 test port");
+            listener.expect("no free WS13 test port")
+        };
         let url = format!("http://{}", listener.local_addr().unwrap());
         let received = Arc::new(Mutex::new(Vec::new()));
         let log = received.clone();

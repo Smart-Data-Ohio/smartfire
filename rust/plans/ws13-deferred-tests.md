@@ -1,6 +1,6 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 100 declarations now have complete assertion coverage mapped below. The other 448 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
+Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 119 declarations now have complete assertion coverage mapped below. The other 429 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
 
 ## Continued slice coverage (after merging WS19b)
 
@@ -16,6 +16,10 @@ The process task now runs invitations, stale streams and cleanups in Rails order
 
 Passed titles are backed jointly by those differential tests, the real HTTP/Cable tests in `call_lifecycle_tests.rs` and `huddle_effects_tests.rs`, and the existing WS8a `room_test.rs` and grant tests. Counts are original declarations, not vector counts. Whole per-viewer fan-out declarations, combinations not explicitly exercised (for example another administrator as moderation target), preload/query assertions and creation/edit flows remain open even where the underlying method is implemented. Full public huddles and aggregate presence controllers, voice/stage CRUD controllers, and 11 of the original 19 owned views remain open. The extra event venue dot is verified with Stage fragments. WS17 retains policy/transport; real LiveKit system tests retain LIVEKIT_SYSTEM_TESTS=1 with a real server as the reason.
 
+## WS13b domain slices
+
+WS13b adds nine complete revocation declarations and nineteen complete grant declarations. These use actual lifecycle methods and compare persisted rows from pinned Rails, with compiled regression tests for revocation, cleanup rollback, room switching, gateway role enforcement, participant sorting/deduplication and issuance timestamps. No production methods or WS17 seam signatures changed. The remaining assigned declarations are still partial/deferred; see `wave4/ws13b-report.md` for the precise handoff.
+
 ## Rails declaration coverage by file
 
 These are original declaration counts, not Rust test counts or individual vector counts. A declaration is closed only when all of its original assertions are covered. Each title remains below, including those now passed. Raw executable pass counts are in ws13-wave4-report.md.
@@ -26,7 +30,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/models/huddle_invitation_test.rb` | 38 | 0 | 38 |
 | `test/controllers/rooms/huddles_controller_test.rb` | 36 | 0 | 36 |
 | `test/models/huddle/join_notifier_test.rb` | 33 | 0 | 33 |
-| `test/models/huddle_grant_test.rb` | 33 | 0 | 33 |
+| `test/models/huddle_grant_test.rb` | 33 | 19 | 14 |
 | `test/system/huddles_test.rb` | 31 | 0 | 31 |
 | `test/controllers/internal/huddle_controller_test.rb` | 29 | 0 | 29 |
 | `test/models/rooms/stage_test.rb` | 27 | 12 | 15 |
@@ -55,7 +59,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
-| **Total** | **548** | **100** | **448** |
+| **Total** | **548** | **119** | **429** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -448,22 +452,22 @@ Owner: WS13b. Deferred.
 
 ## test/models/huddle_grant_test.rb
 
-Owner: WS13b. Deferred.
+Owner: WS13b. Nineteen complete domain declarations are covered by `huddle_grant_sequences_test.rs` (13 pinned Rails sequences, 54 intermediate results) and `huddle_grant_test.rs` (real uniqueness conflicts and liveness boundaries). Fourteen presence/render declarations remain partial; WS13 owns the rendering integration.
 
-- an active session and membership reuse one random grant
-- revoking and restoring room membership never resurrects the old grant
-- issuance rejects a stale or cross-user membership
-- issuance stops after three uniqueness conflicts
-- issuance stamps last_issued_at on create and on reuse
-- joining another room ends the session's in-call grant there but keeps quiet ones
-- rejoining the same room keeps the session's grant there
-- in_call reflects gateway liveness within twenty seconds
-- record_seen! persists liveness at most once per ten seconds
+- **Passed:** an active session and membership reuse one random grant
+- **Passed:** revoking and restoring room membership never resurrects the old grant
+- **Passed:** issuance rejects a stale or cross-user membership
+- **Passed:** issuance stops after three uniqueness conflicts
+- **Passed:** issuance stamps last_issued_at on create and on reuse
+- **Passed:** joining another room ends the session's in-call grant there but keeps quiet ones
+- **Passed:** rejoining the same room keeps the session's grant there
+- **Passed:** in_call reflects gateway liveness within twenty seconds
+- **Passed:** record_seen! persists liveness at most once per ten seconds
 - mark_out_of_call! drops liveness without revoking and refreshes presence
-- mark_out_of_call! is silent when the grant was never seen
-- mark_out_of_call! keeps a sighting newer than the disconnect
-- participants_for lists distinct in-call users by name
-- participants_for drops revoked and quiet grants
+- **Passed:** mark_out_of_call! is silent when the grant was never seen
+- **Passed:** mark_out_of_call! keeps a sighting newer than the disconnect
+- **Passed:** participants_for lists distinct in-call users by name
+- **Passed:** participants_for drops revoked and quiet grants
 - issuing a voice grant refreshes the presence stacks
 - revoking a voice grant refreshes the presence stacks
 - first sighting in the call enqueues a presence refresh, later sightings stay silent
@@ -475,12 +479,12 @@ Owner: WS13b. Deferred.
 - first sighting in a channel enqueues a presence refresh, later sightings stay silent
 - no presence broadcasts without huddle configuration
 - revoking a destroyed room's grants stays silent
-- a stage grant records the membership role it was issued for
-- non-stage grants record no role
-- a stage role change revokes the member's active grants with cleanup
-- a host-speaker change updates the grant's role in place without revoking
-- authorize_or_revoke! revokes a grant whose issued role no longer matches
-- rejoining after a role change issues a new grant for the new role
+- **Passed:** a stage grant records the membership role it was issued for
+- **Passed:** non-stage grants record no role
+- **Passed:** a stage role change revokes the member's active grants with cleanup
+- **Passed:** a host-speaker change updates the grant's role in place without revoking
+- **Passed:** authorize_or_revoke! revokes a grant whose issued role no longer matches
+- **Passed:** rejoining after a role change issues a new grant for the new role
 - issuing a stage grant refreshes the presence stacks
 - revoking a stage grant refreshes the presence stacks
 

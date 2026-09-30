@@ -62,7 +62,11 @@ fn huddle_revocation_and_leave_emit_presence_only_after_commit() {
         Ok(())
     });
     assert!(db.sink.take().iter().any(|event| matches!(event, crate::Event::Broadcast(request) if request.kind == "HuddleGrant#broadcast_voice_presence")), "leave did not emit committed presence");
-    db.write(move |tx| HuddleGrant::find_by_id(tx.conn(), grant)?.unwrap().revoke(tx, false, &config()));
+    db.write(move |tx| {
+        HuddleGrant::find_by_id(tx.conn(), grant)?
+            .unwrap()
+            .revoke(tx, false, &config())
+    });
     assert!(db.sink.take().iter().any(|event| matches!(event, crate::Event::Broadcast(request) if request.kind == "HuddleGrant#broadcast_voice_presence")), "revocation did not emit committed presence");
 }
 
@@ -305,6 +309,11 @@ fn huddle_liveness_touch_and_first_sighting_jobs_match_rails() {
     db.clock
         .travel_to(Timestamp::from_second(vectors["now"].as_i64().unwrap()));
     let (id, _, _) = setup(&db);
+    assert!(!db.read(|conn| {
+        Ok(HuddleGrant::find_by_id(conn, id)?
+            .unwrap()
+            .in_call(db.now()))
+    }));
     let created = db.now();
     for case in vectors["liveness"].as_array().unwrap() {
         db.clock
@@ -553,4 +562,24 @@ fn huddle_issuance_retries_three_real_unique_conflicts_without_leaking_rows() {
         )),
         0
     );
+}
+
+#[test]
+fn huddle_never_seen_disconnect_is_silent_and_keeps_authorization() {
+    let db = TestDb::new();
+    let (id, _, _) = setup(&db);
+    db.sink.take();
+    assert!(!db.write(move |tx| {
+        HuddleGrant::find_by_id(tx.conn(), id)?
+            .unwrap()
+            .mark_out_of_call(tx, None)
+    }));
+    assert!(db.events().is_empty(), "never-seen disconnect emitted work");
+    db.read(|conn| {
+        let grant = HuddleGrant::find_by_id(conn, id)?.unwrap();
+        assert!(grant.authorized(conn)?);
+        assert!(grant.last_seen_at.is_none());
+        assert!(!grant.revoked());
+        Ok(())
+    });
 }

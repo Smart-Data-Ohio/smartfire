@@ -5,7 +5,7 @@ use crate::tests::{TestDb, huddle_notices_test};
 use crate::{Connection, Membership, Session, Timestamp, User};
 use serde_json::{Value, json};
 
-fn normalize(value: &mut Value) {
+pub(crate) fn normalize(value: &mut Value) {
     match value {
         Value::String(s) => {
             if let Some(at) = Timestamp::parse_db(s) {
@@ -18,7 +18,7 @@ fn normalize(value: &mut Value) {
     }
 }
 
-fn snapshot(conn: &Connection) -> crate::Result<Value> {
+pub(crate) fn snapshot(conn: &Connection) -> crate::Result<Value> {
     let mut result = serde_json::Map::new();
     for (key, table) in [("grants", "huddle_grants"), ("cleanups", "huddle_cleanups")] {
         let mut statement = conn.prepare(&format!("SELECT * FROM {table} ORDER BY id"))?;

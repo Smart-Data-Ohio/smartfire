@@ -406,6 +406,9 @@ async fn huddle_sighting_enqueue_rejection_rolls_back_http_request() {
 }
 
 async fn bind_fixture() -> tokio::net::TcpListener {
+    if std::env::var_os("CABLE_TEST_PORT_RANGE").is_some() {
+        return crate::channels::tests::support::bind_listener().await;
+    }
     for port in 52300..=52339 {
         if let Ok(listener) = tokio::net::TcpListener::bind(("127.0.0.1", port)).await {
             return listener;
