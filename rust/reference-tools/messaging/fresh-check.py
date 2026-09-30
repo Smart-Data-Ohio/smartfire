@@ -13,7 +13,7 @@ subprocess.run(["git", "clone", "--quiet", "--no-local", "--single-branch", "--b
                 "rust/ws8bm-messages-http", str(ROOT), str(clone)], check=True)
 assert not (clone / ".scratch").exists() and not (clone / "rust/target").exists()
 (clone / ".scratch").mkdir()
-env = dict(os.environ, CI="1", TMPDIR=str(clone / ".scratch"), CARGO_TARGET_DIR=str(clone / "rust/target"),
+env = dict(os.environ, CI="1", RUST_TEST_THREADS="4", TMPDIR=str(clone / ".scratch"), CARGO_TARGET_DIR=str(clone / "rust/target"),
            CARGO_BUILD_JOBS="4", CABLE_TEST_PORT_RANGE="52050-52099", MAIL_TEST_PORT_RANGE="52050-52099",
            CAMPFIRE_REFERENCE=str(clone), PARITY_NAMESPACE="ws8bm-fresh", PARITY_OWNER="ws8bm",
            PARITY_CPUS="2", PARITY_IMAGE=os.environ.get("PARITY_IMAGE", "triage-reference-d7c7de92"))
