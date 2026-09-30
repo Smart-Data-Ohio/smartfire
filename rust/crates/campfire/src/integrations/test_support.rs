@@ -8,7 +8,7 @@ use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, Mutex};
 
 use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::TcpStream;
 
 use super::net::{BoxFuture, Dialer, Network, Resolver};
 
@@ -163,7 +163,7 @@ impl FakeServer {
     }
 
     async fn start_with(routes: Vec<Route>, tls: Option<tokio_rustls::TlsAcceptor>) -> Self {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let listener = crate::test_support::bind_listener().await;
         let addr = listener.local_addr().unwrap();
         let received = Arc::new(Mutex::new(Vec::new()));
         let routes = Arc::new(routes);
@@ -265,7 +265,7 @@ async fn serve<S: AsyncRead + AsyncWrite + Unpin>(stream: S, routes: &[Route], l
 /// A server that answers every request with `head` and then a byte of body every 50 ms, until
 /// the client hangs up.
 pub async fn trickling_server(head: &'static str) -> SocketAddr {
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = crate::test_support::bind_listener().await;
     let addr = listener.local_addr().unwrap();
     tokio::spawn(async move {
         while let Ok((mut stream, _)) = listener.accept().await {

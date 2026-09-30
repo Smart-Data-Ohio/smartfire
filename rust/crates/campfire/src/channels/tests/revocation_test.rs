@@ -54,7 +54,7 @@ async fn subscribed_kevin(app: &TestApp) -> (Client, String) {
 
 async fn assert_no_deliveries(app: &TestApp) {
     for (_, broadcasting) in room_channels(app).await {
-        eventually(|| async { app.server.broadcast(&broadcasting, &json!({ "after": "revocation" })) == 0 }).await;
+        eventually("revoked stream subscriptions to be removed", || async { app.server.broadcast(&broadcasting, &json!({ "after": "revocation" })) == 0 }).await;
     }
 }
 

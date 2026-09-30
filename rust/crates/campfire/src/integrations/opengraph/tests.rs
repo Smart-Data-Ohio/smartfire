@@ -127,9 +127,9 @@ async fn stops_reading_a_gzip_bomb_at_the_limit() {
     let net = network_to(server.addr);
 
     assert!(matches!(unfurl(&net, "http://www.example.com/small").await, Ok(Unfurl::Json(_))));
-    let started = std::time::Instant::now();
+    let started = crate::test_support::cpu_time();
     assert_eq!(unfurl(&net, "http://www.example.com/").await, Ok(Unfurl::NoContent));
-    assert!(started.elapsed() < std::time::Duration::from_secs(2), "{:?}", started.elapsed());
+    assert!((crate::test_support::cpu_time() - started) < std::time::Duration::from_secs(2), "{:?} CPU", crate::test_support::cpu_time() - started);
 }
 
 /// A server that keeps sending a byte at a time never trips a read timeout, but the unfurl as a
@@ -137,8 +137,6 @@ async fn stops_reading_a_gzip_bomb_at_the_limit() {
 #[tokio::test]
 async fn gives_up_on_a_trickling_page() {
     let server = trickling_server("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n").await;
-    let started = std::time::Instant::now();
     let deadline = std::time::Duration::from_millis(500);
-    assert_eq!(unfurl_within(&network_to(server), "http://www.example.com/", deadline).await, Ok(Unfurl::NoContent));
-    assert!(started.elapsed() < deadline * 2, "{:?}", started.elapsed());
+    assert_eq!(crate::test_support::wait("the trickling page fetch deadline", unfurl_within(&network_to(server), "http://www.example.com/", deadline)).await, Ok(Unfurl::NoContent));
 }

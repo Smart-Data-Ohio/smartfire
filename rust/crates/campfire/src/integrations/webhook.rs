@@ -344,7 +344,7 @@ mod tests {
         let server = trickling_server("HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nConnection: close\r\n\r\n").await;
         let net = crate::integrations::net::Network::system();
         let deadline = Duration::from_secs(1);
-        let delivery = deliver_within(&net, &format!("http://{server}/hook"), "{}".into(), deadline).await.unwrap();
+        let delivery = crate::test_support::wait("the trickling webhook deadline", deliver_within(&net, &format!("http://{server}/hook"), "{}".into(), deadline)).await.unwrap();
         assert_eq!(delivery, WebhookDelivery { status: None, reply: WebhookReply::Text("Failed to respond within 1 seconds".into()) });
     }
 
