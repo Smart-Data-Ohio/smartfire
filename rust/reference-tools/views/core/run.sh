@@ -23,6 +23,8 @@ docker run --rm --name "${PARITY_OWNER:-ws6}-views-goldens-$$" --cpus 2 \
   -v "$(realpath "$STORE/db"):/rails/storage/db" -v "$(realpath "$STORE/storage"):/rails/storage/files" \
   -v "$ROOT:/work:ro" "${PARITY_IMAGE:-campfire-reference}" \
   bash -c 'bin/rails db:prepare >/dev/null && bin/rails runner /work/reference-tools/views/core/goldens.rb'
+mkdir -p crates/views/data
+cp "$STORE/db/message-icons.json" crates/views/data/message-icons.json
 python3 reference-tools/views/core/split.py "$STORE/db/goldens.json" "$OUT"
 python3 - "$OUT" <<'PY'
 from pathlib import Path

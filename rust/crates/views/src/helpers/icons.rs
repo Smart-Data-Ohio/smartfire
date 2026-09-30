@@ -2,7 +2,7 @@
 use super::{Attrs, Html, Safe, attrs, content_tag_text, image_tag, value_to_string};
 use crate::ViewContext;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Deserialize, PartialEq)]
 pub enum AvatarIcon {
     Emoji {
         title: String,

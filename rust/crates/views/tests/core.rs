@@ -470,6 +470,7 @@ fn cached_legacy_boost_forms_never_share_a_viewers_token() {
     let signer = |_: &[&str]| String::new();
     let cache = fragment_cache::FragmentCache::new(1 << 20);
     let boost = messages::BoostView {
+        reaction: None,
         id: 1,
         updated_at: "2026-02-10T12:00:00Z".parse().unwrap(),
         message_id: 2,
@@ -480,6 +481,7 @@ fn cached_legacy_boost_forms_never_share_a_viewers_token() {
             name: "Booster".into(),
             title: "Booster".into(),
             avatar_url: "/avatar".into(),
+            icon: None,
         },
     };
     let mut outputs = Vec::new();

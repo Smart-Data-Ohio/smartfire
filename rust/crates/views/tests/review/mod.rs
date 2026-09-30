@@ -118,6 +118,7 @@ fn review_cached_message_is_session_neutral() {
     let plain: messages::MessageView = serde_json::from_value(v["message"].clone()).unwrap();
     let mut boosted = plain.clone();
     boosted.boosts.push(messages::BoostView {
+        reaction: None,
         id: 9,
         updated_at: plain.updated_at,
         message_id: plain.id,
@@ -138,9 +139,12 @@ fn review_cached_message_is_session_neutral() {
                 || {
                     fragment_cache::with(&cache, || {
                         let html = messages::message(&ctx, &message);
-                        let stored =
-                            messages::cached_message_fragment(message.id, message.updated_at)
-                                .unwrap();
+                        let stored = messages::cached_message_fragment(
+                            message.id,
+                            message.updated_at,
+                            &ctx.base_url,
+                        )
+                        .unwrap();
                         assert!(
                             !stored.contains("authenticity_token")
                                 && !h::request_forgery::has_token_slots(&stored),
@@ -182,6 +186,48 @@ fn review_cached_message_is_session_neutral() {
             "uncached broadcast"
         );
     }
+}
+
+#[test]
+fn review_whole_message_matches_rails_for_both_viewers() {
+    use campfire_views::{fragment_cache, messages};
+    let v = vectors();
+    let message: messages::MessageView = serde_json::from_value(v["message"].clone()).unwrap();
+    assert_eq!(
+        message.boosts.len(),
+        1,
+        "fixture 0001 includes its real boost"
+    );
+    assert_eq!(message.boosts[0].content, "Hello");
+    let cache = fragment_cache::FragmentCache::new(1 << 20);
+    let asset = |path: &str| campfire_assets::asset_path(path);
+    let signer = |_: &[&str]| String::new();
+    let mut differences = Vec::new();
+    for (name, email, token) in [
+        ("David", "david@37signals.com", "DAVID-SESSION"),
+        ("JZ", "jz@37signals.com", "JZ-SESSION"),
+    ] {
+        let ctx = context(Some(name), &asset, &signer, "");
+        let html = h::request_forgery::rendering_with(
+            h::request_forgery::RequestSecrets {
+                tokens: Box::new(UserTokens(token)),
+                csp_nonce: Some(token.into()),
+            },
+            || fragment_cache::with(&cache, || messages::message(&ctx, &message)),
+        );
+        assert!(!html.contains("authenticity_token") && !html.contains("SESSION"));
+        if !compare(
+            &format!("whole-message-{name}"),
+            &html,
+            v["message_html"][email].as_str().unwrap(),
+        ) {
+            differences.push(name);
+        }
+    }
+    assert!(
+        differences.is_empty(),
+        "whole-message differences: {differences:?}"
+    );
 }
 
 #[test]
@@ -485,4 +531,98 @@ fn review_helper_attribute_sweep() {
         }
     }
     assert!(failed.is_empty(), "helper sweep mismatches: {failed:?}");
+}
+
+#[test]
+fn message_partial_branches_match_rails() {
+    use campfire_views::messages;
+    let asset = |path: &str| campfire_assets::asset_path(path);
+    let signer = |_: &[&str]| String::new();
+    let ctx = context(Some("David"), &asset, &signer, "");
+    let mut differences = Vec::new();
+    for row in vectors()["message_states"].as_array().unwrap() {
+        let message: messages::MessageView =
+            serde_json::from_value(row["message"].clone()).unwrap();
+        let name = row["name"].as_str().unwrap();
+        let html = messages::message(&ctx, &message);
+        assert!(
+            !html.contains("authenticity_token"),
+            "{name} must be session-neutral"
+        );
+        if !compare(
+            &format!("message-state-{name}"),
+            &html,
+            row["html"].as_str().unwrap(),
+        ) {
+            differences.push(name.to_string());
+        }
+    }
+    assert!(
+        differences.is_empty(),
+        "message branch differences: {differences:?}"
+    );
+}
+
+#[test]
+fn reaction_registry_and_graphemes_match_rails() {
+    use campfire_views::messages::{reaction_body, reactions};
+    struct StaticIcons;
+    impl h::IconSource for StaticIcons {
+        fn resolve_avatar_icon(&self, name: &str) -> Option<h::AvatarIcon> {
+            reactions::static_icon(name)
+        }
+    }
+    let asset = |path: &str| campfire_assets::asset_path(path);
+    let signer = |_: &[&str]| String::new();
+    let ctx = context(None, &asset, &signer, "");
+    for row in vectors()["reaction_probes"].as_array().unwrap() {
+        let content = row["content"].as_str().unwrap();
+        let resolved = reactions::resolve(content, &StaticIcons);
+        assert_eq!(
+            resolved.is_some(),
+            row["reaction"].as_bool().unwrap(),
+            "Boost.reaction? {content}"
+        );
+        if let Some(resolved) = &resolved {
+            assert_eq!(
+                resolved.title,
+                row["title"].as_str().unwrap(),
+                "reaction title: {content}"
+            );
+        }
+        let icon = resolved.as_ref().and_then(|value| value.icon.as_ref());
+        let alt = resolved
+            .as_ref()
+            .and_then(|value| value.icon_alt.as_deref());
+        assert_eq!(
+            reaction_body(&ctx, content, icon, alt, false).0,
+            row["body"].as_str().unwrap(),
+            "reaction body: {content}"
+        );
+        assert_eq!(
+            reaction_body(&ctx, content, icon, alt, true).0,
+            row["legacy_body"].as_str().unwrap(),
+            "legacy body: {content}"
+        );
+    }
+}
+
+#[test]
+fn edge_install_matches_rails_with_pr151_asset_correction() {
+    let asset = |path: &str| campfire_assets::asset_path(path);
+    let signer = |_: &[&str]| String::new();
+    let mut ctx = context(Some("David"), &asset, &signer, "");
+    ctx.platform.chrome = false;
+    ctx.platform.edge = true;
+    ctx.platform.mac = false;
+    ctx.platform.browser = "Edge".into();
+    ctx.platform.operating_system = "Windows".into();
+    let html = campfire_views::pwa::InstallInstructions { ctx: &ctx }
+        .render()
+        .unwrap();
+    assert!(compare(
+        "edge-install-corrected",
+        &html,
+        vectors()["edge_install_corrected"].as_str().unwrap()
+    ));
 }

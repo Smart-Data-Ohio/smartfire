@@ -18,7 +18,7 @@ AWKWARD = "a b/c?d#e%f&g=h+i.j~k:l@m!n$o'p(q)r*s,t;u=v é"
 
 named = routes.named_routes.names.sort_by(&:to_s).map do |name|
   route = routes.named_routes.get(name)
-  # Parts with a default (`scope defaults: { user_id: "me" }`) aren't positional arguments.
+  # Minimal positional samples omit defaults; callers may also override those parts positionally.
   required = route.required_parts - route.defaults.keys
   helper = "#{name}_path"
   call = ->(args, options = {}) { helpers.public_send(helper, *args, **options) }

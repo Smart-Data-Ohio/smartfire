@@ -1,3 +1,5 @@
+require_relative "message_states"
+
 # Review regressions and the cross-cutting helper audit. Every expectation is actual Rails HTML.
 def generate_review_goldens(goldens)
   controller = GoldenController.new
@@ -21,6 +23,15 @@ def generate_review_goldens(goldens)
   end
   goldens["layouts"]["frame_authenticated"] = render_with(inline: "Body", layout: "turbo_rails/frame")
   goldens["layouts"]["frame_head"] = render_with(inline: '<% content_for :head do %><meta name="extra" content="yes"><% end %>Body', layout: "turbo_rails/frame")
+
+  # PR #151's one authorized correction, applied only to this throwaway oracle render.
+  # The pinned file raises MissingAssetError; do not silently pretend the pin already moved.
+  controller.request.env["HTTP_USER_AGENT"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edge/124.0.0.0"
+  controller.remove_instance_variable(:@platform) if controller.instance_variable_defined?(:@platform)
+  corrected_edge_source = File.read(Rails.root.join("app/views/pwa/_install_instructions.html.erb")).sub('"install-edge.svg"', '"external/install-edge.svg"')
+  out["edge_install_corrected"] = view.render(inline: corrected_edge_source)
+  controller.request.env["HTTP_USER_AGENT"] = USER_AGENT
+  controller.remove_instance_variable(:@platform)
 
   # Links, controls and profile triggers: compare complete tags (including data-action and aria).
   out["link_room"] = view.link_to_room(Rooms::Open.new(id: 1), class: "btn", data: { room_id: 9, action: "click->test#open" }) { "<b>Room</b>".html_safe }
@@ -110,8 +121,19 @@ def generate_review_goldens(goldens)
     id: message.id, client_message_id: message.client_message_id, room_id: message.room_id, room_name: message.room.name,
     creator: { id: message.creator.id, name: message.creator.name, title: message.creator.title, avatar_url: view.fresh_user_avatar_path(message.creator) },
     created_at: message.created_at.iso8601(6), updated_at: message.updated_at.iso8601(6), all_emoji: false,
-    content: { type: "text", html: view.message_presentation(message) }, boosts: []
+    content: { type: "text", html: view.message_presentation(message) },
+    boosts: message.ordered_boosts.map do |boost|
+      { id: boost.id, updated_at: boost.updated_at.iso8601(6), message_id: boost.message_id,
+        content: boost.content, all_emoji: boost.content.all_emoji?,
+        booster: { id: boost.booster.id, name: boost.booster.name, title: boost.booster.title,
+          avatar_url: view.fresh_user_avatar_path(boost.booster) } }
+    end
   }
+  out["reaction_probes"] = ["👍", "👍🏽", "👨‍👩‍👧‍👦", "🇺🇸", "1️⃣", "#️⃣", "❤️", "🎉", "🎉🎉", "1", "#", "©", "Hello", ":github:", ":tada:", ":no_such_icon:", " 👍 ", "", *message_icon_registry[:shortcodes].keys.map { |name| ":#{name}:" }].uniq.map do |content|
+    { content: content, reaction: Boost.reaction?(content), title: view.reaction_title(content),
+      body: view.reaction_chip_body(content), legacy_body: view.boost_content_html(Boost.new(content: content)) }
+  end
+  generate_message_states(goldens, view)
   puts "Rails WS6 review: 13 notification states, #{out.size} helper groups, 2 frame layouts, 2 token-free message viewers"
 ensure
   Current.reset

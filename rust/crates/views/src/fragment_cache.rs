@@ -2,9 +2,9 @@
 //! Jbuilder. The first rendering of a record version is what every later render reuses, whoever
 //! renders it: a broadcast renders without a request, and the pages that show the same message
 //! afterwards repeat that rendering byte for byte. So nothing in a fragment may depend on the
-//! request unless its key does (a message's "Copy link" carries a path, not the request's host).
-//! Forms are the exception: a fragment holds slots for their authenticity tokens, and each render
-//! puts its own session's in them (`request_forgery::token_tag`).
+//! request unless its key does (absolute message URLs partition the key by origin).
+//! The shared message tree is tokenless, as in Rails #148. Other cached forms hold slots for
+//! authenticity tokens; each render fills its own session's (`request_forgery::token_tag`).
 //!
 //! [`FragmentCache`] is the process's store. The reference keeps fragments in Redis
 //! (`config.cache_store = :redis_cache_store`, `config/environments/production.rb`), whose

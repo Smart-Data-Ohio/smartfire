@@ -141,6 +141,27 @@ including cache hits, pre-read fragments, nested boosts and request-free broadca
 fragment may contain token fields, token slots or session nonces. WS4's single token-slot mechanism
 remains defence in depth for other cacheable forms; do not add a second token mechanism.
 
+The full message composition lives in `messages::MessageView`: `details` carries system-note,
+thread, pin, edit, streaming, reply, forward, Drive, poll and step facts. `UserView::icon` is resolved
+only for a bot without an uploaded avatar. Reactions are resolved through `IconSource`; the static
+facts and grapheme/title probes come from pinned Rails, including gemoji Unicode aliases.
+
+`MessageComponents` is the domain adapter for populated GitHub, Twitter, event, quote, Fizzy,
+LinkedIn and generic embed children. Each entry is the owning partial's already rendered loop
+body, including its whitespace. Never put request tokens, viewer-private data or unsanitized
+text in these entries. Empty replacement containers render even without children, as in Rails.
+Those domain providers are still incomplete; empty-container goldens do not prove populated cards.
+
+HTML fragments now include `ViewContext::base_url` in their key because Rails message attributes
+contain absolute URLs. A presenter using `cached_message_fragment(id, updated_at, base_url)` must
+pass the same origin used to render. `MessageItem::cached_fragments` also takes that origin.
+This preserves the forged-host security property and makes fragments independent of the viewer.
+
+PR #151 corrects the Edge image to `external/install-edge.svg`. Until the pin moves, the Edge
+oracle substitutes exactly that path in the pinned ERB in memory; its expected HTML is otherwise
+unchanged Rails output. The old pin itself raises MissingAssetError on Edge. Re-pin and remove
+the oracle substitution when the Rails correction lands.
+
 `fragment_cache::keys::MessageKey` ports `message_with_pr_cards_cache_key`: record version,
 newest cards, optional embed references/PR thread stamp, pins, thread count, poll, note/stream
 flags, agent steps, quote timestamps/names and version 3. `sidebar_membership` includes the

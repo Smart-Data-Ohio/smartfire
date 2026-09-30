@@ -1,0 +1,14 @@
+{%- if let Some(reply) = message.details.reply %}  <div class="message__reply-preview" data-reply-preview="true" data-reply-target-id="{{ reply.id_string() }}">
+{% if let Some(source) = reply.source %}      <span class="message__reply-preview-label">Replying to <strong>{{ source.author }}</strong></span>
+      {{ source.link(ctx) }}{% else %}      <span class="message__reply-preview-label">Replying to a deleted message</span>
+{% endif %}  </div>
+{% endif %}
+{% if message.details.forwarded %}  <div class="message__forwarded-label"
+       data-controller="forward-source"
+       data-forward-source-url-value="{{ message.action_url(ctx) }}/forward_source">
+    <span>Forwarded</span>
+{% if let Some(note) = message.forward_note() %}      <span class="message__forwarded-note overflow-ellipsis">{{ note }}</span>
+{% endif %}    <a class="message__forwarded-source" hidden data-forward-source-target="link"
+       data-no-message-menu="true" target="_top">View original</a>
+  </div>
+{% endif -%}

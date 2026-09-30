@@ -303,7 +303,7 @@ async fn edge_gets_its_install_instructions() {
     browser.sign_in("david@37signals.com").await;
     let profile = browser.request(Method::GET, "/users/me/profile", &[("user-agent", EDGE)], None).await;
     assert_eq!(profile.status, StatusCode::OK);
-    assert!(profile.text().contains("/assets/install-edge-"), "{}", profile.text());
+    assert!(profile.text().contains(&campfire_assets::asset_path("external/install-edge.svg")), "{}", profile.text());
 }
 
 #[tokio::test]

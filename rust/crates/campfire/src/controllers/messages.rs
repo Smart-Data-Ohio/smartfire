@@ -46,7 +46,7 @@ pub async fn index(c: &mut Ctx) -> Result {
     c.respond_to(&[&format::HTML])?;
     let views = present(c, move |presenter| presenter.messages(&messages)).await?;
     let response = page::bare(c, StatusCode::OK, &format::HTML, |ctx| views::Index { ctx, messages: &views }.render()).await?;
-    let fragments = campfire_views::messages::MessageItem::cached_fragments(&c.app().fragment_cache, &views);
+    let fragments = campfire_views::messages::MessageItem::cached_fragments(&c.app().fragment_cache, &views, &c.url_for(""));
     Ok(response.with_cached_fragments(fragments))
 }
 
@@ -455,10 +455,12 @@ pub(crate) async fn present<T: Send + 'static>(
 ) -> Result<T> {
     let app = c.app().clone();
     let request_host = Some(c.request.host());
+    let cache_base_url = c.url_for("");
     c.app()
         .db
         .read(move |conn| {
-            let presenter = Presenter::new(conn, &app, request_host);
+            let mut presenter = Presenter::new(conn, &app, request_host);
+            presenter.cache_base_url = Some(cache_base_url);
             // The Jbuilder partials (`json.cache!`) read the fragment cache on this thread.
             campfire_views::fragment_cache::with(&app.fragment_cache, || f(&presenter))
         })

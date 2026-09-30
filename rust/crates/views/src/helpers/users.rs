@@ -110,7 +110,11 @@ pub fn avatar_tag_with_icon(
         None => image_tag(
             ctx,
             &user.avatar_path,
-            attrs().aria("hidden", "true").size(size).merge(options),
+            if options.keys().any(|key| key.starts_with("aria-")) {
+                attrs().size(size).merge(options)
+            } else {
+                attrs().aria("hidden", "true").size(size).merge(options)
+            },
         ),
     };
     link_to(

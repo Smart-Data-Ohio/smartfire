@@ -12,6 +12,7 @@
 # the templates the same values (campfire_views::helpers::request_forgery::rendering_with).
 require "json"
 require "ostruct"
+require_relative "message_icons"
 
 ActiveRecord::Base.logger = nil
 
