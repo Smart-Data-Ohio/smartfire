@@ -318,7 +318,7 @@ async fn self_service_limits_use_ip_and_user_windows_and_remembered_actions_shar
             };
             Req::new(method.clone(), url)
                 .header("x-forwarded-for", ip)
-                .form(&[("reauth", "wrong")])
+                .form(&[("reauth", if n == 11 { "secret123456" } else { "wrong" })])
         };
         for n in 0..10 {
             assert_eq!(
@@ -381,4 +381,91 @@ async fn self_service_limits_use_ip_and_user_windows_and_remembered_actions_shar
             "{endpoint} window expires"
         );
     }
+}
+
+#[tokio::test]
+async fn challenge_ip_bucket_is_shared_and_rejects_valid_codes_until_three_minutes() {
+    use rails_compat::{ar_encryption::ArEncryption, totp};
+    let clock = Arc::new(campfire_kit::clock::FrozenClock::new(
+        "2026-03-02T16:00:00Z".parse().unwrap(),
+    ));
+    let a = TestApp::boot_with_clock(clock.clone())
+        .await
+        .expect("default seed");
+    let secrets = a.booted.app.secrets.clone();
+    let keys = a.db().write(move |tx| {
+        tx.conn().execute("UPDATE two_factor_credentials SET last_totp_at=NULL,consecutive_failures=0,lockout_count=0,locked_until=NULL WHERE user_id IN (?,?)",[DAVID,KEVIN])?;
+        [DAVID,KEVIN].into_iter().map(|id| TwoFactorCredential::for_user(tx.conn(),id)?.unwrap().secret(&ArEncryption::new(&secrets))).collect::<campfire_db::Result<Vec<_>>>()
+    }).await.unwrap();
+    let mut david = a.anonymous();
+    let mut kevin = a.anonymous();
+    for (browser, email) in [
+        (&mut david, "david@37signals.com"),
+        (&mut kevin, "kevin@37signals.com"),
+    ] {
+        assert_eq!(browser.get("/session/new").await.status, StatusCode::OK);
+        assert_eq!(
+            browser
+                .write(
+                    Req::new(Method::POST, "/session")
+                        .form(&[("email_address", email), ("password", "secret123456")])
+                )
+                .await
+                .location(),
+            Some("http://campfire.test/two_factor_challenge")
+        );
+    }
+    for _ in 0..10 {
+        let reply = david
+            .write(
+                Req::new(Method::POST, "/two_factor_challenge")
+                    .header("x-forwarded-for", "198.18.0.100")
+                    .form(&[("code", "wrong")]),
+            )
+            .await;
+        assert!(
+            !reply.text().contains("Too many attempts."),
+            "ten attempts fit the IP bucket"
+        );
+    }
+    let count = a
+        .db()
+        .read(|c| Ok(Session::for_user(c, DAVID)?.len() + Session::for_user(c, KEVIN)?.len()))
+        .await
+        .unwrap();
+    for (browser, key) in [(&mut david, &keys[0]), (&mut kevin, &keys[1])] {
+        let code = totp::at(key, a.booted.app.clock.now().as_second()).unwrap();
+        let reply = browser
+            .write(
+                Req::new(Method::POST, "/two_factor_challenge")
+                    .header("x-forwarded-for", "198.18.0.100")
+                    .form(&[("code", &code)]),
+            )
+            .await;
+        assert_eq!(reply.status, StatusCode::TOO_MANY_REQUESTS);
+        assert!(
+            reply.text().contains("Too many attempts."),
+            "valid code and a new user cannot bypass the shared IP bucket"
+        );
+    }
+    assert_eq!(
+        a.db()
+            .read(|c| Ok(Session::for_user(c, DAVID)?.len() + Session::for_user(c, KEVIN)?.len()))
+            .await
+            .unwrap(),
+        count
+    );
+    clock.advance(jiff::SignedDuration::from_secs(181));
+    let code = totp::at(&keys[1], a.booted.app.clock.now().as_second()).unwrap();
+    assert_eq!(
+        kevin
+            .write(
+                Req::new(Method::POST, "/two_factor_challenge")
+                    .header("x-forwarded-for", "198.18.0.100")
+                    .form(&[("code", &code)])
+            )
+            .await
+            .location(),
+        Some("http://campfire.test/")
+    );
 }

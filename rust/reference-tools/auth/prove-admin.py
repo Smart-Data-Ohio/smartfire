@@ -13,6 +13,7 @@ cases=[
  ('reset-sessions-survive',domain,'for session in Session::for_user(tx.conn(), user.id)?','for session in Vec::<Session>::new()','reset_removes'),
  ('reset-audit-wrong-action',domain,'action: "two_factor.reset".into()','action: "two_factor.not_reset".into()','failed_audit'),
  ('ip-limiter-omitted',rates,'RateLimit::new(scope, 10, SignedDuration::from_mins(3))','RateLimit::new(scope, 100, SignedDuration::from_mins(3))','self_service_limits'),
+ ('challenge-ip-limiter-omitted',rates,'RateLimit::new(scope, 10, SignedDuration::from_mins(3))','RateLimit::new(scope, 100, SignedDuration::from_mins(3))','challenge_ip_bucket'),
  ('ip-window-too-long',rates,'RateLimit::new(scope, 10, SignedDuration::from_mins(3))','RateLimit::new(scope, 10, SignedDuration::from_mins(5))','self_service_limits'),
  ('user-limiter-omitted',rates,'RateLimit::new(scope, 10, SignedDuration::from_mins(15))','RateLimit::new(scope, 100, SignedDuration::from_mins(15))','self_service_limits'),
  ('user-window-too-short',rates,'RateLimit::new(scope, 10, SignedDuration::from_mins(15))','RateLimit::new(scope, 10, SignedDuration::from_mins(5))','self_service_limits'),

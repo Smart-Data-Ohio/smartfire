@@ -475,4 +475,7 @@ mod session_management_tests;
 #[cfg(test)]
 mod admin_two_factor_tests;
 #[cfg(test)]
+mod full_page_tests;
+
+#[cfg(test)]
 mod tests;
