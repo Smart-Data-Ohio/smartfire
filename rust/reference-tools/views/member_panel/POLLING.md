@@ -23,7 +23,7 @@ returns 200. A different viewer's star projection changes that validator.
 Controller-level `fresh_when` keeps its separate wildcard/list semantics.
 
 Agent reads and working-presence expiry call WS11's real `Agent` model.
-Human status and lease readers are flagged read-only extractions from WS17
-604fa0fe910fd597b903477742a725ff0badd727, pending that owner's merge. The small
+Human status and lease readers use the real WS17 modules carried by the WS11
+merge at 8b76fd0a. The small
 viewer-qualified star query is flagged for WS8b's User::Starring API. Browser
 interactions and end-to-end parity remain in the later end-to-end phase.

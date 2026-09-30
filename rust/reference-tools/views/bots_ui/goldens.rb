@@ -56,6 +56,15 @@ result["pages"]["new_invalid"] = render_with(user: david, template: "accounts/bo
 bender.agent.description = "x" * 501
 bender.agent.valid?
 edit_case(result, "edit_invalid_agent", bender, david)
+# Rejected cap fields retain before-type-cast values in Rails number inputs.
+[" 12 ", "12.5", "abc", true, false].each_with_index do |input, index|
+  bender.reload
+  bender.agent.assign_attributes(daily_message_cap: input)
+  bender.agent.valid?
+  name = "edit_invalid_raw_cap_#{index}"
+  edit_case(result, name, bender, david)
+  result["facts"][name]["raw_caps"] = { "messages" => bender.agent.daily_message_cap_before_type_cast }
+end
 legacy = User.create_bot!(name: "Legacy <Bot>", webhook_url: "https://example.com/legacy")
 edit_case(result, "edit_legacy", legacy, david)
 # A missing agent must stay missing on these read-only pages.

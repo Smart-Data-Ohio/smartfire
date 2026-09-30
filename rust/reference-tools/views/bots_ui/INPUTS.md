@@ -20,20 +20,26 @@ corpus records their types; a Timestamp-only Rust seam cannot represent them.
 The selected date/string HTTP assertions do not establish parity for these
 values, Rails multiparameter assignment, or the whole Date._parse grammar.
 
-WS11 API inspection at `bee976336a5e1f9be689103dc5bb3d5ffb07e75c`:
+WS11 APIs merged from `8b76fd0afc527ce27f0c3ebf0ea6bbf586b8024b`:
 
-- Bot profile and typed cap reads now call `Agent::for_user`, including the
-  edit form and bot list. The duplicate `AgentProfile` struct was removed.
-- Secret reset calls the real `agent_access::reset_webhook_signing_secret`.
-  A flagged read-only getter remains: `ensure_webhook_signing_secret` writes
-  on nil/blank and cannot be called while rendering an edit GET. Rails' nil
-  fallback to a legacy webhook secret also differs from blank fallback.
-- `UserChanges`, `NewUser` and `create_bot` still expose no icon setter.
-  `AgentChanges` still accepts `Option<Option<i64>>` caps, without raw inputs.
-  The icon/raw-cap write flags remain until those owner APIs exist; the
-  reference corpus is not reclassified as passing mutation coverage.
-- The existing directory adapter remains because its pinned Ruby Unicode
-  downcase table differs from `Agent::for_directory`'s Rust lowercase.
-  WS11 owns resolving that policy before the directory seam can be removed.
-- GitHub and Fizzy fragments remain the named WS15g/WS15e call sites with
-  their Rails partial names. Their PRs and main are not merged here.
+- Bot creation/update call `create_bot_with_attributes`/`UserChanges.icon_name`.
+  Their owner normalizer and changed-field validator handle icon inputs; the
+  HTTP tests compare all 21 scalar/strong-parameter cases and rejected creates.
+- Caps pass scalar JSON values to AgentChanges' before-type-cast fields. The
+  HTTP tests compare all 81 cases, including invalid form values, arrays/hashes,
+  no partial writes/audits, and SQLite range errors. Five additional edit-page
+  goldens compare the complete rejected-input HTML against pinned Rails.
+- Secret GET uses `Agent::webhook_signing_secret`; reset uses the real
+  `agent_access::reset_webhook_signing_secret`. Neither GET nor nil-only legacy
+  fallback generates or rotates a signing secret.
+- Human status and lease reads use the merged WS17 owner modules.
+- FLAGGED directory ordering: `Agent::for_directory` still uses Rust contextual
+  lowercase. Preserve the pinned Ruby table for Greek sigma until WS11 fixes
+  the owner sorter. The existing HTTP order assertion stays enabled.
+- FLAGGED budget counter visibility: the bot page uses the viewer's Time.zone;
+  WS11's `usage` uses the bot's zone. The page calls the owner's `cap_usage`
+  with its viewer window until `usage` accepts that zone. No counting logic is
+  duplicated in the UI adapter.
+- GitHub/Fizzy edit-fragment boundaries remain named with their Rails partial
+  names. The merged peers expose domain services, but no replacement bot-edit
+  fragment is supplied; the pinned edit page has no Fizzy section.

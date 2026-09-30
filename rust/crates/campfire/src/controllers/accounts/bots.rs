@@ -6,7 +6,7 @@ pub mod keys;
 pub mod webhook_secrets;
 
 use campfire_db::models::audit_log::{self, AuditLog, Context, NewAuditLog, Target};
-use campfire_db::{Agent, AgentChanges, AgentKind, NewAgent, User, UserChanges};
+use campfire_db::{Agent, AgentChanges, AgentKind, NewAgent, NewUser, User, UserChanges};
 use campfire_kit::{Ctx, Error, Param, ParamMap, Result, StatusCode, format, permit_keys};
 use campfire_views::accounts;
 use serde_json::{Value, json};
@@ -59,6 +59,7 @@ pub async fn create(c: &mut Ctx) -> Result {
         Error::internal(anyhow::anyhow!("NOT NULL constraint failed: users.name"))
     })?;
     let webhook_url = params.get("webhook_url").and_then(Param::to_s);
+    let icon_name = icon_attribute(&params).flatten();
     let avatar = Assignment::from_params(&params, "avatar")?
         .stage(c.app())
         .await?;
@@ -68,7 +69,7 @@ pub async fn create(c: &mut Ctx) -> Result {
         .app()
         .db
         .write(move |tx| {
-            let bot = User::create_bot(tx, &name, webhook_url.as_deref())?;
+            let bot = User::create_bot_with_attributes(tx, NewUser { name, icon_name, ..Default::default() }, webhook_url.as_deref())?;
             let agent = Agent::create(
                 tx,
                 NewAgent {
@@ -109,6 +110,7 @@ pub async fn create(c: &mut Ctx) -> Result {
             let form = accounts::BotForm {
                 name: params.get("name").and_then(Param::to_s),
                 webhook_url: params.get("webhook_url").and_then(Param::to_s),
+                icon_name: icon_attribute(&params).flatten(),
                 errors: Some(errors.to_string()),
                 error_fields: errors
                     .0
@@ -179,6 +181,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     let params = bot_params(c)?;
     let changes = UserChanges {
         name: params.get("name").and_then(Param::to_s),
+        icon_name: icon_attribute(&params),
         ..Default::default()
     };
     let agent_changes = agent_params(c);
@@ -195,12 +198,13 @@ pub async fn update(c: &mut Ctx) -> Result {
     let result = c.app().db.write(move |tx| {
         let mut agent = Agent::for_user(tx.conn(), bot.id)?;
         let before_agent = agent.clone();
-        if let Some(agent) = &mut agent { agent.update(tx, agent_changes)?; }
+        if let Some(agent) = &agent { agent.validate_changes(tx.conn(), agent_changes.clone())?.into_result()?; }
         if webhook_submitted {
             bot.update_bot(tx, changes, webhook_url.as_deref())?;
         } else {
             bot.update(tx, changes)?;
         }
+        if let Some(agent) = &mut agent { agent.update(tx, agent_changes)?; }
         let target = audit_target(&bot, agent.as_ref());
         let after_url = bot.webhook_url(tx.conn())?;
         if previous_url != after_url {
@@ -209,6 +213,7 @@ pub async fn update(c: &mut Ctx) -> Result {
         }
         let mut pairs = serde_json::Map::new();
         if before_bot.name != bot.name { pairs.insert("name".into(), audit_log::pair(json!(before_bot.name), json!(bot.name))); }
+        if before_bot.icon_name != bot.icon_name { pairs.insert("icon_name".into(), audit_log::pair(json!(before_bot.icon_name), json!(bot.icon_name))); }
         if let (Some(before), Some(after)) = (&before_agent, &agent) {
             macro_rules! changed { ($($field:ident),*) => {$(if before.$field != after.$field { pairs.insert(stringify!($field).into(), audit_log::pair(json!(before.$field), json!(after.$field))); })*}; }
             changed!(provider, runtime, description, daily_message_cap, daily_board_post_cap, daily_external_action_cap);
@@ -226,7 +231,17 @@ pub async fn update(c: &mut Ctx) -> Result {
         Err(campfire_db::Error::RecordInvalid(errors)) => {
             let bot = set_bot(c).await?;
             let mut form = edit_form(c, &bot).await?;
-            if let Some(agent) = &mut form.agent {
+            if errors.0.iter().any(|(field,_)| matches!(*field,"name"|"icon_name"|"webhook_url")) {
+                form.name = params.get("name").and_then(Param::to_s).or(form.name);
+                if let Some(icon) = icon_attribute(&params) {
+                    form.icon = c.app().db.read({ let icon = icon.clone(); move |conn| Ok(icon.as_deref().and_then(|name| presenters::resolve_avatar_icon(conn, name))) }).await.map_err(Error::internal)?;
+                    form.icon_name = icon;
+                }
+                if let Some(url) = params.get("webhook_url") { form.webhook_url = url.to_s(); }
+                form.errors = Some(errors.to_string());
+                form.error_fields = errors.0.iter().map(|(field,_)| field.to_string()).collect();
+                if let Some(agent) = &mut form.agent { apply_agent_form(agent, &requested_agent); }
+            } else if let Some(agent) = &mut form.agent {
                 apply_agent_form(agent, &requested_agent);
                 agent.errors = Some(errors.to_string());
                 agent.error_fields = errors
@@ -367,9 +382,7 @@ async fn edit_form(c: &Ctx, bot: &User) -> Result<accounts::BotForm> {
         .map_err(Error::internal)
 }
 
-// FLAGGED WS11 seam: AgentChanges still accepts typed caps only. Rails validates
-// before_type_cast values; vectors/bot-input-contract.json inventories the raw cases.
-// Replace this conversion with WS11's raw-input validator when that API lands.
+/// Preserve strong-parameter scalars for WS11's before-type-cast validation.
 fn agent_params(c: &Ctx) -> AgentChanges {
     let params = c
         .params
@@ -390,20 +403,14 @@ fn agent_params(c: &Ctx) -> AgentChanges {
             .get(key)
             .map(|p| if p.is_null() { None } else { p.to_s() })
     };
-    let cap = |key| {
-        params.get(key).map(|p| {
-            p.to_s()
-                .filter(|s| !campfire_richtext::ruby::is_blank(s))
-                .map(|s| cast_integer(&s).unwrap_or(0))
-        })
-    };
+    let cap = |key| params.get(key).map(Param::to_json);
     AgentChanges {
         provider: string("provider"),
         runtime: string("runtime"),
         description: string("description"),
-        daily_message_cap: cap("daily_message_cap"),
-        daily_board_post_cap: cap("daily_board_post_cap"),
-        daily_external_action_cap: cap("daily_external_action_cap"),
+        daily_message_cap_before_type_cast: cap("daily_message_cap"),
+        daily_board_post_cap_before_type_cast: cap("daily_board_post_cap"),
+        daily_external_action_cap_before_type_cast: cap("daily_external_action_cap"),
         ..Default::default()
     }
 }
@@ -411,14 +418,11 @@ fn agent_params(c: &Ctx) -> AgentChanges {
 fn apply_agent_form(form: &mut accounts::BotAgentForm, changes: &AgentChanges) {
     macro_rules! assign { ($($field:ident),*) => {$(if let Some(value) = &changes.$field { form.$field = value.clone(); })*}; }
     assign!(provider, runtime, description);
-    if let Some(value) = changes.daily_message_cap {
-        form.daily_message_cap = value;
-    }
-    if let Some(value) = changes.daily_board_post_cap {
-        form.daily_board_post_cap = value;
-    }
-    if let Some(value) = changes.daily_external_action_cap {
-        form.daily_external_action_cap = value;
+    for (field, noun) in [("daily_message_cap", "messages"), ("daily_board_post_cap", "board_posts"), ("daily_external_action_cap", "external_actions")] {
+        if let Some(input) = changes.budget_cap_input(field) {
+            let raw = match input.before_type_cast { Value::Null => None, Value::String(value) => Some(value), value => Some(value.to_string()) };
+            form.raw_caps.insert(noun.into(), raw);
+        }
     }
 }
 
@@ -451,9 +455,6 @@ pub(crate) async fn find_active_bot(c: &Ctx, key: &str) -> Result<User> {
 }
 
 /// `params.require(:user).permit(:name, :avatar, :icon_name, :webhook_url)`.
-// FLAGGED WS11 seam: UserChanges/create_bot still have no icon setter. Keep the
-// permitted value available for WS11's normalizing/validating write API; reads
-// already resolve persisted icons through the existing presenter.
 fn bot_params(c: &Ctx) -> Result<ParamMap> {
     Ok(c.params.require("user")?.permit(&permit_keys(&[
         "name",
@@ -461,6 +462,11 @@ fn bot_params(c: &Ctx) -> Result<ParamMap> {
         "icon_name",
         "webhook_url",
     ])))
+}
+
+/// String casting and normalization belong to the User owner; absent differs from nil.
+fn icon_attribute(params: &ParamMap) -> Option<Option<String>> {
+    params.get("icon_name").map(|input| campfire_db::models::user::icon::normalize_input(&input.to_json()))
 }
 
 fn redirect_to_bots(c: &mut Ctx) -> Result {

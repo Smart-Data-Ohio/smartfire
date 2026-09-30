@@ -35,6 +35,7 @@ fn form(facts: &Value) -> BotForm {
             daily_message_cap: agent["daily_message_cap"].as_i64(),
             daily_board_post_cap: agent["daily_board_post_cap"].as_i64(),
             daily_external_action_cap: agent["daily_external_action_cap"].as_i64(),
+            raw_caps: facts["raw_caps"].as_object().map(|caps| caps.iter().map(|(key,value)| (key.clone(), match value { Value::Null => None, Value::String(text) => Some(text.clone()), value => Some(value.to_string()) })).collect()).unwrap_or_default(),
             suspended: !agent["suspended_at"].is_null(),
             errors: string(&facts["agent_errors"]),
             error_fields: facts["agent_error_fields"]
@@ -133,6 +134,11 @@ fn bot_management_pages_match_pinned_rails_bytes() {
         "edit_github_rejected",
         "edit_github_unreadable",
         "edit_invalid_agent",
+        "edit_invalid_raw_cap_0",
+        "edit_invalid_raw_cap_1",
+        "edit_invalid_raw_cap_2",
+        "edit_invalid_raw_cap_3",
+        "edit_invalid_raw_cap_4",
     ] {
         let ctx = context(
             Some(

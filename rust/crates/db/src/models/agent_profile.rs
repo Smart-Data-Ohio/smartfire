@@ -1,19 +1,7 @@
-//! Remaining directory/secret read adapters. Bot profile and cap fields use WS11 Agent.
+//! Remaining directory ordering adapter. Bot profile and cap fields use WS11 Agent.
 mod downcase_table;
 
 use crate::{Connection, Result, Timestamp};
-
-/// FLAGGED WS11 read seam: Agent does not expose a read-only signing-secret getter.
-/// Its ensure/reset operations write and must never run while rendering GET /edit.
-/// Preserve Some("") because Rails' `agent.secret || webhook.secret` only falls back for nil.
-pub fn webhook_signing_secret(
-    conn: &Connection,
-    encryption: &rails_compat::ar_encryption::ArEncryption,
-    agent_id: i64,
-) -> Result<Option<String>> {
-    let encrypted: Option<String> = conn.query_row("SELECT webhook_signing_secret FROM agents WHERE id=?", [agent_id], |row| row.get(0))?;
-    encrypted.map(|value| encryption.decrypt(&value).map_err(|error| crate::Error::Other(error.to_string()))).transpose()
-}
 
 /// Public directory facts only. Suspension and banned-user activity are distinct.
 #[derive(Clone, Debug)]

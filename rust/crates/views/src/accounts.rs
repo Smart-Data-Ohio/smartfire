@@ -130,6 +130,7 @@ pub struct BotAgentForm {
     pub daily_message_cap: Option<i64>,
     pub daily_board_post_cap: Option<i64>,
     pub daily_external_action_cap: Option<i64>,
+    pub raw_caps: std::collections::BTreeMap<String, Option<String>>,
     pub suspended: bool,
     pub errors: Option<String>,
     pub error_fields: Vec<String>,
@@ -181,6 +182,7 @@ impl BotForm {
 }
 impl BotAgentForm {
     fn cap_value(&self, name: &str) -> Option<String> {
+        if let Some(value) = self.raw_caps.get(name) { return value.clone(); }
         match name {
             "messages" => self.daily_message_cap,
             "board_posts" => self.daily_board_post_cap,

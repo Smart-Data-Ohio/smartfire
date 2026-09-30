@@ -300,7 +300,7 @@ pub fn bot_form(conn: &Connection, app: &crate::app::AppState, base_url: &str, b
             id: agent.id, owner_id: agent.owner_id, provider: agent.provider, runtime: agent.runtime,
             description: agent.description, daily_message_cap: agent.daily_message_cap,
             daily_board_post_cap: agent.daily_board_post_cap, daily_external_action_cap: agent.daily_external_action_cap,
-            suspended: agent.suspended_at.is_some(), errors: None, error_fields: Vec::new(),
+            raw_caps: Default::default(), suspended: agent.suspended_at.is_some(), errors: None, error_fields: Vec::new(),
         }), budget_usage_line, signing_secret, github, ..Default::default()
     })
 }
