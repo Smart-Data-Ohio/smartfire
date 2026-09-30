@@ -454,3 +454,5 @@ mod inbound_rails_cases;
 
 #[cfg(test)]
 mod direct_forms_tests;
+#[cfg(test)]
+mod direct_rename_tests;

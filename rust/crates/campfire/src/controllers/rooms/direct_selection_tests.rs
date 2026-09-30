@@ -8,7 +8,7 @@ fn oracle() -> serde_json::Value {
     serde_json::from_str(include_str!("../../../../../vectors/direct_selection.json")).unwrap()
 }
 
-fn next_flash(app: &TestApp, reply: &Reply, cookie: &mut Option<String>) -> serde_json::Value {
+pub(super) fn next_flash(app: &TestApp, reply: &Reply, cookie: &mut Option<String>) -> serde_json::Value {
     let key = campfire_kit::session::SESSION_KEY;
     let raw = reply.headers.get_all("set-cookie").iter().find_map(|value| {
         value.to_str().ok()?.split(';').next()?.strip_prefix(&format!("{key}="))
