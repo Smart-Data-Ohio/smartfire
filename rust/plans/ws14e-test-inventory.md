@@ -250,22 +250,22 @@ Pinned reference: `d7c7de92`. Covered means the named scenario has a discriminat
 
 | Rails test | Coverage or deferral |
 |---|---|
-| `test/controllers/rooms/events/attendances_controller_test.rb:10` — a member can respond and change their response | Deferred: WS14e continuation |
+| `test/controllers/rooms/events/attendances_controller_test.rb:10` — a member can respond and change their response | Covered: `attendance_controller_renders_and_updates_the_requested_frame` |
 | `test/controllers/rooms/events/attendances_controller_test.rb:23` — non-members get a 404 | Deferred: WS14e continuation |
-| `test/controllers/rooms/events/attendances_controller_test.rb:32` — bots are denied | Deferred: WS14e continuation |
+| `test/controllers/rooms/events/attendances_controller_test.rb:32` — bots are denied | Covered: `attendance_controller_security_blocks_nonmembers_and_bots` |
 | `test/controllers/rooms/events/attendances_controller_test.rb:40` — cancelled events reject responses | Deferred: WS14e continuation |
 | `test/controllers/rooms/events/attendances_controller_test.rb:49` — a response on the first event of a series is copied to every future occurrence | Deferred: WS14e continuation |
 | `test/controllers/rooms/events/attendances_controller_test.rb:64` — a later response stays local unless apply to all future is checked | Deferred: WS14e continuation |
 | `test/controllers/rooms/events/attendances_controller_test.rb:87` — show offers apply to all future on later occurrences with a successor | Deferred: WS14e continuation |
 | `test/controllers/rooms/events/attendances_controller_test.rb:111` — unknown responses are rejected | Deferred: WS14e continuation |
-| `test/controllers/rooms/events/attendances_controller_test.rb:118` — show renders the attendance frame with the response controls for members | Deferred: WS14e continuation |
-| `test/controllers/rooms/events/attendances_controller_test.rb:136` — show 404s for non-members | Deferred: WS14e continuation |
-| `test/controllers/rooms/events/attendances_controller_test.rb:149` — show offers apply to all future occurrences on the series head and hides it on the last occurrence | Deferred: WS14e continuation |
-| `test/controllers/rooms/events/attendances_controller_test.rb:172` — show reports the closed state for cancelled events | Deferred: WS14e continuation |
-| `test/controllers/rooms/events/attendances_controller_test.rb:187` — responding from the frame re-renders the frame instead of redirecting | Deferred: WS14e continuation |
+| `test/controllers/rooms/events/attendances_controller_test.rb:118` — show renders the attendance frame with the response controls for members | Covered: `attendance_controller_renders_and_updates_the_requested_frame` |
+| `test/controllers/rooms/events/attendances_controller_test.rb:136` — show 404s for non-members | Covered: `attendance_controller_security_blocks_nonmembers_and_bots` |
+| `test/controllers/rooms/events/attendances_controller_test.rb:149` — show offers apply to all future occurrences on the series head and hides it on the last occurrence | Covered: `attendance_frames_are_byte_identical_to_rails_fragments` |
+| `test/controllers/rooms/events/attendances_controller_test.rb:172` — show reports the closed state for cancelled events | Covered: `attendance_frames_are_byte_identical_to_rails_fragments` |
+| `test/controllers/rooms/events/attendances_controller_test.rb:187` — responding from the frame re-renders the frame instead of redirecting | Covered: `attendance_controller_renders_and_updates_the_requested_frame` |
 | `test/controllers/rooms/events/attendances_controller_test.rb:206` — a frame response from a non-member 404s | Deferred: WS14e continuation |
-| `test/controllers/rooms/events/attendances_controller_test.rb:222` — a frame response with an unknown choice re-renders the frame with an alert | Deferred: WS14e continuation |
-| `test/controllers/rooms/events/attendances_controller_test.rb:238` — a frame response to a cancelled event re-renders the frame with an alert | Deferred: WS14e continuation |
+| `test/controllers/rooms/events/attendances_controller_test.rb:222` — a frame response with an unknown choice re-renders the frame with an alert | Covered: `attendance_controller_renders_and_updates_the_requested_frame` |
+| `test/controllers/rooms/events/attendances_controller_test.rb:238` — a frame response to a cancelled event re-renders the frame with an alert | Covered: `attendance_controller_renders_and_updates_the_requested_frame` |
 
 ## test/system/events_test.rb (3)
 
@@ -283,7 +283,7 @@ Pinned reference: `d7c7de92`. Covered means the named scenario has a discriminat
 | `test/integration/event_cards_test.rb:39` — the card shows no Join button and no live dot | Deferred: WS14e continuation |
 | `test/integration/event_cards_test.rb:60` — a repeating event shows the repeating eyebrow | Deferred: WS14e continuation |
 | `test/integration/event_cards_test.rb:77` — a cancelled event shows the cancelled state | Deferred: WS14e continuation |
-| `test/integration/event_cards_test.rb:96` — the scheduling announcement renders its card in the room | Deferred: WS14e continuation |
+| `test/integration/event_cards_test.rb:96` — the scheduling announcement renders its card in the room | Covered: `event_cards_refresh_after_an_event_edit_through_the_message_cache` |
 | `test/integration/event_cards_test.rb:108` — a link to an event in another room stays a plain link with no card for anyone | Deferred: WS14e continuation |
 | `test/integration/event_cards_test.rb:142` — a message without an event link renders no card | Deferred: WS14e continuation |
 | `test/integration/event_cards_test.rb:153` — rendering a room page costs no extra queries per message with an event link | Deferred: WS14e continuation |

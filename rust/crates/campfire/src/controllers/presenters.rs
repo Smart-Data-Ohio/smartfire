@@ -5,6 +5,7 @@
 pub mod accounts;
 pub mod attachments;
 pub mod page;
+pub mod events;
 pub mod pagination;
 pub mod rich_text;
 pub mod view_context;
@@ -216,7 +217,8 @@ impl<'a> Presenter<'a> {
 
     /// `render message`, as [`Self::messages`] does it.
     pub fn message_item(&self, message: &Message) -> Result<MessageItem> {
-        Ok(match self.cache_base_url.as_deref().and_then(|base| campfire_views::messages::cached_message_fragment(message.id, message.updated_at.jiff(), base)) {
+        let has_events: bool = self.conn.query_row("SELECT EXISTS(SELECT 1 FROM event_references WHERE message_id=?)", [message.id], |row| row.get(0))?;
+        Ok(match self.cache_base_url.as_deref().filter(|_| !has_events).and_then(|base| campfire_views::messages::cached_message_fragment(message.id, message.updated_at.jiff(), base)) {
             Some(html) => MessageItem::Fragment { client_message_id: message.client_message_id.clone(), room_id: message.room_id, html },
             None => MessageItem::View(Box::new(self.message(message)?)),
         })
@@ -260,7 +262,10 @@ impl<'a> Presenter<'a> {
             content: self.content(message, &plain_text)?,
             boosts: self.boosts(message)?,
             details: self.message_details(message)?,
-            components: Default::default(),
+            components: campfire_views::messages::MessageComponents {
+                event_views: events::for_message(self.conn, message)?,
+                ..Default::default()
+            },
         })
     }
 

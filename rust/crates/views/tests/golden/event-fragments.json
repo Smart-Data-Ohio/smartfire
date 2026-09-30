@@ -1,0 +1,503 @@
+{
+  "cards": [
+    {
+      "name": "card 0 UTC",
+      "viewer_zone": "UTC",
+      "event": {
+        "id": 401,
+        "room_id": 654632876,
+        "title": "Planning session",
+        "organizer_name": "David",
+        "starts_at": "2026-10-05T09:00:00Z",
+        "ends_at": "2026-10-05T10:00:00Z",
+        "time_zone": "UTC",
+        "series": false,
+        "cancelled": false,
+        "venue_name": null,
+        "meet_link": null
+      },
+      "html": "<article class=\"event-card\" data-event-card=\"401\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/401\">Planning session</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-05T09:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 9:00 AM</time>\n      &ndash; <time datetime=\"2026-10-05T10:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 10:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_401\" src=\"/rooms/654632876/events/401/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n"
+    },
+    {
+      "name": "card 0 Hawaii",
+      "viewer_zone": "Hawaii",
+      "event": {
+        "id": 401,
+        "room_id": 654632876,
+        "title": "Planning session",
+        "organizer_name": "David",
+        "starts_at": "2026-10-05T09:00:00Z",
+        "ends_at": "2026-10-05T10:00:00Z",
+        "time_zone": "UTC",
+        "series": false,
+        "cancelled": false,
+        "venue_name": null,
+        "meet_link": null
+      },
+      "html": "<article class=\"event-card\" data-event-card=\"401\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/401\">Planning session</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-04T23:00:00-10:00\" data-local-time-target=\"datetime\">October 5, 2026 at 9:00 AM</time>\n      &ndash; <time datetime=\"2026-10-05T00:00:00-10:00\" data-local-time-target=\"datetime\">October 5, 2026 at 10:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_401\" src=\"/rooms/654632876/events/401/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n"
+    },
+    {
+      "name": "card 1 UTC",
+      "viewer_zone": "UTC",
+      "event": {
+        "id": 401,
+        "room_id": 654632876,
+        "title": "Planning session",
+        "organizer_name": "David",
+        "starts_at": "2026-10-05T09:00:00Z",
+        "ends_at": null,
+        "time_zone": "UTC",
+        "series": false,
+        "cancelled": false,
+        "venue_name": null,
+        "meet_link": null
+      },
+      "html": "<article class=\"event-card\" data-event-card=\"401\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/401\">Planning session</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-05T09:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 9:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_401\" src=\"/rooms/654632876/events/401/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n"
+    },
+    {
+      "name": "card 1 Hawaii",
+      "viewer_zone": "Hawaii",
+      "event": {
+        "id": 401,
+        "room_id": 654632876,
+        "title": "Planning session",
+        "organizer_name": "David",
+        "starts_at": "2026-10-05T09:00:00Z",
+        "ends_at": null,
+        "time_zone": "UTC",
+        "series": false,
+        "cancelled": false,
+        "venue_name": null,
+        "meet_link": null
+      },
+      "html": "<article class=\"event-card\" data-event-card=\"401\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/401\">Planning session</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-04T23:00:00-10:00\" data-local-time-target=\"datetime\">October 5, 2026 at 9:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_401\" src=\"/rooms/654632876/events/401/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n"
+    },
+    {
+      "name": "card 2 UTC",
+      "viewer_zone": "UTC",
+      "event": {
+        "id": 401,
+        "room_id": 654632876,
+        "title": "Planning session",
+        "organizer_name": "David",
+        "starts_at": "2026-10-05T09:00:00Z",
+        "ends_at": "2026-10-05T10:00:00Z",
+        "time_zone": "UTC",
+        "series": false,
+        "cancelled": true,
+        "venue_name": null,
+        "meet_link": null
+      },
+      "html": "<article class=\"event-card event-card--cancelled\" data-event-card=\"401\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n      <span class=\"event-card__state\">Cancelled</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/401\">Planning session</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-05T09:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 9:00 AM</time>\n      &ndash; <time datetime=\"2026-10-05T10:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 10:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_401\" src=\"/rooms/654632876/events/401/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n"
+    },
+    {
+      "name": "card 2 Hawaii",
+      "viewer_zone": "Hawaii",
+      "event": {
+        "id": 401,
+        "room_id": 654632876,
+        "title": "Planning session",
+        "organizer_name": "David",
+        "starts_at": "2026-10-05T09:00:00Z",
+        "ends_at": "2026-10-05T10:00:00Z",
+        "time_zone": "UTC",
+        "series": false,
+        "cancelled": true,
+        "venue_name": null,
+        "meet_link": null
+      },
+      "html": "<article class=\"event-card event-card--cancelled\" data-event-card=\"401\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n      <span class=\"event-card__state\">Cancelled</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/401\">Planning session</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-04T23:00:00-10:00\" data-local-time-target=\"datetime\">October 5, 2026 at 9:00 AM</time>\n      &ndash; <time datetime=\"2026-10-05T00:00:00-10:00\" data-local-time-target=\"datetime\">October 5, 2026 at 10:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_401\" src=\"/rooms/654632876/events/401/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n"
+    },
+    {
+      "name": "card 3 UTC",
+      "viewer_zone": "UTC",
+      "event": {
+        "id": 401,
+        "room_id": 654632876,
+        "title": "Planning session",
+        "organizer_name": "David",
+        "starts_at": "2026-10-05T09:00:00Z",
+        "ends_at": "2026-10-05T10:00:00Z",
+        "time_zone": "UTC",
+        "series": true,
+        "cancelled": false,
+        "venue_name": null,
+        "meet_link": null
+      },
+      "html": "<article class=\"event-card\" data-event-card=\"401\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Repeating event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/401\">Planning session</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-05T09:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 9:00 AM</time>\n      &ndash; <time datetime=\"2026-10-05T10:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 10:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_401\" src=\"/rooms/654632876/events/401/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n"
+    },
+    {
+      "name": "card 3 Hawaii",
+      "viewer_zone": "Hawaii",
+      "event": {
+        "id": 401,
+        "room_id": 654632876,
+        "title": "Planning session",
+        "organizer_name": "David",
+        "starts_at": "2026-10-05T09:00:00Z",
+        "ends_at": "2026-10-05T10:00:00Z",
+        "time_zone": "UTC",
+        "series": true,
+        "cancelled": false,
+        "venue_name": null,
+        "meet_link": null
+      },
+      "html": "<article class=\"event-card\" data-event-card=\"401\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Repeating event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/401\">Planning session</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-04T23:00:00-10:00\" data-local-time-target=\"datetime\">October 5, 2026 at 9:00 AM</time>\n      &ndash; <time datetime=\"2026-10-05T00:00:00-10:00\" data-local-time-target=\"datetime\">October 5, 2026 at 10:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_401\" src=\"/rooms/654632876/events/401/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n"
+    },
+    {
+      "name": "card 4 UTC",
+      "viewer_zone": "UTC",
+      "event": {
+        "id": 401,
+        "room_id": 654632876,
+        "title": "Planning session",
+        "organizer_name": "David",
+        "starts_at": "2026-10-05T09:00:00Z",
+        "ends_at": "2026-10-05T10:00:00Z",
+        "time_zone": "UTC",
+        "series": false,
+        "cancelled": false,
+        "venue_name": "Calls & conversation",
+        "meet_link": null
+      },
+      "html": "<article class=\"event-card\" data-event-card=\"401\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/401\">Planning session</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-05T09:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 9:00 AM</time>\n      &ndash; <time datetime=\"2026-10-05T10:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 10:00 AM</time>\n  </p>\n\n    <p class=\"event-card__venue\">Where: Calls &amp; conversation</p>\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_401\" src=\"/rooms/654632876/events/401/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n"
+    },
+    {
+      "name": "card 4 Hawaii",
+      "viewer_zone": "Hawaii",
+      "event": {
+        "id": 401,
+        "room_id": 654632876,
+        "title": "Planning session",
+        "organizer_name": "David",
+        "starts_at": "2026-10-05T09:00:00Z",
+        "ends_at": "2026-10-05T10:00:00Z",
+        "time_zone": "UTC",
+        "series": false,
+        "cancelled": false,
+        "venue_name": "Calls & conversation",
+        "meet_link": null
+      },
+      "html": "<article class=\"event-card\" data-event-card=\"401\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/401\">Planning session</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-04T23:00:00-10:00\" data-local-time-target=\"datetime\">October 5, 2026 at 9:00 AM</time>\n      &ndash; <time datetime=\"2026-10-05T00:00:00-10:00\" data-local-time-target=\"datetime\">October 5, 2026 at 10:00 AM</time>\n  </p>\n\n    <p class=\"event-card__venue\">Where: Calls &amp; conversation</p>\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_401\" src=\"/rooms/654632876/events/401/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n"
+    },
+    {
+      "name": "card 5 UTC",
+      "viewer_zone": "UTC",
+      "event": {
+        "id": 401,
+        "room_id": 654632876,
+        "title": "Planning session",
+        "organizer_name": "David",
+        "starts_at": "2026-10-05T09:00:00Z",
+        "ends_at": "2026-10-05T10:00:00Z",
+        "time_zone": "UTC",
+        "series": false,
+        "cancelled": false,
+        "venue_name": null,
+        "meet_link": "https://meet.google.com/abc-defg-hij?x=1&y=2"
+      },
+      "html": "<article class=\"event-card\" data-event-card=\"401\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/401\">Planning session</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-05T09:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 9:00 AM</time>\n      &ndash; <time datetime=\"2026-10-05T10:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 10:00 AM</time>\n  </p>\n\n\n    <p class=\"event-card__meet\"><a href=\"https://meet.google.com/abc-defg-hij?x=1&amp;y=2\">Join Google Meet</a></p>\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_401\" src=\"/rooms/654632876/events/401/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n"
+    },
+    {
+      "name": "card 5 Hawaii",
+      "viewer_zone": "Hawaii",
+      "event": {
+        "id": 401,
+        "room_id": 654632876,
+        "title": "Planning session",
+        "organizer_name": "David",
+        "starts_at": "2026-10-05T09:00:00Z",
+        "ends_at": "2026-10-05T10:00:00Z",
+        "time_zone": "UTC",
+        "series": false,
+        "cancelled": false,
+        "venue_name": null,
+        "meet_link": "https://meet.google.com/abc-defg-hij?x=1&y=2"
+      },
+      "html": "<article class=\"event-card\" data-event-card=\"401\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/401\">Planning session</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-04T23:00:00-10:00\" data-local-time-target=\"datetime\">October 5, 2026 at 9:00 AM</time>\n      &ndash; <time datetime=\"2026-10-05T00:00:00-10:00\" data-local-time-target=\"datetime\">October 5, 2026 at 10:00 AM</time>\n  </p>\n\n\n    <p class=\"event-card__meet\"><a href=\"https://meet.google.com/abc-defg-hij?x=1&amp;y=2\">Join Google Meet</a></p>\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_401\" src=\"/rooms/654632876/events/401/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n"
+    },
+    {
+      "name": "card 6 UTC",
+      "viewer_zone": "UTC",
+      "event": {
+        "id": 401,
+        "room_id": 654632876,
+        "title": "Planning session",
+        "organizer_name": "David",
+        "starts_at": "2026-10-05T09:00:00Z",
+        "ends_at": "2026-10-05T10:00:00Z",
+        "time_zone": "UTC",
+        "series": false,
+        "cancelled": false,
+        "venue_name": null,
+        "meet_link": null
+      },
+      "html": "<article class=\"event-card\" data-event-card=\"401\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/401\">Planning session</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-05T09:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 9:00 AM</time>\n      &ndash; <time datetime=\"2026-10-05T10:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 10:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_401\" src=\"/rooms/654632876/events/401/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n"
+    },
+    {
+      "name": "card 6 Hawaii",
+      "viewer_zone": "Hawaii",
+      "event": {
+        "id": 401,
+        "room_id": 654632876,
+        "title": "Planning session",
+        "organizer_name": "David",
+        "starts_at": "2026-10-05T09:00:00Z",
+        "ends_at": "2026-10-05T10:00:00Z",
+        "time_zone": "UTC",
+        "series": false,
+        "cancelled": false,
+        "venue_name": null,
+        "meet_link": null
+      },
+      "html": "<article class=\"event-card\" data-event-card=\"401\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/401\">Planning session</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-04T23:00:00-10:00\" data-local-time-target=\"datetime\">October 5, 2026 at 9:00 AM</time>\n      &ndash; <time datetime=\"2026-10-05T00:00:00-10:00\" data-local-time-target=\"datetime\">October 5, 2026 at 10:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_401\" src=\"/rooms/654632876/events/401/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n"
+    },
+    {
+      "name": "card 7 UTC",
+      "viewer_zone": "UTC",
+      "event": {
+        "id": 401,
+        "room_id": 654632876,
+        "title": "<script> & \"Planning\"",
+        "organizer_name": "David",
+        "starts_at": "2026-10-05T09:00:00Z",
+        "ends_at": "2026-10-05T10:00:00Z",
+        "time_zone": "Eastern Time (US & Canada)",
+        "series": false,
+        "cancelled": false,
+        "venue_name": null,
+        "meet_link": null
+      },
+      "html": "<article class=\"event-card\" data-event-card=\"401\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/401\">&lt;script&gt; &amp; &quot;Planning&quot;</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-05T09:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 5:00 AM</time>\n      &ndash; <time datetime=\"2026-10-05T10:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 6:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_401\" src=\"/rooms/654632876/events/401/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n"
+    },
+    {
+      "name": "card 7 Hawaii",
+      "viewer_zone": "Hawaii",
+      "event": {
+        "id": 401,
+        "room_id": 654632876,
+        "title": "<script> & \"Planning\"",
+        "organizer_name": "David",
+        "starts_at": "2026-10-05T09:00:00Z",
+        "ends_at": "2026-10-05T10:00:00Z",
+        "time_zone": "Eastern Time (US & Canada)",
+        "series": false,
+        "cancelled": false,
+        "venue_name": null,
+        "meet_link": null
+      },
+      "html": "<article class=\"event-card\" data-event-card=\"401\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/401\">&lt;script&gt; &amp; &quot;Planning&quot;</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-04T23:00:00-10:00\" data-local-time-target=\"datetime\">October 5, 2026 at 5:00 AM</time>\n      &ndash; <time datetime=\"2026-10-05T00:00:00-10:00\" data-local-time-target=\"datetime\">October 5, 2026 at 6:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_401\" src=\"/rooms/654632876/events/401/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n"
+    }
+  ],
+  "attendances": [
+    {
+      "event_id": 439674038,
+      "room_id": 654632876,
+      "message_id": "601",
+      "current_response": "going",
+      "going": 1,
+      "maybe": 0,
+      "respondable": true,
+      "cancelled": false,
+      "apply_to_future": true,
+      "alert": null,
+      "html": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_601_event_439674038\">\n  <div class=\"event-card__response\">\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/654632876/events/439674038/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/rooms/654632876/events/439674038/attendance\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601\" />\n          <label class=\"event-card__future\">\n            <input type=\"checkbox\" name=\"apply_to_future\" id=\"apply_to_future\" value=\"1\" />\n            Apply to all future occurrences\n          </label>\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>"
+    },
+    {
+      "event_id": 439674038,
+      "room_id": 654632876,
+      "message_id": "601",
+      "current_response": "going",
+      "going": 1,
+      "maybe": 0,
+      "respondable": true,
+      "cancelled": false,
+      "apply_to_future": true,
+      "alert": "Choose going, maybe, or declined.",
+      "html": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_601_event_439674038\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">Choose going, maybe, or declined.</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/654632876/events/439674038/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/rooms/654632876/events/439674038/attendance\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601\" />\n          <label class=\"event-card__future\">\n            <input type=\"checkbox\" name=\"apply_to_future\" id=\"apply_to_future\" value=\"1\" />\n            Apply to all future occurrences\n          </label>\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>"
+    },
+    {
+      "event_id": 439674038,
+      "room_id": 654632876,
+      "message_id": "601",
+      "current_response": "going",
+      "going": 1,
+      "maybe": 0,
+      "respondable": true,
+      "cancelled": false,
+      "apply_to_future": true,
+      "alert": "<invalid> & alert",
+      "html": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_601_event_439674038\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">&lt;invalid&gt; &amp; alert</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/654632876/events/439674038/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/rooms/654632876/events/439674038/attendance\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601\" />\n          <label class=\"event-card__future\">\n            <input type=\"checkbox\" name=\"apply_to_future\" id=\"apply_to_future\" value=\"1\" />\n            Apply to all future occurrences\n          </label>\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>"
+    },
+    {
+      "event_id": 439674039,
+      "room_id": 654632876,
+      "message_id": "601",
+      "current_response": "going",
+      "going": 1,
+      "maybe": 0,
+      "respondable": true,
+      "cancelled": false,
+      "apply_to_future": true,
+      "alert": null,
+      "html": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_601_event_439674039\">\n  <div class=\"event-card__response\">\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/654632876/events/439674039/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/rooms/654632876/events/439674039/attendance\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601\" />\n          <label class=\"event-card__future\">\n            <input type=\"checkbox\" name=\"apply_to_future\" id=\"apply_to_future\" value=\"1\" />\n            Apply to all future occurrences\n          </label>\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>"
+    },
+    {
+      "event_id": 439674039,
+      "room_id": 654632876,
+      "message_id": "601",
+      "current_response": "going",
+      "going": 1,
+      "maybe": 0,
+      "respondable": true,
+      "cancelled": false,
+      "apply_to_future": true,
+      "alert": "Choose going, maybe, or declined.",
+      "html": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_601_event_439674039\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">Choose going, maybe, or declined.</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/654632876/events/439674039/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/rooms/654632876/events/439674039/attendance\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601\" />\n          <label class=\"event-card__future\">\n            <input type=\"checkbox\" name=\"apply_to_future\" id=\"apply_to_future\" value=\"1\" />\n            Apply to all future occurrences\n          </label>\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>"
+    },
+    {
+      "event_id": 439674039,
+      "room_id": 654632876,
+      "message_id": "601",
+      "current_response": "going",
+      "going": 1,
+      "maybe": 0,
+      "respondable": true,
+      "cancelled": false,
+      "apply_to_future": true,
+      "alert": "<invalid> & alert",
+      "html": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_601_event_439674039\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">&lt;invalid&gt; &amp; alert</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/654632876/events/439674039/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/rooms/654632876/events/439674039/attendance\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601\" />\n          <label class=\"event-card__future\">\n            <input type=\"checkbox\" name=\"apply_to_future\" id=\"apply_to_future\" value=\"1\" />\n            Apply to all future occurrences\n          </label>\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>"
+    },
+    {
+      "event_id": 439674040,
+      "room_id": 654632876,
+      "message_id": "601",
+      "current_response": "going",
+      "going": 1,
+      "maybe": 0,
+      "respondable": true,
+      "cancelled": false,
+      "apply_to_future": false,
+      "alert": null,
+      "html": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_601_event_439674040\">\n  <div class=\"event-card__response\">\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/654632876/events/439674040/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/rooms/654632876/events/439674040/attendance\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>"
+    },
+    {
+      "event_id": 439674040,
+      "room_id": 654632876,
+      "message_id": "601",
+      "current_response": "going",
+      "going": 1,
+      "maybe": 0,
+      "respondable": true,
+      "cancelled": false,
+      "apply_to_future": false,
+      "alert": "Choose going, maybe, or declined.",
+      "html": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_601_event_439674040\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">Choose going, maybe, or declined.</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/654632876/events/439674040/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/rooms/654632876/events/439674040/attendance\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>"
+    },
+    {
+      "event_id": 439674040,
+      "room_id": 654632876,
+      "message_id": "601",
+      "current_response": "going",
+      "going": 1,
+      "maybe": 0,
+      "respondable": true,
+      "cancelled": false,
+      "apply_to_future": false,
+      "alert": "<invalid> & alert",
+      "html": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message_601_event_439674040\">\n  <div class=\"event-card__response\">\n      <p class=\"event-card__alert\" role=\"alert\">&lt;invalid&gt; &amp; alert</p>\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <form class=\"event-card__responses\" action=\"/rooms/654632876/events/439674040/attendance\" accept-charset=\"UTF-8\" method=\"post\"><input type=\"hidden\" name=\"_method\" value=\"patch\" /><input type=\"hidden\" name=\"authenticity_token\" value=\"patch:/rooms/654632876/events/439674040/attendance\" />\n        <input type=\"hidden\" name=\"message_id\" id=\"message_id\" value=\"601\" />\n        <button name=\"response\" type=\"submit\" value=\"going\" class=\"btn\">Going</button>\n        <button name=\"response\" type=\"submit\" value=\"maybe\" class=\"btn\">Maybe</button>\n        <button name=\"response\" type=\"submit\" value=\"declined\" class=\"btn btn--plain\">Declined</button>\n</form>  </div>\n</turbo-frame>"
+    },
+    {
+      "event_id": 439674038,
+      "room_id": 654632876,
+      "message_id": null,
+      "current_response": "going",
+      "going": 1,
+      "maybe": 0,
+      "respondable": false,
+      "cancelled": true,
+      "apply_to_future": true,
+      "alert": null,
+      "html": "<turbo-frame class=\"event-card__attendance\" id=\"response_for_message__event_439674038\">\n  <div class=\"event-card__response\">\n    <p class=\"event-card__current\">\n      Currently: <strong>Going</strong>\n      <span class=\"event-card__counts\">(1 going, 0 maybes)</span>\n    </p>\n      <p class=\"event-card__closed\">Responses are closed because this event was cancelled.</p>\n  </div>\n</turbo-frame>"
+    }
+  ],
+  "meet_links": [
+    [
+      "https://meet.google.com/a",
+      "https://meet.google.com/a"
+    ],
+    [
+      "HTTPS://EXAMPLE.COM/a",
+      "https://EXAMPLE.COM/a"
+    ],
+    [
+      "https://h:443/a",
+      "https://h/a"
+    ],
+    [
+      "http://h/a",
+      null
+    ],
+    [
+      "javascript:alert(1)",
+      null
+    ],
+    [
+      "https:/relative",
+      null
+    ],
+    [
+      "https://h/ü",
+      null
+    ],
+    [
+      "https://h/%zz",
+      null
+    ],
+    [
+      "https://h/?%zz",
+      null
+    ],
+    [
+      "https://h/?%z",
+      "https://h/?%z"
+    ]
+  ],
+  "collections": [
+    {
+      "events": [],
+      "html": ""
+    },
+    {
+      "events": [
+        {
+          "id": 401,
+          "room_id": 654632876,
+          "title": "Planning session",
+          "organizer_name": "David",
+          "starts_at": "2026-10-05T09:00:00Z",
+          "ends_at": "2026-10-05T10:00:00Z",
+          "time_zone": "UTC",
+          "series": false,
+          "cancelled": false,
+          "venue_name": null,
+          "meet_link": null
+        },
+        {
+          "id": 402,
+          "room_id": 654632876,
+          "title": "Second",
+          "organizer_name": "David",
+          "starts_at": "2026-10-06T09:00:00Z",
+          "ends_at": null,
+          "time_zone": "UTC",
+          "series": false,
+          "cancelled": true,
+          "venue_name": null,
+          "meet_link": null
+        }
+      ],
+      "html": "  <div id=\"event_cards_message_ws14e-golden-message\" class=\"event-cards\">\n      <article class=\"event-card\" data-event-card=\"401\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/401\">Planning session</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-05T09:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 9:00 AM</time>\n      &ndash; <time datetime=\"2026-10-05T10:00:00Z\" data-local-time-target=\"datetime\">October 5, 2026 at 10:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_401\" src=\"/rooms/654632876/events/401/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n      <article class=\"event-card event-card--cancelled\" data-event-card=\"402\">\n  <header class=\"event-card__header\">\n    <span class=\"event-card__eyebrow\">Event</span>\n      <span class=\"event-card__state\">Cancelled</span>\n  </header>\n\n  <p class=\"event-card__title\"><a href=\"/rooms/654632876/events/402\">Second</a></p>\n\n  <p class=\"event-card__meta\">\n    <time datetime=\"2026-10-06T09:00:00Z\" data-local-time-target=\"datetime\">October 6, 2026 at 9:00 AM</time>\n  </p>\n\n\n\n  <p class=\"event-card__organizer\">Organized by David</p>\n\n  <turbo-frame loading=\"lazy\" class=\"event-card__attendance\" id=\"response_for_message_601_event_402\" src=\"/rooms/654632876/events/402/attendance?message_id=601\">\n    <p class=\"event-card__response-loading\">Loading response…</p>\n</turbo-frame></article>\n\n  </div>\n"
+    }
+  ]
+}

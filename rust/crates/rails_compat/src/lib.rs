@@ -29,6 +29,8 @@ mod marshal;
 mod metadata;
 mod ruby;
 mod uri;
+/// The Rails event helper's safe HTTPS rendering boundary.
+pub use uri::safe_https;
 
 pub use key_generator::KeyGenerator;
 pub use message_verifier::MessageVerifier;
