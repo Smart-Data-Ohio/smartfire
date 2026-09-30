@@ -15,12 +15,13 @@
 
 mod jobs;
 pub mod net;
+pub mod image_proxy;
 pub mod opengraph;
 pub mod search;
 pub mod web_push;
 pub mod webhook;
 
 #[cfg(test)]
-mod test_support;
+pub(crate) mod test_support;
 
 pub use jobs::{register_jobs, web_push_pool};

@@ -49,6 +49,7 @@ pub mod rooms;
 pub mod searches;
 pub mod sessions;
 pub mod unfurl_links;
+pub mod embeds;
 pub mod users;
 pub mod welcome;
 
@@ -219,6 +220,7 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "searches#index" => arc(searches::index),
         "searches#create" => arc(searches::create),
         "searches#clear" => arc(searches::clear),
+        "embeds/images#show" => arc(embeds::show),
         "unfurl_links#create" => arc(unfurl_links::create),
         "pwa#manifest" => arc(pwa::manifest),
         "pwa#service_worker" => arc(pwa::service_worker),
@@ -539,7 +541,7 @@ mod tests {
         "rooms/closeds#destroy", "rooms/closeds#create", "rooms/closeds#new", "rooms/closeds#edit",
         "rooms/closeds#show", "rooms/closeds#update", "rooms/directs#create", "rooms/directs#new",
         "rooms/directs#edit", "rooms/directs#show", "rooms/directs#destroy", "searches#index",
-        "searches#create", "searches#clear", "unfurl_links#create", "pwa#manifest", "pwa#service_worker",
+        "searches#create", "searches#clear", "unfurl_links#create", "embeds/images#show", "pwa#manifest", "pwa#service_worker",
         "rails/health#show", "turbo/native/navigation#recede", "turbo/native/navigation#resume",
         "turbo/native/navigation#refresh", "action_mailbox/ingresses/postmark/inbound_emails#create",
         "action_mailbox/ingresses/sendgrid/inbound_emails#create",

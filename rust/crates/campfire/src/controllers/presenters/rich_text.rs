@@ -40,6 +40,10 @@ impl DbResolver<'_> {
 }
 
 impl AttachableResolver for DbResolver<'_> {
+    fn embed_image_path(&self, url: &str) -> Result<String, campfire_richtext::Error> {
+        Ok(crate::integrations::image_proxy::signed_path(self.secrets, url))
+    }
+
     fn locate_signed(&self, sgid: &str) -> SignedLookup {
         let Some(gid) = global_id::locate_signed(self.secrets, sgid, ATTACHABLE_PURPOSE, self.now) else {
             return SignedLookup::Invalid;

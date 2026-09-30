@@ -56,8 +56,13 @@ end
 urls = ["https://images.example.com/photo.png", "http://example.com/a?b=1&c=2", "https://example.com/%20.png", "javascript:alert(1)", "//images.example.com/x.png"]
 signed = urls.map do |url|
   token = Embeds::ImageProxy.verifier.generate(url)
-  { "url" => url, "signed" => token, "verified_url" => Embeds::ImageProxy.verified_url(token) }
+  { "url" => url, "signed" => token, "path" => Embeds::ImageProxy.signed_path(url), "verified_url" => Embeds::ImageProxy.verified_url(token) }
 end
+attachment = %(<action-text-attachment content-type="application/vnd.actiontext.opengraph-embed" href="https://example.com/page" url="https://example.com/image.png" filename="Title" caption="Description"></action-text-attachment>)
+node = ActionText::Fragment.wrap(attachment).find_all(ActionText::Attachment.tag_name).first
+embed = ActionText::Attachment.from_node(node)
+embed_html = ApplicationController.renderer.render(partial: "action_text/attachables/opengraph_embed", locals: { opengraph_embed: embed })
+
 # The same response construction as ImagesController#show, with Rails' actual header writer.
 controller = Class.new(ActionController::Base) do
   def show
@@ -69,6 +74,6 @@ status, headers, body = controller.action(:show).call(Rack::MockRequest.env_for(
 File.write(output, JSON.pretty_generate({
   "reference" => "d7c7de92", "addresses" => addresses.map { |ip| { "address" => ip, "blocked" => RestrictedHTTP::PrivateNetworkGuard.private_ip?(ip) } },
   "hosts" => host_cases, "redirects" => redirects, "signed" => signed,
-  "image_response" => { "status" => status, "cache_control" => headers["cache-control"], "content_type" => headers["content-type"], "content_disposition" => headers["content-disposition"], "content_transfer_encoding" => headers["content-transfer-encoding"] }
+  "embed_html" => embed_html, "image_response" => { "status" => status, "cache_control" => headers["cache-control"], "content_type" => headers["content-type"], "content_disposition" => headers["content-disposition"], "content_transfer_encoding" => headers["content-transfer-encoding"] }
 }) + "\n")
 puts "WS15e Rails vectors: #{addresses.size} addresses, #{host_cases.size} hosts, #{redirects.size} redirects, #{signed.size} signatures"

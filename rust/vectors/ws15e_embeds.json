@@ -989,29 +989,35 @@
     {
       "url": "https://images.example.com/photo.png",
       "signed": "Imh0dHBzOi8vaW1hZ2VzLmV4YW1wbGUuY29tL3Bob3RvLnBuZyI=--a11208a6ecdd522a281ab76f9d7a7d8e7f5fbbd5",
+      "path": "/embeds/image/Imh0dHBzOi8vaW1hZ2VzLmV4YW1wbGUuY29tL3Bob3RvLnBuZyI=--a11208a6ecdd522a281ab76f9d7a7d8e7f5fbbd5",
       "verified_url": "https://images.example.com/photo.png"
     },
     {
       "url": "http://example.com/a?b=1&c=2",
       "signed": "Imh0dHA6Ly9leGFtcGxlLmNvbS9hP2I9MVx1MDAyNmM9MiI=--52bba9b8336f3a01faa8febc1f80f2bb24cbd7ab",
+      "path": "/embeds/image/Imh0dHA6Ly9leGFtcGxlLmNvbS9hP2I9MVx1MDAyNmM9MiI=--52bba9b8336f3a01faa8febc1f80f2bb24cbd7ab",
       "verified_url": "http://example.com/a?b=1&c=2"
     },
     {
       "url": "https://example.com/%20.png",
       "signed": "Imh0dHBzOi8vZXhhbXBsZS5jb20vJTIwLnBuZyI=--e7c065b542713fb88abb7ebf639c830262b2a92c",
+      "path": "/embeds/image/Imh0dHBzOi8vZXhhbXBsZS5jb20vJTIwLnBuZyI=--e7c065b542713fb88abb7ebf639c830262b2a92c",
       "verified_url": "https://example.com/%20.png"
     },
     {
       "url": "javascript:alert(1)",
       "signed": "ImphdmFzY3JpcHQ6YWxlcnQoMSki--abd7795f6878a8ca6fa8c2da7ec3e9ee008a5ceb",
+      "path": "/embeds/image/ImphdmFzY3JpcHQ6YWxlcnQoMSki--abd7795f6878a8ca6fa8c2da7ec3e9ee008a5ceb",
       "verified_url": null
     },
     {
       "url": "//images.example.com/x.png",
       "signed": "Ii8vaW1hZ2VzLmV4YW1wbGUuY29tL3gucG5nIg==--c4e478f8d5750c215f96cfe57cc49e74fcd37dcb",
+      "path": "/embeds/image/Ii8vaW1hZ2VzLmV4YW1wbGUuY29tL3gucG5nIg==--c4e478f8d5750c215f96cfe57cc49e74fcd37dcb",
       "verified_url": null
     }
   ],
+  "embed_html": "<figure class=\"attachment attachment--content attachment--og\">\n  <actiontext-opengraph-embed>\n    <div class=\"og-embed gap\">\n      <div class=\"og-embed__content\">\n        <div class=\"og-embed__title\">\n          <a rel=\"noreferrer\" target=\"_blank\" href=\"https://example.com/page\">Title</a>\n        </div>\n        <div class=\"og-embed__description\">Description</div>\n      </div>\n        <div class=\"og-embed__image\">\n          <img src=\"/embeds/image/Imh0dHBzOi8vZXhhbXBsZS5jb20vaW1hZ2UucG5nIg==--0c2ef8222aaba4b18cf7de4b96db60cbfd40ee7a\" class=\"image center\" alt=\"\">\n        </div>\n    </div>\n  </actiontext-opengraph-embed>\n</figure>\n",
   "image_response": {
     "status": 200,
     "cache_control": "max-age=3600, private",

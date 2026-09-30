@@ -14,6 +14,12 @@ mutations = [
     ("opengraph/fetch.rs", 'match deadline {', 'let deadline = deadline.map(|_| Duration::from_secs(60));\n    match deadline {', "ws15e_deadline_covers_body_reads"),
     ("opengraph/fetch.rs", 'let ip = guard::resolve(net.resolver.as_ref(), url.host.as_deref().unwrap_or("")).await?;', 'let ip = "93.184.216.34".parse().unwrap();', "ws15e_rejects_private_redirect_before_dialing"),
     ("net/guard.rs", 'match ip {\n        IpAddr::V4', 'return false;\n    #[allow(unreachable_code)]\n    match ip {\n        IpAddr::V4', "ws15e_matches_our_rails_guard_corpus"),
+    ("image_proxy.rs", '"image/jpeg", "image/png",', '"image/svg+xml", "image/jpeg", "image/png",', "ws15e_image_proxy_has_rails_status_body_and_header_matrix"),
+    ("image_proxy.rs", 'pub const MAX_BODY_SIZE: usize = 5 * 1024 * 1024;', 'pub const MAX_BODY_SIZE: usize = 7 * 1024 * 1024;', "ws15e_image_proxy_has_rails_status_body_and_header_matrix"),
+    ("image_proxy.rs", 'let ip = guard::resolve(net.resolver.as_ref(), url.host.as_deref().unwrap_or("")).await?;', 'let ip = "93.184.216.34".parse().unwrap();', "ws15e_image_proxy_denies_ssrf_and_dns_failures_before_fetching"),
+    ("../controllers/embeds.rs", 'before_actions(c, Before::default()).await?;', '', "ws15e_image_proxy_requires_sign_in_and_rejects_invalid_signatures"),
+    ("../controllers/embeds.rs", 'let Some(url) = image_proxy::verified_url(&c.app().secrets, signed, c.now()) else {', 'let Some(url) = Some("http://images.example.com/image.png".to_string()) else {', "ws15e_image_proxy_requires_sign_in_and_rejects_invalid_signatures"),
+    ("../controllers/presenters/rich_text.rs", 'Ok(crate::integrations::image_proxy::signed_path(self.secrets, url))', 'Err(campfire_richtext::Error::Raised("embed_image signer unavailable"))', "ws15e_rendered_embed_html_matches_rails_and_uses_the_proxy"),
     ("net/http.rs", 'if timer.as_mut().poll(cx).is_ready()', 'if false && timer.as_mut().poll(cx).is_ready()', "ws15e_write_timeout_bounds_a_stalled_transport"),
 ]
 for name, old, new, test in mutations:
