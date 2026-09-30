@@ -1,5 +1,7 @@
 //! Fizzy's domain layer. SQL and client policy never render HTML.
 pub mod accounts;
+pub mod agent_action;
+pub mod agent_job;
 pub mod cards;
 pub mod fetch;
 pub mod client;
