@@ -21,6 +21,7 @@ mod mail_merge_test;
 mod poll_test;
 mod push_test;
 mod notification_policy_test;
+mod named_policy_test;
 mod notification_push_test;
 mod status_settings_write_test;
 mod workspace_presence_lease_test;

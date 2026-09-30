@@ -4,366 +4,366 @@
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a room mention records and pushes for a mentions member",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a room mention still records with notifications off but sends no push",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "an invisible room membership gets nothing at all",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a room reply records and pushes for mentions and everything members",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a room reply stays silent with notifications off",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a plain room message pushes everything followers without an inbox item",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a plain room message does nothing for mentions members",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a room keyword match records without pushing for mentions and notifications-off members",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "an everything member's keyword match still pushes as a broadcast",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a room message without a membership records nothing, not even mentions or keywords",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "mention beats reply beats keyword for one room message",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a followed thread records activity and pushes",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "an unfollowed thread stays silent for plain messages",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a thread mention records and pushes for mentions and everything members",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a muted thread gets nothing, not even mentions or keywords",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a thread reply records and pushes for followers only",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a thread keyword match records for unfollowed members without pushing",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "room notifications off suppresses thread activity but not keywords",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a non-member of the thread gets nothing",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "bots and deactivated recipients record nothing",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a muted room mention records and pushes",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a muted room keyword match records without pushing",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a muted room reply stays silent",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "muted room thread activity stays silent for followers",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a muted board post stays silent for members outside the thread",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "DND silences a muted room mention push but keeps the inbox item",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "manual DND suppresses push and sound but still records the inbox item",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a starred sender still pushes through DND",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a preloaded DND exception decides without another lookup",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "quiet hours suppress push inside the window only",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "quiet hours follow the recipient's time zone",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a starred sender still pushes through quiet hours",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "reminders push unless DND is on, and carry no sender exception",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "huddle invitations push unless DND is on without a starred caller",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "huddle join notices push for live memberships and record no inbox item",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "huddle join notices stay silent when muted, off, hidden, or no membership",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "huddle join notices honor DND with a starred-caller exception",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "huddle join notices stay silent during meetings and out of office",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "quiet-during-meetings suppresses push and sound but still records the inbox item",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "quiet-during-meetings pushes outside busy intervals",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "quiet-during-meetings needs meeting status on",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a starred sender still pushes through quiet-during-meetings",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "reminders and huddles stay silent during meetings with no sender exception",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "out of office suppresses push and sound but still records the inbox item",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "out of office pushes when the member keeps notifications on",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a starred sender still pushes through out of office",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "reminders and huddles stay silent during out of office",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "calendar out of office quiets like a manual one",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "an expired out of office pushes again",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "a missing recipient pushes nothing",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "an unknown kind raises",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/policy_test.rb",
       "test": "dnd exceptions load for a batch in one query",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_policy_test (52 individual named tests; pinned original Ruby bodies ran 133 assertions and 82 constructor observations; actual SQLite query ceilings)"
     },
     {
       "file": "test/models/notifications/push_gating_test.rb",

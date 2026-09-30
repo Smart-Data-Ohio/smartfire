@@ -14,6 +14,24 @@ pub enum NotificationKind {
     HuddleJoin,
 }
 
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+#[error("Unknown notification kind: {0}")]
+pub struct UnknownNotificationKind(pub String);
+
+impl std::str::FromStr for NotificationKind {
+    type Err = UnknownNotificationKind;
+    fn from_str(kind: &str) -> std::result::Result<Self, Self::Err> {
+        match kind {
+            "room_message" => Ok(Self::RoomMessage),
+            "thread_message" => Ok(Self::ThreadMessage),
+            "reminder" => Ok(Self::Reminder),
+            "huddle" => Ok(Self::Huddle),
+            "huddle_join" => Ok(Self::HuddleJoin),
+            other => Err(UnknownNotificationKind(other.into())),
+        }
+    }
+}
+
 /// `Some(None)` represents an existing membership whose involvement is SQL NULL.
 pub struct NotificationPolicy<'a> {
     pub recipient: Option<&'a UserStatusSettings>,
