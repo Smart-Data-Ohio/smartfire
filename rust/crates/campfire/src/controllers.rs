@@ -664,3 +664,6 @@ mod tests {
 
 #[cfg(test)]
 mod agent_surface_tests;
+
+#[cfg(test)]
+mod bot_http_tests;

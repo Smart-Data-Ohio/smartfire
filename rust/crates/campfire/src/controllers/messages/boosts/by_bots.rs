@@ -1,11 +1,10 @@
 //! `Messages::Boosts::ByBotsController` (reference/app/controllers/messages/boosts/by_bots_controller.rb):
 //! bots boost with the raw request body as the content.
 
-use campfire_db::{Message, Room};
+use campfire_db::{Boost, Message, Room};
 use campfire_kit::{Ctx, Error, Result, StatusCode, format, halt};
-use campfire_views::messages::json;
 
-use super::{broadcast_create, create_boost, destroy_boost, set_boost};
+use super::{broadcast_create, destroy_boost, set_boost};
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::messages::by_bots::{deny_bot_reply_token, is_blank, raw_request_body};
@@ -26,13 +25,22 @@ pub async fn create(c: &mut Ctx) -> Result {
     if is_blank(&content) {
         return halt(concerns::head(StatusCode::UNPROCESSABLE_ENTITY));
     }
-    let boost = create_boost(c, &message, Some(content)).await?;
+    let (message_id,user_id)=(message.id,require_current_user(c)?.id);
+    let boost = match c.app().db.write(move|tx|Boost::create(tx,message_id,user_id,&content)).await {
+        Ok(boost)=>boost,
+        Err(campfire_db::Error::RecordInvalid(errors))=>return Ok(c.render(StatusCode::UNPROCESSABLE_ENTITY,&format::JSON,serde_json::json!({"errors":errors.full_messages()}).to_string())),
+        Err(error)=>return Err(db_error(error)),
+    };
     broadcast_create(c, &message, &boost).await?;
 
     // render :show, status: :created
     c.respond_to(&[&format::JSON])?;
     let base_url = c.url_for("");
-    let body = present(c, move |presenter| Ok(json::boosts_by_bots_show(&presenter.boost_json(&boost, &message, &base_url)?))).await?;
+    let body = present(c, move |presenter| {
+        let mut payload=serde_json::to_value(presenter.boost_json(&boost,&message,&base_url)?).map_err(|e|campfire_db::Error::Other(e.to_string()))?;
+        payload["booster"]=presenter.user_payload(boost.booster_id)?;
+        Ok(campfire_views::helpers::to_rails_json(&payload))
+    }).await?;
     Ok(c.render(StatusCode::CREATED, &format::JSON, body))
 }
 

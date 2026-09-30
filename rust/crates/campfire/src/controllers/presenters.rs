@@ -3,6 +3,7 @@
 //! partials) computed up front.
 
 pub mod accounts;
+mod agent_payload;
 pub mod attachments;
 pub mod page;
 pub mod pagination;
@@ -18,7 +19,7 @@ use std::sync::LazyLock;
 use campfire_db::{Boost, Connection, Membership, Message, RichText, Room, RoomType, User};
 use campfire_richtext::Presentation;
 use campfire_storage::{Storage, Variation};
-use campfire_views::messages::json::{BoostJson, BoostMessageJson, IdJson, MessageBodyJson, MessageJson, UserJson};
+use campfire_views::messages::json::{BoostJson, BoostMessageJson, UserJson};
 use campfire_views::messages::support::json_time;
 use campfire_views::messages::{
     AttachmentPreview, AttachmentView, BoostView, MessageContent, MessageItem, MessageView, RoomKind, SoundImage, SoundView, UserView,
@@ -126,6 +127,7 @@ pub struct Presenter<'a> {
     /// `Current.request_host`, which opengraph embeds are checked against.
     pub request_host: Option<String>,
     pub cache_base_url: Option<String>,
+    pub current_user_id: Option<i64>,
     users: RefCell<HashMap<i64, User>>,
     room_names: RefCell<HashMap<i64, (Room, String)>>,
 }
@@ -140,6 +142,7 @@ impl<'a> Presenter<'a> {
             now: app.clock.now(),
             request_host,
             cache_base_url: None,
+            current_user_id: None,
             users: RefCell::default(),
             room_names: RefCell::default(),
         }
@@ -426,27 +429,9 @@ impl<'a> Presenter<'a> {
             .map_err(|error| campfire_db::Error::Other(format!("editable_body raised: {error}")))
     }
 
-    /// `messages/_message.json.jbuilder` (`json.cache! message`).
-    pub fn message_json(&self, message: &Message, base_url: &str) -> Result<MessageJson> {
-        let key = || jbuilder_key("messages/_message", &cache_key_with_version("messages", message.id, message.updated_at.jiff()), base_url);
-        fragment_cache::try_fetch_value(key, || self.render_message_json(message, base_url))
-    }
-
-    /// WS8bm seam for MessagePayloadHelper's request-specific JSON. This must
-    /// never reuse the cached Jbuilder payload (reply/thread access is per user).
-    pub fn agent_message_payload(&self, _message: &Message) -> Result<serde_json::Value> {
-        Err(campfire_db::Error::Other("MessagePayloadHelper is not yet ported".into()))
-    }
-
-    fn render_message_json(&self, message: &Message, base_url: &str) -> Result<MessageJson> {
-        Ok(MessageJson {
-            id: message.id,
-            created_at: json_time(message.created_at.jiff()),
-            body: MessageBodyJson { plain_text: self.plain_text_body(message)?, html: self.body_html(message)? },
-            creator: cached_user_json(self.secrets, base_url, &self.user(message.creator_id)?),
-            room: IdJson { id: message.room_id },
-            url: format!("{base_url}{}", campfire_routes::room_message(message.room_id, message.id)),
-        })
+    /// Request-specific MessagePayloadHelper JSON; thread payloads remain a named WS8b/WS12 seam.
+    pub fn agent_message_payload(&self, message: &Message) -> Result<serde_json::Value> {
+        self.root_message_payload(message)
     }
 
     /// `messages/boosts/_boost.json.jbuilder` (`json.cache! boost`).
