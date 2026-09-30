@@ -716,12 +716,17 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     });
     let tasks: Vec<_> = periodic
         .tasks()
-        .filter(|t| !["clear plaintext bot tokens", "stranded agent webhooks"].contains(&t.name()))
+        .filter(|t| !["clear plaintext bot tokens", "stranded agent webhooks", "streaming messages"].contains(&t.name()))
         .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
         .collect();
     assert_eq!(serde_json::json!(tasks), golden["tasks"]);
     let recovery = periodic.tasks().find(|t| t.name() == "stranded agent webhooks").expect("WS11 Rails recovery task");
     assert_eq!(recovery.interval(), Duration::from_secs(30));
+    // WS11 tasks have their own fresh, pinned Rails roster, rather than the WS8 subset.
+    let ws11:serde_json::Value=serde_json::from_str(include_str!("../../../../vectors/agents_streaming_contract.json")).unwrap();
+    let mut tasks:Vec<_>=periodic.tasks().filter(|t|["clear plaintext bot tokens","stranded agent webhooks","streaming messages"].contains(&t.name())).map(|t|serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()})).collect();
+    tasks.sort_by_key(|t|t["name"].as_str().unwrap().to_owned());
+    assert_eq!(serde_json::json!(tasks),ws11["results"]["tasks"]);
 }
 
 #[tokio::test]

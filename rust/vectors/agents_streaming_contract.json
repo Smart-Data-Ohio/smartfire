@@ -100,6 +100,20 @@
       "posted": 1,
       "indexed": 1,
       "presence": null
-    }
+    },
+    "tasks": [
+      {
+        "name": "clear plaintext bot tokens",
+        "seconds": 86400
+      },
+      {
+        "name": "stranded agent webhooks",
+        "seconds": 30
+      },
+      {
+        "name": "streaming messages",
+        "seconds": 30
+      }
+    ]
   }
 }

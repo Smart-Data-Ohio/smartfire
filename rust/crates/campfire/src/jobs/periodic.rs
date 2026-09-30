@@ -118,9 +118,6 @@ impl Loops {
 pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
     let mut periodic = Periodic::new("Periodic");
     periodic.task(clear_plaintext_bot_tokens_task());
-    periodic.task(Task::new("streaming messages", Duration::from_secs(30), |app: App| async move {
-        streaming_messages(&app.db).await
-    }));
     periodic.task(Task::new("stranded agent webhooks", Duration::from_secs(30), |app: App| async move {
         stranded_agent_webhooks(&app.db).await
     }));
@@ -146,6 +143,9 @@ pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
     periodic.task(Task::new("retention prune", intervals.retention, |app: App| async move {
         app.db.write(|tx| { tx.emit_after_commit(campfire_db::Event::job(&campfire_db::models::retention::PruneJob{})); Ok(()) }).await?;
         Ok(())
+    }));
+    periodic.task(Task::new("streaming messages", Duration::from_secs(30), |app: App| async move {
+        streaming_messages(&app.db).await
     }));
     periodic
 }
