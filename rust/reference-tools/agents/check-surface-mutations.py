@@ -22,3 +22,18 @@ try:
 finally:
     path.write_text(original)
 print('WS11-api preflight mutation: four new groups rejected bypass; source restored')
+path = root / 'crates/campfire/src/controllers/agents/integrations.rs'
+original = path.read_text()
+needle = '    if op == "github_pull_request_action" {'
+assert needle in original
+try:
+    path.write_text(original.replace(needle, '    if agent_id == agent.id { return Ok(None); }\n' + needle, 1))
+    result = subprocess.run(['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j','4','-p','campfire','agent_surface_integrations_','--','--nocapture'], cwd=root, env=dict(os.environ,CI='1',TMPDIR=str(scratch)), capture_output=True,text=True)
+    output = result.stdout + result.stderr
+    (scratch / 'integrations.log').write_text(output)
+    summary = re.search(r'^test result: FAILED\..*$',output,re.M)
+    assert result.returncode != 0 and summary and 'assertion' in output and '2 failed' in summary.group(),output[-4000:]
+    print('WS11-api integration mutation: ' + summary.group())
+finally:
+    path.write_text(original)
+print('WS11-api integration mutation: both groups rejected bypass; source restored')

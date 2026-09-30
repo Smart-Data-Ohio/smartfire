@@ -8,6 +8,7 @@ use super::presenters::page::db_error;
 pub mod mcp;
 pub mod approvals;
 pub mod pending;
+pub mod integrations;
 
 pub async fn me(c: &mut Ctx) -> Result {
     concerns::before_actions(c, concerns::Before::default().allow_agent_access()).await?;

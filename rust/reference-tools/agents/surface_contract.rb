@@ -99,6 +99,51 @@ tool("update_board_post", { post_id: 0 }, {}, "work_post_missing")
 tool("update_work", { work_id: 0 }, {}, "work_missing")
 tool("set_result", { post_id: 900200001 }, { owned_work: true, grant: ["read_messages", "manage_threads"] }, "work_result_required")
 tool("handoff_work", { work_id: 0, receiver_agent_id: 1, summary: "handoff" }, {}, "work_handoff_missing")
+# Integration clients are not invoked by any of these local boundary failures.
+contract("fizzy_boards_grant", :get, "/agents/fizzy/boards", nil, { grant: "read_messages" })
+contract("fizzy_board_grant", :get, "/agents/fizzy/boards/abc", nil, { grant: "read_messages" })
+contract("fizzy_search_grant", :get, "/agents/fizzy/cards/search?q=hi", nil, { grant: "read_messages" })
+contract("fizzy_card_grant", :get, "/agents/fizzy/cards/acct/1", nil, { grant: "read_messages" })
+contract("fizzy_action_grant", :post, "/agents/fizzy/card_actions", { kind: "close", number: 1 }, { grant: "fizzy" })
+contract("fizzy_no_account", :get, "/agents/fizzy/boards", nil, { grant: "fizzy" })
+contract("fizzy_no_owner", :get, "/agents/fizzy/boards", nil, { grant: "fizzy", ownerless: true })
+contract("fizzy_bad_account", :get, "/agents/fizzy/boards?account_id=bad%2Fid", nil, { grant: "fizzy", fizzy_account: true })
+contract("fizzy_bad_board", :get, "/agents/fizzy/boards/bad%20id", nil, { grant: "fizzy", fizzy_account: true })
+contract("fizzy_bad_card_number", :get, "/agents/fizzy/cards/acct/abc", nil, { grant: "fizzy", fizzy_account: true })
+contract("fizzy_search_blank", :get, "/agents/fizzy/cards/search?q=%20", nil, { grant: "fizzy", fizzy_account: true })
+contract("fizzy_action_no_account", :post, "/agents/fizzy/card_actions", {}, { grant: "external_action" })
+contract("fizzy_boards_rate", :get, "/agents/fizzy/boards", nil, { grant: "read_messages", repeat: 120 })
+contract("fizzy_action_rate", :post, "/agents/fizzy/card_actions", {}, { grant: "fizzy", repeat: 60 })
+contract("github_nonmember", :post, "/rooms/201306877/agents/github/pull_request_actions", {})
+contract("github_missing_pr", :post, "/rooms/486777696/agents/github/pull_request_actions", { pull_request_id: 0 })
+contract("github_grant", :post, "/rooms/486777696/agents/github/pull_request_actions", { pull_request_id: 900400001 }, { github_pr: true, grant: "read_messages" })
+contract("github_no_account", :post, "/rooms/486777696/agents/github/pull_request_actions", { pull_request_id: 900400001 }, { github_pr: true, grant: "external_action" })
+%w[list_fizzy_boards get_fizzy_board search_fizzy_cards get_fizzy_card create_fizzy_card comment_on_fizzy_card move_fizzy_card close_fizzy_card reopen_fizzy_card].each do |name|
+  fields = { board_id: "abc", q: "hi", account_id: "acct", number: 1, title: "Title", body: "hi", column_id: "abc" }
+  tool(name, fields, { grant: "read_messages" }, "fizzy_#{name}_grant")
+  tool(name, fields, { grant: name.match?(/^(list|get|search)_/) ? "fizzy" : "external_action" }, "fizzy_#{name}_account")
+end
+tool("get_fizzy_card", { account_id: "acct", number: "abc" }, { grant: "fizzy", fizzy_account: true }, "fizzy_invalid_number")
+tool("get_fizzy_board", { board_id: "bad/id" }, { grant: "fizzy", fizzy_account: true }, "fizzy_invalid_board")
+tool("search_fizzy_cards", { q: " " }, { grant: "fizzy", fizzy_account: true }, "fizzy_empty_query")
+contract("fizzy_action_invalid_kind", :post, "/agents/fizzy/card_actions", { kind: "bad", account_id: "bad/id", board_id: "bad/id" }, { grant: "external_action", fizzy_account: true })
+contract("fizzy_action_create_fields", :post, "/agents/fizzy/card_actions", { kind: "create", title: " " }, { grant: "external_action", fizzy_account: true })
+contract("fizzy_action_comment_fields", :post, "/agents/fizzy/card_actions", { kind: "comment", number: "abc", body: " " }, { grant: "external_action", fizzy_account: true })
+contract("fizzy_action_move_fields", :post, "/agents/fizzy/card_actions", { kind: "move" }, { grant: "external_action", fizzy_account: true })
+contract("fizzy_action_lengths", :post, "/agents/fizzy/card_actions", { kind: "create", board_id: "abc", title: "x" * 501, description: "x" * 3501, body: "x" * 3501 }, { grant: "external_action", fizzy_account: true })
+contract("fizzy_action_budget", :post, "/agents/fizzy/card_actions", { kind: "close", number: 0 }, { grant: "external_action", fizzy_account: true, cap: 0 })
+contract("fizzy_action_replay", :post, "/agents/fizzy/card_actions", { kind: "bad", external_id: "surface-replay" }, { grant: "external_action", fizzy_account: true, cap: 0, approval: "pending" })
+contract("fizzy_unreadable_account", :get, "/agents/fizzy/boards", nil, { grant: "fizzy", fizzy_account: true, bad_fizzy_token: true })
+contract("github_owner_pat_ignored", :post, "/rooms/486777696/agents/github/pull_request_actions", { pull_request_id: 900400001, kind: "bad" }, { grant: "external_action", github_pr: true, github_account: "owner_pat" })
+contract("github_invalid_kind", :post, "/rooms/486777696/agents/github/pull_request_actions", { pull_request_id: 900400001, kind: "bad" }, { grant: "external_action", github_pr: true, github_account: "agent_pat" })
+contract("github_comment_body", :post, "/rooms/486777696/agents/github/pull_request_actions", { pull_request_id: 900400001, kind: "comment", body: " " }, { grant: "external_action", github_pr: true, github_account: "owner_app" })
+contract("github_reviewers", :post, "/rooms/486777696/agents/github/pull_request_actions", { pull_request_id: 900400001, kind: "request_review", reviewers: ["@bad--name"] }, { grant: "external_action", github_pr: true, github_account: "owner_app" })
+contract("github_body_length", :post, "/rooms/486777696/agents/github/pull_request_actions", { pull_request_id: 900400001, kind: "comment", body: "x" * 3501 }, { grant: "external_action", github_pr: true, github_account: "agent_pat" })
+contract("github_budget", :post, "/rooms/486777696/agents/github/pull_request_actions", { pull_request_id: 900400001, kind: "approve" }, { grant: "external_action", github_pr: true, github_account: "owner_app", cap: 0 })
+contract("github_replay", :post, "/rooms/486777696/agents/github/pull_request_actions", { pull_request_id: 900400001, kind: "bad", external_id: "surface-replay" }, { grant: "external_action", github_pr: true, github_account: "owner_app", cap: 0, approval: "pending" })
+contract("github_rate", :post, "/rooms/486777696/agents/github/pull_request_actions", { pull_request_id: 900400001, kind: "bad" }, { grant: "external_action", github_pr: true, github_account: "agent_pat", repeat: 60 })
+tool("move_fizzy_card", { number: "abc", column_id: "bad/id" }, { grant: "external_action", fizzy_account: true }, "fizzy_move_invalid")
+tool("close_fizzy_card", { number: 0 }, { grant: "external_action", fizzy_account: true, cap: 0 }, "fizzy_close_budget")
 travel_to Time.utc(2026, 3, 2, 16) do
   agent = Agent.find(773018776)
   result = CASES.map do |item|
@@ -106,7 +151,7 @@ travel_to Time.utc(2026, 3, 2, 16) do
     AgentApproval.connection.execute("DELETE FROM sqlite_sequence WHERE name='agent_approvals'")
     agent.agent_grants.delete_all
     agent.agent_credentials.delete_all
-    agent.update_columns(daily_external_action_cap: item[:setup][:cap], daily_message_cap: item[:setup][:message_cap], daily_board_post_cap: nil)
+    agent.update_columns(owner_id: item[:setup][:ownerless] ? nil : 127326141, daily_external_action_cap: item[:setup][:cap], daily_message_cap: item[:setup][:message_cap], daily_board_post_cap: nil)
     credential = agent.agent_credentials.create!(name: "Surface contract", created_by: User.find(127326141), token_digest: AgentCredential.digest(SECRET), token_last_four: AgentCredential.digest(SECRET).first(4))
     if item[:setup][:grant]
       Array(item[:setup][:grant]).each { |cap| AgentGrant.create!(agent: agent, capability: cap, granted_by: User.find(127326141)) }
@@ -121,6 +166,27 @@ travel_to Time.utc(2026, 3, 2, 16) do
       temporary_grant = AgentGrant.create!(agent: agent, capability: "post_messages", granted_by: User.find(127326141))
       ChannelThread.create!(id: 900200001, name: "Owned", room_id: 486777696, creator_id: 394959859, work_owner_id: 394959859, work_status: "in_progress")
       temporary_grant.destroy!
+    end
+    FizzyConnectedAccount.delete_all
+    GithubConnectedAccount.delete_all
+    if item[:setup][:fizzy_account]
+      FizzyConnectedAccount.create!(user_id: 127326141, fizzy_account_id: "acct", access_token: "ws11api-obviously-fake-fizzy")
+    end
+    if item[:setup][:bad_fizzy_token]
+      FizzyConnectedAccount.connection.execute("UPDATE fizzy_connected_accounts SET access_token='unreadable-fixture'")
+    end
+    if (account = item[:setup][:github_account])
+      GithubConnectedAccount.create!(user_id: account == "agent_pat" ? 394959859 : 127326141, github_login: "fixture", access_token: "ws11api-obviously-fake-github", token_source: account == "owner_app" ? "app" : "pat", token_expires_at: 1.hour.ago)
+    end
+    Github::PullRequestThread.where(github_pull_request_id: 900400001).delete_all
+    Github::PullRequest.where(id: 900400001).delete_all
+    ChannelThread.where(id: 900400002).delete_all
+    if item[:setup][:github_pr]
+      pr = Github::PullRequest.create!(id: 900400001, owner: "fixture", repo: "fixture", number: 1)
+      temporary_grant = AgentGrant.create!(agent: agent, capability: "post_messages", granted_by: User.find(127326141))
+      thread = ChannelThread.create!(id: 900400002, name: "PR", room_id: 486777696, creator_id: 394959859)
+      temporary_grant.destroy!
+      Github::PullRequestThread.create!(pull_request: pr, room_id: 486777696, channel_thread: thread)
     end
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
     session = ActionDispatch::Integration::Session.new(Rails.application)

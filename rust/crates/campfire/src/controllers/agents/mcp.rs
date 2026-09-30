@@ -433,12 +433,18 @@ async fn execute(
     use super::super::presenters::page::db_error;
     match name {
         "request_approval" => {
-            let identity=*c.current::<crate::concerns::CurrentAgent>().expect("authenticated agent");
-            Ok(super::approvals::create_operation(c,identity,args).await?)
+            let identity = *c
+                .current::<crate::concerns::CurrentAgent>()
+                .expect("authenticated agent");
+            Ok(super::approvals::create_operation(c, identity, args).await?)
         }
         "get_approval" => {
-            let id=ruby_i64(required(&args,"approval_id")?);
-            Ok(c.app().db.write(move |tx|campfire_db::models::agent_approvals::show(tx,agent_id,id)).await.map_err(db_error)?)
+            let id = ruby_i64(required(&args, "approval_id")?);
+            Ok(c.app()
+                .db
+                .write(move |tx| campfire_db::models::agent_approvals::show(tx, agent_id, id))
+                .await
+                .map_err(db_error)?)
         }
         "poll_events" => {
             let allowed = c
@@ -580,99 +586,170 @@ async fn execute(
             })
             .await
             .map_err(db_error)?),
-        "list_rooms" => {
-            Ok(super::pending::operation(c,agent_id,"list_rooms",args).await?)
-        }
-        "read_messages" => {
-            Ok(super::pending::operation(c,agent_id,"read_messages",args).await?)
-        }
-        "get_context" => {
-            Ok(super::pending::operation(c,agent_id,"get_context",args).await?)
-        }
+        "list_rooms" => Ok(super::pending::operation(c, agent_id, "list_rooms", args).await?),
+        "read_messages" => Ok(super::pending::operation(c, agent_id, "read_messages", args).await?),
+        "get_context" => Ok(super::pending::operation(c, agent_id, "get_context", args).await?),
         "open_dm" => {
-            required(&args,"user_id")?;
-            if args.get("body").is_none_or(blank)&&args.get("markdown_source").is_none_or(blank){return Err(ToolError::Invalid("body or markdown_source is required".into()));}
-            Ok(super::pending::operation(c,agent_id,"open_dm",args).await?)
+            required(&args, "user_id")?;
+            if args.get("body").is_none_or(blank) && args.get("markdown_source").is_none_or(blank) {
+                return Err(ToolError::Invalid(
+                    "body or markdown_source is required".into(),
+                ));
+            }
+            Ok(super::pending::operation(c, agent_id, "open_dm", args).await?)
         }
         "list_board_posts" => {
-            required(&args,"room_id")?;
-            Ok(super::pending::operation(c,agent_id,"list_board_posts",args).await?)
+            required(&args, "room_id")?;
+            Ok(super::pending::operation(c, agent_id, "list_board_posts", args).await?)
         }
         "create_board_post" => {
-            required(&args,"room_id")?;
-            Ok(super::pending::operation(c,agent_id,"create_board_post",args).await?)
+            required(&args, "room_id")?;
+            Ok(super::pending::operation(c, agent_id, "create_board_post", args).await?)
         }
         "update_board_post" => {
-            required(&args,"post_id")?;
-            let mut args=args; args["work_id"]=args["post_id"].clone();
-            Ok(super::pending::operation(c,agent_id,"update_board_post",args).await?)
+            required(&args, "post_id")?;
+            let mut args = args;
+            args["work_id"] = args["post_id"].clone();
+            Ok(super::pending::operation(c, agent_id, "update_board_post", args).await?)
         }
         "set_result" => {
-            required(&args,"post_id")?;
-            let mut args=args; args["work_id"]=args["post_id"].clone();
-            Ok(super::pending::operation(c,agent_id,"set_result",args).await?)
+            required(&args, "post_id")?;
+            let mut args = args;
+            args["work_id"] = args["post_id"].clone();
+            Ok(super::pending::operation(c, agent_id, "set_result", args).await?)
         }
-        "list_work" => {
-            Ok(super::pending::operation(c,agent_id,"list_work",args).await?)
-        }
+        "list_work" => Ok(super::pending::operation(c, agent_id, "list_work", args).await?),
         "update_work" => {
-            required(&args,"work_id")?;
-            Ok(super::pending::operation(c,agent_id,"update_work",args).await?)
+            required(&args, "work_id")?;
+            Ok(super::pending::operation(c, agent_id, "update_work", args).await?)
         }
         "handoff_work" => {
-            required(&args,"work_id")?;
-            required(&args,"receiver_agent_id")?;
-            required(&args,"summary")?;
-            Ok(super::pending::operation(c,agent_id,"handoff_work",args).await?)
+            required(&args, "work_id")?;
+            required(&args, "receiver_agent_id")?;
+            required(&args, "summary")?;
+            Ok(super::pending::operation(c, agent_id, "handoff_work", args).await?)
         }
         "post_message" => {
-            required(&args,"room_id")?;
-            let room=ruby_i64(&args["room_id"]);
-            let denial=c.app().db.read(move |conn| {
-                let agent=campfire_db::Agent::find(conn,agent_id)?.ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
-                if campfire_db::Room::find_for_user(conn,agent.user_id,room)?.is_none(){return Ok(Some(ServiceResult::fail("Room not found",404)));}
-                Ok((!campfire_db::models::agent_access::capability_for_agent(conn,agent_id,"post_messages",Some(room))?).then(||ServiceResult::fail("Forbidden: agent lacks post_messages capability",403)))
-            }).await.map_err(db_error)?;
-            if let Some(denial)=denial{return Ok(denial);}
-            if args.get("body").is_none_or(blank)&&args.get("markdown_source").is_none_or(blank){return Err(ToolError::Invalid("body or markdown_source is required".into()));}
-            Ok(super::pending::operation(c,agent_id,"post_message",args).await?)
+            required(&args, "room_id")?;
+            let room = ruby_i64(&args["room_id"]);
+            let denial = c
+                .app()
+                .db
+                .read(move |conn| {
+                    let agent = campfire_db::Agent::find(conn, agent_id)?
+                        .ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
+                    if campfire_db::Room::find_for_user(conn, agent.user_id, room)?.is_none() {
+                        return Ok(Some(ServiceResult::fail("Room not found", 404)));
+                    }
+                    Ok((!campfire_db::models::agent_access::capability_for_agent(
+                        conn,
+                        agent_id,
+                        "post_messages",
+                        Some(room),
+                    )?)
+                    .then(|| {
+                        ServiceResult::fail("Forbidden: agent lacks post_messages capability", 403)
+                    }))
+                })
+                .await
+                .map_err(db_error)?;
+            if let Some(denial) = denial {
+                return Ok(denial);
+            }
+            if args.get("body").is_none_or(blank) && args.get("markdown_source").is_none_or(blank) {
+                return Err(ToolError::Invalid(
+                    "body or markdown_source is required".into(),
+                ));
+            }
+            Ok(super::pending::operation(c, agent_id, "post_message", args).await?)
         }
         "react" => {
-            required(&args,"message_id")?;
-            required(&args,"content")?;
-            Ok(super::pending::operation(c,agent_id,"react",args).await?)
+            required(&args, "message_id")?;
+            required(&args, "content")?;
+            Ok(super::pending::operation(c, agent_id, "react", args).await?)
         }
         "pin_message" => {
-            required(&args,"message_id")?;
-            Ok(super::pending::operation(c,agent_id,"pin_message",args).await?)
+            required(&args, "message_id")?;
+            Ok(super::pending::operation(c, agent_id, "pin_message", args).await?)
         }
         "unpin_message" => {
-            required(&args,"message_id")?;
-            Ok(super::pending::operation(c,agent_id,"unpin_message",args).await?)
+            required(&args, "message_id")?;
+            Ok(super::pending::operation(c, agent_id, "unpin_message", args).await?)
         }
         "create_poll" => {
-            required(&args,"room_id")?;
-            required(&args,"question")?;
-            required(&args,"options")?;
-            if !args["options"].is_array(){return Err(ToolError::Invalid("options must be an array".into()));}
-            Ok(super::pending::operation(c,agent_id,"create_poll",args).await?)
+            required(&args, "room_id")?;
+            required(&args, "question")?;
+            required(&args, "options")?;
+            if !args["options"].is_array() {
+                return Err(ToolError::Invalid("options must be an array".into()));
+            }
+            Ok(super::pending::operation(c, agent_id, "create_poll", args).await?)
         }
         "get_poll" => {
-            required(&args,"room_id")?;
-            required(&args,"poll_id")?;
-            Ok(super::pending::operation(c,agent_id,"get_poll",args).await?)
+            required(&args, "room_id")?;
+            required(&args, "poll_id")?;
+            Ok(super::pending::operation(c, agent_id, "get_poll", args).await?)
         }
         "start_stream" => {
-            required(&args,"room_id")?;
-            Ok(super::pending::operation(c,agent_id,"start_stream",args).await?)
+            required(&args, "room_id")?;
+            Ok(super::pending::operation(c, agent_id, "start_stream", args).await?)
         }
         "append_stream" => {
-            required(&args,"message_id")?;
-            Ok(super::pending::operation(c,agent_id,"append_stream",args).await?)
+            required(&args, "message_id")?;
+            Ok(super::pending::operation(c, agent_id, "append_stream", args).await?)
         }
         "finalize_stream" => {
-            required(&args,"message_id")?;
-            Ok(super::pending::operation(c,agent_id,"finalize_stream",args).await?)
+            required(&args, "message_id")?;
+            Ok(super::pending::operation(c, agent_id, "finalize_stream", args).await?)
+        }
+        "list_fizzy_boards" => {
+            Ok(super::integrations::operation(c, agent_id, "fizzy_boards", args).await?)
+        }
+        "get_fizzy_board" => {
+            required(&args, "board_id")?;
+            Ok(super::integrations::operation(c, agent_id, "fizzy_board", args).await?)
+        }
+        "search_fizzy_cards" => {
+            required(&args, "q")?;
+            Ok(super::integrations::operation(c, agent_id, "fizzy_search", args).await?)
+        }
+        "get_fizzy_card" => {
+            required(&args, "account_id")?;
+            required(&args, "number")?;
+            Ok(super::integrations::operation(c, agent_id, "fizzy_card", args).await?)
+        }
+        "create_fizzy_card" => {
+            required(&args, "board_id")?;
+            required(&args, "title")?;
+            let mut args = args;
+            args["kind"] = json!("create");
+            Ok(super::integrations::operation(c, agent_id, "fizzy_card_action", args).await?)
+        }
+        "comment_on_fizzy_card" => {
+            required(&args, "number")?;
+            required(&args, "body")?;
+            let mut args = args;
+            args["kind"] = json!("comment");
+            Ok(super::integrations::operation(c, agent_id, "fizzy_card_action", args).await?)
+        }
+        "move_fizzy_card" => {
+            required(&args, "number")?;
+            required(&args, "column_id")?;
+            let mut args = args;
+            args["kind"] = json!("move");
+            Ok(super::integrations::operation(c, agent_id, "fizzy_card_action", args).await?)
+        }
+        "close_fizzy_card" => {
+            required(&args, "number")?;
+            let mut args = args;
+            args["kind"] = json!("close");
+            Ok(super::integrations::operation(c, agent_id, "fizzy_card_action", args).await?)
+        }
+        "reopen_fizzy_card" => {
+            required(&args, "number")?;
+            let mut args = args;
+            args["kind"] = json!("reopen");
+            Ok(super::integrations::operation(c, agent_id, "fizzy_card_action", args).await?)
         }
         _ => Err(ToolError::Internal(campfire_kit::Error::internal(
             anyhow::anyhow!("agent tool service not yet ported: {name}"),

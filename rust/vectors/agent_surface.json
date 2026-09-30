@@ -1867,6 +1867,1392 @@
         "cache-control": "no-store",
         "pragma": "no-cache"
       }
+    },
+    {
+      "name": "fizzy_boards_grant",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {
+        "grant": "read_messages"
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: agent lacks fizzy capability"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_board_grant",
+      "method": "get",
+      "path": "/agents/fizzy/boards/abc",
+      "body": null,
+      "setup": {
+        "grant": "read_messages"
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: agent lacks fizzy capability"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_search_grant",
+      "method": "get",
+      "path": "/agents/fizzy/cards/search?q=hi",
+      "body": null,
+      "setup": {
+        "grant": "read_messages"
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: agent lacks fizzy capability"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_card_grant",
+      "method": "get",
+      "path": "/agents/fizzy/cards/acct/1",
+      "body": null,
+      "setup": {
+        "grant": "read_messages"
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: agent lacks fizzy capability"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_action_grant",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"close\",\"number\":1}",
+      "setup": {
+        "grant": "fizzy"
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: agent lacks external_action capability"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_no_account",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {
+        "grant": "fizzy"
+      },
+      "status": 422,
+      "response": {
+        "error": "Agent owner has no usable Fizzy account"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_no_owner",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {
+        "grant": "fizzy",
+        "ownerless": true
+      },
+      "status": 422,
+      "response": {
+        "error": "Agent has no owner recorded"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_bad_account",
+      "method": "get",
+      "path": "/agents/fizzy/boards?account_id=bad%2Fid",
+      "body": null,
+      "setup": {
+        "grant": "fizzy",
+        "fizzy_account": true
+      },
+      "status": 404,
+      "response": {
+        "error": "Not found in Fizzy"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_bad_board",
+      "method": "get",
+      "path": "/agents/fizzy/boards/bad%20id",
+      "body": null,
+      "setup": {
+        "grant": "fizzy",
+        "fizzy_account": true
+      },
+      "status": 404,
+      "response": {
+        "error": "Not found in Fizzy"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_bad_card_number",
+      "method": "get",
+      "path": "/agents/fizzy/cards/acct/abc",
+      "body": null,
+      "setup": {
+        "grant": "fizzy",
+        "fizzy_account": true
+      },
+      "status": 404,
+      "response": {
+        "error": "Invalid card number"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_search_blank",
+      "method": "get",
+      "path": "/agents/fizzy/cards/search?q=%20",
+      "body": null,
+      "setup": {
+        "grant": "fizzy",
+        "fizzy_account": true
+      },
+      "status": 422,
+      "response": {
+        "error": "Missing query"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_action_no_account",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{}",
+      "setup": {
+        "grant": "external_action"
+      },
+      "status": 422,
+      "response": {
+        "error": "Agent owner has no usable Fizzy account"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_boards_rate",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {
+        "grant": "read_messages",
+        "repeat": 120
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "fizzy_action_rate",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{}",
+      "setup": {
+        "grant": "fizzy",
+        "repeat": 60
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "github_nonmember",
+      "method": "post",
+      "path": "/rooms/201306877/agents/github/pull_request_actions",
+      "body": "{}",
+      "setup": {},
+      "status": 404,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "github_missing_pr",
+      "method": "post",
+      "path": "/rooms/486777696/agents/github/pull_request_actions",
+      "body": "{\"pull_request_id\":0}",
+      "setup": {},
+      "status": 404,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "github_grant",
+      "method": "post",
+      "path": "/rooms/486777696/agents/github/pull_request_actions",
+      "body": "{\"pull_request_id\":900400001}",
+      "setup": {
+        "github_pr": true,
+        "grant": "read_messages"
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: agent lacks external_action capability"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "github_no_account",
+      "method": "post",
+      "path": "/rooms/486777696/agents/github/pull_request_actions",
+      "body": "{\"pull_request_id\":900400001}",
+      "setup": {
+        "github_pr": true,
+        "grant": "external_action"
+      },
+      "status": 422,
+      "response": {
+        "error": "Agent has no usable GitHub account"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_list_fizzy_boards_grant",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"list_fizzy_boards\",\"arguments\":{\"board_id\":\"abc\",\"q\":\"hi\",\"account_id\":\"acct\",\"number\":1,\"title\":\"Title\",\"body\":\"hi\",\"column_id\":\"abc\"}}}",
+      "setup": {
+        "grant": "read_messages"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Forbidden: agent lacks fizzy capability"
+            }
+          ],
+          "structuredContent": {
+            "error": "Forbidden: agent lacks fizzy capability",
+            "status": "forbidden"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_list_fizzy_boards_account",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"list_fizzy_boards\",\"arguments\":{\"board_id\":\"abc\",\"q\":\"hi\",\"account_id\":\"acct\",\"number\":1,\"title\":\"Title\",\"body\":\"hi\",\"column_id\":\"abc\"}}}",
+      "setup": {
+        "grant": "fizzy"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Agent owner has no usable Fizzy account"
+            }
+          ],
+          "structuredContent": {
+            "error": "Agent owner has no usable Fizzy account",
+            "status": "unprocessable_entity"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_get_fizzy_board_grant",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"get_fizzy_board\",\"arguments\":{\"board_id\":\"abc\",\"q\":\"hi\",\"account_id\":\"acct\",\"number\":1,\"title\":\"Title\",\"body\":\"hi\",\"column_id\":\"abc\"}}}",
+      "setup": {
+        "grant": "read_messages"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Forbidden: agent lacks fizzy capability"
+            }
+          ],
+          "structuredContent": {
+            "error": "Forbidden: agent lacks fizzy capability",
+            "status": "forbidden"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_get_fizzy_board_account",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"get_fizzy_board\",\"arguments\":{\"board_id\":\"abc\",\"q\":\"hi\",\"account_id\":\"acct\",\"number\":1,\"title\":\"Title\",\"body\":\"hi\",\"column_id\":\"abc\"}}}",
+      "setup": {
+        "grant": "fizzy"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Agent owner has no usable Fizzy account"
+            }
+          ],
+          "structuredContent": {
+            "error": "Agent owner has no usable Fizzy account",
+            "status": "unprocessable_entity"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_search_fizzy_cards_grant",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"search_fizzy_cards\",\"arguments\":{\"board_id\":\"abc\",\"q\":\"hi\",\"account_id\":\"acct\",\"number\":1,\"title\":\"Title\",\"body\":\"hi\",\"column_id\":\"abc\"}}}",
+      "setup": {
+        "grant": "read_messages"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Forbidden: agent lacks fizzy capability"
+            }
+          ],
+          "structuredContent": {
+            "error": "Forbidden: agent lacks fizzy capability",
+            "status": "forbidden"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_search_fizzy_cards_account",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"search_fizzy_cards\",\"arguments\":{\"board_id\":\"abc\",\"q\":\"hi\",\"account_id\":\"acct\",\"number\":1,\"title\":\"Title\",\"body\":\"hi\",\"column_id\":\"abc\"}}}",
+      "setup": {
+        "grant": "fizzy"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Agent owner has no usable Fizzy account"
+            }
+          ],
+          "structuredContent": {
+            "error": "Agent owner has no usable Fizzy account",
+            "status": "unprocessable_entity"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_get_fizzy_card_grant",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"get_fizzy_card\",\"arguments\":{\"board_id\":\"abc\",\"q\":\"hi\",\"account_id\":\"acct\",\"number\":1,\"title\":\"Title\",\"body\":\"hi\",\"column_id\":\"abc\"}}}",
+      "setup": {
+        "grant": "read_messages"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Forbidden: agent lacks fizzy capability"
+            }
+          ],
+          "structuredContent": {
+            "error": "Forbidden: agent lacks fizzy capability",
+            "status": "forbidden"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_get_fizzy_card_account",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"get_fizzy_card\",\"arguments\":{\"board_id\":\"abc\",\"q\":\"hi\",\"account_id\":\"acct\",\"number\":1,\"title\":\"Title\",\"body\":\"hi\",\"column_id\":\"abc\"}}}",
+      "setup": {
+        "grant": "fizzy"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Agent owner has no usable Fizzy account"
+            }
+          ],
+          "structuredContent": {
+            "error": "Agent owner has no usable Fizzy account",
+            "status": "unprocessable_entity"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_create_fizzy_card_grant",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"board_id\":\"abc\",\"q\":\"hi\",\"account_id\":\"acct\",\"number\":1,\"title\":\"Title\",\"body\":\"hi\",\"column_id\":\"abc\"}}}",
+      "setup": {
+        "grant": "read_messages"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Forbidden: agent lacks external_action capability"
+            }
+          ],
+          "structuredContent": {
+            "error": "Forbidden: agent lacks external_action capability",
+            "status": "forbidden"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_create_fizzy_card_account",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"board_id\":\"abc\",\"q\":\"hi\",\"account_id\":\"acct\",\"number\":1,\"title\":\"Title\",\"body\":\"hi\",\"column_id\":\"abc\"}}}",
+      "setup": {
+        "grant": "external_action"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Agent owner has no usable Fizzy account"
+            }
+          ],
+          "structuredContent": {
+            "error": "Agent owner has no usable Fizzy account",
+            "status": "unprocessable_entity"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_comment_on_fizzy_card_grant",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"comment_on_fizzy_card\",\"arguments\":{\"board_id\":\"abc\",\"q\":\"hi\",\"account_id\":\"acct\",\"number\":1,\"title\":\"Title\",\"body\":\"hi\",\"column_id\":\"abc\"}}}",
+      "setup": {
+        "grant": "read_messages"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Forbidden: agent lacks external_action capability"
+            }
+          ],
+          "structuredContent": {
+            "error": "Forbidden: agent lacks external_action capability",
+            "status": "forbidden"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_comment_on_fizzy_card_account",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"comment_on_fizzy_card\",\"arguments\":{\"board_id\":\"abc\",\"q\":\"hi\",\"account_id\":\"acct\",\"number\":1,\"title\":\"Title\",\"body\":\"hi\",\"column_id\":\"abc\"}}}",
+      "setup": {
+        "grant": "external_action"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Agent owner has no usable Fizzy account"
+            }
+          ],
+          "structuredContent": {
+            "error": "Agent owner has no usable Fizzy account",
+            "status": "unprocessable_entity"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_move_fizzy_card_grant",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"move_fizzy_card\",\"arguments\":{\"board_id\":\"abc\",\"q\":\"hi\",\"account_id\":\"acct\",\"number\":1,\"title\":\"Title\",\"body\":\"hi\",\"column_id\":\"abc\"}}}",
+      "setup": {
+        "grant": "read_messages"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Forbidden: agent lacks external_action capability"
+            }
+          ],
+          "structuredContent": {
+            "error": "Forbidden: agent lacks external_action capability",
+            "status": "forbidden"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_move_fizzy_card_account",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"move_fizzy_card\",\"arguments\":{\"board_id\":\"abc\",\"q\":\"hi\",\"account_id\":\"acct\",\"number\":1,\"title\":\"Title\",\"body\":\"hi\",\"column_id\":\"abc\"}}}",
+      "setup": {
+        "grant": "external_action"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Agent owner has no usable Fizzy account"
+            }
+          ],
+          "structuredContent": {
+            "error": "Agent owner has no usable Fizzy account",
+            "status": "unprocessable_entity"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_close_fizzy_card_grant",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"close_fizzy_card\",\"arguments\":{\"board_id\":\"abc\",\"q\":\"hi\",\"account_id\":\"acct\",\"number\":1,\"title\":\"Title\",\"body\":\"hi\",\"column_id\":\"abc\"}}}",
+      "setup": {
+        "grant": "read_messages"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Forbidden: agent lacks external_action capability"
+            }
+          ],
+          "structuredContent": {
+            "error": "Forbidden: agent lacks external_action capability",
+            "status": "forbidden"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_close_fizzy_card_account",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"close_fizzy_card\",\"arguments\":{\"board_id\":\"abc\",\"q\":\"hi\",\"account_id\":\"acct\",\"number\":1,\"title\":\"Title\",\"body\":\"hi\",\"column_id\":\"abc\"}}}",
+      "setup": {
+        "grant": "external_action"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Agent owner has no usable Fizzy account"
+            }
+          ],
+          "structuredContent": {
+            "error": "Agent owner has no usable Fizzy account",
+            "status": "unprocessable_entity"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_reopen_fizzy_card_grant",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"reopen_fizzy_card\",\"arguments\":{\"board_id\":\"abc\",\"q\":\"hi\",\"account_id\":\"acct\",\"number\":1,\"title\":\"Title\",\"body\":\"hi\",\"column_id\":\"abc\"}}}",
+      "setup": {
+        "grant": "read_messages"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Forbidden: agent lacks external_action capability"
+            }
+          ],
+          "structuredContent": {
+            "error": "Forbidden: agent lacks external_action capability",
+            "status": "forbidden"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_reopen_fizzy_card_account",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"reopen_fizzy_card\",\"arguments\":{\"board_id\":\"abc\",\"q\":\"hi\",\"account_id\":\"acct\",\"number\":1,\"title\":\"Title\",\"body\":\"hi\",\"column_id\":\"abc\"}}}",
+      "setup": {
+        "grant": "external_action"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Agent owner has no usable Fizzy account"
+            }
+          ],
+          "structuredContent": {
+            "error": "Agent owner has no usable Fizzy account",
+            "status": "unprocessable_entity"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_invalid_number",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"get_fizzy_card\",\"arguments\":{\"account_id\":\"acct\",\"number\":\"abc\"}}}",
+      "setup": {
+        "grant": "fizzy",
+        "fizzy_account": true
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Invalid card number"
+            }
+          ],
+          "structuredContent": {
+            "error": "Invalid card number",
+            "status": "not_found"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_invalid_board",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"get_fizzy_board\",\"arguments\":{\"board_id\":\"bad/id\"}}}",
+      "setup": {
+        "grant": "fizzy",
+        "fizzy_account": true
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Not found in Fizzy"
+            }
+          ],
+          "structuredContent": {
+            "error": "Not found in Fizzy",
+            "status": "not_found"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_empty_query",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"search_fizzy_cards\",\"arguments\":{\"q\":\" \"}}}",
+      "setup": {
+        "grant": "fizzy",
+        "fizzy_account": true
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "error": {
+          "code": -32602,
+          "message": "Missing required argument: q"
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_action_invalid_kind",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"bad\",\"account_id\":\"bad/id\",\"board_id\":\"bad/id\"}",
+      "setup": {
+        "grant": "external_action",
+        "fizzy_account": true
+      },
+      "status": 422,
+      "response": {
+        "errors": {
+          "kind": [
+            "must be one of: create, comment, move, close, reopen"
+          ],
+          "account_id": [
+            "is invalid"
+          ],
+          "board_id": [
+            "is invalid"
+          ]
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_action_create_fields",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"title\":\" \"}",
+      "setup": {
+        "grant": "external_action",
+        "fizzy_account": true
+      },
+      "status": 422,
+      "response": {
+        "errors": {
+          "board_id": [
+            "is required to create a card"
+          ],
+          "title": [
+            "is required to create a card"
+          ]
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_action_comment_fields",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"comment\",\"number\":\"abc\",\"body\":\" \"}",
+      "setup": {
+        "grant": "external_action",
+        "fizzy_account": true
+      },
+      "status": 422,
+      "response": {
+        "errors": {
+          "number": [
+            "is required"
+          ],
+          "body": [
+            "is required for a comment"
+          ]
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_action_move_fields",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"move\"}",
+      "setup": {
+        "grant": "external_action",
+        "fizzy_account": true
+      },
+      "status": 422,
+      "response": {
+        "errors": {
+          "number": [
+            "is required"
+          ],
+          "column_id": [
+            "is required to move a card"
+          ]
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_action_lengths",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"abc\",\"title\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"description\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\",\"body\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+      "setup": {
+        "grant": "external_action",
+        "fizzy_account": true
+      },
+      "status": 422,
+      "response": {
+        "errors": {
+          "title": [
+            "is too long (maximum is 500 characters)"
+          ],
+          "description": [
+            "is too long (maximum is 3500 characters)"
+          ],
+          "body": [
+            "is too long (maximum is 3500 characters)"
+          ]
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_action_budget",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"close\",\"number\":0}",
+      "setup": {
+        "grant": "external_action",
+        "fizzy_account": true,
+        "cap": 0
+      },
+      "status": 429,
+      "response": {
+        "error": "Daily external action budget exceeded (0/day)",
+        "cap": "external_actions",
+        "limit": 0,
+        "retry_after": 28799
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_action_replay",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"bad\",\"external_id\":\"surface-replay\"}",
+      "setup": {
+        "grant": "external_action",
+        "fizzy_account": true,
+        "cap": 0,
+        "approval": "pending"
+      },
+      "status": 200,
+      "response": {
+        "id": 900100001,
+        "status": "pending",
+        "expires_at": "2026-03-03T16:00:00.000Z"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "fizzy_unreadable_account",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {
+        "grant": "fizzy",
+        "fizzy_account": true,
+        "bad_fizzy_token": true
+      },
+      "status": 422,
+      "response": {
+        "error": "Agent owner has no usable Fizzy account"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "github_owner_pat_ignored",
+      "method": "post",
+      "path": "/rooms/486777696/agents/github/pull_request_actions",
+      "body": "{\"pull_request_id\":900400001,\"kind\":\"bad\"}",
+      "setup": {
+        "grant": "external_action",
+        "github_pr": true,
+        "github_account": "owner_pat"
+      },
+      "status": 422,
+      "response": {
+        "error": "Agent has no usable GitHub account"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "github_invalid_kind",
+      "method": "post",
+      "path": "/rooms/486777696/agents/github/pull_request_actions",
+      "body": "{\"pull_request_id\":900400001,\"kind\":\"bad\"}",
+      "setup": {
+        "grant": "external_action",
+        "github_pr": true,
+        "github_account": "agent_pat"
+      },
+      "status": 422,
+      "response": {
+        "errors": {
+          "kind": [
+            "must be one of: comment, approve, request_changes, request_review"
+          ]
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "github_comment_body",
+      "method": "post",
+      "path": "/rooms/486777696/agents/github/pull_request_actions",
+      "body": "{\"pull_request_id\":900400001,\"kind\":\"comment\",\"body\":\" \"}",
+      "setup": {
+        "grant": "external_action",
+        "github_pr": true,
+        "github_account": "owner_app"
+      },
+      "status": 422,
+      "response": {
+        "errors": {
+          "body": [
+            "is required for a comment"
+          ]
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "github_reviewers",
+      "method": "post",
+      "path": "/rooms/486777696/agents/github/pull_request_actions",
+      "body": "{\"pull_request_id\":900400001,\"kind\":\"request_review\",\"reviewers\":[\"@bad--name\"]}",
+      "setup": {
+        "grant": "external_action",
+        "github_pr": true,
+        "github_account": "owner_app"
+      },
+      "status": 422,
+      "response": {
+        "errors": {
+          "reviewers": [
+            "Enter GitHub usernames separated by commas."
+          ]
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "github_body_length",
+      "method": "post",
+      "path": "/rooms/486777696/agents/github/pull_request_actions",
+      "body": "{\"pull_request_id\":900400001,\"kind\":\"comment\",\"body\":\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"}",
+      "setup": {
+        "grant": "external_action",
+        "github_pr": true,
+        "github_account": "agent_pat"
+      },
+      "status": 422,
+      "response": {
+        "errors": {
+          "body": [
+            "is too long (maximum is 3500 characters)"
+          ]
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "github_budget",
+      "method": "post",
+      "path": "/rooms/486777696/agents/github/pull_request_actions",
+      "body": "{\"pull_request_id\":900400001,\"kind\":\"approve\"}",
+      "setup": {
+        "grant": "external_action",
+        "github_pr": true,
+        "github_account": "owner_app",
+        "cap": 0
+      },
+      "status": 429,
+      "response": {
+        "error": "Daily external action budget exceeded (0/day)",
+        "cap": "external_actions",
+        "limit": 0,
+        "retry_after": 28799
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "github_replay",
+      "method": "post",
+      "path": "/rooms/486777696/agents/github/pull_request_actions",
+      "body": "{\"pull_request_id\":900400001,\"kind\":\"bad\",\"external_id\":\"surface-replay\"}",
+      "setup": {
+        "grant": "external_action",
+        "github_pr": true,
+        "github_account": "owner_app",
+        "cap": 0,
+        "approval": "pending"
+      },
+      "status": 200,
+      "response": {
+        "id": 900100001,
+        "status": "pending",
+        "expires_at": "2026-03-03T16:00:00.000Z"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "github_rate",
+      "method": "post",
+      "path": "/rooms/486777696/agents/github/pull_request_actions",
+      "body": "{\"pull_request_id\":900400001,\"kind\":\"bad\"}",
+      "setup": {
+        "grant": "external_action",
+        "github_pr": true,
+        "github_account": "agent_pat",
+        "repeat": 60
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_fizzy_move_invalid",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"move_fizzy_card\",\"arguments\":{\"number\":\"abc\",\"column_id\":\"bad/id\"}}}",
+      "setup": {
+        "grant": "external_action",
+        "fizzy_account": true
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Column is invalid and Number is required"
+            }
+          ],
+          "structuredContent": {
+            "error": "Column is invalid and Number is required",
+            "status": "unprocessable_entity"
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "mcp_fizzy_close_budget",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"close_fizzy_card\",\"arguments\":{\"number\":0}}}",
+      "setup": {
+        "grant": "external_action",
+        "fizzy_account": true,
+        "cap": 0
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Daily external action budget exceeded (0/day)"
+            }
+          ],
+          "structuredContent": {
+            "error": "Daily external action budget exceeded (0/day)",
+            "status": "too_many_requests",
+            "cap": "external_actions",
+            "limit": 0,
+            "retry_after": 28799
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
     }
   ]
 }

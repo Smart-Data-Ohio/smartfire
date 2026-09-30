@@ -18,6 +18,8 @@ files = [
     "app/models/agent_step.rb", "app/models/agent_slash_command.rb",
     "app/helpers/message_payload_helper.rb",
 ]
+files += sorted(str(p.relative_to(root)) for p in (root / "app/controllers/agents").rglob("*.rb") if str(p.relative_to(root)) not in files)
+files += ["app/controllers/messages/by_bots_controller.rb", "app/controllers/messages/boosts/by_bots_controller.rb", "app/controllers/concerns/fizzy_agent_authentication.rb", "app/services/agents/fizzy_reads.rb", "app/services/agents/fizzy_card_actions.rb", "app/models/fizzy/agent_card_action.rb", "app/models/github/agent_pull_request_action.rb", "app/models/github/review_logins.rb", "app/models/github/agent_identity.rb", "app/models/github_connected_account.rb", "app/models/fizzy_connected_account.rb", "app/views/users/_user.json.jbuilder", "app/views/messages/_message.json.jbuilder"]
 lines = subprocess.check_output([
     "docker", "run", "--rm", "--name", "ws11api-source-check", "--entrypoint", "sha256sum",
     "ws11api-reference:d7c7de92", *["/rails/" + file for file in files],
