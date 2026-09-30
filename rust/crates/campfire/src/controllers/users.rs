@@ -154,3 +154,6 @@ mod profile_sections_tests;
 
 #[cfg(test)]
 mod status_popup_tests;
+
+#[cfg(test)]
+mod profile_security_tests;

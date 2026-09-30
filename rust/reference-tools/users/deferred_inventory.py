@@ -42,6 +42,11 @@ covered_before = {
 }
 covered = {file: set(names) for file, names in covered_before.items()}
 covered.update({
+    "controllers/users/profiles_two_factor_test.rb": {
+        "profile shows the 2FA section with devices and revoke buttons", "profile asks for re-authentication on every sensitive 2FA action",
+        "profile offers Google confirmation to linked members", "profile hides Google confirmation without a linked account",
+        "profile points unenrolled users at setup", "changing the password revokes all remembered devices", "updating the name keeps remembered devices",
+    },
     "system/people_group_dms_test.rb": {
         "the new-DM picker filters as you type with no suggestion bubble or submit button",
         "picker selections survive filtering and Message starts the DM",
