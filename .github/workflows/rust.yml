@@ -93,8 +93,7 @@ jobs:
       - name: Prove parity gates reject missing or corrupt inputs
         run: python3 -m unittest discover -s rust/parity -p test_ci_seed_docker.py
 
-      # The named worker branch can warm its own branch-scoped caches for the cold/warm
-      # acceptance runs. It cannot replace main's caches. No PR or other branch writes.
+      # Only pushes to main save these caches; PRs and other branches only restore.
       - name: Save reference image
         if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main') && steps.reference-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
