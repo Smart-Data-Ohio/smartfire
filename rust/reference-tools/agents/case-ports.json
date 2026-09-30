@@ -598,12 +598,95 @@
           "rust": "ws11_stream_case_sweep_suspended_agent_quiet"
         }
       ]
+    },
+    {
+      "rails_file": "test/models/agent_approval_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_approval_cases_test.rs",
+      "cases": [
+        {
+          "rails": "requires action, summary, and expires_at with valid formats",
+          "rust": "ws11_approval_case_requires_action_summary_defaults_expiry"
+        },
+        {
+          "rails": "rejects actions outside the allowed charset or length",
+          "rust": "ws11_approval_case_action_charset_and_length"
+        },
+        {
+          "rails": "rejects summaries over 500 characters",
+          "rust": "ws11_approval_case_summary_length"
+        },
+        {
+          "rails": "rejects payloads over 4 KB",
+          "rust": "ws11_approval_case_payload_four_kilobytes"
+        },
+        {
+          "rails": "defaults expires_at to 24 hours",
+          "rust": "ws11_approval_case_default_twenty_four_hours"
+        },
+        {
+          "rails": "rejects expiry windows outside 5 minutes to 7 days",
+          "rust": "ws11_approval_case_expiry_five_minutes_to_seven_days"
+        },
+        {
+          "rails": "enforces unique external_id per agent",
+          "rust": "ws11_approval_case_external_id_unique_per_agent"
+        },
+        {
+          "rails": "allows multiple rows without an external_id",
+          "rust": "ws11_approval_case_multiple_without_external_id"
+        },
+        {
+          "rails": "effective_status reads expired once the deadline passes",
+          "rust": "ws11_approval_case_effective_expired_without_persisting"
+        },
+        {
+          "rails": "expire_if_due! persists expired only for overdue pending rows",
+          "rust": "ws11_approval_case_expire_only_overdue_pending"
+        },
+        {
+          "rails": "decide! rejects expired and already-decided rows",
+          "rust": "ws11_approval_case_decide_rejects_expired_and_decided"
+        },
+        {
+          "rails": "cancel_by_agent! rejects decided and expired rows",
+          "rust": "ws11_approval_case_cancel_rejects_expired_and_decided"
+        },
+        {
+          "rails": "rejects decision notes over 200 characters",
+          "rust": "ws11_approval_case_decision_note_length"
+        },
+        {
+          "rails": "creates one inbox item per decider",
+          "rust": "ws11_approval_case_inbox_per_decider"
+        },
+        {
+          "rails": "deciders fall back to administrators when the agent has no owner",
+          "rust": "ws11_approval_case_ownerless_admin_deciders"
+        },
+        {
+          "rails": "decision webhook is enqueued after the transaction commits",
+          "rust": "ws11_approval_case_decision_enqueues_after_commit"
+        },
+        {
+          "rails": "decision webhook waits for a wrapping transaction",
+          "rust": "ws11_approval_case_decision_waits_for_outer_transaction"
+        },
+        {
+          "rails": "a second decision on an already decided request appends no second event",
+          "rust": "ws11_approval_case_second_stale_decision_no_event"
+        },
+        {
+          "rails": "cancelling and expiring mark decider inbox items handled",
+          "rust": "ws11_approval_case_cancel_and_expire_handle_inbox"
+        }
+      ]
     }
   ],
   "boundary_deferred": {
     "test/models/agent_credential_test.rb": "The unknown/blank secret case runs against the str domain input. Conversion of absent HTTP credentials (Rails nil.to_s) remains with WS11-api.",
     "test/models/agent_test.rb": "The badge/directory HTML and absence of secrets in rendered HTML remain WS11-ui cases (two unmapped names). The reset-lock comparison checks the actual serialized writer transaction instead of a Ruby method spy.",
     "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8.",
-    "test/models/message_streaming_test.rb": "18 domain and production-sweep cases compared; five actual rendered start/trailing, activity and link-reference cases await their peer adapters. Never-resume checks the same validation through persistence instead of Rails valid?."
+    "test/models/message_streaming_test.rb": "18 domain and production-sweep cases compared; five actual rendered start/trailing, activity and link-reference cases await their peer adapters. Never-resume checks the same validation through persistence instead of Rails valid?.",
+    "test/models/agent_approval_test.rb": "The preference-neighbour case also asserts an ordinary mention inbox item; its approval preference and decider half is already checked in the consolidated vectors, but the complete named case awaits WS12 activity installation."
   }
 }

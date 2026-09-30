@@ -5,7 +5,7 @@ import json,os,re,subprocess
 root=Path(__file__).resolve().parents[3]
 scratch=root/'.scratch';scratch.mkdir(exist_ok=True)
 env=dict(os.environ,PARITY_NAMESPACE='ws11',PARITY_OWNER='ws11',PARITY_IMAGE='triage-reference-d7c7de92')
-for name,vector in [('finalization_failure_contract','agents_finalization_failure_contract'),('private_guard_cases','agents_private_guard_cases')]:
+for name,vector in [('finalization_failure_contract','agents_finalization_failure_contract'),('private_guard_cases','agents_private_guard_cases'),('stream_resume_contract','agents_stream_resume_contract')]:
  path=scratch/(name+'-verified.json')
  with path.open('wb') as out,(scratch/(name+'-verified.log')).open('wb') as err:
   subprocess.run(['rust/parity/bin/reference','runner','--seed','default',f'rust/reference-tools/agents/{name}.rb'],cwd=root,env=env,stdout=out,stderr=err,check=True)
@@ -19,4 +19,4 @@ for (name,body),row in zip(blocks,inputs):
  if row['kind']=='private_ip':
   addresses=[a or b for a,b in re.findall(r'assert_private_ip "([^"]*)"|private_ip\?\("([^"]*)"\)',body)]
   assert row['addresses']==addresses,name
-print('WS11 callback Rails oracles: 2 byte-identical vectors; 28 guard case names and address inputs matched the pin')
+print('WS11 callback Rails oracles: 3 byte-identical vectors; 28 guard case names and address inputs matched the pin')

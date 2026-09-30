@@ -6,7 +6,8 @@
     "test/models/agent_credential_test.rb": "The unknown/blank secret case runs against the str domain input. Conversion of absent HTTP credentials (Rails nil.to_s) remains with WS11-api.",
     "test/models/agent_test.rb": "The badge/directory HTML and absence of secrets in rendered HTML remain WS11-ui cases (two unmapped names). The reset-lock comparison checks the actual serialized writer transaction instead of a Ruby method spy.",
     "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8.",
-    "test/models/message_streaming_test.rb": "18 domain and production-sweep cases compared; five actual rendered start/trailing, activity and link-reference cases await their peer adapters. Never-resume checks the same validation through persistence instead of Rails valid?."
+    "test/models/message_streaming_test.rb": "18 domain and production-sweep cases compared; five actual rendered start/trailing, activity and link-reference cases await their peer adapters. Never-resume checks the same validation through persistence instead of Rails valid?.",
+    "test/models/agent_approval_test.rb": "The preference-neighbour case also asserts an ordinary mention inbox item; its approval preference and decider half is already checked in the consolidated vectors, but the complete named case awaits WS12 activity installation."
   },
   "files": [
     {
@@ -149,26 +150,7 @@
       "rails_file": "test/models/agent_approval_test.rb",
       "owner": "WS11 domain; WS11-ui human approval controller/pages",
       "remaining_named_case_ports": [
-        "requires action, summary, and expires_at with valid formats",
-        "rejects actions outside the allowed charset or length",
-        "rejects summaries over 500 characters",
-        "rejects payloads over 4 KB",
-        "defaults expires_at to 24 hours",
-        "rejects expiry windows outside 5 minutes to 7 days",
-        "enforces unique external_id per agent",
-        "allows multiple rows without an external_id",
-        "effective_status reads expired once the deadline passes",
-        "expire_if_due! persists expired only for overdue pending rows",
-        "decide! rejects expired and already-decided rows",
-        "cancel_by_agent! rejects decided and expired rows",
-        "rejects decision notes over 200 characters",
-        "creates one inbox item per decider",
-        "a decider with approvals switched off gets no item but stays a decider",
-        "deciders fall back to administrators when the agent has no owner",
-        "decision webhook is enqueued after the transaction commits",
-        "decision webhook waits for a wrapping transaction",
-        "a second decision on an already decided request appends no second event",
-        "cancelling and expiring mark decider inbox items handled"
+        "a decider with approvals switched off gets no item but stays a decider"
       ]
     },
     {
