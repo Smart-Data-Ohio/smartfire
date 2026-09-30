@@ -48,6 +48,73 @@ class Users::StatusesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_session_url
   end
 
+  test "the status popup renders your current status inside the card frame" do
+    users(:david).update!(presence_setting: "dnd", custom_status_emoji: "🚂", custom_status_text: "On a train")
+
+    get edit_user_status_url, headers: { "Turbo-Frame" => "user_card" }
+
+    assert_response :success
+    assert_select "turbo-frame#user_card form[action='#{user_status_path}']" do
+      assert_select "select#status_popup_presence_setting option[selected][value='dnd']"
+      assert_select "input#status_popup_custom_status_emoji[value='🚂']"
+      assert_select "input#status_popup_custom_status_text[value='On a train']"
+      assert_select "select#status_popup_custom_status_expires_in"
+      assert_select "button", text: "Save"
+      assert_select "button[name='user[clear_custom_status]']", text: "Clear status"
+      assert_select "a[href='#{user_card_path(users(:david))}']", text: "Cancel"
+    end
+    assert_select "input[name='user[meeting_status_enabled]']", count: 0
+    assert_select "select[name='user[ooo_preset]']", count: 0
+  end
+
+  test "saving from the popup returns the card and broadcasts the new badge" do
+    streams = capture_turbo_stream_broadcasts([ users(:david), :status ]) do
+      patch user_status_url, headers: { "Turbo-Frame" => "user_card" }, params: {
+        user: { presence_setting: "dnd", custom_status_emoji: "🚂", custom_status_text: "On a train", custom_status_expires_in: "never" }
+      }
+    end
+
+    assert_redirected_to user_card_url(users(:david))
+    assert_response :see_other
+    assert_equal "dnd", users(:david).reload.presence_setting
+    assert_equal "🚂 On a train", users(:david).custom_status_display
+    assert_equal 1, streams.size
+    assert_includes streams.first.to_html, "🚂 On a train"
+  end
+
+  test "clearing from the popup leaves meeting and out-of-office settings alone" do
+    users(:david).update!(custom_status_emoji: "🚂", custom_status_text: "On a train",
+      meeting_status_enabled: true, ooo_until: 2.days.from_now, ooo_note: "Back soon")
+
+    patch user_status_url, headers: { "Turbo-Frame" => "user_card" },
+      params: { user: { presence_setting: "auto", custom_status_emoji: "🚂", custom_status_text: "On a train",
+        custom_status_expires_in: "never", clear_custom_status: "1" } }
+
+    assert_redirected_to user_card_url(users(:david))
+    user = users(:david).reload
+    assert_nil user.custom_status_display
+    assert user.meeting_status_enabled?
+    assert_equal "Back soon", user.ooo_note
+    assert user.ooo_until.future?
+  end
+
+  test "an invalid save from the popup re-renders the popup with its error" do
+    patch user_status_url, headers: { "Turbo-Frame" => "user_card" },
+      params: { user: { presence_setting: "away" } }
+
+    assert_response :unprocessable_entity
+    assert_select "turbo-frame#user_card form[action='#{user_status_path}']"
+    assert_select "p", text: /Presence/
+    assert_select "#user_ooo_preset", count: 0
+    assert_equal "auto", users(:david).reload.presence_setting
+  end
+
+  test "saving an unchanged status broadcasts nothing" do
+    assert_no_turbo_stream_broadcasts [ users(:david), :status ] do
+      patch user_status_url, params: { user: { presence_setting: "auto" } }
+    end
+  end
+
   test "opting into meeting status enqueues a first refresh" do
     assert_enqueued_with(job: Calendar::MeetingRefreshJob, args: [ users(:david).id ]) do
       patch user_status_url, params: { user: { meeting_status_enabled: "1" } }
