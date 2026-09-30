@@ -1,0 +1,54 @@
+{
+  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
+  "digest": "d07f963c2bb7a3cc74a910e51ca0075b194da412a93737881f105a55156a988f",
+  "claims": [
+    {
+      "input": "7",
+      "won": true,
+      "saved": 7
+    },
+    {
+      "input": "  +7abc",
+      "won": true,
+      "saved": 7
+    },
+    {
+      "input": "-7",
+      "won": false,
+      "saved": 0
+    },
+    {
+      "input": "bad",
+      "won": false,
+      "saved": 0
+    },
+    {
+      "input": "0",
+      "won": false,
+      "saved": 0
+    },
+    {
+      "input": "9223372036854775808",
+      "error": "ActiveModel::RangeError"
+    },
+    {
+      "input": "99999999999999999999999999999999999999",
+      "error": "ActiveModel::RangeError"
+    },
+    {
+      "input": "0x10",
+      "won": false,
+      "saved": 0
+    },
+    {
+      "input": "1_2",
+      "won": true,
+      "saved": 12
+    },
+    {
+      "input": " 7",
+      "won": false,
+      "saved": 0
+    }
+  ]
+}

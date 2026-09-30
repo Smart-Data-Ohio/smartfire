@@ -42,6 +42,7 @@ pub mod autocompletable;
 pub mod csp_reports;
 pub mod first_runs;
 pub mod google_sign_in;
+pub mod google_calendar;
 pub mod messages;
 pub mod presenters;
 pub mod pwa;

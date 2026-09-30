@@ -214,6 +214,8 @@ fn router(app: &App, kit: Kit) -> Router {
                 controllers::csp_reports::create,
             )),
         )
+        .route("/google/calendar/notifications", axum::routing::post(campfire_kit::unparsed_action(controllers::google_calendar::notifications)))
+        .route("/google/calendar/notifications.{format}", axum::routing::post(campfire_kit::unparsed_action(controllers::google_calendar::notifications)))
         .route("/", dispatch())
         .route("/{*path}", dispatch())
         .layer(axum::middleware::from_fn(public_files));
@@ -494,3 +496,5 @@ mod tests;
 #[cfg(test)]
 mod google_tests;
 
+#[cfg(test)]
+mod google_webhook_tests;
