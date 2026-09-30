@@ -11,6 +11,9 @@ files = [
     'app/controllers/accounts/bots/keys_controller.rb', 'app/controllers/messages/by_bots_controller.rb',
     'app/controllers/messages/boosts/by_bots_controller.rb', 'app/views/accounts/bots/keys/show.html.erb',
     'app/services/bots/clear_plaintext_tokens.rb',
+    'Gemfile.lock', 'app/models/webhook.rb', 'app/models/message/bot_webhook_fanout.rb',
+    'app/models/agent/delivery.rb', 'app/models/agent_event.rb', 'app/models/drive_attachment.rb',
+    'lib/restricted_http/private_network_guard.rb', 'app/jobs/bot/webhook_job.rb', 'app/jobs/application_job.rb',
 ]
 command = ['docker', 'run', '--rm', '--name', 'ws11-reference-source-check', '--entrypoint', 'sha256sum',
            'triage-reference-d7c7de92', *['/rails/' + file for file in files]]

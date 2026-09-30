@@ -485,24 +485,7 @@ fn post(tx: &mut Tx<'_>, c: &Context, text: &str, action: bool) -> Result<Messag
                 }));
             }
         }
-        let recipients = if room.direct() {
-            room.users(tx.conn())?
-        } else {
-            message.mentionees(tx.conn(), tx.rich_text())?
-        };
-        for bot in recipients {
-            if bot.id != message.creator_id
-                && bot.is_active()
-                && bot.is_bot()
-                && !tx.conn().query_row(
-                    "SELECT EXISTS(SELECT 1 FROM agents WHERE user_id=?)",
-                    [bot.id],
-                    |r| r.get::<_, bool>(0),
-                )?
-            {
-                bot.deliver_webhook_later(tx, message.id)?;
-            }
-        }
+        crate::models::bot_webhook_fanout::deliver(tx, &message)?;
     }
     Ok(message)
 }

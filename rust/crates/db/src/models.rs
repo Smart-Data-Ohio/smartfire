@@ -7,6 +7,7 @@ pub mod activity_item;
 pub mod active_storage;
 pub mod ban;
 pub mod boost;
+pub mod bot_webhook_fanout;
 pub mod channel_thread;
 pub mod direct_room;
 pub mod first_run;

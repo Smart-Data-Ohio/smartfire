@@ -411,3 +411,86 @@ async fn ws11_reply_token_unknown_message_is_forbidden() {
         assert_eq!(response.status.as_u16(),oracle["missing_reply_messages"][index]["status"].as_u64().unwrap() as u16,"{method}");
     }
 }
+
+#[tokio::test]
+async fn ws11_agent_backed_bots_never_receive_legacy_webhook_jobs() {
+    let app = TestApp::boot().await.expect("build the default parity seed");
+    app.db().write(|tx| {
+        tx.conn().execute("UPDATE rooms SET type='Rooms::Direct' WHERE id=?", [ALL_TALK])?;
+        let message = Message::create(tx, campfire_db::NewMessage { room_id: ALL_TALK, creator_id: DAVID, body: Some("DM".into()), ..Default::default() })?;
+        let room = campfire_db::Room::find(tx.conn(), ALL_TALK)?;
+        super::deliver_webhooks_to_bots(tx, &room, &message)
+    }).await.unwrap();
+    let count: i64 = app.db().read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Bot::WebhookJob' AND json_extract(arguments, '$.bot_id')=?", [BENDER], |row| row.get(0))?)).await.unwrap();
+    assert_eq!(count, 0, "agent-backed bot bypassed agent delivery");
+}
+
+#[tokio::test]
+async fn ws11_webhook_payloads_match_rails_bytes() {
+    let app = TestApp::boot().await.expect("build the default parity seed");
+    let vectors: serde_json::Value = serde_json::from_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../vectors/agents_webhook_contract.json"))).unwrap();
+    let rich_text = app.db().env().rich_text.clone();
+    let actual = app.db().read(move |conn| {
+        let webhook = campfire_db::Webhook::find_by_user(conn, BENDER)?.unwrap();
+        let message = Message::find(conn, 136976342)?;
+        let agent_id: i64 = conn.query_row("SELECT id FROM agents WHERE user_id=?", [BENDER], |row| row.get(0))?;
+        Ok((webhook.payload(conn, &*rich_text, &message, &campfire_routes::room(ALL_TALK), &campfire_routes::room_at_message(ALL_TALK, message.id))?,
+            webhook.payload_for_agent(conn, &*rich_text, &message, agent_id, 123, &serde_json::Value::Null)?))
+    }).await.unwrap();
+    assert_eq!(actual.0, vectors["payloads"]["agent_backed_legacy_delivery"]);
+    assert_eq!(actual.1, vectors["payloads"]["agent_delivery"]);
+    let secrets = app.booted.app.secrets.clone();
+    let now = vectors["now"].as_str().unwrap().parse().unwrap();
+    let rich_text = app.db().env().rich_text.clone();
+    let legacy = app.db().write(move |tx| {
+        tx.conn().execute("DELETE FROM agents WHERE user_id=?", [BENDER])?;
+        let webhook = campfire_db::Webhook::find_by_user(tx.conn(), BENDER)?.unwrap();
+        let message = Message::find(tx.conn(), 136976342)?;
+        let token = rails_compat::verifiers::bot_reply::token_for(&secrets, BENDER, ALL_TALK, now);
+        webhook.payload(tx.conn(), &*rich_text, &message, &campfire_routes::room_bot_messages(ALL_TALK, &token), &campfire_routes::room_at_message(ALL_TALK, message.id))
+    }).await.unwrap();
+    assert_eq!(legacy, vectors["payloads"]["legacy_delivery"]);
+    assert!(!legacy.contains(BENDER_KEY));
+}
+
+#[tokio::test]
+async fn ws11_webhook_secrets_reload_encrypt_and_rotate() {
+    let app = TestApp::boot().await.expect("build the default parity seed");
+    let vectors: serde_json::Value = serde_json::from_str(include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../vectors/agents_webhook_contract.json"))).unwrap();
+    let encryption = app.booted.app.ar_encryption.clone();
+    let raw = vectors["secret"]["ciphertext"].as_str().unwrap().to_owned();
+    let expected = vectors["secret"]["plaintext"].as_str().unwrap().to_owned();
+    assert_eq!(encryption.decrypt(&raw).unwrap(), expected);
+    app.db().write(move |tx| {
+        tx.conn().execute("UPDATE webhooks SET signing_secret=? WHERE user_id=?", rusqlite::params![raw, BENDER])?;
+        Ok(())
+    }).await.unwrap();
+    let (mut winner, mut stale) = app.db().read(|conn| {
+        let webhook = campfire_db::Webhook::find_by_user(conn, BENDER)?.unwrap();
+        Ok((webhook.clone(), webhook))
+    }).await.unwrap();
+    let encryption = app.booted.app.ar_encryption.clone();
+    let export = app.db().write(move |tx| {
+        assert_eq!(winner.signing_secret(&encryption)?.as_deref(), Some(expected.as_str()));
+        let secret = winner.reset_signing_secret(tx, &encryption)?;
+        assert_eq!(stale.ensure_signing_secret(tx, &encryption)?, secret);
+        let first_ciphertext = stale.encrypted_signing_secret.clone();
+        assert_eq!(stale.ensure_signing_secret(tx, &encryption)?, secret);
+        assert_eq!(stale.encrypted_signing_secret, first_ciphertext);
+        assert_eq!(secret.len(), 64);
+        assert!(secret.bytes().all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase()));
+        let ciphertext = stale.encrypted_signing_secret.unwrap();
+        assert!(!ciphertext.contains(&secret));
+        assert_eq!(encryption.decrypt_bytes(&ciphertext).unwrap().encoding, "US-ASCII");
+        assert!(rails_compat::ar_encryption::ArEncryption::from_key(&[7; 32]).decrypt(&ciphertext).is_err());
+        let agent_id: i64 = tx.conn().query_row("SELECT id FROM agents WHERE user_id=?", [BENDER], |row| row.get(0))?;
+        let agent_secret = campfire_db::models::agent_access::ensure_webhook_signing_secret(tx, &encryption, agent_id)?;
+        assert_eq!(campfire_db::models::agent_access::ensure_webhook_signing_secret(tx, &encryption, agent_id)?, agent_secret);
+        let agent_ciphertext: String = tx.conn().query_row("SELECT webhook_signing_secret FROM agents WHERE id=?", [agent_id], |row| row.get(0))?;
+        assert_eq!(encryption.decrypt_bytes(&agent_ciphertext).unwrap().encoding, "US-ASCII");
+        Ok(serde_json::json!({"webhook":{"plaintext":secret,"ciphertext":ciphertext},"agent":{"plaintext":agent_secret,"ciphertext":agent_ciphertext}}))
+    }).await.unwrap();
+    if let Ok(path) = std::env::var("WS11_SECRET_EXPORT") {
+        std::fs::write(path, serde_json::to_string_pretty(&export).unwrap()).unwrap();
+    }
+}

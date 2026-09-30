@@ -1,6 +1,7 @@
 //! Ports of `reference/test/models/**`, run against the reference fixtures.
 
 mod account_test;
+mod bot_webhook_fanout_test;
 mod audit_log_test;
 mod callbacks_test;
 mod channel_thread_test;

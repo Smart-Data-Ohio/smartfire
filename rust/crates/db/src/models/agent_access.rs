@@ -48,3 +48,15 @@ pub fn capability_for_user(conn: &Connection, user_id: i64, capability: &str, ro
     }
     Ok(Some(exists(conn,"SELECT 1 FROM agent_grants WHERE agent_id=? AND capability=? AND revoked_at IS NULL AND (room_id=? OR room_id IS NULL) LIMIT 1",params![agent_id,capability,room_id])?))
 }
+
+/// Agent#ensure_webhook_signing_secret!, shared by every agent payload type.
+pub fn ensure_webhook_signing_secret(tx: &Tx<'_>, encryption: &rails_compat::ar_encryption::ArEncryption, agent_id: i64) -> Result<String> {
+    let encrypted: Option<String> = tx.conn().query_row_cached("SELECT webhook_signing_secret FROM agents WHERE id = ?", [agent_id], |row| row.get(0))?;
+    if let Some(encrypted) = encrypted {
+        let secret = encryption.decrypt(&encrypted).map_err(|error| crate::Error::Other(error.to_string()))?;
+        if !campfire_richtext::ruby::is_blank(&secret) { return Ok(secret); }
+    }
+    let (secret, encrypted) = super::webhook::new_signing_secret(encryption);
+    tx.conn().execute_cached("UPDATE agents SET webhook_signing_secret = ?, updated_at = ? WHERE id = ?", params![encrypted, tx.now(), agent_id])?;
+    Ok(secret)
+}
