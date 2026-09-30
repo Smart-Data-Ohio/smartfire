@@ -11,7 +11,7 @@
 #
 # The build context is rust/; the reference Rails app (the repository root, or any checkout of it)
 # comes in as the named context `reference`, for the assets and public/ files the binary embeds and
-# the post-restore hook.
+# the assets. Runtime hooks live in this tree and honor the storage overrides.
 #
 # Media: variants and video posters must be byte-identical to the reference's, so libvips and
 # ffmpeg are built from the same Debian trixie source packages the reference image ships
@@ -68,7 +68,8 @@ RUN apt-get source -qq vips=${LIBVIPS_VERSION} && \
       -Djpeg=enabled -Dspng=enabled -Dpng=enabled -Dwebp=enabled -Dtiff=enabled -Dheif=enabled \
       -Dexif=enabled -Dlcms=enabled -Dcgif=enabled -Dimagequant=enabled -Dhighway=enabled \
       -Dzlib=enabled && \
-    meson install -C build --strip
+    meson compile -C build -j 4 && \
+    meson install -C build --no-rebuild --strip
 
 
 # ffmpeg and ffprobe (shared libavcodec/libavformat/...) from Debian's source with Debian's
@@ -90,7 +91,7 @@ RUN apt-get source -qq ffmpeg=${FFMPEG_VERSION} && \
       --disable-filters \
       --enable-filter=buffer,buffersink,abuffer,abuffersink,format,aformat,null,anull,scale,aresample \
       --enable-filter=select,loop,trim,transpose,hflip,vflip,rotate,crop && \
-    make -j"$(nproc)" && \
+    make -j4 && \
     make install && \
     strip --strip-unneeded /opt/ffmpeg/lib/*.so.* /opt/ffmpeg/bin/*
 
@@ -131,6 +132,9 @@ ENV LIBRARY_PATH=/opt/vips/lib
 # arm64 kernels come with 4 or 16 KB pages (the Raspberry Pi 5 uses 16 KB), and built for 16 KB it
 # runs on both.
 ARG TARGETARCH
+ARG CARGO_BUILD_JOBS=4
+ARG CARGO_PROFILE=release
+ARG CARGO_CACHE_SCOPE=campfire-rust
 
 WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
@@ -145,11 +149,12 @@ COPY --from=reference public /reference/public
 COPY --from=reference config/importmap.rb /reference/config/importmap.rb
 COPY --from=reference config/initializers/assets.rb /reference/config/initializers/assets.rb
 
-RUN --mount=type=cache,id=campfire-rust-cargo-registry,target=/usr/local/cargo/registry \
-    --mount=type=cache,id=campfire-rust-target,target=/src/target \
+RUN --mount=type=cache,id=${CARGO_CACHE_SCOPE}-cargo-registry,target=/usr/local/cargo/registry \
+    --mount=type=cache,id=${CARGO_CACHE_SCOPE}-target,target=/src/target \
     if [ "$TARGETARCH" = arm64 ]; then export JEMALLOC_SYS_WITH_LG_PAGE=14; fi && \
-    cargo build --release --locked -p campfire && \
-    install -D -m 755 target/release/campfire /out/campfire
+    cargo build --profile "$CARGO_PROFILE" --locked -j "$CARGO_BUILD_JOBS" -p campfire && \
+    profile_dir="$CARGO_PROFILE" && if [ "$profile_dir" = dev ]; then profile_dir=debug; fi && \
+    install -D -m 755 "target/$profile_dir/campfire" /out/campfire
 
 
 # The shared libraries and executables that go into the runtime, in one directory tree.
@@ -183,6 +188,7 @@ LABEL org.opencontainers.image.description="${OCI_DESCRIPTION}"
 ARG OCI_SOURCE
 LABEL org.opencontainers.image.source="${OCI_SOURCE}"
 LABEL org.opencontainers.image.licenses="MIT"
+LABEL net.smartdata.campfire.runtime="rust"
 
 # Run and own only the runtime files as a non-root user, as the reference does.
 RUN groupadd --system --gid 1000 rails && \
@@ -206,14 +212,10 @@ EOF
 RUN mkdir -p /rails/storage/db /rails/storage/files /rails/storage/backups && \
     chown -R 1000:1000 /rails
 
-# ONCE backup/restore hooks. pre-backup is script/admin/prepare-backup (`campfire backup`);
-# post-restore is the reference's own script.
-COPY --chmod=755 <<'EOF' /hooks/pre-backup
-#!/bin/bash
-cd /rails
-exec /usr/local/bin/campfire backup
-EOF
-COPY --from=reference --chmod=755 hooks/post-restore /hooks/post-restore
+# ONCE and the host release/nightly-backup scripts share the same admin shim.
+COPY --chmod=755 ops/prepare-backup /rails/script/admin/prepare-backup
+COPY --chmod=755 ops/pre-backup /hooks/pre-backup
+COPY --chmod=755 ops/post-restore /hooks/post-restore
 
 USER 1000:1000
 

@@ -6,6 +6,8 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
+campfire_richtext.workspace = true
+rails_compat.workspace = true
 rusqlite.workspace = true
 jiff.workspace = true
 serde.workspace = true
@@ -23,7 +25,8 @@ hex.workspace = true
 crc32fast.workspace = true
 tracing.workspace = true
 base64.workspace = true
-rails_compat.workspace = true
+regex.workspace = true
+caseless.workspace = true
 
 [features]
 # `campfire_db::fixtures`: the reference's test fixtures, loaded into a database for tests.

@@ -525,6 +525,13 @@ async fn bans_and_unbans() {
     admin.confirm_sudo().await;
     let jz = test.label("users.jz");
     let page = admin.get(&format!("/users/{jz}")).await;
+    // WS19's verified sessions use loopback addresses. This scenario bans a public client;
+    // Rails rejects private/internal IPs before applying the ban.
+    let user_id: i64 = jz.parse().unwrap();
+    test.booted.app.db.write(move |tx| {
+        tx.conn().execute("UPDATE sessions SET ip_address = ? WHERE user_id = ?", rusqlite::params!["198.51.100.160", user_id])?;
+        Ok(())
+    }).await.unwrap();
     let action = format!("/users/{jz}/ban");
     page.assert_form(&action);
     assert_redirect(&admin.form("post", &action, &[]).await, &format!("http://campfire.test/users/{jz}"));

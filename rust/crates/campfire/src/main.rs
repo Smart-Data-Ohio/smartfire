@@ -1,6 +1,7 @@
 //! The Campfire server: controllers, channels, jobs and integrations wired over the crates.
 
 mod active_storage;
+mod admin;
 mod app;
 mod channels;
 mod concerns;
@@ -10,6 +11,7 @@ mod integrations;
 mod jobs;
 mod mail;
 mod rich_text;
+mod messaging;
 mod security;
 
 /// jemalloc: the room page alone makes thousands of allocations per request, across as many
@@ -29,6 +31,9 @@ pub static JEMALLOC_CONF: Option<&'static std::ffi::c_char> =
 
 fn main() -> anyhow::Result<()> {
     disable_transparent_huge_pages();
+    if let Some(status) = admin::run(&std::env::args().skip(1).collect::<Vec<_>>()) {
+        std::process::exit(status);
+    }
     app::run()
 }
 
@@ -71,3 +76,6 @@ mod tests {
         assert_eq!(unsafe { std::ffi::CStr::from_ptr(thp) }, c"never");
     }
 }
+
+#[cfg(test)]
+mod slash_commands_tests;

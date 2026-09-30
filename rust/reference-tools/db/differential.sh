@@ -31,8 +31,9 @@ reference() {
     --user "$(id -u):$(id -g)" \
     --env-file "$ROOT/parity/.env.reference" \
     -e RAILS_ENV=test -e RAILS_LOG_LEVEL=warn -e SCHEMA_QUERY="$SCHEMA_QUERY" -e CAMPFIRE_FIXTURES_NOW \
+    -v "${CAMPFIRE_REFERENCE:-$ROOT/..}/test:/rails/test:ro" \
     -v "$ROOT/crates/db/ruby:/tools:ro" -v "$OUT:/out" \
-    "${REFERENCE_IMAGE:-campfire-reference:latest}" sh -ec "$1" 2> >(grep -v -e VIPS -e '^$' >&2)
+    "${PARITY_IMAGE:-${REFERENCE_IMAGE:-campfire-reference:latest}}" sh -ec "$1" 2> >(grep -v -e VIPS -e '^$' >&2)
 }
 
 echo "== reference: db:prepare, db:fixtures:load, scenario.rb, save_touches.rb"
@@ -58,6 +59,7 @@ for test in tests::fixtures_test::fixtures_match_ruby_row_for_row \
   cargo test --locked -j "${CARGO_BUILD_JOBS:-4}" -p campfire_db "$test" -- --exact --ignored || test_status=1
 done
 [ "$test_status" -eq 0 ] || exit "$test_status"
+
 
 echo "== message save touches"
 diff -u "$ROOT/crates/db/src/tests/message_save_touches.json" "$OUT/save_touches_ruby.json"

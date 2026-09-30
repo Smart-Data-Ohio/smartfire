@@ -6,12 +6,15 @@
 //! [`Tx`], which carries the clock, the [`EventSink`] for side effects that leave the
 //! database, and the after-commit queue.
 
+pub mod broadcasts;
 pub mod database;
 pub mod error;
 pub mod events;
 #[cfg(feature = "test-support")]
 pub mod fixtures;
 pub mod models;
+pub mod migrations;
+pub mod additive;
 pub mod rich_text;
 pub mod schema;
 pub mod time;
@@ -30,3 +33,5 @@ pub use time::{Clock, SystemClock, TestClock, Timestamp};
 
 #[cfg(test)]
 mod tests;
+
+pub mod slash_commands;

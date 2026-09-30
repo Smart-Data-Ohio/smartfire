@@ -45,6 +45,17 @@ pub struct PushPayload {
     pub path: String,
 }
 
+impl PushPayload {
+    /// A payload cut to fit a push message, as [`PushSubscription::payload_for`] cuts the room's.
+    pub fn fitted(title: String, body: String, path: String) -> Self {
+        Self {
+            title: truncate_json_string(title, MAX_PAYLOAD_TITLE_BYTES),
+            body: truncate_json_string(body, MAX_PAYLOAD_BODY_BYTES),
+            path,
+        }
+    }
+}
+
 impl PushSubscription {
     fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
         Ok(Self {
