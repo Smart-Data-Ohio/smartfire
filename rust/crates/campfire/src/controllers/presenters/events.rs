@@ -240,3 +240,70 @@ fn query_one<T, P: rusqlite::Params>(
 fn exists<P: rusqlite::Params>(conn: &Connection, sql: &str, args: P) -> Result<bool> {
     Ok(query_one(conn, sql, args, |_| Ok(()))?.is_some())
 }
+
+/// Preload the form's current-user venues, retaining a hidden stored venue.
+pub fn form(
+    conn: &Connection,
+    room: &Room,
+    user: &User,
+    a: &campfire_db::NewCalendarEvent,
+    persisted: Option<&CalendarEvent>,
+    errors: &campfire_db::Errors,
+    title_value: Option<String>,
+) -> Result<campfire_views::events::forms::FormView> {
+    use campfire_views::events::forms::{FormView, VenueOption};
+    let mut venues = query_all(
+        conn,
+        "SELECT r.id,r.name,r.type FROM rooms r JOIN memberships m ON m.room_id=r.id WHERE m.user_id=? AND r.deleted_at IS NULL AND r.type IN ('Rooms::Voice','Rooms::Stage') ORDER BY LOWER(r.name)",
+        [user.id],
+        |r| {
+            Ok(VenueOption {
+                id: r.get(0)?,
+                name: r.get(1)?,
+                stage: r.get::<_, String>(2)? == "Rooms::Stage",
+            })
+        },
+    )?;
+    if let Some(id) = a
+        .venue_room_id
+        .filter(|id| !venues.iter().any(|v| v.id == *id))
+        && let Some(r) = Room::find_by_id(conn, id)?
+    {
+        venues.push(VenueOption {
+            id,
+            name: r.name.unwrap_or_default(),
+            stage: r.room_type == campfire_db::RoomType::Stage,
+        });
+    }
+    if (a.starts_at.is_some() || a.ends_at.is_some())
+        && campfire_views::time::Zone::lookup(&a.time_zone).is_none()
+    {
+        return Err(campfire_db::Error::Other(
+            "Rails form cannot format an invalid event time zone".into(),
+        ));
+    }
+    let zone = campfire_views::time::Zone::for_user(Some(&a.time_zone));
+    Ok(FormView {
+        room_id: room.id,
+        room_name: room_name(conn, room, user)?,
+        id: persisted.map(|e| e.id),
+        title: a.title.clone(),
+        title_value,
+        description: a.description.clone(),
+        starts_at: a.starts_at.map(|t| zone.format(t.jiff(), "%Y-%m-%dT%H:%M")),
+        ends_at: a.ends_at.map(|t| zone.format(t.jiff(), "%Y-%m-%dT%H:%M")),
+        time_zone: a.time_zone.clone(),
+        venue_room_id: a.venue_room_id,
+        recurrence_rule: a.recurrence_rule.clone(),
+        recurrence_until: a.recurrence_until.map(|d| d.to_string()),
+        meet_link_requested: a.meet_link_requested,
+        meet_link: persisted
+            .and_then(|e| e.meet_link.as_deref())
+            .and_then(rails_compat::safe_https),
+        series: persisted.is_some_and(CalendarEvent::series),
+        head: persisted.is_some_and(CalendarEvent::series_head),
+        errors: errors.full_messages(),
+        error_fields: errors.0.iter().map(|(f, _)| f.to_string()).collect(),
+        venues,
+    })
+}

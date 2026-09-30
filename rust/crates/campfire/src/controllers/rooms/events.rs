@@ -1,4 +1,5 @@
-//! rooms/events/attendances_controller.rb. Event page actions are the next slice.
+//! rooms/events_controller.rb and rooms/events/attendances_controller.rb.
+mod input;
 use crate::app::AppCtx;
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
 use crate::controllers::presenters::page::{self, db_error};
@@ -202,3 +203,204 @@ async fn render_attendance(
 
 #[cfg(test)]
 mod tests;
+
+async fn render_form(
+    c: &mut Ctx,
+    room: campfire_db::Room,
+    a: campfire_db::NewCalendarEvent,
+    persisted: Option<CalendarEvent>,
+    errors: campfire_db::Errors,
+    title_value: Option<String>,
+) -> Result {
+    let user = require_current_user(c)?.clone();
+    let editing = persisted.is_some();
+    let status = if errors.is_empty() {
+        StatusCode::OK
+    } else {
+        StatusCode::UNPROCESSABLE_ENTITY
+    };
+    let view = c
+        .app()
+        .db
+        .read(move |conn| {
+            crate::controllers::presenters::events::form(
+                conn,
+                &room,
+                &user,
+                &a,
+                persisted.as_ref(),
+                &errors,
+                title_value,
+            )
+        })
+        .await
+        .map_err(db_error)?;
+    if editing {
+        page::framed_page!(c, status, |ctx| campfire_views::events::forms::Edit {
+            ctx,
+            view: &view
+        })
+        .await
+    } else {
+        page::framed_page!(c, status, |ctx| campfire_views::events::forms::New {
+            ctx,
+            view: &view
+        })
+        .await
+    }
+}
+fn ensure_manager(c: &Ctx, e: &CalendarEvent, cancel: bool) -> Result<()> {
+    let u = Some(require_current_user(c)?);
+    if if cancel {
+        e.cancellable_by(u)
+    } else {
+        e.manageable_by(u)
+    } {
+        Ok(())
+    } else {
+        halt(concerns::head(StatusCode::FORBIDDEN))
+    }
+}
+async fn event_room(c: &Ctx, e: &CalendarEvent) -> Result<campfire_db::Room> {
+    let id = e.room_id;
+    c.app()
+        .db
+        .read(move |conn| campfire_db::Room::find(conn, id))
+        .await
+        .map_err(db_error)
+}
+fn redirect_event(c: &mut Ctx, e: &CalendarEvent, notice: &str) -> Result {
+    let url = c.url_for(&format!("/rooms/{}/events/{}", e.room_id, e.id));
+    c.redirect_to_with(
+        &url,
+        Redirect {
+            notice: Some(notice.into()),
+            ..Default::default()
+        },
+    )
+}
+pub async fn new(c: &mut Ctx) -> Result {
+    let room = scheduled_room(c).await?;
+    let user = require_current_user(c)?.clone();
+    let viewer_zone = viewer_zone(c, user.id).await?;
+    let a = input::prefill(
+        &c.params,
+        &viewer_zone,
+        c.app().db.env().now(),
+        room.id,
+        user.id,
+    )?;
+    let title = (!a.title.is_empty()).then(|| a.title.clone());
+    render_form(c, room, a, None, campfire_db::Errors::default(), title).await
+}
+pub async fn create(c: &mut Ctx) -> Result {
+    let room = scheduled_room(c).await?;
+    let user = require_current_user(c)?.clone();
+    let viewer_zone = viewer_zone(c, user.id).await?;
+    let changes = input::attributes(&c.params, None, &viewer_zone, c.app().db.env().now())?;
+    let title = changes.title.clone();
+    let a = input::new_attributes(changes, room.id, user.id);
+    match c
+        .app()
+        .db
+        .write({
+            let a = a.clone();
+            move |tx| {
+                // Rails save returns false for event validation, but exceptions from the
+                // subsequent after-commit writes escape to production's public 500 page.
+                let errors = CalendarEvent::validate(tx.conn(), &a)?;
+                if errors.is_empty() {
+                    CalendarEvent::create(tx, a).map(Ok)
+                } else {
+                    Ok(Err(errors))
+                }
+            }
+        })
+        .await
+    {
+        Ok(Ok(e)) => redirect_event(
+            c,
+            &e,
+            if e.recurrence_rule.is_some() {
+                "Repeating event scheduled."
+            } else {
+                "Event scheduled."
+            },
+        ),
+        Ok(Err(errors)) => render_form(c, room, a, None, errors, title).await,
+        Err(e) => Err(db_error(e)),
+    }
+}
+pub async fn edit(c: &mut Ctx) -> Result {
+    let e = set_event(c).await?;
+    ensure_manager(c, &e, false)?;
+    let room = event_room(c, &e).await?;
+    let a = input::attempted(&Default::default(), &e);
+    let title = Some(a.title.clone());
+    render_form(c, room, a, Some(e), campfire_db::Errors::default(), title).await
+}
+pub async fn update(c: &mut Ctx) -> Result {
+    let e = set_event(c).await?;
+    ensure_manager(c, &e, false)?;
+    let user = require_current_user(c)?.clone();
+    let viewer_zone = viewer_zone(c, user.id).await?;
+    let changes = input::attributes(&c.params, Some(&e), &viewer_zone, c.app().db.env().now())?;
+    let scope = c.param_str("update_scope").unwrap_or_default().to_string();
+    let actor = user.id;
+    let id = e.id;
+    match c
+        .app()
+        .db
+        .write({
+            let changes = changes.clone();
+            move |tx| CalendarEvent::update_with_scope(tx, id, changes, &scope, Some(actor))
+        })
+        .await
+    {
+        Ok(_) => redirect_event(c, &e, "Event updated."),
+        Err(DbError::RecordInvalid(errors)) => {
+            let room = event_room(c, &e).await?;
+            let a = input::attempted(&changes, &e);
+            let title = Some(a.title.clone());
+            render_form(c, room, a, Some(e), errors, title).await
+        }
+        Err(e) => Err(db_error(e)),
+    }
+}
+pub async fn cancel(c: &mut Ctx) -> Result {
+    let e = set_event(c).await?;
+    ensure_manager(c, &e, true)?;
+    let scope = c.param_str("cancel_scope").unwrap_or_default().to_string();
+    let actor = require_current_user(c)?.id;
+    let id = e.id;
+    let cancelled = c
+        .app()
+        .db
+        .write(move |tx| CalendarEvent::cancel_with_scope(tx, id, &scope, Some(actor)))
+        .await
+        .map_err(db_error)?;
+    redirect_event(
+        c,
+        &e,
+        if cancelled {
+            "Event cancelled."
+        } else {
+            "Event was already cancelled."
+        },
+    )
+}
+
+async fn viewer_zone(c: &Ctx, id: i64) -> Result<String> {
+    c.app()
+        .db
+        .read(move |conn| {
+            Ok(conn
+                .query_row("SELECT time_zone FROM users WHERE id=?", [id], |r| {
+                    r.get::<_, Option<String>>(0)
+                })?
+                .filter(|z| campfire_db::slash_commands::time_parser::known_calendar_zone(z))
+                .unwrap_or_else(|| "UTC".into()))
+        })
+        .await
+        .map_err(db_error)
+}

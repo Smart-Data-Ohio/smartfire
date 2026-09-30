@@ -221,3 +221,299 @@ async fn event_pages_scope_members_bots_and_the_series_index() {
     assert_eq!(indexed.status, StatusCode::OK);
     assert_eq!(indexed.text().matches("3 occurrences remaining").count(), 1);
 }
+
+#[tokio::test]
+async fn event_write_controller_security_and_validation() {
+    let Some(app) = TestApp::boot().await else {
+        return;
+    };
+    let head = event(&app).await;
+    let path = format!("/rooms/{ALL_TALK}/events/{}", head.id);
+    let mut outsider = app.sign_in(KEVIN).await;
+    assert_eq!(
+        outsider.get(&format!("{path}/edit")).await.status,
+        StatusCode::NOT_FOUND
+    );
+    app.db()
+        .write(|tx| {
+            tx.conn()
+                .execute("UPDATE users SET role=0 WHERE id=?", [JASON])?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut jason = app.sign_in(JASON).await;
+    assert_eq!(
+        jason.get(&format!("{path}/edit")).await.status,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        jason
+            .write(Req::new(Method::PATCH, &path).form(&[("event[title]", "Stolen")]))
+            .await
+            .status,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        jason
+            .write(Req::new(Method::PATCH, &format!("{path}/cancel")))
+            .await
+            .status,
+        StatusCode::FORBIDDEN
+    );
+    let mut david = app.david();
+    assert_eq!(
+        david.get(&format!("{path}/edit")).await.status,
+        StatusCode::OK
+    );
+    let invalid = david
+        .write(
+            Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/events"))
+                .form(&[("event[title]", ""), ("event[time_zone]", "UTC")]),
+        )
+        .await;
+    assert_eq!(invalid.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(invalid.text().contains("Title can&#39;t be blank"));
+    assert!(invalid.text().contains("Starts at can&#39;t be blank"));
+    let missing = david
+        .write(Req::new(Method::POST, &format!("/rooms/{ALL_TALK}/events")))
+        .await;
+    assert_eq!(missing.status, StatusCode::BAD_REQUEST);
+}
+#[tokio::test]
+async fn persisted_series_nil_start_returns_rails_public_500_and_writes_nothing() {
+    let Some(app) = TestApp::boot().await else {
+        return;
+    };
+    let head = event(&app).await;
+    let rows = app.db().read(move |c| head.series_events(c)).await.unwrap();
+    let expected: serde_json::Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../db/src/models/calendar_event/edges.json"
+    )))
+    .unwrap();
+    let before = event_snapshot(&app).await;
+    let mut david = app.david();
+    for e in rows {
+        for scope in ["this_event", "this_and_following", "all"] {
+            let response = david
+                .write(
+                    Req::new(Method::PATCH, &format!("/rooms/{ALL_TALK}/events/{}", e.id))
+                        .form(&[("event[starts_at]", ""), ("update_scope", scope)]),
+                )
+                .await;
+            assert_eq!(
+                response.status,
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "{} {scope}",
+                e.id
+            );
+            assert_eq!(
+                response.text(),
+                expected["production_500"].as_str().unwrap()
+            );
+            let after = event_snapshot(&app).await;
+            for (i, (actual, expected)) in after.iter().zip(&before).enumerate() {
+                assert!(actual == expected, "event snapshot table {i} changed");
+            }
+        }
+    }
+}
+async fn event_snapshot(app: &TestApp) -> Vec<Vec<String>> {
+    app.db().read(|c| {
+        ["events","event_attendances","event_references","activity_items","messages","background_jobs"].into_iter().map(|table| {
+            let sql=if table=="background_jobs" {"SELECT id,arguments,job_class FROM background_jobs WHERE job_class LIKE 'Calendar::%' OR job_class LIKE 'Event::%' ORDER BY id".to_owned()}else{format!("SELECT * FROM {table} ORDER BY id")};
+            let mut s=c.prepare(&sql)?;
+            let n=s.column_count();let rows=s.query_map([],|r|Ok((0..n).map(|i|format!("{:?}",r.get_ref(i).unwrap())).collect::<Vec<_>>().join("|")))?.collect::<rusqlite::Result<Vec<_>>>()?;Ok(rows)
+        }).collect::<campfire_db::Result<Vec<_>>>()
+    }).await.unwrap()
+}
+
+#[tokio::test]
+async fn event_create_update_cancel_keep_zone_and_calendar_jobs() {
+    let Some(app) = TestApp::boot_with_clock_and_env(
+        seed_clock(),
+        &[("APP_URL", "https://calendar.smartfire.test:8443")],
+    )
+    .await
+    else {
+        return;
+    };
+    let mut david = app.david();
+    let collection = format!("/rooms/{ALL_TALK}/events");
+    let prefilled=david.get(&format!("{collection}/new?event[title]=Planning&event[starts_at]=2026-10-05T09%3A00%3A00Z&event[time_zone]=Eastern%20Time%20%28US%20%26%20Canada%29")).await;
+    assert_eq!(prefilled.status, StatusCode::OK);
+    assert!(prefilled.text().contains("value=\"2026-10-05T05:00\""));
+    let created = david
+        .write(Req::new(Method::POST, &collection).form(&[
+            ("event[title]", "From form"),
+            ("event[starts_at]", "2026-10-05T09:00"),
+            ("event[ends_at]", "2026-10-05T10:00"),
+            ("event[time_zone]", "Eastern Time (US & Canada)"),
+            ("event[meet_link_requested]", "1"),
+        ]))
+        .await;
+    assert_eq!(created.status, StatusCode::FOUND);
+    let path = created
+        .location()
+        .unwrap()
+        .strip_prefix("http://campfire.test")
+        .unwrap()
+        .to_string();
+    let id = path.rsplit('/').next().unwrap().parse::<i64>().unwrap();
+    let e = app
+        .db()
+        .read(move |conn| CalendarEvent::find(conn, id))
+        .await
+        .unwrap();
+    assert_eq!(
+        e.starts_at,
+        Timestamp::parse_db("2026-10-05 13:00:00").unwrap()
+    );
+    let (body,jobs)=app.db().read(move|conn|{
+        let body=conn.query_row("SELECT body FROM action_text_rich_texts WHERE record_type='Message' AND record_id IN (SELECT message_id FROM event_references WHERE event_id=?)",[id],|r|r.get::<_,String>(0))?;
+        let mut s=conn.prepare("SELECT job_class,arguments FROM background_jobs WHERE job_class LIKE 'Calendar::%' ORDER BY id")?;
+        let jobs=s.query_map([],|r|Ok((r.get::<_,String>(0)?,r.get::<_,String>(1)?)))?.collect::<rusqlite::Result<Vec<_>>>()?;Ok((body,jobs))
+    }).await.unwrap();
+    assert!(body.contains(&format!(
+        "https://calendar.smartfire.test:8443/rooms/{ALL_TALK}/events/{id}"
+    )));
+    assert!(
+        jobs.iter()
+            .any(|(class, args)| class == "Calendar::MeetLinkJob"
+                && serde_json::from_str::<serde_json::Value>(args).unwrap()
+                    == serde_json::json!({"event_id":id}))
+    );
+    assert!(
+        jobs.iter()
+            .any(|(class, args)| class == "Calendar::SyncEntryJob"
+                && serde_json::from_str::<serde_json::Value>(args).unwrap()
+                    == serde_json::json!({"event_id":id,"user_id":DAVID}))
+    );
+    let updated = david
+        .write(Req::new(Method::PATCH, &path).form(&[
+            ("event[title]", "Updated"),
+            ("event[starts_at]", "2026-10-05T09:00"),
+            ("event[ends_at]", "2026-10-05T10:00"),
+            ("event[time_zone]", "Hawaii"),
+        ]))
+        .await;
+    assert_eq!(updated.status, StatusCode::FOUND);
+    let saved = app
+        .db()
+        .read(move |conn| CalendarEvent::find(conn, id))
+        .await
+        .unwrap();
+    assert_eq!(saved.starts_at, e.starts_at);
+    assert_eq!(saved.time_zone, e.time_zone);
+    let cancelled = david
+        .write(Req::new(Method::PATCH, &format!("{path}/cancel")))
+        .await;
+    assert_eq!(cancelled.status, StatusCode::FOUND);
+    assert_eq!(
+        david.get(&format!("{path}/edit")).await.status,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        david
+            .write(Req::new(Method::PATCH, &format!("{path}/cancel")))
+            .await
+            .status,
+        StatusCode::FOUND
+    );
+}
+
+#[tokio::test]
+async fn event_create_keeps_commit_after_announcement_failure_and_jobs_reject_atomically() {
+    let Some(app) = TestApp::boot().await else {
+        return;
+    };
+    app.db()
+        .write(|tx| {
+            tx.conn().execute(
+                "UPDATE rooms SET type='Rooms::Board' WHERE id=?",
+                [ALL_TALK],
+            )?;
+            Ok(())
+        })
+        .await
+        .unwrap();
+    let mut david = app.david();
+    let collection = format!("/rooms/{ALL_TALK}/events");
+    let before = app
+        .db()
+        .read(|conn| {
+            Ok(conn.query_row(
+                "SELECT COUNT(*) FROM events WHERE room_id=?",
+                [ALL_TALK],
+                |r| r.get::<_, i64>(0),
+            )?)
+        })
+        .await
+        .unwrap();
+    let rejected = david
+        .write(Req::new(Method::POST, &collection).form(&[
+            ("event[title]", "Committed despite board"),
+            ("event[starts_at]", "2026-10-05T09:00"),
+            ("event[time_zone]", "UTC"),
+        ]))
+        .await;
+    assert_eq!(rejected.status, StatusCode::INTERNAL_SERVER_ERROR);
+    let oracle: serde_json::Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../db/src/models/calendar_event/edges.json"
+    )))
+    .unwrap();
+    assert_eq!(rejected.text(), oracle["production_500"].as_str().unwrap());
+    let (events, attendances, invitations) = app
+        .db()
+        .read(|conn| {
+            let id = conn.query_row(
+                "SELECT id FROM events WHERE title='Committed despite board'",
+                [],
+                |r| r.get::<_, i64>(0),
+            )?;
+            Ok((
+                conn.query_row(
+                    "SELECT COUNT(*) FROM events WHERE room_id=?",
+                    [ALL_TALK],
+                    |r| r.get::<_, i64>(0),
+                )?,
+                conn.query_row(
+                    "SELECT COUNT(*) FROM event_attendances WHERE event_id=?",
+                    [id],
+                    |r| r.get::<_, i64>(0),
+                )?,
+                conn.query_row(
+                    "SELECT COUNT(*) FROM activity_items WHERE source_type='Event' AND source_id=?",
+                    [id],
+                    |r| r.get::<_, i64>(0),
+                )?,
+            ))
+        })
+        .await
+        .unwrap();
+    assert_eq!(events, before + 1);
+    assert_eq!(attendances, 1);
+    assert_eq!(invitations, 1);
+    app.db().write(|tx|{tx.conn().execute_batch("CREATE TRIGGER ws14e_reject_calendar_job BEFORE INSERT ON background_jobs WHEN NEW.job_class='Calendar::SyncEntryJob' BEGIN SELECT RAISE(ABORT,'reject durable calendar job'); END;")?;Ok(())}).await.unwrap();
+    let rejected = david
+        .write(Req::new(Method::POST, &collection).form(&[
+            ("event[title]", "Rolled back durable job"),
+            ("event[starts_at]", "2026-10-05T09:00"),
+            ("event[time_zone]", "UTC"),
+        ]))
+        .await;
+    assert_eq!(rejected.status, StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(
+        app.db()
+            .read(|conn| Ok(conn.query_row(
+                "SELECT COUNT(*) FROM events WHERE title='Rolled back durable job'",
+                [],
+                |r| r.get::<_, i64>(0)
+            )?))
+            .await
+            .unwrap(),
+        0
+    );
+}

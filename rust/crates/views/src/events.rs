@@ -159,3 +159,5 @@ pub fn card_entries(events: &[CardView], message_id: &str, zone: &Zone) -> Vec<S
 }
 
 pub mod pages;
+
+pub mod forms;

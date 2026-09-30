@@ -119,7 +119,14 @@ fn render(template: &impl Template) -> String {
 
 #[test]
 fn full_event_pages_match_pinned_rails_bytes() {
-    let vectors: Value = serde_json::from_str(include_str!("golden/event-pages.json")).unwrap();
+    compare_pages(include_str!("golden/event-pages.json"));
+}
+#[test]
+fn full_event_forms_match_pinned_rails_bytes() {
+    compare_pages(include_str!("golden/event-forms.json"));
+}
+fn compare_pages(source: &str) {
+    let vectors: Value = serde_json::from_str(source).unwrap();
     let env = include_str!("../../../parity/.env.reference");
     let secrets = rails_compat::Secrets::new(
         env.lines()
@@ -147,9 +154,21 @@ fn full_event_pages_match_pinned_rails_bytes() {
                 ctx: &ctx,
                 view: &view,
             })
-        } else {
+        } else if vector["kind"] == "show" {
             let view = serde_json::from_value(vector["view"].clone()).unwrap();
             render(&campfire_views::events::pages::Show {
+                ctx: &ctx,
+                view: &view,
+            })
+        } else if vector["kind"] == "new" {
+            let view = serde_json::from_value(vector["view"].clone()).unwrap();
+            render(&campfire_views::events::forms::New {
+                ctx: &ctx,
+                view: &view,
+            })
+        } else {
+            let view = serde_json::from_value(vector["view"].clone()).unwrap();
+            render(&campfire_views::events::forms::Edit {
                 ctx: &ctx,
                 view: &view,
             })
