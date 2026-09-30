@@ -11,7 +11,7 @@ name: Rust
 
 on:
   push:
-    branches: [ main, ci/rust-speedups, rust/ws19b-ci-seed ]
+    branches: [ main, ci/rust-speedups ]
     paths:
       - "rust/**"
       - ".github/workflows/rust.yml"
@@ -42,8 +42,8 @@ jobs:
     timeout-minutes: 90
     env:
       CI: "true"
-      RUST_CI_IMAGE: ws19b-ci-toolchain
-      RUST_CI_CONTAINER_PREFIX: ws19b-ci
+      RUST_CI_IMAGE: campfire-toolchain
+      RUST_CI_CONTAINER_PREFIX: campfire-ci
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -96,14 +96,14 @@ jobs:
       # The named worker branch can warm its own branch-scoped caches for the cold/warm
       # acceptance runs. It cannot replace main's caches. No PR or other branch writes.
       - name: Save reference image
-        if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rust/ws19b-ci-seed') && steps.reference-cache.outputs.cache-hit != 'true' }}
+        if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main') && steps.reference-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: rust/parity/.ci/image
           key: ${{ steps.parity.outputs.image_key }}-${{ runner.os }}-${{ runner.arch }}
 
       - name: Save parity seeds
-        if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rust/ws19b-ci-seed') && steps.seed-cache.outputs.cache-hit != 'true' }}
+        if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main') && steps.seed-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -133,7 +133,7 @@ jobs:
           file: rust/Dockerfile
           build-contexts: reference=.
           target: toolchain
-          tags: ws19b-ci-toolchain
+          tags: campfire-toolchain
           load: true
           push: false
           cache-from: type=gha,scope=rust-toolchain

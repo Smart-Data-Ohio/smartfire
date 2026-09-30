@@ -88,8 +88,7 @@ all reference code, fixtures, schema, Dockerfile and bundle inputs), parity Dock
 the build/cache tooling. The seed identity also includes all seed scripts, the fixed environment
 and the Rails validator. There are no fallback keys. The image's embedded Rails revision is
 checked after load, and cached seeds still undergo Rails validation before tests run.
-Only main and the named `rust/ws19b-ci-seed` worker branch save caches; PRs read them and use
-no application secrets. GitHub keeps the worker branch's caches separate from main's.
+Only pushes to main save caches; PRs read them and use no application secrets.
 
 Every app seed loader fails if its seed is missing and `CI` is set, even to an empty value.
 Locally it may return early with a clear skip message. `first_run` is required by the account
