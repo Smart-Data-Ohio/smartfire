@@ -6,6 +6,106 @@ use serde_json::{Value, json};
 
 use super::presenters::page::db_error;
 pub mod mcp;
+
+pub async fn me(c: &mut Ctx) -> Result {
+    concerns::before_actions(c, concerns::Before::default().allow_agent_access()).await?;
+    agent_api::no_store(c);
+    let user_id = concerns::require_current_user(c)?.id;
+    let now = campfire_db::Timestamp::from_jiff(c.now());
+    let payload = c
+        .app()
+        .db
+        .read(move |conn| {
+            campfire_db::Agent::for_user(conn, user_id)?
+                .map(|agent| profile_payload(conn, &agent, now))
+                .transpose()
+        })
+        .await
+        .map_err(db_error)?;
+    Ok(match payload {
+        Some(payload) => c.render(StatusCode::OK, &format::JSON, payload.to_string()),
+        None => c.head(StatusCode::NOT_FOUND),
+    })
+}
+
+pub async fn update_me(c: &mut Ctx) -> Result {
+    concerns::before_actions(c, concerns::Before::default().allow_agent_access()).await?;
+    agent_api::no_store(c);
+    let Some(identity) = c
+        .current::<concerns::CurrentAgent>()
+        .copied()
+        .filter(|_| concerns::authenticated_by(c) == concerns::AuthenticatedBy::AgentToken)
+    else {
+        return Ok(c.render(
+            StatusCode::FORBIDDEN,
+            &format::JSON,
+            json!({"error":"Forbidden: Bearer agent token required"}).to_string(),
+        ));
+    };
+    let status = field(c, "status");
+    let note = field(c, "status_note");
+    let presence = field(c, "working_presence");
+    let result = c
+        .app()
+        .db
+        .write(move |tx| {
+            let mut agent = campfire_db::Agent::find(tx.conn(), identity.agent_id)?
+                .ok_or(campfire_db::Error::RecordNotFound("Agent"))?;
+            if let Some(status) = status {
+                agent.status = attribute_string(Some(&status)).unwrap_or_default();
+            }
+            if let Some(note) = note {
+                agent.status_note = attribute_string(Some(&note));
+            }
+            if let Some(presence) = presence {
+                let text = text(Some(&presence));
+                agent.assign_working_presence(text.as_deref(), tx.now());
+            }
+            match agent.save(tx) {
+                Ok(()) => Ok(ServiceResult::ok(
+                    profile_payload(tx.conn(), &agent, tx.now())?,
+                    200,
+                )),
+                Err(campfire_db::Error::RecordInvalid(errors)) => Ok(ServiceResult::fail(
+                    campfire_db::slash_commands::sentence(errors.full_messages()),
+                    422,
+                )),
+                Err(error) => Err(error),
+            }
+        })
+        .await
+        .map_err(db_error)?;
+    render_result(c, result)
+}
+
+fn profile_payload(
+    conn: &campfire_db::Connection,
+    agent: &campfire_db::Agent,
+    now: campfire_db::Timestamp,
+) -> campfire_db::Result<Value> {
+    let name = campfire_db::User::find_by_id(conn, agent.user_id)?
+        .ok_or(campfire_db::Error::RecordNotFound("User"))?
+        .name;
+    let owner = agent
+        .owner_id
+        .map(|id| campfire_db::User::find_by_id(conn, id))
+        .transpose()?
+        .flatten()
+        .map(|user| json!({"id":user.id,"name":user.name}));
+    let mut payload = json!({"id":agent.id,"kind":agent.kind.name(),"name":name,"user_id":agent.user_id,"owner":owner,"provider":agent.provider,"runtime":agent.runtime,"description":agent.description,"status":agent.status,"status_note":agent.status_note,"status_changed_at":agent.status_changed_at.map(json_time),"last_seen_at":agent.last_seen_at.map(json_time),"working_presence":agent.working_presence_text(now)});
+    payload
+        .as_object_mut()
+        .unwrap()
+        .retain(|_, value| !value.is_null());
+    Ok(payload)
+}
+fn json_time(time: campfire_db::Timestamp) -> String {
+    format!(
+        "{}.{:03}Z",
+        time.jiff().strftime("%Y-%m-%dT%H:%M:%S"),
+        time.subsec_microsecond() / 1000
+    )
+}
 use crate::app::AppCtx;
 use crate::concerns::{self, agent_api};
 
@@ -130,19 +230,21 @@ pub fn create_step_service(
     fields: &Value,
 ) -> campfire_db::Result<ServiceResult> {
     use campfire_db::models::agent_step::{self, NewAgentStep};
-    agent_step::create(
+    let (duration_ms, input_errors) = duration_input(fields.get("duration_ms"));
+    agent_step::create_with_input_errors(
         tx,
         agent_id,
         NewAgentStep {
             message_id: integer(fields.get("message_id")),
             channel_thread_id: integer(fields.get("thread_id")),
-            name: text(fields.get("name")).unwrap_or_default(),
-            status: text(fields.get("status")).unwrap_or_else(|| "running".into()),
-            input_summary: text(fields.get("input_summary")),
-            output_summary: text(fields.get("output_summary")),
-            duration_ms: integer(fields.get("duration_ms")),
+            name: attribute_string(fields.get("name")).unwrap_or_default(),
+            status: attribute_string(fields.get("status")).unwrap_or_else(|| "running".into()),
+            input_summary: attribute_string(fields.get("input_summary")),
+            output_summary: attribute_string(fields.get("output_summary")),
+            duration_ms,
             ..Default::default()
         },
+        input_errors,
     )
 }
 pub fn update_step_service(
@@ -152,21 +254,27 @@ pub fn update_step_service(
     fields: &Value,
 ) -> campfire_db::Result<ServiceResult> {
     use campfire_db::models::agent_step::{self, AgentStepChanges};
-    agent_step::update(
+    let (duration_ms, input_errors) = duration_input(fields.get("duration_ms"));
+    agent_step::update_with_input_errors(
         tx,
         agent_id,
         id,
         AgentStepChanges {
             name: fields
                 .get("name")
-                .map(|v| text(Some(v)).unwrap_or_default()),
+                .map(|v| attribute_string(Some(v)).unwrap_or_default()),
             status: fields
                 .get("status")
-                .map(|v| text(Some(v)).unwrap_or_default()),
-            input_summary: fields.get("input_summary").map(|v| text(Some(v))),
-            output_summary: fields.get("output_summary").map(|v| text(Some(v))),
-            duration_ms: fields.get("duration_ms").map(|v| integer(Some(v))),
+                .map(|v| attribute_string(Some(v)).unwrap_or_default()),
+            input_summary: fields
+                .get("input_summary")
+                .map(|v| attribute_string(Some(v))),
+            output_summary: fields
+                .get("output_summary")
+                .map(|v| attribute_string(Some(v))),
+            duration_ms: fields.get("duration_ms").map(|_| duration_ms),
         },
+        input_errors,
     )
 }
 
@@ -271,7 +379,7 @@ pub fn text(value: Option<&Value>) -> Option<String> {
     value.filter(|v| !v.is_null()).map(|v| {
         v.as_str()
             .map(str::to_owned)
-            .unwrap_or_else(|| v.to_string())
+            .unwrap_or_else(|| ruby_inspect(v))
     })
 }
 
@@ -283,5 +391,65 @@ pub fn ruby_i64(value: &Value) -> i64 {
             .unwrap_or(0),
         Value::String(s) => concerns::ruby_to_i(s),
         _ => 0,
+    }
+}
+
+fn attribute_string(value: Option<&Value>) -> Option<String> {
+    match value {
+        Some(Value::Bool(true)) => Some("t".into()),
+        Some(Value::Bool(false)) => Some("f".into()),
+        _ => text(value),
+    }
+}
+
+fn duration_input(value: Option<&Value>) -> (Option<i64>, campfire_db::Errors) {
+    let mut errors = campfire_db::Errors::default();
+    let invalid = match value {
+        None | Some(Value::Null) => None,
+        Some(Value::String(s)) if s.trim().is_empty() => None,
+        Some(Value::Number(n)) if n.is_i64() || n.is_u64() => None,
+        Some(Value::Number(_)) => Some("must be an integer"),
+        Some(Value::String(s)) => {
+            if s.trim().parse::<f64>().is_err() {
+                Some("is not a number")
+            } else {
+                let digits = s.strip_prefix(['+', '-']).unwrap_or(s);
+                if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+                    Some("must be an integer")
+                } else {
+                    None
+                }
+            }
+        }
+        _ => Some("is not a number"),
+    };
+    if let Some(message) = invalid {
+        errors.add("duration_ms", message);
+        (None, errors)
+    } else {
+        (integer(value), errors)
+    }
+}
+
+pub fn ruby_inspect(value: &Value) -> String {
+    match value {
+        Value::Null => "nil".into(),
+        Value::Array(values) => format!(
+            "[{}]",
+            values
+                .iter()
+                .map(ruby_inspect)
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        Value::Object(values) => format!(
+            "{{{}}}",
+            values
+                .iter()
+                .map(|(key, value)| format!("{} => {}", json!(key), ruby_inspect(value)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        _ => value.to_string(),
     }
 }

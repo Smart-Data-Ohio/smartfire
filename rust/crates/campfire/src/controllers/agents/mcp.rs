@@ -177,16 +177,15 @@ fn invalid_origin(c: &Ctx) -> bool {
         || origin
             .chars()
             .any(|c| c.is_ascii_whitespace() || c.is_ascii_control())
-        || !origin.contains("://")
+        || (!origin.contains("://") && !origin.starts_with("//"))
     {
         return true;
     }
     // Ruby URI preserves an encoded host; WHATWG URL decodes it. Such an
     // authority cannot equal request.host, so don't normalize it into a match.
     let authority = origin
-        .split_once("://")
-        .unwrap()
-        .1
+        .strip_prefix("//")
+        .unwrap_or_else(|| origin.split_once("://").unwrap().1)
         .split(['/', '?', '#'])
         .next()
         .unwrap_or_default();
@@ -194,7 +193,13 @@ fn invalid_origin(c: &Ctx) -> bool {
     if host.contains('%') {
         return true;
     }
-    url::Url::parse(origin)
+    // URI.parse also accepts a network-path reference with an authority.
+    let origin = if origin.starts_with("//") {
+        format!("http:{origin}")
+    } else {
+        origin.to_owned()
+    };
+    url::Url::parse(&origin)
         .ok()
         .and_then(|url| url.host_str().map(str::to_owned))
         .is_none_or(|host| !host.eq_ignore_ascii_case(&c.request.host()))
@@ -583,11 +588,7 @@ fn blank(value: &Value) -> bool {
     }
 }
 fn inspect(value: &Value) -> String {
-    if value.is_null() {
-        "nil".into()
-    } else {
-        value.to_string()
-    }
+    super::ruby_inspect(value)
 }
 fn modern_result(mut result: Value, modern: bool) -> Value {
     if modern {

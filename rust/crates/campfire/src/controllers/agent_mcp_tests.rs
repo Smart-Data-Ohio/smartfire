@@ -85,8 +85,14 @@ async fn mcp_origin_security() {
         "origin_allowed",
         "origin_malformed",
         "origin_encoded_host",
+        "origin_scheme_relative",
     ])
     .await;
+}
+
+#[tokio::test]
+async fn mcp_presence_coercions() {
+    check(&["presence_object", "presence_clear"]).await;
 }
 
 #[tokio::test]

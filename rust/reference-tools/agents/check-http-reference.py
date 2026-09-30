@@ -6,6 +6,7 @@ import subprocess
 
 root = Path(__file__).resolve().parents[3]
 files = [
+    "app/controllers/agents_controller.rb",
     "app/controllers/agents/events_controller.rb", "app/controllers/agents/steps_controller.rb",
     "app/controllers/agents/slash_commands_controller.rb", "app/controllers/agents/mcp_controller.rb",
     "app/controllers/concerns/authentication.rb", "app/controllers/concerns/agent_api_throttle.rb",

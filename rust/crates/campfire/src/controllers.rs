@@ -192,6 +192,8 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "messages/boosts/by_bots#create" => arc(messages::boosts::by_bots::create),
         "messages/boosts/by_bots#destroy" => arc(messages::boosts::by_bots::destroy),
         "agents/events#index" => arc(agents::events),
+        "agents#me" => arc(agents::me),
+        "agents#update" => arc(agents::update_me),
         "agents/mcp#create" => arc(agents::mcp::create),
         "agents/mcp#method_not_allowed" => arc(agents::mcp::method_not_allowed),
         "agents/events#ack" => arc(agents::ack),
@@ -532,6 +534,7 @@ mod tests {
 
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
+        "agents#me", "agents#update",
         "agents/events#index", "agents/events#ack", "agents/steps#create", "agents/steps#update",
         "agents/slash_commands#create", "agents/slash_commands#destroy", "agents/mcp#create", "agents/mcp#method_not_allowed",
         "welcome#show", "first_runs#show", "first_runs#create", "sessions/transfers#show",

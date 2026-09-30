@@ -2,6 +2,130 @@
   "reference_pin": "d7c7de92",
   "cases": [
     {
+      "name": "profile_get",
+      "method": "get",
+      "path": "/agents/me",
+      "body": null,
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 200,
+      "response": {
+        "id": 773018776,
+        "kind": "workspace",
+        "name": "Bender Bot",
+        "user_id": 394959859,
+        "owner": {
+          "id": 127326141,
+          "name": "David"
+        },
+        "status": "idle",
+        "last_seen_at": "2026-03-02T16:00:00.000Z"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "profile_update",
+      "method": "patch",
+      "path": "/agents/me",
+      "body": "{\"status\":\"working\",\"status_note\":\"Tests\",\"working_presence\":\"  Thinking  \",\"provider\":\"ignored\",\"daily_message_cap\":1}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 200,
+      "response": {
+        "id": 773018776,
+        "kind": "workspace",
+        "name": "Bender Bot",
+        "user_id": 394959859,
+        "owner": {
+          "id": 127326141,
+          "name": "David"
+        },
+        "status": "working",
+        "status_note": "Tests",
+        "status_changed_at": "2026-03-02T16:00:00.000Z",
+        "last_seen_at": "2026-03-02T16:00:00.000Z",
+        "working_presence": "Thinking"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "profile_invalid",
+      "method": "patch",
+      "path": "/agents/me",
+      "body": "{\"status\":\"bogus\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "error": "Status is not included in the list"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "profile_clear",
+      "method": "patch",
+      "path": "/agents/me",
+      "body": "{\"working_presence\":\"  \"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 200,
+      "response": {
+        "id": 773018776,
+        "kind": "workspace",
+        "name": "Bender Bot",
+        "user_id": 394959859,
+        "owner": {
+          "id": 127326141,
+          "name": "David"
+        },
+        "status": "working",
+        "status_note": "Tests",
+        "status_changed_at": "2026-03-02T16:00:00.000Z",
+        "last_seen_at": "2026-03-02T16:00:00.000Z"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "profile_boolean_note",
+      "method": "patch",
+      "path": "/agents/me",
+      "body": "{\"status_note\":false}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 200,
+      "response": {
+        "id": 773018776,
+        "kind": "workspace",
+        "name": "Bender Bot",
+        "user_id": 394959859,
+        "owner": {
+          "id": 127326141,
+          "name": "David"
+        },
+        "status": "working",
+        "status_note": "f",
+        "status_changed_at": "2026-03-02T16:00:00.000Z",
+        "last_seen_at": "2026-03-02T16:00:00.000Z",
+        "working_presence": "Thinking"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
       "name": "event_envelope",
       "method": "get",
       "path": "/agents/events?envelope=1",
@@ -220,6 +344,184 @@
       }
     },
     {
+      "name": "step_create",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{\"message_id\":935961918,\"name\":\"Inspect\",\"status\":\"running\",\"duration_ms\":4}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 201,
+      "response": {
+        "id": 1,
+        "message_id": 935961918,
+        "name": "Inspect",
+        "status": "running",
+        "duration_ms": 4,
+        "position": 0,
+        "created_at": "2026-03-02T16:00:00.000Z",
+        "updated_at": "2026-03-02T16:00:00.000Z"
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "step_duration_0",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{\"message_id\":935961918,\"name\":\"\",\"duration_ms\":4.5}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "errors": {
+          "name": [
+            "can't be blank"
+          ],
+          "duration_ms": [
+            "must be an integer"
+          ]
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "step_duration_1",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{\"message_id\":935961918,\"name\":\"\",\"duration_ms\":\"abc\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "errors": {
+          "name": [
+            "can't be blank"
+          ],
+          "duration_ms": [
+            "is not a number"
+          ]
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "step_duration_2",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{\"message_id\":935961918,\"name\":\"\",\"duration_ms\":\"4x\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "errors": {
+          "name": [
+            "can't be blank"
+          ],
+          "duration_ms": [
+            "is not a number"
+          ]
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "step_duration_3",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{\"message_id\":935961918,\"name\":\"\",\"duration_ms\":true}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "errors": {
+          "name": [
+            "can't be blank"
+          ],
+          "duration_ms": [
+            "is not a number"
+          ]
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "step_duration_4",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{\"message_id\":935961918,\"name\":\"\",\"duration_ms\":\"1.0\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "errors": {
+          "name": [
+            "can't be blank"
+          ],
+          "duration_ms": [
+            "must be an integer"
+          ]
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "step_duration_5",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{\"message_id\":935961918,\"name\":\"\",\"duration_ms\":\"\"}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "errors": {
+          "name": [
+            "can't be blank"
+          ]
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "step_duration_6",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{\"message_id\":935961918,\"name\":\"\",\"duration_ms\":null}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 422,
+      "response": {
+        "errors": {
+          "name": [
+            "can't be blank"
+          ]
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
       "name": "slash_nonmember",
       "method": "post",
       "path": "/rooms/201306877/agents/slash_commands",
@@ -260,6 +562,44 @@
       },
       "response_headers": {
         "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "slash_register",
+      "method": "post",
+      "path": "/rooms/486777696/agents/slash_commands",
+      "body": "{\"name\":\"inspect\",\"description\":\"Check\",\"takes_arguments\":false}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 201,
+      "response": {
+        "name": "inspect",
+        "description": "Check",
+        "room_id": 486777696,
+        "agent_id": 773018776,
+        "takes_arguments": false
+      },
+      "response_headers": {
+        "cache-control": "max-age=0, private, must-revalidate"
+      }
+    },
+    {
+      "name": "slash_register_replay",
+      "method": "post",
+      "path": "/rooms/486777696/agents/slash_commands",
+      "body": "{\"name\":\"inspect\",\"description\":\"Check\",\"takes_arguments\":false}",
+      "headers": {},
+      "token": "ws11api-fixture-credential",
+      "status": 201,
+      "response": {
+        "name": "inspect",
+        "description": "Check",
+        "room_id": 486777696,
+        "agent_id": 773018776,
+        "takes_arguments": false
+      },
+      "response_headers": {
+        "cache-control": "max-age=0, private, must-revalidate"
       }
     },
     {

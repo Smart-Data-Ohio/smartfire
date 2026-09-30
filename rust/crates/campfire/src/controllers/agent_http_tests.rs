@@ -9,10 +9,13 @@ pub(super) const SECRET: &str = "ws11api-fixture-credential";
 pub(super) const AGENT: i64 = 773018776;
 
 pub(super) async fn setup() -> TestApp {
-    let app = TestApp::boot_with_clock(std::sync::Arc::new(campfire_kit::FrozenClock::new("2026-03-02T16:00:00Z".parse().unwrap())))
-        .await
-        .expect("WS11-api tests require the pinned default seed");
+    let app = TestApp::boot_with_clock(std::sync::Arc::new(campfire_kit::FrozenClock::new(
+        "2026-03-02T16:00:00Z".parse().unwrap(),
+    )))
+    .await
+    .expect("WS11-api tests require the pinned default seed");
     app.db().write(|tx| {
+        tx.conn().execute("UPDATE agents SET status='idle',status_note=NULL,status_changed_at=NULL,working_presence=NULL,working_presence_expires_at=NULL,last_seen_at=NULL WHERE id=?",[AGENT])?;
         tx.conn().execute("DELETE FROM agent_events WHERE agent_id=?", [AGENT])?;
         tx.conn().execute("DELETE FROM agent_grants WHERE agent_id=?", [AGENT])?;
         tx.conn().execute("DELETE FROM agent_credentials WHERE agent_id=?", [AGENT])?;
@@ -56,6 +59,9 @@ async fn check(name: &str) {
         .find(|c| c["name"] == name)
         .unwrap();
     app.db().write({let name=name.to_string(); move |tx| {
+        if ["profile_invalid","profile_clear","profile_boolean_note"].contains(&name.as_str()) {
+            tx.conn().execute("UPDATE agents SET status='working',status_note='Tests',status_changed_at=?,working_presence='Thinking',working_presence_expires_at=? WHERE id=?",rusqlite::params![tx.now(),tx.now().since(jiff::SignedDuration::from_mins(5)),AGENT])?;
+        }
         if name == "revoked_credential" { tx.conn().execute("UPDATE agent_credentials SET revoked_at=? WHERE agent_id=?", rusqlite::params![tx.now(),AGENT])?; }
         if name == "expired_credential" { tx.conn().execute("UPDATE agent_credentials SET expires_at=? WHERE agent_id=?", rusqlite::params![tx.now(),AGENT])?; }
         if ["missing_grant", "slash_missing_grant"].contains(&name.as_str()) {
@@ -70,7 +76,23 @@ async fn check(name: &str) {
             assert_eq!(request(&app, &polling).await.status.as_u16(), 200);
         }
     }
+    if ["event_ack_replay", "slash_register_replay"].contains(&name) {
+        assert_eq!(
+            request(&app, case).await.status.as_u16(),
+            case["status"].as_u64().unwrap() as u16
+        );
+    }
     let reply = request(&app, case).await;
+    if name == "profile_update" {
+        let agent = app
+            .db()
+            .read(|conn| campfire_db::Agent::find(conn, AGENT))
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(agent.provider, None);
+        assert_eq!(agent.daily_message_cap, None);
+    }
     assert_eq!(
         reply.status.as_u16(),
         case["status"].as_u64().unwrap() as u16,
@@ -119,9 +141,58 @@ async fn rest_vectors() {
         "unknown_credential",
         "step_no_parent",
         "step_missing",
+        "step_create",
         "slash_invalid",
+        "slash_register",
+        "slash_register_replay",
         "slash_missing",
     ] {
         check(name).await;
     }
+}
+
+#[tokio::test]
+async fn profile_vectors() {
+    for name in [
+        "profile_get",
+        "profile_update",
+        "profile_invalid",
+        "profile_clear",
+        "profile_boolean_note",
+    ] {
+        check(name).await;
+    }
+}
+
+#[tokio::test]
+async fn step_duration_validates_before_cast() {
+    for index in 0..7 {
+        check(&format!("step_duration_{index}")).await;
+    }
+}
+
+#[tokio::test]
+async fn invalid_duration_never_persists_and_parent_policy_runs_first() {
+    let app = setup().await;
+    for (message_id, status) in [(935961918, 422), (0, 404)] {
+        let reply = app
+            .anonymous()
+            .send(
+                Req::new(Method::POST, "/agents/steps")
+                    .header("authorization", &["Bearer", SECRET].join(" "))
+                    .header("content-type", "application/json")
+                    .body(
+                        json!({"message_id":message_id,"name":"Inspect","duration_ms":4.5})
+                            .to_string(),
+                    ),
+            )
+            .await;
+        assert_eq!(reply.status.as_u16(), status);
+    }
+    let count: i64 = app
+        .db()
+        .read(|conn| Ok(conn.query_row("SELECT COUNT(*) FROM agent_steps", [], |r| r.get(0))?))
+        .await
+        .unwrap();
+    assert_eq!(count, 0);
 }

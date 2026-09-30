@@ -3000,6 +3000,24 @@
       }
     },
     {
+      "name": "origin_scheme_relative",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"ping\",\"params\":{}}",
+      "headers": {
+        "Origin": "//campfire.test"
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {}
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
       "name": "poll_empty",
       "method": "post",
       "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"poll_events\",\"arguments\":{\"since\":0,\"limit\":1}}}",
@@ -3018,6 +3036,60 @@
           "structuredContent": {
             "events": [],
             "next_since": 0
+          },
+          "isError": false
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "presence_object",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"set_presence\",\"arguments\":{\"text\":{\"x\":\"y\",\"z\":[true,1]}}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"working_presence\":\"{\\\"x\\\" => \\\"y\\\", \\\"z\\\" => [true, 1]}\"}"
+            }
+          ],
+          "structuredContent": {
+            "working_presence": "{\"x\" => \"y\", \"z\" => [true, 1]}"
+          },
+          "isError": false
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "presence_clear",
+      "method": "post",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"set_presence\",\"arguments\":{\"text\":\"\"}}}",
+      "headers": {},
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"working_presence\":null}"
+            }
+          ],
+          "structuredContent": {
+            "working_presence": null
           },
           "isError": false
         }
