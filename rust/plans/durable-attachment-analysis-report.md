@@ -1,3 +1,163 @@
+# Main merge follow-up: WS17 push/presence (2026-09-30)
+
+Verified merge commit: `c80f87892f40d7f244bff9156f91a96ec4430da6`.
+Parents: attachment branch `200c62c3c4965c66afaa041581b9eb35bb64e58c` and
+`origin/main` `ea630861ceb55cb62b9c29f123323ec96bb3cdcf` (#170, WS17).
+The merge was performed with `git merge --no-ff --no-commit origin/main`, then committed.
+No stash or rebase was used.
+
+## Conflict resolution
+
+Two files conflicted (three conflict regions):
+
+- `crates/campfire/src/controllers/presenters/test_support.rs`: merged the attachment branch's
+  named parity seed factory with main's injectable network factory. One internal
+  `boot_seed_with_services(name, clock, network, extra)` now serves the existing public APIs.
+  `boot_seed` retains first-run seed support; `boot_with_network` retains WS17's controlled
+  transport; clock/environment overrides, seed checking, and disabled periodic tasks are preserved.
+- `crates/campfire/src/controllers/users/profiles.rs`: kept WS17's `UserStatusSettings` save,
+  submitted settings/user snapshot, validation errors, and `render_profile` error response.
+  Kept this branch's unit-returning attachment assignment in the same writer transaction as
+  settings and authenticated profile changes. Removed the obsolete pending-analysis variable
+  and outside-transaction `analyze_later` call. Real analyzer jobs remain atomic with the write;
+  NullAnalyzer still runs after commit through the shared helper. Both error-view public values
+  and submitted appearance/time-zone settings remain available on rejection.
+
+The automatic merges were audited too: the durable AnalyzeJob registration and WS17 notification
+registration both remain; message activity recording runs inside the message writer alongside
+signed attachment assignment, durable analysis and `markdown_source` support.
+
+All WS17 test files are identical to main. Both attachment regression files are identical to
+`200c62c3`; comparison against main found no removed test attributes or assertions. No tests,
+thresholds, ignores, masks or goldens were weakened during resolution. The merge touched Rust crates `campfire`, `db`, `rails_compat` and `views`; all are explicitly
+included in the required-crate run, along with `storage`. The full workspace covers the rest.
+No pixel-diff or browser screenshot work was performed.
+
+## Fresh-clone verification after the merge
+
+Independent clone `.scratch/fresh-ws17-merge`, created with `git clone --no-local`, checked out
+at the merge commit with an empty target. Built `default` and `first_run` seeds from our pinned
+Rails `d7c7de9264c63015be398001d7a1094e7695a6db` image. Rails seed verification passed all
+29 default and four first-run checks. `CI=true` requires these seeds, so seeded tests ran.
+
+`cargo metadata --locked --format-version 1` passed in the worktree (using mise Rust 1.98.1)
+and clone/CI image. No lockfile repair was required. Both duplicate-key checks passed:
+
+```text
+workspace dependency keys: 76 unique; 0 duplicates
+duplicate-key check: 13 workspace manifests parsed; 76 unique workspace dependency keys; 0 duplicates
+```
+
+The first is main's committed `reference-tools/ws17_workspace_dependencies.py` (strict TOML
+parsing plus explicit duplicate key counting). The second strictly parses each workspace manifest.
+
+All test and clippy checks used `CARGO_BUILD_JOBS=2`, the machine-wide compiler slot wrapper,
+dev/test debug 0 and incremental 0. Every test invocation used eight test threads. The canonical
+CI toolchain image `attach-toolchain-ci:1.98.1`
+(`sha256:80bed826ce3b998e8ba75b85b25d18055066760982413e4483dd9779c5f053b2`)
+executes the pinned libvips/ffmpeg storage-byte gate. The container invocation is identical to the
+previous documented helper below, with source bind `.scratch/fresh-ws17-merge:/src`; shared
+compiler configuration/slot locks remain mounted, with no global configuration change or bypass.
+
+Exact check arguments:
+
+```sh
+cargo metadata --locked --format-version 1
+cargo test --locked -p campfire -p campfire_db -p campfire_storage -p campfire_views -p rails_compat --no-fail-fast -- --test-threads=8
+cargo test --locked --workspace --exclude html5ever --no-fail-fast -- --test-threads=8
+cargo clippy --locked --workspace --exclude html5ever --all-targets -- -D warnings
+cargo build --locked --workspace --bins
+```
+
+Required crates and their doctests: **1640 passed, 0 failed, 7 existing ignores**.
+Raw result lines:
+
+```text
+test result: ok. 810 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 98.34s
+test result: ok. 612 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 73.27s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.92s
+test result: ok. 46 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.09s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Separate full workspace and doctests: **2101 passed, 0 failed, 12 existing ignores**.
+Raw result lines in execution order:
+
+```text
+test result: ok. 810 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 101.83s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.73s
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.46s
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 9.81s
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.01s
+test result: ok. 612 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 63.98s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.83s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.00s
+test result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+test result: ok. 15 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 4.02s
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+test result: ok. 53 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.82s
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.25s
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 17.47s
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.51s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.18s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.81s
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.73s
+test result: ok. 46 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+test result: ok. 44 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+test result: ok. 78 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.12s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+```
+
+Clippy `-D warnings` and normal binary build passed, respectively:
+
+```text
+    Finished `dev` profile [unoptimized] target(s) in 45.93s
+    Finished `dev` profile [unoptimized] target(s) in 40.42s
+```
+
+The fresh-clone target (2.9 GB) was deleted after completing verification. No
+`.scratch/*/rust/target*` directory remains; the primary worktree's `rust/target` is retained.
+No test process or `attach-ws17-merge` container remains running. The remote main was read back
+as `ea630861`, matching the merged parent. Scratch logs are outputs, never test inputs.
+
+Earlier follow-ups retain their historical commands and results below.
+
+---
+
 # Review follow-up: sanitized attachment filenames (2026-09-30)
 
 Verified source commit: `3ef4fd645ac2a6e155a5534ee55b7c242e5aa1a4`.
