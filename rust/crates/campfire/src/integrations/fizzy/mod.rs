@@ -2,10 +2,15 @@
 pub mod accounts;
 pub mod agent_action;
 pub mod agent_job;
+#[allow(
+    dead_code,
+    reason = "WS11’s authenticated agent REST/MCP adapters have not merged"
+)]
+pub mod agent_reads;
 pub mod cards;
-pub mod fetch;
 pub mod client;
 mod error_body;
+pub mod fetch;
 pub mod urls;
 use serde_json::Value;
 #[allow(dead_code, reason = "Used by staged Fizzy create-card API")]
