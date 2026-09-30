@@ -8,10 +8,12 @@ use crate::controllers::presenters::test_support::*;
 fn oracle() -> Value {serde_json::from_str(include_str!("../../../../../vectors/messaging/signed-attachments.json")).unwrap()}
 #[tokio::test]
 async fn signed_root_and_thread_attachments_match_rails_response_and_blob_rows() {
-    let app = TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();
+    let clock=Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()));
+    let app = TestApp::boot_with_test_clock(clock.clone()).await.unwrap();
     let id = app.db().write(|tx| ChannelThread::create(tx,NewChannelThread {room_id:ALL_TALK,creator_id:DAVID,name:Some("Signed attachments".into()),..Default::default()}).map(|t|t.id)).await.unwrap();
     assert_eq!(oracle()["thread_id"],id);
     for row in oracle()["rows"].as_array().unwrap() {
+        clock.set(row["now"].as_str().unwrap().parse().unwrap());
         let response = app.david().write(Req::new(Method::from_bytes(row["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(),row["path"].as_str().unwrap())
             .header("content-type","application/json").header("accept","application/json").body(row["input"].to_string())).await;
         let name = row["name"].as_str().unwrap();

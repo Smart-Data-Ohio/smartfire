@@ -763,6 +763,11 @@ pub(crate) async fn present<T: Send + 'static>(
 
 /// `render action: :room_not_found` (inside the layout).
 async fn render_room_not_found(c: &mut Ctx) -> Result {
+    // Explicit `render action: :room_not_found` looks up the request's format; Rails has
+    // only the HTML template. A Turbo Stream/JSON rescue therefore raises MissingTemplate.
+    if c.format()?.is_some_and(|requested| *requested != format::HTML) {
+        return Err(Error::internal(anyhow::anyhow!("Missing messages/room_not_found template for request format")));
+    }
     c.respond_to(&[&format::HTML])?;
     page::content_in_application_layout(c, StatusCode::OK, |_| views::RoomNotFound.render()).await
 }
