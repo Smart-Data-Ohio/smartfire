@@ -3253,6 +3253,2489 @@
         "cache-control": "no-store",
         "pragma": "no-cache"
       }
+    },
+    {
+      "name": "matrix_rest_invalid_0",
+      "method": "get",
+      "path": "/agents/me",
+      "body": null,
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_0",
+      "method": "get",
+      "path": "/agents/me",
+      "body": null,
+      "setup": {
+        "human_session": true
+      },
+      "status": 404,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_1",
+      "method": "patch",
+      "path": "/agents/me",
+      "body": "{}",
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_1",
+      "method": "patch",
+      "path": "/agents/me",
+      "body": "{}",
+      "setup": {
+        "human_session": true
+      },
+      "status": 422,
+      "response": {
+        "status": 422,
+        "error": "Unprocessable Content"
+      },
+      "response_headers": {}
+    },
+    {
+      "name": "matrix_rest_invalid_2",
+      "method": "get",
+      "path": "/agents/events",
+      "body": null,
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_2",
+      "method": "get",
+      "path": "/agents/events",
+      "body": null,
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_3",
+      "method": "post",
+      "path": "/agents/events/0/ack",
+      "body": "{}",
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_3",
+      "method": "post",
+      "path": "/agents/events/0/ack",
+      "body": "{}",
+      "setup": {
+        "human_session": true
+      },
+      "status": 422,
+      "response": {
+        "status": 422,
+        "error": "Unprocessable Content"
+      },
+      "response_headers": {}
+    },
+    {
+      "name": "matrix_rest_invalid_4",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{}",
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_4",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{}",
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_5",
+      "method": "patch",
+      "path": "/agents/steps/0",
+      "body": "{}",
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_5",
+      "method": "patch",
+      "path": "/agents/steps/0",
+      "body": "{}",
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_6",
+      "method": "post",
+      "path": "/rooms/486777696/agents/slash_commands",
+      "body": "{}",
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_6",
+      "method": "post",
+      "path": "/rooms/486777696/agents/slash_commands",
+      "body": "{}",
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_7",
+      "method": "delete",
+      "path": "/rooms/486777696/agents/slash_commands/missing",
+      "body": null,
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_7",
+      "method": "delete",
+      "path": "/rooms/486777696/agents/slash_commands/missing",
+      "body": null,
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_8",
+      "method": "get",
+      "path": "/agents/approvals",
+      "body": null,
+      "setup": {
+        "grant": "external_action",
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_8",
+      "method": "get",
+      "path": "/agents/approvals",
+      "body": null,
+      "setup": {
+        "grant": "external_action",
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_9",
+      "method": "get",
+      "path": "/agents/approvals/0",
+      "body": null,
+      "setup": {
+        "grant": "external_action",
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_9",
+      "method": "get",
+      "path": "/agents/approvals/0",
+      "body": null,
+      "setup": {
+        "grant": "external_action",
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_10",
+      "method": "post",
+      "path": "/agents/approvals",
+      "body": "{}",
+      "setup": {
+        "grant": "external_action",
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_10",
+      "method": "post",
+      "path": "/agents/approvals",
+      "body": "{}",
+      "setup": {
+        "grant": "external_action",
+        "human_session": true
+      },
+      "status": 422,
+      "response": {
+        "status": 422,
+        "error": "Unprocessable Content"
+      },
+      "response_headers": {}
+    },
+    {
+      "name": "matrix_rest_invalid_11",
+      "method": "delete",
+      "path": "/agents/approvals/0",
+      "body": null,
+      "setup": {
+        "grant": "external_action",
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_11",
+      "method": "delete",
+      "path": "/agents/approvals/0",
+      "body": null,
+      "setup": {
+        "grant": "external_action",
+        "human_session": true
+      },
+      "status": 422,
+      "response": {
+        "status": 422,
+        "error": "Unprocessable Content"
+      },
+      "response_headers": {}
+    },
+    {
+      "name": "matrix_rest_invalid_12",
+      "method": "get",
+      "path": "/agents/context",
+      "body": null,
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_12",
+      "method": "get",
+      "path": "/agents/context",
+      "body": null,
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_13",
+      "method": "post",
+      "path": "/agents/dms",
+      "body": "{}",
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_13",
+      "method": "post",
+      "path": "/agents/dms",
+      "body": "{}",
+      "setup": {
+        "human_session": true
+      },
+      "status": 422,
+      "response": {
+        "status": 422,
+        "error": "Unprocessable Content"
+      },
+      "response_headers": {}
+    },
+    {
+      "name": "matrix_rest_invalid_14",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{}",
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_14",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{}",
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_15",
+      "method": "post",
+      "path": "/rooms/486777696/agents/streaming_messages",
+      "body": "{}",
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_15",
+      "method": "post",
+      "path": "/rooms/486777696/agents/streaming_messages",
+      "body": "{}",
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_16",
+      "method": "patch",
+      "path": "/agents/streaming_messages/0",
+      "body": "{}",
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_16",
+      "method": "patch",
+      "path": "/agents/streaming_messages/0",
+      "body": "{}",
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_17",
+      "method": "post",
+      "path": "/agents/streaming_messages/0/finalize",
+      "body": "{}",
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_17",
+      "method": "post",
+      "path": "/agents/streaming_messages/0/finalize",
+      "body": "{}",
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_18",
+      "method": "post",
+      "path": "/agents/messages/0/pin",
+      "body": "{}",
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_18",
+      "method": "post",
+      "path": "/agents/messages/0/pin",
+      "body": "{}",
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_19",
+      "method": "delete",
+      "path": "/agents/messages/0/pin",
+      "body": null,
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_19",
+      "method": "delete",
+      "path": "/agents/messages/0/pin",
+      "body": null,
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_20",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{}",
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_20",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{}",
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_21",
+      "method": "get",
+      "path": "/rooms/486777696/agents/polls/0",
+      "body": null,
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_21",
+      "method": "get",
+      "path": "/rooms/486777696/agents/polls/0",
+      "body": null,
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_22",
+      "method": "get",
+      "path": "/rooms/486777696/agents/posts",
+      "body": null,
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_22",
+      "method": "get",
+      "path": "/rooms/486777696/agents/posts",
+      "body": null,
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_23",
+      "method": "post",
+      "path": "/rooms/486777696/agents/posts",
+      "body": "{}",
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_23",
+      "method": "post",
+      "path": "/rooms/486777696/agents/posts",
+      "body": "{}",
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_24",
+      "method": "get",
+      "path": "/agents/work",
+      "body": null,
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_24",
+      "method": "get",
+      "path": "/agents/work",
+      "body": null,
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_25",
+      "method": "get",
+      "path": "/agents/work/0",
+      "body": null,
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_25",
+      "method": "get",
+      "path": "/agents/work/0",
+      "body": null,
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: Bearer agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_26",
+      "method": "patch",
+      "path": "/agents/work/0",
+      "body": "{}",
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_26",
+      "method": "patch",
+      "path": "/agents/work/0",
+      "body": "{}",
+      "setup": {
+        "human_session": true
+      },
+      "status": 422,
+      "response": {
+        "status": 422,
+        "error": "Unprocessable Content"
+      },
+      "response_headers": {}
+    },
+    {
+      "name": "matrix_rest_invalid_27",
+      "method": "put",
+      "path": "/agents/work/0/result",
+      "body": "{}",
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_27",
+      "method": "put",
+      "path": "/agents/work/0/result",
+      "body": "{}",
+      "setup": {
+        "human_session": true
+      },
+      "status": 422,
+      "response": {
+        "status": 422,
+        "error": "Unprocessable Content"
+      },
+      "response_headers": {}
+    },
+    {
+      "name": "matrix_rest_invalid_28",
+      "method": "post",
+      "path": "/agents/work/0/handoff",
+      "body": "{}",
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_28",
+      "method": "post",
+      "path": "/agents/work/0/handoff",
+      "body": "{}",
+      "setup": {
+        "human_session": true
+      },
+      "status": 422,
+      "response": {
+        "status": 422,
+        "error": "Unprocessable Content"
+      },
+      "response_headers": {}
+    },
+    {
+      "name": "matrix_rest_invalid_29",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_29",
+      "method": "get",
+      "path": "/agents/fizzy/boards",
+      "body": null,
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_30",
+      "method": "get",
+      "path": "/agents/fizzy/boards/abc",
+      "body": null,
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_30",
+      "method": "get",
+      "path": "/agents/fizzy/boards/abc",
+      "body": null,
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_31",
+      "method": "get",
+      "path": "/agents/fizzy/cards/search",
+      "body": null,
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_31",
+      "method": "get",
+      "path": "/agents/fizzy/cards/search",
+      "body": null,
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_32",
+      "method": "get",
+      "path": "/agents/fizzy/cards/acct/1",
+      "body": null,
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_32",
+      "method": "get",
+      "path": "/agents/fizzy/cards/acct/1",
+      "body": null,
+      "setup": {
+        "human_session": true
+      },
+      "status": 403,
+      "response": {
+        "error": "Forbidden: agent token required"
+      },
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_invalid_33",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{}",
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_33",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{}",
+      "setup": {
+        "human_session": true
+      },
+      "status": 422,
+      "response": {
+        "status": 422,
+        "error": "Unprocessable Content"
+      },
+      "response_headers": {}
+    },
+    {
+      "name": "matrix_rest_invalid_34",
+      "method": "post",
+      "path": "/rooms/486777696/agents/github/pull_request_actions",
+      "body": "{}",
+      "setup": {
+        "invalid_token": true
+      },
+      "status": 401,
+      "response": null,
+      "response_headers": {
+        "cache-control": "no-cache"
+      }
+    },
+    {
+      "name": "matrix_rest_session_34",
+      "method": "post",
+      "path": "/rooms/486777696/agents/github/pull_request_actions",
+      "body": "{}",
+      "setup": {
+        "human_session": true
+      },
+      "status": 422,
+      "response": {
+        "status": 422,
+        "error": "Unprocessable Content"
+      },
+      "response_headers": {}
+    },
+    {
+      "name": "matrix_rest_rate_0",
+      "method": "post",
+      "path": "/agents/events/0/ack",
+      "body": "{}",
+      "setup": {
+        "repeat": 120,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_1",
+      "method": "post",
+      "path": "/agents/steps",
+      "body": "{}",
+      "setup": {
+        "repeat": 60,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_2",
+      "method": "patch",
+      "path": "/agents/steps/0",
+      "body": "{}",
+      "setup": {
+        "repeat": 60,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_3",
+      "method": "post",
+      "path": "/rooms/486777696/agents/slash_commands",
+      "body": "{}",
+      "setup": {
+        "repeat": 60,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_4",
+      "method": "delete",
+      "path": "/rooms/486777696/agents/slash_commands/missing",
+      "body": null,
+      "setup": {
+        "repeat": 60,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_5",
+      "method": "get",
+      "path": "/agents/approvals/0",
+      "body": null,
+      "setup": {
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ],
+        "repeat": 120
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_6",
+      "method": "delete",
+      "path": "/agents/approvals/0",
+      "body": null,
+      "setup": {
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ],
+        "repeat": 60
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_7",
+      "method": "get",
+      "path": "/agents/context",
+      "body": null,
+      "setup": {
+        "repeat": 120,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_8",
+      "method": "post",
+      "path": "/agents/dms",
+      "body": "{}",
+      "setup": {
+        "repeat": 60,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_9",
+      "method": "post",
+      "path": "/rooms/486777696/agents/messages",
+      "body": "{}",
+      "setup": {
+        "repeat": 60,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_10",
+      "method": "post",
+      "path": "/rooms/486777696/agents/streaming_messages",
+      "body": "{}",
+      "setup": {
+        "repeat": 60,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_11",
+      "method": "patch",
+      "path": "/agents/streaming_messages/0",
+      "body": "{}",
+      "setup": {
+        "repeat": 240,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_12",
+      "method": "post",
+      "path": "/agents/streaming_messages/0/finalize",
+      "body": "{}",
+      "setup": {
+        "repeat": 60,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_13",
+      "method": "post",
+      "path": "/agents/messages/0/pin",
+      "body": "{}",
+      "setup": {
+        "repeat": 60,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_14",
+      "method": "delete",
+      "path": "/agents/messages/0/pin",
+      "body": null,
+      "setup": {
+        "repeat": 60,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_15",
+      "method": "post",
+      "path": "/rooms/486777696/agents/polls",
+      "body": "{}",
+      "setup": {
+        "repeat": 60,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_16",
+      "method": "get",
+      "path": "/rooms/486777696/agents/polls/0",
+      "body": null,
+      "setup": {
+        "repeat": 120,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_17",
+      "method": "post",
+      "path": "/rooms/486777696/agents/posts",
+      "body": "{}",
+      "setup": {
+        "repeat": 30,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_18",
+      "method": "post",
+      "path": "/agents/work/0/handoff",
+      "body": "{}",
+      "setup": {
+        "repeat": 60,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_19",
+      "method": "get",
+      "path": "/agents/fizzy/boards/abc",
+      "body": null,
+      "setup": {
+        "repeat": 120,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_20",
+      "method": "get",
+      "path": "/agents/fizzy/cards/search",
+      "body": null,
+      "setup": {
+        "repeat": 120,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "matrix_rest_rate_21",
+      "method": "get",
+      "path": "/agents/fizzy/cards/acct/1",
+      "body": null,
+      "setup": {
+        "repeat": 120,
+        "grant": [
+          "read_messages",
+          "post_messages",
+          "manage_threads",
+          "external_action"
+        ]
+      },
+      "status": 429,
+      "response": {
+        "error": "rate_limited"
+      },
+      "response_headers": {
+        "cache-control": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_post_message",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"post_message\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 60
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_poll_events",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"poll_events\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 120
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_ack_events",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"ack_events\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 120
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_create_board_post",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"create_board_post\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 30
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_request_approval",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"request_approval\",\"arguments\":{}}}",
+      "setup": {
+        "grant": "external_action",
+        "repeat": 60
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_get_approval",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"get_approval\",\"arguments\":{}}}",
+      "setup": {
+        "grant": "external_action",
+        "repeat": 120
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_get_context",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"get_context\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 120
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_open_dm",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"open_dm\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 60
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_list_fizzy_boards",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"list_fizzy_boards\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 120
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_get_fizzy_board",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"get_fizzy_board\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 120
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_search_fizzy_cards",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"search_fizzy_cards\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 120
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_get_fizzy_card",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"get_fizzy_card\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 120
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_create_fizzy_card",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 60
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_comment_on_fizzy_card",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"comment_on_fizzy_card\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 60
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_move_fizzy_card",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"move_fizzy_card\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 60
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_close_fizzy_card",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"close_fizzy_card\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 60
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_reopen_fizzy_card",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"reopen_fizzy_card\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 60
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_pin_message",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"pin_message\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 60
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_unpin_message",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"unpin_message\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 60
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_register_slash_command",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"register_slash_command\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 60
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_unregister_slash_command",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"unregister_slash_command\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 60
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_create_poll",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"create_poll\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 60
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_get_poll",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"get_poll\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 120
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_handoff_work",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"handoff_work\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 60
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_start_stream",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"start_stream\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 60
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_append_stream",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"append_stream\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 240
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_finalize_stream",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"finalize_stream\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 60
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_add_step",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"add_step\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 60
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
+    },
+    {
+      "name": "mcp_matrix_rate_update_step",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"update_step\",\"arguments\":{}}}",
+      "setup": {
+        "repeat": 60
+      },
+      "status": 200,
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "rate_limited: retry after 60 seconds"
+            }
+          ],
+          "structuredContent": {
+            "error": "rate_limited",
+            "retry_after": 60
+          },
+          "isError": true
+        }
+      },
+      "response_headers": {
+        "cache-control": "no-store",
+        "pragma": "no-cache",
+        "retry-after": "60"
+      }
     }
   ]
 }

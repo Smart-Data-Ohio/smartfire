@@ -2,6 +2,8 @@
 require "active_support/testing/time_helpers"
 extend ActiveSupport::Testing::TimeHelpers
 Rails.logger = ActiveSupport::Logger.new($stderr)
+ActionController::Base.logger = Rails.logger
+ApplicationController.logger = Rails.logger
 SECRET = "ws11api-fixture-credential"
 CASES = []
 def contract(name, method, path, body = nil, setup = {})
@@ -144,6 +146,39 @@ contract("github_replay", :post, "/rooms/486777696/agents/github/pull_request_ac
 contract("github_rate", :post, "/rooms/486777696/agents/github/pull_request_actions", { pull_request_id: 900400001, kind: "bad" }, { grant: "external_action", github_pr: true, github_account: "agent_pat", repeat: 60 })
 tool("move_fizzy_card", { number: "abc", column_id: "bad/id" }, { grant: "external_action", fizzy_account: true }, "fizzy_move_invalid")
 tool("close_fizzy_card", { number: 0 }, { grant: "external_action", fizzy_account: true, cap: 0 }, "fizzy_close_budget")
+# Authentication for every JSON agent REST action and every configured MCP/tool bucket.
+ENDPOINTS = [
+  [:get,"/agents/me"],[:patch,"/agents/me"],[:get,"/agents/events"],[:post,"/agents/events/0/ack"],
+  [:post,"/agents/steps"],[:patch,"/agents/steps/0"],[:post,"/rooms/486777696/agents/slash_commands"],[:delete,"/rooms/486777696/agents/slash_commands/missing"],
+  [:get,"/agents/approvals"],[:get,"/agents/approvals/0"],[:post,"/agents/approvals"],[:delete,"/agents/approvals/0"],
+  [:get,"/agents/context"],[:post,"/agents/dms"],[:post,"/rooms/486777696/agents/messages"],[:post,"/rooms/486777696/agents/streaming_messages"],
+  [:patch,"/agents/streaming_messages/0"],[:post,"/agents/streaming_messages/0/finalize"],[:post,"/agents/messages/0/pin"],[:delete,"/agents/messages/0/pin"],
+  [:post,"/rooms/486777696/agents/polls"],[:get,"/rooms/486777696/agents/polls/0"],[:get,"/rooms/486777696/agents/posts"],[:post,"/rooms/486777696/agents/posts"],
+  [:get,"/agents/work"],[:get,"/agents/work/0"],[:patch,"/agents/work/0"],[:put,"/agents/work/0/result"],[:post,"/agents/work/0/handoff"],
+  [:get,"/agents/fizzy/boards"],[:get,"/agents/fizzy/boards/abc"],[:get,"/agents/fizzy/cards/search"],[:get,"/agents/fizzy/cards/acct/1"],
+  [:post,"/agents/fizzy/card_actions"],[:post,"/rooms/486777696/agents/github/pull_request_actions"]
+]
+ENDPOINTS.each_with_index do |(method,path),index|
+  body=[:get,:delete].include?(method) ? nil : {}
+  contract("matrix_rest_invalid_#{index}",method,path,body,{invalid_token:true})
+  contract("matrix_rest_session_#{index}",method,path,body,{human_session:true})
+end
+[
+  [:post,"/agents/events/0/ack",120],[:post,"/agents/steps",60],[:patch,"/agents/steps/0",60],
+  [:post,"/rooms/486777696/agents/slash_commands",60],[:delete,"/rooms/486777696/agents/slash_commands/missing",60],
+  [:get,"/agents/approvals/0",120],[:delete,"/agents/approvals/0",60],[:get,"/agents/context",120],[:post,"/agents/dms",60],
+  [:post,"/rooms/486777696/agents/messages",60],[:post,"/rooms/486777696/agents/streaming_messages",60],[:patch,"/agents/streaming_messages/0",240],
+  [:post,"/agents/streaming_messages/0/finalize",60],[:post,"/agents/messages/0/pin",60],[:delete,"/agents/messages/0/pin",60],
+  [:post,"/rooms/486777696/agents/polls",60],[:get,"/rooms/486777696/agents/polls/0",120],[:post,"/rooms/486777696/agents/posts",30],[:post,"/agents/work/0/handoff",60],
+  [:get,"/agents/fizzy/boards/abc",120],[:get,"/agents/fizzy/cards/search",120],[:get,"/agents/fizzy/cards/acct/1",120]
+].each_with_index do |(method,path,rate),index|
+  contract("matrix_rest_rate_#{index}",method,path,[:get,:delete].include?(method) ? nil : {},{repeat:rate,grant:["read_messages","post_messages","manage_threads","external_action"]})
+end
+Agents::McpServer::TOOLS.each do |definition|
+  if definition.throttle
+    tool(definition.name,{}, {repeat:definition.throttle.first}, "matrix_rate_#{definition.name}")
+  end
+end
 travel_to Time.utc(2026, 3, 2, 16) do
   agent = Agent.find(773018776)
   result = CASES.map do |item|
@@ -192,6 +227,15 @@ travel_to Time.utc(2026, 3, 2, 16) do
     session = ActionDispatch::Integration::Session.new(Rails.application)
     session.host! "campfire.test"
     headers = { "Accept" => "application/json", "Content-Type" => "application/json", "Authorization" => ["Bearer", SECRET].join(" ") }
+    if item[:setup][:invalid_token]
+      headers["Authorization"]=["Bearer","unrecognized-fixture"].join(" ")
+    elsif item[:setup][:human_session]
+      headers.delete("Authorization")
+      human_session=Session.create!(user_id:127326141,two_factor_verified_at:Time.current)
+      cookie_request=ActionDispatch::Request.new(Rails.application.env_config.merge(Rack::MockRequest.env_for("http://campfire.test/")))
+      cookie_request.cookie_jar.signed[:session_token]=human_session.token
+      session.cookies["session_token"]=cookie_request.cookie_jar[:session_token]
+    end
     raw = item[:body]&.to_json
     (item[:setup][:repeat] || 0).times { session.public_send(item[:method], item[:path], params: raw, headers: headers) }
     session.public_send(item[:method], item[:path], params: raw, headers: headers)

@@ -42,9 +42,24 @@ async fn check(case: &Value) {
             Method::from_bytes(case["method"].as_str().unwrap().to_uppercase().as_bytes()).unwrap(),
             case["path"].as_str().unwrap(),
         )
-        .header("authorization", &["Bearer", SECRET].join(" "))
         .header("accept", "application/json")
         .header("content-type", "application/json");
+        let req = if case["setup"]["human_session"].as_bool() == Some(true) {
+            req
+        } else {
+            req.header(
+                "authorization",
+                &[
+                    "Bearer",
+                    if case["setup"]["invalid_token"].as_bool() == Some(true) {
+                        "unrecognized-fixture"
+                    } else {
+                        SECRET
+                    },
+                ]
+                .join(" "),
+            )
+        };
         if let Some(body) = case["body"].as_str() {
             req.body(body)
         } else {
@@ -54,7 +69,11 @@ async fn check(case: &Value) {
     for _ in 0..case["setup"]["repeat"].as_u64().unwrap_or(0) {
         app.anonymous().send(request()).await;
     }
-    let reply = app.anonymous().send(request()).await;
+    let reply = if case["setup"]["human_session"].as_bool() == Some(true) {
+        app.david().send(request()).await
+    } else {
+        app.anonymous().send(request()).await
+    };
     let name = case["name"].as_str().unwrap();
     assert_eq!(
         reply.status.as_u16(),
@@ -134,4 +153,13 @@ async fn agent_surface_integrations_rest() {
 #[tokio::test]
 async fn agent_surface_integrations_mcp() {
     group(&["mcp_fizzy_"]).await;
+}
+
+#[tokio::test]
+async fn agent_surface_matrix_rest() {
+    group(&["matrix_rest_"]).await;
+}
+#[tokio::test]
+async fn agent_surface_matrix_mcp() {
+    group(&["mcp_matrix_"]).await;
 }
