@@ -1,0 +1,2 @@
+{% if visible %}  <p class="ooo-notice txt-small" role="status">{{ name }} is out of office until {{ until_date.unwrap_or("") }}.{% if let Some(note) = note %} {{ note }}{% endif %}</p>
+{% endif %}

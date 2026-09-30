@@ -23,6 +23,15 @@ pub fn static_icon(name: &str) -> Option<AvatarIcon> {
         .get(name)
         .and_then(|row| row.icon.clone())
 }
+pub fn static_icon_name(name: &str) -> Option<String> {
+    REGISTRY
+        .shortcodes
+        .get(name)?
+        .icon_alt
+        .as_ref()
+        .map(|alt| alt.trim_matches(':').to_string())
+}
+
 pub fn shortcode_name(content: &str) -> Option<&str> {
     SHORTCODE
         .is_match(content)

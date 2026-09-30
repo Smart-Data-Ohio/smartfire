@@ -5,7 +5,7 @@ use rusqlite::{Connection, Row, params};
 
 use crate::database::Tx;
 use crate::error::{Errors, OptionalExt, Result};
-use crate::models::{Membership, Message, Room, User};
+use crate::models::{Membership, Message, Room, User, NotificationKind, NotificationPolicy, UserStatusSettings};
 use crate::rich_text::RichText;
 use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
 use crate::time::Timestamp;
@@ -31,6 +31,19 @@ pub struct PushSubscription {
     pub updated_at: Timestamp,
 }
 
+/// Durable Rust adapter for the pinned Rails controller's inline test delivery. Capture the
+/// random UUID and absolute request path at enqueue, then read the subscription/badge at run.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct TestNotificationJob {
+    pub subscription_id: i64,
+    pub user_id: i64,
+    pub body: String,
+    pub path: String,
+}
+impl crate::Job for TestNotificationJob {
+    const CLASS: &'static str = "Push::Subscription::TestNotificationJob";
+}
+
 /// How long a payload's title and body may be, counted as the bytes they take in the JSON
 /// message. An encrypted Web Push record holds at most 4096 bytes: 4078 of JSON once the padding
 /// and tag are in, and the icon, path and badge take under 150 of that.
@@ -38,20 +51,26 @@ pub const MAX_PAYLOAD_TITLE_BYTES: usize = 256;
 pub const MAX_PAYLOAD_BODY_BYTES: usize = 3072;
 
 /// What `Room::MessagePusher#build_payload` sends.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PushPayload {
     pub title: String,
     pub body: String,
     pub path: String,
+    pub tag: Option<String>,
 }
 
 impl PushPayload {
-    /// A payload cut to fit a push message, as [`PushSubscription::payload_for`] cuts the room's.
+    /// Rails does not truncate Web Push payloads. The transport rejects oversized records.
+    pub fn new(title: String, body: String, path: String, tag: Option<String>) -> Self {
+        Self { title, body, path, tag }
+    }
+    /// Legacy explicit truncation helper. Smartfire's production pushers use [`Self::new`].
     pub fn fitted(title: String, body: String, path: String) -> Self {
         Self {
             title: truncate_json_string(title, MAX_PAYLOAD_TITLE_BYTES),
             body: truncate_json_string(body, MAX_PAYLOAD_BODY_BYTES),
             path,
+            tag: None,
         }
     }
 }
@@ -111,6 +130,19 @@ impl PushSubscription {
             [user_id],
             Self::from_row,
         )
+    }
+
+    pub fn for_users(conn: &Connection, user_ids: &[i64]) -> Result<Vec<Self>> {
+        if user_ids.is_empty() { return Ok(Vec::new()); }
+        query_all(conn,
+            &format!("SELECT * FROM push_subscriptions WHERE user_id IN ({})",placeholders(user_ids.len())),
+            rusqlite::params_from_iter(user_ids),Self::from_row)
+    }
+    pub fn for_ids(conn: &Connection, ids: &[i64]) -> Result<Vec<Self>> {
+        if ids.is_empty() { return Ok(Vec::new()); }
+        query_all(conn,
+            &format!("SELECT * FROM push_subscriptions WHERE id IN ({}) ORDER BY id",placeholders(ids.len())),
+            rusqlite::params_from_iter(ids),Self::from_row)
     }
 
     /// `user.push_subscriptions.find_by(endpoint:, p256dh_key:, auth_key:)`
@@ -218,8 +250,6 @@ impl PushSubscription {
     // Room::MessagePusher
 
     /// `build_payload`: direct rooms show the sender; others the room and "Sender: body".
-    /// Unlike Rails, a long title or body is cut short (with an ellipsis) so the notification
-    /// still fits a push message.
     pub fn payload_for(
         conn: &Connection,
         rich_text: &dyn RichText,
@@ -238,9 +268,10 @@ impl PushSubscription {
             )
         };
         Ok(PushPayload {
-            title: truncate_json_string(title, MAX_PAYLOAD_TITLE_BYTES),
-            body: truncate_json_string(body, MAX_PAYLOAD_BODY_BYTES),
+            title,
+            body,
             path,
+            tag: Some(format!("room-{}", room.id)),
         })
     }
 
@@ -292,8 +323,9 @@ impl PushSubscription {
         )
     }
 
-    /// `Room::MessagePusher#push`: the payload, and the subscriptions it goes to (everything
-    /// first, then mentions).
+    /// `Room::MessagePusher#push`: union the recipient scopes before applying policy, so an
+    /// everything follower who is also mentioned/replied to receives one notification per device.
+    /// The last list is retained as an empty compatibility seam for existing callers.
     pub fn pushes_for(
         conn: &Connection,
         rich_text: &dyn RichText,
@@ -302,16 +334,31 @@ impl PushSubscription {
     ) -> Result<(PushPayload, Vec<Self>, Vec<Self>)> {
         let room = Room::find(conn, message.room_id)?;
         let payload = Self::payload_for(conn, rich_text, &room, message)?;
-        let everything =
-            Self::for_users_involved_in_everything(conn, room.id, message.creator_id, now)?;
         let mentionee_ids: Vec<i64> = message
             .mentionees(conn, rich_text)?
             .iter()
             .map(|u: &User| u.id)
             .collect();
-        let mentions =
-            Self::for_mentioned_users(conn, room.id, message.creator_id, &mentionee_ids, now)?;
-        Ok((payload, everything, mentions))
+        let reply_author_id = match message.reply_to_message_id {
+            Some(id) if message.reply_notify_author => Message::find_by_id(conn, id)?.map(|m| m.creator_id),
+            _ => None,
+        };
+        let subscriptions = query_all(conn,
+            "SELECT DISTINCT s.* FROM push_subscriptions s JOIN memberships m ON m.user_id=s.user_id WHERE m.room_id=? AND m.user_id!=? AND m.involvement!='invisible' AND (m.connected_at IS NULL OR m.connected_at < ?)",
+            params![room.id, message.creator_id, Membership::connection_cutoff(now)], Self::from_row)?;
+        let ids: Vec<i64> = subscriptions.iter().map(|s| s.user_id).collect::<std::collections::HashSet<_>>().into_iter().collect();
+        let users = UserStatusSettings::for_ids(conn, &ids)?;
+        let exceptions = super::notification_policy::dnd_exceptions_for(conn, &ids, Some(message.creator_id))?;
+        let memberships: std::collections::HashMap<i64, Membership> = Membership::for_room(conn, room.id)?.into_iter().map(|m| (m.user_id, m)).collect();
+        let allowed = subscriptions.into_iter().filter(|s| {
+            NotificationPolicy {
+                recipient: users.get(&s.user_id), kind: NotificationKind::RoomMessage,
+                room_involvement: memberships.get(&s.user_id).map(|m| m.involvement), thread_involvement: None,
+                mentioned: mentionee_ids.contains(&s.user_id), reply_to_recipient: reply_author_id == Some(s.user_id),
+                keyword_matched: false, dnd_exception: exceptions.contains(&s.user_id), now,
+            }.push()
+        }).collect();
+        Ok((payload, allowed, Vec::new()))
     }
 }
 
@@ -362,32 +409,91 @@ struct EndpointUri {
 
 impl EndpointUri {
     fn parse(endpoint: &str) -> Option<Self> {
-        if endpoint.is_empty() || endpoint.chars().any(|c| c.is_whitespace()) {
+        // URI::RFC3986_Parser (uri 1.1.1), rather than a browser URL parser:
+        // path/authority/fragment escapes are strict and raw Unicode is rejected.
+        if endpoint.is_empty() || !endpoint.is_ascii() {
             return None;
         }
-        let (scheme, rest) = endpoint.split_once("://")?;
-        let scheme = scheme.to_ascii_lowercase();
-        let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
-        let authority = authority
-            .rsplit_once('@')
-            .map(|(_, h)| h)
-            .unwrap_or(authority);
-        let (host, port) = match authority.rsplit_once(':') {
-            _ if authority.ends_with(']') => (authority.to_string(), None),
-            Some((host, port)) => (host.to_string(), Some(port.parse::<u16>().ok()?)),
-            None => (authority.to_string(), None),
+        let (without_fragment, fragment) = endpoint.split_once('#')
+            .map_or((endpoint, None), |(base, fragment)| (base, Some(fragment)));
+        if fragment.is_some_and(|v| !uri_component(v, "/?:@")) {
+            return None;
+        }
+        let (base, query) = without_fragment.split_once('?')
+            .map_or((without_fragment, None), |(base, query)| (base, Some(query)));
+        let (scheme, rest) = match base.split_once(':') {
+            Some((scheme, rest)) if !scheme.is_empty()
+                && scheme.as_bytes()[0].is_ascii_alphabetic()
+                && scheme.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'+' | b'-' | b'.')) =>
+                    (scheme.to_ascii_lowercase(), rest),
+            _ => (String::new(), base),
         };
-        let default_port = match scheme.as_str() {
+        let mut host = String::new();
+        let mut port = match scheme.as_str() {
             "https" => Some(443),
             "http" => Some(80),
             _ => None,
         };
-        Some(Self {
-            scheme,
-            host,
-            port: port.or(default_port),
-        })
+        let path = if let Some(rest) = rest.strip_prefix("//") {
+            let (authority, path) = rest.find('/').map_or((rest, ""), |index| (&rest[..index], &rest[index..]));
+            let authority = if let Some((userinfo, authority)) = authority.split_once('@') {
+                if !uri_component(userinfo, ":") { return None; }
+                authority
+            } else { authority };
+            let (hostname, explicit_port) = if authority.starts_with('[') {
+                let end = authority.find(']')?;
+                let address = &authority[1..end];
+                let ipv_future = address.strip_prefix('v').and_then(|a| a.split_once('.'))
+                    .is_some_and(|(version, address)| !version.is_empty()
+                        && version.bytes().all(|b| b.is_ascii_hexdigit())
+                        && !address.is_empty() && uri_component(address, ":") && !address.contains('%'));
+                if address.parse::<std::net::Ipv6Addr>().is_err() && !ipv_future { return None; }
+                let suffix = &authority[end + 1..];
+                let explicit_port = if suffix.is_empty() { None } else { Some(suffix.strip_prefix(':')?) };
+                (&authority[..end + 1], explicit_port)
+            } else if let Some((hostname, port)) = authority.split_once(':') {
+                (hostname, Some(port))
+            } else { (authority, None) };
+            if !hostname.starts_with('[') && !uri_component(hostname, "") { return None; }
+            host = hostname.to_owned();
+            if let Some(explicit) = explicit_port {
+                if !explicit.bytes().all(|b| b.is_ascii_digit()) { return None; }
+                if !explicit.is_empty() {
+                    // Ruby accepts arbitrary-size integer ports. Only 443 is permitted.
+                    port = Some(if explicit.trim_start_matches('0') == "443" { 443 } else { 0 });
+                }
+            }
+            path
+        } else {
+            if scheme.is_empty() && rest.split('/').next().is_some_and(|first| first.contains(':')) {
+                return None;
+            }
+            rest
+        };
+        if !uri_component(path, "/:@") { return None; }
+        // Generic#query= removes TAB/CR/LF and escapes other ASCII bytes. It raises
+        // for % followed by two non-hex characters, unlike strict path escapes.
+        let opaque = !scheme.is_empty() && !rest.starts_with('/');
+        if !opaque && query.is_some_and(|q| {
+            let q: Vec<_> = q.bytes().filter(|b| !matches!(b, b'\t' | b'\r' | b'\n')).collect();
+            q.windows(3).any(|w| w[0] == b'%' && !w[1].is_ascii_hexdigit() && !w[2].is_ascii_hexdigit())
+        }) { return None; }
+        Some(Self { scheme, host, port })
     }
+}
+
+// RFC3986 unreserved + sub-delimiters, with component-specific delimiters.
+fn uri_component(value: &str, delimiters: &str) -> bool {
+    let mut bytes = value.bytes();
+    while let Some(b) = bytes.next() {
+        if b == b'%' {
+            if !bytes.next().is_some_and(|b| b.is_ascii_hexdigit())
+                || !bytes.next().is_some_and(|b| b.is_ascii_hexdigit()) { return false; }
+        } else if !(b.is_ascii_alphanumeric() || b"-._~!$&'()*+,;=".contains(&b) || delimiters.as_bytes().contains(&b)) {
+            return false;
+        }
+    }
+    true
 }
 
 #[cfg(test)]

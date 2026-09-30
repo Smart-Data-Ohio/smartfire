@@ -358,6 +358,7 @@ async fn twirp_read_timeout_is_reported_safely() {
     let timeouts = Timeouts {
         open: OPEN_TIMEOUT,
         read: Duration::from_millis(40),
+        write: http::NET_HTTP_DEFAULT_TIMEOUT,
     };
     let error = service
         .post(

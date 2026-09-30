@@ -1,4 +1,14 @@
+# The profile page's Status section and the status popup in your own profile
+# card both save here. The popup posts from inside the card's frame, so it
+# gets the card back on success and the popup form again on errors.
 class Users::StatusesController < ApplicationController
+  STATUS_ATTRIBUTES = %w[ presence_setting custom_status_emoji custom_status_text custom_status_expires_at ].freeze
+
+  def edit
+    @user = Current.user
+    render layout: false
+  end
+
   def update
     @user = Current.user
     @user.assign_attributes(status_params)
@@ -15,19 +25,32 @@ class Users::StatusesController < ApplicationController
       reconcile_meeting_status
       reconcile_ooo_calendar
       broadcast_manual_ooo_change
-      redirect_to user_profile_url, notice: "✓"
+      broadcast_status_change
+
+      if turbo_frame_request?
+        redirect_to user_card_url(@user), status: :see_other
+      else
+        redirect_to user_profile_url, notice: "✓"
+      end
     else
-      set_memberships
-      render "users/profiles/show", status: :unprocessable_entity
+      render_invalid
     end
   rescue ArgumentError
     @user ||= Current.user
     @user.errors.add(:custom_status_expires_in, "is not valid")
-    set_memberships
-    render "users/profiles/show", status: :unprocessable_entity
+    render_invalid
   end
 
   private
+    def render_invalid
+      if turbo_frame_request?
+        render :edit, layout: false, status: :unprocessable_entity
+      else
+        set_memberships
+        render "users/profiles/show", status: :unprocessable_entity
+      end
+    end
+
     def status_params
       params.require(:user).permit(:presence_setting, :custom_status_emoji, :custom_status_text, :custom_status_expires_in,
         :meeting_status_enabled, :ooo_calendar_enabled)
@@ -70,8 +93,7 @@ class Users::StatusesController < ApplicationController
 
     def render_ooo_error(message)
       @user.errors.add(:ooo_until, message)
-      set_memberships
-      render "users/profiles/show", status: :unprocessable_entity
+      render_invalid
     end
 
     # Opting into meeting status fetches the first busy intervals right
@@ -128,6 +150,14 @@ class Users::StatusesController < ApplicationController
 
       @user.claim_ooo_broadcast!(@user.out_of_office?)
       Calendar::OooDispatcher.broadcast_ooo_for(@user)
+    end
+
+    # Open profile pages and cards subscribed to [user, :status] show the
+    # new badge at once; member panels and DM dots poll on their own.
+    def broadcast_status_change
+      return unless @user.saved_changes.keys.intersect?(STATUS_ATTRIBUTES)
+
+      Calendar::MeetingDispatcher.broadcast_badges_for(@user)
     end
 
     def set_memberships

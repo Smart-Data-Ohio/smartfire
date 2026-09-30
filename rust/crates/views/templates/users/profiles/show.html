@@ -15,7 +15,7 @@
       </button>
 {% endfilter %}  </div>
 {% endblock %}
-{% block content %}<section class="panel flex flex-column gap" style="view-transition-name: avatar-{{ user.id }}">
+{% block content %}<section class="panel profile-settings flex flex-column gap" style="view-transition-name: avatar-{{ user.id }}">
   {% include "pwa/_install_instructions.html" %}
 
   <div class="align-center center avatar__form gap" data-controller="upload-preview">
@@ -58,6 +58,16 @@
         </label>
       </div>
 
+{% if has_password %}        <div class="flex align-center gap">
+          <label class="flex align-center gap flex-item-grow input input--actor">
+            {{ h::legacy_tag("input", h::attrs().type_("password").name("user[current_password]").id("user_current_password").class("input txt-large").autocomplete("current-password").placeholder("Current password (to change email)").maxlength(72).attr("aria-label", "Current password, required to change your email address")) }}
+            {{ h::image_tag(ctx, "password.svg", h::attrs().aria_hidden().size(24)) }}
+          </label>
+        </div>
+{% endif %}{% if let Some(error) = current_password_error %}        <p class="txt-small margin-none" style="color: var(--color-negative)">
+          Current password {{ error }}.
+        </p>
+{% endif %}
       <div class="flex align-center gap">
         {{ h::translation_button(ctx, "update_password") }}
 
@@ -79,6 +89,12 @@
       {{ h::profile_form_submit_button(ctx) }}
     </div>
 {% endfilter %}
+  {{ self.status_form() }}
+
+  {{ self.notification_form() }}
+
+  {{ self.appearance_form() }}
+
   <div class="margin-block pad-inline pad-block fill-shade border-radius">
     <menu class="flex flex-column gap margin-none pad">
       {% for membership in shared_memberships %}{% include "users/profiles/_membership.html" %}{% endfor %}
@@ -86,6 +102,10 @@
 {% endif %}
       {% for membership in direct_memberships %}{% include "users/profiles/_membership.html" %}{% endfor %}    </menu>
   </div>
+
+  {{ self.security_panel() }}
+
+  {% include "users/profiles/_sessions.html" %}
 
   {% include "users/profiles/_transfer.html" %}
 </section>

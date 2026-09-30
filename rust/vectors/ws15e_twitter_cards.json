@@ -1,0 +1,580 @@
+{
+  "reference": "d7c7de92",
+  "cards": [
+    {
+      "name": "full",
+      "attributes": {
+        "post_id": "131",
+        "url": "https://x.com/jack/status/131",
+        "author_handle": "jack",
+        "author_name": "jack Bauer",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "Hello @nasa, see https://example.com/x! #launch",
+        "posted_at": "2006-03-21T20:50:14.000Z",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/media/a.jpg",
+            "width": 800,
+            "height": 532,
+            "alt": "A rocket"
+          },
+          {
+            "type": "video",
+            "url": "https://video.twimg.com/x.mp4",
+            "thumbnail_url": "https://pbs.twimg.com/t.jpg",
+            "width": 1280,
+            "height": 720
+          }
+        ],
+        "quote": {
+          "url": "https://x.com/NASA/status/123",
+          "author_name": "NASA",
+          "author_handle": "NASA",
+          "text": "We go up"
+        },
+        "fetched_at": "2023-11-14T22:13:20.000Z",
+        "fetch_error": null
+      },
+      "display_handle": "jack",
+      "display_name": "jack Bauer",
+      "view_url": "https://x.com/jack/status/131",
+      "profile_url": "https://x.com/jack",
+      "logo_url": "/assets/icons/brands/x-9d69ccea.svg",
+      "zone": "UTC",
+      "html": "<article class=\"x-post-card\" data-twitter-post=\"131\">\n    <header class=\"x-post-card__header\">\n        <img alt=\"\" loading=\"lazy\" class=\"x-post-card__avatar\" src=\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\" width=\"40\" height=\"40\" />\n      <span class=\"x-post-card__author\">\n        <a class=\"x-post-card__name\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">jack Bauer</a>\n          <a class=\"x-post-card__handle\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">@jack</a>\n      </span>\n      <img class=\"icon icon--brand x-post-card__logo\" alt=\"\" aria-hidden=\"true\" src=\"/assets/icons/brands/x-9d69ccea.svg\" />\n    </header>\n\n        <div class=\"x-post-card__text\">Hello <a href=\"https://x.com/nasa\" target=\"_blank\" rel=\"noopener noreferrer\">@nasa</a>, see <a href=\"https://example.com/x\" target=\"_blank\" rel=\"noopener noreferrer\">https://example.com/x</a>! <a href=\"https://x.com/hashtag/launch\" target=\"_blank\" rel=\"noopener noreferrer\">#launch</a></div>\n\n      <div class=\"x-post-card__media x-post-card__media--2\">\n            <a target=\"_blank\" rel=\"noopener noreferrer\" class=\"x-post-card__media-link\" aria-label=\"View post on X\" href=\"https://x.com/jack/status/131\">\n              <img alt=\"A rocket\" loading=\"lazy\" class=\"x-post-card__photo\" width=\"800\" height=\"532\" src=\"https://pbs.twimg.com/media/a.jpg\" />\n</a>            <a target=\"_blank\" rel=\"noopener noreferrer\" class=\"x-post-card__media-link x-post-card__media-link--video\" aria-label=\"View video on X\" href=\"https://x.com/jack/status/131\">\n              <img alt=\"\" loading=\"lazy\" class=\"x-post-card__poster\" width=\"1280\" height=\"720\" src=\"https://pbs.twimg.com/t.jpg\" />\n              <span class=\"x-post-card__play\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\" width=\"40\" height=\"40\"><circle cx=\"12\" cy=\"12\" r=\"12\" fill=\"rgba(0,0,0,0.55)\"/><path d=\"M10 8.5v7l6-3.5z\" fill=\"#fff\"/></svg></span>\n</a>      </div>\n\n      <blockquote class=\"x-post-card__quote\">\n        <div class=\"x-post-card__quote-author\">\n            <a target=\"_blank\" rel=\"noopener noreferrer\" class=\"x-post-card__quote-link\" href=\"https://x.com/NASA/status/123\">            <strong>NASA</strong>\n            <span class=\"x-post-card__quote-handle\">@NASA</span>\n</a>\n        </div>\n        <div class=\"x-post-card__quote-text\">We go up</div>\n      </blockquote>\n\n    <footer class=\"x-post-card__footer\">\n        <span class=\"x-post-card__time\"><time datetime=\"2006-03-21T20:50:14Z\" data-local-time-target=\"time\"></time></span>\n        <span class=\"x-post-card__count\">18K replies</span>\n        <span class=\"x-post-card__count\">125K reposts</span>\n        <span class=\"x-post-card__count\">311K likes</span>\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack/status/131\">View on X</a>\n    </footer>\n</article>\n"
+    },
+    {
+      "name": "loading",
+      "attributes": {
+        "post_id": "132",
+        "url": "https://x.com/jack/status/132",
+        "author_handle": null,
+        "author_name": null,
+        "author_avatar_url": null,
+        "text": null,
+        "posted_at": null,
+        "replies": null,
+        "reposts": null,
+        "likes": null,
+        "media": null,
+        "quote": null,
+        "fetched_at": null,
+        "fetch_error": null
+      },
+      "display_handle": "jack",
+      "display_name": "@jack",
+      "view_url": "https://x.com/jack/status/132",
+      "profile_url": "https://x.com/jack",
+      "logo_url": "/assets/icons/brands/x-9d69ccea.svg",
+      "zone": "UTC",
+      "html": "<article class=\"x-post-card\" data-twitter-post=\"132\">\n    <p class=\"x-post-card__loading\">Loading post…</p>\n</article>\n"
+    },
+    {
+      "name": "error",
+      "attributes": {
+        "post_id": "133",
+        "url": "https://x.com/jack/status/133",
+        "author_handle": null,
+        "author_name": null,
+        "author_avatar_url": null,
+        "text": null,
+        "posted_at": null,
+        "replies": null,
+        "reposts": null,
+        "likes": null,
+        "media": null,
+        "quote": null,
+        "fetched_at": "2023-11-14T22:13:20.000Z",
+        "fetch_error": "Post not found on X"
+      },
+      "display_handle": "jack",
+      "display_name": "@jack",
+      "view_url": "https://x.com/jack/status/133",
+      "profile_url": "https://x.com/jack",
+      "logo_url": "/assets/icons/brands/x-9d69ccea.svg",
+      "zone": "UTC",
+      "html": "<article class=\"x-post-card\" data-twitter-post=\"133\">\n    <p class=\"x-post-card__error\">\n        <span class=\"x-post-card__error-handle\">@jack</span>\n      Couldn’t load this post.\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack/status/133\">View on X</a>\n    </p>\n</article>\n"
+    },
+    {
+      "name": "handleless error",
+      "attributes": {
+        "post_id": "134",
+        "url": null,
+        "author_handle": null,
+        "author_name": null,
+        "author_avatar_url": null,
+        "text": null,
+        "posted_at": null,
+        "replies": null,
+        "reposts": null,
+        "likes": null,
+        "media": null,
+        "quote": null,
+        "fetched_at": null,
+        "fetch_error": "error"
+      },
+      "display_handle": null,
+      "display_name": "Post on X",
+      "view_url": "https://x.com/i/status/134",
+      "profile_url": null,
+      "logo_url": "/assets/icons/brands/x-9d69ccea.svg",
+      "zone": "UTC",
+      "html": "<article class=\"x-post-card\" data-twitter-post=\"134\">\n    <p class=\"x-post-card__error\">\n      Couldn’t load this post.\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/i/status/134\">View on X</a>\n    </p>\n</article>\n"
+    },
+    {
+      "name": "no author",
+      "attributes": {
+        "post_id": "131",
+        "url": null,
+        "author_handle": null,
+        "author_name": null,
+        "author_avatar_url": null,
+        "text": "Hello @nasa, see https://example.com/x! #launch",
+        "posted_at": "2006-03-21T20:50:14.000Z",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": null,
+        "quote": null,
+        "fetched_at": "2023-11-14T22:13:20.000Z",
+        "fetch_error": null
+      },
+      "display_handle": null,
+      "display_name": "Post on X",
+      "view_url": "https://x.com/i/status/131",
+      "profile_url": null,
+      "logo_url": "/assets/icons/brands/x-9d69ccea.svg",
+      "zone": "UTC",
+      "html": "<article class=\"x-post-card\" data-twitter-post=\"131\">\n    <header class=\"x-post-card__header\">\n      <span class=\"x-post-card__author\">\n        <a class=\"x-post-card__name\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/i/status/131\">Post on X</a>\n      </span>\n      <img class=\"icon icon--brand x-post-card__logo\" alt=\"\" aria-hidden=\"true\" src=\"/assets/icons/brands/x-9d69ccea.svg\" />\n    </header>\n\n        <div class=\"x-post-card__text\">Hello <a href=\"https://x.com/nasa\" target=\"_blank\" rel=\"noopener noreferrer\">@nasa</a>, see <a href=\"https://example.com/x\" target=\"_blank\" rel=\"noopener noreferrer\">https://example.com/x</a>! <a href=\"https://x.com/hashtag/launch\" target=\"_blank\" rel=\"noopener noreferrer\">#launch</a></div>\n\n\n\n    <footer class=\"x-post-card__footer\">\n        <span class=\"x-post-card__time\"><time datetime=\"2006-03-21T20:50:14Z\" data-local-time-target=\"time\"></time></span>\n        <span class=\"x-post-card__count\">18K replies</span>\n        <span class=\"x-post-card__count\">125K reposts</span>\n        <span class=\"x-post-card__count\">311K likes</span>\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/i/status/131\">View on X</a>\n    </footer>\n</article>\n"
+    },
+    {
+      "name": "long",
+      "attributes": {
+        "post_id": "131",
+        "url": "https://x.com/jack/status/131",
+        "author_handle": "jack",
+        "author_name": "jack Bauer",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+        "posted_at": "2006-03-21T20:50:14.000Z",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": null,
+        "quote": null,
+        "fetched_at": "2023-11-14T22:13:20.000Z",
+        "fetch_error": null
+      },
+      "display_handle": "jack",
+      "display_name": "jack Bauer",
+      "view_url": "https://x.com/jack/status/131",
+      "profile_url": "https://x.com/jack",
+      "logo_url": "/assets/icons/brands/x-9d69ccea.svg",
+      "zone": "UTC",
+      "html": "<article class=\"x-post-card\" data-twitter-post=\"131\">\n    <header class=\"x-post-card__header\">\n        <img alt=\"\" loading=\"lazy\" class=\"x-post-card__avatar\" src=\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\" width=\"40\" height=\"40\" />\n      <span class=\"x-post-card__author\">\n        <a class=\"x-post-card__name\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">jack Bauer</a>\n          <a class=\"x-post-card__handle\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">@jack</a>\n      </span>\n      <img class=\"icon icon--brand x-post-card__logo\" alt=\"\" aria-hidden=\"true\" src=\"/assets/icons/brands/x-9d69ccea.svg\" />\n    </header>\n\n        <details class=\"x-post-card__details\">\n          <summary class=\"x-post-card__summary\">\n            <span class=\"x-post-card__clamp\">ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé</span>\n            <span class=\"x-post-card__toggle x-post-card__toggle--more\">Show more</span>\n            <span class=\"x-post-card__toggle x-post-card__toggle--less\">Show less</span>\n          </summary>\n          <div class=\"x-post-card__text\">ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé</div>\n        </details>\n\n\n\n    <footer class=\"x-post-card__footer\">\n        <span class=\"x-post-card__time\"><time datetime=\"2006-03-21T20:50:14Z\" data-local-time-target=\"time\"></time></span>\n        <span class=\"x-post-card__count\">18K replies</span>\n        <span class=\"x-post-card__count\">125K reposts</span>\n        <span class=\"x-post-card__count\">311K likes</span>\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack/status/131\">View on X</a>\n    </footer>\n</article>\n"
+    },
+    {
+      "name": "lines",
+      "attributes": {
+        "post_id": "131",
+        "url": "https://x.com/jack/status/131",
+        "author_handle": "jack",
+        "author_name": "jack Bauer",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "line\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\nline\n",
+        "posted_at": "2006-03-21T20:50:14.000Z",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": null,
+        "quote": null,
+        "fetched_at": "2023-11-14T22:13:20.000Z",
+        "fetch_error": null
+      },
+      "display_handle": "jack",
+      "display_name": "jack Bauer",
+      "view_url": "https://x.com/jack/status/131",
+      "profile_url": "https://x.com/jack",
+      "logo_url": "/assets/icons/brands/x-9d69ccea.svg",
+      "zone": "UTC",
+      "html": "<article class=\"x-post-card\" data-twitter-post=\"131\">\n    <header class=\"x-post-card__header\">\n        <img alt=\"\" loading=\"lazy\" class=\"x-post-card__avatar\" src=\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\" width=\"40\" height=\"40\" />\n      <span class=\"x-post-card__author\">\n        <a class=\"x-post-card__name\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">jack Bauer</a>\n          <a class=\"x-post-card__handle\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">@jack</a>\n      </span>\n      <img class=\"icon icon--brand x-post-card__logo\" alt=\"\" aria-hidden=\"true\" src=\"/assets/icons/brands/x-9d69ccea.svg\" />\n    </header>\n\n        <details class=\"x-post-card__details\">\n          <summary class=\"x-post-card__summary\">\n            <span class=\"x-post-card__clamp\">line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br></span>\n            <span class=\"x-post-card__toggle x-post-card__toggle--more\">Show more</span>\n            <span class=\"x-post-card__toggle x-post-card__toggle--less\">Show less</span>\n          </summary>\n          <div class=\"x-post-card__text\">line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br>line<br></div>\n        </details>\n\n\n\n    <footer class=\"x-post-card__footer\">\n        <span class=\"x-post-card__time\"><time datetime=\"2006-03-21T20:50:14Z\" data-local-time-target=\"time\"></time></span>\n        <span class=\"x-post-card__count\">18K replies</span>\n        <span class=\"x-post-card__count\">125K reposts</span>\n        <span class=\"x-post-card__count\">311K likes</span>\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack/status/131\">View on X</a>\n    </footer>\n</article>\n"
+    },
+    {
+      "name": "no quote url",
+      "attributes": {
+        "post_id": "131",
+        "url": "https://x.com/jack/status/131",
+        "author_handle": "jack",
+        "author_name": "jack Bauer",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "Hello @nasa, see https://example.com/x! #launch",
+        "posted_at": "2006-03-21T20:50:14.000Z",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": null,
+        "quote": {
+          "author_name": "NASA",
+          "author_handle": "NASA",
+          "text": "We go up"
+        },
+        "fetched_at": "2023-11-14T22:13:20.000Z",
+        "fetch_error": null
+      },
+      "display_handle": "jack",
+      "display_name": "jack Bauer",
+      "view_url": "https://x.com/jack/status/131",
+      "profile_url": "https://x.com/jack",
+      "logo_url": "/assets/icons/brands/x-9d69ccea.svg",
+      "zone": "UTC",
+      "html": "<article class=\"x-post-card\" data-twitter-post=\"131\">\n    <header class=\"x-post-card__header\">\n        <img alt=\"\" loading=\"lazy\" class=\"x-post-card__avatar\" src=\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\" width=\"40\" height=\"40\" />\n      <span class=\"x-post-card__author\">\n        <a class=\"x-post-card__name\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">jack Bauer</a>\n          <a class=\"x-post-card__handle\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">@jack</a>\n      </span>\n      <img class=\"icon icon--brand x-post-card__logo\" alt=\"\" aria-hidden=\"true\" src=\"/assets/icons/brands/x-9d69ccea.svg\" />\n    </header>\n\n        <div class=\"x-post-card__text\">Hello <a href=\"https://x.com/nasa\" target=\"_blank\" rel=\"noopener noreferrer\">@nasa</a>, see <a href=\"https://example.com/x\" target=\"_blank\" rel=\"noopener noreferrer\">https://example.com/x</a>! <a href=\"https://x.com/hashtag/launch\" target=\"_blank\" rel=\"noopener noreferrer\">#launch</a></div>\n\n\n      <blockquote class=\"x-post-card__quote\">\n        <div class=\"x-post-card__quote-author\">\n                        <strong>NASA</strong>\n            <span class=\"x-post-card__quote-handle\">@NASA</span>\n\n        </div>\n        <div class=\"x-post-card__quote-text\">We go up</div>\n      </blockquote>\n\n    <footer class=\"x-post-card__footer\">\n        <span class=\"x-post-card__time\"><time datetime=\"2006-03-21T20:50:14Z\" data-local-time-target=\"time\"></time></span>\n        <span class=\"x-post-card__count\">18K replies</span>\n        <span class=\"x-post-card__count\">125K reposts</span>\n        <span class=\"x-post-card__count\">311K likes</span>\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack/status/131\">View on X</a>\n    </footer>\n</article>\n"
+    },
+    {
+      "name": "no text/counts",
+      "attributes": {
+        "post_id": "131",
+        "url": "https://x.com/jack/status/131",
+        "author_handle": "jack",
+        "author_name": "jack Bauer",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": null,
+        "posted_at": null,
+        "replies": null,
+        "reposts": null,
+        "likes": null,
+        "media": null,
+        "quote": null,
+        "fetched_at": "2023-11-14T22:13:20.000Z",
+        "fetch_error": null
+      },
+      "display_handle": "jack",
+      "display_name": "jack Bauer",
+      "view_url": "https://x.com/jack/status/131",
+      "profile_url": "https://x.com/jack",
+      "logo_url": "/assets/icons/brands/x-9d69ccea.svg",
+      "zone": "UTC",
+      "html": "<article class=\"x-post-card\" data-twitter-post=\"131\">\n    <header class=\"x-post-card__header\">\n        <img alt=\"\" loading=\"lazy\" class=\"x-post-card__avatar\" src=\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\" width=\"40\" height=\"40\" />\n      <span class=\"x-post-card__author\">\n        <a class=\"x-post-card__name\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">jack Bauer</a>\n          <a class=\"x-post-card__handle\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">@jack</a>\n      </span>\n      <img class=\"icon icon--brand x-post-card__logo\" alt=\"\" aria-hidden=\"true\" src=\"/assets/icons/brands/x-9d69ccea.svg\" />\n    </header>\n\n\n\n\n    <footer class=\"x-post-card__footer\">\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack/status/131\">View on X</a>\n    </footer>\n</article>\n"
+    },
+    {
+      "name": "zero/negative counts",
+      "attributes": {
+        "post_id": "131",
+        "url": "https://x.com/jack/status/131",
+        "author_handle": "jack",
+        "author_name": "jack Bauer",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "Hello @nasa, see https://example.com/x! #launch",
+        "posted_at": "2006-03-21T20:50:14.000Z",
+        "replies": 0,
+        "reposts": -1,
+        "likes": 1200000,
+        "media": null,
+        "quote": null,
+        "fetched_at": "2023-11-14T22:13:20.000Z",
+        "fetch_error": null
+      },
+      "display_handle": "jack",
+      "display_name": "jack Bauer",
+      "view_url": "https://x.com/jack/status/131",
+      "profile_url": "https://x.com/jack",
+      "logo_url": "/assets/icons/brands/x-9d69ccea.svg",
+      "zone": "UTC",
+      "html": "<article class=\"x-post-card\" data-twitter-post=\"131\">\n    <header class=\"x-post-card__header\">\n        <img alt=\"\" loading=\"lazy\" class=\"x-post-card__avatar\" src=\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\" width=\"40\" height=\"40\" />\n      <span class=\"x-post-card__author\">\n        <a class=\"x-post-card__name\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">jack Bauer</a>\n          <a class=\"x-post-card__handle\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">@jack</a>\n      </span>\n      <img class=\"icon icon--brand x-post-card__logo\" alt=\"\" aria-hidden=\"true\" src=\"/assets/icons/brands/x-9d69ccea.svg\" />\n    </header>\n\n        <div class=\"x-post-card__text\">Hello <a href=\"https://x.com/nasa\" target=\"_blank\" rel=\"noopener noreferrer\">@nasa</a>, see <a href=\"https://example.com/x\" target=\"_blank\" rel=\"noopener noreferrer\">https://example.com/x</a>! <a href=\"https://x.com/hashtag/launch\" target=\"_blank\" rel=\"noopener noreferrer\">#launch</a></div>\n\n\n\n    <footer class=\"x-post-card__footer\">\n        <span class=\"x-post-card__time\"><time datetime=\"2006-03-21T20:50:14Z\" data-local-time-target=\"time\"></time></span>\n        <span class=\"x-post-card__count\">0 replies</span>\n        <span class=\"x-post-card__count\">-1 reposts</span>\n        <span class=\"x-post-card__count\">1.2M likes</span>\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack/status/131\">View on X</a>\n    </footer>\n</article>\n"
+    },
+    {
+      "name": "escaping",
+      "attributes": {
+        "post_id": "<\"id>",
+        "url": "https://x.com/a?x=1&y=\"2\"",
+        "author_handle": "<user>",
+        "author_name": "<script> & \"name\"",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "<script>& @jack #x",
+        "posted_at": "2006-03-21T20:50:14.000Z",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/a?x=1&y=2",
+            "width": 800,
+            "height": 532,
+            "alt": "\" <unsafe> &"
+          }
+        ],
+        "quote": {
+          "url": "https://x.com/NASA/status/123",
+          "author_name": "<b>NASA</b>",
+          "author_handle": "\"hi",
+          "text": "<img>"
+        },
+        "fetched_at": "2023-11-14T22:13:20.000Z",
+        "fetch_error": null
+      },
+      "display_handle": "<user>",
+      "display_name": "<script> & \"name\"",
+      "view_url": "https://x.com/a?x=1&y=\"2\"",
+      "profile_url": "https://x.com/<user>",
+      "logo_url": "/assets/icons/brands/x-9d69ccea.svg",
+      "zone": "UTC",
+      "html": "<article class=\"x-post-card\" data-twitter-post=\"&lt;&quot;id&gt;\">\n    <header class=\"x-post-card__header\">\n        <img alt=\"\" loading=\"lazy\" class=\"x-post-card__avatar\" src=\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\" width=\"40\" height=\"40\" />\n      <span class=\"x-post-card__author\">\n        <a class=\"x-post-card__name\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/&lt;user&gt;\">&lt;script&gt; &amp; &quot;name&quot;</a>\n          <a class=\"x-post-card__handle\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/&lt;user&gt;\">@&lt;user&gt;</a>\n      </span>\n      <img class=\"icon icon--brand x-post-card__logo\" alt=\"\" aria-hidden=\"true\" src=\"/assets/icons/brands/x-9d69ccea.svg\" />\n    </header>\n\n        <div class=\"x-post-card__text\">&lt;script&gt;&amp; <a href=\"https://x.com/jack\" target=\"_blank\" rel=\"noopener noreferrer\">@jack</a> <a href=\"https://x.com/hashtag/x\" target=\"_blank\" rel=\"noopener noreferrer\">#x</a></div>\n\n      <div class=\"x-post-card__media x-post-card__media--1\">\n            <a target=\"_blank\" rel=\"noopener noreferrer\" class=\"x-post-card__media-link\" aria-label=\"View post on X\" href=\"https://x.com/a?x=1&amp;y=&quot;2&quot;\">\n              <img alt=\"&quot; &lt;unsafe&gt; &amp;\" loading=\"lazy\" class=\"x-post-card__photo\" width=\"800\" height=\"532\" src=\"https://pbs.twimg.com/a?x=1&amp;y=2\" />\n</a>      </div>\n\n      <blockquote class=\"x-post-card__quote\">\n        <div class=\"x-post-card__quote-author\">\n            <a target=\"_blank\" rel=\"noopener noreferrer\" class=\"x-post-card__quote-link\" href=\"https://x.com/NASA/status/123\">            <strong>&lt;b&gt;NASA&lt;/b&gt;</strong>\n            <span class=\"x-post-card__quote-handle\">@&quot;hi</span>\n</a>\n        </div>\n        <div class=\"x-post-card__quote-text\">&lt;img&gt;</div>\n      </blockquote>\n\n    <footer class=\"x-post-card__footer\">\n        <span class=\"x-post-card__time\"><time datetime=\"2006-03-21T20:50:14Z\" data-local-time-target=\"time\"></time></span>\n        <span class=\"x-post-card__count\">18K replies</span>\n        <span class=\"x-post-card__count\">125K reposts</span>\n        <span class=\"x-post-card__count\">311K likes</span>\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/a?x=1&amp;y=&quot;2&quot;\">View on X</a>\n    </footer>\n</article>\n"
+    },
+    {
+      "name": "media cap",
+      "attributes": {
+        "post_id": "131",
+        "url": "https://x.com/jack/status/131",
+        "author_handle": "jack",
+        "author_name": "jack Bauer",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "Hello @nasa, see https://example.com/x! #launch",
+        "posted_at": "2006-03-21T20:50:14.000Z",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/1.jpg",
+            "width": 800,
+            "height": 532,
+            "alt": "A rocket"
+          },
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/2.jpg",
+            "width": 800,
+            "height": 532,
+            "alt": "A rocket"
+          },
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/3.jpg",
+            "width": 800,
+            "height": 532,
+            "alt": "A rocket"
+          },
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/4.jpg",
+            "width": 800,
+            "height": 532,
+            "alt": "A rocket"
+          },
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/5.jpg",
+            "width": 800,
+            "height": 532,
+            "alt": "A rocket"
+          },
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/6.jpg",
+            "width": 800,
+            "height": 532,
+            "alt": "A rocket"
+          }
+        ],
+        "quote": null,
+        "fetched_at": "2023-11-14T22:13:20.000Z",
+        "fetch_error": null
+      },
+      "display_handle": "jack",
+      "display_name": "jack Bauer",
+      "view_url": "https://x.com/jack/status/131",
+      "profile_url": "https://x.com/jack",
+      "logo_url": "/assets/icons/brands/x-9d69ccea.svg",
+      "zone": "UTC",
+      "html": "<article class=\"x-post-card\" data-twitter-post=\"131\">\n    <header class=\"x-post-card__header\">\n        <img alt=\"\" loading=\"lazy\" class=\"x-post-card__avatar\" src=\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\" width=\"40\" height=\"40\" />\n      <span class=\"x-post-card__author\">\n        <a class=\"x-post-card__name\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">jack Bauer</a>\n          <a class=\"x-post-card__handle\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">@jack</a>\n      </span>\n      <img class=\"icon icon--brand x-post-card__logo\" alt=\"\" aria-hidden=\"true\" src=\"/assets/icons/brands/x-9d69ccea.svg\" />\n    </header>\n\n        <div class=\"x-post-card__text\">Hello <a href=\"https://x.com/nasa\" target=\"_blank\" rel=\"noopener noreferrer\">@nasa</a>, see <a href=\"https://example.com/x\" target=\"_blank\" rel=\"noopener noreferrer\">https://example.com/x</a>! <a href=\"https://x.com/hashtag/launch\" target=\"_blank\" rel=\"noopener noreferrer\">#launch</a></div>\n\n      <div class=\"x-post-card__media x-post-card__media--4\">\n            <a target=\"_blank\" rel=\"noopener noreferrer\" class=\"x-post-card__media-link\" aria-label=\"View post on X\" href=\"https://x.com/jack/status/131\">\n              <img alt=\"A rocket\" loading=\"lazy\" class=\"x-post-card__photo\" width=\"800\" height=\"532\" src=\"https://pbs.twimg.com/1.jpg\" />\n</a>            <a target=\"_blank\" rel=\"noopener noreferrer\" class=\"x-post-card__media-link\" aria-label=\"View post on X\" href=\"https://x.com/jack/status/131\">\n              <img alt=\"A rocket\" loading=\"lazy\" class=\"x-post-card__photo\" width=\"800\" height=\"532\" src=\"https://pbs.twimg.com/2.jpg\" />\n</a>            <a target=\"_blank\" rel=\"noopener noreferrer\" class=\"x-post-card__media-link\" aria-label=\"View post on X\" href=\"https://x.com/jack/status/131\">\n              <img alt=\"A rocket\" loading=\"lazy\" class=\"x-post-card__photo\" width=\"800\" height=\"532\" src=\"https://pbs.twimg.com/3.jpg\" />\n</a>            <a target=\"_blank\" rel=\"noopener noreferrer\" class=\"x-post-card__media-link\" aria-label=\"View post on X\" href=\"https://x.com/jack/status/131\">\n              <img alt=\"A rocket\" loading=\"lazy\" class=\"x-post-card__photo\" width=\"800\" height=\"532\" src=\"https://pbs.twimg.com/4.jpg\" />\n</a>      </div>\n\n\n    <footer class=\"x-post-card__footer\">\n        <span class=\"x-post-card__time\"><time datetime=\"2006-03-21T20:50:14Z\" data-local-time-target=\"time\"></time></span>\n        <span class=\"x-post-card__count\">18K replies</span>\n        <span class=\"x-post-card__count\">125K reposts</span>\n        <span class=\"x-post-card__count\">311K likes</span>\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack/status/131\">View on X</a>\n    </footer>\n</article>\n"
+    },
+    {
+      "name": "missing dimensions",
+      "attributes": {
+        "post_id": "131",
+        "url": "https://x.com/jack/status/131",
+        "author_handle": "jack",
+        "author_name": "jack Bauer",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "Hello @nasa, see https://example.com/x! #launch",
+        "posted_at": "2006-03-21T20:50:14.000Z",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/media/a.jpg"
+          },
+          {
+            "type": "video",
+            "url": "https://video.twimg.com/x.mp4",
+            "thumbnail_url": "https://pbs.twimg.com/t.jpg"
+          }
+        ],
+        "quote": null,
+        "fetched_at": "2023-11-14T22:13:20.000Z",
+        "fetch_error": null
+      },
+      "display_handle": "jack",
+      "display_name": "jack Bauer",
+      "view_url": "https://x.com/jack/status/131",
+      "profile_url": "https://x.com/jack",
+      "logo_url": "/assets/icons/brands/x-9d69ccea.svg",
+      "zone": "UTC",
+      "html": "<article class=\"x-post-card\" data-twitter-post=\"131\">\n    <header class=\"x-post-card__header\">\n        <img alt=\"\" loading=\"lazy\" class=\"x-post-card__avatar\" src=\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\" width=\"40\" height=\"40\" />\n      <span class=\"x-post-card__author\">\n        <a class=\"x-post-card__name\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">jack Bauer</a>\n          <a class=\"x-post-card__handle\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">@jack</a>\n      </span>\n      <img class=\"icon icon--brand x-post-card__logo\" alt=\"\" aria-hidden=\"true\" src=\"/assets/icons/brands/x-9d69ccea.svg\" />\n    </header>\n\n        <div class=\"x-post-card__text\">Hello <a href=\"https://x.com/nasa\" target=\"_blank\" rel=\"noopener noreferrer\">@nasa</a>, see <a href=\"https://example.com/x\" target=\"_blank\" rel=\"noopener noreferrer\">https://example.com/x</a>! <a href=\"https://x.com/hashtag/launch\" target=\"_blank\" rel=\"noopener noreferrer\">#launch</a></div>\n\n      <div class=\"x-post-card__media x-post-card__media--2\">\n            <a target=\"_blank\" rel=\"noopener noreferrer\" class=\"x-post-card__media-link\" aria-label=\"View post on X\" href=\"https://x.com/jack/status/131\">\n              <img alt=\"\" loading=\"lazy\" class=\"x-post-card__photo\" src=\"https://pbs.twimg.com/media/a.jpg\" />\n</a>            <a target=\"_blank\" rel=\"noopener noreferrer\" class=\"x-post-card__media-link x-post-card__media-link--video\" aria-label=\"View video on X\" href=\"https://x.com/jack/status/131\">\n              <img alt=\"\" loading=\"lazy\" class=\"x-post-card__poster\" src=\"https://pbs.twimg.com/t.jpg\" />\n              <span class=\"x-post-card__play\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\" width=\"40\" height=\"40\"><circle cx=\"12\" cy=\"12\" r=\"12\" fill=\"rgba(0,0,0,0.55)\"/><path d=\"M10 8.5v7l6-3.5z\" fill=\"#fff\"/></svg></span>\n</a>      </div>\n\n\n    <footer class=\"x-post-card__footer\">\n        <span class=\"x-post-card__time\"><time datetime=\"2006-03-21T20:50:14Z\" data-local-time-target=\"time\"></time></span>\n        <span class=\"x-post-card__count\">18K replies</span>\n        <span class=\"x-post-card__count\">125K reposts</span>\n        <span class=\"x-post-card__count\">311K likes</span>\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack/status/131\">View on X</a>\n    </footer>\n</article>\n"
+    },
+    {
+      "name": "blank error",
+      "attributes": {
+        "post_id": "131",
+        "url": "https://x.com/jack/status/131",
+        "author_handle": "jack",
+        "author_name": "jack Bauer",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "Hello @nasa, see https://example.com/x! #launch",
+        "posted_at": "2006-03-21T20:50:14.000Z",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": null,
+        "quote": null,
+        "fetched_at": "2023-11-14T22:13:20.000Z",
+        "fetch_error": "  "
+      },
+      "display_handle": "jack",
+      "display_name": "jack Bauer",
+      "view_url": "https://x.com/jack/status/131",
+      "profile_url": "https://x.com/jack",
+      "logo_url": "/assets/icons/brands/x-9d69ccea.svg",
+      "zone": "UTC",
+      "html": "<article class=\"x-post-card\" data-twitter-post=\"131\">\n    <header class=\"x-post-card__header\">\n        <img alt=\"\" loading=\"lazy\" class=\"x-post-card__avatar\" src=\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\" width=\"40\" height=\"40\" />\n      <span class=\"x-post-card__author\">\n        <a class=\"x-post-card__name\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">jack Bauer</a>\n          <a class=\"x-post-card__handle\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">@jack</a>\n      </span>\n      <img class=\"icon icon--brand x-post-card__logo\" alt=\"\" aria-hidden=\"true\" src=\"/assets/icons/brands/x-9d69ccea.svg\" />\n    </header>\n\n        <div class=\"x-post-card__text\">Hello <a href=\"https://x.com/nasa\" target=\"_blank\" rel=\"noopener noreferrer\">@nasa</a>, see <a href=\"https://example.com/x\" target=\"_blank\" rel=\"noopener noreferrer\">https://example.com/x</a>! <a href=\"https://x.com/hashtag/launch\" target=\"_blank\" rel=\"noopener noreferrer\">#launch</a></div>\n\n\n\n    <footer class=\"x-post-card__footer\">\n        <span class=\"x-post-card__time\"><time datetime=\"2006-03-21T20:50:14Z\" data-local-time-target=\"time\"></time></span>\n        <span class=\"x-post-card__count\">18K replies</span>\n        <span class=\"x-post-card__count\">125K reposts</span>\n        <span class=\"x-post-card__count\">311K likes</span>\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack/status/131\">View on X</a>\n    </footer>\n</article>\n"
+    },
+    {
+      "name": "date zone",
+      "attributes": {
+        "post_id": "131",
+        "url": "https://x.com/jack/status/131",
+        "author_handle": "jack",
+        "author_name": "jack Bauer",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "Hello @nasa, see https://example.com/x! #launch",
+        "posted_at": "2026-11-01T01:30:00.000-04:00",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": null,
+        "quote": null,
+        "fetched_at": "2023-11-14T17:13:20.000-05:00",
+        "fetch_error": null
+      },
+      "display_handle": "jack",
+      "display_name": "jack Bauer",
+      "view_url": "https://x.com/jack/status/131",
+      "profile_url": "https://x.com/jack",
+      "logo_url": "/assets/icons/brands/x-9d69ccea.svg",
+      "zone": "America/New_York",
+      "html": "<article class=\"x-post-card\" data-twitter-post=\"131\">\n    <header class=\"x-post-card__header\">\n        <img alt=\"\" loading=\"lazy\" class=\"x-post-card__avatar\" src=\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\" width=\"40\" height=\"40\" />\n      <span class=\"x-post-card__author\">\n        <a class=\"x-post-card__name\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">jack Bauer</a>\n          <a class=\"x-post-card__handle\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">@jack</a>\n      </span>\n      <img class=\"icon icon--brand x-post-card__logo\" alt=\"\" aria-hidden=\"true\" src=\"/assets/icons/brands/x-9d69ccea.svg\" />\n    </header>\n\n        <div class=\"x-post-card__text\">Hello <a href=\"https://x.com/nasa\" target=\"_blank\" rel=\"noopener noreferrer\">@nasa</a>, see <a href=\"https://example.com/x\" target=\"_blank\" rel=\"noopener noreferrer\">https://example.com/x</a>! <a href=\"https://x.com/hashtag/launch\" target=\"_blank\" rel=\"noopener noreferrer\">#launch</a></div>\n\n\n\n    <footer class=\"x-post-card__footer\">\n        <span class=\"x-post-card__time\"><time datetime=\"2026-11-01T01:30:00-04:00\" data-local-time-target=\"time\"></time></span>\n        <span class=\"x-post-card__count\">18K replies</span>\n        <span class=\"x-post-card__count\">125K reposts</span>\n        <span class=\"x-post-card__count\">311K likes</span>\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack/status/131\">View on X</a>\n    </footer>\n</article>\n"
+    }
+  ],
+  "containers": [
+    {
+      "cards": [],
+      "client_id": "ws15e-twitter-key",
+      "html": "  <div id=\"twitter_cards_message_ws15e-twitter-key\" class=\"x-post-cards\"></div>\n"
+    },
+    {
+      "cards": [
+        "full"
+      ],
+      "client_id": "ws15e-twitter-key",
+      "html": "  <div id=\"twitter_cards_message_ws15e-twitter-key\" class=\"x-post-cards\">\n    <article class=\"x-post-card\" data-twitter-post=\"131\">\n    <header class=\"x-post-card__header\">\n        <img alt=\"\" loading=\"lazy\" class=\"x-post-card__avatar\" src=\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\" width=\"40\" height=\"40\" />\n      <span class=\"x-post-card__author\">\n        <a class=\"x-post-card__name\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">jack Bauer</a>\n          <a class=\"x-post-card__handle\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">@jack</a>\n      </span>\n      <img class=\"icon icon--brand x-post-card__logo\" alt=\"\" aria-hidden=\"true\" src=\"/assets/icons/brands/x-9d69ccea.svg\" />\n    </header>\n\n        <div class=\"x-post-card__text\">Hello <a href=\"https://x.com/nasa\" target=\"_blank\" rel=\"noopener noreferrer\">@nasa</a>, see <a href=\"https://example.com/x\" target=\"_blank\" rel=\"noopener noreferrer\">https://example.com/x</a>! <a href=\"https://x.com/hashtag/launch\" target=\"_blank\" rel=\"noopener noreferrer\">#launch</a></div>\n\n      <div class=\"x-post-card__media x-post-card__media--2\">\n            <a target=\"_blank\" rel=\"noopener noreferrer\" class=\"x-post-card__media-link\" aria-label=\"View post on X\" href=\"https://x.com/jack/status/131\">\n              <img alt=\"A rocket\" loading=\"lazy\" class=\"x-post-card__photo\" width=\"800\" height=\"532\" src=\"https://pbs.twimg.com/media/a.jpg\" />\n</a>            <a target=\"_blank\" rel=\"noopener noreferrer\" class=\"x-post-card__media-link x-post-card__media-link--video\" aria-label=\"View video on X\" href=\"https://x.com/jack/status/131\">\n              <img alt=\"\" loading=\"lazy\" class=\"x-post-card__poster\" width=\"1280\" height=\"720\" src=\"https://pbs.twimg.com/t.jpg\" />\n              <span class=\"x-post-card__play\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\" width=\"40\" height=\"40\"><circle cx=\"12\" cy=\"12\" r=\"12\" fill=\"rgba(0,0,0,0.55)\"/><path d=\"M10 8.5v7l6-3.5z\" fill=\"#fff\"/></svg></span>\n</a>      </div>\n\n      <blockquote class=\"x-post-card__quote\">\n        <div class=\"x-post-card__quote-author\">\n            <a target=\"_blank\" rel=\"noopener noreferrer\" class=\"x-post-card__quote-link\" href=\"https://x.com/NASA/status/123\">            <strong>NASA</strong>\n            <span class=\"x-post-card__quote-handle\">@NASA</span>\n</a>\n        </div>\n        <div class=\"x-post-card__quote-text\">We go up</div>\n      </blockquote>\n\n    <footer class=\"x-post-card__footer\">\n        <span class=\"x-post-card__time\"><time datetime=\"2006-03-21T20:50:14Z\" data-local-time-target=\"time\"></time></span>\n        <span class=\"x-post-card__count\">18K replies</span>\n        <span class=\"x-post-card__count\">125K reposts</span>\n        <span class=\"x-post-card__count\">311K likes</span>\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack/status/131\">View on X</a>\n    </footer>\n</article>\n\n  </div>\n"
+    },
+    {
+      "cards": [
+        "loading",
+        "error"
+      ],
+      "client_id": "ws15e-twitter-key",
+      "html": "  <div id=\"twitter_cards_message_ws15e-twitter-key\" class=\"x-post-cards\">\n    <article class=\"x-post-card\" data-twitter-post=\"132\">\n    <p class=\"x-post-card__loading\">Loading post…</p>\n</article>\n\n  \n    <article class=\"x-post-card\" data-twitter-post=\"133\">\n    <p class=\"x-post-card__error\">\n        <span class=\"x-post-card__error-handle\">@jack</span>\n      Couldn’t load this post.\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack/status/133\">View on X</a>\n    </p>\n</article>\n\n  </div>\n"
+    },
+    {
+      "cards": [
+        "full"
+      ],
+      "client_id": "quoted\"<&'key",
+      "html": "  <div id=\"twitter_cards_message_quoted&quot;&lt;&amp;&#39;key\" class=\"x-post-cards\">\n    <article class=\"x-post-card\" data-twitter-post=\"131\">\n    <header class=\"x-post-card__header\">\n        <img alt=\"\" loading=\"lazy\" class=\"x-post-card__avatar\" src=\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\" width=\"40\" height=\"40\" />\n      <span class=\"x-post-card__author\">\n        <a class=\"x-post-card__name\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">jack Bauer</a>\n          <a class=\"x-post-card__handle\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack\">@jack</a>\n      </span>\n      <img class=\"icon icon--brand x-post-card__logo\" alt=\"\" aria-hidden=\"true\" src=\"/assets/icons/brands/x-9d69ccea.svg\" />\n    </header>\n\n        <div class=\"x-post-card__text\">Hello <a href=\"https://x.com/nasa\" target=\"_blank\" rel=\"noopener noreferrer\">@nasa</a>, see <a href=\"https://example.com/x\" target=\"_blank\" rel=\"noopener noreferrer\">https://example.com/x</a>! <a href=\"https://x.com/hashtag/launch\" target=\"_blank\" rel=\"noopener noreferrer\">#launch</a></div>\n\n      <div class=\"x-post-card__media x-post-card__media--2\">\n            <a target=\"_blank\" rel=\"noopener noreferrer\" class=\"x-post-card__media-link\" aria-label=\"View post on X\" href=\"https://x.com/jack/status/131\">\n              <img alt=\"A rocket\" loading=\"lazy\" class=\"x-post-card__photo\" width=\"800\" height=\"532\" src=\"https://pbs.twimg.com/media/a.jpg\" />\n</a>            <a target=\"_blank\" rel=\"noopener noreferrer\" class=\"x-post-card__media-link x-post-card__media-link--video\" aria-label=\"View video on X\" href=\"https://x.com/jack/status/131\">\n              <img alt=\"\" loading=\"lazy\" class=\"x-post-card__poster\" width=\"1280\" height=\"720\" src=\"https://pbs.twimg.com/t.jpg\" />\n              <span class=\"x-post-card__play\" aria-hidden=\"true\"><svg viewBox=\"0 0 24 24\" width=\"40\" height=\"40\"><circle cx=\"12\" cy=\"12\" r=\"12\" fill=\"rgba(0,0,0,0.55)\"/><path d=\"M10 8.5v7l6-3.5z\" fill=\"#fff\"/></svg></span>\n</a>      </div>\n\n      <blockquote class=\"x-post-card__quote\">\n        <div class=\"x-post-card__quote-author\">\n            <a target=\"_blank\" rel=\"noopener noreferrer\" class=\"x-post-card__quote-link\" href=\"https://x.com/NASA/status/123\">            <strong>NASA</strong>\n            <span class=\"x-post-card__quote-handle\">@NASA</span>\n</a>\n        </div>\n        <div class=\"x-post-card__quote-text\">We go up</div>\n      </blockquote>\n\n    <footer class=\"x-post-card__footer\">\n        <span class=\"x-post-card__time\"><time datetime=\"2006-03-21T20:50:14Z\" data-local-time-target=\"time\"></time></span>\n        <span class=\"x-post-card__count\">18K replies</span>\n        <span class=\"x-post-card__count\">125K reposts</span>\n        <span class=\"x-post-card__count\">311K likes</span>\n      <a class=\"x-post-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://x.com/jack/status/131\">View on X</a>\n    </footer>\n</article>\n\n  </div>\n"
+    }
+  ],
+  "counts": [
+    {
+      "number": 0,
+      "html": "0"
+    },
+    {
+      "number": 1,
+      "html": "1"
+    },
+    {
+      "number": 999,
+      "html": "999"
+    },
+    {
+      "number": 1000,
+      "html": "1K"
+    },
+    {
+      "number": 9999,
+      "html": "10K"
+    },
+    {
+      "number": 999999,
+      "html": "1M"
+    },
+    {
+      "number": 18041,
+      "html": "18K"
+    },
+    {
+      "number": 124658,
+      "html": "125K"
+    },
+    {
+      "number": 310826,
+      "html": "311K"
+    },
+    {
+      "number": 1200000,
+      "html": "1.2M"
+    },
+    {
+      "number": 1234567890,
+      "html": "1.23B"
+    },
+    {
+      "number": -1000,
+      "html": "-1K"
+    },
+    {
+      "number": -1,
+      "html": "-1"
+    },
+    {
+      "number": 999500,
+      "html": "1M"
+    },
+    {
+      "number": 999999999,
+      "html": "1B"
+    },
+    {
+      "number": 1000000000000,
+      "html": "1000B"
+    }
+  ]
+}

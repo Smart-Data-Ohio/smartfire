@@ -855,16 +855,37 @@
     "name": "relative redirect denied",
     "url": "http://www.example.com/relative-redirect",
     "response": {
-      "status": 204
+      "status": 200,
+      "body": "{\"title\":\"Hey!\",\"url\":\"https://example.com\",\"image\":\"http://example.com/image.png\",\"description\":\"desc..\",\"context_for_validation\":{\"context\":null},\"errors\":{}}"
     },
     "lookups": [
-      "www.example.com"
+      "www.example.com",
+      "www.example.com",
+      "example.com",
+      "example.com",
+      "example.com"
     ],
     "requests": [
       [
         "GET",
         "www.example.com",
         "/relative-redirect",
+        "*/*",
+        "gzip;q=1.0,deflate;q=0.6,identity;q=0.3",
+        "Ruby"
+      ],
+      [
+        "GET",
+        "www.example.com",
+        "/",
+        "*/*",
+        "gzip;q=1.0,deflate;q=0.6,identity;q=0.3",
+        "Ruby"
+      ],
+      [
+        "HEAD",
+        "example.com",
+        "/image.png",
         "*/*",
         "gzip;q=1.0,deflate;q=0.6,identity;q=0.3",
         "Ruby"
@@ -1010,9 +1031,18 @@
       "www.example.com",
       "www.example.com",
       "www.example.com",
+      "www.example.com",
       "www.example.com"
     ],
     "requests": [
+      [
+        "GET",
+        "www.example.com",
+        "/loop",
+        "*/*",
+        "gzip;q=1.0,deflate;q=0.6,identity;q=0.3",
+        "Ruby"
+      ],
       [
         "GET",
         "www.example.com",
@@ -1212,7 +1242,8 @@
     "name": "ten redirects are too many",
     "url": "http://www.example.com/chain/0",
     "response": {
-      "status": 204
+      "status": 200,
+      "body": "{\"title\":\"Chain end\",\"url\":\"https://example.com\",\"image\":\"http://example.com/image.png\",\"description\":\"desc..\",\"context_for_validation\":{\"context\":null},\"errors\":{}}"
     },
     "lookups": [
       "www.example.com",
@@ -1225,7 +1256,10 @@
       "www.example.com",
       "www.example.com",
       "www.example.com",
-      "www.example.com"
+      "www.example.com",
+      "example.com",
+      "example.com",
+      "example.com"
     ],
     "requests": [
       [
@@ -1304,6 +1338,22 @@
         "GET",
         "www.example.com",
         "/chain/9",
+        "*/*",
+        "gzip;q=1.0,deflate;q=0.6,identity;q=0.3",
+        "Ruby"
+      ],
+      [
+        "GET",
+        "www.example.com",
+        "/chain/10",
+        "*/*",
+        "gzip;q=1.0,deflate;q=0.6,identity;q=0.3",
+        "Ruby"
+      ],
+      [
+        "HEAD",
+        "example.com",
+        "/image.png",
         "*/*",
         "gzip;q=1.0,deflate;q=0.6,identity;q=0.3",
         "Ruby"
@@ -1673,7 +1723,9 @@
     "response": {
       "status": 204
     },
-    "lookups": [],
+    "lookups": [
+      "under_score.example"
+    ],
     "requests": []
   },
   {

@@ -5,9 +5,8 @@
 //! (`user.requires_two_factor? && !session.two_factor_verified?`, where only active humans require
 //! one).
 //!
-//! Until the two-factor flows are ported, the port's own sign-in starts unverified sessions
-//! (`start_new_session_for`), so browsers signed in through the port get no cable connection; ones
-//! signed in through Rails (verified sessions) do.
+//! Password/Google/transfer first factors remain pending until verification; unenrolled sessions
+//! cannot connect before setup confirms them. Remembered devices also start verified sessions.
 use campfire_cable::{Authenticate, ConnectRequest};
 use campfire_db::{Database, Session, User};
 use campfire_kit::{CookieJar, SharedClock, SharedCrypto};
@@ -60,16 +59,11 @@ impl Authenticate<CableUser> for SessionAuthenticator {
             }
             return None;
         }
-        if requires_two_factor(&user) && !session.two_factor_verified() {
+        if user.requires_two_factor() && !session.two_factor_verified() {
             return None;
         }
         Some(CableUser { id: user.id, name: user.name, role: user.role, status: user.status, session_id: session.id })
     }
-}
-
-/// `User::TwoFactor#requires_two_factor?`: `active? && !bot?`.
-fn requires_two_factor(user: &User) -> bool {
-    user.is_active() && !user.is_bot()
 }
 
 #[cfg(test)]
@@ -130,5 +124,44 @@ mod tests {
         assert!(db.read(move |conn| Session::find_by_token(conn, &token)).await.unwrap().is_none(), "destroyed");
         assert!(authenticator.connect(&request(&idle_admin.token)).await.is_some(), "exactly the timeout isn't past it");
         assert!(authenticator.connect(&request(&stale_member.token)).await.is_some(), "members' sessions don't expire");
+    }
+
+    #[tokio::test]
+    async fn human_verification_is_required_and_reloaded_on_every_connection() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = database(dir.path()).await;
+        let clock: SharedClock = Arc::new(FrozenClock::new(jiff::Timestamp::from_second(NOW).unwrap()));
+        let authenticator = SessionAuthenticator::new(db.clone(), crypto(), clock, SignedDuration::from_hours(7 * 24));
+        let human = session(&db, Role::Member, 0).await;
+        let request = request(&human.token);
+        // Verification is enough even without a credential (the reference test-only sign-in).
+        assert!(authenticator.connect(&request).await.is_some());
+        let id = human.id;
+        db.write(move |tx| { tx.conn().execute("UPDATE sessions SET two_factor_verified_at=NULL WHERE id=?", [id])?; Ok(()) }).await.unwrap();
+        assert!(authenticator.connect(&request).await.is_none());
+        assert_eq!(db.read(move |c| Session::find(c,id)).await.unwrap().id, id, "2FA rejection does not destroy the session on cable");
+        db.write(move |tx| { let mut s = Session::find(tx.conn(),id)?; s.mark_two_factor_verified(tx) }).await.unwrap();
+        assert!(authenticator.connect(&request).await.is_some());
+        db.write(move |tx| { let mut s = Session::find(tx.conn(),id)?; s.clear_two_factor_verified(tx) }).await.unwrap();
+        assert!(authenticator.connect(&request).await.is_none(), "clearing the persisted stamp blocks reconnect");
+    }
+
+    #[tokio::test]
+    async fn cable_exempts_unverified_bots_and_inactive_users_from_two_factor() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = database(dir.path()).await;
+        let clock: SharedClock = Arc::new(FrozenClock::new(jiff::Timestamp::from_second(NOW).unwrap()));
+        let authenticator = SessionAuthenticator::new(db.clone(), crypto(), clock, SignedDuration::from_hours(7 * 24));
+        for role in [Role::Bot, Role::Member] {
+            let session = session(&db, role, 0).await;
+            let id = session.id;
+            let user_id = session.user_id;
+            db.write(move |tx| {
+                tx.conn().execute("UPDATE sessions SET two_factor_verified_at=NULL WHERE id=?", [id])?;
+                if role == Role::Member { tx.conn().execute("UPDATE users SET status=1 WHERE id=?", [user_id])?; }
+                Ok(())
+            }).await.unwrap();
+            assert!(authenticator.connect(&request(&session.token)).await.is_some());
+        }
     }
 }

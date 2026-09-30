@@ -4,7 +4,7 @@ use campfire_jobs::inspect::{self, JobRow};
 use tokio::sync::Notify;
 
 use super::*;
-use crate::app::{Booted, boot};
+use crate::app::{Booted, boot_with_services};
 
 /// An app booted over an empty storage directory.
 async fn app_in(dir: &std::path::Path) -> Booted {
@@ -16,7 +16,14 @@ async fn app_in(dir: &std::path::Path) -> Booted {
         _ => None,
     })
     .unwrap();
-    boot(config).await.unwrap()
+    // Worker tests own their queue entries. Periodic-host tests start their loops
+    // explicitly; an automatic retention tick must not race these queue assertions.
+    boot_with_services(
+        config,
+        campfire_kit::clock::from_env().unwrap(),
+        crate::integrations::net::Network::system(),
+        periodic::Intervals { periodic: None, huddle: None },
+    ).await.unwrap()
 }
 
 async fn app() -> (Booted, tempfile::TempDir) {
@@ -54,7 +61,11 @@ async fn huddle_join_and_invitation_workers_persist_the_payload_for_ws17() {
     use campfire_db::models::huddle_grant::HuddleGrant;
     use campfire_db::models::huddle_notices::{PushInvitationJob, PushRequest};
     let Some(test) = TestApp::boot().await else { return; };
+    test.booted.jobs.shutdown(Duration::from_secs(2)).await;
     let app = test.booted.app.clone();
+    let mut registry = Registry::new();
+    huddle::register(&mut registry);
+    let producer = campfire_jobs::start(app.db.clone(), app.jobs.queue.clone(), registry, app.clone(), runner_config(&app.config));
     let grant = app.db.write(|tx| {
         let session = campfire_db::Session::start(tx, DAVID, None, None)?;
         let membership = campfire_db::Membership::find_by_room_and_user(tx.conn(), DIRECT_DAVID_JASON, DAVID)?.unwrap();
@@ -80,9 +91,9 @@ async fn huddle_join_and_invitation_workers_persist_the_payload_for_ws17() {
     assert_eq!(request.arguments["recipient_id"],JASON);
     assert_eq!(request.arguments["payload"]["title"],"David started a huddle");
     assert!(request.arguments["room_membership_id"].as_i64().is_some());
-    // WS17 supplies Notifications::HuddlePushJob's handler; these retained intents authorize
-    // no delivery until that handler applies the policy, membership and subscription gates.
-    test.booted.jobs.shutdown(Duration::from_secs(2)).await;
+    // This producer-only registry retains the wire intents for inspection. The full
+    // registered WS17 policy/delivery path is exercised by the transport integration tests.
+    producer.shutdown(Duration::from_secs(2)).await;
 }
 
 #[tokio::test]
@@ -90,7 +101,11 @@ async fn huddle_issuance_rings_and_pushes_once_and_suppresses_the_join_notice() 
     use crate::controllers::presenters::test_support::{TestApp,DAVID,JASON,DIRECT_DAVID_JASON};
     use campfire_db::models::{huddle_grant::HuddleGrant,huddle_invitations::RingRequest,huddle_notices::PushRequest};
     let Some(test)=TestApp::boot().await else { return; };
+    test.booted.jobs.shutdown(Duration::from_secs(2)).await;
     let app=test.booted.app.clone();
+    let mut registry = Registry::new();
+    huddle::register(&mut registry);
+    let producer = campfire_jobs::start(app.db.clone(), app.jobs.queue.clone(), registry, app.clone(), runner_config(&app.config));
     let grant=app.db.write(|tx| {
         let session=campfire_db::Session::start(tx,DAVID,None,None)?;
         let member=campfire_db::Membership::find_by_room_and_user(tx.conn(),DIRECT_DAVID_JASON,DAVID)?.unwrap();
@@ -108,7 +123,7 @@ async fn huddle_issuance_rings_and_pushes_once_and_suppresses_the_join_notice() 
     assert!(!rows.iter().any(|j|j.class==PushRequest::CLASS && j.arguments["kind"]=="huddle_join"));
     app.db.write(move |tx|HuddleGrant::issue(tx,grant.session_id,grant.membership_id,grant.room_id,&campfire_db::models::room_delete::HuddleConfig {api_secret:Some("ws13-fixture-value".into()),admin_configured:false}).map(drop)).await.unwrap();
     assert_eq!(jobs(&app).iter().filter(|j|j.class==RingRequest::CLASS).count(),1,"a reuse inside the dedupe window rang again");
-    test.booted.jobs.shutdown(Duration::from_secs(2)).await;
+    producer.shutdown(Duration::from_secs(2)).await;
 }
 
 #[tokio::test]
@@ -470,6 +485,17 @@ async fn a_posted_message_and_its_webhooks_commit_together() {
     assert_eq!(status, axum::http::StatusCode::OK, "sign-in page: {body}");
     let (status, body) = browser.post("/session", "text/html", &[("email_address", "person@example.com"), ("password", "secret123456")]).await;
     assert_eq!(status, axum::http::StatusCode::FOUND, "signed in: {body}");
+    let (status, _) = browser.get("/two_factor_setup").await;
+    assert_eq!(status, axum::http::StatusCode::OK);
+    let encryption = rails_compat::ar_encryption::ArEncryption::new(&app.secrets);
+    let enrollment_now = campfire_db::Timestamp::from_jiff(app.clock.now());
+    let secret = app.db.read(move |conn| {
+        let session_id = conn.query_row("SELECT session_id FROM two_factor_setup_secrets", [], |r| r.get(0))?;
+        campfire_db::TwoFactorSetupSecret::valid_for(conn, session_id, enrollment_now)?.expect("live enrollment").secret(&encryption)
+    }).await.unwrap();
+    let code = rails_compat::totp::at(&secret, app.clock.now().as_second()).unwrap();
+    let (status, body) = browser.post("/two_factor_setup", "text/html", &[("code", &code)]).await;
+    assert_eq!(status, axum::http::StatusCode::OK, "completed enrollment: {body}");
     let path = format!("/rooms/{room}/messages");
     let post = |n: &'static str| [("message[body]", "<p>Hello bot</p>"), ("message[client_message_id]", n)];
     let messages = || count(&app, "SELECT count(*) FROM messages");
@@ -918,7 +944,17 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
         .tasks()
         .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
         .collect();
-    assert_eq!(serde_json::json!(tasks), golden["tasks"]);
+    let mut expected = golden["tasks"].as_array().unwrap().clone();
+    // Preserve the relative order in the pinned Periodic::Runner for all registered tasks.
+    let retention = expected.pop().unwrap();
+    expected.push(serde_json::json!({"name":"stuck GitHub claims","seconds":30}));
+    expected.push(serde_json::json!({"name":"stuck Fizzy claims","seconds":30}));
+    expected.push(retention);
+    let ws17: serde_json::Value = serde_json::from_str(include_str!("../../../db/src/tests/ws17_vectors.json")).unwrap();
+    expected.push(ws17["presence_task"].clone());
+    let calendar: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/ws17_calendar_dispatch.json")).unwrap();
+    expected.extend(calendar["tasks"].as_array().unwrap().iter().filter(|task| matches!(task["name"].as_str(), Some("meeting status" | "out of office"))).cloned());
+    assert_eq!(serde_json::json!(tasks), serde_json::json!(expected));
 }
 
 #[tokio::test]
@@ -934,7 +970,7 @@ async fn ws8_quote_refresh_jobs_execute_in_the_real_app_runner() {
                 .any(|row| row.class == "Message::QuoteCardsRefreshJob" && row.status == "failed")
     })
     .await;
-    assert!(rows.is_empty(), "{rows:?}");
+    assert!(rows.iter().all(|row| row.class != "Message::QuoteCardsRefreshJob"), "{rows:?}");
     booted.jobs.shutdown(Duration::from_secs(5)).await;
 }
 

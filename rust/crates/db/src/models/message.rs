@@ -454,8 +454,9 @@ impl Message {
             // queues its broadcasts here; push persistence stays in this same transaction.
             message.create_in_index(tx)?;
             message.receive_in_conversation(tx)?;
-            crate::models::activity_mentions::record(tx, &message)?;
+            if !message.system_note { crate::ActivityItem::record_message(tx, &message)?; }
             crate::models::message_reference::sync(tx, &message)?;
+            message.sync_external_references(tx, true)?;
             message.push_later_in_conversation(tx);
         }
         if message.thread_id.is_some() {
@@ -466,6 +467,14 @@ impl Message {
         // Read the final counter after commit. Rails sends unread, push, then indicator.
         tx.after_commit(move |tx| ChannelThread::broadcast_thread_indicators(tx, &indicator_threads));
         Ok(message)
+    }
+
+    /// Network-card owners plug into the real create/edit callbacks through the app sink.
+    /// WS11 calls this only after deciding a finalized stream may fan out; a quiet finalize
+    /// must not warm previews. Import callers pass false to retain DB references without fetches.
+    pub fn sync_external_references(&self, tx: &mut Tx<'_>, enqueue: bool) -> Result<()> {
+        let sink = tx.env().sink.clone();
+        sink.sync_message_references(tx, self, enqueue)
     }
 
     /// RoomMailbox's Markdown entry point; all validation, rendering and callbacks use `create`.
@@ -646,7 +655,9 @@ impl Message {
                 RichTextRecord::create(tx, RECORD_TYPE, self.id, "body", body)?;
             }
         }
-        self.touch(tx)
+        self.touch(tx)?;
+        if !self.streaming { self.sync_external_references(tx, true)?; }
+        Ok(())
     }
 
     /// The edit endpoints' save (`MessagesController#update`,
@@ -789,7 +800,10 @@ impl Message {
         }
         if !self.streaming {
             self.update_in_index(tx)?;
-            if references_changed { crate::models::message_reference::sync(tx, self)?; }
+            if references_changed {
+                crate::models::message_reference::sync(tx, self)?;
+                self.sync_external_references(tx, true)?;
+            }
         }
         Ok(())
     }
