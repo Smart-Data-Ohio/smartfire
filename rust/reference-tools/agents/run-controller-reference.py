@@ -22,8 +22,10 @@ def run(file):
     storage = scratch / name
     (storage / 'db').mkdir(parents=True, exist_ok=True)
     (storage / 'files').mkdir(exist_ok=True)
+    # Keep the daemonized Redis child owned by Docker init, not Rails. Rails
+    # parallel startup must not wait on that unrelated long-lived process.
     result = subprocess.run([
-        'docker', 'run', '--rm', '--name', 'ws11api-test-' + name, '--network', 'none',
+        'docker', 'run', '--rm', '--init', '--name', 'ws11api-test-' + name, '--network', 'none',
         '--user', f'{os.getuid()}:{os.getgid()}', '--env-file', str(root / 'rust/parity/.env.reference'),
         '-e', 'RAILS_ENV=test', '-e', 'PARITY_REDIS=1', '-e', 'BUNDLE_WITHOUT=development',
         '-v', f'{root / "test"}:/rails/test:ro', '-v', f'{storage / "db"}:/rails/storage/db',
