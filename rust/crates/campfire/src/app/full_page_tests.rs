@@ -205,7 +205,7 @@ async fn complete_auth_templates_match_fifteen_seeded_rails_pages_without_masks(
             },
         );
         let expected = expected.as_str().unwrap();
-        if actual != expected {
+        if !super::asset_goldens::compare(name, &actual, expected) {
             let at = actual
                 .bytes()
                 .zip(expected.bytes())

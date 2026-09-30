@@ -75,6 +75,15 @@ export default class extends Controller {
     window.dispatchEvent(new CustomEvent("user-star:changed"))
   }
 
+  // The status popup saved: close the card, and have open member panels
+  // refetch now instead of on their next poll. A failed save re-renders
+  // the popup with its errors and stays open.
+  statusSaved(event) {
+    if (!event.detail?.success) return
+    window.dispatchEvent(new CustomEvent("user-status:changed"))
+    this.close()
+  }
+
   trapFocus(event) {
     if (event.key !== "Tab" || !this.hasPopoverTarget || this.popoverTarget.hidden) return
 
