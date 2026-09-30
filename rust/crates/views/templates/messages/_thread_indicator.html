@@ -1,0 +1,7 @@
+  <button type="button" id="{{ message.dom_id("thread_indicator") }}" class="message__thread-indicator"
+          data-controller="message-toolbar" data-action="message-toolbar#thread"
+          aria-label="Open thread, {{ message.reply_count_label() }}"{% if message.details.reply_count == 0 %} hidden{% endif %}>
+    {{ h::image_tag(ctx, "messages-outlined.svg", h::attrs().size(14).class("colorize--black").aria_hidden()) }}
+    <span>{{ message.reply_count_label() }}</span>
+  </button>
+{# Keep the final newline emitted by this Rails partial. #}

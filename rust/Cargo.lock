@@ -511,7 +511,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "comrak",
- "html5ever 0.35.0",
+ "html5ever",
  "rand 0.9.5",
  "regex",
  "serde",
@@ -522,6 +522,10 @@ dependencies = [
 [[package]]
 name = "campfire_routes"
 version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "campfire_storage"
@@ -549,11 +553,16 @@ name = "campfire_views"
 version = "0.1.0"
 dependencies = [
  "askama",
+ "campfire_assets",
  "campfire_routes",
- "html5ever 0.35.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "campfire_storage",
  "jiff",
+ "rails_compat",
+ "regex",
  "serde",
  "serde_json",
+ "sha2",
+ "unicode-segmentation",
 ]
 
 [[package]]
@@ -1134,17 +1143,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "html5ever"
-version = "0.35.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55d958c2f74b664487a2035fe1dadb032c48718a03b63f3ab0b8537db8549ed4"
-dependencies = [
- "log",
- "markup5ever",
- "match_token",
-]
-
-[[package]]
 name = "http"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1425,6 +1423,7 @@ dependencies = [
  "defmt",
  "jiff-core",
  "jiff-static",
+ "jiff-tzdb",
  "jiff-tzdb-platform",
  "log",
  "portable-atomic",
@@ -3043,6 +3042,12 @@ checksum = "5fd4f6878c9cb28d874b009da9e8d183b5abc80117c40bbd187a1fde336be6e8"
 dependencies = [
  "tinyvec",
 ]
+
+[[package]]
+name = "unicode-segmentation"
+version = "1.13.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6f5d3c3b1bf09027a88a6bc961fc00497d651009560b5463668dc81b0fa87a8"
 
 [[package]]
 name = "universal-hash"

@@ -17,8 +17,8 @@ The goal is a drop-in replacement for the Rails app, indistinguishable from it b
   each needs a decision before cutover.
 - **Drop-in compatible:** the same SQLite database and schema, storage layout, signed/encrypted
   cookies (so people stay signed in across the switch) and environment variables.
-- Port-owned frontend changes go in `crates/assets/overrides/`, which shadows the reference's
-  assets by logical path.
+- Port-owned frontend changes would go in `crates/assets/overrides/`, which shadows the
+  reference's assets by logical path. There are none before cutover (`crates/assets/OVERRIDES.md`).
 
 ## Where the reference lives
 

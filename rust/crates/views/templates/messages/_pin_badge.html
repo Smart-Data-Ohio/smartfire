@@ -1,0 +1,5 @@
+<span id="{{ message.dom_id("pin_badge") }}" class="message__pin-badge"{% if !message.details.pinned %} hidden{% endif %}>
+  {{ h::image_tag(ctx, "pin.svg", h::attrs().size(14).aria_hidden()) }}
+  <span>Pinned</span>
+</span>
+{# Keep the final newline emitted by this Rails partial. #}

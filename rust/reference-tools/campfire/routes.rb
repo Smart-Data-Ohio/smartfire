@@ -38,6 +38,17 @@ samples = [
   %w[GET /nope], %w[PATCH /rooms], %w[GET /ROOMS/1], %w[GET /rooms/%31], %w[GET /rooms/a%2Fb], %w[GET /rooms/caf%C3%A9], %w[GET /cable]
 ]
 
+# Exercise every Smartfire route, including verb alternatives and JSON defaults. Fixed
+# placeholders test recognition only; authorization and record existence belong to the harness.
+Rails.application.routes.routes.each do |route|
+  next if route.verb.blank? || route.internal
+  sample_path = route.path.spec.to_s.sub("(.:format)", "")
+    .gsub(/:([a-z_]+)/) { Regexp.last_match(1) == "bot_key" ? "1-parity" : "1" }
+    .gsub(/\*([a-z_]+)/, "parity")
+  route.verb.split("|").each { |verb| samples << [verb, sample_path] }
+end
+samples.uniq!
+
 recognitions = samples.map do |verb, path|
   params = Rails.application.routes.recognize_path(path, method: verb.downcase.to_sym)
   { verb: verb, path: path, endpoint: "#{params.delete(:controller)}##{params.delete(:action)}", params: params.transform_values(&:to_s) }

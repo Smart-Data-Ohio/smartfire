@@ -16,6 +16,8 @@ use std::sync::LazyLock;
 use campfire_db::{Account, User};
 use campfire_kit::{Ctx, Error, Response, Result, StatusCode, format};
 use campfire_views::helpers::request_forgery::{self, RequestSecrets};
+use campfire_views::layouts::{Chrome, UserPreferences};
+use campfire_views::time::Zone;
 use campfire_views::{AccountSummary, CurrentUser, Platform, ViewContext};
 
 use crate::app::AppCtx;
@@ -31,6 +33,11 @@ pub struct Layout {
     pub last_room_visited_id: Option<i64>,
     pub vapid_public_key: Option<String>,
     pub app_version: String,
+    /// `Time.zone` for the request (`SetTimeZone`).
+    pub time_zone: Zone,
+    /// The layout's chrome from other domains. Only what this crate can answer yet is filled in;
+    /// see `campfire_views::layouts::Chrome` for the owners.
+    pub chrome: Chrome,
 }
 
 impl Layout {
@@ -41,28 +48,45 @@ impl Layout {
         let app = c.app();
         let secrets = app.secrets.clone();
         let user = concerns::current_user(c).cloned();
-        let (account, has_logo) = app
+        let user_id = user.as_ref().map(|user| user.id);
+        let (account, has_logo, preferences) = app
             .db
-            .read(|conn| {
+            .read(move |conn| {
                 let account = Account::first(conn)?;
                 let has_logo = match &account {
                     Some(account) => super::attachments::attached_blob(conn, "Account", account.id, "logo")?.is_some(),
                     None => false,
                 };
-                Ok((account, has_logo))
+                let preferences = match user_id {
+                    Some(user_id) => user_preferences(conn, user_id)?,
+                    None => UserPreferences::default(),
+                };
+                Ok((account, has_logo, preferences))
             })
             .await
             .map_err(Error::internal)?;
         let last_room_visited_id = if user.is_some() { concerns::last_room_visited(c).await?.map(|room| room.id) } else { None };
 
+        let time_zone = Zone::for_user(preferences.time_zone.as_deref());
+        let current_user = user.as_ref().map(|user| CurrentUser { preferences, ..current_user(&secrets, user) });
+        let chrome = Chrome {
+            service_worker_auto_register: true,
+            brand_icon_names: Vec::new(),
+            google_picker: None,
+            huddle_configured: false,
+            global_search_query: None,
+            recent_searches: Vec::new(),
+        };
         Ok(Self {
-            current_user: user.as_ref().map(|user| current_user(&secrets, user)),
+            current_user,
             account: account_summary(account.as_ref(), has_logo),
             custom_styles: account.and_then(|account| account.custom_styles),
             platform: super::accounts::platform(c),
             last_room_visited_id,
             vapid_public_key: app.vapid_public_key(),
             app_version: app.config.app_version.clone(),
+            time_zone,
+            chrome,
         })
     }
 
@@ -80,6 +104,8 @@ impl Layout {
         let stylesheets = stylesheet_tags();
 
         let asset_path = |path: &str| campfire_assets::asset_path(path);
+        let app_secrets = c.app().secrets.clone();
+        let signed_stream_name = move |streamables: &[&str]| rails_compat::turbo::signed_stream_name(&app_secrets, streamables);
         let ctx = ViewContext {
             current_user: self.current_user.clone(),
             account: self.account.clone(),
@@ -97,6 +123,9 @@ impl Layout {
             referrer,
             last_room_visited_id: self.last_room_visited_id,
             app_version: self.app_version.clone(),
+            signed_stream_name: &signed_stream_name,
+            time_zone: self.time_zone.clone(),
+            chrome: self.chrome.clone(),
         };
         request_forgery::rendering_with(secrets, || render(&ctx)).map_err(Error::internal)
     }
@@ -145,7 +174,31 @@ pub fn current_user(secrets: &rails_compat::Secrets, user: &User) -> CurrentUser
         administrator: user.can_administer(None, false),
         bot: user.is_bot(),
         avatar_url: super::avatar_path(secrets, user),
+        preferences: UserPreferences::default(),
     }
+}
+
+/// The `users` columns the layout reads straight off `Current.user` (theme, text size, time zone,
+/// tour, voice settings). The settings other domains derive (notification sounds, Google Drive)
+/// stay at their defaults until their owners fill them in.
+fn user_preferences(conn: &campfire_db::Connection, user_id: i64) -> campfire_db::Result<UserPreferences> {
+    Ok(conn.query_row(
+        "SELECT theme, text_size, time_zone, time_zone_explicit, tour_completed_at IS NOT NULL, voice_mode, push_to_talk_key \
+         FROM users WHERE id = ?",
+        [user_id],
+        |row| {
+            Ok(UserPreferences {
+                theme: row.get(0)?,
+                text_size: row.get(1)?,
+                time_zone: row.get(2)?,
+                time_zone_explicit: row.get(3)?,
+                tour_completed: row.get(4)?,
+                voice_mode: row.get(5)?,
+                push_to_talk_key: row.get(6)?,
+                ..UserPreferences::default()
+            })
+        },
+    )?)
 }
 
 /// `Current.account` for the layout: its name, `fresh_account_logo_path` and whether a logo is

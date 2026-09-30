@@ -19,6 +19,20 @@ pub fn turbo_stream_from(signed_stream_name: &str) -> Html {
     )
 }
 
+/// `turbo_stream_from(*streamables)`, signing the names with the app's secret
+/// ([`crate::ViewContext::signed_stream_name`]). A record is its [`gid_param`], a symbol itself:
+/// `turbo_stream_from Current.user, :rooms` is `&[&gid_param("User", id), "rooms"]`.
+pub fn turbo_stream_from_streamables(ctx: &crate::ViewContext, streamables: &[&str]) -> Html {
+    turbo_stream_from(&(ctx.signed_stream_name)(streamables))
+}
+
+/// `record.to_gid_param`: `gid://campfire/<Model>/<id>` in unpadded URL-safe Base64
+/// (`GlobalID#to_param`).
+pub fn gid_param(model: &str, id: impl std::fmt::Display) -> String {
+    let encoded = super::application::base64_url::urlsafe_encode64(&format!("gid://campfire/{model}/{id}"));
+    encoded.trim_end_matches('=').to_string()
+}
+
 /// `turbo_page_requires_reload_tag`, which `turbo_page_requires_reload` provides to `:head`.
 pub fn turbo_page_requires_reload_tag() -> Html {
     builder_tag("meta", attrs().name("turbo-visit-control").attr("content", "reload"))

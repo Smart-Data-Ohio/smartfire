@@ -296,9 +296,8 @@ fn by_owner(html: &str, page_path: &str, sessions: &[(&str, &campfire_kit::csrf:
     (page, owners)
 }
 
-/// Rails #148 leaves the cached message-tree forms tokenless. The legacy boost-delete form is
-/// the only one ported so far; other write forms must carry only the current viewer's token,
-/// whether the message fragments were cold or warm.
+/// Rails #148 leaves cached message-tree write forms tokenless. The layout's forms and
+/// composer carry only the current viewer's tokens, cold or warm; GET/dialog forms have none.
 #[tokio::test]
 async fn room_pages_carry_only_their_own_viewers_session_bound_values() {
     let Some(app) = TestApp::boot().await else { return };
@@ -307,6 +306,10 @@ async fn room_pages_carry_only_their_own_viewers_session_bound_values() {
         .read(|conn| Ok(campfire_db::Message::for_room(conn, ALL_TALK)?.into_iter().max_by_key(|m| m.created_at).unwrap()))
         .await
         .unwrap();
+    // The existing seed's boosts are all counted reactions. Add one free-text boost to this
+    // test's private database so the legacy delete form's tokenlessness is still exercised.
+    let newest_id = newest.id;
+    app.db().write(move |tx| campfire_db::Boost::create(tx, newest_id, DAVID, "Hello")).await.unwrap();
     let room = format!("/rooms/{ALL_TALK}");
     let older = format!("/rooms/{ALL_TALK}/messages?before={}", newest.id);
     let mut david = app.sign_in(DAVID).await;
@@ -338,19 +341,26 @@ async fn room_pages_carry_only_their_own_viewers_session_bound_values() {
             if inner.contains(r#"data-action="boost-delete#perform""#) {
                 assert_eq!(tokens, 0, "{page_path} as {name}: cached boost-delete forms are tokenless (#148)");
                 tokenless_boosts += 1;
-            } else if method.captures(attributes).is_some_and(|c| c[1].eq_ignore_ascii_case("get") || c[1].eq_ignore_ascii_case("dialog")) {
+            } else if attributes.contains(r#"class="reaction-chip__form""#) || attributes.contains(r#"class="poll__form""#) || attributes.contains(r#"class="poll__retract-form""#) {
+                assert_eq!(tokens, 0, "cached reaction and poll forms are tokenless (#148)");
+            } else if method.captures(attributes).is_none_or(|c| c[1].eq_ignore_ascii_case("get") || c[1].eq_ignore_ascii_case("dialog")) {
                 assert_eq!(tokens, 0, "GET and dialog forms carry no token");
             } else {
                 assert_eq!(tokens, 1, "{page_path} as {name}: other write forms carry one viewer token: {attributes}");
             }
         }
         let (page, owners) = by_owner(html, page_path, &sessions);
-        assert!(owners.len() > 1, "{page_path} as {name} has forms with tokens");
+        if page_path.ends_with("/messages") {
+            assert!(owners.is_empty(), "layout-free cached message HTML has no tokens");
+            assert!(session_bound(html, page_path).is_empty(), "layout-free cached message HTML has no session-bound values");
+        } else {
+            assert!(owners.len() > 1, "{page_path} as {name} has layout and composer tokens");
+        }
         let foreign: Vec<&String> = owners.iter().filter(|owner| owner.as_str() != *name).collect();
         assert!(foreign.is_empty(), "{page_path} as {name}: {} of {} tokens aren't {name}'s: {:?}", foreign.len(), owners.len(), &foreign[..foreign.len().min(3)]);
         labeled.push(page);
     }
-    assert!(tokenless_boosts > 0, "the seed exercises #148's boost-delete form");
+    assert!(tokenless_boosts > 0, "the seeded case exercises #148's boost-delete form");
     // No token or nonce one viewer was given turns up in the other's pages.
     let values = |who: &str| -> std::collections::HashSet<String> {
         renders.iter().filter(|(_, name, _)| *name == who).flat_map(|(path, _, html)| session_bound(html, path)).map(|b| b.value().to_string()).collect()
@@ -365,19 +375,21 @@ async fn room_pages_carry_only_their_own_viewers_session_bound_values() {
         assert_eq!(at(1), at(3), "{} for jason", renders[page * 4].0);
     }
 
-    // Submitted with each person's cookies, a boost form's token from Jason's page works for
-    // Jason only.
+    // Submit the real composer's token: Jason's token works only with Jason's cookies.
     let (_, _, jason_page) = &renders[3];
     let (value, path) = session_bound(jason_page, &room)
         .into_iter()
         .find_map(|bound| match bound {
-            SessionBound::Token { value, path, .. } if path.ends_with("/boosts") => Some((value, path)),
+            SessionBound::Token { value, path, .. } if path.ends_with("/messages") => Some((value, path)),
             _ => None,
         })
-        .expect("a boost form on the room page");
-    let boost = |token: &str| Req::new(Method::POST, &path).form(&[("authenticity_token", token), ("boost[content]", "👍")]);
-    assert_eq!(david.send(boost(&value)).await.status, StatusCode::UNPROCESSABLE_ENTITY, "Jason's token with David's session");
-    assert_ne!(jason.send(boost(&value)).await.status, StatusCode::UNPROCESSABLE_ENTITY, "Jason's token with his own session");
+        .expect("the composer form on the room page");
+    let compose = |token: &str| Req::new(Method::POST, &path).header("accept", "text/vnd.turbo-stream.html").form(&[
+        ("authenticity_token", token), ("message[body]", "A viewer-bound composer submission"),
+        ("message[client_message_id]", "viewer-token-regression"),
+    ]);
+    assert_eq!(david.send(compose(&value)).await.status, StatusCode::UNPROCESSABLE_ENTITY, "Jason's token with David's session");
+    assert_eq!(jason.send(compose(&value)).await.status, StatusCode::OK, "Jason's token with his own session");
 }
 
 #[tokio::test]

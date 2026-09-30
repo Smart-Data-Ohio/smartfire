@@ -3,10 +3,10 @@
 use askama::Template;
 use serde::Deserialize;
 
-use crate::helpers as h;
+use crate::ViewContext;
+use crate::helpers::{self as h, filters};
 use crate::layouts::Page;
 use crate::messages::MessageItem;
-use crate::ViewContext;
 
 /// What `searches/index` shows.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
@@ -43,7 +43,11 @@ impl Page for Index<'_> {
 
 /// `searches_path(q: query)`.
 pub fn search_path(query: &str) -> String {
-    format!("{}?q={}", campfire_routes::searches(), h::url::cgi_escape(query))
+    format!(
+        "{}?q={}",
+        campfire_routes::searches(),
+        h::url::cgi_escape(query)
+    )
 }
 
 #[cfg(test)]
@@ -52,6 +56,9 @@ mod tests {
 
     #[test]
     fn search_paths_escape_the_query_like_cgi_escape() {
-        assert_eq!(search_path(r#"pizza & "pie" *~"#), "/searches?q=pizza+%26+%22pie%22+%2A~");
+        assert_eq!(
+            search_path(r#"pizza & "pie" *~"#),
+            "/searches?q=pizza+%26+%22pie%22+%2A~"
+        );
     }
 }

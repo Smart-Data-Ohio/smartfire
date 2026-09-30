@@ -142,6 +142,10 @@ impl Attrs {
         }
     }
 
+    pub fn keys(&self) -> impl Iterator<Item = &str> {
+        self.0.iter().map(|(key, _)| key.as_str())
+    }
+
     pub fn get(&self, name: &str) -> Option<&Value> {
         self.0.iter().find(|(key, _)| key == name).and_then(|(_, value)| value.as_ref())
     }

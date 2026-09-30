@@ -191,6 +191,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
     let user = require_current_user(c)?.clone();
     let message_id = c.param_str("message_id").and_then(cast_integer);
     let request_host = Some(c.request.host());
+    let cache_base_url = c.url_for("");
     let show = c
         .app()
         .db
@@ -199,7 +200,8 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
                 Some(message) if message.room_id == room.id => Message::page_around(conn, Timeline::Room(room.id), &message)?,
                 _ => Message::last_page(conn, Timeline::Room(room.id))?,
             };
-            let presenter = Presenter::new(conn, &app, request_host);
+            let mut presenter = Presenter::new(conn, &app, request_host);
+            presenter.cache_base_url = Some(cache_base_url);
             let original = Room::original(conn)?.is_some_and(|original| original.id == room.id);
             let room_gid = crate::channels::room_gid(&room).to_param();
             Ok(campfire_views::rooms::ShowView {
@@ -216,7 +218,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
         .await
         .map_err(db_error)?;
     let response = page::framed_page!(c, StatusCode::OK, |ctx| campfire_views::rooms::Show { ctx, show: &show }).await?;
-    let fragments = campfire_views::messages::MessageItem::cached_fragments(&c.app().fragment_cache, &show.messages);
+    let fragments = campfire_views::messages::MessageItem::cached_fragments(&c.app().fragment_cache, &show.messages, &c.url_for(""));
     Ok(response.with_cached_fragments(fragments))
 }
 

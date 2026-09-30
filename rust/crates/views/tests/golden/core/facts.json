@@ -1,0 +1,55 @@
+{
+  "brand_icon_names": "openai,gpt,anthropic,claude,googlegemini,gemini,google,apple,meta,nvidia,github,x,mistralai,huggingface,hf,perplexity,cursor,slack,discord,linux,docker,kubernetes,githubcopilot,ollama,vercel,cloudflare,stripe,notion,figma,linear,microsoft,msft,azure,aws,amazonaws,xai,grok,deepseek",
+  "users": {
+    "David": {
+      "id": 127326141,
+      "name": "David",
+      "administrator": true,
+      "bot": false,
+      "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6MTI3MzI2MTQxLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--4797fcf598034a8a095504797960dd67b938cc08fc3ec05e40e4e5decb9e1106/avatar?v=20260210120000",
+      "time_zone": null,
+      "tour_completed": true,
+      "searches": [
+        {
+          "id": 845978994,
+          "query": "pizza"
+        }
+      ]
+    },
+    "JZ": {
+      "id": 773523953,
+      "name": "JZ",
+      "administrator": false,
+      "bot": false,
+      "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzczNTIzOTUzLCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--6a3ca55467c594c9f2ad68e189b0e173e69fc19547379beefea4f164da7e8cb2/avatar?v=20260210120000",
+      "time_zone": null,
+      "tour_completed": true,
+      "searches": []
+    },
+    "Kevin": {
+      "id": 712064548,
+      "name": "Kevin",
+      "administrator": false,
+      "bot": false,
+      "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6NzEyMDY0NTQ4LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--7ad791d5c34f5a4f2490bd2fe4a4db475cde0a6d660a63b1601fa2f0bc5842ee/avatar?v=20260210120000",
+      "time_zone": null,
+      "tour_completed": true,
+      "searches": []
+    },
+    "Bender Bot": {
+      "id": 394959859,
+      "name": "Bender Bot",
+      "administrator": false,
+      "bot": true,
+      "avatar_path": "/users/eyJfcmFpbHMiOnsiZGF0YSI6Mzk0OTU5ODU5LCJwdXIiOiJ1c2VyL2F2YXRhciJ9fQ--45b4e2c6494b841a52f363f5aa9577b74bbe34cfadfa5a0a8085333f66406c93/avatar?v=20260210120000",
+      "time_zone": null,
+      "tour_completed": false,
+      "searches": []
+    }
+  },
+  "account": {
+    "name": "37signals",
+    "logo_path": "/account/logo?v=20260210120000",
+    "custom_styles": ""
+  }
+}

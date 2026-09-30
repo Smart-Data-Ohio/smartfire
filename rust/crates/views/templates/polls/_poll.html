@@ -1,0 +1,45 @@
+
+<section id="card_poll_{{ poll.id }}" class="poll" aria-label="Poll" data-controller="poll"
+    data-poll-anonymous-value="{{ poll.anonymous }}"
+    data-poll-results-url-value="{{ poll.results_path() }}">
+  <ol class="poll__options">
+{% for option in poll.options %}      <li class="poll__option" data-poll-target="option" data-poll-option-id="{{ option.id }}"
+          data-voter-ids="{{ poll.voter_ids(&option.id) }}">
+        <div class="poll__option-row">
+          <span class="poll__label">{{ option.label }}</span>
+          <span class="poll__count" aria-label="{{ poll.count_label(&option.id) }}">
+            {{ poll.option_votes(&option.id).len() }} · {{ poll.percent(&option.id) }}%
+          </span>
+        </div>
+        <div class="poll__bar" aria-hidden="true">
+          <span class="poll__bar-fill" style="width: {{ poll.percent(&option.id) }}%"></span>
+        </div>
+{% if !poll.anonymous && !poll.option_votes(&option.id).is_empty() %}            <p class="poll__voters txt-small">{{ poll.voter_names(&option.id) }}</p>
+{% endif %}      </li>
+{% endfor %}  </ol>
+
+  <p class="poll__meta txt-small">
+    {{ poll.total_label() }}
+    · {% if poll.multiple %}Multiple choice{% else %}Single choice{% endif %}
+    · {% if poll.anonymous %}Anonymous{% else %}Voters visible{% endif %}
+{% if poll.closes_at.is_some() %}      · {% if poll.closed %}Closed{% else %}Closes{% endif %} {{ poll.close_time() }}
+{% elif poll.closed %}      · Closed
+{% endif %}  </p>
+
+{% if let Some(error) = poll.vote_error %}    <p class="poll__error" role="alert">{{ error }}</p>
+{% endif %}
+{% if !poll.closed %}    <div class="poll__actions">
+      {{ poll.form_open("poll__form") }}
+        <fieldset class="poll__fieldset">
+          <legend class="for-screen-reader">Cast your vote</legend>
+{% for option in poll.options %}            <label class="poll__choice">
+                {{ poll.input(&option.id) }}
+              <span>{{ option.label }}</span>
+            </label>
+{% endfor %}        </fieldset>
+        {{ poll.submit(false) }}
+</form>      {{ poll.form_open("poll__retract-form") }}
+        {{ poll.submit(true) }}
+</form>    </div>
+{% endif %}</section>
+{# Keep the final newline emitted by this Rails partial. #}

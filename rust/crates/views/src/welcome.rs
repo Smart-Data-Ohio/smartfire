@@ -3,7 +3,7 @@
 use askama::Template;
 
 use crate::ViewContext;
-use crate::helpers as h;
+use crate::helpers::{self as h, filters};
 use crate::layouts::Page;
 
 /// `welcome/show.html.erb`: shown to users who aren't in any room yet.
@@ -16,6 +16,10 @@ pub struct Show<'a> {
 }
 
 impl Page for Show<'_> {
-    fn page_title(&self) -> Option<String> { Some("No rooms yet".into()) }
-    fn body_class(&self) -> Option<&str> { Some("sidebar") }
+    fn page_title(&self) -> Option<String> {
+        Some("No rooms yet".into())
+    }
+    fn body_class(&self) -> Option<&str> {
+        Some("sidebar")
+    }
 }

@@ -2,7 +2,9 @@
 //! `Messages::AttachmentPresentation` and the boost partials.
 
 pub mod json;
+pub mod parts;
 pub mod presentation;
+pub mod reactions;
 pub mod support;
 
 use askama::Template;
@@ -12,7 +14,8 @@ use serde::Deserialize;
 
 use crate::ViewContext;
 use crate::fragment_cache;
-use support::{epoch_ms, iso8601, RubyNumber};
+use crate::helpers as h;
+use support::{RubyNumber, epoch_ms, iso8601};
 
 /// What the message views show of a user: `avatar_tag` and the author heading.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
@@ -23,11 +26,26 @@ pub struct UserView {
     pub title: String,
     /// `fresh_user_avatar_path(user)`.
     pub avatar_url: String,
+    #[serde(default)]
+    pub icon: Option<h::AvatarIcon>,
 }
 
 impl UserView {
     pub fn path(&self) -> String {
         routes::user(self.id)
+    }
+
+    pub fn avatar(&self, ctx: &ViewContext, options: h::Attrs) -> h::Html {
+        h::avatar_tag_with_icon(
+            ctx,
+            h::AvatarUser {
+                id: self.id,
+                title: self.title.clone(),
+                avatar_path: self.avatar_url.clone(),
+            },
+            self.icon.as_ref(),
+            options,
+        )
     }
 }
 
@@ -81,6 +99,92 @@ pub struct MessageView {
     /// `message.boosts.ordered`.
     #[serde(default)]
     pub boosts: Vec<BoostView>,
+    #[serde(default)]
+    pub details: MessageDetails,
+    #[serde(default)]
+    pub components: MessageComponents,
+}
+
+/// Session-independent facts read by our message partials. No viewer capability or token belongs here.
+#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct MessageDetails {
+    pub thread_id: Option<i64>,
+    pub system_note: bool,
+    pub action: bool,
+    pub edited_at: Option<Timestamp>,
+    pub streaming: bool,
+    pub markdown: bool,
+    pub pinned: bool,
+    pub reply: Option<ReplyPreview>,
+    pub forwarded: bool,
+    pub forward_note: Option<String>,
+    pub drive_urls: Vec<String>,
+    pub reply_count: u64,
+    pub room_icon: Option<h::AvatarIcon>,
+    pub agent_steps: Vec<parts::AgentStep>,
+    pub poll: Option<parts::Poll>,
+}
+
+/// Already rendered, session-independent child partials, supplied by the domain owners.
+/// These are server-produced HTML, never unsanitized database or request text. The message
+/// composition keeps all replacement targets, including empty card containers, in Rails order.
+#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
+#[serde(default)]
+pub struct MessageComponents {
+    pub github_cards: Vec<String>,
+    pub twitter_cards: Vec<String>,
+    pub event_cards: Vec<String>,
+    pub message_link_cards: Vec<String>,
+    pub fizzy_cards: Vec<String>,
+    pub linkedin_cards: Vec<String>,
+    pub link_embed_cards: Vec<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct ReplyPreview {
+    pub source: Option<ReplySource>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct ReplySource {
+    pub id: i64,
+    pub author: String,
+    pub plain_text: String,
+    pub url: String,
+}
+
+impl ReplyPreview {
+    pub fn id_string(&self) -> String {
+        self.source
+            .as_ref()
+            .map(|source| source.id.to_string())
+            .unwrap_or_default()
+    }
+}
+
+impl ReplySource {
+    pub fn link(&self, ctx: &ViewContext) -> h::Html {
+        let text = if self.plain_text.chars().count() > 180 {
+            self.plain_text.chars().take(177).collect::<String>() + "..."
+        } else {
+            self.plain_text.clone()
+        };
+        h::link_to(
+            &if self.url.starts_with('/') {
+                format!("{}{}", ctx.base_url, self.url)
+            } else {
+                self.url.clone()
+            },
+            h::attrs()
+                .class("message__reply-preview-link")
+                .data("reply_target_id", self.id),
+            &format!(
+                "\n        <span class=\"overflow-ellipsis\">{}</span>\n        <span class=\"for-screen-reader\">View original message</span>\n",
+                h::escape(&text)
+            ),
+        )
+    }
 }
 
 /// `Message#content_type` with what each presentation needs.
@@ -88,7 +192,9 @@ pub struct MessageView {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum MessageContent {
     /// The presentation filters' output after `auto_link`, from the richtext crate.
-    Text { html: String },
+    Text {
+        html: String,
+    },
     Sound(SoundView),
     Attachment(AttachmentView),
     /// Rendering raised past `message_presentation`'s own rescue (or `plain_text_body` raised):
@@ -118,6 +224,8 @@ pub struct SoundImage {
 pub struct AttachmentView {
     /// `attachment.filename.to_s`.
     pub filename: String,
+    /// `attachment.filename.base.to_s`, derived from the stored unsanitized filename.
+    pub filename_base: String,
     /// `rails_blob_path(attachment)`.
     pub blob_path: String,
     /// `rails_blob_path(attachment, disposition: "attachment")`.
@@ -150,6 +258,23 @@ pub struct BoostView {
     /// `boost.content.all_emoji?`.
     pub all_emoji: bool,
     pub booster: UserView,
+    /// `Boost.reaction?` and `BoostsHelper#reaction_title`, resolved by the domain's icon registry.
+    #[serde(default)]
+    pub reaction: Option<ReactionContent>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct ReactionContent {
+    pub title: String,
+    pub icon: Option<h::AvatarIcon>,
+    #[serde(default)]
+    pub icon_alt: Option<String>,
+}
+
+pub struct ReactionGroup<'a> {
+    pub content: &'a str,
+    pub reaction: &'a ReactionContent,
+    pub reactors: Vec<&'a UserView>,
 }
 
 /// A message on its way into `messages/_message`: the fragment itself when the cache already
@@ -159,7 +284,11 @@ pub struct BoostView {
 /// and build a [`MessageView`] only on a miss.
 #[derive(Clone, Debug, PartialEq)]
 pub enum MessageItem {
-    Fragment { client_message_id: String, room_id: i64, html: fragment_cache::Fragment },
+    Fragment {
+        client_message_id: String,
+        room_id: i64,
+        html: fragment_cache::Fragment,
+    },
     View(Box<MessageView>),
 }
 
@@ -167,8 +296,12 @@ impl MessageItem {
     /// `dom_id(message)` / `dom_id(message, prefix)`.
     pub fn dom_id(&self, prefix: &str) -> String {
         match self {
-            MessageItem::Fragment { client_message_id, .. } if prefix.is_empty() => format!("message_{client_message_id}"),
-            MessageItem::Fragment { client_message_id, .. } => format!("{prefix}_message_{client_message_id}"),
+            MessageItem::Fragment {
+                client_message_id, ..
+            } if prefix.is_empty() => format!("message_{client_message_id}"),
+            MessageItem::Fragment {
+                client_message_id, ..
+            } => format!("{prefix}_message_{client_message_id}"),
             MessageItem::View(message) => message.dom_id(prefix),
         }
     }
@@ -184,12 +317,20 @@ impl MessageItem {
     /// order, including those this render just stored in `cache`. Call it after rendering, so the
     /// page's parts (and its ETag) don't depend on which messages happened to be cached before.
     /// A fragment with forms isn't: the page has this render's tokens where it has slots.
-    pub fn cached_fragments(cache: &fragment_cache::FragmentCache, items: &[MessageItem]) -> Vec<fragment_cache::Fragment> {
+    pub fn cached_fragments(
+        cache: &fragment_cache::FragmentCache,
+        items: &[MessageItem],
+        base_url: &str,
+    ) -> Vec<fragment_cache::Fragment> {
         items
             .iter()
             .filter_map(|item| match item {
                 MessageItem::Fragment { html, .. } => Some(html.clone()),
-                MessageItem::View(message) => cache.get(&message_fragment_key(message.id, message.updated_at)),
+                MessageItem::View(message) => cache.get(&message_fragment_key(
+                    message.id,
+                    message.updated_at,
+                    base_url,
+                )),
             })
             .filter(|html| !crate::helpers::request_forgery::has_token_slots(html))
             .collect()
@@ -209,17 +350,8 @@ impl<'de> Deserialize<'de> for MessageItem {
     }
 }
 
-/// `EmojiHelper::REACTIONS`.
-pub const REACTIONS: [(&str, &str); 8] = [
-    ("👍", "Thumbs up"),
-    ("👏", "Clapping"),
-    ("👋", "Waving hand"),
-    ("💪", "Muscle"),
-    ("❤️", "Red heart"),
-    ("😂", "Face with tears of joy"),
-    ("🎉", "Party popper"),
-    ("🔥", "Fire"),
-];
+/// `EmojiHelper::REACTIONS` (see [`crate::helpers::emoji`]).
+pub use crate::helpers::emoji::REACTIONS;
 
 impl MessageView {
     /// `dom_id(message)` / `dom_id(message, prefix)`.
@@ -255,15 +387,128 @@ impl MessageView {
     }
 
     pub fn at_path(&self) -> String {
-        routes::room_at_message(self.room_id, self.id)
+        if let Some(thread) = self.details.thread_id {
+            routes::ROOM.path_with(
+                &[&self.room_id],
+                None,
+                &[
+                    ("thread", Some(&thread.to_string())),
+                    ("message_id", Some(&self.id.to_string())),
+                ],
+            )
+        } else {
+            routes::room_at_message(self.room_id, self.id)
+        }
     }
 
     pub fn path(&self) -> String {
-        routes::room_message(self.room_id, self.id)
+        if let Some(thread) = self.details.thread_id {
+            routes::room_thread_message(self.room_id, thread, self.id)
+        } else {
+            routes::room_message(self.room_id, self.id)
+        }
     }
 
     pub fn edit_path(&self) -> String {
         routes::edit_room_message(self.room_id, self.id)
+    }
+
+    pub fn link_url(&self, ctx: &ViewContext) -> String {
+        format!("{}{}", ctx.base_url, self.at_path())
+    }
+    pub fn action_url(&self, ctx: &ViewContext) -> String {
+        format!("{}{}", ctx.base_url, self.path())
+    }
+
+    pub fn timestamp(&self, style: &str, class: bool) -> h::Html {
+        crate::time::local_datetime_tag(
+            &crate::time::Zone::utc(),
+            self.created_at,
+            style,
+            if class {
+                h::attrs().class("message__timestamp")
+            } else {
+                h::attrs()
+            },
+            "",
+        )
+    }
+
+    pub fn author_button(&self) -> h::Html {
+        h::button_tag(
+            h::attrs()
+                .type_("button")
+                .class("profile-card-name")
+                .merge(h::profile_card_trigger(self.creator.id, false)),
+            &format!(
+                "\n        <strong data-reply-target=\"author\">{}</strong>\n",
+                h::escape(&self.creator.name)
+            ),
+        )
+    }
+
+    pub fn edited_iso(&self) -> String {
+        self.details.edited_at.map(iso8601).unwrap_or_default()
+    }
+    pub fn edited_label(&self) -> String {
+        self.details
+            .edited_at
+            .map(|time| crate::time::Zone::utc().to_fs(time, "long"))
+            .unwrap_or_default()
+    }
+
+    pub fn forward_note(&self) -> Option<&str> {
+        self.details
+            .forward_note
+            .as_deref()
+            .filter(|note| !h::is_blank(note))
+    }
+
+    pub fn reply_count_label(&self) -> String {
+        format!(
+            "{} {}",
+            self.details.reply_count,
+            if self.details.reply_count == 1 {
+                "reply"
+            } else {
+                "replies"
+            }
+        )
+    }
+
+    pub fn legacy_boosts(&self) -> Vec<&BoostView> {
+        self.boosts
+            .iter()
+            .filter(|boost| boost.reaction.is_none())
+            .collect()
+    }
+
+    pub fn reaction_groups(&self) -> Vec<ReactionGroup<'_>> {
+        let mut groups: Vec<ReactionGroup<'_>> = Vec::new();
+        for boost in &self.boosts {
+            let Some(reaction) = &boost.reaction else {
+                continue;
+            };
+            if let Some(group) = groups
+                .iter_mut()
+                .find(|group| group.content == boost.content)
+            {
+                if !group
+                    .reactors
+                    .iter()
+                    .any(|reactor| reactor.id == boost.booster.id)
+                {
+                    group.reactors.push(&boost.booster);
+                }
+            } else {
+                groups.push(ReactionGroup {
+                    content: &boost.content,
+                    reaction,
+                    reactors: vec![&boost.booster],
+                });
+            }
+        }
+        groups
     }
 
     pub fn boosts_path(&self) -> String {
@@ -283,6 +528,22 @@ impl BoostView {
     pub fn path(&self) -> String {
         routes::message_boost(self.message_id, self.id)
     }
+    pub fn avatar_label(&self) -> String {
+        format!("{} boosted {}", self.booster.name, self.content)
+    }
+    pub fn content_html(&self, ctx: &ViewContext) -> h::Html {
+        reaction_body(
+            ctx,
+            &self.content,
+            self.reaction
+                .as_ref()
+                .and_then(|reaction| reaction.icon.as_ref()),
+            self.reaction
+                .as_ref()
+                .and_then(|reaction| reaction.icon_alt.as_deref()),
+            true,
+        )
+    }
 }
 
 /// `messages/_message`.
@@ -297,8 +558,12 @@ pub struct MessagePartial<'a> {
 /// (and whose collection renders are `cached: true`), so a message version renders once.
 pub fn message(ctx: &ViewContext, message: &MessageView) -> String {
     fragment_cache::fetch(
-        || message_fragment_key(message.id, message.updated_at),
-        || MessagePartial { ctx, message }.render().expect("messages/_message renders"),
+        || message_fragment_key(message.id, message.updated_at, &ctx.base_url),
+        || {
+            MessagePartial { ctx, message }
+                .render()
+                .expect("messages/_message renders")
+        },
     )
 }
 
@@ -309,24 +574,34 @@ pub fn cached_message(ctx: &ViewContext, message: &MessageView) -> crate::helper
 
 /// [`cached_message`] for a [`MessageItem`]: a fragment found up front goes out as it is, with
 /// this render's tokens in its slots.
-pub fn cached_message_item<'a>(ctx: &ViewContext, item: &'a MessageItem) -> askama::filters::Safe<std::borrow::Cow<'a, str>> {
+pub fn cached_message_item<'a>(
+    ctx: &ViewContext,
+    item: &'a MessageItem,
+) -> askama::filters::Safe<std::borrow::Cow<'a, str>> {
     askama::filters::Safe(match item {
-        MessageItem::Fragment { html, .. } => crate::helpers::request_forgery::fill_token_slots(html),
+        MessageItem::Fragment { html, .. } => {
+            crate::helpers::request_forgery::fill_token_slots(html)
+        }
         MessageItem::View(message) => std::borrow::Cow::Owned(self::message(ctx, message)),
     })
 }
 
 /// `messages/_message`'s fragment for this message version, if the current store holds it. The
-/// key needs only the message's id and `updated_at`.
-pub fn cached_message_fragment(id: i64, updated_at: Timestamp) -> Option<fragment_cache::Fragment> {
-    fragment_cache::read(&message_fragment_key(id, updated_at))
+/// key includes the message version and URL origin, so forged hosts cannot poison other origins.
+pub fn cached_message_fragment(
+    id: i64,
+    updated_at: Timestamp,
+    base_url: &str,
+) -> Option<fragment_cache::Fragment> {
+    fragment_cache::read(&message_fragment_key(id, updated_at, base_url))
 }
 
-fn message_fragment_key(id: i64, updated_at: Timestamp) -> String {
+fn message_fragment_key(id: i64, updated_at: Timestamp, base_url: &str) -> String {
     format!(
-        "views/messages/_message:{}/{}/presentation-v3",
+        "views/messages/_message:{}/{}/presentation-v{}/{base_url}",
         message_digest(),
-        fragment_cache::cache_key_with_version("messages", id, updated_at)
+        fragment_cache::cache_key_with_version("messages", id, updated_at),
+        fragment_cache::keys::PRESENTATION_CACHE_VERSION,
     )
 }
 
@@ -340,7 +615,11 @@ pub fn boost(ctx: &ViewContext, boost: &BoostView) -> String {
                 fragment_cache::cache_key_with_version("boosts", boost.id, boost.updated_at)
             )
         },
-        || BoostPartial { ctx, boost }.render().expect("messages/boosts/_boost renders"),
+        || {
+            BoostPartial { ctx, boost }
+                .render()
+                .expect("messages/boosts/_boost renders")
+        },
     )
 }
 
@@ -354,8 +633,19 @@ fn message_digest() -> &'static str {
     static DIGEST: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         fragment_cache::digest(&[
             include_str!("../templates/messages/_message.html"),
-            include_str!("../templates/messages/_actions.html"),
             include_str!("../templates/messages/_presentation.html"),
+            include_str!("../templates/messages/_toolbar.html"),
+            include_str!("../templates/messages/_pin_badge.html"),
+            include_str!("../templates/messages/_meta.html"),
+            include_str!("../templates/messages/_streaming_indicator.html"),
+            include_str!("../templates/messages/_context.html"),
+            include_str!("../templates/messages/_system_note.html"),
+            include_str!("../templates/messages/_drive_attachments.html"),
+            include_str!("../templates/messages/_thread_indicator.html"),
+            include_str!("../templates/messages/boosts/_reactions.html"),
+            include_str!("../templates/messages/boosts/_reaction.html"),
+            include_str!("../templates/agent_steps/_steps.html"),
+            include_str!("../templates/polls/_poll.html"),
             include_str!("../templates/messages/_unrenderable.html"),
             include_str!("../templates/messages/boosts/_boosts.html"),
             include_str!("../templates/messages/boosts/_boost.html"),
@@ -365,8 +655,9 @@ fn message_digest() -> &'static str {
 }
 
 fn boost_digest() -> &'static str {
-    static DIGEST: std::sync::LazyLock<String> =
-        std::sync::LazyLock::new(|| fragment_cache::digest(&[include_str!("../templates/messages/boosts/_boost.html")]));
+    static DIGEST: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+        fragment_cache::digest(&[include_str!("../templates/messages/boosts/_boost.html")])
+    });
     &DIGEST
 }
 
@@ -469,4 +760,207 @@ pub struct NewBoost<'a> {
     pub message: &'a MessageView,
     /// `Current.user`.
     pub user: &'a UserView,
+}
+
+/// `MessagesHelper#message_tag`, in the Ruby hash's attribute order.
+pub fn message_open(ctx: &ViewContext, message: &MessageView) -> h::Html {
+    let details = &message.details;
+    let mut class = "message".to_string();
+    if !details.system_note && message.all_emoji {
+        class.push_str(" message--emoji");
+    }
+    if details.system_note {
+        class.push_str(" message--system-note");
+    }
+    if !details.system_note && details.action {
+        class.push_str(" message--action");
+    }
+    let mut attributes = h::attrs()
+        .id(message.dom_id(""))
+        .tabindex(-1)
+        .class(class)
+        .attr_opt("role", details.system_note.then_some("note"))
+        .data("controller", "reply")
+        .data("message_id", message.id)
+        .data("room_id", message.room_id)
+        .attr_opt("data-thread-id", details.thread_id)
+        .data("message_timestamp", message.created_at_epoch())
+        .data("message_updated_at", message.updated_at_epoch())
+        .data("sort_value", message.created_at_epoch())
+        .data("messages_target", "message")
+        .data("message_format_target", "message")
+        .data("search_results_target", "message")
+        .attr_opt(
+            "data-refresh-room-target",
+            details.thread_id.is_none().then_some("message"),
+        )
+        .data(
+            "reply_composer_outlet",
+            details.thread_id.map_or("#composer".into(), |id| {
+                format!("#composer_channel_thread_{id}")
+            }),
+        );
+    if !details.system_note {
+        attributes = attributes
+            .data("user_id", message.creator.id)
+            .data(
+                "actions_url",
+                format!("{}/actions", message.action_url(ctx)),
+            )
+            .data("message_url", message.action_url(ctx))
+            .data(
+                "boost_url",
+                format!("{}{}", ctx.base_url, message.boosts_path()),
+            );
+    }
+    let tag = h::content_tag("div", attributes, "").0;
+    h::raw(tag.strip_suffix("</div>").unwrap())
+}
+
+/// Card owners supply their rendered ERB loop bodies, including branch-specific whitespace.
+pub fn cards(
+    message: &MessageView,
+    prefix: &str,
+    class: &str,
+    indent: usize,
+    bodies: &[String],
+) -> h::Html {
+    h::raw(format!(
+        "{}<div id=\"{}\" class=\"{class}\">{}</div>\n",
+        " ".repeat(indent),
+        message.dom_id(prefix),
+        bodies.concat()
+    ))
+}
+
+pub fn event_cards(message: &MessageView) -> h::Html {
+    if message.components.event_cards.is_empty() {
+        return h::raw("");
+    }
+    h::raw(format!(
+        "  <div id=\"{}\" class=\"event-cards\">\n{}  </div>\n",
+        message.dom_id("event_cards"),
+        message.components.event_cards.concat()
+    ))
+}
+
+pub fn drive_attachment(url: &str) -> h::Html {
+    h::link_to(
+        url,
+        h::attrs()
+            .class("drive-attachment")
+            .target("_blank")
+            .attr("rel", "noopener"),
+        "\n        <span class=\"drive-attachment__icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 16 16\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path d=\"M4 1.5h5.5L13 5v9.5H4z\"/><path d=\"M9.5 1.5V5H13\"/></svg></span>\n        <span class=\"drive-attachment__text\">\n          <span class=\"drive-attachment__name\">Google Drive file</span>\n          <span class=\"drive-attachment__meta\">Open in Drive</span>\n        </span>\n",
+    )
+}
+
+pub fn reaction_body(
+    ctx: &ViewContext,
+    content: &str,
+    icon: Option<&h::AvatarIcon>,
+    icon_alt: Option<&str>,
+    legacy: bool,
+) -> h::Html {
+    match icon {
+        Some(h::AvatarIcon::Image { title, url, brand }) => {
+            let attributes = h::attrs()
+                .class(if *brand {
+                    "icon icon--brand"
+                } else {
+                    "icon icon--custom"
+                })
+                .alt(icon_alt.unwrap_or(content));
+            h::image_tag(
+                ctx,
+                url,
+                if legacy {
+                    attributes.title(title.as_str())
+                } else {
+                    attributes
+                }
+                .attr("draggable", "false"),
+            )
+        }
+        Some(h::AvatarIcon::Emoji { character, .. }) if !legacy => h::text(character),
+        _ => h::text(content),
+    }
+}
+
+/// The counted chip is deliberately tokenless (#148), including on detached broadcasts.
+pub fn reaction(
+    ctx: &ViewContext,
+    message: &MessageView,
+    group: &ReactionGroup<'_>,
+    index: impl std::borrow::Borrow<usize>,
+) -> h::Html {
+    let partial = ReactionPartial {
+        ctx,
+        message,
+        group,
+        index: *index.borrow(),
+    };
+    h::raw(partial.render().expect("messages/boosts/_reaction renders"))
+}
+
+#[derive(Template)]
+#[template(path = "messages/boosts/_reaction.html")]
+struct ReactionPartial<'a> {
+    ctx: &'a ViewContext<'a>,
+    message: &'a MessageView,
+    group: &'a ReactionGroup<'a>,
+    index: usize,
+}
+
+impl ReactionPartial<'_> {
+    fn tooltip_id(&self) -> String {
+        self.message.dom_id(&format!("reactors_{}", self.index))
+    }
+    fn open(&self) -> h::Html {
+        h::form_with(self.message.boosts_path())
+            .class("reaction-chip__form")
+            .authenticity_token(false)
+            .data("turbo_frame", self.message.dom_id("boosting"))
+            .open()
+    }
+    fn button_open(&self) -> h::Html {
+        let ids = self
+            .group
+            .reactors
+            .iter()
+            .map(|reactor| reactor.id.to_string())
+            .collect::<Vec<_>>()
+            .join(",");
+        let attrs = h::attrs()
+            .type_("submit")
+            .class("reaction-chip")
+            .title(self.group.reaction.title.as_str())
+            .aria(
+                "label",
+                format!(
+                    "{}: {}",
+                    self.group.reaction.title,
+                    self.group.reactors.len()
+                ),
+            )
+            .aria("pressed", "false")
+            .attr_opt(
+                "aria-describedby",
+                (!self.group.reactors.is_empty()).then(|| self.tooltip_id()),
+            )
+            .data("controller", "reaction-chip")
+            .data("reaction_chip_booster_ids_value", ids)
+            .data("reaction", self.group.content);
+        let tag = h::button_tag(attrs, "").0;
+        h::raw(tag.strip_suffix("</button>").unwrap())
+    }
+    fn body(&self) -> h::Html {
+        reaction_body(
+            self.ctx,
+            self.group.content,
+            self.group.reaction.icon.as_ref(),
+            self.group.reaction.icon_alt.as_deref(),
+            false,
+        )
+    }
 }
