@@ -77,7 +77,7 @@ impl KeywordAlert {
             && sql::exists(
                 conn,
                 "SELECT 1 FROM keyword_alerts WHERE user_id = ? AND LOWER(phrase) = ? AND (? IS NULL OR id != ?) LIMIT 1",
-                params![user_id, phrase.to_lowercase(), id, id],
+                params![user_id, rails_compat::unicode::downcase(phrase), id, id],
             )?
         {
             errors.add("phrase", "is already in your list");
@@ -130,7 +130,7 @@ pub fn matching_user_ids(phrases_by_user: &[(i64, Vec<String>)], text: &str) -> 
     let mut phrases: Vec<(String, Vec<i64>)> = Vec::new();
     for (user_id, user_phrases) in phrases_by_user {
         for phrase in user_phrases {
-            let phrase = strip(phrase).to_lowercase();
+            let phrase = rails_compat::unicode::downcase(strip(phrase));
             if phrase.trim().is_empty() {
                 continue;
             }
@@ -143,18 +143,7 @@ pub fn matching_user_ids(phrases_by_user: &[(i64, Vec<String>)], text: &str) -> 
     }
     let mut matched = Vec::new();
     for (phrase, users) in phrases {
-        let body = phrase
-            .split(' ')
-            .map(regex::escape)
-            .collect::<Vec<_>>()
-            .join("[ \\t\\r\\n\\x0b\\x0c]+");
-        // Independent match passes make consuming outer boundaries equivalent to Ruby's
-        // lookarounds. Letter and Number properties deliberately exclude combining marks.
-        let pattern = regex::Regex::new(&format!(
-            "(?i)(?:^|[^\\p{{L}}\\p{{N}}_]){body}(?:$|[^\\p{{L}}\\p{{N}}_])"
-        ))
-        .map_err(|e| crate::Error::Other(e.to_string()))?;
-        if pattern.is_match(text) {
+        if rails_compat::keyword_regex::is_match(&phrase, text).map_err(crate::Error::Other)? {
             for user in users {
                 if !matched.contains(&user) {
                     matched.push(user);

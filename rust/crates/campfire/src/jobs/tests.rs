@@ -4,7 +4,7 @@ use campfire_jobs::inspect::{self, JobRow};
 use tokio::sync::Notify;
 
 use super::*;
-use crate::app::{Booted, boot};
+use crate::app::{Booted, boot_with_services};
 use crate::test_support::{WAIT, eventually, wait};
 
 /// An app booted over an empty storage directory.
@@ -17,7 +17,14 @@ async fn app_in(dir: &std::path::Path) -> Booted {
         _ => None,
     })
     .unwrap();
-    boot(config).await.unwrap()
+    // Worker tests own their queue entries. Periodic-host tests start their loops
+    // explicitly; an automatic retention tick must not race these queue assertions.
+    boot_with_services(
+        config,
+        campfire_kit::clock::from_env().unwrap(),
+        crate::integrations::net::Network::system(),
+        periodic::Intervals { periodic: None, huddle: None },
+    ).await.unwrap()
 }
 
 async fn app() -> (Booted, tempfile::TempDir) {
@@ -737,6 +744,10 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
     expected.push(serde_json::json!({"name":"stuck GitHub claims","seconds":30}));
     expected.push(serde_json::json!({"name":"stuck Fizzy claims","seconds":30}));
     expected.push(retention);
+    let ws17: serde_json::Value = serde_json::from_str(include_str!("../../../db/src/tests/ws17_vectors.json")).unwrap();
+    expected.push(ws17["presence_task"].clone());
+    let calendar: serde_json::Value = serde_json::from_str(include_str!("../../../../vectors/ws17_calendar_dispatch.json")).unwrap();
+    expected.extend(calendar["tasks"].as_array().unwrap().iter().filter(|task| matches!(task["name"].as_str(), Some("meeting status" | "out of office"))).cloned());
     assert_eq!(serde_json::json!(tasks), serde_json::json!(expected));
 }
 
@@ -745,8 +756,7 @@ async fn ws8_quote_refresh_jobs_execute_in_the_real_app_runner() {
     let (booted, _dir) = app().await;
     let app = booted.app.clone();
     app.db.write(|tx|{tx.emit_after_commit(Event::job(&campfire_db::models::message_reference::QuoteCardsRefreshJob{source_message_id:999}));assert_eq!(tx.conn().query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Message::QuoteCardsRefreshJob'",[],|r|r.get::<_,i64>(0))?,1);Ok(())}).await.unwrap();
-    // Boot's periodic loop also enqueues retention work. Wait for the condition asserted below,
-    // rather than returning as soon as just the quote-refresh row disappears.
+    // Wait for the whole queue asserted below, including callbacks from the quote refresh.
     let rows = wait_for(&app, "quote refresh and boot-time maintenance execution", |rows| {
         rows.is_empty() || rows.iter().any(|row| row.status == "failed")
     }).await;

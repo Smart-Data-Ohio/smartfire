@@ -320,7 +320,7 @@ pub(crate) fn month(name: &str) -> Option<i8> {
 }
 // ActiveSupport::TimeZone#parse delegates to Date._parse, with omitted date parts
 // filled from now. Explicit offsets denote absolute instants; clock-only forms stay today.
-fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Timestamp> {
+pub(crate) fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Timestamp> {
     let text = strip(text);
     if text.is_empty() {
         return None;
