@@ -5,6 +5,7 @@
 //! `vectors/campfire_sessions.json` holds session cookies *issued by Rails* for the seed's
 //! sessions (`reference-tools/campfire/session_cookies.rb`).
 
+use crate::test_support::{WAIT, eventually, wait};
 use std::path::Path;
 
 use axum::body::Body;
@@ -355,7 +356,7 @@ async fn jobs_run_ad_hoc_work_and_purge_unattached_blobs() {
         let _ = done.send(());
         Ok(())
     });
-    tokio::time::timeout(std::time::Duration::from_secs(5), finished).await.unwrap().unwrap();
+    wait("seeded app ad hoc execution", finished).await.unwrap();
 
     let storage = app.storage.clone();
     let now = app.clock.now();
@@ -381,19 +382,16 @@ async fn jobs_run_ad_hoc_work_and_purge_unattached_blobs() {
         })
         .await
         .unwrap();
-    for _ in 0..50 {
+    eventually("unattached blob row and file to be purged", || async {
         let gone = app.db.read(move |conn| Ok(campfire_storage::Blob::find(conn, blob_id).unwrap().is_none())).await.unwrap();
-        if gone && !path.exists() {
-            break;
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
-    }
+        gone && !path.exists()
+    }).await;
     assert!(!path.exists());
     let attached = app.db.read(|conn| Ok(campfire_storage::Blob::find(conn, 5).unwrap().is_some())).await.unwrap();
     assert!(attached);
 
     let Booted { jobs, .. } = test.booted;
-    jobs.shutdown(std::time::Duration::from_secs(5)).await;
+    jobs.shutdown(WAIT).await;
 }
 
 /// Regression: every message create runs rich text (plain text for the search index, mentions)
@@ -455,7 +453,7 @@ async fn concurrent_message_posts_all_complete() {
         assert_eq!(status.unwrap(), StatusCode::OK);
     }
 
-    let after = tokio::time::timeout(std::time::Duration::from_secs(10), send(&router, get_with_cookie(&format!("/rooms/{room_id}"), &session.cookie_header)))
+    let after = tokio::time::timeout(WAIT, send(&router, get_with_cookie(&format!("/rooms/{room_id}"), &session.cookie_header)))
         .await
         .expect("the server stopped answering");
     assert_eq!(after.status, StatusCode::OK);
@@ -478,19 +476,19 @@ async fn writes_proceed_while_a_variant_is_transformed() {
         async move {
             crate::active_storage::processed_variant_with(&app, blob, variation, move |storage, blob, variation| {
                 let _ = entered.send(());
-                let _ = released.recv();
+                released.recv_timeout(WAIT).expect("the test to release the transform");
                 storage.transform_variant(blob, variation)
             })
             .await
         }
     });
-    transforming.await.unwrap();
+    wait("variant transform to start", transforming).await.unwrap();
 
     let write = app.db.write(|tx| Ok(tx.conn().execute("UPDATE accounts SET name = name", [])?));
-    tokio::time::timeout(std::time::Duration::from_secs(5), write).await.expect("the write waited on the transform").unwrap();
+    wait("a database write while the transform is blocked", write).await.unwrap();
 
     release.send(()).unwrap();
-    let image = processing.await.unwrap().unwrap();
+    let image = wait("released variant processing", processing).await.unwrap().unwrap();
     assert!(app.storage.path_for(&image).exists());
     let storage = app.storage.clone();
     let recorded = app.db.read(move |conn| Ok(storage.existing_variant(conn, &blob, &variation).unwrap())).await.unwrap();
