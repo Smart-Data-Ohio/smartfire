@@ -35,10 +35,10 @@ pub fn deliver(cable: &Cable, app: Option<&App>, event: &Event) -> bool {
 /// Runs the broadcast's handler. A broadcast that fails is logged and dropped: the model
 /// callbacks rescue and report it (`Rails.error.report(..., handled: true)`), so the ones after
 /// it still run.
-fn broadcast(cable: &Cable, _app: Option<&App>, request: &BroadcastRequest) {
+fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
     let result = match request.kind {
         RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, &broadcast, huddle_configured(env))),
-        campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| messaging(cable, &broadcast)),
+        campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| messaging(cable, app, &broadcast)),
         kind => Err(anyhow::anyhow!("no handler for the {kind} broadcast")),
     };
     if let Err(error) = result {
@@ -48,10 +48,26 @@ fn broadcast(cable: &Cable, _app: Option<&App>, request: &BroadcastRequest) {
 
 /// WS8 domain frames share WS7's publisher and conservative Turbo guard. Rendering these
 /// partial descriptions belongs to WS8b; template-free frames are delivered now.
-fn messaging(cable: &Cable, broadcast: &campfire_db::broadcasts::Broadcast) -> anyhow::Result<()> {
-    use campfire_db::broadcasts::Broadcast;
-    let (stream, payload) = template_free_broadcast(broadcast)
-        .ok_or_else(|| anyhow::anyhow!("WS8b partial rendering is not registered: {broadcast:?}"))?;
+fn messaging(cable: &Cable, app: Option<&App>, broadcast: &campfire_db::broadcasts::Broadcast) -> anyhow::Result<()> {
+    use campfire_db::broadcasts::{Broadcast, TurboAction};
+    let (stream, payload) = match template_free_broadcast(broadcast) {
+        Some(frame) => frame,
+        None => {
+            let Broadcast::Turbo(frame) = broadcast else { unreachable!() };
+            let app = app.ok_or_else(|| anyhow::anyhow!("message renderer is not booted"))?;
+            let partial = frame.partial.as_ref().ok_or_else(|| anyhow::anyhow!("rendered frame has no partial"))?;
+            let html = crate::controllers::messages::rendered::domain_partial(app, partial)?
+                .ok_or_else(|| anyhow::anyhow!("owner's partial renderer is not registered: {partial:?}"))?;
+            if campfire_views::helpers::request_forgery::has_token_slots(&html) { return Err(anyhow::anyhow!("unresolved CSRF token slot")); }
+            let action = match frame.action {
+                TurboAction::Append => Action::Append, TurboAction::Prepend => Action::Prepend,
+                TurboAction::Replace => Action::Replace, TurboAction::Update => Action::Update, TurboAction::Remove => Action::Remove,
+            };
+            let attrs = if frame.maintain_scroll { &[("maintain_scroll", Some("true"))][..] } else { &[] };
+            let payload = campfire_cable::turbo::action_tag(action, Target::Target(&frame.target), Some(&html), attrs);
+            (broadcast.stream_name(), serde_json::Value::String(payload))
+        }
+    };
     match broadcast {
         Broadcast::Cable { .. } => { cable.broadcast(&stream, &payload); }
         Broadcast::Turbo(_) => { cable.broadcast_stream_to(&[&stream], payload.as_str().expect("Turbo frame is a string")); }

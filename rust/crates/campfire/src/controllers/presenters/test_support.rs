@@ -296,7 +296,10 @@ impl Browser<'_> {
     }
 
     pub async fn send(&mut self, req: Req) -> Reply {
-        let mut request = Request::builder().method(req.method.clone()).uri(&req.path).header(header::HOST, "campfire.test");
+        let mut request = Request::builder().method(req.method.clone()).uri(&req.path);
+        if !req.headers.iter().any(|(name, _)| name.eq_ignore_ascii_case("host")) {
+            request = request.header(header::HOST, "campfire.test");
+        }
         if !self.cookies.is_empty() {
             let cookie = self.cookies.iter().map(|(k, v)| format!("{k}={v}")).collect::<Vec<_>>().join("; ");
             request = request.header(header::COOKIE, cookie);

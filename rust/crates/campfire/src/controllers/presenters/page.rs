@@ -78,13 +78,10 @@ pub fn render_detached<T>(app: &App, account: Option<&Account>, render: impl FnO
     render_detached_at(app, account, "http://example.org", render)
 }
 
-/// The base of the URLs in a [`render_detached_at`] during a request. `SetCurrentRequest`'s
-/// `default_url_options` only carries `request.host` and `request.protocol`, so the port comes
-/// from the renderer's own env (`example.org:80`) and never shows: a request to
-/// `http://localhost:3999` broadcasts `http://localhost/...` links
-/// (`reference/app/controllers/concerns/set_current_request.rb`).
+/// `SetCurrentRequest#default_url_options` supplies the request's host, port and protocol to
+/// the detached renderer, including a nonstandard port.
 pub fn renderer_base_url(c: &Ctx) -> String {
-    format!("{}{}", c.request.protocol(), c.request.host())
+    c.url_for("")
 }
 
 /// [`render_detached`] during a request: URLs get the request's host through

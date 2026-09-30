@@ -7,6 +7,7 @@ pub mod boosts;
 pub mod by_bots;
 mod payload;
 mod freshness;
+pub(crate) mod rendered;
 #[cfg(test)]
 mod root_tests;
 #[cfg(test)]
@@ -143,7 +144,8 @@ pub async fn update(c: &mut Ctx) -> Result {
         Ok(message) => message,
         Err(error) => return render_record_invalid(c, error),
     };
-    broadcast_replace(c, &room, &message).await?;
+    let drive_given = c.params.get("message").and_then(|params| params.get("drive_file_ids")).is_some();
+    rendered::broadcast_edit(c, &room, &message, drive_given).await?;
 
     match c.respond_to(&[&format::HTML, &format::JSON])? {
         f if *f == format::JSON => {
@@ -592,8 +594,16 @@ pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: Messag
 /// `@message.destroy` then `@message.broadcast_remove`.
 pub(crate) async fn destroy_message(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
     let destroyed = message.clone();
-    c.app().db.write(move |tx| destroyed.destroy(tx)).await.map_err(db_error)?;
+    let (replies, thread) = c.app().db.write(move |tx| {
+        let replies = tx.conn().prepare("SELECT id FROM messages WHERE reply_to_message_id = ? ORDER BY id")?
+            .query_map([destroyed.id], |row| row.get::<_, i64>(0))?.collect::<std::result::Result<Vec<_>, _>>()?;
+        let thread = campfire_db::ChannelThread::find_by_parent_message(tx.conn(), destroyed.id)?.map(|thread| thread.id);
+        destroyed.destroy(tx)?;
+        Ok((replies, thread))
+    }).await.map_err(db_error)?;
     c.app().broadcasts.message_remove(room, message);
+    rendered::broadcast_tombstones(c, replies).await?;
+    if let Some(thread) = thread { rendered::broadcast_thread_refresh(c.app(), room.id, thread).await?; }
     Ok(())
 }
 

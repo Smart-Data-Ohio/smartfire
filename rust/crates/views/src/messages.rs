@@ -688,6 +688,28 @@ pub struct PresentationPartial<'a> {
     pub message: &'a MessageView,
 }
 
+/// Session-independent message parts replaced by the human edit endpoints.
+#[derive(Template)]
+#[template(path = "messages/_meta.html")]
+pub struct MetaPartial<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub message: &'a MessageView,
+}
+
+#[derive(Template)]
+#[template(path = "messages/_drive_attachments.html")]
+pub struct DriveAttachmentsPartial<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub message: &'a MessageView,
+}
+
+#[derive(Template)]
+#[template(path = "messages/_thread_indicator.html")]
+pub struct ThreadIndicatorPartial<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub message: &'a MessageView,
+}
+
 /// `messages/_unrenderable`.
 #[derive(Template)]
 #[template(path = "messages/_unrenderable.html")]
