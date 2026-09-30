@@ -3,6 +3,7 @@
 pub mod credentials;
 pub mod grants;
 pub mod keys;
+pub mod webhook_secrets;
 
 use campfire_db::models::audit_log::{self, AuditLog, Context, NewAuditLog, Target};
 use campfire_db::{Agent, AgentChanges, AgentKind, NewAgent, User, UserChanges};

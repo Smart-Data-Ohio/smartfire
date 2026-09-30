@@ -150,6 +150,7 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "accounts/users#update" => arc(accounts::users::update),
         "accounts/users#destroy" => arc(accounts::users::destroy),
         "accounts/bots/keys#update" => arc(accounts::bots::keys::update),
+        "accounts/bots/webhook_secrets#create" => arc(accounts::bots::webhook_secrets::create),
         "agents/directory#index" => arc(agents::directory::index),
         "agent_approvals#update" => arc(agent_approvals::update),
         "agents/approvals#for_agent" => arc(agents::history::approvals),
@@ -530,6 +531,7 @@ mod tests {
 
     /// Every endpoint `ported` maps, so the test above can check each exists in the table.
     const PORTED_ENDPOINTS: &[&str] = &[
+        "accounts/bots/webhook_secrets#create",
         "agent_approvals#update",
         "agents/approvals#for_agent", "agents/events#ledger",
         "agents/directory#index", "welcome#show", "first_runs#show", "first_runs#create", "sessions/transfers#show",

@@ -30,6 +30,8 @@ mod approval_decisions;
 mod agent_histories;
 #[path = "tests/agent_broadcasts.rs"]
 mod agent_broadcasts;
+#[path = "tests/webhook_secrets.rs"]
+mod webhook_secrets;
 
 struct Test {
     booted: Booted,
