@@ -1,4 +1,9 @@
 use crate::controllers::presenters::test_support::*;
+use axum::http::{Method, StatusCode};
+use campfire_db::{ChannelThread, Message, NewChannelThread, ThreadMembership};
+use campfire_kit::clock::FrozenClock;
+use serde_json::{Value, json};
+use std::sync::Arc;
 
 fn oracle_row(name: &str) -> Value {
     let oracle: Value = serde_json::from_str(include_str!(
@@ -34,11 +39,6 @@ fn assert_response(response: &Reply, row: &Value) {
     }
 }
 
-use axum::http::{Method, StatusCode};
-use campfire_db::{ChannelThread, Message, NewChannelThread, ThreadMembership};
-use campfire_kit::clock::FrozenClock;
-use serde_json::{Value, json};
-use std::sync::Arc;
 async fn app() -> TestApp {
     TestApp::boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap())))
         .await
@@ -265,5 +265,43 @@ async fn review_boolean_client_retry_matches_rails_one_row() {
         ids.len(),
         1,
         "Rails writes one message on a true client ID retry"
+    );
+}
+#[tokio::test]
+async fn review_signed_initial_thread_attachment_matches_rails() {
+    let app = app().await;
+    let signed =
+        campfire_storage::paths::signed_blob_id(&*app.booted.app.storage.verifier, 13, None);
+    let response=app.david().write(Req::new(Method::POST,&format!("/rooms/{ALL_TALK}/threads.json")).header("content-type","application/json").header("accept","application/json").body(json!({"thread":{"name":"Signed initial"},"message":{"client_message_id":"review-initial","attachment":signed}}).to_string())).await;
+    println!("WS8bmr Rust signed initial: {}", response.status);
+    assert_eq!(response.status, StatusCode::CREATED);
+    let expected = oracle_row("signed_initial");
+    assert_response(&response, &expected["responses"][0]);
+    let state = app
+        .db()
+        .read(|conn| {
+            let message =
+                Message::find_duplicate(conn, ALL_TALK, DAVID, "review-initial")?.unwrap();
+            let blob = campfire_storage::Blob::attached(conn, "Message", message.id, "attachment")
+                .unwrap()
+                .unwrap();
+            assert!(blob.is_analyzed());
+            assert_eq!(
+                Message::in_thread(conn, message.thread_id.unwrap())?.len(),
+                1
+            );
+            Ok(blob)
+        })
+        .await
+        .unwrap();
+    assert_eq!(state.id, expected["blob_id"]);
+    assert!(
+        !app.booted
+            .app
+            .storage
+            .service
+            .download(&state.key)
+            .unwrap()
+            .is_empty()
     );
 }

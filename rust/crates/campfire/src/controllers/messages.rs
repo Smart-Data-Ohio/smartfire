@@ -305,14 +305,7 @@ pub(crate) async fn human_message_params_with_client_id(c: &Ctx, root_room: Opti
         return Err(Error::internal(anyhow::anyhow!("message parameters do not support permit")));
     }
     let mut attributes = message_params(c)?;
-    if matches!(attributes.attachment, Some(Assignment::Invalid))
-        && let Some(signed) = message.get("attachment").and_then(Param::as_str) {
-        let id = campfire_storage::paths::verify_signed_blob_id(&*c.app().storage.verifier, signed, c.now())
-            .ok_or_else(invalid_attachment)?;
-        attributes.existing_attachment = Some(c.app().db.read(move |conn| Blob::find(conn, id).map_err(storage_error)?
-            .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))).await.map_err(db_error)?);
-        attributes.attachment = Some(Assignment::Unchanged);
-    }
+    (attributes.attachment, attributes.existing_attachment) = resolve_human_attachment(c, attributes.attachment, message.get("attachment")).await?;
     let permitted = message.permit(&permit_keys(&["markdown_source", "client_message_id", "reply_to_message_id", "reply_notify_author"]));
     let text = |key: &str| permitted.get(key).and_then(string_column);
     attributes.markdown_source = text("markdown_source");
@@ -351,6 +344,19 @@ pub(crate) async fn human_message_params_with_client_id(c: &Ctx, root_room: Opti
         }
     }
     Ok(attributes)
+}
+
+/// Verified direct-upload capabilities shared by root/reply parameters and initial thread
+/// messages. Keep avatar/shared-presenter assignment unchanged for its owner branch.
+pub(crate) async fn resolve_human_attachment(c: &Ctx, assignment: Option<Assignment>, value: Option<&Param>) -> Result<(Option<Assignment>, Option<Blob>)> {
+    if matches!(assignment, Some(Assignment::Invalid))
+        && let Some(signed) = value.and_then(Param::as_str) {
+        let id = campfire_storage::paths::verify_signed_blob_id(&*c.app().storage.verifier, signed, c.now())
+            .ok_or_else(invalid_attachment)?;
+        let blob = c.app().db.read(move |conn| Blob::find(conn, id).map_err(storage_error)?
+            .ok_or(campfire_db::Error::RecordNotFound("ActiveStorage::Blob"))).await.map_err(db_error)?;
+        Ok((Some(Assignment::Unchanged), Some(blob)))
+    } else { Ok((assignment, None)) }
 }
 
 /// `assign_attributes` + `save!` on the human edit endpoint. Bot updates keep their own seam.

@@ -71,7 +71,8 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
         let markdown = initial.get("markdown_source").and_then(messages::string_column);
         if markdown.is_some() { body = None; }
         let body = match body { Some(body) => Some(messages::canonicalize_body(c.app(), body, Some(c.request.host())).await?), None => None };
-        let staged = match messages::attachment_assignment(&initial)? {
+        let (assignment, existing_attachment) = messages::resolve_human_attachment(c, messages::attachment_assignment(&initial)?, initial.get("attachment")).await?;
+        let staged = match assignment {
             Some(Assignment::Create(upload)) => Some(upload.stage(c.app()).await?),
             Some(Assignment::Invalid) => return Err(Error::internal(anyhow::anyhow!("Could not find or build blob: expected attachable"))),
             _ => None,
@@ -94,7 +95,7 @@ async fn create_channel(c: &mut Ctx, room: Room) -> Result {
             ThreadMembership::join(tx, thread.id, creator)?;
             if !initial.is_empty() {
                 if notify == Some(None) { return Err(campfire_db::Error::Other("reply_notify_author violates NOT NULL".into())); }
-                let blob = staged.map(|staged| messages::save_staged(tx, staged)).transpose()?;
+                let blob = existing_attachment.or(staged.map(|staged| messages::save_staged(tx, staged)).transpose()?);
                 let message = thread.post_message(tx, creator, NewMessage { body, markdown_source: markdown,
                     client_message_id: client_id,
                     attachment_blob_id: blob.as_ref().map(|blob| blob.id), reply_to_message_id: reply, reply_notify_author: notify.flatten(),
