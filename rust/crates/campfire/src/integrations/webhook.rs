@@ -116,7 +116,7 @@ async fn post(net: &Network, url: &str, payload: String) -> Result<(u16, Option<
     let mut request = http::Request::net_http(hyper::Method::POST, http::request_uri(&uri), Some(uri_host), headers).transport(true, &endpoint);
     request.body = payload.into_bytes();
 
-    let timeouts = Timeouts { open: ENDPOINT_TIMEOUT, read: ENDPOINT_TIMEOUT };
+    let timeouts = Timeouts { open: ENDPOINT_TIMEOUT, read: ENDPOINT_TIMEOUT, write: http::NET_HTTP_DEFAULT_TIMEOUT };
     let response = http::exchange(net, &endpoint, request, &timeouts).await.map_err(WebhookError::Http)?;
     let (status, content_type) = (response.status, response.content_type());
     let body = match response.read_body(MAX_REPLY_SIZE).await.map_err(WebhookError::Http)? {
@@ -356,7 +356,7 @@ mod tests {
         let route = Route::new("POST", "*", "/hook", 200).header("Content-Type", "image/png").header("Content-Encoding", "gzip").body(bomb);
         let server = FakeServer::start(vec![route]).await;
         let net = crate::integrations::net::Network::system();
-        let outcome = deliver(&net, &format!("http://{}/hook", server.addr), "{}".into()).await;
+        let outcome = crate::test_support::wait("rejecting the oversized webhook reply", deliver(&net, &format!("http://{}/hook", server.addr), "{}".into())).await;
         assert!(matches!(outcome, Err(WebhookError::ReplyTooLarge)), "{outcome:?}");
     }
 
