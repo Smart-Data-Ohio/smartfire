@@ -206,9 +206,9 @@ fn parse_time(raw: &str, now: jiff::Timestamp) -> Option<Timestamp> {
         LazyLock::new(|| regex::Regex::new(r"(-?\d{4,})-(\d{1,2})-(\d{1,2})").unwrap());
     static TIME: LazyLock<regex::Regex> =
         LazyLock::new(|| regex::Regex::new(r"(\d{1,2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?").unwrap());
-    if let Ok(ts) = raw.parse::<jiff::Timestamp>() {
-        return Some(Timestamp::from_jiff(ts));
-    }
+    static OFFSET: LazyLock<regex::Regex> = LazyLock::new(|| {
+        regex::Regex::new(r"^\s*([+-])(\d{2})(?::?(\d{2}))?(?::?(\d{2}))?").unwrap()
+    });
     let date = DATE.captures(raw);
     let time = TIME.captures(raw);
     if date.is_none() && time.is_none() {
@@ -227,12 +227,6 @@ fn parse_time(raw: &str, now: jiff::Timestamp) -> Option<Timestamp> {
     if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
         return None;
     }
-    if year > 9999 {
-        return Some(Timestamp::from_second(jiff::Timestamp::MAX.as_second() - 1));
-    }
-    if year < -9999 {
-        return Some(Timestamp::from_second(jiff::Timestamp::MIN.as_second() + 1));
-    }
     let (hour, minute, second, fraction) = match time.as_ref() {
         Some(t) => (
             parse(&t[1])?,
@@ -242,8 +236,37 @@ fn parse_time(raw: &str, now: jiff::Timestamp) -> Option<Timestamp> {
         ),
         None => (0, 0, 0, ""),
     };
-    if hour > 24 || minute > 59 || second > 60 {
+    if hour > 24
+        || minute > 59
+        || second > 60
+        || (hour == 24 && (minute != 0 || second != 0 || fraction.bytes().any(|b| b != b'0')))
+    {
         return None;
+    }
+    // Time.zone.parse honors both compact and colon-separated numeric offsets.
+    // Validate before normalization: Time.new rejects +2500 and 24:01, but
+    // accepts exactly 24:00 and normalizes leap seconds rather than clamping.
+    let offset = match time
+        .as_ref()
+        .and_then(|t| OFFSET.captures(&raw[t.get(0).unwrap().end()..]))
+    {
+        Some(zone) => {
+            let hour = parse(&zone[2])?;
+            let minute = zone.get(3).map_or(Some(0), |m| parse(m.as_str()))?;
+            let second = zone.get(4).map_or(Some(0), |s| parse(s.as_str()))?;
+            if hour > 23 || minute > 59 || second > 59 {
+                return None;
+            }
+            let sign = if &zone[1] == "-" { -1 } else { 1 };
+            sign * (hour * 3600 + minute * 60 + second)
+        }
+        None => 0,
+    };
+    if year > 9999 {
+        return Some(Timestamp::from_second(jiff::Timestamp::MAX.as_second() - 1));
+    }
+    if year < -9999 {
+        return Some(Timestamp::from_second(jiff::Timestamp::MIN.as_second() + 1));
     }
     let micros: i64 = format!("{fraction:0<6}")
         .chars()
@@ -256,7 +279,7 @@ fn parse_time(raw: &str, now: jiff::Timestamp) -> Option<Timestamp> {
         .to_zoned(jiff::tz::TimeZone::UTC)
         .ok()?
         .timestamp();
-    let seconds = (day - 1) * 86400 + hour * 3600 + minute * 60 + second;
+    let seconds = (day - 1) * 86400 + hour * 3600 + minute * 60 + second - offset;
     Some(Timestamp::from_jiff(
         base.checked_add(
             jiff::SignedDuration::from_secs(seconds)
@@ -280,5 +303,30 @@ mod tests {
         ] {
             assert_eq!(integer_id(raw), expected);
         }
+    }
+
+    #[test]
+    fn ws13b_review_disconnect_parser_matches_pinned_rails_offsets_and_bounds() {
+        let oracle: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../db/src/tests/ws13b_review_fixes.json"
+        ))
+        .unwrap();
+        let now: jiff::Timestamp = "2026-01-01T12:00:01Z".parse().unwrap();
+        for case in oracle["times"].as_array().unwrap() {
+            let expected = case["parsed"]
+                .as_str()
+                .map(|raw| Timestamp::from_jiff(raw.parse().unwrap()));
+            assert_eq!(
+                parse_time(case["input"].as_str().unwrap(), now),
+                expected,
+                "{}",
+                case["input"]
+            );
+        }
+    }
+    #[test]
+    fn ws13b_review_disconnect_rejects_invalid_24_hour_time() {
+        let now: jiff::Timestamp = "2026-01-01T12:00:01Z".parse().unwrap();
+        assert_eq!(parse_time("2026-01-01T24:01:00Z", now), None);
     }
 }

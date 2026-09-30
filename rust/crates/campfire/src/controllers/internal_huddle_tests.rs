@@ -94,6 +94,23 @@ fn bearer(app: &TestApp, grant: &HuddleGrant, offset: i64) -> String {
 }
 
 #[tokio::test]
+async fn ws13b_review_offset_disconnect_preserves_a_newer_rejoin() {
+    let app = TestApp::boot_with_huddle(config()).await.expect("parity seed required");
+    let grant = grant(&app).await;
+    let oracle: serde_json::Value = serde_json::from_str(include_str!("../../../db/src/tests/ws13b_review_fixes.json")).unwrap();
+    for case in oracle["boundaries"].as_array().unwrap() {
+        let seen: jiff::Timestamp = case["seen_at"].as_str().unwrap().parse().unwrap();
+        let id = grant.id;
+        app.db().write(move |tx| Ok(tx.conn().execute("UPDATE huddle_grants SET last_seen_at=? WHERE id=?", rusqlite::params![Timestamp::from_jiff(seen), id])?)).await.unwrap();
+        let (status, _) = request(&app, Method::POST, &format!("/internal/huddle/grants/{id}/left"), Some(GATEWAY), None, serde_json::json!({"disconnected_at":"2026-01-01 17:00:00 +0500"})).await;
+        assert_eq!(status, 200);
+        let actual = app.db().read(move |conn| Ok(HuddleGrant::find_by_id(conn, id)?.unwrap().last_seen_at)).await.unwrap();
+        let expected = case["seen_after"].as_str().map(|s| Timestamp::from_jiff(s.parse().unwrap()));
+        assert_eq!(actual, expected, "{}", case["seen_at"]);
+    }
+}
+
+#[tokio::test]
 async fn huddle_gateway_missing_and_wrong_secret_fail_closed() {
     let Some(app) = TestApp::boot_with_huddle(config()).await else {
         return;
