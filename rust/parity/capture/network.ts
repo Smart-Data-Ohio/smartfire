@@ -1,20 +1,15 @@
 // Server-output layers of a page capture (plans/rust-conversion.md, decision 4): every response
 // the server sent the page, and every Action Cable frame, normalized so that two servers that
 // sent the same bytes (up to the typed placeholders of normalize.ts) produce the same text.
+import fs from "node:fs"
+import path from "node:path"
 import { createHash } from "node:crypto"
-import type { Page, Request, Response } from "playwright"
+import type { APIResponse, Page, Request, Response } from "playwright"
 import { maskText, normalizeFragment, normalizeResponse } from "./normalize.ts"
 import type { NormalizeOptions } from "./normalize.ts"
+import { responseHeaders } from "./headers.ts"
 
-// Headers whose presence says nothing about the app (transport, timing, per-request ids).
-const TRANSPORT_HEADERS = new Set([
-  "connection", "content-length", "date", "keep-alive", "server", "server-timing", "transfer-encoding", "x-request-id", "x-runtime",
-])
-// Headers whose value is part of the shape: what the response is, where it sends you, how it may be
-// cached, which cookies it sets or clears (plans/rust-conversion.md, decision 3).
-const VALUE_HEADERS = new Set(["content-type", "location", "cache-control", "content-disposition", "vary"])
-
-// Records every response from the page's origin: method, path, status, header shape and a hash of
+// Records every response from the page's origin: method, path, status, meaningful header/cookie values and a hash of
 // the normalized body. Requests the harness answered itself (external fixtures) or never let
 // through (held requests) aren't the server's output and are left out.
 export class NetworkLog {
@@ -23,22 +18,43 @@ export class NetworkLog {
   private origin: string
   private options: NormalizeOptions
   private page: Page
+  private errors: string[] = []
+  private bodyDir?: string
+  private assetBody?: (url: string) => Promise<Buffer>
+  private observed = new Set<string>()
 
-  constructor(page: Page, origin: string, options: NormalizeOptions) {
+  constructor(page: Page, origin: string, options: NormalizeOptions, bodyDir?: string, assetBody?: (url: string) => Promise<Buffer>) {
+    this.bodyDir = bodyDir
+    this.assetBody = assetBody
     this.page = page
     this.origin = origin
     this.options = options
-    page.on("response", (response) => this.pending.push({ key: `${response.request().method()} ${response.url()}`, entry: this.describe(response) }))
+    page.on("response", (response) => {
+      const url = new URL(response.url())
+      if (url.origin === this.origin) this.observed.add(`${response.request().method()} ${url.pathname}${url.search} ${response.status()}`)
+      this.pending.push({ key: `${response.request().method()} ${response.url()}${DIGESTED_ASSET.test(url.pathname) ? ` asset-response-${this.pending.length}` : ""}`, entry: this.describe(response).catch((error) => { this.errors.push(String(error)); return undefined }) })
+    })
   }
 
-  private async describe(response: Response): Promise<Entry | undefined> {
+  async recordAPI(url: string, response: APIResponse): Promise<void> {
+    const request = { method: () => "GET", url: () => url, resourceType: () => "image", isNavigationRequest: () => false } as Request
+    const wrapped = { request: () => request, url: () => url, status: () => response.status(), allHeaders: async () => response.headers(), headersArray: async () => response.headersArray(), body: () => response.body() } as Response
+    const entry = this.describe(wrapped, true)
+    this.pending.push({ key: `GET ${url}`, entry })
+    await entry
+  }
+
+  hasResponse(method: string, path: string, status: number): boolean {
+    return this.observed.has(`${method.toUpperCase()} ${path} ${status}`)
+  }
+
+  private async describe(response: Response, api = false): Promise<Entry | undefined> {
     const request = response.request()
     const url = new URL(response.url())
     if (!/^https?:$/.test(url.protocol) || url.origin !== this.origin || request.resourceType() === "websocket") return
     const headers = await response.allHeaders().catch(() => response.headers())
-    const shape = Object.keys(headers).filter((name) => !TRANSPORT_HEADERS.has(name)).sort()
-    const values = shape.filter((name) => VALUE_HEADERS.has(name)).map((name) => `${name}: ${maskText(normalizeHeaderValue(name, headers[name]), this.options)}`)
-    const cookies = (await response.headersArray().catch(() => [])).filter((h) => h.name.toLowerCase() === "set-cookie").map((h) => cookieShape(h.value)).sort()
+    const array = await response.headersArray().catch(() => [])
+    let buffer: Buffer | undefined
     const status = response.status()
     let body: string
     let normalized: string | undefined
@@ -48,22 +64,26 @@ export class NetworkLog {
       // Media is fetched in ranges whose sizes are the engine's choice; the total is the server's.
       body = `range of ${headers["content-range"]?.split("/")[1] ?? "?"} bytes`
     } else if (DIGESTED_ASSET.test(url.pathname)) {
-      // Propshaft names an asset after its content's digest, and the path keeps that digest here.
-      body = "named by its digest"
+      // The filename is a cache key, never evidence that its bytes match.
+      buffer = this.assetBody && !api ? await this.assetBody(response.url()) : await response.body()
+      body = `sha256:${createHash("sha256").update(buffer).digest("hex")}`
     } else if (request.method() !== "GET") {
       // A form submission's response is gone as soon as the page navigates, which may be before
       // it can be read; what it did shows in the pages and frames that follow.
-      body = "not compared (not a GET)"
+      body = "not compared (not a GET; never replayed)"
     } else {
-      const buffer = await this.bodyOf(response)
+      buffer = await this.bodyOf(response)
       normalized = normalizeResponse(buffer, headers["content-type"] ?? "", this.options)
+      if (this.bodyDir) {
+        fs.mkdirSync(this.bodyDir, { recursive: true })
+        fs.writeFileSync(path.join(this.bodyDir, encodeURIComponent(url.pathname + url.search).slice(0, 120) + "-" + createHash("sha256").update(url.pathname + url.search).digest("hex").slice(0, 12) + ".txt"), normalized)
+      }
       body = buffer.length ? "" : "empty "
     }
+    const headerText = responseHeaders(array.length ? array : Object.entries(headers).map(([name, value]) => ({ name, value })), this.options, buffer)
     const head = [
       `${describeRequest(request, this.origin, this.options)} → ${status}`,
-      `  headers: ${shape.join(" ")}`,
-      ...values.map((v) => `  ${v}`),
-      ...cookies.map((c) => `  set-cookie: ${c}`),
+      ...headerText.split("\n").filter(Boolean).map(value => `  ${value}`),
     ].join("\n")
     return { head, body, normalized }
   }
@@ -82,6 +102,8 @@ export class NetworkLog {
   // The log as sorted text: requests run in parallel, so arrival order isn't the server's. `mask`
   // replaces a state's page-derived values (masks.values in screens.yml) before bodies are hashed.
   async text(mask: (text: string) => string = (t) => t): Promise<string> {
+    await Promise.all(this.pending.map(p => p.entry))
+    if (this.errors.length) throw new Error(`network body capture failed: ${this.errors[0]}`)
     // Whether a resource is requested once or twice (the memory cache, a preload) is the browser's
     // business, and so is what an earlier request for it got: a frame loaded while the page was
     // still marking the room read on another connection (the sidebar) may come back either way.
@@ -96,7 +118,7 @@ export class NetworkLog {
 }
 
 // A response's description: the request line and header shape, and the body as a note (redirect,
-// media range, digest-named asset) or as normalized text, hashed when the log is written.
+// media range, actual asset hash) or as normalized text, hashed when the log is written.
 interface Entry {
   head: string
   body: string
@@ -121,20 +143,6 @@ function describeRequest(request: Request, origin: string, options: NormalizeOpt
   const nav = request.isNavigationRequest() ? " (navigation)" : ""
   const target = DIGESTED_ASSET.test(url.pathname) ? url.pathname + url.search : maskText(url.pathname + url.search, options)
   return `${request.method()} ${target}${nav}`.replace(origin, "")
-}
-
-function normalizeHeaderValue(name: string, value: string): string {
-  if (name === "cache-control" || name === "vary") return value.split(",").map((s) => s.trim().toLowerCase()).sort().join(", ")
-  return value
-}
-
-// A cookie's shape: its name, whether it's being cleared, and its attributes (not its value).
-function cookieShape(value: string): string {
-  const [pair, ...attributes] = value.split(";").map((s) => s.trim())
-  const [name, cookieValue = ""] = pair.split("=")
-  const attrs = attributes.map((a) => a.split("=")[0].toLowerCase()).filter((a) => a !== "expires" && a !== "max-age").sort()
-  const cleared = cookieValue === "" || /max-age=0|expires=thu, 01 jan 1970/i.test(value)
-  return `${name}${cleared ? " (cleared)" : ""}${attrs.length ? "; " + attrs.join("; ") : ""}`
 }
 
 // Action Cable frames per subscription. Frames of different subscriptions interleave in real

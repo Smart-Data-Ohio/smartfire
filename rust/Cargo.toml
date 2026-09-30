@@ -48,6 +48,7 @@ aes-gcm      = "0.10"
 rand         = "0.9"
 hex          = "0.4"
 html5ever    = "0.35"
+markup5ever_rcdom = "0.35"
 # commonmarker 2.10.0 Cargo.lock: exact parser/renderer for Rails parity.
 comrak       = { version = "=0.54.0", default-features = false }
 bcrypt       = "0.17"
@@ -55,6 +56,7 @@ uuid         = { version = "1", features = ["v4"] }
 percent-encoding = "2"
 url          = "2"
 regex        = "1"
+unicode-segmentation = "=1.13.3"
 async-trait  = "0.1"
 libc         = "0.2"
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }

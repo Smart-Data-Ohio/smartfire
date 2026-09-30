@@ -18,7 +18,7 @@
 //! the rest (`default`); `slack_import` runs one job at a time across every process
 //! (`config/resque-pool.yml`). Each has `JOB_CONCURRENCY` workers but `slack_import`.
 //!
-//! `DisconnectUser` is not a job in Rails (it's a synchronous Action Cable broadcast), so it goes
+//! `DisconnectUser` and `Broadcast` are not jobs in Rails (it's a synchronous Action Cable broadcast), so it goes
 //! straight to the cable server. [`Jobs::perform_later`] still runs ad hoc futures in memory
 //! (`ActiveStorage::AnalyzeJob`, whose callers hand over a future rather than arguments): lost if
 //! the process stops before they run, as before.
@@ -27,7 +27,7 @@
 
 use std::future::Future;
 use std::panic::AssertUnwindSafe;
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, OnceLock, Weak};
 use std::time::Duration;
 
 use campfire_db::{Event, EventSink, Job, JobRequest, Tx};
@@ -38,7 +38,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::{Mutex, mpsc, watch};
 use tokio::task::JoinHandle;
 
-use crate::app::{App, Cable};
+use crate::app::{App, AppState, Cable};
 use crate::config::Config;
 
 pub mod periodic;
@@ -128,7 +128,7 @@ pub fn request_for(event: &Event) -> Option<JobRequest> {
         Event::RemoveBannedContent { user_id } => JobRequest::new(&RemoveBannedContentJob { user_id: *user_id }),
         Event::PurgeBlob { blob_id } => JobRequest::new(&PurgeJob { blob_id: *blob_id }),
         Event::Job(request) => request.clone(),
-        Event::DisconnectUser { .. } => return None,
+        Event::DisconnectUser { .. } | Event::Broadcast(_) => return None,
     })
 }
 
@@ -174,6 +174,8 @@ pub struct Jobs {
     pub queue: JobQueue,
     ad_hoc: mpsc::Sender<AdHocWork>,
     cable: Arc<OnceLock<Cable>>,
+    /// Weak because the app holds the database, which holds this sink.
+    app: Arc<OnceLock<Weak<AppState>>>,
 }
 
 /// The ad hoc queue's receiving end, until the runner starts.
@@ -185,7 +187,7 @@ impl Jobs {
     pub fn new(registry: &Registry, config: &RunnerConfig) -> anyhow::Result<(Self, AdHocQueue)> {
         let queue = JobQueue::new(registry, config)?;
         let (ad_hoc, receiver) = mpsc::channel(AD_HOC_CAPACITY);
-        Ok((Self { queue, ad_hoc, cable: Arc::new(OnceLock::new()) }, AdHocQueue(receiver)))
+        Ok((Self { queue, ad_hoc, cable: Arc::new(OnceLock::new()), app: Arc::new(OnceLock::new()) }, AdHocQueue(receiver)))
     }
 
     /// Runs best-effort work in memory. Dropped with an error log when the ad hoc queue is full,
@@ -196,6 +198,10 @@ impl Jobs {
             Err(mpsc::error::TrySendError::Full(_)) => tracing::error!(job = name, "job queue is full, dropping job"),
             Err(mpsc::error::TrySendError::Closed(_)) => tracing::warn!(job = name, "job runner stopped, dropping job"),
         }
+    }
+
+    fn set_app(&self, app: &App) {
+        let _ = self.app.set(Arc::downgrade(app));
     }
 
     fn set_cable(&self, cable: Cable) {
@@ -223,9 +229,10 @@ impl EventSink for Jobs {
             // `ActionCable.server.remote_connections.where(current_user: user).disconnect`: a
             // pub/sub broadcast in Rails, done right away. Before boot finishes there are no
             // connections to disconnect.
-            (None, Event::DisconnectUser { user_id, reconnect }) => {
+            (None, event @ (Event::DisconnectUser { .. } | Event::Broadcast(_))) => {
                 if let Some(cable) = self.cable.get() {
-                    crate::channels::revocation::disconnect_user(cable, user_id, reconnect);
+                    let app = self.app.get().and_then(Weak::upgrade);
+                    crate::channels::sink::deliver(cable, app.as_ref(), &event);
                 }
             }
             (None, event) => tracing::warn!(?event, "not a job, dropping event"),
@@ -271,6 +278,7 @@ async fn join_or_abort(tasks: Vec<JoinHandle<()>>, grace: Duration, abandoned: &
 /// running once their leases expire), the ad hoc ones, and the periodic loops.
 pub fn start(app: App, registry: Registry, ad_hoc: AdHocQueue, config: RunnerConfig, periodic: periodic::Loops) -> Runner {
     app.jobs.set_cable(app.cable.clone());
+    app.jobs.set_app(&app);
     let workers = app.config.job_concurrency.max(1);
     let durable = campfire_jobs::start(app.db.clone(), app.jobs.queue.clone(), registry, app.clone(), config);
 

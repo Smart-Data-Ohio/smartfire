@@ -8,8 +8,6 @@ import type { PixelResult, TextDiff } from "./diff.ts"
 import { artifactBase } from "./capture.ts"
 import type { CellMeta } from "./capture.ts"
 import { cellId } from "./inventory.ts"
-import { maskDeliberateNetworkDifferences } from "./divergences.ts"
-import { maskOverriddenAssets } from "./overrides.ts"
 import type { Job } from "./inventory.ts"
 
 export type Status = "pass" | "fail" | "allowed" | "error"
@@ -82,11 +80,15 @@ export function compareJob(job: Job, runDir: string, expectedName: string, actua
     actual: { base: actualBase, meta: readMeta(actualBase) },
     masks: describeMasks(job.state.masks),
   }
+  const previous = result.expected.meta?.flakyAttempts ?? result.actual.meta?.flakyAttempts
+  if (previous) { result.flaky = true; result.attempts = previous; result.error = "captures disagreed in the original run" }
   const errors = [
     !result.expected.meta && `${expectedName}: not captured`,
     result.expected.meta?.error && `${expectedName}: ${result.expected.meta.error}`,
+    result.expected.meta?.retriedAfter && `${expectedName}: an earlier capture failed: ${result.expected.meta.retriedAfter}`,
     !result.actual.meta && `${actualName}: not captured`,
     result.actual.meta?.error && `${actualName}: ${result.actual.meta.error}`,
+    result.actual.meta?.retriedAfter && `${actualName}: an earlier capture failed: ${result.actual.meta.retriedAfter}`,
   ].filter(Boolean)
   if (errors.length) {
     result.status = "error"
@@ -115,12 +117,8 @@ export function compareJob(job: Job, runDir: string, expectedName: string, actua
   result.layers.push({ layer: "pixels", equal: pixels.equal, pixels })
 
   for (const [layer, ext] of TEXT_LAYERS) {
-    const mask = (text: string) => {
-      const masked = maskOverriddenAssets(text)
-      return layer === "network" ? maskDeliberateNetworkDifferences(masked) : masked
-    }
-    const expected = mask(readText(expectedBase + ext))
-    const actual = mask(readText(actualBase + ext))
+    const expected = readText(expectedBase + ext)
+    const actual = readText(actualBase + ext)
     const text = diffText(expected, actual)
     result.layers.push({ layer, equal: text.equal, text })
   }
@@ -133,7 +131,7 @@ function finish(result: CellComparison, allowlist: Allowlist): CellComparison {
     if (!layer.equal) layer.allowed = allowlist.match(result.state, result.cell, layer.layer)
   }
   const failing = result.layers.filter((l) => !l.equal)
-  result.status = !failing.length ? "pass" : failing.every((l) => l.allowed) ? "allowed" : "fail"
+  result.status = result.flaky ? "fail" : !failing.length ? "pass" : failing.every((l) => l.allowed) ? "allowed" : "fail"
   return result
 }
 

@@ -29,7 +29,9 @@ fn sha256(bytes: &[u8]) -> String {
 fn override_files() -> Vec<String> {
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("overrides");
     let mut files = Vec::new();
-    collect_files(&dir, &mut files);
+    if dir.is_dir() {
+        collect_files(&dir, &mut files);
+    }
     files.into_iter().map(|file| file.strip_prefix(&dir).unwrap().to_string_lossy().into_owned()).collect()
 }
 

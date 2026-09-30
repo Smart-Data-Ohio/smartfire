@@ -1,16 +1,18 @@
 {#- reference/app/views/layouts/application.html.erb. Pages extend this, have a `ctx` field, and
-    implement `crate::layouts::Page` for @page_title / @body_class. content_for regions are the
-    head, nav, footer and sidebar blocks; the page itself is the content block. -#}
+    implement `crate::layouts::Page` for @page_title, @body_class and content_for?(:sidebar). The
+    content_for regions are the head, nav, footer, member_panel, thread_panel and sidebar blocks;
+    the page itself is the content block. A block holds exactly what the ERB's content_for
+    captured (see PORTING.md). `data-test-motion` is only rendered in Rails' test environment. -#}
 <!DOCTYPE html>
-<html>
+<html data-theme="{{ h::user_theme(ctx) }}" data-text-size="{{ h::user_text_size(ctx) }}" data-service-worker="{{ ctx.chrome.service_worker_auto_register }}">
   <head>
     {{ h::page_title_tag(self.page_title().as_deref()) }}
 
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, interactive-widget=resizes-content">
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
     <meta name="view-transition" content="same-origin">
-    <meta name="color-scheme" content="light dark">
+    <meta name="color-scheme" content="{{ h::theme_color_scheme_meta_content(ctx) }}">
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#15171c" media="(prefers-color-scheme: dark)">
     <meta name="apple-mobile-web-app-capable" content="yes">
     {{ h::csrf_meta_tags() }}
     {{ h::csp_meta_tag() }}
@@ -19,8 +21,17 @@
 
     {{ h::builder_tag("meta", h::attrs().name("vapid-public-key").attr_opt("content", ctx.vapid_public_key.as_deref())) }}
     {{ h::builder_tag("meta", h::attrs().name("turbo-prefetch").attr("content", "true")) }}
-
-    {{ h::builder_tag("link", h::attrs().attr("rel", "manifest").attr("href", "/webmanifest.json")) }}
+    {% if ctx.google_drive_previews() %}{{ h::builder_tag("meta", h::attrs().name("google-drive-previews").attr("content", "enabled")) }}{% endif %}
+{% if let Some(picker) = ctx.google_picker() %}      {{ h::builder_tag("meta", h::attrs().name("google-drive-share").attr("content", "enabled")) }}
+      {{ h::builder_tag("meta", h::attrs().name("google-picker-client-id").attr("content", picker.client_id.as_str())) }}
+      {{ h::builder_tag("meta", h::attrs().name("google-picker-api-key").attr("content", picker.api_key.as_str())) }}
+      {{ h::builder_tag("meta", h::attrs().name("google-cloud-project-number").attr("content", picker.project_number.as_str())) }}
+{% endif %}    {{ h::builder_tag("meta", h::attrs().name("brand-icon-names").attr("content", ctx.chrome.brand_icon_names.join(","))) }}
+{% if ctx.current_user.is_some() %}      {{ h::builder_tag("meta", h::attrs().name("current-user-time-zone").attr_opt("content", h::current_user_time_zone_meta_content(ctx))) }}
+      {{ h::builder_tag("meta", h::attrs().name("time-zone-url").attr("content", h::routes::user_time_zone())) }}
+      {{ h::notification_sound_meta_tags(ctx) }}
+{% endif %}
+    {{ h::builder_tag("link", h::attrs().attr("rel", "manifest").attr("href", h::routes::WEBMANIFEST.path_with([].as_slice(), Some("json"), [].as_slice()))) }}
     {{ h::builder_tag("link", h::attrs().attr("rel", "icon").attr("href", ctx.account.logo_url.as_str()).type_("image/png")) }}
     {{ h::builder_tag("link", h::attrs().attr("rel", "apple-touch-icon").attr("href", ctx.account.logo_url.as_str())) }}
 
@@ -29,36 +40,92 @@
 
     {{ h::request_forgery::javascript_importmap_tags(ctx.importmap_tags) }}
 
-{% block head %}{% endblock %}  </head>
+    {% block head %}{% endblock %}
+  </head>
 
-  <body class="{{ h::body_classes(ctx, self.body_class()) }}" data-controller="local-time lightbox">
+  <body class="{{ h::body_classes(ctx, self.body_class()) }}"
+        data-controller="local-time lightbox workspace-navigation member-panel thread-panel profile-card keyboard-shortcuts timezone"
+        data-action="keydown.esc@window->workspace-navigation#close keydown.esc@window->member-panel#close keydown.esc@window->thread-panel#close keydown.esc@window->profile-card#close user-star:changed@window->member-panel#refreshPresence keydown@window->member-panel#trapFocus keydown@window->thread-panel#trapFocus keydown@window->profile-card#trapFocus keydown@window->keyboard-shortcuts#handle member-panel:opening@window->workspace-navigation#close member-panel:opening@window->thread-panel#close workspace-navigation:opening@window->member-panel#close workspace-navigation:opening@window->thread-panel#close thread-messages:changed->thread-panel#messagesChanged thread-panel:opening@window->member-panel#close thread-panel:opening@window->workspace-navigation#close workspace-presence:connected@window->member-panel#refreshPresence turbo:before-cache@document->member-panel#prepareForCache turbo:before-cache@document->thread-panel#prepareForCache turbo:frame-load@document->workspace-navigation#syncCurrentRoom turbo:load@document->workspace-navigation#syncCurrentRoom turbo:load@document->member-panel#roomChanged rooms-list:unread@window->workspace-navigation#updateUnreadStatus rooms-list:read@window->workspace-navigation#updateUnreadStatus">
     <a href="#main-content" class="skip-navigation btn">Skip to main content</a>
 
     <nav id="nav">
-{% block nav %}{% endblock %}    </nav>
+{# Only pages in the workspace shell render the drawer; elsewhere the toggle would open nothing. #}{% if self.has_sidebar() %}        <button type="button"
+                class="btn workspace-navigation__open"
+                aria-controls="sidebar"
+                aria-expanded="false"
+                aria-label="Open workspace navigation"
+                data-workspace-navigation-target="opener"
+                data-action="workspace-navigation#open">
+          {{ h::image_tag(ctx, "menu.svg", h::attrs().size(20).aria("hidden", "true")) }}
+        </button>
+{% endif %}
+      {% block nav %}{% endblock %}
 
-{% let notice = ctx.flash_notice.as_ref().or(ctx.flash_alert.as_ref()) %}{% if let Some(notice) = notice %}      <div class="flash" data-controller="element-removal" data-action="animationend->element-removal#remove">
+      {% if ctx.human_signed_in() %}{% include "layouts/_global_search.html" %}{% endif %}
+
+      {% if ctx.human_signed_in() %}{% include "layouts/_help_menu.html" %}{% endif %}
+    </nav>
+
+{% if let Some(notice) = ctx.flash_notice.as_ref().or(ctx.flash_alert.as_ref()) %}      <div class="flash" data-controller="element-removal" data-action="animationend->element-removal#remove">
         <div class="flash__inner shadow" style="{% if ctx.flash_alert.is_some() %}--flash-background: var(--color-negative){% endif %}">
 {% if ctx.flash_alert.is_some() %}            {{ h::image_tag(ctx, "alert.svg", h::attrs().aria("hidden", true).size(24).class("colorize--white")) }}</span>
 {% else %}            {{ h::image_tag(ctx, "check.svg", h::attrs().aria("hidden", true).size(24).class("colorize--white")) }}</span>
 {% endif %}        </div>
+        <button type="button" class="flash__dismiss" data-action="element-removal#remove" aria-label="Dismiss notification">×</button>
         <span class="for-screen-reader" role="alert" aria-atomic="true">{{ notice }}</span>
       </div>
 {% endif %}
     <main id="main-content">
-{% block content %}{% endblock %}
+      {% block content %}{% endblock %}
+
       <footer id="footer">
-{% block footer %}{% endblock %}      </footer>
+        {% block footer %}{% endblock %}
+      </footer>
     </main>
 
-    <aside id="sidebar" data-controller="toggle-class" data-toggle-class-toggle-class="open">
-{% block sidebar %}{% endblock %}    </aside>
+    {% block member_panel %}{% endblock %}
+
+    {% block thread_panel %}{% endblock %}
+
+    <aside id="sidebar"
+           role="navigation"
+           aria-label="Workspace navigation"
+           data-workspace-navigation-target="sidebar"
+           data-action="click->workspace-navigation#navigate keydown->workspace-navigation#trapFocus">
+      <button type="button"
+              class="workspace-navigation__backdrop"
+              aria-hidden="true"
+              tabindex="-1"
+              data-workspace-navigation-target="backdrop"
+              data-action="workspace-navigation#close"
+              hidden></button>
+      {% block sidebar %}{% endblock %}
+    </aside>
+
+{# The rooms subscriptions live here, outside the reloading sidebar frame: those streams also
+   drive main-page targets, and a sidebar reload would otherwise drop broadcasts in the
+   resubscribe gap. #}{% if let Some(user) = ctx.current_user.as_ref() %}      {{ h::turbo_stream_from_streamables(ctx, ["rooms"].as_slice()) }}
+      {{ h::turbo_stream_from_streamables(ctx, [h::gid_param("User", user.id).as_str(), "rooms"].as_slice()) }}
+      <div id="workspace_presence" data-controller="workspace-presence" data-turbo-permanent hidden></div>
+{% endif %}
+    {% if ctx.huddle_configured() %}{% let user = ctx.current_user.as_ref().unwrap() %}{% include "layouts/_huddle.html" %}{% endif %}
+
+    {% if ctx.huddle_configured() %}{% include "layouts/_huddle_invitation.html" %}{% endif %}
+
+    {% if ctx.huddle_configured() %}{% include "layouts/_huddle_join_notice.html" %}{% endif %}
 
     {% include "layouts/_lightbox.html" %}
 
-    <a href="https://once.com" id="app-logo" target="_blank" aria-label="Once software from 37signals home page">
-      {{ h::image_tag(ctx, "campfire-icon.png", h::attrs().alt("Campfire logo").attr("width", 256).attr("height", 216)) }}
+    {% if ctx.current_user.is_some() %}{% include "users/cards/_popover.html" %}{% endif %}
+    {% include "messages/_actions.html" %}
+    {% include "messages/_emoji_picker.html" %}
+
+{% if let Some(user) = ctx.current_user.as_ref() %}      {% include "layouts/_quick_switcher.html" %}
+      {% include "layouts/_keyboard_shortcuts.html" %}
+{% endif %}    {% if ctx.human_signed_in() %}{% include "layouts/_tour.html" %}{% endif %}
+
+    <a href="https://github.com/Smart-Data-Ohio/smartfire" id="app-logo" target="_blank" aria-label="Smartfire on GitHub">
+      {{ h::image_tag(ctx, "campfire-icon.png", h::attrs().alt("Smartfire logo").attr("width", 256).attr("height", 216)) }}
     </a>
   </body>
-</html>
-
+</html>{{ "\n" }}

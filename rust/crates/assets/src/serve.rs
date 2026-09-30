@@ -29,7 +29,8 @@ pub type Body = Cow<'static, [u8]>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StaticResponse {
     pub status: u16,
-    /// In the order Rack builds them, using Rack's lowercase header names.
+    /// In the order Rack builds them. Names are as Rack spells them (lowercase; "cache-control"
+    /// comes from the app's config); HTTP/1.1 and HTTP/2 treat them case-insensitively.
     pub headers: Vec<(&'static str, String)>,
     /// Empty for HEAD requests.
     pub body: Body,
@@ -358,8 +359,8 @@ fn mime_type(extname: &[u8]) -> Option<&'static str> {
         ".svg" => "image/svg+xml",
         ".ttf" => "font/ttf",
         ".txt" => "text/plain",
-        ".wav" => "audio/x-wav",
         ".wasm" => "application/wasm",
+        ".wav" => "audio/x-wav",
         ".webm" => "video/webm",
         ".webp" => "image/webp",
         ".woff" => "font/woff",

@@ -35,8 +35,7 @@ async fn message_broadcasts() {
     let designers = app.room("designers").await;
     let message = app.message("second").await;
 
-    let (broadcasts, room, m) = (app.broadcasts.clone(), designers.clone(), message.clone());
-    app.db.read(move |conn| broadcasts.message_create(conn, &room, &m, &FakePartials)).await.unwrap();
+    app.message_create(&designers, &message).await;
     assert_eq!(
         turbo_stream(&kevin.next_text().await),
         format!(
@@ -78,7 +77,7 @@ async fn boost_broadcasts() {
         )
     );
 
-    app.broadcasts.boost_remove(&designers, &boost);
+    app.broadcasts.boost_remove(&designers, &message, &boost);
     assert_eq!(turbo_stream(&kevin.next_text().await), format!(r#"<turbo-stream action="remove" target="boost_{}"></turbo-stream>"#, boost.id));
 }
 
@@ -97,10 +96,14 @@ async fn room_list_broadcasts() {
         format!(r#"<turbo-stream action="prepend" target="shared_rooms"><template><li>shared {}</li></template></turbo-stream>"#, hq.id)
     );
 
-    app.broadcasts.open_room_update(&hq, &FakePartials);
+    app.broadcasts.open_room_update(&hq, &FakePartials, Some("<h1>header</h1>"));
     assert_eq!(
         turbo_stream(&jz.next_text().await),
         format!(r#"<turbo-stream action="replace" target="list_rooms_open_{0}"><template><li>shared {0}</li></template></turbo-stream>"#, hq.id)
+    );
+    assert_eq!(
+        turbo_stream(&jz.next_text().await),
+        format!(r#"<turbo-stream action="replace" target="header_rooms_open_{0}"><template><h1>header</h1></template></turbo-stream>"#, hq.id)
     );
 
     app.broadcasts.room_remove(&hq);
@@ -115,7 +118,7 @@ async fn room_list_broadcasts() {
         .read(move |conn| {
             broadcasts.closed_room_create(conn, &w, &FakePartials)?;
             broadcasts.closed_room_create(conn, &d, &FakePartials)?;
-            broadcasts.closed_room_update(conn, &d, &FakePartials)
+            broadcasts.closed_room_update(conn, &d, &FakePartials, Some("<h1>header</h1>"))
         })
         .await
         .unwrap();
@@ -126,6 +129,10 @@ async fn room_list_broadcasts() {
     assert_eq!(
         turbo_stream(&jz.next_text().await),
         format!(r#"<turbo-stream action="replace" target="list_rooms_closed_{0}"><template><li>shared {0}</li></template></turbo-stream>"#, designers.id)
+    );
+    assert_eq!(
+        turbo_stream(&jz.next_text().await),
+        format!(r#"<turbo-stream action="replace" target="header_rooms_closed_{0}"><template><h1>header</h1></template></turbo-stream>"#, designers.id)
     );
     jz.assert_silent().await;
 }
@@ -152,27 +159,108 @@ async fn direct_room_and_involvement_broadcasts() {
     let designers = app.room("designers").await;
     let mut membership = app.membership("designers", "kevin").await.unwrap();
 
-    // Direct rooms never change the list.
-    app.broadcasts.involvement_change(&direct, &membership, Some(Invisible), &FakePartials).unwrap();
+    // Direct rooms only redraw their row on a mute or unmute.
+    let mut direct_membership = app.membership("bender_and_kevin", "kevin").await.unwrap();
+    app.broadcasts.involvement_change(&direct, &direct_membership, Some(Invisible), &FakePartials);
     kevin.assert_silent().await;
+    direct_membership.involvement = Some(Muted);
+    app.broadcasts.involvement_change(&direct, &direct_membership, Some(Everything), &FakePartials);
+    assert_eq!(
+        turbo_stream(&kevin.next_text().await),
+        format!(r#"<turbo-stream action="replace" target="list_rooms_direct_{}"><template><li>direct {}</li></template></turbo-stream>"#, direct.id, direct_membership.id)
+    );
 
     membership.involvement = Some(Invisible);
-    app.broadcasts.involvement_change(&designers, &membership, Some(Mentions), &FakePartials).unwrap();
+    app.broadcasts.involvement_change(&designers, &membership, Some(Mentions), &FakePartials);
     assert_eq!(
         turbo_stream(&kevin.next_text().await),
         format!(r#"<turbo-stream action="remove" target="list_rooms_closed_{}"></turbo-stream>"#, designers.id)
     );
 
     membership.involvement = Some(Everything);
-    app.broadcasts.involvement_change(&designers, &membership, Some(Invisible), &FakePartials).unwrap();
+    app.broadcasts.involvement_change(&designers, &membership, Some(Invisible), &FakePartials);
     assert_eq!(
         turbo_stream(&kevin.next_text().await),
-        format!(r#"<turbo-stream action="prepend" target="shared_rooms"><template><li>shared {}</li></template></turbo-stream>"#, designers.id)
+        format!(r#"<turbo-stream action="prepend" target="shared_rooms"><template><li>row {} unread None</li></template></turbo-stream>"#, designers.id)
     );
 
-    app.broadcasts.involvement_change(&designers, &membership, Some(Mentions), &FakePartials).unwrap();
+    // Neither side muted, or a nil previous involvement (`nil.to_s.inquiry`): nothing to redraw.
+    app.broadcasts.involvement_change(&designers, &membership, Some(Mentions), &FakePartials);
+    app.broadcasts.involvement_change(&designers, &membership, None, &FakePartials);
     kevin.assert_silent().await;
-    assert!(app.broadcasts.involvement_change(&designers, &membership, None, &FakePartials).is_err());
+
+    // A mute redims the row in place.
+    membership.involvement = Some(Muted);
+    app.broadcasts.involvement_change(&designers, &membership, Some(Everything), &FakePartials);
+    assert_eq!(
+        turbo_stream(&kevin.next_text().await),
+        format!(r#"<turbo-stream action="replace" target="list_rooms_closed_{}"><template><li>row {} unread Some(false)</li></template></turbo-stream>"#, designers.id, designers.id)
+    );
+    kevin.assert_silent().await;
+}
+
+#[tokio::test]
+async fn thread_messages_go_to_the_thread_stream_without_unread_pings() {
+    let app = start().await;
+    let designers = app.room("designers").await;
+    let thread_id = app.create_thread("designers", "jz", "Broadcast thread").await;
+    let mut kevin = app.connect("kevin").await;
+    let signed = app.signed_stream_name(&[&crate::channels::threads::thread_gid(thread_id).to_param(), "messages"]);
+    let thread_channel = identifier(json!({ "channel": "RoomMessagesChannel", "signed_stream_name": signed }));
+    kevin.confirm(&thread_channel).await;
+    room_messages(&app, &mut kevin, "designers").await;
+    let unreads = identifier(json!({ "channel": "UnreadRoomsChannel" }));
+    kevin.confirm(&unreads).await;
+
+    let mut message = app.message("second").await;
+    message.thread_id = Some(thread_id);
+    app.message_create(&designers, &message).await;
+    let frame = kevin.next_text().await;
+    assert!(frame.starts_with(&format!(r#"{{"identifier":{}"#, campfire_cable::json::encode(&thread_channel))), "{frame}");
+    assert_eq!(
+        turbo_stream(&frame),
+        format!(
+            r#"<turbo-stream action="append" target="messages_channel_thread_{thread_id}"><template><div id="message_0002">message {}</div></template></turbo-stream>"#,
+            message.id
+        )
+    );
+    app.broadcasts.message_remove(&designers, &message);
+    let frame = kevin.next_text().await;
+    assert!(frame.starts_with(&format!(r#"{{"identifier":{}"#, campfire_cable::json::encode(&thread_channel))), "{frame}");
+    kevin.assert_silent().await;
+
+    // System notes append without unread pings too.
+    let mut note = app.message("second").await;
+    note.system_note = true;
+    app.message_create(&designers, &note).await;
+    assert!(turbo_stream(&kevin.next_text().await).contains(r#"target="messages_rooms_closed_"#));
+    kevin.assert_silent().await;
+}
+
+#[tokio::test]
+async fn unread_pings_skip_muted_members_the_message_does_not_mention() {
+    let app = start().await;
+    let designers = app.room("designers").await;
+    let message = app.message("second").await;
+    let unreads = identifier(json!({ "channel": "UnreadRoomsChannel" }));
+    let mut kevin = app.connect("kevin").await;
+    kevin.confirm(&unreads).await;
+    let mut jz = app.connect("jz").await;
+    jz.confirm(&unreads).await;
+    let ping = delivery(&unreads, &format!(r#"{{"roomId":{}}}"#, designers.id));
+
+    app.set_involvement("designers", "kevin", "muted").await;
+    let (broadcasts, room, m, rich_text) = (app.broadcasts.clone(), designers.clone(), message.clone(), campfire_db::rich_text::BasicRichText);
+    app.db.read(move |conn| broadcasts.unread_room(conn, &room, &m, &rich_text)).await.unwrap();
+    assert_eq!(jz.next_text().await, ping);
+    kevin.assert_silent().await;
+
+    // Mentioned, a muted member is told.
+    app.set_body(&message, &format!("<div>Hey {}</div>", campfire_db::rich_text::mention_attachment_for(id("kevin")))).await;
+    let (broadcasts, room, m, rich_text) = (app.broadcasts.clone(), designers.clone(), message.clone(), campfire_db::rich_text::BasicRichText);
+    app.db.read(move |conn| broadcasts.unread_room(conn, &room, &m, &rich_text)).await.unwrap();
+    assert_eq!(jz.next_text().await, ping);
+    assert_eq!(kevin.next_text().await, ping);
 }
 
 #[tokio::test]

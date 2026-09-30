@@ -36,6 +36,7 @@ struct Vectors {
 
 #[derive(serde::Deserialize)]
 struct SessionVector {
+    session_id: i64,
     user_name: String,
     cookie_header: String,
 }
@@ -298,7 +299,7 @@ async fn cable_handshake_with_a_rails_session_cookie() {
 
     let Some(test) = boot_seeded().await else { return };
     let vectors = vectors();
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener = crate::channels::tests::support::bind_listener().await;
     let address = listener.local_addr().unwrap();
     let router = test.booted.router.clone();
     let service = campfire_kit::front::app_service(router);
@@ -317,7 +318,16 @@ async fn cable_handshake_with_a_rails_session_cookie() {
         first.into_text().unwrap().to_string()
     };
 
-    assert_eq!(connect(Some(vectors.sessions[0].cookie_header.clone())).await, r#"{"type":"welcome"}"#);
+    // A Rails-issued cookie authenticates HTTP, but cable also requires a completed second
+    // factor. The reference seed's session predates verification; keep that rejection covered.
+    let cookie = vectors.sessions[0].cookie_header.clone();
+    assert_eq!(connect(Some(cookie.clone())).await, r#"{"type":"disconnect","reason":"unauthorized","reconnect":false}"#);
+    let session_id = vectors.sessions[0].session_id;
+    test.booted.app.db.write(move |tx| {
+        tx.conn().execute("UPDATE sessions SET two_factor_verified_at = ? WHERE id = ?", rusqlite::params![tx.now(), session_id])?;
+        Ok(())
+    }).await.unwrap();
+    assert_eq!(connect(Some(cookie)).await, r#"{"type":"welcome"}"#);
     assert_eq!(connect(None).await, r#"{"type":"disconnect","reason":"unauthorized","reconnect":false}"#);
 }
 

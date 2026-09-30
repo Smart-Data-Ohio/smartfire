@@ -207,6 +207,7 @@ async fn message_created(app: App, job: MessageCreated, _: campfire_jobs::Execut
                         message: Some(html),
                         ..Rendered::default()
                     },
+                    &*app.db.env().rich_text,
                 )
             }
         })

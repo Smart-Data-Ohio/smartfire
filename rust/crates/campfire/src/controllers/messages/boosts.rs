@@ -81,7 +81,7 @@ pub(crate) async fn destroy_boost(c: &Ctx, message: &Message, boost: Boost) -> R
     c.app().db.write(move |tx| destroyed.destroy(tx)).await.map_err(db_error)?;
     let room_id = message.room_id;
     let room = c.app().db.read(move |conn| Room::find(conn, room_id)).await.map_err(db_error)?;
-    c.app().broadcasts.boost_remove(&room, &boost);
+    c.app().broadcasts.boost_remove(&room, message, &boost);
     Ok(())
 }
 

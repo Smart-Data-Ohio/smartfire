@@ -1,0 +1,20 @@
+{#- reference/app/views/layouts/_help_menu.html.erb: the help menu in the top bar. -#}
+<details class="help-menu position-relative"
+        data-controller="popup help-menu"
+        data-action="keydown.esc->popup#close toggle->popup#toggle click@document->popup#closeOnClickOutside"
+        data-popup-orientation-top-class="popup-orientation-top">
+  <summary id="help-menu-button" class="btn btn--borderless room-header__action" aria-label="Help" title="Help">
+    {{ h::image_tag(ctx, "help.svg", h::attrs().size(20).aria("hidden", "true")) }}
+  </summary>
+  <div class="help-menu__menu shadow" data-popup-target="menu" role="menu" aria-label="Help">
+    <button type="button" class="btn btn--borderless help-menu__item" role="menuitem"
+            data-help-menu-target="shortcuts" data-action="help-menu#openShortcuts">
+      Keyboard shortcuts
+    </button>
+    <button type="button" class="btn btn--borderless help-menu__item" role="menuitem"
+            data-action="help-menu#restartTour">
+      Restart tour
+    </button>
+  </div>
+</details>
+

@@ -1,15 +1,16 @@
+{#- reference/app/views/layouts/_lightbox.html.erb -#}
 <dialog class="lightbox" aria-label="Image Viewer (Press escape to close)" data-lightbox-target="dialog" data-action="close->lightbox#reset">
   <img src="" class="lightbox__image" data-lightbox-target="zoomedImage" />
 
   <form method="dialog" class="lightbox__btn">
     <button class="btn">
-      {{ h::image_tag(ctx, "remove.svg", h::attrs().aria_hidden()) }}
+      {{ h::image_tag(ctx, "remove.svg", h::attrs().aria("hidden", "true")) }}
       <span class="for-screen-reader">Close image viewer</span>
     </button>
   </form>
 
   <a href="" class="lightbox__btn--download btn hide-in-ios-pwa" data-lightbox-target="download">
-    {{ h::image_tag(ctx, "download.svg", h::attrs().aria_hidden()) }}
+    {{ h::image_tag(ctx, "download.svg", h::attrs().aria("hidden", "true")) }}
     <span class="for-screen-reader">Download file</span>
   </a>
 
@@ -18,7 +19,7 @@
       data-action="web-share#share"
       data-web-share-files-value=""
       data-lightbox-target="share">
-    {{ h::image_tag(ctx, "share.svg", h::attrs().aria_hidden()) }}
+    {{ h::image_tag(ctx, "share.svg", h::attrs().aria("hidden", "true")) }}
     <span class="for-screen-reader">Share file</span>
   </button>
 </dialog>

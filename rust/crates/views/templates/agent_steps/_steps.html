@@ -1,0 +1,15 @@
+{%- if !steps.is_empty() %}  <details class="agent-steps">
+    <summary class="agent-steps__summary">Steps ({{ steps.len() }})</summary>
+    <ol class="agent-steps__list">
+{% for step in steps %}        <li class="agent-steps__step agent-steps__step--{{ step.status }}">
+          <div class="agent-steps__head">
+            <strong class="agent-steps__name">{{ step.name }}</strong>
+            <span class="agent-steps__status">{{ step.status_label() }}</span>
+{% if step.duration_ms.is_some() %}              <span class="agent-steps__duration">{{ step.duration() }}</span>
+{% endif %}          </div>
+{% if let Some(input) = step.input() %}            <p class="agent-steps__io"><span class="agent-steps__io-label">In:</span> <span class="agent-steps__io-text">{{ input }}</span></p>
+{% endif %}{% if let Some(output) = step.output() %}            <p class="agent-steps__io"><span class="agent-steps__io-label">Out:</span> <span class="agent-steps__io-text">{{ output }}</span></p>
+{% endif %}        </li>
+{% endfor %}    </ol>
+  </details>
+{% endif -%}

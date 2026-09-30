@@ -22,7 +22,7 @@ pub use sql::CachedStatements;
 
 pub use database::{Config, Database, Env, Tx, run_write};
 pub use error::{Error, Errors, Result};
-pub use events::{Event, EventSink, Job, JobRequest, NullSink, RecordingSink};
+pub use events::{Broadcast, BroadcastRequest, Event, EventSink, Job, JobRequest, NullSink, RecordingSink};
 pub use models::*;
 pub use rich_text::{BasicRichText, RichText};
 pub use rusqlite::Connection;

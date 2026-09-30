@@ -143,7 +143,7 @@ async fn broadcast_create(app: &App, room: &Room, message: &Message) -> anyhow::
         let account = campfire_db::Account::first(conn)?;
         let html = page::render_detached(&app, account.as_ref(), |ctx| views::message(ctx, &view));
         let partials = Rendered { message: Some(html), ..Rendered::default() };
-        app.broadcasts.message_create(conn, &room, &message, &partials)
+        app.broadcasts.message_create(conn, &room, &message, &partials, &*app.db.env().rich_text)
     })
     .await?;
     Ok(())

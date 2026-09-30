@@ -1,1093 +1,151 @@
 {
   "fixtures": {
     "cookies": {
-      "A": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklsTnZhR1Z6Y0ZWemNFdFVlV2RoZFZoR1ZHcDZXRkp5VXlJPSIsImV4cCI6bnVsbCwicHVyIjoiY29va2llLnNlc3Npb25fdG9rZW4ifX0%3D--d0a79b0870d1dd512ffd114205e08aeb64955f57",
-      "B": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IkluZ3hkek5qYVRkdWNGTkRhVlpWVG5admN6SmFaMkZ5VVNJPSIsImV4cCI6bnVsbCwicHVyIjoiY29va2llLnNlc3Npb25fdG9rZW4ifX0%3D--9158fe384f898ce3ab3de51fe18b9e3b800eba2b"
+      "A": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklrdDVRbXBYZUhKeU5HRm5hVXBJWm10MGFUZFpkSGgwYnlJPSIsImV4cCI6bnVsbCwicHVyIjoiY29va2llLnNlc3Npb25fdG9rZW4ifX0%3D--477706186a3cc94cbf736522a39f7ab53c9173ce",
+      "B": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IkltVmxaMGhEYW1GelNFSm5jbmc0TkVaSVNrMDFjR0ZFY1NJPSIsImV4cCI6bnVsbCwicHVyIjoiY29va2llLnNlc3Npb25fdG9rZW4ifX0%3D--7c15cce51c8c57b9ce16e34b755206fdaf6ebfe4",
+      "BOT": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklqaFhRbmxJWW1sWVkybGFjbWc1V1hwbldWRldPV0kxYWlJPSIsImV4cCI6bnVsbCwicHVyIjoiY29va2llLnNlc3Npb25fdG9rZW4ifX0%3D--762719e6aa3c846d4387ab12ec6f975f1c478cd6",
+      "PENDING": "session_token=eyJfcmFpbHMiOnsibWVzc2FnZSI6IklrWlRjMFo0YUhsdFZHdElaV1Y0VWpSMmJUZFdWelJOWlNJPSIsImV4cCI6bnVsbCwicHVyIjoiY29va2llLnNlc3Npb25fdG9rZW4ifX0%3D--f47b0e0c80b1fc72a36a776a932b220a4a0d7d6f"
     },
     "tokens": {
-      "A_ID": "773523959",
-      "A_ROOMS_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpODNOek0xTWpNNU5Uazpyb29tcyI=--faf4aa0072cddd647f1fab7bcd2646bfd7b990903bb0162c2670edbb856ce7f4",
-      "B_ID": "773523960",
-      "CLOSED_ID": "699448331",
-      "CLOSED_MESSAGES_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPa05zYjNObFpDODJPVGswTkRnek16RTptZXNzYWdlcyI=--01e5d3e8637986ab362ddbebafae3d33043a139e67b496446ce9434d6a38cf3a",
-      "MESSAGE_ID": "935962043",
+      "A_ID": "1",
+      "A_OOO_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6b29vX25vdGljZSI=--086125f7e15e88b34c10278ec052a0789c530490962af4d9896f4ce6c33b42d0",
+      "A_ROOMS_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6cm9vbXMi--5332e05561936c318a1fd4120aadb81d0ca03962a0bf4111dbb6e242065bb410",
+      "A_STATUS_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6c3RhdHVzIg==--fa3fb4ef3175b6e64a67893f8c1ef4614a6f8d36f8f9af7acc1026badaa396af",
+      "B_ID": "2",
+      "CLOSED_ID": "2",
+      "CLOSED_MESSAGES_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPa05zYjNObFpDOHk6bWVzc2FnZXMi--021c3ea0cbb6d3e185cb6a5b9446e6c1061598e11f1293ec6035530155efc740",
+      "MESSAGE_ID": "1",
       "ROOMS_SIGNED": "InJvb21zIg==--7e4e34fa21835e46c5ed0fa7e6f7330857882b23d4b218afb2ec1880bc554439",
-      "ROOM_ID": "699448330",
-      "ROOM_MESSAGES_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk5qazVORFE0TXpNdzptZXNzYWdlcyI=--82578d9c12ba6e22ce79c75d55713201e5cca7e5b777f59286fffcddddb88418"
+      "ROOM_ID": "1",
+      "ROOM_MESSAGES_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROm1lc3NhZ2VzIg==--7b9de78e7312f38584c450c994b7c776051fb661f6c90ee1c5794c1fd3a2542c",
+      "ROOM_THREADS_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROnRocmVhZHMi--2daf5775325ee4db5f316bc021310e4a1d8ac7a9d87cb77f0462a1777ae96087",
+      "THREAD_ID": "1",
+      "THREAD_MESSAGES_SIGNED": "IloybGtPaTh2WTJGdGNHWnBjbVV2UTJoaGJtNWxiRlJvY21WaFpDOHg6bWVzc2FnZXMi--e66e7fdea645efe22a74155e7791813546c0640c043a24b2f8cc9012e3f1bc83"
     },
     "rows": {
+      "channel_threads": [
+        {
+          "id": 1,
+          "auto_archive_after_minutes": 4320,
+          "closed_at": null,
+          "created_at": "2026-09-30 00:20:07.831530",
+          "creator_id": 1,
+          "last_activity_at": "2026-09-30 00:20:07.828217",
+          "locked_at": null,
+          "messages_count": 0,
+          "name": "Golden thread",
+          "parent_message_id": null,
+          "result_markdown": null,
+          "result_updated_at": null,
+          "result_updated_by_id": null,
+          "room_id": 1,
+          "run_url": null,
+          "updated_at": "2026-09-30 00:20:07.831530",
+          "work_owner_id": null,
+          "work_status": null,
+          "work_status_changed_at": null
+        }
+      ],
       "memberships": [
         {
-          "id": 142918545,
+          "id": 1,
           "connected_at": null,
           "connections": 0,
-          "created_at": "2026-01-04 16:16:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "everything",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": 935962041,
-          "room_category_id": null,
-          "room_id": 699448325,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-03-02 14:00:00",
-          "user_id": 712064548
-        },
-        {
-          "id": 146174848,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:00:00",
+          "created_at": "2026-09-30 00:20:07.681",
           "favorite_position": null,
           "hand_raised_at": null,
           "involvement": "mentions",
           "last_huddle_join_push_at": null,
           "last_read_message_id": null,
           "room_category_id": null,
-          "room_id": 654632876,
+          "room_id": 1,
           "server_muted_at": null,
           "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-03-01 13:00:00",
-          "user_id": 127326141
+          "unread_at": "2026-09-30 00:20:07.730957",
+          "updated_at": "2026-09-30 00:20:07.770915",
+          "user_id": 1
         },
         {
-          "id": 181790929,
+          "id": 2,
           "connected_at": null,
           "connections": 0,
-          "created_at": "2026-01-04 16:04:00",
+          "created_at": "2026-09-30 00:20:07.681",
           "favorite_position": null,
           "hand_raised_at": null,
-          "involvement": "everything",
+          "involvement": "mentions",
           "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
+          "last_read_message_id": 1,
           "room_category_id": null,
-          "room_id": 104393281,
+          "room_id": 1,
           "server_muted_at": null,
           "stage_role": null,
           "unread_at": null,
-          "updated_at": "2026-01-04 16:04:00",
-          "user_id": 127326141
+          "updated_at": "2026-09-30 00:20:07.772950",
+          "user_id": 2
         },
         {
-          "id": 198590975,
+          "id": 5,
           "connected_at": null,
           "connections": 0,
-          "created_at": "2026-01-04 16:14:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "everything",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": 935962036,
-          "room_category_id": null,
-          "room_id": 186869642,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-03-02 11:02:00",
-          "user_id": 149087659
-        },
-        {
-          "id": 211379269,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:09:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "nothing",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 201306877,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-01-04 16:09:00",
-          "user_id": 127326141
-        },
-        {
-          "id": 239841951,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:12:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "everything",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 201306877,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-01-04 16:12:00",
-          "user_id": 712064548
-        },
-        {
-          "id": 449028908,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:13:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "everything",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 186869642,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-03-02 11:03:00",
-          "user_id": 127326141
-        },
-        {
-          "id": 505016279,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:07:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "everything",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": 935961915,
-          "room_category_id": null,
-          "room_id": 486777696,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-03-02 15:40:00",
-          "user_id": 149087659
-        },
-        {
-          "id": 515358788,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:05:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "everything",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 104393281,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-01-04 16:05:00",
-          "user_id": 149087659
-        },
-        {
-          "id": 658335620,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:03:00",
+          "created_at": "2026-09-30 00:20:07.683",
           "favorite_position": null,
           "hand_raised_at": null,
           "involvement": "mentions",
           "last_huddle_join_push_at": null,
           "last_read_message_id": null,
           "room_category_id": null,
-          "room_id": 654632876,
+          "room_id": 1,
           "server_muted_at": null,
           "stage_role": null,
-          "unread_at": "2026-03-01 13:00:00",
-          "updated_at": "2026-03-01 13:00:00",
-          "user_id": 712064548
+          "unread_at": "2026-09-30 00:20:07.730957",
+          "updated_at": "2026-09-30 00:20:07.770915",
+          "user_id": 3
         },
         {
-          "id": 690221570,
+          "id": 6,
           "connected_at": null,
           "connections": 0,
-          "created_at": "2026-01-04 16:10:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "everything",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 201306877,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-01-04 16:10:00",
-          "user_id": 149087659
-        },
-        {
-          "id": 741303990,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:02:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "everything",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 654632876,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-03-01 12:50:00",
-          "user_id": 773523953
-        },
-        {
-          "id": 765383822,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:17:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "everything",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": 935962039,
-          "room_category_id": null,
-          "room_id": 340026324,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-03-02 12:00:00",
-          "user_id": 394959859
-        },
-        {
-          "id": 774341722,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:06:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "everything",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 486777696,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": "2026-03-02 15:40:00",
-          "updated_at": "2026-03-02 15:40:00",
-          "user_id": 127326141
-        },
-        {
-          "id": 812357801,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:18:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "everything",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 340026324,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-03-02 12:00:00",
-          "user_id": 712064548
-        },
-        {
-          "id": 897066373,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:01:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "everything",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": 935961888,
-          "room_category_id": null,
-          "room_id": 654632876,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-03-01 13:00:00",
-          "user_id": 149087659
-        },
-        {
-          "id": 944797859,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:15:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "nothing",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448325,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": "2026-03-02 14:00:00",
-          "updated_at": "2026-03-02 14:00:00",
-          "user_id": 127326141
-        },
-        {
-          "id": 963867642,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-04 16:08:00",
+          "created_at": "2026-09-30 00:20:07.688",
           "favorite_position": null,
           "hand_raised_at": null,
           "involvement": "mentions",
           "last_huddle_join_push_at": null,
           "last_read_message_id": null,
           "room_category_id": null,
-          "room_id": 486777696,
+          "room_id": 2,
           "server_muted_at": null,
           "stage_role": null,
           "unread_at": null,
-          "updated_at": "2026-02-28 22:00:00",
-          "user_id": 394959859
+          "updated_at": "2026-09-30 00:20:07.688",
+          "user_id": 3
         },
         {
-          "id": 1021579652,
+          "id": 10,
           "connected_at": null,
           "connections": 0,
-          "created_at": "2026-01-04 16:11:00",
+          "created_at": "2026-09-30 00:20:07.838",
           "favorite_position": null,
           "hand_raised_at": null,
-          "involvement": "everything",
+          "involvement": "mentions",
           "last_huddle_join_push_at": null,
           "last_read_message_id": null,
           "room_category_id": null,
-          "room_id": 201306877,
+          "room_id": 1,
           "server_muted_at": null,
           "stage_role": null,
           "unread_at": null,
-          "updated_at": "2026-01-04 16:11:00",
-          "user_id": 773523953
-        },
-        {
-          "id": 1021579655,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-22 16:00:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 104393281,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-01-22 16:00:00",
-          "user_id": 773523955
-        },
-        {
-          "id": 1021579656,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-22 16:00:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 201306877,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-01-22 16:00:00",
-          "user_id": 773523955
-        },
-        {
-          "id": 1021579657,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-23 16:00:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 104393281,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-01-23 16:00:00",
-          "user_id": 773523956
-        },
-        {
-          "id": 1021579658,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-23 16:00:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 201306877,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-01-23 16:00:00",
-          "user_id": 773523956
-        },
-        {
-          "id": 1021579661,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-26 16:00:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448326,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-01-26 16:00:00",
-          "user_id": 712064548
-        },
-        {
-          "id": 1021579662,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-26 16:00:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448326,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-01-26 16:00:00",
-          "user_id": 127326141
-        },
-        {
-          "id": 1021579663,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-27 16:00:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "invisible",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448327,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-01-27 16:00:00",
-          "user_id": 127326141
-        },
-        {
-          "id": 1021579664,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-27 16:00:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448327,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-01-27 16:00:00",
-          "user_id": 149087659
-        },
-        {
-          "id": 1021579665,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-27 16:00:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448327,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-01-27 16:00:00",
-          "user_id": 394959859
-        },
-        {
-          "id": 1021579666,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-27 16:00:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448327,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-01-27 16:00:00",
-          "user_id": 712064548
-        },
-        {
-          "id": 1021579667,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-27 16:00:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448327,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-01-27 16:00:00",
-          "user_id": 773523953
-        },
-        {
-          "id": 1021579669,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-27 16:00:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448327,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-01-27 16:00:00",
-          "user_id": 773523955
-        },
-        {
-          "id": 1021579670,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-27 16:00:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448327,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-01-27 16:00:00",
-          "user_id": 773523956
-        },
-        {
-          "id": 1021579681,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-28 16:00:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": 935962042,
-          "room_category_id": null,
-          "room_id": 699448328,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-03-02 10:00:00",
-          "user_id": 127326141
-        },
-        {
-          "id": 1021579682,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-29 16:00:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "everything",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448329,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": "2026-03-02 13:00:00",
-          "updated_at": "2026-03-02 13:00:00",
-          "user_id": 127326141
-        },
-        {
-          "id": 1021579683,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-29 16:00:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "everything",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448329,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-03-02 13:00:00",
-          "user_id": 149087659
-        },
-        {
-          "id": 1021579684,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-29 16:00:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "everything",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": 935962040,
-          "room_category_id": null,
-          "room_id": 699448329,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-03-02 13:00:00",
-          "user_id": 773523953
-        },
-        {
-          "id": 1021579685,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-29 16:00:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "everything",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448329,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-03-02 13:00:00",
-          "user_id": 712064548
-        },
-        {
-          "id": 1021579687,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-30 16:00:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 654632876,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-03-01 13:00:00",
-          "user_id": 773523956
-        },
-        {
-          "id": 1021579688,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-01-30 16:01:00",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 654632876,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-03-01 13:00:00",
-          "user_id": 773523955
-        },
-        {
-          "id": 1021579692,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.077",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 104393281,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-09-29 20:13:29.077",
-          "user_id": 773523959
-        },
-        {
-          "id": 1021579693,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.077",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 201306877,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-09-29 20:13:29.077",
-          "user_id": 773523959
-        },
-        {
-          "id": 1021579694,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.077",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448327,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-09-29 20:13:29.077",
-          "user_id": 773523959
-        },
-        {
-          "id": 1021579695,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.241",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 104393281,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-09-29 20:13:29.241",
-          "user_id": 773523960
-        },
-        {
-          "id": 1021579696,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.241",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 201306877,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-09-29 20:13:29.241",
-          "user_id": 773523960
-        },
-        {
-          "id": 1021579697,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.241",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448327,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-09-29 20:13:29.241",
-          "user_id": 773523960
-        },
-        {
-          "id": 1021579698,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.403",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 104393281,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-09-29 20:13:29.403",
-          "user_id": 773523961
-        },
-        {
-          "id": 1021579699,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.403",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 201306877,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-09-29 20:13:29.403",
-          "user_id": 773523961
-        },
-        {
-          "id": 1021579700,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.403",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448327,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-09-29 20:13:29.403",
-          "user_id": 773523961
-        },
-        {
-          "id": 1021579701,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.415",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448330,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": "2026-09-29 20:13:29.468700",
-          "updated_at": "2026-09-29 20:13:29.514133",
-          "user_id": 773523959
-        },
-        {
-          "id": 1021579702,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.415",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": 935962043,
-          "room_category_id": null,
-          "room_id": 699448330,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-09-29 20:13:29.520135",
-          "user_id": 773523960
-        },
-        {
-          "id": 1021579703,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.417",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448330,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": "2026-09-29 20:13:29.468700",
-          "updated_at": "2026-09-29 20:13:29.514133",
-          "user_id": 127326141
-        },
-        {
-          "id": 1021579704,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.417",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448330,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": "2026-09-29 20:13:29.468700",
-          "updated_at": "2026-09-29 20:13:29.514133",
-          "user_id": 149087659
-        },
-        {
-          "id": 1021579705,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.417",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448330,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": "2026-09-29 20:13:29.468700",
-          "updated_at": "2026-09-29 20:13:29.514133",
-          "user_id": 394959859
-        },
-        {
-          "id": 1021579706,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.417",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448330,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": "2026-09-29 20:13:29.468700",
-          "updated_at": "2026-09-29 20:13:29.514133",
-          "user_id": 712064548
-        },
-        {
-          "id": 1021579707,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.417",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448330,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": "2026-09-29 20:13:29.468700",
-          "updated_at": "2026-09-29 20:13:29.514133",
-          "user_id": 773523953
-        },
-        {
-          "id": 1021579708,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.417",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448330,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": "2026-09-29 20:13:29.468700",
-          "updated_at": "2026-09-29 20:13:29.514133",
-          "user_id": 773523956
-        },
-        {
-          "id": 1021579709,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.417",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448330,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": "2026-09-29 20:13:29.468700",
-          "updated_at": "2026-09-29 20:13:29.514133",
-          "user_id": 773523958
-        },
-        {
-          "id": 1021579712,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.417",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448330,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": "2026-09-29 20:13:29.468700",
-          "updated_at": "2026-09-29 20:13:29.514133",
-          "user_id": 773523961
-        },
-        {
-          "id": 1021579713,
-          "connected_at": null,
-          "connections": 0,
-          "created_at": "2026-09-29 20:13:29.424",
-          "favorite_position": null,
-          "hand_raised_at": null,
-          "involvement": "mentions",
-          "last_huddle_join_push_at": null,
-          "last_read_message_id": null,
-          "room_category_id": null,
-          "room_id": 699448331,
-          "server_muted_at": null,
-          "stage_role": null,
-          "unread_at": null,
-          "updated_at": "2026-09-29 20:13:29.424",
-          "user_id": 773523961
+          "updated_at": "2026-09-30 00:20:07.838",
+          "user_id": 4
         }
       ],
       "messages": [
         {
-          "id": 935962043,
+          "id": 1,
           "action": 0,
           "board_post_opener": 0,
           "client_message_id": "channels-golden-1",
-          "created_at": "2026-09-29 20:13:29.468700",
-          "creator_id": 773523960,
+          "created_at": "2026-09-30 00:20:07.730957",
+          "creator_id": 2,
           "edited_at": null,
           "embeds_suppressed": 0,
           "forward_note": null,
@@ -1098,174 +156,20 @@
           "reply_notify_author": 1,
           "reply_target_deleted_at": null,
           "reply_to_message_id": null,
-          "room_id": 699448330,
+          "room_id": 1,
           "stream_broadcast_at": null,
           "streaming": 0,
           "streaming_updated_at": null,
           "system_note": 0,
           "thread_id": null,
-          "updated_at": "2026-09-29 20:13:29.474324"
+          "updated_at": "2026-09-30 00:20:07.734740"
         }
       ],
       "rooms": [
         {
-          "id": 104393281,
-          "created_at": "2026-01-03 16:00:00",
-          "creator_id": 127326141,
-          "deleted_at": null,
-          "destroy_enqueued_at": null,
-          "direct_member_key": null,
-          "icon_name": null,
-          "inbound_email_token": null,
-          "name": "All Pets",
-          "pins_changed_at": null,
-          "type": "Rooms::Open",
-          "updated_at": "2026-02-28 16:00:00"
-        },
-        {
-          "id": 186869642,
-          "created_at": "2026-01-03 20:00:00",
-          "creator_id": 127326141,
-          "deleted_at": null,
-          "destroy_enqueued_at": null,
-          "direct_member_key": null,
-          "icon_name": null,
-          "inbound_email_token": null,
-          "name": null,
-          "pins_changed_at": null,
-          "type": "Rooms::Direct",
-          "updated_at": "2026-03-02 11:03:00"
-        },
-        {
-          "id": 201306877,
-          "created_at": "2026-01-03 17:00:00",
-          "creator_id": 127326141,
-          "deleted_at": null,
-          "destroy_enqueued_at": null,
-          "direct_member_key": null,
-          "icon_name": null,
-          "inbound_email_token": null,
-          "name": "HQ",
-          "pins_changed_at": null,
-          "type": "Rooms::Open",
-          "updated_at": "2026-01-03 17:00:00"
-        },
-        {
-          "id": 340026324,
-          "created_at": "2026-01-03 22:00:00",
-          "creator_id": 712064548,
-          "deleted_at": null,
-          "destroy_enqueued_at": null,
-          "direct_member_key": null,
-          "icon_name": null,
-          "inbound_email_token": null,
-          "name": null,
-          "pins_changed_at": null,
-          "type": "Rooms::Direct",
-          "updated_at": "2026-03-02 12:00:00"
-        },
-        {
-          "id": 486777696,
-          "created_at": "2026-01-03 18:00:00",
-          "creator_id": 127326141,
-          "deleted_at": null,
-          "destroy_enqueued_at": null,
-          "direct_member_key": null,
-          "icon_name": null,
-          "inbound_email_token": null,
-          "name": "All Talk",
-          "pins_changed_at": null,
-          "type": "Rooms::Closed",
-          "updated_at": "2026-03-02 15:55:00"
-        },
-        {
-          "id": 654632876,
-          "created_at": "2026-01-03 19:00:00",
-          "creator_id": 127326141,
-          "deleted_at": null,
-          "destroy_enqueued_at": null,
-          "direct_member_key": null,
-          "icon_name": null,
-          "inbound_email_token": null,
-          "name": "Designers",
-          "pins_changed_at": null,
-          "type": "Rooms::Closed",
-          "updated_at": "2026-03-02 15:53:00"
-        },
-        {
-          "id": 699448325,
-          "created_at": "2026-01-03 21:00:00",
-          "creator_id": 127326141,
-          "deleted_at": null,
-          "destroy_enqueued_at": null,
-          "direct_member_key": null,
-          "icon_name": null,
-          "inbound_email_token": null,
-          "name": null,
-          "pins_changed_at": null,
-          "type": "Rooms::Direct",
-          "updated_at": "2026-03-02 14:00:00"
-        },
-        {
-          "id": 699448326,
-          "created_at": "2026-01-26 16:00:00",
-          "creator_id": 712064548,
-          "deleted_at": null,
-          "destroy_enqueued_at": null,
-          "direct_member_key": null,
-          "icon_name": null,
-          "inbound_email_token": null,
-          "name": "Quiet Corner",
-          "pins_changed_at": null,
-          "type": "Rooms::Closed",
-          "updated_at": "2026-01-26 16:00:00"
-        },
-        {
-          "id": 699448327,
-          "created_at": "2026-01-27 16:00:00",
-          "creator_id": 127326141,
-          "deleted_at": null,
-          "destroy_enqueued_at": null,
-          "direct_member_key": null,
-          "icon_name": null,
-          "inbound_email_token": null,
-          "name": "Archive",
-          "pins_changed_at": null,
-          "type": "Rooms::Open",
-          "updated_at": "2026-01-27 16:00:00"
-        },
-        {
-          "id": 699448328,
-          "created_at": "2026-01-28 16:00:00",
-          "creator_id": 127326141,
-          "deleted_at": null,
-          "destroy_enqueued_at": null,
-          "direct_member_key": null,
-          "icon_name": null,
-          "inbound_email_token": null,
-          "name": "Broken",
-          "pins_changed_at": null,
-          "type": "Rooms::Closed",
-          "updated_at": "2026-03-02 10:00:00"
-        },
-        {
-          "id": 699448329,
-          "created_at": "2026-01-29 16:00:00",
-          "creator_id": 127326141,
-          "deleted_at": null,
-          "destroy_enqueued_at": null,
-          "direct_member_key": "dm:c8175eb2969bdcd7a558c0fc030bff532afb4c3bad1b2dcaca8e452fcb70f867",
-          "icon_name": null,
-          "inbound_email_token": null,
-          "name": null,
-          "pins_changed_at": null,
-          "type": "Rooms::Direct",
-          "updated_at": "2026-03-02 13:00:00"
-        },
-        {
-          "id": 699448330,
-          "created_at": "2026-09-29 20:13:29.412112",
-          "creator_id": 773523959,
+          "id": 1,
+          "created_at": "2026-09-30 00:20:07.677396",
+          "creator_id": 1,
           "deleted_at": null,
           "destroy_enqueued_at": null,
           "direct_member_key": null,
@@ -1274,12 +178,12 @@
           "name": "Channels",
           "pins_changed_at": null,
           "type": "Rooms::Open",
-          "updated_at": "2026-09-29 20:13:29.485070"
+          "updated_at": "2026-09-30 00:20:07.740478"
         },
         {
-          "id": 699448331,
-          "created_at": "2026-09-29 20:13:29.421919",
-          "creator_id": 773523961,
+          "id": 2,
+          "created_at": "2026-09-30 00:20:07.686331",
+          "creator_id": 3,
           "deleted_at": null,
           "destroy_enqueued_at": null,
           "direct_member_key": null,
@@ -1288,452 +192,66 @@
           "name": "Channels Private",
           "pins_changed_at": null,
           "type": "Rooms::Closed",
-          "updated_at": "2026-09-29 20:13:29.421919"
+          "updated_at": "2026-09-30 00:20:07.686331"
         }
       ],
       "sessions": [
         {
-          "id": 481019662,
-          "created_at": "2026-09-29 20:13:29.577073",
+          "id": 1,
+          "created_at": "2026-09-30 00:20:07.845640",
           "device_id": null,
           "ip_address": "8.8.8.8",
-          "last_active_at": "2026-09-29 20:13:29.577136",
-          "token": "SohespUspKTygauXFTjzXRrS",
-          "two_factor_verified_at": "2026-09-29 20:13:29.579574",
-          "updated_at": "2026-09-29 20:13:29.582390",
+          "last_active_at": "2026-09-30 00:20:07.845671",
+          "token": "KyBjWxrr4agiJHfkti7Ytxto",
+          "two_factor_verified_at": "2026-09-30 00:20:07.846483",
+          "updated_at": "2026-09-30 00:20:07.847418",
           "user_agent": "golden",
-          "user_id": 773523959
+          "user_id": 1
         },
         {
-          "id": 481019663,
-          "created_at": "2026-09-29 20:13:29.593853",
+          "id": 4,
+          "created_at": "2026-09-30 00:20:07.853419",
           "device_id": null,
           "ip_address": "8.8.8.8",
-          "last_active_at": "2026-09-29 20:13:29.593872",
-          "token": "x1w3ci7npSCiVUNvos2ZgarQ",
-          "two_factor_verified_at": "2026-09-29 20:13:29.594674",
-          "updated_at": "2026-09-29 20:13:29.595136",
+          "last_active_at": "2026-09-30 00:20:07.853426",
+          "token": "FSsFxhymTkHeexR4vm7VW4Me",
+          "two_factor_verified_at": null,
+          "updated_at": "2026-09-30 00:20:07.853419",
           "user_agent": "golden",
-          "user_id": 773523960
+          "user_id": 1
+        },
+        {
+          "id": 2,
+          "created_at": "2026-09-30 00:20:07.851074",
+          "device_id": null,
+          "ip_address": "8.8.8.8",
+          "last_active_at": "2026-09-30 00:20:07.851082",
+          "token": "eegHCjasHBgrx84FHJM5paDq",
+          "two_factor_verified_at": "2026-09-30 00:20:07.851357",
+          "updated_at": "2026-09-30 00:20:07.851593",
+          "user_agent": "golden",
+          "user_id": 2
+        },
+        {
+          "id": 3,
+          "created_at": "2026-09-30 00:20:07.852450",
+          "device_id": null,
+          "ip_address": "8.8.8.8",
+          "last_active_at": "2026-09-30 00:20:07.852456",
+          "token": "8WByHbiXciZrh9YzgYQV9b5j",
+          "two_factor_verified_at": null,
+          "updated_at": "2026-09-30 00:20:07.852450",
+          "user_agent": "golden",
+          "user_id": 4
         }
       ],
       "users": [
         {
-          "id": 127326141,
+          "id": 1,
           "bio": null,
           "bot_token": null,
           "bot_token_digest": null,
-          "created_at": "2026-01-02 16:00:00",
-          "custom_status_emoji": null,
-          "custom_status_expires_at": null,
-          "custom_status_text": null,
-          "dnd_enabled": 0,
-          "dnd_until": null,
-          "email_address": "david@37signals.com",
-          "email_self_changed_at": null,
-          "github_login": null,
-          "google_email_link_allowed": 1,
-          "icon_name": null,
-          "inbox_preferences": "{}",
-          "meeting_dnd_enabled": 0,
-          "meeting_status_enabled": 0,
-          "name": "David",
-          "ooo_broadcast": null,
-          "ooo_calendar_enabled": 0,
-          "ooo_note": null,
-          "ooo_notify_enabled": 0,
-          "ooo_until": null,
-          "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
-          "presence_setting": "auto",
-          "push_to_talk_key": null,
-          "quiet_hours_enabled": 0,
-          "quiet_hours_end_minute": null,
-          "quiet_hours_start_minute": null,
-          "role": 1,
-          "status": 0,
-          "text_size": "default",
-          "theme": "system",
-          "time_zone": null,
-          "time_zone_explicit": 0,
-          "tour_completed_at": "2026-01-01 00:00:00",
-          "updated_at": "2026-01-02 16:00:00",
-          "voice_mode": null
-        },
-        {
-          "id": 149087659,
-          "bio": null,
-          "bot_token": null,
-          "bot_token_digest": null,
-          "created_at": "2026-01-02 17:00:00",
-          "custom_status_emoji": null,
-          "custom_status_expires_at": null,
-          "custom_status_text": null,
-          "dnd_enabled": 0,
-          "dnd_until": null,
-          "email_address": "jason@37signals.com",
-          "email_self_changed_at": null,
-          "github_login": null,
-          "google_email_link_allowed": 1,
-          "icon_name": null,
-          "inbox_preferences": "{}",
-          "meeting_dnd_enabled": 0,
-          "meeting_status_enabled": 0,
-          "name": "Jason",
-          "ooo_broadcast": null,
-          "ooo_calendar_enabled": 0,
-          "ooo_note": null,
-          "ooo_notify_enabled": 0,
-          "ooo_until": null,
-          "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
-          "presence_setting": "auto",
-          "push_to_talk_key": null,
-          "quiet_hours_enabled": 0,
-          "quiet_hours_end_minute": null,
-          "quiet_hours_start_minute": null,
-          "role": 1,
-          "status": 0,
-          "text_size": "default",
-          "theme": "system",
-          "time_zone": null,
-          "time_zone_explicit": 0,
-          "tour_completed_at": "2026-01-01 00:00:00",
-          "updated_at": "2026-01-25 16:00:00",
-          "voice_mode": null
-        },
-        {
-          "id": 394959859,
-          "bio": null,
-          "bot_token": null,
-          "bot_token_digest": "32a10df7129c1d279f336b7b06ef59c7779ebc3a5c3bee0a492357dcd8445c18",
-          "created_at": "2026-01-02 20:00:00",
-          "custom_status_emoji": null,
-          "custom_status_expires_at": null,
-          "custom_status_text": null,
-          "dnd_enabled": 0,
-          "dnd_until": null,
-          "email_address": null,
-          "email_self_changed_at": null,
-          "github_login": null,
-          "google_email_link_allowed": 0,
-          "icon_name": null,
-          "inbox_preferences": "{}",
-          "meeting_dnd_enabled": 0,
-          "meeting_status_enabled": 0,
-          "name": "Bender Bot",
-          "ooo_broadcast": null,
-          "ooo_calendar_enabled": 0,
-          "ooo_note": null,
-          "ooo_notify_enabled": 0,
-          "ooo_until": null,
-          "password_digest": null,
-          "presence_setting": "auto",
-          "push_to_talk_key": null,
-          "quiet_hours_enabled": 0,
-          "quiet_hours_end_minute": null,
-          "quiet_hours_start_minute": null,
-          "role": 2,
-          "status": 0,
-          "text_size": "default",
-          "theme": "system",
-          "time_zone": null,
-          "time_zone_explicit": 0,
-          "tour_completed_at": null,
-          "updated_at": "2026-01-02 20:00:00",
-          "voice_mode": null
-        },
-        {
-          "id": 712064548,
-          "bio": "Programmer",
-          "bot_token": null,
-          "bot_token_digest": null,
-          "created_at": "2026-01-02 19:00:00",
-          "custom_status_emoji": null,
-          "custom_status_expires_at": null,
-          "custom_status_text": null,
-          "dnd_enabled": 0,
-          "dnd_until": null,
-          "email_address": "kevin@37signals.com",
-          "email_self_changed_at": null,
-          "github_login": null,
-          "google_email_link_allowed": 1,
-          "icon_name": null,
-          "inbox_preferences": "{}",
-          "meeting_dnd_enabled": 0,
-          "meeting_status_enabled": 0,
-          "name": "Kevin",
-          "ooo_broadcast": null,
-          "ooo_calendar_enabled": 0,
-          "ooo_note": null,
-          "ooo_notify_enabled": 0,
-          "ooo_until": null,
-          "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
-          "presence_setting": "auto",
-          "push_to_talk_key": null,
-          "quiet_hours_enabled": 0,
-          "quiet_hours_end_minute": null,
-          "quiet_hours_start_minute": null,
-          "role": 0,
-          "status": 0,
-          "text_size": "default",
-          "theme": "system",
-          "time_zone": null,
-          "time_zone_explicit": 0,
-          "tour_completed_at": "2026-01-01 00:00:00",
-          "updated_at": "2026-01-02 19:00:00",
-          "voice_mode": null
-        },
-        {
-          "id": 773523953,
-          "bio": "Designer",
-          "bot_token": null,
-          "bot_token_digest": null,
-          "created_at": "2026-01-02 18:00:00",
-          "custom_status_emoji": null,
-          "custom_status_expires_at": null,
-          "custom_status_text": null,
-          "dnd_enabled": 0,
-          "dnd_until": null,
-          "email_address": "jz@37signals.com",
-          "email_self_changed_at": null,
-          "github_login": null,
-          "google_email_link_allowed": 1,
-          "icon_name": null,
-          "inbox_preferences": "{}",
-          "meeting_dnd_enabled": 0,
-          "meeting_status_enabled": 0,
-          "name": "JZ",
-          "ooo_broadcast": null,
-          "ooo_calendar_enabled": 0,
-          "ooo_note": null,
-          "ooo_notify_enabled": 0,
-          "ooo_until": null,
-          "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
-          "presence_setting": "auto",
-          "push_to_talk_key": null,
-          "quiet_hours_enabled": 0,
-          "quiet_hours_end_minute": null,
-          "quiet_hours_start_minute": null,
-          "role": 0,
-          "status": 0,
-          "text_size": "default",
-          "theme": "system",
-          "time_zone": null,
-          "time_zone_explicit": 0,
-          "tour_completed_at": "2026-01-01 00:00:00",
-          "updated_at": "2026-01-02 18:00:00",
-          "voice_mode": null
-        },
-        {
-          "id": 773523954,
-          "bio": "Support",
-          "bot_token": null,
-          "bot_token_digest": null,
-          "created_at": "2026-01-21 16:00:00",
-          "custom_status_emoji": null,
-          "custom_status_expires_at": null,
-          "custom_status_text": null,
-          "dnd_enabled": 0,
-          "dnd_until": null,
-          "email_address": "rita-deactivated-00000000-0000-4000-8000-000000000000@37signals.com",
-          "email_self_changed_at": null,
-          "github_login": null,
-          "google_email_link_allowed": 0,
-          "icon_name": null,
-          "inbox_preferences": "{}",
-          "meeting_dnd_enabled": 0,
-          "meeting_status_enabled": 0,
-          "name": "Rita Lopez",
-          "ooo_broadcast": null,
-          "ooo_calendar_enabled": 0,
-          "ooo_note": null,
-          "ooo_notify_enabled": 0,
-          "ooo_until": null,
-          "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
-          "presence_setting": "auto",
-          "push_to_talk_key": null,
-          "quiet_hours_enabled": 0,
-          "quiet_hours_end_minute": null,
-          "quiet_hours_start_minute": null,
-          "role": 0,
-          "status": 1,
-          "text_size": "default",
-          "theme": "system",
-          "time_zone": null,
-          "time_zone_explicit": 0,
-          "tour_completed_at": null,
-          "updated_at": "2026-01-31 16:00:00",
-          "voice_mode": null
-        },
-        {
-          "id": 773523955,
-          "bio": null,
-          "bot_token": null,
-          "bot_token_digest": null,
-          "created_at": "2026-01-22 16:00:00",
-          "custom_status_emoji": null,
-          "custom_status_expires_at": null,
-          "custom_status_text": null,
-          "dnd_enabled": 0,
-          "dnd_until": null,
-          "email_address": "mallory@example.com",
-          "email_self_changed_at": null,
-          "github_login": null,
-          "google_email_link_allowed": 0,
-          "icon_name": null,
-          "inbox_preferences": "{}",
-          "meeting_dnd_enabled": 0,
-          "meeting_status_enabled": 0,
-          "name": "Mallory Banned",
-          "ooo_broadcast": null,
-          "ooo_calendar_enabled": 0,
-          "ooo_note": null,
-          "ooo_notify_enabled": 0,
-          "ooo_until": null,
-          "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
-          "presence_setting": "auto",
-          "push_to_talk_key": null,
-          "quiet_hours_enabled": 0,
-          "quiet_hours_end_minute": null,
-          "quiet_hours_start_minute": null,
-          "role": 0,
-          "status": 2,
-          "text_size": "default",
-          "theme": "system",
-          "time_zone": null,
-          "time_zone_explicit": 0,
-          "tour_completed_at": null,
-          "updated_at": "2026-02-02 16:00:00",
-          "voice_mode": null
-        },
-        {
-          "id": 773523956,
-          "bio": null,
-          "bot_token": null,
-          "bot_token_digest": "aaf13caa2a3205852a6936e2b9b593f575f8cc0dea18698d000b997c10c00636",
-          "created_at": "2026-01-23 16:00:00",
-          "custom_status_emoji": null,
-          "custom_status_expires_at": null,
-          "custom_status_text": null,
-          "dnd_enabled": 0,
-          "dnd_until": null,
-          "email_address": null,
-          "email_self_changed_at": null,
-          "github_login": null,
-          "google_email_link_allowed": 0,
-          "icon_name": null,
-          "inbox_preferences": "{}",
-          "meeting_dnd_enabled": 0,
-          "meeting_status_enabled": 0,
-          "name": "Deploy Bot",
-          "ooo_broadcast": null,
-          "ooo_calendar_enabled": 0,
-          "ooo_note": null,
-          "ooo_notify_enabled": 0,
-          "ooo_until": null,
-          "password_digest": null,
-          "presence_setting": "auto",
-          "push_to_talk_key": null,
-          "quiet_hours_enabled": 0,
-          "quiet_hours_end_minute": null,
-          "quiet_hours_start_minute": null,
-          "role": 2,
-          "status": 0,
-          "text_size": "default",
-          "theme": "system",
-          "time_zone": null,
-          "time_zone_explicit": 0,
-          "tour_completed_at": null,
-          "updated_at": "2026-01-25 16:01:00",
-          "voice_mode": null
-        },
-        {
-          "id": 773523957,
-          "bio": null,
-          "bot_token": null,
-          "bot_token_digest": "92576edcc33824b23d7c0bac7d3aed034a010033613fd07ad92dfe1effb08975",
-          "created_at": "2026-01-24 16:00:00",
-          "custom_status_emoji": null,
-          "custom_status_expires_at": null,
-          "custom_status_text": null,
-          "dnd_enabled": 0,
-          "dnd_until": null,
-          "email_address": null,
-          "email_self_changed_at": null,
-          "github_login": null,
-          "google_email_link_allowed": 0,
-          "icon_name": null,
-          "inbox_preferences": "{}",
-          "meeting_dnd_enabled": 0,
-          "meeting_status_enabled": 0,
-          "name": "Old Bot",
-          "ooo_broadcast": null,
-          "ooo_calendar_enabled": 0,
-          "ooo_note": null,
-          "ooo_notify_enabled": 0,
-          "ooo_until": null,
-          "password_digest": null,
-          "presence_setting": "auto",
-          "push_to_talk_key": null,
-          "quiet_hours_enabled": 0,
-          "quiet_hours_end_minute": null,
-          "quiet_hours_start_minute": null,
-          "role": 2,
-          "status": 1,
-          "text_size": "default",
-          "theme": "system",
-          "time_zone": null,
-          "time_zone_explicit": 0,
-          "tour_completed_at": null,
-          "updated_at": "2026-02-01 16:00:00",
-          "voice_mode": null
-        },
-        {
-          "id": 773523958,
-          "bio": null,
-          "bot_token": null,
-          "bot_token_digest": null,
-          "created_at": "2026-02-03 16:00:00",
-          "custom_status_emoji": null,
-          "custom_status_expires_at": null,
-          "custom_status_text": null,
-          "dnd_enabled": 0,
-          "dnd_until": null,
-          "email_address": "lou@37signals.com",
-          "email_self_changed_at": null,
-          "github_login": null,
-          "google_email_link_allowed": 0,
-          "icon_name": null,
-          "inbox_preferences": "{}",
-          "meeting_dnd_enabled": 0,
-          "meeting_status_enabled": 0,
-          "name": "Lonely Lou",
-          "ooo_broadcast": null,
-          "ooo_calendar_enabled": 0,
-          "ooo_note": null,
-          "ooo_notify_enabled": 0,
-          "ooo_until": null,
-          "password_digest": "$2a$12$Gz1V3e1PgXe5HFJ5lLlH8eP5BlvdNLdGGdQyacJSn7rvquw4Lt0ue",
-          "presence_setting": "auto",
-          "push_to_talk_key": null,
-          "quiet_hours_enabled": 0,
-          "quiet_hours_end_minute": null,
-          "quiet_hours_start_minute": null,
-          "role": 0,
-          "status": 0,
-          "text_size": "default",
-          "theme": "system",
-          "time_zone": null,
-          "time_zone_explicit": 0,
-          "tour_completed_at": null,
-          "updated_at": "2026-02-03 16:00:00",
-          "voice_mode": null
-        },
-        {
-          "id": 773523959,
-          "bio": null,
-          "bot_token": null,
-          "bot_token_digest": null,
-          "created_at": "2026-09-29 20:13:29.069087",
+          "created_at": "2026-09-30 00:20:07.337414",
           "custom_status_emoji": null,
           "custom_status_expires_at": null,
           "custom_status_text": null,
@@ -1753,7 +271,7 @@
           "ooo_note": null,
           "ooo_notify_enabled": 0,
           "ooo_until": null,
-          "password_digest": "$2a$12$bcyQW4YgOs.kBkVrkt4XGO7QxzQaoMqYXk4MZfTc6NwwZTs/KgSve",
+          "password_digest": "$2a$12$JdNb1.cQW8V3YkomM3.g5ewMMH7OAIlt2YFLEseQju94/G4EsgqMe",
           "presence_setting": "auto",
           "push_to_talk_key": null,
           "quiet_hours_enabled": 0,
@@ -1766,15 +284,15 @@
           "time_zone": null,
           "time_zone_explicit": 0,
           "tour_completed_at": null,
-          "updated_at": "2026-09-29 20:13:29.069087",
+          "updated_at": "2026-09-30 00:20:07.337414",
           "voice_mode": null
         },
         {
-          "id": 773523960,
+          "id": 2,
           "bio": null,
           "bot_token": null,
           "bot_token_digest": null,
-          "created_at": "2026-09-29 20:13:29.226972",
+          "created_at": "2026-09-30 00:20:07.502741",
           "custom_status_emoji": null,
           "custom_status_expires_at": null,
           "custom_status_text": null,
@@ -1794,7 +312,7 @@
           "ooo_note": null,
           "ooo_notify_enabled": 0,
           "ooo_until": null,
-          "password_digest": "$2a$12$6Y89XlE59LD2OdF4yPDawOnC3fXty7eaYLqOCwJb5tC6KD/TB1Fr.",
+          "password_digest": "$2a$12$RoAAQtffd8vpBptEIhT4FeYojcXkCDEy9JBn.Y2/hPzPsFUrTdGU2",
           "presence_setting": "auto",
           "push_to_talk_key": null,
           "quiet_hours_enabled": 0,
@@ -1807,15 +325,15 @@
           "time_zone": null,
           "time_zone_explicit": 0,
           "tour_completed_at": null,
-          "updated_at": "2026-09-29 20:13:29.226972",
+          "updated_at": "2026-09-30 00:20:07.502741",
           "voice_mode": null
         },
         {
-          "id": 773523961,
+          "id": 3,
           "bio": null,
           "bot_token": null,
           "bot_token_digest": null,
-          "created_at": "2026-09-29 20:13:29.392464",
+          "created_at": "2026-09-30 00:20:07.663203",
           "custom_status_emoji": null,
           "custom_status_expires_at": null,
           "custom_status_text": null,
@@ -1835,7 +353,7 @@
           "ooo_note": null,
           "ooo_notify_enabled": 0,
           "ooo_until": null,
-          "password_digest": "$2a$12$TiEEymkF39XSRjkkZ2tf.eGm9tmgEOByZ2/RMZQpsJVe977N7mY.C",
+          "password_digest": "$2a$12$1O0TYXMCQot0WgEOWbCgZuUSTVrsaNXKRFvwjEjWQh70HjTfuXWaO",
           "presence_setting": "auto",
           "push_to_talk_key": null,
           "quiet_hours_enabled": 0,
@@ -1848,7 +366,48 @@
           "time_zone": null,
           "time_zone_explicit": 0,
           "tour_completed_at": null,
-          "updated_at": "2026-09-29 20:13:29.392464",
+          "updated_at": "2026-09-30 00:20:07.663203",
+          "voice_mode": null
+        },
+        {
+          "id": 4,
+          "bio": null,
+          "bot_token": null,
+          "bot_token_digest": "9aeca5562cf750e7a4b54c04404c0172bac7ad457de13f8669988b05d3386170",
+          "created_at": "2026-09-30 00:20:07.836582",
+          "custom_status_emoji": null,
+          "custom_status_expires_at": null,
+          "custom_status_text": null,
+          "dnd_enabled": 0,
+          "dnd_until": null,
+          "email_address": null,
+          "email_self_changed_at": null,
+          "github_login": null,
+          "google_email_link_allowed": 0,
+          "icon_name": null,
+          "inbox_preferences": "{}",
+          "meeting_dnd_enabled": 0,
+          "meeting_status_enabled": 0,
+          "name": "Golden Bot",
+          "ooo_broadcast": null,
+          "ooo_calendar_enabled": 0,
+          "ooo_note": null,
+          "ooo_notify_enabled": 0,
+          "ooo_until": null,
+          "password_digest": null,
+          "presence_setting": "auto",
+          "push_to_talk_key": null,
+          "quiet_hours_enabled": 0,
+          "quiet_hours_end_minute": null,
+          "quiet_hours_start_minute": null,
+          "role": 2,
+          "status": 0,
+          "text_size": "default",
+          "theme": "system",
+          "time_zone": null,
+          "time_zone_explicit": 0,
+          "tour_completed_at": null,
+          "updated_at": "2026-09-30 00:20:07.836582",
           "voice_mode": null
         }
       ]
@@ -1879,6 +438,95 @@
           "close Some((1000, \"\"))"
         ]
       }
+    },
+    {
+      "step": "connect two-factor pending",
+      "frames": {
+        "P": [
+          "{\"type\":\"disconnect\",\"reason\":\"unauthorized\",\"reconnect\":false}",
+          "close Some((1000, \"\"))"
+        ]
+      }
+    },
+    {
+      "step": "connect bot without two-factor",
+      "frames": {
+        "BOT": [
+          "{\"type\":\"welcome\"}"
+        ]
+      }
+    },
+    {
+      "step": "bot activity rejected",
+      "frames": {
+        "BOT": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"ActivityChannel\\\"}\",\"type\":\"reject_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "bot huddle notices rejected",
+      "frames": {
+        "BOT": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"HuddleNoticeChannel\\\"}\",\"type\":\"reject_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "bot agents rejected",
+      "frames": {
+        "BOT": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"AgentsChannel\\\"}\",\"type\":\"reject_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A activity",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"ActivityChannel\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A huddle notices",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"HuddleNoticeChannel\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A agents",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"AgentsChannel\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A unread threads",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"UnreadThreadsChannel\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A workspace presence",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"WorkspacePresenceChannel\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A workspace heartbeat",
+      "frames": {}
+    },
+    {
+      "step": "A workspace unsubscribe",
+      "frames": {}
     },
     {
       "step": "A heartbeat",
@@ -1916,8 +564,8 @@
       "step": "A presence",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":699448330}\",\"type\":\"confirm_subscription\"}",
-          "{\"identifier\":\"{\\\"channel\\\":\\\"ReadRoomsChannel\\\"}\",\"message\":{\"room_id\":699448330}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":1}\",\"type\":\"confirm_subscription\"}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"ReadRoomsChannel\\\"}\",\"message\":{\"room_id\":1}}"
         ]
       }
     },
@@ -1925,7 +573,7 @@
       "step": "A presence in a room A isn't in",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":699448331}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":2}\",\"type\":\"reject_subscription\"}"
         ]
       }
     },
@@ -1941,8 +589,8 @@
       "step": "A presence with a numeric string room",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":\\\"699448330\\\"}\",\"type\":\"confirm_subscription\"}",
-          "{\"identifier\":\"{\\\"channel\\\":\\\"ReadRoomsChannel\\\"}\",\"message\":{\"room_id\":699448330}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":\\\"1\\\"}\",\"type\":\"confirm_subscription\"}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"ReadRoomsChannel\\\"}\",\"message\":{\"room_id\":1}}"
         ]
       }
     },
@@ -1950,7 +598,7 @@
       "step": "A room",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomChannel\\\",\\\"room_id\\\":699448330}\",\"type\":\"confirm_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomChannel\\\",\\\"room_id\\\":1}\",\"type\":\"confirm_subscription\"}"
         ]
       }
     },
@@ -1958,7 +606,7 @@
       "step": "A room A isn't in",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomChannel\\\",\\\"room_id\\\":699448331}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomChannel\\\",\\\"room_id\\\":2}\",\"type\":\"reject_subscription\"}"
         ]
       }
     },
@@ -1974,7 +622,7 @@
       "step": "A typing",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"type\":\"confirm_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"type\":\"confirm_subscription\"}"
         ]
       }
     },
@@ -1982,7 +630,45 @@
       "step": "B typing",
       "frames": {
         "B": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"type\":\"confirm_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A thread typing",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1,\\\"thread_id\\\":1}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "B thread typing",
+      "frames": {
+        "B": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1,\\\"thread_id\\\":1}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A starts thread typing",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1,\\\"thread_id\\\":1}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":1,\"name\":\"Channel Tester\"}}}"
+        ],
+        "B": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1,\\\"thread_id\\\":1}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":1,\"name\":\"Channel Tester\"}}}"
+        ]
+      }
+    },
+    {
+      "step": "B stops thread typing",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1,\\\"thread_id\\\":1}\",\"message\":{\"action\":\"stop\",\"user\":{\"id\":2,\"name\":\"Channel Peer\"}}}"
+        ],
+        "B": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1,\\\"thread_id\\\":1}\",\"message\":{\"action\":\"stop\",\"user\":{\"id\":2,\"name\":\"Channel Peer\"}}}"
         ]
       }
     },
@@ -1990,10 +676,10 @@
       "step": "A starts typing",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":773523959,\"name\":\"Channel Tester\"}}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":1,\"name\":\"Channel Tester\"}}}"
         ],
         "B": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":773523959,\"name\":\"Channel Tester\"}}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":1,\"name\":\"Channel Tester\"}}}"
         ]
       }
     },
@@ -2001,10 +687,10 @@
       "step": "B stops typing",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"message\":{\"action\":\"stop\",\"user\":{\"id\":773523960,\"name\":\"Channel Peer\"}}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"message\":{\"action\":\"stop\",\"user\":{\"id\":2,\"name\":\"Channel Peer\"}}}"
         ],
         "B": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"message\":{\"action\":\"stop\",\"user\":{\"id\":773523960,\"name\":\"Channel Peer\"}}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"message\":{\"action\":\"stop\",\"user\":{\"id\":2,\"name\":\"Channel Peer\"}}}"
         ]
       }
     },
@@ -2016,7 +702,70 @@
       "step": "A room messages",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk5qazVORFE0TXpNdzptZXNzYWdlcyI=--82578d9c12ba6e22ce79c75d55713201e5cca7e5b777f59286fffcddddb88418\\\"}\",\"type\":\"confirm_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROm1lc3NhZ2VzIg==--7b9de78e7312f38584c450c994b7c776051fb661f6c90ee1c5794c1fd3a2542c\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A thread messages",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2UTJoaGJtNWxiRlJvY21WaFpDOHg6bWVzc2FnZXMi--e66e7fdea645efe22a74155e7791813546c0640c043a24b2f8cc9012e3f1bc83\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A room threads",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROnRocmVhZHMi--2daf5775325ee4db5f316bc021310e4a1d8ac7a9d87cb77f0462a1777ae96087\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A stock thread messages rejected",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2UTJoaGJtNWxiRlJvY21WaFpDOHg6bWVzc2FnZXMi--e66e7fdea645efe22a74155e7791813546c0640c043a24b2f8cc9012e3f1bc83\\\"}\",\"type\":\"reject_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A stock room threads rejected",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROnRocmVhZHMi--2daf5775325ee4db5f316bc021310e4a1d8ac7a9d87cb77f0462a1777ae96087\\\"}\",\"type\":\"reject_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A turbo status",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6c3RhdHVzIg==--fa3fb4ef3175b6e64a67893f8c1ef4614a6f8d36f8f9af7acc1026badaa396af\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "A turbo ooo notice",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6b29vX25vdGljZSI=--086125f7e15e88b34c10278ec052a0789c530490962af4d9896f4ce6c33b42d0\\\"}\",\"type\":\"confirm_subscription\"}"
+        ]
+      }
+    },
+    {
+      "step": "new channel and signature-only broadcasts",
+      "frames": {
+        "A": [
+          "{\"identifier\":\"{\\\"channel\\\":\\\"ActivityChannel\\\"}\",\"message\":{\"activityItemId\":42}}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"HuddleNoticeChannel\\\"}\",\"message\":{\"huddleJoinNotice\":{\"eventType\":\"huddle_ended\",\"roomId\":1}}}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"UnreadThreadsChannel\\\"}\",\"message\":{\"threadId\":1,\"roomId\":1}}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"AgentsChannel\\\"}\",\"message\":\"\\u003cturbo-stream action=\\\"replace\\\" target=\\\"status_badge_agent_1\\\"\\u003e\\u003ctemplate\\u003e\\u003cspan\\u003eready\\u003c/span\\u003e\\u003c/template\\u003e\\u003c/turbo-stream\\u003e\"}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6c3RhdHVzIg==--fa3fb4ef3175b6e64a67893f8c1ef4614a6f8d36f8f9af7acc1026badaa396af\\\"}\",\"message\":\"\\u003cturbo-stream action=\\\"update\\\" target=\\\"status_badge_user_1\\\"\\u003e\\u003ctemplate\\u003e\\u003cspan\\u003eonline\\u003c/span\\u003e\\u003c/template\\u003e\\u003c/turbo-stream\\u003e\"}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6b29vX25vdGljZSI=--086125f7e15e88b34c10278ec052a0789c530490962af4d9896f4ce6c33b42d0\\\"}\",\"message\":\"\\u003cturbo-stream action=\\\"update\\\" target=\\\"ooo_notice_user_1\\\"\\u003e\\u003ctemplate\\u003e\\u003cspan\\u003eaway\\u003c/span\\u003e\\u003c/template\\u003e\\u003c/turbo-stream\\u003e\"}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2UTJoaGJtNWxiRlJvY21WaFpDOHg6bWVzc2FnZXMi--e66e7fdea645efe22a74155e7791813546c0640c043a24b2f8cc9012e3f1bc83\\\"}\",\"message\":\"\\u003cturbo-stream action=\\\"remove\\\" target=\\\"message_golden\\\"\\u003e\\u003c/turbo-stream\\u003e\"}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROnRocmVhZHMi--2daf5775325ee4db5f316bc021310e4a1d8ac7a9d87cb77f0462a1777ae96087\\\"}\",\"message\":\"\\u003cturbo-stream action=\\\"remove\\\" target=\\\"channel_thread_golden\\\"\\u003e\\u003c/turbo-stream\\u003e\"}"
         ]
       }
     },
@@ -2024,7 +773,7 @@
       "step": "A room messages for a room A isn't in",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPa05zYjNObFpDODJPVGswTkRnek16RTptZXNzYWdlcyI=--01e5d3e8637986ab362ddbebafae3d33043a139e67b496446ce9434d6a38cf3a\\\"}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPa05zYjNObFpDOHk6bWVzc2FnZXMi--021c3ea0cbb6d3e185cb6a5b9446e6c1061598e11f1293ec6035530155efc740\\\"}\",\"type\":\"reject_subscription\"}"
         ]
       }
     },
@@ -2064,7 +813,7 @@
       "step": "A turbo own rooms",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpODNOek0xTWpNNU5Uazpyb29tcyI=--faf4aa0072cddd647f1fab7bcd2646bfd7b990903bb0162c2670edbb856ce7f4\\\"}\",\"type\":\"confirm_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6cm9vbXMi--5332e05561936c318a1fd4120aadb81d0ca03962a0bf4111dbb6e242065bb410\\\"}\",\"type\":\"confirm_subscription\"}"
         ]
       }
     },
@@ -2072,7 +821,7 @@
       "step": "A turbo guarded room messages",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk5qazVORFE0TXpNdzptZXNzYWdlcyI=--82578d9c12ba6e22ce79c75d55713201e5cca7e5b777f59286fffcddddb88418\\\"}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROm1lc3NhZ2VzIg==--7b9de78e7312f38584c450c994b7c776051fb661f6c90ee1c5794c1fd3a2542c\\\"}\",\"type\":\"reject_subscription\"}"
         ]
       }
     },
@@ -2088,7 +837,7 @@
       "step": "A presence present",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"ReadRoomsChannel\\\"}\",\"message\":{\"room_id\":699448330}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"ReadRoomsChannel\\\"}\",\"message\":{\"room_id\":1}}"
         ]
       }
     },
@@ -2104,8 +853,8 @@
       "step": "unread fanout",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"UnreadRoomsChannel\\\"}\",\"message\":{\"roomId\":699448330}}",
-          "{\"identifier\":\"{\\\"channel\\\":\\\"UnreadRoomsChannel\\\"}\",\"message\":{\"roomId\":699448330}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"UnreadRoomsChannel\\\"}\",\"message\":{\"roomId\":1}}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"UnreadRoomsChannel\\\"}\",\"message\":{\"roomId\":1}}"
         ]
       }
     },
@@ -2113,7 +862,7 @@
       "step": "message removed",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk5qazVORFE0TXpNdzptZXNzYWdlcyI=--82578d9c12ba6e22ce79c75d55713201e5cca7e5b777f59286fffcddddb88418\\\"}\",\"message\":\"\\u003cturbo-stream action=\\\"remove\\\" target=\\\"message_channels-golden-1\\\"\\u003e\\u003c/turbo-stream\\u003e\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROm1lc3NhZ2VzIg==--7b9de78e7312f38584c450c994b7c776051fb661f6c90ee1c5794c1fd3a2542c\\\"}\",\"message\":\"\\u003cturbo-stream action=\\\"remove\\\" target=\\\"message_channels-golden-1\\\"\\u003e\\u003c/turbo-stream\\u003e\"}"
         ]
       }
     },
@@ -2121,7 +870,7 @@
       "step": "B presence",
       "frames": {
         "B": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":699448330}\",\"type\":\"confirm_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":1}\",\"type\":\"confirm_subscription\"}"
         ]
       }
     },
@@ -2129,10 +878,10 @@
       "step": "A typing again",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":773523959,\"name\":\"Channel Tester\"}}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":1,\"name\":\"Channel Tester\"}}}"
         ],
         "B": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":773523959,\"name\":\"Channel Tester\"}}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":1,\"name\":\"Channel Tester\"}}}"
         ]
       }
     },
@@ -2140,7 +889,7 @@
       "step": "revoke A",
       "frames": {
         "A": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpODNOek0xTWpNNU5Uazpyb29tcyI=--faf4aa0072cddd647f1fab7bcd2646bfd7b990903bb0162c2670edbb856ce7f4\\\"}\",\"message\":\"\\u003cturbo-stream action=\\\"remove\\\" target=\\\"list_rooms_open_699448330\\\"\\u003e\\u003c/turbo-stream\\u003e\"}",
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VlhObGNpOHg6cm9vbXMi--5332e05561936c318a1fd4120aadb81d0ca03962a0bf4111dbb6e242065bb410\\\"}\",\"message\":\"\\u003cturbo-stream action=\\\"remove\\\" target=\\\"list_rooms_open_1\\\"\\u003e\\u003c/turbo-stream\\u003e\"}",
           "{\"type\":\"disconnect\",\"reason\":\"remote\",\"reconnect\":true}",
           "close Some((1000, \"\"))"
         ]
@@ -2158,7 +907,7 @@
       "step": "A2 presence",
       "frames": {
         "A2": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":699448330}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"PresenceChannel\\\",\\\"room_id\\\":1}\",\"type\":\"reject_subscription\"}"
         ]
       }
     },
@@ -2166,7 +915,7 @@
       "step": "A2 room",
       "frames": {
         "A2": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomChannel\\\",\\\"room_id\\\":699448330}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomChannel\\\",\\\"room_id\\\":1}\",\"type\":\"reject_subscription\"}"
         ]
       }
     },
@@ -2174,7 +923,7 @@
       "step": "A2 typing",
       "frames": {
         "A2": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"type\":\"reject_subscription\"}"
         ]
       }
     },
@@ -2182,7 +931,7 @@
       "step": "A2 room messages",
       "frames": {
         "A2": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk5qazVORFE0TXpNdzptZXNzYWdlcyI=--82578d9c12ba6e22ce79c75d55713201e5cca7e5b777f59286fffcddddb88418\\\"}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"RoomMessagesChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROm1lc3NhZ2VzIg==--7b9de78e7312f38584c450c994b7c776051fb661f6c90ee1c5794c1fd3a2542c\\\"}\",\"type\":\"reject_subscription\"}"
         ]
       }
     },
@@ -2190,7 +939,7 @@
       "step": "A2 turbo guarded room messages",
       "frames": {
         "A2": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk5qazVORFE0TXpNdzptZXNzYWdlcyI=--82578d9c12ba6e22ce79c75d55713201e5cca7e5b777f59286fffcddddb88418\\\"}\",\"type\":\"reject_subscription\"}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"Turbo::StreamsChannel\\\",\\\"signed_stream_name\\\":\\\"IloybGtPaTh2WTJGdGNHWnBjbVV2VW05dmJYTTZPazl3Wlc0dk1ROm1lc3NhZ2VzIg==--7b9de78e7312f38584c450c994b7c776051fb661f6c90ee1c5794c1fd3a2542c\\\"}\",\"type\":\"reject_subscription\"}"
         ]
       }
     },
@@ -2214,7 +963,7 @@
       "step": "B typing after A left",
       "frames": {
         "B": [
-          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":699448330}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":773523960,\"name\":\"Channel Peer\"}}}"
+          "{\"identifier\":\"{\\\"channel\\\":\\\"TypingNotificationsChannel\\\",\\\"room_id\\\":1}\",\"message\":{\"action\":\"start\",\"user\":{\"id\":2,\"name\":\"Channel Peer\"}}}"
         ]
       }
     },

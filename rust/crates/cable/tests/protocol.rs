@@ -326,6 +326,55 @@ async fn turbo_streams_channel_verifies_and_guards_stream_names() {
     client.assert_silent().await;
 }
 
+#[tokio::test]
+async fn broadcasts_carrying_session_bound_markup_are_refused() {
+    let app = start(test_config()).await;
+    let mut client = app.connect(1).await;
+    client.next_text().await;
+    let rooms = identifier(json!({ "channel": "Turbo::StreamsChannel", "signed_stream_name": "signed(rooms)" }));
+    client.subscribe(&rooms).await;
+    assert_eq!(client.next_text().await, confirm(&rooms));
+
+    let token = r#"<form><input type="hidden" name="authenticity_token" value="abc"></form>"#;
+    assert_eq!(app.server.broadcast_replace_to(&["rooms"], "room_1", token), 0);
+    assert_eq!(app.server.broadcast_append_to(&["rooms"], "rooms", r#"<script nonce="abc"></script>"#), 0);
+    for html in [
+        "<svg><style/></svg><input name=authenticity_token value=secret>",
+        "<svg><style/></svg><script nonce=secret></script>",
+        "<math><style/></math><input name=authenticity_token value=secret>",
+        "<math><style/></math><script nonce=secret></script>",
+        "<noscript><input name=authenticity_token></noscript>",
+        "<select><meta name=csrf-token content=secret></select>",
+        "<select><meta name=csrf-param content=authenticity_token></select>",
+        "<select><style nonce=secret></style></select>",
+        "<select><title><input name=authenticity_token></title></select>",
+    ] {
+        assert_eq!(app.server.broadcast_append_to(&["rooms"], "rooms", html), 0, "{html}");
+    }
+    client.assert_silent().await;
+
+    assert_eq!(app.server.broadcast_replace_to(&["rooms"], "room_1", "<form></form>"), 1);
+    let frame: Value = serde_json::from_str(&client.next_text().await).unwrap();
+    assert_eq!(frame["message"], r#"<turbo-stream action="replace" target="room_1"><template><form></form></template></turbo-stream>"#);
+    for html in [
+        "<div>nonce=\"example\" name=\"authenticity_token\"</div>",
+        "<textarea><input name=authenticity_token><script nonce=example></script></textarea>",
+        "<title><input name=authenticity_token><script nonce=example></script></title>",
+    ] {
+        assert_eq!(app.server.broadcast_append_to(&["rooms"], "rooms", html), 1, "{html}");
+        let frame: Value = serde_json::from_str(&client.next_text().await).unwrap();
+        assert_eq!(
+            frame["message"],
+            campfire_cable::turbo::action_tag(
+                campfire_cable::turbo::Action::Append,
+                campfire_cable::turbo::Target::Target("rooms"),
+                Some(html),
+                &[],
+            )
+        );
+    }
+}
+
 async fn http_get(url: &str, headers: &[(&str, &str)]) -> (u16, Option<String>, String) {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     let url = url.strip_prefix("http://").unwrap();

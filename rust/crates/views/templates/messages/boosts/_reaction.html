@@ -1,0 +1,13 @@
+
+{{ self.open() }}
+  {{ h::hidden_field_tag("boost[content]", Some(group.content), h::attrs()) }}
+  <span class="reaction-chip__wrap">
+    {{ self.button_open() }}
+      <span class="reaction-chip__emoji" aria-hidden="true">{{ self.body() }}</span>
+      <span class="reaction-chip__count">{{ group.reactors.len() }}</span>
+      <span class="for-screen-reader">{{ group.reaction.title }}</span>
+</button>{% if !group.reactors.is_empty() %}      <span class="reaction-chip__tooltip" role="tooltip" id="{{ self.tooltip_id() }}">
+{% for reactor in group.reactors %}          <span class="reaction-chip__reactor">{{ reactor.name }}</span>
+{% endfor %}      </span>
+{% endif %}  </span>
+</form>

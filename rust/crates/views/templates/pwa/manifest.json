@@ -1,18 +1,18 @@
 {
-  "name": {{ self.json(account_name.as_deref().unwrap_or("Campfire")) }},
+  "name": "{{ account_name.as_deref().unwrap_or("Smartfire") }}",
   "icons": [
     {
-      "src": {{ self.json(logo_path_small) }},
+      "src": "{{ logo_path_small }}",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": {{ self.json(logo_path) }},
+      "src": "{{ logo_path }}",
       "type": "image/png",
       "sizes": "512x512"
     },
     {
-      "src": {{ self.json(logo_path) }},
+      "src": "{{ logo_path }}",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "maskable"
@@ -21,43 +21,42 @@
   "start_url": "/",
   "display": "standalone",
   "scope": "/",
-  "description": "A chat app from the makers of Basecamp and HEY.",
+  "description": "A free, open source workspace where people and AI agents work together.",
   "categories": ["social", "business", "productivity"],
   "theme_color": "#ffffff",
   "background_color": "#ffffff",
   "shortcuts": [
     {
       "name": "New chat room",
-      "description": "Open Campfire and start a new chat room",
+      "description": "Open Smartfire and start a new chat room",
       "url": "rooms/opens/new",
-      "icons": [{ "src": {{ self.json(self.image_url("add.svg").as_str()) }}, "sizes": "any" }]
+      "icons": [{ "src": "{{ self.image_url("add.svg") }}", "sizes": "any" }]
     },
     {
       "name": "My profile",
-      "description": "Open Campfire and view your profile",
+      "description": "Open Smartfire and view your profile",
       "url": "/users/me/profile",
-      "icons": [{ "src": {{ self.json(self.image_url("person.svg").as_str()) }}, "sizes": "any" }]
+      "icons": [{ "src": "{{ self.image_url("person.svg") }}", "sizes": "any" }]
     }
   ],
   "screenshots": [
     {
-      "src": {{ self.json(self.image_url("screenshots/android-chat.png").as_str()) }},
+      "src": "{{ self.image_url("screenshots/android-chat.png") }}",
       "sizes": "1080x2400",
       "form_factor": "narrow",
-      "label": "Campfire is an installable, self-hosted group chat system."
+      "label": "Smartfire is an installable, self-hosted group chat system."
     },
     {
-      "src": {{ self.json(self.image_url("screenshots/android-sidebar.png").as_str()) }},
+      "src": "{{ self.image_url("screenshots/android-sidebar.png") }}",
       "sizes": "1080x2400",
       "form_factor": "narrow",
       "label": "Easily invite people. Make rooms. @mentions, DMs, and mobile support."
     },
     {
-      "src": {{ self.json(self.image_url("screenshots/android-dark-mode.png").as_str()) }},
+      "src": "{{ self.image_url("screenshots/android-dark-mode.png") }}",
       "sizes": "1080x2400",
       "form_factor": "narrow",
       "label": "Full support for dark mode, customizable to your brand."
     }
   ]
-}
-
+}{{ "\n" }}
