@@ -1,0 +1,127 @@
+{
+  "reference_pin": "d7c7de92",
+  "now": 1767268800,
+  "authorization": [
+    {
+      "name": "active",
+      "authorized": true
+    },
+    {
+      "name": "revoked",
+      "authorized": false
+    },
+    {
+      "name": "missing_session",
+      "authorized": false
+    },
+    {
+      "name": "wrong_session_user",
+      "authorized": false
+    },
+    {
+      "name": "removed_membership",
+      "authorized": false
+    },
+    {
+      "name": "wrong_membership_user",
+      "authorized": false
+    },
+    {
+      "name": "wrong_membership_room",
+      "authorized": false
+    },
+    {
+      "name": "banned_user",
+      "authorized": false
+    },
+    {
+      "name": "deactivated_user",
+      "authorized": false
+    },
+    {
+      "name": "bot_user",
+      "authorized": false
+    },
+    {
+      "name": "missing_room",
+      "authorized": false
+    },
+    {
+      "name": "deleted_room",
+      "authorized": false
+    },
+    {
+      "name": "server_mute_mismatch",
+      "authorized": false
+    },
+    {
+      "name": "server_mute_match",
+      "authorized": true
+    },
+    {
+      "name": "stage_role_mismatch",
+      "authorized": false
+    },
+    {
+      "name": "stage_role_match",
+      "authorized": true
+    }
+  ],
+  "liveness": [
+    {
+      "at": 1767268800,
+      "last_seen": 1767268800,
+      "in_call": true,
+      "jobs": [
+        "presence",
+        "join"
+      ],
+      "updated_at": 1767268800
+    },
+    {
+      "at": 1767268801,
+      "last_seen": 1767268800,
+      "in_call": true,
+      "jobs": [],
+      "updated_at": 1767268800
+    },
+    {
+      "at": 1767268809,
+      "last_seen": 1767268800,
+      "in_call": true,
+      "jobs": [],
+      "updated_at": 1767268800
+    },
+    {
+      "at": 1767268810,
+      "last_seen": 1767268810,
+      "in_call": true,
+      "jobs": [],
+      "updated_at": 1767268800
+    },
+    {
+      "at": 1767268829,
+      "last_seen": 1767268829,
+      "in_call": true,
+      "jobs": [],
+      "updated_at": 1767268800
+    },
+    {
+      "at": 1767268830,
+      "last_seen": 1767268829,
+      "in_call": true,
+      "jobs": [],
+      "updated_at": 1767268800
+    },
+    {
+      "at": 1767268850,
+      "last_seen": 1767268850,
+      "in_call": true,
+      "jobs": [
+        "presence",
+        "join"
+      ],
+      "updated_at": 1767268800
+    }
+  ]
+}

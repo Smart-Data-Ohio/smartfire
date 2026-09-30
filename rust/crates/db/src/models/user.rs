@@ -407,6 +407,9 @@ impl User {
             sets.push(("role", Box::new(role)));
         }
         if let Some(status) = changes.status.filter(|s| *s != self.status) {
+            if status != Status::Active {
+                crate::models::huddle_grant::HuddleGrant::revoke_for_user(tx, self.id, &crate::models::room_delete::HuddleConfig::from_env())?;
+            }
             self.status = status;
             sets.push(("status", Box::new(status)));
         }

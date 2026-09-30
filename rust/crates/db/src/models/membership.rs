@@ -382,6 +382,8 @@ impl Membership {
     /// revocations (`before_destroy`), the last stage host's successor and
     /// calendar syncs.
     pub fn destroy(&self, tx: &mut Tx<'_>) -> Result<()> {
+        crate::models::huddle_grant::HuddleGrant::revoke_for_membership(tx, self.id, &crate::models::room_delete::HuddleConfig::from_env())?;
+        crate::models::huddle_grant::HuddleGrant::end_streams_for_membership(tx, self.room_id, self.id)?;
         tx.conn().execute_cached(
             r#"DELETE FROM "memberships" WHERE "memberships"."id" = ?"#,
             [self.id],
@@ -405,6 +407,50 @@ impl Membership {
     }
 
     // Membership::Connectable
+
+    /// Rails' stage/mute validations run before either revocation callback. The immediate
+    /// transaction serializes the last-host guard with concurrent role changes.
+    fn validate_call_attributes(&self, conn: &Connection, role: Option<StageRole>, hand: Option<Timestamp>, muted: Option<Timestamp>) -> Result<()> {
+        let room = Room::find(conn, self.room_id)?;
+        let mut errors = crate::Errors::default();
+        if !room.stage() {
+            if role.is_some() { errors.add("stage_role", "only exists on stage rooms"); }
+            if hand.is_some() { errors.add("hand_raised_at", "only exists on stage rooms"); }
+        }
+        if hand.is_some() && role != Some(StageRole::Listener) { errors.add("hand_raised_at", "can only be raised by a listener"); }
+        if !room.stage() && !room.voice() && muted.is_some() { errors.add("server_muted_at", "only exists on stage and voice rooms"); }
+        if self.stage_role == Some(StageRole::Host) && role != self.stage_role && !sql::exists(conn, "SELECT 1 FROM memberships WHERE room_id=? AND stage_role='host' AND id!=? LIMIT 1", params![self.room_id, self.id])? {
+            errors.add("stage_role", "can't demote the last host");
+        }
+        self.validate_organization(conn, self.room_category_id)?;
+        errors.into_result()
+    }
+
+    pub fn change_stage_role(&mut self, tx: &mut Tx<'_>, role: StageRole) -> Result<()> {
+        self.validate_call_attributes(tx.conn(), Some(role), None, self.server_muted_at)?;
+        if self.stage_role == Some(role) && self.hand_raised_at.is_none() { return Ok(()); }
+        if self.stage_role != Some(role) {
+            if (self.stage_role == Some(StageRole::Listener)) != (role == StageRole::Listener) {
+                crate::models::huddle_grant::HuddleGrant::revoke_for_membership(tx, self.id, &crate::models::room_delete::HuddleConfig::from_env())?;
+            } else {
+                tx.conn().execute_cached("UPDATE huddle_grants SET stage_role=? WHERE membership_id=? AND revoked_at IS NULL", params![role, self.id])?;
+            }
+        }
+        tx.conn().execute_cached("UPDATE memberships SET stage_role=?,hand_raised_at=NULL,updated_at=? WHERE id=?", params![role, tx.now(), self.id])?;
+        self.reload(tx.conn())
+    }
+
+    pub fn server_mute(&mut self, tx: &mut Tx<'_>) -> Result<bool> { self.set_server_muted(tx, true) }
+    pub fn server_unmute(&mut self, tx: &mut Tx<'_>) -> Result<bool> { self.set_server_muted(tx, false) }
+    fn set_server_muted(&mut self, tx: &mut Tx<'_>, muted: bool) -> Result<bool> {
+        if self.server_muted_at.is_some() == muted { return Ok(false); }
+        let at = muted.then(|| tx.now());
+        self.validate_call_attributes(tx.conn(), self.stage_role, self.hand_raised_at, at)?;
+        crate::models::huddle_grant::HuddleGrant::revoke_for_membership(tx, self.id, &crate::models::room_delete::HuddleConfig::from_env())?;
+        tx.conn().execute_cached("UPDATE memberships SET server_muted_at=?,updated_at=? WHERE id=?", params![at, tx.now(), self.id])?;
+        self.reload(tx.conn())?;
+        Ok(true)
+    }
 
     /// `Membership.disconnect_all`
     pub fn disconnect_all(tx: &mut Tx<'_>) -> Result<usize> {
