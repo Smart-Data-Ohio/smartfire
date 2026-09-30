@@ -98,7 +98,7 @@ async fn seed(db: &Database, case: &Value) {
         }
         if case["webhook"]==true {tx.conn().execute("INSERT INTO webhooks (user_id,url,created_at,updated_at) VALUES (810,'https://example.com/hooks',?,?)",params![now,now])?;}
         if case["audit_failure"]==true {tx.conn().execute_batch("CREATE TRIGGER fail_action_audit BEFORE INSERT ON audit_logs BEGIN SELECT RAISE(ABORT,'fixture audit down'); END;")?;}
-        Ok(())
+        super::super::tests::enqueue_retention_job(tx)
     }).await.unwrap();
 }
 async fn snapshot(db: &Database) -> Value {
@@ -107,7 +107,8 @@ async fn snapshot(db: &Database) -> Value {
         let events:Vec<Value>=stmt.query_map([],|r|Ok(json!({"agent_id":r.get::<_,i64>(0)?,"agent_approval_id":r.get::<_,Option<i64>>(1)?,"room_id":r.get::<_,Option<i64>>(2)?,"actor_id":r.get::<_,Option<i64>>(3)?,"outcome":r.get::<_,Option<String>>(4)?,"detail":r.get::<_,Option<String>>(5)?,"event_type":r.get::<_,String>(6)?,"metadata":serde_json::from_str::<Value>(&r.get::<_,String>(7)?).unwrap(),"webhook_status":r.get::<_,String>(8)?,"webhook_attempts":r.get::<_,i64>(9)?,"hop":r.get::<_,i64>(10)?})))?.collect::<rusqlite::Result<_>>()?;
         let mut stmt=conn.prepare("SELECT action,actor_id,actor_label,target_type,target_id,target_label,details FROM audit_logs WHERE action='agent.github_action.execute' ORDER BY id")?;
         let audits:Vec<Value>=stmt.query_map([],|r|Ok(json!({"action":r.get::<_,String>(0)?,"actor_id":r.get::<_,Option<i64>>(1)?,"actor_label":r.get::<_,Option<String>>(2)?,"target_type":r.get::<_,String>(3)?,"target_id":r.get::<_,i64>(4)?,"target_label":r.get::<_,String>(5)?,"details":serde_json::from_str::<Value>(&r.get::<_,String>(6)?).unwrap()})))?.collect::<rusqlite::Result<_>>()?;
-        let mut stmt=conn.prepare("SELECT job_class,arguments FROM background_jobs ORDER BY id")?;
+        // Include the action's agent webhook fanout, excluding unrelated recurring work.
+        let mut stmt=conn.prepare("SELECT job_class,arguments FROM background_jobs WHERE job_class GLOB 'Github::*' OR job_class='Agent::EventWebhookJob' ORDER BY id")?;
         let jobs:Vec<Value>=stmt.query_map([],|r|{let args:Value=serde_json::from_str(&r.get::<_,String>(1)?).unwrap(); Ok(json!({"class":r.get::<_,String>(0)?,"attempt":args["attempt"]}))})?.collect::<rusqlite::Result<_>>()?;
         let disconnected:Option<String>=conn.query_row("SELECT disconnected_reason FROM github_connected_accounts WHERE id=819",[],|r|r.get(0)).optional()?.flatten();
         Ok(json!({"events":events,"audits":audits,"jobs":jobs,"disconnected_reason":disconnected}))

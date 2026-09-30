@@ -242,12 +242,12 @@ async fn review_stale_room_card_enqueues_one_refresh_and_serves_queue_failure() 
     }
     // An uncached version of the message renders even if the durable queue cannot accept a fetch.
 
-    fresh.app.db.write(|tx|{tx.conn().execute_batch("DELETE FROM background_jobs; UPDATE github_pull_requests SET fetch_requested_at=NULL; UPDATE messages SET updated_at='2026-01-01 12:01:00' WHERE id=818; CREATE TRIGGER reject_render_refresh BEFORE INSERT ON background_jobs WHEN NEW.job_class='Github::FetchPullRequestJob' BEGIN SELECT RAISE(ABORT,'queue unavailable'); END;")?;Ok(())}).await.unwrap();
+    fresh.app.db.write(|tx|{tx.conn().execute_batch("DELETE FROM background_jobs; UPDATE github_pull_requests SET fetch_requested_at=NULL; UPDATE messages SET updated_at='2026-01-01 12:01:00' WHERE id=818; CREATE TRIGGER reject_render_refresh BEFORE INSERT ON background_jobs WHEN NEW.job_class='Github::FetchPullRequestJob' BEGIN SELECT RAISE(ABORT,'queue unavailable'); END;")?;crate::integrations::github::tests::enqueue_retention_job(tx)}).await.unwrap();
     let response=fresh.router.clone().oneshot(Request::builder().uri("/rooms/815").header("Host","example.org").header("Cookie",&fresh.cookie).body(Body::empty()).unwrap()).await.unwrap();
     assert_eq!(response.status(),axum::http::StatusCode::OK);
     let html=String::from_utf8(axum::body::to_bytes(response.into_body(),1024*1024).await.unwrap().to_vec()).unwrap();
     assert!(html.contains("Secret title"));
-    fresh.app.db.read(|conn|{let claim:Option<campfire_db::Timestamp>=conn.query_row("SELECT fetch_requested_at FROM github_pull_requests WHERE id=816",[],|r|r.get(0))?;assert!(claim.is_none());assert_eq!(conn.query_row("SELECT COUNT(*) FROM background_jobs",[],|r|r.get::<_,i64>(0))?,0);Ok(())}).await.unwrap();
+    fresh.app.db.read(|conn|{let claim:Option<campfire_db::Timestamp>=conn.query_row("SELECT fetch_requested_at FROM github_pull_requests WHERE id=816",[],|r|r.get(0))?;assert!(claim.is_none());assert_eq!(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class GLOB 'Github::*'",[],|r|r.get::<_,i64>(0))?,0);Ok(())}).await.unwrap();
     assert!(fresh.server.received().is_empty());
 }
 

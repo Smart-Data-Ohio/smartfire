@@ -3,6 +3,24 @@ use jiff::Timestamp;
 use rails_compat::{Secrets, app_verifier};
 use serde_json::{Value, json};
 
+/// Exercise queue assertions with the unrelated job main's recurring scheduler enqueues.
+/// Use the real durable sink so the fixture cannot pass without a persisted job row.
+pub(crate) fn enqueue_retention_job(tx: &mut campfire_db::Tx<'_>) -> campfire_db::Result<()> {
+    let count = |tx: &campfire_db::Tx<'_>| {
+        tx.conn().query_row(
+            "SELECT COUNT(*) FROM background_jobs WHERE job_class='Retention::PruneJob'",
+            [],
+            |row| row.get::<_, i64>(0),
+        )
+    };
+    let before = count(tx)?;
+    tx.emit_after_commit(campfire_db::Event::job(
+        &campfire_db::models::retention::PruneJob {},
+    ));
+    assert_eq!(count(tx)?, before + 1, "the recurring job must be persisted");
+    Ok(())
+}
+
 fn now() -> Timestamp {
     "2026-01-01T12:00:00Z".parse().unwrap()
 }

@@ -974,9 +974,10 @@ async fn review_refresh_queue_is_atomic_with_triggering_save() {
         let pr=PullRequest::for_message(tx.conn(),m.id)?.remove(0);
         tx.conn().execute("UPDATE github_pull_requests SET fetch_requested_at=NULL,title='Before' WHERE id=?",[pr.id])?;
         tx.conn().execute_batch("DELETE FROM background_jobs; CREATE TRIGGER reject_review_job BEFORE INSERT ON background_jobs WHEN NEW.job_class='Github::FetchPullRequestJob' BEGIN SELECT RAISE(ABORT,'review queue failure'); END;")?;
+        super::super::tests::enqueue_retention_job(tx)?;
         Ok(pr)
     }).await.unwrap();
     let result=app.db.write(move|tx|update(tx,pr.id,&[("title",SqlValue::Text("After".into()))])).await;
     assert!(result.is_err(),"queue insertion failure must roll back the triggering PR save");
-    app.db.read(move|conn|{let stored=PullRequest::find(conn,pr.id)?;assert_eq!(stored.title.as_deref(),Some("Before"));assert!(stored.fetch_requested_at.is_none());let jobs:i64=conn.query_row("SELECT COUNT(*) FROM background_jobs",[],|r|r.get(0))?;assert_eq!(jobs,0);Ok(())}).await.unwrap();
+    app.db.read(move|conn|{let stored=PullRequest::find(conn,pr.id)?;assert_eq!(stored.title.as_deref(),Some("Before"));assert!(stored.fetch_requested_at.is_none());let jobs:i64=conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class GLOB 'Github::*'",[],|r|r.get(0))?;assert_eq!(jobs,0);Ok(())}).await.unwrap();
 }
