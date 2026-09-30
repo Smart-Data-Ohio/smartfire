@@ -71,6 +71,7 @@ pub(crate) fn deliver(
     } else if !matches!(
         partial,
         Partial::Poll { .. }
+            | Partial::QuoteCards { .. }
             | Partial::PinBadge { .. }
             | Partial::PinsCount { .. }
             | Partial::PinsList { .. }
@@ -89,6 +90,11 @@ pub(crate) fn deliver(
             &origin,
             |ctx| -> campfire_db::Result<String> {
                 let rendered = match partial {
+                    // WS8bm2 owning-partial seam, including request-free refresh jobs.
+                    Partial::QuoteCards { message_id } => {
+                        let view = presenter.message(&campfire_db::Message::find(conn, *message_id)?)?;
+                        campfire_views::message_links::cards(ctx, &view).0
+                    }
                     Partial::Poll { poll_id } => {
                         campfire_views::messages::parts::poll(
                             ctx,

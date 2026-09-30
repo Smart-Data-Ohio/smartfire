@@ -24,7 +24,7 @@
           {{ crate::messages::cards(message, "github_pr_cards", "github-pr-cards", 0, &message.components.github_cards) }}
           {{ crate::messages::cards(message, "twitter_cards", "x-post-cards", 2, &message.components.twitter_cards) }}
           {{ crate::messages::event_cards(message) }}
-          {{ crate::messages::cards(message, "message_link_cards", "message-link-cards", 0, &message.components.message_link_cards) }}
+          {{ crate::message_links::cards(ctx, message) }}
           {{ crate::messages::cards(message, "fizzy_cards", "fizzy-cards", 0, &message.components.fizzy_cards) }}
           {{ crate::messages::cards(message, "linkedin_cards", "linkedin-post-cards", 2, &message.components.linkedin_cards) }}
           {{ crate::messages::cards(message, "link_embed_cards", "link-embed-cards", 2, &message.components.link_embed_cards) }}

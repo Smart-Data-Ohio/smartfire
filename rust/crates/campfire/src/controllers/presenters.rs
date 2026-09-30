@@ -131,7 +131,7 @@ pub struct Presenter<'a> {
     pub cache_base_url: Option<String>,
     users: RefCell<HashMap<i64, User>>,
     room_names: RefCell<HashMap<i64, (Room, String)>>,
-    // WS8bm2 search-only read adapter; ordinary root rendering stays with WS8b-m.
+    // WS8bm2 shared rendering-details seam for root and search pages.
     pub(crate) search_preloads: Option<super::searches::preloads::Preloads>,
 }
 
@@ -243,6 +243,9 @@ impl<'a> Presenter<'a> {
     /// (`cache [ message, "presentation-v3" ]` wraps the whole partial, so Rails evaluates none of
     /// it on a hit), else its view.
     pub fn messages(&self, messages: &[Message]) -> Result<Vec<MessageItem>> {
+        if self.search_preloads.is_none() {
+            return self.preload_search(messages)?.messages(messages);
+        }
         messages.iter().map(|message| self.message_item(message)).collect()
     }
 
@@ -256,6 +259,9 @@ impl<'a> Presenter<'a> {
 
     /// A message as `messages/_message` shows it.
     pub fn message(&self, message: &Message) -> Result<MessageView> {
+        if self.search_preloads.is_none() {
+            return self.preload_search(std::slice::from_ref(message))?.message(message);
+        }
         let (_, room_name) = self.room_and_name(message.room_id)?;
         match self.renderable_message(message, &room_name) {
             // `message_tag` rescues whatever its block raises, e.g. `avatar_tag message.creator`
@@ -292,8 +298,28 @@ impl<'a> Presenter<'a> {
             content: self.content(message, &plain_text)?,
             boosts: self.boosts(message)?,
             details: self.message_details(message)?,
-            components: Default::default(),
+            components: self.quote_components(message)?,
         })
+    }
+
+    fn quote_components(&self, message: &Message) -> Result<campfire_views::messages::MessageComponents> {
+        let data = self.search_preloads.as_ref().expect("rendering details loaded");
+        let references = data.records.quotes.get(&message.id).into_iter().flatten()
+            .filter_map(|(id, source)| data.records.sources.get(source).map(|source| (*id, source)))
+            .map(|(id, source)| -> Result<_> {
+                let card = if source.room_id == message.room_id {
+                    let room = data.records.rooms.get(&source.room_id).ok_or(campfire_db::Error::RecordNotFound("Room"))?;
+                    Some(campfire_views::message_links::Card {
+                        author: self.user(source.creator_id)?.name,
+                        room_label: if room.direct() { "a direct message".into() } else { room.name.clone().unwrap_or_default() },
+                        excerpt: campfire_views::helpers::truncate(&self.plain_text_body(source)?, 200, "..."),
+                        created_at: source.created_at.jiff(),
+                        message_path: campfire_db::message_pin::message_path(source),
+                    })
+                } else { None };
+                Ok(campfire_views::message_links::Reference { id, card })
+            }).collect::<Result<Vec<_>>>()?;
+        Ok(campfire_views::messages::MessageComponents { quote_references: Some(references), ..Default::default() })
     }
 
     fn message_details(&self, message: &Message) -> Result<campfire_views::messages::MessageDetails> {

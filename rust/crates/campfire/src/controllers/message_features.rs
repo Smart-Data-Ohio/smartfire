@@ -198,3 +198,5 @@ mod slash_tests;
 mod links_files_tests;
 #[cfg(test)]
 mod reminder_tests;
+#[cfg(test)]
+mod quote_integration_tests;

@@ -40,6 +40,13 @@ def check(name, relative, old, new, test):
         source.write_text(original)
 
 
+check("quote-inline-privacy", "rust/crates/campfire/src/controllers/presenters.rs",
+      "source.room_id == message.room_id", "true",
+      "controllers::message_features::quote_integration_tests::cross_room_quote_renders_lazy_without_source_facts")
+check("quote-neutral-label", "rust/crates/campfire/src/controllers/presenters.rs",
+      '"a direct message".into()', '"David and Jason".into()',
+      "controllers::message_features::quote_integration_tests::two_cached_direct_room_viewers_see_the_same_neutral_quote_label")
+
 check("membership", "rust/crates/campfire/src/controllers/message_features.rs",
       "let (_, room) = concerns::set_room(c).await?;",
       'let id = c.param_str("room_id").and_then(cast_integer).ok_or(Error::NotFound)?;\n'

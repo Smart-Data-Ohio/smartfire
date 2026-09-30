@@ -343,7 +343,9 @@ async fn update_root_message(c: &Ctx, room: &Room, message: Message) -> Result<M
     let id = message.id;
     let app = c.app().clone();
     let host = Some(c.request.host());
-    let (id, blob) = c.app().db.write(move |tx| {
+    // WS8bm2 quote-card commit callbacks need the initiating request's origin.
+    let origin = page::renderer_base_url(c);
+    let (id, blob) = c.app().db.write_scoped(move || crate::channels::message_features::origin(&origin), move |tx| {
         let mut message = message;
         let mut changes = changes;
         if preserve {
@@ -592,7 +594,8 @@ pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: Messag
 /// `@message.destroy` then `@message.broadcast_remove`.
 pub(crate) async fn destroy_message(c: &Ctx, room: &Room, message: &Message) -> Result<()> {
     let destroyed = message.clone();
-    c.app().db.write(move |tx| destroyed.destroy(tx)).await.map_err(db_error)?;
+    let origin = page::renderer_base_url(c);
+    c.app().db.write_scoped(move || crate::channels::message_features::origin(&origin), move |tx| destroyed.destroy(tx)).await.map_err(db_error)?;
     c.app().broadcasts.message_remove(room, message);
     Ok(())
 }
@@ -634,6 +637,16 @@ pub(crate) async fn broadcast_replace(c: &Ctx, room: &Room, message: &Message) -
             .map_err(|e| campfire_db::Error::Other(e.to_string()))?;
             let partials = Rendered { message_presentation: Some(html), ..Rendered::default() };
             app.broadcasts.message_replace(&room, &message, &partials);
+            // WS8bm2 owning quote-container seam: Rails update replaces this target
+            // after presentation/meta even when the edited message has no quotes.
+            let html = page::render_detached_at(&app, account.as_ref(), &base_url,
+                |ctx| campfire_views::message_links::cards(ctx, &view).0);
+            let html = campfire_cable::turbo::action_tag(campfire_cable::turbo::Action::Replace,
+                campfire_cable::turbo::Target::Target(&campfire_db::broadcasts::message_dom_id(&message, Some("message_link_cards"))),
+                Some(&html), &[("maintain_scroll", Some("true"))]);
+            let stream = campfire_db::broadcasts::conversation_messages(conn, &message)?.iter()
+                .map(campfire_db::broadcasts::Streamable::to_param).collect::<Vec<_>>().join(":");
+            app.cable.broadcast_stream_to(&[&stream], &html);
             Ok(())
         })
         .await

@@ -20,6 +20,7 @@ pub struct RenderingUser {
 #[derive(Default)]
 pub struct RenderingRecords {
     pub sources: HashMap<i64, Message>,
+    pub quotes: HashMap<i64, Vec<(i64, i64)>>,
     pub rooms: HashMap<i64, Room>,
     pub direct_names: HashMap<i64, Vec<String>>,
     pub room_icons: HashMap<i64, Option<String>>,
@@ -56,9 +57,15 @@ impl RenderingRecords {
             return Ok(data);
         }
         let ids: Vec<_> = messages.iter().map(|m| m.id).collect();
+        for (message, reference, source) in rows(conn,
+            "SELECT message_id,id,referenced_message_id FROM message_references WHERE message_id IN ($ids) ORDER BY id",
+            &ids, |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))? {
+            data.quotes.entry(message).or_default().push((reference, source));
+        }
         let reply_ids: Vec<_> = messages
             .iter()
             .filter_map(|m| m.reply_to_message_id)
+            .chain(data.quotes.values().flatten().map(|(_, source)| *source))
             .collect::<HashSet<_>>()
             .into_iter()
             .collect();
