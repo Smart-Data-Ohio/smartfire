@@ -100,7 +100,7 @@ impl Layout {
         let chrome = Chrome {
             service_worker_auto_register: true,
             brand_icon_names: Vec::new(),
-            google_picker: None,
+            google_picker: app.config.google_picker.clone(),
             huddle_configured: false,
             global_search_query: if c.request.path().starts_with("/searches") { crate::controllers::searches::display_query(c) } else { None },
             recent_searches,

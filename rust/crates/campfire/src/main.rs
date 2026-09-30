@@ -10,6 +10,7 @@ mod concerns;
 mod config;
 // WS8bm2 readiness seam for slash launch data; WS13 owns execution.
 mod huddle_readiness;
+mod picker_configuration;
 mod controllers;
 mod integrations;
 mod jobs;

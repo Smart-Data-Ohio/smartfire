@@ -101,8 +101,9 @@ pub async fn content(c: &mut Ctx) -> Result {
     c.no_store();
     let viewer = require_current_user(c)?.clone();
     let updated_at = room.updated_at.jiff();
+    let picker_available = c.app().config.google_picker.is_some();
     let (messages, user, steps, composer) = messages::present(c, move |p| Ok((p.messages(&records)?, p.user_view(viewer.id)?, p.thread_steps(id)?,
-        p.composer_facts(&room, &viewer, Some(&thread), p.composer_drive_flow(&viewer, false)?)?))).await?;
+        p.composer_facts(&room, &viewer, Some(&thread), p.composer_drive_flow(&viewer, picker_available && !viewer.is_bot())?)?))).await?;
     // WS8b-m2 supplies the scheduled child after the lead merges its feature branch.
     let scheduled_control = campfire_views::helpers::empty();
     c.set_header("x-thread-content-at-latest", if anchor.is_none() {"true"} else {"false"});

@@ -409,7 +409,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
             presenter.cache_base_url = Some(cache_base_url);
             let original = Room::original(conn)?.is_some_and(|original| original.id == room.id);
             let room_gid = crate::channels::room_gid(&room).to_param();
-            let drive=presenter.composer_drive_flow(&user,false)?;
+            let drive=presenter.composer_drive_flow(&user,app.config.google_picker.is_some() && !user.is_bot())?;
             let composer=presenter.composer_facts(&room,&user,None,drive)?;
             let list=super::presenters::room_native::message_list(&presenter,&messages,divider.message_id,divider.count)?;
             Ok((campfire_views::rooms::ShowView {

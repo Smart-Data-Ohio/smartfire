@@ -67,3 +67,32 @@ async fn native_owner_panels_use_request_secrets_and_neutral_direct_names() {
     other.get(&format!("/rooms/{DIRECT_DAVID_JASON}")).await;
     assert!(!other.real_authenticity_token().unwrap().is_valid(value,&format!("/rooms/{DIRECT_DAVID_JASON}/polls"),"POST"));
 }
+
+#[tokio::test]
+async fn native_picker_configuration_reaches_layout_and_owner_composer() {
+    let oracle:Value=serde_json::from_str(include_str!("picker_config.json")).unwrap();
+    for row in oracle["picker_cases"].as_array().unwrap() {
+        let pairs=row["input"].as_object().unwrap().iter().map(|(k,v)|(k.as_str(),v.as_str().unwrap())).collect::<Vec<_>>();
+        let app=TestApp::boot_frozen_with_env(&pairs).await.expect("seed required");
+        let html=app.david().get(&format!("/rooms/{ALL_TALK}")).await.text();
+        let user=DAVID;
+        let state=app.booted.app.clone();
+        let footer=app.db().read(move|conn| {
+            let viewer=campfire_db::User::find(conn,user)?;
+            let room=campfire_db::Room::find(conn,ALL_TALK)?;
+            let presenter=crate::controllers::presenters::Presenter::new(conn,&state,None);
+            let drive=presenter.composer_drive_flow(&viewer,state.config.google_picker.is_some())?;
+            let facts=presenter.composer_facts(&room,&viewer,None,drive)?;
+            let viewer=crate::controllers::presenters::user_view(&state.secrets,&viewer);
+            let account=campfire_db::Account::first(conn)?;
+            let result=page::render_detached_at(&state,account.as_ref(),"http://campfire.test",|ctx| rendering_with(RequestSecrets{tokens:Box::new(Tokens),csp_nonce:None},||super::super::presenters::room_native::components(ctx,&viewer,&facts)));
+            result.map(|(footer,_)|footer).map_err(|e|campfire_db::Error::Other(e.to_string()))
+        }).await.unwrap();
+        assert!(crate::app::asset_goldens::compare("configured native composer",&footer,row["composer"].as_str().unwrap()));
+        let expected=row["configured"].as_bool().unwrap();
+        assert_eq!(html.contains("name=\"google-drive-share\" content=\"enabled\""),expected,"Picker configuration {:?}",row["input"]);
+        assert_eq!(html.contains("data-controller=\"drive-share\""),expected,"composer Picker {:?}",row["input"]);
+        if expected {assert!(html.contains("content=\"public-client&lt;&amp;&gt;\""));}
+        assert_eq!(html.contains("data-controller=\"drive-picker\""),!expected,"seed's metadata consent yields to the public Picker");
+    }
+}

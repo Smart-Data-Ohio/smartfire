@@ -1,6 +1,6 @@
 # Room owner integration contract — native adapters mounted, byte acceptance partial
 
-Main is merged through `2a7c8b9b` (#169/#170), including WS15e (#166), the shared
+Main is merged through `76e54ad5` (#169/#170/#171), including WS15e (#166), the shared
 asset-golden helper (#168), board drift (#164/#165), and the updated WS17 code.
 Earlier merge commits brought in WS11 `18c9219c`, WS8bm `b14759da` and WS8bm2
 `d24317e8`. WS9 authentication and request concerns remain the main implementations.
@@ -58,8 +58,12 @@ bytes for three rooms and two viewers; no membership or presence write occurs.
 composer with room ID/kind, viewer-relative domain display name, `thread: None`, the
 static slash-command registry followed by room-scoped agent slash commands, and the
 Drive flow. Drive consent scopes currently select `None` or `Metadata`; the unresolved
-WS14 Picker availability input is explicitly `false`, so configured `Share` acceptance
-is still pending.
+WS14 Picker availability comes from WS13's public configuration adapter: all of
+`GOOGLE_CLIENT_ID`, `GOOGLE_PICKER_API_KEY` and `GOOGLE_CLOUD_PROJECT_NUMBER` must
+be nonblank, and the viewer must be human. The same facts populate the layout
+meta tags and the root/thread composer input. Eight complete root composer
+captures match Rails, with public client-ID escaping checked through actual HTTP.
+Stored account tokens and client secrets are never read by this adapter.
 
 Inside the request rendering scope, `room_native::components` renders:
 
@@ -88,8 +92,9 @@ The templates are copied without edits from the owning branches. Fourteen comple
 thread/poll/pin captures match the pinned Rails corpus, separately from the real
 HTTP viewer-token ownership test and original collapsed work-guide declaration.
 
-Configured WS13 huddle header/sidebar adapters and WS14 Picker availability remain
-integration work. No huddle policy, grant issuance or message/composer internals
+Configured WS13 huddle header/sidebar adapters remain integration work.
+The public Picker configuration seam is now connected; Google OAuth/token flow
+and transport remain WS14's. No huddle policy, grant issuance or message/composer internals
 are reproduced locally.
 
 ## Pin refresh
