@@ -178,7 +178,7 @@ impl Browser<'_> {
         for cookie in reply.set_cookies() {
             let pair = cookie.split(';').next().unwrap();
             let (name, value) = pair.split_once('=').unwrap();
-            let deleted = cookie.to_ascii_lowercase().contains("max-age=0") || cookie.contains("1970");
+            let deleted = cookie_is_deleted(&cookie);
             if deleted || value.is_empty() {
                 self.cookies.remove(name);
             } else {
@@ -223,6 +223,33 @@ impl Browser<'_> {
         let reply = self.form("post", "/session", &[("email_address", email), ("password", PASSWORD)]).await;
         assert_eq!(reply.status, StatusCode::FOUND, "sign in as {email}: {}", reply.text());
     }
+}
+
+fn cookie_is_deleted(cookie: &str) -> bool {
+    cookie.split(';').skip(1).any(|attribute| {
+        let Some((name, value)) = attribute.trim().split_once('=') else { return false };
+        (name.eq_ignore_ascii_case("max-age") && value.trim().parse::<i64>().is_ok_and(|age| age <= 0))
+            || (name.eq_ignore_ascii_case("expires") && value.contains("1970"))
+    })
+}
+
+#[test]
+fn browser_keeps_valid_signed_cookies_with_epoch_digits_in_the_signature() {
+    use campfire_kit::Crypto;
+    let secrets = std::sync::Arc::new(rails_compat::Secrets::new(&parity_env("SECRET_KEY_BASE").unwrap()));
+    let crypto = campfire_kit::RailsCrypto::new(secrets);
+    let (token, signed) = (0..20_000).find_map(|i| {
+        let token = format!("fixture-browser-session-{i}");
+        let signed = crypto.sign_cookie("session_token", &token, None);
+        signed.contains("1970").then_some((token, signed))
+    }).expect("deterministic signed-cookie fixture contains epoch digits");
+    assert_eq!(crypto.verify_signed_cookie("session_token", &signed, seed_clock().now()), Some(token));
+    let header = format!("session_token={signed}; Path=/; HttpOnly; SameSite=Lax");
+    assert!(!cookie_is_deleted(&header), "valid signature digits are not an expiry attribute");
+    assert!(!cookie_is_deleted("session_token=fixture; Path=/1970; Expires=Mon, 02 Mar 2046 16:00:00 GMT"));
+    assert!(cookie_is_deleted("session_token=fixture; Max-Age=0; Path=/"));
+    assert!(cookie_is_deleted("session_token=fixture; max-age=-1; Path=/"));
+    assert!(cookie_is_deleted("session_token=fixture; expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/"));
 }
 
 fn encode(value: &str) -> String {
