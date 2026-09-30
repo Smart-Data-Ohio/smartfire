@@ -736,3 +736,6 @@ async fn ws11_recovery_continues_after_one_durable_enqueue_failure() {
 #[cfg(test)]
 #[path = "agent_payload_tests.rs"]
 mod payload_tests;
+
+#[cfg(test)]
+mod case_tests;

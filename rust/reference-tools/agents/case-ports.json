@@ -680,6 +680,80 @@
           "rust": "ws11_approval_case_cancel_and_expire_handle_inbox"
         }
       ]
+    },
+    {
+      "rails_file": "test/jobs/agent/event_webhook_job_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/case_tests.rs",
+      "cases": [
+        {
+          "rails": "a successful post marks the row delivered",
+          "rust": "ws11_event_webhook_case_success_marks_delivered"
+        },
+        {
+          "rails": "a transport failure records the attempt and retries with backoff",
+          "rust": "ws11_event_webhook_case_transport_failure_retries_then_succeeds"
+        },
+        {
+          "rails": "a timeout records the attempt in the ledger and retries",
+          "rust": "ws11_event_webhook_case_timeout_records_attempt_without_reply"
+        },
+        {
+          "rails": "the fifth failure marks the row failed without re-enqueueing",
+          "rust": "ws11_event_webhook_case_fifth_failure_exhausts_without_enqueue"
+        },
+        {
+          "rails": "a 201 response counts as delivered",
+          "rust": "ws11_event_webhook_case_created_counts_as_delivered"
+        },
+        {
+          "rails": "a 500 response retries with backoff and fails after five attempts",
+          "rust": "ws11_event_webhook_case_server_error_retries_then_exhausts"
+        },
+        {
+          "rails": "a 429 response waits out Retry-After before retrying",
+          "rust": "ws11_event_webhook_case_retry_after_forty_five"
+        },
+        {
+          "rails": "a 429 response without Retry-After retries with the default backoff",
+          "rust": "ws11_event_webhook_case_retry_after_absent_uses_default"
+        },
+        {
+          "rails": "a 408 response retries instead of failing fast",
+          "rust": "ws11_event_webhook_case_request_timeout_retries"
+        },
+        {
+          "rails": "a 404 response fails fast without retrying",
+          "rust": "ws11_event_webhook_case_not_found_fails_fast"
+        },
+        {
+          "rails": "an error response with an attachment body creates no sync reply",
+          "rust": "ws11_event_webhook_case_error_attachment_creates_no_reply"
+        },
+        {
+          "rails": "a guard refusal fails fast without retrying",
+          "rust": "ws11_event_webhook_case_guard_refuses_without_post"
+        },
+        {
+          "rails": "an unresolvable host fails fast without retrying",
+          "rust": "ws11_event_webhook_case_unresolvable_fails_without_post"
+        },
+        {
+          "rails": "a message deleted before the post fails fast without retrying",
+          "rust": "ws11_event_webhook_case_deleted_message_fails_without_post"
+        },
+        {
+          "rails": "a removed webhook configuration clears the owed post",
+          "rust": "ws11_event_webhook_case_removed_configuration_clears_owed_post"
+        },
+        {
+          "rails": "an already delivered row posts nothing",
+          "rust": "ws11_event_webhook_case_delivered_row_posts_nothing"
+        },
+        {
+          "rails": "acking a pending row does not cancel its webhook",
+          "rust": "ws11_event_webhook_case_ack_does_not_cancel_pending_webhook"
+        }
+      ]
     }
   ],
   "boundary_deferred": {

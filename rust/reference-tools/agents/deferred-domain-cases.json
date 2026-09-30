@@ -154,29 +154,6 @@
       ]
     },
     {
-      "rails_file": "test/jobs/agent/event_webhook_job_test.rb",
-      "owner": "WS11 delivery; WS15g live repository reader",
-      "remaining_named_case_ports": [
-        "a successful post marks the row delivered",
-        "a transport failure records the attempt and retries with backoff",
-        "a timeout records the attempt in the ledger and retries",
-        "the fifth failure marks the row failed without re-enqueueing",
-        "a 201 response counts as delivered",
-        "a 500 response retries with backoff and fails after five attempts",
-        "a 429 response waits out Retry-After before retrying",
-        "a 429 response without Retry-After retries with the default backoff",
-        "a 408 response retries instead of failing fast",
-        "a 404 response fails fast without retrying",
-        "an error response with an attachment body creates no sync reply",
-        "a guard refusal fails fast without retrying",
-        "an unresolvable host fails fast without retrying",
-        "a message deleted before the post fails fast without retrying",
-        "a removed webhook configuration clears the owed post",
-        "an already delivered row posts nothing",
-        "acking a pending row does not cancel its webhook"
-      ]
-    },
-    {
       "rails_file": "test/models/user/bot_test.rb",
       "owner": "WS11 bot domain/removal; WS11-api by-bot HTTP surface",
       "remaining_named_case_ports": [
