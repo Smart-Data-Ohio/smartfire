@@ -22,6 +22,16 @@
       "status": 404
     }
   ],
+  "missing_reply_messages": [
+    {
+      "method": "put",
+      "status": 403
+    },
+    {
+      "method": "delete",
+      "status": 403
+    }
+  ],
   "system_note_denials": [
     {
       "method": "put",

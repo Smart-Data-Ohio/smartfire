@@ -16,6 +16,8 @@ cmd = ['mise', 'exec', 'rust@1.98.1', '--', 'cargo', 'test', '--locked', '-j', '
 mutations = [
     ('reply-scope', 'crates/campfire/src/controllers/messages/by_bots.rs',
      '    deny_bot_reply_token(c)?;', '', 'ws11_reply_token_only_creates_messages'),
+    ('reply-missing-message', 'crates/campfire/src/controllers/messages/by_bots.rs',
+     '    deny_bot_reply_token(c)?;', '', 'ws11_reply_token_unknown_message_is_forbidden'),
     ('system-notes', 'crates/campfire/src/controllers/messages/by_bots.rs',
      'if message.system_note {', 'if false {', 'ws11_bot_cannot_manage_system_notes'),
     ('root-count', 'crates/campfire/src/controllers/messages/by_bots.rs',
@@ -28,6 +30,10 @@ mutations = [
      'if campfire_richtext::ruby::is_blank(secret) {', 'if true {', 'ws11_agent_credentials_are_authenticated_then_denied_on_human_endpoints'),
     ('capability-revocation', 'crates/db/src/models/agent_access.rs',
      'Ok(Some(exists(conn,', 'Ok(Some(true || exists(conn,', 'ws11_bot_grants_are_checked_on_every_request_after_membership'),
+    ('credential-revocation', 'crates/db/src/models/agent_access.rs',
+     'revoked_at IS NULL AND (expires_at IS NULL OR expires_at>?)', '1=1 AND (expires_at IS NULL OR expires_at>?)', 'ws11_agent_credentials_are_authenticated_then_denied_on_human_endpoints'),
+    ('credential-expiry', 'crates/db/src/models/agent_access.rs',
+     '(expires_at IS NULL OR expires_at>?)', '(? IS NOT NULL)', 'ws11_agent_credentials_are_authenticated_then_denied_on_human_endpoints'),
     ('credential-use-throttle', 'crates/db/src/models/agent_access.rs',
      'AND (last_used_at IS NULL OR last_used_at<=?)', 'AND (? IS NOT NULL)', 'ws11_agent_credentials_are_authenticated_then_denied_on_human_endpoints'),
 ]

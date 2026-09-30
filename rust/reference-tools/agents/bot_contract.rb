@@ -17,6 +17,10 @@ travel_to Time.utc(2026, 3, 2, 16) do
     client.public_send(method, path, params: "Forbidden", headers: { "CONTENT_TYPE" => "text/plain" })
     { method: method, status: client.response.status }
   end
+  missing_reply_messages = %w[put delete].map do |method|
+    client.public_send(method, "#{base}/0", params: "Missing", headers: { "CONTENT_TYPE" => "text/plain" })
+    { method: method, status: client.response.status }
+  end
   plain_key = "#{bot.id}-BenderToken1"
   note = room.messages.create!(creator: bot, body: "System note", system_note: true)
   note_path = Rails.application.routes.url_helpers.room_bot_message_path(room, plain_key, note)
@@ -66,5 +70,5 @@ travel_to Time.utc(2026, 3, 2, 16) do
   grant.revoke!
   client.get key_path
   grants << { name: "revoked next request", status: client.response.status }
-  puts JSON.pretty_generate(reference_pin: "d7c7de92", reply_denials: denied, system_note_denials: system_note, root_page: page, credential_digest: digest, credential_auth: auth, grants: grants)
+  puts JSON.pretty_generate(reference_pin: "d7c7de92", reply_denials: denied, missing_reply_messages: missing_reply_messages, system_note_denials: system_note, root_page: page, credential_digest: digest, credential_auth: auth, grants: grants)
 end

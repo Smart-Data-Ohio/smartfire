@@ -399,3 +399,15 @@ async fn ws11_bot_grants_are_checked_on_every_request_after_membership() {
     app.db().write(move |tx| {tx.conn().execute("UPDATE agent_grants SET revoked_at=? WHERE id=?",rusqlite::params![tx.now(),grant])?;Ok(())}).await.unwrap();
     assert_eq!(client.get(&path).await.status,StatusCode::FORBIDDEN,"revocation takes effect next request");
 }
+
+#[tokio::test]
+async fn ws11_reply_token_unknown_message_is_forbidden() {
+    let app = TestApp::boot().await.expect("build the default parity seed");
+    let token = rails_compat::verifiers::bot_reply::token_for(&app.booted.app.secrets,BENDER,ALL_TALK,app.booted.app.clock.now());
+    let mut client = app.anonymous();
+    let oracle=ws11_oracle();
+    for (index,method) in [Method::PUT,Method::DELETE].into_iter().enumerate() {
+        let response=client.send(Req::new(method.clone(),&format!("/rooms/{ALL_TALK}/{token}/messages/0")).body("Missing")).await;
+        assert_eq!(response.status.as_u16(),oracle["missing_reply_messages"][index]["status"].as_u64().unwrap() as u16,"{method}");
+    }
+}
