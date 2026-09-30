@@ -1,0 +1,1540 @@
+{
+  "reference": "d7c7de92",
+  "secret_key_base": "5335c3b1ad35b4ad170c3413bd651ef3b6ed64e257261871a6de3f978cf3868ee417a927040935fb30b0f7debdedb34a2a403e9f34b16cf594c917c2ecd4a995",
+  "now": 1767268800,
+  "secret": "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP",
+  "codes": [
+    {
+      "at": 1767268710,
+      "code": "749417"
+    },
+    {
+      "at": 1767268740,
+      "code": "061430"
+    },
+    {
+      "at": 1767268769,
+      "code": "061430"
+    },
+    {
+      "at": 1767268770,
+      "code": "629670"
+    },
+    {
+      "at": 1767268799,
+      "code": "629670"
+    },
+    {
+      "at": 1767268800,
+      "code": "536101"
+    },
+    {
+      "at": 1767268829,
+      "code": "536101"
+    },
+    {
+      "at": 1767268830,
+      "code": "507792"
+    },
+    {
+      "at": 1767268859,
+      "code": "507792"
+    },
+    {
+      "at": 1767268860,
+      "code": "606206"
+    },
+    {
+      "at": 1767268890,
+      "code": "558886"
+    }
+  ],
+  "checks": [
+    {
+      "at": 1767268800,
+      "code": "749417",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "749417",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "749417",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "749417",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "061430",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "061430",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "061430",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "061430",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "061430",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "061430",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "061430",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "061430",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "629670",
+      "after": null,
+      "matched_at": 1767268770
+    },
+    {
+      "at": 1767268800,
+      "code": "629670",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "629670",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "629670",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "629670",
+      "after": null,
+      "matched_at": 1767268770
+    },
+    {
+      "at": 1767268800,
+      "code": "629670",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "629670",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "629670",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "536101",
+      "after": null,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268800,
+      "code": "536101",
+      "after": 1767268770,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268800,
+      "code": "536101",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "536101",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "536101",
+      "after": null,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268800,
+      "code": "536101",
+      "after": 1767268770,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268800,
+      "code": "536101",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "536101",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "507792",
+      "after": null,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268800,
+      "code": "507792",
+      "after": 1767268770,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268800,
+      "code": "507792",
+      "after": 1767268800,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268800,
+      "code": "507792",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "507792",
+      "after": null,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268800,
+      "code": "507792",
+      "after": 1767268770,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268800,
+      "code": "507792",
+      "after": 1767268800,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268800,
+      "code": "507792",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "606206",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "606206",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "606206",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "606206",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "558886",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "558886",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "558886",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "558886",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "749417",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "749417",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "749417",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "749417",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "061430",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "061430",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "061430",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "061430",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "061430",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "061430",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "061430",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "061430",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "629670",
+      "after": null,
+      "matched_at": 1767268770
+    },
+    {
+      "at": 1767268801,
+      "code": "629670",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "629670",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "629670",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "629670",
+      "after": null,
+      "matched_at": 1767268770
+    },
+    {
+      "at": 1767268801,
+      "code": "629670",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "629670",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "629670",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "536101",
+      "after": null,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268801,
+      "code": "536101",
+      "after": 1767268770,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268801,
+      "code": "536101",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "536101",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "536101",
+      "after": null,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268801,
+      "code": "536101",
+      "after": 1767268770,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268801,
+      "code": "536101",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "536101",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "507792",
+      "after": null,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268801,
+      "code": "507792",
+      "after": 1767268770,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268801,
+      "code": "507792",
+      "after": 1767268800,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268801,
+      "code": "507792",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "507792",
+      "after": null,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268801,
+      "code": "507792",
+      "after": 1767268770,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268801,
+      "code": "507792",
+      "after": 1767268800,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268801,
+      "code": "507792",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "606206",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "606206",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "606206",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "606206",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "558886",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "558886",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "558886",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268801,
+      "code": "558886",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "749417",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "749417",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "749417",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "749417",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "061430",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "061430",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "061430",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "061430",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "061430",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "061430",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "061430",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "061430",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "629670",
+      "after": null,
+      "matched_at": 1767268770
+    },
+    {
+      "at": 1767268829,
+      "code": "629670",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "629670",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "629670",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "629670",
+      "after": null,
+      "matched_at": 1767268770
+    },
+    {
+      "at": 1767268829,
+      "code": "629670",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "629670",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "629670",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "536101",
+      "after": null,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268829,
+      "code": "536101",
+      "after": 1767268770,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268829,
+      "code": "536101",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "536101",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "536101",
+      "after": null,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268829,
+      "code": "536101",
+      "after": 1767268770,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268829,
+      "code": "536101",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "536101",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "507792",
+      "after": null,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268829,
+      "code": "507792",
+      "after": 1767268770,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268829,
+      "code": "507792",
+      "after": 1767268800,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268829,
+      "code": "507792",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "507792",
+      "after": null,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268829,
+      "code": "507792",
+      "after": 1767268770,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268829,
+      "code": "507792",
+      "after": 1767268800,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268829,
+      "code": "507792",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "606206",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "606206",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "606206",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "606206",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "558886",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "558886",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "558886",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268829,
+      "code": "558886",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "749417",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "749417",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "749417",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "749417",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "061430",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "061430",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "061430",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "061430",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "061430",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "061430",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "061430",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "061430",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "629670",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "629670",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "629670",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "629670",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "629670",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "629670",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "629670",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "629670",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "536101",
+      "after": null,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268830,
+      "code": "536101",
+      "after": 1767268770,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268830,
+      "code": "536101",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "536101",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "536101",
+      "after": null,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268830,
+      "code": "536101",
+      "after": 1767268770,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268830,
+      "code": "536101",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "536101",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "507792",
+      "after": null,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268830,
+      "code": "507792",
+      "after": 1767268770,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268830,
+      "code": "507792",
+      "after": 1767268800,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268830,
+      "code": "507792",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "507792",
+      "after": null,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268830,
+      "code": "507792",
+      "after": 1767268770,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268830,
+      "code": "507792",
+      "after": 1767268800,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268830,
+      "code": "507792",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "606206",
+      "after": null,
+      "matched_at": 1767268860
+    },
+    {
+      "at": 1767268830,
+      "code": "606206",
+      "after": 1767268770,
+      "matched_at": 1767268860
+    },
+    {
+      "at": 1767268830,
+      "code": "606206",
+      "after": 1767268800,
+      "matched_at": 1767268860
+    },
+    {
+      "at": 1767268830,
+      "code": "606206",
+      "after": 1767268830,
+      "matched_at": 1767268860
+    },
+    {
+      "at": 1767268830,
+      "code": "558886",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "558886",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "558886",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268830,
+      "code": "558886",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "749417",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "749417",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "749417",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "749417",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "061430",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "061430",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "061430",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "061430",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "061430",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "061430",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "061430",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "061430",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "629670",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "629670",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "629670",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "629670",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "629670",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "629670",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "629670",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "629670",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "536101",
+      "after": null,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268831,
+      "code": "536101",
+      "after": 1767268770,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268831,
+      "code": "536101",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "536101",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "536101",
+      "after": null,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268831,
+      "code": "536101",
+      "after": 1767268770,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268831,
+      "code": "536101",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "536101",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "507792",
+      "after": null,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268831,
+      "code": "507792",
+      "after": 1767268770,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268831,
+      "code": "507792",
+      "after": 1767268800,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268831,
+      "code": "507792",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "507792",
+      "after": null,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268831,
+      "code": "507792",
+      "after": 1767268770,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268831,
+      "code": "507792",
+      "after": 1767268800,
+      "matched_at": 1767268830
+    },
+    {
+      "at": 1767268831,
+      "code": "507792",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "606206",
+      "after": null,
+      "matched_at": 1767268860
+    },
+    {
+      "at": 1767268831,
+      "code": "606206",
+      "after": 1767268770,
+      "matched_at": 1767268860
+    },
+    {
+      "at": 1767268831,
+      "code": "606206",
+      "after": 1767268800,
+      "matched_at": 1767268860
+    },
+    {
+      "at": 1767268831,
+      "code": "606206",
+      "after": 1767268830,
+      "matched_at": 1767268860
+    },
+    {
+      "at": 1767268831,
+      "code": "558886",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "558886",
+      "after": 1767268770,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "558886",
+      "after": 1767268800,
+      "matched_at": null
+    },
+    {
+      "at": 1767268831,
+      "code": "558886",
+      "after": 1767268830,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": null,
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "   ",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "000000",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "12345",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "1234567",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "123-456",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "１２３４５６",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": " 536101",
+      "after": null,
+      "matched_at": null
+    },
+    {
+      "at": 1767268800,
+      "code": "536 \t\n101",
+      "after": null,
+      "matched_at": 1767268800
+    },
+    {
+      "at": 1767268800,
+      "code": "536101\u000b\f\r",
+      "after": null,
+      "matched_at": 1767268800
+    }
+  ],
+  "base32": [
+    {
+      "secret": "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP",
+      "code": "536101"
+    },
+    {
+      "secret": "jbswy3dpehpk3pxpjbswy3dpehpk3pxp",
+      "code": "536101"
+    },
+    {
+      "secret": "JB=SWY3DPEHPK3PXP",
+      "code": "704044"
+    },
+    {
+      "secret": "A",
+      "code": "191168"
+    },
+    {
+      "secret": "",
+      "code": "191168"
+    },
+    {
+      "secret": "invalid!",
+      "error": "ROTP::Base32::Base32Error"
+    },
+    {
+      "secret": " JBSWY3DP",
+      "error": "ROTP::Base32::Base32Error"
+    }
+  ],
+  "backups": [
+    {
+      "input": null,
+      "normalized": "",
+      "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "input": "",
+      "normalized": "",
+      "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "input": "  --\t",
+      "normalized": "",
+      "digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "input": "ABCD-Ef1234",
+      "normalized": "abcdef1234",
+      "digest": "0d5673491c347d4e99a3b47df481d9d38aef51a961849fd8d00c906a68cf8abe"
+    },
+    {
+      "input": "a\tb\nc\u000bd\fe\rf",
+      "normalized": "abcdef",
+      "digest": "bef57ec7f53a6d40beb640a780a639c83bc29ac8a9816f1fc6c5c6dcd93c4721"
+    },
+    {
+      "input": " ABC ",
+      "normalized": " abc ",
+      "digest": "cb7376e9c961a5a3a1e55a37d81a7f6aaf58526ce1b8135f6418302772053c55"
+    },
+    {
+      "input": "İÅΣ",
+      "normalized": "i̇åσ",
+      "digest": "7181ef7f98d71bf0b0f9fdeebee8e9928edfae5590520c584fd50543c8776310"
+    }
+  ],
+  "collision": {
+    "at": 14207940,
+    "code": "519179",
+    "matched_at": 14207940
+  },
+  "provisioning_uri": "otpauth://totp/Smartfire:david%40example.com?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Smartfire",
+  "formatted_secret": "JBSW Y3DP EHPK 3PXP JBSW Y3DP EHPK 3PXP",
+  "provisioning": [
+    {
+      "email": "david@example.com",
+      "uri": "otpauth://totp/Smartfire:david%40example.com?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Smartfire"
+    },
+    {
+      "email": " User:Name+tag@example.com \t\u0000",
+      "uri": "otpauth://totp/Smartfire:%20User_Name%2Btag%40example.com?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Smartfire"
+    },
+    {
+      "email": "é@example.com",
+      "uri": "otpauth://totp/Smartfire:%C3%A9%40example.com?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Smartfire"
+    },
+    {
+      "email": "a~*b@example.com",
+      "uri": "otpauth://totp/Smartfire:a~%2Ab%40example.com?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Smartfire"
+    }
+  ],
+  "credential_ciphertext": "{\"p\":\"QQuQO7Q0YzuykHNhBj0cCUyyy+sdOQU8dmRluW5U45o=\",\"h\":{\"iv\":\"9husP27wtShxQ9Bb\",\"at\":\"62PqtRHAu7y9hLp2CM1RGg==\",\"e\":\"QVNDSUktOEJJVA==\"}}",
+  "setup_ciphertext": "{\"p\":\"tuaazB6eU87Ac+scWCaZKneWjN9Mys7wy74VgAU42yI=\",\"h\":{\"iv\":\"ZYG5ZLucEj8B1JOD\",\"at\":\"dWv1Tm1ar6pMlmxURrkrQw==\",\"e\":\"QVNDSUktOEJJVA==\"}}",
+  "remember": {
+    "token": "ws9-fixture-remember-token",
+    "raw": "eyJfcmFpbHMiOnsibWVzc2FnZSI6IkluZHpPUzFtYVhoMGRYSmxMWEpsYldWdFltVnlMWFJ2YTJWdUlnPT0iLCJleHAiOiIyMDI2LTAxLTMxVDEyOjAwOjAwLjAwMFoiLCJwdXIiOiJjb29raWUudHdvX2ZhY3Rvcl9yZW1lbWJlciJ9fQ==--9676c4cc9d5a8ee90c44c761973a39a006f10e9a",
+    "header": "two_factor_remember=eyJfcmFpbHMiOnsibWVzc2FnZSI6IkluZHpPUzFtYVhoMGRYSmxMWEpsYldWdFltVnlMWFJ2YTJWdUlnPT0iLCJleHAiOiIyMDI2LTAxLTMxVDEyOjAwOjAwLjAwMFoiLCJwdXIiOiJjb29raWUudHdvX2ZhY3Rvcl9yZW1lbWJlciJ9fQ%3D%3D--9676c4cc9d5a8ee90c44c761973a39a006f10e9a; path=/; expires=Sat, 31 Jan 2026 12:00:00 GMT; secure; httponly; samesite=lax",
+    "expires_at": 1769860800
+  }
+}
