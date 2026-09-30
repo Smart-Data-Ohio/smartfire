@@ -140,7 +140,7 @@ pub(super) fn message(body: &[u8]) -> Result<String, &'static str> {
 }
 
 /// JSON.parse's default max_nesting is 100; braces inside strings do not contribute.
-pub(super) fn within_nesting_limit(body: &[u8]) -> bool {
+pub(in crate::integrations) fn within_nesting_limit(body: &[u8]) -> bool {
     let (mut depth, mut quoted, mut escaped) = (0usize, false, false);
     for byte in body {
         if quoted {

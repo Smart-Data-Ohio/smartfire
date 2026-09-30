@@ -14,7 +14,7 @@ pub mod agent_reads;
 pub mod agent_requests;
 pub mod cards;
 pub mod client;
-mod error_body;
+pub(super) mod error_body;
 pub mod fetch;
 pub mod urls;
 use serde_json::Value;

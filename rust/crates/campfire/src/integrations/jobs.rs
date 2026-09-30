@@ -21,6 +21,7 @@ use crate::jobs::{PushMessageJob, Registry, WebhookJob, discard_missing};
 /// Registers `Room::PushMessageJob` and `Bot::WebhookJob`.
 pub fn register_jobs(registry: &mut Registry) {
     registry.register(super::link_embed::perform);
+    registry.register(super::twitter::fetcher::perform);
     registry.register(super::fizzy::fetch::perform);
     registry.register(super::fizzy::agent_job::perform);
     registry.register(push_message);
