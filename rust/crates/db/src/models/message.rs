@@ -483,6 +483,7 @@ impl Message {
                     .rich_text()
                     .render_markdown(tx.conn(), source, attributes.room_id)
                     .map_err(crate::error::Error::Other)?;
+                // Assigning Markdown to Rails' Action Text body canonicalizes before save.
                 Ok(Some(Self::prepare_body(tx, &rendered, true)?))
             }
             Some(_) => Ok(None),

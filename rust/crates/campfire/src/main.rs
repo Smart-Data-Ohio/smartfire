@@ -70,3 +70,6 @@ mod tests {
         assert_eq!(unsafe { std::ffi::CStr::from_ptr(thp) }, c"never");
     }
 }
+
+#[cfg(test)]
+mod slash_commands_tests;

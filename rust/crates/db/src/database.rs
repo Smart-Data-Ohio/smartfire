@@ -161,6 +161,25 @@ impl<'c> Tx<'c> {
     pub fn in_transaction(&self) -> bool {
         self.in_transaction
     }
+
+    /// A model operation whose validation error may be rescued by its caller. Discard
+    /// deferred callbacks together with rolled-back rows; queue persistence failures still
+    /// fail the enclosing transaction through `persist_error`.
+    pub fn savepoint<T>(&mut self, f: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
+        let callbacks = self.after_commit.len();
+        self.conn.execute_batch("SAVEPOINT model_operation")?;
+        match f(self) {
+            Ok(value) => {
+                self.conn.execute_batch("RELEASE SAVEPOINT model_operation")?;
+                Ok(value)
+            }
+            Err(error) => {
+                self.after_commit.truncate(callbacks);
+                self.conn.execute_batch("ROLLBACK TO SAVEPOINT model_operation; RELEASE SAVEPOINT model_operation")?;
+                Err(error)
+            }
+        }
+    }
 }
 
 /// Runs `f` in `BEGIN IMMEDIATE`, commits, then runs the after-commit queue. An error from
