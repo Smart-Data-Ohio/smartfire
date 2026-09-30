@@ -103,7 +103,24 @@ COPY --from=ffmpeg /opt/ffmpeg /opt/ffmpeg
 ENV LIBRARY_PATH=/opt/vips/lib \
     LD_LIBRARY_PATH=/opt/vips/lib:/opt/ffmpeg/lib \
     PATH=/opt/ffmpeg/bin:$PATH
-RUN rustup component add clippy
+ARG TARGETARCH
+# Pin nextest's prebuilt binaries, including their checksums, so the image never compiles its
+# runner from source. Keep mold in this CI-only stage; developer and production builds use
+# their normal linker unless CI explicitly supplies RUSTFLAGS.
+RUN rustup component add clippy && \
+    apt-get update -qq && apt-get install --no-install-recommends -y mold && \
+    case "$TARGETARCH" in \
+      amd64) triple=x86_64-unknown-linux-gnu; checksum=682c21b777c333e96fd532e114d3a5a894e0729ab88d94c0a9f20f8419695428 ;; \
+      arm64) triple=aarch64-unknown-linux-gnu; checksum=b2e33d7c72de7ade0ff7b3a948ac37516b24f8a836b7a8870c1f634a94be9de9 ;; \
+      *) echo "Unsupported nextest architecture: $TARGETARCH" >&2; exit 1 ;; \
+    esac && \
+    curl --fail --silent --show-error --location \
+      "https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-0.9.146/cargo-nextest-0.9.146-${triple}.tar.gz" \
+      --output /usr/src/nextest.tar.gz && \
+    echo "${checksum}  /usr/src/nextest.tar.gz" | sha256sum -c - && \
+    tar -xzf /usr/src/nextest.tar.gz -C /usr/local/cargo/bin cargo-nextest && \
+    rm /usr/src/nextest.tar.gz && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 
 # Build the binary against the libvips above.
