@@ -98,7 +98,7 @@ async fn huddle_items_disabled_still_records_the_neighboring_message_mention() {
         .write(move |tx| {
             ActivityItem::find(tx.conn(), item_id)?.mark_handled(tx)?;
             let message = Message::find(tx.conn(), id)?;
-            campfire_db::models::activity_mentions::record(tx, &message)
+            ActivityItem::record_message(tx, &message).map(drop)
         })
         .await
         .unwrap();

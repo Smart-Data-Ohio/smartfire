@@ -2,6 +2,20 @@ require "json"
 require "active_support/testing/time_helpers"
 class HuddleRingPolicySeam
   include ActiveSupport::Testing::TimeHelpers
+  def setup_sql(recipient)
+    connection=ActiveRecord::Base.connection
+    fields=%w[presence_setting dnd_enabled dnd_until quiet_hours_enabled quiet_hours_start_minute quiet_hours_end_minute time_zone meeting_status_enabled meeting_dnd_enabled ooo_until ooo_notify_enabled]
+    recipient.reload
+    assignments=fields.map { |key| "#{key}=#{connection.quote(recipient.attributes_before_type_cast[key])}" }.join(",")
+    statements=["UPDATE users SET #{assignments} WHERE id=#{recipient.id}","DELETE FROM dnd_allowed_users WHERE user_id=#{recipient.id}","DELETE FROM calendar_meeting_caches WHERE user_id=#{recipient.id}"]
+    records=DndAllowedUser.where(user:recipient).order(:id).to_a
+    records << Calendar::MeetingCache.find_by(user:recipient)
+    records.compact.each do |record|
+      attrs=record.reload.attributes_before_type_cast
+      statements << "INSERT INTO #{record.class.table_name}(#{attrs.keys.join(',')}) VALUES(#{attrs.values.map { |v| connection.quote(v) }.join(',')})"
+    end
+    statements.join("; ")+";"
+  end
   def run
     ActiveRecord::Schema.verbose=false
     titles=File.read(Rails.root.join("test/models/huddle/ring_policy_test.rb")).scan(/^  test "(.*)" do$/).flatten
@@ -38,9 +52,9 @@ class HuddleRingPolicySeam
         grant.send(:broadcast_suppressed_invitation!,recipient)
         raise "policy/producer mismatch" unless frames.size==1 && frames[0][:payload][:huddleInvitation][:silent]==!sound
         fields=%w[id presence_setting dnd_enabled dnd_until quiet_hours_enabled quiet_hours_start_minute quiet_hours_end_minute time_zone meeting_status_enabled meeting_dnd_enabled ooo_until ooo_notify_enabled]
-        {context:{recipient:recipient.attributes.slice(*fields),caller_id:caller&.id,kind:"huddle",now:Time.current.to_i,quiet_override:name=="quiet_override",allowed_user_ids:DndAllowedUser.where(user:recipient).order(:id).pluck(:allowed_user_id),meeting_cache:Calendar::MeetingCache.find_by(user:recipient)&.attributes},sound_allowed:sound,sender_id:grant.user.id,broadcast:frames[0]}
+        {setup_sql:setup_sql(recipient),context:{recipient:recipient.attributes.slice(*fields),caller_id:caller&.id,kind:"huddle",now:Time.current.to_i,quiet_override:name=="quiet_override",allowed_user_ids:DndAllowedUser.where(user:recipient).order(:id).pluck(:allowed_user_id),meeting_cache:Calendar::MeetingCache.find_by(user:recipient)&.attributes},sound_allowed:sound,sender_id:grant.user.id,broadcast:frames[0]}
       end
-      {name:name,title:titles[index],depends_on:"WS17 Notifications::Policy and RingPolicy quiet-check adapter (not merged)",outcomes:outcomes}
+      {name:name,title:titles[index],outcomes:outcomes}
     end
     puts JSON.pretty_generate(reference_pin:"d7c7de92",cases:cases)
   ensure

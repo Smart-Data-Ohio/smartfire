@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""All eight WS17-dependent ring assertions must detect a seam regression."""
+"""All eight real-policy ring assertions must detect a publication regression."""
 import os
 from pathlib import Path
 import re
@@ -9,11 +9,11 @@ path = ROOT / "rust/crates/db/src/models/huddle_invitations.rs"
 original = path.read_text()
 before = 'invitation["silent"] = serde_json::Value::Bool(!sound_allowed);'
 after = 'invitation["silent"] = serde_json::Value::Bool(sound_allowed);'
-environment = dict(os.environ, TMPDIR=str(ROOT / ".scratch"), CARGO_TARGET_DIR=str(ROOT / "rust/target"), CI="1", CABLE_TEST_PORT_RANGE="53000-53049", MAIL_TEST_PORT_RANGE="53050-53099")
+environment = dict(os.environ, CARGO_BUILD_JOBS="2", TMPDIR=str(ROOT / ".scratch"), CARGO_TARGET_DIR=str(ROOT / "rust/target"), CI="1", CABLE_TEST_PORT_RANGE="53000-53049", MAIL_TEST_PORT_RANGE="53050-53099")
 try:
     assert original.count(before) == 1
     path.write_text(original.replace(before, after, 1))
-    result = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j4", "--manifest-path", str(ROOT / "rust/Cargo.toml"), "-p", "campfire_db", "huddle_ring_policy_seam_test", "--", "--test-threads=4"], cwd=ROOT, env=environment, capture_output=True, text=True)
+    result = subprocess.run(["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "--manifest-path", str(ROOT / "rust/Cargo.toml"), "-p", "campfire_db", "huddle_ring_policy_seam_test", "--", "--test-threads=8"], cwd=ROOT, env=environment, capture_output=True, text=True)
     output = result.stdout + result.stderr
     (ROOT / ".scratch/ring-discrimination-detail.log").write_text(output)
     summary = next((s for s in re.findall(r"^test result: FAILED\..*$", output, re.M) if "8 failed;" in s), None)
@@ -21,4 +21,4 @@ try:
     print(f"ring-sound-inverted: {summary}")
 finally:
     path.write_text(original)
-print("WS13b ring discrimination: 1 compiled regression detected across all 8 WS17-dependent declarations; source restored")
+print("WS13b ring discrimination: 1 compiled regression detected across all 8 real-policy declarations; source restored")

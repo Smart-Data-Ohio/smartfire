@@ -6,7 +6,7 @@ use crate::models::{
     huddle_notices::{self, PushInvitationJob},
 };
 use crate::sql::query_all;
-use crate::{ActivityItem, CachedStatements, Event, Job, Result, Room, Timestamp, Tx, User};
+use crate::{ActivityItem, CachedStatements, Connection, Event, Job, NotificationKind, NotificationPolicy, Result, Room, Timestamp, Tx, User, UserStatusSettings};
 use jiff::SignedDuration;
 use rusqlite::{OptionalExtension, params};
 use serde::{Deserialize, Serialize};
@@ -19,6 +19,45 @@ pub struct RingRequest {
 }
 impl Job for RingRequest {
     const CLASS: &'static str = "Notifications::HuddleRingJob";
+}
+
+/// `Huddle::RingPolicy.ring?`: an override replaces the entire sound decision.
+/// Production reads the current WS17 settings/cache and the actual caller's allowance.
+pub fn ring_allowed(
+    conn: &Connection,
+    recipient_id: i64,
+    caller_id: Option<i64>,
+    now: Timestamp,
+    quiet_check: Option<&dyn Fn(&UserStatusSettings) -> bool>,
+) -> Result<bool> {
+    let recipient = UserStatusSettings::find(conn, recipient_id)?;
+    if let Some(check) = quiet_check {
+        return Ok(!check(&recipient));
+    }
+    let exceptions = super::notification_policy::dnd_exceptions_for(conn, &[recipient_id], caller_id)?;
+    Ok(NotificationPolicy {
+        recipient: Some(&recipient),
+        kind: NotificationKind::Huddle,
+        room_involvement: None,
+        thread_involvement: None,
+        mentioned: false,
+        reply_to_recipient: false,
+        keyword_matched: false,
+        dnd_exception: exceptions.contains(&recipient_id),
+        now,
+    }.sound())
+}
+
+pub fn publish_ring_with_policy(
+    tx: &mut Tx<'_>,
+    request: &RingRequest,
+    quiet_check: Option<&dyn Fn(&UserStatusSettings) -> bool>,
+) -> Result<()> {
+    if User::find_by_id(tx.conn(), request.recipient_id)?.is_none() {
+        return Ok(());
+    }
+    let sound = ring_allowed(tx.conn(), request.recipient_id, Some(request.sender_id), tx.now(), quiet_check)?;
+    publish_ring(tx, request, sound)
 }
 
 /// WS17 evaluates kind=huddle sound policy, then calls this in its write transaction.

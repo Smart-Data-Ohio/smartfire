@@ -49,6 +49,21 @@ impl campfire_db::Job for Invitation {
 }
 impl JobKind for Invitation {}
 
+#[derive(Serialize, Deserialize)]
+#[serde(transparent)]
+struct Ring(campfire_db::models::huddle_invitations::RingRequest);
+impl campfire_db::Job for Ring {
+    const CLASS: &'static str = "Notifications::HuddleRingJob";
+}
+impl JobKind for Ring {}
+
+async fn ring(app: App, job: Ring, _: Execution) -> JobResult {
+    app.db.write(move |tx| {
+        campfire_db::models::huddle_invitations::publish_ring_with_policy(tx, &job.0, None)
+    }).await?;
+    Ok(Outcome::Done)
+}
+
 async fn join(app: App, job: Join, _: Execution) -> JobResult {
     app.db
         .write(move |tx| campfire_db::models::huddle_notices::notify_join(tx, job.0.grant_id))
@@ -93,6 +108,18 @@ pub(crate) async fn recover_unregistered(db: &Database) -> campfire_db::Result<u
 }
 
 pub(super) fn register(registry: &mut Registry) {
+    register_sources(registry);
+    registry.register(ring);
+}
+
+#[cfg(test)]
+pub(super) fn source_registry() -> Registry {
+    let mut registry = Registry::new();
+    register_sources(&mut registry);
+    registry
+}
+
+fn register_sources(registry: &mut Registry) {
     registry.register(cleanup);
     registry.register(presence);
     registry.register(join);

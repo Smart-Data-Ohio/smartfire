@@ -1,6 +1,6 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 257 declarations now have complete assertion coverage mapped below. The other 291 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
+Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 270 declarations now have complete assertion coverage mapped below. The other 278 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
 
 ## Continued slice coverage (after merging WS19b)
 
@@ -18,7 +18,7 @@ Passed titles are backed jointly by those differential tests, the real HTTP/Cabl
 
 ## WS13b domain slices
 
-WS13b adds nine complete revocation, nineteen complete grant and thirty-seven complete invitation and thirty-two complete join-notifier declarations, plus eleven stage, six stream, three voice and eight join-pusher declarations, all ten job declarations and all four reconciler declarations. The invitation corpus retains 136 intermediate results across 38 sequences (one neighboring message assertion remains open). These use actual lifecycle methods and compare persisted rows from pinned Rails, with compiled regression tests for revocation, cleanup rollback, room switching, gateway role enforcement, participant sorting/deduplication and issuance timestamps. The single-row membership creation path now reproduces pinned Rails listener defaults, association errors and commit behavior; WS17 seam signatures remain unchanged. The remaining assigned declarations are still partial/deferred; see `wave4/ws13b-report.md` for the precise handoff.
+WS13b completes all 207 assigned original domain/job/service declarations: nine revocation, 33 grant, 38 invitation, 33 join-notifier, eleven stage, six stream, three voice, thirteen join-pusher, eight ring-policy, ten job and four reconciler declarations. Rendering remains byte-identical to pinned Rails; query counts/shapes and locks run against real SQLite. The merged WS17 policy, durable push adapter and registered ring worker now close the final thirteen dependencies. Neighboring mentions use WS17's full message recorder once; the temporary isolated recorder is removed. No assigned declarations remain deferred. WS13 controller and system rows retain their independent status.
 
 ## Rails declaration coverage by file
 
@@ -43,12 +43,12 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/system/huddle_join_notices_test.rb` | 16 | 0 | 16 |
 | `test/controllers/rooms/stage/hands_controller_test.rb` | 15 | 9 | 6 |
 | `test/system/stage_test.rb` | 15 | 0 | 15 |
-| `test/models/huddle/join_pusher_test.rb` | 13 | 8 | 5 |
+| `test/models/huddle/join_pusher_test.rb` | 13 | 13 | 0 |
 | `test/system/voice_channels_test.rb` | 12 | 0 | 12 |
 | `test/system/huddle_invitations_test.rb` | 10 | 0 | 10 |
 | `test/models/huddle/invitation_resolver_test.rb` | 9 | 9 | 0 |
 | `test/models/huddle_revocation_test.rb` | 9 | 9 | 0 |
-| `test/models/huddle/ring_policy_test.rb` | 8 | 0 | 8 |
+| `test/models/huddle/ring_policy_test.rb` | 8 | 8 | 0 |
 | `test/system/huddle_audio_test.rb` | 8 | 0 | 8 |
 | `test/system/huddle_roster_test.rb` | 8 | 0 | 8 |
 | `test/controllers/users/huddle_presence_controller_test.rb` | 6 | 0 | 6 |
@@ -59,7 +59,7 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 4 | 0 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 4 | 0 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 2 | 0 |
-| **Total** | **548** | **257** | **291** |
+| **Total** | **548** | **270** | **278** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -360,7 +360,7 @@ Owner: WS13b. Passed: all four declarations. The 33 notifier sequences compare e
 
 ## test/jobs/huddle/push_invitation_job_test.rb
 
-Owner: WS13b with WS17 for transport/policy integration. Passed: all four job declarations up to the retained seam. Four actual pinned Rails job cases map to `huddle_invitation_job_test.rs`, with registered-worker persistence/missing-source tests. Recipient-only payloads and off/connected subscription scopes match; transport remains WS17.
+Owner: WS13b. Passed: all four job declarations. Four actual pinned Rails job cases map to `huddle_invitation_job_test.rs`, with registered producer-worker persistence/missing-source tests. Recipient-only payloads and off/connected subscription scopes match. The merged WS17 intent handler evaluates current policy and uses its atomic durable delivery adapter; registered TLS tests verify actual wire delivery.
 
 - **Passed:** pushes the invitation to the recipient only
 - **Passed:** an opted-out recipient gets no push subscriptions
@@ -421,16 +421,16 @@ Owner: WS13b. Passed: 33/33 declarations. The 33 notifier sequences compare exac
 
 ## test/models/huddle/join_pusher_test.rb
 
-Owner: WS13b with WS17 for transport/policy integration. Partial: 8/13 complete assertions at the unchanged `prepare_push` seam. Thirteen Rails sequences cover payload/subscriptions, repeated pushes, timestamp preservation, connection and inbox gates, hidden/off/muted scopes and empty-subscription claims. Each of the five `ws17_*_policy_input` tests runs the assertion against the existing seam and is marked below as depending on WS17. Their huddle-side outcomes pass with pinned Rails policy inputs; policy derivation awaits WS17. Hidden/off/muted scopes are also exercised with policy allowed, so those complete assertions do not depend on the input decision.
+Owner: WS13b. Passed: all 13 declarations. `huddle_join_push_sequences_test.rs` persists the actual DND/allowance/quiet/meeting/OOO records, derives and checks WS17's current `NotificationPolicy`, then passes the original WS13 wire DTO to the real `enqueue_huddle_request` adapter. All 31 intermediate payload/subscription/throttle/timestamp states match pinned Rails. The merged registered bridge/delivery/TLS integration tests exercise the same adapter and complete decrypted payloads. No oracle policy decision is supplied to the adapter.
 
 - **Passed:** pushes the join to the recipient's subscriptions and stamps the throttle
 - **Passed:** a second push inside ten minutes is throttled
 - **Passed:** a push ten minutes later goes out again
-- **WS17-dependent:** a DND recipient gets no push and burns no throttle window
-- **WS17-dependent:** a starred joiner still pushes through DND
-- **WS17-dependent:** a recipient in quiet hours gets no push
-- **WS17-dependent:** a recipient quiet in a meeting gets no push
-- **WS17-dependent:** an out-of-office recipient gets no push unless they keep notifications on
+- **Passed:** a DND recipient gets no push and burns no throttle window
+- **Passed:** a starred joiner still pushes through DND
+- **Passed:** a recipient in quiet hours gets no push
+- **Passed:** a recipient quiet in a meeting gets no push
+- **Passed:** an out-of-office recipient gets no push unless they keep notifications on
 - **Passed:** a connected recipient gets no push and burns no throttle window
 - **Passed:** a switched-off or hidden room gets no push
 - **Passed:** a muted room gets no push and burns no throttle window
@@ -439,16 +439,16 @@ Owner: WS13b with WS17 for transport/policy integration. Partial: 8/13 complete 
 
 ## test/models/huddle/ring_policy_test.rb
 
-Owner: WS13b with WS17 for Notifications::Policy. All eight assertions are ported and run in `huddle_ring_policy_seam_test.rs`: thirteen actual pinned Rails policy outcomes and complete invitation frames pass through the unchanged `publish_ring` seam. Each `ws17_input_*` test supplies the captured policy decision explicitly; the fixture preserves recipient/caller/allow-list/meeting/OOO/override context for integration. All eight remain WS17-dependent until WS17 derives the decision and wires RingPolicy/quiet-check. No test is silently skipped, no policy implementation is claimed, and main has not been merged.
+Owner: WS13b. Passed: all eight declarations. `huddle_ring_policy_seam_test.rs` loads actual persisted Rails recipient/caller/allow-list/meeting/OOO contexts and derives WS17 sound policy before publishing thirteen exact invitation frames. The quiet-check override replaces policy for both original recipients. `registered_ring_worker_uses_current_ws17_policy_and_exact_rails_frames` consumes real intents through the merged production registry and verifies all eleven production-policy frames over a real WebSocket, including caller-specific allowances. No WS17 ignores or pending policy inputs remain.
 
-- **WS17-dependent:** an invitation rings a member who is not in do-not-disturb
-- **WS17-dependent:** do-not-disturb silences the ring
-- **WS17-dependent:** a caller allowed during do-not-disturb still rings
-- **WS17-dependent:** a quiet check override replaces the policy
-- **WS17-dependent:** quiet-during-meetings silences the ring during a busy interval
-- **WS17-dependent:** a caller allowed during do-not-disturb still rings through a meeting
-- **WS17-dependent:** out of office silences the ring unless the member keeps notifications on
-- **WS17-dependent:** a caller allowed during do-not-disturb still rings through out of office
+- **Passed:** an invitation rings a member who is not in do-not-disturb
+- **Passed:** do-not-disturb silences the ring
+- **Passed:** a caller allowed during do-not-disturb still rings
+- **Passed:** a quiet check override replaces the policy
+- **Passed:** quiet-during-meetings silences the ring during a busy interval
+- **Passed:** a caller allowed during do-not-disturb still rings through a meeting
+- **Passed:** out of office silences the ring unless the member keeps notifications on
+- **Passed:** a caller allowed during do-not-disturb still rings through out of office
 
 ## test/models/huddle_grant_test.rb
 
@@ -490,7 +490,7 @@ Owner: WS13b. Passed: 33/33 declarations. The grant sequence corpus covers domai
 
 ## test/models/huddle_invitation_test.rb
 
-Owner: WS13b. Passed: 38/38 declarations. Stateful sequences compare grant/item attributes, huddle JSON and immediate job IDs. `jobs/huddle_neighbor_mention_test.rs` closes the neighboring mention assertion using the real signed Rails Action Text attachment and actual message creation, including eleven recipient/visibility/thread guards and recorder idempotence. The small mention-recorder hook is shared with WS8/WS12; other inbox winners and grouping remain WS12 work.
+Owner: WS13b. Passed: 38/38 declarations. Stateful sequences compare grant/item attributes, huddle JSON and immediate job IDs. `jobs/huddle_neighbor_mention_test.rs` closes the neighboring mention assertion using the real signed Rails Action Text attachment and actual message creation, including eleven recipient/visibility/thread guards and recorder idempotence. The merged WS17 full message recorder now owns this hook; the temporary isolated mention implementation has been removed.
 
 - **Passed:** issuing a grant in a one-to-one DM invites only the other participant
 - **Passed:** issuing a grant never schedules a delayed job

@@ -56,7 +56,7 @@ for script, path, count in [
         detail = "1 neighboring mention; 11 guards; recorder idempotence"
     elif script == "huddle_ring_policy_seam":
         assert sum(len(case["outcomes"]) for case in actual["cases"]) == 13
-        detail = "8 WS17-dependent declarations; 13 policy-input outcomes"
+        detail = "8 real-policy declarations; 13 persisted policy outcomes"
     else:
         detail = "8 SQL/lock/cache cases"
     print(f"{script}: {detail}; regenerated JSON matches")

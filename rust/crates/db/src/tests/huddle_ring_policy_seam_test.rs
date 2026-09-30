@@ -1,8 +1,6 @@
-//! Eight original RingPolicy declarations, executable at the unchanged WS17
-//! publication seam. Each depends on WS17 to derive sound_allowed from the
-//! captured real policy context. These tests prove publication, not that adapter.
+//! All eight RingPolicy declarations derive real WS17 policy from persisted Rails contexts.
 use crate::Timestamp;
-use crate::models::huddle_invitations::{RingRequest, publish_ring};
+use crate::models::huddle_invitations::{RingRequest, ring_allowed, publish_ring_with_policy};
 use crate::tests::TestDb;
 use serde_json::{Value, json};
 
@@ -17,10 +15,6 @@ fn run(name: &str) {
         .iter()
         .find(|v| v["name"] == name)
         .unwrap();
-    assert_eq!(
-        case["depends_on"],
-        "WS17 Notifications::Policy and RingPolicy quiet-check adapter (not merged)"
-    );
     let db = TestDb::new();
     for outcome in case["outcomes"].as_array().unwrap() {
         db.clock.travel_to(Timestamp::from_second(
@@ -33,11 +27,21 @@ fn run(name: &str) {
             sender_id: outcome["sender_id"].as_i64().unwrap(),
             invitation,
         };
-        // Explicit oracle decision: the unmerged WS17 adapter is the sole
-        // remaining dependency, never an assumed policy default.
-        let sound_allowed = outcome["sound_allowed"].as_bool().unwrap();
+        let setup = outcome["setup_sql"].as_str().unwrap().to_owned();
+        db.write(move |tx| { tx.conn().execute_batch(&setup)?; Ok(()) });
+        let quiet = |recipient: &crate::UserStatusSettings| recipient.user.id == crate::fixtures::identify("jason");
+        let override_check = outcome["context"]["quiet_override"].as_bool().unwrap()
+            .then_some(&quiet as &dyn Fn(&crate::UserStatusSettings) -> bool);
+        let sound_allowed = db.read(|conn| ring_allowed(conn, request.recipient_id,
+            outcome["context"]["caller_id"].as_i64(), db.now(), override_check));
+        assert_eq!(serde_json::json!(sound_allowed), outcome["sound_allowed"], "{name} real WS17 decision");
         db.sink.take();
-        db.write(move |tx| publish_ring(tx, &request, sound_allowed));
+        let override_active = outcome["context"]["quiet_override"].as_bool().unwrap();
+        db.write(move |tx| {
+            let quiet = |recipient: &crate::UserStatusSettings| recipient.user.id == crate::fixtures::identify("jason");
+            let check = override_active.then_some(&quiet as &dyn Fn(&crate::UserStatusSettings) -> bool);
+            publish_ring_with_policy(tx, &request, check)
+        });
         let frames = db
             .events()
             .iter()
@@ -51,7 +55,7 @@ fn run(name: &str) {
         assert_eq!(
             json!(frames),
             json!([outcome["broadcast"]]),
-            "WS17-dependent {name}: {}",
+            "{name}: {}",
             outcome["context"]
         );
     }
@@ -59,4 +63,4 @@ fn run(name: &str) {
 macro_rules! cases { ($($name:ident => $case:literal),* $(,)?) => {$ (
     #[test] fn $name() { run($case); }
 )*}; }
-cases!(ws17_input_default => "default", ws17_input_dnd => "dnd", ws17_input_allowed_dnd => "allowed_dnd", ws17_input_quiet_override => "quiet_override", ws17_input_meeting => "meeting", ws17_input_allowed_meeting => "allowed_meeting", ws17_input_ooo => "ooo", ws17_input_allowed_ooo => "allowed_ooo");
+cases!(policy_default => "default", policy_dnd => "dnd", policy_allowed_dnd => "allowed_dnd", policy_quiet_override => "quiet_override", policy_meeting => "meeting", policy_allowed_meeting => "allowed_meeting", policy_ooo => "ooo", policy_allowed_ooo => "allowed_ooo");

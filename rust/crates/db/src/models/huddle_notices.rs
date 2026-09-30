@@ -35,9 +35,9 @@ impl Job for PushInvitationJob {
     const CLASS: &'static str = "Huddle::PushInvitationJob";
 }
 
-/// WS17 supplies Notifications::Policy and the durable delivery handler. `prepare_push` owns
-/// the huddle subscription scopes and conditional join throttle. A request authorizes no
-/// delivery on its own; this class deliberately has no stub handler.
+/// The registered WS17 handler deserializes this intent, evaluates current policy,
+/// and atomically claims the throttle and enqueues delivery. The legacy `prepare_push`
+/// helper remains for isolated subscription/claim checks and is not part of that path.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PushRequest {
     pub kind: PushKind,
@@ -63,7 +63,7 @@ pub struct PushDelivery {
     pub subscriptions: Vec<crate::PushSubscription>,
 }
 
-/// WS17 calls its policy on this transaction's current records, then passes the decision here.
+/// Isolated scope/claim helper. Production uses WS17's `enqueue_huddle_request` instead.
 /// It must enqueue delivery in this same transaction so a rejected enqueue rolls the throttle
 /// back. Invitation queue calls may carry zero subscriptions; joins never burn an empty window.
 pub fn prepare_push(

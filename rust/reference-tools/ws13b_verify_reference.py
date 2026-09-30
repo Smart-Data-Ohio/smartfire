@@ -28,6 +28,8 @@ PATHS = [
     "app/views/rooms/stage/_stream_event.html.erb", "app/views/rooms/stage/_role_event.html.erb",
     "app/views/users/_mention.html.erb", "app/helpers/users_helper.rb",
     "app/services/activity_items/recorder.rb", "test/test_helpers/mention_test_helper.rb",
+    "app/models/user/status_settings.rb", "app/models/calendar/meeting_cache.rb",
+    "app/models/dnd_allowed_user.rb",
 ]
 image = os.environ.get("PARITY_IMAGE", "ws13-reference:d7c7de92")
 raw = subprocess.check_output(["docker", "run", "--rm", "--name", "ws13b-source-check", "--network", "none", "--entrypoint", "sha256sum", image, *[f"/rails/{path}" for path in PATHS]], text=True, cwd=ROOT)

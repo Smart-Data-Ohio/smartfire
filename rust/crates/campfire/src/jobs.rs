@@ -422,4 +422,6 @@ mod tests;
 #[cfg(test)]
 mod huddle_render_tests;
 #[cfg(test)]
+mod huddle_policy_integration_tests;
+#[cfg(test)]
 mod huddle_neighbor_mention_test;

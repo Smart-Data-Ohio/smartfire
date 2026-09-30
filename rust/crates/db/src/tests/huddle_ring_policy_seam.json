@@ -4,9 +4,9 @@
     {
       "name": "default",
       "title": "an invitation rings a member who is not in do-not-disturb",
-      "depends_on": "WS17 Notifications::Policy and RingPolicy quiet-check adapter (not merged)",
       "outcomes": [
         {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until=NULL,ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659;",
           "context": {
             "recipient": {
               "id": 149087659,
@@ -55,9 +55,9 @@
     {
       "name": "dnd",
       "title": "do-not-disturb silences the ring",
-      "depends_on": "WS17 Notifications::Policy and RingPolicy quiet-check adapter (not merged)",
       "outcomes": [
         {
+          "setup_sql": "UPDATE users SET presence_setting='dnd',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until=NULL,ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659;",
           "context": {
             "recipient": {
               "id": 149087659,
@@ -106,9 +106,9 @@
     {
       "name": "allowed_dnd",
       "title": "a caller allowed during do-not-disturb still rings",
-      "depends_on": "WS17 Notifications::Policy and RingPolicy quiet-check adapter (not merged)",
       "outcomes": [
         {
+          "setup_sql": "UPDATE users SET presence_setting='dnd',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until=NULL,ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659; INSERT INTO dnd_allowed_users(id,allowed_user_id,created_at,updated_at,user_id) VALUES(1,127326141,'2026-09-23 12:00:00','2026-09-23 12:00:00',149087659);",
           "context": {
             "recipient": {
               "id": 149087659,
@@ -155,6 +155,7 @@
           }
         },
         {
+          "setup_sql": "UPDATE users SET presence_setting='dnd',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until=NULL,ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659; INSERT INTO dnd_allowed_users(id,allowed_user_id,created_at,updated_at,user_id) VALUES(1,127326141,'2026-09-23 12:00:00','2026-09-23 12:00:00',149087659);",
           "context": {
             "recipient": {
               "id": 149087659,
@@ -205,9 +206,9 @@
     {
       "name": "quiet_override",
       "title": "a quiet check override replaces the policy",
-      "depends_on": "WS17 Notifications::Policy and RingPolicy quiet-check adapter (not merged)",
       "outcomes": [
         {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until=NULL,ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659;",
           "context": {
             "recipient": {
               "id": 149087659,
@@ -252,6 +253,7 @@
           }
         },
         {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until=NULL,ooo_notify_enabled=0 WHERE id=127326141; DELETE FROM dnd_allowed_users WHERE user_id=127326141; DELETE FROM calendar_meeting_caches WHERE user_id=127326141;",
           "context": {
             "recipient": {
               "id": 127326141,
@@ -300,9 +302,9 @@
     {
       "name": "meeting",
       "title": "quiet-during-meetings silences the ring during a busy interval",
-      "depends_on": "WS17 Notifications::Policy and RingPolicy quiet-check adapter (not merged)",
       "outcomes": [
         {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=1,meeting_dnd_enabled=1,ooo_until=NULL,ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659; INSERT INTO calendar_meeting_caches(id,busy_intervals,created_at,fetch_error,fetched_at,in_meeting_broadcast,ooo_intervals,refresh_pending_at,updated_at,user_id) VALUES(1,'[[\"2026-09-23T11:55:00Z\",\"2026-09-23T12:55:00Z\"]]','2026-09-23 12:00:00',NULL,'2026-09-23 12:00:00',NULL,'[]',NULL,'2026-09-23 12:00:00',149087659);",
           "context": {
             "recipient": {
               "id": 149087659,
@@ -367,9 +369,9 @@
     {
       "name": "allowed_meeting",
       "title": "a caller allowed during do-not-disturb still rings through a meeting",
-      "depends_on": "WS17 Notifications::Policy and RingPolicy quiet-check adapter (not merged)",
       "outcomes": [
         {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=1,meeting_dnd_enabled=1,ooo_until=NULL,ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659; INSERT INTO dnd_allowed_users(id,allowed_user_id,created_at,updated_at,user_id) VALUES(1,127326141,'2026-09-23 12:00:00','2026-09-23 12:00:00',149087659); INSERT INTO calendar_meeting_caches(id,busy_intervals,created_at,fetch_error,fetched_at,in_meeting_broadcast,ooo_intervals,refresh_pending_at,updated_at,user_id) VALUES(1,'[[\"2026-09-23T11:55:00Z\",\"2026-09-23T12:55:00Z\"]]','2026-09-23 12:00:00',NULL,'2026-09-23 12:00:00',NULL,'[]',NULL,'2026-09-23 12:00:00',149087659);",
           "context": {
             "recipient": {
               "id": 149087659,
@@ -432,6 +434,7 @@
           }
         },
         {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=1,meeting_dnd_enabled=1,ooo_until=NULL,ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659; INSERT INTO dnd_allowed_users(id,allowed_user_id,created_at,updated_at,user_id) VALUES(1,127326141,'2026-09-23 12:00:00','2026-09-23 12:00:00',149087659); INSERT INTO calendar_meeting_caches(id,busy_intervals,created_at,fetch_error,fetched_at,in_meeting_broadcast,ooo_intervals,refresh_pending_at,updated_at,user_id) VALUES(1,'[[\"2026-09-23T11:55:00Z\",\"2026-09-23T12:55:00Z\"]]','2026-09-23 12:00:00',NULL,'2026-09-23 12:00:00',NULL,'[]',NULL,'2026-09-23 12:00:00',149087659);",
           "context": {
             "recipient": {
               "id": 149087659,
@@ -498,9 +501,9 @@
     {
       "name": "ooo",
       "title": "out of office silences the ring unless the member keeps notifications on",
-      "depends_on": "WS17 Notifications::Policy and RingPolicy quiet-check adapter (not merged)",
       "outcomes": [
         {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until='2026-09-24 12:00:00',ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659;",
           "context": {
             "recipient": {
               "id": 149087659,
@@ -545,6 +548,7 @@
           }
         },
         {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until='2026-09-24 12:00:00',ooo_notify_enabled=1 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659;",
           "context": {
             "recipient": {
               "id": 149087659,
@@ -593,9 +597,9 @@
     {
       "name": "allowed_ooo",
       "title": "a caller allowed during do-not-disturb still rings through out of office",
-      "depends_on": "WS17 Notifications::Policy and RingPolicy quiet-check adapter (not merged)",
       "outcomes": [
         {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until='2026-09-24 12:00:00',ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659; INSERT INTO dnd_allowed_users(id,allowed_user_id,created_at,updated_at,user_id) VALUES(1,127326141,'2026-09-23 12:00:00','2026-09-23 12:00:00',149087659);",
           "context": {
             "recipient": {
               "id": 149087659,
@@ -642,6 +646,7 @@
           }
         },
         {
+          "setup_sql": "UPDATE users SET presence_setting='auto',dnd_enabled=0,dnd_until=NULL,quiet_hours_enabled=0,quiet_hours_start_minute=NULL,quiet_hours_end_minute=NULL,time_zone=NULL,meeting_status_enabled=0,meeting_dnd_enabled=0,ooo_until='2026-09-24 12:00:00',ooo_notify_enabled=0 WHERE id=149087659; DELETE FROM dnd_allowed_users WHERE user_id=149087659; DELETE FROM calendar_meeting_caches WHERE user_id=149087659; INSERT INTO dnd_allowed_users(id,allowed_user_id,created_at,updated_at,user_id) VALUES(1,127326141,'2026-09-23 12:00:00','2026-09-23 12:00:00',149087659);",
           "context": {
             "recipient": {
               "id": 149087659,

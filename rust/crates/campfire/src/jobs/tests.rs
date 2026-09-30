@@ -63,8 +63,7 @@ async fn huddle_join_and_invitation_workers_persist_the_payload_for_ws17() {
     let Some(test) = TestApp::boot().await else { return; };
     test.booted.jobs.shutdown(Duration::from_secs(2)).await;
     let app = test.booted.app.clone();
-    let mut registry = Registry::new();
-    huddle::register(&mut registry);
+    let registry = huddle::source_registry();
     let producer = campfire_jobs::start(app.db.clone(), app.jobs.queue.clone(), registry, app.clone(), runner_config(&app.config));
     let grant = app.db.write(|tx| {
         let session = campfire_db::Session::start(tx, DAVID, None, None)?;
@@ -103,8 +102,7 @@ async fn huddle_issuance_rings_and_pushes_once_and_suppresses_the_join_notice() 
     let Some(test)=TestApp::boot().await else { return; };
     test.booted.jobs.shutdown(Duration::from_secs(2)).await;
     let app=test.booted.app.clone();
-    let mut registry = Registry::new();
-    huddle::register(&mut registry);
+    let registry = huddle::source_registry();
     let producer = campfire_jobs::start(app.db.clone(), app.jobs.queue.clone(), registry, app.clone(), runner_config(&app.config));
     let grant=app.db.write(|tx| {
         let session=campfire_db::Session::start(tx,DAVID,None,None)?;
