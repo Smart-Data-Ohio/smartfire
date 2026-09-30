@@ -1,6 +1,8 @@
 //! `reference/app/models/user.rb` and `user/*.rb` (Role, Bot, Bannable, Mentionable; Avatar
 //! and Transferable are signed ids, which live in `rails_compat`).
 
+pub mod lifecycle;
+
 use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, ValueRef};
 use rusqlite::{Connection, Row, params};
 use sha2::{Digest, Sha256};
@@ -430,6 +432,9 @@ impl User {
             sets.push(("role", Box::new(role)));
         }
         if let Some(status) = changes.status.filter(|s| *s != self.status) {
+            if status != Status::Active {
+                lifecycle::revoke_agent_grants(tx, self.id)?;
+            }
             self.status = status;
             sets.push(("status", Box::new(status)));
         }
@@ -527,6 +532,10 @@ impl User {
     /// non-direct memberships, push subscriptions, searches and sessions, and scrambles the
     /// email address.
     pub fn deactivate(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        self.deactivate_with_audit(tx, &crate::models::audit_log::Context::default())
+    }
+
+    pub fn deactivate_with_audit(&mut self, tx: &mut Tx<'_>, context: &crate::models::audit_log::Context) -> Result<()> {
         self.close_remote_connections(tx, false);
         let conn = tx.conn();
         conn.execute_cached(
@@ -541,11 +550,13 @@ impl User {
             r#"DELETE FROM "searches" WHERE "searches"."user_id" = ?"#,
             [self.id],
         )?;
+        conn.execute_cached("DELETE FROM two_factor_setup_secrets WHERE session_id IN (SELECT id FROM sessions WHERE user_id=?)", [self.id])?;
         conn.execute_cached(
             r#"DELETE FROM "sessions" WHERE "sessions"."user_id" = ?"#,
             [self.id],
         )?;
         conn.execute_cached("DELETE FROM user_devices WHERE user_id = ?", [self.id])?;
+        lifecycle::deactivate(tx, self.id, context)?;
         let email = self.deactivated_email_address();
         self.update(
             tx,
@@ -566,6 +577,10 @@ impl User {
 
     /// `User::Bannable#ban`
     pub fn ban(&mut self, tx: &mut Tx<'_>) -> Result<()> {
+        self.ban_with_audit(tx, &crate::models::audit_log::Context::default())
+    }
+
+    pub fn ban_with_audit(&mut self, tx: &mut Tx<'_>, context: &crate::models::audit_log::Context) -> Result<()> {
         // create_bans_from_sessions: `sessions.pluck(:ip_address).compact_blank.uniq`
         let ips: Vec<Option<String>> = query_all(
             tx.conn(),
@@ -587,6 +602,7 @@ impl User {
             [self.id],
         )?;
         tx.emit_after_commit(Event::RemoveBannedContent { user_id: self.id });
+        lifecycle::suspend_owned_agents(tx, self.id, context)?;
         self.update(
             tx,
             UserChanges {

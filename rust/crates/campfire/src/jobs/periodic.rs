@@ -145,6 +145,15 @@ pub fn periodic(intervals: PeriodicIntervals) -> Periodic<App> {
         crate::integrations::google::calendar::renew(&app).await?;
         Ok(())
     }));
+    use crate::integrations::action_claims;
+    periodic.task(Task::new("stuck GitHub claims", action_claims::SWEEP_INTERVAL, |app: App| async move {
+        action_claims::recover_stuck_claims(&app.db, action_claims::GITHUB, app.db.env().now()).await;
+        Ok(())
+    }));
+    periodic.task(Task::new("stuck Fizzy claims", action_claims::SWEEP_INTERVAL, |app: App| async move {
+        action_claims::recover_stuck_claims(&app.db, action_claims::FIZZY, app.db.env().now()).await;
+        Ok(())
+    }));
     periodic.task(Task::new("retention prune", intervals.retention, |app: App| async move {
         app.db.write(|tx| { tx.emit_after_commit(campfire_db::Event::job(&campfire_db::models::retention::PruneJob{})); Ok(()) }).await?;
         Ok(())

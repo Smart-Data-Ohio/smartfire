@@ -355,6 +355,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "hkdf",
+ "hmac",
  "http",
  "http-body-util",
  "hyper",
@@ -365,6 +366,7 @@ dependencies = [
  "percent-encoding",
  "rails_compat",
  "rand 0.9.5",
+ "rcgen",
  "regex",
  "ring",
  "rusqlite",
@@ -595,6 +597,7 @@ version = "0.1.0"
 dependencies = [
  "askama",
  "campfire_assets",
+ "campfire_richtext",
  "campfire_routes",
  "campfire_storage",
  "jiff",

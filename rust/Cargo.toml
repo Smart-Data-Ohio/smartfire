@@ -28,7 +28,7 @@ tower        = "0.5"
 tower-http   = { version = "0.6", features = ["limit", "timeout", "fs"] }
 hyper        = "1"
 serde        = { version = "1", features = ["derive"] }
-serde_json   = { version = "1", features = ["preserve_order"] }
+serde_json   = { version = "1", features = ["preserve_order", "raw_value"] }
 serde_yaml   = "0.9"
 rusqlite     = { version = "0.37", features = ["bundled", "functions", "hooks", "serde_json"] }
 askama       = "0.14"

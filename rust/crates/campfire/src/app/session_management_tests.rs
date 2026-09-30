@@ -399,7 +399,7 @@ async fn session_page_bodies_and_profile_panel_match_pinned_rails_bytes() {
                 if name=="profile" {users::ProfileSessions{ctx}.render().unwrap()} else {users::SessionsIndex{ctx,sessions:if name=="one"{vec![rows[0].clone()]}else{rows.clone()},now:"2026-03-02T16:00:00Z".parse().unwrap()}.as_content().render().unwrap()}
             })
         });
-        assert_eq!(actual,goldens[name].as_str().unwrap(),"{name}");
+        assert!(super::asset_goldens::compare(name, &actual, goldens[name].as_str().unwrap()));
     }
 }
 #[tokio::test]

@@ -1,0 +1,835 @@
+{
+  "reference": "d7c7de92",
+  "cases": [
+    {
+      "name": "success",
+      "url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "input_url": "https://x.com/jack/status/424242",
+      "body": "{\"code\":200,\"tweet\":{\"id\":\"424242\",\"text\":\"just setting up my twttr\",\"created_timestamp\":1142974214,\"likes\":310826,\"retweets\":124658,\"replies\":18041,\"author\":{\"name\":\"jack\",\"screen_name\":\"jack\",\"avatar_url\":\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\"}}}",
+      "status": 200,
+      "path": "/jack/status/424242",
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": "jack",
+        "author_name": "jack",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "just setting up my twttr",
+        "posted_at": "2006-03-21 20:50:14.000000",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "photos",
+      "url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "input_url": "https://x.com/jack/status/424242",
+      "body": "{\"code\":200,\"tweet\":{\"id\":\"424242\",\"text\":\"just setting up my twttr\",\"created_timestamp\":1142974214,\"likes\":310826,\"retweets\":124658,\"replies\":18041,\"author\":{\"name\":\"jack\",\"screen_name\":\"jack\",\"avatar_url\":\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\"},\"media\":{\"photos\":[{\"type\":\"photo\",\"url\":\"https://pbs.twimg.com/media/a.jpg?name=orig\",\"width\":800,\"height\":532},{\"type\":\"photo\",\"url\":\"https://pbs.twimg.com/media/b.jpg\",\"width\":640,\"height\":480,\"altText\":\"A desk\"}]}}}",
+      "status": 200,
+      "path": "/jack/status/424242",
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": "jack",
+        "author_name": "jack",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "just setting up my twttr",
+        "posted_at": "2006-03-21 20:50:14.000000",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/media/a.jpg?name=orig",
+            "thumbnail_url": null,
+            "width": 800,
+            "height": 532,
+            "alt": null
+          },
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/media/b.jpg",
+            "thumbnail_url": null,
+            "width": 640,
+            "height": 480,
+            "alt": "A desk"
+          }
+        ],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "video",
+      "url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "input_url": "https://x.com/jack/status/424242",
+      "body": "{\"code\":200,\"tweet\":{\"id\":\"424242\",\"text\":\"just setting up my twttr\",\"created_timestamp\":1142974214,\"likes\":310826,\"retweets\":124658,\"replies\":18041,\"author\":{\"name\":\"jack\",\"screen_name\":\"jack\",\"avatar_url\":\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\"},\"media\":{\"photos\":[{\"type\":\"photo\",\"url\":null}],\"videos\":[{\"type\":\"video\",\"url\":\"https://video.twimg.com/1/v.mp4?tag=16\",\"thumbnail_url\":\"https://pbs.twimg.com/1/t.jpg\",\"width\":1280,\"height\":720}]}}}",
+      "status": 200,
+      "path": "/jack/status/424242",
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": "jack",
+        "author_name": "jack",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "just setting up my twttr",
+        "posted_at": "2006-03-21 20:50:14.000000",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [
+          {
+            "type": "video",
+            "url": "https://video.twimg.com/1/v.mp4?tag=16",
+            "thumbnail_url": "https://pbs.twimg.com/1/t.jpg",
+            "width": 1280,
+            "height": 720,
+            "alt": null
+          }
+        ],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "quote",
+      "url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "input_url": "https://x.com/jack/status/424242",
+      "body": "{\"code\":200,\"tweet\":{\"id\":\"424242\",\"text\":\"just setting up my twttr\",\"created_timestamp\":1142974214,\"likes\":310826,\"retweets\":124658,\"replies\":18041,\"author\":{\"name\":\"jack\",\"screen_name\":\"jack\",\"avatar_url\":\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\"},\"quote\":{\"url\":\"https://x.com/NASA/status/123\",\"text\":\"We go up\",\"author\":{\"name\":\"NASA\",\"screen_name\":\"NASA\"},\"media\":{\"photos\":[{\"type\":\"photo\",\"url\":\"https://pbs.twimg.com/q.jpg\"}]}}}}",
+      "status": 200,
+      "path": "/jack/status/424242",
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": "jack",
+        "author_name": "jack",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "just setting up my twttr",
+        "posted_at": "2006-03-21 20:50:14.000000",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [],
+        "quote": {
+          "url": "https://x.com/NASA/status/123",
+          "author_name": "NASA",
+          "author_handle": "NASA",
+          "text": "We go up"
+        },
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "html",
+      "url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "input_url": "https://x.com/jack/status/424242",
+      "body": "{\"code\":200,\"tweet\":{\"id\":\"424242\",\"text\":\"hi \\u003cimg src=x onerror=alert(1)\\u003e there\",\"created_timestamp\":1142974214,\"likes\":310826,\"retweets\":124658,\"replies\":18041,\"author\":{\"name\":\"\\u003cb\\u003ejack\\u003c/b\\u003e\",\"screen_name\":\"jack\",\"avatar_url\":\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\"}}}",
+      "status": 200,
+      "path": "/jack/status/424242",
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": "jack",
+        "author_name": "jack",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "hi  there",
+        "posted_at": "2006-03-21 20:50:14.000000",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "evil hosts",
+      "url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "input_url": "https://x.com/jack/status/424242",
+      "body": "{\"code\":200,\"tweet\":{\"id\":\"424242\",\"text\":\"just setting up my twttr\",\"created_timestamp\":1142974214,\"likes\":310826,\"retweets\":124658,\"replies\":18041,\"author\":{\"name\":\"jack\",\"screen_name\":\"jack\",\"avatar_url\":\"https://evil.example/avatar.jpg\"},\"media\":{\"photos\":[{\"type\":\"photo\",\"url\":\"https://evil.example/pic.jpg\"}],\"videos\":[{\"type\":\"video\",\"url\":\"https://evil.example/v.mp4\",\"thumbnail_url\":\"https://pbs.twimg.com/t.jpg\"}]}}}",
+      "status": 200,
+      "path": "/jack/status/424242",
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": "jack",
+        "author_name": "jack",
+        "author_avatar_url": null,
+        "text": "just setting up my twttr",
+        "posted_at": "2006-03-21 20:50:14.000000",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "alt limits",
+      "url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "input_url": "https://x.com/jack/status/424242",
+      "body": "{\"code\":200,\"tweet\":{\"id\":\"424242\",\"text\":\"just setting up my twttr\",\"created_timestamp\":1142974214,\"likes\":310826,\"retweets\":124658,\"replies\":18041,\"author\":{\"name\":\"jack\",\"screen_name\":\"jack\",\"avatar_url\":\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\"},\"media\":{\"photos\":[{\"type\":\"photo\",\"url\":\"https://pbs.twimg.com/a.jpg\",\"altText\":\"\\u003cb\\u003ehi\\u003c/b\\u003e\"},{\"type\":\"photo\",\"url\":\"https://pbs.twimg.com/b.jpg\",\"altText\":\"yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\"}]}}}",
+      "status": 200,
+      "path": "/jack/status/424242",
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": "jack",
+        "author_name": "jack",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "just setting up my twttr",
+        "posted_at": "2006-03-21 20:50:14.000000",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/a.jpg",
+            "thumbnail_url": null,
+            "width": null,
+            "height": null,
+            "alt": "hi"
+          },
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/b.jpg",
+            "thumbnail_url": null,
+            "width": null,
+            "height": null,
+            "alt": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"
+          }
+        ],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "media cap/coercion",
+      "url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "input_url": "https://x.com/jack/status/424242",
+      "body": "{\"code\":200,\"tweet\":{\"id\":\"424242\",\"text\":\"just setting up my twttr\",\"created_timestamp\":1142974214,\"likes\":\"123\",\"retweets\":-3,\"replies\":2.9,\"author\":{\"name\":\"jack\",\"screen_name\":\"jack\",\"avatar_url\":\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\"},\"media\":{\"photos\":[null,\"bad\",{\"type\":\"gif\",\"url\":\"https://video.twimg.com/g.mp4\",\"thumbnail_url\":\"https://pbs.twimg.com/g.jpg\",\"width\":\"0x10\",\"height\":\"08\",\"altText\":\" \",\"alt\":\"fallback\"},{\"type\":\"photo\",\"url\":\"https://pbs.twimg.com/1.jpg\",\"width\":2.9,\"height\":\"2_000\"},{\"type\":\"photo\",\"url\":\"https://pbs.twimg.com/2.jpg\",\"width\":2.9,\"height\":\"2_000\"},{\"type\":\"photo\",\"url\":\"https://pbs.twimg.com/3.jpg\",\"width\":2.9,\"height\":\"2_000\"},{\"type\":\"photo\",\"url\":\"https://pbs.twimg.com/4.jpg\",\"width\":2.9,\"height\":\"2_000\"},{\"type\":\"photo\",\"url\":\"https://pbs.twimg.com/5.jpg\",\"width\":2.9,\"height\":\"2_000\"},{\"type\":\"photo\",\"url\":\"https://pbs.twimg.com/6.jpg\",\"width\":2.9,\"height\":\"2_000\"}]}}}",
+      "status": 200,
+      "path": "/jack/status/424242",
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": "jack",
+        "author_name": "jack",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "just setting up my twttr",
+        "posted_at": "2006-03-21 20:50:14.000000",
+        "replies": 2,
+        "reposts": -3,
+        "likes": null,
+        "media": [
+          {
+            "type": "gif",
+            "url": "https://video.twimg.com/g.mp4",
+            "thumbnail_url": "https://pbs.twimg.com/g.jpg",
+            "width": 16,
+            "height": null,
+            "alt": "fallback"
+          },
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/1.jpg",
+            "thumbnail_url": null,
+            "width": 2,
+            "height": 2000,
+            "alt": null
+          },
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/2.jpg",
+            "thumbnail_url": null,
+            "width": 2,
+            "height": 2000,
+            "alt": null
+          },
+          {
+            "type": "photo",
+            "url": "https://pbs.twimg.com/3.jpg",
+            "thumbnail_url": null,
+            "width": 2,
+            "height": 2000,
+            "alt": null
+          }
+        ],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "scheme case",
+      "url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "input_url": "https://x.com/jack/status/424242",
+      "body": "{\"code\":200,\"tweet\":{\"id\":\"424242\",\"text\":\"just setting up my twttr\",\"created_timestamp\":1142974214,\"likes\":310826,\"retweets\":124658,\"replies\":18041,\"author\":{\"name\":\"jack\",\"screen_name\":\"jack\",\"avatar_url\":\"HTTPs://pbs.twimg.com/a.jpg\"},\"media\":{\"photos\":[{\"type\":\"photo\",\"url\":\"HTTPS://pbs.twimg.com/a.jpg\"}],\"videos\":[{\"type\":\"video\",\"url\":\"HTTPS://video.twimg.com/a.mp4\",\"thumbnail_url\":\"HTTPs://pbs.twimg.com/t.jpg\"}]}}}",
+      "status": 200,
+      "path": "/jack/status/424242",
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": "jack",
+        "author_name": "jack",
+        "author_avatar_url": "HTTPs://pbs.twimg.com/a.jpg",
+        "text": "just setting up my twttr",
+        "posted_at": "2006-03-21 20:50:14.000000",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [
+          {
+            "type": "photo",
+            "url": "HTTPS://pbs.twimg.com/a.jpg",
+            "thumbnail_url": null,
+            "width": null,
+            "height": null,
+            "alt": null
+          },
+          {
+            "type": "video",
+            "url": "HTTPS://video.twimg.com/a.mp4",
+            "thumbnail_url": "HTTPs://pbs.twimg.com/t.jpg",
+            "width": null,
+            "height": null,
+            "alt": null
+          }
+        ],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "twimg strict",
+      "url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "input_url": "https://x.com/jack/status/424242",
+      "body": "{\"code\":200,\"tweet\":{\"id\":\"424242\",\"text\":\"just setting up my twttr\",\"created_timestamp\":1142974214,\"likes\":310826,\"retweets\":124658,\"replies\":18041,\"author\":{\"screen_name\":\" jack \",\"name\":false,\"avatar_url\":\"https://PBS.TWIMG.COM/a.jpg\"},\"media\":{\"photos\":[{\"type\":\"photo\",\"url\":\"http://pbs.twimg.com/a\"},{\"type\":\"photo\",\"url\":\"https://pbs.twimg.com.evil/a\"},{\"type\":\"photo\",\"url\":\"https://pbs.twimg.com/a b\"},{\"type\":\"photo\",\"url\":\"https://user:pass@pbs.twimg.com:444/a?x=1#f\"}],\"videos\":[{\"type\":\"gif\",\"url\":\"https://video.twimg.com/a\",\"thumbnail_url\":null}]}}}",
+      "status": 200,
+      "path": "/jack/status/424242",
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": "jack",
+        "author_name": "false",
+        "author_avatar_url": null,
+        "text": "just setting up my twttr",
+        "posted_at": "2006-03-21 20:50:14.000000",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [
+          {
+            "type": "photo",
+            "url": "https://user:pass@pbs.twimg.com:444/a?x=1#f",
+            "thumbnail_url": null,
+            "width": null,
+            "height": null,
+            "alt": null
+          }
+        ],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "empty/coercion",
+      "url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "input_url": "https://x.com/jack/status/424242",
+      "body": "{\"code\":200,\"tweet\":{\"id\":\"\",\"text\":false,\"author\":{\"screen_name\":\"not.a.handle\",\"name\":[\"a\",1]},\"quote\":{\"text\":\"\\u003cb\\u003e\\u003c/b\\u003e\"},\"created_at\":\"bad\",\"likes\":false}}",
+      "status": 200,
+      "path": "/jack/status/424242",
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": null,
+        "author_name": "[\"a\", 1]",
+        "author_avatar_url": null,
+        "text": "false",
+        "posted_at": null,
+        "replies": null,
+        "reposts": null,
+        "likes": null,
+        "media": [],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "entities/script",
+      "url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "input_url": "https://x.com/jack/status/424242",
+      "body": "{\"code\":200,\"tweet\":{\"id\":\"424242\",\"text\":\"Tom \\u0026amp; Jerry\\u003cscript\\u003ebad\\u003c/script\\u003e\\u003cstyle\\u003ecss\\u003c/style\\u003e \\u0026lt;b\\u0026gt;\\\\u00a0\",\"created_timestamp\":1142974214,\"likes\":310826,\"retweets\":124658,\"replies\":18041,\"author\":{\"screen_name\":\"abcdefghijklmnop\",\"name\":\" \\u0026quot;name\\u0026quot; \"}}}",
+      "status": 200,
+      "path": "/jack/status/424242",
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": null,
+        "author_name": "\"name\"",
+        "author_avatar_url": null,
+        "text": "Tom &amp; Jerrybadcss &lt;b&gt;\\u00a0",
+        "posted_at": "2006-03-21 20:50:14.000000",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "text limit",
+      "url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "input_url": "https://x.com/jack/status/424242",
+      "body": "{\"code\":200,\"tweet\":{\"id\":\"424242\",\"text\":\"ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé\",\"created_timestamp\":1142974214,\"likes\":310826,\"retweets\":124658,\"replies\":18041,\"author\":{\"name\":\"jack\",\"screen_name\":\"jack\",\"avatar_url\":\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\"}}}",
+      "status": 200,
+      "path": "/jack/status/424242",
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": "jack",
+        "author_name": "jack",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+        "posted_at": "2006-03-21 20:50:14.000000",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "float timestamp",
+      "url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "input_url": "https://x.com/jack/status/424242",
+      "body": "{\"code\":200,\"tweet\":{\"id\":\"424242\",\"text\":\"just setting up my twttr\",\"created_timestamp\":1142974214.123456,\"likes\":310826,\"retweets\":124658,\"replies\":18041,\"author\":{\"name\":\"jack\",\"screen_name\":\"jack\",\"avatar_url\":\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\"}}}",
+      "status": 200,
+      "path": "/jack/status/424242",
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": "jack",
+        "author_name": "jack",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "just setting up my twttr",
+        "posted_at": "2006-03-21 20:50:14.123456",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "created_at",
+      "url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "input_url": "https://x.com/jack/status/424242",
+      "body": "{\"code\":200,\"tweet\":{\"id\":\"424242\",\"text\":\"just setting up my twttr\",\"likes\":310826,\"retweets\":124658,\"replies\":18041,\"author\":{\"name\":\"jack\",\"screen_name\":\"jack\",\"avatar_url\":\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\"},\"created_at\":\"Tue Mar 21 20:50:14 +0000 2006\"}}",
+      "status": 200,
+      "path": "/jack/status/424242",
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": "jack",
+        "author_name": "jack",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "just setting up my twttr",
+        "posted_at": "2006-03-21 20:50:14.000000",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "iso date",
+      "url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "input_url": "https://x.com/jack/status/424242",
+      "body": "{\"code\":200,\"tweet\":{\"id\":\"424242\",\"text\":\"just setting up my twttr\",\"likes\":310826,\"retweets\":124658,\"replies\":18041,\"author\":{\"name\":\"jack\",\"screen_name\":\"jack\",\"avatar_url\":\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\"},\"created_at\":\"2026-09-30T10:22:33.123456-04:00\"}}",
+      "status": 200,
+      "path": "/jack/status/424242",
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": "jack",
+        "author_name": "jack",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "just setting up my twttr",
+        "posted_at": "2026-09-30 14:22:33.123456",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "no date",
+      "url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "input_url": "https://x.com/jack/status/424242",
+      "body": "{\"code\":200,\"tweet\":{\"id\":\"424242\",\"text\":\"just setting up my twttr\",\"likes\":310826,\"retweets\":124658,\"replies\":18041,\"author\":{\"name\":\"jack\",\"screen_name\":\"jack\",\"avatar_url\":\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\"}}}",
+      "status": 200,
+      "path": "/jack/status/424242",
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": "jack",
+        "author_name": "jack",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "just setting up my twttr",
+        "posted_at": null,
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "http404",
+      "input_url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "status": 404,
+      "body": "",
+      "path": "/jack/status/424242",
+      "initial": {
+        "text": "old text",
+        "author_name": "old author",
+        "media": [
+          {
+            "type": "photo"
+          }
+        ]
+      },
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": null,
+        "author_name": "old author",
+        "author_avatar_url": null,
+        "text": "old text",
+        "posted_at": null,
+        "replies": null,
+        "reposts": null,
+        "likes": null,
+        "media": [
+          {
+            "type": "photo"
+          }
+        ],
+        "quote": null,
+        "fetch_error": "Post not found on X"
+      }
+    },
+    {
+      "name": "http502",
+      "input_url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "status": 502,
+      "body": "",
+      "path": "/jack/status/424242",
+      "initial": {
+        "text": "old text",
+        "author_name": "old author",
+        "media": [
+          {
+            "type": "photo"
+          }
+        ]
+      },
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": null,
+        "author_name": "old author",
+        "author_avatar_url": null,
+        "text": "old text",
+        "posted_at": null,
+        "replies": null,
+        "reposts": null,
+        "likes": null,
+        "media": [
+          {
+            "type": "photo"
+          }
+        ],
+        "quote": null,
+        "fetch_error": "fxtwitter returned 502"
+      }
+    },
+    {
+      "name": "not found",
+      "input_url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "status": 200,
+      "body": "{\"code\":404,\"tweet\":null}",
+      "path": "/jack/status/424242",
+      "initial": {
+        "text": "old text",
+        "author_name": "old author",
+        "media": [
+          {
+            "type": "photo"
+          }
+        ]
+      },
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": null,
+        "author_name": "old author",
+        "author_avatar_url": null,
+        "text": "old text",
+        "posted_at": null,
+        "replies": null,
+        "reposts": null,
+        "likes": null,
+        "media": [
+          {
+            "type": "photo"
+          }
+        ],
+        "quote": null,
+        "fetch_error": "Post not found on X"
+      }
+    },
+    {
+      "name": "json error",
+      "input_url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "status": 200,
+      "body": "{",
+      "path": "/jack/status/424242",
+      "initial": {
+        "text": "old text",
+        "author_name": "old author",
+        "media": [
+          {
+            "type": "photo"
+          }
+        ]
+      },
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": null,
+        "author_name": "old author",
+        "author_avatar_url": null,
+        "text": "old text",
+        "posted_at": null,
+        "replies": null,
+        "reposts": null,
+        "likes": null,
+        "media": [
+          {
+            "type": "photo"
+          }
+        ],
+        "quote": null,
+        "fetch_error": "Could not load this post"
+      }
+    },
+    {
+      "name": "array",
+      "input_url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "status": 200,
+      "body": "[]",
+      "path": "/jack/status/424242",
+      "initial": {
+        "text": "old text",
+        "author_name": "old author",
+        "media": [
+          {
+            "type": "photo"
+          }
+        ]
+      },
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": null,
+        "author_name": "old author",
+        "author_avatar_url": null,
+        "text": "old text",
+        "posted_at": null,
+        "replies": null,
+        "reposts": null,
+        "likes": null,
+        "media": [
+          {
+            "type": "photo"
+          }
+        ],
+        "quote": null,
+        "fetch_error": "Could not load this post"
+      }
+    },
+    {
+      "name": "depth",
+      "input_url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "status": 200,
+      "body": "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]",
+      "path": "/jack/status/424242",
+      "initial": {
+        "text": "old text",
+        "author_name": "old author",
+        "media": [
+          {
+            "type": "photo"
+          }
+        ]
+      },
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": null,
+        "author_name": "old author",
+        "author_avatar_url": null,
+        "text": "old text",
+        "posted_at": null,
+        "replies": null,
+        "reposts": null,
+        "likes": null,
+        "media": [
+          {
+            "type": "photo"
+          }
+        ],
+        "quote": null,
+        "fetch_error": "Could not load this post"
+      }
+    },
+    {
+      "name": "no tweet",
+      "input_url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "status": 200,
+      "body": "{\"tweet\":false}",
+      "path": "/jack/status/424242",
+      "initial": {
+        "text": "old text",
+        "author_name": "old author",
+        "media": [
+          {
+            "type": "photo"
+          }
+        ]
+      },
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": null,
+        "author_name": "old author",
+        "author_avatar_url": null,
+        "text": "old text",
+        "posted_at": null,
+        "replies": null,
+        "reposts": null,
+        "likes": null,
+        "media": [
+          {
+            "type": "photo"
+          }
+        ],
+        "quote": null,
+        "fetch_error": "Could not load this post"
+      }
+    },
+    {
+      "name": "handleless",
+      "input_url": "https://x.com/i/status/424243",
+      "post_id": "424243",
+      "status": 200,
+      "body": "{\"tweet\":{\"id\":\"424243\",\"text\":\"just setting up my twttr\",\"created_timestamp\":1142974214,\"likes\":310826,\"retweets\":124658,\"replies\":18041,\"author\":{\"name\":\"jack\",\"screen_name\":\"jack\",\"avatar_url\":\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\"}}}",
+      "path": "/i/status/424243",
+      "result": {
+        "url": "https://x.com/jack/status/424243",
+        "author_handle": "jack",
+        "author_name": "jack",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "just setting up my twttr",
+        "posted_at": "2006-03-21 20:50:14.000000",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "empty link",
+      "input_url": null,
+      "post_id": "424244",
+      "status": 200,
+      "body": "{\"tweet\":{\"id\":\"424244\",\"text\":\"just setting up my twttr\",\"created_timestamp\":1142974214,\"likes\":310826,\"retweets\":124658,\"replies\":18041,\"author\":{\"name\":\"jack\",\"screen_name\":\"jack\",\"avatar_url\":\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\"}}}",
+      "path": "/i/status/424244",
+      "result": {
+        "url": "https://x.com/jack/status/424244",
+        "author_handle": "jack",
+        "author_name": "jack",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "just setting up my twttr",
+        "posted_at": "2006-03-21 20:50:14.000000",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "big id",
+      "input_url": "https://x.com/u/status/9999999999999999999999999",
+      "post_id": "9999999999999999999999999",
+      "status": 200,
+      "body": "{\"tweet\":{\"id\":\"9999999999999999999999999\",\"text\":\"just setting up my twttr\",\"created_timestamp\":1142974214,\"likes\":310826,\"retweets\":124658,\"replies\":18041,\"author\":{\"name\":\"jack\",\"screen_name\":\"jack\",\"avatar_url\":\"https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg\"}}}",
+      "path": "/u/status/9999999999999999999999999",
+      "result": {
+        "url": "https://x.com/jack/status/9999999999999999999999999",
+        "author_handle": "jack",
+        "author_name": "jack",
+        "author_avatar_url": "https://pbs.twimg.com/profile_images/1/avatar_200x200.jpg",
+        "text": "just setting up my twttr",
+        "posted_at": "2006-03-21 20:50:14.000000",
+        "replies": 18041,
+        "reposts": 124658,
+        "likes": 310826,
+        "media": [],
+        "quote": null,
+        "fetch_error": null
+      }
+    },
+    {
+      "name": "read timeout",
+      "input_url": "https://x.com/jack/status/424242",
+      "post_id": "424242",
+      "path": "/jack/status/424242",
+      "transport_error": "ReadTimeout",
+      "result": {
+        "url": "https://x.com/jack/status/424242",
+        "author_handle": null,
+        "author_name": null,
+        "author_avatar_url": null,
+        "text": null,
+        "posted_at": null,
+        "replies": null,
+        "reposts": null,
+        "likes": null,
+        "media": null,
+        "quote": null,
+        "fetch_error": "Could not reach X (Read Timeout)"
+      }
+    }
+  ]
+}

@@ -134,6 +134,7 @@ pub struct MessageDetails {
 pub struct MessageComponents {
     pub github_cards: Vec<String>,
     pub twitter_cards: Vec<String>,
+    pub twitter_posts: Vec<crate::twitter::Card>,
     pub event_cards: Vec<String>,
     pub message_link_cards: Vec<String>,
     pub fizzy_cards: Vec<String>,
@@ -633,6 +634,7 @@ fn message_digest() -> &'static str {
     static DIGEST: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         fragment_cache::digest(&[
             include_str!("../templates/messages/_message.html"),
+            include_str!("../templates/twitter/posts/_card.html"),
             include_str!("../templates/messages/_presentation.html"),
             include_str!("../templates/messages/_toolbar.html"),
             include_str!("../templates/messages/_pin_badge.html"),
@@ -681,6 +683,14 @@ pub struct Show<'a> {
 #[derive(Template)]
 #[template(path = "messages/_presentation.html")]
 pub struct PresentationPartial<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub message: &'a MessageView,
+}
+
+/// `messages/_meta`, replaced by the real message edit caller.
+#[derive(Template)]
+#[template(path = "messages/_meta.html")]
+pub struct MetaPartial<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub message: &'a MessageView,
 }
@@ -828,7 +838,7 @@ pub fn cards(
     h::raw(format!(
         "{}<div id=\"{}\" class=\"{class}\">{}</div>\n",
         " ".repeat(indent),
-        message.dom_id(prefix),
+        h::escape(&message.dom_id(prefix)),
         bodies.concat()
     ))
 }

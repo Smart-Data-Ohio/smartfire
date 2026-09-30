@@ -207,6 +207,10 @@ async fn open_database(
 
 /// The HTTP service: public files, then `/cable`, then the Rails route table.
 fn router(app: &App, kit: Kit) -> Router {
+    let github_webhook = || {
+        axum::routing::post(campfire_kit::unparsed_action(controllers::github::webhooks::create))
+            .fallback(campfire_kit::unparsed_action(controllers::github::webhooks::not_found))
+    };
     let dispatch = || axum::routing::any(campfire_kit::action(dispatch_with_fragment_cache));
     let routes = Router::new()
         .merge(
@@ -239,6 +243,8 @@ fn router(app: &App, kit: Kit) -> Router {
                 controllers::google_calendar::notifications,
             )),
         )
+        .route("/github/webhooks", github_webhook())
+        .route("/github/webhooks.{format}", github_webhook())
         .route("/", dispatch())
         .route("/{*path}", dispatch())
         .layer(axum::middleware::from_fn(public_files));
@@ -536,3 +542,7 @@ mod google_calendar_job_tests;
 
 #[cfg(test)]
 mod google_test_support;
+
+#[cfg(test)]
+#[path = "../../../test-support/asset_goldens.rs"]
+pub(crate) mod asset_goldens;

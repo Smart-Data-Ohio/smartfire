@@ -90,7 +90,7 @@ pub fn update_role(
 pub fn deactivate_user(tx: &mut Tx<'_>, user: &mut User, context: &Context) -> Result<()> {
     let before = user.status;
     let target = Target::from(&*user);
-    user.deactivate(tx)?;
+    user.deactivate_with_audit(tx, context)?;
     AuditLog::record(
         tx,
         NewAuditLog {
@@ -113,7 +113,7 @@ pub fn set_user_banned(
 ) -> Result<()> {
     let before = user.status;
     if banned {
-        user.ban(tx)?;
+        user.ban_with_audit(tx, context)?;
     } else {
         user.unban(tx)?;
     }
