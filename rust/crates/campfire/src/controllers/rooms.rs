@@ -398,7 +398,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
     let message_id = c.param_str("message_id").and_then(cast_integer);
     let request_host = Some(c.request.host());
     let cache_base_url = c.url_for("");
-    let show = c
+    let (show,composer) = c
         .app()
         .db
         .read(move |conn| {
@@ -409,8 +409,11 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
             presenter.cache_base_url = Some(cache_base_url);
             let original = Room::original(conn)?.is_some_and(|original| original.id == room.id);
             let room_gid = crate::channels::room_gid(&room).to_param();
-            Ok(campfire_views::rooms::ShowView {
-                shell:Default::default(),scroll_to_unread_divider:divider.scroll,jump_to_unread_url:divider.jump_url,unread_divider_message_id:divider.message_id,unread_count:divider.count,
+            let drive=presenter.composer_drive_flow(&user,false)?;
+            let composer=presenter.composer_facts(&room,&user,None,drive)?;
+            let list=presenter.room_message_list(&messages,divider.message_id,divider.count)?;
+            Ok((campfire_views::rooms::ShowView {
+                shell:campfire_views::rooms::ShellComponents{message_list:Some(list),..Default::default()},scroll_to_unread_divider:divider.scroll,jump_to_unread_url:divider.jump_url,unread_divider_message_id:divider.message_id,unread_count:divider.count,
                 room: presenter.room_view(&room, &user)?,
                 updated_at: room.updated_at.jiff(),
                 user: user_view(&app.secrets, &user),
@@ -427,11 +430,13 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
                         user.id,
                         app.db.env().now(),
                     )?,
-            })
+            },composer))
         })
         .await
         .map_err(db_error)?;
-    let response = page::framed_page!(c, StatusCode::OK, |ctx| campfire_views::rooms::Show { ctx, show: &show }).await?;
+    let response = super::presenters::view_context::page_or_frame(c,StatusCode::OK,
+        |ctx|super::presenters::room_native::render(ctx,&show,&composer,false),
+        |ctx|super::presenters::room_native::render(ctx,&show,&composer,true)).await?;
     let fragments = campfire_views::messages::MessageItem::cached_fragments(&c.app().fragment_cache, &show.messages, &c.url_for(""));
     Ok(response.with_cached_fragments(fragments))
 }
@@ -493,3 +498,7 @@ mod members_rails_cases;
 #[cfg(test)]
 #[path = "rooms/refreshes_rails_cases.rs"]
 mod refreshes_rails_cases;
+
+#[cfg(test)]
+#[path = "rooms/native_integration_tests.rs"]
+mod native_integration_tests;

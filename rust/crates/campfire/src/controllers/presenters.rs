@@ -5,6 +5,7 @@
 pub mod accounts;
 pub mod rooms_directory;
 pub mod room_shell;
+pub mod room_native;
 pub mod switcher;
 pub mod status_settings;
 pub mod attachments;
