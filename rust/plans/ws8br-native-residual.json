@@ -1,7 +1,7 @@
 {
   "reference": "d7c7de92",
   "scope": "Unmatched card regions only; diagnostic, not a parity fixture or mask",
-  "designers_list_rust_bytes": 286287,
+  "designers_list_rust_bytes": 287734,
   "designers_list_rails_bytes": 288823,
   "regions": [
     {
@@ -11,30 +11,6 @@
       "rails_bytes": 1190,
       "rust": "<div id=\"github_pr_cards_message_dea0071a-bcd7-5548-a81a-8afdd467d12d\" class=\"github-pr-cards\"></div>",
       "rails": "<div id=\"github_pr_cards_message_dea0071a-bcd7-5548-a81a-8afdd467d12d\" class=\"github-pr-cards\">\n    <article class=\"github-pr-card github-pr-card--open\" data-github-pr=\"smart-data-ohio/smartfire#42\">\n  <header class=\"github-pr-card__header\">\n    <span class=\"github-pr-card__repo\">Smart-Data-Ohio/smartfire</span>\n    <span class=\"github-pr-card__number\">#42</span>\n    <span class=\"github-pr-card__state\">Open</span>\n  </header>\n\n    <p class=\"github-pr-card__title\">Port the launch checklist</p>\n\n    <div class=\"github-pr-card__meta\">\n        <span class=\"github-pr-card__author\">\n          parity-user\n        </span>\n\n        <span class=\"github-pr-card__branches\" title=\"Base \u2190 head\">\n          main \u2190 rust-parity\n        </span>\n\n\n        <span class=\"github-pr-card__checks github-pr-card__checks--success\">No checks</span>\n    </div>\n\n  <footer class=\"github-pr-card__footer\">\n    <a class=\"github-pr-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://github.com/Smart-Data-Ohio/smartfire/pull/42\">View on GitHub</a>\n        <a class=\"github-pr-card__discuss\" data-turbo-frame=\"_top\" href=\"/rooms/654632876/threads/8\">Discuss</a>\n  </footer>\n</article>\n\n</div>"
-    },
-    {
-      "room_id": 654632876,
-      "slot": "fizzy_cards_message_9a8c5f83-5ff9-5aac-b9f2-607298341362",
-      "rust_bytes": 93,
-      "rails_bytes": 272,
-      "rust": "<div id=\"fizzy_cards_message_9a8c5f83-5ff9-5aac-b9f2-607298341362\" class=\"fizzy-cards\"></div>",
-      "rails": "<div id=\"fizzy_cards_message_9a8c5f83-5ff9-5aac-b9f2-607298341362\" class=\"fizzy-cards\">\n  <turbo-frame loading=\"lazy\" class=\"fizzy-card-frame\" id=\"card_for_message_935962054_fizzy_card_1\" src=\"/rooms/654632876/fizzy/cards/1/card?message_id=935962054\"></turbo-frame>\n</div>"
-    },
-    {
-      "room_id": 654632876,
-      "slot": "link_embed_cards_message_7684c8e9-2646-5712-b11f-789a479782c0",
-      "rust_bytes": 103,
-      "rails_bytes": 543,
-      "rust": "<div id=\"link_embed_cards_message_7684c8e9-2646-5712-b11f-789a479782c0\" class=\"link-embed-cards\"></div>",
-      "rails": "<div id=\"link_embed_cards_message_7684c8e9-2646-5712-b11f-789a479782c0\" class=\"link-embed-cards\">\n      <article class=\"link-embed-card\">\n    <div class=\"link-embed-card__body\">\n        <p class=\"link-embed-card__site\">Example</p>\n        <p class=\"link-embed-card__title\">\n          <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://example.com/parity\">Smartfire release notes</a>\n        </p>\n        <p class=\"link-embed-card__description\">Recorded integration card, captured offline.</p>\n    </div>\n  </article>\n\n  </div>"
-    },
-    {
-      "room_id": 654632876,
-      "slot": "linkedin_cards_message_fa8bdc6b-2aed-58ac-b9ac-9c360c09e165",
-      "rust_bytes": 104,
-      "rails_bytes": 932,
-      "rust": "<div id=\"linkedin_cards_message_fa8bdc6b-2aed-58ac-b9ac-9c360c09e165\" class=\"linkedin-post-cards\"></div>",
-      "rails": "<div id=\"linkedin_cards_message_fa8bdc6b-2aed-58ac-b9ac-9c360c09e165\" class=\"linkedin-post-cards\">\n      <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__title\">\n        <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/posts/parity_release-activity-1234567890123456789-abcd\">Smartfire launch</a>\n      </p>\n      <p class=\"linkedin-post-card__excerpt\">Recorded LinkedIn excerpt.</p>\n    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/posts/parity_release-activity-1234567890123456789-abcd\">View post on LinkedIn</a>\n    </footer>\n  </article>\n\n  </div>"
     }
   ]
 }

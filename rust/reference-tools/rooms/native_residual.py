@@ -32,11 +32,10 @@ for rails,rust in zip(expected,actual,strict=True):
             regions.append(dict(room_id=rust['room_id'],slot=selector,rust_bytes=len(aa.encode()),rails_bytes=len(bb.encode()),rust=aa,rails=bb))
             reconstructed=reconstructed.replace(aa,bb)
     assert reconstructed==b,'unexplained non-card differences remain'
-assert len(regions)==4
 output=dict(reference='d7c7de92',scope='Unmatched card regions only; diagnostic, not a parity fixture or mask',
             designers_list_rust_bytes=len(actual[0]['message_list'].encode()),
             designers_list_rails_bytes=len(expected[0]['message_list'].encode()),regions=regions)
 (root/'rust/plans/ws8br-native-residual.json').write_text(json.dumps(output,indent=2)+'\n')
 for region in regions:
     print(f"{region['slot']}: Rust {region['rust_bytes']} bytes; Rails {region['rails_bytes']} bytes")
-print('Native residual inventory: four empty owner card slots explain the complete remaining difference; strict acceptance still fails')
+print(f'Native residual inventory: {len(regions)} empty owner card slots explain the complete remaining difference; strict acceptance still ' + ('fails' if regions else 'passes'))

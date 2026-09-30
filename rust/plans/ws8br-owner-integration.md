@@ -97,14 +97,29 @@ The empty refresh is byte-identical to Rails. Populated owner rendering is compa
 with fixed request secrets; the separate real HTTP response's Unpin token is verified
 for its viewer and rejected for another viewer. No response bytes are normalized.
 
+## Merged provider inputs
+
+`Presenter::renderable_message` calls main's `link_embeds::components(self, message)`
+for persisted Twitter, Fizzy, generic-link and LinkedIn facts, and retains WS8bm2's
+`quote_references` alongside them. Its preloaded child presenters share pending fetch
+sets and Twitter facts with their parent, so the caller receives every requested ID.
+`PageResolver` delegates Twitter existence and signed image paths to main's resolver.
+Root `render_show` returns pending link and Twitter IDs from its reader closure and
+calls main's `enqueue_render_fetches` on the writer before returning the page.
+A rejected enqueue clears the incomplete rendered fragment cache so a retry can
+register those requests again. Actual provider jobs, claims, policy and broadcasts
+remain in WS15e. WS11's suspension/fanout and WS17's status callbacks are retained;
+main's linked-account disconnect hook runs in the existing user transaction.
+
 ## Acceptance boundary
 
 The strict native comparison checks three seeded room root collections and all nine
 complete list/composer/pending-template regions. It deliberately exits nonzero on
 any difference, with no masks, allowlists, ignored app cases or substituted fragments.
 All six composer/template regions and both DM list regions now match exactly.
-The remaining populated Designers list differs only in four empty owner card slots:
-GitHub, Fizzy, generic link embed and LinkedIn. `ws8br-native-residual.json` retains
+The remaining populated Designers list differs only in the empty GitHub PR card slot.
+Fizzy, generic link embed and LinkedIn now call the WS15e factories merged on main;
+their complete container bytes are also asserted through the real room-page HTTP path. `ws8br-native-residual.json` retains
 each exact Rails/Rust region; the strict checker still exits 1. The owner message
 list and composer internals are unchanged. The app suite proves native
 mounting and controller behavior, not byte-identical full-page acceptance.

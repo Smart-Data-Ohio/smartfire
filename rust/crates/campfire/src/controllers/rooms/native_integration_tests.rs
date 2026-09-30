@@ -82,3 +82,37 @@ impl campfire_views::helpers::request_forgery::AuthenticityTokens for ComponentT
  fn global(&self)->String {"GLOBAL".into()}
  fn for_form(&self,action:&str,method:&str)->String {format!("{method}:{action}")}
 }
+
+// Preserve the complete source bytes of a nested card container. This is a byte
+// comparison, not a DOM serialization or a replacement in the production page.
+fn card_container<'a>(html: &'a str, selector: &str) -> &'a str {
+    let start = html.find(&format!("<div id=\"{selector}\"")).expect("card target missing");
+    let mut depth = 0;
+    for tag in regex::Regex::new(r"</?div\b[^>]*>").unwrap().find_iter(&html[start..]) {
+        depth += if tag.as_str().starts_with("</") { -1 } else { 1 };
+        if depth == 0 { return &html[start..start + tag.end()]; }
+    }
+    panic!("unclosed card target: {selector}");
+}
+
+#[tokio::test]
+async fn native_room_page_provider_cards_match_rails_bytes() {
+    let app = TestApp::boot_frozen().await.expect("seed required");
+    let fixtures: serde_json::Value = serde_json::from_str(include_str!("../../../../views/tests/golden/rooms/native_components.json")).unwrap();
+    let row = &fixtures["rows"][0];
+    let room_id = row["room_id"].as_i64().unwrap();
+    assert_eq!(row["user_id"], DAVID);
+    let expected = row["message_list"].as_str().unwrap();
+    let reply = app.david().get(&format!("/rooms/{room_id}")).await;
+    assert_eq!(reply.status, StatusCode::OK);
+    let actual = reply.text();
+    let targets = regex::Regex::new(r#"<div id="((?:fizzy_cards|link_embed_cards|linkedin_cards)_message_[^"]+)""#).unwrap();
+    let mut populated = 0;
+    for target in targets.captures_iter(expected) {
+        let selector = &target[1];
+        let expected_card = card_container(expected, selector);
+        assert!(crate::app::asset_goldens::compare(selector, card_container(&actual, selector), expected_card), "{selector}");
+        if !expected_card.ends_with("></div>") { populated += 1; }
+    }
+    assert_eq!(populated, 3, "the seed must exercise all three merged provider bodies");
+}

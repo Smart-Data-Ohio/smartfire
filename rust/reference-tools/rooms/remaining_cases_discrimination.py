@@ -10,7 +10,7 @@ originals={path:path.read_bytes() for path in paths}
 scratch=root/'.scratch';scratch.mkdir(exist_ok=True)
 env=dict(os.environ,CI='1',TMPDIR=str(scratch),CARGO_PROFILE_TEST_DEBUG='0',CARGO_PROFILE_DEV_DEBUG='0',
          CABLE_TEST_PORT_RANGE='52100-52149',MAIL_TEST_PORT_RANGE='52100-52149')
-base=['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j4','--manifest-path','rust/Cargo.toml','-p','campfire','--bin','campfire','--']
+base=['mise','exec','rust@1.98.1','--','cargo','test','--locked','-j2','--manifest-path','rust/Cargo.toml','-p','campfire','--bin','campfire','--']
 def reject(name,filters,count):
     run=subprocess.run(base+filters+['--test-threads=4'],cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
     (scratch/f'remaining-{name}-discrimination.log').write_text(run.stdout)
