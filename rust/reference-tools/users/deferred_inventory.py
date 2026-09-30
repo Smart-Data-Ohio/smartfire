@@ -42,6 +42,9 @@ covered_before = {
 }
 covered = {file: set(names) for file, names in covered_before.items()}
 covered.update({
+    "controllers/first_runs_controller_test.rb": {"new is permitted when no other users exit", "new is not permitted when account exist", "create", "create is not vulnerable to race conditions"},
+    "controllers/welcome_controller_test.rb": {"redirects to the first created visible room the user has access to", "redirects to the last room visited, if we have one"},
+    "controllers/accounts/logos_controller_test.rb": {"show stock", "show stock small size", "show custom", "show custom small size", "show stock when custom logo cannot be resized", "destroy"},
     "controllers/accounts/audit_logs_controller_test.rb": {
         "admins can browse the log", "members are forbidden", "visitors are sent to sign in", "visitors cannot export CSV", "members cannot export CSV",
         "filtering by actor matches names and emails in labels", "filtering by action and target type", "unknown filter values are ignored", "filtering by date range", "paging walks older entries",
