@@ -32,7 +32,9 @@ async fn index_pages_with_conditional_gets() {
     assert!(!reply.text().contains("<html"), "layout false");
     let etag = reply.header("etag").unwrap().to_string();
     assert!(etag.starts_with("W/\""));
-    assert!(reply.header("last-modified").is_some());
+    // WS8bm2 cache seam: pinned Rails uses only its composite ETag. A timestamp
+    // cannot express an unpin, so MessagesController deliberately omits this header.
+    assert!(reply.header("last-modified").is_none());
 
     let cached = david
         .send(Req::new(Method::GET, &format!("/rooms/{ALL_TALK}/messages?before={}", messages[50].id)).header("if-none-match", &etag))

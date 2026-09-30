@@ -494,6 +494,10 @@ async fn http_broadcasts_supply_real_nonempty_partials() {
             .await
             .contains("Real presentation partial")
     );
+    // WS8bm2 owning-container seam: even an edit with no references replaces the
+    // empty quote container. Consume and verify that frame before testing boosts.
+    let quotes = broadcast_html(&mut client).await;
+    assert!(quotes.contains("class=\"message-link-cards\"></div>"), "{quotes}");
     let response = browser
         .write(
             Req::new(Method::POST, &format!("/messages/{id}/boosts"))
