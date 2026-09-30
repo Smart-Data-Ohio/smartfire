@@ -35,10 +35,17 @@ pub fn deliver(cable: &Cable, app: Option<&App>, event: &Event) -> bool {
 /// Runs the broadcast's handler. A broadcast that fails is logged and dropped: the model
 /// callbacks rescue and report it (`Rails.error.report(..., handled: true)`), so the ones after
 /// it still run.
-fn broadcast(cable: &Cable, _app: Option<&App>, request: &BroadcastRequest) {
+fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
     let result = match request.kind {
-        RoomRemovalBroadcast::KIND => decode(request).map(|broadcast| room_removal(cable, &broadcast, huddle_configured(env))),
-        campfire_db::broadcasts::Broadcast::KIND => decode(request).and_then(|broadcast| messaging(cable, &broadcast)),
+        RoomRemovalBroadcast::KIND => {
+            decode(request).map(|broadcast| room_removal(cable, &broadcast, huddle_configured(env)))
+        }
+        campfire_db::broadcasts::Broadcast::KIND => {
+            decode(request).and_then(|broadcast| messaging(cable, &broadcast))
+        }
+        campfire_db::models::agent::AgentStatusChange::KIND => {
+            decode(request).and_then(|broadcast| agent_status(app, &broadcast))
+        }
         kind => Err(anyhow::anyhow!("no handler for the {kind} broadcast")),
     };
     if let Err(error) = result {
@@ -46,21 +53,73 @@ fn broadcast(cable: &Cable, _app: Option<&App>, request: &BroadcastRequest) {
     }
 }
 
+/// WS11 emits the badge followed by the directory row after commit. Render
+/// synchronously on that thread, preserving Rails' callback/frame order.
+fn agent_status(
+    app: Option<&App>,
+    change: &campfire_db::models::agent::AgentStatusChange,
+) -> anyhow::Result<()> {
+    use crate::controllers::presenters;
+    use askama::Template;
+    use campfire_db::models::agent::AgentStatusTarget;
+    let app =
+        app.ok_or_else(|| anyhow::anyhow!("Agent status rendering requires the booted app"))?;
+    let Some(agent) = app.db.read_blocking(|conn| {
+        presenters::agents::directory_agent(conn, &app.secrets, change.agent_id)
+    })?
+    else {
+        return Ok(());
+    };
+    let now = app.clock.now();
+    let (prefix, html) = presenters::page::render_detached(app, None, |ctx| match change.target {
+        AgentStatusTarget::Badge => campfire_views::agents::StatusBadge {
+            ctx,
+            agent: &agent,
+            now,
+        }
+        .render()
+        .map(|html| ("status_badge", html)),
+        AgentStatusTarget::DirectoryRow => campfire_views::agents::DirectoryRow {
+            ctx,
+            agent: &agent,
+            now,
+        }
+        .render()
+        .map(|html| ("directory_row", html)),
+    })?;
+    app.broadcasts.replace(
+        &super::broadcasts::Stream::named(super::agents::STREAM_NAME),
+        &format!("{prefix}_agent_{}", agent.id),
+        &html,
+    );
+    Ok(())
+}
+
 /// WS8 domain frames share WS7's publisher and conservative Turbo guard. Rendering these
 /// partial descriptions belongs to WS8b; template-free frames are delivered now.
 fn messaging(cable: &Cable, broadcast: &campfire_db::broadcasts::Broadcast) -> anyhow::Result<()> {
     use campfire_db::broadcasts::Broadcast;
-    let (stream, payload) = template_free_broadcast(broadcast)
-        .ok_or_else(|| anyhow::anyhow!("WS8b partial rendering is not registered: {broadcast:?}"))?;
+    let (stream, payload) = template_free_broadcast(broadcast).ok_or_else(|| {
+        anyhow::anyhow!("WS8b partial rendering is not registered: {broadcast:?}")
+    })?;
     match broadcast {
-        Broadcast::Cable { .. } => { cable.broadcast(&stream, &payload); }
-        Broadcast::Turbo(_) => { cable.broadcast_stream_to(&[&stream], payload.as_str().expect("Turbo frame is a string")); }
+        Broadcast::Cable { .. } => {
+            cable.broadcast(&stream, &payload);
+        }
+        Broadcast::Turbo(_) => {
+            cable.broadcast_stream_to(
+                &[&stream],
+                payload.as_str().expect("Turbo frame is a string"),
+            );
+        }
     }
     Ok(())
 }
 
 fn decode<B: Broadcast>(request: &BroadcastRequest) -> anyhow::Result<B> {
-    Ok(request.decode::<B>().ok_or_else(|| anyhow::anyhow!("not a {} broadcast", B::KIND))??)
+    Ok(request
+        .decode::<B>()
+        .ok_or_else(|| anyhow::anyhow!("not a {} broadcast", B::KIND))??)
 }
 
 fn env(name: &str) -> Option<String> {
@@ -72,19 +131,44 @@ pub fn room_removal(cable: &Cable, broadcast: &RoomRemovalBroadcast, huddle_conf
     let user = user_gid(broadcast.user_id).to_param();
     let param_key = broadcast.room_class.replace("::", "_").to_ascii_lowercase();
     if huddle_configured {
-        let target = dom_id(&param_key, broadcast.room_id, Some("header_voice_participants"));
-        cable.broadcast_action_to(&[&user, ROOMS], Action::Remove, Target::Target(&target), None, &[]);
+        let target = dom_id(
+            &param_key,
+            broadcast.room_id,
+            Some("header_voice_participants"),
+        );
+        cable.broadcast_action_to(
+            &[&user, ROOMS],
+            Action::Remove,
+            Target::Target(&target),
+            None,
+            &[],
+        );
     }
     let target = dom_id(&param_key, broadcast.room_id, Some("list"));
-    cable.broadcast_action_to(&[&user, ROOMS], Action::Remove, Target::Target(&target), None, &[]);
+    cable.broadcast_action_to(
+        &[&user, ROOMS],
+        Action::Remove,
+        Target::Target(&target),
+        None,
+        &[],
+    );
 }
 
 /// `Huddle.configured?` (reference/app/services/huddle.rb): the five LiveKit variables are set and
 /// the public and internal LiveKit URLs name different endpoints. Read on every call, as Rails
 /// reads `ENV` on every call. (The huddle workstream owns the rest of `Huddle`.)
 pub fn huddle_configured(env: impl Fn(&str) -> Option<String>) -> bool {
-    const REQUIRED: [&str; 5] = ["LIVEKIT_URL", "LIVEKIT_INTERNAL_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET", "LIVEKIT_GATEWAY_SECRET"];
-    let values: Vec<String> = REQUIRED.iter().filter_map(|name| env(name).filter(|value| !value.trim().is_empty())).collect();
+    const REQUIRED: [&str; 5] = [
+        "LIVEKIT_URL",
+        "LIVEKIT_INTERNAL_URL",
+        "LIVEKIT_API_KEY",
+        "LIVEKIT_API_SECRET",
+        "LIVEKIT_GATEWAY_SECRET",
+    ];
+    let values: Vec<String> = REQUIRED
+        .iter()
+        .filter_map(|name| env(name).filter(|value| !value.trim().is_empty()))
+        .collect();
     if values.len() != REQUIRED.len() {
         return false;
     }
@@ -133,7 +217,11 @@ mod tests {
     use super::*;
 
     fn configured(vars: &[(&str, &str)]) -> bool {
-        huddle_configured(|name| vars.iter().find(|(key, _)| *key == name).map(|(_, value)| value.to_string()))
+        huddle_configured(|name| {
+            vars.iter()
+                .find(|(key, _)| *key == name)
+                .map(|(_, value)| value.to_string())
+        })
     }
 
     #[test]

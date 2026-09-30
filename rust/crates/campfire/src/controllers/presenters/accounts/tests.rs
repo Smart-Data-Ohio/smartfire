@@ -28,6 +28,8 @@ mod bot_access;
 mod approval_decisions;
 #[path = "tests/agent_histories.rs"]
 mod agent_histories;
+#[path = "tests/agent_broadcasts.rs"]
+mod agent_broadcasts;
 
 struct Test {
     booted: Booted,
