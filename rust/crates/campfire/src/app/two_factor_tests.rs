@@ -305,7 +305,7 @@ async fn two_factor_views_match_rails_seed_bytes_including_inline_qr() {
     }
 }
 fn same_bytes(name: &str, actual: &str, expected: &str) {
-    if actual != expected {
+    if !super::asset_goldens::compare(name, actual, expected) {
         let at = actual
             .bytes()
             .zip(expected.bytes())
