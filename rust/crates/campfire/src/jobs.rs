@@ -214,7 +214,9 @@ impl Jobs {
 
 impl EventSink for Jobs {
     fn sync_message_references(&self, tx: &mut Tx<'_>, message: &campfire_db::Message, enqueue: bool) -> campfire_db::Result<()> {
-        crate::integrations::sync_message_references(tx, message, enqueue)
+        let app = self.app.get().and_then(Weak::upgrade);
+        let crypto = app.as_ref().map(|app| rails_compat::ar_encryption::ArEncryption::new(&app.secrets));
+        crate::integrations::sync_message_references(tx, message, enqueue, crypto.as_ref())
     }
 
     fn persist(&self, tx: &Tx<'_>, event: &Event) -> campfire_db::Result<()> {

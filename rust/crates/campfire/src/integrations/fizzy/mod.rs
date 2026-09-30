@@ -1,9 +1,12 @@
 //! Fizzy's domain layer. SQL and client policy never render HTML.
 pub mod accounts;
+pub mod cards;
+pub mod fetch;
 pub mod client;
 mod error_body;
 pub mod urls;
 use serde_json::Value;
+#[allow(dead_code, reason = "Used by staged Fizzy create-card API")]
 fn blank(value: &Value) -> bool {
     match value {
         Value::Null | Value::Bool(false) => true,

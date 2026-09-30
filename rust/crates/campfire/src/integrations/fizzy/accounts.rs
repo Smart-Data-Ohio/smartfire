@@ -1,5 +1,5 @@
 //! `FizzyConnectedAccount`: encrypted per-user PAT, Rails validations and disconnection state.
-use campfire_db::{Connection, Errors, Result, Timestamp, Tx};
+use campfire_db::{Connection, Errors, Result, Tx};
 use rails_compat::ar_encryption::ArEncryption;
 use rusqlite::{OptionalExtension, params};
 pub const UNREADABLE_TOKEN_REASON: &str = "The stored token could not be read; link it again";
@@ -10,12 +10,16 @@ pub struct Account {
     pub id: i64,
     pub user_id: i64,
     pub account_id: String,
+    #[allow(dead_code, reason = "Fizzy profile/agent controller consumers remain staged")]
     pub account_name: Option<String>,
+    #[allow(dead_code, reason = "Fizzy profile/agent controller consumers remain staged")]
     pub fizzy_user_id: Option<String>,
+    #[allow(dead_code, reason = "Fizzy profile/agent controller consumers remain staged")]
     pub fizzy_user_name: Option<String>,
     pub disconnected_reason: Option<String>,
     access_token: String,
 }
+#[allow(dead_code, reason = "Fizzy connection controller input remains staged")]
 pub struct Input<'a> {
     pub user_id: i64,
     pub account_id: &'a str,
@@ -70,12 +74,15 @@ impl Account {
         )?;
         Ok(())
     }
+    #[allow(dead_code, reason = "Fizzy connection controller consumer remains staged")]
     pub fn create(tx: &Tx<'_>, crypto: &ArEncryption, input: &Input<'_>) -> Result<Self> {
         Self::save(tx, crypto, input, false)
     }
+    #[allow(dead_code, reason = "Fizzy connection controller consumer remains staged")]
     pub fn relink(tx: &Tx<'_>, crypto: &ArEncryption, input: &Input<'_>) -> Result<Self> {
         Self::save(tx, crypto, input, true)
     }
+    #[allow(dead_code, reason = "Used by staged Fizzy connection writes")]
     fn save(tx: &Tx<'_>, crypto: &ArEncryption, input: &Input<'_>, relink: bool) -> Result<Self> {
         let existing = Self::for_user(tx.conn(), input.user_id)?;
         let id = if relink {
@@ -89,6 +96,7 @@ impl Account {
         Ok(Self::for_user(tx.conn(), input.user_id)?.expect("saved account"))
     }
     /// Disconnect clears only this viewer's payloads; references/cards are shared.
+    #[allow(dead_code, reason = "Fizzy connection controller consumer remains staged")]
     pub fn disconnect(tx: &Tx<'_>, user: i64) -> Result<()> {
         tx.conn()
             .execute("DELETE FROM fizzy_card_caches WHERE user_id=?", [user])?;
@@ -98,13 +106,7 @@ impl Account {
         )?;
         Ok(())
     }
-    pub fn updated_at(&self, conn: &Connection) -> Result<Timestamp> {
-        Ok(conn.query_row(
-            "SELECT updated_at FROM fizzy_connected_accounts WHERE id=?",
-            [self.id],
-            |r| r.get(0),
-        )?)
-    }
+
 }
 
 fn validate(tx: &Tx<'_>, id: Option<i64>, user: i64, account: &str) -> Result<()> {

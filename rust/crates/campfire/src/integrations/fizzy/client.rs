@@ -79,10 +79,12 @@ impl Client {
             base: chomp_slash(base).into(),
         }
     }
+    #[allow(dead_code, reason = "Fizzy connection/message/agent controller consumers remain staged")]
     pub async fn identity(&self) -> Result<Value, Error> {
         self.request(Method::GET, "/my/identity.json".into(), None)
             .await
     }
+    #[allow(dead_code, reason = "Fizzy connection/message/agent controller consumers remain staged")]
     pub async fn boards(&self, account: &str) -> Result<Value, Error> {
         self.request(
             Method::GET,
@@ -91,6 +93,7 @@ impl Client {
         )
         .await
     }
+    #[allow(dead_code, reason = "Fizzy connection/message/agent controller consumers remain staged")]
     pub async fn board(&self, account: &str, board: &str) -> Result<Value, Error> {
         self.request(
             Method::GET,
@@ -103,6 +106,7 @@ impl Client {
         )
         .await
     }
+    #[allow(dead_code, reason = "Fizzy connection/message/agent controller consumers remain staged")]
     pub async fn columns(&self, account: &str, board: &str) -> Result<Value, Error> {
         self.request(
             Method::GET,
@@ -127,6 +131,7 @@ impl Client {
         )
         .await
     }
+    #[allow(dead_code, reason = "Fizzy connection/message/agent controller consumers remain staged")]
     pub async fn search(&self, account: &str, query: &str) -> Result<Value, Error> {
         self.request(
             Method::GET,
@@ -139,6 +144,7 @@ impl Client {
         )
         .await
     }
+    #[allow(dead_code, reason = "Fizzy connection/message/agent controller consumers remain staged")]
     pub async fn create_card(
         &self,
         account: &str,
@@ -162,6 +168,7 @@ impl Client {
         )
         .await
     }
+    #[allow(dead_code, reason = "Fizzy connection/message/agent controller consumers remain staged")]
     pub async fn create_comment(
         &self,
         account: &str,
@@ -179,6 +186,7 @@ impl Client {
         )
         .await
     }
+    #[allow(dead_code, reason = "Fizzy connection/message/agent controller consumers remain staged")]
     pub async fn move_to_column(
         &self,
         account: &str,
@@ -198,6 +206,7 @@ impl Client {
         .await?;
         Ok(true)
     }
+    #[allow(dead_code, reason = "Fizzy connection/message/agent controller consumers remain staged")]
     pub async fn close_card(&self, account: &str, number: &str) -> Result<bool, Error> {
         self.request(
             Method::POST,
@@ -211,6 +220,7 @@ impl Client {
         .await?;
         Ok(true)
     }
+    #[allow(dead_code, reason = "Fizzy connection/message/agent controller consumers remain staged")]
     pub async fn reopen_card(&self, account: &str, number: &str) -> Result<bool, Error> {
         self.request(
             Method::DELETE,
@@ -304,6 +314,7 @@ fn checked_number(number: &str) -> Result<&str, Error> {
         Err(Error::new(ErrorKind::Other, "Invalid Fizzy card number"))
     }
 }
+#[allow(dead_code, reason = "Used by the staged Fizzy search API")]
 fn cgi_escape(query: &str) -> String {
     query
         .bytes()

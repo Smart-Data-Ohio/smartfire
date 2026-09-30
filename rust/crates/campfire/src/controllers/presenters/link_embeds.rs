@@ -8,7 +8,7 @@ use campfire_db::{Connection, Message, Room};
 use campfire_views::messages::{self, MessageComponents};
 
 pub fn components(presenter: &super::Presenter<'_>, message: &Message) -> campfire_db::Result<MessageComponents> {
-    let mut components = MessageComponents::default();
+    let mut components = MessageComponents { fizzy_cards: super::fizzy_cards::frames(presenter.conn, message)?, ..Default::default() };
     if !message.embeds_suppressed {
         for reference in Reference::for_message(presenter.conn, message)? {
             presenter.request_link_fetch(&reference.embed);

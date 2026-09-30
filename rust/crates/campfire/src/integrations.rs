@@ -13,8 +13,6 @@
 //! plans/rust-conversion.md, "HTTP clients: three distinct policies"). Oracles for the tests
 //! (Ruby scripts run in the reference) live in testdata/oracle.
 
-// Fizzy HTTP/agent/card consumers land in the next coherent slice.
-#[allow(dead_code, reason = "Staged Fizzy domain before card/controller consumers")]
 pub mod fizzy;
 pub mod image_proxy;
 mod jobs;
@@ -38,6 +36,7 @@ pub use jobs::{register_jobs, web_push_pool};
 
 
 /// SQL-only reference callbacks invoked from WS8's message transaction.
-pub fn sync_message_references(tx: &mut campfire_db::Tx<'_>, message: &campfire_db::Message, enqueue: bool) -> campfire_db::Result<()> {
-    link_embed::sync_message(tx, message, enqueue)
+pub fn sync_message_references(tx: &mut campfire_db::Tx<'_>, message: &campfire_db::Message, enqueue: bool, crypto: Option<&rails_compat::ar_encryption::ArEncryption>) -> campfire_db::Result<()> {
+    link_embed::sync_message(tx, message, enqueue)?;
+    fizzy::cards::sync_message(tx, message, enqueue, crypto)
 }

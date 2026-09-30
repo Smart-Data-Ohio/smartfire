@@ -5,6 +5,7 @@
 pub mod accounts;
 pub mod attachments;
 pub mod link_embeds;
+pub mod fizzy_cards;
 pub mod page;
 pub mod pagination;
 pub mod rich_text;

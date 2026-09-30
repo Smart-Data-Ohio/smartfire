@@ -1,0 +1,285 @@
+{
+  "reference": "d7c7de92",
+  "card": {
+    "id": 3,
+    "account_id": "897362094",
+    "number": 579
+  },
+  "frames": [
+    {
+      "name": "connect",
+      "connect": true,
+      "payload": null,
+      "error": null,
+      "html": "<turbo-frame id=\"card_for_message_99_fizzy_card_3\">\n    <p class=\"fizzy-chip\">\n  <a class=\"fizzy-chip__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://app.fizzy.do/897362094/cards/579\">Fizzy card #579</a>\n    <span class=\"fizzy-chip__hint\"><a href=\"/users/me/profile\">Connect Fizzy to preview</a></span>\n</p>\n\n</turbo-frame>"
+    },
+    {
+      "name": "loading",
+      "connect": false,
+      "payload": null,
+      "error": null,
+      "html": "<turbo-frame id=\"card_for_message_99_fizzy_card_3\">\n    <p class=\"fizzy-card__loading\">Loading Fizzy card…</p>\n</turbo-frame>"
+    },
+    {
+      "name": "missing",
+      "connect": false,
+      "payload": null,
+      "error": "not_found",
+      "html": "<turbo-frame id=\"card_for_message_99_fizzy_card_3\">\n    <p class=\"fizzy-chip\">\n  <a class=\"fizzy-chip__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://app.fizzy.do/897362094/cards/579\">Fizzy card #579</a>\n</p>\n\n</turbo-frame>"
+    },
+    {
+      "name": "error",
+      "connect": false,
+      "payload": null,
+      "error": "Fizzy returned 500 <danger>",
+      "html": "<turbo-frame id=\"card_for_message_99_fizzy_card_3\">\n    <p class=\"fizzy-card__error\">\n      Couldn’t load this Fizzy card.\n      <span class=\"fizzy-card__error-detail\">Fizzy returned 500 &lt;danger&gt;</span>\n    </p>\n</turbo-frame>"
+    },
+    {
+      "name": "full",
+      "connect": false,
+      "payload": {
+        "title": "Fix <billing> & \"quotes\"",
+        "board": {
+          "name": "Engineering"
+        },
+        "column": {
+          "name": "In Progress"
+        },
+        "url": "https://app.fizzy.do/897362094/cards/579",
+        "assignees": [
+          {
+            "name": "David",
+            "avatar_url": "https://cdn.example.test/avatar.png"
+          },
+          {
+            "name": "<Bad>",
+            "avatar_url": "http://bad.example/avatar.png"
+          }
+        ],
+        "has_more_assignees": true,
+        "tags": [
+          "billing",
+          "<urgent>"
+        ],
+        "steps": [
+          {
+            "completed": true
+          },
+          {
+            "completed": false
+          }
+        ],
+        "last_active_at": "2026-03-02T15:00:00Z"
+      },
+      "error": null,
+      "html": "<turbo-frame id=\"card_for_message_99_fizzy_card_3\">\n    <article class=\"fizzy-card fizzy-card--column\" data-fizzy-card=\"897362094#579\">\n  <header class=\"fizzy-card__header\">\n    <span class=\"fizzy-card__board\">Engineering</span>\n    <span class=\"fizzy-card__number\">#579</span>\n    <span class=\"fizzy-card__state\">In Progress</span>\n  </header>\n\n    <p class=\"fizzy-card__title\">Fix &lt;billing&gt; &amp; &quot;quotes&quot;</p>\n\n    <div class=\"fizzy-card__meta\">\n        <span class=\"fizzy-card__assignee\">\n            <img alt=\"\" class=\"fizzy-card__avatar\" loading=\"lazy\" src=\"https://cdn.example.test/avatar.png\" width=\"16\" height=\"16\" />\n          David\n        </span>\n        <span class=\"fizzy-card__assignee\">\n          &lt;Bad&gt;\n        </span>\n        <span class=\"fizzy-card__more-assignees\">+ more</span>\n\n        <span class=\"fizzy-card__tag\">#billing</span>\n        <span class=\"fizzy-card__tag\">#&lt;urgent&gt;</span>\n\n        <span class=\"fizzy-card__steps\">1/2 steps</span>\n    </div>\n\n  <footer class=\"fizzy-card__footer\">\n      <span class=\"fizzy-card__updated\">Active <time datetime=\"2026-03-02T15:00:00Z\" data-local-time-target=\"time\"></time></span>\n    <a class=\"fizzy-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://app.fizzy.do/897362094/cards/579\">View in Fizzy</a>\n  </footer>\n</article>\n\n</turbo-frame>"
+    },
+    {
+      "name": "stale_error",
+      "connect": false,
+      "payload": {
+        "title": "Fix <billing> & \"quotes\"",
+        "board": {
+          "name": "Engineering"
+        },
+        "column": {
+          "name": "In Progress"
+        },
+        "url": "https://app.fizzy.do/897362094/cards/579",
+        "assignees": [
+          {
+            "name": "David",
+            "avatar_url": "https://cdn.example.test/avatar.png"
+          },
+          {
+            "name": "<Bad>",
+            "avatar_url": "http://bad.example/avatar.png"
+          }
+        ],
+        "has_more_assignees": true,
+        "tags": [
+          "billing",
+          "<urgent>"
+        ],
+        "steps": [
+          {
+            "completed": true
+          },
+          {
+            "completed": false
+          }
+        ],
+        "last_active_at": "2026-03-02T15:00:00Z"
+      },
+      "error": "error ignored with payload",
+      "html": "<turbo-frame id=\"card_for_message_99_fizzy_card_3\">\n    <article class=\"fizzy-card fizzy-card--column\" data-fizzy-card=\"897362094#579\">\n  <header class=\"fizzy-card__header\">\n    <span class=\"fizzy-card__board\">Engineering</span>\n    <span class=\"fizzy-card__number\">#579</span>\n    <span class=\"fizzy-card__state\">In Progress</span>\n  </header>\n\n    <p class=\"fizzy-card__title\">Fix &lt;billing&gt; &amp; &quot;quotes&quot;</p>\n\n    <div class=\"fizzy-card__meta\">\n        <span class=\"fizzy-card__assignee\">\n            <img alt=\"\" class=\"fizzy-card__avatar\" loading=\"lazy\" src=\"https://cdn.example.test/avatar.png\" width=\"16\" height=\"16\" />\n          David\n        </span>\n        <span class=\"fizzy-card__assignee\">\n          &lt;Bad&gt;\n        </span>\n        <span class=\"fizzy-card__more-assignees\">+ more</span>\n\n        <span class=\"fizzy-card__tag\">#billing</span>\n        <span class=\"fizzy-card__tag\">#&lt;urgent&gt;</span>\n\n        <span class=\"fizzy-card__steps\">1/2 steps</span>\n    </div>\n\n  <footer class=\"fizzy-card__footer\">\n      <span class=\"fizzy-card__updated\">Active <time datetime=\"2026-03-02T15:00:00Z\" data-local-time-target=\"time\"></time></span>\n    <a class=\"fizzy-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://app.fizzy.do/897362094/cards/579\">View in Fizzy</a>\n  </footer>\n</article>\n\n</turbo-frame>"
+    },
+    {
+      "name": "closed",
+      "connect": false,
+      "payload": {
+        "title": "Fix <billing> & \"quotes\"",
+        "board": {
+          "name": "Engineering"
+        },
+        "column": {
+          "name": "In Progress"
+        },
+        "url": "https://app.fizzy.do/897362094/cards/579",
+        "assignees": [
+          {
+            "name": "David",
+            "avatar_url": "https://cdn.example.test/avatar.png"
+          },
+          {
+            "name": "<Bad>",
+            "avatar_url": "http://bad.example/avatar.png"
+          }
+        ],
+        "has_more_assignees": true,
+        "tags": [
+          "billing",
+          "<urgent>"
+        ],
+        "steps": [
+          {
+            "completed": true
+          },
+          {
+            "completed": false
+          }
+        ],
+        "last_active_at": "2026-03-02T15:00:00Z",
+        "closed": true
+      },
+      "error": null,
+      "html": "<turbo-frame id=\"card_for_message_99_fizzy_card_3\">\n    <article class=\"fizzy-card fizzy-card--closed\" data-fizzy-card=\"897362094#579\">\n  <header class=\"fizzy-card__header\">\n    <span class=\"fizzy-card__board\">Engineering</span>\n    <span class=\"fizzy-card__number\">#579</span>\n    <span class=\"fizzy-card__state\">Closed</span>\n  </header>\n\n    <p class=\"fizzy-card__title\">Fix &lt;billing&gt; &amp; &quot;quotes&quot;</p>\n\n    <div class=\"fizzy-card__meta\">\n        <span class=\"fizzy-card__assignee\">\n            <img alt=\"\" class=\"fizzy-card__avatar\" loading=\"lazy\" src=\"https://cdn.example.test/avatar.png\" width=\"16\" height=\"16\" />\n          David\n        </span>\n        <span class=\"fizzy-card__assignee\">\n          &lt;Bad&gt;\n        </span>\n        <span class=\"fizzy-card__more-assignees\">+ more</span>\n\n        <span class=\"fizzy-card__tag\">#billing</span>\n        <span class=\"fizzy-card__tag\">#&lt;urgent&gt;</span>\n\n        <span class=\"fizzy-card__steps\">1/2 steps</span>\n    </div>\n\n  <footer class=\"fizzy-card__footer\">\n      <span class=\"fizzy-card__updated\">Active <time datetime=\"2026-03-02T15:00:00Z\" data-local-time-target=\"time\"></time></span>\n    <a class=\"fizzy-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://app.fizzy.do/897362094/cards/579\">View in Fizzy</a>\n  </footer>\n</article>\n\n</turbo-frame>"
+    },
+    {
+      "name": "postponed",
+      "connect": false,
+      "payload": {
+        "title": "Fix <billing> & \"quotes\"",
+        "board": {
+          "name": "Engineering"
+        },
+        "column": null,
+        "url": "https://app.fizzy.do/897362094/cards/579",
+        "assignees": [
+          {
+            "name": "David",
+            "avatar_url": "https://cdn.example.test/avatar.png"
+          },
+          {
+            "name": "<Bad>",
+            "avatar_url": "http://bad.example/avatar.png"
+          }
+        ],
+        "has_more_assignees": true,
+        "tags": [
+          "billing",
+          "<urgent>"
+        ],
+        "steps": [
+          {
+            "completed": true
+          },
+          {
+            "completed": false
+          }
+        ],
+        "last_active_at": "2026-03-02T15:00:00Z",
+        "postponed": true
+      },
+      "error": null,
+      "html": "<turbo-frame id=\"card_for_message_99_fizzy_card_3\">\n    <article class=\"fizzy-card fizzy-card--postponed\" data-fizzy-card=\"897362094#579\">\n  <header class=\"fizzy-card__header\">\n    <span class=\"fizzy-card__board\">Engineering</span>\n    <span class=\"fizzy-card__number\">#579</span>\n    <span class=\"fizzy-card__state\">Postponed</span>\n  </header>\n\n    <p class=\"fizzy-card__title\">Fix &lt;billing&gt; &amp; &quot;quotes&quot;</p>\n\n    <div class=\"fizzy-card__meta\">\n        <span class=\"fizzy-card__assignee\">\n            <img alt=\"\" class=\"fizzy-card__avatar\" loading=\"lazy\" src=\"https://cdn.example.test/avatar.png\" width=\"16\" height=\"16\" />\n          David\n        </span>\n        <span class=\"fizzy-card__assignee\">\n          &lt;Bad&gt;\n        </span>\n        <span class=\"fizzy-card__more-assignees\">+ more</span>\n\n        <span class=\"fizzy-card__tag\">#billing</span>\n        <span class=\"fizzy-card__tag\">#&lt;urgent&gt;</span>\n\n        <span class=\"fizzy-card__steps\">1/2 steps</span>\n    </div>\n\n  <footer class=\"fizzy-card__footer\">\n      <span class=\"fizzy-card__updated\">Active <time datetime=\"2026-03-02T15:00:00Z\" data-local-time-target=\"time\"></time></span>\n    <a class=\"fizzy-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://app.fizzy.do/897362094/cards/579\">View in Fizzy</a>\n  </footer>\n</article>\n\n</turbo-frame>"
+    },
+    {
+      "name": "triage",
+      "connect": false,
+      "payload": {
+        "title": "Fix <billing> & \"quotes\"",
+        "board": {
+          "name": "Engineering"
+        },
+        "column": null,
+        "url": "https://app.fizzy.do/897362094/cards/579",
+        "assignees": [],
+        "has_more_assignees": false,
+        "tags": [],
+        "steps": [],
+        "last_active_at": "bad date"
+      },
+      "error": null,
+      "html": "<turbo-frame id=\"card_for_message_99_fizzy_card_3\">\n    <article class=\"fizzy-card fizzy-card--triage\" data-fizzy-card=\"897362094#579\">\n  <header class=\"fizzy-card__header\">\n    <span class=\"fizzy-card__board\">Engineering</span>\n    <span class=\"fizzy-card__number\">#579</span>\n    <span class=\"fizzy-card__state\">Maybe?</span>\n  </header>\n\n    <p class=\"fizzy-card__title\">Fix &lt;billing&gt; &amp; &quot;quotes&quot;</p>\n\n    <div class=\"fizzy-card__meta\">\n\n\n    </div>\n\n  <footer class=\"fizzy-card__footer\">\n    <a class=\"fizzy-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://app.fizzy.do/897362094/cards/579\">View in Fizzy</a>\n  </footer>\n</article>\n\n</turbo-frame>"
+    },
+    {
+      "name": "no_title",
+      "connect": false,
+      "payload": {
+        "title": null,
+        "board": {
+          "name": "Engineering"
+        },
+        "column": {
+          "name": "In Progress"
+        },
+        "url": "javascript:alert(1)",
+        "assignees": [
+          {
+            "name": "David",
+            "avatar_url": "https://cdn.example.test/avatar.png"
+          },
+          {
+            "name": "<Bad>",
+            "avatar_url": "http://bad.example/avatar.png"
+          }
+        ],
+        "has_more_assignees": true,
+        "tags": [
+          "billing",
+          "<urgent>"
+        ],
+        "steps": [
+          {
+            "completed": true
+          },
+          {
+            "completed": false
+          }
+        ],
+        "last_active_at": "2026-03-02T15:00:00Z"
+      },
+      "error": null,
+      "html": "<turbo-frame id=\"card_for_message_99_fizzy_card_3\">\n    <article class=\"fizzy-card fizzy-card--column\" data-fizzy-card=\"897362094#579\">\n  <header class=\"fizzy-card__header\">\n    <span class=\"fizzy-card__board\">Engineering</span>\n    <span class=\"fizzy-card__number\">#579</span>\n    <span class=\"fizzy-card__state\">In Progress</span>\n  </header>\n\n    <p class=\"fizzy-card__loading\">Loading card…</p>\n\n  <footer class=\"fizzy-card__footer\">\n      <span class=\"fizzy-card__updated\">Active <time datetime=\"2026-03-02T15:00:00Z\" data-local-time-target=\"time\"></time></span>\n    <a class=\"fizzy-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://app.fizzy.do/897362094/cards/579\">View in Fizzy</a>\n  </footer>\n</article>\n\n</turbo-frame>"
+    },
+    {
+      "name": "empty_payload",
+      "connect": false,
+      "payload": {},
+      "error": null,
+      "html": "<turbo-frame id=\"card_for_message_99_fizzy_card_3\">\n    <p class=\"fizzy-card__loading\">Loading Fizzy card…</p>\n</turbo-frame>"
+    }
+  ],
+  "serialized_payloads": [
+    {
+      "payload": null,
+      "stored": null
+    },
+    {
+      "payload": false,
+      "stored": "false"
+    },
+    {
+      "payload": {},
+      "stored": "{}"
+    },
+    {
+      "payload": [
+        "one",
+        "two"
+      ],
+      "stored": "[\"one\",\"two\"]"
+    }
+  ]
+}
