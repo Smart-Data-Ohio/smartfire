@@ -396,3 +396,37 @@ async fn ws11_event_webhook_case_ack_does_not_cancel_pending_webhook() {
     assert_eq!(e.webhook_status, "delivered");
     assert_eq!(s.received().len(), 1);
 }
+
+#[tokio::test]
+async fn ws11_bot_case_auth_keeps_working_after_plaintext_clearing() {
+    let (t, _) = setup().await;
+    let (id, key) = t
+        .db()
+        .write(|tx| {
+            let b = User::create_bot(tx, "Bender", None)?;
+            let key = b.plain_bot_key().unwrap();
+            tx.conn().execute(
+                "UPDATE users SET bot_token=? WHERE id=?",
+                params![b.plain_bot_token, b.id],
+            )?;
+            Ok((b.id, key))
+        })
+        .await
+        .unwrap();
+    crate::jobs::periodic::clear_plaintext_bot_tokens(t.db())
+        .await
+        .unwrap();
+    t.db()
+        .read(move |c| {
+            assert!(
+                c.query_row("SELECT bot_token FROM users WHERE id=?", [id], |r| r
+                    .get::<_, Option<String>>(0))?
+                    .is_none()
+            );
+            assert_eq!(User::authenticate_bot(c, &key)?.map(|u| u.id), Some(id));
+            assert!(User::authenticate_bot(c, &format!("{id}-WrongToken12"))?.is_none());
+            Ok(())
+        })
+        .await
+        .unwrap();
+}

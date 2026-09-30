@@ -7,7 +7,8 @@
     "test/models/agent_test.rb": "The badge/directory HTML and absence of secrets in rendered HTML remain WS11-ui cases (two unmapped names). The reset-lock comparison checks the actual serialized writer transaction instead of a Ruby method spy.",
     "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8.",
     "test/models/message_streaming_test.rb": "18 domain and production-sweep cases compared; five actual rendered start/trailing, activity and link-reference cases await their peer adapters. Never-resume checks the same validation through persistence instead of Rails valid?.",
-    "test/models/agent_approval_test.rb": "The preference-neighbour case also asserts an ordinary mention inbox item; its approval preference and decider half is already checked in the consolidated vectors, but the complete named case awaits WS12 activity installation."
+    "test/models/agent_approval_test.rb": "The preference-neighbour case also asserts an ordinary mention inbox item; its approval preference and decider half is already checked in the consolidated vectors, but the complete named case awaits WS12 activity installation.",
+    "test/models/user/bot_test.rb": "Nine digest/authentication and production plaintext-scrub cases compared. Two fixed SecureRandom-stub cases, three reply-token model cases and one actual queued webhook execution case remain unmapped; broader token and HTTP checks are additional evidence."
   },
   "files": [
     {
@@ -159,18 +160,9 @@
       "remaining_named_case_ports": [
         "create bot",
         "reset bot key",
-        "authenticate",
-        "creation writes the digest alone and stored bots hide their key",
-        "leftover plaintext is never consulted",
-        "bot auth keeps working after plaintext clearing",
-        "a bot without a digest cannot authenticate until its key is reset",
-        "reset stores the digest alone, clears leftover plaintext, and retires the old key",
         "reply token authenticates its bot for its room only",
         "reply token expires",
         "reply token is refused once the bot leaves or deactivates",
-        "authenticate refuses wrong, empty, and malformed keys",
-        "a deactivated bot's key is refused",
-        "existing keys keep working after the digest migration",
         "deliver message by webhook"
       ]
     },

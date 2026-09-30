@@ -8,6 +8,7 @@ mod agent_approval_test;
 mod agent_approval_cases_test;
 mod agent_record_test;
 mod agent_cases_test;
+mod agent_bot_cases_test;
 mod agent_dispatcher_cases_test;
 mod agent_slash_command_test;
 mod agent_step_test;

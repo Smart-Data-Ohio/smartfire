@@ -754,6 +754,54 @@
           "rust": "ws11_event_webhook_case_ack_does_not_cancel_pending_webhook"
         }
       ]
+    },
+    {
+      "rails_file": "test/models/user/bot_test.rb",
+      "rust_file": "rust/crates/db/src/tests/agent_bot_cases_test.rs",
+      "cases": [
+        {
+          "rails": "authenticate",
+          "rust": "ws11_bot_case_authenticate_created_bot"
+        },
+        {
+          "rails": "creation writes the digest alone and stored bots hide their key",
+          "rust": "ws11_bot_case_digest_alone_and_stored_key_hidden"
+        },
+        {
+          "rails": "leftover plaintext is never consulted",
+          "rust": "ws11_bot_case_leftover_plaintext_never_consulted"
+        },
+        {
+          "rails": "a bot without a digest cannot authenticate until its key is reset",
+          "rust": "ws11_bot_case_missing_digest_requires_reset"
+        },
+        {
+          "rails": "reset stores the digest alone, clears leftover plaintext, and retires the old key",
+          "rust": "ws11_bot_case_reset_clears_plaintext_retires_old_key"
+        },
+        {
+          "rails": "authenticate refuses wrong, empty, and malformed keys",
+          "rust": "ws11_bot_case_wrong_empty_and_malformed_keys_refused"
+        },
+        {
+          "rails": "a deactivated bot's key is refused",
+          "rust": "ws11_bot_case_deactivated_key_refused"
+        },
+        {
+          "rails": "existing keys keep working after the digest migration",
+          "rust": "ws11_bot_case_pre_migration_fixture_digest_keeps_working"
+        }
+      ]
+    },
+    {
+      "rails_file": "test/models/user/bot_test.rb",
+      "rust_file": "rust/crates/campfire/src/integrations/agent_jobs/case_tests.rs",
+      "cases": [
+        {
+          "rails": "bot auth keeps working after plaintext clearing",
+          "rust": "ws11_bot_case_auth_keeps_working_after_plaintext_clearing"
+        }
+      ]
     }
   ],
   "boundary_deferred": {
@@ -761,6 +809,7 @@
     "test/models/agent_test.rb": "The badge/directory HTML and absence of secrets in rendered HTML remain WS11-ui cases (two unmapped names). The reset-lock comparison checks the actual serialized writer transaction instead of a Ruby method spy.",
     "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8.",
     "test/models/message_streaming_test.rb": "18 domain and production-sweep cases compared; five actual rendered start/trailing, activity and link-reference cases await their peer adapters. Never-resume checks the same validation through persistence instead of Rails valid?.",
-    "test/models/agent_approval_test.rb": "The preference-neighbour case also asserts an ordinary mention inbox item; its approval preference and decider half is already checked in the consolidated vectors, but the complete named case awaits WS12 activity installation."
+    "test/models/agent_approval_test.rb": "The preference-neighbour case also asserts an ordinary mention inbox item; its approval preference and decider half is already checked in the consolidated vectors, but the complete named case awaits WS12 activity installation.",
+    "test/models/user/bot_test.rb": "Nine digest/authentication and production plaintext-scrub cases compared. Two fixed SecureRandom-stub cases, three reply-token model cases and one actual queued webhook execution case remain unmapped; broader token and HTTP checks are additional evidence."
   }
 }
