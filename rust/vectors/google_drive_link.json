@@ -1,0 +1,183 @@
+{
+  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
+  "urls": [
+    {
+      "input": "https://docs.google.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit",
+      "output": "1AbcDefGhIjKlMnOpQrSt"
+    },
+    {
+      "input": "https://docs.google.com/spreadsheets/d/1AbcDefGhIjKlMnOpQrSt/edit#gid=0",
+      "output": "1AbcDefGhIjKlMnOpQrSt"
+    },
+    {
+      "input": "https://docs.google.com/presentation/d/1AbcDefGhIjKlMnOpQrSt/edit",
+      "output": "1AbcDefGhIjKlMnOpQrSt"
+    },
+    {
+      "input": "https://docs.google.com/forms/d/1AbcDefGhIjKlMnOpQrSt/viewform",
+      "output": "1AbcDefGhIjKlMnOpQrSt"
+    },
+    {
+      "input": "https://drive.google.com/file/d/1AbcDefGhIjKlMnOpQrSt/view?usp=sharing",
+      "output": "1AbcDefGhIjKlMnOpQrSt"
+    },
+    {
+      "input": "https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt",
+      "output": "1AbcDefGhIjKlMnOpQrSt"
+    },
+    {
+      "input": "https://drive.google.com/open?usp=sharing&id=1AbcDefGhIjKlMnOpQrSt",
+      "output": "1AbcDefGhIjKlMnOpQrSt"
+    },
+    {
+      "input": "https://drive.google.com/drive/folders/1AbcDefGhIjKlMnOpQrSt",
+      "output": "1AbcDefGhIjKlMnOpQrSt"
+    },
+    {
+      "input": "https://docs.google.com/document/u/0/d/1AbcDefGhIjKlMnOpQrSt/edit",
+      "output": "1AbcDefGhIjKlMnOpQrSt"
+    },
+    {
+      "input": "https://drive.google.com/drive/u/2/folders/1AbcDefGhIjKlMnOpQrSt",
+      "output": "1AbcDefGhIjKlMnOpQrSt"
+    },
+    {
+      "input": "https://drive.google.com/u/0/open?id=1AbcDefGhIjKlMnOpQrSt",
+      "output": "1AbcDefGhIjKlMnOpQrSt"
+    },
+    {
+      "input": "https://docs.google.com/u/2/document/u/0/d/1AbcDefGhIjKlMnOpQrSt/edit",
+      "output": "1AbcDefGhIjKlMnOpQrSt"
+    },
+    {
+      "input": "HTTPS://DOCS.GOOGLE.COM/DOCUMENT/D/1AbcDefGhIjKlMnOpQrSt/edit",
+      "output": "1AbcDefGhIjKlMnOpQrSt"
+    },
+    {
+      "input": "https://example.com/document/d/1AbcDefGhIjKlMnOpQrSt/edit",
+      "output": null
+    },
+    {
+      "input": "https://docs.google.com.evil.test/document/d/1AbcDefGhIjKlMnOpQrSt/edit",
+      "output": null
+    },
+    {
+      "input": "https://docs.google.com/document/d//edit",
+      "output": null
+    },
+    {
+      "input": "https://docs.google.com/document/d/short/edit",
+      "output": null
+    },
+    {
+      "input": "https://drive.google.com/open?id=",
+      "output": null
+    },
+    {
+      "input": "https://drive.google.com/drive/folders/",
+      "output": null
+    },
+    {
+      "input": "javascript:alert(document.cookie)",
+      "output": null
+    },
+    {
+      "input": null,
+      "output": null
+    },
+    {
+      "input": "",
+      "output": null
+    },
+    {
+      "input": false,
+      "output": null
+    },
+    {
+      "input": [
+        "https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt"
+      ],
+      "output": null
+    },
+    {
+      "input": {
+        "id": "1AbcDefGhIjKlMnOpQrSt"
+      },
+      "output": null
+    },
+    {
+      "input": "https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrStgarbage",
+      "output": "1AbcDefGhIjKlMnOpQrStgarbage"
+    },
+    {
+      "input": "https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt%20",
+      "output": null
+    },
+    {
+      "input": "https://docſ.google.com/document/d/1AbcDefGhIjKlMnOpQrSt",
+      "output": "1AbcDefGhIjKlMnOpQrSt"
+    },
+    {
+      "input": "https://docs.google.com/document/d/ſabcdefghij",
+      "output": "ſabcdefghij"
+    },
+    {
+      "input": "https://docs.google.com/document/d/Kabcdefghij",
+      "output": "Kabcdefghij"
+    },
+    {
+      "input": "https://docs.google.com/u/２/document/d/1AbcDefGhIjKlMnOpQrSt",
+      "output": null
+    }
+  ],
+  "ids": [
+    {
+      "input": "1AbcDefGhIjKlMnOpQrSt",
+      "valid": true
+    },
+    {
+      "input": "abc_def-123XYZ",
+      "valid": true
+    },
+    {
+      "input": "short",
+      "valid": false
+    },
+    {
+      "input": "has spaces in it!!",
+      "valid": false
+    },
+    {
+      "input": "https://drive.google.com/open?id=1AbcDefGhIjKlMnOpQrSt",
+      "valid": false
+    },
+    {
+      "input": null,
+      "valid": false
+    },
+    {
+      "input": false,
+      "valid": false
+    },
+    {
+      "input": [],
+      "valid": false
+    },
+    {
+      "input": {},
+      "valid": false
+    },
+    {
+      "input": "1234567890\n",
+      "valid": false
+    },
+    {
+      "input": "ſabcdefghij",
+      "valid": false
+    },
+    {
+      "input": "Kabcdefghij",
+      "valid": false
+    }
+  ]
+}

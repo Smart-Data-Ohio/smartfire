@@ -1,18 +1,18 @@
 # WS14g Rails test ledger (partial)
 
 Source: this checkout at Rails pin `d7c7de92`. Named declarations are listed individually. A domain property exercised by a native test does not claim its HTTP/browser case is ported. Outside-slice cases have a named owner; consult that owner's report for completion.
-Path-glob ledger: 48 files; 611 named cases; 21 ported domain cases; 590 deferred or outside slice. Additional Google cases in other controller files: 37.
+Path-glob ledger: 48 files; 611 named cases; 34 ported domain/API cases; 577 partial, deferred or outside slice. Additional Google cases in other controller files: 37.
 
 
 The 70 signed Google ID-token vectors also run through the local TLS fake. Those cases are not added to these Rails declaration counts.
 
 ## test/controllers/accounts/users/google_links_controller_test.rb
 
-- **Deferred** — administrators allow a Google link for a self-changed email — WS14g continuation.
-- **Deferred** — administrators unlink a Google identity — WS14g continuation.
-- **Deferred** — members cannot allow or remove Google links — WS14g continuation.
-- **Deferred** — bots have no Google link to manage — WS14g continuation.
-- **Deferred** — the account page offers the controls to administrators only — WS14g continuation.
+- **Partial** — administrators allow a Google link for a self-changed email — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — administrators unlink a Google identity — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — members cannot allow or remove Google links — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — bots have no Google link to manage — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — the account page offers the controls to administrators only — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
 
 ## test/controllers/agents/drive_attachments_delivery_test.rb
 
@@ -38,14 +38,14 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/controllers/google/calendar_notifications_controller_test.rb
 
-- **Deferred** — unknown channel answers 404 and enqueues nothing — WS14g continuation.
-- **Deferred** — wrong token answers 403 and enqueues nothing — WS14g continuation.
-- **Deferred** — sync handshake is acknowledged without work — WS14g continuation.
-- **Deferred** — a change notification enqueues one inbound sync — WS14g continuation.
-- **Deferred** — a redelivered notification is acknowledged without a second sync — WS14g continuation.
-- **Deferred** — not_exists drops the channel and enqueues a re-watch — WS14g continuation.
-- **Deferred** — a change notification also enqueues a meeting refresh — WS14g continuation.
-- **Deferred** — a redelivered notification enqueues no second meeting refresh — WS14g continuation.
+- **Ported API case** — unknown channel answers 404 and enqueues nothing — app::google_webhook_tests (native request/claim/queue tests).
+- **Ported API case** — wrong token answers 403 and enqueues nothing — app::google_webhook_tests (native request/claim/queue tests).
+- **Ported API case** — sync handshake is acknowledged without work — app::google_webhook_tests (native request/claim/queue tests).
+- **Ported API case** — a change notification enqueues one inbound sync — app::google_webhook_tests (native request/claim/queue tests).
+- **Ported API case** — a redelivered notification is acknowledged without a second sync — app::google_webhook_tests (native request/claim/queue tests).
+- **Ported API case** — not_exists drops the channel and enqueues a re-watch — app::google_webhook_tests (native request/claim/queue tests).
+- **Ported API case** — a change notification also enqueues a meeting refresh — app::google_webhook_tests (native request/claim/queue tests).
+- **Ported API case** — a redelivered notification enqueues no second meeting refresh — app::google_webhook_tests (native request/claim/queue tests).
 
 ## test/controllers/google/connections_controller_test.rb
 
@@ -172,62 +172,62 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/controllers/sessions/google_controller_test.rb
 
-- **Deferred** — login page offers Google sign-in with the mark, domains, and password note — WS14g continuation.
-- **Deferred** — login page hides the Google button when credentials are missing — WS14g continuation.
-- **Deferred** — login page hides the Google button when domains are explicitly empty — WS14g continuation.
-- **Deferred** — start redirects to Google with identity-only scope, nonce, and PKCE — WS14g continuation.
-- **Deferred** — start requires CSRF protection — WS14g continuation.
-- **Deferred** — start and callback 404 when Google credentials are missing — WS14g continuation.
-- **Deferred** — start and callback 404 when sign-in domains are explicitly empty — WS14g continuation.
-- **Deferred** — signed-in users are sent home instead of starting or finishing Google sign-in — WS14g continuation.
-- **Deferred** — first-run setup cannot be bypassed through Google sign-in — WS14g continuation.
-- **Deferred** — new smartdata.net user is auto-provisioned as an ordinary member — WS14g continuation.
-- **Deferred** — new cnbssoftware.com user is auto-provisioned as an ordinary member — WS14g continuation.
-- **Deferred** — existing account links by verified email, preserving id, history, role, and password — WS14g continuation.
-- **Deferred** — subsequent logins resolve the immutable subject across email changes — WS14g continuation.
-- **Deferred** — post-auth return destination survives the Google round trip — WS14g continuation.
-- **Deferred** — external Google account is rejected while password sign-in still works — WS14g continuation.
-- **Deferred** — missing hd is rejected: the email suffix alone proves nothing — WS14g continuation.
-- **Deferred** — spoofed hd with an external email domain is rejected — WS14g continuation.
-- **Deferred** — allowed email with an external hd is rejected — WS14g continuation.
-- **Deferred** — Google-only user cannot sign in with a password — WS14g continuation.
-- **Deferred** — deactivated user with a retained identity is rejected, never revived — WS14g continuation.
-- **Deferred** — deactivated predecessor without an identity is not recreated — WS14g continuation.
-- **Deferred** — banned user is rejected — WS14g continuation.
-- **Deferred** — bot user is rejected — WS14g continuation.
-- **Deferred** — agent user is rejected — WS14g continuation.
-- **Deferred** — ambiguous duplicate emails are rejected — WS14g continuation.
-- **Deferred** — a different subject cannot link onto an already-linked user — WS14g continuation.
-- **Deferred** — malformed id_token is rejected — WS14g continuation.
-- **Deferred** — id_token signed by the wrong key is rejected — WS14g continuation.
-- **Deferred** — expired id_token is rejected — WS14g continuation.
-- **Deferred** — id_token for another audience is rejected — WS14g continuation.
-- **Deferred** — multi-audience id_token requires a matching azp — WS14g continuation.
-- **Deferred** — multi-audience id_token with a matching azp succeeds — WS14g continuation.
-- **Deferred** — id_token with a wrong azp is rejected — WS14g continuation.
-- **Deferred** — id_token from an unknown issuer is rejected — WS14g continuation.
-- **Deferred** — id_token with a missing or wrong nonce is rejected — WS14g continuation.
-- **Deferred** — id_token with a missing or unverified email is rejected — WS14g continuation.
-- **Deferred** — id_token with a missing subject is rejected — WS14g continuation.
-- **Deferred** — id_token with a non-RS256 algorithm is rejected — WS14g continuation.
-- **Deferred** — unknown signing key refetches once and still fails closed — WS14g continuation.
-- **Deferred** — key rotation succeeds through a bounded refetch — WS14g continuation.
-- **Deferred** — callback with a forged or missing state is rejected without contacting Google — WS14g continuation.
-- **Deferred** — callback with an expired flow is rejected — WS14g continuation.
-- **Deferred** — callback state cannot be replayed — WS14g continuation.
-- **Deferred** — cancelled grant redirects without signing in — WS14g continuation.
-- **Deferred** — callback without a code is rejected — WS14g continuation.
-- **Deferred** — failed code exchange sends PKCE and fails without signing in — WS14g continuation.
-- **Deferred** — token exchange without an id_token fails without signing in — WS14g continuation.
-- **Deferred** — token endpoint outage fails closed with a retry message — WS14g continuation.
-- **Deferred** — token endpoint connection failure fails closed with a retry message — WS14g continuation.
-- **Deferred** — signing key outage fails closed with a retry message — WS14g continuation.
-- **Deferred** — rejection logs carry no tokens or codes — WS14g continuation.
-- **Deferred** — authorization code is filtered from logs — WS14g continuation.
-- **Deferred** — Google sign-in creates no Calendar/Drive connection and stores no tokens — WS14g continuation.
-- **Deferred** — Calendar connection is never treated as login identity — WS14g continuation.
-- **Deferred** — connecting Calendar creates no login identity — WS14g continuation.
-- **Deferred** — disconnecting Calendar keeps the login identity — WS14g continuation.
+- **Partial** — login page offers Google sign-in with the mark, domains, and password note — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — login page hides the Google button when credentials are missing — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — login page hides the Google button when domains are explicitly empty — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — start redirects to Google with identity-only scope, nonce, and PKCE — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — start requires CSRF protection — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — start and callback 404 when Google credentials are missing — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — start and callback 404 when sign-in domains are explicitly empty — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — signed-in users are sent home instead of starting or finishing Google sign-in — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — first-run setup cannot be bypassed through Google sign-in — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — new smartdata.net user is auto-provisioned as an ordinary member — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — new cnbssoftware.com user is auto-provisioned as an ordinary member — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — existing account links by verified email, preserving id, history, role, and password — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — subsequent logins resolve the immutable subject across email changes — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — post-auth return destination survives the Google round trip — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — external Google account is rejected while password sign-in still works — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — missing hd is rejected: the email suffix alone proves nothing — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — spoofed hd with an external email domain is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — allowed email with an external hd is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — Google-only user cannot sign in with a password — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — deactivated user with a retained identity is rejected, never revived — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — deactivated predecessor without an identity is not recreated — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — banned user is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — bot user is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — agent user is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — ambiguous duplicate emails are rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — a different subject cannot link onto an already-linked user — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — malformed id_token is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — id_token signed by the wrong key is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — expired id_token is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — id_token for another audience is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — multi-audience id_token requires a matching azp — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — multi-audience id_token with a matching azp succeeds — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — id_token with a wrong azp is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — id_token from an unknown issuer is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — id_token with a missing or wrong nonce is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — id_token with a missing or unverified email is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — id_token with a missing subject is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — id_token with a non-RS256 algorithm is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — unknown signing key refetches once and still fails closed — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — key rotation succeeds through a bounded refetch — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — callback with a forged or missing state is rejected without contacting Google — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — callback with an expired flow is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — callback state cannot be replayed — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — cancelled grant redirects without signing in — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — callback without a code is rejected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — failed code exchange sends PKCE and fails without signing in — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — token exchange without an id_token fails without signing in — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — token endpoint outage fails closed with a retry message — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — token endpoint connection failure fails closed with a retry message — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — signing key outage fails closed with a retry message — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — rejection logs carry no tokens or codes — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — authorization code is filtered from logs — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — Google sign-in creates no Calendar/Drive connection and stores no tokens — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — Calendar connection is never treated as login identity — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — connecting Calendar creates no login identity — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — disconnecting Calendar keeps the login identity — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
 
 ## test/controllers/sessions/google_pre_hijack_test.rb
 
@@ -287,14 +287,14 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/controllers/users/google_sign_in_links_controller_test.rb
 
-- **Deferred** — the profile offers the link and the flow links the verified subject to the signed-in member — WS14g continuation.
-- **Deferred** — the link flow keeps sign-in's domain allowlist — WS14g continuation.
-- **Deferred** — the link flow keeps sign-in's nonce check — WS14g continuation.
-- **Deferred** — a Google account that already signs in as someone else is refused — WS14g continuation.
-- **Deferred** — a member already linked to another subject is refused — WS14g continuation.
-- **Deferred** — a link flow finished by a different signed-in member links nobody — WS14g continuation.
-- **Deferred** — a link flow whose member signed out does not sign anyone in — WS14g continuation.
-- **Deferred** — starting a link requires a signed-in member and CSRF protection — WS14g continuation.
+- **Partial** — the profile offers the link and the flow links the verified subject to the signed-in member — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — the link flow keeps sign-in's domain allowlist — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — the link flow keeps sign-in's nonce check — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — a Google account that already signs in as someone else is refused — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — a member already linked to another subject is refused — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — a link flow finished by a different signed-in member links nobody — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — a link flow whose member signed out does not sign anyone in — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — starting a link requires a signed-in member and CSRF protection — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
 
 ## test/integration/drive_picker_test.rb
 
@@ -597,11 +597,11 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/models/google/drive_link_test.rb
 
-- **Deferred** — docs editor URLs — WS14g continuation.
-- **Deferred** — drive file, open, and folder URLs — WS14g continuation.
-- **Deferred** — account switcher prefixes — WS14g continuation.
-- **Deferred** — negatives — WS14g continuation.
-- **Deferred** — valid_id? accepts bare file ids only — WS14g continuation.
+- **Ported domain case** — docs editor URLs — models::google_drive_link::tests::all_pinned_rails_url_and_id_vectors.
+- **Ported domain case** — drive file, open, and folder URLs — models::google_drive_link::tests::all_pinned_rails_url_and_id_vectors.
+- **Ported domain case** — account switcher prefixes — models::google_drive_link::tests::all_pinned_rails_url_and_id_vectors.
+- **Ported domain case** — negatives — models::google_drive_link::tests::all_pinned_rails_url_and_id_vectors.
+- **Ported domain case** — valid_id? accepts bare file ids only — models::google_drive_link::tests::all_pinned_rails_url_and_id_vectors.
 
 ## test/models/google/picker_test.rb
 
@@ -640,13 +640,13 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 
 ## test/models/google_account_test.rb
 
-- **Deferred** — one account per user — WS14g continuation.
-- **Deferred** — tokens round-trip encrypted at rest — WS14g continuation.
-- **Deferred** — drive? reflects the stored scopes — WS14g continuation.
-- **Deferred** — connected, usable, and expiry predicates — WS14g continuation.
-- **Deferred** — calendar? treats blank scopes as granted and requires calendar.events otherwise — WS14g continuation.
-- **Deferred** — an unreadable token reads as unusable and marks the account disconnected — WS14g continuation.
-- **Deferred** — cleanup_snapshot returns an encrypted blob, or nil when unreadable — WS14g continuation.
+- **Partial** — one account per user — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — tokens round-trip encrypted at rest — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — drive? reflects the stored scopes — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — connected, usable, and expiry predicates — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — calendar? treats blank scopes as granted and requires calendar.events otherwise — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — an unreadable token reads as unusable and marks the account disconnected — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
+- **Partial** — cleanup_snapshot returns an encrypted blob, or nil when unreadable — WS14g continuation; controller/domain implementation exists with representative native tests; the full named Rails case remains to be mapped.
 
 ## test/models/user/meeting_status_test.rb
 
@@ -816,3 +816,9 @@ The 70 signed Google ID-token vectors also run through the local TLS fake. Those
 - **Deferred** — reconnect without Drive requests the calendar scope only — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
 - **Deferred** — layout carries the Drive previews meta tag only with the Drive scope — WS14g Calendar/Drive source + WS8b-r profile + WS17 status.
 
+
+## Continuation coverage and remaining seams
+
+The callback is installed at boot and its provisioning/link/sign-in writes share one immediate transaction. Eight native request tests cover first and returning sign-in, bad state/nonce/audience/domain/expiry, enrolled/remembered-device handoff, self-link ownership, fresh reauth/sudo, mismatched sudo subject, administrator trust no-ops, and session-insert rollback. Existing WS9 confirmation tests also run with the adapter installed. These coalesce Rails cases; partial entries above remain explicit until their complete Rails assertions are represented.
+
+The connection model has four native tests for encrypted columns, Rails-written ciphertext, expiry/scope predicates, reconnect preservation, unreadable-token disconnection, and cleanup snapshots. The connection controllers and HTTP refresh/revoke remain deferred. Calendar webhook handlers enqueue durable rows but downstream Calendar handlers remain deferred. Positional job payloads are declared from Rails and MeetingRefresh uses WS17's named user_id payload. Drive URL parsing is implemented; Drive metadata endpoints, recipients, attachment controller wiring and HTML remain deferred. Existing Message Drive attachment validation/save/touch/cascade code stays owned by WS8 and was not duplicated.

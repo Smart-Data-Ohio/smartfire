@@ -73,3 +73,5 @@ pub use workspace_presence_lease::WorkspacePresenceLease;
 pub mod google_calendar;
 
 pub mod google_account;
+
+pub mod google_drive_link;
