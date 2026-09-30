@@ -104,29 +104,29 @@ pub(super) fn update(tx: &Tx<'_>, user: i64, changes: Value) -> Result<()> {
     if !preferences.is_null() && !preferences.is_object() {
         errors.add("inbox_preferences", "is invalid");
     }
-    for (key, attribute) in [
-        (
-            "github_review_requests",
-            "inbox_preferences.github_review_requests",
-        ),
-        ("agent_approvals", "inbox_preferences.agent_approvals"),
-        ("agent_work", "inbox_preferences.agent_work"),
-        ("event_reminders", "inbox_preferences.event_reminders"),
-        ("huddle_invitations", "inbox_preferences.huddle_invitations"),
-    ] {
-        if let Some(value) = preferences.get(key)
-            && !matches!(value, Value::Bool(_))
-            && ![
-                json!(0),
-                json!(1),
-                json!("0"),
-                json!("1"),
-                json!("true"),
-                json!("false"),
-            ]
-            .contains(value)
-        {
-            errors.add(attribute, "must be true or false");
+    if let Some(preferences) = preferences.as_object() {
+        for (key, value) in preferences {
+            if !matches!(value, Value::Bool(_))
+                && ![
+                    json!(0),
+                    json!(1),
+                    json!("0"),
+                    json!("1"),
+                    json!("true"),
+                    json!("false"),
+                ]
+                .contains(value)
+            {
+                // ActiveModel replaces dots before humanizing nested attributes. A base
+                // message preserves the arbitrary JSON key without leaking static strings.
+                errors.add(
+                    "base",
+                    format!(
+                        "Inbox preferences {} must be true or false",
+                        key.replace(['_', '.'], " ")
+                    ),
+                );
+            }
         }
     }
     if let Some(voice) = text("voice_mode").filter(|s| present(s).is_some())

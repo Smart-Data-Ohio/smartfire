@@ -284,25 +284,99 @@ fn fallback(text: &str, zone: &TimeZone, now: Timestamp) -> Option<Timestamp> {
     let zoned = now.jiff().to_zoned(zone.clone());
     let mut date = zoned.date();
     let mut found = false;
-    if let Some(c)=re(r"(?P<year>[0-9]{4})-(?P<month>[0-9]{2})-(?P<day>[0-9]{2})").captures(text) {
-        date=normalized_date(c["year"].parse().ok()?,c["month"].parse().ok()?,c["day"].parse().ok()?)?;found=true;
-    }else if let Some(c)=re(r"(?i)\b(?P<month>jan[a-z]*|feb[a-z]*|mar[a-z]*|apr[a-z]*|may|jun[a-z]*|jul[a-z]*|aug[a-z]*|sep[a-z]*|oct[a-z]*|nov[a-z]*|dec[a-z]*)\s+(?P<day>[0-9]{1,2})(?:st|nd|rd|th)?(?:[, ]+(?P<year>[0-9]{4}))?").captures(text) {
-        date=normalized_date(c.name("year").map(|y|y.as_str().parse::<i16>()).transpose().ok()?.unwrap_or(date.year()),month(&c["month"])?,c["day"].parse().ok()?)?;found=true;
+    if let Some(c) =
+        re(r"(?P<year>[0-9]{4})[-/](?P<month>[0-9]{1,2})[-/](?P<day>[0-9]{1,2})").captures(text)
+    {
+        date = normalized_date(
+            c["year"].parse().ok()?,
+            c["month"].parse().ok()?,
+            c["day"].parse().ok()?,
+        )?;
+        found = true;
+    } else if let Some(c) =
+        re(r"\b(?P<day>[0-9]{1,2})[-/](?P<month>[0-9]{1,2})[-/](?P<year>[0-9]{2,4})\b")
+            .captures(text)
+    {
+        let mut year = c["year"].parse::<i16>().ok()?;
+        if year < 100 {
+            year += if year < 69 { 2000 } else { 1900 };
+        }
+        date = normalized_date(year, c["month"].parse().ok()?, c["day"].parse().ok()?)?;
+        found = true;
+    } else {
+        let names = r"jan[a-z]*|feb[a-z]*|mar[a-z]*|apr[a-z]*|may|jun[a-z]*|jul[a-z]*|aug[a-z]*|sep[a-z]*|oct[a-z]*|nov[a-z]*|dec[a-z]*";
+        let patterns = [
+            re(&format!(
+                r"(?i)\b(?P<day>[0-9]{{1,2}})(?:st|nd|rd|th)?[ -]+(?P<month>{names})(?:[, -]+(?P<year>[0-9]{{4}}))?"
+            )),
+            re(&format!(
+                r"(?i)\b(?P<month>{names})[ -]+(?P<day>[0-9]{{1,2}})(?:st|nd|rd|th)?(?:[, -]+(?P<year>[0-9]{{4}}))?"
+            )),
+        ];
+        if let Some(c) = patterns.iter().find_map(|p| p.captures(text)) {
+            date = normalized_date(
+                c.name("year")
+                    .map(|y| y.as_str().parse::<i16>())
+                    .transpose()
+                    .ok()?
+                    .unwrap_or(date.year()),
+                month(&c["month"])?,
+                c["day"].parse().ok()?,
+            )?;
+            found = true;
+        }
     }
-    let pattern = format!(r"(?i)(?:\b|T){CLOCK}(?::(?P<second>[0-9]{{2}}))?");
-    let clocks = re(&pattern);
+    let clocks = re(
+        r"(?i)(?:\b|T)(?P<hour>[0-9]{1,2})(?::(?P<minute>[0-9]{2}))?(?::(?P<second>[0-9]{2})(?:\.(?P<fraction>[0-9]+))?)?\s*(?P<meridiem>am|pm)?",
+    );
     let c = clocks
         .captures_iter(text)
         .find(|c| c.name("minute").is_some() || c.name("meridiem").is_some());
     if let Some(c) = c {
         let (h, m) = clock(&c)?;
-        let s = c
+        let second = c
             .name("second")
             .map(|s| s.as_str().parse::<i8>())
             .transpose()
             .ok()?
             .unwrap_or(0);
-        return local(date, h, m, s, 0, zone);
+        let nanos = if let Some(f) = c.name("fraction") {
+            let mut f = f.as_str().chars().take(6).collect::<String>();
+            while f.len() < 6 {
+                f.push('0');
+            }
+            f.parse::<i32>().ok()? * 1000
+        } else {
+            0
+        };
+        let remaining = strip(&text[c.get(0)?.end()..]);
+        if let Some(offset) =
+            re(r"(?i)\A(?P<offset>Z|UTC|GMT|[+-][0-9]{2}:?[0-9]{2})\b").captures(remaining)
+        {
+            let token = &offset["offset"];
+            let seconds = if token.eq_ignore_ascii_case("z")
+                || token.eq_ignore_ascii_case("utc")
+                || token.eq_ignore_ascii_case("gmt")
+            {
+                0
+            } else {
+                let digits = token[1..].replace(':', "");
+                let hour = digits[..2].parse::<i32>().ok()?;
+                let minute = digits[2..].parse::<i32>().ok()?;
+                if hour >= 24 || minute >= 60 {
+                    return None;
+                }
+                (hour * 3600 + minute * 60) * if token.starts_with('-') { -1 } else { 1 }
+            };
+            let time = Time::new(h, m, second, nanos).ok()?;
+            return Some(Timestamp::from_jiff(
+                jiff::tz::Offset::from_seconds(seconds)
+                    .ok()?
+                    .to_timestamp(DateTime::from_parts(date, time))
+                    .ok()?,
+            ));
+        }
+        return local(date, h, m, second, nanos, zone);
     }
     if found
         || WEEKDAYS

@@ -185,7 +185,7 @@ pub fn dispatch(tx: &mut Tx<'_>, context: &Context, text: &str) -> Result<Comman
         Err(error) => Err(error),
     }
 }
-fn sentence(messages: Vec<String>) -> String {
+pub(crate) fn sentence(messages: Vec<String>) -> String {
     match messages.as_slice() {
         [] => String::new(),
         [one] => one.clone(),
@@ -227,10 +227,7 @@ fn handle(tx: &mut Tx<'_>, c: &Context, name: &str, args: &str) -> Result<Comman
         "poll" => Ok(CommandResult::new("open_poll")),
         "huddle" => Ok(huddle_stub(c)),
         "event" => Ok(event_stub(c, args, &zone_name, tx.now())),
-        "play" => {
-            let m = post(tx, c, strip(&format!("/play {args}")), false)?;
-            Ok(CommandResult::posted(&m))
-        }
+        "play" => play_stub(tx, c, args),
         "shrug" => {
             let body = if present(args).is_none() {
                 SHRUG.to_string()
@@ -272,6 +269,9 @@ fn handle(tx: &mut Tx<'_>, c: &Context, name: &str, args: &str) -> Result<Comman
             Ok(result)
         }
         "status" => {
+            if time_parser::known_zone(&zone_name).is_none() {
+                return Err(Error::Other(format!("Invalid Timezone: {zone_name}")));
+            }
             let mut pieces = args.splitn(2, |ch: char| {
                 matches!(ch, ' ' | '\t' | '\n' | '\r' | '\x0b' | '\x0c')
             });
@@ -421,6 +421,17 @@ pub fn event_stub(c: &Context, args: &str, zone_name: &str, now: Timestamp) -> C
     r.url = Some(format!("{path}?{query}"));
     r
 }
+/// Rails defers sound recognition/playback to the message presentation path (WS8b/WS5).
+/// Unknown and blank sounds are posted verbatim, just like valid ones.
+pub fn play_stub(tx: &mut Tx<'_>, c: &Context, args: &str) -> Result<CommandResult> {
+    Ok(CommandResult::posted(&post(
+        tx,
+        c,
+        strip(&format!("/play {args}")),
+        false,
+    )?))
+}
+
 fn form_encode(text: &str) -> String {
     let mut s = String::new();
     for b in text.bytes() {
