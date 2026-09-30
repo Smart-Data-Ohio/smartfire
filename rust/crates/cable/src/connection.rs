@@ -4,6 +4,8 @@
 //! from the hub's per-broadcasting ring buffers, so there's no per-connection queue: a client
 //! that stops reading falls behind by the ring's capacity, which closes the connection with
 //! `reconnect: true`. Frames that are ready together go out in one socket write.
+//! A remote disconnect drains earlier hub publications before sending its disconnect and close,
+//! preserving the room-removal order from `Membership#broadcast_room_removal_to_user`.
 //!
 //! The socket's read half lives in a task of its own that hands incoming messages over in order,
 //! so it's only polled when the socket is readable, not every time a delivery wakes the
@@ -19,7 +21,7 @@ use tokio::task::JoinHandle;
 
 use crate::channel::{Channel, Params, Subscription};
 use crate::protocol::{self, DisconnectReason};
-use crate::pubsub::{Deliveries, Frame, Subscriber};
+use crate::pubsub::{Deliveries, Delivery, Frame, RecvError, Subscriber};
 use crate::server::{ConnectRequest, Identified, internal_channel};
 use crate::socket::{Incoming, Reader, Writer};
 use crate::{Server, json};
@@ -33,6 +35,14 @@ struct Entry<U: Send + Sync + 'static> {
 struct Close {
     reason: Option<DisconnectReason>,
     reconnect: Value,
+}
+
+enum Event {
+    Internal(Result<Delivery, RecvError>),
+    Incoming(Option<Incoming>),
+    Delivery(Result<Delivery, RecvError>),
+    Heartbeat,
+    Restart,
 }
 
 impl Close {
@@ -80,7 +90,7 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(server: Server<U>
     let mut internal = SelectAll::new();
     let identifier = user.connection_identifier();
     if !identifier.is_empty() {
-        internal.push(server.hub().subscribe(&internal_channel(&identifier), None).deliveries());
+        internal.push(server.hub().subscribe(&internal_channel(&identifier), None).ordered_deliveries());
         // A ban or sign-out that disconnected this user between the check above and that
         // subscription went unheard, so check again now that it would be heard (Rails has this
         // gap).
@@ -108,8 +118,32 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(server: Server<U>
     }
 
     loop {
-        tokio::select! {
-            message = incoming.recv() => match message {
+        let mut disconnect_sequence = None;
+        let event = tokio::select! {
+            // Revocation wins ties, but the ordinary events retain select!'s fairness.
+            biased;
+            Some(message) = internal.next() => Event::Internal(message),
+            event = async {
+                tokio::select! {
+                    message = incoming.recv() => Event::Incoming(message),
+                    Some(delivery) = deliveries.next() => Event::Delivery(delivery),
+                    Ok(()) = heartbeat.changed() => Event::Heartbeat,
+                    Ok(()) = restarts.recv() => Event::Restart,
+                }
+            } => event,
+        };
+        match event {
+            Event::Internal(message) => match message {
+                Ok(message) => match process_internal_message(message.frame.as_str()) {
+                    Some(remote) => {
+                        disconnect_sequence = Some(message.sequence);
+                        close = Some(remote);
+                    }
+                    None => continue,
+                },
+                Err(_) => continue,
+            },
+            Event::Incoming(message) => match message {
                 Some(Incoming::Text(text)) => connection.dispatch(&text).await,
                 Some(Incoming::Binary) => tracing::error!("Couldn't handle non-string message: Array"),
                 Some(Incoming::Ping(payload)) => {
@@ -129,12 +163,12 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(server: Server<U>
                 }
                 None => break,
             },
-            Some(delivery) = deliveries.next() => {
+            Event::Delivery(delivery) => {
                 // Whatever else is ready already goes out in the same write.
                 let mut delivery = Some(delivery);
                 while let Some(result) = delivery.take() {
                     match result {
-                        Ok(frame) => connection.pending.push(frame),
+                        Ok(delivery) => connection.pending.push(delivery.frame),
                         Err(_) => {
                             close = Some(Close::lagged());
                             break;
@@ -145,26 +179,36 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(server: Server<U>
                     }
                 }
             }
-            Some(message) = internal.next() => match message {
-                Ok(message) => match process_internal_message(message.as_str()) {
-                    Some(remote) => close = Some(remote),
-                    None => continue,
-                },
-                Err(_) => continue,
-            },
-            Ok(()) = heartbeat.changed() => {
+            Event::Heartbeat => {
                 // One frame per beat, shared by every connection.
                 let ping = heartbeat.borrow_and_update().clone();
                 connection.pending.push(ping);
             }
-            Ok(()) = restarts.recv() => {
+            Event::Restart => {
                 close = Some(Close { reason: Some(DisconnectReason::ServerRestart), reconnect: Value::Bool(true) });
             }
         }
 
-        deliveries.extend(connection.started.drain(..).map(|(subscriber, registration)| Abortable::new(subscriber.deliveries(), registration)));
+        deliveries.extend(connection.started.drain(..).map(|(subscriber, registration)| Abortable::new(subscriber.ordered_deliveries(), registration)));
         if !connection.flush(&mut sink).await {
             break;
+        }
+        if let Some(sequence) = disconnect_sequence {
+            // Every earlier publication is already in its ring: broadcasting and sequence
+            // assignment share the hub lock. Drain each stream only up to this disconnect,
+            // so later producers cannot keep the socket open, then merge publication order.
+            let (prior, lagged) = drain_before_disconnect(std::mem::take(&mut deliveries), sequence);
+            for batch in prior.chunks(config.max_write_batch.max(1)) {
+                connection.pending.extend(batch.iter().cloned());
+                if !connection.flush(&mut sink).await {
+                    reader.abort();
+                    connection.handle_close().await;
+                    return;
+                }
+            }
+            if lagged {
+                close = Some(Close::lagged());
+            }
         }
         if let Some(Close { reason, reconnect }) = close.take() {
             let _ = sink.send(&[protocol::disconnect(reason, &reconnect).into()]).await;
@@ -175,6 +219,30 @@ pub(crate) async fn run<U: Identified + Send + Sync + 'static>(server: Server<U>
 
     reader.abort();
     connection.handle_close().await;
+}
+
+/// The rings and the drain are bounded. Stop at the first later publication on each stream,
+/// rather than draining a SelectAll that concurrent producers could keep ready indefinitely.
+fn drain_before_disconnect(deliveries: SelectAll<Deliveries>, sequence: u64) -> (Vec<Frame>, bool) {
+    let mut prior = Vec::new();
+    let mut lagged = false;
+    for mut stream in deliveries {
+        // This finite drain must distinguish an empty ring from Tokio's cooperative-budget
+        // yield, which otherwise looks Pending even with earlier frames still queued.
+        while let Some(result) = tokio::task::unconstrained(stream.next()).now_or_never().flatten() {
+            match result {
+                Ok(delivery) if delivery.sequence < sequence => prior.push(delivery),
+                Ok(_) => break,
+                Err(RecvError::Lagged) => {
+                    lagged = true;
+                    break;
+                }
+                Err(RecvError::Closed) => break,
+            }
+        }
+    }
+    prior.sort_by_key(|delivery| delivery.sequence);
+    (prior.into_iter().map(|delivery| delivery.frame).collect(), lagged)
 }
 
 /// `InternalChannel#process_internal_message`.

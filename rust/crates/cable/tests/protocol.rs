@@ -240,6 +240,43 @@ async fn remote_disconnect_closes_every_connection_for_the_identifier() {
 }
 
 #[tokio::test]
+async fn remote_disconnect_preserves_prior_publications_across_streams_and_batches() {
+    for reconnect in [true, false] {
+        let app = start(Config { max_write_batch: 2, ..test_config() }).await;
+        let mut client = app.connect(1).await;
+        assert_eq!(client.next_text().await, WELCOME);
+        let room = room(1);
+        let rooms = identifier(json!({ "channel": "Turbo::StreamsChannel", "signed_stream_name": "signed(rooms)" }));
+        for channel in [&room, &rooms] {
+            client.subscribe(channel).await;
+            assert_eq!(client.next_text().await, confirm(channel));
+        }
+
+        client.perform(&room, json!({ "action": "broadcast_then_disconnect", "reconnect": reconnect })).await;
+        for i in 0..70 {
+            assert_eq!(client.next_text().await, message(&room, &i.to_string()), "room publication {i}, reconnect={reconnect}");
+            let remove = campfire_cable::json::encode(&format!(r#"<turbo-stream action="remove" target="room_{i}"></turbo-stream>"#));
+            assert_eq!(client.next_text().await, message(&rooms, &remove), "Turbo publication {i}, reconnect={reconnect}");
+        }
+        assert_eq!(client.next_text().await, format!(r#"{{"type":"disconnect","reason":"remote","reconnect":{reconnect}}}"#));
+        assert_eq!(client.next().await, Frame::Close(Some((1000, String::new()))));
+    }
+}
+
+#[tokio::test]
+async fn a_disconnect_drain_that_lagged_requires_reconnect() {
+    let app = start(Config { stream_capacity: 1, ..test_config() }).await;
+    let mut client = app.connect(1).await;
+    assert_eq!(client.next_text().await, WELCOME);
+    let room = room(1);
+    client.subscribe(&room).await;
+    assert_eq!(client.next_text().await, confirm(&room));
+    client.perform(&room, json!({ "action": "broadcast_then_disconnect", "reconnect": false })).await;
+    assert_eq!(client.next_text().await, r#"{"type":"disconnect","reason":null,"reconnect":true}"#);
+    assert_eq!(client.next().await, Frame::Close(Some((1000, String::new()))));
+}
+
+#[tokio::test]
 async fn restart_closes_with_server_restart() {
     let app = start(test_config()).await;
     let mut client = app.connect(1).await;
