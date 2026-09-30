@@ -659,10 +659,11 @@ fn message_partial_branches_match_rails() {
             !html.contains("authenticity_token"),
             "{name} must be session-neutral"
         );
-        if !compare(
+        if !compare_message(
             &format!("message-state-{name}"),
             &html,
             row["html"].as_str().unwrap(),
+            &message,
         ) {
             differences.push(name.to_string());
         }
@@ -671,6 +672,89 @@ fn message_partial_branches_match_rails() {
         differences.is_empty(),
         "message branch differences: {differences:?}"
     );
+}
+
+// These resolved Image URLs are serialized input, and image_tag passes absolute paths
+// through. Identify just their expected output fields; every surrounding UI asset stays live.
+fn compare_message(
+    name: &str,
+    actual: &str,
+    expected: &str,
+    message: &campfire_views::messages::MessageView,
+) -> bool {
+    let frozen_urls: Vec<_> = message
+        .details
+        .room_icon
+        .iter()
+        .chain(
+            message
+                .boosts
+                .iter()
+                .filter_map(|boost| boost.reaction.as_ref()?.icon.as_ref()),
+        )
+        .filter_map(|icon| match icon {
+            h::AvatarIcon::Image { url, .. } if url.starts_with("/assets/") => Some(url.as_str()),
+            _ => None,
+        })
+        .collect();
+    let frozen = asset_goldens::frozen_fixture_fields(expected, &frozen_urls);
+    compare_fields(name, actual, expected, &frozen)
+}
+
+#[test]
+fn frozen_message_fields_stay_exact_while_surrounding_live_assets_are_validated() {
+    use campfire_views::messages;
+    let asset = |path: &str| campfire_assets::asset_path(path);
+    let signer = |_: &[&str]| String::new();
+    let ctx = context(Some("David"), &asset, &signer, "");
+    for row in vectors()["message_states"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|row| ["room_icon", "reactions"].contains(&row["name"].as_str().unwrap()))
+    {
+        let mut message: messages::MessageView =
+            serde_json::from_value(row["message"].clone()).unwrap();
+        let icon = if let Some(icon) = message.details.room_icon.as_mut() {
+            icon
+        } else {
+            message
+                .boosts
+                .iter_mut()
+                .find_map(|boost| boost.reaction.as_mut()?.icon.as_mut())
+                .unwrap()
+        };
+        let h::AvatarIcon::Image { url, .. } = icon else {
+            panic!("expected frozen image fixture")
+        };
+        let original = url.clone();
+        // Force divergence from the live manifest without depending on an untracked asset file.
+        let frozen = "/assets/icons/brands/github-00000000.svg";
+        *url = frozen.into();
+        let expected = row["html"].as_str().unwrap().replace(&original, frozen);
+        let actual = messages::message(&ctx, &message);
+        assert!(compare_message(
+            "frozen fixture",
+            &actual,
+            &expected,
+            &message
+        ));
+        assert!(!compare_message(
+            "changed frozen fixture",
+            &actual.replace(frozen, &asset("icons/brands/github.svg")),
+            &expected,
+            &message
+        ));
+        let live = asset("menu-dots-horizontal.svg");
+        assert!(actual.contains(&live));
+        let wrong_live = actual.replace(&live, "/assets/menu-dots-horizontal-00000000.svg");
+        assert!(!compare_message(
+            "wrong live digest",
+            &wrong_live,
+            &expected,
+            &message
+        ));
+    }
 }
 
 #[test]

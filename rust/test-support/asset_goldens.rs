@@ -1,9 +1,21 @@
-//! Page parity permits only stale fingerprint bytes in a Rails golden. Actual URLs must
-//! match the live Rust/Propshaft manifest; every other byte (including importmap JSON,
-//! tag order, duplicates, query strings and whitespace) remains part of the comparison.
+//! Page parity permits stale fingerprints only in identified local pipeline URL fields.
+//! All surrounding HTML/JSON/header bytes and explicitly frozen fixture fields stay exact.
+
+use std::{ops::Range, sync::LazyLock};
 
 pub fn compare(name: &str, actual: &str, expected: &str) -> bool {
-    match matching_bytes(actual, expected) {
+    compare_with_frozen_fields(name, actual, expected, &[])
+}
+
+/// Field ordinals come from the expected render, not a global URL allowlist. Each selected
+/// fixture field stays byte-exact even if another field resolves that same asset live.
+pub fn compare_with_frozen_fields(
+    name: &str,
+    actual: &str,
+    expected: &str,
+    frozen: &[usize],
+) -> bool {
+    match matching_fields(actual, expected, frozen) {
         Ok(()) => true,
         Err(error) => {
             eprintln!("{name}: {error}");
@@ -12,9 +24,43 @@ pub fn compare(name: &str, actual: &str, expected: &str) -> bool {
     }
 }
 
+/// Serialized fixture URLs identify their expected src fields. Refuse ambiguous provenance
+/// rather than silently treating an additional live use of the same URL as frozen.
+pub fn frozen_fixture_fields(expected: &str, inputs: &[&str]) -> Vec<usize> {
+    let fields = url_fields(expected);
+    let mut frozen = Vec::new();
+    for input in inputs {
+        let matches: Vec<_> = fields
+            .iter()
+            .enumerate()
+            .filter_map(|(index, range)| (&expected[range.clone()] == *input).then_some(index))
+            .collect();
+        assert_eq!(
+            matches.len(),
+            1,
+            "fixture URL must identify one field: {input}"
+        );
+        frozen.push(matches[0]);
+    }
+    frozen
+}
+
+#[cfg(test)]
 fn matching_bytes(actual: &str, expected: &str) -> Result<(), String> {
-    let actual = logical_references(actual, true)?;
-    let expected = logical_references(expected, false)?;
+    matching_fields(actual, expected, &[])
+}
+
+fn matching_fields(actual: &str, expected: &str, frozen: &[usize]) -> Result<(), String> {
+    let actual_fields = url_fields(actual);
+    let expected_fields = url_fields(expected);
+    if actual_fields.len() != expected_fields.len() {
+        return Err("URL field count differs".into());
+    }
+    if frozen.iter().any(|index| *index >= expected_fields.len()) {
+        return Err("frozen fixture field is absent".into());
+    }
+    let actual = logical_references(actual, &actual_fields, true, frozen)?;
+    let expected = logical_references(expected, &expected_fields, false, frozen)?;
     if actual == expected {
         return Ok(());
     }
@@ -30,53 +76,180 @@ fn matching_bytes(actual: &str, expected: &str) -> Result<(), String> {
     ))
 }
 
-fn logical_references(text: &str, live: bool) -> Result<String, String> {
-    let mut output = String::with_capacity(text.len());
-    let mut rest = text;
-    while let Some(start) = rest.find("/assets/") {
-        let tail = &rest[start + "/assets/".len()..];
-        let end = tail
-            .find(|c: char| !c.is_ascii_alphanumeric() && !"/_-.@+".contains(c))
-            .unwrap_or(tail.len());
-        let path = &tail[..end];
-        // A bare prefix in service-worker code/comments is not an asset URL.
-        if path.is_empty() {
-            output.push_str(&rest[..start + "/assets/".len()]);
-            rest = tail;
+// Only quoted/unquoted href/src/content attribute values are candidates. Consume complete
+// tags/attributes so matching text inside another attribute, a comment or raw-text element
+// cannot become a URL field. Original offsets preserve every byte outside the URL value.
+static TAGS: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(concat!(
+        r"(?is)<!--.*?(?:-->|\z)|<![^>]*(?:>|\z)|<(?P<close>/)?(?P<tag>[a-z][a-z0-9:-]*)",
+        r#"(?P<attrs>(?:[^"'<>]|"[^"]*"|'[^']*')*)>"#,
+    ))
+    .unwrap()
+});
+static ATTRS: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(concat!(
+        r#"(?:^|\s)(?P<name>[^\s"'<>/=]+)\s*=\s*"#,
+        r#"(?:"(?P<double>[^"]*)"|'(?P<single>[^']*)'|(?P<bare>[^\s"'=<>`]+))"#,
+    ))
+    .unwrap()
+});
+static STRINGS: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#""(?:[^"\\]|\\.)*""#).unwrap());
+static LINKS: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"(?:^\s*|,\s*)<([^<>]*)>\s*;").unwrap());
+
+fn url_fields(text: &str) -> Vec<Range<usize>> {
+    if text.trim_start().starts_with(['{', '[']) {
+        return json_fields(text, 0, false);
+    }
+    if let Some(first) = LINKS.find(text)
+        && first.start() == 0
+    {
+        return LINKS
+            .captures_iter(text)
+            .map(|cap| cap.get(1).unwrap().range())
+            .collect();
+    }
+    let mut fields = Vec::new();
+    let mut raw: Option<(String, bool, usize)> = None;
+    for tag in TAGS.captures_iter(text) {
+        let Some(name) = tag.name("tag") else {
+            continue;
+        };
+        let closing = tag.name("close").is_some();
+        if let Some((raw_name, importmap, start)) = &raw {
+            if closing && name.as_str().eq_ignore_ascii_case(raw_name) {
+                if *importmap {
+                    fields.extend(json_fields(
+                        &text[*start..tag.get(0).unwrap().start()],
+                        *start,
+                        true,
+                    ));
+                }
+                raw = None;
+            }
             continue;
         }
-        // Propshaft inserts eight SHA1 hex characters before the extension (also .js.map).
-        // Already-digested vendor names are logical names themselves and stay byte-exact.
-        let logical = if campfire_assets::manifest()
+        if closing {
+            continue;
+        }
+        let attrs = tag.name("attrs").unwrap();
+        let mut importmap = false;
+        for attr in ATTRS.captures_iter(attrs.as_str()) {
+            let value = attr
+                .name("double")
+                .or_else(|| attr.name("single"))
+                .or_else(|| attr.name("bare"))
+                .unwrap();
+            let key = attr.name("name").unwrap().as_str();
+            if ["href", "src", "content"]
+                .iter()
+                .any(|name| key.eq_ignore_ascii_case(name))
+            {
+                fields.push(attrs.start() + value.start()..attrs.start() + value.end());
+            }
+            if key.eq_ignore_ascii_case("type") && value.as_str() == "importmap" {
+                importmap = true
+            }
+        }
+        if ["script", "style", "textarea", "title"]
             .iter()
-            .any(|(l, d)| *l == path && *d == path)
+            .any(|tag| name.as_str().eq_ignore_ascii_case(tag))
         {
-            path.to_string()
-        } else if let Some((stem, suffix)) = path.rsplit_once('-')
-            && suffix.len() > 8
+            raw = Some((
+                name.as_str().to_string(),
+                importmap && name.as_str().eq_ignore_ascii_case("script"),
+                tag.get(0).unwrap().end(),
+            ));
+        }
+    }
+    fields
+}
+
+fn json_fields(text: &str, offset: usize, importmap: bool) -> Vec<Range<usize>> {
+    if serde_json::from_str::<serde_json::Value>(text).is_err() {
+        return Vec::new();
+    }
+    let strings: Vec<_> = STRINGS.find_iter(text).collect();
+    strings
+        .iter()
+        .enumerate()
+        .filter_map(|(index, value)| {
+            // Object keys are strict; ordinary JSON only permits the named URL fields (PWA src).
+            if text[value.end()..].trim_start().starts_with(':') {
+                return None;
+            }
+            let named_value = index.checked_sub(1).is_some_and(|previous| {
+                let key = &strings[previous];
+                ["href", "src", "content"].contains(&&key.as_str()[1..key.len() - 1])
+                    && text[key.end()..value.start()].trim() == ":"
+            });
+            (importmap || named_value)
+                .then_some(offset + value.start() + 1..offset + value.end() - 1)
+        })
+        .collect()
+}
+
+fn logical_references(
+    text: &str,
+    fields: &[Range<usize>],
+    live: bool,
+    frozen: &[usize],
+) -> Result<String, String> {
+    let mut output = String::with_capacity(text.len());
+    let mut end = 0;
+    for (index, field) in fields.iter().enumerate() {
+        output.push_str(&text[end..field.start]);
+        let value = &text[field.clone()];
+        let replacement = if frozen.contains(&index) {
+            None
+        } else {
+            logical_url(value, live)?
+        };
+        output.push_str(replacement.as_deref().unwrap_or(value));
+        end = field.end;
+    }
+    output.push_str(&text[end..]);
+    Ok(output)
+}
+
+fn logical_url(value: &str, live: bool) -> Result<Option<String>, String> {
+    // Origin, nested paths and query values never qualify. Only the entire local path does.
+    let path_end = value.find(['?', '#']).unwrap_or(value.len());
+    let Some(path) = value[..path_end].strip_prefix("/assets/") else {
+        return Ok(None);
+    };
+    let Some((stem, suffix)) = path.rsplit_once('-').filter(|(_, suffix)| {
+        suffix.len() > 8
             && suffix.as_bytes()[8] == b'.'
             && suffix.as_bytes()[..8].iter().all(u8::is_ascii_hexdigit)
+    }) else {
+        // A known logical asset emitted without its required fingerprint is also invalid.
+        if live
+            && let Some((_, current)) = campfire_assets::manifest()
+                .iter()
+                .find(|(logical, _)| *logical == path)
+            && *current != path
         {
-            format!("{stem}{}", &suffix[8..])
-        } else {
-            path.to_string()
-        };
-        let current = campfire_assets::manifest()
-            .iter()
-            .find_map(|(l, d)| (*l == logical).then_some(*d))
-            .ok_or_else(|| format!("unknown asset reference /assets/{path}"))?;
-        if live && path != current {
             return Err(format!(
                 "wrong asset digest: /assets/{path}; pipeline requires /assets/{current}"
             ));
         }
-        output.push_str(&rest[..start]);
-        output.push_str("/assets/");
-        output.push_str(&logical);
-        rest = &tail[end..];
+        return Ok(None);
+    };
+    let logical = format!("{stem}{}", &suffix[8..]);
+    let Some((_, current)) = campfire_assets::manifest()
+        .iter()
+        .find(|(name, _)| *name == logical)
+    else {
+        return Ok(None);
+    };
+    if live && path != *current {
+        return Err(format!(
+            "wrong asset digest: /assets/{path}; pipeline requires /assets/{current}"
+        ));
     }
-    output.push_str(rest);
-    Ok(output)
+    Ok(Some(format!("/assets/{logical}{}", &value[path_end..])))
 }
 
 #[cfg(test)]
@@ -133,7 +306,9 @@ mod tests {
                     .unwrap_err()
                     .contains("asset")
             );
-            assert!(matching_bytes(&changed, &changed).is_err());
+            if wrong != "/assets/people-not-a-digest.css" {
+                assert!(matching_bytes(&changed, &changed).is_err());
+            }
         }
     }
 
@@ -174,5 +349,130 @@ mod tests {
         assert!(matching_bytes(actual, &expected).is_ok());
         assert!(matching_bytes(&expected, actual).is_err());
         assert!(matching_bytes(&actual.replace(current, logical), actual).is_err());
+    }
+}
+
+#[cfg(test)]
+mod reviewed_mutations {
+    use super::*;
+
+    fn rejected(wrapper: &str) {
+        let current = campfire_assets::stylesheet_path("people");
+        let actual = wrapper.replace("URL", &current);
+        let expected = wrapper.replace("URL", "/assets/people-00000000.css");
+        assert_ne!(actual, expected);
+        assert!(!compare(wrapper, &actual, &expected));
+    }
+
+    #[test]
+    fn rejects_digest_changes_in_external_urls() {
+        rejected(r#"<link href="https://cdn.example.testURL">"#);
+    }
+    #[test]
+    fn rejects_digest_changes_in_visible_text() {
+        rejected("<p>URL</p>");
+    }
+    #[test]
+    fn rejects_digest_changes_in_query_values() {
+        rejected(r#"<a href="/download?next=URL">download</a>"#);
+    }
+    #[test]
+    fn rejects_digest_changes_in_unrelated_attributes() {
+        rejected(r#"<p data-note="URL">text</p>"#);
+    }
+    #[test]
+    fn rejects_digest_changes_in_nested_non_asset_paths() {
+        rejected(r#"<a href="/downloadURL">download</a>"#);
+    }
+    #[test]
+    fn leaves_unchanged_external_urls_byte_exact() {
+        let page = r#"<link href="https://cdn.example.test/assets/people-00000000.css">"#;
+        assert!(compare("external URL", page, page));
+    }
+}
+
+#[cfg(test)]
+mod field_boundaries {
+    use super::*;
+
+    #[test]
+    fn frozen_fixture_field_is_strict_while_another_use_of_the_asset_is_live() {
+        let current = campfire_assets::asset_path("icons/brands/github.svg");
+        let frozen = "/assets/icons/brands/github-00000000.svg";
+        let actual =
+            format!(r#"<img class="fixture" src="{frozen}"><img class="live" src="{current}">"#);
+        let expected = format!(
+            r#"<img class="fixture" src="{frozen}"><img class="live" src="/assets/icons/brands/github-11111111.svg">"#
+        );
+        assert!(compare_with_frozen_fields(
+            "mixed",
+            &actual,
+            &expected,
+            &[0]
+        ));
+        assert!(!compare("all live", &actual, &expected));
+        let changed_frozen = actual.replacen(frozen, &current, 1);
+        assert!(!compare_with_frozen_fields(
+            "changed frozen field",
+            &changed_frozen,
+            &expected,
+            &[0]
+        ));
+        let changed_live = actual.replace(&current, "/assets/icons/brands/github-22222222.svg");
+        assert!(!compare_with_frozen_fields(
+            "wrong live digest",
+            &changed_live,
+            &expected,
+            &[0]
+        ));
+        let fields = frozen_fixture_fields(&actual, &[frozen]);
+        assert_eq!(fields, [0]);
+        assert!(compare_with_frozen_fields(
+            "frozen provenance",
+            &actual,
+            &expected,
+            &fields
+        ));
+    }
+
+    #[test]
+    fn accepts_only_local_attribute_importmap_pwa_and_link_header_values() {
+        let current = campfire_assets::stylesheet_path("people");
+        for actual in [
+            format!(r#"<meta content='{current}'>"#),
+            format!(r#"<img src={current}>"#),
+            format!(r#"{{"icons":[{{"src":"{current}"}}]}}"#),
+            format!("<{current}>; rel=preload; as=style"),
+            format!(r#"<script type="importmap">{{"imports":{{"people":"{current}"}}}}</script>"#),
+        ] {
+            let expected = actual.replace(&current, "/assets/people-00000000.css");
+            assert!(compare("local field", &actual, &expected));
+            assert!(!compare("wrong actual", &expected, &actual));
+        }
+    }
+
+    #[test]
+    fn comments_raw_text_json_keys_and_unknown_paths_remain_byte_exact() {
+        let current = campfire_assets::stylesheet_path("people");
+        for wrapper in [
+            r#"<!-- <img src="URL"> -->"#,
+            r#"<!-- <img src="URL">"#,
+            r#"<script>const html = '<img src="URL">'</script>"#,
+            r#"<textarea><img src="URL"></textarea>"#,
+            r#"<p title='src="URL"'>text</p>"#,
+            r#"<script type="importmap">{"imports":{"URL":"other"}}</script>"#,
+            r#"{"caption":"URL"}"#,
+        ] {
+            let actual = wrapper.replace("URL", &current);
+            let expected = wrapper.replace("URL", "/assets/people-00000000.css");
+            assert!(!compare("ordinary bytes", &actual, &expected));
+        }
+        let unknown = r#"<img src="/assets/not-in-pipeline-00000000.css">"#;
+        assert!(compare("unchanged non-pipeline URL", unknown, unknown));
+        assert!(!compare(
+            "changed non-pipeline URL",
+            &unknown.replace("00000000", "11111111"),
+            unknown
+        ));
     }
 }

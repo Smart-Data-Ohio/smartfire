@@ -104,7 +104,11 @@ fn context<'a>(
 }
 
 fn compare(name: &str, actual: &str, expected: &str) -> bool {
-    if asset_goldens::compare(name, actual, expected) {
+    compare_fields(name, actual, expected, &[])
+}
+
+fn compare_fields(name: &str, actual: &str, expected: &str, frozen: &[usize]) -> bool {
+    if asset_goldens::compare_with_frozen_fields(name, actual, expected, frozen) {
         return true;
     }
     if let Ok(dir) = std::env::var("WS6_VIEW_DIFF_DIR") {
