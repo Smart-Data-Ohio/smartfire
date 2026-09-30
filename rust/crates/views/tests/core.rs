@@ -8,6 +8,7 @@ mod bots_ui;
 mod bot_access_ui;
 mod agents_ui;
 mod agent_history_ui;
+mod member_panel;
 
 fn fixture(path: &str) -> String {
     std::fs::read_to_string(format!(

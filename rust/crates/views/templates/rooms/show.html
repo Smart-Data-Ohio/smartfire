@@ -31,3 +31,5 @@
 {%- endblock %}
 
 {%- block footer %}{% let room = &show.room %}{% include "rooms/show/_composer.html" %}{% endblock %}
+
+{% block member_panel %}{{ self.member_panel()? }}{% endblock %}

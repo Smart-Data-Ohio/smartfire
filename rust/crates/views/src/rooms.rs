@@ -104,13 +104,47 @@ impl Page for Show<'_> {
     }
 
     fn body_class(&self) -> Option<&str> {
-        Some("sidebar")
+        Some("sidebar room-workspace")
     }
 }
 
 impl Show<'_> {
+    fn member_panel_toggle(&self) -> askama::Result<h::Html> {
+        Ok(h::raw(MemberPanelToggle { ctx: self.ctx }.render()?))
+    }
+
+    fn member_panel(&self) -> askama::Result<h::Html> {
+        Ok(h::raw(MemberPanel { ctx: self.ctx, room_id: self.show.room.id }.render()?))
+    }
+
     fn loaded_at(&self) -> i64 {
         epoch_ms(self.show.updated_at)
+    }
+}
+
+/// The member-panel control in `rooms/show/_nav`.
+#[derive(Template)]
+#[template(path = "rooms/show/_member_panel_toggle.html")]
+pub struct MemberPanelToggle<'a> {
+    pub ctx: &'a ViewContext<'a>,
+}
+
+/// The lazy member panel. Domain data comes from Rooms::MembersController's JSON;
+/// this partial holds only URLs and a request-bound selection form.
+#[derive(Template)]
+#[template(path = "rooms/show/_member_panel.html")]
+pub struct MemberPanel<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub room_id: i64,
+}
+
+impl MemberPanel<'_> {
+    fn members_path(&self) -> String {
+        campfire_routes::ROOM_MEMBERS.path_with(&[&self.room_id], Some("json"), &[])
+    }
+
+    fn selection_bar(&self) -> askama::Result<h::Html> {
+        Ok(h::raw(crate::shared::MultiSelectBar { exit_button: true }.render()?))
     }
 }
 
