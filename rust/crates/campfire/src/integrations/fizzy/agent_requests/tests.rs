@@ -2,7 +2,7 @@ use super::super::accounts::{Input, UNREADABLE_TOKEN_REASON};
 use super::*;
 use crate::controllers::presenters::test_support::*;
 async fn fixture(name: &str) -> (TestApp, i64, i64) {
-    let mut app = TestApp::boot_using_clock(std::sync::Arc::new(campfire_kit::FrozenClock::new(
+    let mut app = TestApp::boot_with_clock(std::sync::Arc::new(campfire_kit::FrozenClock::new(
         SEED_NOW.parse().unwrap(),
     )))
     .await

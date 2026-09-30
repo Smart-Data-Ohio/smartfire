@@ -573,7 +573,8 @@ async fn idle_administrator_sessions_expire_when_restored() {
         .db
         .write(move |tx| {
             let stale = Session::start(tx, david.id, Some("test"), None)?;
-            let fresh = Session::start(tx, david.id, Some("test"), None)?;
+            let mut fresh = Session::start(tx, david.id, Some("test"), None)?;
+            fresh.mark_two_factor_verified(tx)?; // Rails' sign_in helper verifies its sessions.
             tx.conn().execute("UPDATE sessions SET last_active_at = ? WHERE id = ?", rusqlite::params![days(8), stale.id])?;
             tx.conn().execute("UPDATE sessions SET last_active_at = ? WHERE id = ?", rusqlite::params![days(6), fresh.id])?;
             Ok((stale, fresh))

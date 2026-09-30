@@ -1,6 +1,7 @@
 //! One module per model under `reference/app/models`.
 
 pub mod account;
+pub mod auth_audit;
 pub mod audit_log;
 pub mod activity_item;
 pub mod active_storage;
@@ -26,13 +27,16 @@ pub mod search;
 pub mod search_query;
 pub mod session;
 pub mod sound;
+pub mod two_factor;
 pub mod thread_membership;
 pub mod thread_tag;
 pub mod user;
+pub mod user_device;
 pub mod webhook;
 pub mod workspace_presence_lease;
 
 pub use account::{Account, AccountSettings};
+pub use auth_audit::{AuthAudit, SudoVerifier};
 pub use active_storage::{Attachment, Blob};
 pub use activity_item::ActivityItem;
 pub use ban::Ban;
@@ -53,9 +57,11 @@ pub use scheduled_message::{NewScheduledMessage, ScheduledMessage};
 pub use search::Search;
 pub use session::{NewSession, Session};
 pub use sound::Sound;
+pub use two_factor::{ChallengeFailure, TwoFactorBackupCode, TwoFactorCredential, TwoFactorRememberedDevice, TwoFactorSetupSecret};
 pub use thread_membership::{ThreadInvolvement, ThreadMembership};
 pub use thread_tag::ThreadTag;
 pub use user::{NewUser, PasswordDigest, Role, Status, User, UserChanges};
+pub use user_device::{DeviceSignIn, UserDevice};
 pub use webhook::Webhook;
 
 pub mod room_delete;
