@@ -48,3 +48,9 @@ WS11 APIs merged from `8b76fd0afc527ce27f0c3ebf0ea6bbf586b8024b`:
 - GitHub/Fizzy edit-fragment boundaries remain named with their Rails partial
   names. The merged peers expose domain services, but no replacement bot-edit
   fragment is supplied; the pinned edit page has no Fizzy section.
+
+GitHub connection mutations now call WS15g authenticated_login, Account::relink
+and Accounts::revoke_remote_token. Administrator/sudo checks precede external
+calls. Twelve HTTP tests include all ten named Rails controller cases plus
+sudo ordering and audit rollback. FLAGGED WS15g deletion: its Account has no
+destroy API; unlink uses one audited row deletion until that method is supplied.

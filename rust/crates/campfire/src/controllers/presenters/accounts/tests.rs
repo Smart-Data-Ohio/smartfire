@@ -20,6 +20,8 @@ const HOST: &str = "campfire.test";
 const PASSWORD: &str = "secret123456";
 const CHROME: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36";
 
+#[path = "tests/github_connections.rs"]
+mod github_connections;
 #[path = "tests/owner_inputs.rs"]
 mod owner_inputs;
 #[path = "tests/bot_mutations.rs"]

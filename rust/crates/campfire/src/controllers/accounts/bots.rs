@@ -2,6 +2,7 @@
 
 pub mod credentials;
 pub mod grants;
+pub mod github_connections;
 pub mod keys;
 pub mod webhook_secrets;
 
