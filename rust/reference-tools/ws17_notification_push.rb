@@ -45,16 +45,19 @@ travel_to(Time.utc(2026,3,2,16)) do
    deliveries << {payload:payload,subscriptions:subs.map(&:id),users:subs.map(&:user_id),encoded:}
   end
   old=Rails.configuration.x.web_push_pool;Rails.configuration.x.web_push_pool=pool
-  recipient.reload;user.reload
-  case kind
-  when "event";Event::ReminderPusher.new(event:event.reload).push
-  when "board";BoardAutomations::NudgePusher.new(nudge:nudge.reload).push
-  when "join";Huddle::JoinPusher.new(grant:grant.reload,recipient:recipient.reload,room_membership:direct.memberships.find_by(user:recipient)).push
-  when "invitation"
-   item=ActivityItem.new(user:recipient,source:grant,event_type:"huddle_started")
-   Huddle::InvitationPusher.new(activity_item:item).push
+  begin
+   recipient.reload;user.reload
+   case kind
+   when "event";Event::ReminderPusher.new(event:event.reload).push
+   when "board";BoardAutomations::NudgePusher.new(nudge:nudge.reload).push
+   when "join";Huddle::JoinPusher.new(grant:grant.reload,recipient:recipient.reload,room_membership:direct.memberships.find_by(user:recipient)).push
+   when "invitation"
+    item=ActivityItem.new(user:recipient,source:grant,event_type:"huddle_started")
+    Huddle::InvitationPusher.new(activity_item:item).push
+   end
+  ensure
+   Rails.configuration.x.web_push_pool=old
   end
-  Rails.configuration.x.web_push_pool=old
   throttle=direct.memberships.find_by(user:recipient)&.last_huddle_join_push_at
   rows << {name:,kind:,setup_sql:setup.join("\n"),event_id:event.id,nudge_id:nudge.id,room_id:direct.id,recipient_id:recipient.id,sender_id:user.id,deliveries:,throttle:throttle&.iso8601(6)}
  end
