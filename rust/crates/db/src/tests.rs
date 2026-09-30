@@ -18,6 +18,8 @@ mod message_test;
 mod mail_merge_test;
 mod poll_test;
 mod push_test;
+mod notification_policy_test;
+mod workspace_presence_lease_test;
 mod room_test;
 mod room_delete_test;
 mod retention_test;

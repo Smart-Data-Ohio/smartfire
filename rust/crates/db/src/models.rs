@@ -29,6 +29,8 @@ pub mod sound;
 pub mod thread_membership;
 pub mod thread_tag;
 pub mod user;
+pub mod user_status_settings;
+pub mod notification_policy;
 pub mod webhook;
 pub mod workspace_presence_lease;
 
@@ -56,6 +58,8 @@ pub use sound::Sound;
 pub use thread_membership::{ThreadInvolvement, ThreadMembership};
 pub use thread_tag::ThreadTag;
 pub use user::{NewUser, PasswordDigest, Role, Status, User, UserChanges};
+pub use user_status_settings::{MeetingCache, UserStatusSettings};
+pub use notification_policy::{NotificationKind, NotificationPolicy};
 pub use webhook::Webhook;
 
 pub mod room_delete;

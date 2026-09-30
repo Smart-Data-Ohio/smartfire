@@ -5,7 +5,7 @@ use rusqlite::{Connection, Row, params};
 
 use crate::database::Tx;
 use crate::error::{Errors, OptionalExt, Result};
-use crate::models::{Membership, Message, Room, User};
+use crate::models::{Membership, Message, Room, User, NotificationKind, NotificationPolicy, UserStatusSettings};
 use crate::rich_text::RichText;
 use crate::sql::{self, CachedStatements, placeholders, query_all, query_one};
 use crate::time::Timestamp;
@@ -43,15 +43,21 @@ pub struct PushPayload {
     pub title: String,
     pub body: String,
     pub path: String,
+    pub tag: Option<String>,
 }
 
 impl PushPayload {
+    /// Rails does not truncate Web Push payloads. The transport rejects oversized records.
+    pub fn new(title: String, body: String, path: String, tag: Option<String>) -> Self {
+        Self { title, body, path, tag }
+    }
     /// A payload cut to fit a push message, as [`PushSubscription::payload_for`] cuts the room's.
     pub fn fitted(title: String, body: String, path: String) -> Self {
         Self {
             title: truncate_json_string(title, MAX_PAYLOAD_TITLE_BYTES),
             body: truncate_json_string(body, MAX_PAYLOAD_BODY_BYTES),
             path,
+            tag: None,
         }
     }
 }
@@ -218,8 +224,6 @@ impl PushSubscription {
     // Room::MessagePusher
 
     /// `build_payload`: direct rooms show the sender; others the room and "Sender: body".
-    /// Unlike Rails, a long title or body is cut short (with an ellipsis) so the notification
-    /// still fits a push message.
     pub fn payload_for(
         conn: &Connection,
         rich_text: &dyn RichText,
@@ -238,9 +242,10 @@ impl PushSubscription {
             )
         };
         Ok(PushPayload {
-            title: truncate_json_string(title, MAX_PAYLOAD_TITLE_BYTES),
-            body: truncate_json_string(body, MAX_PAYLOAD_BODY_BYTES),
+            title,
+            body,
             path,
+            tag: Some(format!("room-{}", room.id)),
         })
     }
 
@@ -292,8 +297,9 @@ impl PushSubscription {
         )
     }
 
-    /// `Room::MessagePusher#push`: the payload, and the subscriptions it goes to (everything
-    /// first, then mentions).
+    /// `Room::MessagePusher#push`: union the recipient scopes before applying policy, so an
+    /// everything follower who is also mentioned/replied to receives one notification per device.
+    /// The last list is retained as an empty compatibility seam for existing callers.
     pub fn pushes_for(
         conn: &Connection,
         rich_text: &dyn RichText,
@@ -302,16 +308,31 @@ impl PushSubscription {
     ) -> Result<(PushPayload, Vec<Self>, Vec<Self>)> {
         let room = Room::find(conn, message.room_id)?;
         let payload = Self::payload_for(conn, rich_text, &room, message)?;
-        let everything =
-            Self::for_users_involved_in_everything(conn, room.id, message.creator_id, now)?;
         let mentionee_ids: Vec<i64> = message
             .mentionees(conn, rich_text)?
             .iter()
             .map(|u: &User| u.id)
             .collect();
-        let mentions =
-            Self::for_mentioned_users(conn, room.id, message.creator_id, &mentionee_ids, now)?;
-        Ok((payload, everything, mentions))
+        let reply_author_id = match message.reply_to_message_id {
+            Some(id) if message.reply_notify_author => Message::find_by_id(conn, id)?.map(|m| m.creator_id),
+            _ => None,
+        };
+        let subscriptions = query_all(conn,
+            "SELECT DISTINCT s.* FROM push_subscriptions s JOIN memberships m ON m.user_id=s.user_id WHERE m.room_id=? AND m.user_id!=? AND m.involvement!='invisible' AND (m.connected_at IS NULL OR m.connected_at < ?)",
+            params![room.id, message.creator_id, Membership::connection_cutoff(now)], Self::from_row)?;
+        let ids: Vec<i64> = subscriptions.iter().map(|s| s.user_id).collect::<std::collections::HashSet<_>>().into_iter().collect();
+        let users = UserStatusSettings::for_ids(conn, &ids)?;
+        let exceptions = super::notification_policy::dnd_exceptions_for(conn, &ids, Some(message.creator_id))?;
+        let memberships: std::collections::HashMap<i64, Membership> = Membership::for_room(conn, room.id)?.into_iter().map(|m| (m.user_id, m)).collect();
+        let allowed = subscriptions.into_iter().filter(|s| {
+            NotificationPolicy {
+                recipient: users.get(&s.user_id), kind: NotificationKind::RoomMessage,
+                room_involvement: memberships.get(&s.user_id).map(|m| m.involvement), thread_involvement: None,
+                mentioned: mentionee_ids.contains(&s.user_id), reply_to_recipient: reply_author_id == Some(s.user_id),
+                keyword_matched: false, dnd_exception: exceptions.contains(&s.user_id), now,
+            }.push()
+        }).collect();
+        Ok((payload, allowed, Vec::new()))
     }
 }
 
