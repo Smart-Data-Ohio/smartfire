@@ -9,6 +9,38 @@ use crate::integrations::github::{
 use campfire_db::{Account, Connection, Message, Result};
 use campfire_views::github::{Card, CardMessage, File};
 use serde_json::Value;
+pub fn subscription_section(
+    conn: &Connection,
+    room: &campfire_db::Room,
+    user: &campfire_db::User,
+) -> Result<campfire_views::github::subscriptions::Section> {
+    use campfire_views::github::subscriptions::{Section, Subscription};
+    let can_administer = user.can_administer(Some(room.creator_id), false) && !room.direct();
+    let subscriptions = if can_administer {
+        crate::integrations::github::subscriptions::RepositorySubscription::for_room(conn, room.id)?
+            .into_iter()
+            .map(|s| Subscription {
+                id: s.id,
+                full_name: s.full_name(),
+                events: s
+                    .events
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|s| s.as_str().map(str::to_owned))
+                    .collect(),
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
+    Ok(Section {
+        room_id: room.id,
+        can_administer,
+        administrator: user.is_administrator(),
+        subscriptions,
+    })
+}
 
 pub fn card(conn: &Connection, pr: &PullRequest, room_id: i64) -> Result<Card> {
     Ok(Card {
@@ -75,9 +107,20 @@ pub fn card_with_files(conn: &Connection, pr: &PullRequest, room_id: i64) -> Res
 }
 pub fn shared_card(conn: &Connection, pr: &PullRequest, room_id: i64, files: bool) -> Result<Card> {
     if pr.private != Some(false) {
-        return Ok(Card { id:pr.id, owner:pr.owner.clone(), repo:pr.repo.clone(), number:pr.number, private:pr.private, ..Default::default() });
+        return Ok(Card {
+            id: pr.id,
+            owner: pr.owner.clone(),
+            repo: pr.repo.clone(),
+            number: pr.number,
+            private: pr.private,
+            ..Default::default()
+        });
     }
-    if files {card_with_files(conn, pr, room_id)} else {card(conn, pr, room_id)}
+    if files {
+        card_with_files(conn, pr, room_id)
+    } else {
+        card(conn, pr, room_id)
+    }
 }
 pub fn message_cards(conn: &Connection, app: &AppState, message: &Message) -> Result<String> {
     let cards = PullRequest::for_message(conn, message.id)?

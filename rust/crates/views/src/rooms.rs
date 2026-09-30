@@ -193,6 +193,7 @@ pub struct OpensNew<'a> {
 pub struct OpensEdit<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub form: &'a OpenFormView,
+    pub github: crate::github::subscriptions::Section,
 }
 
 /// `rooms/closeds/new`.
@@ -209,6 +210,7 @@ pub struct ClosedsNew<'a> {
 pub struct ClosedsEdit<'a> {
     pub ctx: &'a ViewContext<'a>,
     pub form: &'a ClosedFormView,
+    pub github: crate::github::subscriptions::Section,
 }
 
 impl Page for OpensNew<'_> {

@@ -16,18 +16,18 @@ use campfire_kit::Crypto;
 use rusqlite::params;
 use serde_json::{Value, json};
 use tower::ServiceExt;
-struct Fresh {
-    app: App,
-    router: axum::Router,
+pub(super) struct Fresh {
+    pub(super) app: App,
+    pub(super) router: axum::Router,
     _dir: tempfile::TempDir,
-    server: FakeServer,
-    cookie: String,
+    pub(super) server: FakeServer,
+    pub(super) cookie: String,
 }
 fn cases() -> Value {
     serde_json::from_str(include_str!("../../../../../vectors/github_card_http.json")).unwrap()
 }
 impl Fresh {
-    async fn new(case: &Value) -> Self {
+    pub(super) async fn new(case: &Value) -> Self {
         let status = case["access"].as_u64().unwrap_or(200) as u16;
         let (server, network) = fake(vec![
             Route::new("GET", "api.github.com", "/repos/rails/rails", status).body("{}"),
@@ -64,8 +64,9 @@ impl Fresh {
         let encryption = crypto();
         let session=booted.app.db.write(move|tx| {
    fixtures::load(tx.conn(),&fixtures::reference_dir(),&fixtures::Options {now:tx.now(),bcrypt_cost:4})?;
-   let now=tx.now();tx.conn().execute("INSERT INTO users (id,name,role,created_at,updated_at) VALUES (811,'Oracle',1,?,?)",params![now,now])?;
-   for id in [815,825] {tx.conn().execute("INSERT INTO rooms (id,type,creator_id,name,created_at,updated_at) VALUES (?,'Rooms::Closed',811,'Cards',?,?)",params![id,now,now])?;}
+   let now=tx.now();tx.conn().execute("INSERT INTO users (id,name,role,created_at,updated_at) VALUES (811,'Oracle',?, ?,?)",params![input["role"].as_i64().unwrap_or(1),now,now])?;
+   tx.conn().execute("INSERT INTO users (id,name,created_at,updated_at) VALUES (812,'Other',?,?)",params![now,now])?;
+   for id in [815,825] {tx.conn().execute("INSERT INTO rooms (id,type,creator_id,name,created_at,updated_at) VALUES (?,?,?,'Cards',?,?)",params![id,input["kind"].as_str().unwrap_or("Rooms::Closed"),input["room_creator"].as_i64().unwrap_or(811),now,now])?;}
    if input["member"]!=false {tx.conn().execute("INSERT INTO memberships (room_id,user_id,created_at,updated_at) VALUES (815,811,?,?)",params![now,now])?;}
    for (id,room,key) in [(818,815,"card-parent"),(828,825,"other-parent")] {tx.conn().execute("INSERT INTO messages (id,room_id,creator_id,client_message_id,created_at,updated_at) VALUES (?,?,811,?,?,?)",params![id,room,key,now,now])?;}
    tx.conn().execute("INSERT INTO channel_threads (id,room_id,creator_id,parent_message_id,name,last_activity_at,created_at,updated_at) VALUES (817,815,811,818,'Discussion',?,?,?)",params![now,now,now])?;

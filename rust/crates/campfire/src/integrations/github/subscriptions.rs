@@ -1,6 +1,6 @@
 //! Repository subscriptions and notification claims; callbacks remain in the write transaction.
 use super::{blank, client::ruby_strip, notifier::bot_user};
-use campfire_db::{Connection, Errors, Result, Room, Tx, User};
+use campfire_db::{Connection, Database, Errors, Result, Room, Tx, User};
 use rusqlite::{OptionalExtension, params};
 use serde_json::{Value, json};
 
@@ -24,6 +24,23 @@ pub struct RepositorySubscription {
     pub created_by_id: Option<i64>,
 }
 impl RepositorySubscription {
+    pub fn for_room(conn: &Connection, room_id: i64) -> Result<Vec<Self>> {
+        Ok(conn
+            .prepare(
+                "SELECT * FROM github_repository_subscriptions WHERE room_id=? ORDER BY owner,repo",
+            )?
+            .query_map([room_id], Self::from_row)?
+            .collect::<rusqlite::Result<_>>()?)
+    }
+    pub fn find_for_room(conn: &Connection, room_id: i64, id: i64) -> Result<Self> {
+        let subscription = Self::find(conn, id)?;
+        if subscription.room_id != room_id {
+            return Err(campfire_db::Error::RecordNotFound(
+                "Github::RepositorySubscription",
+            ));
+        }
+        Ok(subscription)
+    }
     fn from_row(r: &rusqlite::Row<'_>) -> rusqlite::Result<Self> {
         let events: String = r.get("events")?;
         Ok(Self {
@@ -130,6 +147,84 @@ impl RepositorySubscription {
         }
         Ok(())
     }
+}
+pub enum SubscribeOutcome {
+    Created(RepositorySubscription),
+    Invalid(Errors),
+    Unverified {
+        full_name: String,
+        linked_usable: bool,
+    },
+}
+pub struct SubscribeInput {
+    pub room_id: i64,
+    pub user_id: i64,
+    pub full_name: String,
+    pub events: Value,
+    pub administrator_override: bool,
+}
+/// Validate before network access. The subscriber's own linked account vouches for private
+/// notifications; only a server-authorized administrator override permits an unverified row.
+pub async fn subscribe(
+    db: &Database,
+    accounts: &super::accounts::Accounts,
+    input: SubscribeInput,
+) -> Result<SubscribeOutcome> {
+    let mut parts = ruby_strip(&input.full_name).splitn(2, '/');
+    let owner = ruby_strip(parts.next().unwrap_or_default()).to_lowercase();
+    let repo = ruby_strip(parts.next().unwrap_or_default()).to_lowercase();
+    let events = if value_blank(&input.events) {
+        json!(DEFAULT_EVENTS)
+    } else {
+        input.events
+    };
+    let (errors, account) = db
+        .read({
+            let owner = owner.clone();
+            let repo = repo.clone();
+            let events = events.clone();
+            move |conn| {
+                Ok((
+                    validate(conn, None, input.room_id, &owner, &repo, &events, true)?,
+                    super::accounts::Account::for_user(conn, input.user_id)?,
+                ))
+            }
+        })
+        .await?;
+    if !errors.is_empty() {
+        return Ok(SubscribeOutcome::Invalid(errors));
+    }
+    let verified = match &account {
+        Some(account) => {
+            accounts
+                .can_read_repository(account.id, &owner, &repo)
+                .await?
+        }
+        None => false,
+    };
+    if !verified && !input.administrator_override {
+        let linked_usable = match &account {
+            Some(account) => accounts.usable(account.id).await?,
+            None => false,
+        };
+        return Ok(SubscribeOutcome::Unverified {
+            full_name: format!("{owner}/{repo}"),
+            linked_usable,
+        });
+    }
+    db.write(move |tx| {
+        RepositorySubscription::create(
+            tx,
+            input.room_id,
+            &owner,
+            &repo,
+            events,
+            Some(input.user_id),
+            verified,
+        )
+    })
+    .await
+    .map(SubscribeOutcome::Created)
 }
 fn value_blank(value: &Value) -> bool {
     match value {

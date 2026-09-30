@@ -1,14 +1,13 @@
 # WS15g Rails test coverage — partial
 
-Reference: `d7c7de92`. 426 Rails cases in 31 files: 224 mapped to Rust assertions; 202 explicitly deferred.
+Reference: `d7c7de92`. 426 Rails cases in 31 files: 241 mapped to Rust assertions; 185 explicitly deferred.
 
-These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. Room-page/controller/system parity, remaining helper cache cases, and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
+These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. The PR domain, message reference hooks, threads, subscriptions, notification claims and registered card replacements are covered. Card/card-set/thread-header/files-summary partials match pinned Rails bytes. The viewer-frame HTTP file is 13/15 covered, with exact successful bodies; relink/recovery stay deferred. Room subscription create/update/destroy and their role-gated edit sections are covered. GitHub health data/section pass independently; shared health-page wiring remains deferred. Remaining room-page/controller/system parity, helper cache cases, and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
 
 | Rails file | Cases passing grouped assertions | Deferred |
 |---|---:|---:|
 | `test/controllers/agents/github/pull_request_actions_controller_test.rb` | 0/21 | 21 |
 | `test/helpers/github_pull_requests_helper_test.rb` | 1/20 | 19 |
-| `test/controllers/rooms/github_subscriptions_controller_test.rb` | 0/17 | 17 |
 | `test/integration/github_pr_cards_test.rb` | 0/16 | 16 |
 | `test/controllers/github/pull_request_review_requests_controller_test.rb` | 0/15 | 15 |
 | `test/controllers/github/app_connections_controller_test.rb` | 0/13 | 13 |
@@ -30,6 +29,7 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | `test/jobs/github/perform_agent_action_job_test.rb` | 34/36 | 2 |
 | `test/models/github/pull_request_test.rb` | 16/17 | 1 |
 | `test/models/github/write_client_test.rb` | 12/13 | 1 |
+| `test/controllers/rooms/github_subscriptions_controller_test.rb` | 17/17 | 0 |
 | `test/models/github/agent_pull_request_action_test.rb` | 11/11 | 0 |
 | `test/models/github/app_test.rb` | 11/11 | 0 |
 | `test/models/github/notification_test.rb` | 3/3 | 0 |
@@ -251,23 +251,23 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| administrator can subscribe a room with default events | Deferred; WS15g continuation | — |
-| administrator can subscribe with an explicit event selection | Deferred; WS15g continuation | — |
-| subscribing an open room returns to its edit page | Deferred; WS15g continuation | — |
-| room creator can subscribe without being an administrator | Deferred; WS15g continuation | — |
-| duplicate and malformed subscriptions redirect with an alert | Deferred; WS15g continuation | — |
-| administrator can change events and remove a subscription | Deferred; WS15g continuation | — |
-| removing one of several subscriptions keeps the bot in the room | Deferred; WS15g continuation | — |
-| plain members get forbidden | Deferred; WS15g continuation | — |
-| non-members get not found | Deferred; WS15g continuation | — |
-| direct rooms get not found | Deferred; WS15g continuation | — |
-| github section renders for administrators but not plain members | Deferred; WS15g continuation | — |
-| subscribing checks access with the subscriber's own token and records a verified reader | Deferred; WS15g continuation | — |
-| a subscriber whose token cannot read the repository is refused | Deferred; WS15g continuation | — |
-| a subscriber without a linked GitHub account is refused | Deferred; WS15g continuation | — |
-| a disconnected GitHub account cannot vouch for a subscription | Deferred; WS15g continuation | — |
-| administrators may override the check, leaving the subscription unverified | Deferred; WS15g continuation | — |
-| the override checkbox renders for administrators only | Deferred; WS15g continuation | — |
+| administrator can subscribe a room with default events | Mapped to grouped Rust assertions; WS15g | `github_subscription_http_status_flash_token_events_and_membership_match_rails` |
+| administrator can subscribe with an explicit event selection | Mapped to grouped Rust assertions; WS15g | `github_subscription_http_status_flash_token_events_and_membership_match_rails` |
+| subscribing an open room returns to its edit page | Mapped to grouped Rust assertions; WS15g | `github_subscription_http_status_flash_token_events_and_membership_match_rails` |
+| room creator can subscribe without being an administrator | Mapped to grouped Rust assertions; WS15g | `github_subscription_http_status_flash_token_events_and_membership_match_rails` |
+| duplicate and malformed subscriptions redirect with an alert | Mapped to grouped Rust assertions; WS15g | `github_subscription_http_status_flash_token_events_and_membership_match_rails` |
+| administrator can change events and remove a subscription | Mapped to grouped Rust assertions; WS15g | `github_subscription_http_status_flash_token_events_and_membership_match_rails` |
+| removing one of several subscriptions keeps the bot in the room | Mapped to grouped Rust assertions; WS15g | `github_subscription_http_status_flash_token_events_and_membership_match_rails` |
+| plain members get forbidden | Mapped to grouped Rust assertions; WS15g | `github_subscription_http_security_rejects_nonmembers_plain_members_direct_deleted_and_cross_room` |
+| non-members get not found | Mapped to grouped Rust assertions; WS15g | `github_subscription_http_security_rejects_nonmembers_plain_members_direct_deleted_and_cross_room` |
+| direct rooms get not found | Mapped to grouped Rust assertions; WS15g | `github_subscription_http_security_rejects_nonmembers_plain_members_direct_deleted_and_cross_room` |
+| github section renders for administrators but not plain members | Mapped to grouped Rust assertions; WS15g | `github_subscription_sections_match_rails_bytes_and_real_edit_page_permissions` |
+| subscribing checks access with the subscriber's own token and records a verified reader | Mapped to grouped Rust assertions; WS15g | `github_subscription_http_status_flash_token_events_and_membership_match_rails` |
+| a subscriber whose token cannot read the repository is refused | Mapped to grouped Rust assertions; WS15g | `github_subscription_http_status_flash_token_events_and_membership_match_rails` |
+| a subscriber without a linked GitHub account is refused | Mapped to grouped Rust assertions; WS15g | `github_subscription_http_status_flash_token_events_and_membership_match_rails` |
+| a disconnected GitHub account cannot vouch for a subscription | Mapped to grouped Rust assertions; WS15g | `github_subscription_http_status_flash_token_events_and_membership_match_rails` |
+| administrators may override the check, leaving the subscription unverified | Mapped to grouped Rust assertions; WS15g | `github_subscription_http_status_flash_token_events_and_membership_match_rails` |
+| the override checkbox renders for administrators only | Mapped to grouped Rust assertions; WS15g | `github_subscription_sections_match_rails_bytes_and_real_edit_page_permissions` |
 
 ## `test/helpers/github_pull_requests_helper_test.rb` (20 tests)
 
