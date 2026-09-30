@@ -13,6 +13,9 @@
 //! plans/rust-conversion.md, "HTTP clients: three distinct policies"). Oracles for the tests
 //! (Ruby scripts run in the reference) live in testdata/oracle.
 
+// Fizzy HTTP/agent/card consumers land in the next coherent slice.
+#[allow(dead_code, reason = "Staged Fizzy domain before card/controller consumers")]
+pub mod fizzy;
 pub mod image_proxy;
 mod jobs;
 pub mod action_claims;

@@ -236,62 +236,64 @@ fn github_claim_periodic_task_is_registered_every_thirty_seconds() {
 
 #[tokio::test]
 async fn github_claim_registered_periodic_task_executes_and_obeys_its_interval() {
-    let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
-    std::fs::create_dir_all(&scratch).unwrap();
-    let directory = tempfile::tempdir_in(scratch).unwrap();
-    let config = crate::config::Config::from_lookup(|name| match name {
-        "SECRET_KEY_BASE" => Some("a".repeat(128)),
-        "DISABLE_SSL" => Some("1".into()),
-        "CAMPFIRE_STORAGE_PATH" => Some(directory.path().to_string_lossy().into_owned()),
-        _ => None,
-    })
-    .unwrap();
-    let clock = Arc::new(campfire_kit::clock::FrozenClock::new(
-        "2026-01-01T12:00:00Z".parse().unwrap(),
-    ));
-    let booted = crate::app::boot_with_clock(config, clock.clone())
+    for integration in [GITHUB, FIZZY] {
+        let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+        std::fs::create_dir_all(&scratch).unwrap();
+        let directory = tempfile::tempdir_in(scratch).unwrap();
+        let config = crate::config::Config::from_lookup(|name| match name {
+            "SECRET_KEY_BASE" => Some("a".repeat(128)),
+            "DISABLE_SSL" => Some("1".into()),
+            "CAMPFIRE_STORAGE_PATH" => Some(directory.path().to_string_lossy().into_owned()),
+            _ => None,
+        })
+        .unwrap();
+        let clock = Arc::new(campfire_kit::clock::FrozenClock::new(
+            "2026-01-01T12:00:00Z".parse().unwrap(),
+        ));
+        let booted = crate::app::boot_with_clock(config, clock.clone())
+            .await
+            .unwrap();
+        booted
+            .jobs
+            .shutdown(std::time::Duration::from_secs(1))
+            .await;
+        let db = &booted.app.db;
+        db.write(|tx| {
+            campfire_db::fixtures::load(
+                tx.conn(),
+                &campfire_db::fixtures::reference_dir(),
+                &campfire_db::fixtures::Options {
+                    now: tx.now(),
+                    bcrypt_cost: 4,
+                },
+            )
+        })
         .await
         .unwrap();
-    booted
-        .jobs
-        .shutdown(std::time::Duration::from_secs(1))
-        .await;
-    let db = &booted.app.db;
-    db.write(|tx| {
-        campfire_db::fixtures::load(
-            tx.conn(),
-            &campfire_db::fixtures::reference_dir(),
-            &campfire_db::fixtures::Options {
-                now: tx.now(),
-                bcrypt_cost: 4,
-            },
-        )
-    })
-    .await
-    .unwrap();
-    seed(db, GITHUB, 960, false).await;
-    let mut periodic = crate::jobs::periodic::periodic(crate::jobs::periodic::PeriodicIntervals {
-        reminders: SWEEP_INTERVAL,
-        retention: std::time::Duration::from_secs(86400),
-    });
-    assert_eq!(
-        periodic.tick(booted.app.clone(), db.env().now()).await,
-        ["saved item reminders", "scheduled messages", "poll closing", "stuck rooms", "retention prune", "stuck GitHub claims"]
-    );
-    assert_eq!(snapshot(db).await["metadata"]["status"], "failed");
-    clock.advance(jiff::SignedDuration::from_secs(29));
-    assert!(
-        periodic
-            .tick(booted.app.clone(), db.env().now())
-            .await
-            .is_empty()
-    );
-    clock.advance(jiff::SignedDuration::from_secs(1));
-    assert_eq!(
-        periodic.tick(booted.app.clone(), db.env().now()).await,
-        ["saved item reminders", "scheduled messages", "poll closing", "stuck GitHub claims"]
-    );
-    assert_eq!(snapshot(db).await["audits"], 1);
+        seed(db, integration, 960, false).await;
+        let mut periodic = crate::jobs::periodic::periodic(crate::jobs::periodic::PeriodicIntervals {
+            reminders: SWEEP_INTERVAL,
+            retention: std::time::Duration::from_secs(86400),
+        });
+        assert_eq!(
+            periodic.tick(booted.app.clone(), db.env().now()).await,
+            ["saved item reminders", "scheduled messages", "poll closing", "stuck rooms", "stuck GitHub claims", "stuck Fizzy claims", "retention prune"]
+        );
+        assert_eq!(snapshot(db).await["metadata"]["status"], "failed");
+        clock.advance(jiff::SignedDuration::from_secs(29));
+        assert!(
+            periodic
+                .tick(booted.app.clone(), db.env().now())
+                .await
+                .is_empty()
+        );
+        clock.advance(jiff::SignedDuration::from_secs(1));
+        assert_eq!(
+            periodic.tick(booted.app.clone(), db.env().now()).await,
+            ["saved item reminders", "scheduled messages", "poll closing", "stuck GitHub claims", "stuck Fizzy claims"]
+        );
+        assert_eq!(snapshot(db).await["audits"], 1);
+    }
 }
 
 #[tokio::test]

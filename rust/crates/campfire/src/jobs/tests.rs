@@ -720,8 +720,11 @@ fn ws8_periodic_tasks_match_rails_names_and_intervals() {
         .map(|t| serde_json::json!({"name":t.name(),"seconds":t.interval().as_secs()}))
         .collect();
     let mut expected = golden["tasks"].as_array().unwrap().clone();
-    // Periodic::Runner registers this domain task alongside the WS8 tasks.
+    // Preserve the relative order in the pinned Periodic::Runner for all registered tasks.
+    let retention = expected.pop().unwrap();
     expected.push(serde_json::json!({"name":"stuck GitHub claims","seconds":30}));
+    expected.push(serde_json::json!({"name":"stuck Fizzy claims","seconds":30}));
+    expected.push(retention);
     assert_eq!(serde_json::json!(tasks), serde_json::json!(expected));
 }
 

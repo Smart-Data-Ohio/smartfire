@@ -18,7 +18,6 @@ pub const GITHUB: Integration = Integration {
     audit_action: "agent.github_action.execute",
     timeout_message: "GitHub action execution timed out",
 };
-#[allow(dead_code, reason = "WS15e reuses the shared helper for Fizzy")]
 pub const FIZZY: Integration = Integration {
     event_type: "fizzy_action_completed",
     audit_action: "agent.fizzy_action.execute",
