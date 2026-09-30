@@ -44,6 +44,7 @@ use crate::config::Config;
 pub mod periodic;
 mod messaging;
 mod notifications;
+mod peer_callbacks;
 
 /// The app's job classes and their handlers, which get the [`App`].
 pub type Registry = campfire_jobs::Registry<App>;
@@ -193,7 +194,9 @@ impl Jobs {
     pub fn new(registry: &Registry, config: &RunnerConfig) -> anyhow::Result<(Self, AdHocQueue)> {
         let queue = JobQueue::new(registry, config)?;
         let (ad_hoc, receiver) = mpsc::channel(AD_HOC_CAPACITY);
-        Ok((Self { queue, model_callbacks: Arc::default(), ad_hoc, cable: Arc::new(OnceLock::new()), app: Arc::new(OnceLock::new()) }, AdHocQueue(receiver)))
+        let model_callbacks = Arc::new(campfire_db::callbacks::Registry::default());
+        peer_callbacks::install(&model_callbacks);
+        Ok((Self { queue, model_callbacks, ad_hoc, cable: Arc::new(OnceLock::new()), app: Arc::new(OnceLock::new()) }, AdHocQueue(receiver)))
     }
 
     /// Runs best-effort work in memory. Dropped with an error log when the ad hoc queue is full,
@@ -422,3 +425,6 @@ use crate::channels::sink::template_free_broadcast;
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod peer_callback_tests;

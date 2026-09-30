@@ -6,8 +6,8 @@
     "test/models/agent_credential_test.rb": "The unknown/blank secret case runs against the str domain input. Conversion of absent HTTP credentials (Rails nil.to_s) remains with WS11-api.",
     "test/models/agent_test.rb": "The badge/directory HTML and absence of secrets in rendered HTML remain WS11-ui cases (two unmapped names). The reset-lock comparison checks the actual serialized writer transaction instead of a Ruby method spy.",
     "test/services/slash_commands/dispatcher_test.rb": "Five agent invocations compared here; 35 built-in command cases remain WS8.",
-    "test/models/message_streaming_test.rb": "19 named comparisons include installed production link-reference callbacks. Four complete start/trailing cable, activity and finalization cases remain unmapped; generic MessageReplace rendering and WS15e reference callbacks are now installed. WS12 activity and remaining WS14/WS15g reference peers remain separate boundaries.",
-    "test/models/agent_approval_test.rb": "The preference-neighbour case also asserts an ordinary mention inbox item; its approval preference and decider half is already checked in the consolidated vectors, but the complete named case awaits WS12 activity installation.",
+    "test/models/message_streaming_test.rb": "19 named comparisons plus a production WebSocket comparison of three byte-identical append/update/final phases. Four complete start/trailing and every-side-effect names still await full named-case comparisons; remaining reference/dependency peers remain flagged.",
+    "test/models/agent_approval_test.rb": "All named domain cases now include the installed ordinary mention producer. Human approval controller/pages remain WS11-ui.",
     "test/models/user/bot_test.rb": "Nine digest/authentication and production plaintext-scrub cases compared. Two fixed SecureRandom-stub cases, three reply-token model cases and one actual queued webhook execution case remain unmapped; broader token and HTTP checks are additional evidence.",
     "test/models/agent_budgets_test.rb": "Nine budget comparisons include real message/thread/approval writes and read-only usage. ActivityItem.accessible_to and WorkHandoffs.create are WS12 producers; the two complete named cases remain deferred."
   },
@@ -112,13 +112,6 @@
         "finalize fires every side effect exactly once",
         "appends re-render without firing side effects",
         "a coalesced update sends a trailing broadcast with the final text"
-      ]
-    },
-    {
-      "rails_file": "test/models/agent_approval_test.rb",
-      "owner": "WS11 domain; WS11-ui human approval controller/pages",
-      "remaining_named_case_ports": [
-        "a decider with approvals switched off gets no item but stays a decider"
       ]
     },
     {
