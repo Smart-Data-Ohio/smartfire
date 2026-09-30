@@ -260,3 +260,76 @@ fn stale_stream_state_matches_sixteen_rails_scenarios() {
         }
     }
 }
+
+#[test]
+fn hand_mutations_and_role_clearing_match_seventeen_rails_scenarios() {
+    let vectors: Value =
+        serde_json::from_str(include_str!("../models/huddle_hand_vectors.json")).unwrap();
+    assert_eq!(vectors["cases"].as_array().unwrap().len(), 17);
+    for case in vectors["cases"].as_array().unwrap() {
+        let db = TestDb::new();
+        db.clock
+            .travel_to(Timestamp::from_second(vectors["now"].as_i64().unwrap()));
+        let input = case["input"].clone();
+        db.write(move |tx| {
+            huddle_notices_test::load(tx, &input)?;
+            // Keep the original timestamps: no-op lower and repeated raise must not touch them.
+            for member in input["memberships"].as_array().unwrap() {
+                let created = Timestamp::parse_db(member["created_at"].as_str().unwrap()).unwrap();
+                let updated = Timestamp::parse_db(member["updated_at"].as_str().unwrap()).unwrap();
+                tx.conn().execute(
+                    "UPDATE memberships SET created_at=?,updated_at=? WHERE id=?",
+                    rusqlite::params![created, updated, member["id"].as_i64()],
+                )?;
+            }
+            Ok(())
+        });
+        let id = case["membership_id"].as_i64().unwrap();
+        let operation = case["operation"].as_str().unwrap().to_string();
+        let role = case["next_role"].as_str().map(|r| match r {
+            "listener" => crate::StageRole::Listener,
+            "speaker" => crate::StageRole::Speaker,
+            "host" => crate::StageRole::Host,
+            _ => panic!("unknown role"),
+        });
+        let result = db.try_write(move |tx| {
+            let mut member = crate::Membership::find(tx.conn(), id)?;
+            match operation.as_str() {
+                "raise" => member.raise_hand(tx),
+                "lower" => member.lower_hand(tx),
+                "role" => member.change_stage_role(tx, role.unwrap()).map(|()| true),
+                _ => panic!("unknown operation"),
+            }
+        });
+        let mut errors = Value::Null;
+        match result {
+            Ok(changed) => assert_eq!(json!(changed), case["changed"], "{}", case["name"]),
+            Err(crate::Error::RecordInvalid(error)) => {
+                let mut fields = serde_json::Map::new();
+                for (attribute, message) in error.0 {
+                    fields
+                        .entry(attribute)
+                        .or_insert_with(|| json!([]))
+                        .as_array_mut()
+                        .unwrap()
+                        .push(json!(message));
+                }
+                errors = Value::Object(fields);
+            }
+            Err(error) => panic!("{}: {error}", case["name"]),
+        }
+        assert_eq!(errors, case["errors"], "{}", case["name"]);
+        let members = db.read(|conn| snapshot(conn, "memberships"));
+        let mut actual = members
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["id"] == id)
+            .unwrap()
+            .clone();
+        let mut expected = case["membership"].clone();
+        normalize(&mut actual);
+        normalize(&mut expected);
+        assert_eq!(actual, expected, "{}", case["name"]);
+    }
+}

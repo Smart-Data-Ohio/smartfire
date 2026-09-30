@@ -408,6 +408,26 @@ impl Membership {
 
     // Membership::Connectable
 
+    /// `raise_hand!`: a repeat keeps its original timestamp and skips validation/write.
+    pub fn raise_hand(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
+        if self.hand_raised_at.is_some() { return Ok(false); }
+        self.validate_call_attributes(tx.conn(),self.stage_role,Some(tx.now()),self.server_muted_at)?;
+        tx.conn().execute_cached("UPDATE memberships SET hand_raised_at=?,updated_at=? WHERE id=?",params![tx.now(),tx.now(),self.id])?;
+        self.reload(tx.conn())?;
+        Ok(true)
+    }
+
+    /// `lower_hand!`: Rails' update! succeeds even when nothing was raised, and does not
+    /// touch updated_at for that no-op. Controllers still broadcast the roster on success.
+    pub fn lower_hand(&mut self, tx: &mut Tx<'_>) -> Result<bool> {
+        self.validate_call_attributes(tx.conn(),self.stage_role,None,self.server_muted_at)?;
+        if self.hand_raised_at.is_some() {
+            tx.conn().execute_cached("UPDATE memberships SET hand_raised_at=NULL,updated_at=? WHERE id=?",params![tx.now(),self.id])?;
+            self.reload(tx.conn())?;
+        }
+        Ok(true)
+    }
+
     /// Rails' stage/mute validations run before either revocation callback. The immediate
     /// transaction serializes the last-host guard with concurrent role changes.
     fn validate_call_attributes(&self, conn: &Connection, role: Option<StageRole>, hand: Option<Timestamp>, muted: Option<Timestamp>) -> Result<()> {
