@@ -88,6 +88,6 @@ relay = shapes.map do |shape|
   expected = !!basic.authenticate(request) { |user, password| user.to_s == 'actionmailbox' && password.to_s == 'fixture-mail-password' }
   shape.merge(expected: expected)
 end
-review = {deep_mime_raw: Ws10ReviewFixtures.nested_mail(2000), deep_fixed_width_raw: Ws10ReviewFixtures.nested_mail(4000, fixed_width: true), replay_raw: Ws10ReviewFixtures.replay_mail, retry_raw: Ws10ReviewFixtures.retry_mail}
+review = {deep_mime_raw: Ws10ReviewFixtures.nested_mail(2000), deep_fixed_width_raw: Ws10ReviewFixtures.nested_mail(4000, fixed_width: true), wide: Ws10ReviewFixtures.wide_mail, replay_raw: Ws10ReviewFixtures.replay_mail, retry_raw: Ws10ReviewFixtures.retry_mail}
 File.write('/out/reference.json', JSON.pretty_generate({auth: auth, html: html, messages: messages, cram: cram, relay: relay, whitespace: whitespace, review: review}) + "\n")
 puts "mail reference: #{auth.size} authentication headers, #{html.size} HTML cases, #{messages.size} MIME messages"

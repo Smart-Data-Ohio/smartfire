@@ -207,77 +207,158 @@ fn authentication_values(raw: &[u8]) -> Vec<String> {
 thread_local! {
     static BOUNDARY_SCAN_BYTES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
+
+fn boundary_work(_bytes: usize) {
+    #[cfg(test)]
+    BOUNDARY_SCAN_BYTES.with(|count| count.set(count.get() + _bytes));
+}
+
+#[derive(Clone, Copy)]
+struct DelimiterLine {
+    start: usize,
+    end: usize,
+    next_line: Option<usize>,
+}
+
+#[derive(Default)]
+struct BoundaryNode {
+    lines: Vec<DelimiterLine>,
+    cursor: usize,
+    children: Option<std::collections::HashMap<u8, usize>>,
+}
+
+/// Index line prefixes, retaining mailparse's prefix matching (not whole-line matching).
+/// Expand a prefix only when a MIME header requests it. Each delimiter byte is indexed
+/// at most once, including when boundary names share prefixes or are reused by siblings.
+struct BoundaryIndex<'a> {
+    raw: &'a [u8],
+    nodes: Vec<BoundaryNode>,
+}
+
+impl<'a> BoundaryIndex<'a> {
+    fn new(raw: &'a [u8], body: usize) -> Self {
+        let mut root = BoundaryNode::default();
+        let mut start = body;
+        boundary_work(raw.len() - body);
+        for line in raw[body..].split_inclusive(|byte| *byte == b'\n') {
+            boundary_work(line.len().min(2));
+            if line.starts_with(b"--") {
+                let next_line = line.ends_with(b"\n").then_some(start + line.len());
+                root.lines.push(DelimiterLine {
+                    start,
+                    end: next_line.map_or(raw.len(), |next| next - 1),
+                    next_line,
+                });
+            }
+            start += line.len();
+        }
+        Self {
+            raw,
+            nodes: vec![root],
+        }
+    }
+
+    fn boundary_node(&mut self, boundary: &[u8]) -> Option<usize> {
+        if self.nodes[0].lines.is_empty() {
+            return None;
+        }
+        let mut node = 0;
+        for (offset, byte) in boundary.iter().enumerate() {
+            boundary_work(1);
+            if self.nodes[node].children.is_none() {
+                let mut children = std::collections::HashMap::new();
+                for index in 0..self.nodes[node].lines.len() {
+                    let line = self.nodes[node].lines[index];
+                    let position = line.start + 2 + offset;
+                    boundary_work(1);
+                    if position < line.end {
+                        let key = self.raw[position];
+                        let child = *children.entry(key).or_insert_with(|| {
+                            self.nodes.push(BoundaryNode::default());
+                            self.nodes.len() - 1
+                        });
+                        self.nodes[child].lines.push(line);
+                    }
+                }
+                self.nodes[node].children = Some(children);
+            }
+            node = *self.nodes[node].children.as_ref()?.get(byte)?;
+        }
+        Some(node)
+    }
+
+    fn parts(&mut self, body: usize, end: usize, boundary: &str) -> Vec<std::ops::Range<usize>> {
+        let Some(node) = self.boundary_node(boundary.as_bytes()) else {
+            return Vec::new();
+        };
+        let node = &mut self.nodes[node];
+        // The explicit stack visits headers in source order. A cursor per prefix avoids
+        // even repeated binary searches when many sibling multiparts reuse a boundary.
+        while node
+            .lines
+            .get(node.cursor)
+            .is_some_and(|line| line.start < body)
+        {
+            boundary_work(1);
+            node.cursor += 1;
+        }
+        let delimiter_len = 2 + boundary.len();
+        let in_part = |line: &&DelimiterLine| line.start + delimiter_len <= end;
+        let Some(mut current) = node.lines.get(node.cursor).filter(in_part).copied() else {
+            return Vec::new();
+        };
+        node.cursor += 1;
+        boundary_work(1);
+        let mut parts = Vec::new();
+        while let Some(start) = current.next_line.filter(|start| *start <= end) {
+            let next = node.lines.get(node.cursor).filter(in_part).copied();
+            let mut part_end = next.map_or(end, |line| line.start);
+            if next.is_some() && part_end > start && self.raw[part_end - 1] == b'\n' {
+                part_end -= 1;
+                if part_end > start && self.raw[part_end - 1] == b'\r' {
+                    part_end -= 1;
+                }
+            }
+            parts.push(start..part_end);
+            let Some(next) = next else { break };
+            node.cursor += 1;
+            boundary_work(3);
+            let cursor = next.start + delimiter_len;
+            if cursor + 2 > end || self.raw[cursor..end].starts_with(b"--") {
+                break;
+            }
+            current = next;
+        }
+        parts
+    }
+}
+
 /// Mail 2.9.1 splits multipart bodies lazily and has no numeric depth limit. Mailparse's
 /// eager recursive tree can exhaust the process stack before Action Mailbox routes a bounce.
-/// Keep the same delimiter traversal on an explicit stack; only leaves enter parse_mail.
+/// Traverse indexed part offsets on an explicit stack; only leaves enter parse_mail.
 fn mime_leaves(raw: &[u8]) -> anyhow::Result<(ParsedMail<'_>, Vec<ParsedMail<'_>>, bool)> {
     fn shallow(raw: &[u8]) -> anyhow::Result<(ParsedMail<'_>, usize)> {
         let (_, body) = mailparse::parse_headers(raw)?;
         Ok((mailparse::parse_mail(&raw[..body])?, body))
     }
-    fn boundary_at(raw: &[u8], start: usize, boundary: &[u8]) -> Option<usize> {
-        let found =
-            raw[start..]
-                .windows(boundary.len())
-                .enumerate()
-                .find_map(|(offset, candidate)| {
-                    let index = start + offset;
-                    (candidate == boundary && (index == start || raw[index - 1] == b'\n'))
-                        .then_some(index)
-                });
-        #[cfg(test)]
-        BOUNDARY_SCAN_BYTES.with(|count| {
-            count.set(
-                count.get()
-                    + found.map_or(raw.len() - start, |index| index - start + boundary.len()),
-            )
-        });
-        found
-    }
-    fn part_ranges<'a>(raw: &'a [u8], body: usize, boundary: &str) -> Vec<&'a [u8]> {
-        let boundary = format!("--{boundary}");
-        let Some(first) = boundary_at(raw, body, boundary.as_bytes()) else {
-            return Vec::new();
-        };
-        let mut cursor = first + boundary.len();
-        let mut parts = Vec::new();
-        while let Some(start) = raw[cursor..]
-            .iter()
-            .position(|b| *b == b'\n')
-            .map(|offset| cursor + offset + 1)
-        {
-            let next = boundary_at(raw, start, boundary.as_bytes());
-            let mut end = next.unwrap_or(raw.len());
-            if next.is_some() && end > start && raw[end - 1] == b'\n' {
-                end -= 1;
-                if end > start && raw[end - 1] == b'\r' {
-                    end -= 1;
-                }
-            }
-            parts.push(&raw[start..end]);
-            cursor = next.map_or(raw.len(), |index| index + boundary.len());
-            if cursor + 2 > raw.len() || raw[cursor..].starts_with(b"--") {
-                break;
-            }
-        }
-        parts
-    }
-    let (root, _) = shallow(raw)?;
-    let mut stack = vec![(raw, false)];
+    let (root, body) = shallow(raw)?;
+    let mut boundaries = BoundaryIndex::new(raw, body);
+    let mut stack = vec![(0..raw.len(), false)];
     let mut leaves = Vec::new();
     let mut multipart = false;
-    while let Some((part, digest)) = stack.pop() {
+    while let Some((range, digest)) = stack.pop() {
+        let part = &raw[range.clone()];
         let (head, body) = shallow(part)?;
         let children = if head.ctype.mimetype.starts_with("multipart/") {
             head.ctype
                 .params
                 .get("boundary")
-                .map(|b| part_ranges(part, body, b))
+                .map(|b| boundaries.parts(range.start + body, range.end, b))
                 .unwrap_or_default()
         } else {
             Vec::new()
         };
-        if part.as_ptr() == raw.as_ptr() && part.len() == raw.len() {
+        if range.start == 0 && range.end == raw.len() {
             multipart = !children.is_empty();
         }
         if children.is_empty() {
@@ -447,6 +528,57 @@ impl Email {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn review_wide_room_has_linear_boundary_work() {
+        let corpus: serde_json::Value =
+            serde_json::from_str(include_str!("../../../vectors/mail/reference.json")).unwrap();
+        let fixture = &corpus["review"]["wide"];
+        let mut raw = fixture["prefix"].as_str().unwrap().to_owned();
+        raw.push_str(
+            &fixture["part"]
+                .as_str()
+                .unwrap()
+                .repeat(fixture["parts"].as_u64().unwrap() as usize),
+        );
+        raw.push_str(fixture["suffix"].as_str().unwrap());
+        BOUNDARY_SCAN_BYTES.with(|count| count.set(0));
+        let email = Email::parse_for_routing(raw.as_bytes()).unwrap();
+        let scanned = BOUNDARY_SCAN_BYTES.with(std::cell::Cell::get);
+        println!(
+            "wide fixture bytes={} boundary bytes scanned={scanned}",
+            raw.len()
+        );
+        assert!(scanned <= 4 * raw.len());
+        assert_eq!(email.body, "x");
+        assert_eq!(email.room_token().as_deref(), Some("token"));
+    }
+
+    #[test]
+    fn review_deep_room_has_linear_boundary_work() {
+        let corpus: serde_json::Value =
+            serde_json::from_str(include_str!("../../../vectors/mail/reference.json")).unwrap();
+        let raw = corpus["review"]["deep_fixed_width_raw"]
+            .as_str()
+            .unwrap()
+            .replace("nobody@mail.test", "room-token@mail.test");
+        assert_eq!(raw.len(), 324_088);
+        BOUNDARY_SCAN_BYTES.with(|count| count.set(0));
+        let email = Email::parse_for_routing(raw.as_bytes()).unwrap();
+        let scanned = BOUNDARY_SCAN_BYTES.with(std::cell::Cell::get);
+        println!(
+            "room fixture bytes={} boundary bytes scanned={scanned}",
+            raw.len()
+        );
+        assert!(
+            scanned <= 4 * raw.len(),
+            "quadratic boundary traversal: scanned {scanned} bytes for {} input bytes",
+            raw.len()
+        );
+        assert_eq!(email.room_token().as_deref(), Some("token"));
+        assert_eq!(email.body, "Hello");
+        assert!(email.files.is_empty());
+    }
 
     #[test]
     fn review_deep_bounce_has_linear_boundary_work() {

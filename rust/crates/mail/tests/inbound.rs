@@ -213,6 +213,48 @@ async fn review_deep_mime_parses_without_abort() {
 }
 
 #[tokio::test]
+async fn review_multipart_matches_pinned_rails() {
+    use base64::Engine as _;
+    let cases: serde_json::Value =
+        serde_json::from_str(include_str!("../../../vectors/mail/multipart.json")).unwrap();
+    assert_eq!(cases.as_array().unwrap().len(), 6);
+    for case in cases.as_array().unwrap() {
+        let h = Harness::new().await;
+        let raw = case["raw"].as_str().unwrap().replace(
+            "room-token@mail.test",
+            &format!("room-{}@mail.test", h.token),
+        );
+        let parsed = Email::parse_for_routing(raw.as_bytes()).unwrap();
+        let message = h.message(h.deliver(raw.into_bytes()).await).await;
+        assert_eq!(
+            message.markdown_source.as_deref(),
+            case["source"].as_str(),
+            "fixture {}",
+            case["label"]
+        );
+        let attached =
+            h.db.read(move |c| {
+                campfire_db::Attachment::find_for(c, "Message", message.id, "attachment")
+            })
+            .await
+            .unwrap();
+        if let Some(filename) = case["filename"].as_str() {
+            let blob = h.db.read(move |c| attached.unwrap().blob(c)).await.unwrap();
+            assert_eq!(blob.filename, filename);
+            assert_eq!(
+                std::fs::read(h.storage.service.path_for(&blob.key)).unwrap(),
+                base64::engine::general_purpose::STANDARD
+                    .decode(case["bytes"].as_str().unwrap())
+                    .unwrap()
+            );
+        } else {
+            assert!(attached.is_none());
+        }
+        assert_eq!(parsed.source(false).as_deref(), case["source"].as_str());
+    }
+}
+
+#[tokio::test]
 async fn review_routing_replay_does_not_duplicate_message() {
     let h = Harness::new().await;
     let raw = review_fixture("replay_raw").replace(

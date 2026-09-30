@@ -1,5 +1,10 @@
 # Reviewer minimal fixtures shared by the Rails checks and Rust oracle generator.
 module Ws10ReviewFixtures
+  def self.wide_mail
+    {prefix: "From: outside@example.com\r\nTo: room-token@mail.test\r\nContent-Type: multipart/mixed; boundary=wide\r\n\r\n",
+     part: "--wide\r\n\r\nx\r\n", parts: 100_000, suffix: "--wide--\r\n"}
+  end
+
   def self.nested_mail(depth, fixed_width: false)
     raw = +"From: outside@example.com\r\nTo: nobody@mail.test\r\n"
     boundaries = depth.times.map { |i| fixed_width ? format('b%08d', i) : "b#{i}" }
