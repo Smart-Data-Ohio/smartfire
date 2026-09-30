@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify source against the fixed pin and the explicitly adopted #162 board blob."""
+"""Verify source against the fixed pin and explicitly adopted #162/#163 blobs."""
 import hashlib
 from pathlib import Path
 import subprocess
@@ -7,9 +7,17 @@ import sys
 
 root = Path(__file__).resolve().parents[2]
 pin = "d7c7de92"
-assert sys.argv[1:] in ([], ["--board-tag"])
+assert sys.argv[1:] in ([], ["--board-tag"], ["--status-popup"])
+status_popup = sys.argv[1:] == ["--status-popup"]
 board_tag = bool(sys.argv[1:])
-image = "ws17-reference-board-a6f10a25:latest" if board_tag else "triage-reference-d7c7de92:latest"
+image = "ws17-reference-status-2e20b24c:latest" if status_popup else "ws17-reference-board-a6f10a25:latest" if board_tag else "triage-reference-d7c7de92:latest"
+status_files = [
+    "app/assets/stylesheets/people.css", "app/controllers/users/statuses_controller.rb",
+    "app/javascript/controllers/profile_card_controller.js", "app/views/layouts/application.html.erb",
+    "app/views/users/cards/show.html.erb", "app/views/users/profiles/_status.html.erb",
+    "app/views/users/sidebars/show.html.erb", "app/views/users/statuses/_fields.html.erb",
+    "app/views/users/statuses/edit.html.erb", "config/routes.rb",
+]
 files = [
     "app/views/users/show.html.erb", "app/views/rooms/show/_ooo_notices.html.erb", "app/controllers/rooms_controller.rb",
     "config/initializers/web_push.rb", "config/initializers/vapid.rb",
@@ -40,16 +48,26 @@ files = [
     "app/views/users/profiles/_appearance.html.erb", "app/controllers/users/push_subscriptions_controller.rb",
     "app/views/users/push_subscriptions/index.html.erb", "app/views/users/push_subscriptions/_push_subscription.html.erb",
 ]
+if status_popup:
+    files = list(dict.fromkeys(files + status_files + [
+        "app/views/sessions/new.html.erb", "app/views/sessions/incompatible_browser.html.erb",
+        "app/views/sessions/transfers/show.html.erb", "app/views/two_factor/setups/show.html.erb",
+        "app/views/two_factor/challenges/show.html.erb", "app/views/two_factor/backup_codes/show.html.erb",
+        "app/views/users/sessions/index.html.erb", "app/views/sudos/new.html.erb",
+        "app/views/sudos/continue.html.erb", "app/views/layouts/public.html.erb",
+    ]))
 checks = subprocess.check_output([
     "docker", "run", "--rm", "--name", "ws17-verify-reference", "--entrypoint", "sha256sum",
     image, *["/rails/" + path for path in files],
 ], text=True).splitlines()
 assert len(checks) == len(files)
 for path, check in zip(files, checks, strict=True):
-    source_pin = "a6f10a25" if board_tag and path == "app/models/board_automations/nudge_pusher.rb" else pin
+    source_pin = "2e20b24c" if status_popup and path in status_files else "a6f10a25" if board_tag and path == "app/models/board_automations/nudge_pusher.rb" else pin
     source = subprocess.check_output(["git", "show", f"{source_pin}:{path}"], cwd=root)
     assert hashlib.sha256(source).hexdigest() == check.split()[0], f"reference drift: {path}"
-if board_tag:
+if status_popup:
+    print(f"Rails source verified: {len(files)-11} files match {pin}; 1 board pusher matches a6f10a25; 10 status/layout files match 2e20b24c")
+elif board_tag:
     print(f"Rails source verified: {len(files)-1} files match {pin}; 1 board pusher matches a6f10a25")
 else:
     print(f"pinned Rails source verified: {len(files)} files match {pin}")
