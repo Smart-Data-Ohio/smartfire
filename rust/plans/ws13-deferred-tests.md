@@ -18,7 +18,7 @@ Passed titles are backed jointly by those differential tests, the real HTTP/Cabl
 
 ## WS13b domain slices
 
-WS13b completes all 207 assigned original domain/job/service declarations: nine revocation, 33 grant, 38 invitation, 33 join-notifier, eleven stage, six stream, three voice, thirteen join-pusher, eight ring-policy, ten job and four reconciler declarations. Rendering remains byte-identical to pinned Rails; query counts/shapes and locks run against real SQLite. The merged WS17 policy, durable push adapter and registered ring worker now close the final thirteen dependencies. Neighboring mentions use WS17's full message recorder once; the temporary isolated recorder is removed. No assigned declarations remain deferred. WS13 controller and system rows retain their independent status.
+All 207 original declarations in the WS13b-assigned files now have complete coverage, including the inherited WS13 assertions: nine revocation, 33 grant, 38 invitation, 33 join-notifier, 27 stage, 27 stream, five voice, thirteen join-pusher, eight ring-policy, ten job and four reconciler declarations. Rendering remains byte-identical to pinned Rails; query counts/shapes and locks run against real SQLite. The merged WS17 policy, durable push adapter and registered ring worker now close the final thirteen dependencies. Neighboring mentions use WS17's full message recorder once; the temporary isolated recorder is removed. No assigned declarations remain deferred. WS13 controller and system rows retain their independent status.
 
 ## Rails declaration coverage by file
 
