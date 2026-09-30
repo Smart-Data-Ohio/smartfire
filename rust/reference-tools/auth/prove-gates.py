@@ -45,8 +45,8 @@ DEVICE = "crates/db/src/models/user_device.rs"
 PREFIX = "tests::two_factor_test::"
 prove("domain-missing", DB, "if tx.in_transaction() {\n        Ok(())", "if false {\n        Ok(())", "campfire_db", PREFIX)
 prove("human-policy", DB, "self.is_active() && !self.is_bot()", "false", "campfire_db", PREFIX + "only_active_humans")
-prove("stale-totp-replay", DB, "*self = Self::find(tx.conn(), self.id)?;\n        let Some(at) = matched_step(&self.secret", "let Some(at) = matched_step(&self.secret", "campfire_db", PREFIX + "concurrent_totp")
-prove("confirmation-secret", DB, "let secret = setup.secret(encryption)?;", "let secret = self.secret(encryption)?;", "campfire_db", PREFIX + "confirmation_rejects_wrong")
+prove("stale-totp-replay", DB, "*self = Self::find(tx.conn(), self.id)?;\n        let Some(at)", "let Some(at)", "campfire_db", PREFIX + "concurrent_totp")
+prove("confirmation-secret", DB, "let secret = decrypt_totp_secret(encryption, &setup.encrypted_secret)?;", "let secret = self.secret(encryption)?;", "campfire_db", PREFIX + "confirmation_rejects_wrong")
 prove("backup-reuse", DB, "AND used_at IS NULL", "", "campfire_db", PREFIX + "backup_codes_are_single_use")
 prove("backup-concurrent-reuse", DB, "AND used_at IS NULL", "", "campfire_db", PREFIX + "concurrent_backup_code")
 prove("lockout-duration", DB, "1 | -2 => 60", "1 | -2 => 30", "campfire_db", PREFIX + "lockouts_escalate")
@@ -60,4 +60,6 @@ prove("remember-revoke-scope", DB, "WHERE user_id = ? AND id = ?", "WHERE (? IS 
 prove("user-device-missing", DEVICE, "let Some(device_id) =", 'return Err(crate::Error::Other("injected missing device model".into()));\n        let Some(device_id) =', "campfire_db", "tests::user_device_test::")
 prove("collision-first-match", TOTP, "matched = Some(step.checked_mul(STEP_SECONDS).ok_or(InvalidTotp::Time)?);", "if matched.is_none() { matched = Some(step.checked_mul(STEP_SECONDS).ok_or(InvalidTotp::Time)?); }", "rails_compat", "totp::tests::newest_colliding")
 prove("provisioning-issuer", TOTP, 'pub const ISSUER: &str = "Smartfire";', 'pub const ISSUER: &str = "Campfire";', "rails_compat", "totp::tests::provisioning_uris")
-print("WS9 security gates: 23 deliberate defects rejected")
+prove("base32-unicode", TOTP, "flat_map(char::to_uppercase)", "map(|c| c.to_ascii_uppercase())", "rails_compat", "totp::tests::rails_totp_codes")
+prove("base32-binary-encoding", DB, 'decoded.encoding != "UTF-8" && !decoded.bytes.is_ascii()', 'false', "campfire_db", PREFIX + "unicode_base32_upcase")
+print("WS9 security gates: 25 deliberate defects rejected")

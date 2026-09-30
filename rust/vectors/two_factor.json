@@ -1465,6 +1465,22 @@
     {
       "secret": " JBSWY3DP",
       "error": "ROTP::Base32::Base32Error"
+    },
+    {
+      "secret": "ſ",
+      "code": "191168"
+    },
+    {
+      "secret": "ı",
+      "code": "191168"
+    },
+    {
+      "secret": "ß",
+      "code": "101910"
+    },
+    {
+      "secret": "ﬀ",
+      "code": "387551"
     }
   ],
   "backups": [
@@ -1504,6 +1520,32 @@
       "digest": "7181ef7f98d71bf0b0f9fdeebee8e9928edfae5590520c584fd50543c8776310"
     }
   ],
+  "encoded_secrets": [
+    {
+      "encoding": "UTF-8",
+      "ciphertext": "{\"p\":\"qeQ=\",\"h\":{\"iv\":\"byqy+WuOgHFJnfPS\",\"at\":\"5ZxLB0xCgk0tXz5MDAEoMQ==\"}}",
+      "code": "191168",
+      "verified": true
+    },
+    {
+      "encoding": "ASCII-8BIT",
+      "ciphertext": "{\"p\":\"it4=\",\"h\":{\"iv\":\"GkOXLBaA7bwzT8zf\",\"at\":\"RiK+swOfFZTozToYl3xcbg==\",\"e\":\"QVNDSUktOEJJVA==\"}}",
+      "code": "000000",
+      "error": "ROTP::Base32::Base32Error"
+    },
+    {
+      "encoding": "UTF-8",
+      "ciphertext": "{\"p\":\"c+Y=\",\"h\":{\"iv\":\"ZXh0VekahPJ7DffZ\",\"at\":\"+rCEcfmlvbBYmhpzKrpcHA==\"}}",
+      "code": "101910",
+      "verified": true
+    },
+    {
+      "encoding": "ASCII-8BIT",
+      "ciphertext": "{\"p\":\"lbo=\",\"h\":{\"iv\":\"xP+Arw+TRUlHaNBi\",\"at\":\"Cw4KETF4Q3WHNU8fDt41QA==\",\"e\":\"QVNDSUktOEJJVA==\"}}",
+      "code": "000000",
+      "error": "ROTP::Base32::Base32Error"
+    }
+  ],
   "collision": {
     "at": 14207940,
     "code": "519179",
@@ -1529,8 +1571,8 @@
       "uri": "otpauth://totp/Smartfire:a~%2Ab%40example.com?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Smartfire"
     }
   ],
-  "credential_ciphertext": "{\"p\":\"4m/wZzN+ID7U77+2fnC+RgURk2D7juL2VO8WFATbITg=\",\"h\":{\"iv\":\"BC+nE4x2uEREgW5B\",\"at\":\"U7RkAS0HfMJHnnmTp3/rzQ==\",\"e\":\"QVNDSUktOEJJVA==\"}}",
-  "setup_ciphertext": "{\"p\":\"dHxG4SXE00EwIUxXswOeX7bIkfnbefagt34SYoJryF8=\",\"h\":{\"iv\":\"Iq8fT43yJPlMfVRJ\",\"at\":\"M7pjg1gb/m1ZxKB0sEssrg==\",\"e\":\"QVNDSUktOEJJVA==\"}}",
+  "credential_ciphertext": "{\"p\":\"meOXkkLMX6oMmxniZXKRi+mBPS2i9q3QuYUMzNoTJjU=\",\"h\":{\"iv\":\"FPhvLqd4lN/XAJ2q\",\"at\":\"K0szKHeDtX/TIq03PzSrUg==\",\"e\":\"QVNDSUktOEJJVA==\"}}",
+  "setup_ciphertext": "{\"p\":\"K0NqABKz8cQY9myJbtrxZCcirPyV4SQFybvMMEAvwqg=\",\"h\":{\"iv\":\"4FjjlP/KuINC17rT\",\"at\":\"NChgnZRGwZnYBdXhRWVUbA==\",\"e\":\"QVNDSUktOEJJVA==\"}}",
   "remember": {
     "token": "ws9-fixture-remember-token",
     "raw": "eyJfcmFpbHMiOnsibWVzc2FnZSI6IkluZHpPUzFtYVhoMGRYSmxMWEpsYldWdFltVnlMWFJ2YTJWdUlnPT0iLCJleHAiOiIyMDI2LTAxLTMxVDEyOjAwOjAwLjAwMFoiLCJwdXIiOiJjb29raWUudHdvX2ZhY3Rvcl9yZW1lbWJlciJ9fQ==--9676c4cc9d5a8ee90c44c761973a39a006f10e9a",

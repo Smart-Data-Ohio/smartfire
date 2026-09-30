@@ -143,7 +143,12 @@ impl TwoFactorCredential {
             return Ok(false);
         }
         *self = Self::find(tx.conn(), self.id)?;
-        let Some(at) = matched_step(&self.secret(encryption)?, code, tx.now(), self.last_totp_at)?
+        let Some(at) = matched_step(
+            &decrypt_totp_secret(encryption, &self.encrypted_secret)?,
+            code,
+            tx.now(),
+            self.last_totp_at,
+        )?
         else {
             return Ok(false);
         };
@@ -169,7 +174,7 @@ impl TwoFactorCredential {
             return Ok(false);
         }
         *self = Self::find(tx.conn(), self.id)?;
-        let secret = setup.secret(encryption)?;
+        let secret = decrypt_totp_secret(encryption, &setup.encrypted_secret)?;
         let Some(at) = matched_step(&secret, code, tx.now(), self.last_totp_at)? else {
             return Ok(false);
         };
@@ -625,6 +630,18 @@ fn decrypt(encryption: &ArEncryption, ciphertext: &str) -> Result<String> {
     encryption
         .decrypt(ciphertext)
         .map_err(|_| Error::Other("two-factor secret can't be decrypted".into()))
+}
+
+fn decrypt_totp_secret(encryption: &ArEncryption, ciphertext: &str) -> Result<String> {
+    let decoded = encryption
+        .decrypt_bytes(ciphertext)
+        .map_err(|_| Error::Other("two-factor secret can't be decrypted".into()))?;
+    // Ruby upcase only changes ASCII for ASCII-8BIT, the encoding of generated secrets.
+    // Non-ASCII bytes then fail ROTP's base32 lookup rather than becoming Unicode letters.
+    if decoded.encoding != "UTF-8" && !decoded.bytes.is_ascii() {
+        return Err(Error::Other("invalid TOTP secret".into()));
+    }
+    String::from_utf8(decoded.bytes).map_err(|_| Error::Other("invalid TOTP secret".into()))
 }
 
 fn require_transaction(tx: &Tx<'_>) -> Result<()> {

@@ -34,7 +34,7 @@ class TwoFactorVectors
     collision_code = totp.at(collision_at)
     raise "collision fixture changed" unless collision_code == totp.at(collision_at - 30)
     # ROTP accepts lowercase and '=' anywhere, discarding incomplete trailing bits.
-    secrets = [SECRET, SECRET.downcase, "JB=SWY3DPEHPK3PXP", "A", "", "invalid!", " JBSWY3DP"]
+    secrets = [SECRET, SECRET.downcase, "JB=SWY3DPEHPK3PXP", "A", "", "invalid!", " JBSWY3DP", "ſ", "ı", "ß", "ﬀ"]
     decoded = secrets.map do |secret|
       begin
         { secret: secret, code: ROTP::TOTP.new(secret).at(now) }
@@ -42,6 +42,18 @@ class TwoFactorVectors
         { secret: secret, error: error.class.name }
       end
     end
+    encoded_secrets = ["ſ", "ſ".b, "ß", "ß".b].map do |secret|
+      credential.update!(secret: secret, last_totp_at: nil)
+      ciphertext = credential.read_attribute_before_type_cast(:secret)
+      begin
+        code = credential.totp.now
+        { encoding: secret.encoding.name, ciphertext: ciphertext, code: code,
+          verified: credential.verify_code(code) }
+      rescue ROTP::Base32::Base32Error => error
+        { encoding: secret.encoding.name, ciphertext: ciphertext, code: "000000", error: error.class.name }
+      end
+    end
+    credential.update!(secret: SECRET, last_totp_at: nil)
     backup_inputs = [nil, "", "  --\t", "ABCD-Ef1234", "a\tb\nc\vd\fe\rf", "\u00a0ABC\u2003", "İÅΣ"]
     backups = backup_inputs.map { |input| { input: input, normalized: TwoFactorBackupCode.normalize(input), digest: TwoFactorBackupCode.digest(input) } }
     cookie, header = write_cookie(env: { "HTTPS" => "on" }) do |jar|
@@ -50,7 +62,7 @@ class TwoFactorVectors
     end
     output = {
       reference: "d7c7de92", secret_key_base: ENV.fetch("SECRET_KEY_BASE"), now: now, secret: SECRET,
-      codes: codes, checks: checks, base32: decoded, backups: backups,
+      codes: codes, checks: checks, base32: decoded, backups: backups, encoded_secrets: encoded_secrets,
       collision: { at: collision_at, code: collision_code,
         matched_at: totp.verify(collision_code, drift_ahead: 30, drift_behind: 30, at: collision_at) },
       provisioning_uri: credential.provisioning_uri, formatted_secret: credential.formatted_secret,

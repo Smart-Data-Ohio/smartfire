@@ -337,6 +337,34 @@ fn credential_for_jason(t: &TestDb) -> Credential {
 }
 
 #[test]
+fn unicode_base32_upcase_respects_the_rails_secret_encoding() {
+    let t = db();
+    let credential = credential(&t, "david");
+    for case in vectors()["encoded_secrets"].as_array().unwrap() {
+        let expected_error = !case["error"].is_null();
+        let expected_verified = case["verified"].as_bool();
+        let case = case.clone();
+        let id = credential.id;
+        let result = t.try_write(move |tx| {
+            tx.conn().execute(
+                "UPDATE two_factor_credentials SET secret = ?, last_totp_at = NULL WHERE id = ?",
+                rusqlite::params![case["ciphertext"].as_str().unwrap(), id],
+            )?;
+            Credential::find(tx.conn(), id)?.verify_code(
+                tx,
+                encryption(),
+                case["code"].as_str().unwrap(),
+            )
+        });
+        if expected_error {
+            assert!(result.is_err());
+        } else {
+            assert_eq!(result.unwrap(), expected_verified.unwrap());
+        }
+    }
+}
+
+#[test]
 fn credential_validations_match_rails() {
     let t = db();
     credential(&t, "david");

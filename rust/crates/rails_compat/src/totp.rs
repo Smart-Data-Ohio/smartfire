@@ -100,8 +100,11 @@ fn decode_base32(secret: &str) -> Result<Vec<u8>, InvalidTotp> {
     let mut output = Vec::new();
     let mut buffer = 0u32;
     let mut bits = 0;
-    for c in secret.chars().filter(|c| *c != '=') {
-        let c = c.to_ascii_uppercase();
+    for c in secret
+        .chars()
+        .filter(|c| *c != '=')
+        .flat_map(char::to_uppercase)
+    {
         let value = BASE32
             .iter()
             .position(|byte| char::from(*byte) == c)
