@@ -3,8 +3,9 @@ use crate::app::App;
 use crate::controllers::presenters::{Presenter, page};
 use askama::Template;
 use campfire_db::broadcasts::{Broadcast, Partial, TurboAction};
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 
+thread_local! { static SLASH: Cell<bool> = const { Cell::new(false) }; }
 thread_local! { static ORIGIN: RefCell<Option<String>> = const { RefCell::new(None) }; }
 
 /// The writer closure carries the request's renderer origin. A guard restores the previous
@@ -17,6 +18,22 @@ impl Drop for OriginGuard {
 }
 pub(crate) fn origin(origin: &str) -> OriginGuard {
     OriginGuard(ORIGIN.with(|value| value.replace(Some(origin.to_owned()))))
+}
+
+pub(crate) struct SlashGuard {
+    _origin: OriginGuard,
+    previous: bool,
+}
+impl Drop for SlashGuard {
+    fn drop(&mut self) {
+        SLASH.with(|flag| flag.set(self.previous));
+    }
+}
+pub(crate) fn slash_origin(base: &str) -> SlashGuard {
+    SlashGuard {
+        _origin: origin(base),
+        previous: SLASH.with(|flag| flag.replace(true)),
+    }
 }
 
 pub(crate) fn deliver(
@@ -48,7 +65,7 @@ pub(crate) fn deliver(
                 |row| row.get::<_, bool>(0),
             )?)
         })?;
-        if !pin_note && !scheduled {
+        if !pin_note && !scheduled && !SLASH.with(|flag| flag.get()) {
             return Ok(false);
         }
     } else if !matches!(
@@ -156,9 +173,10 @@ mod tests {
             .expect("WS8bm2 requires default seed");
         app.db()
             .write_scoped(
-                || origin("http://one.test"),
+                || slash_origin("http://one.test"),
                 |tx| {
                     tx.after_commit(|_| {
+                        assert!(SLASH.with(|flag| flag.get()));
                         assert_eq!(
                             ORIGIN.with(|origin| origin.borrow().clone()).as_deref(),
                             Some("http://one.test")
@@ -172,35 +190,40 @@ mod tests {
             .unwrap();
         let clean = app
             .db()
-            .write(|_| Ok(ORIGIN.with(|origin| origin.borrow().is_none())))
+            .write(|_| {
+                Ok(ORIGIN.with(|origin| origin.borrow().is_none())
+                    && !SLASH.with(|flag| flag.get()))
+            })
             .await
             .unwrap();
         assert!(clean);
         let failed: campfire_db::Result<()> = app
             .db()
             .write_scoped(
-                || origin("http://two.test"),
+                || slash_origin("http://two.test"),
                 |_| Err(campfire_db::Error::Other("refused".into())),
             )
             .await;
         assert!(failed.is_err());
         assert!(
             app.db()
-                .write(|_| Ok(ORIGIN.with(|origin| origin.borrow().is_none())))
+                .write(|_| Ok(ORIGIN.with(|origin| origin.borrow().is_none())
+                    && !SLASH.with(|flag| flag.get())))
                 .await
                 .unwrap()
         );
         let panicked: campfire_db::Result<()> = app
             .db()
             .write_scoped(
-                || origin("http://three.test"),
+                || slash_origin("http://three.test"),
                 |_| panic!("deliberate writer panic"),
             )
             .await;
         assert!(panicked.is_err());
         assert!(
             app.db()
-                .write(|_| Ok(ORIGIN.with(|origin| origin.borrow().is_none())))
+                .write(|_| Ok(ORIGIN.with(|origin| origin.borrow().is_none())
+                    && !SLASH.with(|flag| flag.get())))
                 .await
                 .unwrap()
         );

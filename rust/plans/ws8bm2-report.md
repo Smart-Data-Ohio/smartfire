@@ -290,3 +290,22 @@ WS8bm2 reference check self-test: 2 injected source-byte/file-set differences re
 ```text
     Finished `dev` profile [unoptimized + debuginfo] target(s) in 12.03s
 ```
+
+## Slash/autocomplete continuation slice
+
+`controllers/rooms/slash_commands.rs` authorizes the live room, active human and optional same-room thread, dispatches WS8a inside the real writer transaction, and uses a scoped commit-thread renderer for one slash message append. Registered agent execution remains WS11's seam; metadata includes real room registrations. `controllers/autocompletable/{icons,slash_commands}.rs`, `db/{autocomplete_users,command_suggestions}.rs` and the users controller provide the Markdown picker payloads, canonical icon/alias rank, SQL page caps, and name uniqueness over the complete active room/global scope. Autocomplete avatar versions use the request zone. Huddle readiness reads the five settings and separated host/port policy; WS13 owns launching it. Root message partial is unchanged. Existing `/play` rendering matches all 56 Rails sounds plus five unknown/blank/case inputs.
+
+36 owned tests cover 9/10 named slash controller cases (agent execution deferred), 6/6 icons, 7/7 slash metadata and 5/5 users, plus nine HTTP byte, CSRF/thread, atomic rollback, uniqueness, presentation and actual socket checks. One readiness test compares twelve Rails cases; the existing origin guard test now checks slash scope restoration on success/error/panic. Browser slash picker interaction remains deferred. The inherited WS6 autocomplete smoke test expected obsolete Lexxy HTML; pinned Rails proves HTML is 406, so its assertion was updated without skipping it.
+
+Failing-first: the initial real request run rejected all thirteen new security/route checks (0 passed; 13 failed). Exact JSON comparison subsequently exposed the difference between explicit Rails render-json and Jbuilder HTML escaping, then avatar timestamp zones; both corrected. Six compiled mutations fail for CSRF, duplicate-name tokens, icon rank, root-only thread metadata, durable job rollback, and socket delivery, then restore the sources.
+
+```text
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 430 filtered out; finished in 1.65s
+WS8bm2 discrimination: 6 compiled regressions detected; sources restored
+WS8bm2 slash Rails oracle: 20 dispatch responses; 17 picker responses; 61 play presentation fragments; 3 format responses; 12 huddle readiness cases
+WS8bm2 reference source check: 57 controller, model, helper and template files match d7c7de92
+WS8bm2 reference check self-test: 2 injected source-byte/file-set differences rejected
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 13.95s
+```
+
+The final fresh-clone verification will replace historical command summaries above. Status remains partial; next are message links/files, integration gaps, reminder push and browser/deferred Rails cases.

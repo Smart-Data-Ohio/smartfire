@@ -7,6 +7,9 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[3]
 FILES = [
+    "app/controllers/rooms/slash_commands_controller.rb", "app/controllers/autocompletable/icons_controller.rb", "app/controllers/autocompletable/slash_commands_controller.rb", "app/controllers/autocompletable/users_controller.rb",
+    "app/models/icons.rb", "app/models/sound.rb", "app/services/huddle.rb", "app/services/slash_commands/registry.rb", "app/services/slash_commands/dispatcher.rb", "app/services/slash_commands/handlers.rb",
+    "app/views/autocompletable/users/_user.json.jbuilder", "app/views/autocompletable/icons/_icon.json.jbuilder", "app/views/messages/_presentation.html.erb",
     "app/models/message.rb", "app/models/message/mention_preloader.rb", "lib/rails_ext/action_text_attachables.rb",
     "app/controllers/searches_controller.rb", "app/models/search_query.rb", "app/models/search.rb", "app/helpers/searches_helper.rb",
     "app/views/searches/index.html.erb", "app/views/searches/index.turbo_stream.erb", "app/views/searches/clear.turbo_stream.erb",
