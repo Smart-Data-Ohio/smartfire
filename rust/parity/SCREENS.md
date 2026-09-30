@@ -194,11 +194,16 @@ Scratch sockets/browser profiles live under `PARITY_SCRATCH` (default
 also avoids Unix's 108-byte limit. No host scratch is written to /tmp.
 
 Run the committed oracle fault suite with `node capture/test/injections/suite.ts after` from
-rust/parity, using the WS19 namespace/image. It checks 17 header/cookie/asset divergences,
+rust/parity, using the WS19 namespace/image. It checks 21 header/cookie/asset divergences,
 a transient first-capture pixel, a deleted-pins seed, and shared-server presence activity.
 The unchanged control must pass, every fault must fail. `before` is for reproducing the old
 98c96ef2 oracle with these injection fixtures. `bin/test-network-race` exercises concurrent
 reference boots in three fresh namespaces. All are offline and keep the real seeds intact.
+
+Set-Cookie fields and the attributes inside each cookie retain their transmitted order.
+Later repeated cookie writes and repeated attributes can change the stored value or scope;
+their order is never normalized. `before --ordering-only` reproduces the four page/fragment
+false passes on 62e5b959; `after --ordering-only` requires all four to fail.
 
 ## Follow-up coverage wave
 

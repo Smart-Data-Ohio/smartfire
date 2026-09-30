@@ -20,10 +20,9 @@ export function responseHeaders(headers: Header[], options: NormalizeOptions = {
     else fields.set(name, [...(fields.get(name) ?? []), header.value])
   }
   const combined = [...fields].map(([name, values]) => ({ name, value: values.join(', ') }))
-  return [...combined, ...cookies].flatMap(({ name, value }) => {
+  const normalized = combined.flatMap(({ name, value }) => {
     name = name.toLowerCase()
     if (TRANSPORT.has(name)) return []
-    if (name === 'set-cookie') return [`set-cookie: ${cookie(value, options)}`]
     if (name === 'date') value = value.replace(/(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT/g, date => Number.isNaN(Date.parse(date)) ? date : '«response-date»')
     else if (name === 'x-request-id') value = value ? '«request-id»' : value
     else if (name === 'x-csrf-token') value = value ? '«csrf-token»' : value
@@ -45,7 +44,10 @@ export function responseHeaders(headers: Header[], options: NormalizeOptions = {
     else if (name === 'vary') value = value.split(',').map(s => s.trim().toLowerCase()).sort().join(', ')
     else if (name === 'location') value = maskText(value, options)
     return [`${name}: ${value}`]
-  }).sort().join('\n')
+  })
+  // Later writes to the same cookie replace earlier ones. Preserve the transmitted order;
+  // sorting unrelated HTTP fields must never reorder Set-Cookie fields with side effects.
+  return [...normalized.sort(), ...cookies.map(({ value }) => `set-cookie: ${cookie(value, options)}`)].join('\n')
 }
 
 function cookie(raw: string, options: NormalizeOptions): string {
@@ -65,6 +67,6 @@ function cookie(raw: string, options: NormalizeOptions): string {
     }
     if (key === 'samesite' && value) value = value.toLowerCase()
     return key + (value === undefined ? '' : `=${value}`)
-  }).sort()
+  }) // Repeated attributes use their final value (e.g. Path); their order is significant.
   return [`${name}=${value}`, ...attributes].join('; ')
 }

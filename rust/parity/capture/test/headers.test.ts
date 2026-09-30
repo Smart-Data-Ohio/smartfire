@@ -35,6 +35,15 @@ test('session cookie bytes normalize; presence, clearing and attributes do not',
   }
   assert.notEqual(describe('set-cookie', 'two_factor_remembered_device=a'), describe('set-cookie', 'two_factor_remembered_device=b'))
 })
+test('repeated Set-Cookie fields retain browser overwrite order', () => {
+  const headers = [{ name: 'set-cookie', value: 'oracle=one; Path=/' }, { name: 'set-cookie', value: 'oracle=two; Path=/' }]
+  assert.notEqual(responseHeaders(headers, options), responseHeaders([...headers].reverse(), options))
+})
+test('repeated cookie attributes retain their effective-value order', () => {
+  for (const attributes of ['Path=/restricted; Path=/', 'Domain=restricted.localhost; Domain=localhost', 'SameSite=Lax; SameSite=Strict', 'Max-Age=3600; Max-Age=1', 'Expires=Mon, 02 Mar 2026 17:00:00 GMT; Expires=Mon, 02 Mar 2026 16:00:01 GMT']) {
+    assert.notEqual(describe('set-cookie', `oracle=expected; ${attributes}`), describe('set-cookie', `oracle=expected; ${attributes.split('; ').reverse().join('; ')}`))
+  }
+})
 test('Rack HTML ETags normalize only after proving the validator names the response bytes', () => {
   const make = (token: string, etag?: string) => {
     const body = Buffer.from(`<meta name="csrf-token" content="${token}">`)

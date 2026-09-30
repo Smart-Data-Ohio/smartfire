@@ -8,6 +8,8 @@
 #   empty/deletion values and every attribute (Path, Domain, SameSite, Secure, HttpOnly,
 #   Expires and Max-Age, including values) remain. Other cookie values never normalize.
 #   Pending 2FA and verified-session behaviors are separately exercised, never merged.
+#   Set-Cookie fields and attributes retain transmitted order: later duplicate cookie writes
+#   or attributes change the stored value/scope. Neither sequence is sorted or deduplicated.
 # - Attachment object URLs: browser UUID; file bytes and surrounding DOM remain.
 # - Asset filenames: Propshaft digest in DOM; network request digest remains checked.
 #   Actual digest-named response bytes are independently SHA-256 hashed in full.
