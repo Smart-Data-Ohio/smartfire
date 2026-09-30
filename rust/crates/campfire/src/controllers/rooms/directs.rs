@@ -26,8 +26,7 @@ pub async fn new(c: &mut Ctx) -> Result {
 pub async fn create(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let user_id = require_current_user(c)?.id;
-    let mut ids = selected_user_ids(c);
-    ids.push(user_id);
+    let ids = selected_user_ids(c, Some(user_id));
     let result = c
         .app()
         .db
@@ -143,7 +142,7 @@ pub async fn update(c: &mut Ctx) -> Result {
 pub async fn add_members(c: &mut Ctx) -> Result {
     before_actions(c, Before::default()).await?;
     let room = set_room(c, Scope::Directs).await?;
-    let ids = selected_user_ids(c);
+    let ids = selected_user_ids(c, None);
     let user = require_current_user(c)?.id;
     let updated = room.clone();
     let result = c
@@ -201,20 +200,20 @@ pub async fn leave(c: &mut Ctx) -> Result {
 }
 
 // Array(params.fetch(:user_ids, [])).first(MAX_MEMBERS), capped before any user query.
-fn selected_user_ids(c: &Ctx) -> Vec<i64> {
-    let values = match c.param("user_ids") {
+fn selected_user_ids(c: &Ctx, actor: Option<i64>) -> Vec<i64> {
+    let mut values = match c.param("user_ids") {
         Some(Param::Array(values)) => values
             .iter()
             .take(campfire_db::models::direct_room::MAX_MEMBERS)
+            .cloned()
             .collect::<Vec<_>>(),
         Some(Param::Null) | None => Vec::new(),
-        Some(value) => vec![value],
+        Some(value) => vec![value.clone()],
     };
-    values
-        .into_iter()
-        .filter_map(Param::to_s)
-        .filter_map(|s| crate::concerns::cast_integer(&s))
-        .collect()
+    // Including Current.user happens before User.where, so a nested sole operand
+    // becomes an IN operand instead of being recursively unwrapped on creation.
+    if let Some(actor)=actor {values.push(Param::Number(actor.into()));}
+    super::user_ids_from_param(&Param::Array(values))
 }
 fn active_user_ids(conn: &campfire_db::Connection, ids: &[i64]) -> campfire_db::Result<Vec<i64>> {
     Ok(User::where_ids(conn, ids)?

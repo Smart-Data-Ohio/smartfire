@@ -399,6 +399,58 @@
       ]
     },
     {
+      "input": [
+        [
+          127326141,
+          149087659
+        ]
+      ],
+      "status": 500,
+      "user_ids": [
+        127326141,
+        149087659
+      ]
+    },
+    {
+      "input": [
+        [
+          127326141
+        ],
+        149087659
+      ],
+      "status": 500,
+      "user_ids": [
+        149087659
+      ]
+    },
+    {
+      "input": [
+        [
+          127326141
+        ],
+        [
+          149087659
+        ]
+      ],
+      "status": 500,
+      "user_ids": []
+    },
+    {
+      "input": [
+        [
+          [
+            127326141,
+            149087659
+          ]
+        ]
+      ],
+      "status": 500,
+      "user_ids": [
+        127326141,
+        149087659
+      ]
+    },
+    {
       "input": {
         "id": 127326141
       },
@@ -415,6 +467,34 @@
     "*/*": 302
   },
   "closed_json_failure_class": "ActionView::MissingTemplate",
+  "stream_cases": [
+    {
+      "name": "Format stream create",
+      "status": 500,
+      "json": {
+        "status": 500,
+        "error": "Internal Server Error"
+      },
+      "user_ids": [
+        127326141,
+        149087659
+      ],
+      "frames": []
+    },
+    {
+      "name": "Format stream update",
+      "status": 500,
+      "json": {
+        "status": 500,
+        "error": "Internal Server Error"
+      },
+      "user_ids": [
+        127326141,
+        149087659
+      ],
+      "frames": []
+    }
+  ],
   "integer_casts": {
     "true": 1,
     "false": 0

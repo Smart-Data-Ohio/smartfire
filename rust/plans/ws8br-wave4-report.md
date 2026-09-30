@@ -1,6 +1,6 @@
 # WS8br Wave 4 — PARTIAL
 
-Branch `rust/ws8br-rooms-http`, assigned worktree `rust-ws8br`, Rails pin `d7c7de92`. Received base `c4849d54`; main `21a7332f` is already merged through `9f356e2f`. Pushed read/quiet-refresh slice: `9a5fcea5`. Pushed join/preview slice: `e015d50e`. Pushed channel audit/header slice: `8bdb43ec`. This continuation also ports channel name/member-ID casts, request-dependent partial failures and the inherited direct-show callback failure. No PR or deployment.
+Branch `rust/ws8br-rooms-http`, assigned worktree `rust-ws8br`, Rails pin `d7c7de92`. Received base `c4849d54`; main `21a7332f` is already merged through `9f356e2f`. Pushed read/quiet-refresh slice: `9a5fcea5`. Pushed join/preview slice: `e015d50e`. Pushed channel audit/header slice: `8bdb43ec`. Pushed channel cast/partial lookup slice: `66cde771`. This final slice corrects mixed-array predicates in closed writes and nested group-DM add-member selections. It includes scalar/member-ID casts, request-dependent partial failures and the inherited direct-show callback failure. No PR or deployment.
 
 ## Ownership and retained work
 
@@ -28,10 +28,15 @@ Earlier pushed work remains: room authorization/soft-delete/durable enqueue, gro
 - `channel_audits_tests.rs`, `channels/tests/channel_audits_test.rs`, `channel_audits.rb`, vector and discriminator: three HTTP tests plus one real socket test verify actor/target/labels/details/IP, no-op auditing, forbidden update stability, post-commit outages, eight Rails HTTP transitions, 27 exact recipient HTML deliveries and the removed session's ordered disconnect. The audit comparison explicitly supplies the same proxy IP as Rails; the test helper otherwise has no peer address.
 - Deferred inventory also includes the mixed `audit_log/rooms_audit_test.rb`: room cases WS8br, account cases WS8br2.
 
-- `rooms.rs`: permitted scalar room names follow Active Model String casts (`t`/`f`, nil, numbers); unpermitted arrays/hashes are absent on update. Closed member IDs follow integer casts and nested-array predicates without flattening hashes. Nil name versus empty-string HTML/data attribute bytes remain a broader presenter acceptance gap.
+- `rooms.rs`: permitted scalar room names follow Active Model String casts (`t`/`f`, nil, numbers); unpermitted arrays/hashes are absent on update. Closed member IDs follow integer casts and Active Record array predicates without flattening hashes. The broader probes in the final slice corrected the previous recursive flattening overreach: only a single non-null operand delegates recursively; multiple operands are scalar IN casts. Nil name versus empty-string HTML/data attribute bytes remain a broader presenter acceptance gap.
 - `rooms/closeds.rs`: request format governs the shared HTML partial lookup. JSON/XML/Turbo-only requests fail with 500 after domain/audit commits, before controller rows/headers; HTML, mixed JSON/HTML and wildcard succeed, matching the pinned Rails bug.
 - `rooms/directs.rs`: namespace show inherits a missing `@room` callback at the pin and returns 500 after auth; the generic member-scoped room page remains working. Anonymous users still redirect and bot keys still receive 403.
-- `coercions_tests.rs`, `coercions.rb`, `room_coercions.json`, discriminator: five HTTP tests compare 16 creates, 16 updates, eight ID casts, six partial formats and four direct-show callback failures against real Rails. They also verify persisted membership/audit state after rendering failure, plus generic page access guards.
+- `coercions_tests.rs`, `coercions.rb`, `room_coercions.json`, discriminator: five HTTP tests compare 16 creates, 16 updates, twelve ID casts, six partial formats, four direct-show callback failures and two committed stream-failure cases against real Rails. They also verify persisted membership/audit state after rendering failure, plus generic page access guards.
+
+- `rooms.rs`, `rooms/directs.rs`: shared domain-independent parameter adapter reproduces the gem ArrayHandler branch. Direct selection still caps the outer array to ten before querying. Create includes the acting user before constructing the predicate; add-member uses the selected operands alone. Nested selection thus correctly differs between these actions. No owner domain/model or presenter API changed.
+- `direct_selection_tests.rs`, `direct_selection.rb`, vector and discriminator: two tests cover 11 actual create/reuse requests and nine group addition requests with exact statuses/redirects, resulting members, notes, audits and next-request flash; nonmember/type/anonymous/bot/CSRF guards remain in front of parsing. Flash assertions decrypt real response cookies and preserve unchanged cookies like a browser, with no normalization. Both the received group selector and the overbroad closed-array parser compile and fail the new/expanded assertions.
+
+- `channels/tests/channel_audits_test.rs`, `format_stream_discrimination.py`: extra real socket test verifies both members receive no global or personal room frames on JSON create/update partial failures while name/membership commits remain. Moving the same 500 failure after publication compiles and fails specifically on an unexpected frame. HTTP statuses alone would miss this regression.
 
 No schema, Rails source, mask, parity allowlist, message-list/composer internals or owner-rendered partial changed. No new ignored test.
 
@@ -72,7 +77,7 @@ python3 rust/reference-tools/rooms/reads_discrimination.py > .scratch/reads-disc
 ```
 
 ```text
-test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 345 filtered out; finished in 0.53s
+test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 357 filtered out; finished in 0.51s
 Reads discrimination: five compiled HTTP regressions rejected c4849d54; source restored
 ```
 
@@ -93,7 +98,7 @@ python3 rust/reference-tools/rooms/join_discrimination.py > .scratch/join-discri
 ```
 
 ```text
-test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 346 filtered out; finished in 0.48s
+test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 358 filtered out; finished in 0.43s
 Join discrimination: four compiled HTTP regressions rejected legacy lookup and absent dispatch; source restored
 ```
 
@@ -114,9 +119,9 @@ python3 rust/reference-tools/rooms/channel_audits_discrimination.py > .scratch/c
 ```
 
 ```text
-test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 351 filtered out; finished in 0.50s
+test result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 359 filtered out; finished in 0.41s
 Channel audit discrimination: three compiled HTTP regressions rejected e015d50e; source restored
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 7.52s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 361 filtered out; finished in 7.44s
 Channel header discrimination: compiled missing-header socket regression rejected; source restored
 ```
 
@@ -127,7 +132,7 @@ PARITY_NAMESPACE=ws8br PARITY_IMAGE=ws8br-reference-d7c7de92 PARITY_OWNER=ws8br 
 ```
 
 ```text
-Rails room coercion oracle: 16 create casts, 16 update casts, 4 direct-show callbacks, 6 partial formats, 8 ID casts; reference d7c7de92
+Rails room coercion oracle: 16 create casts, 16 update casts, 4 direct-show callbacks, 6 partial formats, 12 ID casts, 2 stream failure cases; reference d7c7de92
 ```
 
 coercion-discrimination:
@@ -137,8 +142,43 @@ python3 rust/reference-tools/rooms/coercions_discrimination.py > .scratch/coerci
 ```
 
 ```text
-test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 354 filtered out; finished in 0.49s
+test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 355 filtered out; finished in 0.54s
 Coercion discrimination: five compiled HTTP regressions rejected 8bdb43ec; source restored
+```
+
+direct-oracle:
+
+```bash
+PARITY_NAMESPACE=ws8br PARITY_IMAGE=ws8br-reference-d7c7de92 PARITY_OWNER=ws8br rust/parity/bin/reference runner --seed default --time 2026-03-02T16:00:00Z --freeze -e RAILS_LOG_LEVEL=fatal rust/reference-tools/rooms/direct_selection.rb > .scratch/direct-selection.json 2> .scratch/direct-selection-oracle.log
+```
+
+```text
+Rails direct selection oracle: 11 create inputs, 9 member inputs; reference d7c7de92
+```
+
+direct-discrimination:
+
+```bash
+python3 rust/reference-tools/rooms/direct_selection_discrimination.py > .scratch/direct-selection-discrimination-summary.log 2>&1
+```
+
+```text
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 361 filtered out; finished in 0.41s
+Direct selection discrimination: compiled HTTP regression rejected 66cde771
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 361 filtered out; finished in 0.39s
+Array predicate discrimination: compiled HTTP regression rejected 66cde771
+Direct selection discrimination: both sources restored
+```
+
+format-stream-discrimination:
+
+```bash
+python3 rust/reference-tools/rooms/format_stream_discrimination.py > .scratch/format-stream-discrimination-summary.log 2>&1
+```
+
+```text
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 361 filtered out; finished in 0.40s
+Format stream discrimination: compiled socket regression rejected post-publication failure; source restored
 ```
 
 app:
@@ -148,7 +188,7 @@ CI=1 TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" CABLE_TEST_PORT_
 ```
 
 ```text
-test result: ok. 356 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 31.56s
+test result: ok. 359 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 32.29s
 ```
 
 views:
@@ -158,11 +198,11 @@ TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1
 ```
 
 ```text
-test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
-test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 ```
@@ -174,10 +214,10 @@ TMPDIR="$PWD/.scratch" CARGO_TARGET_DIR="$PWD/rust/target" mise exec rust@1.98.1
 ```
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.69s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.77s
 ```
 
-All four oracles exited 0 and their outputs are byte-identical to tracked vectors. The discriminators require compiled assertion failures: reads 5, join 4, audits 3 plus header socket 1, coercions 5. Auth and nonmember guards are included. App/views/clippy exit 0. No full workspace test run, full Rails Minitest run, browser/system/pixel acceptance or complete room parity is claimed.
+All five oracles exited 0 and their outputs are byte-identical to tracked vectors. The discriminators require compiled assertion failures: reads 5, join 4, audits 3 plus header socket 1, coercions 5; direct selection 1 and array predicate 1 against `66cde771`; one post-publication format-failure socket regression. Auth and nonmember guards are included. App/views/clippy exit 0. No full workspace test run, full Rails Minitest run, browser/system/pixel acceptance or complete room parity is claimed.
 
 ## Cases grouped by file
 
@@ -188,10 +228,10 @@ All four oracles exited 0 and their outputs are byte-identical to tracked vector
 | `rooms/reads_controller_test.rb` | 7 | All seven behaviors covered by five HTTP tests and one socket test; malformed parameter matrix and venue-specific writes remain. |
 | `rooms/refreshes_controller_test.rb` | 4 | Quiet 204 and lost-membership 404 covered; changed-message full bytes and pin count/list integration remain WS8b-m/WS8br. |
 | `rooms_controller_test.rb` | 29 | Previous delete/leave/guard/pagination/unread subsets retained; Six join/preview declarations now covered by four HTTP tests and one socket test; complete page, exact errors/flash and leave-failure rescue remain. |
-| `rooms/opens_controller_test.rb` | 15 | Conversion/access subsets retained; icons, invalid forms and complete CRUD/form acceptance remain; scalar/member-ID casts and request partial formats, creation audit and unconfigured row/header callbacks are now covered. |
-| `rooms/closeds_controller_test.rb` | 12 | Conversion/access subsets retained; icons, invalid forms and complete CRUD/form acceptance remain; creation/membership audit and unconfigured row/header callbacks are now covered. |
+| `rooms/opens_controller_test.rb` | 15 | Conversion/access subsets retained; icons, invalid forms and complete CRUD/form acceptance remain; scalar name casts, creation audit and unconfigured row/header callbacks are now covered. |
+| `rooms/closeds_controller_test.rb` | 12 | Conversion/access subsets retained; icons, invalid forms and complete CRUD/form acceptance remain; name/member-ID casts, request partial formats and stream silence after rendering failures, creation/membership audit and unconfigured row/header callbacks are now covered. |
 | `audit_log/rooms_audit_test.rb` | 17 | Room creation, actual membership diff/no-op, actor/target and committed audit failures covered here; direct/leave subsets retained. Invalid-icon no-audit case remains; five account cases belong to WS8br2. |
-| `rooms/directs_controller_test.rb` | 29 | Previous cap/reuse/rename/add/leave/delete and directory-frame subsets retained; picker/settings/invalid rename/overflow/no-op/removed-member acceptance remain; inherited show failure and auth gates now covered. |
+| `rooms/directs_controller_test.rb` | 29 | Previous cap/reuse/rename/add/leave/delete and directory-frame subsets retained; collection predicate create/add, next-request flash, committed notes/audits now covered; picker/settings/invalid rename/overflow/no-op/removed-member acceptance remain; inherited show failure and auth gates now covered. |
 | `rooms/involvements_controller_test.rb` | 8 | Six HTTP transitions with exact recipient rows retained; exhaustive format/enum/venue/browser cases remain. |
 | `rooms/members_controller_test.rb` | 13 | Endpoint remains unported; WS17 presence and WS11 agents must supply facts, WS8br owns response/auth/cache integration. |
 | `rooms/categories_controller_test.rb` | 5 | Scoped assignment subset retained; exhaustive malformed/format and browser acceptance remain. |
@@ -202,11 +242,11 @@ All four oracles exited 0 and their outputs are byte-identical to tracked vector
 | `users/sidebars_controller_test.rb` | 14 | Complete frames/recipient state/cache subsets retained; query-count/configured-owner/browser acceptance remains. |
 | `unfurl_links_controller_test.rb` | 9 | Existing upstream re-diff remains WS8br; embed behavior WS15e. |
 
-Current own Rust counts: channel coercion HTTP 5, channel audit HTTP 3, channel callback socket 1, join HTTP 4, join socket 1, join views 1, reads HTTP 5, reads socket 1, room parity 19, inherited room tests 16, sidebar controller 4, switcher 4, directory socket 3, sidebar views 5, shell views 3, header views 1. Full browser files remain deferred; transferred users/account/public/tour/PWA/QR files belong to WS8br2 as the machine-readable inventory records.
+Current own Rust counts: direct selection HTTP 2, channel coercion HTTP 5, channel audit HTTP 3, channel callback/format socket 2, join HTTP 4, join socket 1, join views 1, reads HTTP 5, reads socket 1, room parity 19, inherited room tests 16, sidebar controller 4, switcher 4, directory socket 3, sidebar views 5, shell views 3, header views 1. Full browser files remain deferred; transferred users/account/public/tour/PWA/QR files belong to WS8br2 as the machine-readable inventory records.
 
 ## Precisely remaining, requested order
 
-1. Finish room HTTP: open/closed icons/invalid forms and remaining CRUD/form parity, direct settings and failure paths, members JSON with WS17/WS11 facts, full refresh/pins integration, leave failure rescue and exact errors/flash/formats, broader involvement/categories/favorites cases. Voice/stage domain remains WS13, boards WS12; do not implement owner internals.
+1. Finish room HTTP: open/closed icons/invalid forms and remaining CRUD/form parity, direct settings and failure paths, members JSON with WS17/WS11 facts, full refresh/pins integration, leave failure rescue and exact errors/flash/formats, broader involvement/categories/favorites and malformed/large-number/format cases. Mixed-array predicates now match the actual gem; exhaustive coercion coverage is still partial. Voice/stage domain remains WS13, boards WS12; do not implement owner internals.
 2. Integrate WS8b-m message list/composer/template/threads/pins/polls, WS17 viewer OOO facts and WS13 configured venue/header children; full seeded live room page byte/browser acceptance. The stable `rooms::room_message_list(ctx,&ShowView)` still defaults to the authorized zero-byte empty-room placeholder. Lending Rails owner fragments in shell goldens proves surrounding regions only.
 3. Inbound-email address browser acceptance. Rails' existing redirect `/rooms/:id/edit` targets a missing generic action at the pin; preserve the observed redirect and report this gap.
 4. Complete remaining owned Rails controller/system cases grouped by file, including query counts and valid agent-token guards when their owner auth lands. No full-file Rails pass count is inferred from Rust subset passes.

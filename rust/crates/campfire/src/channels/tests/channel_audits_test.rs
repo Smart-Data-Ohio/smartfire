@@ -1,8 +1,40 @@
 //! Channel callbacks emit the actual Rails rows/headers, and withhold controller frames after audit failures.
 use super::*;
+use campfire_db::CachedStatements;
 use super::directory::connect_user;
 use crate::controllers::presenters::test_support::{ALL_TALK,JASON,KEVIN};
 const JZ:i64=773523953;
+
+#[tokio::test]
+async fn closed_request_partial_failures_commit_but_publish_no_controller_frames() {
+    let hub=boot().await.expect("seed required");
+    let fixture:serde_json::Value=serde_json::from_str(include_str!("../../../../../vectors/room_coercions.json")).unwrap();
+    let global=hub.turbo(&["rooms"]);
+    let mut clients=Vec::new();
+    for id in [DAVID,JASON] {
+        let mut client=connect_user(&hub,id).await;
+        let stream=format!("{}:rooms",user_gid(id).to_param());
+        client.confirm(&global).await;
+        client.confirm(&hub.turbo(&[&stream])).await;
+        clients.push(client);
+    }
+    let mut actor=hub.app.david();
+    let mut room_id=0;
+    for (index,case) in fixture["stream_cases"].as_array().unwrap().iter().enumerate() {
+        assert_eq!(case["frames"],json!([]),"the real Rails failed partial lookup publishes nothing");
+        let (method,path)=if index==0 {(Method::POST,"/rooms/closeds".into())}else{(Method::PATCH,format!("/rooms/closeds/{room_id}"))};
+        let body=json!({"room":{"name":case["name"]},"user_ids":[DAVID,JASON]});
+        let reply=actor.write(Req::new(method,&path).header("content-type","application/json").header("Accept","application/json").body(serde_json::to_vec(&body).unwrap())).await;
+        assert_eq!(reply.status.as_u16() as u64,case["status"].as_u64().unwrap());
+        assert_eq!(reply.json(),case["json"]);
+        if index==0 {room_id=hub.app.db().read(|conn|Ok(conn.query_row_cached("SELECT MAX(id) FROM rooms",[],|row|row.get::<_,i64>(0))?)).await.unwrap();}
+        let (name,mut ids)=hub.app.db().read(move|conn|{let room=Room::find(conn,room_id)?;Ok((room.name.clone(),room.user_ids(conn)?))}).await.unwrap();ids.sort();
+        assert_eq!(json!(name),case["name"]);
+        assert_eq!(json!(ids),case["user_ids"]);
+        for client in &mut clients {client.assert_silent().await;}
+    }
+}
+
 #[tokio::test]
 async fn channel_http_rows_and_headers_match_rails_after_audits() {
     let hub=boot().await.expect("seed required");

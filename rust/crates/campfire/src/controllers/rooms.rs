@@ -273,22 +273,30 @@ pub(crate) fn room_name_param(c: &Ctx) -> Result<Option<Option<String>>> {
 
 /// `params.fetch(:user_ids, [])` as ids `User.where(id:)` can match.
 pub(crate) fn user_ids_param(c: &Ctx) -> Vec<i64> {
-    fn collect(value: &campfire_kit::Param, ids: &mut Vec<i64>) {
+    c.param("user_ids").map(user_ids_from_param).unwrap_or_default()
+}
+
+/// Active Record PredicateBuilder::ArrayHandler delegates a single non-null operand
+/// back to the builder, but casts multiple operands individually as integers for IN.
+pub(super) fn user_ids_from_param(value: &campfire_kit::Param) -> Vec<i64> {
+    fn scalar(value: &campfire_kit::Param) -> Option<i64> {
         match value {
-            // Active Record's array predicate flattens arrays, without flattening hashes.
-            campfire_kit::Param::Array(values) => for value in values { collect(value, ids); },
-            campfire_kit::Param::Str(value) => ids.extend(cast_integer(value)),
-            campfire_kit::Param::Number(value) => {
-                if let Some(id) = value.as_i64() { ids.push(id); }
-                else if let Some(id) = value.as_f64().filter(|id| *id >= i64::MIN as f64 && *id < -(i64::MIN as f64)) { ids.push(id as i64); }
-            }
-            campfire_kit::Param::Bool(value) => ids.push(i64::from(*value)),
-            _ => {},
+            campfire_kit::Param::Str(value) => cast_integer(value),
+            campfire_kit::Param::Number(value) => value.as_i64().or_else(|| {
+                value.as_f64().filter(|id| *id >= i64::MIN as f64 && *id < -(i64::MIN as f64)).map(|id| id as i64)
+            }),
+            campfire_kit::Param::Bool(value) => Some(i64::from(*value)),
+            _ => None,
         }
     }
-    let mut ids = Vec::new();
-    if let Some(value) = c.param("user_ids") { collect(value, &mut ids); }
-    ids
+    match value {
+        campfire_kit::Param::Array(values) => {
+            let values=values.iter().filter(|value| !matches!(value,campfire_kit::Param::Null)).collect::<Vec<_>>();
+            if values.len()==1 {user_ids_from_param(values[0])}
+            else {values.into_iter().filter_map(scalar).collect()}
+        }
+        value => scalar(value).into_iter().collect(),
+    }
 }
 
 /// `User.where(id: ids)`, as ids of existing users (in id order, like the query).
@@ -400,3 +408,6 @@ mod channel_audits_tests;
 
 #[cfg(test)]
 mod coercions_tests;
+
+#[cfg(test)]
+mod direct_selection_tests;

@@ -37,7 +37,7 @@ shows={}
   shows[id]={status:client.response.status,json:(JSON.parse(client.response.body) rescue nil)}
 end
 ids=[]
-[[127326141,149087659],127326141,127326141.75,nil,true,false,[[127326141]],{id:127326141}].each do |value|
+[[127326141,149087659],127326141,127326141.75,nil,true,false,[[127326141]],[[127326141,149087659]],[[127326141],149087659],[[127326141],[149087659]],[[[127326141,149087659]]],{id:127326141}].each do |value|
   client.post('/rooms/closeds',params:{room:{name:'ID cast probe'},user_ids:value},headers:{'X-CSRF-Token'=>token},as: :json)
   ActiveSupport::IsolatedExecutionState.clear
   ids << {input:value,status:client.response.status,user_ids:Room.last.user_ids.sort}
@@ -48,11 +48,22 @@ formats={}
   ActiveSupport::IsolatedExecutionState.clear
   formats[accept]=client.response.status
 end
+stream_cases=[]
+frames=[]
+ActionCable.server.define_singleton_method(:broadcast) { |stream,message,**_| frames << {stream:stream,html:message} if stream=='rooms' || stream.end_with?(':rooms') }
+client.post('/rooms/closeds',params:{room:{name:'Format stream create'},user_ids:[127326141,149087659]},headers:{'X-CSRF-Token'=>token},as: :json)
+ActiveSupport::IsolatedExecutionState.clear
+room=Room.last
+stream_cases << {name:room.name,status:client.response.status,json:JSON.parse(client.response.body),user_ids:room.user_ids.sort,frames:frames.dup}
+frames.clear
+client.patch("/rooms/closeds/#{room.id}",params:{room:{name:'Format stream update'},user_ids:[127326141,149087659]},headers:{'X-CSRF-Token'=>token},as: :json)
+ActiveSupport::IsolatedExecutionState.clear
+stream_cases << {name:room.reload.name,status:client.response.status,json:JSON.parse(client.response.body),user_ids:room.user_ids.sort,frames:frames.dup}
 failure_class=failures.compact.last
 begin
   client.post('/rooms/closeds',params:{room:{name:'Missing partial probe'},user_ids:[127326141]},headers:{'X-CSRF-Token'=>token},as: :json,env:{'action_dispatch.show_exceptions'=>:none})
 rescue => error
   failure_class=error.class.name
 end
-puts JSON.pretty_generate({reference:'d7c7de92',names:cases,updates:updates,shows:shows,ids:ids,formats:formats,closed_json_failure_class:failure_class,integer_casts:{'true'=>ActiveRecord::Type.lookup(:integer).cast(true),'false'=>ActiveRecord::Type.lookup(:integer).cast(false)}})
-warn "Rails room coercion oracle: #{cases.size} create casts, #{updates.size} update casts, #{shows.size} direct-show callbacks, #{formats.size} partial formats, #{ids.size} ID casts; reference d7c7de92"
+puts JSON.pretty_generate({reference:'d7c7de92',names:cases,updates:updates,shows:shows,ids:ids,formats:formats,closed_json_failure_class:failure_class,stream_cases:stream_cases,integer_casts:{'true'=>ActiveRecord::Type.lookup(:integer).cast(true),'false'=>ActiveRecord::Type.lookup(:integer).cast(false)}})
+warn "Rails room coercion oracle: #{cases.size} create casts, #{updates.size} update casts, #{shows.size} direct-show callbacks, #{formats.size} partial formats, #{ids.size} ID casts, #{stream_cases.size} stream failure cases; reference d7c7de92"
