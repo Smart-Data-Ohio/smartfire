@@ -128,6 +128,15 @@ impl TestApp {
     }
 
     async fn boot_using_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
+        Self::boot_using_clock_env(clock, &[]).await
+    }
+
+    /// Test-local configuration; no process environment changes or pre-existing input files.
+    pub async fn boot_frozen_with_env(values: &[(&str, &str)]) -> Option<TestApp> {
+        Self::boot_using_clock_env(std::sync::Arc::new(campfire_kit::FrozenClock::new(SEED_NOW.parse().unwrap())), values).await
+    }
+
+    async fn boot_using_clock_env(clock: campfire_kit::SharedClock, values: &[(&str, &str)]) -> Option<TestApp> {
         let seed = seed_dir("default")?;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("db")).unwrap();
@@ -140,7 +149,7 @@ impl TestApp {
             "DISABLE_SSL" => Some("true".into()),
             "APP_VERSION" | "GIT_REVISION" => Some("parity".into()),
             "CAMPFIRE_STORAGE_PATH" => Some(root.clone()),
-            _ => None,
+            _ => values.iter().find(|(key,_)| *key == name).map(|(_,value)| (*value).to_string()),
         })
         .unwrap();
         Some(TestApp { booted: boot_with_clock(config, clock).await.unwrap(), _dir: dir })

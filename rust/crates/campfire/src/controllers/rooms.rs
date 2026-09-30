@@ -286,9 +286,18 @@ pub(super) async fn form_room(
 ) -> Result<campfire_views::rooms::FormRoom> {
     let icon_name = Room::normalize_icon_name(icon_name.as_deref());
     let lookup_name = icon_name.clone();
-    let icon = c.app().db.read(move |conn| Ok(super::presenters::accounts::resolve_room_icon(conn, lookup_name.as_deref()))).await.map_err(db_error)?;
+    let domain = c.app().mail.config.domain.clone();
+    let (icon, inbound_email) = c.app().db.read(move |conn| {
+        let icon = super::presenters::accounts::resolve_room_icon(conn, lookup_name.as_deref());
+        let inbound_email = if let Some(id) = id {
+            let room=Room::find(conn,id)?;
+            let address = domain.as_ref().zip(room.inbound_email_token.as_ref()).filter(|(_,token)| !token.chars().all(char::is_whitespace)).filter(|_| room.emailable()).map(|(domain,token)| format!("room-{token}@{domain}"));
+            Some(campfire_views::rooms::InboundEmailView {id,emailable:room.emailable(),enabled:domain.is_some(),address})
+        } else { None };
+        Ok((icon, inbound_email))
+    }).await.map_err(db_error)?;
     Ok(campfire_views::rooms::FormRoom {
-        id, name, icon_name, icon, errors: errors.full_messages(),
+        id, name, icon_name, icon, inbound_email, errors: errors.full_messages(),
         error_attributes: errors.0.iter().map(|(attribute,_)| (*attribute).to_string()).collect(),
     })
 }
@@ -436,3 +445,6 @@ mod direct_selection_tests;
 
 #[cfg(test)]
 mod icons_tests;
+
+#[cfg(test)]
+mod inbound_tests;

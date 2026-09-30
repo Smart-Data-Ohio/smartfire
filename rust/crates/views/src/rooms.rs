@@ -204,6 +204,31 @@ pub struct FormRoom {
     pub errors: Vec<String>,
     #[serde(default)]
     pub error_attributes: Vec<String>,
+    #[serde(default)]
+    pub inbound_email: Option<InboundEmailView>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct InboundEmailView {
+    pub id: i64,
+    pub emailable: bool,
+    pub enabled: bool,
+    pub address: Option<String>,
+}
+
+#[derive(Template)]
+#[template(path = "rooms/inbound_email_addresses/_section.html")]
+pub struct InboundEmailSection<'a> {
+    pub ctx: &'a ViewContext<'a>,
+    pub email: &'a InboundEmailView,
+    pub can_administer: bool,
+}
+impl InboundEmailSection<'_> {
+    fn button(&self, rotate: bool)->h::Html {
+        let options=h::attrs().class(if rotate {"btn btn--negative txt-small"} else {"btn txt-small"});
+        let form_options=if rotate {h::attrs().data("turbo_confirm","Rotate this room's email address? The old address stops working.")} else {h::attrs()};
+        h::button_to_form(&campfire_routes::room_inbound_email_address(self.email.id), options, form_options, if rotate {"Rotate address"} else {"Create email address"})
+    }
 }
 
 /// `rooms/opens/{new,edit}`.
@@ -305,6 +330,9 @@ impl Page for ClosedsEdit<'_> {
 }
 
 impl FormRoom {
+    fn inbound_email_html(&self, ctx: &ViewContext, can_administer: &bool)->h::Html {
+        self.inbound_email.as_ref().map(|email| h::raw(InboundEmailSection {ctx,email,can_administer:*can_administer}.render().expect("inbound email section renders"))).unwrap_or_else(h::empty)
+    }
     /// `form_with model: room`'s action for an open or closed room.
     fn action(&self, kind: RoomKind) -> String {
         match (self.id, kind) {
