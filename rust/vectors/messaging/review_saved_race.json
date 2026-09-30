@@ -1,0 +1,14 @@
+{
+  "reference": "d7c7de92",
+  "claimed": "2026-03-02T16:02:00.000000Z",
+  "after_status": {
+    "status": "done",
+    "remind_at": "2026-03-02T16:01:00.000000Z",
+    "reminded_at": "2026-03-02T16:02:00.000000Z"
+  },
+  "after_reschedule": {
+    "status": "in_progress",
+    "remind_at": "2026-03-02T18:00:00.000000Z",
+    "reminded_at": null
+  }
+}
