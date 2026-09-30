@@ -41,6 +41,7 @@ async fn database(case: &Value) -> TestDb {
         sink: Arc::new(QueueSink(queue)),
         rich_text: Arc::new(BasicRichText),
         bcrypt_cost: 4,
+        ..Default::default()
     };
     let directory =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");

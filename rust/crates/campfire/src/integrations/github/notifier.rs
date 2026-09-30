@@ -92,8 +92,6 @@ pub async fn deliver(db: &Database, event: String, payload: Value) -> campfire_d
                 Some(mut thread) if thread.locked_at.is_none()=>thread.post_message(tx,bot,attributes)?,
                 _=>Message::create_markdown(tx,attributes,&source)?,
             };
-            // The next PR-domain slice registers this sync on all Message save callbacks.
-            super::references::sync(tx,&message)?;
             tx.emit_after_commit(Event::broadcast(&MessageCreated {room_id:message.room_id,message_id:message.id,thread_id:message.thread_id}));
             tx.conn().execute("UPDATE github_notifications SET message_id=?,updated_at=? WHERE id=?",params![message.id,tx.now(),notification])?;
             if post.event=="review_requested" {record_review_request(tx,&message,post.reviewer.as_ref())?;}

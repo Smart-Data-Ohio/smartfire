@@ -7,6 +7,15 @@ import subprocess
 root = Path(__file__).resolve().parents[2]
 repo = root.parent
 names = {
+    'test/models/github/pull_request_url_test.rb': ['github_url_extraction_and_non_code_html_match_pinned_rails'] * 10,
+    'test/models/github/pull_request_test.rb': [None] * 9 + [
+        'github_message_create_and_edit_hooks_reconcile_references_and_fetches',
+        'github_message_create_and_edit_hooks_reconcile_references_and_fetches',
+        'github_message_create_and_edit_hooks_reconcile_references_and_fetches',
+        'github_message_reference_security_ignores_code_and_caps_before_case_normalization',
+        'github_message_create_and_edit_hooks_reconcile_references_and_fetches',
+        'github_message_create_and_edit_hooks_reconcile_references_and_fetches',
+    ] + [None] * 2,
     'test/jobs/github/deliver_subscription_event_job_test.rb': [
         'github_notifier_posts_claims_references_inbox_and_thread_routes_match_rails',
     ] * 2 + ['github_notifier_security_redacts_per_subscription_and_neutralizes_mentions'] + [
@@ -128,7 +137,7 @@ paths = sorted(p for p in subprocess.check_output(['git', '-C', str(repo), 'ls-t
 rows = []
 file_counts = []
 covered = 0
-rust_tests = (root / 'crates/campfire/src/integrations/github/tests.rs').read_text() + (root / 'crates/campfire/src/controllers/github/webhooks/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/action_claims/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/fetcher/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/agent_actions/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/notifier/tests.rs').read_text()
+rust_tests = (root / 'crates/campfire/src/integrations/github/references/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/tests.rs').read_text() + (root / 'crates/campfire/src/controllers/github/webhooks/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/action_claims/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/fetcher/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/agent_actions/tests.rs').read_text() + (root / 'crates/campfire/src/integrations/github/notifier/tests.rs').read_text()
 for path in paths:
     content = subprocess.check_output(['git', '-C', str(repo), 'show', f'd7c7de92:{path}'], text=True)
     tests = re.findall(r'^\s*test\s+["\'](.+?)["\']\s+do', content, re.M)

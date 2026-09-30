@@ -46,7 +46,12 @@ pub struct Env {
     /// BCrypt cost for `has_secure_password`. Rails uses `BCrypt::Engine.cost` (12), or
     /// `MIN_COST` (4) in the test environment.
     pub bcrypt_cost: u32,
+    /// App-owned reference domains run on Message's real save hooks, in its transaction.
+    /// The flag lets importers reconcile rows without scheduling network fetches.
+    pub message_reference_syncs: Vec<MessageReferenceSync>,
 }
+
+pub type MessageReferenceSync = fn(&mut Tx<'_>, &crate::Message, bool) -> Result<()>;
 
 impl Default for Env {
     fn default() -> Self {
@@ -55,6 +60,7 @@ impl Default for Env {
             sink: Arc::new(NullSink),
             rich_text: Arc::new(BasicRichText),
             bcrypt_cost: 12,
+            message_reference_syncs: Vec::new(),
         }
     }
 }

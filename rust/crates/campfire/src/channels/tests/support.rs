@@ -59,6 +59,7 @@ pub async fn start() -> TestApp {
         sink: sink.clone(),
         rich_text: Arc::new(BasicRichText),
         bcrypt_cost: 4,
+        ..Default::default()
     };
     let mut config = campfire_db::Config::new(dir.path().join("test.sqlite3"));
     config.readers = 2;

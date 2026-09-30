@@ -1,6 +1,6 @@
 # WS15g Rails test coverage — partial
 
-Reference: `d7c7de92`. 426 Rails cases in 31 files: 160 mapped to Rust assertions; 266 explicitly deferred.
+Reference: `d7c7de92`. 426 Rails cases in 31 files: 176 mapped to Rust assertions; 250 explicitly deferred.
 
 These are domain-level ports grouped into Rust tests, not executions of the original Ruby tests. Webhook HTTP ingestion, transactional enqueue, fetch persistence/runtime handler and the shared stuck-claim sweep with runtime periodic registration are covered. Notifier posting/dedupe/privacy/thread routing with its registered runtime and message broadcasts are also covered. PR card broadcasts and view/system parity, other HTTP controllers, the remaining PR model/reference/thread/subscription domain and agent write HTTP controllers remain deferred. All deferred cases retain WS15g as owner; WS11 supplies the agent authentication seam and outbound event-webhook runtime. No coverage or parity allowlist has been added.
 
@@ -9,16 +9,15 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | `test/controllers/agents/github/pull_request_actions_controller_test.rb` | 0/21 | 21 |
 | `test/helpers/github_pull_requests_helper_test.rb` | 0/20 | 20 |
 | `test/controllers/rooms/github_subscriptions_controller_test.rb` | 0/17 | 17 |
-| `test/models/github/pull_request_test.rb` | 0/17 | 17 |
 | `test/integration/github_pr_cards_test.rb` | 0/16 | 16 |
 | `test/controllers/github/pull_request_review_requests_controller_test.rb` | 0/15 | 15 |
 | `test/controllers/rooms/github/pull_request_cards_controller_test.rb` | 0/15 | 15 |
 | `test/controllers/github/app_connections_controller_test.rb` | 0/13 | 13 |
 | `test/controllers/github/connections_controller_test.rb` | 0/13 | 13 |
 | `test/controllers/github/pull_request_comments_controller_test.rb` | 0/11 | 11 |
+| `test/models/github/pull_request_test.rb` | 6/17 | 11 |
 | `test/models/github/pull_request_thread_test.rb` | 0/11 | 11 |
 | `test/controllers/accounts/bots/github_connections_controller_test.rb` | 0/10 | 10 |
-| `test/models/github/pull_request_url_test.rb` | 0/10 | 10 |
 | `test/models/github/repository_subscription_test.rb` | 0/10 | 10 |
 | `test/controllers/agents/github_action_delivery_test.rb` | 0/9 | 9 |
 | `test/controllers/github/pull_request_reviews_controller_test.rb` | 0/9 | 9 |
@@ -36,6 +35,7 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | `test/models/github/write_client_test.rb` | 12/13 | 1 |
 | `test/models/github/agent_pull_request_action_test.rb` | 11/11 | 0 |
 | `test/models/github/app_test.rb` | 11/11 | 0 |
+| `test/models/github/pull_request_url_test.rb` | 10/10 | 0 |
 | `test/models/github_connected_account_test.rb` | 20/20 | 0 |
 
 ## `test/controllers/accounts/bots/github_connections_controller_test.rb` (10 tests)
@@ -503,12 +503,12 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 | claim_fetch_request! grants one fetch per PR per ten minutes | Deferred; WS15g continuation | — |
 | claiming a fetch request does not broadcast a card update | Deferred; WS15g continuation | — |
 | with_rendering_details preloads referenced PRs | Deferred; WS15g continuation | — |
-| creating a message with a PR URL references the PR and enqueues a fetch | Deferred; WS15g continuation | — |
-| duplicate URLs in one message create a single reference | Deferred; WS15g continuation | — |
-| a message without a PR URL references nothing and enqueues nothing | Deferred; WS15g continuation | — |
-| URLs in code spans and fenced blocks create no references | Deferred; WS15g continuation | — |
-| editing a message to add a PR URL adds the reference | Deferred; WS15g continuation | — |
-| editing a message to remove a PR URL drops the reference | Deferred; WS15g continuation | — |
+| creating a message with a PR URL references the PR and enqueues a fetch | Mapped to grouped Rust assertions; WS15g | `github_message_create_and_edit_hooks_reconcile_references_and_fetches` |
+| duplicate URLs in one message create a single reference | Mapped to grouped Rust assertions; WS15g | `github_message_create_and_edit_hooks_reconcile_references_and_fetches` |
+| a message without a PR URL references nothing and enqueues nothing | Mapped to grouped Rust assertions; WS15g | `github_message_create_and_edit_hooks_reconcile_references_and_fetches` |
+| URLs in code spans and fenced blocks create no references | Mapped to grouped Rust assertions; WS15g | `github_message_reference_security_ignores_code_and_caps_before_case_normalization` |
+| editing a message to add a PR URL adds the reference | Mapped to grouped Rust assertions; WS15g | `github_message_create_and_edit_hooks_reconcile_references_and_fetches` |
+| editing a message to remove a PR URL drops the reference | Mapped to grouped Rust assertions; WS15g | `github_message_create_and_edit_hooks_reconcile_references_and_fetches` |
 | updating a record broadcasts a card replace to each referencing room once | Deferred; WS15g continuation | — |
 | card broadcasts carry the title for a public pull request and only a frame for a private one | Deferred; WS15g continuation | — |
 
@@ -532,16 +532,16 @@ These are domain-level ports grouped into Rust tests, not executions of the orig
 
 | Rails test | Status and owner | Rust coverage |
 |---|---|---|
-| extracts a canonical pull request URL | Deferred; WS15g continuation | — |
-| extracts /pulls/ variants and trailing paths, queries, and fragments | Deferred; WS15g continuation | — |
-| extracts multiple URLs and deduplicates repeats | Deferred; WS15g continuation | — |
-| ignores non-PR URLs | Deferred; WS15g continuation | — |
-| extract caps references at Twitter's MAX_PER_MESSAGE | Deferred; WS15g continuation | — |
-| non_code_text drops code spans and fenced blocks but keeps prose and labeled links | Deferred; WS15g continuation | — |
-| non_code_text keeps a URL at a br or block boundary matchable | Deferred; WS15g continuation | — |
-| pull_request_url? matches only PR URLs | Deferred; WS15g continuation | — |
-| ignores dot-only owner and repo segments | Deferred; WS15g continuation | — |
-| still matches names containing dots and dashes | Deferred; WS15g continuation | — |
+| extracts a canonical pull request URL | Mapped to grouped Rust assertions; WS15g | `github_url_extraction_and_non_code_html_match_pinned_rails` |
+| extracts /pulls/ variants and trailing paths, queries, and fragments | Mapped to grouped Rust assertions; WS15g | `github_url_extraction_and_non_code_html_match_pinned_rails` |
+| extracts multiple URLs and deduplicates repeats | Mapped to grouped Rust assertions; WS15g | `github_url_extraction_and_non_code_html_match_pinned_rails` |
+| ignores non-PR URLs | Mapped to grouped Rust assertions; WS15g | `github_url_extraction_and_non_code_html_match_pinned_rails` |
+| extract caps references at Twitter's MAX_PER_MESSAGE | Mapped to grouped Rust assertions; WS15g | `github_url_extraction_and_non_code_html_match_pinned_rails` |
+| non_code_text drops code spans and fenced blocks but keeps prose and labeled links | Mapped to grouped Rust assertions; WS15g | `github_url_extraction_and_non_code_html_match_pinned_rails` |
+| non_code_text keeps a URL at a br or block boundary matchable | Mapped to grouped Rust assertions; WS15g | `github_url_extraction_and_non_code_html_match_pinned_rails` |
+| pull_request_url? matches only PR URLs | Mapped to grouped Rust assertions; WS15g | `github_url_extraction_and_non_code_html_match_pinned_rails` |
+| ignores dot-only owner and repo segments | Mapped to grouped Rust assertions; WS15g | `github_url_extraction_and_non_code_html_match_pinned_rails` |
+| still matches names containing dots and dashes | Mapped to grouped Rust assertions; WS15g | `github_url_extraction_and_non_code_html_match_pinned_rails` |
 
 ## `test/models/github/repository_subscription_test.rb` (10 tests)
 

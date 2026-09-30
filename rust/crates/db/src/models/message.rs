@@ -387,8 +387,8 @@ impl Message {
     /// SQLite transaction as the write, so failure rolls it all back. Broadcasts and job wakes
     /// run after commit in Rails' order: unread, push, then the final thread indicator.
     /// Not ported here, for their owners: agent deliveries
-    /// (WS11), activity items (WS12), the GitHub, Fizzy, Twitter, event and link-embed reference
-    /// syncs (WS14, WS15), and the Slack importer's `importing` flag (WS16).
+    /// (WS11), activity items (WS12), and the Slack importer's `importing` flag (WS16).
+    /// App-owned reference domains register in Env; their failures roll back this write.
     pub fn create(tx: &mut Tx<'_>, attributes: NewMessage) -> Result<Self> {
         let body = Self::rendered_body(tx, &attributes)?;
         Self::validate(tx.conn(), &attributes)?.into_result()?;
@@ -455,6 +455,7 @@ impl Message {
             message.create_in_index(tx)?;
             message.receive_in_conversation(tx)?;
             crate::models::message_reference::sync(tx, &message)?;
+            message.sync_integration_references(tx, true)?;
             message.push_later_in_conversation(tx);
         }
         if message.thread_id.is_some() {
@@ -788,7 +789,20 @@ impl Message {
         }
         if !self.streaming {
             self.update_in_index(tx)?;
-            if references_changed { crate::models::message_reference::sync(tx, self)?; }
+            if references_changed {
+                crate::models::message_reference::sync(tx, self)?;
+                self.sync_integration_references(tx, true)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Reference portion of Rails' `sync_all_references`, also called by normal saves.
+    /// Active stream finalization calls this after its winning claim; quiet finalization
+    /// skips it. Importers pass false to keep only the database reference rows.
+    pub fn sync_integration_references(&self, tx: &mut Tx<'_>, enqueue_fetches: bool) -> Result<()> {
+        for sync in tx.env().message_reference_syncs.clone() {
+            sync(tx, self, enqueue_fetches)?;
         }
         Ok(())
     }

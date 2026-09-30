@@ -181,6 +181,7 @@ async fn open_database(config: &Config, clock: SharedClock, jobs: jobs::Jobs, ri
         sink: Arc::new(jobs),
         rich_text,
         bcrypt_cost: 12,
+        message_reference_syncs: vec![crate::integrations::github::references::sync],
     };
     Ok(tokio::task::spawn_blocking(move || Database::open(db_config, env)).await??)
 }

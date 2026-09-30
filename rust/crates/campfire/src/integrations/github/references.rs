@@ -1,4 +1,4 @@
-//! PR URL bookkeeping used by Notifier; Message save registration is the next domain slice.
+//! GitHub reference reconciliation registered on Message's create/edit hooks.
 use super::{blank, jobs::FetchPullRequestJob};
 use campfire_db::{Event, Message, Tx};
 use rusqlite::{OptionalExtension, params};
@@ -9,16 +9,10 @@ static URL: LazyLock<regex::Regex> = LazyLock::new(|| {
     )
     .unwrap()
 });
-pub fn sync(tx: &mut Tx<'_>, message: &Message) -> campfire_db::Result<()> {
-    let mut text = campfire_db::models::message_reference::non_code_text(
-        &message.body_html(tx.conn())?.unwrap_or_default(),
-    )?;
-    if let Some(note) = message.forward_note.as_ref().filter(|note| !blank(note)) {
-        text.push('\n');
-        text.push_str(note);
-    }
+/// Numbers retain decimal precision until the model checks SQLite's integer range.
+pub fn extract(text: &str) -> Vec<(String, String, String)> {
     let mut triples = Vec::new();
-    for capture in URL.captures_iter(&text) {
+    for capture in URL.captures_iter(text) {
         let owner = &capture[1];
         let repo = &capture[2];
         if [".", ".."].contains(&owner) || [".", ".."].contains(&repo) {
@@ -34,6 +28,22 @@ pub fn sync(tx: &mut Tx<'_>, message: &Message) -> campfire_db::Result<()> {
             }
         }
     }
+    triples
+}
+
+pub fn pull_request_url(url: &str) -> bool {
+    !extract(url).is_empty()
+}
+
+pub fn sync(tx: &mut Tx<'_>, message: &Message, enqueue_fetches: bool) -> campfire_db::Result<()> {
+    let mut text = campfire_db::models::message_reference::non_code_text(
+        &message.body_html(tx.conn())?.unwrap_or_default(),
+    )?;
+    if let Some(note) = message.forward_note.as_ref().filter(|note| !blank(note)) {
+        text.push('\n');
+        text.push_str(note);
+    }
+    let triples = extract(&text);
     let now = tx.now();
     let cutoff = now.ago(jiff::SignedDuration::from_mins(10));
     let mut prs = Vec::new();
@@ -79,7 +89,10 @@ pub fn sync(tx: &mut Tx<'_>, message: &Message) -> campfire_db::Result<()> {
             params![cutoff, id],
             |r| r.get::<_, bool>(0),
         )?;
-        if (created||stale)&&tx.conn().execute("UPDATE github_pull_requests SET fetch_requested_at=? WHERE id=? AND (fetch_requested_at IS NULL OR fetch_requested_at < ?)",params![now,id,cutoff])?==1 {tx.emit_after_commit(Event::job(&FetchPullRequestJob {pull_request_id:id}));}
+        if enqueue_fetches&&(created||stale)&&tx.conn().execute("UPDATE github_pull_requests SET fetch_requested_at=? WHERE id=? AND (fetch_requested_at IS NULL OR fetch_requested_at < ?)",params![now,id,cutoff])?==1 {tx.emit_after_commit(Event::job(&FetchPullRequestJob {pull_request_id:id}));}
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests;

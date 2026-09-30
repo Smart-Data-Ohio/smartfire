@@ -6,7 +6,7 @@ TASK_ROOT=$(cd "$RUST_ROOT/.." && pwd)
 SCRATCH="$TASK_ROOT/.scratch/ws15g"
 mkdir -p "$SCRATCH"
 MODE=${1:-generate}
-case "$MODE" in generate|verify|webhooks|claims|fetch|actions|notifier|notifier_verify) ;; *) echo "usage: $0 [generate|verify|webhooks|claims|fetch|actions|notifier|notifier_verify]" >&2; exit 2 ;; esac
+case "$MODE" in generate|verify|webhooks|claims|fetch|actions|notifier|notifier_verify|references) ;; *) echo "unknown GitHub oracle mode: $MODE" >&2; exit 2 ;; esac
 python3 - "$TASK_ROOT" "$SCRATCH/reference-hashes.json" <<'PY'
 import hashlib, json, pathlib, subprocess, sys
 paths = ['app/models/github/app.rb', 'app/models/github/write_client.rb', 'app/models/github_connected_account.rb', 'app/controllers/github/app_connections_controller.rb', 'config/initializers/active_record_encryption.rb', 'config/application.rb', 'Gemfile.lock', 'app/controllers/github/webhooks_controller.rb', 'app/models/github/webhook_delivery.rb', 'app/models/github/notifier.rb', 'app/jobs/github/perform_agent_action_job.rb', 'app/jobs/fizzy/perform_agent_action_job.rb', 'app/models/audit_log.rb', 'app/models/agent_event.rb', 'app/models/github/pull_request_fetcher.rb', 'app/jobs/github/fetch_pull_request_job.rb', 'app/models/github/pull_request.rb', 'app/models/github/agent_pull_request_action.rb', 'app/models/github/review_logins.rb', 'app/models/agent.rb', 'app/models/agent_approval.rb', 'app/models/github/notification.rb', 'app/models/github/repository_subscription.rb', 'app/models/github/pull_request_reference_sync.rb', 'app/models/github/pull_request_url.rb', 'app/models/message.rb', 'app/models/channel_thread.rb', 'app/models/user/inbox_preferences.rb', 'app/jobs/github/deliver_subscription_event_job.rb', 'app/models/user.rb', 'app/models/user/bot.rb', 'app/models/membership.rb', 'app/models/thread_membership.rb', 'app/models/activity_item.rb', 'app/jobs/application_job.rb']
@@ -23,6 +23,7 @@ if [[ "$MODE" == fetch ]]; then SCRIPT=fetch.rb; fi
 if [[ "$MODE" == actions ]]; then SCRIPT=actions.rb; fi
 if [[ "$MODE" == notifier ]]; then SCRIPT=notifier.rb; fi
 if [[ "$MODE" == notifier_verify ]]; then SCRIPT=notifier_verify.rb; fi
+if [[ "$MODE" == references ]]; then SCRIPT=references.rb; fi
 docker run --rm --network none --name "ws15g-github-$MODE" --entrypoint '' --user "$(id -u):$(id -g)" \
   -e RAILS_ENV=production -e RAILS_LOG_LEVEL=fatal -e SECRET_KEY_BASE="$GITHUB_FIXTURE_SECRET" \
   -e DISABLE_SSL=1 -e SKIP_TELEMETRY=true -e DATABASE_URL="sqlite3:/work/scratch/$MODE.sqlite3" \

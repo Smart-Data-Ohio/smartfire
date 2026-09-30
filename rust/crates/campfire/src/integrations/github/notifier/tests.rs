@@ -54,6 +54,7 @@ async fn database(case: &Value) -> (TestDb, Sink) {
             Arc::new(campfire_kit::FrozenClock::new(now)),
         )),
         bcrypt_cost: 4,
+        message_reference_syncs: vec![super::super::references::sync],
     };
     let directory =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
