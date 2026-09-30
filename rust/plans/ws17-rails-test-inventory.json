@@ -425,15 +425,17 @@
       "file": "test/models/notifications/push_gating_test.rb",
       "test": "huddle push honors DND with a starred-caller exception",
       "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "owner": "WS13/WS13b",
+      "evidence": null,
+      "seam": "Huddle::Grant.issue / InvitationResolver source lifecycle and missed-call ActivityItem after the 46-second group-ring expiry. Invitation/job must emit Notifications::HuddlePushJob PushRequest; WS17 applies DND/caller allowance and atomically claims/enqueues delivery with enqueue_huddle_request. Actual missed-call/grant source path is unmerged."
     },
     {
       "file": "test/models/notifications/push_gating_test.rb",
       "test": "group huddle push skips DND and quiet-hours recipients but their missed calls are still recorded",
       "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "owner": "WS13/WS13b",
+      "evidence": null,
+      "seam": "Huddle::Grant.issue / InvitationResolver source lifecycle and missed-call ActivityItem after the 46-second group-ring expiry. Invitation/job must emit Notifications::HuddlePushJob PushRequest; WS17 applies DND/caller allowance and atomically claims/enqueues delivery with enqueue_huddle_request. Actual missed-call/grant source path is unmerged."
     },
     {
       "file": "test/models/room/push_test.rb",
@@ -1258,8 +1260,9 @@
       "file": "test/models/calendar/meeting_cache_test.rb",
       "test": "one cache per user",
       "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation (claims/readers); WS14 (cache persistence/feed)",
-      "evidence": null
+      "owner": "WS14g",
+      "evidence": null,
+      "seam": "Calendar::MeetingCache.create!(user:) validated creation must reject a duplicate user_id with RecordInvalid before INSERT; WS17 only exposes existing-row find/read and claim_broadcast(&self, &mut Tx, active)/claim_refresh_followup(&self, &mut Tx, now, window). Raw setup SQL or a unique-index error does not replay the model validation."
     },
     {
       "file": "test/models/calendar/meeting_cache_test.rb",
@@ -1650,29 +1653,33 @@
       "file": "test/jobs/huddle/push_invitation_job_test.rb",
       "test": "pushes the invitation to the recipient only",
       "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
-      "evidence": null
+      "owner": "WS13/WS13b",
+      "evidence": null,
+      "seam": "Huddle::PushInvitationJob validates live invitation/grant, recipient and connection/opt-out eligibility and constructs the invitation payload; emit huddle_notices::PushRequest with enqueue_huddle_push(tx, &request), class Notifications::HuddlePushJob. WS17 HuddlePushRequest wire bridge and enqueue_huddle_request(&mut Tx, request) are final; no source invitation job is landed on this branch."
     },
     {
       "file": "test/jobs/huddle/push_invitation_job_test.rb",
       "test": "an opted-out recipient gets no push subscriptions",
       "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
-      "evidence": null
+      "owner": "WS13/WS13b",
+      "evidence": null,
+      "seam": "Huddle::PushInvitationJob validates live invitation/grant, recipient and connection/opt-out eligibility and constructs the invitation payload; emit huddle_notices::PushRequest with enqueue_huddle_push(tx, &request), class Notifications::HuddlePushJob. WS17 HuddlePushRequest wire bridge and enqueue_huddle_request(&mut Tx, request) are final; no source invitation job is landed on this branch."
     },
     {
       "file": "test/jobs/huddle/push_invitation_job_test.rb",
       "test": "a connected recipient gets no push",
       "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
-      "evidence": null
+      "owner": "WS13/WS13b",
+      "evidence": null,
+      "seam": "Huddle::PushInvitationJob validates live invitation/grant, recipient and connection/opt-out eligibility and constructs the invitation payload; emit huddle_notices::PushRequest with enqueue_huddle_push(tx, &request), class Notifications::HuddlePushJob. WS17 HuddlePushRequest wire bridge and enqueue_huddle_request(&mut Tx, request) are final; no source invitation job is landed on this branch."
     },
     {
       "file": "test/jobs/huddle/push_invitation_job_test.rb",
       "test": "missing invitations are ignored",
       "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation (transport/policy/claims); WS13 (payload/source)",
-      "evidence": null
+      "owner": "WS13/WS13b",
+      "evidence": null,
+      "seam": "Huddle::PushInvitationJob validates live invitation/grant, recipient and connection/opt-out eligibility and constructs the invitation payload; emit huddle_notices::PushRequest with enqueue_huddle_push(tx, &request), class Notifications::HuddlePushJob. WS17 HuddlePushRequest wire bridge and enqueue_huddle_request(&mut Tx, request) are final; no source invitation job is landed on this branch."
     },
     {
       "file": "test/controllers/users/statuses_controller_test.rb",
@@ -2056,15 +2063,17 @@
       "file": "test/system/meeting_status_test.rb",
       "test": "opting in shows In a meeting for a stubbed busy interval, then clears after it ends",
       "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "owner": "WS14g",
+      "evidence": null,
+      "seam": "Calendar::MeetingRefreshJob { user_id: i64 }, class Calendar::MeetingRefreshJob, default queue/version 1: WS14 Google events fetch/interval filtering and cache completion must run before dispatch_meetings(&Database, Timestamp) and the browser clock advance. Handler is deliberately absent, not a fabricated refresh success."
     },
     {
       "file": "test/system/meeting_status_test.rb",
       "test": "the profile links to connect without a Google account",
       "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation",
-      "evidence": null
+      "owner": "WS14g",
+      "evidence": null,
+      "seam": "Google account/profile integration must mount the real #google-calendar-title connect section. WS17 already renders its status-form anchor and hides the opt-in when no identity exists, but the destination/account connection is unmerged."
     },
     {
       "file": "test/system/out_of_office_test.rb",
@@ -2322,8 +2331,9 @@
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "work events notify followed thread members",
       "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "owner": "WS12",
+      "evidence": null,
+      "seam": "WorkThreadEvent.activity_recipient_ids / allows_activity_recipient? and ActivityItems::Recorder.record!(recipient:, source:, event_type:): work_assignment idempotency, grouped work_update repointing, followed membership and agent_work preference. Generic work-source recorder is not landed; message-only ActivityItem::record_message(tx, &Message) is final."
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -2350,8 +2360,9 @@
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "a member with notifications off gets no work items but a mentions member does",
       "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "owner": "WS12",
+      "evidence": null,
+      "seam": "WorkThreadEvent.activity_recipient_ids / allows_activity_recipient? and ActivityItems::Recorder.record!(recipient:, source:, event_type:): work_assignment idempotency, grouped work_update repointing, followed membership and agent_work preference. Generic work-source recorder is not landed; message-only ActivityItem::record_message(tx, &Message) is final."
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -2371,15 +2382,17 @@
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "a status update after a work assignment keeps the assignment item and repoints the update item",
       "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "owner": "WS12",
+      "evidence": null,
+      "seam": "WorkThreadEvent.activity_recipient_ids / allows_activity_recipient? and ActivityItems::Recorder.record!(recipient:, source:, event_type:): work_assignment idempotency, grouped work_update repointing, followed membership and agent_work preference. Generic work-source recorder is not landed; message-only ActivityItem::record_message(tx, &Message) is final."
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "work updates for one thread collapse into a single item",
       "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "owner": "WS12",
+      "evidence": null,
+      "seam": "WorkThreadEvent.activity_recipient_ids / allows_activity_recipient? and ActivityItems::Recorder.record!(recipient:, source:, event_type:): work_assignment idempotency, grouped work_update repointing, followed membership and agent_work preference. Generic work-source recorder is not landed; message-only ActivityItem::record_message(tx, &Message) is final."
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
@@ -2392,22 +2405,25 @@
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "work assigned by an agent honors the recipient's agent_work switch",
       "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "owner": "WS12",
+      "evidence": null,
+      "seam": "WorkThreadEvent.activity_recipient_ids / allows_activity_recipient? and ActivityItems::Recorder.record!(recipient:, source:, event_type:): work_assignment idempotency, grouped work_update repointing, followed membership and agent_work preference. Generic work-source recorder is not landed; message-only ActivityItem::record_message(tx, &Message) is final."
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "work assigned by a bot without an agent ignores the agent_work switch",
       "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "owner": "WS12",
+      "evidence": null,
+      "seam": "WorkThreadEvent.activity_recipient_ids / allows_activity_recipient? and ActivityItems::Recorder.record!(recipient:, source:, event_type:): work_assignment idempotency, grouped work_update repointing, followed membership and agent_work preference. Generic work-source recorder is not landed; message-only ActivityItem::record_message(tx, &Message) is final."
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",
       "test": "a caller-authorized record skips the source check but keeps idempotency",
       "status": "deferred-exact-scenario",
-      "owner": "WS17 continuation (keyword integration); WS12 (full recorder/lifecycle)",
-      "evidence": null
+      "owner": "WS12",
+      "evidence": null,
+      "seam": "ActivityItems::Recorder.record!(recipient:, source:, event_type:, skip_source_check: true): caller-authorized source scope plus grouping and recipient/source unique-index rescue; generic Rust recorder/source authorization is not landed."
     },
     {
       "file": "test/services/activity_items/recorder_test.rb",

@@ -22,6 +22,9 @@ travel_to(Time.utc(2026,3,2,16)) do
  grant=HuddleGrant.issue!(session:Session.find(ActiveRecord::FixtureSet.identify(:david_safari)),membership:direct.memberships.find_by!(user:))
  base_members=[room.memberships.find_by!(user:),room.memberships.find_by!(user:recipient),direct.memberships.find_by!(user:recipient)]
  base_sql=base_members.map { |m|insert_sql(m) }
+ # Membership bulk creation uses database-clock timestamps. Fix the test fixture's
+ # timestamps explicitly before capturing source SQL; payloads and badges remain unmodified.
+ board.memberships.update_all(created_at: Time.current, updated_at: Time.current)
  board_sql=[board,post,*board.memberships,nudge].map { |r|insert_sql(r) }
  roles=[user,recipient,other].map { |u|[u.id,u.role_before_type_cast] }.to_h
  subscriptions=Push::Subscription.where(user_id:[user.id,recipient.id,other.id]).map { |s|insert_sql(s) }
