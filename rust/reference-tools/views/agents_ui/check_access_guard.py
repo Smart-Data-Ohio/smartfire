@@ -13,9 +13,9 @@ try:
     source.write_text(original.replace("Before::default()", "Before::default().allow_agent_access().allow_bot_access()")
                      .replace("if require_current_user(c)?.is_bot()", "if false && require_current_user(c)?.is_bot()"))
     result = subprocess.run(
-        ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4",
-         "-p", "campfire", "agent_directory_", "--", "--nocapture"],
-        cwd=root, env={**os.environ, "CI": "1"}, capture_output=True, text=True,
+        ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked",
+         "-p", "campfire", "agent_directory_", "--", "--nocapture", "--test-threads=8"],
+        cwd=root, env={**os.environ, "CI": "1", "CARGO_BUILD_JOBS": "2"}, capture_output=True, text=True,
     )
     output = result.stdout + result.stderr
     print(output, end="")

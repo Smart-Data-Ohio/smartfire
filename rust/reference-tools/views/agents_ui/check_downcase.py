@@ -7,14 +7,14 @@ import subprocess
 root = Path(__file__).resolve().parents[3]
 source = root / "crates/db/src/models/agent_profile.rs"
 original = source.read_text()
-assert original.count("ruby_downcase(&record.user.name)") == 1
+assert original.count("rails_compat::unicode::downcase(&record.user.name)") == 1
 try:
-    source.write_text(original.replace("ruby_downcase(&record.user.name)", "record.user.name.to_lowercase()"))
+    source.write_text(original.replace("rails_compat::unicode::downcase(&record.user.name)", "record.user.name.to_lowercase()"))
     result = subprocess.run(
-        ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4",
+        ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked",
          "-p", "campfire", "agent_directory_lists_active_then_inactive_without_private_facts",
-         "--", "--nocapture"],
-        cwd=root, env={**os.environ, "CI": "1"}, capture_output=True, text=True,
+         "--", "--nocapture", "--test-threads=8"],
+        cwd=root, env={**os.environ, "CI": "1", "CARGO_BUILD_JOBS": "2"}, capture_output=True, text=True,
     )
     output = result.stdout + result.stderr
     print(output, end="")

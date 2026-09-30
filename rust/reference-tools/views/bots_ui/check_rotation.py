@@ -20,9 +20,9 @@ try:
         assert original.count(needle) == 1, f"{name}: review changed rotation seam"
         path.write_text(original.replace(needle, replacement))
         result = subprocess.run(
-            ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4",
-             "-p", "campfire", "ws11_key_rotation_requires_sudo_and_shows_the_key_once", "--", "--nocapture"],
-            cwd=root, env={**os.environ, "CI": "1"}, capture_output=True, text=True,
+            ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked",
+             "-p", "campfire", "ws11_key_rotation_requires_sudo_and_shows_the_key_once", "--", "--nocapture", "--test-threads=8"],
+            cwd=root, env={**os.environ, "CI": "1", "CARGO_BUILD_JOBS": "2"}, capture_output=True, text=True,
         )
         output = result.stdout + result.stderr
         assert result.returncode != 0 and "test result: FAILED." in output and "panicked at" in output, f"{name}: regression escaped HTTP test\n{output}"

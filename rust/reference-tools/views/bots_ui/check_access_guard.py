@@ -12,9 +12,9 @@ assert original.count(needle) == 1, "management guard changed; review the inject
 try:
     source.write_text(original.replace(needle, "if true || manages {"))
     result = subprocess.run(
-        ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked", "-j", "4",
-         "-p", "campfire", "bot_edit_pages_follow_admin_owner_and_legacy_access", "--", "--nocapture"],
-        cwd=root, env={**os.environ, "CI": "1"}, capture_output=True, text=True,
+        ["mise", "exec", "rust@1.98.1", "--", "cargo", "test", "--locked",
+         "-p", "campfire", "bot_edit_pages_follow_admin_owner_and_legacy_access", "--", "--nocapture", "--test-threads=8"],
+        cwd=root, env={**os.environ, "CI": "1", "CARGO_BUILD_JOBS": "2"}, capture_output=True, text=True,
     )
     output = result.stdout + result.stderr
     print(output, end="")
