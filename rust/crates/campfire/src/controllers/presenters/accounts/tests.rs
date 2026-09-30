@@ -32,6 +32,8 @@ mod agent_histories;
 mod agent_broadcasts;
 #[path = "tests/webhook_secrets.rs"]
 mod webhook_secrets;
+#[path = "tests/kill_switch.rs"]
+mod kill_switch;
 
 struct Test {
     booted: Booted,

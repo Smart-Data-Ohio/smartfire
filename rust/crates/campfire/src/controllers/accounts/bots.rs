@@ -258,7 +258,7 @@ pub async fn destroy(c: &mut Ctx) -> Result {
         .db
         .write(move |tx| {
             let agent = Agent::for_user(tx.conn(), bot.id)?;
-            bot.deactivate(tx)?;
+            bot.deactivate_with_audit(tx, &context)?;
             AuditLog::record(
                 tx,
                 NewAuditLog {
@@ -274,6 +274,35 @@ pub async fn destroy(c: &mut Ctx) -> Result {
         .await
         .map_err(Error::internal)?;
     redirect_to_bots(c)
+}
+
+/// Rails permits administrators and the owner without a sudo prompt.
+pub async fn kill_switch(c: &mut Ctx) -> Result {
+    concerns::before_actions(c, Before::default()).await?;
+    let bot = set_bot(c).await?;
+    ensure_can_manage_bot(c, &bot).await?;
+    let id = bot.id;
+    let agent = c
+        .app()
+        .db
+        .read(move |conn| Agent::for_user(conn, id))
+        .await
+        .map_err(Error::internal)?;
+    let Some(agent) = agent else {
+        return Ok(c.head(StatusCode::NOT_FOUND));
+    };
+    let context = audit_context(c)?;
+    let cancelled = c
+        .app()
+        .db
+        .write(move |tx| campfire_db::models::agent_lifecycle::kill_switch(tx, agent.id, &context))
+        .await
+        .map_err(Error::internal)?;
+    let plural = if cancelled == 1 { "" } else { "s" };
+    c.flash().set_notice(format!(
+        "Agent suspended; {cancelled} approval{plural} cancelled."
+    ));
+    c.redirect_to(&c.url_for(&campfire_routes::edit_account_bot(id)))
 }
 
 pub(super) async fn ensure_can_manage_bot(c: &mut Ctx, bot: &User) -> Result<()> {
