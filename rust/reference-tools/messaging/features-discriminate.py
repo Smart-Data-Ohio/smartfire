@@ -40,6 +40,9 @@ def check(name, relative, old, new, test):
         source.write_text(original)
 
 
+check("composer-thread-field-ids", "rust/crates/views/src/helpers/forms.rs",
+      'self.namespace.as_ref().map_or(id.clone(),|namespace|format!("{namespace}_{id}"))', 'id',
+      "controllers::message_features::composer_tests::complete_markdown_composers_match_four_actual_rails_partials")
 check("x-identity-order", "rust/crates/db/src/models/message_rendering/twitter.rs",
       "a.len().cmp(&b.len()).then_with(|| a.cmp(b))", "b.len().cmp(&a.len()).then_with(|| b.cmp(a))",
       "controllers::message_features::provider_tests::preloaded_x_cards_match_actual_rails_numeric_order_and_warm_refresh")

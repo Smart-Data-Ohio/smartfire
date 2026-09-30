@@ -2,6 +2,8 @@
 //! `Messages::AttachmentPresentation` and the boost partials.
 
 pub mod json;
+// WS8b-r composer seam: published reusable facts and partial.
+pub mod composer;
 pub mod parts;
 pub mod presentation;
 pub mod reactions;

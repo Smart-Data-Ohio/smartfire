@@ -33,6 +33,7 @@ pub struct FormWith {
     action: String,
     method: String,
     object_name: Option<String>,
+    namespace: Option<String>,
     id: Option<String>,
     class: Option<String>,
     data: Attrs,
@@ -47,6 +48,7 @@ pub fn form_with(url: impl std::fmt::Display) -> FormWith {
         action: url.to_string(),
         method: "post".to_string(),
         object_name: None,
+        namespace: None,
         id: None,
         class: None,
         data: attrs(),
@@ -76,6 +78,12 @@ impl FormWith {
 
     pub fn id(mut self, id: impl std::fmt::Display) -> Self {
         self.id = Some(id.to_string());
+        self
+    }
+
+    /// WS8b-r thread composer namespaces field IDs without changing parameter names.
+    pub fn namespace(mut self, namespace: impl Into<String>) -> Self {
+        self.namespace = Some(namespace.into());
         self
     }
 
@@ -114,6 +122,7 @@ impl FormWith {
     fn builder(&self) -> FormBuilder {
         FormBuilder {
             object_name: self.object_name.clone().unwrap_or_default(),
+            namespace: self.namespace.clone(),
             multipart: self.multipart.clone(),
         }
     }
@@ -243,6 +252,7 @@ impl FormWith {
 
 struct FormBuilder {
     object_name: String,
+    namespace: Option<String>,
     multipart: Rc<Cell<bool>>,
 }
 
@@ -258,11 +268,8 @@ impl FormBuilder {
 
     /// `Tags::Base#tag_id`: the sanitized object name and method joined by "_".
     fn tag_id(&self, method: &str) -> String {
-        if self.object_name.is_empty() {
-            return method.to_string();
-        }
-        let object = sanitize_object_name(&self.object_name);
-        format!("{object}_{method}")
+        let id=if self.object_name.is_empty() {method.to_string()} else {format!("{}_{method}",sanitize_object_name(&self.object_name))};
+        self.namespace.as_ref().map_or(id.clone(),|namespace|format!("{namespace}_{id}"))
     }
 
     fn add_default_name_and_id(&self, method: &str, options: &mut Attrs) {

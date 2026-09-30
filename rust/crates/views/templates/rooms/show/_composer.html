@@ -1,4 +1,4 @@
-{#- reference/app/views/rooms/show/_composer.html.erb (content_for :footer), with RoomsHelper#composer_form_tag -#}
+{% if show.markdown_composer.is_some() %}{{ self.markdown_composer() }}{% else %}{#- reference/app/views/rooms/show/_composer.html.erb (content_for :footer), with RoomsHelper#composer_form_tag -#}
   <div class="composer flex align-end gap position-relative"
       data-controller="typing-notifications" data-typing-notifications-active-class="typing-indicator--active">
     <a class="btn flex-item-no-shrink margin-block-end composer__context-btn" style="view-transition-name: input-switcher" href="{{ h::routes::searches() }}">
@@ -46,3 +46,4 @@
         <input data-composer-target="clientid" type="hidden" name="message[client_message_id]" id="message_client_message_id" />
 </form>    </turbo-frame>
   </div>
+{% endif %}

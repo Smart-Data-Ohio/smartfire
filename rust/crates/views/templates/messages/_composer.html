@@ -1,0 +1,93 @@
+
+    <div class="composer position-relative"
+      data-controller="typing-notifications"
+      data-typing-notifications-active-class="typing-indicator--active"
+      data-typing-notifications-room-id-value="{{ facts.room_id }}"
+      data-typing-notifications-thread-id-value="{{ facts.thread_value() }}">
+    <turbo-frame id="{{ facts.composer_frame_id() }}" class="composer__frame min-width">
+      {{ facts.form().open() }}
+        <fieldset data-composer-target="fields" contents>
+          <div class="composer__stack">
+            <div class="composer__context" hidden aria-live="polite" data-composer-target="context">
+              <div class="composer__context-copy min-width">
+                <span class="composer__context-label" data-composer-target="contextLabel"></span>
+                <span class="composer__context-preview overflow-ellipsis" data-composer-target="contextPreview"></span>
+                <span class="composer__feedback" role="alert" data-composer-target="feedback" hidden></span>
+              </div>
+
+              <label class="composer__reply-notify" for="{{ facts.reply_notify_id() }}" hidden data-composer-target="notifyControl">
+                <input id="{{ facts.reply_notify_id() }}" type="checkbox" name="message[reply_notify_author]" value="1" checked disabled data-composer-target="replyNotify"
+                       data-action="change->composer#notifyChanged" />
+                <span>Notify author</span>
+              </label>
+
+              <button type="button" class="btn btn--borderless composer__context-cancel"
+                      aria-label="Cancel message context" title="Cancel"
+                      data-action="composer#cancelContext">
+                {{ h::image_tag(ctx, "remove.svg", h::attrs().size(18).class("colorize--black").aria_hidden()) }}
+              </button>
+            </div>
+
+            {{ facts.form().hidden_field("reply_to_message_id", None, h::attrs().data("composer_target", "replyTo").autocomplete("off")) }}
+            <div class="composer__filelist flex flex--align-center gap flex-wrap" data-composer-target="fileList"></div>
+            <div class="composer__drive-attachments" aria-live="polite"></div>
+
+            <div class="composer__surface flex align-end gap">
+              <div class="composer__attach flex-item-no-shrink" data-controller="attach-menu">
+                <button type="button" class="btn btn--borderless composer__attachment-btn"
+                        title="Attach a file" aria-label="Attach a file"
+                        {% if facts.drive_available() %}aria-haspopup="menu" aria-expanded="false" aria-controls="{{ facts.attach_menu_id() }}"{% endif %}
+                        data-attach-menu-target="button"
+                        data-action="click->attach-menu#toggle keydown->attach-menu#buttonKeydown">
+                  <span class="composer__attachment-mark" aria-hidden="true">+</span>
+                </button>
+                <input type="file" class="attach-menu__file" tabindex="-1" aria-hidden="true" multiple
+                       data-attach-menu-target="fileInput" data-action="composer#filePicked" />
+{% if facts.drive_available() %}                  <div id="{{ facts.attach_menu_id() }}" class="room-menu attach-menu" popover="manual"
+                       role="menu" aria-label="Attach a file" hidden data-attach-menu-target="menu">
+                    <button type="button" class="btn room-menu__item attach-menu__item" role="menuitem"
+                            data-action="attach-menu#chooseDevice">
+                      From this device
+                    </button>
+                    <button type="button" class="btn room-menu__item attach-menu__item" role="menuitem"
+                            data-action="attach-menu#chooseDrive">
+                      From Google Drive
+                    </button>
+                  </div>
+{% endif %}              </div>
+
+{% if facts.drive_share() %}                <div class="drive-share flex-item-no-shrink" data-controller="drive-share"
+                     data-drive-share-room-id-value="{{ facts.room_id }}"
+                     data-drive-share-thread-id-value="{{ facts.thread_value() }}">
+                  <div class="drive-share__panel" role="dialog" aria-label="Share a Drive file" hidden
+                       data-drive-share-target="panel" data-action="keydown->drive-share#panelKey"></div>
+                </div>
+{% else if facts.drive_metadata() %}                <div class="drive-picker flex-item-no-shrink" data-controller="drive-picker">
+                  <div class="drive-picker__panel" role="dialog" aria-label="Find a Drive file" hidden
+                       data-drive-picker-target="panel" data-action="keydown->drive-picker#key">
+                    <input type="text" class="drive-picker__search input" placeholder="Search Drive files"
+                           autocomplete="off" autocapitalize="off" spellcheck="false"
+                           role="combobox" aria-label="Search Drive files" aria-expanded="false" aria-autocomplete="list"
+                           data-drive-picker-target="search" data-action="input->drive-picker#search" />
+                    <ul class="drive-picker__results" role="listbox" aria-label="Drive files" data-drive-picker-target="results"></ul>
+                    <p class="drive-picker__status txt-small" role="status" hidden data-drive-picker-target="status"></p>
+                  </div>
+                </div>
+{% endif %}
+              <div class="composer__editor min-width flex-item-grow" data-controller="markdown-editor">
+                {{ facts.text_area() }}
+              </div>
+
+              {{ scheduled_control }}
+
+              {{ facts.send_button(ctx) }}            </div>
+          </div>
+        </fieldset>
+
+        <div class="typing-indicator gap txt-small align-center flex-inline" data-typing-notifications-target="indicator">
+          <div class="typing-indicator__author spinner" data-typing-notifications-target="author"></div>
+        </div>
+
+        {{ facts.form().hidden_field("client_message_id", None, h::attrs().data("composer_target", "clientid")) }}
+</form>    </turbo-frame>
+  </div>{{ "\n\n" }}

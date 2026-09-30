@@ -184,3 +184,6 @@ mod date_tests;
 
 #[cfg(test)]
 mod provider_tests;
+
+#[cfg(test)]
+mod composer_tests;

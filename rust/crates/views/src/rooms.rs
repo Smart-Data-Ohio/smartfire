@@ -65,6 +65,9 @@ impl RoomView {
 /// What `rooms/show` shows.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct ShowView {
+    /// WS8b-r composer seam; ordinary room HTTP always supplies these facts.
+    #[serde(default)]
+    pub markdown_composer: Option<crate::messages::composer::Facts>,
     /// WS8bm2 room-header seam; the owning shell supplies the authorized count.
     #[serde(default)]
     pub pin_count: Option<i64>,
@@ -104,6 +107,11 @@ impl Page for Show<'_> {
 }
 
 impl Show<'_> {
+    fn markdown_composer(&self) -> h::Html {
+        let Some(facts)=&self.show.markdown_composer else {return h::empty()};
+        let scheduled_control=h::raw(crate::scheduled_messages::ComposerButton {ctx:self.ctx,room_id:facts.room_id,thread_id:facts.thread.as_ref().map(|t|t.id)}.render().expect("schedule control renders"));
+        h::raw(crate::messages::composer::Composer {ctx:self.ctx,facts,scheduled_control:&scheduled_control}.render().expect("Markdown composer renders"))
+    }
     fn pin_panel(&self) -> h::Html {
         self.show.pin_count.map(|count| {
             crate::pins::PanelPartial { ctx:self.ctx,room_id:self.show.room.id,

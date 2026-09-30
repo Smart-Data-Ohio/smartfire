@@ -211,11 +211,23 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
             presenter.cache_time_zone = cache_time_zone;
             let original = Room::original(conn)?.is_some_and(|original| original.id == room.id);
             let room_gid = crate::channels::room_gid(&room).to_param();
+            let room_view=presenter.room_view(&room,&user)?;
             Ok(campfire_views::rooms::ShowView {
+                // WS8b-r published composer mount; WS11 registry metadata is read-only.
+                markdown_composer: Some(campfire_views::messages::composer::Facts {
+                    room_id:room.id,room_kind:room_view.kind,room_name:room_view.display_name.clone(),thread:None,
+                    slash_commands:campfire_db::command_suggestions::for_room(conn,room.id,false,None)?.into_iter().map(|c|c.name).collect(),
+                    // WS14g read-only availability seam: do not load encrypted Google tokens.
+                    drive: {
+                        use rusqlite::OptionalExtension;
+                        let scopes:Option<String>=conn.query_row("SELECT scopes FROM google_accounts WHERE user_id=?",[user.id],|r|r.get(0)).optional()?.flatten();
+                        if scopes.is_some_and(|s|s.split_ascii_whitespace().any(|scope|scope=="https://www.googleapis.com/auth/drive.file")) {campfire_views::messages::composer::DriveFlow::Metadata} else {campfire_views::messages::composer::DriveFlow::None}
+                    },
+                }),
                 // WS8bm2 pin-header mount. The lazy frame retains its own room gate.
                 pin_count: Some(campfire_db::MessagePin::count_for_room(conn, room.id)?),
                 pin_param_key: Some(campfire_db::broadcasts::room_param_key(room.room_type)),
-                room: presenter.room_view(&room, &user)?,
+                room: room_view,
                 updated_at: room.updated_at.jiff(),
                 user: user_view(&app.secrets, &user),
                 // The page's message fragments come from the store the render then uses.
