@@ -18,6 +18,7 @@ files = [
     'app/models/message/agent_delivery.rb', 'app/models/agents/work_payload.rb', 'app/models/work_thread_link.rb',
     'app/models/github/pull_request.rb', 'app/models/github/pull_request_thread.rb', 'app/models/github_connected_account.rb',
     'app/models/membership.rb', 'app/models/user.rb', 'app/models/boost.rb',
+    'app/services/agents/event_polling.rb', 'app/services/agents/service_result.rb',
     'app/services/agents/posting.rb', 'app/services/agents/budgets.rb', 'app/models/agent_budget_notice.rb',
 ]
 command = ['docker', 'run', '--rm', '--name', 'ws11-reference-source-check', '--entrypoint', 'sha256sum',

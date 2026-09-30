@@ -18,6 +18,77 @@ pub const CAPABILITIES: [&str; 7] = [
 ];
 const LEGACY_CAPABILITIES: [&str; 3] = ["read_messages", "post_messages", "react"];
 
+fn active_agent(conn: &Connection, agent_id: i64) -> Result<Option<(i64, bool)>> {
+    let user = query_one(
+        conn,
+        "SELECT a.user_id FROM agents a JOIN users u ON u.id=a.user_id
+         WHERE a.id=? AND a.suspended_at IS NULL AND u.status=0",
+        [agent_id],
+        |r| r.get::<_, i64>(0),
+    )?;
+    user.map(|user| {
+        Ok((
+            user,
+            !exists(
+                conn,
+                "SELECT 1 FROM agent_grants WHERE agent_id=?",
+                [agent_id],
+            )?,
+        ))
+    })
+    .transpose()
+}
+
+/// Agent#can? with a resolved optional Room association. Membership is a caller check.
+pub fn capability_for_agent(
+    conn: &Connection,
+    agent_id: i64,
+    capability: &str,
+    room_id: Option<i64>,
+) -> Result<bool> {
+    let Some((_, legacy)) = active_agent(conn, agent_id)? else {
+        return Ok(false);
+    };
+    if !CAPABILITIES.contains(&capability) {
+        return Ok(false);
+    }
+    if let Some(room) = room_id
+        && exists(
+            conn,
+            "SELECT 1 FROM rooms WHERE id=? AND deleted_at IS NOT NULL",
+            [room],
+        )?
+    {
+        return Ok(false);
+    }
+    if legacy {
+        return Ok(LEGACY_CAPABILITIES.contains(&capability));
+    }
+    exists(
+        conn,
+        "SELECT 1 FROM agent_grants WHERE agent_id=? AND capability=? AND revoked_at IS NULL
+         AND (room_id IS NULL OR (? IS NOT NULL AND room_id=?))",
+        params![agent_id, capability, room_id, room_id],
+    )
+}
+
+pub fn has_capability_anywhere(conn: &Connection, agent_id: i64, capability: &str) -> Result<bool> {
+    let Some((_, legacy)) = active_agent(conn, agent_id)? else {
+        return Ok(false);
+    };
+    if !CAPABILITIES.contains(&capability) {
+        return Ok(false);
+    }
+    if legacy {
+        return Ok(LEGACY_CAPABILITIES.contains(&capability));
+    }
+    exists(
+        conn,
+        "SELECT 1 FROM agent_grants WHERE agent_id=? AND capability=? AND revoked_at IS NULL",
+        params![agent_id, capability],
+    )
+}
+
 /// AgentCredential.authenticate plus Agent#active?, record_use! and touch_last_seen!.
 /// Both activity stamps use conditional updates (Rails update_all, without callbacks).
 #[derive(Debug, Clone)]

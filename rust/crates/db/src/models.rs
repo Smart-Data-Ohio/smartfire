@@ -5,6 +5,7 @@ pub mod agent_access;
 pub mod agent_credential;
 pub mod agent_grant;
 pub mod agent_delivery;
+pub mod agent_event_access;
 pub mod agent_payloads;
 pub mod agent_posting;
 pub mod audit_log;
