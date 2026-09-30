@@ -3,7 +3,7 @@ use crate::ruby::{blank, strip};
 use crate::{
     config::Config,
     jobs::{IncinerationJob, MessageCreated, RoutingJob},
-    parse::{Email, Verdict, authenticated_sender},
+    parse::{Email, MAX_MIME_DEPTH, Verdict, authenticated_sender},
 };
 use campfire_db::{
     Attachment, Connection, Database, Event, Membership, Message, NewMessage, Room, Timestamp, Tx,
@@ -243,6 +243,11 @@ pub fn post(
     let Some(room) = find_room(tx.conn(), &token)? else {
         return Ok(Routed::Dropped);
     };
+    // Pinned Rails overflows its stack here. The WS10 parity exception preserves
+    // zero posts while committing a terminal bounce instead of leaving Processing.
+    if email.mime_depth > MAX_MIME_DEPTH {
+        return Ok(Routed::Bounced);
+    }
     if renderer.is_none() && email.source(false).is_some() {
         return Ok(Routed::WaitingForRenderer);
     }

@@ -5,6 +5,11 @@ use mailparse::{MailAddr, MailHeaderMap, ParsedMail};
 use regex::Regex;
 use std::sync::LazyLock;
 
+/// Last successful depth in pinned production Rails (Mail 2.9.1, 1 MiB Ruby VM stack).
+/// Depth 1,752 raises SystemStackError; the WS10 decision makes that a terminal bounce.
+/// Root multipart counts as one. See vectors/mail/mime-depth.json and its reference tool.
+pub const MAX_MIME_DEPTH: usize = 1_751;
+
 pub fn authenticated_sender(headers: &[String], authserv_id: Option<&str>, address: &str) -> bool {
     let Some(authserv_id) = authserv_id.filter(|s| !blank(s)) else {
         return false;
@@ -148,6 +153,8 @@ pub struct Email {
     pub auth_headers: Vec<String>,
     pub message_id: Option<String>,
     pub files: Vec<File>,
+    /// Multipart containers along the deepest inspected path; routing may stop at its cutoff.
+    pub mime_depth: usize,
 }
 fn addresses(mail: &ParsedMail<'_>, key: &str) -> Vec<mailparse::SingleInfo> {
     mail.headers
@@ -205,12 +212,12 @@ fn authentication_values(raw: &[u8]) -> Vec<String> {
 
 #[cfg(test)]
 thread_local! {
-    static BOUNDARY_SCAN_BYTES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+    static BOUNDARY_WORK: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
 }
 
-fn boundary_work(_bytes: usize) {
+fn boundary_work(_units: usize) {
     #[cfg(test)]
-    BOUNDARY_SCAN_BYTES.with(|count| count.set(count.get() + _bytes));
+    BOUNDARY_WORK.with(|count| count.set(count.get() + _units));
 }
 
 #[derive(Clone, Copy)]
@@ -336,17 +343,21 @@ impl<'a> BoundaryIndex<'a> {
 /// Mail 2.9.1 splits multipart bodies lazily and has no numeric depth limit. Mailparse's
 /// eager recursive tree can exhaust the process stack before Action Mailbox routes a bounce.
 /// Traverse indexed part offsets on an explicit stack; only leaves enter parse_mail.
-fn mime_leaves(raw: &[u8]) -> anyhow::Result<(ParsedMail<'_>, Vec<ParsedMail<'_>>, bool)> {
+fn mime_leaves(
+    raw: &[u8],
+    depth_limit: Option<usize>,
+) -> anyhow::Result<(ParsedMail<'_>, Vec<ParsedMail<'_>>, bool, usize)> {
     fn shallow(raw: &[u8]) -> anyhow::Result<(ParsedMail<'_>, usize)> {
         let (_, body) = mailparse::parse_headers(raw)?;
         Ok((mailparse::parse_mail(&raw[..body])?, body))
     }
     let (root, body) = shallow(raw)?;
     let mut boundaries = BoundaryIndex::new(raw, body);
-    let mut stack = vec![(0..raw.len(), false)];
+    let mut stack = vec![(0..raw.len(), false, 0)];
     let mut leaves = Vec::new();
     let mut multipart = false;
-    while let Some((range, digest)) = stack.pop() {
+    let mut mime_depth = 0;
+    while let Some((range, digest, depth)) = stack.pop() {
         let part = &raw[range.clone()];
         let (head, body) = shallow(part)?;
         let children = if head.ctype.mimetype.starts_with("multipart/") {
@@ -370,11 +381,18 @@ fn mime_leaves(raw: &[u8]) -> anyhow::Result<(ParsedMail<'_>, Vec<ParsedMail<'_>
             }
             leaves.push(leaf);
         } else {
+            let depth = depth + 1;
+            mime_depth = mime_depth.max(depth);
+            if depth_limit.is_some_and(|limit| depth > limit) {
+                // Preserve the headers and excessive depth for the terminal routing bounce.
+                // Nothing from an over-depth body is decoded or staged as an attachment.
+                return Ok((root, Vec::new(), true, mime_depth));
+            }
             let digest = head.ctype.mimetype == "multipart/digest";
-            stack.extend(children.into_iter().rev().map(|part| (part, digest)));
+            stack.extend(children.into_iter().rev().map(|part| (part, digest, depth)));
         }
     }
-    Ok((root, leaves, multipart))
+    Ok((root, leaves, multipart, mime_depth))
 }
 impl Email {
     /// Action Mailbox routes recipients before splitting the body. Non-room mail goes
@@ -385,10 +403,13 @@ impl Email {
         if headers.room_token().is_none() {
             return Ok(headers);
         }
-        Self::parse(raw)
+        Self::parse_with_depth_limit(raw, Some(MAX_MIME_DEPTH))
     }
     pub fn parse(raw: &[u8]) -> anyhow::Result<Self> {
-        let (mail, leaves, multipart) = mime_leaves(raw)?;
+        Self::parse_with_depth_limit(raw, None)
+    }
+    fn parse_with_depth_limit(raw: &[u8], depth_limit: Option<usize>) -> anyhow::Result<Self> {
+        let (mail, leaves, multipart, mime_depth) = mime_leaves(raw, depth_limit)?;
         let recipients = ["To", "Cc", "Bcc"]
             .iter()
             .flat_map(|h| addresses(&mail, h))
@@ -465,6 +486,7 @@ impl Email {
                     .to_owned()
             }),
             files,
+            mime_depth,
         })
     }
     pub fn room_token(&self) -> Option<String> {
@@ -542,11 +564,11 @@ mod tests {
                 .repeat(fixture["parts"].as_u64().unwrap() as usize),
         );
         raw.push_str(fixture["suffix"].as_str().unwrap());
-        BOUNDARY_SCAN_BYTES.with(|count| count.set(0));
+        BOUNDARY_WORK.with(|count| count.set(0));
         let email = Email::parse_for_routing(raw.as_bytes()).unwrap();
-        let scanned = BOUNDARY_SCAN_BYTES.with(std::cell::Cell::get);
+        let scanned = BOUNDARY_WORK.with(std::cell::Cell::get);
         println!(
-            "wide fixture bytes={} boundary bytes scanned={scanned}",
+            "wide fixture bytes={} boundary work units={scanned}",
             raw.len()
         );
         assert!(scanned <= 4 * raw.len());
@@ -563,21 +585,32 @@ mod tests {
             .unwrap()
             .replace("nobody@mail.test", "room-token@mail.test");
         assert_eq!(raw.len(), 324_088);
-        BOUNDARY_SCAN_BYTES.with(|count| count.set(0));
-        let email = Email::parse_for_routing(raw.as_bytes()).unwrap();
-        let scanned = BOUNDARY_SCAN_BYTES.with(std::cell::Cell::get);
-        println!(
-            "room fixture bytes={} boundary bytes scanned={scanned}",
-            raw.len()
-        );
-        assert!(
-            scanned <= 4 * raw.len(),
-            "quadratic boundary traversal: scanned {scanned} bytes for {} input bytes",
-            raw.len()
-        );
-        assert_eq!(email.room_token().as_deref(), Some("token"));
-        assert_eq!(email.body, "Hello");
-        assert!(email.files.is_empty());
+        for bounded in [false, true] {
+            BOUNDARY_WORK.with(|count| count.set(0));
+            let email = if bounded {
+                Email::parse_for_routing(raw.as_bytes())
+            } else {
+                Email::parse(raw.as_bytes())
+            }
+            .unwrap();
+            let work = BOUNDARY_WORK.with(std::cell::Cell::get);
+            println!(
+                "room fixture bytes={} bounded={bounded} boundary work units={work}",
+                raw.len()
+            );
+            assert!(
+                work <= 4 * raw.len(),
+                "quadratic boundary traversal: {work} work units for {} input bytes",
+                raw.len()
+            );
+            assert_eq!(email.room_token().as_deref(), Some("token"));
+            assert_eq!(email.body, if bounded { "" } else { "Hello" });
+            assert_eq!(
+                email.mime_depth,
+                if bounded { MAX_MIME_DEPTH + 1 } else { 4_000 }
+            );
+            assert!(email.files.is_empty());
+        }
     }
 
     #[test]
@@ -589,13 +622,10 @@ mod tests {
             .unwrap()
             .as_bytes();
         assert_eq!(raw.len(), 324_084);
-        BOUNDARY_SCAN_BYTES.with(|count| count.set(0));
+        BOUNDARY_WORK.with(|count| count.set(0));
         let email = Email::parse_for_routing(raw).unwrap();
-        let scanned = BOUNDARY_SCAN_BYTES.with(std::cell::Cell::get);
-        println!(
-            "fixture bytes={} boundary bytes scanned={scanned}",
-            raw.len()
-        );
+        let scanned = BOUNDARY_WORK.with(std::cell::Cell::get);
+        println!("fixture bytes={} boundary work units={scanned}", raw.len());
         assert!(
             scanned <= raw.len(),
             "quadratic boundary traversal: scanned {scanned} bytes for {} input bytes",

@@ -336,6 +336,130 @@ async fn review_deep_mime_bounces_without_posting() {
 }
 
 #[tokio::test]
+async fn review_deep_room_bounces_without_posting() {
+    let h = Harness::new().await;
+    let raw = review_fixture("deep_fixed_width_raw")
+        .replace("nobody@mail.test", &format!("room-{}@mail.test", h.token));
+    let id = inbound::accept(&h.db, h.storage.clone(), raw.into_bytes())
+        .await
+        .unwrap()
+        .unwrap();
+    let routed = inbound::route(
+        &h.db,
+        h.storage.clone(),
+        h.config.clone(),
+        h.throttle.clone(),
+        Some(Arc::new(render)),
+        id,
+    )
+    .await
+    .unwrap();
+    let (status, posts, incinerations) = h.db.read(move |c| Ok((
+        c.query_row("SELECT status FROM action_mailbox_inbound_emails WHERE id = ?", [id], |r| r.get::<_, i64>(0))?,
+        c.query_row("SELECT COUNT(*) FROM messages WHERE markdown_source IS NOT NULL", [], |r| r.get::<_, i64>(0))?,
+        c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class = 'ActionMailbox::IncinerationJob'", [], |r| r.get::<_, i64>(0))?,
+    ))).await.unwrap();
+    println!(
+        "deep room route={routed:?} status={status} posts={posts} incinerations={incinerations}"
+    );
+    assert_eq!(routed, Routed::Bounced);
+    assert_eq!(
+        (status, posts, incinerations),
+        (Status::Bounced as i64, 0, 1)
+    );
+    assert!(Status::Bounced.processed());
+    assert_eq!(
+        inbound::route(
+            &h.db,
+            h.storage.clone(),
+            h.config.clone(),
+            h.throttle.clone(),
+            Some(Arc::new(render)),
+            id,
+        )
+        .await
+        .unwrap(),
+        Routed::AlreadyRouted
+    );
+}
+
+#[tokio::test]
+async fn measured_mime_depth_boundary_matches_rails_with_terminal_bounce() {
+    let profile: serde_json::Value =
+        serde_json::from_str(include_str!("../../../vectors/mail/mime-depth.json")).unwrap();
+    assert_eq!(
+        campfire_mail::parse::MAX_MIME_DEPTH as u64,
+        profile["maximum_mime_depth"].as_u64().unwrap()
+    );
+    assert_eq!(
+        profile["first_overflow_depth"].as_u64().unwrap(),
+        campfire_mail::parse::MAX_MIME_DEPTH as u64 + 1
+    );
+    for case in profile["fixtures"].as_array().unwrap() {
+        let h = Harness::new().await;
+        let raw = case["raw"].as_str().unwrap().replace(
+            "room-token@mail.test",
+            &format!("room-{}@mail.test", h.token),
+        );
+        let id = inbound::accept(&h.db, h.storage.clone(), raw.into_bytes())
+            .await
+            .unwrap()
+            .unwrap();
+        let overflow = case["error"] == "SystemStackError";
+        let renderer: Option<Arc<dyn inbound::Renderer>> = if overflow {
+            None
+        } else {
+            Some(Arc::new(render))
+        };
+        let routed = inbound::route(
+            &h.db,
+            h.storage.clone(),
+            h.config.clone(),
+            h.throttle.clone(),
+            renderer,
+            id,
+        )
+        .await
+        .unwrap();
+        let (status, posts) =
+            h.db.read(move |c| {
+                Ok((
+                    c.query_row(
+                        "SELECT status FROM action_mailbox_inbound_emails WHERE id = ?",
+                        [id],
+                        |r| r.get::<_, i64>(0),
+                    )?,
+                    c.query_row(
+                        "SELECT COUNT(*) FROM messages WHERE markdown_source IS NOT NULL",
+                        [],
+                        |r| r.get::<_, i64>(0),
+                    )?,
+                ))
+            })
+            .await
+            .unwrap();
+        println!(
+            "measured depth={} route={routed:?} status={status} posts={posts}",
+            case["depth"]
+        );
+        if overflow {
+            assert_eq!(routed, Routed::Bounced);
+            assert_eq!((status, posts), (Status::Bounced as i64, 0));
+        } else {
+            assert!(
+                matches!(routed, Routed::Posted(_)),
+                "legitimate depth was not posted: {routed:?}"
+            );
+            assert_eq!((status, posts), (Status::Delivered as i64, 1));
+            assert_eq!(
+                h.message(routed).await.markdown_source.as_deref(),
+                case["source"].as_str()
+            );
+        }
+    }
+}
+
+#[tokio::test]
 async fn concurrent_routing_replays_post_and_enqueue_once() {
     let h = Harness::new().await;
     let id = inbound::accept(
