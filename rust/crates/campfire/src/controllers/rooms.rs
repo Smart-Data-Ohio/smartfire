@@ -216,6 +216,7 @@ async fn render_show(c: &mut Ctx, room: Room) -> Result {
                 // WS8b-r published composer mount; WS11 registry metadata is read-only.
                 markdown_composer: Some(campfire_views::messages::composer::Facts {
                     room_id:room.id,room_kind:room_view.kind,room_name:room_view.display_name.clone(),thread:None,
+                    room_param_key:Some(campfire_db::broadcasts::room_param_key(room.room_type)),
                     slash_commands:campfire_db::command_suggestions::for_room(conn,room.id,false,None)?.into_iter().map(|c|c.name).collect(),
                     // WS14g read-only availability seam: do not load encrypted Google tokens.
                     drive: {

@@ -16,7 +16,7 @@ async fn room_http_mounts_markdown_slash_and_schedule_controls() {
 }
 
 #[tokio::test]
-async fn complete_markdown_composers_match_four_actual_rails_partials() {
+async fn complete_markdown_composers_match_actual_rails_partials_and_sti_identifiers() {
     use askama::Template;
     use campfire_views::{
         helpers::raw,
@@ -31,7 +31,16 @@ async fn complete_markdown_composers_match_four_actual_rails_partials() {
     ))
     .unwrap();
     let app = super::quote_integration_tests::app_rows(serde_json::json!({})).await;
-    for case in oracle["cases"].as_array().unwrap() {
+    let sti: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../../vectors/messaging/composer_sti.json"
+    ))
+    .unwrap();
+    for case in oracle["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .chain(sti["cases"].as_array().unwrap())
+    {
         let facts = Facts {
             room_id: case["room_id"].as_i64().unwrap(),
             room_kind: if case["room_kind"] == "rooms_direct" {
@@ -39,6 +48,7 @@ async fn complete_markdown_composers_match_four_actual_rails_partials() {
             } else {
                 RoomKind::Closed
             },
+            room_param_key: Some(case["room_kind"].as_str().unwrap().into()),
             room_name: case["room_name"].as_str().unwrap().into(),
             thread: case["thread"].as_object().map(|_| Thread {
                 id: case["thread"]["id"].as_i64().unwrap(),
@@ -87,4 +97,48 @@ async fn room_composer_registry_reads_agent_metadata_and_is_outside_shared_fragm
     let form = &response.text()[start..end];
     assert!(form.contains("name=\"authenticity_token\""));
     assert!(form.contains("action=\"/rooms/699448326/messages\""));
+}
+
+#[tokio::test]
+async fn room_http_preserves_each_sti_composer_reply_identifier() {
+    let app = super::quote_integration_tests::app_rows(serde_json::json!({})).await;
+    let mut browser = app.david();
+    for (kind, param) in [
+        ("Rooms::Open", "rooms_open"),
+        ("Rooms::Closed", "rooms_closed"),
+        ("Rooms::Voice", "rooms_voice"),
+        ("Rooms::Stage", "rooms_stage"),
+        ("Rooms::Board", "rooms_board"),
+    ] {
+        app.db()
+            .write(move |tx| {
+                tx.conn()
+                    .execute("UPDATE rooms SET type=? WHERE id=?", (kind, QUIET_CORNER))?;
+                Ok(())
+            })
+            .await
+            .unwrap();
+        let response = browser.get(&format!("/rooms/{QUIET_CORNER}")).await;
+        assert_eq!(
+            response.status,
+            StatusCode::OK,
+            "{kind}: {}",
+            response.text()
+        );
+        assert!(
+            response
+                .text()
+                .contains(&format!("id=\"reply_notify_{param}_{QUIET_CORNER}\"")),
+            "{kind}"
+        );
+        assert!(
+            response
+                .text()
+                .contains(&format!("for=\"reply_notify_{param}_{QUIET_CORNER}\"")),
+            "{kind}"
+        );
+    }
+    println!(
+        "WS8bm2 STI composer HTTP: 5/5 room types preserve Rails reply-control ids and labels"
+    );
 }

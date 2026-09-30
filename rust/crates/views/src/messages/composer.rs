@@ -19,6 +19,9 @@ pub struct Thread {
 pub struct Facts {
     pub room_id: i64,
     pub room_kind: RoomKind,
+    /// `Room.model_name.param_key`; the legacy room kind collapses Voice/Stage/Board.
+    #[serde(default)]
+    pub room_param_key: Option<String>,
     pub room_name: String,
     pub thread: Option<Thread>,
     /// The complete registry and ordered room agent-command names, supplied by the presenter.
@@ -45,10 +48,11 @@ impl Facts {
         self.scoped_id("attach_menu", "attach-menu")
     }
     pub fn reply_notify_id(&self) -> String {
-        self.scoped_id(
-            "reply_notify",
-            &room_dom_id(self.room_kind, self.room_id, "reply_notify"),
-        )
+        let room_id = self.room_param_key.as_ref().map_or_else(
+            || room_dom_id(self.room_kind, self.room_id, "reply_notify"),
+            |key| format!("reply_notify_{key}_{}", self.room_id),
+        );
+        self.scoped_id("reply_notify", &room_id)
     }
     pub fn drive_available(&self) -> bool {
         self.drive != DriveFlow::None
