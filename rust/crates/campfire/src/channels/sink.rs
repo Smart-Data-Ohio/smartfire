@@ -43,6 +43,10 @@ fn broadcast(cable: &Cable, app: Option<&App>, request: &BroadcastRequest) {
             if let Some(app) = app && super::message_features::deliver(cable, app, &broadcast)? { return Ok(()); }
             messaging(cable, app, &broadcast)
         }),
+        campfire_db::models::user_status_settings::updates::StatusBadgeBroadcast::KIND =>
+            decode(request).and_then(|broadcast| status_badge(cable, broadcast)),
+        campfire_db::models::user_status_settings::updates::OooNoticeBroadcast::KIND =>
+            decode(request).and_then(|broadcast| ooo_notice(cable, broadcast)),
         kind => Err(anyhow::anyhow!("no handler for the {kind} broadcast")),
     };
     if let Err(error) = result {

@@ -481,5 +481,6 @@ mod opens_rails_cases;
 
 #[cfg(test)]
 mod closeds_rails_cases;
+#[cfg(test)]
 #[path = "rooms/ws17_ooo_tests.rs"]
 mod ws17_ooo_tests;

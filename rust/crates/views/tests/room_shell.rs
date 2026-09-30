@@ -58,6 +58,7 @@ fn view(row: &serde_json::Value) -> rooms::ShowView {
         jump_to_unread_url: None,
         unread_divider_message_id: None,
         unread_count: 0,
+        ooo_notice_members: vec![],
     }
 }
 #[test]

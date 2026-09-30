@@ -164,7 +164,7 @@ impl<'a> Presenter<'a> {
     }
     pub(crate) fn preload_search(&self, messages: &[Message]) -> Result<Self> {
         let data = super::searches::preloads::Preloads::load(self, messages)?;
-        Ok(Self { conn:self.conn,secrets:self.secrets,storage:self.storage,rich_text:self.rich_text,now:self.now,
+        Ok(Self { app:self.app,conn:self.conn,secrets:self.secrets,storage:self.storage,rich_text:self.rich_text,now:self.now,
             request_host:self.request_host.clone(),cache_base_url:self.cache_base_url.clone(),
             users:RefCell::default(),room_names:RefCell::default(),search_preloads:Some(data) })
     }
@@ -253,8 +253,7 @@ impl<'a> Presenter<'a> {
         }
         if let Some(data) = &self.search_preloads {
             let room = data.records.rooms.get(&room_id).cloned().ok_or(campfire_db::Error::RecordNotFound("Room"))?;
-            let names = data.records.direct_names.get(&room_id).cloned().unwrap_or_default();
-            let name = room_display_name(room.name.as_deref(),room.direct(),&names,None);
+            let name = self.room_display_name(&room, None)?;
             return Ok((room,name));
         }
         let room = Room::find(self.conn, room_id)?;
