@@ -105,7 +105,7 @@ fn user(p: &Presenter<'_>, user: &User, base: &str) -> Result<Value> {
         "avatar_url": format!("{base}{}", avatar_path(p.secrets, user)), "icon_name": icon, "icon_avatar_url": icon_url}))
 }
 
-fn thread(p: &Presenter<'_>, thread: &ChannelThread, viewer: &User, base: &str) -> Result<Value> {
+pub(crate) fn thread(p: &Presenter<'_>, thread: &ChannelThread, viewer: &User, base: &str) -> Result<Value> {
     let member = thread.membership_for(p.conn, viewer.id)?;
     let room = thread.room(p.conn)?;
     let settings = thread.settings_manageable_by(p.conn, viewer)?;

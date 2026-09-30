@@ -105,3 +105,27 @@ async fn root_formats_and_destroy_side_effects_match_rails() {
         assert_eq!(reply.status.as_u16(), row["status"].as_u64().unwrap() as u16, "{action}.{format}: {}", reply.text());
     }
 }
+
+#[tokio::test]
+async fn page_anchors_require_alive_membership_and_a_root_message() {
+    let (app, ids) = fixture().await;
+    let parent = ids[0];
+    let child = app.db().write(move |tx| {
+        let thread = campfire_db::ChannelThread::create(tx, campfire_db::NewChannelThread { room_id: ALL_TALK, creator_id: DAVID,
+            parent_message_id: Some(parent), name: Some("Paging thread".into()), ..Default::default() })?;
+        Message::create(tx, NewMessage { room_id: ALL_TALK, creator_id: DAVID, thread_id: Some(thread.id),
+            markdown_source: Some("Hidden child".into()), ..Default::default() })
+    }).await.unwrap();
+    let mut david = app.david();
+    for direction in ["before", "after"] {
+        assert_eq!(david.get(&format!("/rooms/{ALL_TALK}/messages?{direction}={}", child.id)).await.status, StatusCode::NOT_FOUND);
+    }
+    let mut kevin = app.sign_in(KEVIN).await;
+    let path = format!("/rooms/{ALL_TALK}/messages?before={parent}");
+    assert_eq!(kevin.get(&path).await.status, StatusCode::NOT_FOUND);
+    app.db().write(|tx| { tx.conn().execute("DELETE FROM memberships WHERE user_id = ? AND room_id = ?", (DAVID, ALL_TALK))?; Ok(()) }).await.unwrap();
+    assert_eq!(david.get(&path).await.status, StatusCode::NOT_FOUND);
+    let mut jason = app.sign_in(JASON).await;
+    app.db().write(|tx| { tx.conn().execute("UPDATE rooms SET deleted_at = ? WHERE id = ?", (tx.now(), ALL_TALK))?; Ok(()) }).await.unwrap();
+    assert_eq!(jason.get(&path).await.status, StatusCode::NOT_FOUND);
+}

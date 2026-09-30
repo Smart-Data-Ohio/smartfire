@@ -8,6 +8,8 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[3]
 FILES = [
     "app/controllers/messages_controller.rb",
+    "app/controllers/channel_threads_controller.rb",
+    "app/models/thread_membership.rb",
     "app/controllers/concerns/messages/drive_attachable.rb",
     "app/controllers/concerns/room_scoped.rb",
     "app/controllers/concerns/set_current_request.rb",

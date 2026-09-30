@@ -5,7 +5,7 @@
 
 pub mod boosts;
 pub mod by_bots;
-mod payload;
+pub(crate) mod payload;
 mod freshness;
 pub(crate) mod rendered;
 #[cfg(test)]
@@ -412,24 +412,43 @@ pub(crate) fn attachment_assignment(permitted: &campfire_kit::ParamMap) -> Resul
 
 /// `@room.root_messages.find(params[:before])` and friends (`find_paged_messages`).
 pub(crate) async fn find_paged_messages(c: &Ctx, room: &Room) -> Result<Vec<Message>> {
-    let present = |key: &str| c.params.get(key).filter(|p| p.is_present()).map(|p| p.as_str().and_then(cast_integer));
+    let present = |key: &str| c.params.get(key).filter(|p| p.is_present()).cloned();
     let (before, after) = (present("before"), present("after"));
     let room_id = room.id;
     c.app()
         .db
         .read(move |conn| match (before, after) {
             (Some(before), _) => {
-                let message = Message::find_in(conn, Timeline::Room(room_id), before.ok_or(campfire_db::Error::RecordNotFound("Message"))?)?;
+                let message = paging_anchor(conn, Timeline::Room(room_id), &before)?;
                 Message::page_before(conn, Timeline::Room(room_id), &message)
             }
             (None, Some(after)) => {
-                let message = Message::find_in(conn, Timeline::Room(room_id), after.ok_or(campfire_db::Error::RecordNotFound("Message"))?)?;
+                let message = paging_anchor(conn, Timeline::Room(room_id), &after)?;
                 Message::page_after(conn, Timeline::Room(room_id), &message)
             }
             (None, None) => Message::last_page(conn, Timeline::Room(room_id)),
         })
         .await
         .map_err(db_error)
+}
+
+fn paging_anchor(conn: &campfire_db::Connection, timeline: Timeline, value: &Param) -> campfire_db::Result<Message> {
+    if let Param::Array(values) = value {
+        // ActiveRecord find(array) first resolves every id, then pagination raises because the
+        // resulting Array has no created_at. Unknown ids still raise RecordNotFound first.
+        fn flatten<'a>(values: &'a [Param], ids: &mut Vec<&'a Param>) {
+            for value in values {
+                match value { Param::Array(values) => flatten(values, ids), Param::Null => {}, value => ids.push(value) }
+            }
+        }
+        let mut ids = Vec::new();
+        flatten(values, &mut ids);
+        if ids.is_empty() { return Err(campfire_db::Error::RecordNotFound("Message")); }
+        for id in ids { paging_anchor(conn, timeline, id)?; }
+        return Err(campfire_db::Error::Other("Array has no created_at pagination cursor".into()));
+    }
+    let id = value.to_s().as_deref().and_then(cast_integer).ok_or(campfire_db::Error::RecordNotFound("Message"))?;
+    Message::find_in(conn, timeline, id)
 }
 
 // --- Creating, updating, destroying ---------------------------------------------------------------

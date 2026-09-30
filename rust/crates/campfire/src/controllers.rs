@@ -38,6 +38,7 @@ use crate::active_storage;
 // Controller modules (one per Rails controller namespace), plus the presenters that map rows to
 // view models. Controller agents add their `pub mod` lines here.
 pub mod accounts;
+pub mod channel_threads;
 pub mod autocompletable;
 pub mod csp_reports;
 pub mod first_runs;
@@ -185,6 +186,9 @@ fn ported(endpoint: &str) -> Option<Arc<dyn Action>> {
         "messages#show" => arc(messages::show),
         "messages#update" => arc(messages::update),
         "messages#destroy" => arc(messages::destroy),
+        "channel_threads#join" => arc(channel_threads::join),
+        "channel_threads#leave" => arc(channel_threads::leave),
+        "channel_threads#read" => arc(channel_threads::read),
         "messages/boosts/by_bots#create" => arc(messages::boosts::by_bots::create),
         "messages/boosts/by_bots#destroy" => arc(messages::boosts::by_bots::destroy),
         "messages/by_bots#index" => arc(messages::by_bots::index),
