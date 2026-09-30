@@ -51,6 +51,16 @@ try {
     await page.locator("#profile-card-popover[hidden]").waitFor({ state: "attached" })
     assert.equal(await trigger.evaluate(el => el === document.activeElement), true)
   })
+  await scenario("sidebar-avatar-keyboard-card", async page => {
+    const trigger = page.locator("#direct_rooms button.profile-card-avatar").first()
+    await trigger.press("Enter")
+    await visibleCard(page).waitFor({ state: "attached" })
+    await page.locator("#user_card .profile-card__name").waitFor()
+    assert.equal(new URL(page.url()).pathname, "/users")
+    await page.keyboard.press("Escape")
+    await page.locator("#profile-card-popover[hidden]").waitFor({ state: "attached" })
+    assert.equal(await trigger.evaluate(el => el === document.activeElement), true)
+  })
   await scenario("shift-click-range", async page => {
     // The parity seed includes Deploy Bot: this range contains two bots and three humans.
     await box(page, "bender").check()

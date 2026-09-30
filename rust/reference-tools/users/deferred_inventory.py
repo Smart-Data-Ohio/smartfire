@@ -53,6 +53,7 @@ covered.update({
         "Enter in the picker filter selects the single visible match",
         "clicking a picker row toggles it while the name still opens the profile card",
         "the new-DM picker does not overflow at phone width",
+        "the sidebar avatar trigger opens the profile card by keyboard",
         "Esc with a closed profile card stays unhandled for later listeners",
         "multi-selecting three people in the directory lands in their group DM",
         "shift-click extends the checkbox range", "long-press selects a row on touch",
