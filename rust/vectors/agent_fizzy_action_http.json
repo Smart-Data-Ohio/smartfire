@@ -2542,6 +2542,1982 @@
         }
       ],
       "notices": []
+    },
+    {
+      "name": "rest_replay_type_0",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":true}",
+      "setup": {
+        "replay": true
+      },
+      "status": 202,
+      "response_body": "{\"id\":1900700002,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        },
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": "t",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "mcp_replay_type_0",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":true}}}",
+      "setup": {
+        "replay": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900700002,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T16:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":1900700002,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        },
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": "t",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "rest_replay_type_1",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":42}",
+      "setup": {
+        "replay": true
+      },
+      "status": 202,
+      "response_body": "{\"id\":1900700002,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        },
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": "42",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "mcp_replay_type_1",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":42}}}",
+      "setup": {
+        "replay": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900700002,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T16:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":1900700002,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        },
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": "42",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "rest_replay_type_2",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":1.5}",
+      "setup": {
+        "replay": true
+      },
+      "status": 202,
+      "response_body": "{\"id\":1900700002,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        },
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": "1.5",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "mcp_replay_type_2",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":1.5}}}",
+      "setup": {
+        "replay": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900700002,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T16:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":1900700002,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        },
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": "1.5",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "rest_replay_type_3",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":[]}",
+      "setup": {
+        "replay": true
+      },
+      "status": 202,
+      "response_body": "{\"id\":1900700002,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        },
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": null,
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "mcp_replay_type_3",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":[]}}}",
+      "setup": {
+        "replay": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900700002,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T16:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":1900700002,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        },
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": null,
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "rest_replay_type_4",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":[\"wire-action\"]}",
+      "setup": {
+        "replay": true
+      },
+      "status": 200,
+      "response_body": "{\"id\":1900700001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "mcp_replay_type_4",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":[\"wire-action\"]}}}",
+      "setup": {
+        "replay": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900700001,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T16:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":1900700001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "rest_replay_type_5",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":[\"missing\",\"wire-action\"]}",
+      "setup": {
+        "replay": true
+      },
+      "status": 200,
+      "response_body": "{\"id\":1900700001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "mcp_replay_type_5",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":[\"missing\",\"wire-action\"]}}}",
+      "setup": {
+        "replay": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900700001,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T16:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":1900700001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "rest_replay_type_6",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":[[\"wire-action\"]]}",
+      "setup": {
+        "replay": true
+      },
+      "status": 200,
+      "response_body": "{\"id\":1900700001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "mcp_replay_type_6",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":[[\"wire-action\"]]}}}",
+      "setup": {
+        "replay": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900700001,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T16:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":1900700001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "rest_replay_type_7",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":[false]}",
+      "setup": {
+        "replay": true
+      },
+      "status": 202,
+      "response_body": "{\"id\":1900700002,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        },
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": "[false]",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "mcp_replay_type_7",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":[false]}}}",
+      "setup": {
+        "replay": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900700002,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T16:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":1900700002,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        },
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": "[false]",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "rest_replay_type_8",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":[null]}",
+      "setup": {
+        "replay": true
+      },
+      "status": 202,
+      "response_body": "{\"id\":1900700002,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        },
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": null,
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "mcp_replay_type_8",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":[null]}}}",
+      "setup": {
+        "replay": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900700002,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T16:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":1900700002,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        },
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": "[nil]",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "rest_replay_type_9",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":[{\"name\":\"x\"}]}",
+      "setup": {
+        "replay": true
+      },
+      "status": 500,
+      "response_body": "{\"status\":500,\"error\":\"Internal Server Error\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=UTF-8"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "mcp_replay_type_9",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":[{\"name\":\"x\"}]}}}",
+      "setup": {
+        "replay": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"error\":{\"code\":-32603,\"message\":\"Internal error\"}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "rest_replay_type_10",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":{}}",
+      "setup": {
+        "replay": true
+      },
+      "status": 202,
+      "response_body": "{\"id\":1900700002,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        },
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": null,
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "mcp_replay_type_10",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":{}}}}",
+      "setup": {
+        "replay": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900700002,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T16:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":1900700002,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        },
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": null,
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "rest_nil_replay",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":[null]}",
+      "setup": {
+        "replay": true,
+        "null_external": true
+      },
+      "status": 202,
+      "response_body": "{\"id\":1900700002,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": null,
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        },
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": null,
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "mcp_nil_replay",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":[null]}}}",
+      "setup": {
+        "replay": true,
+        "null_external": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900700001,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T16:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":1900700001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.close",
+          "summary": "Previous",
+          "payload": "{\"kind\":\"close\"}",
+          "external_id": null,
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": false,
+          "account_matches": false,
+          "fizzy_user_id": null,
+          "fizzy_user_name": null
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "rest_hash_without_grant",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":{\"name\":\"x\"}}",
+      "setup": {
+        "no_grant": true
+      },
+      "status": 403,
+      "response_body": "{\"error\":\"Forbidden: agent lacks external_action capability\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [],
+      "inbox": [],
+      "notices": []
+    },
+    {
+      "name": "mcp_hash_without_grant",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":{\"name\":\"x\"}}}}",
+      "setup": {
+        "no_grant": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Forbidden: agent lacks external_action capability\"}],\"structuredContent\":{\"error\":\"Forbidden: agent lacks external_action capability\",\"status\":\"forbidden\"},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [],
+      "inbox": [],
+      "notices": []
+    },
+    {
+      "name": "rest_hash_without_account",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":{\"name\":\"x\"}}",
+      "setup": {
+        "no_account": true
+      },
+      "status": 422,
+      "response_body": "{\"error\":\"Agent owner has no usable Fizzy account\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [],
+      "inbox": [],
+      "notices": []
+    },
+    {
+      "name": "mcp_hash_without_account",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":{\"name\":\"x\"}}}}",
+      "setup": {
+        "no_account": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Agent owner has no usable Fizzy account\"}],\"structuredContent\":{\"error\":\"Agent owner has no usable Fizzy account\",\"status\":\"unprocessable_entity\"},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [],
+      "inbox": [],
+      "notices": []
+    },
+    {
+      "name": "rest_budget_zone_0",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":\"wire-action\"}",
+      "setup": {
+        "cap": 0,
+        "zone": "Eastern Time (US & Canada)"
+      },
+      "status": 429,
+      "response_body": "{\"error\":\"Daily external action budget exceeded (0/day)\",\"cap\":\"external_actions\",\"limit\":0,\"retry_after\":46799}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [],
+      "inbox": [],
+      "notices": [
+        {
+          "cap": "external_actions",
+          "day": "2026-03-02"
+        }
+      ]
+    },
+    {
+      "name": "mcp_budget_zone_0",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":\"wire-action\"}}}",
+      "setup": {
+        "cap": 0,
+        "zone": "Eastern Time (US & Canada)"
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Daily external action budget exceeded (0/day)\"}],\"structuredContent\":{\"error\":\"Daily external action budget exceeded (0/day)\",\"status\":\"too_many_requests\",\"cap\":\"external_actions\",\"limit\":0,\"retry_after\":46799},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [],
+      "inbox": [],
+      "notices": [
+        {
+          "cap": "external_actions",
+          "day": "2026-03-02"
+        }
+      ]
+    },
+    {
+      "name": "rest_budget_zone_1",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":\"wire-action\"}",
+      "setup": {
+        "cap": 0,
+        "zone": "Asia/Tokyo"
+      },
+      "status": 429,
+      "response_body": "{\"error\":\"Daily external action budget exceeded (0/day)\",\"cap\":\"external_actions\",\"limit\":0,\"retry_after\":82799}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [],
+      "inbox": [],
+      "notices": [
+        {
+          "cap": "external_actions",
+          "day": "2026-03-03"
+        }
+      ]
+    },
+    {
+      "name": "mcp_budget_zone_1",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":\"wire-action\"}}}",
+      "setup": {
+        "cap": 0,
+        "zone": "Asia/Tokyo"
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Daily external action budget exceeded (0/day)\"}],\"structuredContent\":{\"error\":\"Daily external action budget exceeded (0/day)\",\"status\":\"too_many_requests\",\"cap\":\"external_actions\",\"limit\":0,\"retry_after\":82799},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [],
+      "inbox": [],
+      "notices": [
+        {
+          "cap": "external_actions",
+          "day": "2026-03-03"
+        }
+      ]
+    },
+    {
+      "name": "rest_budget_zone_2",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":\"wire-action\"}",
+      "setup": {
+        "cap": 0,
+        "zone": "Invalid Zone"
+      },
+      "status": 429,
+      "response_body": "{\"error\":\"Daily external action budget exceeded (0/day)\",\"cap\":\"external_actions\",\"limit\":0,\"retry_after\":28799}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [],
+      "inbox": [],
+      "notices": [
+        {
+          "cap": "external_actions",
+          "day": "2026-03-02"
+        }
+      ]
+    },
+    {
+      "name": "mcp_budget_zone_2",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":\"wire-action\"}}}",
+      "setup": {
+        "cap": 0,
+        "zone": "Invalid Zone"
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"Daily external action budget exceeded (0/day)\"}],\"structuredContent\":{\"error\":\"Daily external action budget exceeded (0/day)\",\"status\":\"too_many_requests\",\"cap\":\"external_actions\",\"limit\":0,\"retry_after\":28799},\"isError\":true}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [],
+      "inbox": [],
+      "notices": [
+        {
+          "cap": "external_actions",
+          "day": "2026-03-02"
+        }
+      ]
+    },
+    {
+      "name": "rest_inbox_preference_0",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":\"wire-action\"}",
+      "setup": {
+        "preference": false
+      },
+      "status": 202,
+      "response_body": "{\"id\":1900700001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "mcp_inbox_preference_0",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":\"wire-action\"}}}",
+      "setup": {
+        "preference": false
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900700001,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T16:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":1900700001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "rest_inbox_preference_1",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":\"wire-action\"}",
+      "setup": {
+        "preference": 0
+      },
+      "status": 202,
+      "response_body": "{\"id\":1900700001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "mcp_inbox_preference_1",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":\"wire-action\"}}}",
+      "setup": {
+        "preference": 0
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900700001,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T16:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":1900700001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "rest_inbox_preference_2",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":\"wire-action\"}",
+      "setup": {
+        "preference": "0"
+      },
+      "status": 202,
+      "response_body": "{\"id\":1900700001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "mcp_inbox_preference_2",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":\"wire-action\"}}}",
+      "setup": {
+        "preference": "0"
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900700001,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T16:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":1900700001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "rest_inbox_preference_3",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":\"wire-action\"}",
+      "setup": {
+        "preference": "false"
+      },
+      "status": 202,
+      "response_body": "{\"id\":1900700001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "mcp_inbox_preference_3",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":\"wire-action\"}}}",
+      "setup": {
+        "preference": "false"
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900700001,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T16:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":1900700001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "rest_inbox_preference_4",
+      "method": "post",
+      "path": "/agents/fizzy/card_actions",
+      "body": "{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":\"wire-action\"}",
+      "setup": {
+        "preference": true
+      },
+      "status": 202,
+      "response_body": "{\"id\":1900700001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
+    },
+    {
+      "name": "mcp_inbox_preference_4",
+      "method": "post",
+      "path": "/agents/mcp",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"tools/call\",\"params\":{\"name\":\"create_fizzy_card\",\"arguments\":{\"kind\":\"create\",\"board_id\":\"board\",\"title\":\" α \\u0026 β \\u003c \\u003e \",\"description\":\" Details α \\u0026 β \",\"external_id\":\"wire-action\"}}}",
+      "setup": {
+        "preference": true
+      },
+      "status": 200,
+      "response_body": "{\"jsonrpc\":\"2.0\",\"id\":11,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\\"id\\\":1900700001,\\\"status\\\":\\\"pending\\\",\\\"expires_at\\\":\\\"2026-03-03T16:00:00.000Z\\\"}\"}],\"structuredContent\":{\"id\":1900700001,\"status\":\"pending\",\"expires_at\":\"2026-03-03T16:00:00.000Z\"},\"isError\":false}}",
+      "response_headers": {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "no-store",
+        "pragma": "no-cache"
+      },
+      "calls": [],
+      "reason": null,
+      "approvals": [
+        {
+          "action": "fizzy.create",
+          "summary": "Create Fizzy card in board board (account 897362094): α & β < >",
+          "payload": "{\"account_id\":\"897362094\",\"kind\":\"create\",\"board_id\":\"board\",\"number\":null,\"column_id\":null,\"title\":\"α \\u0026 β \\u003c \\u003e\",\"description\":\"Details α \\u0026 β\",\"body\":null}",
+          "external_id": "wire-action",
+          "status": "pending",
+          "expires_at": "2026-03-03T16:00:00.000Z",
+          "credential_matches": true,
+          "account_matches": true,
+          "fizzy_user_id": "owner-id",
+          "fizzy_user_name": "Fixture Owner"
+        }
+      ],
+      "inbox": [
+        {
+          "user": 127326141,
+          "event": "agent_approval_request"
+        },
+        {
+          "user": 149087659,
+          "event": "agent_approval_request"
+        }
+      ],
+      "notices": []
     }
   ]
 }

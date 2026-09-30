@@ -35,6 +35,14 @@ add.call("validation_before_budget",valid.merge(title:"a"*501),{cap:0})
 add.call("nested_ignored",{card_action:valid})
 add.call("create_ignored_extras",valid.merge(number:"wrong",body:"ignored",column_id:"wrong"))
 add.call("close_ignored_extras",{kind:"close",number:579,title:"a"*501,body:"a"*3501,external_id:"wire-action"})
+[true,42,1.5,[],["wire-action"],["missing","wire-action"],[["wire-action"]],[false],[nil],[{name:"x"}],{}].each_with_index do |external,i|
+ add.call("replay_type_#{i}",valid.merge(external_id:external),{replay:true})
+end
+add.call("nil_replay",valid.merge(external_id:[nil]),{replay:true,null_external:true})
+add.call("hash_without_grant",valid.merge(external_id:{name:"x"}),{no_grant:true})
+add.call("hash_without_account",valid.merge(external_id:{name:"x"}),{no_account:true})
+["Eastern Time (US & Canada)","Asia/Tokyo","Invalid Zone"].each_with_index { |zone,i|add.call("budget_zone_#{i}",valid,{cap:0,zone:zone}) }
+[false,0,"0","false",true].each_with_index { |preference,i|add.call("inbox_preference_#{i}",valid,{preference:preference}) }
 travel_to Time.utc(2026,3,2,16) do
  results=cases.map do |item|
   result=nil; execution=Rails.application.executor.run!(reset:true)
@@ -45,6 +53,8 @@ travel_to Time.utc(2026,3,2,16) do
    AgentBudgetNotice.where(agent_id:agent.id).delete_all
    agent.agent_grants.delete_all; agent.agent_credentials.delete_all
    agent.update_columns(owner_id:setup[:no_owner] ? nil : 127326141,suspended_at:nil,daily_external_action_cap:setup[:cap])
+   User.find(394959859).update_columns(time_zone:setup[:zone])
+   User.find(127326141).update_columns(inbox_preferences:setup.key?(:preference) ? {"agent_approvals"=>setup[:preference]} : {})
    agent.agent_credentials.create!(name:"HTTP contract",created_by_id:127326141,token_digest:AgentCredential.digest(secret),token_last_four:AgentCredential.digest(secret).first(4))
    agent.agent_grants.create!(capability:"external_action",room_id:setup[:room_grant] ? 486777696 : nil,granted_by_id:127326141) unless setup[:no_grant]
    FizzyConnectedAccount.where(user_id:127326141).delete_all
@@ -57,7 +67,7 @@ travel_to Time.utc(2026,3,2,16) do
    AgentBudgetNotice.where(agent_id:agent.id).delete_all
    ActiveRecord::Base.connection.execute("UPDATE sqlite_sequence SET seq=1900700000 WHERE name='agent_approvals'")
    if setup[:replay]
-    agent.agent_approvals.create!(action:"fizzy.close",summary:"Previous",payload:'{"kind":"close"}',external_id:"wire-action",expires_at:Time.current+1.day)
+    agent.agent_approvals.create!(action:"fizzy.close",summary:"Previous",payload:'{"kind":"close"}',external_id:setup[:null_external] ? nil : "wire-action",expires_at:Time.current+1.day)
     agent.agent_approvals.update_all(expires_at:Time.current-1.second) if setup[:expired]
    end
    WebMock.reset!

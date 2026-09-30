@@ -35,6 +35,8 @@ async fn check(case: &Value) {
         if config["no_grant"]!=true {
             tx.conn().execute("INSERT INTO agent_grants(agent_id,capability,room_id,granted_by_id,created_at,updated_at) VALUES(?,'external_action',?,127326141,?,?)",rusqlite::params![AGENT,if config["room_grant"]==true {Some(486777696)} else {None},tx.now(),tx.now()])?;
         }
+        tx.conn().execute("UPDATE users SET time_zone=? WHERE id=394959859",[config["zone"].as_str()])?;
+        tx.conn().execute("UPDATE users SET inbox_preferences=? WHERE id=127326141",[if config.get("preference").is_some() {json!({"agent_approvals":config["preference"]}).to_string()} else {"{}".into()}])?;
         Account::disconnect(tx,127326141)?;
         if config["no_account"]!=true {
             let account=Account::create(tx,&crypto,&Input{user_id:127326141,account_id:"897362094",account_name:None,fizzy_user_id:Some("owner-id"),fizzy_user_name:Some("Fixture Owner"),token:"fixture-owner"})?;
@@ -46,7 +48,7 @@ async fn check(case: &Value) {
         tx.conn().execute("DELETE FROM agent_budget_notices WHERE agent_id=?",[AGENT])?;
         tx.conn().execute("UPDATE sqlite_sequence SET seq=1900700000 WHERE name='agent_approvals'",[])?;
         if config["replay"]==true {
-            let approval=campfire_db::AgentApproval::create(tx,campfire_db::NewApproval{agent_id:AGENT,action:"fizzy.close".into(),summary:"Previous".into(),payload:Some("{\"kind\":\"close\"}".into()),external_id:Some("wire-action".into()),..Default::default()})?;
+            let approval=campfire_db::AgentApproval::create(tx,campfire_db::NewApproval{agent_id:AGENT,action:"fizzy.close".into(),summary:"Previous".into(),payload:Some("{\"kind\":\"close\"}".into()),external_id:if config["null_external"]==true {None} else {Some("wire-action".into())},..Default::default()})?;
             if config["expired"]==true {tx.conn().execute("UPDATE agent_approvals SET expires_at=? WHERE id=?",rusqlite::params![tx.now().since(jiff::SignedDuration::from_secs(-1)),approval.id])?;}
         }
         Ok(())
@@ -115,3 +117,6 @@ async fn fizzy_action_wire_errors_replays_and_coercions() {
         check(&case).await;
     }
 }
+
+#[tokio::test]
+async fn fizzy_action_replay_types() {for case in cases().into_iter().filter(|c|c["name"].as_str().unwrap().contains("replay_type_")) {check(&case).await;}}
