@@ -107,3 +107,34 @@ async fn domain_message_descriptions_render_through_the_guard_and_publisher() {
         compare(&mut client, &streams[..1], name).await;
     }
 }
+
+#[tokio::test]
+async fn all_owned_message_states_publish_the_actual_rails_append_replace_remove_bytes() {
+    use crate::controllers::messages::state_tests::{oracle, seed, create_state};
+    use campfire_db::broadcasts::{Broadcast, Partial, room_messages, message_dom_id, room_dom_id};
+    let hub = boot_with_test_clock(Arc::new(FrozenClock::new(SEED_NOW.parse().unwrap()))).await.unwrap();
+    hub.app.db().write(seed).await.unwrap();
+    let room = hub.app.db().read(|conn| campfire_db::Room::find(conn, ALL_TALK)).await.unwrap();
+    for row in oracle()["rows"].as_array().unwrap() {
+        let fixture = row.clone();
+        // Create before subscribing so only the three explicit publisher operations are read.
+        let message = hub.app.db().write(move |tx| create_state(tx, &fixture)).await.unwrap();
+        let (mut client, streams) = subscriber(&hub, None).await;
+        let descriptions = [
+            Broadcast::append(room_messages(&room), room_dom_id(&room, Some("messages")), Partial::Message { message_id: message.id }),
+            Broadcast::replace(room_messages(&room), message_dom_id(&message, None), Partial::MessageReplace { message_id: message.id }),
+            Broadcast::remove(room_messages(&room), message_dom_id(&message, None)),
+        ];
+        for (description, expected) in descriptions.into_iter().zip(row["frames"].as_array().unwrap()) {
+            assert_eq!(description.stream_name(), expected["stream"]);
+            assert_eq!(expected["stream"], streams[0]);
+            hub.app.db().write(move |tx| { tx.emit_after_commit(campfire_db::Event::broadcast(&description)); Ok(()) }).await.unwrap();
+            let actual: Value = serde_json::from_str(&client.next_text().await).unwrap();
+            let html = actual["message"].as_str().unwrap();
+            let expected = expected["payload"].as_str().unwrap();
+            if html != expected { crate::controllers::presenters::test_support::rails_mismatch(html, expected, row["name"].as_str().unwrap()); }
+            assert_eq!(campfire_cable::turbo::session_bound(html), None);
+        }
+        client.assert_silent().await;
+    }
+}

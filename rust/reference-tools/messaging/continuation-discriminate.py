@@ -55,4 +55,13 @@ check("collection-streaming", "rust/crates/campfire/src/controllers/presenters/m
 check("collection-null-room", "rust/crates/views/src/fragment_cache/keys.rs",
       '.to_owned() + "nil]"', '.to_owned() + "empty]"',
       "controllers::messages::collection_tests::nullable_quote_name_digest_matches_ruby_inspect_and_comparison_errors")
-print("WS8bm continuation discrimination: 7 compiled regressions detected; sources restored", flush=True)
+check("room-unread-marker", "rust/crates/campfire/src/controllers/presenters/room_list.rs",
+      "records.iter().position(|record| record.id == id)", "records.iter().position(|record| record.id == -id)",
+      "controllers::messages::room_list_tests::room_list_places_unread_outside_shared_fragments_and_matches_rails_around_pages")
+check("forward-note-bytes", "rust/crates/campfire/src/controllers/presenters.rs",
+      "forward_note: message.forward_note.clone()", "forward_note: None",
+      "controllers::messages::state_tests::complete_message_states_match_rails_on_cache_misses_and_hits")
+check("agent-step-order", "rust/crates/campfire/src/controllers/presenters.rs",
+      "ORDER BY position, id", "ORDER BY position DESC, id DESC",
+      "channels::tests::hub_test::message_parity::all_owned_message_states_publish_the_actual_rails_append_replace_remove_bytes")
+print("WS8bm continuation discrimination: 10 compiled regressions detected; sources restored", flush=True)

@@ -37,6 +37,9 @@ FILES = [
     "app/views/messages/index.html.erb",
     "app/views/messages/destroy.turbo_stream.erb",
     "app/views/messages/_system_note.html.erb",
+    "app/views/messages/_context.html.erb",
+    "app/views/agent_steps/_steps.html.erb",
+    "app/helpers/agents/steps_helper.rb",
     "app/views/users/_mention.html.erb",
     "config/icons.yml",
 ]
