@@ -1,6 +1,6 @@
 //! `app/models/rooms/direct.rb`. HTTP selection/access and huddle-specific rendering are WS8b/WS13.
 use crate::broadcasts::{Broadcast, Partial, Streamable, TurboAction, room_dom_id, room_messages};
-use crate::sql::exists;
+use crate::sql::{exists, query_all};
 use crate::{Connection, Errors, Event, Membership, Message, NewMessage, Result, Room, Tx, User};
 use campfire_richtext::ruby::{is_blank, strip};
 use rusqlite::params;
@@ -23,6 +23,9 @@ pub fn display_name(
         .filter(|u| for_user.is_none_or(|f| f.id != u.id))
         .collect();
     list.sort_by_key(|u| u.name.to_lowercase());
+    display_ordered_members(for_user, &list)
+}
+fn display_ordered_members(for_user: Option<&User>, list: &[&User]) -> Option<String> {
     match list.len() {
         0 => for_user.map(|u| u.name.clone()),
         1 => Some(list[0].name.clone()),
@@ -67,13 +70,20 @@ impl Room {
         for_user: Option<&User>,
         members: Option<&[User]>,
     ) -> Result<Option<String>> {
+        if let Some(name) = self.name.as_deref().filter(|name| !is_blank(name)) {
+            return Ok(Some(name.into()));
+        }
         match members {
             Some(members) => Ok(display_name(self.name.as_deref(), for_user, members)),
-            None => Ok(display_name(
-                self.name.as_deref(),
-                for_user,
-                &self.users(conn)?,
-            )),
+            None => {
+                // users.ordered uses SQLite LOWER(name); preloaded members use Ruby
+                // downcase sorting above. These differ for non-ASCII capitals.
+                let users = query_all(conn,
+                    "SELECT users.* FROM users INNER JOIN memberships ON users.id=memberships.user_id WHERE memberships.room_id=? ORDER BY LOWER(users.name)",
+                    [self.id], User::from_row)?;
+                let list = users.iter().filter(|u| for_user.is_none_or(|f| f.id != u.id)).collect::<Vec<_>>();
+                Ok(display_ordered_members(for_user, &list))
+            }
         }
     }
     pub fn rename_direct(&mut self, tx: &mut Tx<'_>, name: &str, actor: i64) -> Result<()> {

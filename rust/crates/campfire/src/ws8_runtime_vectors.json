@@ -90,12 +90,20 @@
     },
     {
       "kind": "cable",
-      "stream": "user_1_unread_threads",
+      "stream": "user_149087659_unread_threads",
       "payload": {
-        "threadId": 4
+        "threadId": 1,
+        "roomId": 654632876
       }
     }
   ],
+  "thread_broadcast": {
+    "room_id": 654632876,
+    "creator_id": 127326141,
+    "recipient_id": 149087659,
+    "name": "WS8 runtime thread",
+    "source": "WS8 runtime reply"
+  },
   "custom": {
     "id": 1,
     "name": "ws8custom",

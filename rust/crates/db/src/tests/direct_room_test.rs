@@ -56,6 +56,33 @@ fn direct_display_names_match_rails_vectors() {
     }
 }
 #[test]
+fn review_direct_default_and_preloaded_order_match_rails() {
+    let t = frozen();
+    let cases: serde_json::Value = serde_json::from_str(include_str!("ws8_review_vectors.json")).unwrap();
+    for row in cases["direct"].as_array().unwrap() {
+        let names = row["names"].as_array().unwrap().clone();
+        let (room, viewer) = t.write(move |tx| {
+            let users = names.iter().map(|name| User::create(tx, NewUser {
+                name: name.as_str().unwrap().into(), ..Default::default()
+            })).collect::<Result<Vec<_>>>()?;
+            let ids = users.iter().map(|u| u.id).collect::<Vec<_>>();
+            Ok((Room::create_for(tx, RoomType::Direct, None, id("david"), &ids)?, users[0].clone()))
+        });
+        let actual = t.read(|conn| {
+            let members = room.users(conn)?;
+            Ok(serde_json::json!({
+                "default": room.direct_display_name(conn, None, None)?,
+                "preloaded": room.direct_display_name(conn, None, Some(&members))?,
+                "viewer_default": room.direct_display_name(conn, Some(&viewer), None)?,
+                "viewer_preloaded": room.direct_display_name(conn, Some(&viewer), Some(&members))?
+            }))
+        });
+        for key in ["default", "preloaded", "viewer_default", "viewer_preloaded"] {
+            assert_eq!(actual[key], row[key], "{row}");
+        }
+    }
+}
+#[test]
 fn group_rename_validates_and_limits_notes_to_one_per_minute() {
     let t = frozen();
     let room = group(&t);

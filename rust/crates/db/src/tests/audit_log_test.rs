@@ -25,6 +25,19 @@ fn nested_redaction_and_scalar_wrapping_match_rails() {
     }
 }
 #[test]
+fn review_unicode_secret_redaction_matches_rails_on_record() {
+    let t = fixture();
+    let cases: Value = serde_json::from_str(include_str!("ws8_review_vectors.json")).unwrap();
+    for row in cases["filters"].as_array().unwrap() {
+        let changes = row["input"].clone();
+        let record = t.write(move |tx| AuditLog::record(tx, NewAuditLog {
+            action: "future.action".into(), changes: Some(changes), ..Default::default()
+        }, &Context::default()));
+        assert_eq!(record.details, row["output"], "{row}");
+        assert_eq!(t.read(|conn| AuditLog::find(conn, record.id)).details, row["output"]);
+    }
+}
+#[test]
 fn failure_labels_match_rails_without_preserving_mistyped_passwords() {
     let t = fixture();
     t.write(|tx| {

@@ -278,6 +278,26 @@ mod tests {
         }
     }
     #[test]
+    fn runtime_review_markdown_create_and_edit_store_canonical_rails_html() {
+        let cases: Value = serde_json::from_str(include_str!("../../db/src/tests/ws8_review_vectors.json")).unwrap();
+        let (db, adapter, _dir) = fixture();
+        let mut config = Config::new(db.path());
+        config.prepare = false;
+        let db = Database::open(config, Env { rich_text: Arc::new(adapter), ..Env::default() }).unwrap();
+        let source = cases["saved"]["source"].as_str().unwrap().to_owned();
+        let mut message = db.write_blocking(move |tx| campfire_db::Message::create(tx, campfire_db::NewMessage {
+            room_id: fixtures::identify("designers"), creator_id: fixtures::identify("david"),
+            markdown_source: Some(source), ..Default::default()
+        })).unwrap();
+        assert_eq!(db.read_blocking(|conn| message.body_html(conn)).unwrap(), Some(cases["saved"]["body"].as_str().unwrap().into()));
+        let edited = cases["edited"]["source"].as_str().unwrap().to_owned();
+        let message = db.write_blocking(move |tx| {
+            message.edit(tx, campfire_db::MessageChanges { markdown_source: Some(edited), ..Default::default() })?;
+            Ok(message)
+        }).unwrap();
+        assert_eq!(db.read_blocking(|conn| message.body_html(conn)).unwrap(), Some(cases["edited"]["body"].as_str().unwrap().into()));
+    }
+    #[test]
     fn runtime_scheduled_edit_and_forward_match_rails() {
         use campfire_db::models::forwarder::{self, BlobCopier, Destination};
         use campfire_db::{Message, MessageChanges, NewScheduledMessage, ScheduledMessage};

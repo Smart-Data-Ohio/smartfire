@@ -110,6 +110,28 @@ fn grammar_matches_rails_including_invalid_tokens_unicode_and_chips() {
     }
 }
 #[test]
+fn review_unicode_connector_phrases_match_rails_in_sqlite() {
+    let t = super::channel_thread_test::frozen();
+    t.write(|tx| {
+        for (client, body) in [("adjacent", "a b"), ("separated", "a x b")] {
+            Message::create(tx, NewMessage {
+                room_id: id("designers"), creator_id: id("david"),
+                body: Some(body.into()), client_message_id: Some(client.into()),
+                ..Default::default()
+            })?;
+        }
+        Ok(())
+    });
+    let cases: Value = serde_json::from_str(include_str!("ws8_review_vectors.json")).unwrap();
+    for row in cases["search"].as_array().unwrap() {
+        let q = SearchQuery::parse(row["raw"].as_str().unwrap());
+        assert_eq!(json!(q.text_tokens()), row["tokens"], "{row}");
+        assert_eq!(json!(q.match_expression()), row["expression"], "{row}");
+        let page = t.read(|conn| q.messages_for_user(conn, id("david"), jiff::tz::TimeZone::UTC, None));
+        assert_eq!(json!(page.messages.iter().map(|m| &m.client_message_id).collect::<Vec<_>>()), row["clients"], "{row}");
+    }
+}
+#[test]
 fn sqlite_operators_match_rails_and_hide_inaccessible_deleted_rooms() {
     let t = fixture();
     for row in golden()["results"].as_array().unwrap() {

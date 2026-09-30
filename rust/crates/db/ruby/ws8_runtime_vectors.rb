@@ -11,7 +11,25 @@ html=["<p>Hello</p>",'<action-text-attachment content-type="application/vnd.camp
 canonical=html.map{|body|{input:body,output:ActionText::Content.new(body).to_html}}
 runner=Periodic::Runner.new(reminders_interval:17,retention_interval:123)
 tasks=runner.instance_variable_get(:@tasks).select{|t|["saved item reminders","scheduled messages","poll closing","stuck rooms","retention prune"].include?(t.name)}.map{|t|{name:t.name,seconds:t.interval.to_i}}
-broadcasts=[{kind:"remove",stream:"gid://campfire/User/1:rooms",target:"list_rooms_direct_4",payload:ApplicationController.helpers.turbo_stream_action_tag(:remove,target:"list_rooms_direct_4")},{kind:"cable",stream:"user_1_unread_threads",payload:{threadId:4}}]
+# Capture the callback's actual payload. Passing a handwritten payload through
+# both runtimes only checks transport and cannot prove the domain contract.
+thread = room.channel_threads.create!(creator: user, name: "WS8 runtime thread")
+recipient = User.find(ActiveRecord::FixtureSet.identify("jason"))
+thread.memberships.create!(user: recipient)
+reply_source = "WS8 runtime reply"
+captured = []
+server = ActionCable.server
+original_broadcast = server.method(:broadcast)
+server.define_singleton_method(:broadcast) { |stream, payload, **| captured << {kind: "cable", stream: stream, payload: payload} }
+begin
+  room.messages.create!(thread: thread, creator: user, markdown_source: reply_source)
+ensure
+  server.define_singleton_method(:broadcast, original_broadcast)
+end
+unread = captured.select { |event| event[:stream] == UnreadThreadsChannel.stream_name_for(recipient.id) }
+raise "expected one real unread-thread callback" unless unread.one?
+broadcasts=[{kind:"remove",stream:"gid://campfire/User/1:rooms",target:"list_rooms_direct_4",payload:ApplicationController.helpers.turbo_stream_action_tag(:remove,target:"list_rooms_direct_4")},*unread]
+thread_broadcast = {room_id: room.id, creator_id: user.id, recipient_id: recipient.id, name: thread.name, source: reply_source}
 flow_source = "**Scheduled** @[David] and :gpt:"
 flow_edit = "## Edited\n\n- [x] ready @[Jason]"
 scheduled = ScheduledMessage.create!(user:user,room:room,markdown_source:flow_source,send_at:1.hour.from_now)
@@ -27,5 +45,5 @@ attachment = room.messages.create!(creator:user,body:"Attachment")
 attachment.attachment.attach(io:StringIO.new("WS8 copy\n"),filename:"ws8.txt",content_type:"text/plain",identify:false,metadata:{"ws8"=>"metadata"})
 copy = Messages::Forwarder.call(source:attachment,destinations:[{room_id:destination.id}],creator:user).first.message.attachment.blob
 attachment_copy = copy.attributes.slice("filename","content_type","byte_size","checksum","metadata","service_name")
-File.write(ARGV.fetch(0),JSON.pretty_generate({markdown:markdown,canonical:canonical,tasks:tasks,broadcasts:broadcasts,custom:{id:icon.id,name:icon.name,title:icon.title},flows:flows,attachment_copy:attachment_copy})+"\n")
+File.write(ARGV.fetch(0),JSON.pretty_generate({markdown:markdown,canonical:canonical,tasks:tasks,broadcasts:broadcasts,thread_broadcast:thread_broadcast,custom:{id:icon.id,name:icon.name,title:icon.title},flows:flows,attachment_copy:attachment_copy})+"\n")
 puts "WS8 runtime vectors: #{markdown.size} Markdown, #{canonical.size} canonicalization, #{tasks.size} periodic tasks, #{broadcasts.size} template-free broadcasts, #{flows.size} write flows, 1 attachment copy"

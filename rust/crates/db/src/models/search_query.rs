@@ -14,7 +14,9 @@ static OPERATORS: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?:^|[ \t\n\x0b\x0c\r])((from|in|has|before|after|on|is):([^ \t\n\x0b\x0c\r]+))")
         .unwrap()
 });
-static WORDS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[\p{L}\p{M}\p{N}_]+").unwrap());
+// Ruby [[:word:]] includes every connector punctuation, not only ASCII '_'.
+// Keep a＿b in one quoted FTS phrase so SQLite requires adjacent tokens.
+static WORDS: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\w+").unwrap());
 static SPACE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\p{White_Space}+").unwrap());
 static DATE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$").unwrap());

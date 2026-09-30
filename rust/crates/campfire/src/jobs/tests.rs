@@ -731,17 +731,11 @@ fn ws8_template_free_broadcast_payloads_match_rails() {
     let golden: serde_json::Value =
         serde_json::from_str(include_str!("../ws8_runtime_vectors.json")).unwrap();
     for row in golden["broadcasts"].as_array().unwrap() {
-        let event = if row["kind"] == "remove" {
-            Broadcast::remove(
-                vec![Streamable::User(1), Streamable::Name("rooms")],
-                row["target"].as_str().unwrap().into(),
-            )
-        } else {
-            Broadcast::Cable {
-                stream: row["stream"].as_str().unwrap().into(),
-                payload: row["payload"].clone(),
-            }
-        };
+        if row["kind"] != "remove" { continue; }
+        let event = Broadcast::remove(
+            vec![Streamable::User(1), Streamable::Name("rooms")],
+            row["target"].as_str().unwrap().into(),
+        );
         assert_eq!(
             template_free_broadcast(&event),
             Some((
@@ -750,6 +744,39 @@ fn ws8_template_free_broadcast_payloads_match_rails() {
             ))
         );
     }
+}
+
+#[test]
+fn ws8_thread_unread_broadcasts_match_real_rails_callbacks() {
+    use campfire_db::{ChannelThread, Config, Database, Env, Message, NewChannelThread, NewMessage, RecordingSink, ThreadMembership, fixtures};
+    let golden: serde_json::Value = serde_json::from_str(include_str!("../ws8_runtime_vectors.json")).unwrap();
+    let setup = golden["thread_broadcast"].clone();
+    let sink = RecordingSink::new();
+    let dir = tempfile::tempdir().unwrap();
+    let now = campfire_db::Timestamp::parse_db("2026-03-10 12:00:00").unwrap();
+    let db = Database::open(Config::new(dir.path().join("thread.sqlite3")), Env { sink: std::sync::Arc::new(sink.clone()), ..Env::default() }).unwrap();
+    db.write_blocking(move |tx| {
+        fixtures::load(tx.conn(), &fixtures::reference_dir(), &fixtures::Options { now, bcrypt_cost: 4 })?;
+        let thread = ChannelThread::create(tx, NewChannelThread {
+            room_id: setup["room_id"].as_i64().unwrap(), creator_id: setup["creator_id"].as_i64().unwrap(),
+            name: Some(setup["name"].as_str().unwrap().into()), ..Default::default()
+        })?;
+        ThreadMembership::join(tx, thread.id, setup["recipient_id"].as_i64().unwrap())?;
+        Message::create(tx, NewMessage {
+            room_id: thread.room_id, creator_id: thread.creator_id, thread_id: Some(thread.id),
+            markdown_source: Some(setup["source"].as_str().unwrap().into()), ..Default::default()
+        })?;
+        Ok(())
+    }).unwrap();
+    let actual: Vec<_> = sink.events().iter().filter_map(|event| match event {
+        Event::Broadcast(event @ campfire_db::broadcasts::Broadcast::Cable { stream, .. }) if stream.ends_with("_unread_threads") => {
+            let (stream, payload) = template_free_broadcast(event).unwrap();
+            Some(serde_json::json!({"kind":"cable", "stream":stream, "payload":payload}))
+        }
+        _ => None,
+    }).collect();
+    let expected: Vec<_> = golden["broadcasts"].as_array().unwrap().iter().filter(|row| row["kind"] == "cable").cloned().collect();
+    assert_eq!(actual, expected);
 }
 
 #[tokio::test]

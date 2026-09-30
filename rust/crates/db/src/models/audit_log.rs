@@ -229,6 +229,32 @@ pub fn actions() -> Vec<String> {
 static SECRET: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)passw|passwd|pwd|secret|token|api[-_]?key|_key$|credential|authorization|cookie|session|join[-_]?code|transfer[-_]?id").unwrap()
 });
+fn secret_key(key: &str) -> bool {
+    use caseless::Caseless;
+    if key.is_ascii() {
+        return SECRET.is_match(key);
+    }
+    // Ruby's /i uses full folding: passw matches paßw. Preserve original
+    // character boundaries: secret must not start halfway through ßecret's ss.
+    let mut folded = String::with_capacity(key.len());
+    let mut boundaries = vec![0];
+    for ch in key.chars() {
+        folded.extend(std::iter::once(ch).default_case_fold());
+        boundaries.push(folded.len());
+    }
+    let mut offset = 0;
+    while let Some(matched) = SECRET.find_at(&folded, offset) {
+        if boundaries.binary_search(&matched.start()).is_ok()
+            && boundaries.binary_search(&matched.end()).is_ok()
+        {
+            return true;
+        }
+        let next = boundaries.partition_point(|&pos| pos <= matched.start());
+        let Some(&boundary) = boundaries.get(next) else { break };
+        offset = boundary;
+    }
+    false
+}
 pub fn filter_secrets(input: Option<&Value>) -> Value {
     fn deep(value: &Value) -> Value {
         match value {
@@ -237,7 +263,7 @@ pub fn filter_secrets(input: Option<&Value>) -> Value {
                     .map(|(key, value)| {
                         (
                             key.clone(),
-                            if SECRET.is_match(key) {
+                            if secret_key(key) {
                                 json!("[FILTERED]")
                             } else {
                                 deep(value)

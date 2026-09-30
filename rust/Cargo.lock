@@ -423,6 +423,7 @@ dependencies = [
  "bcrypt",
  "campfire_db",
  "campfire_richtext",
+ "caseless",
  "crc32fast",
  "hex",
  "jiff",
