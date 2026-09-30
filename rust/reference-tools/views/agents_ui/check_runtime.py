@@ -10,6 +10,7 @@ sink = root / "crates/campfire/src/channels/sink.rs"
 history = root / "crates/campfire/src/controllers/presenters/agents/history.rs"
 decisions = root / "crates/campfire/src/controllers/agent_approvals.rs"
 rendered = root / "crates/campfire/src/controllers/messages/rendered.rs"
+agent = root / "crates/db/src/models/agent.rs"
 cases = [
     ("activity", sink, "cable.broadcast(&stream, &payload);",
      'if !stream.ends_with("_activity") { cable.broadcast(&stream, &payload); }',
@@ -30,6 +31,14 @@ cases = [
      "views::uncached_message(ctx, &view)",
      "views::message(ctx, &view)",
      "message_step_callbacks_replace_current_message_in_room_and_thread_without_cached_tokens"),
+    ("presence-broadcast", agent,
+     "if self.status != before.status || self.status_note != before.status_note {",
+     "if true || self.status != before.status || self.status_note != before.status_note {",
+     "working_presence_is_polled_and_does_not_emit_status_callbacks"),
+    ("presence-status-note", sink,
+     "decode(request).and_then(|broadcast| agent_status(app, &broadcast))",
+     "decode::<campfire_db::models::agent::AgentStatusChange>(request).map(|_| ())",
+     "working_presence_is_polled_and_does_not_emit_status_callbacks"),
     ("ledger", history,
      '&& agent.can(conn, "read_messages", Some(message.room_id))?',
      "&& true",

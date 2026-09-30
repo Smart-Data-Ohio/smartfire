@@ -379,6 +379,122 @@ async fn message_step_callbacks_replace_current_message_in_room_and_thread_witho
 }
 
 #[tokio::test]
+async fn working_presence_is_polled_and_does_not_emit_status_callbacks() {
+    // app/models/agent.rb only broadcasts status/status_note changes. The
+    // member panel polls working_presence_text through Rooms::MembersController.
+    let test = boot_seed("default").await.expect("default seed");
+    let bot: i64 = test.label("users.bender").parse().unwrap();
+    let viewer: i64 = test.label("users.david").parse().unwrap();
+    let listener = crate::channels::tests::support::bind_listener().await;
+    let address = listener.local_addr().unwrap();
+    let router = test.booted.router.clone();
+    let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let mut socket = activity_socket(&test, address, viewer).await;
+    let identifier = json!({"channel":"AgentsChannel"}).to_string();
+    socket
+        .send(Message::Text(
+            json!({"command":"subscribe","identifier":identifier})
+                .to_string()
+                .into(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(receive(&mut socket).await["type"], "confirm_subscription");
+    let id = test
+        .booted
+        .app
+        .db
+        .write(move |tx| {
+            let agent = campfire_db::Agent::for_user(tx.conn(), bot)?.unwrap();
+            let result = campfire_db::models::agent_working_presence::set(
+                tx,
+                agent.id,
+                Some("  Reading <queue>  "),
+            )?;
+            assert!(result.is_ok());
+            assert_eq!(
+                result.payload.unwrap()["working_presence"],
+                "Reading <queue>"
+            );
+            let reloaded = campfire_db::Agent::find(tx.conn(), agent.id)?.unwrap();
+            assert_eq!(
+                reloaded.working_presence_text(tx.now()),
+                Some("Reading <queue>")
+            );
+            assert_eq!(
+                reloaded.working_presence_text(tx.now().since(jiff::SignedDuration::from_mins(5))),
+                None
+            );
+            Ok(agent.id)
+        })
+        .await
+        .unwrap();
+    assert!(
+        tokio::time::timeout(std::time::Duration::from_millis(250), socket.next())
+            .await
+            .is_err(),
+        "working presence incorrectly broadcast a status callback"
+    );
+    test.booted
+        .app
+        .db
+        .write(move |tx| {
+            let result =
+                campfire_db::models::agent_working_presence::set(tx, id, Some(&"x".repeat(141)))?;
+            assert_eq!(result.status, 422);
+            assert_eq!(
+                campfire_db::Agent::find(tx.conn(), id)?
+                    .unwrap()
+                    .working_presence_text(tx.now()),
+                Some("Reading <queue>")
+            );
+            let result = campfire_db::models::agent_working_presence::set(tx, id, None)?;
+            assert!(result.is_ok());
+            assert!(result.payload.unwrap()["working_presence"].is_null());
+            Ok(())
+        })
+        .await
+        .unwrap();
+    assert!(
+        tokio::time::timeout(std::time::Duration::from_millis(250), socket.next())
+            .await
+            .is_err(),
+        "working presence clear incorrectly broadcast a status callback"
+    );
+    // A status-note-only write does broadcast both fragments, with current data.
+    test.booted
+        .app
+        .db
+        .write(move |tx| {
+            let mut agent = campfire_db::Agent::find(tx.conn(), id)?.unwrap();
+            agent.update(
+                tx,
+                campfire_db::AgentChanges {
+                    status_note: Some(Some("Ready <again>".into())),
+                    ..Default::default()
+                },
+            )
+        })
+        .await
+        .unwrap();
+    for target in [
+        format!("status_badge_agent_{id}"),
+        format!("directory_row_agent_{id}"),
+    ] {
+        let frame = receive(&mut socket).await;
+        assert_eq!(frame["identifier"], identifier);
+        let html = frame["message"].as_str().unwrap();
+        assert!(html.starts_with(&format!(
+            "<turbo-stream action=\"replace\" target=\"{target}\">"
+        )));
+        assert!(html.contains("Ready &lt;again&gt;"));
+        assert!(!html.contains("Reading &lt;queue&gt;"));
+    }
+    socket.close(None).await.unwrap();
+    server.abort();
+}
+
+#[tokio::test]
 async fn status_callback_replaces_badge_then_directory_over_live_socket_after_commit() {
     let test = boot_seed("default").await.expect("default seed");
     let mut viewer = test.browser("198.51.100.171");
