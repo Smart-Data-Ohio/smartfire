@@ -218,6 +218,22 @@ impl EventSink for Jobs {
         self.model_callbacks.call(tx, callback)
     }
 
+    fn disconnect_user_accounts(&self, tx: &mut Tx<'_>, user_id: i64) -> campfire_db::Result<()> {
+        if let Some(account) = crate::integrations::fizzy::accounts::Account::for_user(tx.conn(), user_id)? {
+            account.mark_disconnected(tx, "Account deactivated")?;
+        }
+        if let Some(account) = crate::integrations::github::accounts::Account::for_user(tx.conn(), user_id)? {
+            crate::integrations::github::accounts::Account::mark_disconnected(tx, account.id, "Account deactivated")?;
+        }
+        Ok(())
+    }
+
+    fn sync_message_references(&self, tx: &mut Tx<'_>, message: &campfire_db::Message, enqueue: bool) -> campfire_db::Result<()> {
+        let app = self.app.get().and_then(Weak::upgrade);
+        let crypto = app.as_ref().map(|app| rails_compat::ar_encryption::ArEncryption::new(&app.secrets));
+        crate::integrations::sync_message_references(tx, message, enqueue, crypto.as_ref())
+    }
+
     fn persist(&self, tx: &Tx<'_>, event: &Event) -> campfire_db::Result<()> {
         if let Some(request) = request_for(event) {
             if !tx.in_transaction() {
@@ -250,7 +266,7 @@ impl EventSink for Jobs {
 
 /// The running jobs: the durable queue's runner, the ad hoc workers, and the periodic loops.
 pub struct Runner {
-    durable: campfire_jobs::Runner,
+    durable: Option<campfire_jobs::Runner>,
     ad_hoc_stopping: watch::Sender<bool>,
     ad_hoc: Vec<JoinHandle<()>>,
     periodic_stopping: watch::Sender<bool>,
@@ -262,12 +278,27 @@ impl Runner {
     /// runner (running jobs get `grace` to finish; the rest stay queued for the next process),
     /// then the ad hoc workers (they perform what's queued, up to `grace`). Whatever outlasts its
     /// grace period is aborted, and gone by the time this returns.
-    pub async fn shutdown(self, grace: Duration) {
+    pub async fn shutdown(mut self, grace: Duration) {
+        self.stop_inner(grace).await;
+    }
+
+    #[cfg(test)]
+    pub async fn stop(&mut self, grace: Duration) {
+        self.stop_inner(grace).await;
+    }
+
+    async fn stop_inner(&mut self, grace: Duration) {
         let _ = self.periodic_stopping.send(true);
-        join_or_abort(self.periodic, grace, "periodic tasks still running at shutdown were aborted").await;
-        self.durable.shutdown(grace).await;
+        join_or_abort(
+            std::mem::take(&mut self.periodic), grace, "periodic tasks still running at shutdown were aborted",
+        ).await;
+        if let Some(durable) = self.durable.take() {
+            durable.shutdown(grace).await;
+        }
         let _ = self.ad_hoc_stopping.send(true);
-        join_or_abort(self.ad_hoc, grace, "ad hoc jobs still running at shutdown were aborted").await;
+        join_or_abort(
+            std::mem::take(&mut self.ad_hoc), grace, "ad hoc jobs still running at shutdown were aborted",
+        ).await;
     }
 }
 
@@ -296,7 +327,8 @@ pub fn start(app: App, registry: Registry, ad_hoc: AdHocQueue, config: RunnerCon
 
     let (periodic_stopping, _) = watch::channel(false);
     let periodic = periodic.spawn(&app, &periodic_stopping);
-    Runner { durable, ad_hoc_stopping, ad_hoc, periodic_stopping, periodic }
+    Runner { durable: Some(durable), ad_hoc_stopping, ad_hoc, periodic_stopping, periodic,
+    }
 }
 
 /// An ad hoc worker: performs ad hoc jobs one at a time, until the queue has closed and drained.

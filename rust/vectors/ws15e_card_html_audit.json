@@ -1,0 +1,457 @@
+{
+  "reference": "d7c7de92",
+  "generic": [
+    {
+      "name": "empty",
+      "url": "https://example.com/path?x=1&y=\"2\"#<'raw>",
+      "attributes": {
+        "title": null,
+        "description": null,
+        "site_name": null,
+        "image_url": null
+      },
+      "html": ""
+    },
+    {
+      "name": "image only",
+      "url": "https://example.com/path?x=1&y=\"2\"#<'raw>",
+      "attributes": {
+        "title": null,
+        "description": null,
+        "site_name": null,
+        "image_url": "https://example.com/a?x=1&y=2"
+      },
+      "html": ""
+    },
+    {
+      "name": "blank Unicode",
+      "url": "https://example.com/path?x=1&y=\"2\"#<'raw>",
+      "attributes": {
+        "title": "  ",
+        "description": "\t\r\n",
+        "site_name": " ",
+        "image_url": " "
+      },
+      "html": ""
+    },
+    {
+      "name": "unsafe",
+      "url": "https://example.com/path?x=1&y=\"2\"#<'raw>",
+      "attributes": {
+        "title": "<img src=x onerror=alert(1)> & \"title\"",
+        "description": "first\n<script>x</script> & 'quotes'",
+        "site_name": "<b>site</b>",
+        "image_url": "https://example.com/path?x=1&y=\"2\"#<'raw>"
+      },
+      "html": "  <article class=\"link-embed-card\">\n    <div class=\"link-embed-card__body\">\n        <p class=\"link-embed-card__site\">&lt;b&gt;site&lt;/b&gt;</p>\n        <p class=\"link-embed-card__title\">\n          <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://example.com/path?x=1&amp;y=&quot;2&quot;#&lt;&#39;raw&gt;\">&lt;img src=x onerror=alert(1)&gt; &amp; &quot;title&quot;</a>\n        </p>\n        <p class=\"link-embed-card__description\">first\n&lt;script&gt;x&lt;/script&gt; &amp; &#39;quotes&#39;</p>\n    </div>\n      <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" class=\"link-embed-card__image-link\" tabindex=\"-1\" aria-hidden=\"true\" href=\"https://example.com/path?x=1&amp;y=&quot;2&quot;#&lt;&#39;raw&gt;\">\n        <img alt=\"\" loading=\"lazy\" class=\"link-embed-card__image\" src=\"https://example.com/path?x=1&amp;y=&quot;2&quot;#&lt;&#39;raw&gt;\" />\n</a>  </article>\n"
+    },
+    {
+      "name": "zero and false",
+      "url": "https://example.com/path?x=1&y=\"2\"#<'raw>",
+      "attributes": {
+        "title": "0",
+        "description": "f",
+        "site_name": "123",
+        "image_url": null
+      },
+      "html": "  <article class=\"link-embed-card\">\n    <div class=\"link-embed-card__body\">\n        <p class=\"link-embed-card__site\">123</p>\n        <p class=\"link-embed-card__title\">\n          <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://example.com/path?x=1&amp;y=&quot;2&quot;#&lt;&#39;raw&gt;\">0</a>\n        </p>\n        <p class=\"link-embed-card__description\">f</p>\n    </div>\n  </article>\n"
+    },
+    {
+      "name": "array text",
+      "url": "https://example.com/path?x=1&y=\"2\"#<'raw>",
+      "attributes": {
+        "title": "[\"one\", \"two\"]",
+        "description": "{\"hello\" => \"<world>\"}",
+        "site_name": null,
+        "image_url": null
+      },
+      "html": "  <article class=\"link-embed-card\">\n    <div class=\"link-embed-card__body\">\n        <p class=\"link-embed-card__title\">\n          <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://example.com/path?x=1&amp;y=&quot;2&quot;#&lt;&#39;raw&gt;\">[&quot;one&quot;, &quot;two&quot;]</a>\n        </p>\n        <p class=\"link-embed-card__description\">{&quot;hello&quot; =&gt; &quot;&lt;world&gt;&quot;}</p>\n    </div>\n  </article>\n"
+    },
+    {
+      "name": "long Unicode",
+      "url": "https://example.com/path?x=1&y=\"2\"#<'raw>",
+      "attributes": {
+        "title": "é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀",
+        "description": "中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中",
+        "site_name": "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc",
+        "image_url": null
+      },
+      "html": "  <article class=\"link-embed-card\">\n    <div class=\"link-embed-card__body\">\n        <p class=\"link-embed-card__site\">abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc</p>\n        <p class=\"link-embed-card__title\">\n          <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://example.com/path?x=1&amp;y=&quot;2&quot;#&lt;&#39;raw&gt;\">é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀</a>\n        </p>\n        <p class=\"link-embed-card__description\">中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中</p>\n    </div>\n  </article>\n"
+    },
+    {
+      "name": "description only",
+      "url": "https://example.com/path?x=1&y=\"2\"#<'raw>",
+      "attributes": {
+        "title": null,
+        "description": "Excerpt",
+        "site_name": null,
+        "image_url": "https://example.com/a.png"
+      },
+      "html": "  <article class=\"link-embed-card\">\n    <div class=\"link-embed-card__body\">\n        <p class=\"link-embed-card__description\">Excerpt</p>\n    </div>\n      <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" class=\"link-embed-card__image-link\" tabindex=\"-1\" aria-hidden=\"true\" href=\"https://example.com/path?x=1&amp;y=&quot;2&quot;#&lt;&#39;raw&gt;\">\n        <img alt=\"\" loading=\"lazy\" class=\"link-embed-card__image\" src=\"https://example.com/a.png\" />\n</a>  </article>\n"
+    }
+  ],
+  "linkedin": [
+    {
+      "name": "empty",
+      "url": "https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw",
+      "attributes": {
+        "title": null,
+        "description": null,
+        "site_name": null,
+        "image_url": null
+      },
+      "player_url": "https://www.linkedin.com/embed/feed/update/urn:li:activity:9007199254740999",
+      "html": "  <p class=\"linkedin-post-chip\">\n    <span class=\"linkedin-post-chip__mark\" aria-hidden=\"true\">in</span>\n    <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw\">View post on LinkedIn</a>\n  </p>\n"
+    },
+    {
+      "name": "image only",
+      "url": "https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw",
+      "attributes": {
+        "title": null,
+        "description": null,
+        "site_name": null,
+        "image_url": "https://example.com/a?x=1&y=2"
+      },
+      "player_url": "https://www.linkedin.com/embed/feed/update/urn:li:activity:9007199254740999",
+      "html": "  <p class=\"linkedin-post-chip\">\n    <span class=\"linkedin-post-chip__mark\" aria-hidden=\"true\">in</span>\n    <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw\">View post on LinkedIn</a>\n  </p>\n"
+    },
+    {
+      "name": "blank Unicode",
+      "url": "https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw",
+      "attributes": {
+        "title": "  ",
+        "description": "\t\r\n",
+        "site_name": " ",
+        "image_url": " "
+      },
+      "player_url": "https://www.linkedin.com/embed/feed/update/urn:li:activity:9007199254740999",
+      "html": "  <p class=\"linkedin-post-chip\">\n    <span class=\"linkedin-post-chip__mark\" aria-hidden=\"true\">in</span>\n    <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw\">View post on LinkedIn</a>\n  </p>\n"
+    },
+    {
+      "name": "unsafe",
+      "url": "https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw",
+      "attributes": {
+        "title": "<img src=x onerror=alert(1)> & \"title\"",
+        "description": "first\n<script>x</script> & 'quotes'",
+        "site_name": "<b>site</b>",
+        "image_url": "https://example.com/path?x=1&y=\"2\"#<'raw>"
+      },
+      "player_url": "https://www.linkedin.com/embed/feed/update/urn:li:activity:9007199254740999",
+      "html": "  <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__title\">\n        <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw\">&lt;img src=x onerror=alert(1)&gt; &amp; &quot;title&quot;</a>\n      </p>\n      <p class=\"linkedin-post-card__excerpt\">first\n&lt;script&gt;x&lt;/script&gt; &amp; &#39;quotes&#39;</p>\n      <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" class=\"linkedin-post-card__image-link\" tabindex=\"-1\" aria-hidden=\"true\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw\">\n        <img alt=\"\" loading=\"lazy\" class=\"linkedin-post-card__image\" src=\"https://example.com/path?x=1&amp;y=&quot;2&quot;#&lt;&#39;raw&gt;\" />\n</a>    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw\">View post on LinkedIn</a>\n        <span data-controller=\"linkedin-embed\" data-linkedin-embed-src-value=\"https://www.linkedin.com/embed/feed/update/urn:li:activity:9007199254740999\">\n          <button type=\"button\" class=\"btn linkedin-post-card__embed-button\"\n                  data-action=\"linkedin-embed#show\"\n                  data-linkedin-embed-target=\"button\">\n            Show embedded post\n          </button>\n        </span>\n    </footer>\n  </article>\n"
+    },
+    {
+      "name": "zero and false",
+      "url": "https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw",
+      "attributes": {
+        "title": "0",
+        "description": "f",
+        "site_name": "123",
+        "image_url": null
+      },
+      "player_url": "https://www.linkedin.com/embed/feed/update/urn:li:activity:9007199254740999",
+      "html": "  <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__title\">\n        <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw\">0</a>\n      </p>\n      <p class=\"linkedin-post-card__excerpt\">f</p>\n    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw\">View post on LinkedIn</a>\n        <span data-controller=\"linkedin-embed\" data-linkedin-embed-src-value=\"https://www.linkedin.com/embed/feed/update/urn:li:activity:9007199254740999\">\n          <button type=\"button\" class=\"btn linkedin-post-card__embed-button\"\n                  data-action=\"linkedin-embed#show\"\n                  data-linkedin-embed-target=\"button\">\n            Show embedded post\n          </button>\n        </span>\n    </footer>\n  </article>\n"
+    },
+    {
+      "name": "array text",
+      "url": "https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw",
+      "attributes": {
+        "title": "[\"one\", \"two\"]",
+        "description": "{\"hello\" => \"<world>\"}",
+        "site_name": null,
+        "image_url": null
+      },
+      "player_url": "https://www.linkedin.com/embed/feed/update/urn:li:activity:9007199254740999",
+      "html": "  <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__title\">\n        <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw\">[&quot;one&quot;, &quot;two&quot;]</a>\n      </p>\n      <p class=\"linkedin-post-card__excerpt\">{&quot;hello&quot; =&gt; &quot;&lt;world&gt;&quot;}</p>\n    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw\">View post on LinkedIn</a>\n        <span data-controller=\"linkedin-embed\" data-linkedin-embed-src-value=\"https://www.linkedin.com/embed/feed/update/urn:li:activity:9007199254740999\">\n          <button type=\"button\" class=\"btn linkedin-post-card__embed-button\"\n                  data-action=\"linkedin-embed#show\"\n                  data-linkedin-embed-target=\"button\">\n            Show embedded post\n          </button>\n        </span>\n    </footer>\n  </article>\n"
+    },
+    {
+      "name": "long Unicode",
+      "url": "https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw",
+      "attributes": {
+        "title": "é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀",
+        "description": "中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中",
+        "site_name": "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc",
+        "image_url": null
+      },
+      "player_url": "https://www.linkedin.com/embed/feed/update/urn:li:activity:9007199254740999",
+      "html": "  <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__title\">\n        <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw\">é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀é😀</a>\n      </p>\n      <p class=\"linkedin-post-card__excerpt\">中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中</p>\n    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw\">View post on LinkedIn</a>\n        <span data-controller=\"linkedin-embed\" data-linkedin-embed-src-value=\"https://www.linkedin.com/embed/feed/update/urn:li:activity:9007199254740999\">\n          <button type=\"button\" class=\"btn linkedin-post-card__embed-button\"\n                  data-action=\"linkedin-embed#show\"\n                  data-linkedin-embed-target=\"button\">\n            Show embedded post\n          </button>\n        </span>\n    </footer>\n  </article>\n"
+    },
+    {
+      "name": "description only",
+      "url": "https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw",
+      "attributes": {
+        "title": null,
+        "description": "Excerpt",
+        "site_name": null,
+        "image_url": "https://example.com/a.png"
+      },
+      "player_url": "https://www.linkedin.com/embed/feed/update/urn:li:activity:9007199254740999",
+      "html": "  <article class=\"linkedin-post-card\">\n    <header class=\"linkedin-post-card__header\">\n      <span class=\"linkedin-post-card__mark\" aria-hidden=\"true\">in</span>\n      <span class=\"linkedin-post-card__source\">LinkedIn</span>\n    </header>\n      <p class=\"linkedin-post-card__excerpt\">Excerpt</p>\n      <a target=\"_blank\" rel=\"nofollow noopener noreferrer\" class=\"linkedin-post-card__image-link\" tabindex=\"-1\" aria-hidden=\"true\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw\">\n        <img alt=\"\" loading=\"lazy\" class=\"linkedin-post-card__image\" src=\"https://example.com/a.png\" />\n</a>    <footer class=\"linkedin-post-card__footer\">\n      <a class=\"linkedin-post-card__link\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" href=\"https://www.linkedin.com/feed/update/urn:li:activity:9007199254740999?own=1#raw\">View post on LinkedIn</a>\n        <span data-controller=\"linkedin-embed\" data-linkedin-embed-src-value=\"https://www.linkedin.com/embed/feed/update/urn:li:activity:9007199254740999\">\n          <button type=\"button\" class=\"btn linkedin-post-card__embed-button\"\n                  data-action=\"linkedin-embed#show\"\n                  data-linkedin-embed-target=\"button\">\n            Show embedded post\n          </button>\n        </span>\n    </footer>\n  </article>\n"
+    }
+  ],
+  "fizzy": [
+    {
+      "name": "empty",
+      "payload": {},
+      "error": null,
+      "zone": "UTC",
+      "html": "<turbo-frame id=\"card&quot;&lt;&amp;&#39;frame\">\n    <p class=\"fizzy-card__loading\">Loading Fizzy card…</p>\n</turbo-frame>"
+    },
+    {
+      "name": "false payload",
+      "payload": false,
+      "error": null,
+      "zone": "UTC",
+      "html": "<turbo-frame id=\"card&quot;&lt;&amp;&#39;frame\">\n    <p class=\"fizzy-card__loading\">Loading Fizzy card…</p>\n</turbo-frame>"
+    },
+    {
+      "name": "whitespace error",
+      "payload": null,
+      "error": "  ",
+      "zone": "UTC",
+      "html": "<turbo-frame id=\"card&quot;&lt;&amp;&#39;frame\">\n    <p class=\"fizzy-card__loading\">Loading Fizzy card…</p>\n</turbo-frame>"
+    },
+    {
+      "name": "error escapes",
+      "payload": null,
+      "error": "<script> & 'error'",
+      "zone": "UTC",
+      "html": "<turbo-frame id=\"card&quot;&lt;&amp;&#39;frame\">\n    <p class=\"fizzy-card__error\">\n      Couldn’t load this Fizzy card.\n      <span class=\"fizzy-card__error-detail\">&lt;script&gt; &amp; &#39;error&#39;</span>\n    </p>\n</turbo-frame>"
+    },
+    {
+      "name": "unsafe fields",
+      "payload": {
+        "title": "<script>bad</script> & \"title\"",
+        "board": {
+          "name": "<b> & board"
+        },
+        "tags": [
+          "<'unsafe'>",
+          "&tag"
+        ],
+        "steps": [],
+        "assignees": [
+          {
+            "name": "<img> & name",
+            "avatar_url": "https://avatars.example/a?x=1&y=2"
+          }
+        ],
+        "url": "javascript:alert(1)",
+        "column": {
+          "name": "<i> & column"
+        }
+      },
+      "error": null,
+      "zone": "UTC",
+      "html": "<turbo-frame id=\"card&quot;&lt;&amp;&#39;frame\">\n    <article class=\"fizzy-card fizzy-card--column\" data-fizzy-card=\"897362094#579\">\n  <header class=\"fizzy-card__header\">\n    <span class=\"fizzy-card__board\">&lt;b&gt; &amp; board</span>\n    <span class=\"fizzy-card__number\">#579</span>\n    <span class=\"fizzy-card__state\">&lt;i&gt; &amp; column</span>\n  </header>\n\n    <p class=\"fizzy-card__title\">&lt;script&gt;bad&lt;/script&gt; &amp; &quot;title&quot;</p>\n\n    <div class=\"fizzy-card__meta\">\n        <span class=\"fizzy-card__assignee\">\n            <img alt=\"\" class=\"fizzy-card__avatar\" loading=\"lazy\" src=\"https://avatars.example/a?x=1&amp;y=2\" width=\"16\" height=\"16\" />\n          &lt;img&gt; &amp; name\n        </span>\n\n        <span class=\"fizzy-card__tag\">#&lt;&#39;unsafe&#39;&gt;</span>\n        <span class=\"fizzy-card__tag\">#&amp;tag</span>\n\n    </div>\n\n  <footer class=\"fizzy-card__footer\">\n    <a class=\"fizzy-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://app.fizzy.do/897362094/cards/579\">View in Fizzy</a>\n  </footer>\n</article>\n\n</turbo-frame>"
+    },
+    {
+      "name": "Ruby truthiness",
+      "payload": {
+        "title": "Card & <title>",
+        "board": {
+          "name": "Board"
+        },
+        "tags": [],
+        "steps": [
+          {
+            "completed": 0
+          },
+          {
+            "completed": ""
+          },
+          {
+            "completed": false
+          },
+          {
+            "completed": null
+          }
+        ],
+        "assignees": [],
+        "url": "https://app.fizzy.do/897362094/cards/579",
+        "closed": 0,
+        "postponed": true,
+        "has_more_assignees": 0
+      },
+      "error": null,
+      "zone": "UTC",
+      "html": "<turbo-frame id=\"card&quot;&lt;&amp;&#39;frame\">\n    <article class=\"fizzy-card fizzy-card--closed\" data-fizzy-card=\"897362094#579\">\n  <header class=\"fizzy-card__header\">\n    <span class=\"fizzy-card__board\">Board</span>\n    <span class=\"fizzy-card__number\">#579</span>\n    <span class=\"fizzy-card__state\">Closed</span>\n  </header>\n\n    <p class=\"fizzy-card__title\">Card &amp; &lt;title&gt;</p>\n\n    <div class=\"fizzy-card__meta\">\n        <span class=\"fizzy-card__more-assignees\">+ more</span>\n\n\n        <span class=\"fizzy-card__steps\">2/4 steps</span>\n    </div>\n\n  <footer class=\"fizzy-card__footer\">\n    <a class=\"fizzy-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://app.fizzy.do/897362094/cards/579\">View in Fizzy</a>\n  </footer>\n</article>\n\n</turbo-frame>"
+    },
+    {
+      "name": "Ruby collection labels",
+      "payload": {
+        "title": [
+          "one",
+          "two"
+        ],
+        "board": {
+          "name": {
+            "a": "<b>"
+          }
+        },
+        "tags": [
+          {
+            "a": "<b>"
+          },
+          [
+            "one",
+            "two"
+          ],
+          false,
+          12
+        ],
+        "steps": [],
+        "assignees": [],
+        "url": "https://app.fizzy.do/897362094/cards/579",
+        "column": {
+          "name": [
+            "in",
+            "progress"
+          ]
+        }
+      },
+      "error": null,
+      "zone": "UTC",
+      "html": "<turbo-frame id=\"card&quot;&lt;&amp;&#39;frame\">\n    <article class=\"fizzy-card fizzy-card--column\" data-fizzy-card=\"897362094#579\">\n  <header class=\"fizzy-card__header\">\n    <span class=\"fizzy-card__board\">{&quot;a&quot; =&gt; &quot;&lt;b&gt;&quot;}</span>\n    <span class=\"fizzy-card__number\">#579</span>\n    <span class=\"fizzy-card__state\">[&quot;in&quot;, &quot;progress&quot;]</span>\n  </header>\n\n    <p class=\"fizzy-card__title\">[&quot;one&quot;, &quot;two&quot;]</p>\n\n    <div class=\"fizzy-card__meta\">\n\n        <span class=\"fizzy-card__tag\">#{&quot;a&quot; =&gt; &quot;&lt;b&gt;&quot;}</span>\n        <span class=\"fizzy-card__tag\">#[&quot;one&quot;, &quot;two&quot;]</span>\n        <span class=\"fizzy-card__tag\">#false</span>\n        <span class=\"fizzy-card__tag\">#12</span>\n\n    </div>\n\n  <footer class=\"fizzy-card__footer\">\n    <a class=\"fizzy-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://app.fizzy.do/897362094/cards/579\">View in Fizzy</a>\n  </footer>\n</article>\n\n</turbo-frame>"
+    },
+    {
+      "name": "avatars schemes",
+      "payload": {
+        "title": "Card & <title>",
+        "board": {
+          "name": "Board"
+        },
+        "tags": [],
+        "steps": [],
+        "assignees": [
+          {
+            "name": "name",
+            "avatar_url": "https://avatars.example/a.png"
+          },
+          {
+            "name": "name",
+            "avatar_url": "HTTPs://avatars.example/a.png"
+          },
+          {
+            "name": "name",
+            "avatar_url": "http://avatars.example/a.png"
+          },
+          {
+            "name": "name",
+            "avatar_url": "//avatars.example/a.png"
+          },
+          {
+            "name": "name",
+            "avatar_url": "javascript:alert(1)"
+          },
+          {
+            "name": "name",
+            "avatar_url": "https://"
+          }
+        ],
+        "url": "https://app.fizzy.do/897362094/cards/579"
+      },
+      "error": null,
+      "zone": "UTC",
+      "html": "<turbo-frame id=\"card&quot;&lt;&amp;&#39;frame\">\n    <article class=\"fizzy-card fizzy-card--triage\" data-fizzy-card=\"897362094#579\">\n  <header class=\"fizzy-card__header\">\n    <span class=\"fizzy-card__board\">Board</span>\n    <span class=\"fizzy-card__number\">#579</span>\n    <span class=\"fizzy-card__state\">Maybe?</span>\n  </header>\n\n    <p class=\"fizzy-card__title\">Card &amp; &lt;title&gt;</p>\n\n    <div class=\"fizzy-card__meta\">\n        <span class=\"fizzy-card__assignee\">\n            <img alt=\"\" class=\"fizzy-card__avatar\" loading=\"lazy\" src=\"https://avatars.example/a.png\" width=\"16\" height=\"16\" />\n          name\n        </span>\n        <span class=\"fizzy-card__assignee\">\n            <img alt=\"\" class=\"fizzy-card__avatar\" loading=\"lazy\" src=\"HTTPs://avatars.example/a.png\" width=\"16\" height=\"16\" />\n          name\n        </span>\n        <span class=\"fizzy-card__assignee\">\n          name\n        </span>\n        <span class=\"fizzy-card__assignee\">\n          name\n        </span>\n        <span class=\"fizzy-card__assignee\">\n          name\n        </span>\n        <span class=\"fizzy-card__assignee\">\n          name\n        </span>\n\n\n    </div>\n\n  <footer class=\"fizzy-card__footer\">\n    <a class=\"fizzy-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://app.fizzy.do/897362094/cards/579\">View in Fizzy</a>\n  </footer>\n</article>\n\n</turbo-frame>"
+    },
+    {
+      "name": "nil collections",
+      "payload": {
+        "title": "Card & <title>",
+        "board": {
+          "name": "Board"
+        },
+        "tags": null,
+        "steps": null,
+        "assignees": null,
+        "url": "https://app.fizzy.do/897362094/cards/579"
+      },
+      "error": null,
+      "zone": "UTC",
+      "html": "<turbo-frame id=\"card&quot;&lt;&amp;&#39;frame\">\n    <article class=\"fizzy-card fizzy-card--triage\" data-fizzy-card=\"897362094#579\">\n  <header class=\"fizzy-card__header\">\n    <span class=\"fizzy-card__board\">Board</span>\n    <span class=\"fizzy-card__number\">#579</span>\n    <span class=\"fizzy-card__state\">Maybe?</span>\n  </header>\n\n    <p class=\"fizzy-card__title\">Card &amp; &lt;title&gt;</p>\n\n    <div class=\"fizzy-card__meta\">\n\n\n    </div>\n\n  <footer class=\"fizzy-card__footer\">\n    <a class=\"fizzy-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://app.fizzy.do/897362094/cards/579\">View in Fizzy</a>\n  </footer>\n</article>\n\n</turbo-frame>"
+    },
+    {
+      "name": "zero title",
+      "payload": {
+        "title": 0,
+        "board": {
+          "name": "Board"
+        },
+        "tags": [],
+        "steps": [],
+        "assignees": [],
+        "url": "https://app.fizzy.do/897362094/cards/579"
+      },
+      "error": null,
+      "zone": "UTC",
+      "html": "<turbo-frame id=\"card&quot;&lt;&amp;&#39;frame\">\n    <article class=\"fizzy-card fizzy-card--triage\" data-fizzy-card=\"897362094#579\">\n  <header class=\"fizzy-card__header\">\n    <span class=\"fizzy-card__board\">Board</span>\n    <span class=\"fizzy-card__number\">#579</span>\n    <span class=\"fizzy-card__state\">Maybe?</span>\n  </header>\n\n    <p class=\"fizzy-card__title\">0</p>\n\n    <div class=\"fizzy-card__meta\">\n\n\n    </div>\n\n  <footer class=\"fizzy-card__footer\">\n    <a class=\"fizzy-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://app.fizzy.do/897362094/cards/579\">View in Fizzy</a>\n  </footer>\n</article>\n\n</turbo-frame>"
+    },
+    {
+      "name": "false title",
+      "payload": {
+        "title": false,
+        "board": {
+          "name": "Board"
+        },
+        "tags": [],
+        "steps": [],
+        "assignees": [],
+        "url": "https://app.fizzy.do/897362094/cards/579"
+      },
+      "error": null,
+      "zone": "UTC",
+      "html": "<turbo-frame id=\"card&quot;&lt;&amp;&#39;frame\">\n    <article class=\"fizzy-card fizzy-card--triage\" data-fizzy-card=\"897362094#579\">\n  <header class=\"fizzy-card__header\">\n    <span class=\"fizzy-card__board\">Board</span>\n    <span class=\"fizzy-card__number\">#579</span>\n    <span class=\"fizzy-card__state\">Maybe?</span>\n  </header>\n\n    <p class=\"fizzy-card__loading\">Loading card…</p>\n\n  <footer class=\"fizzy-card__footer\">\n    <a class=\"fizzy-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://app.fizzy.do/897362094/cards/579\">View in Fizzy</a>\n  </footer>\n</article>\n\n</turbo-frame>"
+    },
+    {
+      "name": "date zone",
+      "payload": {
+        "title": "Card & <title>",
+        "board": {
+          "name": "Board"
+        },
+        "tags": [],
+        "steps": [],
+        "assignees": [],
+        "url": "https://app.fizzy.do/897362094/cards/579",
+        "last_active_at": "2026-11-01T05:30:00Z"
+      },
+      "error": null,
+      "zone": "America/New_York",
+      "html": "<turbo-frame id=\"card&quot;&lt;&amp;&#39;frame\">\n    <article class=\"fizzy-card fizzy-card--triage\" data-fizzy-card=\"897362094#579\">\n  <header class=\"fizzy-card__header\">\n    <span class=\"fizzy-card__board\">Board</span>\n    <span class=\"fizzy-card__number\">#579</span>\n    <span class=\"fizzy-card__state\">Maybe?</span>\n  </header>\n\n    <p class=\"fizzy-card__title\">Card &amp; &lt;title&gt;</p>\n\n    <div class=\"fizzy-card__meta\">\n\n\n    </div>\n\n  <footer class=\"fizzy-card__footer\">\n      <span class=\"fizzy-card__updated\">Active <time datetime=\"2026-11-01T01:30:00-04:00\" data-local-time-target=\"time\"></time></span>\n    <a class=\"fizzy-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://app.fizzy.do/897362094/cards/579\">View in Fizzy</a>\n  </footer>\n</article>\n\n</turbo-frame>"
+    },
+    {
+      "name": "date local",
+      "payload": {
+        "title": "Card & <title>",
+        "board": {
+          "name": "Board"
+        },
+        "tags": [],
+        "steps": [],
+        "assignees": [],
+        "url": "https://app.fizzy.do/897362094/cards/579",
+        "last_active_at": "2026-11-01 01:30:00"
+      },
+      "error": null,
+      "zone": "America/New_York",
+      "html": "<turbo-frame id=\"card&quot;&lt;&amp;&#39;frame\">\n    <article class=\"fizzy-card fizzy-card--triage\" data-fizzy-card=\"897362094#579\">\n  <header class=\"fizzy-card__header\">\n    <span class=\"fizzy-card__board\">Board</span>\n    <span class=\"fizzy-card__number\">#579</span>\n    <span class=\"fizzy-card__state\">Maybe?</span>\n  </header>\n\n    <p class=\"fizzy-card__title\">Card &amp; &lt;title&gt;</p>\n\n    <div class=\"fizzy-card__meta\">\n\n\n    </div>\n\n  <footer class=\"fizzy-card__footer\">\n      <span class=\"fizzy-card__updated\">Active <time datetime=\"2026-11-01T01:30:00-04:00\" data-local-time-target=\"time\"></time></span>\n    <a class=\"fizzy-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://app.fizzy.do/897362094/cards/579\">View in Fizzy</a>\n  </footer>\n</article>\n\n</turbo-frame>"
+    },
+    {
+      "name": "date only",
+      "payload": {
+        "title": "Card & <title>",
+        "board": {
+          "name": "Board"
+        },
+        "tags": [],
+        "steps": [],
+        "assignees": [],
+        "url": "https://app.fizzy.do/897362094/cards/579",
+        "last_active_at": "2026-03-02"
+      },
+      "error": null,
+      "zone": "America/New_York",
+      "html": "<turbo-frame id=\"card&quot;&lt;&amp;&#39;frame\">\n    <article class=\"fizzy-card fizzy-card--triage\" data-fizzy-card=\"897362094#579\">\n  <header class=\"fizzy-card__header\">\n    <span class=\"fizzy-card__board\">Board</span>\n    <span class=\"fizzy-card__number\">#579</span>\n    <span class=\"fizzy-card__state\">Maybe?</span>\n  </header>\n\n    <p class=\"fizzy-card__title\">Card &amp; &lt;title&gt;</p>\n\n    <div class=\"fizzy-card__meta\">\n\n\n    </div>\n\n  <footer class=\"fizzy-card__footer\">\n      <span class=\"fizzy-card__updated\">Active <time datetime=\"2026-03-02T00:00:00-05:00\" data-local-time-target=\"time\"></time></span>\n    <a class=\"fizzy-card__link\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://app.fizzy.do/897362094/cards/579\">View in Fizzy</a>\n  </footer>\n</article>\n\n</turbo-frame>"
+    }
+  ]
+}

@@ -175,7 +175,7 @@
   </div>
 
   <div class="sidebar__tools">
-    <%= link_to user_profile_path, class: "workspace-user min-width" do %>
+    <%= link_to user_profile_path, class: "workspace-user min-width", data: profile_card_trigger(Current.user) do %>
       <span class="avatar workspace-user__avatar">
         <%= image_tag fresh_user_avatar_path(Current.user), size: 36, aria: { hidden: "true" }, style: "view-transition-name: avatar-#{Current.user.id}" %>
       </span>

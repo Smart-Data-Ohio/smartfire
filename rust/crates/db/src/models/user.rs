@@ -3,6 +3,7 @@
 
 pub mod removal;
 pub mod icon;
+pub mod lifecycle;
 
 use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, ValueRef};
 use rusqlite::{Connection, Row, params};
@@ -553,12 +554,13 @@ impl User {
             r#"DELETE FROM "searches" WHERE "searches"."user_id" = ?"#,
             [self.id],
         )?;
+        conn.execute_cached("DELETE FROM two_factor_setup_secrets WHERE session_id IN (SELECT id FROM sessions WHERE user_id=?)", [self.id])?;
         conn.execute_cached(
             r#"DELETE FROM "sessions" WHERE "sessions"."user_id" = ?"#,
             [self.id],
         )?;
         conn.execute_cached("DELETE FROM user_devices WHERE user_id = ?", [self.id])?;
-        super::agent_lifecycle::suspend_owned(tx, self.id, audit)?;
+        lifecycle::deactivate(tx, self.id, audit)?;
         let email = self.deactivated_email_address();
         self.update(
             tx,

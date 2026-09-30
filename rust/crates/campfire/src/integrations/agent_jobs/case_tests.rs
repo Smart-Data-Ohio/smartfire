@@ -109,7 +109,7 @@ fn failed(e: &AgentEvent, attempt: i64, error: &str) {
 fn retry(e: &AgentEvent, error: &str, seconds: i64) {
     assert_eq!(e.webhook_status, "pending");
     assert_eq!(e.webhook_attempts, 1);
-    assert!(e.webhook_last_error.as_deref().unwrap().contains(error));
+    assert!(e.webhook_last_error.as_deref().unwrap().contains(error), "expected {error}, got {:?}", e.webhook_last_error);
     assert_eq!(
         e.webhook_next_attempt_at.unwrap(),
         e.created_at.since(jiff::SignedDuration::from_secs(seconds))
@@ -235,7 +235,7 @@ async fn ws11_event_webhook_case_server_error_retries_then_exhausts() {
 #[tokio::test]
 async fn ws11_event_webhook_case_retry_after_forty_five() {
     let (t, e) = setup().await;
-    let (_, n) = respond(Route::new("POST", "*", "/hook", 429).header("Retry-After", "45")).await;
+    let (_server, n) = respond(Route::new("POST", "*", "/hook", 429).header("Retry-After", "45")).await;
     post(&t, e.id, 0, &n).await;
     retry(&read(&t, e.id).await, "429", 45);
     assert_eq!(queued(&t, e.id).await, 1);
@@ -245,7 +245,7 @@ async fn ws11_event_webhook_case_retry_after_forty_five() {
 #[tokio::test]
 async fn ws11_event_webhook_case_retry_after_absent_uses_default() {
     let (t, e) = setup().await;
-    let (_, n) = respond(Route::new("POST", "*", "/hook", 429)).await;
+    let (_server, n) = respond(Route::new("POST", "*", "/hook", 429)).await;
     post(&t, e.id, 0, &n).await;
     retry(&read(&t, e.id).await, "429", 3);
     assert_eq!(queued(&t, e.id).await, 1);
@@ -253,7 +253,7 @@ async fn ws11_event_webhook_case_retry_after_absent_uses_default() {
 #[tokio::test]
 async fn ws11_event_webhook_case_request_timeout_retries() {
     let (t, e) = setup().await;
-    let (_, n) = respond(Route::new("POST", "*", "/hook", 408)).await;
+    let (_server, n) = respond(Route::new("POST", "*", "/hook", 408)).await;
     post(&t, e.id, 0, &n).await;
     retry(&read(&t, e.id).await, "408", 3);
     assert_eq!(queued(&t, e.id).await, 1);
@@ -275,7 +275,7 @@ async fn ws11_event_webhook_case_error_attachment_creates_no_reply() {
         .read(|c| Ok(c.query_row("SELECT COUNT(*) FROM messages", [], |r| r.get::<_, i64>(0))?))
         .await
         .unwrap();
-    let (_, n) = respond(
+    let (_server, n) = respond(
         Route::new("POST", "*", "/hook", 500)
             .header("Content-Type", "image/jpeg")
             .body(vec![255, 216, 255, 217]),

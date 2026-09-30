@@ -476,6 +476,14 @@ impl Message {
         Ok(message)
     }
 
+    /// Network-card owners plug into the real create/edit callbacks through the app sink.
+    /// WS11 calls this only after deciding a finalized stream may fan out; a quiet finalize
+    /// must not warm previews. Import callers pass false to retain DB references without fetches.
+    pub fn sync_external_references(&self, tx: &mut Tx<'_>, enqueue: bool) -> Result<()> {
+        let sink = tx.env().sink.clone();
+        sink.sync_message_references(tx, self, enqueue)
+    }
+
     /// RoomMailbox's Markdown entry point; all validation, rendering and callbacks use `create`.
     pub fn create_markdown(tx: &mut Tx<'_>, mut attributes: NewMessage, source: &str) -> Result<Self> {
         attributes.markdown_source = Some(source.to_owned());
@@ -667,7 +675,9 @@ impl Message {
                 RichTextRecord::create(tx, RECORD_TYPE, self.id, "body", body)?;
             }
         }
-        self.touch(tx)
+        self.touch(tx)?;
+        if !self.streaming { self.sync_external_references(tx, true)?; }
+        Ok(())
     }
 
     /// The edit endpoints' save (`MessagesController#update`,
@@ -1161,7 +1171,8 @@ impl Message {
             tx.model_callback(phase, self.id)?;
         }
         crate::models::message_reference::sync(tx,self)?;
-        tx.model_callback(Phase::MessageLinkReferences, self.id)
+        tx.model_callback(Phase::MessageLinkReferences, self.id)?;
+        self.sync_external_references(tx, true)
     }
 
     /// Claim first, like Rails' `update_all`, then run the deferred callbacks.
