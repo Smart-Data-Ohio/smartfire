@@ -1,4 +1,4 @@
-//! Four functional SwitchersControllerTest mappings. Full-request query-budget case stays inventoried.
+//! All five SwitchersControllerTest mappings, including full-request query measurements.
 use crate::controllers::presenters::test_support::*;
 use axum::http::StatusCode;
 use campfire_db::{ChannelThread, Involvement, Membership, NewChannelThread, Room, RoomType};
@@ -53,4 +53,35 @@ async fn show_requires_sign_in() {
     let reply = app.anonymous().get("/switcher.json").await;
     assert_eq!(reply.status, StatusCode::FOUND);
     assert_eq!(reply.location(), Some("http://campfire.test/session/new"));
+}
+
+async fn seed_switcher_data(db: &campfire_db::Database, offset: usize) {
+    db.write(move |tx| {
+        for index in 0..3 {
+            let room=Room::create_for(tx,RoomType::Closed,Some(&format!("Extra {}",offset+index)),DAVID,&[DAVID,JASON])?;
+            ChannelThread::create(tx,NewChannelThread{room_id:room.id,creator_id:DAVID,name:Some(format!("Thread {}",offset+index)),..Default::default()})?;
+        }
+        Ok(())
+    }).await.unwrap();
+}
+
+async fn measured_payload(db:&campfire_db::Database,n:usize,router:&axum::Router) -> usize {
+    let probe=super::query_probe::SqlProbe::start(db,n).await;
+    let reply=super::query_probe::request(router,"/switcher.json").await;
+    let statements=probe.finish().await;
+    assert_eq!(reply.status,StatusCode::OK);
+    assert!(reply.json()["rooms"].as_array().unwrap().len()>=3);
+    let count=statements.len();assert!(count>0,"the actual HTTP request must execute queries");count
+}
+#[tokio::test]
+async fn show_costs_a_constant_number_of_queries_as_rooms_people_and_threads_grow() {
+    let app=setup().await;
+    let db=app.db().clone();let n=app.booted.app.config.db_readers;let router=app.booted.router.clone();
+    app.booted.jobs.shutdown(std::time::Duration::from_secs(5)).await;
+    seed_switcher_data(&db,0).await;
+    super::query_probe::request(&router,"/switcher.json").await;
+    let small=measured_payload(&db,n,&router).await;
+    seed_switcher_data(&db,10).await;
+    let large=measured_payload(&db,n,&router).await;
+    assert_eq!(small,large,"full switcher HTTP query count: {small} then {large}");
 }

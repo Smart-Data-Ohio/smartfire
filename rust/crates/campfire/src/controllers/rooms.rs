@@ -526,3 +526,6 @@ mod switchers_rails_cases;
 #[cfg(test)]
 #[path = "rooms/native_integration_tests.rs"]
 mod native_integration_tests;
+
+#[cfg(test)]
+mod query_probe;

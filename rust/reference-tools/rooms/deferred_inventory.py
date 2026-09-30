@@ -6,7 +6,9 @@ import os
 from pathlib import Path
 import re
 import argparse
+import subprocess
 parser=argparse.ArgumentParser()
+parser.add_argument('--reference',default='d7c7de92',help='Git reference whose Rails declarations are inventoried')
 parser.add_argument('--test-log',type=Path,help='raw cargo test output for the named one-to-one Rust Rails cases')
 parser.add_argument('--rails-log',type=Path,help='raw per-file output from check_controller_files.py')
 args=parser.parse_args()
@@ -86,16 +88,16 @@ def owner(file):
     return 'WS8br'
 result=[]
 for file in files:
-    path=reference/file
-    if not path.exists():
+    pinned=subprocess.run(['git','show',f'{args.reference}:{file}'],cwd=reference,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
+    if pinned.returncode!=0:
         result.append(dict(file=file,owner=owner(file),reference_file_present=False,declared_cases=[],declared_count=0,rails_tests_run=0,rails_pass_count=0,status='full-file acceptance deferred'))
         continue
-    source=path.read_text()
+    source=pinned.stdout.decode()
     cases=[]
     for match in re.finditer(r"^\s*(?:test\s+([\"'])(.*?)\1\s+do|def\s+(test_\w+))",source,re.M):
         cases.append(dict(name=match[2] or match[3],line=source.count('\n',0,match.start())+1))
-    result.append(dict(file=file,owner=owner(file),reference_file_present=True,source_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),declared_cases=cases,declared_count=len(cases),rails_tests_run=0,rails_pass_count=0,status='full-file acceptance deferred'))
-output=dict(reference='d7c7de92',note='These are source declarations, not dynamically expanded Rails tests. Equivalent Rust subsets are reported separately; no full-file Rails acceptance is claimed.',files=result)
+    result.append(dict(file=file,owner=owner(file),reference_file_present=True,source_sha256=hashlib.sha256(pinned.stdout).hexdigest(),declared_cases=cases,declared_count=len(cases),rails_tests_run=0,rails_pass_count=0,status='full-file acceptance deferred'))
+output=dict(reference=args.reference,note='These are source declarations, not dynamically expanded Rails tests. Equivalent Rust subsets are reported separately; no full-file Rails acceptance is claimed.',files=result)
 if args.test_log:
     receipts=args.test_log.read_text()
     groups=[
@@ -109,9 +111,6 @@ if args.test_log:
         ('test/controllers/rooms_controller_test.rb','rooms_rails_cases',
          {"index redirects to the user's last room":'index_redirects_to_the_users_last_room','show':'show_case'},
          {'show renders collapsed work-thread guidance in the new-thread panel':'WS8bm thread-panel rendering',
-          'show renders a link preview written by hand without its off-scheme image and link':'WS8bm message renderer and WS15e embed provider',
-          'show renders a link preview written by hand without its image pointed at this Smartfire':'WS8bm message renderer and WS15e embed provider',
-          'show renders an unfurled link preview':'WS8bm message renderer and WS15e embed provider',
           'destroy succeeds when the queue is down and the sweep recovers the room':'Lead decision 2 requires atomic queue rollback; native fault-injection coverage is separate'}),
         ('test/controllers/rooms/opens_controller_test.rb','opens_rails_cases',
          {'new':'new_case','create':'create_case','update':'update_case',
@@ -131,15 +130,13 @@ if args.test_log:
           'direct row re-renders when a participant joins',
           'group direct rooms render member names and a huddle stack',
           'no channel or DM stacks without huddle configuration',
-          'sidebar query count does not grow with quiet channels, DMs, boards, and stages',
-          'sidebar query count does not grow with group DMs, named or not']}),
+          'sidebar query count does not grow with quiet channels, DMs, boards, and stages']}),
         ('test/controllers/rooms/involvements_controller_test.rb','involvements_rails_cases',{'show':'show_case'},{}),
         ('test/controllers/rooms/reads_controller_test.rb','reads_rails_cases',{},{}),
         ('test/controllers/rooms/favorites_controller_test.rb','favorites_rails_cases',{},{}),
         ('test/controllers/room_categories_controller_test.rb','room_categories_rails_cases',{},{}),
         ('test/controllers/rooms/categories_controller_test.rb','categories_rails_cases',{},{}),
-        ('test/controllers/switchers_controller_test.rb','switchers_rails_cases',{},
-         {'show costs a constant number of queries as rooms, people and threads grow':'Full-request query instrumentation; existing pure read-model budget tests do not claim this HTTP case'}),
+        ('test/controllers/switchers_controller_test.rb','switchers_rails_cases',{},{}),
     ]
     extras={'members_rails_cases':{'member_reads_deny_bot_credentials','complete_member_json_matches_rails_for_each_viewer_and_room'},
             'refreshes_rails_cases':{'pin_only_refresh_matches_rails_bytes_and_request_token_ownership'}}

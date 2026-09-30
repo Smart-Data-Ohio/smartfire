@@ -422,3 +422,36 @@ async fn join_of_a_room_you_already_belong_to_returns_to_it() {
     );
     assert_eq!(ids(&app, HQ).await, before);
 }
+
+async fn posted_link_preview(href:&str,url:&str,client_id:&str)->String {
+    let app=setup().await;
+    let body=format!("<div><action-text-attachment content-type=\"application/vnd.actiontext.opengraph-embed\" href=\"{href}\" url=\"{url}\" filename=\"Free cookies\" caption=\"Cookies here\"></action-text-attachment></div>");
+    let mut browser=app.david();
+    let response=browser.write(Req::new(Method::POST,&format!("/rooms/{ALL_TALK}/messages.turbo_stream"))
+        .form(&[("message[body]",&body),("message[client_message_id]",client_id)])).await;
+    assert_eq!(response.status,StatusCode::OK,"{}",response.text());
+    let response=browser.get(&campfire_routes::room(ALL_TALK)).await;
+    assert_eq!(response.status,StatusCode::OK);
+    response.text()
+}
+#[tokio::test]
+async fn show_renders_a_link_preview_written_by_hand_without_its_off_scheme_image_and_link() {
+    let html=posted_link_preview("javascript:alert(1)","data:image/svg+xml;base64,PHN2Zy8+","hand-written-preview").await;
+    assert!(!html.contains("javascript:alert"));assert!(!html.contains("data:image/svg"));
+    assert!(html.contains("Free cookies"));
+}
+#[tokio::test]
+async fn show_renders_a_link_preview_written_by_hand_without_its_image_pointed_at_this_smartfire() {
+    let own_url=format!("http://campfire.test/rooms/{ALL_TALK}");
+    let html=posted_link_preview(&own_url,&own_url,"same-host-preview").await;
+    assert!(!html.contains(&format!("<img src=\"{own_url}\"")));
+    assert!(!html.contains(&format!("<a rel=\"noreferrer\" target=\"_blank\" href=\"{own_url}\"")));
+    assert!(html.contains("Free cookies"));
+}
+#[tokio::test]
+async fn show_renders_an_unfurled_link_preview() {
+    let html=posted_link_preview("https://example.com/page","https://example.com/image.png","unfurled-preview").await;
+    assert!(html.contains("<img src=\"/embeds/image/"));
+    assert!(!html.contains("https://example.com/image.png"));
+    assert!(html.contains("href=\"https://example.com/page\""));
+}

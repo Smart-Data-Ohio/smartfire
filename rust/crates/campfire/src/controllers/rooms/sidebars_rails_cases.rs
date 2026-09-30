@@ -86,3 +86,37 @@ async fn direct_rows_keep_avatar_card_triggers_as_siblings_of_the_room_link() {
         }
     }
 }
+
+const HUDDLE_ENV: &[(&str,&str)] = &[
+    ("LIVEKIT_URL","wss://huddle.example.test"),("LIVEKIT_INTERNAL_URL","ws://livekit.example.test:7880"),
+    ("LIVEKIT_API_KEY","fixture-api-key"),("LIVEKIT_API_SECRET","fixture-api-secret"),
+    ("LIVEKIT_GATEWAY_SECRET","fixture-gateway-secret")];
+async fn measured_sidebar(db:&campfire_db::Database,n:usize,router:&axum::Router)->Vec<String> {
+    let probe=super::query_probe::SqlProbe::start(db,n).await;
+    let reply=super::query_probe::request(router,&campfire_routes::user_sidebar()).await;
+    let content=Content::wrap(&reply.text()).unwrap();
+    assert_eq!(reply.status,StatusCode::OK);
+    let statements=probe.finish().await;
+    assert!(content.dom.text_content(content.root).contains("Jason"));
+    let queries:Vec<_>=statements.into_iter().filter(|s|s.sql.trim_start().to_ascii_uppercase().starts_with("SELECT")).map(|s|s.sql).collect();
+    assert!(!queries.is_empty(),"trace must include the actual HTTP SELECT executions");queries
+}
+#[tokio::test]
+async fn sidebar_query_count_does_not_grow_with_group_dms_named_or_not() {
+    let app=TestApp::boot_frozen_with_env(HUDDLE_ENV).await.expect("seed required");
+    let db=app.db().clone();let n=app.booted.app.config.db_readers;let router=app.booted.router.clone();
+    app.booted.jobs.shutdown(std::time::Duration::from_secs(5)).await;
+    db.write(|tx|Room::find_or_create_direct_for(tx,&[DAVID,JASON,KEVIN],DAVID).map(|_|())).await.unwrap();
+    super::query_probe::request(&router,&campfire_routes::user_sidebar()).await;
+    let baseline=measured_sidebar(&db,n,&router).await;
+    db.write(|tx| {
+        for index in 0..5 {
+            let peer=campfire_db::User::create(tx,campfire_db::NewUser{name:format!("Group peer {index}"),email_address:Some(format!("grouppeer{index}@example.test")),..Default::default()})?;
+            let room=Room::find_or_create_direct_for(tx,&[DAVID,JASON,peer.id],DAVID)?;
+            if index%2==0 {tx.conn().execute("UPDATE rooms SET name=? WHERE id=?",(format!("Named group {index}"),room.id))?;}
+        }
+        Ok(())
+    }).await.unwrap();
+    let more=measured_sidebar(&db,n,&router).await;
+    assert_eq!(baseline.len(),more.len(),"full sidebar HTTP SELECT count: {baseline:?} then {more:?}");
+}
