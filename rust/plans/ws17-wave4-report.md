@@ -6,7 +6,7 @@ Reference Rails `d7c7de92`; merged main `21a7332f` with merge commit `56aa9f62`.
 
 Earlier pushed slices (`7b9267a3`, `32b49aa4`, `76c34826`, `0adcae95`, `12c448d7`) provide typed notification policy, tagged Web Push with Smartfire subject and IP pinning, durable room/thread/saved/test push transport, presence leases/HTTP/pruner, validated dirty-tracked settings writes, status and notification PATCH, DND allowances, keyword-list replacement, cache reconciliation, manual OOO claims, and complete badge/OOO broadcast HTML. PWA worker/offline bytes are pinned. Existing Rails oracle vectors remain exercised by the full suites below.
 
-Profile/subscription/allowance slice pushed at `ba916992`; keyword recording pushed at `fd411985`; calendar dispatch pushed at `9dff8776`; notification push adapters pushed at `7eaf269f`; current named policy replay slice:
+Profile/subscription/allowance slice pushed at `ba916992`; keyword recording pushed at `fd411985`; calendar dispatch pushed at `9dff8776`; notification push adapters pushed at `7eaf269f`; named policy replay pushed at `e90bb4c5`; current named OOO/meeting replay slice:
 
 | Files | Change and verification |
 | --- | --- |
@@ -24,6 +24,7 @@ Profile/subscription/allowance slice pushed at `ba916992`; keyword recording pus
 | `db/models/notification_push.rs`, subscription batches; `campfire/jobs/notifications.rs` | Live event/board source readers until WS14/WS12 land. Durable event/board jobs re-read memberships and current reminder policy with no sender exception. Match event rounding/staleness, venue/direct title/tag, board status/escalation/path and membership recheck. WS13 huddle adapter keeps supplied payload bytes, SQL disconnected/visible scope, actual caller allowances, huddle inbox switch, strict older-than-ten-minutes throttle, and atomic throttle/delivery-job enqueue. Four new registered handlers. |
 | `db/tests/notification_push_test.rs`, notification push oracle; `web_push/ws17_delivery_tests.rs` | Fifty actual Rails source/policy states including all 10 event, 4 board and 13 join-pusher titles. Claims run on real SQLite and across two database handles; repeat/eleven-minute replay. Registered handlers run against private seeded app DB and local TLS, comparing complete decrypted JSON with actual Rails strings (no output masks). Rejecting a delivery INSERT rolls back both throttle and triggering source write. |
 | `db/tests/named_policy_test.rs`, `notification_policy.rs`; named policy oracle, pinned declarations and regeneration | Largest remaining file first: 52 individually named Rust tests. Run the unchanged pinned Ruby test declarations/setup/private helpers/assertions under an isolated fixture/clock host, not rewritten case tables: all 52 Ruby cases and 133 original assertions pass. Capture 82 constructor observations, then replay actual persisted recipient/cache/allowance state and decisions in Rust. A real SQLite trace asserts zero policy queries and one batched allowance query (zero without sender). Dynamic kind parsing rejects unknown strings with the pin's exact error message. |
+| `db/tests/named_calendar_status_test.rs`, `user_status_settings.rs`; pinned OOO/meeting declarations and oracle | Next largest deferred files: all 22 OOO and 14 meeting-status titles, each an individual named Rust test. The unchanged Ruby bodies run 98 original assertions; replay all 199 operations in order on one real DB/clock per case, checking both loaded and persisted attributes before/after every call. Cache creation is source setup SQL at the WS14 seam. Match failed-save retention, expired settings, racing/repeated claims, presets, zones, quiet/label precedence and deactivation. Add the separate pure visibility/quiet/date readers and a loaded-settings deactivation wrapper that clears the owned OOO attributes with the real User write. |
 | `reference-tools/ws17_profile_ui.rb`, regeneration script, verifier and injection runner | Actual pinned source/output verification; no Rails changes, output masks, allowlist changes or new ignores. |
 
 User/profile security, GitHub/inbox/voice settings and connected-service UI belong to WS9/WS11/WS12/WS13/WS14/WS15. The existing basic profile update path still needs those owners' callbacks. This slice adds only the owned appearance attributes, without claiming whole-profile parity.
@@ -54,6 +55,7 @@ pub fn push(&self) -> bool;
 WS13 builds invitation/join `PushPayload` and candidate room-membership facts. WS17's shared transport is available now. Before `Pool::queue`, preload settings once and evaluate `NotificationPolicy` with current time and the actual sender's DND allowances. Invitation uses `NotificationKind::Huddle`; join uses **`NotificationKind::HuddleJoin` with the recipient's actual `room_involvement`** (missing membership is `None`, a present SQL-null involvement is `Some(None)`). Other unused policy inputs are false/None. Join with missing, invisible, nothing or muted membership is suppressed. `Pool::queue` itself applies no policy or recipient-scope filtering.
 
 Keep Rails' pusher scopes before delivery: visible/disconnected memberships, invitations exclude `nothing`, joins exclude `nothing` and `muted`; SQL-null exclusions follow Rails SQL rather than adding eligibility. Join also checks the huddle inbox preference and claims its ten-minute throttle only after policy and subscriptions permit an actual push. The dedicated durable huddle gate/delivery adapter is now available below; the shared transport signatures remain unchanged. WS13 still connects its source jobs/lifecycle and payload construction to this adapter. WS13 owns payload/source construction, WS17 the gate/transport. `PushPayload::new` preserves supplied strings/tag without automatic truncation. Pool reads fresh badges and delivers through current VAPID and stored pinned endpoint IP. Preserve transactional claim/enqueue when connecting the source.
+
 
 
 
@@ -117,13 +119,13 @@ Rails profile UI: 6 complete appearance forms; 1 complete subscription content; 
 
 ```text
 profile-save-theme: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 411 filtered out; finished in 0.42s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 411 filtered out; finished in 0.43s
 profile-private-endpoint: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 411 filtered out; finished in 0.59s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 411 filtered out; finished in 0.43s
 profile-unique-loser: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 411 filtered out; finished in 0.45s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 411 filtered out; finished in 0.46s
 profile-sound-metadata: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 411 filtered out; finished in 0.58s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 411 filtered out; finished in 0.43s
 ```
 
 `python3 rust/reference-tools/ws17_regenerate_message_activity.py`
@@ -137,11 +139,11 @@ Rails message activity: 31 complete callback/candidate cases
 
 ```text
 keyword-priority: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 511 filtered out; finished in 1.86s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 547 filtered out; finished in 1.38s
 keyword-read-state: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 511 filtered out; finished in 0.32s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 547 filtered out; finished in 0.11s
 keyword-atomic: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 411 filtered out; finished in 0.80s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 411 filtered out; finished in 0.47s
 ```
 
 `python3 rust/reference-tools/ws17_regenerate_calendar_dispatch.py`
@@ -155,13 +157,13 @@ Rails calendar dispatch: 25 complete two-tick cases
 
 ```text
 calendar-steady-write: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 511 filtered out; finished in 0.28s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 547 filtered out; finished in 0.09s
 calendar-racing-claim: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 511 filtered out; finished in 0.18s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 547 filtered out; finished in 0.10s
 calendar-duplicate-refresh: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 411 filtered out; finished in 0.20s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 411 filtered out; finished in 0.10s
 calendar-atomic: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 411 filtered out; finished in 0.45s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 411 filtered out; finished in 0.41s
 ```
 
 `python3 rust/reference-tools/ws17_regenerate_notification_push.py`
@@ -175,13 +177,13 @@ Rails notification push: 50 complete source/policy payload cases
 
 ```text
 push-reminder-dnd: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 511 filtered out; finished in 1.69s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 547 filtered out; finished in 1.14s
 push-event-stale: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 511 filtered out; finished in 1.62s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 547 filtered out; finished in 1.38s
 push-huddle-boundary: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 511 filtered out; finished in 2.62s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 547 filtered out; finished in 2.24s
 push-huddle-atomic: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 411 filtered out; finished in 0.13s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 411 filtered out; finished in 0.11s
 ```
 
 `python3 rust/reference-tools/ws17_regenerate_named_policy.py`
@@ -196,27 +198,53 @@ Rails named policy: 52 passed cases; 133 original Rails assertions; 82 construct
 
 ```text
 named-policy-quiet: detected
-test result: FAILED. 35 passed; 17 failed; 0 ignored; 0 measured; 460 filtered out; finished in 2.80s
+test result: FAILED. 35 passed; 17 failed; 0 ignored; 0 measured; 496 filtered out; finished in 4.16s
 named-policy-bot-inbox: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 511 filtered out; finished in 0.10s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 547 filtered out; finished in 0.18s
 named-policy-query-ceiling: detected
-test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 511 filtered out; finished in 0.10s
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 547 filtered out; finished in 0.23s
+```
+
+`python3 rust/reference-tools/ws17_regenerate_named_calendar_status.py`
+
+```text
+pinned Rails source verified: 50 files match d7c7de92
+pinned calendar status declarations verified: 2 files byte-identical to d7c7de92
+Rails named out_of_office: 22 passed cases; 71 original Rails assertions; 129 operations
+Rails named meeting_status: 14 passed cases; 27 original Rails assertions; 70 operations
+```
+
+`python3 rust/reference-tools/ws17_injections.py named-status`
+
+```text
+named-status-deactivate: detected
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 547 filtered out; finished in 0.32s
+named-status-expired-note: detected
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 547 filtered out; finished in 0.12s
+named-status-meeting-dnd: detected
+test result: FAILED. 33 passed; 3 failed; 0 ignored; 0 measured; 512 filtered out; finished in 1.36s
+```
+
+`mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire_db named_calendar_status_test`
+
+```text
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 512 filtered out; finished in 0.83s
 ```
 
 `mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire_db named_policy_test`
 
 ```text
-test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 460 filtered out; finished in 1.81s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 496 filtered out; finished in 1.81s
 ```
 
 `CAMPFIRE_TEST_REQUIRE_SEED=1 CABLE_TEST_PORT_RANGE=52400-52499 MAIL_TEST_PORT_RANGE=52400-52499 mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire_db -p campfire_jobs -p campfire_views -- --test-threads=4`
 
 ```text
-test result: ok. 509 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 36.71s
-test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.82s
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.90s
-test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
-test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+test result: ok. 545 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 47.03s
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.85s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.93s
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -226,16 +254,16 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 `CAMPFIRE_TEST_REQUIRE_SEED=1 CABLE_TEST_PORT_RANGE=52400-52499 MAIL_TEST_PORT_RANGE=52400-52499 mise exec rust@1.98.1 -- cargo test --locked -j 4 --manifest-path rust/Cargo.toml -p campfire -- --test-threads=4`
 
 ```text
-test result: ok. 409 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 33.79s
+test result: ok. 409 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 37.86s
 ```
 
 `mise exec rust@1.98.1 -- cargo clippy --locked -j 4 --manifest-path rust/Cargo.toml --workspace --all-targets -- -D warnings`
 
 ```text
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 25.39s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 24.99s
 ```
 
-The three named policy injections bypass quietness, allow bot/inactive inbox items, and issue a second allowance query; all fail actual assertions. Every cited regeneration/injection command is rerun for this final slice before the full suites. Four new push injections bypass senderless reminder DND, skip event staleness, make the huddle throttle boundary inclusive, and commit before enqueue. Every injection fails a real test and sources are restored. The pre-change periodic registration test failed with `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 385 filtered out; finished in 0.00s`. Four calendar injections restore steady-state claim writes, remove the concurrent claim guard, duplicate both-opt-in refreshes, and commit before the refresh/claim; all produce actual failed tests. The pre-change keyword callback failed with `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 439 filtered out; finished in 0.04s`. Three keyword injections remove mention priority, reset read/handled state on conflict, and commit before the callback write; all produce real failed tests. The pre-change appearance HTTP test failed on persisted `system` versus submitted `dark`: `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.48s`. Complete form comparison also failed before correcting dynamic zone labels; subscription content failed before correcting its exact leading/collection whitespace. The four committed injections remove the theme save, accept private DNS, remove unique-index rescue, and erase sound metadata; each must produce an actual failed test, not a compiler error. Sources are restored by the runner before final suites.
+The three new named status injections retain stale loaded OOO on deactivation, leak an expired manual note into calendar OOO, and ignore manual/scheduled DND for the meeting label; all fail real assertions. Before the loaded-settings wrapper, the named replay failed with `test result: FAILED. 35 passed; 1 failed; 0 ignored; 0 measured; 512 filtered out; finished in 0.79s`. The three named policy injections bypass quietness, allow bot/inactive inbox items, and issue a second allowance query; all fail actual assertions. Every cited regeneration/injection command is rerun for this final slice before the full suites. Four new push injections bypass senderless reminder DND, skip event staleness, make the huddle throttle boundary inclusive, and commit before enqueue. Every injection fails a real test and sources are restored. The pre-change periodic registration test failed with `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 385 filtered out; finished in 0.00s`. Four calendar injections restore steady-state claim writes, remove the concurrent claim guard, duplicate both-opt-in refreshes, and commit before the refresh/claim; all produce actual failed tests. The pre-change keyword callback failed with `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 439 filtered out; finished in 0.04s`. Three keyword injections remove mention priority, reset read/handled state on conflict, and commit before the callback write; all produce real failed tests. The pre-change appearance HTTP test failed on persisted `system` versus submitted `dark`: `test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 370 filtered out; finished in 0.48s`. Complete form comparison also failed before correcting dynamic zone labels; subscription content failed before correcting its exact leading/collection whitespace. The four committed injections remove the theme save, accept private DNS, remove unique-index rescue, and erase sound metadata; each must produce an actual failed test, not a compiler error. Sources are restored by the runner before final suites.
 
 ## Precisely remaining
 
@@ -243,20 +271,20 @@ The three named policy injections bypass quietness, allow bot/inactive inbox ite
 2. Message keyword recording is delivered. WS12 still owns generic/caller-authorized recording, work events, inbox queries/controllers/source rendering and access rules. `ActivityItem::record_message(tx: &mut Tx, message: &Message) -> Result<Vec<ActivityItem>>` is the minimal shared seam. WS11 must call it on a live stream finalize; WS16 must gate it for importing together with the existing message callback chain. This slice gates normal creation on non-streaming/non-system-note state; edits do not re-record.
 3. Meeting/OOO due sweeps and conditional claims/broadcasts are delivered. WS14 owns validated cache creation (the one remaining cache title), Google fetch execution and refresh completion at the documented job seam.
 4. Event/board pushers, registered durable jobs and the huddle policy/throttle/durable-delivery adapter are delivered. WS12/14 must connect their source claims/callbacks to the documented ID jobs; WS13 must connect invitation/join source jobs and payloads to the adapter. Four named invitation-source job titles remain deferred to WS13. Room handler audit remains. Huddle fan-out batching against the eventual WS13 notifier still needs owner integration/performance verification.
-5. Remaining exact named scenarios below, largest files first. The next files are User::OutOfOfficeTest (22) and User::MeetingStatusTest (14), then OOO DM integration/push gating (10 each). Existing broad time/zone vectors exercise readers, but their exact named sequences are still deferred; no broader replay coverage is claimed.
+5. Remaining exact named scenarios below, largest files first. User::OutOfOfficeTest (22/22) and User::MeetingStatusTest (14/14) are now complete. The next files are OOO DM integration and push gating (10 each), then generic/work/caller-authorized recorder cases and status-notification browser cases (7 each). These exact sequences remain deferred; no broader replay coverage is claimed.
 
 ## Named scenario coverage by file
 
-347 selected exact Rails titles: **253 passed equivalent; 94 deferred**. `rust/plans/ws17-rails-test-inventory.json` records exact title, owner, status and Rust evidence. Additional profile/UI HTTP cases are outside this pre-existing selected inventory.
+347 selected exact Rails titles: **289 passed equivalent; 58 deferred**. `rust/plans/ws17-rails-test-inventory.json` records exact title, owner, status and Rust evidence. Additional profile/UI HTTP cases are outside this pre-existing selected inventory.
 
 | Rails file | Passed equivalent | Deferred |
 | --- | ---: | ---: |
 | `test/models/notifications/policy_test.rb` | 52 | 0 |
 | `test/controllers/users/statuses_controller_test.rb` | 22 | 0 |
-| `test/models/user/out_of_office_test.rb` | 0 | 22 |
+| `test/models/user/out_of_office_test.rb` | 22 | 0 |
 | `test/services/activity_items/recorder_test.rb` | 13 | 7 |
 | `test/models/push/subscription_test.rb` | 13 | 5 |
-| `test/models/user/meeting_status_test.rb` | 0 | 14 |
+| `test/models/user/meeting_status_test.rb` | 14 | 0 |
 | `test/models/user/status_settings_test.rb` | 10 | 4 |
 | `test/models/workspace_presence_lease_test.rb` | 14 | 0 |
 | `test/models/calendar/meeting_cache_test.rb` | 12 | 1 |
@@ -288,42 +316,6 @@ The three named policy injections bypass quietness, allow bot/inactive inbox ite
 
 | Rails file | Exact title | Owner |
 | --- | --- | --- |
-| `test/models/user/out_of_office_test.rb` | OOO presets run to the end of the day in the member's zone | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | OOO quiet never suppresses the OOO label | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | OOO quiets notifications unless the member keeps them on | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | OOO wins over a custom status, DND, and the meeting label | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | a calendar OOO outside its intervals reads as off | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | a manual OOO is active until its end, then reads as off | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | a note longer than 140 characters is invalid | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | an unknown preset raises | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | calendar OOO needs the opt-in and a covering interval | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | claim_ooo_broadcast! wins the first claim and each flip, and loses re-runs | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | claiming an end clears the expired manual columns | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | claiming an end keeps a manual OOO set racing the sweep | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | deactivating clears the manual OOO columns | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | invisible hides the OOO label but OOO still reads as active | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | out of office defaults off | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | overlapping manual and calendar OOO show the later end | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | setting an OOO end in the past is invalid, but an expired end left behind still saves | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | the Monday preset is a week out on Mondays | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | the custom preset parses a datetime-local value in the member's zone | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | the note shows only while the manual OOO is active | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | the return date renders in the OOO member's own zone | WS17 continuation |
-| `test/models/user/out_of_office_test.rb` | the status line names the return date and the note | WS17 continuation |
-| `test/models/user/meeting_status_test.rb` | a custom status wins over the meeting label | WS17 continuation |
-| `test/models/user/meeting_status_test.rb` | an expired custom status yields to the meeting label | WS17 continuation |
-| `test/models/user/meeting_status_test.rb` | in_meeting? is false without a cache row | WS17 continuation |
-| `test/models/user/meeting_status_test.rb` | in_meeting? needs the opt-in and a covering interval | WS17 continuation |
-| `test/models/user/meeting_status_test.rb` | invisible hides the meeting label | WS17 continuation |
-| `test/models/user/meeting_status_test.rb` | manual DND wins over the meeting label | WS17 continuation |
-| `test/models/user/meeting_status_test.rb` | meeting status and quiet-during-meetings default off | WS17 continuation |
-| `test/models/user/meeting_status_test.rb` | quiet hours win over the meeting label | WS17 continuation |
-| `test/models/user/meeting_status_test.rb` | quiet-during-meetings applies through a custom status | WS17 continuation |
-| `test/models/user/meeting_status_test.rb` | quiet-during-meetings is off outside busy intervals | WS17 continuation |
-| `test/models/user/meeting_status_test.rb` | quiet-during-meetings never suppresses the meeting label | WS17 continuation |
-| `test/models/user/meeting_status_test.rb` | quiet-during-meetings only works while meeting status is on | WS17 continuation |
-| `test/models/user/meeting_status_test.rb` | the DND presence wins over the meeting label | WS17 continuation |
-| `test/models/user/meeting_status_test.rb` | the meeting label shows while in a meeting | WS17 continuation |
 | `test/integration/ooo_dm_notice_test.rb` | a DM with an OOO member shows the notice above the composer | WS17 continuation |
 | `test/integration/ooo_dm_notice_test.rb` | a DM with nobody out shows no notice | WS17 continuation |
 | `test/integration/ooo_dm_notice_test.rb` | a channel shows no notice even while a member is out | WS17 continuation |

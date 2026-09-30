@@ -928,254 +928,254 @@
     {
       "file": "test/models/user/meeting_status_test.rb",
       "test": "meeting status and quiet-during-meetings default off",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/meeting_status_test.rb",
       "test": "in_meeting? needs the opt-in and a covering interval",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/meeting_status_test.rb",
       "test": "in_meeting? is false without a cache row",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/meeting_status_test.rb",
       "test": "the meeting label shows while in a meeting",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/meeting_status_test.rb",
       "test": "a custom status wins over the meeting label",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/meeting_status_test.rb",
       "test": "an expired custom status yields to the meeting label",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/meeting_status_test.rb",
       "test": "manual DND wins over the meeting label",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/meeting_status_test.rb",
       "test": "the DND presence wins over the meeting label",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/meeting_status_test.rb",
       "test": "quiet hours win over the meeting label",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/meeting_status_test.rb",
       "test": "invisible hides the meeting label",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/meeting_status_test.rb",
       "test": "quiet-during-meetings never suppresses the meeting label",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/meeting_status_test.rb",
       "test": "quiet-during-meetings only works while meeting status is on",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/meeting_status_test.rb",
       "test": "quiet-during-meetings applies through a custom status",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/meeting_status_test.rb",
       "test": "quiet-during-meetings is off outside busy intervals",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "out of office defaults off",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "a manual OOO is active until its end, then reads as off",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "setting an OOO end in the past is invalid, but an expired end left behind still saves",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "a note longer than 140 characters is invalid",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "the status line names the return date and the note",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "the return date renders in the OOO member's own zone",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "OOO wins over a custom status, DND, and the meeting label",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "invisible hides the OOO label but OOO still reads as active",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "OOO quiet never suppresses the OOO label",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "calendar OOO needs the opt-in and a covering interval",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "a calendar OOO outside its intervals reads as off",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "overlapping manual and calendar OOO show the later end",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "the note shows only while the manual OOO is active",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "OOO presets run to the end of the day in the member's zone",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "the Monday preset is a week out on Mondays",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "the custom preset parses a datetime-local value in the member's zone",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "an unknown preset raises",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "claim_ooo_broadcast! wins the first claim and each flip, and loses re-runs",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "claiming an end clears the expired manual columns",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "claiming an end keeps a manual OOO set racing the sweep",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "OOO quiets notifications unless the member keeps them on",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/user/out_of_office_test.rb",
       "test": "deactivating clears the manual OOO columns",
-      "status": "deferred-exact-scenario",
+      "status": "ported-equivalent",
       "owner": "WS17 continuation",
-      "evidence": null
+      "evidence": "campfire_db: named_calendar_status_test (22 OOO and 14 meeting exact named cases; original Ruby bodies passed 98 assertions; 199 ordered operations, real writers/claims/clock/reloads and both loaded/stored state checks)"
     },
     {
       "file": "test/models/calendar/meeting_cache_test.rb",

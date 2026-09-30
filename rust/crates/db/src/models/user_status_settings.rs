@@ -134,7 +134,9 @@ impl MeetingCache {
             .is_some()
     }
     pub fn in_ooo(&self, now: Timestamp) -> bool {
-        Self::covering_ends(&self.ooo_intervals, now).next().is_some()
+        Self::covering_ends(&self.ooo_intervals, now)
+            .next()
+            .is_some()
     }
     pub fn ooo_end_covering(&self, now: Timestamp) -> Option<Timestamp> {
         Self::covering_ends(&self.ooo_intervals, now).max()
@@ -142,6 +144,16 @@ impl MeetingCache {
 }
 
 impl UserStatusSettings {
+    /// Keep the loaded status attributes in step with User#deactivate's persisted OOO reset.
+    pub fn deactivate(&mut self, tx: &mut crate::Tx<'_>) -> Result<()> {
+        self.user.deactivate(tx)?;
+        self.ooo_until = None;
+        self.ooo_note = None;
+        self.ooo_broadcast = None;
+        self.original_attributes = self.attributes();
+        Ok(())
+    }
+
     fn from_row(row: &Row<'_>) -> rusqlite::Result<Self> {
         let mut user = Self {
             user: User::from_row(row)?,
@@ -258,6 +270,13 @@ impl UserStatusSettings {
     pub fn manual_ooo_active(&self, now: Timestamp) -> bool {
         self.ooo_until.is_some_and(|until| until > now)
     }
+    pub fn calendar_ooo_active(&self, now: Timestamp) -> bool {
+        self.ooo_calendar_enabled
+            && self
+                .meeting_cache
+                .as_ref()
+                .is_some_and(|cache| cache.in_ooo(now))
+    }
     pub fn ooo_until_effective(&self, now: Timestamp) -> Option<Timestamp> {
         let manual = self.ooo_until.filter(|until| *until > now);
         let calendar = self
@@ -277,35 +296,53 @@ impl UserStatusSettings {
                 .as_ref()
                 .is_some_and(|cache| cache.in_meeting(now))
     }
-    pub fn quiet_for_push(&self, now: Timestamp) -> bool {
-        self.dnd_active(now)
-            || (self.meeting_dnd_enabled && self.in_meeting(now))
-            || (self.out_of_office(now) && !self.ooo_notify_enabled)
+    pub fn ooo_status_visible(&self, now: Timestamp) -> bool {
+        self.out_of_office(now) && self.presence_setting != "invisible"
     }
-    pub fn status_text_display(&self, now: Timestamp) -> Option<String> {
-        if self.presence_setting != "invisible"
-            && let Some(until) = self.ooo_until_effective(now)
-        {
-            let date = until
+    pub fn ooo_until_date(&self, now: Timestamp) -> Option<String> {
+        self.ooo_until_effective(now).map(|until| {
+            until
                 .jiff()
                 .to_zoned(self.zone())
                 .strftime("%B %d, %Y")
-                .to_string();
-            let mut text = format!("🌴 Out of office until {date}");
-            if self.manual_ooo_active(now)
-                && let Some(note) = self.ooo_note.as_deref().filter(|s| !s.trim().is_empty())
-            {
-                text.push_str(&format!(" — {note}"));
-            }
-            return Some(text);
-        }
-        self.custom_status_display(now).or_else(|| {
-            (self.in_meeting(now)
-                && !self.out_of_office(now)
-                && !self.dnd_active(now)
-                && self.presence_setting != "invisible")
-                .then(|| "📅 In a meeting".into())
+                .to_string()
         })
+    }
+    pub fn ooo_status_text(&self, now: Timestamp) -> Option<String> {
+        if !self.ooo_status_visible(now) {
+            return None;
+        }
+        let mut text = format!("🌴 Out of office until {}", self.ooo_until_date(now)?);
+        if self.manual_ooo_active(now)
+            && let Some(note) = self.ooo_note.as_deref().filter(|s| !s.trim().is_empty())
+        {
+            text.push_str(&format!(" — {note}"));
+        }
+        Some(text)
+    }
+    pub fn ooo_dnd_active(&self, now: Timestamp) -> bool {
+        self.out_of_office(now) && !self.ooo_notify_enabled
+    }
+    pub fn meeting_status_visible(&self, now: Timestamp) -> bool {
+        self.in_meeting(now)
+            && !self.out_of_office(now)
+            && self.custom_status_display(now).is_none()
+            && !self.dnd_active(now)
+            && self.presence_setting != "invisible"
+    }
+    pub fn meeting_dnd_active(&self, now: Timestamp) -> bool {
+        self.meeting_dnd_enabled && self.in_meeting(now)
+    }
+    pub fn quiet_for_push(&self, now: Timestamp) -> bool {
+        self.dnd_active(now) || self.meeting_dnd_active(now) || self.ooo_dnd_active(now)
+    }
+    pub fn status_text_display(&self, now: Timestamp) -> Option<String> {
+        self.ooo_status_text(now)
+            .or_else(|| self.custom_status_display(now))
+            .or_else(|| {
+                self.meeting_status_visible(now)
+                    .then(|| "📅 In a meeting".into())
+            })
     }
     pub fn effective_presence(
         &self,
