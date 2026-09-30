@@ -1,0 +1,92 @@
+{
+  "reference": "d7c7de9264c63015be398001d7a1094e7695a6db",
+  "now": "2026-03-02T16:00:00Z",
+  "cases": [
+    {
+      "kind": "text",
+      "filename": "analysis.txt",
+      "content_type": "text/plain",
+      "data_base64": "QXR0YWNobWVudCBhbmFseXplciBwYXJpdHkuCg==",
+      "sha256": "c5220a329398d379a289de2cab10536760c78295ec842521bf3fbdac55caa8ba",
+      "status": 302,
+      "identified_content_type": "text/plain",
+      "analyzer": "ActiveStorage::Analyzer::NullAnalyzer",
+      "analyze_later": false,
+      "analysis_jobs": 0,
+      "metadata": {
+        "identified": true,
+        "analyzed": true
+      }
+    },
+    {
+      "kind": "image",
+      "filename": "analysis.png",
+      "content_type": "image/png",
+      "data_base64": "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAtGVYSWZJSSoACAAAAAYAEgEDAAEAAAABAAAAGgEFAAEAAABWAAAAGwEFAAEAAABeAAAAKAEDAAEAAAACAAAAEwIDAAEAAAABAAAAaYcEAAEAAABmAAAAAAAAADhjAADoAwAAOGMAAOgDAAAGAACQBwAEAAAAMDIxMAGRBwAEAAAAAQIDAACgBwAEAAAAMDEwMAGgAwABAAAA//8AAAKgBAABAAAAQAAAAAOgBAABAAAAQAAAAAAAAACc6RMPAAAAG0lEQVR4nO3BgQAAAADDoPlT3+AEVQEAAAB8AxBAAAFGOA0dAAAAAElFTkSuQmCC",
+      "sha256": "b5160fb46afaba85164d904f79b9f35ce6df90afa9154db5712841f2add1205c",
+      "status": 302,
+      "identified_content_type": "image/png",
+      "analyzer": "ActiveStorage::Analyzer::ImageAnalyzer::Vips",
+      "analyze_later": true,
+      "analysis_jobs": 1,
+      "metadata": {
+        "identified": true
+      }
+    },
+    {
+      "kind": "video",
+      "filename": "alpha-centuri.mov",
+      "content_type": "video/quicktime",
+      "reference_fixture": "test/fixtures/files/alpha-centuri.mov",
+      "sha256": "420726f9cdff7b48f6bb2d6c79af6ff69dfcc4d290a8376d1901be0de9c62286",
+      "status": 302,
+      "identified_content_type": "video/quicktime",
+      "analyzer": "ActiveStorage::Analyzer::VideoAnalyzer",
+      "analyze_later": true,
+      "analysis_jobs": 1,
+      "metadata": {
+        "identified": true
+      }
+    },
+    {
+      "kind": "audio",
+      "filename": "analysis.wav",
+      "content_type": "audio/wav",
+      "rust_fixture": "reference-tools/attachments/fixtures/analysis.wav",
+      "sha256": "c726d333dd159a31423f3480dbb1c5c4a9dfcd30efe1f7e12ade390dc92e8908",
+      "status": 302,
+      "identified_content_type": "audio/x-wav",
+      "analyzer": "ActiveStorage::Analyzer::AudioAnalyzer",
+      "analyze_later": true,
+      "analysis_jobs": 1,
+      "metadata": {
+        "identified": true
+      }
+    },
+    {
+      "kind": "pdf",
+      "filename": "analysis.pdf",
+      "content_type": "application/pdf",
+      "rust_fixture": "reference-tools/attachments/fixtures/analysis.pdf",
+      "sha256": "70a1d89401df160ac5b5447fe480ac9aaa27ca41a91097f88dc1287074217ab0",
+      "status": 302,
+      "identified_content_type": "application/pdf",
+      "analyzer": "ActiveStorage::Analyzer::NullAnalyzer",
+      "analyze_later": false,
+      "analysis_jobs": 0,
+      "metadata": {
+        "identified": true,
+        "analyzed": true
+      }
+    }
+  ],
+  "inline_failure": {
+    "status": 500,
+    "account_name": "Null analyzer committed",
+    "attachment_committed": true,
+    "metadata": {
+      "identified": true
+    },
+    "analysis_jobs": 0
+  }
+}

@@ -17,7 +17,7 @@ use campfire_views::messages as views;
 use crate::active_storage::{self, keep_after_commit};
 use crate::app::{App, AppCtx};
 use crate::concerns::{self, Before, before_actions, cast_integer, require_current_user};
-use crate::controllers::presenters::attachments::Assignment;
+use crate::controllers::presenters::attachments::{self, Assignment};
 use crate::controllers::presenters::page::{self, Rendered, db_error};
 use crate::controllers::presenters::{DbResolver, Presenter, cache_key_with_version, room_kind, storage_error};
 use crate::jobs::{WEBHOOK_HOLD, WebhookJob};
@@ -224,18 +224,19 @@ pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessagePara
     let creator_id = require_current_user(c)?.id;
     let room_id = room.id;
     let room = room.clone();
-    let attachment = match attributes.attachment {
-        Some(Assignment::Create(upload)) => Some(upload.stage(c.app()).await?),
-        Some(Assignment::Invalid) => return Err(invalid_attachment()),
-        _ => None,
+    let attachment = attributes.attachment.unwrap_or(Assignment::Unchanged).stage(c.app()).await?;
+    if matches!(attachment, Assignment::Invalid) {
+        return Err(invalid_attachment());
+    }
+    let body = match attributes.body {
+        Some(body) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
+        None => None,
     };
-    let body = attributes.body.map(|body| canonicalize_body(c.app(), body, Some(c.request.host())));
-    let body = match body { Some(body) => Some(body.await?), None => None };
     let (message, blob) = c
         .app()
         .db
         .write(move |tx| {
-            let blob = attachment.map(|staged| save_staged(tx, staged)).transpose()?;
+            let blob = attachment_blob(tx, attachment)?;
             let message = Message::create(
                 tx,
                 NewMessage {
@@ -249,6 +250,9 @@ pub(crate) async fn create_message(c: &Ctx, room: &Room, attributes: MessagePara
                 },
             )?;
             deliver_webhooks_to_bots(tx, &room, &message)?;
+            if let Some(blob) = &blob {
+                attachments::enqueue_analysis(tx, blob);
+            }
             Ok((message, blob))
         })
         .await
@@ -265,6 +269,16 @@ pub(crate) fn save_staged(tx: &mut campfire_db::Tx<'_>, staged: Staged) -> campf
     let blob = staged.insert(tx.conn(), tx.now().jiff()).map_err(storage_error)?;
     keep_after_commit(tx, staged);
     Ok(blob)
+}
+
+/// Resolve a staged upload or an existing direct-upload blob inside the writer transaction.
+fn attachment_blob(tx: &mut campfire_db::Tx<'_>, assignment: Assignment<Staged>) -> campfire_db::Result<Option<Blob>> {
+    match assignment {
+        Assignment::Create(staged) => save_staged(tx, staged).map(Some),
+        Assignment::Existing(blob) => attachments::save_existing(tx, blob).map(Some),
+        Assignment::Unchanged | Assignment::Delete => Ok(None),
+        Assignment::Signed(_) | Assignment::Invalid => Err(campfire_db::Error::Other("invalid attachment".into())),
+    }
 }
 
 /// [`canonical_body`] on a reader, ahead of the write that stores it.
@@ -304,49 +318,28 @@ pub(crate) async fn process_attachment(app: &App, blob: Blob) -> Result<()> {
 /// `blob.analyze`: its `after_update` touches the attached records. The file is analyzed off the
 /// writer.
 async fn analyze_attachment(app: &App, blob: Blob) -> Result<Blob> {
-    let metadata = active_storage::analyzed_metadata(app, &blob).await?;
-    app.db
-        .write(move |tx| {
-            let mut blob = blob;
-            blob.update_metadata(tx.conn(), metadata).map_err(storage_error)?;
-            touch_attachment_records(tx, blob.id)?;
-            Ok(blob)
-        })
-        .await
-        .map_err(db_error)
-}
-
-/// `Blob#touch_attachments`: each attached record is touched (a message also touches its room).
-fn touch_attachment_records(tx: &mut campfire_db::Tx<'_>, blob_id: i64) -> campfire_db::Result<()> {
-    for (record_type, record_id) in campfire_storage::blob::attachment_records(tx.conn(), blob_id).map_err(storage_error)? {
-        if record_type == "Message" {
-            Message::find(tx.conn(), record_id)?.touch(tx)?;
-        }
-    }
-    Ok(())
+    active_storage::analyze(app, blob.id).await.map_err(Error::internal)?.ok_or(Error::NotFound)
 }
 
 /// `@message.update!(message_params)`. A new attachment replaces the old one (whose blob is purged
 /// later) without `process_attachment`: the blob is only analyzed, by `ActiveStorage::AnalyzeJob`
 /// after commit (verified against the reference with a bot's `PUT` and `attachment`).
 pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: MessageParams) -> Result<Message> {
-    let attachment = match attributes.attachment {
-        Some(Assignment::Invalid) => return Err(invalid_attachment()),
-        Some(Assignment::Create(upload)) => Some(Some(upload.stage(c.app()).await?)),
-        Some(_) => Some(None),
-        None => None,
-    };
+    let attachment_given = attributes.attachment.is_some();
+    let attachment = attributes.attachment.unwrap_or(Assignment::Unchanged).stage(c.app()).await?;
+    if matches!(attachment, Assignment::Invalid) {
+        return Err(invalid_attachment());
+    }
     let body = match attributes.body {
         Some(body) => Some(canonicalize_body(c.app(), body, Some(c.request.host())).await?),
         None => None,
     };
-    let (id, blob) = c
+    let id = c
         .app()
         .db
         .write(move |tx| {
             let mut message = message;
-            let attachment_given = attachment.is_some();
-            let blob = attachment.flatten().map(|staged| save_staged(tx, staged)).transpose()?;
+            let blob = attachment_blob(tx, attachment)?;
             if attachment_given {
                 message.replace_attachment(tx, blob.as_ref().map(|blob| blob.id))?;
             }
@@ -355,16 +348,13 @@ pub(crate) async fn update_message(c: &Ctx, message: Message, attributes: Messag
                 body,
                 ..Default::default()
             })?;
-            Ok((message.id, blob))
+            if let Some(blob) = &blob {
+                attachments::enqueue_analysis(tx, blob);
+            }
+            Ok(message.id)
         })
         .await
         .map_err(db_error)?;
-    if let Some(blob) = blob.filter(|blob| !blob.is_analyzed()) {
-        let job_app = c.app().clone();
-        c.app().jobs.perform_later("ActiveStorage::AnalyzeJob", async move {
-            analyze_attachment(&job_app, blob).await.map(drop).map_err(|e| anyhow::anyhow!("{e:?}"))
-        });
-    }
     c.app().db.read(move |conn| Message::find(conn, id)).await.map_err(db_error)
 }
 

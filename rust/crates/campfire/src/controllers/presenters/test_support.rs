@@ -67,7 +67,10 @@ fn find_seed(root: &Path, name: &str, ci: bool) -> Option<PathBuf> {
     if dir.join("db/production.sqlite3").is_file() {
         return Some(dir);
     }
-    assert!(!ci, "CI requires parity/.seed/{name}; run parity/bin/seed build {name} before the tests");
+    assert!(
+        !ci,
+        "CI requires parity/.seed/{name}; run parity/bin/seed build {name} before the tests"
+    );
     eprintln!("skipping locally: parity/.seed/{name} isn't built (parity/bin/seed build {name})");
     None
 }
@@ -133,28 +136,83 @@ impl TestApp {
         Self::boot_with_huddle_and_clock(huddle, seed_clock()).await
     }
 
-    pub async fn boot_with_huddle_and_clock(huddle: crate::huddle::Config, clock: campfire_kit::SharedClock) -> Option<TestApp> {
-        Self::boot_with_huddle_services(clock, crate::integrations::net::Network::system(), &[], huddle).await
+    pub async fn boot_with_huddle_and_clock(
+        huddle: crate::huddle::Config,
+        clock: campfire_kit::SharedClock,
+    ) -> Option<TestApp> {
+        Self::boot_with_huddle_services(
+            clock,
+            crate::integrations::net::Network::system(),
+            &[],
+            huddle,
+        )
+        .await
     }
 
     pub async fn boot_with_network(network: crate::integrations::net::Network) -> Option<TestApp> {
-        Self::boot_with_services(seed_clock(), network, &[]).await
+        Self::boot_seed_with_services("default", seed_clock(), network, &[]).await
     }
 
     pub async fn boot_with_clock(clock: campfire_kit::SharedClock) -> Option<TestApp> {
         Self::boot_with_clock_and_env(clock, &[]).await
     }
 
-    pub async fn boot_with_clock_and_env(clock: campfire_kit::SharedClock, extra: &[(&str, &str)]) -> Option<TestApp> {
-        Self::boot_with_services(clock, crate::integrations::net::Network::system(), extra).await
+    pub async fn boot_with_clock_and_env(
+        clock: campfire_kit::SharedClock,
+        extra: &[(&str, &str)],
+    ) -> Option<TestApp> {
+        Self::boot_seed_with_services(
+            "default",
+            clock,
+            crate::integrations::net::Network::system(),
+            extra,
+        )
+        .await
     }
 
-    async fn boot_with_services(clock: campfire_kit::SharedClock, network: crate::integrations::net::Network, extra: &[(&str, &str)]) -> Option<TestApp> {
-        Self::boot_with_huddle_services(clock, network, extra, crate::huddle::Config::default()).await
+    pub async fn boot_seed(name: &str) -> Option<TestApp> {
+        Self::boot_seed_with_services(
+            name,
+            seed_clock(),
+            crate::integrations::net::Network::system(),
+            &[],
+        )
+        .await
     }
 
-    async fn boot_with_huddle_services(clock: campfire_kit::SharedClock, network: crate::integrations::net::Network, extra: &[(&str, &str)], huddle: crate::huddle::Config) -> Option<TestApp> {
-        let seed = seed_dir("default")?;
+    async fn boot_seed_with_services(
+        name: &str,
+        clock: campfire_kit::SharedClock,
+        network: crate::integrations::net::Network,
+        extra: &[(&str, &str)],
+    ) -> Option<TestApp> {
+        Self::boot_seed_with_huddle_services(
+            name,
+            clock,
+            network,
+            extra,
+            crate::huddle::Config::default(),
+        )
+        .await
+    }
+
+    async fn boot_with_huddle_services(
+        clock: campfire_kit::SharedClock,
+        network: crate::integrations::net::Network,
+        extra: &[(&str, &str)],
+        huddle: crate::huddle::Config,
+    ) -> Option<TestApp> {
+        Self::boot_seed_with_huddle_services("default", clock, network, extra, huddle).await
+    }
+
+    async fn boot_seed_with_huddle_services(
+        name: &str,
+        clock: campfire_kit::SharedClock,
+        network: crate::integrations::net::Network,
+        extra: &[(&str, &str)],
+        huddle: crate::huddle::Config,
+    ) -> Option<TestApp> {
+        let seed = seed_dir(name)?;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("db")).unwrap();
         std::fs::copy(
@@ -177,7 +235,20 @@ impl TestApp {
         })
         .unwrap();
         config.huddle = huddle;
-        Some(TestApp { booted: boot_with_services(config, clock, network, crate::jobs::periodic::Intervals { periodic: None, huddle: None }).await.unwrap(), _dir: dir })
+        Some(TestApp {
+            booted: boot_with_services(
+                config,
+                clock,
+                network,
+                crate::jobs::periodic::Intervals {
+                    periodic: None,
+                    huddle: None,
+                },
+            )
+            .await
+            .unwrap(),
+            _dir: dir,
+        })
     }
 
     pub fn db(&self) -> &campfire_db::Database {
@@ -347,15 +418,25 @@ impl Browser<'_> {
         self.authenticity_token().await;
         let key = campfire_kit::session::SESSION_KEY;
         let crypto = campfire_kit::RailsCrypto::new(self.app.booted.app.secrets.clone());
-        let raw = percent_encoding::percent_decode_str(self.cookies.get(key).unwrap()).decode_utf8().unwrap();
-        let mut session = crypto.decrypt_cookie(key, &raw, jiff::Timestamp::now()).unwrap();
-        session["sudo_verified_at"] = serde_json::json!(self.app.booted.app.clock.now().as_second());
+        let raw = percent_encoding::percent_decode_str(self.cookies.get(key).unwrap())
+            .decode_utf8()
+            .unwrap();
+        let mut session = crypto
+            .decrypt_cookie(key, &raw, jiff::Timestamp::now())
+            .unwrap();
+        session["sudo_verified_at"] =
+            serde_json::json!(self.app.booted.app.clock.now().as_second());
         let encrypted = crypto.encrypt_cookie(key, &session, None);
-        self.cookies.insert(key.into(), campfire_kit::cookies::escape(&encrypted));
+        self.cookies
+            .insert(key.into(), campfire_kit::cookies::escape(&encrypted));
     }
 
     pub fn cookie_header(&self) -> String {
-        self.cookies.iter().map(|(k,v)| format!("{k}={v}")).collect::<Vec<_>>().join("; ")
+        self.cookies
+            .iter()
+            .map(|(k, v)| format!("{k}={v}"))
+            .collect::<Vec<_>>()
+            .join("; ")
     }
 
     pub fn absorb_cookie_header(&mut self, header: &str) {

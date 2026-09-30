@@ -104,10 +104,7 @@ async fn ws17_durable_event_board_and_huddle_jobs_decrypt_complete_rails_json() 
             app.clone(),
             crate::jobs::runner_config(&app.config),
         );
-        tokio::time::timeout(Duration::from_secs(5),async {loop{
-   let count=db.read(|c|Ok(c.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class IN ('Event::ReminderPushJob','BoardAutomations::NudgePushJob','Huddle::InvitationDeliveryJob','Huddle::JoinDeliveryJob')",[],|r|r.get::<_,i64>(0))?)).await.unwrap();
-   if count==0 {break;}tokio::time::sleep(Duration::from_millis(10)).await;
-  }}).await.unwrap();
+        wait_for_jobs_and_deliveries(&db, &pool, &["Event::ReminderPushJob", "BoardAutomations::NudgePushJob", "Huddle::InvitationDeliveryJob", "Huddle::JoinDeliveryJob"]).await;
         runner.shutdown(Duration::from_secs(5)).await;
     }
     pool.shutdown().await;
@@ -219,12 +216,7 @@ async fn ws17_ws13_wire_requests_deliver_captured_payload_and_claim_join_once() 
             app.clone(),
             crate::jobs::runner_config(&app.config),
         );
-        let wait = || async {
-            tokio::time::timeout(Duration::from_secs(5),async {loop {
-            let count=db.read(|conn|Ok(conn.query_row("SELECT count(*) FROM background_jobs WHERE job_class IN ('Notifications::HuddlePushJob','Huddle::InvitationDeliveryJob','Huddle::JoinDeliveryJob')",[],|r|r.get::<_,i64>(0))?)).await.unwrap();
-            if count==0 {break;}tokio::time::sleep(Duration::from_millis(10)).await;
-        }}).await.unwrap();
-        };
+        let wait = || wait_for_jobs_and_deliveries(&db, &pool, &["Notifications::HuddlePushJob", "Huddle::InvitationDeliveryJob", "Huddle::JoinDeliveryJob"]);
         wait().await;
         if kind == "huddle_join" {
             db.write(move |tx| {
