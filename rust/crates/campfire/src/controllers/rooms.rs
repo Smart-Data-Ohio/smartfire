@@ -7,6 +7,7 @@
 //! So the actions they inherit from here but don't list (`destroy` for opens/closeds, `show` for
 //! directs) run without `set_room` and raise on the nil `@room`, as in the reference.
 
+pub mod members;
 pub mod categories;
 pub mod favorites;
 pub mod inbound_email_addresses;
@@ -484,3 +485,7 @@ mod closeds_rails_cases;
 #[cfg(test)]
 #[path = "rooms/ws17_ooo_tests.rs"]
 mod ws17_ooo_tests;
+
+#[cfg(test)]
+#[path = "rooms/members_rails_cases.rs"]
+mod members_rails_cases;
