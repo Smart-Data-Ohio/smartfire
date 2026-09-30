@@ -121,6 +121,9 @@ async fn review_failed_thread_upload_rolls_back_like_rails() {
     assert_response(&reply, &oracle_row("missing_file")["responses"][0]);
 }
 
+// Request record tables; the running retention worker may claim/finish its own queue
+// row during media processing. Durable request enqueue rollback has separate HTTP
+// trigger regressions, so unrelated consumer state is not a request invariant.
 async fn row_snapshot(app: &TestApp) -> Vec<(String, Vec<Vec<String>>)> {
     app.db()
         .read(|conn| {
@@ -134,7 +137,6 @@ async fn row_snapshot(app: &TestApp) -> Vec<(String, Vec<Vec<String>>)> {
                 "active_storage_attachments",
                 "active_storage_blobs",
                 "active_storage_variant_records",
-                "background_jobs",
             ]
             .into_iter()
             .map(|table| {
