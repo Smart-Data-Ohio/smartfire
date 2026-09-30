@@ -220,6 +220,7 @@ async fn github_fetch_runtime_performs_discards_missing_and_does_not_retry_failu
         let (server, network) = fake(routes(case)).await;
         let scratch =
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+        std::fs::create_dir_all(&scratch).unwrap();
         let directory = tempfile::tempdir_in(scratch).unwrap();
         let config = crate::config::Config::from_lookup(|name| match name {
             "SECRET_KEY_BASE" => Some("a".repeat(128)),

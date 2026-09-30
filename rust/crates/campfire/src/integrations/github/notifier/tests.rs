@@ -295,6 +295,7 @@ async fn github_notifier_durable_handler_publishes_real_room_and_thread_frames()
             .clone();
         let scratch =
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+        std::fs::create_dir_all(&scratch).unwrap();
         let directory = tempfile::tempdir_in(scratch).unwrap();
         let secret: Value =
             serde_json::from_str(include_str!("../../../../../../vectors/github.json")).unwrap();
@@ -464,6 +465,7 @@ async fn github_notifier_runtime_uses_default_retry_policy_and_fails_nontransien
         let case = &vectors()["cases"][0];
         let scratch =
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+        std::fs::create_dir_all(&scratch).unwrap();
         let directory = tempfile::tempdir_in(scratch).unwrap();
         let secret: Value =
             serde_json::from_str(include_str!("../../../../../../vectors/github.json")).unwrap();

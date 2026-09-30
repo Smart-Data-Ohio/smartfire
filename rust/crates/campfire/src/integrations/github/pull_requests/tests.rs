@@ -675,14 +675,14 @@ async fn github_pr_agent_payload_security_hides_private_and_unknown_details_with
 }
 
 #[tokio::test]
-async fn github_pr_commit_callbacks_coalesce_and_refresh_queue_failure_releases_claim() {
+async fn github_pr_commit_callbacks_coalesce_and_refresh_queue_failure_rolls_back_save() {
     let (fixture,_,sink)=database().await;
     fixture.db.write(|tx| {let pr=PullRequest::for_reference(tx,"o","r",1)?;update(tx,pr.id,&[("title",SqlValue::Text("First".into()))])?;update(tx,pr.id,&[("title",SqlValue::Text("Last".into()))])?;Ok(())}).await.unwrap();
     assert_eq!(sink.take().iter().filter(|e|matches!(e,Event::Broadcast(b) if b.kind==CardUpdated::KIND)).count(),1);
     let (app,_dir)=super::super::references::tests::application().await;
     let pr=app.db.write(|tx|{let m=message(tx,fixtures::identify("designers"),"https://github.com/o/r/pull/2")?;let pr=PullRequest::for_message(tx.conn(),m.id)?.remove(0);tx.conn().execute("UPDATE github_pull_requests SET fetch_requested_at=NULL WHERE id=?",[pr.id])?;tx.conn().execute_batch("CREATE TRIGGER reject_card_refresh BEFORE INSERT ON background_jobs WHEN NEW.job_class='Github::FetchPullRequestJob' BEGIN SELECT RAISE(ABORT,'queue down'); END;")?;Ok(pr)}).await.unwrap();
-    app.db.write(move|tx|update(tx,pr.id,&[("private",SqlValue::Integer(0)),("title",SqlValue::Text("Saved despite failed render refresh".into()))])).await.unwrap();
-    app.db.read(move|conn|{let stored=PullRequest::find(conn,pr.id)?;assert!(stored.fetch_requested_at.is_none());assert_eq!(stored.title.as_deref(),Some("Saved despite failed render refresh"));Ok(())}).await.unwrap();
+    app.db.write(move|tx|update(tx,pr.id,&[("private",SqlValue::Integer(0)),("title",SqlValue::Text("Rejected with failed render refresh".into()))])).await.unwrap_err();
+    app.db.read(move|conn|{let stored=PullRequest::find(conn,pr.id)?;assert!(stored.fetch_requested_at.is_none());assert_eq!(stored.title,None);assert_eq!(stored.private,None);Ok(())}).await.unwrap();
 }
 
 #[tokio::test]
@@ -851,6 +851,7 @@ async fn github_pr_registered_card_callbacks_publish_public_and_private_room_and
                             ),
                         ),
                         ("private", SqlValue::Integer(i64::from(private))),
+                        ("changed_files", SqlValue::Text(json!({"files":[{"filename":"app/a.rb","status":"modified","additions":4,"deletions":2}],"total_count":3}).to_string())),
                     ],
                 )
             })
@@ -874,7 +875,12 @@ async fn github_pr_registered_card_callbacks_publish_public_and_private_room_and
             let target = if identifier == identifiers[0] {
                 crate::channels::broadcasts::message_dom_id(&message, Some("github_pr_cards"))
             } else {
-                crate::channels::broadcasts::thread_dom_id(thread.id, "github_pr_header")
+                {
+                    let cards:Value=serde_json::from_str(include_str!("../../../../../../vectors/github_cards.json")).unwrap();
+                    let expected=cards.as_array().unwrap().iter().find(|c|c["name"]=="public").unwrap()["files"].as_str().unwrap();
+                    if private {assert!(!html.contains("app/a.rb"));} else {assert!(html.contains(expected),"actual thread cable replacement discarded pinned file summary: {html}");}
+                    crate::channels::broadcasts::thread_dom_id(thread.id, "github_pr_header")
+                }
             };
             assert!(html.contains(&format!("target=\"{target}\"")));
             seen.push(identifier.to_owned());
@@ -957,4 +963,20 @@ async fn github_pr_and_thread_stamps_invalidate_message_fragments_without_touchi
         })
         .await
         .unwrap();
+}
+
+
+#[tokio::test]
+async fn review_refresh_queue_is_atomic_with_triggering_save() {
+    let (app,_dir)=super::super::references::tests::application().await;
+    let pr=app.db.write(|tx| {
+        let m=message(tx,fixtures::identify("designers"),"https://github.com/review/atomic/pull/2")?;
+        let pr=PullRequest::for_message(tx.conn(),m.id)?.remove(0);
+        tx.conn().execute("UPDATE github_pull_requests SET fetch_requested_at=NULL,title='Before' WHERE id=?",[pr.id])?;
+        tx.conn().execute_batch("DELETE FROM background_jobs; CREATE TRIGGER reject_review_job BEFORE INSERT ON background_jobs WHEN NEW.job_class='Github::FetchPullRequestJob' BEGIN SELECT RAISE(ABORT,'review queue failure'); END;")?;
+        Ok(pr)
+    }).await.unwrap();
+    let result=app.db.write(move|tx|update(tx,pr.id,&[("title",SqlValue::Text("After".into()))])).await;
+    assert!(result.is_err(),"queue insertion failure must roll back the triggering PR save");
+    app.db.read(move|conn|{let stored=PullRequest::find(conn,pr.id)?;assert_eq!(stored.title.as_deref(),Some("Before"));assert!(stored.fetch_requested_at.is_none());let jobs:i64=conn.query_row("SELECT COUNT(*) FROM background_jobs",[],|r|r.get(0))?;assert_eq!(jobs,0);Ok(())}).await.unwrap();
 }

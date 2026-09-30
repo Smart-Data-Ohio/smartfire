@@ -37,6 +37,8 @@ impl Fresh {
     }
     pub(super) async fn with_routes(case: &Value, routes: Vec<Route>) -> Self {
         let (server, network) = fake(routes).await;
+        let scratch = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g");
+        std::fs::create_dir_all(&scratch).unwrap();
         let dir = tempfile::tempdir_in(
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../.scratch/ws15g"),
         )
@@ -205,4 +207,44 @@ async fn github_viewer_card_http_frames_statuses_permissions_and_bodies_match_ra
             case["name"]
         );
     }
+}
+
+
+// Independent review regressions: these assertions also compile against 1325b624.
+#[tokio::test]
+async fn review_required_github_routes_reach_authenticated_handlers() {
+    let fresh=Fresh::new(&json!({"private":false})).await;
+    let raw_csrf=base64::Engine::encode(&base64::engine::general_purpose::URL_SAFE_NO_PAD,[7u8;32]);
+    let values=json!({"_csrf_token":raw_csrf,"sudo_verified_at":1767268800});
+    let raw=campfire_kit::RailsCrypto::new(fresh.app.secrets.clone()).encrypt_cookie("_campfire_session",&values,None);
+    let cookie=format!("{}; _campfire_session={}",fresh.cookie,url::form_urlencoded::byte_serialize(raw.as_bytes()).collect::<String>());
+    let mut observed=Vec::new();
+    let mut expected=Vec::new();
+    for (method,path,status) in [("GET","/github/app/connect",404),("GET","/github/app/callback",404),("POST","/github/connection",302),("DELETE","/github/connection",302),("GET","/rooms/815/github/pull_request_write_actions/816",200),("POST","/rooms/815/github/pull_request_comments",422),("POST","/rooms/815/agents/github/pull_request_actions",403)] {
+        let request=Request::builder().method(method).uri(path).header("Host","example.org").header("Cookie",&cookie).header("X-CSRF-Token",campfire_kit::csrf::mask(&[7u8;32],[9u8;32])).header("Content-Type","application/json").body(Body::from(json!({"pull_request_id":816,"body":""}).to_string())).unwrap();
+        let response=fresh.router.clone().oneshot(request).await.unwrap();
+        observed.push((path,response.status().as_u16())); expected.push((path,status));
+    }
+    assert_eq!(observed,expected,"reviewed workflows must reach their own authenticated controller, never the 501 fallback");
+    assert!(fresh.server.received().is_empty());
+}
+#[tokio::test]
+async fn review_stale_room_card_enqueues_one_refresh_and_serves_queue_failure() {
+    let fresh=Fresh::new(&json!({"private":false})).await;
+    fresh.app.db.write(|tx| {tx.conn().execute_batch("DELETE FROM background_jobs; UPDATE github_pull_requests SET fetched_at=NULL,fetch_requested_at=NULL;")?;Ok(())}).await.unwrap();
+    for _ in 0..2 {
+        let response=fresh.router.clone().oneshot(Request::builder().uri("/rooms/815").header("Host","example.org").header("Cookie",&fresh.cookie).body(Body::empty()).unwrap()).await.unwrap();
+        assert_eq!(response.status(),axum::http::StatusCode::OK);
+        let html=String::from_utf8(axum::body::to_bytes(response.into_body(),1024*1024).await.unwrap().to_vec()).unwrap();
+        assert!(html.contains("github-pr-card"));
+        let jobs:i64=fresh.app.db.read(|conn|Ok(conn.query_row("SELECT COUNT(*) FROM background_jobs WHERE job_class='Github::FetchPullRequestJob'",[],|r|r.get(0))?)).await.unwrap();
+        assert_eq!(jobs,1,"stale rendered PR must enqueue once as Rails does");
+    }
+    // A separate uncached message renders even if the durable queue cannot accept a fetch.
+
+    fresh.app.db.write(|tx|{tx.conn().execute_batch("DELETE FROM background_jobs; UPDATE github_pull_requests SET fetch_requested_at=NULL; UPDATE messages SET updated_at='2026-01-01 12:01:00' WHERE id=818; CREATE TRIGGER reject_render_refresh BEFORE INSERT ON background_jobs WHEN NEW.job_class='Github::FetchPullRequestJob' BEGIN SELECT RAISE(ABORT,'queue unavailable'); END;")?;Ok(())}).await.unwrap();
+    let response=fresh.router.clone().oneshot(Request::builder().uri("/rooms/815").header("Host","example.org").header("Cookie",&fresh.cookie).body(Body::empty()).unwrap()).await.unwrap();
+    assert_eq!(response.status(),axum::http::StatusCode::OK);
+    fresh.app.db.read(|conn|{let claim:Option<campfire_db::Timestamp>=conn.query_row("SELECT fetch_requested_at FROM github_pull_requests WHERE id=816",[],|r|r.get(0))?;assert!(claim.is_none());Ok(())}).await.unwrap();
+    assert!(fresh.server.received().is_empty());
 }

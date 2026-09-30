@@ -22,7 +22,7 @@ pub fn publish(app: &App, event: &CardUpdated) -> anyhow::Result<()> {
         let account=Account::first(conn)?;
         for id in ids {
             if let Some(thread)=ChannelThread::find_by_id(conn,id)? {
-                let card=github::card(conn,&pr,thread.room_id)?;
+                let card=github::shared_card(conn,&pr,thread.room_id,true)?;
                 let html=page::render_detached(&app,account.as_ref(),|ctx|campfire_views::github::thread_header(ctx,thread.room_id,thread.id,&card));
                 app.broadcasts.turbo(&Stream::thread_messages(id),Action::Replace,&thread_dom_id(id,"github_pr_header"),Some(&html),true);
             }

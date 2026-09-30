@@ -456,16 +456,19 @@ pub(crate) async fn present<T: Send + 'static>(
     let app = c.app().clone();
     let request_host = Some(c.request.host());
     let cache_base_url = c.url_for("");
-    c.app()
+    let (value, refreshes) = c.app()
         .db
         .read(move |conn| {
             let mut presenter = Presenter::new(conn, &app, request_host);
             presenter.cache_base_url = Some(cache_base_url);
             // The Jbuilder partials (`json.cache!`) read the fragment cache on this thread.
-            campfire_views::fragment_cache::with(&app.fragment_cache, || f(&presenter))
+            let value = campfire_views::fragment_cache::with(&app.fragment_cache, || f(&presenter))?;
+            Ok((value, presenter.take_github_refreshes()))
         })
         .await
-        .map_err(db_error)
+        .map_err(db_error)?;
+    crate::integrations::github::pull_requests::refresh_after_render(&c.app().db, refreshes).await;
+    Ok(value)
 }
 
 /// `render action: :room_not_found` (inside the layout).

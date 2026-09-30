@@ -388,16 +388,11 @@ pub fn update(
             ),
         )?;
     }
-    // `_cards` requests stale rows after the PR save has committed. The bounded
-    // enqueue runs on this writer in its own transaction, so queue failure releases
-    // its claim and leaves the saved card available, exactly like the helper rescue.
-    tx.after_commit(move |tx| {
-        if let Err(error) = campfire_db::run_write(tx.conn(), tx.env(), |inner| {
-            let ids=inner.conn().prepare("SELECT DISTINCT github_pull_request_id FROM github_pull_request_references WHERE message_id IN (SELECT message_id FROM github_pull_request_references WHERE github_pull_request_id=?)")?.query_map([id],|r|r.get::<_,i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
-            request_refresh(inner, &ids)
-        }) { tracing::warn!(pull_request_id=id, %error, "Skipping PR refresh enqueue"); }
-        Ok(())
-    });
+    // The claim and durable enqueue belong to the save that triggers the card callback.
+    // A rejected queue insert must roll back the save, rather than publish an unrefreshable card.
+    let ids = tx.conn().prepare("SELECT DISTINCT github_pull_request_id FROM github_pull_request_references WHERE message_id IN (SELECT message_id FROM github_pull_request_references WHERE github_pull_request_id=?)")?
+        .query_map([id], |r| r.get::<_, i64>(0))?.collect::<rusqlite::Result<Vec<_>>>()?;
+    request_refresh(tx, &ids)?;
     tx.broadcast_after_commit_once(&CardUpdated {
         pull_request_id: id,
     });
@@ -414,6 +409,15 @@ pub fn request_refresh(tx: &mut Tx<'_>, ids: &[i64]) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// Rendering can serve stored card data even if refresh scheduling fails. The writer
+/// transaction still makes claim + job indivisible, and serializes concurrent renders.
+pub async fn refresh_after_render(db: &Database, ids: Vec<i64>) {
+    if ids.is_empty() { return; }
+    if let Err(error) = db.write(move |tx| request_refresh(tx, &ids)).await {
+        tracing::warn!(%error, "Skipping rendered PR refresh enqueue");
+    }
 }
 
 pub fn collapse_case_duplicates(tx: &Tx<'_>) -> Result<()> {
