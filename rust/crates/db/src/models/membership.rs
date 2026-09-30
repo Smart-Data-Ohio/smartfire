@@ -161,6 +161,30 @@ impl Membership {
         .or_not_found("Membership")
     }
 
+    /// `room.memberships.create!(user:)`, with the schema's default involvement.
+    /// Unlike Room#grant_to's insert_all, this runs the single-row creation
+    /// defaults and association validations. Rails declares the same callback
+    /// method for create then destroy; the latter replaces the former, so
+    /// creation does not refresh a direct-room member key at this pin.
+    pub fn create_default(tx: &mut Tx<'_>, room_id: i64, user_id: i64) -> Result<Self> {
+        let room = Room::find_by_id(tx.conn(), room_id)?;
+        let mut errors = crate::Errors::default();
+        if room.is_none() {
+            errors.add("room", "must exist");
+        }
+        if User::find_by_id(tx.conn(), user_id)?.is_none() {
+            errors.add("user", "must exist");
+        }
+        errors.into_result()?; // Single-membership creation validates both associations.
+        let stage_role = room.as_ref().filter(|room| room.stage()).map(|_| StageRole::Listener);
+        let id = tx.conn().query_row_cached(
+            "INSERT INTO memberships(room_id,user_id,stage_role,created_at,updated_at) VALUES(?,?,?,?,?) RETURNING id",
+            params![room_id, user_id, stage_role, tx.now(), tx.now()],
+            |row| row.get(0),
+        )?;
+        Self::find(tx.conn(), id)
+    }
+
     pub fn count(conn: &Connection) -> Result<i64> {
         sql::count(conn, r#"SELECT COUNT(*) FROM "memberships""#, [])
     }

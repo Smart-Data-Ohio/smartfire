@@ -1,6 +1,6 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 188 declarations now have complete assertion coverage mapped below. The other 360 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
+Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 208 declarations now have complete assertion coverage mapped below. The other 340 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. These test declarations remain WS13 work. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; they do not complete every assertion in the Rails controller tests below. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
 
 ## Continued slice coverage (after merging WS19b)
 
@@ -18,7 +18,7 @@ Passed titles are backed jointly by those differential tests, the real HTTP/Cabl
 
 ## WS13b domain slices
 
-WS13b adds nine complete revocation, nineteen complete grant and thirty-seven complete invitation and thirty-two complete join-notifier declarations. The invitation corpus retains 136 intermediate results across 38 sequences (one neighboring message assertion remains open). These use actual lifecycle methods and compare persisted rows from pinned Rails, with compiled regression tests for revocation, cleanup rollback, room switching, gateway role enforcement, participant sorting/deduplication and issuance timestamps. No production methods or WS17 seam signatures changed. The remaining assigned declarations are still partial/deferred; see `wave4/ws13b-report.md` for the precise handoff.
+WS13b adds nine complete revocation, nineteen complete grant and thirty-seven complete invitation and thirty-two complete join-notifier declarations, plus eleven stage, six stream and three voice declarations. The invitation corpus retains 136 intermediate results across 38 sequences (one neighboring message assertion remains open). These use actual lifecycle methods and compare persisted rows from pinned Rails, with compiled regression tests for revocation, cleanup rollback, room switching, gateway role enforcement, participant sorting/deduplication and issuance timestamps. The single-row membership creation path now reproduces pinned Rails listener defaults, association errors and commit behavior; WS17 seam signatures remain unchanged. The remaining assigned declarations are still partial/deferred; see `wave4/ws13b-report.md` for the precise handoff.
 
 ## Rails declaration coverage by file
 
@@ -33,8 +33,8 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/models/huddle_grant_test.rb` | 33 | 19 | 14 |
 | `test/system/huddles_test.rb` | 31 | 0 | 31 |
 | `test/controllers/internal/huddle_controller_test.rb` | 29 | 0 | 29 |
-| `test/models/rooms/stage_test.rb` | 27 | 12 | 15 |
-| `test/models/stream_test.rb` | 27 | 14 | 13 |
+| `test/models/rooms/stage_test.rb` | 27 | 23 | 4 |
+| `test/models/stream_test.rb` | 27 | 20 | 7 |
 | `test/controllers/rooms/stages_controller_test.rb` | 24 | 0 | 24 |
 | `test/controllers/rooms/stage/roles_controller_test.rb` | 20 | 16 | 4 |
 | `test/controllers/rooms/call_moderation_controller_test.rb` | 19 | 13 | 6 |
@@ -54,12 +54,12 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/controllers/users/huddle_presence_controller_test.rb` | 6 | 0 | 6 |
 | `test/system/huddle_presence_test.rb` | 6 | 0 | 6 |
 | `test/integration/huddle_presence_test.rb` | 5 | 0 | 5 |
-| `test/models/rooms/voice_test.rb` | 5 | 2 | 3 |
+| `test/models/rooms/voice_test.rb` | 5 | 5 | 0 |
 | `test/jobs/huddle/join_notice_job_test.rb` | 4 | 0 | 4 |
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
-| **Total** | **548** | **188** | **360** |
+| **Total** | **548** | **208** | **340** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
@@ -547,14 +547,14 @@ Owner: WS13b. Passed against nine pinned Rails lifecycle scenarios in `huddle_re
 
 ## test/models/rooms/stage_test.rb
 
-Owner: WS13b. Partial: 12/27 declarations passed against the hand, lifecycle and participation corpora plus existing WS8a room tests; the other 15 remain open.
+Owner: WS13b. Partial: 23/27 declarations passed. The extended domain lifecycle corpus covers succession, grants/stream endings, retained chat history, scope inclusion and message reachability. `Membership::create_default` reproduces Rails single-row listener defaults. Lock-order and preloaded live-stream query assertions remain open (four declarations).
 
 - **Passed:** type predicate
-- stage rooms are listed without directs but outside the voice scope
+- **Passed:** stage rooms are listed without directs but outside the voice scope
 - **Passed:** default involvement for new members is mentions
 - **Passed:** the room creator becomes host and every other member becomes a listener
 - **Passed:** the creator becomes host even when they were not in the member list
-- members added later become listeners
+- **Passed:** members added later become listeners
 - **Passed:** the last host cannot be demoted
 - a host demotion checks for another host after locking the room in its transaction
 - **Passed:** a host can step down once another host exists
@@ -562,38 +562,38 @@ Owner: WS13b. Partial: 12/27 declarations passed against the hand, lifecycle and
 - **Passed:** only listeners can raise a hand, and any promotion clears it
 - **Passed:** raising twice keeps the first timestamp
 - **Passed:** lowering a hand that was never raised succeeds
-- stage members can reach the room's messages like any channel
+- **Passed:** stage members can reach the room's messages like any channel
 - **Passed:** deactivating a user removes their stage memberships
-- deactivating the sole host ends the live session and promotes an administrator member
-- deactivating the sole host promotes the earliest remaining member without an administrator
-- deactivating a host promotes nobody when another host remains
-- deactivating the last member of a stage leaves the emptied room alone
-- destroying the last host membership ends the live session and promotes an administrator successor
+- **Passed:** deactivating the sole host ends the live session and promotes an administrator member
+- **Passed:** deactivating the sole host promotes the earliest remaining member without an administrator
+- **Passed:** deactivating a host promotes nobody when another host remains
+- **Passed:** deactivating the last member of a stage leaves the emptied room alone
+- **Passed:** destroying the last host membership ends the live session and promotes an administrator successor
 - **Passed:** destroying the last host promotes the earliest remaining member without an administrator
-- destroying a host while another host remains ends nothing and promotes nobody
-- destroying a speaker ends only their own stream and grants
+- **Passed:** destroying a host while another host remains ends nothing and promotes nobody
+- **Passed:** destroying a speaker ends only their own stream and grants
 - destroying the last host locks the room and checks for another host inside its transaction
 - live_stream reads the preloaded live stream without querying
 - live_stream is nil from the preloaded association once the stream has ended
-- live_stream queries fresh when streams are not preloaded
+- **Passed:** live_stream queries fresh when streams are not preloaded
 
 ## test/models/rooms/voice_test.rb
 
-Owner: WS13b. Partial: 2/5 declarations passed; the other 3 remain WS13 work.
+Owner: WS13b. Passed: 5/5 declarations. The extended domain lifecycle corpus adds voice/channel scopes, member and outsider message reachability, and membership removal on deactivation.
 
 - **Passed:** type predicate
-- voices scope and channel queries include voice rooms
+- **Passed:** voices scope and channel queries include voice rooms
 - **Passed:** default involvement for new members is mentions
-- voice members can reach the room's messages like any channel
-- deactivating a user removes their voice memberships
+- **Passed:** voice members can reach the room's messages like any channel
+- **Passed:** deactivating a user removes their voice memberships
 
 ## test/models/stream_test.rb
 
-Owner: WS13b. Partial: 14/27 declarations passed; the other 13 remain WS13 work.
+Owner: WS13b. Partial: 20/27 declarations passed. The extended domain lifecycle corpus adds live scope, unrelated-member revocation, authorization revocation, presenter membership removal/deactivation with a grant, and room stream destruction. Six complete rendering/fan-out declarations and the non-stage stream-query assertion remain open.
 
 - **Passed:** quality must be a known preset
 - **Passed:** started_at defaults to now
-- live scope only returns unended streams
+- **Passed:** live scope only returns unended streams
 - **Passed:** one live stream per room
 - **Passed:** an ended stream frees the room for another
 - **Passed:** end! is idempotent
@@ -606,13 +606,13 @@ Owner: WS13b. Partial: 14/27 declarations passed; the other 13 remain WS13 work.
 - a presenter stop appends no stream-stopped event
 - an automatic end appends no stream-stopped event
 - **Passed:** revoking the presenter's last grant for the room ends the stream
-- revoking another member's grant leaves the stream live
-- a grant revoked through authorization ends the stream
-- removing the presenter's membership ends the stream
+- **Passed:** revoking another member's grant leaves the stream live
+- **Passed:** a grant revoked through authorization ends the stream
+- **Passed:** removing the presenter's membership ends the stream
 - **Passed:** removing the presenter's membership without grants ends the stream and broadcasts the end
-- deactivating the presenter ends the stream
+- **Passed:** deactivating the presenter ends the stream
 - **Passed:** deactivating the presenter ends the stream even without grants
-- destroying the room destroys its streams
+- **Passed:** destroying the room destroys its streams
 - revoking a grant outside a stage room runs no stream queries
 - **Passed:** end_stale_live! ends streams whose presenter went quiet over thirty seconds ago
 - **Passed:** end_stale_live! ends streams whose presenter was never seen

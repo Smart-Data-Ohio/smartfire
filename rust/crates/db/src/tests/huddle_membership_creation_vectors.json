@@ -1,0 +1,444 @@
+{
+  "reference_pin": "d7c7de92",
+  "now": 1767268800,
+  "cases": [
+    {
+      "name": "stage",
+      "room_id": 9001,
+      "user_id": 149087659,
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "WS13b create",
+          "pins_changed_at": null,
+          "type": "Rooms::Stage",
+          "updated_at": "2026-01-01 12:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": "listener",
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ],
+        "grants": [],
+        "items": []
+      },
+      "error": null,
+      "row": {
+        "id": 1021579653,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-01 12:00:00 UTC",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 9001,
+        "server_muted_at": null,
+        "stage_role": "listener",
+        "unread_at": null,
+        "updated_at": "2026-01-01 12:00:00 UTC",
+        "user_id": 149087659
+      },
+      "direct_member_key": null
+    },
+    {
+      "name": "voice",
+      "room_id": 9001,
+      "user_id": 149087659,
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "WS13b create",
+          "pins_changed_at": null,
+          "type": "Rooms::Voice",
+          "updated_at": "2026-01-01 12:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ],
+        "grants": [],
+        "items": []
+      },
+      "error": null,
+      "row": {
+        "id": 1021579653,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-01 12:00:00 UTC",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 9001,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-01-01 12:00:00 UTC",
+        "user_id": 149087659
+      },
+      "direct_member_key": null
+    },
+    {
+      "name": "direct",
+      "room_id": 9001,
+      "user_id": 149087659,
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "WS13b create",
+          "pins_changed_at": null,
+          "type": "Rooms::Direct",
+          "updated_at": "2026-01-01 12:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ],
+        "grants": [],
+        "items": []
+      },
+      "error": null,
+      "row": {
+        "id": 1021579653,
+        "connected_at": null,
+        "connections": 0,
+        "created_at": "2026-01-01 12:00:00 UTC",
+        "favorite_position": null,
+        "hand_raised_at": null,
+        "involvement": "mentions",
+        "last_huddle_join_push_at": null,
+        "last_read_message_id": null,
+        "room_category_id": null,
+        "room_id": 9001,
+        "server_muted_at": null,
+        "stage_role": null,
+        "unread_at": null,
+        "updated_at": "2026-01-01 12:00:00 UTC",
+        "user_id": 149087659
+      },
+      "direct_member_key": null
+    },
+    {
+      "name": "missing_room",
+      "room_id": -1,
+      "user_id": 149087659,
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "WS13b create",
+          "pins_changed_at": null,
+          "type": "Rooms::Direct",
+          "updated_at": "2026-01-01 12:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ],
+        "grants": [],
+        "items": []
+      },
+      "error": {
+        "room": [
+          "must exist"
+        ]
+      },
+      "row": null,
+      "direct_member_key": null
+    },
+    {
+      "name": "missing_user",
+      "room_id": 9001,
+      "user_id": -1,
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "WS13b create",
+          "pins_changed_at": null,
+          "type": "Rooms::Direct",
+          "updated_at": "2026-01-01 12:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ],
+        "grants": [],
+        "items": []
+      },
+      "error": {
+        "user": [
+          "must exist"
+        ]
+      },
+      "row": null,
+      "direct_member_key": null
+    },
+    {
+      "name": "both_missing",
+      "room_id": -1,
+      "user_id": -1,
+      "input": {
+        "room": {
+          "id": 9001,
+          "created_at": "2026-01-01 12:00:00 UTC",
+          "creator_id": 127326141,
+          "deleted_at": null,
+          "destroy_enqueued_at": null,
+          "direct_member_key": null,
+          "icon_name": null,
+          "inbound_email_token": null,
+          "name": "WS13b create",
+          "pins_changed_at": null,
+          "type": "Rooms::Direct",
+          "updated_at": "2026-01-01 12:00:00 UTC"
+        },
+        "memberships": [
+          {
+            "id": 9011,
+            "connected_at": null,
+            "connections": 0,
+            "created_at": "2026-01-01 12:00:00 UTC",
+            "favorite_position": null,
+            "hand_raised_at": null,
+            "involvement": "mentions",
+            "last_huddle_join_push_at": null,
+            "last_read_message_id": null,
+            "room_category_id": null,
+            "room_id": 9001,
+            "server_muted_at": null,
+            "stage_role": null,
+            "unread_at": null,
+            "updated_at": "2026-01-01 12:00:00 UTC",
+            "user_id": 127326141
+          }
+        ],
+        "users": [
+          {
+            "id": 127326141,
+            "name": "David",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          },
+          {
+            "id": 149087659,
+            "name": "Jason",
+            "role": "administrator",
+            "status": "active",
+            "inbox_preferences": {}
+          }
+        ],
+        "grants": [],
+        "items": []
+      },
+      "error": {
+        "room": [
+          "must exist"
+        ],
+        "user": [
+          "must exist"
+        ]
+      },
+      "row": null,
+      "direct_member_key": null
+    }
+  ]
+}
