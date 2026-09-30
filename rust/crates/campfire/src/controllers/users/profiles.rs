@@ -77,9 +77,11 @@ async fn render_show(
         })
         .await
         .map_err(Error::internal)?;
+    let github = presenters::github::connection(c.app(), user.id).await.map_err(Error::internal)?;
     let user = presenters::user_summary(&secrets, &user);
     framed_page!(c, status, |ctx| users::ProfileShow {
         ctx,
+        github: github.clone(),
         has_password,
         current_password_error,
         security: security.clone(),

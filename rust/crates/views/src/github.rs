@@ -1,5 +1,6 @@
 //! Session-independent GitHub partials. Data and authorization are supplied by the app.
 use crate::{ViewContext, helpers as h};
+pub mod connections;
 pub mod subscriptions;
 pub mod write_actions;
 #[derive(Clone, Debug, Default)]

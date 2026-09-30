@@ -140,9 +140,17 @@ impl Page for BotsNew<'_> {
 #[derive(Template)]
 #[template(path = "accounts/bots/edit.html", blocks = ["head", "content"])]
 pub struct BotsEdit<'a> {
+    pub github: crate::github::connections::Connection,
+    pub administrator: bool,
     pub ctx: &'a ViewContext<'a>,
     pub bot_id: i64,
     pub bot: BotForm,
+}
+
+impl BotsEdit<'_> {
+    fn github_panel(&self) -> h::Html {
+        h::raw(crate::github::connections::bot(&self.github, self.bot_id, self.administrator))
+    }
 }
 
 impl Page for BotsEdit<'_> {

@@ -158,3 +158,58 @@ pub fn cache_stamp(conn: &Connection, message: &Message) -> Result<String> {
         threads.map(|t| t.to_db()).unwrap_or_default()
     ))
 }
+
+/// Public account display data for the owning profile/bot page. `usable?` may mark an
+/// unreadable credential disconnected; do it outside a read closure and reload that reason.
+pub async fn connection(
+    app: &AppState,
+    user_id: i64,
+) -> Result<campfire_views::github::connections::Connection> {
+    use crate::integrations::github::accounts::Account as GithubAccount;
+    let account = app
+        .db
+        .read(move |conn| GithubAccount::for_user(conn, user_id))
+        .await?;
+    let usable = if let Some(account) = &account {
+        app.github_accounts.usable(account.id).await?
+    } else {
+        false
+    };
+    let account = app
+        .db
+        .read(move |conn| GithubAccount::for_user(conn, user_id))
+        .await?;
+    Ok(campfire_views::github::connections::Connection {
+        linked: account.is_some(),
+        usable,
+        login: account
+            .as_ref()
+            .map(|a| a.github_login.clone())
+            .unwrap_or_default(),
+        reason: account.as_ref().and_then(|a| a.disconnected_reason.clone()),
+        app_token: account.as_ref().is_some_and(|a| a.token_source == "app"),
+        app_configured: app.github_app.configured(),
+    })
+}
+
+/// WS8b-m calls this after authorizing the thread's room. Empty for ordinary threads.
+/// Uses the same file-bearing, private-safe card adapter as the registered cable callback.
+pub fn thread_header(
+    conn: &Connection,
+    ctx: &campfire_views::ViewContext<'_>,
+    thread: &campfire_db::ChannelThread,
+) -> Result<String> {
+    use rusqlite::OptionalExtension;
+    let pr_id=conn.query_row("SELECT github_pull_request_id FROM github_pull_request_threads WHERE channel_thread_id=? AND room_id=?",rusqlite::params![thread.id,thread.room_id],|r|r.get::<_,i64>(0)).optional()?;
+    let Some(id) = pr_id else {
+        return Ok(String::new());
+    };
+    let pr = PullRequest::find(conn, id)?;
+    let data = shared_card(conn, &pr, thread.room_id, true)?;
+    Ok(campfire_views::github::thread_header(
+        ctx,
+        thread.room_id,
+        thread.id,
+        &data,
+    ))
+}

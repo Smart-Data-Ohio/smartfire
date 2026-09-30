@@ -30,3 +30,6 @@ mod lifecycle_tests;
 
 #[cfg(test)]
 mod agent_tests;
+
+#[cfg(test)]
+mod fragment_tests;

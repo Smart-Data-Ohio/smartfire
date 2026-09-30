@@ -137,6 +137,20 @@ impl TestApp {
         clock: campfire_kit::SharedClock,
         extra: &[(&str, &str)],
     ) -> Option<TestApp> {
+        Self::boot_with_clients(clock, extra, None).await
+    }
+
+    pub async fn boot_with_github_app(
+        github_app: crate::integrations::github::client::AppClient,
+    ) -> Option<TestApp> {
+        Self::boot_with_clients(seed_clock(), &[], Some(github_app)).await
+    }
+
+    async fn boot_with_clients(
+        clock: campfire_kit::SharedClock,
+        extra: &[(&str, &str)],
+        github_app: Option<crate::integrations::github::client::AppClient>,
+    ) -> Option<TestApp> {
         let seed = seed_dir("default")?;
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("db")).unwrap();
@@ -159,8 +173,15 @@ impl TestApp {
                 .map(|(_, value)| (*value).into()),
         })
         .unwrap();
+        let booted = match github_app {
+            Some(client) => crate::app::boot_with_github_clients(
+                config, clock, crate::integrations::github::client::ReadClient::from_env(),
+                client, crate::integrations::net::Network::system(),
+            ).await.unwrap(),
+            None => boot_with_clock(config, clock).await.unwrap(),
+        };
         Some(TestApp {
-            booted: boot_with_clock(config, clock).await.unwrap(),
+            booted,
             _dir: dir,
         })
     }

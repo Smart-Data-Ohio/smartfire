@@ -148,6 +148,7 @@ impl ProfileMembership {
 #[derive(Template)]
 #[template(path = "users/profiles/show.html", blocks = ["head", "content"])]
 pub struct ProfileShow<'a> {
+    pub github: crate::github::connections::Connection,
     pub has_password: bool,
     pub current_password_error: Option<&'a str>,
     pub security: crate::two_factor::ProfileData,
@@ -161,6 +162,9 @@ pub struct ProfileShow<'a> {
 }
 
 impl<'a> ProfileShow<'a> {
+    fn github_panel(&self) -> h::Html {
+        h::raw(crate::github::connections::profile(&self.github))
+    }
     fn security_panel(&self) -> h::Html {
         h::raw(
             crate::two_factor::Profile {
