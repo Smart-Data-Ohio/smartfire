@@ -111,8 +111,27 @@ pub fn david_cookie() -> String {
         .to_string()
 }
 
+/// The production app and router, with an optional runner for statement-level tests.
+/// Ordinary tests retain the complete runner and its normal concurrency.
+pub struct TestBooted {
+    pub app: crate::app::App,
+    pub router: axum::Router,
+    pub jobs: TestJobs,
+}
+pub struct TestJobs(Option<crate::jobs::Runner>);
+impl TestJobs {
+    pub async fn shutdown(self, grace: std::time::Duration) {
+        if let Some(runner) = self.0 { runner.shutdown(grace).await; }
+    }
+}
+impl From<Booted> for TestBooted {
+    fn from(booted: Booted) -> Self {
+        Self {app: booted.app, router: booted.router, jobs: TestJobs(Some(booted.jobs))}
+    }
+}
+
 pub struct TestApp {
-    pub booted: Booted,
+    pub booted: TestBooted,
     _dir: tempfile::TempDir,
 }
 
@@ -143,7 +162,14 @@ impl TestApp {
         })
         .unwrap();
         config.huddle = huddle;
-        Some(TestApp { booted: boot_with_clock(config, clock).await.unwrap(), _dir: dir })
+        Some(TestApp { booted: boot_with_clock(config, clock).await.unwrap().into(), _dir: dir })
+    }
+
+    /// Observe only a controller's SQL, without the independent queue's polling writes.
+    pub async fn stop_jobs(&mut self) {
+        if let Some(runner) = self.booted.jobs.0.take() {
+            runner.shutdown(std::time::Duration::from_secs(2)).await;
+        }
     }
 
     pub fn db(&self) -> &campfire_db::Database {

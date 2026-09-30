@@ -56,6 +56,10 @@ def replace_body(source, marker, body):
 
 
 mutations = [
+    ("remaining-stage-type-isolation-bypassed", R, lambda s: replace_once(s, "if room.stage() =>", "if !room.direct() =>"), "campfire", "remaining_call_security_keeps_stage_actions_private_and_type_scoped"),
+    ("remaining-internal-steady-check-writes", I, lambda s: replace_once(s, "if !authorized || seen_due {", "if true || !authorized || seen_due {"), "campfire", "remaining_gateway_steady_state_has_no_transaction_and_denial_revokes_once"),
+    ("remaining-personal-roster-bypassed", B, lambda s: replace_body(s, "pub(crate) fn stage_roster(", "Ok(())"), "campfire", "remaining_hands_roles_and_mute_deliver_exact_personalized_frames"),
+    ("remaining-header-presence-bypassed", ROOT / "rust/crates/views/templates/rooms/show/_workspace_nav.html", lambda s: replace_once(s, "{{ self.participants()|safe }}", ""), "campfire", "remaining_presence_integration_composes_live_quiet_direct_group_and_disabled_headers"),
     ("call-channel-creator-update-guard-bypassed", K, lambda s: replace_once(s, "    ensure_can_administer(c, &room)?;\n    let name = room_name_param(c)?;", "    let name = room_name_param(c)?;"), "campfire", "call_channel_members_and_outsiders_cannot_edit_read_messages_or_receive_denial_frames"),
     ("internal-first-sighting-bypassed", I, lambda s: replace_once(s, "let seen_due = record_seen", "let seen_due = false && record_seen"), "campfire", "huddle_gateway_liveness_is_exact_throttled_and_independent_of_expired_tokens"),
     ("internal-authorization-payload-corrupted", I, lambda s: replace_once(s, "c.json(StatusCode::OK, &grant.authorization_payload())", 'c.json(StatusCode::OK, &serde_json::json!({"grant_id":grant.id + 1}))'), "campfire", "huddle_gateway_all_ninety_eight_recorded_token_shapes_execute_through_http"),

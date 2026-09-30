@@ -258,3 +258,12 @@ mod stream_controller_tests;
 
 #[cfg(test)]
 mod stage_page_tests;
+
+#[cfg(test)]
+mod remaining_call_tests;
+
+#[cfg(test)]
+mod remaining_query_tests;
+
+#[cfg(test)]
+mod remaining_presence_tests;

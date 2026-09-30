@@ -583,3 +583,6 @@ mod tests {
         assert_eq!(to_fs_number(time), "20240601120000");
     }
 }
+
+#[cfg(test)]
+pub(crate) mod sql_probe;

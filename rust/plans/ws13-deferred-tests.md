@@ -1,12 +1,12 @@
 # WS13 deferred Rails test declarations
 
-Status: partial. This catalogue retains all 548 original test declarations in 33 files for traceability. 237 declarations now have complete assertion coverage mapped below. The other 311 remain partial or deferred. A declaration remains open until all of its assertions are ported, including notice and rendering effects. The three HuddleNoticeChannel tests already ported by WS7 are verified separately in the report. Controller, integration and system declarations remain WS13 work. WS13b owns every model, job and service file below; their pre-existing passed counts are retained unchanged. The new internal HTTP tests execute 39 pinned Rails cases. They prove status/payload/no-store/liveness and persisted enqueue outcomes; new request tests close 27/29 internal controller declarations. Both SQL statement-count assertions remain open. WS17 owns push transport and Notifications::Policy; WS13 retains the invitation/join payload and enqueue tests. Thirty-five system declarations require LIVEKIT_SYSTEM_TESTS=1 with a real LiveKit server. The other 71 browser system declarations remain WS13 work, pending the public controllers/views and their browser harness.
+Status: partial. All 548 original declarations remain inventoried across 33 Rails files: 263 passed, 285 open. All 226 WS13 controller/integration declarations have complete assertions. WS13b owns the 216 model/job/service declarations, whose historical 37 passed and 179 open counts remain unchanged. WS17 owns Notifications::Policy and push transport; their payload/enqueue seams remain unchanged. All 106 system declarations await the end-to-end phase: 71 stubbed browser cases and 35 real LiveKit cases (31 huddles, four Stage), individually retained below. Full room/sidebar composition and runtime chrome remain follow-up work. Counts refer to complete original declarations, not vector or Rust-test counts.
 
 ## Continued slice coverage (after merging WS19b)
 
 Historical domain coverage predates the WS13b split and is retained below. WS13b now owns the model/job/service files; WS13 owns controllers, integration and system files. WS17 retains transport and Notifications::Policy.
 
-- `controllers/internal_huddle_tests.rs`: original-token admission, case-insensitive Bearer scheme, expired/malformed rejection, secret enforcement on all three endpoints, configuration ordering, revoked/missing/removed grants, numeric-prefix IDs, record_seen=0, timestamp coercions, stale disconnect floors, no-store, exact authorization_payload, and HTTP enqueue rollback. 39 Rails request-response cases; additional signed-token shapes are validated by the existing 98-case protocol corpus. Every protocol shape now also executes through HTTP; liveness and disconnect presence assertions are complete. SQL statement/transaction count assertions remain open.
+- `controllers/internal_huddle_tests.rs`: original-token admission, case-insensitive Bearer scheme, expired/malformed rejection, secret enforcement on all three endpoints, configuration ordering, revoked/missing/removed grants, numeric-prefix IDs, record_seen=0, timestamp coercions, stale disconnect floors, no-store, exact authorization_payload, and HTTP enqueue rollback. 39 Rails request-response cases; additional signed-token shapes are validated by the existing 98-case protocol corpus. Every protocol shape now also executes through HTTP; liveness and disconnect presence assertions are complete. SQL statement and transaction boundaries now have execution-level assertions.
 - `tests/huddle_grant_test.rs`: eligibility/current relationships, random identities and reuse, never reviving revoked grants, requested-room coordinates, three real unique conflicts, concurrent issuance, 10-second sightings and strict 20-second first-sighting boundary, first-sighting jobs, leave floors, membership/session/ban/room revocation, role boundaries/server mute, last-host guard, and synchronous last-active-stage-grant stream state. Post-issuance invitations now have 49 exact Rails issuance scenarios; Stream callbacks now run; committed presence and leave/call-ended notices now have the coverage below.
 - `huddle_gateway_node.mjs`: all 16 existing gateway tests run through real Rust endpoints. Ordinary responses are not fabricated; denial injections revoke SQLite rows. Only the original explicit outage/stall/malformed-response injections remain at the proxy. The test-only Rust launcher is ignored by default because it needs Node and the pinned ws package; it was explicitly run successfully in this slice.
 
@@ -24,20 +24,20 @@ These are original declaration counts, not Rust test counts or individual vector
 | --- | ---: | ---: | ---: |
 | `test/controllers/rooms/stage/streams_controller_test.rb` | 38 | 38 | 0 |
 | `test/models/huddle_invitation_test.rb` | 38 | 0 | 38 |
-| `test/controllers/rooms/huddles_controller_test.rb` | 36 | 35 | 1 |
+| `test/controllers/rooms/huddles_controller_test.rb` | 36 | 36 | 0 |
 | `test/models/huddle/join_notifier_test.rb` | 33 | 0 | 33 |
 | `test/models/huddle_grant_test.rb` | 33 | 0 | 33 |
 | `test/system/huddles_test.rb` | 31 | 0 | 31 |
-| `test/controllers/internal/huddle_controller_test.rb` | 29 | 27 | 2 |
+| `test/controllers/internal/huddle_controller_test.rb` | 29 | 29 | 0 |
 | `test/models/rooms/stage_test.rb` | 27 | 12 | 15 |
 | `test/models/stream_test.rb` | 27 | 14 | 13 |
-| `test/controllers/rooms/stages_controller_test.rb` | 24 | 23 | 1 |
-| `test/controllers/rooms/stage/roles_controller_test.rb` | 20 | 16 | 4 |
-| `test/controllers/rooms/call_moderation_controller_test.rb` | 19 | 13 | 6 |
+| `test/controllers/rooms/stages_controller_test.rb` | 24 | 24 | 0 |
+| `test/controllers/rooms/stage/roles_controller_test.rb` | 20 | 20 | 0 |
+| `test/controllers/rooms/call_moderation_controller_test.rb` | 19 | 19 | 0 |
 | `test/controllers/rooms/voices_controller_test.rb` | 18 | 18 | 0 |
 | `test/controllers/rooms/stage_view_test.rb` | 16 | 16 | 0 |
 | `test/system/huddle_join_notices_test.rb` | 16 | 0 | 16 |
-| `test/controllers/rooms/stage/hands_controller_test.rb` | 15 | 9 | 6 |
+| `test/controllers/rooms/stage/hands_controller_test.rb` | 15 | 15 | 0 |
 | `test/system/stage_test.rb` | 15 | 0 | 15 |
 | `test/models/huddle/join_pusher_test.rb` | 13 | 0 | 13 |
 | `test/system/voice_channels_test.rb` | 12 | 0 | 12 |
@@ -47,19 +47,19 @@ These are original declaration counts, not Rust test counts or individual vector
 | `test/models/huddle/ring_policy_test.rb` | 8 | 0 | 8 |
 | `test/system/huddle_audio_test.rb` | 8 | 0 | 8 |
 | `test/system/huddle_roster_test.rb` | 8 | 0 | 8 |
-| `test/controllers/users/huddle_presence_controller_test.rb` | 6 | 5 | 1 |
+| `test/controllers/users/huddle_presence_controller_test.rb` | 6 | 6 | 0 |
 | `test/system/huddle_presence_test.rb` | 6 | 0 | 6 |
-| `test/integration/huddle_presence_test.rb` | 5 | 0 | 5 |
+| `test/integration/huddle_presence_test.rb` | 5 | 5 | 0 |
 | `test/models/rooms/voice_test.rb` | 5 | 2 | 3 |
 | `test/jobs/huddle/join_notice_job_test.rb` | 4 | 0 | 4 |
 | `test/jobs/huddle/push_invitation_job_test.rb` | 4 | 0 | 4 |
 | `test/services/huddle/reconciler_test.rb` | 4 | 0 | 4 |
 | `test/jobs/huddle/broadcast_presence_job_test.rb` | 2 | 0 | 2 |
-| **Total** | **548** | **237** | **311** |
+| **Total** | **548** | **263** | **285** |
 
 ## test/controllers/internal/huddle_controller_test.rb
 
-Owner: WS13. Partial: 27/29 declarations passed. `internal_huddle_declaration_tests.rs` runs all 98 signed Rails shapes through the actual HTTP endpoint, plus both explicit refreshed-listener omissions, and verifies exact payload/liveness/throttle/cleanup and a real Cable disconnect refresh. Existing request tests cover gateway authentication, configuration and lookup denials. Both SQL statement/transaction count assertions remain open.
+Owner: WS13. Complete: 29/29 original declarations passed through real HTTP, Cable and SQLite assertions.
 
 - **Passed:** authorizes an exact active grant from an original token
 - **Passed:** authorizes a server-refreshed token that omits false permissions
@@ -80,8 +80,8 @@ Owner: WS13. Partial: 27/29 declarations passed. `internal_huddle_declaration_te
 - **Passed:** grant lookup records liveness at most once per ten seconds
 - **Passed:** an enforcement-only grant lookup authorizes without recording liveness
 - **Passed:** an enforcement-only lookup still revokes a stale grant
-- a steady-state grant check runs no transaction and writes nothing
-- a denied lookup takes the lock and revokes exactly once
+- **Passed:** a steady-state grant check runs no transaction and writes nothing
+- **Passed:** a denied lookup takes the lock and revokes exactly once
 - **Passed:** a denied lookup does not record liveness
 - **Passed:** a disconnect event marks the grant out of the call and refreshes presence
 - **Passed:** a stale disconnect event keeps a newer sighting
@@ -93,31 +93,31 @@ Owner: WS13. Partial: 27/29 declarations passed. `internal_huddle_declaration_te
 
 ## test/controllers/rooms/call_moderation_controller_test.rb
 
-Owner: WS13. Partial: 13/19 declarations passed; the other 6 remain WS13 work.
+Owner: WS13. Complete: 19/19 original declarations passed through real HTTP, Cable and SQLite assertions.
 
-- a host server-mutes a speaker, revoking publish until unmuted
-- muting delivers a roster to every member and a rejoin event to the target
+- **Passed:** a host server-mutes a speaker, revoking publish until unmuted
+- **Passed:** muting delivers a roster to every member and a rejoin event to the target
 - **Passed:** mute and unmute role events carry the server-muted state
 - **Passed:** muting twice and unmuting a member who was never muted both succeed
 - **Passed:** a repeated mute keeps the member's fresh grant and sends no rejoin
 - **Passed:** unmuting a member who was never muted sends no rejoin
-- a publish grant that survived a mute fails authorization
+- **Passed:** a publish grant that survived a mute fails authorization
 - **Passed:** disconnect drops the member from the call but keeps the membership
 - **Passed:** an administrator who is not a host moderates a stage room
 - **Passed:** a host cannot mute, unmute, or disconnect an administrator
-- an administrator moderates another administrator
+- **Passed:** an administrator moderates another administrator
 - **Passed:** a server-muted administrator unmutes themselves
 - **Passed:** a server-muted host cannot unmute themselves
-- speakers and listeners cannot moderate
+- **Passed:** speakers and listeners cannot moderate
 - **Passed:** moderating your own session is rejected
 - **Passed:** moderation is unreachable outside stage and voice rooms
 - **Passed:** moderation denies outsiders, unknown memberships, and unauthenticated requests
 - **Passed:** an administrator server-mutes a voice member, and members cannot
-- server mute only exists on stage and voice rooms
+- **Passed:** server mute only exists on stage and voice rooms
 
 ## test/controllers/rooms/huddles_controller_test.rb
 
-Owner: WS13. Partial: 35/36 declarations passed. `huddle_declaration_tests.rs` completes invitation enqueue capture and recipients, opaque reuse, membership/removal denials, sign-out cleanup, URL alias denial with global grant count, and exactly one real Cable room refresh on leave. The concurrent issuance exception injection remains open.
+Owner: WS13. Complete: 36/36 original declarations passed through real HTTP, Cable and SQLite assertions.
 
 - **Passed:** an authorized room member receives a narrowly scoped join token
 - **Passed:** the active grant is reused while its random participant identity remains opaque
@@ -146,7 +146,7 @@ Owner: WS13. Partial: 35/36 declarations passed. `huddle_declaration_tests.rs` c
 - **Passed:** bots cannot join through an ordinary session
 - **Passed:** banned users cannot join
 - **Passed:** missing LiveKit configuration is reported without minting a token
-- a concurrent membership revocation receives a controlled denial
+- **Passed:** a concurrent membership revocation receives a controlled denial
 - **Passed:** a stage listener's token cannot publish anything
 - **Passed:** stage speakers and hosts publish like any other participant
 - **Passed:** voice and direct room tokens still publish
@@ -158,10 +158,10 @@ Owner: WS13. Partial: 35/36 declarations passed. `huddle_declaration_tests.rs` c
 
 ## test/controllers/rooms/stage/hands_controller_test.rb
 
-Owner: WS13. Partial: 9/15 declarations passed; the other 6 remain WS13 work.
+Owner: WS13. Complete: 15/15 original declarations passed through real HTTP, Cable and SQLite assertions.
 
-- a listener raises their hand and every viewer gets their own roster
-- a double raise keeps the first timestamp and queue place
+- **Passed:** a listener raises their hand and every viewer gets their own roster
+- **Passed:** a double raise keeps the first timestamp and queue place
 - **Passed:** raising hands is rate limited per membership
 - **Passed:** the hand-raise rate limit resets after a minute
 - **Passed:** a turbo-stream raise swaps the actor's own controls without navigating
@@ -170,17 +170,17 @@ Owner: WS13. Partial: 9/15 declarations passed; the other 6 remain WS13 work.
 - **Passed:** lowering a hand that was never raised succeeds
 - **Passed:** a host lowers another member's hand without promoting them
 - **Passed:** an administrator member lowers another member's hand
-- a listener cannot lower another member's hand
+- **Passed:** a listener cannot lower another member's hand
 - **Passed:** lowering a non-member's hand is not found
-- non-members get not found
-- an administrator who is not a member gets not found
-- hands do not exist outside stage rooms
+- **Passed:** non-members get not found
+- **Passed:** an administrator who is not a member gets not found
+- **Passed:** hands do not exist outside stage rooms
 
 ## test/controllers/rooms/stage/roles_controller_test.rb
 
-Owner: WS13. Partial: 16/20 declarations passed; the other 4 remain WS13 work.
+Owner: WS13. Complete: 20/20 original declarations passed through real HTTP, Cable and SQLite assertions.
 
-- a host promotes a listener, clearing their hand and revoking their grants
+- **Passed:** a host promotes a listener, clearing their hand and revoking their grants
 - **Passed:** the affected member's panel replacement carries no rejoin trigger
 - **Passed:** a publish-boundary crossing appends a rejoin event to the member's persistent target
 - **Passed:** a host-speaker change broadcasts roster and panel but no rejoin event and revokes nothing
@@ -193,17 +193,17 @@ Owner: WS13. Partial: 16/20 declarations passed; the other 4 remain WS13 work.
 - **Passed:** a listener cannot change anyone's role
 - **Passed:** a speaker cannot change anyone's role
 - **Passed:** an administrator member manages roles without being a host
-- an administrator who is not a member gets not found
-- an administrator member promotes a new host when the stage has none
+- **Passed:** an administrator who is not a member gets not found
+- **Passed:** an administrator member promotes a new host when the stage has none
 - **Passed:** non-members get not found
 - **Passed:** changing a non-member's role is not found
 - **Passed:** an unknown role is unprocessable
-- a missing role is unprocessable
+- **Passed:** a missing role is unprocessable
 - **Passed:** roles do not exist outside stage rooms
 
 ## test/controllers/rooms/stage/streams_controller_test.rb
 
-Owner: WS13. Complete: 38/38 declarations passed.
+Owner: WS13. Complete: 38/38 original declarations passed through real HTTP, Cable and SQLite assertions.
 
 - **Passed:** a host goes live, broadcasting the badge, dot, and panels
 - **Passed:** a speaker goes live
@@ -246,7 +246,7 @@ Owner: WS13. Complete: 38/38 declarations passed.
 
 ## test/controllers/rooms/stage_view_test.rb
 
-Owner: WS13. Passed: all 16 declarations; actual seeded page and sidebar requests plus eight exact Voice/Stage sidebar-section renders.
+Owner: WS13. Complete: 16/16 original declarations passed through real HTTP, Cable and SQLite assertions.
 
 - **Passed:** a listener's join control hints that publishing is unavailable
 - **Passed:** a host's join control hints that publishing is available
@@ -267,7 +267,7 @@ Owner: WS13. Passed: all 16 declarations; actual seeded page and sidebar request
 
 ## test/controllers/rooms/stages_controller_test.rb
 
-Owner: WS13. Partial: 23/24 declarations passed. `call_channel_declaration_tests.rs` completes request role/default, denial silence, new-form validation, empty/hostless room and exact member-only icon Cable effects. The SQL lock/transaction assertion remains open.
+Owner: WS13. Complete: 24/24 original declarations passed through real HTTP, Cable and SQLite assertions.
 
 - **Passed:** show redirects to get general show
 - **Passed:** new
@@ -285,7 +285,7 @@ Owner: WS13. Partial: 23/24 declarations passed. `call_channel_declaration_tests
 - **Passed:** update clears the icon with a blank shortcode
 - **Passed:** updating the icon replaces sidebar rows and headers for members only
 - **Passed:** a host removes themselves once another host exists
-- the sole-host check and revision run in one locked transaction
+- **Passed:** the sole-host check and revision run in one locked transaction
 - **Passed:** removing everyone including the last host empties the room
 - **Passed:** the room page and the members edit render with zero hosts
 - **Passed:** non-members cannot see the room page or its messages
@@ -296,7 +296,7 @@ Owner: WS13. Partial: 23/24 declarations passed. `call_channel_declaration_tests
 
 ## test/controllers/rooms/voices_controller_test.rb
 
-Owner: WS13. Passed: all 18 original declarations. Shared request tests additionally prove denial silence, unknown-icon creation, self-removal and non-member page/message/namespace isolation.
+Owner: WS13. Complete: 18/18 original declarations passed through real HTTP, Cable and SQLite assertions.
 
 - **Passed:** show redirects to get general show
 - **Passed:** new
@@ -319,10 +319,10 @@ Owner: WS13. Passed: all 18 original declarations. Shared request tests addition
 
 ## test/controllers/users/huddle_presence_controller_test.rb
 
-Owner: WS13. Partial: 5/6 declarations passed; the other 1 remain open.
+Owner: WS13. Complete: 6/6 original declarations passed through real HTTP, Cable and SQLite assertions.
 
 - **Passed:** returns only the current user's rooms with at least one participant
-- the response runs one grants query no matter how many rooms are live
+- **Passed:** the response runs one grants query no matter how many rooms are live
 - **Passed:** returns an empty list when nobody is in any call
 - **Passed:** an unauthenticated request receives JSON instead of a redirect
 - **Passed:** bots and inactive users are denied like the huddle controller
@@ -330,13 +330,13 @@ Owner: WS13. Partial: 5/6 declarations passed; the other 1 remain open.
 
 ## test/integration/huddle_presence_test.rb
 
-Owner: WS13. Deferred.
+Owner: WS13. Complete: 5/5 original declarations passed through real HTTP, Cable and SQLite assertions.
 
-- channel header shows the live stack immediately before the join button
-- quiet channel header keeps an empty stack target
-- two-person DM header shows the live stack
-- group DM header shows the live stack immediately before the join button
-- no header stack without huddle configuration
+- **Passed:** channel header shows the live stack immediately before the join button
+- **Passed:** quiet channel header keeps an empty stack target
+- **Passed:** two-person DM header shows the live stack
+- **Passed:** group DM header shows the live stack immediately before the join button
+- **Passed:** no header stack without huddle configuration
 
 ## test/jobs/huddle/broadcast_presence_job_test.rb
 
@@ -775,3 +775,9 @@ Owner: WS13. Open browser system coverage; public huddle/voice/stage controllers
 `stream_controller_tests.rs` closes the 22 previously open stream declarations with exact HTTP bodies, global stream-count guards, outsider/admin/type isolation, presenter and stale-id behavior, member-edit teardown and last-host succession. Its real Cable test checks one room badge and three per-user replacements, explicit presenter-stop silence, a moderator's single stopped event, and a barrier proving silent no-op stop without sleeping or changing timing thresholds. `stage_page_tests.rs` checks the 15 page declarations through the actual generic room endpoint. Domain/model/job/service files remain WS13b-owned.
 
 The 35 real LiveKit declarations remain individually inventoried above: 31 in `test/system/huddles_test.rb`, four in `test/system/stage_test.rb`. Their browser WebRTC/media/reconnect assertions cannot be expressed by recorded responses from the injected administrative LiveKit client. Recorded client/Twirp and gateway contracts remain covered; the other 71 stubbed browser declarations remain open, rather than being reclassified as LiveKit-dependent.
+
+## Remaining controller and integration closure
+
+The nine tests in `remaining_call_tests.rs`, `remaining_query_tests.rs` and `remaining_presence_tests.rs` close the last 26 original declarations. Query probes trace executed cached statements, retaining the configured reader count. Their isolated app shuts down its independent background workers before measuring controller SQL; the test suite still runs four tests concurrently. A barrier holds the room read after membership scope while a separate write commits membership revocation, then verifies the issue path returns the controlled JSON denial without a grant. Stage edits prove the host read and membership insert sit between one immediate begin and commit. Steady-state admission runs no transaction or writes and at most eight statements; denial performs exactly one grant update and cleanup insert. Presence batches one grants query and one user preload across three live rooms. Real Cable frames prove exact hand/promotion/mute fan-out, personalization, cleanup and unchanged host grants, with a clock-controlled double raise preserving queue order. All five integration declarations inspect actual GET HTML for channel, direct and group stacks, quiet targets, adjacency and disabled configuration.
+
+All 226 controller/integration declarations are complete. WS13b retains the 216 domain declarations and unchanged historic 37 passed / 179 open. All 106 system declarations wait for the end-to-end phase: 71 stubbed browser cases and 35 real LiveKit cases remain individually inventoried, as requested.
