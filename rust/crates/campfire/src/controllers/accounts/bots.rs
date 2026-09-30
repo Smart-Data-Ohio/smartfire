@@ -174,7 +174,7 @@ pub async fn update(c: &mut Ctx) -> Result {
     });
     if webhook_changing {
         concerns::ensure_can_administer(c)?;
-        concerns::require_sudo_mode(c)?;
+        concerns::sudo::require_sudo_mode(c)?;
     }
     let params = bot_params(c)?;
     let changes = UserChanges {
@@ -186,22 +186,21 @@ pub async fn update(c: &mut Ctx) -> Result {
         .stage(c.app())
         .await?;
     let context = audit_context(c)?;
-    // User::update_bot's existing seam uses None to remove. Supply the current URL
-    // for an omitted/owner-disabled field until WS11 adds an explicit presence seam.
-    let webhook_url = if concerns::require_current_user(c)?.is_administrator()
-        && params.contains_key("webhook_url")
-    {
-        params.get("webhook_url").and_then(Param::to_s)
-    } else {
-        previous_url.clone()
-    };
+    // Preserve Rails' distinction between an omitted URL and a submitted blank URL.
+    let webhook_submitted = concerns::require_current_user(c)?.is_administrator()
+        && params.contains_key("webhook_url");
+    let webhook_url = params.get("webhook_url").and_then(Param::to_s);
     let before_bot = bot.clone();
     let requested_agent = agent_changes.clone();
     let result = c.app().db.write(move |tx| {
         let mut agent = Agent::for_user(tx.conn(), bot.id)?;
         let before_agent = agent.clone();
         if let Some(agent) = &mut agent { agent.update(tx, agent_changes)?; }
-        bot.update_bot(tx, changes, webhook_url.as_deref())?;
+        if webhook_submitted {
+            bot.update_bot(tx, changes, webhook_url.as_deref())?;
+        } else {
+            bot.update(tx, changes)?;
+        }
         let target = audit_target(&bot, agent.as_ref());
         let after_url = bot.webhook_url(tx.conn())?;
         if previous_url != after_url {
@@ -368,6 +367,9 @@ async fn edit_form(c: &Ctx, bot: &User) -> Result<accounts::BotForm> {
         .map_err(Error::internal)
 }
 
+// FLAGGED WS11 seam: AgentChanges still accepts typed caps only. Rails validates
+// before_type_cast values; vectors/bot-input-contract.json inventories the raw cases.
+// Replace this conversion with WS11's raw-input validator when that API lands.
 fn agent_params(c: &Ctx) -> AgentChanges {
     let params = c
         .params
@@ -448,7 +450,10 @@ pub(crate) async fn find_active_bot(c: &Ctx, key: &str) -> Result<User> {
         .ok_or(Error::NotFound)
 }
 
-/// `params.require(:user).permit(:name, :avatar, :webhook_url)`
+/// `params.require(:user).permit(:name, :avatar, :icon_name, :webhook_url)`.
+// FLAGGED WS11 seam: UserChanges/create_bot still have no icon setter. Keep the
+// permitted value available for WS11's normalizing/validating write API; reads
+// already resolve persisted icons through the existing presenter.
 fn bot_params(c: &Ctx) -> Result<ParamMap> {
     Ok(c.params.require("user")?.permit(&permit_keys(&[
         "name",
