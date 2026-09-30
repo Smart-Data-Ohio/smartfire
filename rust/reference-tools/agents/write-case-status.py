@@ -9,6 +9,7 @@ inventory = json.loads((ROOT / '.scratch/ws11-domain-case-inventory.json').read_
 ports = json.loads((Path(__file__).parent / 'case-ports.json').read_text())
 completed = {group['rails_file']: {case['rails'] for case in group['cases']} for group in ports['files']}
 shared = {
+    'test/models/agent_test.rb': 'WS11-ui rendered broadcast cases; WS11 domain cases compared',
     'test/jobs/agent/event_webhook_job_test.rb': 'WS11 delivery; WS15g live repository reader',
     'test/models/agent_approval_test.rb': 'WS11 domain; WS11-ui human approval controller/pages',
     'test/models/agent_kill_switch_test.rb': 'WS11; WS15g/WS15e approved-action execution callbacks',
@@ -21,7 +22,7 @@ shared = {
     'test/services/slash_commands/dispatcher_test.rb': 'WS11 agent dispatch; WS8 built-in commands',
 }
 remaining = []
-for group in inventory:
+for group in sorted(inventory, key=lambda group: (-group['cases'], group['path'])):
     done = completed.get(group['path'], set())
     assert done.issubset(set(group['names'])), group['path']
     names = [name for name in group['names'] if name not in done]

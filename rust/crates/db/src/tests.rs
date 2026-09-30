@@ -6,6 +6,8 @@ mod agent_peer_callbacks_test;
 mod agent_access_model_test;
 mod agent_approval_test;
 mod agent_record_test;
+mod agent_cases_test;
+mod agent_dispatcher_cases_test;
 mod agent_slash_command_test;
 mod agent_step_test;
 mod agent_working_presence_test;

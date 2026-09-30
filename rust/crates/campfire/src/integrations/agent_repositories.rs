@@ -41,6 +41,8 @@ impl State {
             .unwrap_or_else(|p| p.into_inner())
             .clone();
         let Some(reader) = reader else {
+            // FLAGGED STUB: WS15g installs the live GitHub reader. Until then
+            // private/unknown PRs stay inaccessible; no GitHub I/O is implemented here.
             return Ok(RepositoryAccess::default());
         };
         let requests = db

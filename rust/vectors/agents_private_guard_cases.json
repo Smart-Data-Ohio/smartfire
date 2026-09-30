@@ -1,0 +1,452 @@
+{
+  "reference_pin": "d7c7de92",
+  "cases": [
+    {
+      "name": "private_ip? returns true for 'This' network (RFC1700)",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "0.0.0.0",
+          "private": true
+        },
+        {
+          "address": "0.255.255.255",
+          "private": true
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns true for loopback addresses",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "127.0.0.0",
+          "private": true
+        },
+        {
+          "address": "127.0.0.1",
+          "private": true
+        },
+        {
+          "address": "127.255.255.255",
+          "private": true
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns true for RFC1918 private addresses",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "10.0.0.0",
+          "private": true
+        },
+        {
+          "address": "10.255.255.255",
+          "private": true
+        },
+        {
+          "address": "172.16.0.0",
+          "private": true
+        },
+        {
+          "address": "172.31.255.255",
+          "private": true
+        },
+        {
+          "address": "192.168.0.0",
+          "private": true
+        },
+        {
+          "address": "192.168.255.255",
+          "private": true
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns true for link-local addresses",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "169.254.0.1",
+          "private": true
+        },
+        {
+          "address": "169.254.169.254",
+          "private": true
+        },
+        {
+          "address": "169.254.255.255",
+          "private": true
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns false for public addresses",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "93.184.216.34",
+          "private": false
+        },
+        {
+          "address": "8.8.8.8",
+          "private": false
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns true for IPv4-mapped IPv6 addresses with private IPs",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "::ffff:192.168.1.1",
+          "private": true
+        },
+        {
+          "address": "::ffff:10.0.0.1",
+          "private": true
+        },
+        {
+          "address": "::ffff:172.16.0.1",
+          "private": true
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns true for IPv4-mapped IPv6 addresses with link-local IPs",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "::ffff:169.254.169.254",
+          "private": true
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns true for IPv4-mapped IPv6 addresses even with public IPs",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "::ffff:93.184.216.34",
+          "private": true
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns true for IPv4-compatible IPv6 addresses with private IPs",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "::192.168.1.1",
+          "private": true
+        },
+        {
+          "address": "::10.0.0.1",
+          "private": true
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns true for IPv4-compatible IPv6 addresses with link-local IPs",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "::169.254.169.254",
+          "private": true
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns true for IPv4-compatible IPv6 addresses even with public IPs",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "::93.184.216.34",
+          "private": true
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns true for carrier-grade NAT addresses (RFC6598)",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "100.64.0.1",
+          "private": true
+        },
+        {
+          "address": "100.127.255.255",
+          "private": true
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns true for NAT64 addresses embedding a private IPv4",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "64:ff9b::a9fe:a9fe",
+          "private": true
+        },
+        {
+          "address": "64:ff9b::a00:5",
+          "private": true
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns true for the whole local-use NAT64 block (RFC8215)",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "64:ff9b:1::a00:1",
+          "private": true
+        },
+        {
+          "address": "64:ff9b:1::808:808",
+          "private": true
+        },
+        {
+          "address": "64:ff9b:1:ffff::1",
+          "private": true
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns true for SIIT IPv4-translated addresses (RFC2765)",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "::ffff:0:169.254.169.254",
+          "private": true
+        },
+        {
+          "address": "::ffff:0:a9fe:a9fe",
+          "private": true
+        },
+        {
+          "address": "::ffff:0:127.0.0.1",
+          "private": true
+        },
+        {
+          "address": "::ffff:0:192.168.0.1",
+          "private": true
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns false for NAT64 addresses embedding a public IPv4",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "64:ff9b::808:808",
+          "private": false
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns true for 6to4 and Teredo transition addresses",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "2002:a9fe:a9fe::",
+          "private": true
+        },
+        {
+          "address": "2001::1",
+          "private": true
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns true for IPv6 loopback, ULA, and link-local",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "::1",
+          "private": true
+        },
+        {
+          "address": "fd00:ec2::254",
+          "private": true
+        },
+        {
+          "address": "fe80::1",
+          "private": true
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns true for IPv6 multicast, documentation, and benchmarking ranges",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "ff02::1",
+          "private": true
+        },
+        {
+          "address": "2001:db8::1",
+          "private": true
+        },
+        {
+          "address": "2001:2::1",
+          "private": true
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns false for public IPv6 addresses",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "2606:4700:4700::1111",
+          "private": false
+        }
+      ]
+    },
+    {
+      "name": "private_ip? returns true for invalid addresses",
+      "kind": "private_ip",
+      "results": [
+        {
+          "address": "not-an-ip",
+          "private": true
+        },
+        {
+          "address": "",
+          "private": true
+        }
+      ]
+    },
+    {
+      "name": "resolve raises Violation for private hostname",
+      "kind": "resolve",
+      "results": [
+        {
+          "host": "private.example.com",
+          "answers": [
+            "192.168.1.1"
+          ],
+          "error": "RestrictedHTTP::Violation"
+        }
+      ]
+    },
+    {
+      "name": "resolve returns IP for public hostname",
+      "kind": "resolve",
+      "results": [
+        {
+          "host": "example.com",
+          "answers": [
+            "93.184.216.34"
+          ],
+          "address": "93.184.216.34"
+        }
+      ]
+    },
+    {
+      "name": "resolve refuses hostnames answering only blocked IPv6 addresses",
+      "kind": "resolve",
+      "results": [
+        {
+          "host": "images.example.com",
+          "answers": [
+            "::1"
+          ],
+          "error": "RestrictedHTTP::Violation"
+        },
+        {
+          "host": "images.example.com",
+          "answers": [
+            "fd00::1"
+          ],
+          "error": "RestrictedHTTP::Violation"
+        },
+        {
+          "host": "images.example.com",
+          "answers": [
+            "fe80::1"
+          ],
+          "error": "RestrictedHTTP::Violation"
+        },
+        {
+          "host": "images.example.com",
+          "answers": [
+            "::ffff:127.0.0.1"
+          ],
+          "error": "RestrictedHTTP::Violation"
+        }
+      ]
+    },
+    {
+      "name": "resolve refuses numeric IPv4 literals however they are spelled",
+      "kind": "resolve",
+      "results": [
+        {
+          "host": "2130706433",
+          "answers": [],
+          "error": "RestrictedHTTP::Violation"
+        },
+        {
+          "host": "0x7f000001",
+          "answers": [],
+          "error": "RestrictedHTTP::Violation"
+        },
+        {
+          "host": "017700000001",
+          "answers": [],
+          "error": "RestrictedHTTP::Violation"
+        },
+        {
+          "host": "127.1",
+          "answers": [],
+          "error": "RestrictedHTTP::Violation"
+        },
+        {
+          "host": "3232235521",
+          "answers": [],
+          "error": "RestrictedHTTP::Violation"
+        }
+      ]
+    },
+    {
+      "name": "resolve returns the normalized address for public numeric literals",
+      "kind": "resolve",
+      "results": [
+        {
+          "host": "134744072",
+          "answers": [],
+          "address": "8.8.8.8"
+        },
+        {
+          "host": "8.8.8.8",
+          "answers": [],
+          "address": "8.8.8.8"
+        }
+      ]
+    },
+    {
+      "name": "resolve refuses bracketed IPv6 literals pointing at blocked addresses",
+      "kind": "resolve",
+      "results": [
+        {
+          "host": "[::1]",
+          "answers": [],
+          "error": "RestrictedHTTP::Violation"
+        }
+      ]
+    },
+    {
+      "name": "resolve raises Unresolvable, not Violation, when the host resolves to nothing",
+      "kind": "resolve",
+      "results": [
+        {
+          "host": "nxdomain.example.com",
+          "answers": [],
+          "error": "Surfguard::Unresolvable"
+        }
+      ]
+    }
+  ]
+}
