@@ -44,7 +44,9 @@ fn overridden() -> BTreeMap<String, (String, String)> {
         .filter_map(|logical| {
             let theirs = reference[&logical]["digested_path"].as_str()?;
             let ours = ours[logical.as_str()];
-            assert_ne!(theirs, ours, "{logical} is overridden but digests the same");
+            // Approved post-pin files can match the current reference precompile exactly.
+            // Keep them in the strict compiled-byte checks rather than the override mapping.
+            if theirs == ours { return None; }
             Some((logical, (theirs.to_string(), ours.to_string())))
         })
         .collect()
@@ -150,6 +152,19 @@ fn compiled_files_are_byte_identical_to_the_reference_precompile() {
         reference.as_object().unwrap().len() + added().len(),
         campfire_assets::manifest().len()
     );
+}
+
+#[test]
+fn approved_status_assets_are_served_byte_identically_and_stay_in_strict_baseline_checks() {
+    let approved: [(&str, &[u8]); 2] = [
+        ("people.css", include_bytes!("../../../reference-tools/users/post-pin/app/assets/stylesheets/people.css")),
+        ("controllers/profile_card_controller.js", include_bytes!("../../../reference-tools/users/post-pin/app/javascript/controllers/profile_card_controller.js")),
+    ];
+    let mapped = overridden();
+    for (logical, bytes) in approved {
+        assert!(!mapped.contains_key(logical), "approved file must receive the ordinary strict precompile comparison");
+        assert_eq!(get(&campfire_assets::asset_path(logical)).body.as_slice(), bytes, "{logical}: complete served bytes");
+    }
 }
 
 #[test]

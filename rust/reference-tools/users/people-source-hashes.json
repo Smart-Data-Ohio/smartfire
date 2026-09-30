@@ -2,7 +2,7 @@
   "app/controllers/users_controller.rb": "744c1b27bb60c818830ea940708546212a6bdbd35be8ac4249f6a46be9a83d8b",
   "app/controllers/users/cards_controller.rb": "10adb9638be20307f5e2377d8b550ebecac0048f4b2081c2a4a5df19ddc08071",
   "app/views/users/index.html.erb": "0dde69b18c4bcdd738da8faee667bda5818f7ba3f3162f67e901e797a79d744b",
-  "app/views/users/cards/show.html.erb": "55cba0c89414c2916e825efa053b84f24e6d2d14a9c134d95ff54414aff6f0cb",
+  "app/views/users/cards/show.html.erb": "8d898a311eeb58f4160d8ed29346b1766e37808fb10083ab2c47f8323f84bc67",
   "app/views/users/statuses/_badge.html.erb": "4d4530eace8152c8c766e7cf52bb81d3789a81141121e0b96c172012742cdb3d",
   "app/views/users/stars/_toggle.html.erb": "82663da2fb15ad71365255ba87c1c029281ccd34a35ff9779c4ae91dffa0febc"
 }

@@ -5,5 +5,5 @@
   "app/helpers/users_helper.rb": "f696fbaedebbf60841a45dc96824ed0deb74e9a82a78c51f13531641ffd80b76",
   "app/models/user.rb": "41c18c8325200bf8034554c4b107cc722d7b89aba32ade9d9944a7055587dd5b",
   "app/javascript/controllers/dm_picker_controller.js": "3e5f75764a8e9888b469c1caf171b6df50260bdf0959c6554192b6b6777b62b4",
-  "app/assets/stylesheets/people.css": "ba03e3466b80821a04cc7bdb19828da828d61534de6e55860f89ac0d5d701af5"
+  "app/assets/stylesheets/people.css": "fdef4009a16efb9294d643d187afa6fcffbdf8054eadccf5ed6aee3e343855db"
 }

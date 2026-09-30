@@ -13,7 +13,7 @@
   "app/views/users/profiles/_notifications.html.erb": "2b79871131d6ab1d03abc0ee83b7c8a858b1562a4fe41a4b168c6c7cdae4d57e",
   "app/views/users/profiles/_sessions.html.erb": "9097841487ae4f47190d32e740111fdc4939131d149455ffc8174bca267d1f4b",
   "app/views/users/profiles/_slack_import.html.erb": "e7b99849a1632b29000a6b6bd903911c28864e5e7e9bd96b3ec1d1a4aeed9480",
-  "app/views/users/profiles/_status.html.erb": "1231710541d124f8e88ea0c24a261a23dadf6e853eae044c55b1efc0037154ad",
+  "app/views/users/profiles/_status.html.erb": "8e4553dee3137b28212fe4dd08160f91475f859a7ecefa83e52bcfcd9d55e40b",
   "app/views/users/profiles/_transfer.html.erb": "2e63817502f8c49197e94a47f753a88c785604bdce3d6d34731553dfe764f4a0",
   "app/views/users/profiles/_two_factor.html.erb": "d85f26cfaedc39c3c253f2d122dd08547461b069f863a8f9976a2805887ee1cd",
   "app/views/users/profiles/show.html.erb": "dbdaa29a5ae7610a1b961f731d2df8cfaf14a2e86e4952e5ece24df96edfc07f"

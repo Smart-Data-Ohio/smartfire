@@ -19,7 +19,8 @@ scratch.mkdir(exist_ok=True)
 run_dir = Path(tempfile.mkdtemp(prefix="browser-people-", dir=scratch))
 seed = root / "parity/.seed/default"
 picker_mode = sys.argv[1:] == ["--picker"]
-assert not sys.argv[1:] or picker_mode, "expected --picker or no arguments"
+status_mode = sys.argv[1:] == ["--status"]
+assert not sys.argv[1:] or picker_mode or status_mode, "expected --picker, --status or no arguments"
 browser_seed = None
 if picker_mode:
     browser_seed = root / f"parity/.seed/ws8br2-browser-{os.getpid()}"
@@ -54,7 +55,7 @@ shutil.copytree(seed / "storage", run_dir / "files")
 oracle_env = os.environ.copy()
 # The media library overlay belongs to the Rust process, not host curl/Python forwarding.
 oracle_env.pop("LD_LIBRARY_PATH", None)
-oracle_env.update(PARITY_NAMESPACE="ws8br2-browser", PARITY_OWNER="ws8br2", PARITY_RUNTIME="docker", PARITY_IMAGE="ws8br2-reference:d7c7de92")
+oracle_env.update(PARITY_NAMESPACE="ws8br2-browser", PARITY_OWNER="ws8br2", PARITY_RUNTIME="docker", PARITY_IMAGE="ws8br2-reference:d7c7de92-status-2e20b24c")
 reference = str(root / "parity/bin/reference")
 dockerfile = root / "parity/Dockerfile.playwright"
 digest = hashlib.sha256(b"".join((root / "parity" / name).read_bytes() for name in ("Dockerfile.playwright", "package.json", "package-lock.json"))).hexdigest()[:12]
@@ -81,7 +82,7 @@ try:
             subprocess.run(["docker", "run", "--rm", "--network", "host", "--label", "parity.owner=ws8br2",
                             "-v", f"{root.parent}:/work:ro", "-e", f"WS8BR2_BROWSER_URL=http://127.0.0.1:{port}",
                             "-e", f"WS8BR2_BROWSER_LABELS=/work/rust/parity/.seed/{seed.name}/labels.json", image,
-                            "node", "/work/rust/reference-tools/users/" + ("browser_picker.mjs" if picker_mode else "browser_people.mjs")], check=True)
+                            "node", "/work/rust/reference-tools/users/" + ("browser_picker.mjs" if picker_mode else "browser_status.mjs" if status_mode else "browser_people.mjs")], check=True)
 finally:
     if server is not None:
         server.terminate()

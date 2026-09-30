@@ -5,8 +5,11 @@ Files in `overrides/` shadow the reference app's assets of the same logical path
 its frontend without editing the reference Rails app. `build.rs` puts that directory first on the
 load path, and skips it when it doesn't exist.
 
-**There are none.** Until cutover the Rust app serves our Rails app's assets byte for byte (the
-digested paths, the import map and the modulepreload set included), so `overrides/` is absent.
+The lead explicitly requested the post-pin #163 status popup. `people.css` and
+`controllers/profile_card_controller.js` are exact copies from `2e20b24c`, held here so a build
+against the pinned Rails archive also serves the approved status assets. Their compiled bytes
+and digests are checked strictly against the post-change Rails precompile. Every other asset
+remains pinned; these files contain no Rust-specific frontend changes.
 Upstream's JavaScript overrides were removed when the crate was pointed at our tree:
 
 | File | Why it went |

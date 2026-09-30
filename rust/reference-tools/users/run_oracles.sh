@@ -5,12 +5,12 @@ ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 OUT=${WS8BR2_ORACLE_DIR:-$ROOT/../.scratch/verified-oracles}
 mkdir -p "$OUT"
 export PARITY_NAMESPACE=ws8br2 PARITY_OWNER=ws8br2 PARITY_RUNTIME=docker
-export PARITY_IMAGE=${PARITY_IMAGE:-ws8br2-reference:d7c7de92}
+export PARITY_IMAGE=${PARITY_IMAGE:-ws8br2-reference:d7c7de92-status-2e20b24c}
 run() {
   local probe=$1 seed=$2 expected=$3 label=$4
   "$ROOT/parity/bin/reference" exec --seed "$seed" --time 2026-03-02T16:00:00Z --freeze -- \
     bin/rails runner --skip-executor "/work/reference-tools/users/$probe.rb" "${@:5}" > "$OUT/$label.json" 2> "$OUT/$label.log"
-  cmp "$OUT/$label.json" "$ROOT/$expected"
+  if [ "${WS8BR2_REGENERATE:-0}" = 1 ]; then cp "$OUT/$label.json" "$ROOT/$expected"; else cmp "$OUT/$label.json" "$ROOT/$expected"; fi
   rg '^Rails .* oracle:' "$OUT/$label.log"
 }
 run public default vectors/users_public.json public
@@ -36,4 +36,8 @@ run pwa default vectors/users_pwa_default.json pwa-default
 run pwa first_run vectors/users_pwa_first_run.json pwa-first-run
 run zones first_run crates/db/src/slash_commands/rails_zone_identifiers.json zones
 run zones first_run crates/db/src/slash_commands/rails_named_zones.json named-zones named
-echo 'WS8br2 oracle verification: all 23 fresh files match byte for byte; no masks or normalization'
+if [ "${WS8BR2_REGENERATE:-0}" = 1 ]; then
+  echo 'WS8br2 oracle generation: 23 fresh unnormalized files written'
+else
+  echo 'WS8br2 oracle verification: all 23 fresh files match byte for byte; no masks or normalization'
+fi
