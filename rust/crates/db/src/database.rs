@@ -46,6 +46,8 @@ pub struct Env {
     /// BCrypt cost for `has_secure_password`. Rails uses `BCrypt::Engine.cost` (12), or
     /// `MIN_COST` (4) in the test environment.
     pub bcrypt_cost: u32,
+    /// Configured default host/protocol, supplied from the mail URL configuration.
+    pub default_url_origin: String,
 }
 
 impl Default for Env {
@@ -55,6 +57,7 @@ impl Default for Env {
             sink: Arc::new(NullSink),
             rich_text: Arc::new(BasicRichText),
             bcrypt_cost: 12,
+            default_url_origin: "http://example.com".into(),
         }
     }
 }

@@ -329,8 +329,15 @@ impl CalendarEvent {
                     Self::insert(tx, &follower, Some(event.id))?;
                 }
             }
-            event.invite(tx)?;
-            event.announce_in_channel(tx, None)?;
+            let created = event.clone();
+            tx.after_commit(move |after| {
+                // Rails after_create_commit: earlier successful side effects survive
+                // a rejected announcement. Each write keeps its own jobs atomic.
+                crate::run_write(after.conn(), after.env(), |tx| created.invite(tx))?;
+                crate::run_write(after.conn(), after.env(), |tx| {
+                    created.announce_in_channel(tx)
+                })
+            });
             // Rails registers each Event before its organizer attendance with the
             // transaction. Its after-create-commit Meet job precedes attendance sync.
             for occurrence in event.series_events(tx.conn())? {
@@ -368,11 +375,11 @@ impl CalendarEvent {
         }
         Ok(())
     }
-    fn announce_in_channel(&self, tx: &mut Tx<'_>, host: Option<&str>) -> Result<()> {
+    fn announce_in_channel(&self, tx: &mut Tx<'_>) -> Result<()> {
         use crate::broadcasts::{Broadcast, Partial, room_dom_id, room_messages};
         let url = format!(
             "{}/rooms/{}/events/{}",
-            host.unwrap_or(""),
+            tx.env().default_url_origin,
             self.room_id,
             self.id
         );

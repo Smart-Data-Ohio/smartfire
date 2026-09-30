@@ -57,6 +57,10 @@ impl TestDb {
 
     /// Fixtures loaded with `clock` and BCrypt cost `bcrypt_cost` for their password digests.
     pub fn with_clock(clock: TestClock, bcrypt_cost: u32) -> Self {
+        Self::with_clock_and_origin(clock, bcrypt_cost, "http://example.com")
+    }
+
+    pub fn with_clock_and_origin(clock: TestClock, bcrypt_cost: u32, origin: &str) -> Self {
         let dir = tempfile::tempdir().unwrap();
         let sink = RecordingSink::new();
         let env = Env {
@@ -64,6 +68,7 @@ impl TestDb {
             sink: Arc::new(sink.clone()),
             rich_text: Arc::new(BasicRichText),
             bcrypt_cost: 4,
+            default_url_origin: origin.into(),
         };
         let mut config = Config::new(dir.path().join("test.sqlite3"));
         config.readers = 2;
@@ -120,6 +125,7 @@ impl TestDb {
             sink: Arc::new(self.sink.clone()),
             rich_text: Arc::new(BasicRichText),
             bcrypt_cost: 4,
+            ..Env::default()
         };
         let mut config = Config::new(self.db.path());
         config.readers = 1;

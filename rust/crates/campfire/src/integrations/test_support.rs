@@ -303,7 +303,7 @@ impl TestDb {
         let path = std::env::temp_dir().join(format!("campfire-integrations-{}-{n}", std::process::id()));
         let _ = std::fs::remove_dir_all(&path);
         std::fs::create_dir_all(&path).unwrap();
-        let env = Env { clock: Arc::new(TestClock::new()), sink: Arc::new(NullSink), rich_text: Arc::new(BasicRichText), bcrypt_cost: 4 };
+        let env = Env { clock: Arc::new(TestClock::new()), sink: Arc::new(NullSink), rich_text: Arc::new(BasicRichText), bcrypt_cost: 4, ..Env::default() };
         let mut config = Config::new(path.join("test.sqlite3"));
         config.environment = "test".into();
         let db = Database::open(config, env).unwrap();

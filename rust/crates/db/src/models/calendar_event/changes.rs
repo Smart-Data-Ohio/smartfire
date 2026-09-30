@@ -99,6 +99,13 @@ impl CalendarEvent {
         a: &NewCalendarEvent,
         rules: SaveRules,
     ) -> Result<()> {
+        // Pinned Rails raises on nil sibling comparisons/arithmetic. Return an
+        // internal error so requests use public/500.html; never write a substitute.
+        if self.series() && a.starts_at.is_none() {
+            return Err(crate::Error::Other(
+                "Event series nil start: Rails NoMethodError".into(),
+            ));
+        }
         let mut errors = Self::validate_fields(
             conn,
             a,

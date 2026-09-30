@@ -183,6 +183,7 @@ async fn open_database(
         sink: Arc::new(jobs),
         rich_text,
         bcrypt_cost: 12,
+        default_url_origin: config.mail.url_origin().to_owned(),
     };
     Ok(tokio::task::spawn_blocking(move || Database::open(db_config, env)).await??)
 }

@@ -2,7 +2,8 @@
 use super::*;
 use crate::models::calendar_event::{SyncEntryJob, reminders::ReminderPushJob};
 use crate::{
-    ActivityItem, CalendarEvent, Error, EventAttendance, NewCalendarEvent, Timestamp, User,
+    ActivityItem, CalendarEvent, Error, EventAttendance, NewCalendarEvent, Room, RoomType,
+    Timestamp, User,
 };
 use jiff::SignedDuration;
 use rusqlite::params;
@@ -174,7 +175,7 @@ fn series_materializes_organizer_attendance_one_invitation_and_one_announcement(
     assert_eq!(
         message,
         format!(
-            "Scheduled an event: Planning session\n/rooms/{}/events/{}",
+            "Scheduled an event: Planning session\nhttp://example.com/rooms/{}/events/{}",
             head.room_id, head.id
         )
     );
@@ -1086,4 +1087,96 @@ fn scoped_calendar_sync_and_cancel_preserve_ws14g_argument_contracts() {
             format!("remote-{head_id}")
         ])]
     );
+}
+
+fn edge_vectors() -> serde_json::Value {
+    serde_json::from_str(include_str!("../models/calendar_event/edges.json")).unwrap()
+}
+#[test]
+fn event_after_commit_rejection_keeps_rails_rows() {
+    let t = frozen();
+    let room = t.write(|tx| {
+        Room::create_for(
+            tx,
+            RoomType::Board,
+            Some("Rejected event board"),
+            id("david"),
+            &[id("david"), id("jason")],
+        )
+    });
+    let tables = ["events", "event_attendances", "activity_items", "messages"];
+    let before = tables.map(|table| count(&t, table));
+    let mut a = attrs(&t);
+    a.room_id = room.id;
+    assert!(t.try_write(move |tx| CalendarEvent::create(tx, a)).is_err());
+    let actual: Vec<i64> = tables
+        .into_iter()
+        .zip(before)
+        .map(|(table, n)| count(&t, table) - n)
+        .collect();
+    let expected: Vec<i64> = edge_vectors()["rejected"]["delta"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|n| n.as_i64().unwrap())
+        .collect();
+    assert_eq!(actual, expected);
+}
+#[test]
+fn event_announcement_uses_rails_configured_origin() {
+    for vector in edge_vectors()["urls"].as_array().unwrap() {
+        let origin = vector["origin"].as_str().unwrap();
+        let t = TestDb::with_clock_and_origin(
+            TestClock::frozen_at(Timestamp::parse_db("2026-09-22 12:00:00").unwrap()),
+            4,
+            origin,
+        );
+        let mut a = attrs(&t);
+        a.title = "Origin <&>".into();
+        let event = t.write(move |tx| CalendarEvent::create(tx, a));
+        let actual = t.read(|c| {
+            Ok(c.query_row::<String, _, _>(
+                "SELECT markdown_source FROM messages ORDER BY id DESC LIMIT 1",
+                [],
+                |r| r.get(0),
+            )?)
+        });
+        let expected = vector["announcement"].as_str().unwrap().replace(
+            vector["suffix"].as_str().unwrap(),
+            &format!("/rooms/{}/events/{}", event.room_id, event.id),
+        );
+        assert_eq!(actual, expected);
+    }
+}
+#[test]
+fn event_nil_series_start_matches_rails_failure_without_writes() {
+    use crate::models::calendar_event::changes::EventChanges;
+    for vector in edge_vectors()["nil_starts"].as_array().unwrap() {
+        assert_eq!(vector["exception"], "NoMethodError");
+        assert_eq!(vector["unchanged"], true);
+        let t = frozen();
+        let head = series(&t);
+        let before = t.read(|c| head.series_events(c));
+        let event = before[vector["index"].as_u64().unwrap() as usize].id;
+        let scope = vector["scope"].as_str().unwrap().to_owned();
+        let before_events = t.events().len();
+        let error = t
+            .try_write(move |tx| {
+                CalendarEvent::update_with_scope(
+                    tx,
+                    event,
+                    EventChanges {
+                        starts_at: Some(None),
+                        title: Some("Must roll back".into()),
+                        ..Default::default()
+                    },
+                    &scope,
+                    Some(id("david")),
+                )
+            })
+            .unwrap_err();
+        assert!(matches!(error, Error::Other(_)), "{error:?}");
+        assert_eq!(t.read(|c| head.series_events(c)), before);
+        assert_eq!(t.events().len(), before_events);
+    }
 }
