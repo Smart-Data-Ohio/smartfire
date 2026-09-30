@@ -764,9 +764,9 @@ async fn ws8_quote_refresh_jobs_execute_in_the_real_app_runner() {
         Ok(())
     }).await.unwrap();
     let rows = wait_for(&app, "quote refresh execution", |rows| {
-        // The periodic runner may enqueue retention alongside this job. Wait for
-        // that work too before asserting an empty queue, rather than racing it.
-        rows.is_empty()
+        // Future retention work remains queued by design. Only the quote job
+        // must finish; the assertions below also verify the future job survives.
+        rows.iter().all(|row| row.class != "Message::QuoteCardsRefreshJob")
             || rows
                 .iter()
                 .any(|row| row.class == "Message::QuoteCardsRefreshJob" && row.status == "failed")

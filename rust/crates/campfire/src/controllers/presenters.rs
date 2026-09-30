@@ -254,7 +254,9 @@ impl<'a> Presenter<'a> {
         }
         if let Some(data) = &self.search_preloads {
             let room = data.records.rooms.get(&room_id).cloned().ok_or(campfire_db::Error::RecordNotFound("Room"))?;
-            let name = self.room_display_name(&room, None)?;
+            let name = if room.direct() {
+                room.direct_display_name(self.conn, None, Some(data.records.direct_members.get(&room_id).map(Vec::as_slice).unwrap_or_default()))?.unwrap_or_default()
+            } else { room.name.clone().unwrap_or_default() };
             return Ok((room,name));
         }
         let room = Room::find(self.conn, room_id)?;
@@ -279,10 +281,28 @@ impl<'a> Presenter<'a> {
 
     /// `render message`, as [`Self::messages`] does it.
     pub fn message_item(&self, message: &Message) -> Result<MessageItem> {
-        let Some(base) = self.cache_base_url.as_deref() else { return Ok(MessageItem::View(Box::new(self.message(message)?))) };
+        self.message_item_for(message, false)
+    }
+
+    /// Room context belongs inside the shared fragment, so resolve its icon on a miss.
+    pub fn search_message_item(&self, message: &Message) -> Result<MessageItem> {
+        self.message_item_for(message, true)
+    }
+
+    fn message_item_for(&self, message: &Message, search: bool) -> Result<MessageItem> {
+        let view = || -> Result<MessageView> {
+            let mut view = self.message(message)?;
+            if search {
+                use campfire_views::helpers::IconSource;
+                let icon = self.search_preloads.as_ref().and_then(|data| data.records.room_icons.get(&message.room_id)).and_then(Option::as_deref);
+                view.details.room_icon = icon.and_then(|name| self.resolve_avatar_icon(name));
+            }
+            Ok(view)
+        };
+        let Some(base) = self.cache_base_url.as_deref() else { return Ok(MessageItem::View(Box::new(view()?))) };
         let key = campfire_views::messages::collection_fragment_key(&self.message_collection_cache_key(message)?, base);
         let html = fragment_cache::try_fetch_value(|| key, || {
-            let view = self.message(message)?;
+            let view = view()?;
             let account = campfire_db::Account::first(self.conn)?;
             page::render_detached_at(self.app, account.as_ref(), base, |ctx| {
                 use askama::Template;

@@ -164,18 +164,9 @@ fn search_messages(
     p: &super::presenters::Presenter<'_>,
     messages: &[campfire_db::Message],
 ) -> campfire_db::Result<Vec<campfire_views::messages::MessageItem>> {
-    use campfire_views::{helpers::IconSource, messages::MessageItem};
     if messages.is_empty() { return Ok(vec![]); }
     let p = p.preload_search(messages)?;
-    let mut items = p.messages(messages)?;
-    let data = p.search_preloads.as_ref().expect("search preload installed");
-    let icons = data.records.room_icons.iter().map(|(id,name)|(*id,name.as_deref().and_then(|n|p.resolve_avatar_icon(n)))).collect::<std::collections::HashMap<_,_>>();
-    for item in &mut items {
-        if let MessageItem::View(view) = item {
-            view.details.room_icon = icons.get(&view.room_id).cloned().flatten();
-        }
-    }
-    Ok(items)
+    messages.iter().map(|message| p.search_message_item(message)).collect()
 }
 fn section_view(
     section: campfire_db::search_query::SearchSection,

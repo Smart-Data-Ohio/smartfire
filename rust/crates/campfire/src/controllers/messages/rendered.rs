@@ -26,7 +26,7 @@ async fn broadcast_edit_in(c: &Ctx, room: &Room, message: &Message, drive_given:
                 ("meta", views::MetaPartial { ctx, message: &view }.render()?),
                 ("github_pr_cards", views::cards(&view, "github_pr_cards", "github-pr-cards", 0, &view.components.github_cards).0),
                 ("twitter_cards", views::cards(&view, "twitter_cards", "x-post-cards", 2, &view.components.twitter_cards).0),
-                ("message_link_cards", views::cards(&view, "message_link_cards", "message-link-cards", 0, &view.components.message_link_cards).0),
+                ("message_link_cards", campfire_views::message_links::cards(ctx, &view).0),
                 ("fizzy_cards", views::cards(&view, "fizzy_cards", "fizzy-cards", 0, &view.components.fizzy_cards).0),
                 ("linkedin_cards", views::cards(&view, "linkedin_cards", "linkedin-post-cards", 2, &view.components.linkedin_cards).0),
                 ("link_embed_cards", views::cards(&view, "link_embed_cards", "link-embed-cards", 2, &view.components.link_embed_cards).0),
